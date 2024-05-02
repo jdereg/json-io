@@ -121,6 +121,9 @@ Aliasing is used to turn long java package names to simple class names, e.g. `ja
 in the JSON.  By default, `json-io` has most of the common JDK classes aliased to make the JSON content smaller.  You can
 add additional aliases for classes in your program.
 
+**Note**: For any alias added, `json-io` automatically adds 1D, 2D, and 3D array aliases for the class.  So for example, 
+if you add `com.mycompany.Foo ==> Foo` alias, then `Foo[], Foo[][],` and `Foo[][][]` are added as aliases too.
+
 An alternative to using this API is to place your own `aliases.txt` file in the class path. `json-io` ships with
 a pretty extensive list - you can supply your own [aliases.txt](/src/main/resources/config/aliases.txt) file instead of the one shipped with `json-io.`
 >#### `String` getTypeNameAlias(`String typeName`)
@@ -134,7 +137,11 @@ entries that match values in the passed in Map. New entries in the Map are added
 >#### `ReadOptionsBuilder` aliasTypeName(`String typeName, String alias`)
 >- [ ] Sets the alias for a given class name. 
 >#### `ReadOptionsBuilder` aliasTypeName(`Class, String alias`)
->- [ ] Sets the alias for a given class. 
+>- [ ] Sets the alias for a given class.
+>#### `ReadOptionsBuilder` removeAliasTypeNamesMatching(`String typeNamePattern`)
+>- [ ] Remove alias entries from this `ReadOptionsBuilder` instance where the Java fully qualified string class name 
+matches the passed in wildcard pattern. The `typeNamePattern` matches using a wild-card pattern, where * matches
+anything and ? matches one character. As many * or ? can be used as needed.
 
 ### Class Coercion
 Use this feature to turn classes like`java.util.Collections$UnmodifiableRandomAccessList`into an`ArrayList`when parsed and loaded 
@@ -236,7 +243,9 @@ and 1 value of all number types, the string values of "0" through "9", "on", "of
 ---
 ## Application Scoped Options (full lifecycle of JVM)
 These particular options can be set at 'application-scope' to ensure all `ReadOptions` instances are automatically created
-with them, so you don't have to configure these options for each `ReadOptions` instance individually.
+with them, so you don't have to configure these options for each `ReadOptions` instance individually. Where it is written
+"JVM Lifecycle," that means from start-up of your application or service to shutdown. None of the 'permanent' APIs modify
+any files on disk, just static memory - affecting all new instances of `ReadOptions` for a start-up/shut down cycle.
 
 ### addPermanentClassFactory
 Call this method to add a factory class that will be used to create instances of another class.  This is useful
@@ -259,6 +268,21 @@ be written to and read from the @type field within the JSON.  By default the @ty
 when the type of the class cannot be determined from a root class, field type, array component type, or template
 argument type.
 >#### ReadOptionsBuilder.addPermanentAlias(`Class<?> sourceClass, String alias`)
+
+### removePermanentAliasTypeNamesMatching
+Call this method to remove alias entries from the "base" `ReadOptionsBuilder` so that new instances of `ReadOptionsBuilders`
+do not contain the removed entries (JVM lifetime). This removes the substitution pairings so that 'read' JSON will not understand
+the short-name aliases that were removed. __Be cautious with removing aliases on the 'read' side. It is usually OK for the
+`ReadOptions` to contain many aliases.  It is the `WriteOptions` you want to manage carefully, especially in a large micro-service
+environment. You want to control what alias substitutions happen on the written side, to ensure that receiving services have
+the appropriate aliases already 'understood' in their alias maps so that they can make the appropriate substitutions.__  
+
+This API matches your wildcard patterns containing *, ?, and regular characters, against fully qualified class names in 
+its cache, and removes the matching entries.
+
+An alternative to using this API is to place your own `aliases.txt` file in the class path. `json-io` ships with
+a pretty extensive list - you can supply your own [aliases.txt](/src/main/resources/config/aliases.txt) file instead of the one shipped with `json-io.`
+>#### WriteOptionsBuilder.removePermanentAliasTypeNamesMatching(`String classNamePattern`)
 
 ### addPermanentReader
 Call this method to add a custom JSON reader to json-io.  It will associate the `Class` 'c' to the reader you pass in. 

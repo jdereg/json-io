@@ -170,7 +170,7 @@ public class WriteOptionsBuilder {
      * @param classNamePattern String pattern to match class names. This String matches using a wild-card
      * pattern, where * matches anything and ? matches one character. As many * or ? can be used as needed.
      */
-    public static void removeAliasedClassNamesMatching(String classNamePattern) {
+    public static void removePermanentAliasTypeNamesMatching(String classNamePattern) {
         String regex = StringUtilities.wildcardToRegexString(classNamePattern);
         Pattern pattern = Pattern.compile(regex);
         BASE_ALIAS_MAPPINGS.keySet().removeIf(key -> pattern.matcher(key).matches());
@@ -326,6 +326,20 @@ public class WriteOptionsBuilder {
         Convention.throwIfClassNotFound(typeName, options.classLoader);
         Convention.throwIfKeyExists(options.aliasTypeNames, typeName, "Tried to create @type alias '" + alias + "' for '" + typeName + "', but it is already aliased to: " + options.aliasTypeNames.get(typeName));
         options.aliasTypeNames.put(typeName, alias);
+    }
+
+    /**
+     * Remove alias entries from this WriteOptionsBuilder instance where the Java fully qualified string
+     * class name matches the passed in wildcard pattern.
+     * @param typeNamePattern String pattern to match class names. This String matches using a wild-card
+     * pattern, where * matches anything and ? matches one character. As many * or ? can be used as needed.
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder removeAliasTypeNameMatching(String typeNamePattern) {
+        String regex = StringUtilities.wildcardToRegexString(typeNamePattern);
+        Pattern pattern = Pattern.compile(regex);
+        options.aliasTypeNames.keySet().removeIf(key -> pattern.matcher(key).matches());
+        return this;
     }
 
     /**

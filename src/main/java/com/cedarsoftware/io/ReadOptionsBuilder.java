@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 import com.cedarsoftware.io.factory.ArrayFactory;
 import com.cedarsoftware.io.factory.ConvertableFactory;
@@ -34,6 +35,7 @@ import com.cedarsoftware.io.reflect.filters.field.EnumFieldFilter;
 import com.cedarsoftware.io.reflect.filters.field.StaticFieldFilter;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
+import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.convert.CommonValues;
 import com.cedarsoftware.util.convert.Convert;
 import com.cedarsoftware.util.convert.ConverterOptions;
@@ -215,6 +217,24 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentAlias(Class<?> sourceClass, String alias) {
         BASE_ALIAS_MAPPINGS.put(sourceClass.getName(), alias);
+    }
+
+    /**
+     * Call this method to remove alias patterns from the ReadsOptionsBuilder. Be careful doing so. In a micro-services
+     * environment, you want the receiving services to know as many substitutions as possible. It is important to control
+     * the aliases on the "written" side, to ensure that written JSON does not include aliases that the receiving
+     * micro-services do not yet 'understand.' Therefore, you should rarely need this API.<br>
+     * <br>
+     * This API matches your wildcard pattern of *, ?, and characters against class names in its cache. It removes the
+     * entries (className to aliasName) from the cache to prevent the resultant classes from being aliased during output.
+     *
+     * @param classNamePattern String pattern to match class names. This String matches using a wild-card
+     * pattern, where * matches anything and ? matches one character. As many * or ? can be used as needed.
+     */
+    public static void removePermanentAliasTypeNamesMatching(String classNamePattern) {
+        String regex = StringUtilities.wildcardToRegexString(classNamePattern);
+        Pattern pattern = Pattern.compile(regex);
+        BASE_ALIAS_MAPPINGS.values().removeIf(value -> pattern.matcher(value).matches());
     }
 
     /**
@@ -539,6 +559,20 @@ public class ReadOptionsBuilder {
      */
     public ReadOptionsBuilder aliasTypeName(String typeName, String alias) {
         addUniqueAlias(typeName, alias);
+        return this;
+    }
+
+    /**
+     * Remove alias entries from this ReadOptionsBuilder instance where the Java fully qualified string
+     * class name matches the passed in wildcard pattern.
+     * @param typeNamePattern String pattern to match class names. This String matches using a wild-card
+     * pattern, where * matches anything and ? matches one character. As many * or ? can be used as needed.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder removeAliasTypeNameMatching(String typeNamePattern) {
+        String regex = StringUtilities.wildcardToRegexString(typeNamePattern);
+        Pattern pattern = Pattern.compile(regex);
+        options.aliasTypeNames.values().removeIf(key -> pattern.matcher(key).matches());
         return this;
     }
 

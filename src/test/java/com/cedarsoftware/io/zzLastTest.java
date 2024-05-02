@@ -3,7 +3,11 @@ package com.cedarsoftware.io;
 import java.math.BigInteger;
 import java.util.Arrays;
 
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Last test to run, deals with static data and dumps out statistics.
@@ -24,10 +28,24 @@ import org.junit.jupiter.api.Test;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@TestMethodOrder(MethodOrderer.Alphanumeric.class)
 class zzLastTest
 {
     @Test
-    void testRemovingAliases()
+    void testRemovingReadAliases()
+    {
+        String json = "[\"Hello\",{\"@type\":\"Integer\",\"value\":16},16,{\"@type\":\"Byte\",\"value\":16},{\"@type\":\"Short\",\"value\":16},{\"@type\":\"ArraysAsList\",\"@items\":[\"foo\",true,{\"@type\":\"Character\",\"value\":\"a\"},{\"@type\":\"BigInteger\",\"value\":\"1\"}]}]";
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        TestUtil.toObjects(json, readOptions, Object[].class);
+
+        ReadOptions readOptions2 = new ReadOptionsBuilder(readOptions).removeAliasTypeNameMatching("*").build();
+        assertThatThrownBy(() -> TestUtil.toObjects(json, readOptions2, Object[].class))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Unknown type (class) 'Integer' not defined");
+    }
+
+    @Test
+    void testRemovingWriteAliases()
     {
         Object[] objects = new Object[] {
                 "Hello",
@@ -38,7 +56,54 @@ class zzLastTest
                 Arrays.asList("foo", true, 'a', BigInteger.ONE)
         };
         String json = TestUtil.toJson(objects);
-        WriteOptionsBuilder.removeAliasedClassNamesMatching("j*a?lang.*");
+        System.out.println(json);
+        WriteOptions writeOptions = new WriteOptionsBuilder().removeAliasTypeNameMatching("j*a?lang.*").build();
+        String json2 = TestUtil.toJson(objects, writeOptions);
+        System.out.println(json2);
+
+        assert json.contains("Integer") && !json.contains("java.lang.Integer");
+        assert json.contains("Byte") && !json.contains("java.lang.Byte");
+        assert json.contains("BigInteger") && !json.contains("java.math.BigInteger");
+        assert json.contains("ArraysAsList") && !json.contains("java.util.Arrays$ArrayList");
+
+        assert json2.contains("java.lang.Integer");
+        assert json2.contains("java.lang.Byte");
+        assert !json2.contains("java.math.BigInteger");
+        assert !json2.contains("java.util.Arrays$ArrayList");
+
+        writeOptions = new WriteOptionsBuilder(writeOptions).removeAliasTypeNameMatching("*").build();
+        json2 = TestUtil.toJson(objects, writeOptions);
+        assert json2.contains("java.math.BigInteger");
+        assert json2.contains("java.util.Arrays$ArrayList");
+    }
+
+    @Test
+    void testRemovingReadAliasesPermanent()
+    {
+        String json = "[\"Hello\",{\"@type\":\"Integer\",\"value\":16},16,{\"@type\":\"Byte\",\"value\":16},{\"@type\":\"Short\",\"value\":16},{\"@type\":\"ArraysAsList\",\"@items\":[\"foo\",true,{\"@type\":\"Character\",\"value\":\"a\"},{\"@type\":\"BigInteger\",\"value\":\"1\"}]}]";
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        TestUtil.toObjects(json, readOptions, Object[].class);
+
+        ReadOptionsBuilder.removePermanentAliasTypeNamesMatching("*");
+        ReadOptions readOptions2 = new ReadOptionsBuilder().build();
+        assertThatThrownBy(() -> TestUtil.toObjects(json, readOptions2, Object[].class))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Unknown type (class) 'Integer' not defined");
+    }
+
+    @Test
+    void testRemovingWriteAliasesPermanent()
+    {
+        Object[] objects = new Object[] {
+                "Hello",
+                16,
+                16L,
+                (byte) 16,
+                (short) 16,
+                Arrays.asList("foo", true, 'a', BigInteger.ONE)
+        };
+        String json = TestUtil.toJson(objects);
+        WriteOptionsBuilder.removePermanentAliasTypeNamesMatching("j*a?lang.*");
         String json2 = TestUtil.toJson(objects);
 
         assert json.contains("Integer") && !json.contains("java.lang.Integer");
@@ -51,7 +116,7 @@ class zzLastTest
         assert !json2.contains("java.math.BigInteger");
         assert !json2.contains("java.util.Arrays$ArrayList");
 
-        WriteOptionsBuilder.removeAliasedClassNamesMatching("*");
+        WriteOptionsBuilder.removePermanentAliasTypeNamesMatching("*");
         json2 = TestUtil.toJson(objects);
         assert json2.contains("java.math.BigInteger");
         assert json2.contains("java.util.Arrays$ArrayList");
