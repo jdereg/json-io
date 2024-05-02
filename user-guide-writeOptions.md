@@ -50,7 +50,7 @@ Aliasing is used to turn long java package names to simple class names, e.g. `ja
 in the JSON.  By default, `json-io` has most of the common JDK classes aliased to make the JSON content smaller.  You can
 add additional aliases for classes in your program.
 
-The APIs below affect one instance of a `WriteOptions` created from a `WriteOptionsBuilder.`  If you want to change it for all, see the "addPermanentXXX()" APIs.  
+The APIs below affect one instance of a `WriteOptions` created from a `WriteOptionsBuilder.`  If you want to change it for all, see the [xxxPermanentXXX()](/src/user-guide-writeOptions.md#application-scoped-options-full-lifecycle-of-jvm) APIs.  
 
 **Note**: For any alias added, `json-io` automatically adds 1D, 2D, and 3D array aliases for the class.  So for example,
 if you add `com.mycompany.Foo ==> Foo` alias, then `Foo[], Foo[][],` and `Foo[][][]` are added as aliases too.
@@ -334,12 +334,12 @@ will automatically be created with permanent aliases added to them.
 >#### WriteOptionsBuilder.addPermanentAlias(`Class<?> clazz, String alias`)
 
 ### removePermanentAliasTypeNamesMatching
-Call this method to remove alias entries from the "base" `WriteOptionsBuilder` so that new instances of `WriteOptionsBuilders`
-do not contain the removed entries (JVM lifetime). This removes the substitution pairings so that written JSON will not include
+Call this method to remove alias entries from the "base" `WriteOptionsBuilder` so that all new instances of `WriteOptions` created
+by `WriteOptionsBuilder` do not contain the removed entries (JVM lifetime). This removes the substitution pairings so that written JSON will not include
 shorter (aliased) names for the types (fully qualified class names) matched. This API matches your wildcard patterns containing
 *, ?, and regular characters, against class names in its cache, and removes the matching entries.
 
-An alternative to using this API is to place your own `aliases.txt` file in the class path. `json-io` ships with
+An alternative to using this API is to place your own [aliases.txt](/src/main/resources/config/aliases.txt) file in the class path. `json-io` ships with
 a pretty extensive list - you can supply your own [aliases.txt](/src/main/resources/config/aliases.txt) file instead of the one shipped with `json-io.`
 >#### WriteOptionsBuilder.removePermanentAliasTypeNamesMatching(`String classNamePattern`)
 
