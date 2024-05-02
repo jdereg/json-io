@@ -47,10 +47,13 @@ be written multiple times, instead references to the original are written.  This
 
 ### Aliasing - shorten class names in @type.
 Aliasing is used to turn long java package names to simple class names, e.g. `java.util.ArrayList` becomes `ArrayList` 
-in the JSON.  By default, json-io has most of the common JDK classes aliased to make the JSON content smaller.  You can
+in the JSON.  By default, `json-io` has most of the common JDK classes aliased to make the JSON content smaller.  You can
 add additional aliases for classes in your program.
 
-The APIs below affect one instance of `WriteOptionsBuilder.`  
+The APIs below affect one instance of a `WriteOptions` created from a `WriteOptionsBuilder.`  If you want to change it for all, see the "addPermanentXXX()" APIs.  
+
+**Note**: For any alias added, `json-io` automatically adds 1D, 2D, and 3D array aliases for the class.  So for example,
+if you add `com.mycompany.Foo ==> Foo` alias, then `Foo[], Foo[][],` and `Foo[][][]` are added as aliases too.
 
 An alternative to using this API is to place your own `aliases.txt` file in the class path. `json-io` ships with
 a pretty extensive list - you can supply your own [aliases.txt](/src/main/resources/config/aliases.txt) file instead of the one shipped with `json-io.`
@@ -73,11 +76,11 @@ entries that match values in the passed in Map. New entries in the Map are added
    anything and ? matches one character. As many * or ? can be used as needed.
 
 ### @type
-Used to provide hint to JsonReader to know what Classes to instantiate. Frequently, json-io can determine
+Used to provide hint to JsonReader to know what Classes to instantiate. Frequently, `json-io` can determine
 what Java type (class) an object is because of the field-type on an object, the component-type of an array, or if the
 root class is specified.  Sometimes, though the type cannot be inferred.  An example would be field on a class that is 
 declared as an `Object` type but more complex, derived instances are assigned to the `Object` field.  In that case,
-json-io will output an additional entry in the JSON object, @type=_typename_ to indicate the class type the reader
+`json-io` will output an additional entry in the JSON object, @type=_typename_ to indicate the class type the reader
 should instantiate and then load with the contents from the input JSON.
 
 >#### `boolean` isAlwaysShowingType()
@@ -190,7 +193,7 @@ class out, giving you the capability to selectively choose fields, format it dif
 ### "Not" Customized Class Writers
 Customized writers are associated to a particular class AND it's derivatives.  If the inheritance model is causing a class to be custom
 written and you do not want that, you can add that class to the "Not" customized list. Being 
-on the "Not" customized list takes priority over the customized list, letting the default json-io JSON writer do its job.
+on the "Not" customized list takes priority over the customized list, letting the default `json-io` JSON writer do its job.
 >#### `boolean` isNotCustomWrittenClass( `Class` )
 >- [ ] Checks if a class is on the not-customized list. Returns `true` if it is, `false` otherwise.
 
@@ -355,9 +358,9 @@ useful for small, immutable classes.
 
 ### addPermanentWriter
 
-Call this method to add a permanent (JVM lifetime) custom JSON writer to json-io.  It will associate the
+Call this method to add a permanent (JVM lifetime) custom JSON writer to `json-io.`  It will associate the
 `clazz` to the writer you pass in.  The writers are found with `isAssignableFrom().` If this is too broad, causing too
-many classes to be associated to the custom writer, you can indicate that json-io should not use a custom write for a 
+many classes to be associated to the custom writer, you can indicate that `json-io` should not use a custom write for a 
 particular class, by calling the `addNotCustomWrittenClass()` method. 
 
 >#### WriteOptionsBuilder.addPermanentWriter(`Class<?> clazz, JsonWriter.JsonClassWriter writer`)
@@ -385,7 +388,7 @@ an example.
 Add a `MethodFilter` that is JVM lifecycle scoped. All `WriteOptions` instances will contain this filter. A `MethodFilter`
 is used to filter (eliminate) a method accessor (getter) from being called. For example, a `getFoo()` method which one
 might think returns the `Foo` member variable, but instead performs undesired extra work before the value is accessed.
-In this case, tell `json-io` to eliminate the `getFoo()` accessor and then json-io will use techniques to attempt
+In this case, tell `json-io` to eliminate the `getFoo()` accessor and then `json-io` will use techniques to attempt
 reading the field directly.
 
 The `MethodFilter` is passed the `Class` and the method name and if it returns 'true' for that pairing, the 'getter' method

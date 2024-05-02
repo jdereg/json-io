@@ -42,7 +42,7 @@ JSON can be`put`into a`Map.`
 >- [ ] Set to`true`to indicate that an exception should be thrown if an unknown class type is encountered,`false`otherwise.
    If`fail`is`false,`then the default class used will be`LinkedHashMap` for the particular JSON object encountered. You can
    set this to your own class using the`unknownTypeClass()`feature. The default setting is `true.` 
->####  `ReadOptionsBuilder` unknownTypeClass(`Class`)
+>#### `ReadOptionsBuilder` unknownTypeClass(`Class`)
 >- [ ] Set the class to use (defaults to`LinkedHashMap.class`) when a JSON object is encountered and there is no
    corresponding Java class to instantiate to receive the values. 
 
@@ -62,7 +62,7 @@ the values be both written and read properly. This feature is off by default.  A
 work for your application, keep in mind, NaN, +Inf, -Inf are not necessarily going to be supported by other APIs and services.
 
 JSON payloads can carry floating point numbers that are much larger than a Java IEEE 754 `Double` can hold. These options allow you
-configure json-io to return these as `BigDecimal` always, only when needed, or never.
+configure `json-io` to return these as `BigDecimal` always, only when needed, or never.
 > #### `boolean`isAllowNanAndInfinity()
 >- [ ] Returns`true`if set to allow serialization of`NaN`and`Infinity`for`doubles`and`floats.`
 >#### `ReadOptionsBuilder` allowNanAndInfinity(`boolean allow`)
@@ -87,7 +87,7 @@ favoring `Double` except when precision would be lost, then `BigDecimal` is retu
                                               
 ### Integer Options
 JSON payloads can carry integer numbers that are much larger than a Java `Long` can hold. These options allow you
-configure json-io to return these as `BigInteger` always, only when needed, or never.
+configure `json-io` to return these as `BigInteger` always, only when needed, or never.
 
 >#### `boolean` isIntegerTypeLong()
 >- [ ] return `true` if integer values should always be returned as a `Long.`  This is the default.
@@ -120,6 +120,8 @@ additional JSON from the stream.  For example, NDJSON is a format of {...}\n{...
 Aliasing is used to turn long java package names to simple class names, e.g. `java.util.ArrayList` becomes `ArrayList`
 in the JSON.  By default, `json-io` has most of the common JDK classes aliased to make the JSON content smaller.  You can
 add additional aliases for classes in your program.
+
+The APIs below affect one instance of a `ReadOptions` created from a `ReadOptionsBuilder.`  If you want to change it for all, see the "xxxPermanentXXX()" APIs.
 
 **Note**: For any alias added, `json-io` automatically adds 1D, 2D, and 3D array aliases for the class.  So for example, 
 if you add `com.mycompany.Foo ==> Foo` alias, then `Foo[], Foo[][],` and `Foo[][][]` are added as aliases too.
@@ -170,7 +172,7 @@ field on the destination object to receive the value.
 destination object to receive the value.
 
 ### Class Factory
-For a class that is failing to instantiate or be read in correctly by the default processing of json-io, you can
+For a class that is failing to instantiate or be read in correctly by the default processing of `json-io,` you can
 associate a`ClassFactory`to a`Class` to remedy the situation. The`ClassFactory's`job is to create instances of the
 associated class, and load the values from the JSON into the class from the JSON object being encountered at the 
 time (it is passed to the`ClassFactory`). This is the preferred method for custom handling a class as opposed to using a`CustomReader.`
@@ -285,9 +287,9 @@ a pretty extensive list - you can supply your own [aliases.txt](/src/main/resour
 >#### WriteOptionsBuilder.removePermanentAliasTypeNamesMatching(`String classNamePattern`)
 
 ### addPermanentReader
-Call this method to add a custom JSON reader to json-io.  It will associate the `Class` 'c' to the reader you pass in. 
+Call this method to add a custom JSON reader to `json-io.`  It will associate the `Class` 'c' to the reader you pass in. 
 The readers are found with `Class.isAssignableFrom().`  If this is too broad, causing too many classes to be associated 
-to the custom reader, you can indicate that json-io should not use a custom reader for a particular class, by calling
+to the custom reader, you can indicate that `json-io` should not use a custom reader for a particular class, by calling
 the `ReadOptionsBuilder.addNotCustomReader()` method.  This method will add the custom reader such that it will be
 there permanently, for the life of the JVM (static).
 >#### ReadOptionsBuilder.addPermanentReader(`Class<?> c, JsonReader.JsonClassReader reader`)
