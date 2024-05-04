@@ -1,9 +1,9 @@
 ## Controlling the output JSON using `WriteOptions`
 Create a new `WriteOptions` instance and turn various features on/off using the methods below. Example:
-
-    WriteOptions writeOptions = new WriteOptionsBuilder().prettyPrint(true).writeLongsAsStrings(true).build();
-    JsonIo.toJson(root, writeOptions);
-
+```java
+WriteOptions writeOptions = new WriteOptionsBuilder().prettyPrint(true).writeLongsAsStrings(true).build();
+JsonIo.toJson(root, writeOptions);
+```
 To pass these to `JsonIo.toJson(root, writeOptions)` set up a `WriteOptions` using the `WriteOptionsBuilder.`
 You can view the Javadoc on the `WriteOptionsBuilder` class for detailed information. The `WriteOptions` are created
 and made read-only by calling the `.build()` method on the `WriteOptionsBuilder.` You can have multiple `WriteOptions`
@@ -132,7 +132,7 @@ sequentially to the same stream.
 #### Example Use Case: NDJSON Format
 NDJSON (Newline Delimited JSON) is a format where multiple JSON objects are separated by newlines (`{...}\n{...}\n{...}`). To efficiently create NDJSON, you might prefer not to close the stream after each JSON object is written, allowing continuous addition to the stream:
 
-```
+```java
    WriteOptions options = new WriteOptionsBuilder().closeStream(false).build();
    OutputStream outputStream = new FileOutputStream("output.ndjson");
    try {
