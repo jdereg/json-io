@@ -53,7 +53,7 @@ associative array.  When reading from a JSON `String` or`InputStream`of JSON, us
 ```java 
 String json = // or InputStream to JSON providing source
 ReadOptions readOptions = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
-Map root = JsonIo.toObjects(json, readOptions);    
+Map root = JsonIo.toObjects(json, readOptions, Map.class);    
 ```
 See the `ReadOptions` below for the feature control options. In the provided example, rather than returning the objects
 converted into Java classes, the raw JSON values are parsed and returned as `Maps`. This forms a graph consisting of all 
