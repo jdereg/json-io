@@ -2,6 +2,7 @@
 * 4.24.0
   * All aliases have been moved to [aliases.txt](/src/main/resources/config/aliases.txt) in the resources folder. It is a very complete list of class names to alias names. If you want less aliases (or more) substituted on writing JSON, use the `addPermanentAlias()` APIs on `ReadOptionsBuilder` and `WriteOptionsBuilder.` If you do not want a particular alias output, use `WriteOptionsBuilder.removeAliasedClassName(wildcardPattern)`. The API is available for all Read/WriteOptions, the "permanent" APIs on the builder, or for a specific Read/WriteOptions instance.
   * The "extendedAliases" option has been removed from Read/Write options builders. By default, as many aliases are enabled as possible, and you can use the removeAliasXXX APIs to reduce them, or place your own version of [aliases.txt](/src/main/resources/config/aliases.txt) in the classpath ahead of the one in `json-io.jar.`
+  * `WriterContext.getObjsReferenced()` added, which has all objects id to `Object` to allow custom writers to write `@id, @ref` if desired.
 * 4.23.0
   * `Collections.unmodifiableXXX()` instances when serialized, restore back to unmodifiable instances.
   * `ImmutableList` and `ImmutableSet` restore back unmodifiable instances.
