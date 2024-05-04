@@ -165,7 +165,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     /**
      *  Map containing all objects that were referenced within input object graph.
      */
-    protected Map<Object, Long> getObjsReferenced() {
+    public Map<Object, Long> getObjsReferenced() {
         return objsReferenced;
     }
 
@@ -345,7 +345,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
         flush();
         objVisited.clear();
-        this.objsReferenced.clear();
+        objsReferenced.clear();
     }
 
     /**
@@ -362,8 +362,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         final Deque<Object> stack = new ArrayDeque<>();
         stack.addFirst(root);
-        final Map<Object, Long> visited = this.objVisited;
-        final Map<Object, Long> referenced = this.objsReferenced;
+        final Map<Object, Long> visited = objVisited;
+        final Map<Object, Long> referenced = objsReferenced;
 
         while (!stack.isEmpty())
         {

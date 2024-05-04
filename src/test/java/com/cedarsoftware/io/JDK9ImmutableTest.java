@@ -13,7 +13,6 @@ import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.CollectionUtilities.listOf;
@@ -643,7 +642,6 @@ class JDK9ImmutableTest
         assertEquals(((ZonedDateTime)map2.keySet().iterator().next()).toEpochSecond(), zdt2.toEpochSecond());
     }
 
-    @Disabled
     @Test
     void testMapValueForwardReferenceOutsideMap() {
         Map<Temporal, Object> map = new LinkedHashMap<>();
@@ -655,7 +653,7 @@ class JDK9ImmutableTest
         Object[] items = new Object[] { map, zdt };
 
         String json = TestUtil.toJson(items, new WriteOptionsBuilder().build());
-        System.out.println(json);
+        
         // JSON below has been manually rearranged to force forward reference
         json = "[\n" +
                 "  {\n" +
@@ -681,12 +679,52 @@ class JDK9ImmutableTest
                 "    \"@items\": [{\"@ref\": 1}, 16, 8, 4]\n" +
                 "  },\n" +
                 "  {\n" +
-                "    \"@ref\": 1,\n" +
+                "    \"@id\": 1,\n" +
                 "    \"@type\": \"ZonedDateTime\",\n" +
                 "    \"value\": \"2024-04-27T20:13:00-05:00\"\n" +
                 "  }\n" +
                 "]\n";
 
+        // No forward reference exceptions
         Object[] objs = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), Object[].class);
+        Map<String, Object> dateKeys = (Map<String, Object>) objs[0];
+        assert dateKeys.values().toArray()[0] instanceof ZonedDateTime;
+        assert dateKeys.values().toArray()[1] instanceof Long;
+        assert dateKeys.values().toArray()[2] instanceof Long;
+        assert dateKeys.values().toArray()[3] instanceof Long;
+    }
+
+    @Test
+    void testMapValueForwardReferenceInsideMap() {
+        // JSON below has been manually rearranged to force forward reference
+        String json = "{\n" +
+                "  \"@type\": \"LinkedHashMap\",\n" +
+                "  \"@keys\": [\n" +
+                "    {\n" +
+                "      \"@ref\": 1\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"@ref\": 2\n" +
+                "    }\n" +
+                "  ],\n" +
+                "  \"@items\": [\n" +
+                "    {\n" +
+                "      \"@id\": 1,\n" +
+                "      \"@type\": \"String\",\n" +
+                "      \"_v\": \"foo\"\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"@id\": 2,\n" +
+                "      \"@type\": \"String\",\n" +
+                "      \"_v\": \"bar\"\n" +
+                "    }\n" +
+                "  ]\n" +
+                "}";
+
+        Map<String, Object> map = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), Map.class);
+        assertEquals("foo", map.keySet().toArray()[0]);
+        assertEquals("foo", map.values().toArray()[0]);
+        assertEquals("bar", map.keySet().toArray()[1]);
+        assertEquals("bar", map.values().toArray()[1]);
     }
 }

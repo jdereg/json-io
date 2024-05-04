@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-@TestMethodOrder(MethodOrderer.Alphanumeric.class)
+@TestMethodOrder(MethodOrderer.DisplayName.class)
 class zzLastTest
 {
     @Test
@@ -56,10 +56,9 @@ class zzLastTest
                 Arrays.asList("foo", true, 'a', BigInteger.ONE)
         };
         String json = TestUtil.toJson(objects);
-        System.out.println(json);
+
         WriteOptions writeOptions = new WriteOptionsBuilder().removeAliasTypeNamesMatching("j*a?lang.*").build();
         String json2 = TestUtil.toJson(objects, writeOptions);
-        System.out.println(json2);
 
         assert json.contains("Integer") && !json.contains("java.lang.Integer");
         assert json.contains("Byte") && !json.contains("java.lang.Byte");

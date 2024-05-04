@@ -1,6 +1,7 @@
 package com.cedarsoftware.io;
 
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -21,7 +22,6 @@ import java.io.IOException;
  */
 public interface WriterContext {
 
-    // TODO: Add access to all objects while writing
     /**
      * Gets the write options for the current serialization
      * @return WriteOptions
@@ -37,4 +37,9 @@ public interface WriterContext {
      * Write any object fully.
      */
     void writeImpl(Object obj, boolean showType) throws IOException;
+
+    /**
+     * Provide access to all objects that are referenced
+     */
+    Map<Object, Long> getObjsReferenced();
 }

@@ -26,10 +26,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class InternalAPIsTest
+class InternalAPIsTest
 {
     @Test
-    public void testDistanceToInterface()
+    void testDistanceToInterface()
     {
         // The values below can differ depending on the JDK versions, so be careful the classes chosen
         assert ClassUtilities.computeInheritanceDistance(Resolver.class, ObjectResolver.class) == -1;
@@ -37,7 +37,7 @@ public class InternalAPIsTest
     }
 
     @Test
-    public void testCleanString()
+    void testCleanString()
     {
         String s = MetaUtils.removeLeadingAndTrailingQuotes("\"Foo\"");
         assert "Foo".equals(s);
@@ -52,19 +52,19 @@ public class InternalAPIsTest
     }
 
     @Test
-    public void testProtectedAPIs()
+    void testProtectedAPIs()
     {
         FastByteArrayOutputStream fbao = new FastByteArrayOutputStream();
         DerivedWriter writer = new DerivedWriter(fbao);
-        Map ref = writer.getObjsReferenced();
-        Map vis = writer.getObjVisited();
+        Map<Object, Long> ref = writer.getObjsReferenced();
+        Map<Object, Long> vis = writer.getObjVisited();
         assertNotNull(ref);
         assertNotNull(vis);
     }
 
-    public static class DerivedWriter extends JsonWriter
+    static class DerivedWriter extends JsonWriter
     {
-        public DerivedWriter(OutputStream out)
+        DerivedWriter(OutputStream out)
         {
             super(out);
         }
