@@ -71,7 +71,6 @@ class JsonParser {
     private final int maxParseDepth;
     private final ReadOptions readOptions;
     private final ReferenceTracker references;
-    private final Resolver resolver;
 
     static {
         // substitutes
@@ -132,10 +131,9 @@ class JsonParser {
     }
 
     JsonParser(FastReader reader, Resolver resolver) {
-        this.input = reader;
-        this.resolver = resolver;
-        this.readOptions = resolver.getReadOptions();
-        this.references = resolver.getReferences();
+        input = reader;
+        readOptions = resolver.getReadOptions();
+        references = resolver.getReferences();
         maxParseDepth = readOptions.getMaxDepth();
         allowNanAndInfinity = readOptions.isAllowNanAndInfinity();
     }
