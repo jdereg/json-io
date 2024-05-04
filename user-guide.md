@@ -4,56 +4,56 @@
 ### Typed Usage
 
 _Example 1: Java object graph to JSON String_
-
-    Employee emp;
-    // Emp fetched from database
-    String json = JsonIo.toJson(emp, writeOptions);
-
+```java
+Employee emp;
+// Emp fetched from database
+String json = JsonIo.toJson(emp, writeOptions);
+```
 This example will convert the `Employee` instance to a JSON String, including nested sub-objects.  If
 `JsonIo.toObjects(json, readOptions, Employee.class)` were used on this JSON `String,` a new Java `Employee` instance would be returned.  
 
 See [WriteOptions reference](/user-guide-writeOptions.md) for list of all `WriteOptions` and instructions on how to use.
 
 _Example 2: String to Java object_
-
-    String json = // String JSON representing Employee instance
-    Employee employee = JsonIo.toObjects(json, readOptions, Employee.class);
-
+```java
+String json = // String JSON representing Employee instance
+Employee employee = JsonIo.toObjects(json, readOptions, Employee.class);
+```
 This will convert the JSON String back to a Java Object graph. 
 
 See [ReadOptions reference](/user-guide-readOptions.md) for a list of all `ReadOptions` and instructions on how to use. 
 
 _Example 3: Java Object to `OutputStream`_
-
-    Employee emp;
-    // emp obtained from data store...
-    JsonIo.toJson(outputStream, emp, writeOptions);       
-
+```java
+Employee emp;
+// emp obtained from data store...
+JsonIo.toJson(outputStream, emp, writeOptions);       
+```
 In this example, a Java object is written to an `OutputStream` in JSON format.  The stream is closed when finished.  If
 you need to keep the `OutputStream` open (e.g. NDJSON), then set `writeOptions.closeStream(false).` Example:
-
-    WriteOptions writeOptions = new WriteOptionsBuilder().closeStream(false).build();
-    JsonIo.toJson(outputStream, record1, writeOptions);    
-    JsonIo.toJson(outputStream, record2, writeOptions);
-    ...
-    JsonIo.toJson(outputStream, recordn, writeOptions);
-    outputStream.close();
-
+```java
+WriteOptions writeOptions = new WriteOptionsBuilder().closeStream(false).build();
+JsonIo.toJson(outputStream, record1, writeOptions);    
+JsonIo.toJson(outputStream, record2, writeOptions);
+...
+JsonIo.toJson(outputStream, recordn, writeOptions);
+outputStream.close();
+```
 
 _Example 4: `InputStream` to Java object_
-
-    Employee emp = JsonIo.toObjects(stream, readOptions, Employee.class);
-
+```java
+Employee emp = JsonIo.toObjects(stream, readOptions, Employee.class);
+```
 In this example, an`InputStream`is supplying the JSON.
 
 ### Untyped Usage
 **json-io** provides the choice to use the generic `Map` of `Maps` representation of an object, akin to a Javascript
 associative array.  When reading from a JSON `String` or`InputStream`of JSON, use `JsonIo:`
 
-``` 
-    String json = // or InputStream to JSON providing source
-    ReadOptions readOptions = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
-    Map root = JsonIo.toObjects(json, readOptions);    
+```java 
+String json = // or InputStream to JSON providing source
+ReadOptions readOptions = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+Map root = JsonIo.toObjects(json, readOptions);    
 ```
 See the `ReadOptions` below for the feature control options. In the provided example, rather than returning the objects
 converted into Java classes, the raw JSON values are parsed and returned as `Maps`. This forms a graph consisting of all 
@@ -78,10 +78,10 @@ arguments, etc. There are unlimited Java classes 'out-there' that `json-io` has 
 resorts to a lot of "tricks" to make that happen.  However, if a particular class is not instantiating, add a
 `JsonReader.ClassFactory` (one that you write, which subclasses this interface) and associate it to the class you want to
 instantiate. See [examples](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectsTest.java) for how to do this.
-~~~
+```java
 JsonReader.ClassFactory    // Create a class that implements this interface
 JsonWriter.JsonClassWriter // Create a class that implements this interface
-~~~
+```
 
 Your `JsonReader.ClassFactory` class is called after the JSON is parsed and `json-io` is converting all the Maps to
 Java instances.  Your factory class is passed the JsonObject (a Map) with the fields and values from the JSON so that 
@@ -116,11 +116,11 @@ Even though **json-io** is great for Java / Javascript serialization, here are s
 
 #### Cloning
 Many projects use `JsonIo` to write an object to JSON, then read it in, cloning the original object graph:
-
-    Employee emp;
-    // emp obtained from somewhere...
-    Employee deepCopy = (Employee) JsonIo.deepCopy(emp, null, null);   // ReadOptions, WriteOptions can be null
-
+```java
+Employee emp;
+// emp obtained from somewhere...
+Employee deepCopy = (Employee) JsonIo.deepCopy(emp, null, null);   // ReadOptions, WriteOptions can be null
+```
 #### Debugging
 Instead of `System.out.println()` debugging, call `JsonIo.toJson(obj, writeOptions)` and dump the JSON
 string out. That will give you the full referenceable graph dump in JSON.  Use the prettyPrint feature of `WriteOptions`

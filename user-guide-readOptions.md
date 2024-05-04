@@ -1,7 +1,7 @@
 ## Controlling the input JSON using `ReadOptions`
 To configure read options for use with `JsonIo.toObjects(),` you need to set up a `ReadOptions` instance using the
 `ReadOptionsBuilder.` Here’s how you can create and customize a new `ReadOptions` instance:
-```
+```java           
 ReadOptions readOptions = new ReadOptionsBuilder()
 .feature1()
 .feature2(args)

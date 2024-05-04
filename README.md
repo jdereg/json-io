@@ -24,17 +24,17 @@ Both of these features ensure that our library can be seamlessly integrated into
 ___
 To include in your project:
 ##### Gradle
-```
+```groovy
 implementation 'com.cedarsoftware:json-io:4.23.0'
 ```
 
 ##### Maven
-```
-    <dependency>
-      <groupId>com.cedarsoftware</groupId>
-      <artifactId>json-io</artifactId>
-      <version>4.23.0</version>
-    </dependency>
+```xml
+ <dependency>
+   <groupId>com.cedarsoftware</groupId>
+   <artifactId>json-io</artifactId>
+   <version>4.23.0</version>
+ </dependency>
 ```
 ___
 
