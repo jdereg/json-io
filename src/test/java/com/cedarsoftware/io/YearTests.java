@@ -9,6 +9,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -105,8 +107,8 @@ class YearTests extends SerializationDeserializationMinimumTests<Year> {
     void testOldFormat_nestedObject() {
         String json = "{\"@type\":\"com.cedarsoftware.io.YearTests$NestedYear\",\"dateTime1\":{\"@id\":1,\"year\":1970},\"dateTime2\":{\"@ref\":1}}";
         NestedYear date = TestUtil.toObjects(json, null);
-        assertThat(date.dateTime1.getValue()).isEqualTo(1970);
-        assertThat(date.dateTime1).isSameAs(date.dateTime2);
+        assertEquals(1970, date.dateTime1.getValue());
+        assertSame(date.dateTime1, date.dateTime2);
     }
 
     @Test
@@ -114,7 +116,7 @@ class YearTests extends SerializationDeserializationMinimumTests<Year> {
         Year date = Year.of(2014);
         String json = TestUtil.toJson(date);
         Year result = TestUtil.toObjects(json, null);
-        assertThat(result).isEqualTo(date);
+        assertEquals(result, date);
     }
 
     @Test

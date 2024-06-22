@@ -71,6 +71,7 @@ public class ReadOptionsBuilder {
     private static final Set<Class<?>> BASE_NON_REFS = ConcurrentHashMap.newKeySet();
     private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_SETTERS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Set<String>> BASE_NOT_IMPORTED_FIELDS = new ConcurrentHashMap<>();
+    private final static ReadOptions defReadOptions;
     private final DefaultReadOptions options;
 
     static {
@@ -82,8 +83,17 @@ public class ReadOptionsBuilder {
         loadBaseNonRefs();
         loadBaseFieldsNotImported();
         loadBaseNonStandardSetters();
+
+        defReadOptions = new ReadOptionsBuilder().build();
     }
 
+    /**
+     * @return Default ReadOptions - no construction needed, unmodifiable.
+     */
+    public static ReadOptions getDefaultReadOptions() {
+        return defReadOptions;
+    }
+    
     /**
      * Start with default options
      */

@@ -181,7 +181,7 @@ public class JsonReader implements Closeable
     }
 
     public JsonReader(InputStream inputStream, ReadOptions readOptions, ReferenceTracker references) {
-        this.readOptions = readOptions == null ? new ReadOptionsBuilder().returnAsJavaObjects().build() : readOptions;
+        this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
         Converter converter = new Converter(this.readOptions.getConverterOptions());
         this.input = getReader(inputStream);
 

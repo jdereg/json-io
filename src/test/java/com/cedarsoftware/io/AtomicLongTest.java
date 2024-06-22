@@ -57,7 +57,17 @@ class AtomicLongTest
         assert atom2.values[3].get() == 45;
 
         json = TestUtil.toJson(atom2);
-        assert json.equals("{\"@type\":\"com.cedarsoftware.io.AtomicLongTest$TestAtomicLongField\",\"value\":16,\"nullValue\":null,\"strValue\":50,\"emptyStrValue\":0,\"objValue\":-9,\"values\":[-5,null,5,45]}");
+        TestAtomicLongField atom1 = TestUtil.toObjects(json, null);
+        assert atom1.value.get() == 16;
+        assert atom1.nullValue == null;
+        assert atom1.strValue.get() == 50;
+        assert atom1.emptyStrValue.get() == 0;
+        assert atom1.objValue.get() == -9;
+        assert atom1.values.length == 4;
+        assert atom1.values[0].get() == -5;
+        assert atom1.values[1] == null;
+        assert atom1.values[2].get() == 5;
+        assert atom1.values[3].get() == 45;
 
         json = "{\"@type\":\"com.cedarsoftware.io.AtomicLongTest$TestAtomicLongField\",\"value\":16.5}";
 

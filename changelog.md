@@ -1,4 +1,9 @@
 ### Revision History
+* 4.25.0
+  * `JsonParser` now uses an instance-based cache for common values, not a static one.  This will allow for more speed during concurrent parsing.
+  * Within `aliases.txt,` `java.time.zone.ZoneRules = ZoneRules` is now correctly specified (it had `java.time.ZoneRules` before).
+  * When `null` passed in for `ReadOptions` or `WriteOptions` to `JsonIo` APIs, an already created default instance of `ReadOptions` or `WriteOptions` is returned to improve performance (no need to reconstruct the default instance).
+  * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `2.9.0` to `2.10.0.`
 * 4.24.0
   * All aliases have been moved to [aliases.txt](/src/main/resources/config/aliases.txt) in the resources folder. It is a very complete list of class names to alias names. If you want less aliases (or more) substituted on writing JSON, use the `addPermanentAlias()` APIs on `ReadOptionsBuilder` and `WriteOptionsBuilder.` If you do not want a particular alias output, use `WriteOptionsBuilder.removeAliasedClassName(wildcardPattern)`. The API is available for all Read/WriteOptions, the "permanent" APIs on the builder, or for a specific Read/WriteOptions instance.
   * The "extendedAliases" option has been removed from Read/Write options builders. By default, as many aliases are enabled as possible, and you can use the removeAliasXXX APIs to reduce them, or place your own version of [aliases.txt](/src/main/resources/config/aliases.txt) in the classpath ahead of the one in `json-io.jar.`

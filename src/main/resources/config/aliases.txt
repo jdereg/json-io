@@ -47,7 +47,7 @@ java.time.ZonedDateTime = ZonedDateTime
 java.time.ZoneId = ZoneId
 java.time.ZoneOffset = ZoneOffset
 java.time.ZoneRegion = ZoneRegion
-java.time.ZoneRules = ZoneRules
+java.time.zone.ZoneRules = ZoneRules
 
 sun.util.calendar.ZoneInfo = ZoneInfo
 

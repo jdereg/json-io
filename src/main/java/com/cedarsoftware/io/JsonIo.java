@@ -120,7 +120,7 @@ public class JsonIo {
     public static void toJson(OutputStream out, Object source, WriteOptions writeOptions) {
         Convention.throwIfNull(out, "OutputStream cannot be null");
         if (writeOptions == null) {
-            writeOptions = new WriteOptionsBuilder().build();
+            writeOptions = WriteOptionsBuilder.getDefaultWriteOptions();
         }
         JsonWriter writer = null;
         try {
@@ -177,7 +177,7 @@ public class JsonIo {
     public static <T> T toObjects(InputStream in, ReadOptions readOptions, Class<T> rootType) {
         Convention.throwIfNull(in, "InputStream cannot be null");
         if (readOptions == null) {
-            readOptions = new ReadOptionsBuilder().returnAsJavaObjects().build();
+            readOptions = ReadOptionsBuilder.getDefaultReadOptions();
         }
 
         JsonReader jr = null;
@@ -213,7 +213,9 @@ public class JsonIo {
      * @return a typed Java instance object graph.
      */
     public static <T> T toObjects(JsonObject jsonObject, ReadOptions readOptions, Class<T> rootType) {
-        if (readOptions == null || !readOptions.isReturningJavaObjects()) {
+        if (readOptions == null) {
+            readOptions = ReadOptionsBuilder.getDefaultReadOptions();
+        } else if (!readOptions.isReturningJavaObjects()) {
             readOptions = new ReadOptionsBuilder(readOptions).returnAsJavaObjects().build();
         }
         JsonReader reader = new JsonReader(readOptions);
@@ -232,7 +234,9 @@ public class JsonIo {
             writeOptions = new WriteOptionsBuilder(writeOptions).prettyPrint(true).build();
         }
 
-        if (readOptions == null || !readOptions.isReturningJavaObjects()) {
+        if (readOptions == null) {
+            readOptions = ReadOptionsBuilder.getDefaultReadOptions();
+        } else if (!readOptions.isReturningJavaObjects()) {
             readOptions = new ReadOptionsBuilder(readOptions).returnAsJavaObjects().build();
         }
 
@@ -264,7 +268,11 @@ public class JsonIo {
         }
 
         writeOptions = new WriteOptionsBuilder(writeOptions).showTypeInfoMinimal().shortMetaKeys(true).build();
-        readOptions = new ReadOptionsBuilder(readOptions).build();
+        if (readOptions == null) {
+            readOptions = ReadOptionsBuilder.getDefaultReadOptions();
+        } else {
+            readOptions = new ReadOptionsBuilder(readOptions).build();
+        }
 
         String json = toJson(source, writeOptions);
         return (T) toObjects(json, readOptions, source.getClass());

@@ -62,6 +62,7 @@ public class WriteOptionsBuilder {
     private static final Map<String, FieldFilter> BASE_FIELD_FILTERS = new ConcurrentHashMap<>();
     private static final Map<String, MethodFilter> BASE_METHOD_FILTERS = new ConcurrentHashMap<>();
     private static final Map<String, AccessorFactory> BASE_ACCESSOR_FACTORIES = new ConcurrentHashMap<>();
+    private static final WriteOptions defWriteOptions;
     private final DefaultWriteOptions options;
 
     static {
@@ -77,6 +78,15 @@ public class WriteOptionsBuilder {
         addPermanentMethodFilter("default", new DefaultMethodFilter());
         addPermanentAccessorFactory("get", new GetMethodAccessorFactory());
         addPermanentAccessorFactory("is", new IsMethodAccessorFactory());
+
+        defWriteOptions = new WriteOptionsBuilder().build();
+    }
+
+    /**
+     * @return Default WriteOptions - no construction needed, unmodifiable.
+     */
+    public static WriteOptions getDefaultWriteOptions() {
+        return defWriteOptions;
     }
 
     /**
