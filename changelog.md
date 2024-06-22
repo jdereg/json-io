@@ -1,4 +1,6 @@
 ### Revision History
+* 4.26.0
+  * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `2.10.0` to `2.11.0.`
 * 4.25.0
   * `JsonParser` now uses an instance-based cache for common values, not a static one.  This will allow for more speed during concurrent parsing.
   * Within `aliases.txt,` `java.time.zone.ZoneRules = ZoneRules` is now correctly specified (it had `java.time.ZoneRules` before).
