@@ -59,9 +59,17 @@ import static com.cedarsoftware.util.MathUtilities.parseToMinimalNumericType;
  */
 class JsonParser {
     private static final JsonObject EMPTY_ARRAY = new JsonObject();  // compared with ==
-    private static final Map<String, String> stringCache = new LRUCache<>(2500);
-    private static final Map<Number, Number> numberCache = new LRUCache<>(2500);
-    private static final Map<String, String> substitutes = new LinkedHashMap<>();
+    private final Map<String, String> stringCache = new LinkedHashMap<String, String>() {
+        protected boolean removeEldestEntry(Map.Entry eldest) {
+            return size() > 2500;
+        }
+    };
+    private final Map<Number, Number> numberCache = new LinkedHashMap<Number, Number>() {
+        protected boolean removeEldestEntry(Map.Entry eldest) {
+            return size() > 2500;
+        }
+    };
+    private final Map<String, String> substitutes = new LinkedHashMap<>();
     private final FastReader input;
     private final StringBuilder strBuf = new StringBuilder(256);
     private final StringBuilder hexBuf = new StringBuilder();
@@ -72,7 +80,7 @@ class JsonParser {
     private final ReadOptions readOptions;
     private final ReferenceTracker references;
 
-     static {
+     {
         // substitutes
         substitutes.put(SHORT_ID, ID);
         substitutes.put(SHORT_REF, REF);

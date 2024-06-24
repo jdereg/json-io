@@ -137,7 +137,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      */
     public JsonWriter(OutputStream out)
     {
-        this(out, new WriteOptionsBuilder().build());
+        this(out, null);
     }
 
     /**
