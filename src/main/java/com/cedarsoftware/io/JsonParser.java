@@ -12,7 +12,6 @@ import java.util.Map;
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.FastReader;
-import com.cedarsoftware.util.LRUCache;
 
 import static com.cedarsoftware.io.JsonObject.ID;
 import static com.cedarsoftware.io.JsonObject.ITEMS;

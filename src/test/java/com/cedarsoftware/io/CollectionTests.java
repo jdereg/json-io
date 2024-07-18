@@ -23,6 +23,7 @@ import java.util.TreeSet;
 
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
+import com.cedarsoftware.util.SealableList;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.CollectionUtilities.listOf;
@@ -603,6 +604,23 @@ class CollectionTests {
         TestUtil.printLine(json);
         List<Object> dupe = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
         assert DeepEquals.deepEquals(list, dupe);
+    }
+
+    @Test
+    void testReadListOfInJDK1_8()
+    {
+        // java.util.ImmutableCollections$ListN - created by using JDK9+ and then storing the String so that we are
+        // still JDK 1.8 but can test how it properly handles a List.of() generated JSON.
+        //
+        // First, note that the ImmutableCollection is aliased to ListN.  This will then be unaliased when read in.
+        // Second, the java.util.ImmutableCollections$ListN = com.cedarsoftware.io.factory.ImmutableListFactory entry
+        // in the classFactory.txt file will cause the ImmutableCollection$ListN to be created by the
+        // ImmutableListFactory.
+        // Third, the ImmutableListFactory will create the List as a SealableList, which allows it to be added to
+        // during construction and then sealed (become immutable) before passing back to caller.
+        String json = "{\"@type\":\"ListN\",\"@items\":[\"alpha\",\"bravo\",\"charlie\",\"delta\"]}";
+        List<String> x = JsonIo.toObjects(json, null, null);
+        assert x instanceof SealableList;
     }
 
     private static Date _testDate = new Date();
