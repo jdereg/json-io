@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import com.google.gson.JsonParser;
+
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -57,7 +59,10 @@ class AtomicIntegerTest
         assert atom2.values[3].get() == 45;
 
         json = TestUtil.toJson(atom2);
-        assert json.equals("{\"@type\":\"com.cedarsoftware.io.AtomicIntegerTest$TestAtomicIntegerField\",\"value\":16,\"nullValue\":null,\"strValue\":50,\"emptyStrValue\":0,\"objValue\":-9,\"values\":[-5,null,5,45]}");
+        
+        String expectedJson = "{\"@type\":\"com.cedarsoftware.io.AtomicIntegerTest$TestAtomicIntegerField\",\"value\":16,\"nullValue\":null,\"strValue\":50,\"emptyStrValue\":0,\"objValue\":-9,\"values\":[-5,null,5,45]}";
+
+        assert JsonParser.parseString(json).equals(JsonParser.parseString(expectedJson));
         
         json = "{\"@type\":\"com.cedarsoftware.io.AtomicIntegerTest$TestAtomicIntegerField\",\"value\":16.5}";
         TestAtomicIntegerField aif = TestUtil.toObjects(json, null);
