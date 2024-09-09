@@ -1,5 +1,8 @@
 package com.cedarsoftware.util.io;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -52,6 +55,16 @@ class PrettyPrintTest
         nice.dictionary.put("bigdec", new BigDecimal("3.141592653589793238462643383"));
 
         String target = TestUtil.fetchResource("format/prettyPrint.json");
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS);
+
+        // Create an ordered ObjectNode for serialization
+        ObjectNode orderedNode = objectMapper.createObjectNode();
+        orderedNode.putPOJO("name", nice.name);
+        orderedNode.putPOJO("items", nice.items);
+        orderedNode.putPOJO("dictionary", nice.dictionary);
+
         WriteOptions writeOptions = new WriteOptionsBuilder().withPrettyPrint().build();
         String json = TestUtil.toJson(nice, writeOptions);
 
