@@ -322,6 +322,17 @@ public class ReadOptionsBuilder {
     }
 
     /**
+     * Add a class to the injector factory list - allows to add injector to the class
+     *
+     * @param factory Class to add to the injector factory list.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder addInjectorFactory(InjectorFactory factory) {
+        options.injectorFactories.add(factory);
+        return this;
+    }
+
+    /**
      * Add a class to the not-customized list - the list of classes that you do not want to be picked up by a
      * custom reader (that could happen through inheritance).
      *
