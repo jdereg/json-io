@@ -268,7 +268,7 @@ public class JsonReader implements Closeable
         Converter converter = getResolver().getConverter();
         if (converter.isConversionSupportedFor(graph.getClass(), rootType)) {
             return (graph instanceof Map) ?
-                    converter.convert((T) pickNotEmpty((Map<?, ?>) graph, (Map<?, ?>) returnValue), rootType)
+                    converter.convert(pickNotEmpty((Map<?, ?>) graph, (Map<?, ?>) returnValue), rootType)
                     : converter.convert(graph, rootType);
         }
         throw new JsonIoException("Return type mismatch, expected: " + rootType.getName() + ", actual: " + graph.getClass().getName() +

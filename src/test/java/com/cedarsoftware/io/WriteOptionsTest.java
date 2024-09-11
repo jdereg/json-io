@@ -270,6 +270,7 @@ class WriteOptionsTest {
         assertThrows(IllegalArgumentException.class, ()-> new WriteOptionsBuilder()
                 .aliasTypeName("int", "properInt")
                 .aliasTypeName("long", "properLong")
+                .removeAliasTypeNamesMatching("int")
                 .build());
     }
 

@@ -85,11 +85,6 @@ public class MetaUtils
     private MetaUtils () {}
     enum Dumpty {}
 
-    public static final String META_CLASS_FIELD_NAME = "metaClass";
-
-    public static final String META_CLASS_NAME = "groovy.lang.MetaClass";
-
-    private static final Map<String, Class<?>> nameToClass = new HashMap<>();
     private static final ConcurrentMap<String, CachedConstructor> constructors = new ConcurrentHashMap<>();
     static final ThreadLocal<SimpleDateFormat> dateFormat = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
     private static boolean useUnsafe = false;
@@ -155,22 +150,6 @@ public class MetaUtils
         }
     }
 
-    static
-    {
-        nameToClass.put("boolean", boolean.class);
-        nameToClass.put("char", char.class);
-        nameToClass.put("byte", byte.class);
-        nameToClass.put("short", short.class);
-        nameToClass.put("int", int.class);
-        nameToClass.put("long", long.class);
-        nameToClass.put("float", float.class);
-        nameToClass.put("double", double.class);
-        // Logical primitives
-        nameToClass.put("string", String.class);
-        nameToClass.put("date", Date.class);
-        nameToClass.put("class", Class.class);
-    }
-    
     public static Optional<Class<?>> getClassIfEnum(Class<?> c) {
         if (c.isEnum()) {
             return Optional.of(c);
@@ -601,9 +580,7 @@ public class MetaUtils
 
     public static void trySetAccessible(AccessibleObject object)
     {
-        safelyIgnoreException(() -> {
-            object.setAccessible(true);
-        });
+        safelyIgnoreException(() -> object.setAccessible(true));
     }
 
     public static <T> T safelyIgnoreException(Callable<T> callable, T defaultValue) {
@@ -799,12 +776,5 @@ public class MetaUtils
             }
         }
         return closest;
-    }
-
-    static final Pattern primArray = Pattern.compile("\\[+[ZBCDFIJS]");
-
-    static boolean isPrimitiveArrayUsingClassName(Class<?> arrayClass) {
-        String className = arrayClass.getName();
-        return primArray.matcher(className).matches();
     }
 }
