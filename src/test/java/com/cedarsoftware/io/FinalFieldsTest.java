@@ -2,8 +2,6 @@ package com.cedarsoftware.io;
 
 import java.io.Serializable;
 
-import com.cedarsoftware.io.reflect.factories.AllowAllNonStaticFieldMethodInjectorFactory;
-
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -18,9 +16,7 @@ class FinalFieldsTest {
         String jsonOut = TestUtil.toJson(expected);
         TestUtil.printLine(jsonOut);
 
-        FinalFieldsIncluded actual = TestUtil.toObjects(jsonOut, new ReadOptionsBuilder()
-                .addInjectorFactory(new AllowAllNonStaticFieldMethodInjectorFactory())
-                .build(), null);
+        FinalFieldsIncluded actual = TestUtil.toObjects(jsonOut, null);
 
         Assertions.assertEquals(expected._charFinalA, actual._charFinalA);
         Assertions.assertEquals(expected._stringFinalA, actual._stringFinalA);
