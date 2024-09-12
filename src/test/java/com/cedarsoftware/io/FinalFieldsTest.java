@@ -39,8 +39,8 @@ class FinalFieldsTest {
         public final ComplexObject _object = ComplexObject.newDefaultObject();
 
         private FinalFieldsIncluded(final char charFinalA, final String stringFinalA) {
-            _charFinalA = charFinalA;
-            _stringFinalA = stringFinalA;
+            this._charFinalA = charFinalA;
+            this._stringFinalA = stringFinalA;
         }
 
         public static FinalFieldsIncluded newDefaultObject() {
@@ -55,7 +55,7 @@ class FinalFieldsTest {
         public String _stringB;
 
         private ComplexObject(final String stringFinalA) {
-            _stringFinalA = stringFinalA;
+            this._stringFinalA = stringFinalA;
         }
 
         public static ComplexObject newDefaultObject() {
