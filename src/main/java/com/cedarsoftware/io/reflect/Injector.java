@@ -1,5 +1,7 @@
 package com.cedarsoftware.io.reflect;
 
+import static java.lang.reflect.Modifier.isPublic;
+
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -9,8 +11,6 @@ import java.lang.reflect.Type;
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.StringUtilities;
-
-import static java.lang.reflect.Modifier.isPublic;
 
 /**
  * @author Ken Partlow (kpartlow@gmail.com)
@@ -67,6 +67,7 @@ public class Injector {
     }
 
     public static Injector create(Field field, String methodName, String uniqueFieldName) {
+        // find method that returns void
         try {
             MethodType methodType = MethodType.methodType(Void.class, field.getType());
             MethodHandle handle = MethodHandles.publicLookup().findVirtual(field.getDeclaringClass(), methodName, methodType);
@@ -84,8 +85,7 @@ public class Injector {
 
         try {
             injector.invoke(object, value);
-        }
-        catch (ClassCastException e) {
+        } catch (ClassCastException e) {
             String msg = e.getMessage();
             if (StringUtilities.hasContent(msg) && msg.contains("LinkedHashMap")) {
                 throw new JsonIoException("Unable to set field: " + getName() + " using " + getDisplayName() + ".", e);
@@ -95,8 +95,7 @@ public class Injector {
             } catch (Throwable t) {
                 throw new JsonIoException("Unable to set field: " + getName() + " using " + getDisplayName() + ". Getting a ClassCastException.", e);
             }
-        }
-        catch (Throwable t) {
+        } catch (Throwable t) {
             if (t instanceof JsonIoException) {
                 throw (JsonIoException) t;
             }
