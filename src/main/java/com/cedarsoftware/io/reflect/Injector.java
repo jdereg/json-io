@@ -1,11 +1,10 @@
 package com.cedarsoftware.io.reflect;
 
-import static java.lang.reflect.Modifier.isPublic;
-
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 
 import com.cedarsoftware.io.JsonIoException;
@@ -45,8 +44,9 @@ public class Injector {
     }
 
     public static Injector create(Field field, String uniqueFieldName) {
-        if (!isPublic(field.getModifiers()) || !isPublic(field.getDeclaringClass().getModifiers())) {
+        if (!Modifier.isStatic(field.getModifiers()) && !field.isAccessible()) {
             try {
+                // it makes Lookup to be changed to trusted during the unreflectField
                 field.setAccessible(true);
             } catch (Exception ioe) {
                 // If object could not be set accessible let's escape here instead
