@@ -1223,6 +1223,8 @@ public class ReadOptionsBuilder {
 
                     if (map.putIfAbsent(name, field) != null) {
                         map.put(field.getDeclaringClass().getSimpleName() + '.' + name, field);
+                        // to support inner classes that were serialized by previous version of json-io
+                        map.put(field.getDeclaringClass().getName() + '.' + name, field);
                     }
                 }
                 curr = curr.getSuperclass();
