@@ -508,3 +508,8 @@ The `addPermanentNonStandardSetter` method in `json-io` allows you to define cus
 - **Example Usage**: An example of using this feature is with the `Throwable` class in Java. Typically, to set a cause on a `Throwable`, the `initCause()` method is used instead of a standard setter. Configuring `addPermanentNonStandardSetter(Throwable.class, "cause", "initCause")` instructs `json-io` to use `initCause()` to set the cause from the JSON data:
 
 >#### ReadOptionsBuilder.addPermanentNonStandardSetter(`Class<?> clazz, String fieldName, String setterName`)
+
+### Add Injector factory
+The `addInjectorFactory` method in `json-io` allows you to specify a custom, global approach for injecting values into an object. For instance, if you have a specific way of declaring setter methods and want them to be invoked when setting values, this method can accommodate that. Additionally, it can be used to customize value injection for inner classes with special naming conventions.
+
+>#### ReadOptionsBuilder.addInjectorFactory(`InjectorFactory factory`)
