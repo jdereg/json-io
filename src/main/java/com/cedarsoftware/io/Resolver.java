@@ -121,7 +121,7 @@ public abstract class Resolver {
             "java.time.ZoneRegion",
             "sun.util.calendar.ZoneInfo"
     )));
-    
+
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
      * could not yet be loaded, as the @ref appears ahead of the referenced object's
@@ -170,9 +170,11 @@ public abstract class Resolver {
     public ReadOptions getReadOptions() {
         return readOptions;
     }
+
     public ReferenceTracker getReferences() {
         return references;
     }
+
     public Converter getConverter() {
         return converter;
     }
@@ -272,7 +274,7 @@ public abstract class Resolver {
     public void push(JsonObject jsonObject) {
         stack.push(jsonObject);
     }
-    
+
     public abstract void traverseFields(final JsonObject jsonObj);
 
     protected abstract Object readWithFactoryIfExists(final Object o, final Class<?> compType);
@@ -282,7 +284,7 @@ public abstract class Resolver {
     protected abstract void traverseArray(JsonObject jsonObj);
 
     public abstract void assignField(final JsonObject jsonObj, final Injector injector, final Object rhs);
-    
+
     protected void cleanup() {
         patchUnresolvedReferences();
         rehashMaps();
@@ -372,7 +374,7 @@ public abstract class Resolver {
         Class targetType = jsonObj.getJavaType();
         jsonObj.setJavaType(coerceClassIfNeeded(targetType));
         targetType = jsonObj.getJavaType();
-        
+
         // Does a 'Converter' conversion exist?
         if (jsonObj.hasValue() && jsonObj.getValue() != null) {
             if (converter.isConversionSupportedFor(jsonObj.getValue().getClass(), targetType)) {
@@ -396,17 +398,17 @@ public abstract class Resolver {
 
         // EnumSet
         Object mayEnumSpecial = jsonObj.get("@enum");
-        if (mayEnumSpecial instanceof String) {
+        Class<?> c = jsonObj.getJavaType();
+        // support deserialization of EnumSet an old serialization of json-io library (second condition)
+        if (mayEnumSpecial instanceof String || EnumSet.class.isAssignableFrom(c)) {
             // TODO: This should move to EnumSetFactory - Both creating the enum and extracting the enumSet.
-            Class<?> clazz = ClassUtilities.forName((String) mayEnumSpecial, Resolver.class.getClassLoader());
-            mate = extractEnumSet(clazz, jsonObj);
+            mate = extractEnumSet(jsonObj);
             jsonObj.setTarget(mate);
             jsonObj.isFinished = true;
             return mate;
         }
 
         // Arrays
-        Class<?> c = jsonObj.getJavaType();
         Object[] items = jsonObj.getJsonArray();
         if (c.isArray() || (items != null && c == Object.class && !jsonObj.containsKey(KEYS))) {    // Handle []
             int size = (items == null) ? 0 : items.length;
@@ -490,9 +492,12 @@ public abstract class Resolver {
         return clazz == null ? type : clazz;
     }
 
-    private EnumSet<?> extractEnumSet(Class c, JsonObject jsonObj) {
+    private EnumSet<?> extractEnumSet(JsonObject jsonObj) {
         String enumClassName = (String) jsonObj.get("@enum");
-        Class enumClass = enumClassName == null ? null : ClassUtilities.forName(enumClassName, readOptions.getClassLoader());
+        Class enumClass = enumClassName == null
+                ? evaluateEnumSetTypeFromItems(jsonObj)
+                : ClassUtilities.forName(enumClassName, readOptions.getClassLoader());
+
         Object[] items = jsonObj.getJsonArray();
         if (items == null || items.length == 0) {
             if (enumClass != null) {
@@ -521,6 +526,30 @@ public abstract class Resolver {
             }
         }
         return enumSet;
+    }
+
+    /**
+     * an old serialized values support a different format of enumset serialization
+     * Example:
+     * <pre>{@code
+     *     "@type": "java.util.RegularEnumSet",
+     *     "@items": [
+     *       {
+     *         "@type": "com.cedarsoftware.io.OldSetTest$Enum1",
+     *         "name": "E1"
+     *       }     *
+     *}</pre>
+     */
+    private Class<?> evaluateEnumSetTypeFromItems(final JsonObject json) {
+        final Object[] items = json.getJsonArray();
+        if (items != null && items.length != 0) {
+            if (items[0] instanceof JsonObject) {
+                return ((JsonObject) items[0]).getJavaType();
+            }
+        }
+
+        // can't evaluate
+        return null;
     }
 
     /**
@@ -576,9 +605,8 @@ public abstract class Resolver {
             jsonObj.rehashMaps(useMapsLocal, (Object[]) mapPieces[1], (Object[]) mapPieces[2]);
         }
     }
-    
-    public boolean valueToTarget(JsonObject jsonObject)
-    {
+
+    public boolean valueToTarget(JsonObject jsonObject) {
         if (jsonObject.javaType == null) {
             if (jsonObject.hintType == null) {
                 return false;
@@ -596,7 +624,7 @@ public abstract class Resolver {
                 return true;
             }
             Object javaArray = Array.newInstance(componentType, jsonItems.length);
-            for (int i=0; i < jsonItems.length; i++) {
+            for (int i = 0; i < jsonItems.length; i++) {
                 try {
                     Class<?> type = componentType;
                     if (jsonItems[i] instanceof JsonObject) {
@@ -641,17 +669,16 @@ public abstract class Resolver {
      * that the root Object[] items are copied to the JsonObject, and then return the JsonObject wrapper.  If
      * called with a primitive (anythning else), just return it.
      */
-    Object createJavaFromJson(Object root)
-    {
+    Object createJavaFromJson(Object root) {
         if (root instanceof Object[]) {
             JsonObject array = new JsonObject();
             array.setTarget(root);
-            array.setJsonArray((Object[])root);
-            push(array);	// resolver - you do the rest of the mapping
+            array.setJsonArray((Object[]) root);
+            push(array);    // resolver - you do the rest of the mapping
             return root;
         } else if (root instanceof JsonObject) {
             Object ret = createInstance((JsonObject) root);
-            push((JsonObject) root);	// thank you, resolver
+            push((JsonObject) root);    // thank you, resolver
             return ret;
         } else {
             return root;
