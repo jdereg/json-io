@@ -2,7 +2,6 @@ package com.cedarsoftware.io;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
@@ -35,6 +34,7 @@ import com.cedarsoftware.io.reflect.filters.field.EnumFieldFilter;
 import com.cedarsoftware.io.reflect.filters.field.StaticFieldFilter;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
+import com.cedarsoftware.util.LRUCache;
 import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.convert.CommonValues;
 import com.cedarsoftware.util.convert.Convert;
@@ -106,11 +106,11 @@ public class ReadOptionsBuilder {
             options.aliasTypeNames.put(alias, srcType);
         });
 
-        options.injectorFactories.add(new MethodInjectorFactory());
+        addInjectorFactory(new MethodInjectorFactory());
 
-        options.fieldFilters.add(new StaticFieldFilter());
-        options.fieldFilters.add(new EnumFieldFilter());
-        
+        addFieldFilter(new StaticFieldFilter());
+        addFieldFilter(new EnumFieldFilter());
+
         options.coercedTypes.putAll(BASE_COERCED_TYPES);
         options.customReaderClasses.putAll(BASE_READERS);
         options.classFactoryMap.putAll(BASE_CLASS_FACTORIES);
@@ -329,6 +329,17 @@ public class ReadOptionsBuilder {
      */
     public ReadOptionsBuilder addInjectorFactory(InjectorFactory factory) {
         options.injectorFactories.add(factory);
+        return this;
+    }
+
+    /**
+     * Add a class to the field filter list - allows adding more field filter types
+     *
+     * @param filter FieldFilter to add
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder addFieldFilter(FieldFilter filter) {
+        options.fieldFilters.add(filter);
         return this;
     }
 
@@ -871,7 +882,7 @@ public class ReadOptionsBuilder {
         private Map<String, Object> customOptions = new LinkedHashMap<>();
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
-        private final Map<Class<?>, Map<String, Injector>> injectorsCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
+        private final Map<Class<?>, Map<String, Injector>> injectorsCache = new LRUCache<>(1000);
         private Map<Class<?>, Map<String, String>> nonStandardSetters = new HashMap<>();
 
         // Runtime cache (not feature options)
@@ -880,7 +891,7 @@ public class ReadOptionsBuilder {
         private final JsonReader.ClassFactory enumFactory = new EnumClassFactory();
 
         //  Cache of fields used for accessors.  controlled by ignoredFields
-        private final Map<Class<?>, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
+        private final Map<Class<?>, Map<String, Field>> classMetaCache = new LRUCache<>(1000);
         
         /**
          * Default constructor.  Prevent instantiation outside of package.
@@ -1121,7 +1132,7 @@ public class ReadOptionsBuilder {
             if (classToTraverse == null) {
                 return Collections.emptyMap();
             }
-            return this.injectorsCache.computeIfAbsent(classToTraverse, this::buildInjectors);
+            return injectorsCache.computeIfAbsent(classToTraverse, this::buildInjectors);
         }
 
         public void clearCaches() {
@@ -1213,9 +1224,7 @@ public class ReadOptionsBuilder {
                 }
 
                 for (Field field : fields) {
-                    if (Modifier.isStatic(field.getModifiers()) ||
-                            excludedFields.contains(field.getName()) ||
-                            fieldIsFiltered(field)) {
+                    if (excludedFields.contains(field.getName()) || fieldIsFiltered(field)) {
                         continue;
                     }
 

@@ -368,6 +368,18 @@ This feature enhances the efficiency of serialization and deserialization proces
 >#### `ReadOptionsBuilder` addNonReferenceableClass(`Class`)
 >- [ ] Adds a class to be considered "non-referenceable." Examples are the built-in primitives.
 
+### Add InjectorFactory
+
+The `addInjectorFactory` method in `json-io` allows you to specify a custom, global approach for injecting values into an object. For instance, if you have a specific way of declaring setter methods and want them to be invoked when setting values, this method can accommodate that. Additionally, it can be used to customize value injection for inner classes with special naming conventions.
+
+>#### ReadOptionsBuilder.addInjectorFactory(`InjectorFactory factory`)
+
+### Add FieldFilter
+
+The `addFieldFilter` method in `json-io` allows you to add a custom filter to eliminate fields from consideration.
+There are already two built-in `FieldFilters`, one for filtering out static fields and another for filtering out Enum fields.
+
+>#### ReadOptionsBuilder.addFieldFilter(`FieldFilter filter`)
 ---
 ## Application Scoped Options (Full Lifecycle of JVM)
 
@@ -509,7 +521,3 @@ The `addPermanentNonStandardSetter` method in `json-io` allows you to define cus
 
 >#### ReadOptionsBuilder.addPermanentNonStandardSetter(`Class<?> clazz, String fieldName, String setterName`)
 
-### Add Injector factory
-The `addInjectorFactory` method in `json-io` allows you to specify a custom, global approach for injecting values into an object. For instance, if you have a specific way of declaring setter methods and want them to be invoked when setting values, this method can accommodate that. Additionally, it can be used to customize value injection for inner classes with special naming conventions.
-
->#### ReadOptionsBuilder.addInjectorFactory(`InjectorFactory factory`)

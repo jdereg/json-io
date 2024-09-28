@@ -27,6 +27,7 @@ import com.cedarsoftware.io.reflect.filters.method.DefaultMethodFilter;
 import com.cedarsoftware.io.reflect.filters.method.NamedMethodFilter;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
+import com.cedarsoftware.util.LRUCache;
 import com.cedarsoftware.util.ReflectionUtils;
 import com.cedarsoftware.util.StringUtilities;
 
@@ -814,9 +815,9 @@ public class WriteOptionsBuilder {
         private final Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
-        private final Map<Class<?>, List<Accessor>> accessorsCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
+        private final Map<Class<?>, List<Accessor>> accessorsCache = new LRUCache<>(1000);
 
-        private final Map<Class<?>, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
+        private final Map<Class<?>, Map<String, Field>> classMetaCache = new LRUCache<>(1000);
 
         /**
          * Default Constructor.  Prevent instantiation outside of package.
