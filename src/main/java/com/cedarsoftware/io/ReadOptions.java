@@ -119,6 +119,11 @@ public interface ReadOptions {
     int getMaxDepth();
 
     /**
+     * @return int size of LRU Cache used to cache Class to Field and Class to injectors
+     */
+    int getLruSize();
+
+    /**
      * Alias Type Names, e.g. "ArrayList" instead of "java.util.ArrayList".
      * @param typeName String name of type to fetch alias for.  There are no default aliases.
      * @return String alias name or null if type name is not aliased.

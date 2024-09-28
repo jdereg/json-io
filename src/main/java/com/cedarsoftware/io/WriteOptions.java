@@ -95,7 +95,12 @@ public interface WriteOptions {
      * @return boolean 'true' if the OutputStream should be closed when the reading is finished.  The default is 'true.'
      */
     boolean isCloseStream();
-    
+
+    /**
+     * @return int size of LRU Cache used to cache Class to Field and Class to Accessor
+     */
+    int getLruSize();
+
     /**
      * @return ClassLoader to be used when writing JSON to resolve String named classes.
      */
