@@ -1,5 +1,5 @@
 ### Revision History
-#### 4.27.0
+#### 4.27.0-SNAPSHOT
   * `ReadOptionsBuilder.addInjectorFactory()` added to allow additional `InjectorFactory's` to be added.
   * `ReadOptionsBuilder.addFieldFilter()` added to allow additional `FieldFilters` to be added.
 #### 4.26.0

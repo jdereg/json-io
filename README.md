@@ -24,7 +24,7 @@ ___
 To include in your project:
 ##### Gradle
 ```groovy
-implementation 'com.cedarsoftware:json-io:4.26.0'
+implementation 'com.cedarsoftware:json-io:4.27.0'
 ```
 
 ##### Maven
@@ -32,7 +32,7 @@ implementation 'com.cedarsoftware:json-io:4.26.0'
  <dependency>
    <groupId>com.cedarsoftware</groupId>
    <artifactId>json-io</artifactId>
-   <version>4.26.0</version>
+   <version>4.27.0</version>
  </dependency>
 ```
 ___
