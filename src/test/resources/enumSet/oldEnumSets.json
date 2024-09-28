@@ -1,0 +1,59 @@
+{
+  "@type": "com.cedarsoftware.io.OldSetTest$ManySets",
+  "enumSet1": {
+    "@type": "java.util.RegularEnumSet",
+    "@items": [
+      {
+        "@type": "com.cedarsoftware.io.OldSetTest$Enum1",
+        "name": "E1"
+      },
+      {
+        "@type": "com.cedarsoftware.io.OldSetTest$Enum1",
+        "name": "E2"
+      },
+      {
+        "@type": "com.cedarsoftware.io.OldSetTest$Enum1",
+        "name": "E3"
+      }
+    ]
+  },
+  "enumSet2": {
+    "@type": "java.util.RegularEnumSet",
+    "@items": [
+      {
+        "@type": "com.cedarsoftware.io.OldSetTest$Enum2",
+        "v": 11,
+        "name": "E1"
+      },
+      {
+        "@type": "com.cedarsoftware.io.OldSetTest$Enum2",
+        "v": 22,
+        "name": "E2"
+      },
+      {
+        "@type": "com.cedarsoftware.io.OldSetTest$Enum2",
+        "v": 33,
+        "name": "E3"
+      }
+    ]
+  },
+  "child": {
+    "enumSet3": {
+      "@type": "java.util.RegularEnumSet",
+      "@items": [
+        {
+          "@type": "com.cedarsoftware.io.OldSetTest$Enum1",
+          "name": "E1"
+        },
+        {
+          "@type": "com.cedarsoftware.io.OldSetTest$Enum1",
+          "name": "E2"
+        },
+        {
+          "@type": "com.cedarsoftware.io.OldSetTest$Enum1",
+          "name": "E3"
+        }
+      ]
+    }
+  }
+}
