@@ -123,6 +123,15 @@ To activate pretty printing, configure your serialization settings accordingly:
 >#### `WriteOptionsBuilder` prettyPrint(`boolean prettyPrint`)
 >- [ ] Sets the 'prettyPrint' setting, `true` to turn on, `false` will turn off. The default setting is `false.` 
 
+### lruSize - LRU Size [Cache of fields and filters]
+Set the maximum number of `Class` to `Field` mappings and `Class` to accessor mappings. This will allow infrequently used `Class's`
+to drop from the cache - they will be dynamically added back if not in the cache.  Reduces operational memory foot print.
+> #### `int` lruSize()
+>- [ ] Return the LRU size
+
+> #### `WriteOptionsBuilder` lruSize(`int size`)
+>- [ ] Set the max LRU cache size
+
 ### Automatically Close OutputStream (or Not)
 
 In `json-io`, you have the option to automatically close the `OutputStream` after writing JSON output or to leave it

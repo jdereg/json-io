@@ -52,7 +52,7 @@ class PrettyPrintTest
         nice.dictionary.put("bigdec", new BigDecimal("3.141592653589793238462643383"));
 
         String target = MetaUtils.loadResourceAsString("format/prettyPrint.json");
-        WriteOptions writeOptions = new WriteOptionsBuilder().prettyPrint(true).build();
+        WriteOptions writeOptions = new WriteOptionsBuilder().prettyPrint(true).lruSize(25).build();
         String json = TestUtil.toJson(nice, writeOptions);
 
         assertThat(json).isEqualToIgnoringNewLines(target);

@@ -107,7 +107,7 @@ class WriteOptionsTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void testForceMapOutputAsTwoArrays(boolean value) {
-        WriteOptions options = new WriteOptionsBuilder().forceMapOutputAsTwoArrays(value).build();
+        WriteOptions options = new WriteOptionsBuilder().forceMapOutputAsTwoArrays(value).lruSize(10).build();
         assertThat(options.isForceMapOutputAsTwoArrays()).isEqualTo(value);
     }
 

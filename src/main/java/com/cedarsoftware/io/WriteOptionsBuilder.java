@@ -123,6 +123,7 @@ public class WriteOptionsBuilder {
             options.enumPublicFieldsOnly = other.enumPublicFieldsOnly;
             options.forceMapOutputAsTwoArrays = other.forceMapOutputAsTwoArrays;
             options.prettyPrint = other.prettyPrint;
+            options.lruSize = other.lruSize;
             options.shortMetaKeys = other.shortMetaKeys;
             options.showTypeInfo = other.showTypeInfo;
             options.skipNullFields = other.skipNullFields;
@@ -158,6 +159,13 @@ public class WriteOptionsBuilder {
 
             options.accessorFactories.clear();
             options.accessorFactories.putAll(other.accessorFactories);
+
+            // Copy caches
+            options.accessorsCache = new LRUCache<>(other.lruSize);
+            options.accessorsCache.putAll(other.accessorsCache);
+
+            options.classMetaCache = new LRUCache<>(other.lruSize);
+            options.classMetaCache.putAll(other.classMetaCache);
         }
     }
 
@@ -395,6 +403,23 @@ public class WriteOptionsBuilder {
         return this;
     }
 
+    /**
+     * @param size Max size of the cache for Class fields and Class accessors
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder lruSize(int size) {
+        options.lruSize = size;
+
+        Map<Class<?>, List<Accessor>> accessorCacheCopy = options.accessorsCache;
+        options.accessorsCache = new LRUCache<>(options.getLruSize());
+        options.accessorsCache.putAll(accessorCacheCopy);
+
+        Map<Class<?>, Map<String, Field>> classMetaCacheCopy = options.classMetaCache;
+        options.classMetaCache = new LRUCache<>(options.getLruSize());
+        options.classMetaCache.putAll(classMetaCacheCopy);
+        return this;
+    }
+    
     /**
      * @param writeLongsAsStrings boolean true to turn on writing longs as Strings, false to write them as
      *                            native JSON longs.
@@ -790,6 +815,7 @@ public class WriteOptionsBuilder {
         private boolean shortMetaKeys = false;
         private ShowType showTypeInfo = WriteOptions.ShowType.MINIMAL;
         private boolean prettyPrint = false;
+        private int lruSize = 1000;
         private boolean writeLongsAsStrings = false;
         private boolean skipNullFields = false;
         private boolean forceMapOutputAsTwoArrays = false;
@@ -815,9 +841,9 @@ public class WriteOptionsBuilder {
         private final Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
-        private final Map<Class<?>, List<Accessor>> accessorsCache = new LRUCache<>(1000);
+        private Map<Class<?>, List<Accessor>> accessorsCache = new LRUCache<>(lruSize);
 
-        private final Map<Class<?>, Map<String, Field>> classMetaCache = new LRUCache<>(1000);
+        private Map<Class<?>, Map<String, Field>> classMetaCache = new LRUCache<>(lruSize);
 
         /**
          * Default Constructor.  Prevent instantiation outside of package.
@@ -929,6 +955,13 @@ public class WriteOptionsBuilder {
         }
 
         /**
+         * @return int 'LRU Size' setting for holding reflected fields and accessors.  Default is 1000.
+         */
+        public int getLruSize() {
+            return lruSize;
+        }
+
+        /**
          * @return boolean 'writeLongsAsStrings' setting, true indicating longs will be written as Strings,
          * false to write them out as native JSON longs.  Writing Strings as Longs to the JSON, will fix errors
          * in Javascript when an 18-19 digit long value is sent to Javascript.  This is because Javascript stores
@@ -1032,6 +1065,7 @@ public class WriteOptionsBuilder {
         }
 
         public void clearCaches() {
+            classMetaCache.clear();
             accessorsCache.clear();
         }
 

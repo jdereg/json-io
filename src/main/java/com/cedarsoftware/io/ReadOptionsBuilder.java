@@ -138,6 +138,7 @@ public class ReadOptionsBuilder {
             options.closeStream = other.closeStream;
             options.failOnUnknownType = other.failOnUnknownType;
             options.maxDepth = other.maxDepth;
+            options.lruSize = other.lruSize;
             options.returnType = other.returnType;
             options.unknownTypeClass = other.unknownTypeClass;
             options.missingFieldHandler = other.missingFieldHandler;
@@ -177,6 +178,13 @@ public class ReadOptionsBuilder {
 
             options.nonRefClasses.clear();
             options.nonRefClasses.addAll(other.nonRefClasses);
+
+            // Copy caches
+            options.injectorsCache = new LRUCache<>(other.lruSize);
+            options.injectorsCache.putAll(other.injectorsCache);
+
+            options.classMetaCache = new LRUCache<>(other.lruSize);
+            options.classMetaCache.putAll(other.classMetaCache);
         }
     }
 
@@ -554,6 +562,23 @@ public class ReadOptionsBuilder {
     }
 
     /**
+     * @param lruSize int maximum size of the LRU cache that holds reflective information like fields of a Class and
+     *                injectors associated to a class.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder lruSize(int lruSize) {
+        options.lruSize = lruSize;
+        Map<Class<?>, Map<String, Injector>> injectorCacheCopy = options.injectorsCache;
+        options.injectorsCache = new LRUCache<>(options.getLruSize());
+        options.injectorsCache.putAll(injectorCacheCopy);
+
+        Map<Class<?>, Map<String, Field>> classMetaCacheCopy = options.classMetaCache;
+        options.classMetaCache = new LRUCache<>(options.getLruSize());
+        options.classMetaCache.putAll(classMetaCacheCopy);
+        return this;
+    }
+
+    /**
      * @param allowNanAndInfinity boolean 'allowNanAndInfinity' setting.  true will allow Double and Floats to be
      *                            read in as NaN and +Inf, -Inf [infinity], false and a JsonIoException will be
      *                            thrown if these values are encountered
@@ -863,6 +888,7 @@ public class ReadOptionsBuilder {
         private boolean failOnUnknownType = true;
         private boolean closeStream = true;
         private int maxDepth = 1000;
+        private int lruSize = 1000;
         private JsonReader.MissingFieldHandler missingFieldHandler = null;
         private DefaultConverterOptions converterOptions = new DefaultConverterOptions();
         private ReadOptions.ReturnType returnType = ReadOptions.ReturnType.JAVA_OBJECTS;
@@ -882,7 +908,7 @@ public class ReadOptionsBuilder {
         private Map<String, Object> customOptions = new LinkedHashMap<>();
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
-        private final Map<Class<?>, Map<String, Injector>> injectorsCache = new LRUCache<>(1000);
+        private Map<Class<?>, Map<String, Injector>> injectorsCache = new LRUCache<>(lruSize);
         private Map<Class<?>, Map<String, String>> nonStandardSetters = new HashMap<>();
 
         // Runtime cache (not feature options)
@@ -890,11 +916,11 @@ public class ReadOptionsBuilder {
         private final JsonReader.ClassFactory throwableFactory = new ThrowableFactory();
         private final JsonReader.ClassFactory enumFactory = new EnumClassFactory();
 
-        //  Cache of fields used for accessors.  controlled by ignoredFields
-        private final Map<Class<?>, Map<String, Field>> classMetaCache = new LRUCache<>(1000);
+        //  Cache of fields used for accessors. Controlled by ignoredFields
+        private Map<Class<?>, Map<String, Field>> classMetaCache = new LRUCache<>(lruSize);
         
         /**
-         * Default constructor.  Prevent instantiation outside of package.
+         * Default constructor. Prevent instantiation outside of package.
          */
         private DefaultReadOptions() {
         }
@@ -944,6 +970,17 @@ public class ReadOptionsBuilder {
             return maxDepth;
         }
         
+        /**
+         * @return int LRU size, which is the size of the maximum number of class to fields, and field to injector
+         * caches. It defaults to 1,0000. Higher values will help improve performance, however, infrequently used
+         * classes (mapped to Fields) will be kept in the cache. Adjust this as needed if memory usage becomes a
+         * problem.  If you have a high variety of classes being serialized, say 10's of thousands, then you would
+         * want to monitor your cache size, balancing performance versus memory usage.
+         */
+        public int getLruSize() {
+            return lruSize;
+        }
+
         /**
          * Alias Type Names, e.g. "ArrayList" instead of "java.util.ArrayList".
          *
@@ -1136,6 +1173,7 @@ public class ReadOptionsBuilder {
         }
 
         public void clearCaches() {
+            classMetaCache.clear();
             injectorsCache.clear();
         }
 
@@ -1145,8 +1183,8 @@ public class ReadOptionsBuilder {
 
             for (final Map.Entry<String, Field> entry : fields.entrySet()) {
                 final Field field = entry.getValue();
-
                 final String fieldName = entry.getKey();
+                
                 Injector injector = this.findInjector(field, fieldName);
 
                 if (injector == null) {

@@ -539,7 +539,9 @@ class JsonParser {
         if (cachedInstance != null) {
             return cachedInstance;
         } else {
-            stringCache.put(s, s);  // caching all strings (LRU has upper limit)
+            if (s.length() < 33) {
+                stringCache.put(s, s);  // cache small strings (LRU has upper limit)
+            }
             return s;
         }
     }

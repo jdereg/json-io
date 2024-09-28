@@ -1,4 +1,7 @@
 ### Revision History
+#### 4.27.0
+  * `ReadOptionsBuilder.addInjectorFactory()` added to allow additional `InjectorFactory's` to be added.
+  * `ReadOptionsBuilder.addFieldFilter()` added to allow additional `FieldFilters` to be added.
 #### 4.26.0
   * Performance improvement for `JsonIo`: When using `null` for default `ReadOptions` or `WriteOptions,` the same static instance is used as the `ReadOptions` and `WriteOptions` are immutable.  
   * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `2.10.0` to `2.13.0.`

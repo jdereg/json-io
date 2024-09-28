@@ -85,6 +85,15 @@ you know that the maximum object nesting level has been reached.
 >- [ ] Set the max depth to allow for nested JSON {...}.  Set this to prevent security risk from`StackOverflow`attack 
 vectors. 
 
+### lruSize - LRU Size [Cache of fields and filters]
+Set the maximum number of `Class` to `Field` mappings and `Class` to filter mappings. This will allow infrequently used `Class's` 
+to drop from the cache - they will be dynamically added back if not in the cache.  Reduces operational memory foot print.
+> #### `int` lruSize()
+>- [ ] Return the LRU size
+
+> #### `ReadOptionsBuilder` lruSize(`int size`)
+>- [ ] Set the max LRU cache size
+
 ### Floating Point Options
 
 Handling special floating point values and large numbers in JSON can be challenging due to limitations in standard formats and data types.
