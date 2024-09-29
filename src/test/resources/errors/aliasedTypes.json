@@ -1,0 +1,50 @@
+[
+  {
+    "@type": "bigint",
+    "value": "123456789012345678901234567890"
+  },
+  {
+    "@type": "BigInt",
+    "value": "123456789012345678901234567891"
+  },
+  {
+    "@type": "java.math.BigInteger",
+    "value": "123456789012345678901234567892"
+  },
+  {
+    "@type": "bigdec",
+    "value": "123456789012345678901234567890.0"
+  },
+  {
+    "@type": "BigDec",
+    "value": "123456789012345678901234567891.1"
+  },
+  {
+    "@type": "java.math.BigDecimal",
+    "value": "123456789012345678901234567892.2"
+  },
+  {
+    "@type": "string",
+    "value": "foo"
+  },
+  {
+    "@type": "String",
+    "value": "bar"
+  },
+  {
+    "@type": "java.lang.String",
+    "value": "baz"
+  },
+  {
+    "@type": "date",
+    "value": "1970/1/1"
+  },
+  {
+    "@type": "date",
+    "value": "1980/1/1"
+  },
+  {
+    "@type": "date",
+    "value": "1990/1/1"
+  }
+]

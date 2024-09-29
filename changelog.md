@@ -1,8 +1,10 @@
 ### Revision History
-#### 4.27.0-SNAPSHOT
+#### 4.27.0
   * `ReadOptionsBuilder.addInjectorFactory()` added to allow additional `InjectorFactory's` to be added.
   * `ReadOptionsBuilder.addFieldFilter()` added to allow additional `FieldFilters` to be added.
-  * LRU size control added to `ReadOptionsBuild` and `WriteOptionsBuilder`. These control the LRU size of the cache that maps `Classes` to `Fields`, `Classes` to `Injectors`, and `Classes` to `Accessors.` 
+  * LRU size control added to `ReadOptionsBuild` and `WriteOptionsBuilder`. These control the LRU size of the cache that maps `Classes` to `Fields`, `Classes` to `Injectors`, and `Classes` to `Accessors.`
+  * Adds `bigint,` `BigInt,` `bigdec,` `BigDec,` `String,` `Date,` and `Class` to aliases to java-util's `ClassUtilities.forName()` support
+  * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `2.13.0` to `2.14.0.`
 #### 4.26.0
   * Performance improvement for `JsonIo`: When using `null` for default `ReadOptions` or `WriteOptions,` the same static instance is used.  
   * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `2.10.0` to `2.13.0.`

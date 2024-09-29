@@ -2,6 +2,8 @@ package com.cedarsoftware.io;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -81,6 +83,16 @@ public class WriteOptionsBuilder {
         addPermanentAccessorFactory("is", new IsMethodAccessorFactory());
 
         defWriteOptions = new WriteOptionsBuilder().build();
+
+        // low-level alias support (bigint, bigdec, class, date, and string)
+        // class, date, and string are already within ClassUtilities.
+        ClassUtilities.addPermanentClassAlias(BigInteger.class, "bigint");
+        ClassUtilities.addPermanentClassAlias(BigInteger.class, "BigInt");
+        ClassUtilities.addPermanentClassAlias(BigDecimal.class, "bigdec");
+        ClassUtilities.addPermanentClassAlias(BigDecimal.class, "BigDec");
+        ClassUtilities.addPermanentClassAlias(BigDecimal.class, "Class");
+        ClassUtilities.addPermanentClassAlias(BigDecimal.class, "String");
+        ClassUtilities.addPermanentClassAlias(BigDecimal.class, "Date");
     }
 
     /**
@@ -1136,7 +1148,7 @@ public class WriteOptionsBuilder {
             final Set<String> included = includedFields == null ? new HashSet<>() : includedFields;
             Class<?> curr = c;
 
-            while (curr != Object.class) {
+            while (curr != null) {
                 List<Field> fields = ReflectionUtils.getDeclaredFields(curr);
                 final Set<String> excludedForClass = this.excludedFieldNames.get(curr);
 

@@ -1,9 +1,14 @@
 package com.cedarsoftware.io;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.cedarsoftware.util.Converter;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -294,5 +299,35 @@ class ErrorsTest
         assert x.equals("' should be one char");
         x = TestUtil.toObjects("\"a \\' char\"", null);
         assert x.equals("a ' char");
+    }
+
+    @Test
+    public void testAliasedTypes()
+    {
+        String json = MetaUtils.loadResourceAsString("errors/aliasedTypes.json");
+        Object[] items = TestUtil.toObjects(json, null);
+
+        assert items.length == 12 : "Expected 12 items, but got " + items.length;
+
+        // BigInteger assertions
+        assert new BigInteger("123456789012345678901234567890").equals(items[0]) : "Mismatch at index 0";
+        assert new BigInteger("123456789012345678901234567891").equals(items[1]) : "Mismatch at index 1";
+        assert new BigInteger("123456789012345678901234567892").equals(items[2]) : "Mismatch at index 2";
+
+        // BigDecimal assertions
+        assert new BigDecimal("123456789012345678901234567890.0").equals(items[3]) : "Mismatch at index 3";
+        assert new BigDecimal("123456789012345678901234567891.1").equals(items[4]) : "Mismatch at index 4";
+        assert new BigDecimal("123456789012345678901234567892.2").equals(items[5]) : "Mismatch at index 5";
+
+        // String assertions
+        assert "foo".equals(items[6]) : "Mismatch at index 6";
+        assert "bar".equals(items[7]) : "Mismatch at index 7";
+        assert "baz".equals(items[8]) : "Mismatch at index 8";
+
+        // Date assertions
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/M/d");
+        assert Converter.convert("1970/1/1", Date.class).equals(items[9]) : "Mismatch at index 9";
+        assert Converter.convert("1980/1/1", Date.class).equals(items[10]) : "Mismatch at index 10";
+        assert Converter.convert("1990/1/1", Date.class).equals(items[11]) : "Mismatch at index 11";
     }
 }
