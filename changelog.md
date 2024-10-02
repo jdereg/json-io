@@ -1,4 +1,6 @@
 ### Revision History
+#### 4.28.0
+  * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `2.14.0` to `2.15.0.`
 #### 4.27.0
   * `ReadOptionsBuilder.addInjectorFactory()` added to allow additional `InjectorFactory's` to be added.
   * `ReadOptionsBuilder.addFieldFilter()` added to allow additional `FieldFilters` to be added.

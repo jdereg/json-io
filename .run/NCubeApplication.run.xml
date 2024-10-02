@@ -15,6 +15,7 @@
       <option name="environmentVariables" />
     </selectedOptions>
     <option name="SPRING_BOOT_MAIN_CLASS" value="com.cedarsoftware.ncube.NCubeApplication" />
+    <option name="VM_PARAMETERS" value="-Xmx1200m" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>
