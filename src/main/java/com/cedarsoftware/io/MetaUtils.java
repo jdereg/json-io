@@ -80,9 +80,10 @@ import static java.lang.reflect.Modifier.isPublic;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class MetaUtils
-{
-    private MetaUtils () {}
+public class MetaUtils {
+    private MetaUtils() {
+    }
+
     enum Dumpty {}
 
     private static final ConcurrentMap<String, CachedConstructor> constructors = new ConcurrentHashMap<>();
@@ -137,14 +138,12 @@ public class MetaUtils
      * is used when all constructors have been tried and the Java class could not be instantiated.
      * @param state boolean true = on, false = off.
      */
-    public static void setUseUnsafe(boolean state)
-    {
+    public static void setUseUnsafe(boolean state) {
         useUnsafe = state;
         if (state) {
             try {
                 unsafe = new Unsafe();
-            }
-            catch (InvocationTargetException e) {
+            } catch (InvocationTargetException e) {
                 useUnsafe = false;
             }
         }
@@ -163,8 +162,7 @@ public class MetaUtils
         return enclosingClass != null && enclosingClass.isEnum() ? Optional.of(enclosingClass) : Optional.empty();
     }
 
-    static void throwIfSecurityConcern(Class<?> securityConcern, Class<?> c)
-    {
+    static void throwIfSecurityConcern(Class<?> securityConcern, Class<?> c) {
         if (securityConcern.isAssignableFrom(c)) {
             throw new JsonIoException("For security reasons, json-io does not allow instantiation of: " + securityConcern.getName());
         }
@@ -237,7 +235,7 @@ public class MetaUtils
      */
     private static Object pickBestValue(Class<?> param, List<Object> values) {
         int[] distances = new int[values.size()];
-        int i=0;
+        int i = 0;
 
         for (Object value : values) {
             distances[i++] = value == null ? -1 : ClassUtilities.computeInheritanceDistance(value.getClass(), param);
@@ -282,37 +280,32 @@ public class MetaUtils
      * the same, so then it looks at values passed into the arguments, non-null being more
      * valuable than null, as well as number of argument types - more is better than fewer.
      */
-    private static class ConstructorWithValues implements Comparable<ConstructorWithValues>
-    {
+    private static class ConstructorWithValues implements Comparable<ConstructorWithValues> {
         final Constructor<?> constructor;
         final Object[] argsNull;
         final Object[] argsNonNull;
 
-        ConstructorWithValues(Constructor<?> constructor, Object[] argsNull, Object[] argsNonNull)
-        {
+        ConstructorWithValues(Constructor<?> constructor, Object[] argsNull, Object[] argsNonNull) {
             this.constructor = constructor;
             this.argsNull = argsNull;
             this.argsNonNull = argsNonNull;
         }
 
-        public int compareTo(ConstructorWithValues other)
-        {
+        public int compareTo(ConstructorWithValues other) {
             final int mods = constructor.getModifiers();
             final int otherMods = other.constructor.getModifiers();
 
             // Rule 1: Visibility: favor public over non-public
             if (!isPublic(mods) && isPublic(otherMods)) {
                 return 1;
-            }
-            else if (isPublic(mods) && !isPublic(otherMods)) {
+            } else if (isPublic(mods) && !isPublic(otherMods)) {
                 return -1;
             }
 
             // Rule 2: Visibility: favor protected over private
             if (!isProtected(mods) && isProtected(otherMods)) {
                 return 1;
-            }
-            else if (isProtected(mods) && !isProtected(otherMods)) {
+            } else if (isProtected(mods) && !isProtected(otherMods)) {
                 return -1;
             }
 
@@ -321,8 +314,7 @@ public class MetaUtils
             long score2 = scoreArgumentValues(other.argsNull);
             if (score1 < score2) {
                 return 1;
-            }
-            else if (score1 > score2) {
+            } else if (score1 > score2) {
                 return -1;
             }
 
@@ -331,8 +323,7 @@ public class MetaUtils
             score2 = scoreArgumentValues(other.argsNonNull);
             if (score1 < score2) {
                 return 1;
-            }
-            else if (score1 > score2) {
+            } else if (score1 > score2) {
                 return -1;
             }
 
@@ -348,8 +339,7 @@ public class MetaUtils
          * 50 points for each parameter.  So non-null values are twice as high (100 points versus 50 points) as
          * parameter "slots."
          */
-        private long scoreArgumentValues(Object[] args)
-        {
+        private long scoreArgumentValues(Object[] args) {
             if (args.length == 0) {
                 return 0L;
             }
@@ -365,8 +355,7 @@ public class MetaUtils
             return nonNull * 100L + args.length * 50L;
         }
 
-        private String buildParameterTypeString(Constructor<?> constructor)
-        {
+        private String buildParameterTypeString(Constructor<?> constructor) {
             Class<?>[] paramTypes = constructor.getParameterTypes();
             StringBuilder s = new StringBuilder();
 
@@ -377,8 +366,7 @@ public class MetaUtils
         }
     }
 
-    public static String createCacheKey(Class<?> c, Collection<?> args)
-    {
+    public static String createCacheKey(Class<?> c, Collection<?> args) {
         StringBuilder s = new StringBuilder(c.getName());
         for (Object o : args) {
             if (o == null) {
@@ -476,8 +464,7 @@ public class MetaUtils
                             constructors.put(cacheKey, new CachedConstructor(constructor, false));
                             return o;
                         }
-                    }
-                    catch (Exception ignored) {
+                    } catch (Exception ignored) {
                     }
                 }
             }
@@ -495,8 +482,7 @@ public class MetaUtils
                 // Be nice to person debugging
                 Object o = cachedConstructor.constructor.newInstance(arguments.toArray());
                 return o;
-            }
-            catch (Exception ignored) {
+            } catch (Exception ignored) {
             }
 
             Object o = tryUnsafeInstantiation(c);
@@ -512,13 +498,13 @@ public class MetaUtils
     // MetaUtils.setUseUnsafe(true) to enable it. This may result in heap-dumps
     // for e.g. ConcurrentHashMap or can cause problems when the class is not initialized,
     // that's why we try ordinary constructors first.
-    private static Object tryUnsafeInstantiation(Class<?> c)
-    {
+    private static Object tryUnsafeInstantiation(Class<?> c) {
         if (useUnsafe) {
             try {
                 Object o = unsafe.allocateInstance(c);
                 return o;
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
         return null;
     }
@@ -526,13 +512,11 @@ public class MetaUtils
     /**
      * Format a nice looking method signature for logging output
      */
-    public static String getLogMessage(String methodName, Object[] args)
-    {
+    public static String getLogMessage(String methodName, Object[] args) {
         return getLogMessage(methodName, args, 64);
     }
 
-    public static String getLogMessage(String methodName, Object[] args, int argCharLen)
-    {
+    public static String getLogMessage(String methodName, Object[] args, int argCharLen) {
         StringBuilder sb = new StringBuilder();
         sb.append(methodName);
         sb.append('(');
@@ -544,8 +528,7 @@ public class MetaUtils
         return result + ')';
     }
 
-    private static String getJsonStringToMaxLength(Object obj, int argCharLen)
-    {
+    private static String getJsonStringToMaxLength(Object obj, int argCharLen) {
         WriteOptions options = new WriteOptionsBuilder().shortMetaKeys(true).showTypeInfoNever().build();
         String arg = JsonIo.toJson(obj, options);
         if (arg.length() > argCharLen) {
@@ -553,7 +536,7 @@ public class MetaUtils
         }
         return arg;
     }
-    
+
     public static <K, V> V getValueWithDefaultForNull(Map map, K key, V defaultValue) {
         V value = (V) map.get(key);
         return (value == null) ? defaultValue : value;
@@ -578,8 +561,7 @@ public class MetaUtils
         }
     }
 
-    public static void trySetAccessible(AccessibleObject object)
-    {
+    public static void trySetAccessible(AccessibleObject object) {
         safelyIgnoreException(() -> object.setAccessible(true));
     }
 
@@ -597,7 +579,7 @@ public class MetaUtils
         } catch (Throwable ignored) {
         }
     }
-    
+
     /**
      * Use this method when you don't want a length check to
      * throw a NullPointerException when
@@ -620,17 +602,15 @@ public class MetaUtils
     /**
      * Legacy API that many applications consumed.
      */
-    public static boolean isPrimitive(Class<?> c)
-    {
+    public static boolean isPrimitive(Class<?> c) {
         return Primitives.isPrimitive(c);
     }
 
     /**
      * Legacy API that many applications consumed.
      */
-    public static boolean isLogicalPrimitive(Class<?> c)
-    {
-        return  isPrimitive(c) ||
+    public static boolean isLogicalPrimitive(Class<?> c) {
+        return isPrimitive(c) ||
                 c.equals(String.class) ||
                 Number.class.isAssignableFrom(c) ||
                 Date.class.isAssignableFrom(c) ||
@@ -662,7 +642,7 @@ public class MetaUtils
                 }
             }
             scanner.close();
-        }  catch (Exception e) {
+        } catch (Exception e) {
             throw new JsonIoException("Error reading in " + resName + ". The file should be in the resources folder. The contents are expected to have two strings separated by '='. You can use # or blank lines in the file, they will be skipped.");
         }
         return map;
@@ -686,7 +666,7 @@ public class MetaUtils
                 }
             }
             scanner.close();
-        }  catch (Exception e) {
+        } catch (Exception e) {
             throw new JsonIoException("Error reading in " + resName + ". The file should be in the resources folder. The contents have a single String per line.  You can use # (comment) or blank lines in the file, they will be skipped.");
         }
         return set;
@@ -701,14 +681,16 @@ public class MetaUtils
         byte[] resourceBytes = loadResourceAsBytes(resourceName);
         return new String(resourceBytes, StandardCharsets.UTF_8);
     }
-    
+
     /**
      * Loads resource content as a byte[].
      * @param resourceName Name of the resource file.
      * @return Content of the resource file as a byte[].
      */
     public static byte[] loadResourceAsBytes(String resourceName) {
-        try (InputStream inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourceName)) {
+        try (InputStream inputStream = Optional.ofNullable(Thread.currentThread().getContextClassLoader().getResourceAsStream(resourceName))
+                // in case if it was inside osgi container
+                .orElseGet(() -> MetaUtils.class.getClassLoader().getResourceAsStream(resourceName))) {
             if (inputStream == null) {
                 throw new JsonIoException("Resource not found: " + resourceName);
             }
