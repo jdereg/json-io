@@ -1,0 +1,21 @@
+-------------------------------------------------------------------------------
+Test set: com.cedarsoftware.io.AtomicIntegerTest
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.183 s <<< FAILURE! -- in com.cedarsoftware.io.AtomicIntegerTest
+com.cedarsoftware.io.AtomicIntegerTest.testAssignAtomicInteger -- Time elapsed: 0.176 s <<< ERROR!
+com.cedarsoftware.io.JsonIoException: EOF expected, content found after "@type" --> :
+	at com.cedarsoftware.io.JsonParser.readString(JsonParser.java:420)
+	at com.cedarsoftware.io.JsonParser.readFieldNameIterative(JsonParser.java:257)
+	at com.cedarsoftware.io.JsonParser.readJsonObjectIterative(JsonParser.java:199)
+	at com.cedarsoftware.io.JsonParser.readValue(JsonParser.java:134)
+	at com.cedarsoftware.io.JsonReader.readObject(JsonReader.java:210)
+	at com.cedarsoftware.io.JsonIo.toObjects(JsonIo.java:186)
+	at com.cedarsoftware.io.JsonIo.toObjects(JsonIo.java:158)
+	at com.cedarsoftware.io.TestUtil.readJsonIo(TestUtil.java:142)
+	at com.cedarsoftware.io.TestUtil.toObjects(TestUtil.java:193)
+	at com.cedarsoftware.io.TestUtil.toObjects(TestUtil.java:183)
+	at com.cedarsoftware.io.AtomicIntegerTest.testAssignAtomicInteger(AtomicIntegerTest.java:46)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+

@@ -1,0 +1,11 @@
+nondexFilter=.*
+nondexMode=FULL
+nondexSeed=1223286
+nondexStart=0
+nondexEnd=9223372036854775807
+nondexPrintstack=false
+nondexDir=/Users/jderegnaucourt/workspace/json-io/.nondex
+nondexJarDir=/Users/jderegnaucourt/workspace/json-io/.nondex
+nondexExecid=HYjqSXlddSA+yLRQy5Fo2W44mFCI30pQLD5ubiWeTQs=
+nondexLogging=CONFIG
+test=
