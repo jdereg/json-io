@@ -1,16 +1,18 @@
 package com.cedarsoftware.io;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.DeepEquals;
-import org.assertj.core.util.Arrays;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static com.cedarsoftware.util.MapUtilities.mapOf;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -31,7 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public abstract class SerializationDeserializationMinimumTests<T> {
 
-    protected abstract T provideT1();
+    protected abstract T  provideT1();
 
     protected abstract T provideT2();
 
@@ -64,8 +66,8 @@ public abstract class SerializationDeserializationMinimumTests<T> {
     }
 
     protected void assertStandalone(T expected, T actual) {
-        assertThat(expected).isNotSameAs(actual);
-        assertThat(actual).isEqualTo(expected);
+        assert expected != actual;
+        assert DeepEquals.deepEquals(actual, expected);
     }
 
     //  nested object
@@ -91,11 +93,10 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         T[] actual = extractNestedInObject_withMatchingFieldTypes(nestedActual);
 
         // Uncomment if we remove java.util.LocalDate/Time from nonRefs.txt
-        assertThat(actual[0])
-                .isEqualTo(expected[0])
-                .isNotSameAs(actual[1]);
+        assert DeepEquals.deepEquals(actual[0], expected[0]);
+        assert actual[0] != expected[0];
 
-        assertThat(actual[1]).isEqualTo(expected[1]);
+        assert DeepEquals.deepEquals(actual[1], expected[1]);
     }
 
     protected abstract T[] extractNestedInObject_withMatchingFieldTypes(Object o);
@@ -274,40 +275,25 @@ public abstract class SerializationDeserializationMinimumTests<T> {
     }
 
     protected void assertObjectArray_withDuplicates(Object[] expected, Object[] actual) {
-        assertThat(actual).hasSize(expected.length);
-        assertThat(actual[0]).isEqualTo(expected[0]);
-        assertThat(actual[1]).isEqualTo(expected[1]);
-        assertThat(actual[2]).isEqualTo(expected[2]);
-        assertThat(actual[3]).isEqualTo(expected[3]);
-
+        assertEquals(actual.length, expected.length);
         assertReferentialIdentity(actual[0], actual[1]);
-        assertThat(DeepEquals.deepEquals(expected, actual)).isTrue();
+        assert DeepEquals.deepEquals(expected, actual);
     }
-
-
+    
     @Test
     protected void testClassSpecificArray_withNoDuplicates() {
-        T[] expected = Arrays.array(provideT1(), provideT2());
-
+        T[] expected = ArrayUtilities.createArray(provideT1(), provideT2());
         // should be no references
         String json = TestUtil.toJson(expected);
-
         assertNoReferencesInString(json);
-
         T[] actual = TestUtil.toObjects(json, null);
-
         assertClassSpecificArray_withNoDuplicates(expected, actual);
     }
 
     protected void assertClassSpecificArray_withNoDuplicates(T[] expected, T[] actual) {
-        assertThat(actual).hasSize(expected.length);
-        assertThat(actual[0]).isEqualTo(expected[0]);
-        assertThat(actual[1]).isEqualTo(expected[1]);
-
-        assertThat(actual[0])
-                .isNotSameAs(actual[1]);
-
-        assertThat(DeepEquals.deepEquals(expected, actual)).isTrue();
+        assertEquals(actual.length, expected.length);
+        assert DeepEquals.deepEquals(expected, actual);
+        assert actual[0] != actual[1];
     }
 
     @Test
@@ -315,15 +301,12 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         T one = provideT1();
         T two = provideT2();
 
-        T[] expected = Arrays.array(one, two, one);
+        T[] expected = ArrayUtilities.createArray(one, two, one);
 
         // should be no references
         String json = TestUtil.toJson(expected);
-
         assertReferentialityInString(json);
-
         T[] actual = TestUtil.toObjects(json, null);
-
         assertClassSpecificArray_withDuplicates(expected, actual);
     }
 
@@ -467,9 +450,9 @@ public abstract class SerializationDeserializationMinimumTests<T> {
 
     private void assertReferentialIdentity(Object actual, Object expected) {
         if (isReferenceable()) {
-            assertThat(actual).isSameAs(expected);
+            assert actual == expected;
         } else {
-            assertThat(actual).isNotSameAs(expected);
+            assert actual != expected;
         }
     }
 
@@ -482,7 +465,9 @@ public abstract class SerializationDeserializationMinimumTests<T> {
     }
 
     private void assertOneOfTheseTypesInString(String json) {
-        assertThat(json).containsAnyOf(buildPossibleClassNamesArray());
+        String[] strings = buildPossibleClassNamesArray();
+        boolean containsAny = Arrays.stream(strings).anyMatch(json::contains);
+        assert containsAny : json + " should contain at least one of " + String.join(", ", strings);
     }
 
     protected String[] buildPossibleClassNamesArray() {

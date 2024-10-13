@@ -2,11 +2,10 @@ package com.cedarsoftware.io;
 
 import java.io.InputStream;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Useful utilities for use in unit testing.
@@ -28,7 +27,7 @@ import org.slf4j.LoggerFactory;
  *         limitations under the License.
  */
 public class TestUtil {
-    final static Logger logger = LoggerFactory.getLogger(TestUtil.class);
+    private static final Logger logger = Logger.getLogger(TestUtil.class.getName());
 
     public static <T> T serializeDeserialize(T initial) {
         String json = toJson(initial);
@@ -95,7 +94,7 @@ public class TestUtil {
     }
 
     /**
-     * Generally, use this API to write JSON.  It will do so using json-io and other serializers, so that
+     * Generally, use this API to write JSON. It will do so using json-io and other serializers, so that
      * timing statistics can be measured.
      */
     public static String toJson(Object obj, WriteOptions writeOptions) {
@@ -109,7 +108,7 @@ public class TestUtil {
             printLine(jsonIoTestInfo.json);
         }
 
-        if (jsonIoTestInfo.t == null && gsonTestInfo.t == null && jacksonTestInfo.t == null) {   // Only add times when all parsers succeeded
+        if (jsonIoTestInfo.t == null && gsonTestInfo.t == null && jacksonTestInfo.t == null) { // Only add times when all parsers succeeded
             totalJsonWrite += jsonIoTestInfo.nanos;
             totalGsonWrite += gsonTestInfo.nanos;
             totalJacksonWrite += jacksonTestInfo.nanos;
@@ -176,17 +175,18 @@ public class TestUtil {
     }
 
     /**
-     * Generally, use this API to read JSON.  It will do so using json-io and other serializers, so that
-     * timing statistics can be measured.  This version is the simple (no build options version).
+     * Generally, use this API to read JSON. It will do so using json-io and other serializers, so that
+     * timing statistics can be measured. This version is the simple (no build options version).
      */
     public static <T> T toObjects(String json, Class<T> root) {
         return toObjects(json, new ReadOptionsBuilder().build(), root);
     }
 
     /**
-     * Generally, use this API to read JSON.  It will do so using json-io and other serializers, so that
-     * timing statistics can be measured.  This version is more capable, as it supports build options.
+     * Generally, use this API to read JSON. It will do so using json-io and other serializers, so that
+     * timing statistics can be measured. This version is more capable, as it supports build options.
      */
+    @SuppressWarnings("unchecked")
     public static <T> T toObjects(final String json, ReadOptions readOptions, Class<T> root) {
         totalReads++;
 
@@ -194,7 +194,7 @@ public class TestUtil {
         TestInfo gsonTestInfo = readGson(json);
         TestInfo jacksonTestInfo = readJackson(json);
 
-        if (jsonIoTestInfo.t == null && gsonTestInfo.t == null && jacksonTestInfo.t == null) {   // only add times when all parsers succeeded
+        if (jsonIoTestInfo.t == null && gsonTestInfo.t == null && jacksonTestInfo.t == null) { // only add times when all parsers succeeded
             totalJsonRead += jsonIoTestInfo.nanos;
             totalGsonRead += gsonTestInfo.nanos;
             totalJacksonRead += jacksonTestInfo.nanos;
@@ -218,7 +218,6 @@ public class TestUtil {
             }
         }
 
-        //noinspection unchecked
         return (T) jsonIoTestInfo.obj;
     }
 
@@ -234,13 +233,13 @@ public class TestUtil {
 
     public static void writeTimings() {
         logger.info("Write JSON");
-        logger.info("  json-io: " + (totalJsonWrite / 1000000.0) + " ms");
-        logger.info("  GSON: " + (totalGsonWrite / 1000000.0) + " ms");
-        logger.info("  Jackson: " + (totalJacksonWrite / 1000000.0) + " ms");
+        logger.info("  json-io: " + (totalJsonWrite / 1_000_000.0) + " ms");
+        logger.info("  GSON: " + (totalGsonWrite / 1_000_000.0) + " ms");
+        logger.info("  Jackson: " + (totalJacksonWrite / 1_000_000.0) + " ms");
         logger.info("Read JSON");
-        logger.info("  json-io: " + (totalJsonRead / 1000000.0) + " ms");
-        logger.info("  GSON: " + (totalGsonRead / 1000000.0) + " ms");
-        logger.info("  Jackson: " + (totalJacksonRead / 1000000.0) + " ms");
+        logger.info("  json-io: " + (totalJsonRead / 1_000_000.0) + " ms");
+        logger.info("  GSON: " + (totalGsonRead / 1_000_000.0) + " ms");
+        logger.info("  Jackson: " + (totalJacksonRead / 1_000_000.0) + " ms");
         logger.info("Write Fails:");
         logger.info("  json-io: " + jsonIoWriteFails + " / " + totalWrites);
         logger.info("  GSON: " + gsonWriteFails + " / " + totalWrites);
@@ -270,7 +269,7 @@ public class TestUtil {
 
         while (true) {
             idx = source.indexOf(sub, idx);
-            if (idx < answer) {
+            if (idx == -1) {
                 return answer;
             }
             ++answer;
@@ -296,18 +295,11 @@ public class TestUtil {
 
     /**
      * Ensure that the passed in source contains all the Strings passed in the 'contains' parameter AND
-     * that they appear in the order they are passed in.  This is a better check than simply asserting
-     * that a particular error message contains a set of tokens...it also ensures the order in which the
-     * tokens appear.  If the strings passed in do not appear in the same order within the source string,
-     * an assertion failure happens.  Finally, the Strings are NOT compared with case sensitivity.  This is
-     * useful for testing exception message text - ensuring that key values are within the message, without
-     * copying the exact message into the test.  This allows more freedom for the author of the code being
-     * tested, where changes to the error message would be less likely to break the test.
+     * that they appear in the order they are passed in. This method asserts the presence and order
+     * of the specified strings, ignoring case.
      *
-     * @param source   String source string to test, for example, an exception error message being tested.
-     * @param contains String comma separated list of Strings that must appear in the source string.  Furthermore,
-     *                 the strings in the contains comma separated list must appear in the source string, in the same order as they
-     *                 are passed in.
+     * @param source   Source string to test.
+     * @param contains Strings that must appear in the source string in the specified order.
      */
     public static void assertContainsIgnoreCase(String source, String... contains) {
         String lowerSource = source.toLowerCase();
@@ -320,19 +312,11 @@ public class TestUtil {
     }
 
     /**
-     * Ensure that the passed in source contains all the Strings passed in the 'contains' parameter AND
-     * that they appear in the order they are passed in.  This is a better check than simply asserting
-     * that a particular error message contains a set of tokens...it also ensures the order in which the
-     * tokens appear.  If the strings passed in do not appear in the same order within the source string,
-     * false is returned, otherwise true is returned. Finally, the Strings are NOT compared with case sensitivity.
-     * This is useful for testing exception message text - ensuring that key values are within the message, without
-     * copying the exact message into the test.  This allows more freedom for the author of the code being
-     * tested, where changes to the error message would be less likely to break the test.
+     * Checks whether the source string contains all specified substrings in the given order, ignoring case.
      *
-     * @param source   String source string to test, for example, an exception error message being tested.
-     * @param contains String comma separated list of Strings that must appear in the source string.  Furthermore,
-     *                 the strings in the contains comma separated list must appear in the source string, in the same order as they
-     *                 are passed in.
+     * @param source   Source string to test.
+     * @param contains Strings that must appear in the source string in the specified order.
+     * @return True if all specified strings are found in order; otherwise, false.
      */
     public static boolean checkContainsIgnoreCase(String source, String... contains) {
         String lowerSource = source.toLowerCase();

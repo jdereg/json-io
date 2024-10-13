@@ -7,7 +7,6 @@ import java.util.Date;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate> {
@@ -63,7 +62,7 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
 
     @Override
     protected void assertT1_serializedWithoutType_parsedAsJsonTypes(LocalDate expected, Object actual) {
-        assertThat(actual).isEqualTo("1950-01-27");
+        assertEquals("1950-01-27", actual);
     }
 
     @Test
@@ -71,7 +70,7 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
         LocalDate date = LocalDate.of(2014, 10, 17);
         String json = TestUtil.toJson(date);
         LocalDate result = TestUtil.toObjects(json, null);
-        assertThat(result).isEqualTo(date);
+        assertEquals(date, result);
     }
 
     @Test
@@ -79,10 +78,9 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
         String json = "{ \"@type\" : \"java.time.LocalDate\", \"year\" : 2023, \"month\": 4, \"day\": 5 }";
         LocalDate localDate = TestUtil.toObjects(json, null);
 
-        assertThat(localDate)
-                .hasYear(2023)
-                .hasMonthValue(4)
-                .hasDayOfMonth(5);
+        assert localDate.getYear() == 2023;
+        assert localDate.getMonthValue() == 4;
+        assert localDate.getDayOfMonth() == 5;
     }
 
     @Test
@@ -91,15 +89,15 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
         String json = loadJsonForTest("old-format-nested-level.json");
         NestedLocalDate nested = TestUtil.toObjects(json, null);
 
-        assertThat(nested.getOne())
-                .hasYear(2014)
-                .hasMonthValue(6)
-                .hasDayOfMonth(13);
+        LocalDate d1 = nested.getOne();
+        assert d1.getYear() == 2014;
+        assert d1.getMonthValue() == 6;
+        assert d1.getDayOfMonth() == 13;
 
-        assertThat(nested.getTwo())
-                .hasYear(2024)
-                .hasMonthValue(9)
-                .hasDayOfMonth(12);
+        LocalDate d2 = nested.getTwo();
+        assert d2.getYear() == 2024;
+        assert d2.getMonthValue() == 9;
+        assert d2.getDayOfMonth() == 12;
     }
 
     static class LocalDateArray

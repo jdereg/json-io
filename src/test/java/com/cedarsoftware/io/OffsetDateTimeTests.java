@@ -7,6 +7,7 @@ import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -58,14 +59,14 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
     }
 
     private void assertOffsetDateTime(OffsetDateTime offsetDateTime, int year, int month, int day, int hour, int min, int sec, int nano, String zone) {
-        assertThat(offsetDateTime.getYear()).isEqualTo(year);
-        assertThat(offsetDateTime.getMonthValue()).isEqualTo(month);
-        assertThat(offsetDateTime.getDayOfMonth()).isEqualTo(day);
-        assertThat(offsetDateTime.getHour()).isEqualTo(hour);
-        assertThat(offsetDateTime.getMinute()).isEqualTo(min);
-        assertThat(offsetDateTime.getSecond()).isEqualTo(sec);
-        assertThat(offsetDateTime.getNano()).isEqualTo(nano);
-        assertThat(offsetDateTime.getOffset()).isEqualTo(ZoneOffset.of("Z"));
+        assertEquals(offsetDateTime.getYear(), (year));
+        assertEquals(offsetDateTime.getMonthValue(), (month));
+        assertEquals(offsetDateTime.getDayOfMonth(), (day));
+        assertEquals(offsetDateTime.getHour(), (hour));
+        assertEquals(offsetDateTime.getMinute(), (min));
+        assertEquals(offsetDateTime.getSecond(), (sec));
+        assertEquals(offsetDateTime.getNano(), (nano));
+        assertEquals(offsetDateTime.getOffset(), (ZoneOffset.of("Z")));
     }
 
     private String loadJsonForTest(String fileName) {

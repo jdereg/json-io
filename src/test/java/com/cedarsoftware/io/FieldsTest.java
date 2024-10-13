@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 
 import com.cedarsoftware.io.models.Human;
 import com.cedarsoftware.io.models.OuterObject;
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -23,7 +24,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static com.cedarsoftware.util.MapUtilities.mapOf;
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -54,10 +55,10 @@ public class FieldsTest
         String json = TestUtil.toJson(expected);
         TestUtil.printLine(json);
         OuterObject actual = TestUtil.toObjects(json, null);
-        assertThat(actual.getX()).isEqualTo(expected.getX());
-        assertThat(actual.getY()).isEqualTo(expected.getY());
-        assertThat(actual.getMessage1Holder().getMessage()).isEqualTo(expected.getMessage1Holder().getMessage());
-        assertThat(actual.getMessage2Holder().getMessage()).isEqualTo(expected.getMessage2Holder().getMessage());
+        assertEquals(actual.getX(), expected.getX());
+        assertEquals(actual.getY(), expected.getY());
+        assertEquals(actual.getMessage1Holder().getMessage(), expected.getMessage1Holder().getMessage());
+        assertEquals(actual.getMessage2Holder().getMessage(), expected.getMessage2Holder().getMessage());
     }
 
     @Test
@@ -81,7 +82,7 @@ public class FieldsTest
         TestUtil.printLine(jsonOut);
 
         NestedChar actual = TestUtil.toObjects(jsonOut, null);
-        assertThat(initial.ch).isEqualTo(actual.ch);
+        assertEquals(initial.ch, actual.ch);
     }
 
     private static void assertFields(ManyFields root)
@@ -445,7 +446,7 @@ public class FieldsTest
             this.name = name;
         }
 
-        private ClassLoader classLoader = FieldsTest.class.getClassLoader();
+        private ClassLoader classLoader = ClassUtilities.getClassLoader();
         private String name;
     }
 

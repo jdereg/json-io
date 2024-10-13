@@ -77,8 +77,6 @@ public class Accessor {
             } else {
                 return methodHandle.invoke(o);
             }
-        } catch (ThreadDeath td) {
-            throw td;
         } catch (Throwable t) {
             return null;
         }

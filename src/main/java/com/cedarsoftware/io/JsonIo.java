@@ -280,7 +280,7 @@ public class JsonIo {
 
     /**
      * Call this method to see all the conversions offered.
-     * @param args
+     * @param args String[] of command line arguments
      */
     public static void main(String[] args) {
         String json = toJson(new Converter(new DefaultConverterOptions()).getSupportedConversions(), new WriteOptionsBuilder().prettyPrint(true).showTypeInfoNever().build());
@@ -323,7 +323,7 @@ public class JsonIo {
         if (loader instanceof ClassLoader) {
             classLoader = (ClassLoader) loader;
         } else {
-            classLoader = com.cedarsoftware.io.JsonReader.class.getClassLoader();
+            classLoader = ClassUtilities.getClassLoader();
         }
         builder.classLoader(classLoader);
 
@@ -443,7 +443,7 @@ public class JsonIo {
         if (loader instanceof ClassLoader) {
             classLoader = (ClassLoader) loader;
         } else {
-            classLoader = com.cedarsoftware.io.JsonReader.class.getClassLoader();
+            classLoader = ClassUtilities.getClassLoader();
         }
         builder.classLoader(classLoader);
 

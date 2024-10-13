@@ -466,7 +466,6 @@ class DatesTest
         assertEquals(stamp.getTime(), now);
     }
 
-    @Disabled
     @Test
     void testSqlDate2()
     {

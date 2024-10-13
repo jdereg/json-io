@@ -25,7 +25,7 @@ public class ClassForNameTest
     @Test
     public void testClassForName()
     {
-        Class<?> testObjectClass = ClassUtilities.forName("com.cedarsoftware.io.TestObject", ClassForNameTest.class.getClassLoader());
+        Class<?> testObjectClass = ClassUtilities.forName("com.cedarsoftware.io.TestObject", ClassUtilities.getClassLoader());
         assert testObjectClass instanceof Class<?>;
         assert "com.cedarsoftware.io.TestObject".equals(testObjectClass.getName());
     }
@@ -41,20 +41,20 @@ public class ClassForNameTest
     @Test
     public void testClassForNameNullClassErrorHandling()
     {
-        assert null == ClassUtilities.forName(null, ClassForNameTest.class.getClassLoader());
-        assert null == ClassUtilities.forName("Smith&Wesson", ClassForNameTest.class.getClassLoader());
+        assert null == ClassUtilities.forName(null, ClassUtilities.getClassLoader());
+        assert null == ClassUtilities.forName("Smith&Wesson", ClassUtilities.getClassLoader());
     }
 
     @Test
     public void testClassForNameFailOnClassLoaderErrorTrue()
     {
-        assert null == ClassUtilities.forName("foo.bar.baz.Qux", ClassForNameTest.class.getClassLoader());
+        assert null == ClassUtilities.forName("foo.bar.baz.Qux", ClassUtilities.getClassLoader());
     }
 
     @Test
     public void testClassForNameFailOnClassLoaderErrorFalse()
     {
-        Class<?> testObjectClass = ClassUtilities.forName("foo.bar.baz.Qux", ClassForNameTest.class.getClassLoader());
+        Class<?> testObjectClass = ClassUtilities.forName("foo.bar.baz.Qux", ClassUtilities.getClassLoader());
         assert testObjectClass == null;
     }
 
@@ -62,7 +62,7 @@ public class ClassForNameTest
     {
         AlternateNameClassLoader(ClassForNameTest enclosing, String alternateName, Class<?> clazz)
         {
-            super(AlternateNameClassLoader.class.getClassLoader());
+            super(ClassUtilities.getClassLoader());
             this.alternateName = alternateName;
             this.clazz = clazz;
         }

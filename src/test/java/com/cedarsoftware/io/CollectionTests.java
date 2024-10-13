@@ -25,11 +25,12 @@ import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
 import com.cedarsoftware.util.SealableList;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 
 import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -369,17 +370,17 @@ class CollectionTests {
         emptyCols = TestUtil.toObjects(json, null);
 
         assertEquals(0, emptyCols.getCol().size());
-        assertInstanceOf(ArrayList.class, emptyCols.getCol());
+        assert ArrayList.class.isAssignableFrom(emptyCols.getCol().getClass());
         assertEquals(0, emptyCols.getList().size());
-        assertInstanceOf(ArrayList.class, emptyCols.getList());
+        assert ArrayList.class.isAssignableFrom(emptyCols.getList().getClass());
         assertEquals(0, emptyCols.getMap().size());
-        assertInstanceOf(LinkedHashMap.class, emptyCols.getMap());
+        assert LinkedHashMap.class.isAssignableFrom(emptyCols.getMap().getClass());
         assertEquals(0, emptyCols.getSet().size());
-        assertInstanceOf(LinkedHashSet.class, emptyCols.getSet());
+        assert LinkedHashSet.class.isAssignableFrom(emptyCols.getSet().getClass());
         assertEquals(0, emptyCols.getSortedSet().size());
-        assertInstanceOf(TreeSet.class, emptyCols.getSortedSet());
+        assert TreeSet.class.isAssignableFrom(emptyCols.getSortedSet().getClass());
         assertEquals(0, emptyCols.getSortedMap().size());
-        assertInstanceOf(TreeMap.class, emptyCols.getSortedMap());
+        assert TreeMap.class.isAssignableFrom(emptyCols.getSortedMap().getClass());
     }
 
     @Test
@@ -493,10 +494,10 @@ class CollectionTests {
         assertEquals("This is a string", col1.get(2));
         assertNull(col1.get(3));
         assertEquals(col1.get(4), to);
-        assertInstanceOf(Object[].class, col1.get(5));
+        assert Object[].class.isAssignableFrom(col1.get(5).getClass());
         Object[] oa = (Object[]) col1.get(5);
         assertEquals("dog", oa[0]);
-        assertInstanceOf(String[].class, oa[1]);
+        assert String[].class.isAssignableFrom(oa[1].getClass());
         String[] sa = (String[]) oa[1];
         assertEquals("a", sa[0]);
         assertEquals("b", sa[1]);
@@ -607,6 +608,7 @@ class CollectionTests {
     }
 
     @Test
+    @EnabledForJreRange(min = JRE.JAVA_9)
     void testReadListOfInJDK1_8()
     {
         // java.util.ImmutableCollections$ListN - created by using JDK9+ and then storing the String so that we are

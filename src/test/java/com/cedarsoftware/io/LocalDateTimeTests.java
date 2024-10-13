@@ -84,13 +84,13 @@ class LocalDateTimeTests extends SerializationDeserializationMinimumTests<LocalD
     void testOldFormat_topLevel_withType() {
         String json = "{ \"@type\": \"java.time.LocalDateTime\", \"date\": \"2014-10-17\", \"time\": \"09:15:16\" }";
         LocalDateTime localDate = TestUtil.toObjects(json, LocalDateTime.class);
-        assertThat(localDate).hasYear(2014);
-        assertThat(localDate).hasMonthValue(10);
-        assertThat(localDate).hasDayOfMonth(17);
-        assertThat(localDate).hasHour(9);
-        assertThat(localDate).hasMinute(15);
-        assertThat(localDate).hasSecond(16);
-        assertThat(localDate).hasNano(0);
+        assert localDate.getYear() == 2014;
+        assert localDate.getMonthValue() == 10;
+        assert localDate.getDayOfMonth() == 17;
+        assert localDate.getHour() == 9;
+        assert localDate.getMinute() == 15;
+        assert localDate.getSecond() == 16;
+        assert localDate.getNano() == 0;
     }
 
     @Test

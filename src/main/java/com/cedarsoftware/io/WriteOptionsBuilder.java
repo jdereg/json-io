@@ -835,7 +835,7 @@ public class WriteOptionsBuilder {
         private boolean enumPublicFieldsOnly = false;
         private boolean closeStream = true;
         private JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
-        private ClassLoader classLoader = WriteOptions.class.getClassLoader();
+        private ClassLoader classLoader = ClassUtilities.getClassLoader();
         private Map<Class<?>, Set<String>> includedFieldNames = new LinkedHashMap<>();
         private Map<Class<?>, Map<String, String>> nonStandardGetters = new LinkedHashMap<>();
         private Map<String, String> aliasTypeNames = new LinkedHashMap<>();
@@ -1202,7 +1202,7 @@ public class WriteOptionsBuilder {
      */
     private static void loadBaseWriters() {
         Map<String, String> map = MetaUtils.loadMapDefinition("config/customWriters.txt");
-        ClassLoader classLoader = WriteOptions.class.getClassLoader();
+        ClassLoader classLoader = ClassUtilities.getClassLoader();
 
         for (Map.Entry<String, String> entry : map.entrySet()) {
             String className = entry.getKey();
@@ -1233,7 +1233,7 @@ public class WriteOptionsBuilder {
     static void loadBaseNonRefs() {
         Set<String> set = MetaUtils.loadSetDefinition("config/nonRefs.txt");
         set.forEach((className) -> {
-            Class<?> clazz = ClassUtilities.forName(className, WriteOptions.class.getClassLoader());
+            Class<?> clazz = ClassUtilities.forName(className, ClassUtilities.getClassLoader());
             if (clazz == null) {
                 System.out.println("Class: " + className + " undefined.  Cannot be used as non-referenceable class, listed in resources/nonRefs.txt");
             }

@@ -14,6 +14,8 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 
 import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static com.cedarsoftware.util.CollectionUtilities.setOf;
@@ -362,6 +364,7 @@ class JDK9ImmutableTest
     }
 
     @Test
+    @EnabledForJreRange(min = JRE.JAVA_9)
     void testForwardReferenceImmutableList() {
         Node node1 = new Node("Node1");
         Node node2 = new Node("Node2");
@@ -419,6 +422,7 @@ class JDK9ImmutableTest
     }
 
     @Test
+    @EnabledForJreRange(min = JRE.JAVA_9)
     void testForwardReferenceImmutableSet() {
         Node node1 = new Node("Node1");
         Node node2 = new Node("Node2");

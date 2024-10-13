@@ -17,6 +17,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
@@ -59,7 +60,7 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
         NestedZonedDateTime expected = new NestedZonedDateTime(date, date2);
         String json = TestUtil.toJson(expected);
         NestedZonedDateTime result = TestUtil.toObjects(json, null);
-        assertThat(result.date1).isEqualTo(date);
+        assertEquals(result.date1, date);
     }
 
     @Test
@@ -191,6 +192,6 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
         String json = TestUtil.toJson(expected, new WriteOptionsBuilder().build());
 
         ZonedDateTime actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), ZonedDateTime.class);
-        assertThat(expected).isEqualTo(actual);
+        assert expected.equals(actual);
     }
 }

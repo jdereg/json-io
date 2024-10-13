@@ -151,8 +151,8 @@ class RootsTest
                 .build(), null);
         })
                 .isInstanceOf(ClassCastException.class)
-                .hasMessageContaining("class com.cedarsoftware.io.JsonObject cannot be cast to class java.time.ZonedDateTime");
-        
+                .hasMessageContaining("com.cedarsoftware.io.JsonObject cannot be cast");
+
         // When forced, it's ok.
         ZonedDateTime zdt2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()

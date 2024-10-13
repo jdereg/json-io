@@ -4,6 +4,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import com.cedarsoftware.util.ClassUtilities;
+
 import static com.cedarsoftware.io.MetaUtils.trySetAccessible;
 import static com.cedarsoftware.util.ClassUtilities.forName;
 
@@ -22,7 +24,7 @@ final class Unsafe
      */
     public Unsafe() throws InvocationTargetException {
         try {
-            Constructor<?> unsafeConstructor = forName("sun.misc.Unsafe", MetaUtils.class.getClassLoader()).getDeclaredConstructor();
+            Constructor<?> unsafeConstructor = forName("sun.misc.Unsafe", ClassUtilities.getClassLoader()).getDeclaredConstructor();
             trySetAccessible(unsafeConstructor);
             sunUnsafe = unsafeConstructor.newInstance();
             allocateInstance = sunUnsafe.getClass().getMethod("allocateInstance", Class.class);

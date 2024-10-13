@@ -688,9 +688,7 @@ public class MetaUtils {
      * @return Content of the resource file as a byte[].
      */
     public static byte[] loadResourceAsBytes(String resourceName) {
-        try (InputStream inputStream = Optional.ofNullable(Thread.currentThread().getContextClassLoader().getResourceAsStream(resourceName))
-                // in case if it was inside osgi container
-                .orElseGet(() -> MetaUtils.class.getClassLoader().getResourceAsStream(resourceName))) {
+        try (InputStream inputStream = ClassUtilities.getClassLoader().getResourceAsStream(resourceName)) {
             if (inputStream == null) {
                 throw new JsonIoException("Resource not found: " + resourceName);
             }

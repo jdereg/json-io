@@ -30,6 +30,8 @@ import com.cedarsoftware.io.reflect.filters.models.ColorEnum;
 import com.cedarsoftware.io.reflect.filters.models.GetMethodTestObject;
 import com.cedarsoftware.io.reflect.filters.models.ObjectWithBooleanValues;
 import com.cedarsoftware.io.reflect.filters.models.PrivateFinalObject;
+import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -39,7 +41,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import static com.cedarsoftware.util.CollectionUtilities.setOf;
 import static com.cedarsoftware.util.MapUtilities.mapOf;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -80,7 +81,7 @@ class WriteOptionsTest {
     private static Stream<Arguments> classLoadersTest() {
         return Stream.of(
                 Arguments.of(ClassLoader.getSystemClassLoader()),
-                Arguments.of(WriteOptionsTest.class.getClassLoader())
+                Arguments.of(ClassUtilities.getClassLoader())
         );
     }
 
@@ -243,8 +244,8 @@ class WriteOptionsTest {
     @MethodSource("aliasExceptions")
     void testAliasTypeNames_exceptionCases(String fqName, String shortName) {
         WriteOptions options = new WriteOptionsBuilder().build();
-        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
-                new WriteOptionsBuilder().aliasTypeName(fqName, shortName));
+        assertThrows(IllegalArgumentException.class, () ->
+        { new WriteOptionsBuilder().aliasTypeName(fqName, shortName); });
     }
 
     @Test
@@ -262,7 +263,7 @@ class WriteOptionsTest {
         Map<String, String> map = mapOf("java.lang.Integer", "properInt");
 
         WriteOptionsBuilder builder = new WriteOptionsBuilder();
-        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> builder.aliasTypeNames(map));
+        assertThrows(IllegalArgumentException.class, () -> builder.aliasTypeNames(map));
     }
 
     @Test
@@ -277,7 +278,7 @@ class WriteOptionsTest {
     @Test
     void testAliasTypeNames_addedByNameValue_whenAlreadyExists_throwsException() {
         WriteOptionsBuilder builder = new WriteOptionsBuilder();
-        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> builder.aliasTypeName("java.lang.Integer", "properInt"));
+        assertThrows(IllegalArgumentException.class, () -> builder.aliasTypeName("java.lang.Integer", "properInt"));
     }
 
     @Test
@@ -429,8 +430,8 @@ class WriteOptionsTest {
         Date[] dates = new Date[]{now};
         String json = TestUtil.toJson(dates, options);
         Date[] dates2 = TestUtil.toObjects(json, Date[].class);
-        assertThat(dates).isEqualTo(dates2);
-        assertThat(dates[0]).isEqualTo(now);
+        assert DeepEquals.deepEquals(dates, dates2);
+        assertEquals(dates[0], now);
         assertEquals(dates2[0].toString(), dates[0].toString());    // differ in millis
         assertEquals(dates2[0].toString(), now.toString());         // differ in millis
     }
@@ -462,7 +463,7 @@ class WriteOptionsTest {
         Date now = new Date();
         String json = TestUtil.toJson(now, options);
         Date date2 = TestUtil.toObjects(json, Date.class);
-        assertThat(date2).isEqualTo(now);
+        assertEquals(date2, now);
     }
 
     @Test
@@ -527,13 +528,13 @@ class WriteOptionsTest {
     void getAccessorsForClass_onEnum_fillsOutAccessorCorrectly() {
         List<Accessor> accessors = new WriteOptionsBuilder().build().getAccessorsForClass(Enum.class);
 
-        assertThat(accessors).hasSize(1);
-        assertThat(accessors.get(0).isPublic()).isTrue();
-        assertThat(accessors.get(0).getFieldOrMethodName()).isEqualTo("name");
-        assertThat(accessors.get(0).getActualFieldName()).isEqualTo("name");
-        assertThat(accessors.get(0).getUniqueFieldName()).isEqualTo("name");
-        assertThat(accessors.get(0).getFieldType()).isEqualTo(String.class);
-        assertThat(accessors.get(0).getDeclaringClass()).isEqualTo(Enum.class);
+        assert accessors.size() == 1;
+        assert accessors.get(0).isPublic();
+        assert accessors.get(0).getFieldOrMethodName().equals("name");
+        assert accessors.get(0).getActualFieldName().equals("name");
+        assert accessors.get(0).getUniqueFieldName().equals("name");
+        assert accessors.get(0).getFieldType().equals(String.class);
+        assert accessors.get(0).getDeclaringClass().equals(Enum.class);
     }
 
     @Test
@@ -550,15 +551,13 @@ class WriteOptionsTest {
         assertThat(list.get(1).getFieldOrMethodName()).isEqualTo("y");
         assertThat(list.get(2).getFieldOrMethodName()).isEqualTo("getKey");
         assertThat(list.get(3).getFieldOrMethodName()).isEqualTo("isFlatuated");
-
     }
 
     @Test
     void getAccessorsForClass_findsName_whenIncludedInNonStandardMappings() {
         List<Accessor> list = new WriteOptionsBuilder().build().getAccessorsForClass(WriteOptions.ShowType.class);
 
-        assertThat(list)
-                .hasSize(1);
+        assertEquals(list.size(), 1);
 
         //  non-standard mapping for Enum.name()
         assertThat(list.get(0).getFieldOrMethodName()).isEqualTo("name");
@@ -569,48 +568,44 @@ class WriteOptionsTest {
         List<Accessor> list = new WriteOptionsBuilder().build().getAccessorsForClass(GetMethodTestObject.class);
 
         //  will not include
-        assertThat(list)
-                .hasSize(5);
+        assertEquals(list.size(), 5);
 
-        assertThat(list.get(0).getFieldOrMethodName()).isEqualTo("test1");
-        assertThat(list.get(1).getFieldOrMethodName()).isEqualTo("test2");
-        assertThat(list.get(2).getFieldOrMethodName()).isEqualTo("test3");
-        assertThat(list.get(3).getFieldOrMethodName()).isEqualTo("test4");
+        assertEquals(list.get(0).getFieldOrMethodName(), "test1");
+        assertEquals(list.get(1).getFieldOrMethodName(), "test2");
+        assertEquals(list.get(2).getFieldOrMethodName(), "test3");
+        assertEquals(list.get(3).getFieldOrMethodName(), "test4");
 
         //  public method for accessing test5 so we use that.
-        assertThat(list.get(4).getFieldOrMethodName()).isEqualTo("getTest5");
+        assertEquals(list.get(4).getFieldOrMethodName(), "getTest5");
     }
 
     @Test
     void getAccessorsForClass_bindsBooleanNonStaticFieldAccessors() throws Throwable {
         List<Accessor> list = new WriteOptionsBuilder().build().getAccessorsForClass(ObjectWithBooleanValues.class);
 
-        assertThat(list)
-                .hasSize(5);
+        assertEquals(list.size(), 5);
 
-        assertThat(list.get(0).getFieldOrMethodName()).isEqualTo("test1");
-        assertThat(list.get(1).getFieldOrMethodName()).isEqualTo("test2");
-        assertThat(list.get(2).getFieldOrMethodName()).isEqualTo("test3");
-        assertThat(list.get(3).getFieldOrMethodName()).isEqualTo("test4");
+        assertEquals(list.get(0).getFieldOrMethodName(), "test1");
+        assertEquals(list.get(1).getFieldOrMethodName(), "test2");
+        assertEquals(list.get(2).getFieldOrMethodName(), "test3");
+        assertEquals(list.get(3).getFieldOrMethodName(), "test4");
 
         //  public method for accessing test5 so we use that.
-        assertThat(list.get(4).getFieldOrMethodName()).isEqualTo("isTest5");
+        assertEquals(list.get(4).getFieldOrMethodName(), "isTest5");
     }
 
     @Test
     void getAccessorsForClass_findEnumWithCustomFields_whenNotPublicFieldsOnly() {
         List<Accessor> list = new WriteOptionsBuilder().writeEnumAsJsonObject(false).build().getAccessorsForClass(CarEnumWithCustomFields.class);
 
-        assertThat(list)
-                .hasSize(5);
-
-
-        assertThat(list.get(0).getFieldOrMethodName()).isEqualTo("speed");
-        assertThat(list.get(1).getFieldOrMethodName()).isEqualTo("getRating");
-        assertThat(list.get(2).getFieldOrMethodName()).isEqualTo("tire");
-        assertThat(list.get(3).getFieldOrMethodName()).isEqualTo("isStick");
+        assertEquals(list.size(), 5);
+        
+        assertEquals(list.get(0).getFieldOrMethodName(), "speed");
+        assertEquals(list.get(1).getFieldOrMethodName(), "getRating");
+        assertEquals(list.get(2).getFieldOrMethodName(), "tire");
+        assertEquals(list.get(3).getFieldOrMethodName(), "isStick");
 
         //  public method for accessing test5 so we use that.
-        assertThat(list.get(4).getFieldOrMethodName()).isEqualTo("name");
+        assertEquals(list.get(4).getFieldOrMethodName(), "name");
     }
 }

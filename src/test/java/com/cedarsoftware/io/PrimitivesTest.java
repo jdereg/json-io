@@ -1,6 +1,7 @@
 package com.cedarsoftware.io;
 
 import com.cedarsoftware.util.ClassUtilities;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -8,7 +9,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -29,10 +29,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class PrimitivesTest
+class PrimitivesTest
 {
     @Test
-    public void testPrimitivesSetWithStrings()
+    void testPrimitivesSetWithStrings()
     {
         String json = "{\"@type\":\"" + AllPrimitives.class.getName() + "\",\"b\":\"true\",\"bb\":\"true\",\"by\":\"9\",\"bby\":\"9\",\"c\":\"B\",\"cc\":\"B\",\"d\":\"9.0\",\"dd\":\"9.0\",\"f\":\"9.0\",\"ff\":\"9.0\",\"i\":\"9\",\"ii\":\"9\",\"l\":\"9\",\"ll\":\"9\",\"s\":\"9\",\"ss\":\"9\"}";
         AllPrimitives ap = TestUtil.toObjects(json, null);
@@ -55,7 +55,7 @@ public class PrimitivesTest
     }
 
     @Test
-    public void testAbilityToNullPrimitivesWithEmptyString()
+    void testAbilityToNullPrimitivesWithEmptyString()
     {
         String json = "{\"@type\":\"" + AllPrimitives.class.getName() + "\",\"b\":\"\",\"bb\":\"\",\"by\":\"\",\"bby\":\"\",\"c\":\"\",\"cc\":\"\",\"d\":\"\",\"dd\":\"\",\"f\":\"\",\"ff\":\"\",\"i\":\"\",\"ii\":\"\",\"l\":\"\",\"ll\":\"\",\"s\":\"\",\"ss\":\"\"}";
         AllPrimitives ap = TestUtil.toObjects(json, null);
@@ -78,7 +78,7 @@ public class PrimitivesTest
     }
 
     @Test
-    public void testEmptyPrimitives()
+    void testEmptyPrimitives()
     {
         final String json = "{\"@type\":\"byte\"}";
 
@@ -129,7 +129,7 @@ public class PrimitivesTest
     }
 
     @Test
-    public void testAssignPrimitiveToString()
+    void testAssignPrimitiveToString()
     {
         String json = "{\"@type\":\"" + TestStringField.class.getName() + "\",\"intField\":16,\"booleanField\":true,\"doubleField\":345.12321,\"nullField\":null,\"values\":[10,true,3.14159,null]}";
         TestStringField tsf = TestUtil.toObjects(json, null);
@@ -147,23 +147,23 @@ public class PrimitivesTest
     void testValueAtRootNoType()
     {
         Object x = TestUtil.toObjects("120.1", null);
-        assertInstanceOf(Double.class, x);
+        assert Double.class.isAssignableFrom(x.getClass());
         assertEquals(x, 120.1d);
 
         x = TestUtil.toObjects("true", null);
-        assertInstanceOf(Boolean.class, x);
+        assert Boolean.class.isAssignableFrom(x.getClass());
         assertEquals(x, true);
 
         x = TestUtil.toObjects("false", null);
-        assertInstanceOf(Boolean.class, x);
+        assert Boolean.class.isAssignableFrom(x.getClass());
         assertEquals(x, false);
 
         x = TestUtil.toObjects("\"42\"", null);
-        assertInstanceOf(String.class, x);
+        assert String.class.isAssignableFrom(x.getClass());
         assertEquals(x, "42");
 
         x = TestUtil.toObjects("1e2", null);
-        assertInstanceOf(Double.class, x);
+        assert Double.class.isAssignableFrom(x.getClass());
         assertEquals(x, 100d);
     }
 
@@ -171,25 +171,25 @@ public class PrimitivesTest
     @ValueSource(strings = {"java.lang.Byte", "byte"})
     void testByteValueAtRoot(String stringType)
     {
-        Class<?> type = ClassUtilities.forName(stringType, Primitives.class.getClassLoader());
+        Class<?> type = ClassUtilities.forName(stringType, ClassUtilities.getClassLoader());
         Object x = TestUtil.toObjects("120.1", type);
-        assertInstanceOf(Byte.class, x);
+        assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)120);
 
         x = TestUtil.toObjects("true", type);
-        assertInstanceOf(Byte.class, x);
+        assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)1);
 
         x = TestUtil.toObjects("false", type);
-        assertInstanceOf(Byte.class, x);
+        assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)0);
 
         x = TestUtil.toObjects("\"42\"", type);
-        assertInstanceOf(Byte.class, x);
+        assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)42);
 
         x = TestUtil.toObjects("1e2", type);
-        assertInstanceOf(Byte.class, x);
+        assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)100);
     }
 
@@ -197,77 +197,78 @@ public class PrimitivesTest
     @ValueSource(strings = {"java.lang.Byte", "byte"})
     void testByteObjectValueAtRoot(String stringType)
     {
-        Class<?> type = stringType.equals("null") ? null : ClassUtilities.forName(stringType, Primitives.class.getClassLoader());
+        Class<?> type = stringType.equals("null") ? null : ClassUtilities.forName(stringType, ClassUtilities.getClassLoader());
         Object x = TestUtil.toObjects("{\"value\":120.1}", type);
-        assertInstanceOf(Byte.class, x);
+        assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)120);
 
         x = TestUtil.toObjects("{\"value\":true}", type);
-        assertInstanceOf(Byte.class, x);
+        assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)1);
 
         x = TestUtil.toObjects("{\"value\":false}", type);
-        assertInstanceOf(Byte.class, x);
+        assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)0);
 
         x = TestUtil.toObjects("{\"value\":\"42\"}", type);
-        assertInstanceOf(Byte.class, x);
+        assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)42);
 
         x = TestUtil.toObjects("{\"value\":1e2}", type);
-        assertInstanceOf(Byte.class, x);
+        assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)100);
     }
 
+    @Disabled
     @ParameterizedTest
     @ValueSource(strings = {"null"})
     void testByteObjectValueAtNullRoot(String stringType)
     {
-//        Class<?> type = stringType.equals("null") ? null : ClassUtilities.forName(stringType, Primitives.class.getClassLoader());
-//        Object x = TestUtil.toObjects("{\"value\":120.1}", type);
-//        assertInstanceOf(Double.class, x);
-//        assertEquals(x, 120d);
-//
-//        x = TestUtil.toObjects("{\"value\":true}", type);
-//        assertInstanceOf(Boolean.class, x);
-//        assertEquals(x, true);
-//
-//        x = TestUtil.toObjects("{\"value\":false}", type);
-//        assertInstanceOf(Boolean.class, x);
-//        assertEquals(x, false);
-//
-//        x = TestUtil.toObjects("{\"value\":\"42\"}", type);
-//        assertInstanceOf(String.class, x);
-//        assertEquals(x, "42");
-//
-//        x = TestUtil.toObjects("{\"value\":1e2}", type);
-//        assertInstanceOf(Double.class, x);
-//        assertEquals(x, 100d);
+        Class<?> type = stringType.equals("null") ? null : ClassUtilities.forName(stringType, ClassUtilities.getClassLoader());
+        Object x = TestUtil.toObjects("{\"value\":120.1}", type);
+        assert Double.class.isAssignableFrom(x.getClass());
+        assertEquals(x, 120d);
+
+        x = TestUtil.toObjects("{\"value\":true}", type);
+        assert Boolean.class.isAssignableFrom(x.getClass());
+        assertEquals(x, true);
+
+        x = TestUtil.toObjects("{\"value\":false}", type);
+        assert Boolean.class.isAssignableFrom(x.getClass());
+        assertEquals(x, false);
+
+        x = TestUtil.toObjects("{\"value\":\"42\"}", type);
+        assert String.class.isAssignableFrom(x.getClass());
+        assertEquals(x, "42");
+
+        x = TestUtil.toObjects("{\"value\":1e2}", type);
+        assert Double.class.isAssignableFrom(x.getClass());
+        assertEquals(x, 100d);
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"java.lang.Byte", "byte", "null"})
     void testTypedByteObjectValueAtRoot(String stringType)
     {
-        Class<?> type = stringType.equals("null") ? null : ClassUtilities.forName(stringType, Primitives.class.getClassLoader());
+        Class<?> type = stringType.equals("null") ? null : ClassUtilities.forName(stringType, ClassUtilities.getClassLoader());
         Object x = TestUtil.toObjects("{\"@type\":\"byte\",\"value\":120.1}", type);
-        assertInstanceOf(Byte.class, x);
+        assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)120);
 
         x = TestUtil.toObjects("{\"@type\":\"byte\",\"value\":true}", type);
-        assertInstanceOf(Byte.class, x);
+        assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)1);
 
         x = TestUtil.toObjects("{\"@type\":\"byte\",\"value\":false}", type);
-        assertInstanceOf(Byte.class, x);
+        assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)0);
 
         x = TestUtil.toObjects("{\"@type\":\"byte\",\"value\":\"42\"}", type);
-        assertInstanceOf(Byte.class, x);
+        assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)42);
 
         x = TestUtil.toObjects("{\"@type\":\"byte\",\"value\":1e2}", type);
-        assertInstanceOf(Byte.class, x);
+        assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)100);
     }
 
