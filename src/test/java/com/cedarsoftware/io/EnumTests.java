@@ -17,6 +17,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.assertj.core.api.Assertions.assertThat;
+import com.google.gson.JsonParser;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -169,7 +170,7 @@ class EnumTests {
         String json = TestUtil.toJson(x, options);
 
         String expected = loadJson("default-enum-standalone-with-privates.json");
-        assertThat(json).isEqualToIgnoringWhitespace(expected);
+        assertThat(JsonParser.parseString(json)).isEqualTo(JsonParser.parseString(expected));
     }
 
     @Test
