@@ -24,7 +24,7 @@ ___
 To include in your project:
 ##### Gradle
 ```groovy
-implementation 'com.cedarsoftware:json-io:4.28.0'
+implementation 'com.cedarsoftware:json-io:4.29.0'
 ```
 
 ##### Maven
@@ -32,7 +32,7 @@ implementation 'com.cedarsoftware:json-io:4.28.0'
  <dependency>
    <groupId>com.cedarsoftware</groupId>
    <artifactId>json-io</artifactId>
-   <version>4.28.0</version>
+   <version>4.29.0</version>
  </dependency>
 ```
 ___
@@ -50,23 +50,23 @@ ___
 >- [ ] **Java Package**: com.cedarsoftware.io
 >- [ ] **Java**: JDK17+ (Class file 52 format, includes module-info.class - multi-release JAR)
 >- [ ] **API**
-   >  - Static methods on [JsonIo](https://www.javadoc.io/doc/com.cedarsoftware/json-io/latest/com/cedarsoftware/io/JsonIo.html): [toJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.28.0/com/cedarsoftware/io/JsonIo.html#toJson(java.lang.Object,com.cedarsoftware.io.WriteOptions)), [toObjects()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.28.0/com/cedarsoftware/io/JsonIo.html#toObjects(java.lang.String,com.cedarsoftware.io.ReadOptions,java.lang.Class)), [formatJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.28.0/com/cedarsoftware/io/JsonIo.html#formatJson(java.lang.String,com.cedarsoftware.io.ReadOptions,com.cedarsoftware.io.WriteOptions)), [deepCopy()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.28.0/com/cedarsoftware/io/JsonIo.html#deepCopy(java.lang.Object,com.cedarsoftware.io.ReadOptions,com.cedarsoftware.io.WriteOptions))
+   >  - Static methods on [JsonIo](https://www.javadoc.io/doc/com.cedarsoftware/json-io/latest/com/cedarsoftware/io/JsonIo.html): [toJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.29.0/com/cedarsoftware/io/JsonIo.html#toJson(java.lang.Object,com.cedarsoftware.io.WriteOptions)), [toObjects()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.29.0/com/cedarsoftware/io/JsonIo.html#toObjects(java.lang.String,com.cedarsoftware.io.ReadOptions,java.lang.Class)), [formatJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.29.0/com/cedarsoftware/io/JsonIo.html#formatJson(java.lang.String,com.cedarsoftware.io.ReadOptions,com.cedarsoftware.io.WriteOptions)), [deepCopy()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.29.0/com/cedarsoftware/io/JsonIo.html#deepCopy(java.lang.Object,com.cedarsoftware.io.ReadOptions,com.cedarsoftware.io.WriteOptions))
 >  - Use [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md) to configure `JsonIo`
->  - Use [JsonReader.ClassFactory](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.28.0/com/cedarsoftware/io/JsonReader.ClassFactory.html) for difficult classes (hard to instantiate & fill)
->  - Use [JsonWriter.JsonClassWriter](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.28.0/com/cedarsoftware/io/JsonWriter.JsonClassWriter.html) to customize the output JSON for a particular class
+>  - Use [JsonReader.ClassFactory](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.29.0/com/cedarsoftware/io/JsonReader.ClassFactory.html) for difficult classes (hard to instantiate & fill)
+>  - Use [JsonWriter.JsonClassWriter](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.29.0/com/cedarsoftware/io/JsonWriter.JsonClassWriter.html) to customize the output JSON for a particular class
 >- [ ] Updates will be 5.1.0, 5.2.0, ...
->### 4.28.0 (current)
->- [ ] **Version**: [4.28.0](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.28.0/index.html)
+>### 4.29.0 (current)
+>- [ ] **Version**: [4.29.0](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.29.0/index.html)
 >- [ ] **Bundling**: Both JPMS (Java Platform Module System) and OSGi (Open Service Gateway initiative)
 >- [ ] **Maintained**: Fully
 >- [ ] **Java Package**: com.cedarsoftware.io
 >- [ ] **Java**: JDK1.8+ (Class file 52 format, includes module-info.class - multi-release JAR)
 >- [ ] **API**
->  - Static methods on [JsonIo](https://www.javadoc.io/doc/com.cedarsoftware/json-io/latest/com/cedarsoftware/io/JsonIo.html): [toJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.28.0/com/cedarsoftware/io/JsonIo.html#toJson(java.lang.Object,com.cedarsoftware.io.WriteOptions)), [toObjects()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.28.0/com/cedarsoftware/io/JsonIo.html#toObjects(java.lang.String,com.cedarsoftware.io.ReadOptions,java.lang.Class)), [formatJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.28.0/com/cedarsoftware/io/JsonIo.html#formatJson(java.lang.String,com.cedarsoftware.io.ReadOptions,com.cedarsoftware.io.WriteOptions)), [deepCopy()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.28.0/com/cedarsoftware/io/JsonIo.html#deepCopy(java.lang.Object,com.cedarsoftware.io.ReadOptions,com.cedarsoftware.io.WriteOptions))
+>  - Static methods on [JsonIo](https://www.javadoc.io/doc/com.cedarsoftware/json-io/latest/com/cedarsoftware/io/JsonIo.html): [toJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.29.0/com/cedarsoftware/io/JsonIo.html#toJson(java.lang.Object,com.cedarsoftware.io.WriteOptions)), [toObjects()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.29.0/com/cedarsoftware/io/JsonIo.html#toObjects(java.lang.String,com.cedarsoftware.io.ReadOptions,java.lang.Class)), [formatJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.29.0/com/cedarsoftware/io/JsonIo.html#formatJson(java.lang.String,com.cedarsoftware.io.ReadOptions,com.cedarsoftware.io.WriteOptions)), [deepCopy()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.29.0/com/cedarsoftware/io/JsonIo.html#deepCopy(java.lang.Object,com.cedarsoftware.io.ReadOptions,com.cedarsoftware.io.WriteOptions))
 >  - Use [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md) to configure `JsonIo`
->  - Use [JsonReader.ClassFactory](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.28.0/com/cedarsoftware/io/JsonReader.ClassFactory.html) for difficult classes (hard to instantiate & fill)
->  - Use [JsonWriter.JsonClassWriter](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.28.0/com/cedarsoftware/io/JsonWriter.JsonClassWriter.html) to customize the output JSON for a particular class
->- [ ] Updates will be 4.29.0, 4.30.0, ...
+>  - Use [JsonReader.ClassFactory](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.29.0/com/cedarsoftware/io/JsonReader.ClassFactory.html) for difficult classes (hard to instantiate & fill)
+>  - Use [JsonWriter.JsonClassWriter](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.29.0/com/cedarsoftware/io/JsonWriter.JsonClassWriter.html) to customize the output JSON for a particular class
+>- [ ] Updates will be 4.30.0, 4.31.0, ...
 >### 4.14.x (supported)
 >- [ ] **Version**: [4.14.3](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/index.html)
 >- [ ] **Bundling**: Both JPMS (Java Platform Module System) and OSGi (Open Service Gateway initiative)

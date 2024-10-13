@@ -1,4 +1,9 @@
 ### Revision History
+#### 4.29.0
+  * Consumed `java-util` `ClassUtilities.getClassLoader(),` which obtains the classLoader in a more robust way and works in OSGi and JPMS environment or non-framework environment
+  * Removed `slf4j` and `logback-classic` from `test` dependencies
+  * Merged in PR #297 by DaniellaHubble: Fix test that fails unexpectedly in `testEnumWithPrivateMembersAsField_withPrivatesOn()`
+  * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `2.15.0` to `2.17.0.`
 #### 4.28.0
   * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `2.14.0` to `2.15.0.`
 #### 4.27.0
