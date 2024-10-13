@@ -122,7 +122,7 @@ class SerializationErrorTests {
         assertThat(actual.getFoodType()).isEqualTo(FoodType.MILKS);
     }
 
-    @Disabled("needs Factory abd Writer for DateFormatter and maybe other Chronos types")
+    @Disabled("needs Factory and Writer for DateFormatter and maybe other Chronos types")
 //    @Test
     void testWriteOptions() {
         WriteOptions writeOptions = new WriteOptionsBuilder().build();
@@ -131,7 +131,7 @@ class SerializationErrorTests {
         assertTrue(DeepEquals.deepEquals(writeOptions, backFromSleep));
     }
 
-    @Disabled("needs Factory abd Writer for DateFormatter and maybe other Chronos types")
+    @Disabled("needs Factory and Writer for DateFormatter and maybe other Chronos types")
 //    @Test
     void testReadOptions() {
         ReadOptions readOptions = new ReadOptionsBuilder().build();

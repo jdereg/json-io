@@ -9,12 +9,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.jupiter.api.Disabled;
+import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -55,6 +58,14 @@ public class NoTypeTest
     }
 
     @Test
+    void personTestToPersonWithReadOptionJavaObjects()
+    {
+        String json = MetaUtils.loadResourceAsString("noTypes/person.json");
+        String msg = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), Person.class); }).getMessage();
+        assert msg.contains("Either use null for root, or set");
+    }
+
+    @Test
     void personTestToMap()
     {
         String json = MetaUtils.loadResourceAsString("noTypes/person.json");
@@ -66,19 +77,171 @@ public class NoTypeTest
     }
 
     @Test
-    @Disabled
-    void personsTestToPersons()
+    void personsTestWithPersonArrayRoot()
     {
         String json = MetaUtils.loadResourceAsString("noTypes/persons.json");
         Person[] persons = TestUtil.toObjects(json, Person[].class);
+        
         assert persons[0].name.equals("Joe");
         assert persons[0].age == 50;
         assert persons[0].salary == 225000.0d;
         assert persons[0].creditScore == 0;
-        assert persons[0].name.equals("Jane");
-        assert persons[0].age == 40;
-        assert persons[0].salary == 314000.0d;
-        assert persons[0].creditScore == 0;
+
+        assert persons[1].name.equals("Jane");
+        assert persons[1].age == 40;
+        assert persons[1].salary == 314000.0d;
+        assert persons[1].creditScore == 0;
+    }
+
+    @Test
+    void personsTestWithPersonArrayRootAsNativeJsonObjects()
+    {
+        String json = MetaUtils.loadResourceAsString("noTypes/persons.json");
+
+        try {
+            TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), Person[].class);
+            fail();
+        } catch (JsonIoException e) {
+            assert e.getMessage().contains("Either use null for root, or set");
+        }
+    }
+
+    @Test
+    void personsTestWithNullRoot()
+    {
+        String json = MetaUtils.loadResourceAsString("noTypes/persons.json");
+        Object[] persons = TestUtil.toObjects(json, null);
+        Map<String, Object> joe = (Map<String, Object>)persons[0];
+        Map<String, Object> jane = (Map<String, Object>) persons[1];
+
+        assert joe.get("name").equals("Joe");
+        assert joe.get("age").equals(50L);
+        assert joe.get("salary").equals(225000.0d);
+        assert joe.get("creditScore") == null;
+
+        assert jane.get("name").equals("Jane");
+        assert jane.get("age").equals(40L);
+        assert jane.get("salary").equals(314000.0d);
+        assert jane.get("creditScore") == null;
+    }
+
+    @Test
+    void personsTestWithMapRoot()
+    {
+        String json = MetaUtils.loadResourceAsString("noTypes/persons.json");
+        assertThrows(ClassCastException.class, () -> { Map x = TestUtil.toObjects(json, Map.class); });
+    }
+
+    @Test
+    void testStringArrayAtRoot() {
+        String json = "[\"foo\", null ,\"baz\"]";
+
+        // String[]
+        String[] strings = TestUtil.toObjects(json, String[].class);
+        assert strings.length == 3;
+        assert strings[0].equals("foo");
+        assert strings[1] == null;
+        assert strings[2].equals("baz");
+
+        // Implied Object[]
+        Object[] array = TestUtil.toObjects(json, null);
+        assert array.length == 3;
+        assert array[0].equals("foo");
+        assert array[1] == null;
+        assert array[2].equals("baz");
+
+        // Explicit Object[]
+        array = TestUtil.toObjects(json, Object[].class);
+        assert array.length == 3;
+        assert array[0].equals("foo");
+        assert array[1] == null;
+        assert array[2].equals("baz");
+    }
+    
+    @Test
+    void testSpecificRootsWithReturnAsJsonObjects() {
+        final String json = "[\"foo\", null ,\"baz\"]";
+
+        // String[]
+        String msg = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), String[].class); }).getMessage();
+        assert msg.contains("Either use null for root, or set");
+
+        String json2 = "75.1";
+        // AtomicInteger
+        AtomicInteger x = TestUtil.toObjects(json2, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), AtomicInteger.class);
+        assert x.get() == 75;   // Expected coercion into 'integer' space
+    }
+
+    @Test
+    void testStringArrayHeteroItems() {
+        String json = "[\"foo\", null , 25, true, 3.14159]";
+
+        // String[]
+        String[] strings = TestUtil.toObjects(json, String[].class);
+        assert strings.length == 5;
+        assert strings[0].equals("foo");
+        assert strings[1] == null;
+        assert strings[2].equals("25"); // Converted during parsing to component type of array[]
+        assert strings[3].equals("true"); // Converted during parsing to component type of array[]
+        assert strings[4].equals("3.14159"); // Converted during parsing to component type of array[]
+
+        // Implied Object[]
+        Object[] array = TestUtil.toObjects(json, null);
+        assert array.length == 5;
+        assert array[0].equals("foo");
+        assert array[1] == null;
+        assert array[2].equals(25L);    // No conversion when Object[]
+        assert array[3].equals(true);    // No conversion when Object[]
+        assert array[4].equals(3.14159d);    // No conversion when Object[]
+
+        // Explicit Object[]
+        array = TestUtil.toObjects(json, Object[].class);
+        assert array.length == 5;
+        assert array[0].equals("foo");
+        assert array[1] == null;
+        assert array[2].equals(25L);    // No coversion when implied Object[]
+        assert array[3].equals(true);    // No coversion when implied Object[]
+        assert array[4].equals(3.14159d);    // No coversion when implied Object[]
+    }
+
+    @Test
+    void testStringArrayHeteroItemsNoChance() {
+        String json = "[\"foo\", [null]]";
+
+        // String[]
+        assertThrows(JsonIoException.class, () -> {String[] strings = TestUtil.toObjects(json, String[].class); });
+
+        // Implied Object[]
+        Object[] array = TestUtil.toObjects(json, null);
+        assert array.length == 2;
+        assert array[0].equals("foo");
+        assert DeepEquals.deepEquals(array[1], new Object[] {null});
+
+        // Explicit Object[]
+        array = TestUtil.toObjects(json, Object[].class);
+        assert array.length == 2;
+        assert array[0].equals("foo");
+        assert DeepEquals.deepEquals(array[1], new Object[] {null});
+    }
+
+    @Test
+    void testStringArrayHeteroItemsNoChance2() {
+        String json = "[\"foo\", {}]";
+
+        // String[]
+        assertThrows(JsonIoException.class, () -> {String[] strings = TestUtil.toObjects(json, String[].class); });
+
+        // Implied Object[]
+        Object[] array = TestUtil.toObjects(json, null);
+        assert array.length == 2;
+        assert array[0].equals("foo");
+        assert array[1] instanceof JsonObject;
+
+        // Explicit Object[]
+        array = TestUtil.toObjects(json, Object[].class);
+        assert array.length == 2;
+        assert array[0].equals("foo");
+        assert array[1] instanceof JsonObject;
     }
 
     @Test

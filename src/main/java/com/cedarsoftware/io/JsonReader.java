@@ -217,8 +217,6 @@ public class JsonReader implements Closeable
             throw new JsonIoException(getErrorMessage("error parsing JSON value"), e);
         }
 
-        boolean asMaps = readOptions.isReturningJsonObjects();
-
         // JSON {} at root
         if (returnValue instanceof JsonObject) {
             return determineReturnValueWhenJsonObjectRoot(rootType, returnValue);
@@ -230,6 +228,7 @@ public class JsonReader implements Closeable
             rootObj.setTarget(returnValue);
             rootObj.setJsonArray((Object[])returnValue);
             T graph = toJavaObjects(rootObj, rootType);
+            boolean asMaps = readOptions.isReturningJsonObjects();
             return asMaps ? returnValue : graph;
         }
 
@@ -253,6 +252,10 @@ public class JsonReader implements Closeable
         // Handle the case where no specific rootType is provided
         if (rootType == null) {
             return (!asMaps || isJsonPrimitive(graph)) ? graph : returnValue;
+        }
+
+        if (graph == null) {
+            throw new JsonIoException("Cannot use root: {" + rootType.getName() + "} when 'returnAsNativeJsonObjects()' is set. Either use null for root, or set readOptions.returnAsJavaObjects() for this root.");
         }
 
         // Check for type compatibility or required conversion

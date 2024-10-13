@@ -2,6 +2,7 @@ package com.cedarsoftware.io;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -147,9 +148,9 @@ class JsonParser {
 
     /**
      * Read a JSON value (see json.org).  A value can be a JSON object, array, string, number, ("true", "false"), or "null".
-     * @param suggestedClass JsonValue Owning entity.
+     * @param suggestedType JsonValue Owning entity.
      */
-    Object readValue(Class<?> suggestedClass) throws IOException {
+    Object readValue(Class<?> suggestedType) throws IOException {
         if (curParseDepth > maxParseDepth) {
             error("Maximum parsing depth exceeded");
         }
@@ -164,10 +165,10 @@ class JsonParser {
                 return str;
             case '{':
                 input.pushback('{');
-                JsonObject jObj = readJsonObject(suggestedClass);
+                JsonObject jObj = readJsonObject(suggestedType);
                 return jObj;
             case '[':
-                Object[] array = readArray(suggestedClass == null ? null : suggestedClass.getComponentType());
+                Object array = readArray(suggestedType == null ? null : suggestedType.getComponentType());
                 return array;
             case ']':   // empty array
                 input.pushback(']');
@@ -196,9 +197,9 @@ class JsonParser {
      * from an @type field, containing field type, or containing array type, then the javaType will be set on the
      * JsonObject.
      */
-    private JsonObject readJsonObject(Class<?> suggestedClass) throws IOException {
+    private JsonObject readJsonObject(Class<?> suggestedType) throws IOException {
         JsonObject jObj = new JsonObject();
-        jObj.setHintType(suggestedClass);
+        jObj.setHintType(suggestedType);
         final FastReader in = input;
 
         // Start reading the object, skip white space and find {
@@ -213,7 +214,7 @@ class JsonParser {
         in.pushback((char) c);
         ++curParseDepth;
 
-        Map<String, Injector> injectors = readOptions.getDeepInjectorMap(suggestedClass);
+        Map<String, Injector> injectors = readOptions.getDeepInjectorMap(suggestedType);
 
         while (true) {
             String field = readFieldName();
@@ -276,15 +277,15 @@ class JsonParser {
     /**
      * Read a JSON array
      */
-    private Object[] readArray(Class<?> suggestedClass) throws IOException {
-        final List<Object> array = new ArrayList<>();
+    private Object readArray(Class<?> suggestedType) throws IOException {
+        final List<Object> list = new ArrayList<>();
         ++curParseDepth;
 
         while (true) {
-            Object value = readValue(suggestedClass);
+            Object value = readValue(suggestedType);
 
             if (value != EMPTY_ARRAY) {
-                array.add(value);
+                list.add(value);
             }
             
             final int c = skipWhitespaceRead(true);
@@ -297,7 +298,17 @@ class JsonParser {
         }
 
         --curParseDepth;
-        return array.toArray();
+        
+        if (suggestedType == null || suggestedType == Object.class) {
+            // No suggested type, so use Object[]
+            return list.toArray();
+        } else {
+            // suggested type is the component type of the array, for example "Person.class" for Person[], "Location.class" for Location[], etc.
+            JsonObject jsonArray = new JsonObject();
+            jsonArray.setJsonArray(list.toArray());
+            jsonArray.setTarget(Array.newInstance(suggestedType, list.size()));
+            return jsonArray;
+        }
     }
 
     /**

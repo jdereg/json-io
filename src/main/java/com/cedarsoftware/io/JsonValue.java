@@ -72,7 +72,7 @@ public abstract class JsonValue {
     public void setTarget(Object target) {
         this.target = target;
         if (target != null) {
-            this.javaType = target.getClass();
+            setJavaType(target.getClass());
         }
     }
 

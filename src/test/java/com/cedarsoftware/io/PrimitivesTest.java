@@ -1,7 +1,6 @@
 package com.cedarsoftware.io;
 
 import com.cedarsoftware.util.ClassUtilities;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -219,29 +218,26 @@ class PrimitivesTest
         assertEquals(x, (byte)100);
     }
 
-    @Disabled
-    @ParameterizedTest
-    @ValueSource(strings = {"null"})
-    void testByteObjectValueAtNullRoot(String stringType)
+    @Test
+    void testPrimitiveTypeAtRoot()
     {
-        Class<?> type = stringType.equals("null") ? null : ClassUtilities.forName(stringType, ClassUtilities.getClassLoader());
-        Object x = TestUtil.toObjects("{\"value\":120.1}", type);
+        Object x = TestUtil.toObjects("{\"value\":120.1}", double.class);
         assert Double.class.isAssignableFrom(x.getClass());
-        assertEquals(x, 120d);
+        assertEquals(x, 120.1d);
 
-        x = TestUtil.toObjects("{\"value\":true}", type);
+        x = TestUtil.toObjects("{\"value\":true}", boolean.class);
         assert Boolean.class.isAssignableFrom(x.getClass());
         assertEquals(x, true);
 
-        x = TestUtil.toObjects("{\"value\":false}", type);
+        x = TestUtil.toObjects("{\"value\":false}", Boolean.class);
         assert Boolean.class.isAssignableFrom(x.getClass());
         assertEquals(x, false);
 
-        x = TestUtil.toObjects("{\"value\":\"42\"}", type);
+        x = TestUtil.toObjects("{\"value\":\"42\"}", String.class);
         assert String.class.isAssignableFrom(x.getClass());
         assertEquals(x, "42");
 
-        x = TestUtil.toObjects("{\"value\":1e2}", type);
+        x = TestUtil.toObjects("{\"value\":1e2}", Double.class);
         assert Double.class.isAssignableFrom(x.getClass());
         assertEquals(x, 100d);
     }
