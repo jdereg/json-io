@@ -1,0 +1,848 @@
+{
+  "customerName": "Acme Corporation",
+  "zipCode": "12345",
+  "locations": [
+    {
+      "locationName": "Location 1",
+      "streetAddress": "1 Main St, Cityville",
+      "buildings": [
+        {
+          "name": "Building 1",
+          "numberOfFloors": 5,
+          "type": "Office",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        },
+        {
+          "name": "Building 2",
+          "numberOfFloors": 6,
+          "type": "Warehouse",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        }
+      ],
+      "buildingz": [
+        {
+          "@type": "com.cedarsoftware.io.models.array.Building",
+          "name": "Building 1",
+          "numberOfFloors": 5,
+          "type": "Office",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        },
+        {
+          "@type": "com.cedarsoftware.io.models.array.Building",
+          "name": "Building 2",
+          "numberOfFloors": 6,
+          "type": "Warehouse",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "locationName": "Location 2",
+      "streetAddress": "2 Main St, Cityville",
+      "buildings": [
+        {
+          "name": "Building 1",
+          "numberOfFloors": 5,
+          "type": "Office",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        },
+        {
+          "name": "Building 2",
+          "numberOfFloors": 6,
+          "type": "Warehouse",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        }
+      ],
+      "buildingz": [
+        {
+          "@type": "com.cedarsoftware.io.models.array.Building",
+          "name": "Building 1",
+          "numberOfFloors": 5,
+          "type": "Office",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        },
+        {
+          "@type": "com.cedarsoftware.io.models.array.Building",
+          "name": "Building 2",
+          "numberOfFloors": 6,
+          "type": "Warehouse",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "locationz": [
+    {
+      "@type": "com.cedarsoftware.io.models.array.Location",
+      "locationName": "Location 1",
+      "streetAddress": "1 Main St, Cityville",
+      "buildings": [
+        {
+          "name": "Building 1",
+          "numberOfFloors": 5,
+          "type": "Office",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        },
+        {
+          "name": "Building 2",
+          "numberOfFloors": 6,
+          "type": "Warehouse",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        }
+      ],
+      "buildingz": [
+        {
+          "@type": "com.cedarsoftware.io.models.array.Building",
+          "name": "Building 1",
+          "numberOfFloors": 5,
+          "type": "Office",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        },
+        {
+          "@type": "com.cedarsoftware.io.models.array.Building",
+          "name": "Building 2",
+          "numberOfFloors": 6,
+          "type": "Warehouse",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "@type": "com.cedarsoftware.io.models.array.Location",
+      "locationName": "Location 2",
+      "streetAddress": "2 Main St, Cityville",
+      "buildings": [
+        {
+          "name": "Building 1",
+          "numberOfFloors": 5,
+          "type": "Office",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        },
+        {
+          "name": "Building 2",
+          "numberOfFloors": 6,
+          "type": "Warehouse",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        }
+      ],
+      "buildingz": [
+        {
+          "@type": "com.cedarsoftware.io.models.array.Building",
+          "name": "Building 1",
+          "numberOfFloors": 5,
+          "type": "Office",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        },
+        {
+          "@type": "com.cedarsoftware.io.models.array.Building",
+          "name": "Building 2",
+          "numberOfFloors": 6,
+          "type": "Warehouse",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "locationz": [
+    {
+      "@type": "com.cedarsoftware.io.models.array.Location",
+      "locationName": "Location 1",
+      "streetAddress": "1 Main St, Cityville",
+      "buildings": [
+        {
+          "name": "Building 1",
+          "numberOfFloors": 5,
+          "type": "Office",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        },
+        {
+          "name": "Building 2",
+          "numberOfFloors": 6,
+          "type": "Warehouse",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        }
+      ],
+      "buildingz": [
+        {
+          "@type": "com.cedarsoftware.io.models.array.Building",
+          "name": "Building 1",
+          "numberOfFloors": 5,
+          "type": "Office",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        },
+        {
+          "@type": "com.cedarsoftware.io.models.array.Building",
+          "name": "Building 2",
+          "numberOfFloors": 6,
+          "type": "Warehouse",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "@type": "com.cedarsoftware.io.models.array.Location",
+      "locationName": "Location 2",
+      "streetAddress": "2 Main St, Cityville",
+      "buildings": [
+        {
+          "name": "Building 1",
+          "numberOfFloors": 5,
+          "type": "Office",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        },
+        {
+          "name": "Building 2",
+          "numberOfFloors": 6,
+          "type": "Warehouse",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        }
+      ],
+      "buildingz": [
+        {
+          "@type": "com.cedarsoftware.io.models.array.Building",
+          "name": "Building 1",
+          "numberOfFloors": 5,
+          "type": "Office",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        },
+        {
+          "@type": "com.cedarsoftware.io.models.array.Building",
+          "name": "Building 2",
+          "numberOfFloors": 6,
+          "type": "Warehouse",
+          "assets": [
+            {
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ],
+          "assetz": [
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 1",
+              "value": 1000.0
+            },
+            {
+              "@type": "com.cedarsoftware.io.models.array.Asset",
+              "name": "Asset 2",
+              "value": 2000.0
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "employees": [
+    {
+      "firstName": "FirstName1",
+      "lastName": "LastName1",
+      "pets": [
+        {
+          "name": "Pet1",
+          "type": "Dog",
+          "birthday": 1420866000000
+        },
+        {
+          "name": "Pet2",
+          "type": "Cat",
+          "birthday": 1423630800000
+        }
+      ],
+      "petz": [
+        {
+          "@type": "com.cedarsoftware.io.models.array.Pet",
+          "name": "Pet1",
+          "type": "Dog",
+          "birthday": 1420866000000
+        },
+        {
+          "@type": "com.cedarsoftware.io.models.array.Pet",
+          "name": "Pet2",
+          "type": "Cat",
+          "birthday": 1423630800000
+        }
+      ]
+    },
+    {
+      "firstName": "FirstName2",
+      "lastName": "LastName2",
+      "pets": [
+        {
+          "name": "Pet1",
+          "type": "Dog",
+          "birthday": 1420866000000
+        },
+        {
+          "name": "Pet2",
+          "type": "Cat",
+          "birthday": 1423630800000
+        }
+      ],
+      "petz": [
+        {
+          "@type": "com.cedarsoftware.io.models.array.Pet",
+          "name": "Pet1",
+          "type": "Dog",
+          "birthday": 1420866000000
+        },
+        {
+          "@type": "com.cedarsoftware.io.models.array.Pet",
+          "name": "Pet2",
+          "type": "Cat",
+          "birthday": 1423630800000
+        }
+      ]
+    }
+  ],
+  "employeez": [
+    {
+      "@type": "com.cedarsoftware.io.models.array.Person",
+      "firstName": "FirstName1",
+      "lastName": "LastName1",
+      "pets": [
+        {
+          "name": "Pet1",
+          "type": "Dog",
+          "birthday": 1420866000000
+        },
+        {
+          "name": "Pet2",
+          "type": "Cat",
+          "birthday": 1423630800000
+        }
+      ],
+      "petz": [
+        {
+          "@type": "com.cedarsoftware.io.models.array.Pet",
+          "name": "Pet1",
+          "type": "Dog",
+          "birthday": 1420866000000
+        },
+        {
+          "@type": "com.cedarsoftware.io.models.array.Pet",
+          "name": "Pet2",
+          "type": "Cat",
+          "birthday": 1423630800000
+        }
+      ]
+    },
+    {
+      "@type": "com.cedarsoftware.io.models.array.Person",
+      "firstName": "FirstName2",
+      "lastName": "LastName2",
+      "pets": [
+        {
+          "name": "Pet1",
+          "type": "Dog",
+          "birthday": 1420866000000
+        },
+        {
+          "name": "Pet2",
+          "type": "Cat",
+          "birthday": 1423630800000
+        }
+      ],
+      "petz": [
+        {
+          "@type": "com.cedarsoftware.io.models.array.Pet",
+          "name": "Pet1",
+          "type": "Dog",
+          "birthday": 1420866000000
+        },
+        {
+          "@type": "com.cedarsoftware.io.models.array.Pet",
+          "name": "Pet2",
+          "type": "Cat",
+          "birthday": 1423630800000
+        }
+      ]
+    }
+  ]
+}
