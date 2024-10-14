@@ -142,7 +142,7 @@ public class TimeZoneTests
         String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);
 
-       List<TimeZone> actual = (List<TimeZone>) TestUtil.toObjects(json, null);
+       List<TimeZone> actual = TestUtil.toObjects(json, null);
 
         // assert
         assertThat(actual).hasSize(2)
@@ -158,7 +158,7 @@ public class TimeZoneTests
         String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);
 
-        Map actual = (Map<String, TimeZone>) TestUtil.toObjects(json, null);
+        Map actual = TestUtil.toObjects(json, null);
 
         assertThat(actual).hasSize(1)
                 .containsAllEntriesOf(expected);

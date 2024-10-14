@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import com.cedarsoftware.io.prettyprint.JsonPrettyPrinter;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.FastByteArrayInputStream;
@@ -35,7 +36,7 @@ import com.cedarsoftware.util.convert.DefaultConverterOptions;
  * streaming mode.  The JSON specification has great primitives which are universally useful in many languages. In
  * Java that is boolean, null, long [or BigInteger], and double [or BigDecimal], and String.<br/>
  * <br/>
- * When JsonObject is returned [option #3 or #4 above with readOptions.returnType(ReturnType.JSON_VALUES)], your root
+ * When JsonObject is returned [option #3 or #4 above with readOptions.returnAsNativeJsonObjects(), your root
  * value will represent one of:
  * <ul>JSON object {...}<br/>
  * JSON array [...]<br/>
@@ -224,33 +225,11 @@ public class JsonIo {
 
     /**
      * Format the passed in JSON into multi-line, indented format, commonly used in JSON online editors.
-     * @param readOptions ReadOptions to control the feature options. Can be null to take the defaults.
-     * @param writeOptions WriteOptions to control the feature options. Can be null to take the defaults.
      * @param json String JSON content.
      * @return String JSON formatted in human-readable, standard multi-line, indented format.
      */
-    public static String formatJson(String json, ReadOptions readOptions, WriteOptions writeOptions) {
-        if (writeOptions == null || !writeOptions.isPrettyPrint()) {
-            writeOptions = new WriteOptionsBuilder(writeOptions).prettyPrint(true).build();
-        }
-
-        if (readOptions == null) {
-            readOptions = ReadOptionsBuilder.getDefaultReadOptions();
-        } else if (!readOptions.isReturningJavaObjects()) {
-            readOptions = new ReadOptionsBuilder(readOptions).returnAsJavaObjects().build();
-        }
-
-        Object object = toObjects(json, readOptions, null);
-        return toJson(object, writeOptions);
-    }
-
-    /**
-     * Format the passed in JSON into multi-line, indented format, commonly used in JSON online editors.
-     * @param json String JSON content.
-     * @return String JSON formatted in human readable, standard multi-line, indented format.
-     */
     public static String formatJson(String json) {
-        return formatJson(json, null, null);
+        return JsonPrettyPrinter.prettyPrint(json);
     }
 
     /**
@@ -270,8 +249,6 @@ public class JsonIo {
         writeOptions = new WriteOptionsBuilder(writeOptions).showTypeInfoMinimal().shortMetaKeys(true).build();
         if (readOptions == null) {
             readOptions = ReadOptionsBuilder.getDefaultReadOptions();
-        } else {
-            readOptions = new ReadOptionsBuilder(readOptions).build();
         }
 
         String json = toJson(source, writeOptions);

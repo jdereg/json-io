@@ -1,6 +1,9 @@
 ### Revision History
+#### 4.30.0
+  * Root object type's like `Person[].class,` `String[].class,` can now be specified as the `rootType` and the return value will be `Person[],` `String[],` or a `ClassCastException` if the JSON data does not match the type.
+  * `JsonIo.formatJson()` three parameter version removed. Use the one (1) parameter API that takes the JSON to format. It runs much faster, as it no longer deserializes/serializes, but walks the JSON `String` directly.
 #### 4.29.0
-  * Consumed `java-util` `ClassUtilities.getClassLoader(),` which obtains the classLoader in a more robust way and works in OSGi and JPMS environment or non-framework environment
+  * Consumed `java-util's` `ClassUtilities.getClassLoader(),` which obtains the classLoader in a more robust way and works in OSGi and JPMS environment or non-framework environment
   * Removed `slf4j` and `logback-classic` from `test` dependencies
   * Merged in PR #297 by DaniellaHubble: Fix test that fails unexpectedly in `testEnumWithPrivateMembersAsField_withPrivatesOn()`
   * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `2.15.0` to `2.17.0.`
