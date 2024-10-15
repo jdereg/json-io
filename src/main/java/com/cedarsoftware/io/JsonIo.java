@@ -300,7 +300,7 @@ public class JsonIo {
         if (loader instanceof ClassLoader) {
             classLoader = (ClassLoader) loader;
         } else {
-            classLoader = ClassUtilities.getClassLoader();
+            classLoader = ClassUtilities.getClassLoader(JsonIo.class);
         }
         builder.classLoader(classLoader);
 
@@ -420,7 +420,7 @@ public class JsonIo {
         if (loader instanceof ClassLoader) {
             classLoader = (ClassLoader) loader;
         } else {
-            classLoader = ClassUtilities.getClassLoader();
+            classLoader = ClassUtilities.getClassLoader(JsonIo.class);
         }
         builder.classLoader(classLoader);
 

@@ -688,7 +688,7 @@ public class MetaUtils {
      * @return Content of the resource file as a byte[].
      */
     public static byte[] loadResourceAsBytes(String resourceName) {
-        try (InputStream inputStream = ClassUtilities.getClassLoader().getResourceAsStream(resourceName)) {
+        try (InputStream inputStream = ClassUtilities.getClassLoader(MetaUtils.class).getResourceAsStream(resourceName)) {
             if (inputStream == null) {
                 throw new JsonIoException("Resource not found: " + resourceName);
             }
