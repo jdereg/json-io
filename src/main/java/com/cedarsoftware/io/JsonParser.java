@@ -298,7 +298,11 @@ class JsonParser {
         }
 
         --curParseDepth;
-        
+
+//        JsonObject jsonArray = new JsonObject();
+//        jsonArray.setJsonArray(list.toArray());
+//        jsonArray.setTarget(Array.newInstance(suggestedType == null ? Object.class : suggestedType, list.size()));
+//        return jsonArray;
         if (suggestedType == null || suggestedType == Object.class) {
             // No suggested type, so use Object[]
             return list.toArray();

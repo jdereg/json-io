@@ -217,11 +217,6 @@ public class JsonReader implements Closeable
             throw new JsonIoException(getErrorMessage("error parsing JSON value"), e);
         }
 
-        // JSON {} at root
-        if (returnValue instanceof JsonObject) {
-            return determineReturnValueWhenJsonObjectRoot(rootType, returnValue);
-        }
-
         // JSON [] at root
         if (returnValue instanceof Object[]) {
             JsonObject rootObj = new JsonObject();
@@ -230,6 +225,11 @@ public class JsonReader implements Closeable
             T graph = toJavaObjects(rootObj, rootType);
             boolean asMaps = readOptions.isReturningJsonObjects();
             return asMaps ? returnValue : graph;
+        }
+
+        // JSON {} at root
+        if (returnValue instanceof JsonObject) {
+            return determineReturnValueWhenJsonObjectRoot(rootType, returnValue);
         }
 
         // JSON Primitive (String, Boolean, Double, Long), or convertible types

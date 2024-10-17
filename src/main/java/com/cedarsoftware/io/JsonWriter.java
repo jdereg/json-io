@@ -974,11 +974,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
         tabIn();
 
-        Object[] items = jObj.getJsonArray();
+        Object items = jObj.getJsonArray();
         final int lenMinus1 = len - 1;
 
         for (int i = 0; i < len; i++) {
-            final Object value = items[i];
+            final Object value = Array.get(items, i);
 
             if (value == null) {
                 output.write("null");
@@ -1053,13 +1053,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         beginCollection(showType, referenced);
 
-        Object[] items = jObj.getJsonArray();
-        final int itemsLen = items.length;
+        Object items = jObj.getJsonArray();
+        final int itemsLen = Array.getLength(items);
         final int itemsLenMinus1 = itemsLen - 1;
 
         for (int i=0; i < itemsLen; i++)
         {
-            writeCollectionElement(items[i]);
+            writeCollectionElement(Array.get(items, i));
 
             if (i != itemsLenMinus1)
             {

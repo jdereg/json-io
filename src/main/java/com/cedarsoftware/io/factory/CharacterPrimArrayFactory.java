@@ -1,5 +1,7 @@
 package com.cedarsoftware.io.factory;
 
+import java.lang.reflect.Array;
+
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.Resolver;
@@ -28,18 +30,21 @@ public class CharacterPrimArrayFactory extends ArrayFactory<char[]> {
     }
 
     public char[] newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        Object[] items = jObj.getJsonArray();
+        Object items = jObj.getJsonArray();
         Object value;
-        
+
         if (items == null) {
             value = null;
-        } else if (items.length == 0) {
-            value = new char[0];
-        } else if (items.length == 1) {
-            String s = (String) items[0];
-            value = s.toCharArray();
         } else {
-            throw new JsonIoException("char[] should only have one String in the [], found " + items.length + ", line " + jObj.getLine() + ", col " + jObj.getCol());
+            int len = Array.getLength(items);
+            if (len == 0) {
+                value = new char[0];
+            } else if (len == 1) {
+                String s = (String) Array.get(items, 0);
+                value = s.toCharArray();
+            } else {
+                throw new JsonIoException("char[] should only have one String in the [], found " + len + ", line " + jObj.getLine() + ", col " + jObj.getCol());
+            }
         }
         jObj.setTarget(value);
         return (char[]) jObj.getTarget();

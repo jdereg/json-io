@@ -273,7 +273,7 @@ public class ObjectResolver extends Resolver
      */
     protected void traverseCollection(final JsonObject jsonObj)
     {
-        Object[] items = jsonObj.getJsonArray();
+        Object items = jsonObj.getJsonArray();
 
         Class mayEnumClass = null;
         String mayEnumClasName = (String)jsonObj.get("@enum");
@@ -286,7 +286,9 @@ public class ObjectResolver extends Resolver
         int idx = 0;
 
         if (items != null) {
-            for (final Object element : items) {
+            int len = Array.getLength(items);
+            for (int i=0; i < len; i++) {
+                Object element = Array.get(items, i);
                 Object special;
                 if (element == null) {
                     col.add(null);
@@ -353,11 +355,11 @@ public class ObjectResolver extends Resolver
 
         final Object array = jsonObj.getTarget();
         final Class compType = array.getClass().getComponentType();
-        final Object[] jsonItems =  jsonObj.getJsonArray();
+        final Object jsonItems =  jsonObj.getJsonArray();
         // Primitive arrays never make it here, as the ArrayFactory (ClassFactory) processes them in assignField.
 
         for (int i = 0; i < len; i++) {
-            final Object element = jsonItems[i];
+            final Object element = Array.get(jsonItems, i);
             Object special;
 
             if (element == null) {
@@ -575,9 +577,11 @@ public class ObjectResolver extends Resolver
                         }
                     } else if (instance instanceof JsonObject) {
                         final JsonObject jObj = (JsonObject) instance;
-                        final Object[] array = jObj.getJsonArray();
+                        final Object array = jObj.getJsonArray();
                         if (array != null) {
-                            for (Object o : array) {
+                            int len = Array.getLength(array);
+                            for (int i=0; i < len; i++) {
+                                Object o = Array.get(array, i);
                                 stack2.addFirst(new Object[]{typeArgs[0], o});
                             }
                         }

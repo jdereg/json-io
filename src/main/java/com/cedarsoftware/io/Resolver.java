@@ -409,9 +409,9 @@ public abstract class Resolver {
         }
 
         // Arrays
-        Object[] items = jsonObj.getJsonArray();
+        Object items = jsonObj.getJsonArray();
         if (c.isArray() || (items != null && c == Object.class && !jsonObj.containsKey(KEYS))) {    // Handle []
-            int size = (items == null) ? 0 : items.length;
+            int size = (items == null) ? 0 : Array.getLength(items);
             mate = Array.newInstance(c.isArray() ? c.getComponentType() : Object.class, size);
             jsonObj.setTarget(mate);
             return mate;
@@ -498,8 +498,8 @@ public abstract class Resolver {
                 ? evaluateEnumSetTypeFromItems(jsonObj)
                 : ClassUtilities.forName(enumClassName, readOptions.getClassLoader());
 
-        Object[] items = jsonObj.getJsonArray();
-        if (items == null || items.length == 0) {
+        Object items = jsonObj.getJsonArray();
+        if (items == null || Array.getLength(items) == 0) {
             if (enumClass != null) {
                 return EnumSet.noneOf(enumClass);
             } else {
@@ -510,7 +510,9 @@ public abstract class Resolver {
         }
 
         EnumSet enumSet = null;
-        for (Object item : items) {
+        int len = Array.getLength(items);
+        for (int i=0; i < len; i++) {
+            Object item = Array.get(items, i);
             Enum enumItem;
             if (item instanceof String) {
                 enumItem = Enum.valueOf(enumClass, (String) item);
@@ -541,10 +543,11 @@ public abstract class Resolver {
      *}</pre>
      */
     private Class<?> evaluateEnumSetTypeFromItems(final JsonObject json) {
-        final Object[] items = json.getJsonArray();
-        if (items != null && items.length != 0) {
-            if (items[0] instanceof JsonObject) {
-                return ((JsonObject) items[0]).getJavaType();
+        final Object items = json.getJsonArray();
+        if (items != null && Array.getLength(items) != 0) {
+            Object value = Array.get(items, 0);
+            if (value instanceof JsonObject) {
+                return ((JsonObject) value).getJavaType();
             }
         }
 
@@ -617,23 +620,25 @@ public abstract class Resolver {
         // TODO: Support multiple dimensions
         // TODO: Support char
         if (jsonObject.javaType.isArray() && isConvertable(jsonObject.javaType.getComponentType())) {
-            Object[] jsonItems = jsonObject.getJsonArray();
+            Object jsonItems = jsonObject.getJsonArray();
             Class<?> componentType = jsonObject.javaType.getComponentType();
             if (jsonItems == null) {    // empty array
                 jsonObject.setFinishedTarget(null, true);
                 return true;
             }
-            Object javaArray = Array.newInstance(componentType, jsonItems.length);
-            for (int i = 0; i < jsonItems.length; i++) {
+            int len = Array.getLength(jsonItems);
+            Object javaArray = Array.newInstance(componentType, len);
+            for (int i = 0; i < len; i++) {
                 try {
                     Class<?> type = componentType;
-                    if (jsonItems[i] instanceof JsonObject) {
-                        JsonObject jObj = (JsonObject) jsonItems[i];
+                    Object item = Array.get(jsonItems, i);
+                    if (item instanceof JsonObject) {
+                        JsonObject jObj = (JsonObject) item;
                         if (jObj.getJavaType() != null) {
                             type = jObj.getJavaType();
                         }
                     }
-                    Array.set(javaArray, i, converter.convert(jsonItems[i], type));
+                    Array.set(javaArray, i, converter.convert(item, type));
                 } catch (Exception e) {
                     JsonIoException jioe = new JsonIoException(e.getMessage());
                     jioe.setStackTrace(e.getStackTrace());

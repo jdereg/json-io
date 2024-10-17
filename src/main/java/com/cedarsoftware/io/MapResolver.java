@@ -1,5 +1,6 @@
 package com.cedarsoftware.io;
 
+import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
@@ -137,16 +138,16 @@ public class MapResolver extends Resolver
      */
     protected void traverseCollection(final JsonObject jsonObj)
     {
-        final Object[] items = jsonObj.getJsonArray();
-        if (items == null || items.length == 0) {
+        final Object items = jsonObj.getJsonArray();
+        if (items == null || Array.getLength(items) == 0) {
             return;
         }
 
         Converter converter = getConverter();
-        int len = items.length;
+        int len = Array.getLength(items);
 
         for (int i=0; i < len; i++) {
-            Object element = items[i];
+            Object element = Array.get(items, i);
 
             if (element instanceof Object[]) {   // array element inside Collection
                 JsonObject jsonObject = new JsonObject();
@@ -163,7 +164,7 @@ public class MapResolver extends Resolver
                     // will be placed on the value-side of the Map
                     Class<?> type = jsonObject.getJavaType();
                     if (type != null && converter.isConversionSupportedFor(Map.class, type)) {
-                        items[i] = converter.convert(jsonObject, type);
+                        Array.set(items, i, converter.convert(jsonObject, type));
                         jsonObject.setFinished();
                     } else {
                         push(jsonObject);
@@ -174,9 +175,9 @@ public class MapResolver extends Resolver
                     
                     if (type != null && converter.isConversionSupportedFor(Map.class, type)) {
                         refObject.setFinishedTarget(converter.convert(refObject, type), true);
-                        items[i] = refObject.getTarget();
+                        Array.set(items, i, refObject.getTarget());
                     } else {
-                        items[i] = refObject;
+                        Array.set(items, i, refObject);
                     }
                 }
             }

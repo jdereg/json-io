@@ -642,7 +642,7 @@ public class ArrayTest
         JsonObject e1 = (JsonObject) list[0];
         JsonObject e2 = (JsonObject) list[1];
         assertEquals(e1.getJsonArray(), e2.getJsonArray());
-        assertEquals(0, e1.getJsonArray().length);
+        assertEquals(0, e1.getLength());
 
         json1 = TestUtil.toJson(list);
         TestUtil.printLine("json1=" + json1);

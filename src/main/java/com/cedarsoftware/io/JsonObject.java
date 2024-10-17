@@ -79,8 +79,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     // Return the array that this JSON object wraps.  This is used when there is a Collection class (like ArrayList)
     // represented in the JSON.  This also occurs if a specified array type is used (not Object[], but Integer[], for
     // example).
-    public Object[] getJsonArray() {
-        return (Object[]) get(ITEMS);
+    public Object getJsonArray() {
+        return get(ITEMS);
     }
 
     public void setJsonArray(Object[] jsonArray) {
@@ -98,8 +98,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     private Integer getLenientSize() {
         if (isArray()) {
             if (target == null) {
-                Object[] items = getJsonArray();
-                return items == null ? 0 : items.length;
+                Object items = getJsonArray();
+                return items == null ? 0 : Array.getLength(items);
             }
             if (char[].class.isAssignableFrom(target.getClass())) {
                 // Verify this for Character[]
@@ -108,8 +108,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
             return Array.getLength(target);
         }
         if (isCollection() || isMap()) {
-            Object[] items = getJsonArray();
-            return items == null ? 0 : items.length;
+            Object items = getJsonArray();
+            return items == null ? 0 : Array.getLength(items);
         }
         return null;
     }
@@ -128,10 +128,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
 
     public int size() {
         if (containsKey(ITEMS)) {
-            if (getJsonArray() == null) {
-                return 0;
-            }
-            return getJsonArray().length;
+            return getLength();
         }
 
         return jsonStore.size();

@@ -33,19 +33,19 @@ public class ArrayFactory<T> implements JsonReader.ClassFactory {
     }
 
     public T newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        Object[] items = jObj.getJsonArray();
+        Object items = jObj.getJsonArray();
         Converter converter = resolver.getConverter();
         if (items == null) {
             jObj.setTarget(null);
             return null;
         }
-        int len = items.length;
+        int len = Array.getLength(items);
         Class<?> arrayType = getType();
         Class<?> componentType = arrayType.getComponentType();
         Object array = Array.newInstance(componentType, len);
 
         for (int i = 0; i < len; i++) {
-            Object val = items[i];
+            Object val = Array.get(items, i);
             if (val == null) {
             } else if (val instanceof JsonObject) {
                 Class<?> type;
