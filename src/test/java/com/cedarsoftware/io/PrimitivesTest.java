@@ -170,7 +170,7 @@ class PrimitivesTest
     @ValueSource(strings = {"java.lang.Byte", "byte"})
     void testByteValueAtRoot(String stringType)
     {
-        Class<?> type = ClassUtilities.forName(stringType, ClassUtilities.getClassLoader());
+        Class<?> type = ClassUtilities.forName(stringType, ClassUtilities.getClassLoader(PrimitivesTest.class));
         Object x = TestUtil.toObjects("120.1", type);
         assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)120);
@@ -196,7 +196,7 @@ class PrimitivesTest
     @ValueSource(strings = {"java.lang.Byte", "byte"})
     void testByteObjectValueAtRoot(String stringType)
     {
-        Class<?> type = stringType.equals("null") ? null : ClassUtilities.forName(stringType, ClassUtilities.getClassLoader());
+        Class<?> type = stringType.equals("null") ? null : ClassUtilities.forName(stringType, ClassUtilities.getClassLoader(PrimitivesTest.class));
         Object x = TestUtil.toObjects("{\"value\":120.1}", type);
         assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)120);
@@ -246,7 +246,7 @@ class PrimitivesTest
     @ValueSource(strings = {"java.lang.Byte", "byte", "null"})
     void testTypedByteObjectValueAtRoot(String stringType)
     {
-        Class<?> type = stringType.equals("null") ? null : ClassUtilities.forName(stringType, ClassUtilities.getClassLoader());
+        Class<?> type = stringType.equals("null") ? null : ClassUtilities.forName(stringType, ClassUtilities.getClassLoader(PrimitivesTest.class));
         Object x = TestUtil.toObjects("{\"@type\":\"byte\",\"value\":120.1}", type);
         assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)120);

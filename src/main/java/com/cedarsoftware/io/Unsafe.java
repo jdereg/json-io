@@ -24,7 +24,7 @@ final class Unsafe
      */
     public Unsafe() throws InvocationTargetException {
         try {
-            Constructor<?> unsafeConstructor = forName("sun.misc.Unsafe", ClassUtilities.getClassLoader()).getDeclaredConstructor();
+            Constructor<?> unsafeConstructor = forName("sun.misc.Unsafe", ClassUtilities.getClassLoader(Unsafe.class)).getDeclaredConstructor();
             trySetAccessible(unsafeConstructor);
             sunUnsafe = unsafeConstructor.newInstance();
             allocateInstance = sunUnsafe.getClass().getMethod("allocateInstance", Class.class);

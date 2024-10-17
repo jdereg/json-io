@@ -81,7 +81,7 @@ class WriteOptionsTest {
     private static Stream<Arguments> classLoadersTest() {
         return Stream.of(
                 Arguments.of(ClassLoader.getSystemClassLoader()),
-                Arguments.of(ClassUtilities.getClassLoader())
+                Arguments.of(ClassUtilities.getClassLoader(WriteOptionsTest.class))
         );
     }
 

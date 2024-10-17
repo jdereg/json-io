@@ -27,15 +27,10 @@
         <!-- remove source encoding warnings from maven output -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <!-- Java source, target, and release version -->
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <maven.compiler.release>8</maven.compiler.release>
-
         <!-- testing only -->
         <version.junit-jupiter-params>5.10.0</version.junit-jupiter-params>
         <version.assertj-core>3.24.2</version.assertj-core>
-        <version.java-util>2.17.0</version.java-util>
+        <version.java-util>2.18.0</version.java-util>
         <version.gson>2.11.0</version.gson>
         <version.jackson-core>2.18.0</version.jackson-core>
 

@@ -25,7 +25,7 @@ public class ClassForNameTest
     @Test
     public void testClassForName()
     {
-        Class<?> testObjectClass = ClassUtilities.forName("com.cedarsoftware.io.TestObject", ClassUtilities.getClassLoader());
+        Class<?> testObjectClass = ClassUtilities.forName("com.cedarsoftware.io.TestObject", ClassUtilities.getClassLoader(ClassForNameTest.class));
         assert testObjectClass instanceof Class<?>;
         assert "com.cedarsoftware.io.TestObject".equals(testObjectClass.getName());
     }
@@ -41,20 +41,20 @@ public class ClassForNameTest
     @Test
     public void testClassForNameNullClassErrorHandling()
     {
-        assert null == ClassUtilities.forName(null, ClassUtilities.getClassLoader());
-        assert null == ClassUtilities.forName("Smith&Wesson", ClassUtilities.getClassLoader());
+        assert null == ClassUtilities.forName(null, ClassUtilities.getClassLoader(ClassForNameTest.class));
+        assert null == ClassUtilities.forName("Smith&Wesson", ClassUtilities.getClassLoader(ClassForNameTest.class));
     }
 
     @Test
     public void testClassForNameFailOnClassLoaderErrorTrue()
     {
-        assert null == ClassUtilities.forName("foo.bar.baz.Qux", ClassUtilities.getClassLoader());
+        assert null == ClassUtilities.forName("foo.bar.baz.Qux", ClassUtilities.getClassLoader(ClassForNameTest.class));
     }
 
     @Test
     public void testClassForNameFailOnClassLoaderErrorFalse()
     {
-        Class<?> testObjectClass = ClassUtilities.forName("foo.bar.baz.Qux", ClassUtilities.getClassLoader());
+        Class<?> testObjectClass = ClassUtilities.forName("foo.bar.baz.Qux", ClassUtilities.getClassLoader(ClassForNameTest.class));
         assert testObjectClass == null;
     }
 
@@ -62,7 +62,7 @@ public class ClassForNameTest
     {
         AlternateNameClassLoader(ClassForNameTest enclosing, String alternateName, Class<?> clazz)
         {
-            super(ClassUtilities.getClassLoader());
+            super(ClassUtilities.getClassLoader(ClassForNameTest.class));
             this.alternateName = alternateName;
             this.clazz = clazz;
         }

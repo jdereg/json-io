@@ -758,7 +758,7 @@ public class ReadOptionsBuilder {
      */
     private static void loadBaseClassFactory() {
         Map<String, String> map = MetaUtils.loadMapDefinition("config/classFactory.txt");
-        ClassLoader classLoader = ClassUtilities.getClassLoader();
+        ClassLoader classLoader = ClassUtilities.getClassLoader(ReadOptionsBuilder.class);
 
         for (Map.Entry<String, String> entry : map.entrySet()) {
             String className = entry.getKey();
@@ -795,7 +795,7 @@ public class ReadOptionsBuilder {
      */
     private static void loadBaseReaders() {
         Map<String, String> map = MetaUtils.loadMapDefinition("config/customReaders.txt");
-        ClassLoader classLoader = ClassUtilities.getClassLoader();
+        ClassLoader classLoader = ClassUtilities.getClassLoader(ReadOptionsBuilder.class);
 
         for (Map.Entry<String, String> entry : map.entrySet()) {
             String className = entry.getKey();
@@ -821,7 +821,7 @@ public class ReadOptionsBuilder {
      */
     private static void loadBaseCoercedTypes() {
         Map<String, String> map = MetaUtils.loadMapDefinition("config/coercedTypes.txt");
-        ClassLoader classLoader = ClassUtilities.getClassLoader();
+        ClassLoader classLoader = ClassUtilities.getClassLoader(ReadOptionsBuilder.class);
 
         for (Map.Entry<String, String> entry : map.entrySet()) {
             String srcClassName = entry.getKey();
@@ -844,7 +844,7 @@ public class ReadOptionsBuilder {
         private ZoneId zoneId = ZoneId.systemDefault();
         private Locale locale = Locale.getDefault();
         private Charset charset = StandardCharsets.UTF_8;
-        private ClassLoader classloader = ClassUtilities.getClassLoader();
+        private ClassLoader classloader = ClassUtilities.getClassLoader(ReadOptionsBuilder.class);
         private Character trueChar = CommonValues.CHARACTER_ONE;
         private Character falseChar = CommonValues.CHARACTER_ZERO;
         private Map<String, Object> customOptions = new ConcurrentHashMap<>();
@@ -1295,7 +1295,7 @@ public class ReadOptionsBuilder {
     static Map<Class<?>, Set<String>> loadClassToSetOfStrings(String fileName) {
         Map<String, String> map = loadMapDefinition(fileName);
         Map<Class<?>, Set<String>> builtMap = new LinkedHashMap<>();
-        ClassLoader classLoader = ClassUtilities.getClassLoader();
+        ClassLoader classLoader = ClassUtilities.getClassLoader(ReadOptionsBuilder.class);
 
         for (Map.Entry<String, String> entry : map.entrySet()) {
             String className = entry.getKey();
@@ -1314,7 +1314,7 @@ public class ReadOptionsBuilder {
     static Map<Class<?>, Map<String, String>> loadClassToFieldAliasNameMapping(String fileName) {
         Map<String, String> map = MetaUtils.loadMapDefinition(fileName);
         Map<Class<?>, Map<String, String>> nonStandardMapping = new ConcurrentHashMap<>();
-        ClassLoader classLoader = ClassUtilities.getClassLoader();
+        ClassLoader classLoader = ClassUtilities.getClassLoader(ReadOptionsBuilder.class);
 
         for (Map.Entry<String, String> entry : map.entrySet()) {
             String className = entry.getKey();
@@ -1340,7 +1340,7 @@ public class ReadOptionsBuilder {
      */
     private static void loadBaseNonRefs() {
         final Set<String> set = MetaUtils.loadSetDefinition("config/nonRefs.txt");
-        final ClassLoader classLoader = ClassUtilities.getClassLoader();
+        final ClassLoader classLoader = ClassUtilities.getClassLoader(ReadOptionsBuilder.class);
 
         for (String className : set) {
             Class<?> loadedClass = ClassUtilities.forName(className, classLoader);
@@ -1360,10 +1360,11 @@ public class ReadOptionsBuilder {
 
     static void loadBaseAliasMappings(AliasApplier aliasApplier) {
         Map<String, String> aliasMappings = MetaUtils.loadMapDefinition("config/aliases.txt");
+        ClassLoader classLoader = ClassUtilities.getClassLoader(ReadOptionsBuilder.class);
         for (Map.Entry<String, String> entry : aliasMappings.entrySet()) {
             String className = entry.getKey();
             String alias = entry.getValue();
-            Class<?> clazz = ClassUtilities.forName(className, ClassUtilities.getClassLoader());
+            Class<?> clazz = ClassUtilities.forName(className, classLoader);
 
             if (clazz == null) {
                 System.out.println("Could not find class: " + className + " which has associated alias value: " + alias + " config/aliases.txt");

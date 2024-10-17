@@ -8,11 +8,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.ReflectionUtils;
 import org.junit.jupiter.api.Test;
 
+import static com.cedarsoftware.util.ClassUtilities.getClassLoader;
 import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -46,7 +46,7 @@ public class SecurityTest
         Process process = builder.start();
         attemptToWriteDisallowedClass(builder);
         attemptToWriteDisallowedClass(process);
-        attemptToWriteDisallowedClass(ClassUtilities.getClassLoader());
+        attemptToWriteDisallowedClass(getClassLoader(SecurityTest.class));
         Method method = ReflectionUtils.getMethod(SecurityTest.class, "testSecureWrites", (Class<?>[])null);
         assert method != null;
         attemptToWriteDisallowedClass(method);

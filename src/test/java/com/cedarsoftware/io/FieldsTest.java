@@ -446,7 +446,7 @@ public class FieldsTest
             this.name = name;
         }
 
-        private ClassLoader classLoader = ClassUtilities.getClassLoader();
+        private ClassLoader classLoader = ClassUtilities.getClassLoader(FieldsTest.class);
         private String name;
     }
 
