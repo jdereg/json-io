@@ -11,11 +11,12 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.gson.JsonParser;
+
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.CollectionUtilities.listOf;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -264,7 +265,10 @@ public class NoTypeTest
         String json = TestUtil.toJson(j);
         String json2 = TestUtil.toJson(j, new WriteOptionsBuilder().showTypeInfoNever().build());
         assert !json.equals(json2);
-        assertEquals("{\"name\":\"Zeus\",\"things\":[1,2,\"3\",\"4\",-84243801600000,\"Hello\",\"com.cedarsoftware.io.NoTypeTest$Junk\"],\"namesToAge\":{\"Appollo\":2500,\"Hercules\":2489,\"Poseidon\":\"2502\",\"Aphrodite\":\"2499.0\",\"Zeus\":-84243801600000},\"stuff\":[1,2,\"3\",\"4\",-84243801600000,\"Hello\",\"com.cedarsoftware.io.NoTypeTest$Junk\"]}", json2);
+
+        String expectedJson = "{\"name\":\"Zeus\",\"things\":[1,2,\"3\",\"4\",-84243801600000,\"Hello\",\"com.cedarsoftware.io.NoTypeTest$Junk\"],\"namesToAge\":{\"Appollo\":2500,\"Hercules\":2489,\"Poseidon\":\"2502\",\"Aphrodite\":\"2499.0\",\"Zeus\":-84243801600000},\"stuff\":[1,2,\"3\",\"4\",-84243801600000,\"Hello\",\"com.cedarsoftware.io.NoTypeTest$Junk\"]}";
+
+        assert JsonParser.parseString(json2).equals(JsonParser.parseString(expectedJson));
     }
 
     @Test
