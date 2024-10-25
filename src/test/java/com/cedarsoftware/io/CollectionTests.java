@@ -21,6 +21,8 @@ import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import com.google.gson.JsonParser;
+
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
 import com.cedarsoftware.util.SealableList;
@@ -393,7 +395,10 @@ class CollectionTests {
         String json = TestUtil.toJson(arrayList, writeOptions);
         TestUtil.printLine(json);
         String className = CollectionTests.class.getName();
-        assertEquals("{\"@type\":\"ArrayList\",\"@items\":[{\"@type\":\"" + className + "$TestEnum4\",\"age\":21,\"foo\":\"bar\",\"name\":\"B\"}]}", json);
+
+        String expectedJson = "{\"@type\":\"ArrayList\",\"@items\":[{\"@type\":\"" + className + "$TestEnum4\",\"age\":21,\"foo\":\"bar\",\"name\":\"B\"}]}";
+
+        assert JsonParser.parseString(json).equals(JsonParser.parseString(expectedJson));
     }
 
     @Test

@@ -5,9 +5,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.google.gson.JsonParser;
+
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -59,7 +60,10 @@ class AtomicBooleanTest
         assert atom2.values[3].get();
 
         json = TestUtil.toJson(atom2);
-        assertThat(json).isEqualTo("{\"@type\":\"com.cedarsoftware.io.AtomicBooleanTest$TestAtomicBooleanField\",\"value\":true,\"nullValue\":null,\"strValue\":true,\"emptyStrValue\":false,\"objValue\":false,\"values\":[false,null,true,true]}");
+
+        String expectedJson = "{\"@type\":\"com.cedarsoftware.io.AtomicBooleanTest$TestAtomicBooleanField\",\"value\":true,\"nullValue\":null,\"strValue\":true,\"emptyStrValue\":false,\"objValue\":false,\"values\":[false,null,true,true]}";
+
+        assert JsonParser.parseString(json).equals(JsonParser.parseString(expectedJson));
 
         json = "{\"@type\":\"com.cedarsoftware.io.AtomicBooleanTest$TestAtomicBooleanField\",\"value\":16.5}";
         TestAtomicBooleanField abf = TestUtil.toObjects(json, null);

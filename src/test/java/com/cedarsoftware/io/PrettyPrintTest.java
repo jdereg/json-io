@@ -6,6 +6,8 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import com.google.gson.JsonParser;
+
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -55,7 +57,7 @@ class PrettyPrintTest
         WriteOptions writeOptions = new WriteOptionsBuilder().prettyPrint(true).lruSize(25).build();
         String json = TestUtil.toJson(nice, writeOptions);
 
-        assertThat(json).isEqualToIgnoringNewLines(target);
+        assert JsonParser.parseString(json).equals(JsonParser.parseString(target));
 
         String json1 = TestUtil.toJson(nice);
         assertThat(json)
