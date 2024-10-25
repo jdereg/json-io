@@ -927,15 +927,15 @@ class MapsTest
     {
         private void init()
         {
-            _strings_a = new HashMap<>();
-            _strings_b = new HashMap<>();
+            _strings_a = new LinkedHashMap<>();
+            _strings_b = new LinkedHashMap<>();
             _strings_c = null;
             _testobjs_a = new TreeMap<>();
-            _map_col = new HashMap<>();
+            _map_col = new LinkedHashMap<>();
             _map_col_2 = new TreeMap<>();
-            _map_col_3 = new HashMap<>();
-            _map_obj = new HashMap<>();
-            _map_con = new ConcurrentHashMap<>();
+            _map_col_3 = new LinkedHashMap<>();
+            _map_obj = new LinkedHashMap<>();
+            _map_con = Collections.synchronizedMap(new LinkedHashMap<>());
 
             _strings_a.put("woods", "tiger");
             _strings_a.put("mickleson", "phil");
