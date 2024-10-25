@@ -99,7 +99,8 @@ public class NoTypeTest
         String json = MetaUtils.loadResourceAsString("noTypes/persons.json");
 
         try {
-            TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), Person[].class);
+            Object o = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), Person[].class);
+            System.out.println("o = " + o);
             fail();
         } catch (JsonIoException e) {
             assert e.getMessage().contains("Either use null for root, or set");
@@ -206,10 +207,18 @@ public class NoTypeTest
 
     @Test
     void testStringArrayHeteroItemsNoChance() {
-        String json = "[\"foo\", [null]]";
+        // String[] does not allow an array as an element
+        assertThrows(JsonIoException.class, () -> {String[] strings = TestUtil.toObjects("[\"foo\", [null]]", String[].class); });
 
-        // String[]
-        assertThrows(JsonIoException.class, () -> {String[] strings = TestUtil.toObjects(json, String[].class); });
+        String json = "[\"foo\", null]";
+
+        // Explicit String[]
+        String[] strings = TestUtil.toObjects(json, String[].class);
+        assert strings.length == 2;
+        assert strings[0].equals("foo");
+        assert strings[1] == null;
+
+        json = "[\"foo\", [null]]";
 
         // Implied Object[]
         Object[] array = TestUtil.toObjects(json, null);

@@ -207,6 +207,9 @@ public class JsonReader implements Closeable
     public <T> T readObject(Class<T> rootType) {
         T returnValue;
         try {
+//            if (readOptions.isReturningJsonObjects()) {
+//                rootType = null;
+//            }
             returnValue = (T) parser.readValue(rootType);
             if (returnValue == null) {
                 return null;    // easy, done.

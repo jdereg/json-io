@@ -2,7 +2,6 @@ package com.cedarsoftware.io;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -77,6 +76,7 @@ class JsonParser {
     private int curParseDepth = 0;
     private final boolean allowNanAndInfinity;
     private final int maxParseDepth;
+    private final Resolver resolver;
     private final ReadOptions readOptions;
     private final ReferenceTracker references;
 
@@ -140,6 +140,7 @@ class JsonParser {
 
     JsonParser(FastReader reader, Resolver resolver) {
         input = reader;
+        this.resolver = resolver;
         readOptions = resolver.getReadOptions();
         references = resolver.getReferences();
         maxParseDepth = readOptions.getMaxDepth();
@@ -298,21 +299,7 @@ class JsonParser {
         }
 
         --curParseDepth;
-
-//        JsonObject jsonArray = new JsonObject();
-//        jsonArray.setJsonArray(list.toArray());
-//        jsonArray.setTarget(Array.newInstance(suggestedType == null ? Object.class : suggestedType, list.size()));
-//        return jsonArray;
-        if (suggestedType == null || suggestedType == Object.class) {
-            // No suggested type, so use Object[]
-            return list.toArray();
-        } else {
-            // suggested type is the component type of the array, for example "Person.class" for Person[], "Location.class" for Location[], etc.
-            JsonObject jsonArray = new JsonObject();
-            jsonArray.setJsonArray(list.toArray());
-            jsonArray.setTarget(Array.newInstance(suggestedType, list.size()));
-            return jsonArray;
-        }
+        return resolver.resolveArray(suggestedType, list);
     }
 
     /**

@@ -4,7 +4,8 @@
     "age": 50,
     "salary": 225000.0
   },
-  {"name": "Jane",
+  {
+    "name": "Jane",
     "age": 40,
     "salary": 314000.0
   }

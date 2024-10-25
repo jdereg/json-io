@@ -97,6 +97,7 @@ public class ObjectResolver extends Resolver
                 handleMissingField(jsonObj, rhs, key);
             } //else no handler so ignore.
         }
+        jsonObj.setFinished();
     }
 
     /**
@@ -294,7 +295,10 @@ public class ObjectResolver extends Resolver
                     col.add(null);
                 } else if ((special = readWithFactoryIfExists(element, null)) != null) {
                     col.add(special);
-                } else if (element instanceof String || element instanceof Boolean || element instanceof Double || element instanceof Long) {    // Allow Strings, Booleans, Longs, and Doubles to be "inline" without Java object decoration (@id, @type, etc.)
+                } else if (element instanceof String || element instanceof Boolean || element instanceof Double || element instanceof Long) {
+                    // TODO: (String) element, shouldn't that cause a ClassCastException when Boolean, Doouble, or Long.  Does
+                    // the readWithFactoryIfExists pick up these types?  If so, does this line ever get hit?
+                    // Allow Strings, Booleans, Longs, and Doubles to be "inline" without Java object decoration (@id, @type, etc.)
                     col.add(mayEnumClass == null ? element : Enum.valueOf(mayEnumClass, (String) element));
                 } else if (element.getClass().isArray()) {
                     final JsonObject jObj = new JsonObject();
@@ -425,6 +429,7 @@ public class ObjectResolver extends Resolver
                 }
             }
         }
+        jsonObj.setFinished();
         jsonObj.clear();
     }
 

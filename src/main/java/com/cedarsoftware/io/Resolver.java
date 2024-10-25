@@ -242,6 +242,7 @@ public abstract class Resolver {
             }
             visited.put(jsonObj, null);
             traverseSpecificType(jsonObj);
+//            jsonObj.setFinished();
         }
         return (T) root.getTarget();
     }
@@ -453,11 +454,11 @@ public abstract class Resolver {
 
     /**
      * If a ClassFactory is associated to the passed in Class (clazz), then use the ClassFactory
-     * to create an instance.  If a ClassFactory create the instance, it may optionall load
+     * to create an instance.  If a ClassFactory creates the instance, it may optionally load
      * the values into the instance, using the values from the passed in JsonObject.  If the
      * ClassFactory instance creates AND loads the object, it is indicated on the ClassFactory
      * by the isObjectFinal() method returning true.  Therefore, the JsonObject instance that is
-     * loaded, is marked with 'isFinished=true' so that no more process is needed for this instance.
+     * loaded, is marked with 'isFinished=true' so that no more processing is needed for this instance.
      */
     Object createInstanceUsingClassFactory(Class c, JsonObject jsonObj) {
         // If a ClassFactory exists for a class, use it to instantiate the class.  The ClassFactory
@@ -688,5 +689,21 @@ public abstract class Resolver {
         } else {
             return root;
         }
+    }
+
+    Object resolveArray(Class<?> suggestedType, List<Object> list)
+    {
+        if (suggestedType == null || suggestedType == Object.class) {
+            // No suggested type, so use Object[]
+            return list.toArray();
+        }
+        
+        JsonObject jsonArray = new JsonObject();
+        jsonArray.setTarget(Array.newInstance(suggestedType, list.size()));
+        jsonArray.setJsonArray(list.toArray());
+        traverseJsonObject(jsonArray);
+        jsonArray.setFinished();
+//        return jsonArray.getTarget();
+        return jsonArray;
     }
 }

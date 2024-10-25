@@ -192,8 +192,8 @@ public class JsonIo {
             throw new JsonIoException(e);
         }
         finally {
-            if (readOptions.isCloseStream()) {
-                if (jr != null) {
+            if (jr != null) {
+                if (readOptions.isCloseStream()) {
                     jr.close();
                 }
             }
