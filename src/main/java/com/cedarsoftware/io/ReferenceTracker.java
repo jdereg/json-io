@@ -24,8 +24,10 @@ public interface ReferenceTracker {
 
     JsonObject get(JsonObject jObj);
 
-    JsonObject get(Long jObj);
+    JsonObject get(Long id);
 
+    boolean contains(Long id);
+    
     void clear();
 
     int size();

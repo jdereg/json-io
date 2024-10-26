@@ -396,6 +396,10 @@ public class JsonReader implements Closeable
             this.references.clear();
         }
 
+        public boolean contains(Long id) {
+            return references.containsKey(id);
+        }
+
         public int size() {
             return this.references.size();
         }
