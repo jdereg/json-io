@@ -691,19 +691,5 @@ public abstract class Resolver {
         }
     }
 
-    Object resolveArray(Class<?> suggestedType, List<Object> list)
-    {
-        if (suggestedType == null || suggestedType == Object.class) {
-            // No suggested type, so use Object[]
-            return list.toArray();
-        }
-        
-        JsonObject jsonArray = new JsonObject();
-        jsonArray.setTarget(Array.newInstance(suggestedType, list.size()));
-        jsonArray.setJsonArray(list.toArray());
-        traverseJsonObject(jsonArray);
-        jsonArray.setFinished();
-//        return jsonArray.getTarget();
-        return jsonArray;
-    }
+    abstract Object resolveArray(Class<?> suggestedType, List<Object> list);
 }

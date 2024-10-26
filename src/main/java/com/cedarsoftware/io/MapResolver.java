@@ -4,6 +4,7 @@ import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 import com.cedarsoftware.io.reflect.Injector;
@@ -45,15 +46,12 @@ import com.cedarsoftware.util.convert.Converter;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class MapResolver extends Resolver
-{
-    protected MapResolver(ReadOptions readOptions, ReferenceTracker references, Converter converter)
-    {
+public class MapResolver extends Resolver {
+    protected MapResolver(ReadOptions readOptions, ReferenceTracker references, Converter converter) {
         super(readOptions, references, converter);
     }
 
-    protected Object readWithFactoryIfExists(Object o, Class<?> compType)
-    {
+    protected Object readWithFactoryIfExists(Object o, Class<?> compType) {
         // No custom reader support for maps
         return null;
     }
@@ -66,8 +64,7 @@ public class MapResolver extends Resolver
      * instance.
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
      */
-    public void traverseFields(final JsonObject jsonObj)
-    {
+    public void traverseFields(final JsonObject jsonObj) {
         final Object target = jsonObj.getTarget();
         final Map<String, Injector> injectorMap = (target == null) ? null : getReadOptions().getDeepInjectorMap(target.getClass());
 
@@ -136,8 +133,7 @@ public class MapResolver extends Resolver
      * unresolved references are added via .add().
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      */
-    protected void traverseCollection(final JsonObject jsonObj)
-    {
+    protected void traverseCollection(final JsonObject jsonObj) {
         final Object items = jsonObj.getJsonArray();
         if (items == null || Array.getLength(items) == 0) {
             return;
@@ -186,10 +182,14 @@ public class MapResolver extends Resolver
         jsonObj.setTarget(null);  // don't waste space (used for typed return, not generic Map return)
     }
 
-    protected void traverseArray(JsonObject jsonObj)
-    {
+    protected void traverseArray(JsonObject jsonObj) {
         traverseCollection(jsonObj);
     }
 
-    public void assignField(final JsonObject jsonObj, final Injector injector, final Object rhs) {}
+    public void assignField(final JsonObject jsonObj, final Injector injector, final Object rhs) {
+    }
+
+    Object resolveArray(Class<?> suggestedType, List<Object> list) {
+        return list.toArray();
+    }
 }

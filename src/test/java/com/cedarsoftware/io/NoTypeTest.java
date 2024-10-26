@@ -63,7 +63,7 @@ public class NoTypeTest
     {
         String json = MetaUtils.loadResourceAsString("noTypes/person.json");
         String msg = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), Person.class); }).getMessage();
-        assert msg.contains("Either use null for root, or set");
+        assert msg.contains("must be a Map type or null when JSON is an object { }");
     }
 
     @Test
@@ -101,10 +101,9 @@ public class NoTypeTest
 
         try {
             Object o = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), Person[].class);
-            System.out.println("o = " + o);
             fail();
         } catch (JsonIoException e) {
-            assert e.getMessage().contains("Either use null for root, or set");
+            assert e.getMessage().contains("Root type ([Lcom.cedarsoftware.io.NoTypeTest$Person;) cannot be converted to: [Ljava.lang.Object;");
         }
     }
 
@@ -166,7 +165,7 @@ public class NoTypeTest
 
         // String[]
         String msg = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), String[].class); }).getMessage();
-        assert msg.contains("Either use null for root, or set");
+        assert msg.contains("Root type ([Ljava.lang.String;) cannot be converted to: [Ljava.lang.Object;");
 
         String json2 = "75.1";
         // AtomicInteger

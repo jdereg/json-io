@@ -207,13 +207,11 @@ public class JsonReader implements Closeable
     public <T> T readObject(Class<T> rootType) {
         T returnValue;
         try {
-//            if (readOptions.isReturningJsonObjects()) {
-//                rootType = null;
-//            }
             returnValue = (T) parser.readValue(rootType);
             if (returnValue == null) {
                 return null;    // easy, done.
             }
+            verifyRootType(rootType, returnValue);
         } catch (JsonIoException e) {
             throw e;
         } catch (Exception e) {
@@ -246,6 +244,32 @@ public class JsonReader implements Closeable
         }
 
         return returnValue;
+    }
+
+    private <T> void verifyRootType(Class<T> rootType, T returnValue) {
+        if (readOptions.isReturningJavaObjects() || rootType == null) {
+            return;
+        }
+
+        Converter converter = resolver.getConverter();
+        if (converter.isConversionSupportedFor(rootType, returnValue.getClass()) || converter.isConversionSupportedFor(returnValue.getClass(), rootType)) {
+            return;
+        }
+
+        if (returnValue instanceof JsonObject) {
+            if (Map.class.isAssignableFrom(rootType)) {
+                return;
+            }
+            throw new JsonIoException("Root type (" + rootType.getName() + ") must be a Map type or null when JSON is an object { }");
+        }
+
+        if (returnValue.getClass().isArray()) {
+            if (!rootType.isArray() && !(returnValue instanceof JsonObject && ((JsonObject) returnValue).isArray())) {
+                throw new JsonIoException("Root type (" + rootType.getName() + ") must be an array type or null when JSON is an array [ ]");
+            }
+        }
+
+        throw new JsonIoException("Root type (" + rootType.getName() + ") cannot be converted to: " + returnValue.getClass().getName());
     }
 
     private <T> T determineReturnValueWhenJsonObjectRoot(Class<T> rootType, T returnValue) {
