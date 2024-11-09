@@ -670,23 +670,26 @@ public class TestGraphComparatorList
 
         List<Delta> deltas = compare(persons[0], persons[1], getIdFetcher());
         assertTrue(deltas.size() == 3);
-        Delta delta = deltas.get(0);
-        assertTrue(LIST_SET_ELEMENT == delta.getCmd());
-        assertTrue("pets".equals(delta.getFieldName()));
-        assertTrue(0 == (Integer) delta.getOptionalKey());
-        assertTrue(persons[1].pets.get(0).equals(delta.getTargetValue()));
-        assertTrue((Long) delta.getId() == id);
 
-        delta = deltas.get(1);
+        deltas.sort(Comparator.comparing(Delta::getCmd).thenComparing(Delta::getFieldName));
+
+        Delta delta = deltas.get(0);
         assertTrue(OBJECT_ASSIGN_FIELD == delta.getCmd());
         assertTrue("favoritePet".equals(delta.getFieldName()));
         assertTrue(null == delta.getOptionalKey());
         assertTrue(persons[1].pets.get(0).equals(delta.getTargetValue()));
         assertTrue((Long) delta.getId() == id);
 
-        delta = deltas.get(2);
+        delta = deltas.get(1);
         assertTrue(OBJECT_ORPHAN == delta.getCmd());
         assertTrue(edId == (Long) delta.getId());
+
+        delta = deltas.get(2);
+        assertTrue(LIST_SET_ELEMENT == delta.getCmd());
+        assertTrue("pets".equals(delta.getFieldName()));
+        assertTrue(0 == (Integer) delta.getOptionalKey());
+        assertTrue(persons[1].pets.get(0).equals(delta.getTargetValue()));
+        assertTrue((Long) delta.getId() == id);
 
         applyDelta(persons[0], deltas, getIdFetcher(), getJavaDeltaProcessor());
         assertTrue(DeepEquals.deepEquals(persons[0], persons[1]));
