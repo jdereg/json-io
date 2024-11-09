@@ -258,6 +258,33 @@ class JsonParser {
     }
 
     /**
+     * Read a JSON array
+     */
+    private Object readArray(Class<?> suggestedType) throws IOException {
+        final List<Object> list = new ArrayList<>();
+        ++curParseDepth;
+
+        while (true) {
+            Object value = readValue(suggestedType);
+
+            if (value != EMPTY_ARRAY) {
+                list.add(value);
+            }
+
+            final int c = skipWhitespaceRead(true);
+
+            if (c == ']') {
+                break;
+            } else if (c != ',') {
+                error("Expected ',' or ']' inside array");
+            }
+        }
+
+        --curParseDepth;
+        return resolver.resolveArray(suggestedType, list);
+    }
+
+    /**
      * Read the field name of a JSON object.
      *
      * @return String field name.
@@ -273,33 +300,6 @@ class JsonParser {
             error("Expected ':' between field and value, instead found '" + (char) c + "'");
         }
         return field;
-    }
-
-    /**
-     * Read a JSON array
-     */
-    private Object readArray(Class<?> suggestedType) throws IOException {
-        final List<Object> list = new ArrayList<>();
-        ++curParseDepth;
-
-        while (true) {
-            Object value = readValue(suggestedType);
-
-            if (value != EMPTY_ARRAY) {
-                list.add(value);
-            }
-            
-            final int c = skipWhitespaceRead(true);
-
-            if (c == ']') {
-                break;
-            } else if (c != ',') {
-                error("Expected ',' or ']' inside array");
-            }
-        }
-
-        --curParseDepth;
-        return resolver.resolveArray(suggestedType, list);
     }
 
     /**
@@ -442,7 +442,7 @@ class JsonParser {
             return number.doubleValue();
         }
     }
-    
+
     private static final int STRING_START = 0;
     private static final int STRING_SLASH = 1;
     private static final int HEX_DIGITS = 2;
@@ -556,7 +556,7 @@ class JsonParser {
      * @throws IOException for stream errors or parsing errors.
      */
     private int skipWhitespaceRead(boolean throwOnEof) throws IOException {
-        Reader in = input;
+        final Reader in = input;
         int c;
         do {
             c = in.read();
@@ -575,10 +575,10 @@ class JsonParser {
      * @param jObj  JsonObject representing the current item in the JSON being loaded.
      */
     private void loadId(Object value, JsonObject jObj) {
-        if (!(value instanceof Long)) {
+        if (!(value instanceof Number)) {
             error("Expected a number for " + ID + ", instead got: " + value);
         }
-        Long id = (Long) value;
+        Long id = ((Number) value).longValue();
         references.put(id, jObj);
         jObj.setId(id);
     }
@@ -590,11 +590,11 @@ class JsonParser {
      * @param jObj  JsonValue that will be stuffed with the reference id and marked as finished.
      */
     private void loadRef(Object value, JsonValue jObj) {
-        if (!(value instanceof Long)) {
+        if (!(value instanceof Number)) {
             error("Expected a number for " + REF + ", instead got: " + value);
         }
-        jObj.setReferenceId((Long) value);
-        jObj.setFinished();   // "Nothing further to load, your honor."
+        jObj.setReferenceId(((Number) value).longValue());
+        jObj.setFinished();
     }
 
     /**
@@ -626,15 +626,15 @@ class JsonParser {
         return clazz;
     }
 
-    Object error(String msg) {
+    private Object error(String msg) {
         throw new JsonIoException(getMessage(msg));
     }
 
-    Object error(String msg, Exception e) {
+    private Object error(String msg, Exception e) {
         throw new JsonIoException(getMessage(msg), e);
     }
 
-    String getMessage(String msg) {
+    private String getMessage(String msg) {
         return msg + "\nline: " + input.getLine() + ", col: " + input.getCol() + "\n" + input.getLastSnippet();
     }
 }
