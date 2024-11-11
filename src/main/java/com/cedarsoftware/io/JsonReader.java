@@ -3,15 +3,10 @@ package com.cedarsoftware.io;
 import java.io.Closeable;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -227,7 +222,7 @@ public class JsonReader implements Closeable
         if (returnValue instanceof Object[]) {
             JsonObject rootObj = new JsonObject();
             rootObj.setTarget(returnValue);
-            rootObj.setJsonArray((Object[])returnValue);
+            rootObj.setItems(returnValue);
             T graph = toJavaObjects(rootObj, rootType);
             boolean asMaps = readOptions.isReturningJsonObjects();
             return asMaps ? returnValue : graph;

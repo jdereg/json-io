@@ -416,13 +416,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
     private void processJsonObject(JsonObject jsonObj, Deque<Object> stack) {
         // Traverse items (array elements)
-        Object items = jsonObj.getJsonArray();
+        Object items = jsonObj.getItems();
         if (items != null) {
             processArray(items, stack);
         }
 
         // Traverse keys (for JsonObject representing maps)
-        Object[] keys = jsonObj.getKeys();
+        Object keys = jsonObj.getKeys();
         if (keys != null) {
             processArray(keys, stack);
         }
@@ -941,7 +941,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
         tabIn();
 
-        Object items = jObj.getJsonArray();
+        Object items = jObj.getItems();
         final int lenMinus1 = len - 1;
 
         for (int i = 0; i < len; i++) {
@@ -1020,7 +1020,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         beginCollection(showType, referenced);
 
-        Object items = jObj.getJsonArray();
+        Object items = jObj.getItems();
         final int itemsLen = Array.getLength(items);
         final int itemsLenMinus1 = itemsLen - 1;
 

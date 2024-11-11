@@ -324,9 +324,9 @@ public abstract class Resolver {
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      */
     protected void traverseMap(JsonObject jsonObj) {
-        Map.Entry<Object[], Object[]> pair = jsonObj.asTwoArrays();
-        final Object[] keys = pair.getKey();
-        final Object[] items = pair.getValue();
+        Map.Entry<Object, Object> pair = jsonObj.asTwoArrays();
+        final Object keys = pair.getKey();
+        final Object items = pair.getValue();
 
         if (keys == null) {  // If keys is null, items is also null due to JsonObject validation
             return;
@@ -340,9 +340,9 @@ public abstract class Resolver {
         prettyMaps.add(new Object[]{jsonObj, keys, items});
     }
 
-    private void buildCollection(Object[] arrayContent) {
+    private void buildCollection(Object arrayContent) {
         final JsonObject collection = new JsonObject();
-        collection.setJsonArray(arrayContent);
+        collection.setItems(arrayContent);
         collection.setTarget(arrayContent);
         push(collection);
     }
@@ -406,7 +406,7 @@ public abstract class Resolver {
         }
 
         // Arrays
-        Object items = jsonObj.getJsonArray();
+        Object items = jsonObj.getItems();
         if (c.isArray() || (items != null && c == Object.class && !jsonObj.containsKey(KEYS))) {    // Handle []
             int size = (items == null) ? 0 : Array.getLength(items);
             mate = Array.newInstance(c.isArray() ? c.getComponentType() : Object.class, size);
@@ -495,7 +495,7 @@ public abstract class Resolver {
                 ? evaluateEnumSetTypeFromItems(jsonObj)
                 : ClassUtilities.forName(enumClassName, readOptions.getClassLoader());
 
-        Object items = jsonObj.getJsonArray();
+        Object items = jsonObj.getItems();
         if (items == null || Array.getLength(items) == 0) {
             if (enumClass != null) {
                 return EnumSet.noneOf(enumClass);
@@ -540,7 +540,7 @@ public abstract class Resolver {
      *}</pre>
      */
     private Class<?> evaluateEnumSetTypeFromItems(final JsonObject json) {
-        final Object items = json.getJsonArray();
+        final Object items = json.getItems();
         if (items != null && Array.getLength(items) != 0) {
             Object value = Array.get(items, 0);
             if (value instanceof JsonObject) {
@@ -617,7 +617,7 @@ public abstract class Resolver {
         // TODO: Support multiple dimensions
         // TODO: Support char
         if (jsonObject.javaType.isArray() && isConvertable(jsonObject.javaType.getComponentType())) {
-            Object jsonItems = jsonObject.getJsonArray();
+            Object jsonItems = jsonObject.getItems();
             Class<?> componentType = jsonObject.javaType.getComponentType();
             if (jsonItems == null) {    // empty array
                 jsonObject.setFinishedTarget(null, true);
@@ -675,7 +675,7 @@ public abstract class Resolver {
         if (root instanceof Object[]) {
             JsonObject array = new JsonObject();
             array.setTarget(root);
-            array.setJsonArray((Object[]) root);
+            array.setItems(root);
             push(array);    // resolver - you do the rest of the mapping
             return root;
         } else if (root instanceof JsonObject) {

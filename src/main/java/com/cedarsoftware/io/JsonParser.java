@@ -647,20 +647,19 @@ class JsonParser {
     }
 
     /**
-     * Load the @id field listed in the JSON
+     * Load the @items field listed in the JSON
      *
      * @param value Object should be a Long, if not exception is thrown.  It is the value associated to the @id field.
      * @param jObj  JsonObject representing the current item in the JSON being loaded.
      */
     private void loadItems(Object value, JsonObject jObj) {
         if (value == null) {
-            jObj.setJsonArray(null);
             return;
         }
         if (!value.getClass().isArray()) {
             error("Expected @items to have an array [], but found: " + value);
         }
-        jObj.setJsonArray((Object[]) value);
+        jObj.setItems(value);
     }
 
     private Object error(String msg) {

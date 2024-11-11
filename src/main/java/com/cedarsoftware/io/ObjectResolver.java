@@ -146,7 +146,7 @@ public class ObjectResolver extends Resolver
         } else if (rhs.getClass().isArray()) {    // LHS of assignment is an [] field or RHS is an array and LHS is Object
             final Object[] elements = (Object[]) rhs;
             JsonObject jsonArray = new JsonObject();
-            jsonArray.setJsonArray(elements);
+            jsonArray.setItems(elements);
             jsonArray.setHintType(fieldType);
             createInstance(jsonArray);
             injector.inject(target, jsonArray.getTarget());
@@ -282,7 +282,7 @@ public class ObjectResolver extends Resolver
             return;
         }
 
-        Object items = jsonObj.getJsonArray();
+        Object items = jsonObj.getItems();
 
         Class mayEnumClass = null;
         String mayEnumClasName = jsonObj.getEnumType();
@@ -311,7 +311,7 @@ public class ObjectResolver extends Resolver
                 } else if (element.getClass().isArray()) {
                     final JsonObject jObj = new JsonObject();
                     jObj.setHintType(Object.class);
-                    jObj.setJsonArray((Object[]) element);
+                    jObj.setItems(element);
                     createInstance(jObj);
                     col.add(jObj.getTarget());
                     push(jObj);
@@ -372,7 +372,7 @@ public class ObjectResolver extends Resolver
         final ReferenceTracker refTracker = getReferences();
         final Object array = jsonObj.getTarget();
         final Class compType = array.getClass().getComponentType();
-        final Object jsonItems =  jsonObj.getJsonArray();
+        final Object jsonItems =  jsonObj.getItems();
         // Primitive arrays never make it here, as the ArrayFactory (ClassFactory) processes them in assignField.
 
         for (int i = 0; i < len; i++) {
@@ -404,7 +404,7 @@ public class ObjectResolver extends Resolver
                 } else {
                     // Prep a JsonObject for array[i]
                     JsonObject jsonArray = new JsonObject();
-                    jsonArray.setJsonArray((Object[]) element);
+                    jsonArray.setItems(element);
                     jsonArray.setHintType(compType);
 
                     // create and set it into enclosing array
@@ -563,9 +563,9 @@ public class ObjectResolver extends Resolver
 
                 if (Map.class.isAssignableFrom(clazz)) {
                     JsonObject jsonObj = (JsonObject) instance; // Maps are brought in as JsonObjects
-                    Map.Entry<Object[], Object[]> pair = jsonObj.asTwoArrays();
-                    Object[] keys = pair.getKey();
-                    Object[] items = pair.getValue();
+                    Map.Entry<Object, Object> pair = jsonObj.asTwoArrays();
+                    Object keys = pair.getKey();
+                    Object items = pair.getValue();
                     getTemplateTraverseWorkItem(stack2, keys, typeArgs[0]);
                     getTemplateTraverseWorkItem(stack2, items, typeArgs[1]);
                 } else if (Collection.class.isAssignableFrom(clazz)) {
@@ -580,7 +580,7 @@ public class ObjectResolver extends Resolver
                             } else if (vals instanceof Object[]) {
                                 JsonObject coll = new JsonObject();
                                 coll.setJavaType(clazz);
-                                coll.setJsonArray((Object[]) vals);
+                                coll.setItems(vals);
                                 List items = Arrays.asList((Object[]) vals);
                                 stack2.addFirst(new Object[]{t, items});
                                 array[i] = coll;
@@ -595,7 +595,7 @@ public class ObjectResolver extends Resolver
                         }
                     } else if (instance instanceof JsonObject) {
                         final JsonObject jObj = (JsonObject) instance;
-                        final Object array = jObj.getJsonArray();
+                        final Object array = jObj.getItems();
                         if (array != null) {
                             int len = Array.getLength(array);
                             for (int i=0; i < len; i++) {
@@ -631,16 +631,17 @@ public class ObjectResolver extends Resolver
         }
     }
 
-    private static void getTemplateTraverseWorkItem(final Deque<Object[]> stack2, final Object[] items, final Type type) {
-        if (items == null || items.length < 1) {
+    private static void getTemplateTraverseWorkItem(final Deque<Object[]> stack2, final Object items, final Type type) {
+        if (items == null || Array.getLength(items) < 1) {
             return;
         }
         Class<?> rawType = getRawType(type);
         if (rawType != null && Collection.class.isAssignableFrom(rawType)) {
             stack2.add(new Object[]{type, items});
         } else {
-            for (Object o : items) {
-                stack2.add(new Object[]{type, o});
+            int len = Array.getLength(items);
+            for (int i = 0; i < len; i++) {
+                stack2.add(new Object[]{type, Array.get(items, i)});
             }
         }
     }
@@ -683,7 +684,7 @@ public class ObjectResolver extends Resolver
 
         JsonObject jsonArray = new JsonObject();
         jsonArray.setTarget(Array.newInstance(suggestedType, list.size()));
-        jsonArray.setJsonArray(list.toArray());
+        jsonArray.setItems(list.toArray());
         traverseJsonObject(jsonArray);
 //        jsonArray.setFinished();
 //        return jsonArray.getTarget();

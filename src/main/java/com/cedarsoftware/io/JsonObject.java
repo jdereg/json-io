@@ -2,10 +2,12 @@ package com.cedarsoftware.io;
 
 import java.lang.reflect.Array;
 import java.util.AbstractMap;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import com.cedarsoftware.util.Converter;
@@ -39,8 +41,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     private Integer hash = null;
 
     // Explicit fields for meta data
-    private Object[] items;
-    private Object[] keys;
+    private Object items;
+    private Object keys;
     private String enumType;
 
     public String toString() {
@@ -90,21 +92,35 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
 
     // Return the array that this JSON object wraps. This is used when there is a Collection class (like ArrayList)
     // represented in the JSON. This also occurs if a specified array type is used (not Object[], but Integer[], for example).
-    protected Object getJsonArray() {
+    protected Object getItems() {
         return items;
     }
 
-    protected void setJsonArray(Object[] jsonArray) {
-        this.items = jsonArray;
+    protected void setItems(Object array) {
+        if (array == null) {
+            throw new JsonIoException("Argument array cannot be null");
+        }
+        if (!array.getClass().isArray()) {
+            throw new JsonIoException("Argument array must be an array, type: " + array.getClass().getName());
+        }
+        this.items = array;
+        hash = null;
     }
-    
+
     // New getters/setters for keys and enum type
-    protected Object[] getKeys() {
+    protected Object getKeys() {
         return keys;
     }
 
-    protected void setKeys(Object[] keys) {
+    protected void setKeys(Object keys) {
+        if (keys == null) {
+            throw new JsonIoException("Argument 'keys' cannot be null");
+        }
+        if (!keys.getClass().isArray()) {
+            throw new JsonIoException("Argument 'keys' must be an array, type: " + keys.getClass().getName());
+        }
         this.keys = keys;
+        hash = null;
     }
 
     protected String getEnumType() {
@@ -113,8 +129,9 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
 
     protected void setEnumType(String enumType) {
         this.enumType = enumType;
+        hash = null;
     }
-    
+
     public int getLength() {
         Integer items = getLenientSize();
         if (items != null) {
@@ -126,7 +143,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     private Integer getLenientSize() {
         if (isArray()) {
             if (target == null) {
-                Object items = getJsonArray();
+                Object items = getItems();
                 return items == null ? 0 : Array.getLength(items);
             }
             if (char[].class.isAssignableFrom(target.getClass())) {
@@ -136,7 +153,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
             return Array.getLength(target);
         }
         if (isCollection() || isMap()) {
-            Object items = getJsonArray();
+            Object items = getItems();
             return items == null ? 0 : Array.getLength(items);
         }
         return null;
@@ -144,6 +161,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
 
     public void setValue(Object o) {
         put(VALUE, o);
+        hash = null;
     }
 
     public Object getValue() {
@@ -161,39 +179,67 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         return jsonStore.size();
     }
 
+    public int hashCode() {
+        if (hash == null) {
+            int result = 1;
+
+            if (keys != null) {
+                result = 31 * result + hashCode(keys, new IdentityHashMap<>());
+            }
+
+            if (items != null) {
+                result = 31 * result + hashCode(items, new IdentityHashMap<>());
+            }
+
+            if (enumType != null) {
+                result = 31 * result + enumType.hashCode();
+            }
+
+            if (!jsonStore.isEmpty()) {
+                result = 31 * result + jsonStore.hashCode();
+            }
+
+            hash = result;
+        }
+        return hash;
+    }
+
     private int hashCode(Object array, Map<Object, Integer> seen) {
         if (array == null) {
-            return super.hashCode();
+            return 1;
         }
         if (!array.getClass().isArray()) {
-            return super.hashCode();
+            return array.hashCode();
         }
 
-        if (seen.containsKey(array)) {
-            return hash;
+        Integer cachedHash = seen.get(array);
+        if (cachedHash != null) {
+            return cachedHash;
         }
 
-        seen.put(array, null);
+        seen.put(array, null);  // Mark as being processed
+
         int result = 1;
         int length = Array.getLength(array);
+
         for (int i = 0; i < length; i++) {
             Object item = Array.get(array, i);
-            hash = hashCode(item, seen);
-            result = 31 * result + hash;
+            result = 31 * result + hashCode(item, seen);
         }
-        seen.remove(array);
+
+        seen.put(array, result);
         return result;
     }
 
-    public int hashCode() {
-        if (hash == null) {
-            if (isArray() || isCollection()) {
-                hash = hashCode(getJsonArray(), new IdentityHashMap<>());
-            } else {
-                hash = jsonStore.hashCode();
-            }
-        }
-        return hash;
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (!(obj instanceof JsonObject)) return false;
+        JsonObject other = (JsonObject) obj;
+
+        if (!Objects.equals(enumType, other.enumType)) return false;
+        if (!Arrays.deepEquals(new Object[]{items}, new Object[]{other.items})) return false;
+        if (!Arrays.deepEquals(new Object[]{keys}, new Object[]{other.keys})) return false;
+        return jsonStore.equals(other.jsonStore);
     }
 
     public boolean isEmpty() {
@@ -270,12 +316,12 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
             return oldRef;
         }
         if (ITEMS.equals(key)) {
-            Object[] oldItems = items;
+            Object oldItems = items;
             items = null;
             return oldItems;
         }
         if (KEYS.equals(key)) {
-            Object[] oldKeys = keys;
+            Object oldKeys = keys;
             keys = null;
             return oldKeys;
         }
@@ -295,7 +341,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         // Handle meta fields
         if (ID.equals(key)) {
             Object oldId = id;
-            id = (Integer) value;
+            id = Converter.convert(value, Long.class);
             return oldId;
         }
         if (REF.equals(key)) {
@@ -307,16 +353,16 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
             if (value != null && !value.getClass().isArray()) {
                 throw new IllegalArgumentException("@items value must be an [] array");
             }
-            Object[] oldItems = items;
-            items = (Object[]) value;
+            Object oldItems = items;
+            items = value;
             return oldItems;
         }
         if (KEYS.equals(key)) {
             if (value != null && !(value instanceof Object[])) {
                 throw new IllegalArgumentException("@keys value must be an Object[] array");
             }
-            Object[] oldKeys = keys;
-            keys = (Object[]) value;
+            Object oldKeys = keys;
+            keys = value;
             return oldKeys;
         }
         if (ENUM.equals(key)) {
@@ -333,7 +379,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     }
 
     public void putAll(Map<?, ?> map) {
-        hash = null;
         for (Entry<?, ?> entry : map.entrySet()) {
             put(entry.getKey(), entry.getValue());
         }
@@ -362,24 +407,32 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
 
     /**
      * Return the keys/values of this Map as a Map.Entry, where the key is Object[] of keys, and the value is
-     * Object[] values. Currently, this has a side effect on the JsonObject, changing how it stores the keys
-     * and items internally. No calling code should be written to be sensitive to this.
+     * Object[] values. Currently, this has a side effect on the JsonObject, moving the keys from the jsonStore
+     * to the 'keys' member variable, and the values from the jsonStore to the 'items' member variable. This
+     * happens when the JSON representation of the Map has String keys, as opposed to being written with @keys
+     * and @items. During parsing, these make it into the JsonObject, and this method moves them from the jsonStore
+     * to the explicit member variables. No code should be written that depends on this.
      */
-    Map.Entry<Object[], Object[]> asTwoArrays() {
+    Map.Entry<Object, Object> asTwoArrays() {
         if (keys == null && items == null && !isReference()) {
             // Only convert regular fields to arrays, not meta fields
             final Object[] newKeys = new Object[jsonStore.size()];
             final Object[] newValues = new Object[jsonStore.size()];
             int i = 0;
 
-            for (Object e : jsonStore.entrySet()) {
-                final Map.Entry entry = (Map.Entry) e;
+            for (Map.Entry<?, ?> entry : jsonStore.entrySet()) {
                 newKeys[i] = entry.getKey();
                 newValues[i] = entry.getValue();
                 i++;
             }
+
+            // Move the String-key defined Map to @keys, @items - direct member variables.
             setKeys(newKeys);
-            setJsonArray(newValues);
+            setItems(newValues);
+
+            // Clear the jsonStore now that the String key/values have been moved.
+            jsonStore.clear();
+            return new AbstractMap.SimpleImmutableEntry<>(newKeys, newValues);
         }
 
         // Add validation for unbalanced keys/items
@@ -387,36 +440,31 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
             throw new JsonIoException("@keys or @items cannot be empty if the other is not empty");
         }
 
-        if (keys != null && items != null && keys.length != items.length) {
+        if (keys != null && items != null && Array.getLength(keys) != Array.getLength(items)) {
             throw new JsonIoException("@keys and @items must be same length");
         }
 
         return new AbstractMap.SimpleImmutableEntry<>(keys, items);
     }
 
-    void rehashMaps(boolean useMapsLocal, Object[] keys, Object[] items) {
-        Object[] javaKeys, javaValues;
-        Map<Object, Object> map;
+    void rehashMaps(boolean useMapsLocal, Object[] keyz, Object[] itemz) {
+        Map<Object, Object> targetMap = useMapsLocal ? this : (Map<Object, Object>) target;
+        Object sourceKeys = useMapsLocal ? getKeys() : keyz;
+        Object sourceValues = useMapsLocal ? getItems() : itemz;
 
-        if (useMapsLocal) {   // Move from two Object[]'s storage internally back to Map(key, value)
-            map = this;
-            javaKeys = getKeys();
-            javaValues = (Object[]) getJsonArray();
+        if (useMapsLocal) {
             remove(KEYS);
             remove(ITEMS);
-        } else {              // Populate peer Java Map instance
-            map = (Map<Object, Object>) target;
-            javaKeys = keys;
-            javaValues = items;
         }
-        jsonStore.clear();
-        this.keys = null;
-        this.items = null;
-        hash = null;
-        int len = javaKeys.length;
 
-        for (int i=0; i < len; i++) {
-            map.put(javaKeys[i], javaValues[i]);
+        jsonStore.clear();
+        keys = null;
+        items = null;
+        hash = null;
+
+        int len = Array.getLength(sourceKeys);
+        for (int i = 0; i < len; i++) {
+            targetMap.put(Array.get(sourceKeys, i), Array.get(sourceValues, i));
         }
     }
 }

@@ -520,7 +520,7 @@ class MapOfMapsTest
         assert array[0] == array[1];                // Same instance of List
         JsonObject objList1 = (JsonObject) array[0];
         assert objList1.isArray();
-        Object list1 = objList1.getJsonArray();
+        Object list1 = objList1.getItems();
         assert Array.get(list1, 0) == Array.get(list1, 1);                // Same Person instance
         assert Array.get(list1, 0) != Array.get(list1, 2);                // Not same Person instance
         assert DeepEquals.deepEquals(Array.get(list1, 2), Array.get(list1, 1));  // Although difference instance, same contents

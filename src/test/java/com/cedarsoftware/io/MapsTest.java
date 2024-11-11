@@ -660,7 +660,7 @@ class MapsTest
         assert e.getMessage().toLowerCase().contains("@keys or @items");
         assert e.getMessage().toLowerCase().contains("empty");
 
-        final String json2 = "{\"@type\":\"java.util.HashMap\",\"@keys\":[1,2],\"@items\":[true]}";
+        final String json2 = "{\"@type\":\"HashMap\",\"@keys\":[1,2],\"@items\":[true]}";
         e = assertThrows(Exception.class, () -> { TestUtil.toObjects(json2, null); });
         assert e.getMessage().toLowerCase().contains("must be same length");
     }
