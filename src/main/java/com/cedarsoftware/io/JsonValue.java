@@ -25,6 +25,7 @@ public abstract class JsonValue {
     public static final String ID = "@id";
     public static final String REF = "@ref";
     public static final String TYPE = "@type";
+    public static final String ENUM = "@enum";
     public static final String SHORT_TYPE = "@t";
     public static final String SHORT_ITEMS = "@e";
     public static final String SHORT_KEYS = "@k";
@@ -59,6 +60,7 @@ public abstract class JsonValue {
 
     public void setReferenceId(Long id) {
         refId = id;
+        isFinished = true;
     }
 
     public boolean isFinished() {
@@ -105,11 +107,13 @@ public abstract class JsonValue {
     }
 
     public String getJavaTypeName() {
-        Class<?> type = getJavaType();
-        if (type == null) {
-            return null;
+        // Then try javaType (resolved class)
+        if (javaType != null) {
+            return javaType.getName();
         }
-        return type.getName();
+
+        // Finally fallback to hintType if available
+        return hintType != null ? hintType.getName() : null;
     }
 
     public long getId() {

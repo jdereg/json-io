@@ -80,6 +80,10 @@ public class ObjectResolver extends Resolver
      */
     public void traverseFields(final JsonObject jsonObj)
     {
+        if (jsonObj.isFinished) {
+            return;
+        }
+
         final Object javaMate = jsonObj.getTarget();
         final Iterator<Map.Entry<Object, Object>> i = jsonObj.entrySet().iterator();
         final Class<?> cls = javaMate.getClass();
@@ -152,7 +156,7 @@ public class ObjectResolver extends Resolver
             final Long ref = jsRhs.getReferenceId();
 
             if (ref != null) {    // Correct field references
-                final JsonObject refObject = getReferences().get(ref);
+                final JsonObject refObject = getReferences().getOrThrow(ref);
 
                 if (refObject.getTarget() != null) {
                     injector.inject(target, refObject.getTarget());
@@ -209,7 +213,7 @@ public class ObjectResolver extends Resolver
                 final Long ref = jObj.getReferenceId();
 
                 if (ref != null) { // Correct field references
-                    final JsonObject refObject = getReferences().get(ref);
+                    final JsonObject refObject = getReferences().getOrThrow(ref);
                     storeMissingField(target, missingField, refObject.getTarget());
                 } else {   // Assign ObjectMap's to Object (or derived) fields
                     // check that jObj as a type
@@ -274,10 +278,14 @@ public class ObjectResolver extends Resolver
      */
     protected void traverseCollection(final JsonObject jsonObj)
     {
+        if (jsonObj.isFinished) {
+            return;
+        }
+
         Object items = jsonObj.getJsonArray();
 
         Class mayEnumClass = null;
-        String mayEnumClasName = (String)jsonObj.get("@enum");
+        String mayEnumClasName = jsonObj.getEnumType();
         if (mayEnumClasName != null) {
             mayEnumClass = ClassUtilities.forName(mayEnumClasName, classLoader);
         }
@@ -312,7 +320,7 @@ public class ObjectResolver extends Resolver
                     final Long ref = jObj.getReferenceId();
 
                     if (ref != null) {
-                        JsonObject refObject = getReferences().get(ref);
+                        JsonObject refObject = getReferences().getOrThrow(ref);
 
                         if (refObject.getTarget() != null) {
                             col.add(refObject.getTarget());
@@ -352,11 +360,16 @@ public class ObjectResolver extends Resolver
      */
     protected void traverseArray(final JsonObject jsonObj)
     {
+        if (jsonObj.isFinished) {
+            return;
+        }
         final int len = jsonObj.getLength();
         if (len == 0) {
             return;
         }
 
+        final ReadOptions readOptions = getReadOptions();
+        final ReferenceTracker refTracker = getReferences();
         final Object array = jsonObj.getTarget();
         final Class compType = array.getClass().getComponentType();
         final Object jsonItems =  jsonObj.getJsonArray();
@@ -405,7 +418,7 @@ public class ObjectResolver extends Resolver
                 Long ref = jsonElement.getReferenceId();
 
                 if (ref != null) {    // Connect reference
-                    JsonObject refObject = getReferences().get(ref);
+                    JsonObject refObject = refTracker.getOrThrow(ref);
                     if (refObject.getTarget() != null) {   // Array element with reference to existing object
                         Array.set(array, i, refObject.getTarget());
                     } else {    // Array with a forward reference as an element
@@ -415,7 +428,7 @@ public class ObjectResolver extends Resolver
                     jsonElement.setHintType(compType);
                     Object arrayElement = createInstance(jsonElement);
                     Array.set(array, i, arrayElement);
-                    boolean isNonRefClass = getReadOptions().isNonReferenceableClass(arrayElement.getClass());
+                    boolean isNonRefClass = readOptions.isNonReferenceableClass(arrayElement.getClass());
                     if (!isNonRefClass && !jsonElement.isFinished) {
                         // Skip walking primitives and completed objects.
                         push(jsonElement);
@@ -603,7 +616,7 @@ public class ObjectResolver extends Resolver
 
                                 if (injector != null && (injector.getType().getTypeParameters().length > 0 || injector.getGenericType() instanceof TypeVariable)) {
                                     Object pt = typeArgs[0];
-                                    if (entry.getValue() instanceof JsonObject && ((JsonObject) entry.getValue()).get("@enum") != null) {
+                                    if (entry.getValue() instanceof JsonObject && ((JsonObject) entry.getValue()).getEnumType() != null) {
                                         pt = injector.getGenericType();
                                     }
                                     stack2.addFirst(new Object[]{pt, entry.getValue()});

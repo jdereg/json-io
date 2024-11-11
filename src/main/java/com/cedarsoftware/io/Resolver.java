@@ -20,7 +20,6 @@ import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
-import static com.cedarsoftware.io.JsonObject.ITEMS;
 import static com.cedarsoftware.io.JsonObject.KEYS;
 
 /**
@@ -198,7 +197,10 @@ public abstract class Resolver {
         }
 
         if (rootObj.isReference()) {
-            rootObj = getReferences().get(rootObj);
+            rootObj = getReferences().get(rootObj.refId);
+            if (rootObj != null) {
+                return (T) rootObj;
+            }
         }
 
         if (rootObj.isFinished) {   // Called on a JsonObject that has already been converted
@@ -242,12 +244,14 @@ public abstract class Resolver {
             }
             visited.put(jsonObj, null);
             traverseSpecificType(jsonObj);
-//            jsonObj.setFinished();
         }
         return (T) root.getTarget();
     }
 
     public void traverseSpecificType(JsonObject jsonObj) {
+        if (jsonObj.isFinished) {
+            return;
+        }
         if (jsonObj.isArray()) {
             traverseArray(jsonObj);
         } else if (jsonObj.isCollection()) {
@@ -324,16 +328,8 @@ public abstract class Resolver {
         final Object[] keys = pair.getKey();
         final Object[] items = pair.getValue();
 
-        if (keys == null || items == null) {
-            if (keys != items) {
-                throw new JsonIoException("Unbalanced { } in JSON, it has " + KEYS + " or " + ITEMS + " empty. They should be same null, empty, or same length.");
-            }
+        if (keys == null) {  // If keys is null, items is also null due to JsonObject validation
             return;
-        }
-
-        int size = keys.length;
-        if (size != items.length) {
-            throw new JsonIoException("Unbalance { } in JSON, it has " + KEYS + " and " + ITEMS + "s entries of different sizes. They should be same length.");
         }
 
         buildCollection(keys);
@@ -398,7 +394,7 @@ public abstract class Resolver {
         // TODO: Additional Factory Classes: EnumSet
 
         // EnumSet
-        Object mayEnumSpecial = jsonObj.get("@enum");
+        Object mayEnumSpecial = jsonObj.getEnumType();
         Class<?> c = jsonObj.getJavaType();
         // support deserialization of EnumSet an old serialization of json-io library (second condition)
         if (mayEnumSpecial instanceof String || EnumSet.class.isAssignableFrom(c)) {
@@ -494,7 +490,7 @@ public abstract class Resolver {
     }
 
     private EnumSet<?> extractEnumSet(JsonObject jsonObj) {
-        String enumClassName = (String) jsonObj.get("@enum");
+        String enumClassName = jsonObj.getEnumType();
         Class enumClass = enumClassName == null
                 ? evaluateEnumSetTypeFromItems(jsonObj)
                 : ClassUtilities.forName(enumClassName, readOptions.getClassLoader());
@@ -563,7 +559,7 @@ public abstract class Resolver {
     private void patchUnresolvedReferences() {
         for (UnresolvedReference ref : unresolvedRefs) {
             Object objToFix = ref.referencingObj.getTarget();
-            JsonObject objReferenced = this.references.get(ref.refId);
+            JsonObject objReferenced = this.references.getOrThrow(ref.refId);
 
             if (ref.index >= 0) {    // Fix []'s and Collections containing a forward reference.
                 if (objToFix instanceof List) {

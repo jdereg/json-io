@@ -14,6 +14,8 @@ import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.FastReader;
 
 import static com.cedarsoftware.io.JsonObject.ID;
+import static com.cedarsoftware.io.JsonObject.TYPE;
+import static com.cedarsoftware.io.JsonObject.ENUM;
 import static com.cedarsoftware.io.JsonObject.ITEMS;
 import static com.cedarsoftware.io.JsonObject.KEYS;
 import static com.cedarsoftware.io.JsonObject.REF;
@@ -22,7 +24,6 @@ import static com.cedarsoftware.io.JsonObject.SHORT_ITEMS;
 import static com.cedarsoftware.io.JsonObject.SHORT_KEYS;
 import static com.cedarsoftware.io.JsonObject.SHORT_REF;
 import static com.cedarsoftware.io.JsonObject.SHORT_TYPE;
-import static com.cedarsoftware.io.JsonObject.TYPE;
 import static com.cedarsoftware.util.MathUtilities.parseToMinimalNumericType;
 
 /**
@@ -238,6 +239,14 @@ class JsonParser {
 
                 case ID:
                     loadId(value, jObj);
+                    break;
+
+                case ITEMS:
+                    loadItems(value, jObj);
+                    break;
+
+                case ENUM:
+                    loadEnum(value, jObj);
                     break;
 
                 default:
@@ -594,7 +603,18 @@ class JsonParser {
             error("Expected a number for " + REF + ", instead got: " + value);
         }
         jObj.setReferenceId(((Number) value).longValue());
-        jObj.setFinished();
+    }
+
+    /**
+     * Load the @enum field listed in the JSON
+     *
+     * @param value Object should be a String, if not exception is thrown. It is the class of the Enum.
+     */
+    private void loadEnum(Object value, JsonObject jObj) {
+        if (!(value instanceof String)) {
+            error("Expected a String for " + ENUM + ", instead got: " + value);
+        }
+        jObj.setEnumType((String) value);
     }
 
     /**
@@ -624,6 +644,23 @@ class JsonParser {
             }
         }
         return clazz;
+    }
+
+    /**
+     * Load the @id field listed in the JSON
+     *
+     * @param value Object should be a Long, if not exception is thrown.  It is the value associated to the @id field.
+     * @param jObj  JsonObject representing the current item in the JSON being loaded.
+     */
+    private void loadItems(Object value, JsonObject jObj) {
+        if (value == null) {
+            jObj.setJsonArray(null);
+            return;
+        }
+        if (!value.getClass().isArray()) {
+            error("Expected @items to have an array [], but found: " + value);
+        }
+        jObj.setJsonArray((Object[]) value);
     }
 
     private Object error(String msg) {

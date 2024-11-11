@@ -36,11 +36,7 @@ class TransientTest
         String fname;
         String lname;
         transient String fullname;
-        transient Map map = new HashMap() {
-            public Set entrySet() {
-                throw new UnsupportedOperationException();
-            }
-        };
+        transient Map map = new HashMap<>();
 
         void setFname(String f) { fname = f; buildFull(); }
 

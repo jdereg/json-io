@@ -7,6 +7,8 @@ import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
 import com.cedarsoftware.util.convert.Converter;
 
+import static com.cedarsoftware.io.JsonValue.ITEMS;
+
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -33,7 +35,7 @@ public class ArrayFactory<T> implements JsonReader.ClassFactory {
     }
 
     public T newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        Object items = jObj.getJsonArray();
+        Object items = jObj.get(ITEMS);
         Converter converter = resolver.getConverter();
         if (items == null) {
             jObj.setTarget(null);

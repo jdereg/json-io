@@ -26,6 +26,7 @@ import java.util.Optional;
 import com.cedarsoftware.io.reflect.Accessor;
 import com.cedarsoftware.util.FastWriter;
 
+import static com.cedarsoftware.io.JsonValue.ENUM;
 import static com.cedarsoftware.io.JsonValue.ID;
 import static com.cedarsoftware.io.JsonValue.SHORT_ID;
 import static com.cedarsoftware.io.JsonValue.SHORT_TYPE;
@@ -365,91 +366,88 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         final Map<Object, Long> visited = objVisited;
         final Map<Object, Long> referenced = objsReferenced;
 
-        while (!stack.isEmpty())
-        {
+        while (!stack.isEmpty()) {
             final Object obj = stack.removeFirst();
 
-            if (!writeOptions.isNonReferenceableClass(obj.getClass()))
-            {
+            if (!writeOptions.isNonReferenceableClass(obj.getClass())) {
                 Long id = visited.get(obj);
-                if (id != null)
-                {   // Only write an object once.
-                    if (id.equals(ZERO))
-                    {   // 2nd time this object has been seen, so give it a unique ID and mark it referenced
+                if (id != null) {   // Object has been seen before
+                    if (id.equals(ZERO)) {
                         id = identity++;
                         visited.put(obj, id);
                         referenced.put(obj, id);
                     }
                     continue;
-                }
-                else
-                {   // Initially, mark an object with 0 as the ID, in case it is never referenced,
-                    // we don't waste the memory to store a Long instance that is never used.
+                } else {
                     visited.put(obj, ZERO);
                 }
             }
 
             final Class<?> clazz = obj.getClass();
 
-            if (clazz.isArray())
-            {
-                if (!writeOptions.isNonReferenceableClass(clazz.getComponentType()))
-                {   // Speed up: do not traceReferences of primitives, they cannot reference anything
-                    final int len = Array.getLength(obj);
+            if (clazz.isArray()) {
+                processArray(obj, stack);
+            } else if (obj instanceof JsonObject) {
+                processJsonObject((JsonObject) obj, stack);
+            } else if (Map.class.isAssignableFrom(clazz)) {
+                processMap((Map<?, ?>) obj, stack);
+            } else if (Collection.class.isAssignableFrom(clazz)) {
+                processCollection((Collection<?>) obj, stack);
+            } else {
+                if (!writeOptions.isNonReferenceableClass(clazz)) {
+                    processFields(stack, obj);
+                }
+            }
+        }
+    }
 
-                    for (int i = 0; i < len; i++)
-                    {
-                        final Object o = Array.get(obj, i);
-                        if (o != null)
-                        {   // Slight perf gain (null is legal)
-                            stack.addFirst(o);
-                        }
-                    }
+    private void processArray(Object array, Deque<Object> stack) {
+        final Class<?> componentType = array.getClass().getComponentType();
+        if (!writeOptions.isNonReferenceableClass(componentType)) {
+            final int len = Array.getLength(array);
+            for (int i = 0; i < len; i++) {
+                final Object element = Array.get(array, i);
+                if (element != null) {
+                    stack.addFirst(element);
                 }
             }
-            else if (Map.class.isAssignableFrom(clazz))
-            {   // Speed up - logically walk maps, as opposed to following their internal structure.
-                try
-                {
-                    Map map = (Map) obj;
-                    for (final Object item : map.entrySet())
-                    {
-                        final Entry entry = (Entry) item;
-                        Object key = entry.getKey();
-                        Object value = entry.getValue();
-                        if (value != null && !writeOptions.isNonReferenceableClass(value.getClass()))
-                        {
-                            stack.addFirst(value);
-                        }
-                        if (key != null && !writeOptions.isNonReferenceableClass(key.getClass()))
-                        {
-                            stack.addFirst(key);
-                        }
-                    }
-                }
-                catch (UnsupportedOperationException e)
-                {
-                    // Some kind of Map that does not support .entrySet() - some Maps throw UnsupportedOperation for
-                    // this API.  Do not attempt any further tracing of references.  Likely a ClassLoader field or
-                    // something unusual like that.
-                }
+        }
+    }
+
+    private void processJsonObject(JsonObject jsonObj, Deque<Object> stack) {
+        // Traverse items (array elements)
+        Object items = jsonObj.getJsonArray();
+        if (items != null) {
+            processArray(items, stack);
+        }
+
+        // Traverse keys (for JsonObject representing maps)
+        Object[] keys = jsonObj.getKeys();
+        if (keys != null) {
+            processArray(keys, stack);
+        }
+
+        // Traverse other entries in jsonStore (allows for Collections to have properties)
+        processMap(jsonObj, stack);
+    }
+
+    private void processMap(Map<?, ?> map, Deque<Object> stack) {
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            Object key = entry.getKey();
+            Object value = entry.getValue();
+            if (key != null) {
+                stack.addFirst(key);
             }
-            else if (Collection.class.isAssignableFrom(clazz))
-            {
-                for (final Object item : (Collection)obj)
-                {
-                    if (item != null && !writeOptions.isNonReferenceableClass(item.getClass()))
-                    {
-                        stack.addFirst(item);
-                    }
-                }
+            if (value != null) {
+                stack.addFirst(value);
             }
-            else
-            {   // Speed up: do not traceReferences of non-referenceable classes
-                if (!writeOptions.isNonReferenceableClass(obj.getClass()))
-                {
-                    traceFields(stack, obj);
-                }
+        }
+    }
+
+    private void processCollection(Collection<?> collection, Deque<Object> stack) {
+        for (Object item : collection) {
+            if (item != null) {
+                stack.addFirst(item);
             }
         }
     }
@@ -463,7 +461,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      * @param obj Object root of graph
      * the JDK reflection operations.  This allows a subset of the actual fields on an object to be serialized.
      */
-    protected void traceFields(final Deque<Object> stack, final Object obj)
+    protected void processFields(final Deque<Object> stack, final Object obj)
     {
         // If caller has special Field specifier for a given class
         // then use it, otherwise use reflection.
@@ -473,7 +471,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         {
             MetaUtils.safelyIgnoreException(() -> {
                 final Object o = accessor.retrieve(obj);
-                if (o != null && !writeOptions.isNonReferenceableClass(o.getClass())) {   // Trace through objects that can reference other objects
+                if (o != null) {   // Trace through objects that can reference other objects
                     stack.addFirst(o);
                 }
             });
@@ -583,8 +581,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
     private void writePrimitive(final Object obj, boolean showType) throws IOException
     {
-        if (writeOptions.isNeverShowingType())
-        {
+        if (writeOptions.isNeverShowingType()) {
             showType = false;
         }
         if (obj instanceof Long && getWriteOptions().isWriteLongsAsStrings()) {
@@ -609,10 +606,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
     }
 
-    private void writeArray(final Object array, boolean showType) throws IOException
-    {
-        if (writeOptions.isNeverShowingType())
-        {
+    private void writeArray(final Object array, boolean showType) throws IOException {
+        if (writeOptions.isNeverShowingType()) {
             showType = false;
         }
         Class<?> arrayType = array.getClass();
@@ -620,49 +615,39 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         boolean referenced = objsReferenced.containsKey(array);
         boolean typeWritten = showType && !(arrayType.equals(Object[].class));
         final Writer output = this.out; // performance opt: place in final local for quicker access
-        
-        if (typeWritten || referenced)
-        {
+
+        if (typeWritten || referenced) {
             output.write('{');
             tabIn();
         }
 
-        if (referenced)
-        {
+        if (referenced) {
             writeId(getId(array));
             output.write(',');
             newLine();
         }
 
-        if (typeWritten)
-        {
+        if (typeWritten) {
             writeType(arrayType.getName(), output);
             output.write(',');
             newLine();
         }
 
-        if (len == 0)
-        {
-            if (typeWritten || referenced)
-            {
+        if (len == 0) {
+            if (typeWritten || referenced) {
                 output.write(writeOptions.isShortMetaKeys() ? "\"@e\":[]" : "\"@items\":[]");
                 tabOut();
                 output.write('}');
-            }
-            else
-            {
+            } else {
                 output.write("[]");
             }
             return;
         }
 
 
-        if (typeWritten || referenced)
-        {
+        if (typeWritten || referenced) {
             output.write(writeOptions.isShortMetaKeys() ? "\"@e\":[" : "\"@items\":[");
-        }
-        else
-        {
+        } else {
             output.write('[');
         }
         tabIn();
@@ -674,41 +659,25 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         // reflective Array.get() but it is slower.  I chose speed over code length.
 
 
-        if (byte[].class == arrayType)
-        {
+        if (byte[].class == arrayType) {
             writeByteArray((byte[]) array, lenMinus1);
         } else if (char[].class == arrayType) {
             writeJsonUtf8String(output, new String((char[]) array));
-        }
-        else if (short[].class == arrayType)
-        {
+        } else if (short[].class == arrayType) {
             writeShortArray((short[]) array, lenMinus1);
-        }
-        else if (int[].class == arrayType)
-        {
+        } else if (int[].class == arrayType) {
             writeIntArray((int[]) array, lenMinus1);
-        }
-        else if (long[].class == arrayType)
-        {
+        } else if (long[].class == arrayType) {
             writeLongArray((long[]) array, lenMinus1);
-        }
-        else if (float[].class == arrayType)
-        {
+        } else if (float[].class == arrayType) {
             writeFloatArray((float[]) array, lenMinus1);
-        }
-        else if (double[].class == arrayType)
-        {
+        } else if (double[].class == arrayType) {
             writeDoubleArray((double[]) array, lenMinus1);
-        }
-        else if (boolean[].class == arrayType)
-        {
+        } else if (boolean[].class == arrayType) {
             writeBooleanArray((boolean[]) array, lenMinus1);
-        }
-        else
-        {
+        } else {
             final Class<?> componentClass = array.getClass().getComponentType();
-            for (int i = 0; i < len; i++)
-            {
+            for (int i = 0; i < len; i++) {
                 final Object value = Array.get(array, i);
 
                 if (value == null) {
@@ -720,8 +689,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                     }
                 }
 
-                if (i != lenMinus1)
-                {   // Make sure no bogus comma at the end of the array
+                if (i != lenMinus1) {   // Make sure no bogus comma at the end of the array
                     output.write(',');
                     newLine();
                 }
@@ -730,8 +698,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         tabOut();
         output.write(']');
-        if (typeWritten || referenced)
-        {
+        if (typeWritten || referenced) {
             tabOut();
             output.write('}');
         }
@@ -1459,7 +1426,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             newLine();
         }
 
-        out.write("\"@enum\":");
+        out.write("\"" + ENUM + "\":");
 
         Enum<? extends Enum<?>> ee = null;
         if (!enumSet.isEmpty())

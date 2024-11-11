@@ -67,6 +67,9 @@ public class MapResolver extends Resolver {
     public void traverseFields(final JsonObject jsonObj) {
         final Object target = jsonObj.getTarget();
         final Map<String, Injector> injectorMap = (target == null) ? null : getReadOptions().getDeepInjectorMap(target.getClass());
+        final ReferenceTracker refTracker = getReferences();
+        final Converter converter = getConverter();
+        final ReadOptions readOptions = getReadOptions();
 
         for (Map.Entry<Object, Object> e : jsonObj.entrySet()) {
             final String fieldName = (String) e.getKey();
@@ -86,17 +89,17 @@ public class MapResolver extends Resolver {
             } else if (rhs instanceof JsonObject) {
                 JsonObject jObj = (JsonObject) rhs;
                 if (injector != null) {
-                    boolean isNonRefClass = getReadOptions().isNonReferenceableClass(injector.getType());
+                    boolean isNonRefClass = readOptions.isNonReferenceableClass(injector.getType());
                     if (isNonRefClass) {
                         // This will be JsonPrimitive.setValue() in the future (clean)
-                        jObj.setValue(this.getConverter().convert(jObj.getValue(), injector.getType()));
+                        jObj.setValue(converter.convert(jObj.getValue(), injector.getType()));
                         continue;
                     }
                 }
                 Long refId = jObj.getReferenceId();
 
                 if (refId != null) {    // Correct field references
-                    JsonObject refObject = this.getReferences().get(refId);
+                    JsonObject refObject = refTracker.getOrThrow(refId);
                     jsonObj.put(fieldName, refObject);    // Update Map-of-Maps reference
                 } else {
                     push(jObj);
@@ -110,8 +113,8 @@ public class MapResolver extends Resolver {
                 // was optionally specified in @type.
                 final Class<?> fieldType = injector.getType();
                 if (Primitives.isPrimitive(fieldType) || BigDecimal.class.equals(fieldType) || BigInteger.class.equals(fieldType) || Date.class.equals(fieldType)) {
-                    Object convert = this.getConverter().convert(rhs, fieldType);
-                    jsonObj.put(fieldName, convert);
+                    Object fieldValue = converter.convert(rhs, fieldType);
+                    jsonObj.put(fieldName, fieldValue);
                 } else if (rhs instanceof String) {
                     if (fieldType != String.class && fieldType != StringBuilder.class && fieldType != StringBuffer.class) {
                         if ("".equals(((String) rhs).trim())) {   // Allow "" to null out a non-String field on the inbound JSON
@@ -139,8 +142,9 @@ public class MapResolver extends Resolver {
             return;
         }
 
-        Converter converter = getConverter();
-        int len = Array.getLength(items);
+        final ReferenceTracker refTracker = getReferences();
+        final Converter converter = getConverter();
+        final int len = Array.getLength(items);
 
         for (int i=0; i < len; i++) {
             Object element = Array.get(items, i);
@@ -166,7 +170,7 @@ public class MapResolver extends Resolver {
                         push(jsonObject);
                     }
                 } else {    // connect reference
-                    JsonObject refObject = getReferences().get(refId);
+                    JsonObject refObject = refTracker.getOrThrow(refId);
                     Class<?> type = refObject.getJavaType();
                     
                     if (type != null && converter.isConversionSupportedFor(Map.class, type)) {

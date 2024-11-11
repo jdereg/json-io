@@ -6,6 +6,8 @@ import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.Resolver;
 
+import static com.cedarsoftware.io.JsonValue.ITEMS;
+
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -30,7 +32,7 @@ public class CharacterPrimArrayFactory extends ArrayFactory<char[]> {
     }
 
     public char[] newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        Object items = jObj.getJsonArray();
+        Object items = jObj.get(ITEMS);
         Object value;
 
         if (items == null) {

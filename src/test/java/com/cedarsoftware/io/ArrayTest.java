@@ -1033,6 +1033,24 @@ public class ArrayTest
 //        assertEquals(0, emptyList2.size());
     }
 
+    @Test
+    void testArrayWithCircularReference()
+    {
+        TestArray ta = new TestArray();
+        String json0 = TestUtil.toJson(ta, new WriteOptionsBuilder().build());
+
+        // First convert to Maps
+        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        String json1 = TestUtil.toJson(objAsMap);
+
+        // Then convert back to objects
+        Object obj = TestUtil.toObjects(json1, new ReadOptionsBuilder().build(), null);
+        String json2 = TestUtil.toJson(obj);
+
+        assertEquals(json0, json1);
+        assertEquals(json1, json2);
+    }
+    
     private static Stream<Arguments> allShowTypeInfos() {
         return Stream.of(
                 Arguments.of(new WriteOptionsBuilder().showTypeInfoNever().build()),
@@ -1464,5 +1482,17 @@ public class ArrayTest
         private Object _arrayO;
         private Object _arrayS;
         private Object _arrayArrayO;
+    }
+
+    public static class TestArray {
+        private Object[] _test_a;
+        private Object[] _test_b;
+
+        public TestArray() {
+            _test_a = new Object[1];
+            _test_b = new Object[1];
+            _test_a[0] = _test_b;
+            _test_b[0] = _test_a;
+        }
     }
 }

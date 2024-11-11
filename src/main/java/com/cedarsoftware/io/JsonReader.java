@@ -3,10 +3,15 @@ package com.cedarsoftware.io;
 import java.io.Closeable;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -396,33 +401,29 @@ public class JsonReader implements Closeable
             this.references.clear();
         }
 
-        public boolean contains(Long id) {
-            return references.containsKey(id);
-        }
-
         public int size() {
             return this.references.size();
         }
 
-        public JsonObject get(JsonObject jObj) {
-            if (!jObj.isReference()) {
-                return jObj;
+        public JsonObject getOrThrow(Long id) {
+            JsonObject target = get(id);
+            if (target == null) {
+                throw new JsonIoException("Forward reference @ref: " + id + ", but no object defined (@id) with that value");
             }
-
-            return get(jObj.getReferenceId());
+            return target;
         }
 
         public JsonObject get(Long id) {
             JsonObject target = references.get(id);
             if (target == null) {
-                throw new JsonIoException("Forward reference @ref: " + id + ", but no object defined (@id) with that value");
+                return null;
             }
 
             while (target.isReference()) {
                 id = target.getReferenceId();
                 target = references.get(id);
                 if (target == null) {
-                    throw new JsonIoException("Forward reference @ref: " + id + ", but no object defined (@id) with that value");
+                    return null;
                 }
             }
 

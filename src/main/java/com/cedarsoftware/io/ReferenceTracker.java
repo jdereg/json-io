@@ -22,11 +22,9 @@ public interface ReferenceTracker {
 
     JsonObject put(Long l, JsonObject o);
 
-    JsonObject get(JsonObject jObj);
-
     JsonObject get(Long id);
 
-    boolean contains(Long id);
+    JsonObject getOrThrow(Long id);
     
     void clear();
 

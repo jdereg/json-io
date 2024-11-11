@@ -645,7 +645,7 @@ class MapsTest
     @Test
     void testOddMaps()
     {
-        String json = "{\"@type\":\"java.util.HashMap\",\"@keys\":null,\"@items\":null}";
+        String json = "{\"@type\":\"HashMap\",\"@keys\":null,\"@items\":null}";
         Map map = TestUtil.toObjects(json, null);
         assertTrue(map instanceof HashMap);
         assertTrue(map.isEmpty());
@@ -655,14 +655,14 @@ class MapsTest
         assertTrue(map instanceof HashMap);
         assertTrue(map.isEmpty());
         
-        final String json1 = "{\"@type\":\"java.util.HashMap\",\"@keys\":null,\"@items\":[]}";
+        final String json1 = "{\"@type\":\"HashMap\",\"@keys\":null,\"@items\":[]}";
         Exception e = assertThrows(Exception.class, () -> { TestUtil.toObjects(json1, null);});
         assert e.getMessage().toLowerCase().contains("@keys or @items");
         assert e.getMessage().toLowerCase().contains("empty");
 
         final String json2 = "{\"@type\":\"java.util.HashMap\",\"@keys\":[1,2],\"@items\":[true]}";
         e = assertThrows(Exception.class, () -> { TestUtil.toObjects(json2, null); });
-        assert e.getMessage().toLowerCase().contains("different size");
+        assert e.getMessage().toLowerCase().contains("must be same length");
     }
 
     @Test
@@ -846,6 +846,179 @@ class MapsTest
         Map root2 = TestUtil.toObjects(json, null);
         assert root2.get("testCfgKey").equals("testCfgValue");
         assert root1.get("testCfgKey").equals(root2.get("testCfgKey"));
+    }
+
+    @Test
+    void testMapWithCircularReferenceInValues() {
+        TestMapValues tmv = new TestMapValues();
+        String json0 = TestUtil.toJson(tmv, new WriteOptionsBuilder().build());
+
+        // First convert to Maps (native JSON objects)
+        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        String json1 = TestUtil.toJson(objAsMap);
+
+        // Then convert back to objects
+        Object obj = TestUtil.toObjects(json1, new ReadOptionsBuilder().build(), null);
+        String json2 = TestUtil.toJson(obj);
+
+        assertEquals(json0, json1);
+        assertEquals(json1, json2);
+    }
+
+    @Test
+    void testMapWithCircularReferenceInKeys() {
+        TestMapKeys tmk = new TestMapKeys();
+        String json0 = TestUtil.toJson(tmk, new WriteOptionsBuilder().build());
+
+        // First convert to Maps (native JSON objects)
+        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        String json1 = TestUtil.toJson(objAsMap);
+
+        // Then convert back to objects
+        Object obj = TestUtil.toObjects(json1, new ReadOptionsBuilder().build(), null);
+        String json2 = TestUtil.toJson(obj);
+
+        assertEquals(json0, json1);
+        assertEquals(json1, json2);
+    }
+
+    @Test
+    void testMapWithCircularReferenceInKeyAndValue() {
+        TestMapKeyValueCircular tmkvc = new TestMapKeyValueCircular();
+        String json0 = TestUtil.toJson(tmkvc, new WriteOptionsBuilder().build());
+
+        // First convert to Maps (native JSON objects)
+        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        String json1 = TestUtil.toJson(objAsMap);
+
+        // Then convert back to objects
+        Object obj = TestUtil.toObjects(json1, new ReadOptionsBuilder().build(), null);
+        String json2 = TestUtil.toJson(obj);
+
+        assertEquals(json0, json1);
+        assertEquals(json1, json2);
+    }
+
+    @Test
+    void testMapWithNestedCircularReferenceInValues() {
+        TestMapValuesNested tmvn = new TestMapValuesNested();
+        String json0 = TestUtil.toJson(tmvn);
+
+        // Convert to Maps (native JSON objects)
+        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        String json1 = TestUtil.toJson(objAsMap);
+
+        // Convert back to objects
+        Object obj = TestUtil.toObjects(json1, null);
+        String json2 = TestUtil.toJson(obj);
+
+        assertEquals(json0, json1);
+        assertEquals(json1, json2);
+    }
+
+    @Test
+    void testMapWithNestedCircularReferenceInKeys() {
+        TestMapKeysNested tmkn = new TestMapKeysNested();
+        String json0 = TestUtil.toJson(tmkn);
+
+        // Convert to Maps (native JSON objects)
+        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        String json1 = TestUtil.toJson(objAsMap);
+
+        // Convert back to objects
+        Object obj = TestUtil.toObjects(json1, null);
+        String json2 = TestUtil.toJson(obj);
+
+        assertEquals(json0, json1);
+        assertEquals(json1, json2);
+    }
+
+    @Test
+    void testMapWithNestedCircularReferenceInKeyAndValue() {
+        TestMapKeyValueCircularNested tmkvcn = new TestMapKeyValueCircularNested();
+        String json0 = TestUtil.toJson(tmkvcn);
+
+        // Convert to Maps (native JSON objects)
+        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        String json1 = TestUtil.toJson(objAsMap);
+
+        // Convert back to objects
+        Object obj = TestUtil.toObjects(json1, null);
+        String json2 = TestUtil.toJson(obj);
+
+        assertEquals(json0, json1);
+        assertEquals(json1, json2);
+    }
+
+    public static class TestMapKeys {
+        private Map<Object, String> _test_a;
+        private Map<Object, String> _test_b;
+
+        public TestMapKeys() {
+            _test_a = new HashMap<>();
+            _test_b = new HashMap<>();
+            _test_a.put(_test_b, "value_b");
+            _test_b.put(_test_a, "value_a");
+        }
+    }
+
+    public static class TestMapKeysNested {
+        private Map<Object, String>[] _test_a;
+        private Map<Object, String>[] _test_b;
+
+        public TestMapKeysNested() {
+            _test_a = new Map[1];
+            _test_b = new Map[1];
+            _test_a[0] = new HashMap<>();
+            _test_b[0] = new HashMap<>();
+            _test_a[0].put(_test_b, "value_b");
+            _test_b[0].put(_test_a, "value_a");
+        }
+    }
+
+    public static class TestMapValues {
+        private Map<String, Object> _test_a;
+        private Map<String, Object> _test_b;
+
+        public TestMapValues() {
+            _test_a = new HashMap<>();
+            _test_b = new HashMap<>();
+            _test_a.put("b", _test_b);
+            _test_b.put("a", _test_a);
+        }
+    }
+
+    public static class TestMapValuesNested {
+        private Map<String, Object>[] _test_a;
+        private Map<String, Object>[] _test_b;
+
+        public TestMapValuesNested() {
+            _test_a = new Map[1];
+            _test_b = new Map[1];
+            _test_a[0] = new HashMap<>();
+            _test_b[0] = new HashMap<>();
+            _test_a[0].put("b", _test_b);
+            _test_b[0].put("a", _test_a);
+        }
+    }
+
+    public static class TestMapKeyValueCircular {
+        private Map<Object, Object> _test_map;
+
+        public TestMapKeyValueCircular() {
+            _test_map = new HashMap<>();
+            _test_map.put(_test_map, _test_map);
+        }
+    }
+
+    public static class TestMapKeyValueCircularNested {
+        private Map<Object, Object>[] _test_map;
+
+        public TestMapKeyValueCircularNested() {
+            _test_map = new Map[1];
+            _test_map[0] = new HashMap<>();
+            _test_map[0].put(_test_map, _test_map);
+        }
     }
 
     public static class MapArrayKey

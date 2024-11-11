@@ -4,6 +4,7 @@ import java.util.Map;
 
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
+import com.cedarsoftware.io.ReferenceTracker;
 import com.cedarsoftware.io.Resolver;
 
 /**
@@ -53,11 +54,15 @@ public class ConvertableFactory<T> implements JsonReader.ClassFactory {
     }
 
     private void resolveReferences(Resolver resolver, JsonObject jObj) {
+        ReferenceTracker refTracker = resolver.getReferences();
         for (Map.Entry<Object, Object> entry : jObj.entrySet()) {
             if (entry.getValue() instanceof JsonObject) {
                 JsonObject child = (JsonObject) entry.getValue();
                 if (child.isReference()) {
-                    entry.setValue(resolver.getReferences().get(child));
+                    Object value = refTracker.get(child.getReferenceId());
+                    if (value != null) {
+                        entry.setValue(value);
+                    }
                 }
             }
         }
