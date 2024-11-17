@@ -32,7 +32,7 @@ public class CharacterPrimArrayFactory extends ArrayFactory<char[]> {
     }
 
     public char[] newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        Object items = jObj.get(ITEMS);
+        Object items = jObj.getItems();
         Object value;
 
         if (items == null) {

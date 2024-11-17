@@ -407,7 +407,7 @@ public abstract class Resolver {
 
         // Arrays
         Object items = jsonObj.getItems();
-        if (c.isArray() || (items != null && c == Object.class && !jsonObj.containsKey(KEYS))) {    // Handle []
+        if (c.isArray() || (items != null && c == Object.class && jsonObj.getKeys() == null)) {    // Handle []
             int size = (items == null) ? 0 : Array.getLength(items);
             mate = Array.newInstance(c.isArray() ? c.getComponentType() : Object.class, size);
             jsonObj.setTarget(mate);

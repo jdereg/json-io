@@ -245,6 +245,10 @@ class JsonParser {
                     loadItems(value, jObj);
                     break;
 
+                case KEYS:
+                    loadKeys(value, jObj);
+                    break;
+
                 case ENUM:
                     loadEnum(value, jObj);
                     break;
@@ -649,7 +653,7 @@ class JsonParser {
     /**
      * Load the @items field listed in the JSON
      *
-     * @param value Object should be a Long, if not exception is thrown.  It is the value associated to the @id field.
+     * @param value Object should be an array, if not exception is thrown.  It is the value associated to the @items field.
      * @param jObj  JsonObject representing the current item in the JSON being loaded.
      */
     private void loadItems(Object value, JsonObject jObj) {
@@ -657,9 +661,25 @@ class JsonParser {
             return;
         }
         if (!value.getClass().isArray()) {
-            error("Expected @items to have an array [], but found: " + value);
+            error("Expected @items to have an array [], but found: " + value.getClass().getName());
         }
         jObj.setItems(value);
+    }
+
+    /**
+     * Load the @keys field listed in the JSON
+     *
+     * @param value Object should be an array, if not exception is thrown.  It is the value associated to the @keys field.
+     * @param jObj  JsonObject representing the current item in the JSON being loaded.
+     */
+    private void loadKeys(Object value, JsonObject jObj) {
+        if (value == null) {
+            return;
+        }
+        if (!value.getClass().isArray()) {
+            error("Expected @keys to have an array [], but found: " + value.getClass().getName());
+        }
+        jObj.setKeys(value);
     }
 
     private Object error(String msg) {

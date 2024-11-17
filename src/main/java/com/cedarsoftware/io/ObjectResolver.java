@@ -363,7 +363,7 @@ public class ObjectResolver extends Resolver
         if (jsonObj.isFinished) {
             return;
         }
-        final int len = jsonObj.getLength();
+        final int len = jsonObj.size();
         if (len == 0) {
             return;
         }

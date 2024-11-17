@@ -32,7 +32,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class URLTest
 {
-
     private static final String LOCALHOST = "http://localhost";
     private static final String OUTSIDE_DOMAIN = "https://foo.bar.com";
     
@@ -65,6 +64,7 @@ class URLTest
         assertThat(url.toString()).isEqualTo(input);
     }
 
+//    @Disabled
     @ParameterizedTest
     @MethodSource("argumentsForUrlTesting")
     void testSerialization_withDifferentUrls_works(String input) throws Exception {
