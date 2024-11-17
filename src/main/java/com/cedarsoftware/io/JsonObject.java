@@ -10,8 +10,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import com.cedarsoftware.util.Converter;
-
 /**
  * This class holds a JSON object in a LinkedHashMap.
  * LinkedHashMap used to keep fields in same order as they are
@@ -51,9 +49,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     }
 
     public Object setFinishedTarget(Object o, boolean isFinished) {
-        setTarget(o);
         this.isFinished = isFinished;
-        return target;
+        return setTarget(o);
     }
 
     // Map APIs

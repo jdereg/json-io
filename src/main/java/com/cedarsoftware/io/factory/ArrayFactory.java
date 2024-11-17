@@ -38,8 +38,7 @@ public class ArrayFactory<T> implements JsonReader.ClassFactory {
         Object items = jObj.getItems();
         Converter converter = resolver.getConverter();
         if (items == null) {
-            jObj.setTarget(null);
-            return null;
+            return (T)jObj.setTarget(null);
         }
         int len = Array.getLength(items);
         Class<?> arrayType = getType();
@@ -76,8 +75,7 @@ public class ArrayFactory<T> implements JsonReader.ClassFactory {
             }
         }
 
-        jObj.setTarget(array);
-        return (T) jObj.getTarget();
+        return (T) jObj.setTarget(array);
     }
 
     public Class<?> getType() {

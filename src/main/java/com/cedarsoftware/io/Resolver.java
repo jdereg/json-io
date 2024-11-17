@@ -400,9 +400,8 @@ public abstract class Resolver {
         if (mayEnumSpecial instanceof String || EnumSet.class.isAssignableFrom(c)) {
             // TODO: This should move to EnumSetFactory - Both creating the enum and extracting the enumSet.
             mate = extractEnumSet(jsonObj);
-            jsonObj.setTarget(mate);
             jsonObj.isFinished = true;
-            return mate;
+            return jsonObj.setTarget(mate);
         }
 
         // Arrays
@@ -444,8 +443,7 @@ public abstract class Resolver {
             // If the newInstance(c) fails, it throws a JsonIoException.
             mate = MetaUtils.newInstance(converter, c, null);  // can add constructor arg values
         }
-        jsonObj.setTarget(mate);
-        return mate;
+        return jsonObj.setTarget(mate);
     }
 
     /**
@@ -477,8 +475,7 @@ public abstract class Resolver {
             return jsonObj.setFinishedTarget(target, true);
         }
 
-        jsonObj.setTarget(target);
-        return target;
+        return jsonObj.setTarget(target);
     }
 
     private Class<?> coerceClassIfNeeded(Class<?> type) {

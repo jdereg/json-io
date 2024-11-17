@@ -39,6 +39,7 @@ public abstract class JsonValue {
     protected long id = -1L;
     protected Long refId = null;
     protected int line;
+    protected int col;
 
     public int getLine() {
         return line;
@@ -47,8 +48,6 @@ public abstract class JsonValue {
     public int getCol() {
         return col;
     }
-
-    protected int col;
 
     public boolean isReference() {
         return refId != null;
@@ -71,18 +70,17 @@ public abstract class JsonValue {
         isFinished = true;
     }
 
-    public void setTarget(Object target) {
+    public Object setTarget(Object target) {
         this.target = target;
         if (target != null) {
             setJavaType(target.getClass());
         }
+        return target;
     }
 
     public Object setFinishedTarget(Object o, boolean isFinished) {
-        this.target = o;
-        this.javaType = o.getClass();
         this.isFinished = isFinished;
-        return this.target;
+        return setTarget(o);
     }
 
     public Object getTarget() {
@@ -102,11 +100,11 @@ public abstract class JsonValue {
         }
     }
 
-    public void setHintType(Class<?> type) {
+    void setHintType(Class<?> type) {
         this.hintType = type;
     }
 
-    public String getJavaTypeName() {
+    String getJavaTypeName() {
         // Then try javaType (resolved class)
         if (javaType != null) {
             return javaType.getName();

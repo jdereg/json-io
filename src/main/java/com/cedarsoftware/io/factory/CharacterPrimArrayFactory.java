@@ -48,7 +48,6 @@ public class CharacterPrimArrayFactory extends ArrayFactory<char[]> {
                 throw new JsonIoException("char[] should only have one String in the [], found " + len + ", line " + jObj.getLine() + ", col " + jObj.getCol());
             }
         }
-        jObj.setTarget(value);
-        return (char[]) jObj.getTarget();
+        return (char[]) jObj.setTarget(value);
     }
 }
