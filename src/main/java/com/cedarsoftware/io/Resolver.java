@@ -20,7 +20,7 @@ import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
-import static com.cedarsoftware.io.JsonObject.KEYS;
+import static com.cedarsoftware.io.JsonValue.ITEMS;
 
 /**
  * This class is used to convert a source of Java Maps that were created from
@@ -363,7 +363,7 @@ public abstract class Resolver {
      */
     Object createInstance(JsonObject jsonObj) {
         Object target = jsonObj.getTarget();
-        if (target != null) {   // already created peer Java instance
+        if (target != null) {
             return target;
         }
 
@@ -372,7 +372,7 @@ public abstract class Resolver {
         jsonObj.setJavaType(coerceClassIfNeeded(targetType));
         targetType = jsonObj.getJavaType();
 
-        // Does a 'Converter' conversion exist?
+        // Check for a 'Converter' conversion
         if (jsonObj.hasValue() && jsonObj.getValue() != null) {
             if (converter.isConversionSupportedFor(jsonObj.getValue().getClass(), targetType)) {
                 Object value = converter.convert(jsonObj.getValue(), targetType);
@@ -381,32 +381,40 @@ public abstract class Resolver {
         } else if (!jsonObj.isEmpty() && converter.isConversionSupportedFor(Map.class, targetType)) {
             try {
                 Object value = converter.convert(jsonObj, targetType);
-                return jsonObj.setFinishedTarget(value, true);  // Calendar, Timestamp, Duration, Instance, LocalDateTime, ...
-            } catch (Exception ignored) {   // will be created later, below
+                return jsonObj.setFinishedTarget(value, true);
+            } catch (Exception ignored) { }
+        }
+
+        // Try factory with @type first
+        Object mate = NO_FACTORY;
+        if (targetType != null) {
+            mate = createInstanceUsingClassFactory(targetType, jsonObj);
+            if (mate != NO_FACTORY) {
+                return mate;
             }
         }
 
-        // ClassFactory defined
-        Object mate = createInstanceUsingClassFactory(jsonObj.getJavaType(), jsonObj);
-        if (mate != NO_FACTORY) {
-            return mate;
-        }
-        // TODO: Additional Factory Classes: EnumSet
+        // Try factory with @enum if exists
+        String enumTypeName = jsonObj.getEnumType();
+        if (enumTypeName != null) {
+            Class<?> enumClass = ClassUtilities.forName(enumTypeName, readOptions.getClassLoader());
+            if (enumClass != null) {
+                // If we only have @enum and no items, this is an empty EnumSet
+                boolean isEmptyEnumSet = !jsonObj.containsKey(ITEMS) &&
+                        (targetType == null || targetType == Object.class);
+                Class<?> factoryType = isEmptyEnumSet ? EnumSet.class : enumClass;
 
-        // EnumSet
-        Object mayEnumSpecial = jsonObj.getEnumType();
-        Class<?> c = jsonObj.getJavaType();
-        // support deserialization of EnumSet an old serialization of json-io library (second condition)
-        if (mayEnumSpecial instanceof String || EnumSet.class.isAssignableFrom(c)) {
-            // TODO: This should move to EnumSetFactory - Both creating the enum and extracting the enumSet.
-            mate = extractEnumSet(jsonObj);
-            jsonObj.isFinished = true;
-            return jsonObj.setTarget(mate);
+                mate = createInstanceUsingClassFactory(factoryType, jsonObj);
+                if (mate != NO_FACTORY) {
+                    return mate;
+                }
+            }
         }
-
-        // Arrays
+        
+        // Handle arrays
         Object items = jsonObj.getItems();
-        if (c.isArray() || (items != null && c == Object.class && jsonObj.getKeys() == null)) {    // Handle []
+        Class<?> c = jsonObj.getJavaType();
+        if (c.isArray() || (items != null && c == Object.class && jsonObj.getKeys() == null)) {
             int size = (items == null) ? 0 : Array.getLength(items);
             mate = Array.newInstance(c.isArray() ? c.getComponentType() : Object.class, size);
             jsonObj.setTarget(mate);
@@ -484,69 +492,6 @@ public abstract class Resolver {
         }
         Class clazz = readOptions.getCoercedClass(type);
         return clazz == null ? type : clazz;
-    }
-
-    private EnumSet<?> extractEnumSet(JsonObject jsonObj) {
-        String enumClassName = jsonObj.getEnumType();
-        Class enumClass = enumClassName == null
-                ? evaluateEnumSetTypeFromItems(jsonObj)
-                : ClassUtilities.forName(enumClassName, readOptions.getClassLoader());
-
-        Object items = jsonObj.getItems();
-        if (items == null || Array.getLength(items) == 0) {
-            if (enumClass != null) {
-                return EnumSet.noneOf(enumClass);
-            } else {
-                return EnumSet.noneOf(MetaUtils.Dumpty.class);
-            }
-        } else if (enumClass == null) {
-            throw new JsonIoException("Could not figure out Enum of the not empty set " + jsonObj);
-        }
-
-        EnumSet enumSet = null;
-        int len = Array.getLength(items);
-        for (int i=0; i < len; i++) {
-            Object item = Array.get(items, i);
-            Enum enumItem;
-            if (item instanceof String) {
-                enumItem = Enum.valueOf(enumClass, (String) item);
-            } else {
-                JsonObject jObj = (JsonObject) item;
-                enumItem = Enum.valueOf(enumClass, (String) jObj.get("name"));
-            }
-
-            if (enumSet == null) {   // Lazy init the EnumSet
-                enumSet = EnumSet.of(enumItem);
-            } else {
-                enumSet.add(enumItem);
-            }
-        }
-        return enumSet;
-    }
-
-    /**
-     * an old serialized values support a different format of enumset serialization
-     * Example:
-     * <pre>{@code
-     *     "@type": "java.util.RegularEnumSet",
-     *     "@items": [
-     *       {
-     *         "@type": "com.cedarsoftware.io.OldSetTest$Enum1",
-     *         "name": "E1"
-     *       }     *
-     *}</pre>
-     */
-    private Class<?> evaluateEnumSetTypeFromItems(final JsonObject json) {
-        final Object items = json.getItems();
-        if (items != null && Array.getLength(items) != 0) {
-            Object value = Array.get(items, 0);
-            if (value instanceof JsonObject) {
-                return ((JsonObject) value).getJavaType();
-            }
-        }
-
-        // can't evaluate
-        return null;
     }
 
     /**

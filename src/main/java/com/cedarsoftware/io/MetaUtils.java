@@ -84,7 +84,7 @@ public class MetaUtils {
     private MetaUtils() {
     }
 
-    enum Dumpty {}
+    public enum Dumpty {}
 
     private static final ConcurrentMap<String, CachedConstructor> constructors = new ConcurrentHashMap<>();
     static final ThreadLocal<SimpleDateFormat> dateFormat = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ"));

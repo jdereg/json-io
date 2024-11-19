@@ -105,6 +105,34 @@ have lots of additional information for Read/Write options.
 
 [Example Code - Primitive, array, type array, List, Map](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectsTest.java)
 
+### Order of Type Resolution and Substitution
+
+#### Aliases (aliases.txt) - First
+- Used during writing (`JsonWriter`) and reading (`JsonReader`)
+- Primarily for shortening class names in JSON output
+- Example: `java.math.BigInteger = BigInteger`
+- Lightweight, just changes the string representation
+- Doesn't affect class loading or behavior
+#### Coerced Types (coercedTypes.txt) - Second
+- Used during class instantiation (`Resolver`)
+- Changes actual class used for instantiation
+- Example: `java.util.RegularEnumSet = java.util.EnumSet`
+- More invasive as it affects the actual type created
+- Should be used sparingly, only when:
+  - Handling internal implementation classes (like` RegularEnumSet`)
+  - Managing backward compatibility with older serialized forms
+  - Dealing with JDK implementation details that shouldn't leak into JSON
+#### ClassFactory (classFactory.txt) - Third
+- Used during object instantiation
+- Controls how instances are created and populated
+- Most flexible and powerful mechanism
+- Proper place for custom instantiation logic
+- Examples: `EnumSetFactory,` `CollectionFactory,` etc.
+#### Custom Readers/Writers - (When applicable)
+- Used for special serialization/deserialization logic
+- Can completely override normal processing
+- Most complex but most powerful
+- Strongly recommended: Use `ClassFactory` instead of a `CustomReader` as it **creates** and **loads**.
 ---
 ## Javascript
 Included is a small Javascript utility (`jsonUtil.js` in the root folder) that will take a JSON output

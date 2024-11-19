@@ -1413,14 +1413,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
     }
 
-    private void writeEnumSet(final EnumSet<?> enumSet) throws IOException
-    {
+    private void writeEnumSet(final EnumSet<?> enumSet) throws IOException {
         out.write('{');
         tabIn();
 
         boolean referenced = this.objsReferenced.containsKey(enumSet);
-        if (referenced)
-        {
+        if (referenced) {
             writeId(getId(enumSet));
             out.write(',');
             newLine();
@@ -1429,15 +1427,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         out.write("\"" + ENUM + "\":");
 
         Enum<? extends Enum<?>> ee = null;
-        if (!enumSet.isEmpty())
-        {
+        if (!enumSet.isEmpty()) {
             ee = enumSet.iterator().next();
-        }
-        else
-        {
+        } else {
             EnumSet<? extends Enum<?>> complement = EnumSet.complementOf(enumSet);
-            if (!complement.isEmpty())
-            {
+            if (!complement.isEmpty()) {
                 ee = complement.iterator().next();
             }
         }
@@ -1445,22 +1439,16 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         Field elementTypeField = writeOptions.getDeepDeclaredFields(EnumSet.class).get("elementType");
 
         Class<?> elementType = (Class<?>) getValueByReflect(enumSet, elementTypeField);
-        if ( elementType != null)
-        {
+        if (elementType != null) {
             // nice we got the right to sneak into
-        }
-        else if (ee == null)
-        {
+        } else if (ee == null) {
             elementType = MetaUtils.Dumpty.class;
-        }
-        else
-        {
+        } else {
             elementType = ee.getClass();
         }
         writeBasicString(out, elementType.getName());
 
-        if (!enumSet.isEmpty())
-        {
+        if (!enumSet.isEmpty()) {
             Collection<Accessor> mapOfFields = writeOptions.getAccessorsForClass(elementType);
             int enumFieldsCount = mapOfFields.size();
 
@@ -1469,19 +1457,15 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
             writeBasicString(out, "@items");
             out.write(":[");
-            if (enumFieldsCount > 2)
-            {
+            if (enumFieldsCount > 2) {
                 newLine();
             }
 
             boolean firstInSet = true;
-            for (Enum e : enumSet)
-            {
-                if (!firstInSet)
-                {
+            for (Enum e : enumSet) {
+                if (!firstInSet) {
                     out.write(",");
-                    if (enumFieldsCount > 2)
-                    {
+                    if (enumFieldsCount > 2) {
                         newLine();
                     }
                 }
@@ -1489,13 +1473,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
                 if (enumFieldsCount <= 2) {
                     writeJsonUtf8String(out, e.name());
-                }
-                else
-                {
+                } else {
                     boolean firstInEntry = true;
                     out.write('{');
-                    for (Accessor f : mapOfFields)
-                    {
+                    for (Accessor f : mapOfFields) {
                         firstInEntry = writeField(e, firstInEntry, f.getUniqueFieldName(), f);
                     }
                     out.write('}');
@@ -1504,7 +1485,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
             out.write("]");
         }
-        
+
         tabOut();
         out.write('}');
     }

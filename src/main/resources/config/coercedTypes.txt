@@ -36,3 +36,5 @@ java.util.LinkedHashMap$LinkedValues = java.util.ArrayList
 
 java.util.TreeMap$KeySet = java.util.TreeSet
 java.util.TreeMap$Values = java.util.ArrayList
+
+java.util.RegularEnumSet = java.util.EnumSet

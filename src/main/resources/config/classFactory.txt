@@ -167,3 +167,5 @@ java.util.ImmutableCollections$ListN = com.cedarsoftware.io.factory.ImmutableLis
 java.util.ImmutableCollections$List12 = com.cedarsoftware.io.factory.ImmutableListFactory
 java.util.ImmutableCollections$SetN = com.cedarsoftware.io.factory.ImmutableSetFactory
 java.util.ImmutableCollections$Set12 = com.cedarsoftware.io.factory.ImmutableSetFactory
+
+java.util.EnumSet = com.cedarsoftware.io.factory.EnumSetFactory

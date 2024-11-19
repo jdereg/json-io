@@ -117,7 +117,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         hash = null;
     }
 
-    protected String getEnumType() {
+    public String getEnumType() {
         return enumType;
     }
 
