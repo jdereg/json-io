@@ -276,19 +276,15 @@ public class ObjectResolver extends Resolver
      * unresolved references are added via .add().
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      */
-    protected void traverseCollection(final JsonObject jsonObj)
-    {
+    protected void traverseCollection(final JsonObject jsonObj) {
         if (jsonObj.isFinished) {
             return;
         }
 
         Object items = jsonObj.getItems();
 
-        Class mayEnumClass = null;
-        String mayEnumClasName = jsonObj.getEnumType();
-        if (mayEnumClasName != null) {
-            mayEnumClass = ClassUtilities.forName(mayEnumClasName, classLoader);
-        }
+        // Get enum class directly since it's already resolved
+        Class<?> mayEnumClass = jsonObj.getEnumType();
 
         final Collection col = (Collection) jsonObj.getTarget();
         final boolean isList = col instanceof List;
@@ -304,10 +300,9 @@ public class ObjectResolver extends Resolver
                 } else if ((special = readWithFactoryIfExists(element, null)) != null) {
                     col.add(special);
                 } else if (element instanceof String || element instanceof Boolean || element instanceof Double || element instanceof Long) {
-                    // TODO: (String) element, shouldn't that cause a ClassCastException when Boolean, Doouble, or Long.  Does
-                    // the readWithFactoryIfExists pick up these types?  If so, does this line ever get hit?
                     // Allow Strings, Booleans, Longs, and Doubles to be "inline" without Java object decoration (@id, @type, etc.)
-                    col.add(mayEnumClass == null ? element : Enum.valueOf(mayEnumClass, (String) element));
+                    Enum<?> enumValue = mayEnumClass == null ? null : Enum.valueOf((Class<? extends Enum>) mayEnumClass, (String) element);
+                    col.add(mayEnumClass == null ? element : enumValue);
                 } else if (element.getClass().isArray()) {
                     final JsonObject jObj = new JsonObject();
                     jObj.setHintType(Object.class);

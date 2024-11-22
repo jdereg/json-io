@@ -13,9 +13,8 @@ import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.FastReader;
 
-import static com.cedarsoftware.io.JsonObject.ID;
-import static com.cedarsoftware.io.JsonObject.TYPE;
 import static com.cedarsoftware.io.JsonObject.ENUM;
+import static com.cedarsoftware.io.JsonObject.ID;
 import static com.cedarsoftware.io.JsonObject.ITEMS;
 import static com.cedarsoftware.io.JsonObject.KEYS;
 import static com.cedarsoftware.io.JsonObject.REF;
@@ -24,6 +23,7 @@ import static com.cedarsoftware.io.JsonObject.SHORT_ITEMS;
 import static com.cedarsoftware.io.JsonObject.SHORT_KEYS;
 import static com.cedarsoftware.io.JsonObject.SHORT_REF;
 import static com.cedarsoftware.io.JsonObject.SHORT_TYPE;
+import static com.cedarsoftware.io.JsonObject.TYPE;
 import static com.cedarsoftware.util.MathUtilities.parseToMinimalNumericType;
 
 /**
@@ -618,7 +618,8 @@ class JsonParser {
         if (!(value instanceof String)) {
             error("Expected a String for " + ENUM + ", instead got: " + value);
         }
-        jObj.setEnumType((String) value);
+        Class<?> enumClass = stringToClass((String) value);
+        jObj.setEnumType(enumClass);
     }
 
     /**
@@ -637,17 +638,7 @@ class JsonParser {
         }
 
         // Resolve class during parsing
-        Class<?> clazz = ClassUtilities.forName(javaType, readOptions.getClassLoader());
-        if (clazz == null) {
-            if (readOptions.isFailOnUnknownType()) {
-                error("Unknown type (class) '" + javaType + "' not defined.");
-            }
-            clazz = readOptions.getUnknownTypeClass();
-            if (clazz == null) {
-                clazz = LinkedHashMap.class;
-            }
-        }
-        return clazz;
+        return stringToClass(javaType);
     }
 
     /**
@@ -680,6 +671,20 @@ class JsonParser {
             error("Expected @keys to have an array [], but found: " + value.getClass().getName());
         }
         jObj.setKeys(value);
+    }
+
+    private Class<?> stringToClass(String className) {
+        Class<?> clazz = ClassUtilities.forName(className, readOptions.getClassLoader());
+        if (clazz == null) {
+            if (readOptions.isFailOnUnknownType()) {
+                error("Unknown type (class) '" + className + "' not defined.");
+            }
+            clazz = readOptions.getUnknownTypeClass();
+            if (clazz == null) {
+                clazz = LinkedHashMap.class;
+            }
+        }
+        return clazz;
     }
 
     private Object error(String msg) {

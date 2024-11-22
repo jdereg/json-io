@@ -395,19 +395,16 @@ public abstract class Resolver {
         }
 
         // Try factory with @enum if exists
-        String enumTypeName = jsonObj.getEnumType();
-        if (enumTypeName != null) {
-            Class<?> enumClass = ClassUtilities.forName(enumTypeName, readOptions.getClassLoader());
-            if (enumClass != null) {
-                // If we only have @enum and no items, this is an empty EnumSet
-                boolean isEmptyEnumSet = !jsonObj.containsKey(ITEMS) &&
-                        (targetType == null || targetType == Object.class);
-                Class<?> factoryType = isEmptyEnumSet ? EnumSet.class : enumClass;
+        Class<?> enumClass = jsonObj.getEnumType();
+        if (enumClass != null) {
+            // If we only have @enum and no items, this is an empty EnumSet
+            boolean isEmptyEnumSet = !jsonObj.containsKey(ITEMS) &&
+                    (targetType == null || targetType == Object.class);
+            Class<?> factoryType = isEmptyEnumSet ? EnumSet.class : enumClass;
 
-                mate = createInstanceUsingClassFactory(factoryType, jsonObj);
-                if (mate != NO_FACTORY) {
-                    return mate;
-                }
+            mate = createInstanceUsingClassFactory(factoryType, jsonObj);
+            if (mate != NO_FACTORY) {
+                return mate;
             }
         }
         

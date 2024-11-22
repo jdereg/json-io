@@ -35,15 +35,15 @@ public class EnumSetFactory implements JsonReader.ClassFactory {
             throw new JsonIoException("EnumSetFactory can only create EnumSet instances");
         }
 
-        String enumTypeName = jObj.getEnumType();
-        Class<? extends Enum> enumClass = enumTypeName == null ?
-                evaluateEnumSetTypeFromItems(jObj) :
-                (Class<? extends Enum>) ClassUtilities.forName(enumTypeName, resolver.getReadOptions().getClassLoader());
+        Class<? extends Enum> enumClass = (Class<? extends Enum>) jObj.getEnumType();
+        if (enumClass == null) {
+            enumClass = evaluateEnumSetTypeFromItems(jObj);
+        }
 
         Object items = jObj.getItems();
         if (items == null || Array.getLength(items) == 0) {
             if (enumClass != null) {
-                return EnumSet.noneOf((Class<Enum>)enumClass);
+                return EnumSet.noneOf(enumClass);
             }
             return EnumSet.noneOf(MetaUtils.Dumpty.class);
         }
@@ -80,14 +80,14 @@ public class EnumSetFactory implements JsonReader.ClassFactory {
     }
 
     @SuppressWarnings("unchecked")
-    private Class<? extends Enum> evaluateEnumSetTypeFromItems(final JsonObject json) {
+    private Class<? extends Enum<?>> evaluateEnumSetTypeFromItems(final JsonObject json) {
         final Object items = json.getItems();
         if (items != null && Array.getLength(items) != 0) {
             Object value = Array.get(items, 0);
             if (value instanceof JsonObject) {
                 Class<?> type = ((JsonObject) value).getJavaType();
                 if (type != null && type.isEnum()) {
-                    return (Class<? extends Enum>) type;
+                    return (Class<? extends Enum<?>>) type;
                 }
             }
         }

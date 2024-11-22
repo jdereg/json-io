@@ -28,6 +28,7 @@ import com.cedarsoftware.util.FastWriter;
 
 import static com.cedarsoftware.io.JsonValue.ENUM;
 import static com.cedarsoftware.io.JsonValue.ID;
+import static com.cedarsoftware.io.JsonValue.ITEMS;
 import static com.cedarsoftware.io.JsonValue.SHORT_ID;
 import static com.cedarsoftware.io.JsonValue.SHORT_TYPE;
 import static com.cedarsoftware.io.JsonValue.TYPE;
@@ -1455,14 +1456,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             out.write(",");
             newLine();
 
-            writeBasicString(out, "@items");
+            writeBasicString(out, ITEMS);
             out.write(":[");
             if (enumFieldsCount > 2) {
                 newLine();
             }
 
             boolean firstInSet = true;
-            for (Enum e : enumSet) {
+            for (Enum<?> e : enumSet) {
                 if (!firstInSet) {
                     out.write(",");
                     if (enumFieldsCount > 2) {

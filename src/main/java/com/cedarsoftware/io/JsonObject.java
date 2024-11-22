@@ -40,17 +40,12 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     // Explicit fields for meta data
     private Object items;
     private Object keys;
-    private String enumType;
+    private Class<?> enumType;
 
     public String toString() {
         String jType = javaType == null ? "not set" : javaType.getName();
         String targetInfo = target == null ? "null" : jType;
         return "JsonObject(id:" + id + ", type:" + jType + ", target:" + targetInfo + ", line:" + line + ", col:" + col + ", size:" + size() + ")";
-    }
-
-    public Object setFinishedTarget(Object o, boolean isFinished) {
-        this.isFinished = isFinished;
-        return setTarget(o);
     }
 
     // Map APIs
@@ -117,11 +112,11 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         hash = null;
     }
 
-    public String getEnumType() {
+    public Class<?> getEnumType() {
         return enumType;
     }
 
-    protected void setEnumType(String enumType) {
+    protected void setEnumType(Class<?> enumType) {
         this.enumType = enumType;
         hash = null;
     }
