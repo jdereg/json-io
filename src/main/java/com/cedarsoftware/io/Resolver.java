@@ -17,7 +17,6 @@ import java.util.Set;
 
 import com.cedarsoftware.io.JsonReader.MissingFieldHandler;
 import com.cedarsoftware.io.reflect.Injector;
-import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
 import static com.cedarsoftware.io.JsonValue.ITEMS;
@@ -397,12 +396,8 @@ public abstract class Resolver {
         // Try factory with @enum if exists
         Class<?> enumClass = jsonObj.getEnumType();
         if (enumClass != null) {
-            // If we only have @enum and no items, this is an empty EnumSet
-            boolean isEmptyEnumSet = !jsonObj.containsKey(ITEMS) &&
-                    (targetType == null || targetType == Object.class);
-            Class<?> factoryType = isEmptyEnumSet ? EnumSet.class : enumClass;
-
-            mate = createInstanceUsingClassFactory(factoryType, jsonObj);
+            // Always use EnumSet.class as the factory type
+            mate = createInstanceUsingClassFactory(EnumSet.class, jsonObj);
             if (mate != NO_FACTORY) {
                 return mate;
             }

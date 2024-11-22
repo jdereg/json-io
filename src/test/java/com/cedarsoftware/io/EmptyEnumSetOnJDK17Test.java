@@ -70,7 +70,7 @@ public class EmptyEnumSetOnJDK17Test
         EnumSet<?> source = EnumSet.of(TestEnum.V1, TestEnum.V3);
 
         String json = TestUtil.toJson(source);
-
+        System.out.println(json);
         Object obj = TestUtil.toObjects(json, null);
         EnumSet<?> target = TestUtil.toObjects(json, null);
 
