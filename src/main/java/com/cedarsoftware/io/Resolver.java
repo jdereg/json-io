@@ -440,11 +440,7 @@ public abstract class Resolver {
     }
 
     /**
-     * Create an instance of a Java class using the ".type" field on the jsonObj.  The clazz argument is not
-     * used for determining type, just for clarity in an exception message.
-     * TODO: These instances are not all LOADED yet, so that is why they are not in the main createInstance()
-     * TODO: method.  As they are loaded, they will move up.  Also, pulling primitives, class, and others into
-     * TODO: factories will shrink this to just unknown generic classes, Object[]'s, and Collections of such.
+     * Create an instance of a Java class using the JavaType field on the jsonObj.
      */
     private Object createInstanceUsingType(JsonObject jsonObj) {
         Class<?> c = jsonObj.getJavaType();

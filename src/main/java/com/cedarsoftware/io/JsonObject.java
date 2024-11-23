@@ -83,7 +83,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         return items;
     }
 
-    protected void setItems(Object array) {
+    void setItems(Object array) {
         if (array == null) {
             throw new JsonIoException("Argument array cannot be null");
         }
@@ -99,7 +99,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         return keys;
     }
 
-    protected void setKeys(Object keys) {
+    void setKeys(Object keys) {
         if (keys == null) {
             throw new JsonIoException("Argument 'keys' cannot be null");
         }
