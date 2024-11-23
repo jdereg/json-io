@@ -233,24 +233,29 @@ Handling special floating point values such as NaN (Not a Number) and Infinity (
 Enums in Java are commonly used as a discrete list of values, but there are instances where additional fields are added to these enums. These fields can be either public or private, depending on the design requirements.
 
 #### Handling Enum Fields
-`json-io` provides flexible options for serializing enums, accommodating various use cases:
-- **Skip Private Fields**: By default, you might want to serialize only the public fields of an enum to ensure that internal state representations are not exposed. This option allows you to exclude private fields from the JSON output.
-- **Retain Only Name Value**: For simplicity or to adhere strictly to the enum concept, you can choose to serialize only the name of the enum. This is particularly useful when the additional fields are not relevant for the receiving system or when minimizing the output size is critical.
-- **Force Enum as an Object**: If the additional fields in the enum are important for the application logic, you can opt to serialize the enum as a full-fledged object. This approach includes all serializable fields, providing a complete representation of the enum state.
-- **Force Enum as a Single Value**: Conversely, you may enforce that the enum is serialized merely as a single value (its name), ensuring compatibility with systems expecting a simpler representation.
+The `WriteOptions` of `json-io` provide a flexible set of configurations that allow developers to customize
+how enums and `EnumSet` objects are serialized into JSON. These options determine whether enums are written 
+as simple strings, detailed objects with `public` and `private` fields, or represented using specific metadata
+like `@enum` or `@type.` By adjusting these settings, users can balance between backward compatibility and 
+newer, streamlined serialization formats. Below is a detailed breakdown of the available options and their
+effects.
 
 #### Configuration Example
 Here's how you configure these options in `json-io`:
 
 >#### `boolean` isWriteEnumAsString()
->- [ ] Returns `true` if enums are to be written out as Strings. If this is false, then enums are being written as objects, and then the `isEnumPublicFieldsOnly()` API is valid and will indicate if enums are to be written with public/private fields.
+>- [ ] Returns `true` if enums are to be written out as Strings (default). If this is false, then enums are being written as objects, and then the `isEnumPublicFieldsOnly()` API is valid and will indicate if enums are to be written with public/private fields.
 >#### `boolean` isEnumPublicFieldsOnly()
->- [ ] Returns `true` indicating that only public fields will be output on an `enum.`The default is to only output public fields as well as to write it as a primitive (single value) instead of a JSON { } object when possible.
+>- [ ] Returns `true` indicating that only public fields will be output on an enum (default). The default is to only output public fields as well as to write it as a primitive (single value) instead of a JSON { } object when possible. Set to `false` to write public/private fields.
+>#### `boolean` isEnumSetWrittenOldWay()
+>- [ ] Returns `true` if `EnumSet` is written with `@enum=enumElementTypeClass,` or `false` if `EnumSets` are written with `@type=enumElementTypeClass`.  Default is `true` for backward compatibility, but will switch to `false` in an future release.
 
 >#### `WriteOptionsBuilder` writeEnumsAsString()
->- [ ] Sets the option to write out enums as a String. This is the default option.  If you have called `writeEnumAsJsonObject(true or false),` call `writeEnumsAsString()`to return to enum output as String.
+>- [ ] Sets the option to write enums as a `String.` This is the default option.  If you have called `writeEnumAsJsonObject(true or false),` call `writeEnumsAsString()`to return to enum output as `String.`
 >#### `WriteOptionsBuilder` writeEnumAsJsonObject(`boolean writePublicFieldsOnly`)
->- [ ] Sets the option to write out all the member fields of an enum, using JSON { } format for the enum, to allow for multiple fields. Setting this option to true or false (include/exclude private fields), turns off the writeEnumsAsString() option.
+>- [ ] Sets the option to write all the member fields of an enum, using JSON { } format for the enum, to allow for multiple fields. Setting this option to `true` or `false` (include/exclude private fields), turns off the writeEnumsAsString() option. This option is off by default - enums are written as `String` by default.
+>#### `WriteOptionsBuilder` writeEnumSetOldWay(`boolean writeEnumSetOldWay`)
+>- [ ] Sets the option to write `EnumSet` with `@enum=elementTypeClassName` or `@type=elementTypeClassName`. The default is true (@enum) for backward compatibility. This will change in a future release. 
 
 ### Customizing JSON Output with `JsonClassWriter`
 

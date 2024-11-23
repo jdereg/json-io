@@ -430,18 +430,12 @@ class EnumTests {
         A("Foo") {
             public void doXX() {
             }
-
-
         }, B("Bar") {
             public void doXX() {
             }
-
-
         }, C(null) {
             public void doXX() {
             }
-
-
         };
 
         TestEnum3(String val) {

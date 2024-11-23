@@ -133,6 +133,7 @@ public class WriteOptionsBuilder {
             options.closeStream = other.closeStream;
             options.classLoader = other.classLoader;
             options.enumPublicFieldsOnly = other.enumPublicFieldsOnly;
+            options.enumSetWrittenOldWay = other.enumSetWrittenOldWay;
             options.forceMapOutputAsTwoArrays = other.forceMapOutputAsTwoArrays;
             options.prettyPrint = other.prettyPrint;
             options.lruSize = other.lruSize;
@@ -490,12 +491,24 @@ public class WriteOptionsBuilder {
      * Option to write out all the member fields of an enum.  You can also filter the
      * field to write out only the public fields on the enum.
      *
-     * @param writePublicFieldsOnly boolean, only write out the public fields when writing enums as objects
+     * @param writePublicFieldsOnly boolean, only write out the public fields when writing enums as objects. Defaults to false.
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder writeEnumAsJsonObject(boolean writePublicFieldsOnly) {
         options.enumWriter = DefaultWriteOptions.nullWriter;
         options.enumPublicFieldsOnly = writePublicFieldsOnly;
+        return this;
+    }
+
+    /**
+     * Option to write out all the member fields of an enum.  You can also filter the
+     * field to write out only the public fields on the enum.
+     *
+     * @param writeOldWay boolean, write EnumSet using @enum instead of @type.
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder writeEnumSetOldWay(boolean writeOldWay) {
+        options.enumSetWrittenOldWay = writeOldWay;
         return this;
     }
 
@@ -833,6 +846,7 @@ public class WriteOptionsBuilder {
         private boolean forceMapOutputAsTwoArrays = false;
         private boolean allowNanAndInfinity = false;
         private boolean enumPublicFieldsOnly = false;
+        private boolean enumSetWrittenOldWay = true;
         private boolean closeStream = true;
         private JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
         private ClassLoader classLoader = ClassUtilities.getClassLoader(DefaultWriteOptions.class);
@@ -1019,6 +1033,20 @@ public class WriteOptionsBuilder {
          */
         public boolean isEnumPublicFieldsOnly() {
             return enumPublicFieldsOnly;
+        }
+
+        /**
+         * true indicates that EnumSet instances are written with an "@enum":"enum_classname" where enum_classname is
+         * the Class name of the enum type that is held in the EnumSet. When 'false' EnumSets are written with
+         * "@type":"enum_classname" the same as before - the distinction is that @enum is now written as @type. EnumSets
+         * are resolved unambiguously because they are always written with @items:[] so the resolver knows that if
+         * the @type is an Enum, and there is an @items[], then it can infer that it is an EnumSet, not an enum.  When
+         * an enum is written out as "@type":"com.foo.myEnum" there will not be an @items, therefore it can be
+         * considered an Enum, not an EnumSet. <p></p>
+         * The default is true for backward compatibility but will be switched to false in the next major release.
+         */
+        public boolean isEnumSetWrittenOldWay() {
+            return enumSetWrittenOldWay;
         }
 
         /**

@@ -92,6 +92,18 @@ public interface WriteOptions {
     boolean isEnumPublicFieldsOnly();
 
     /**
+     * true indicates that EnumSet instances are written with an "@enum":"enum_classname" where enum_classname is the
+     * Class name of the enum type that is held in the EnumSet. When 'false' EnumSets are written with
+     * "@type":"enum_classname" the same as before - the distinction is that @enum is now written as @type. EnumSets
+     * are resolved because these are always written with @items:[] so the resolver knows that if the @type is an
+     * Enum, and there is an @items[], then it can infere that it is an EnumSet, not a enum.  When an enum is written
+     * out as "@type":"com.foo.myEnum" there will not be an @items, therefore it can be considered an Enum, not an
+     * EnumSet. <p></p>
+     * The default is true for backward compatibility but will be switched to false in the next major release.
+     */
+    boolean isEnumSetWrittenOldWay();
+
+    /**
      * @return boolean 'true' if the OutputStream should be closed when the reading is finished.  The default is 'true.'
      */
     boolean isCloseStream();
@@ -167,7 +179,7 @@ public interface WriteOptions {
      *              as there will be a separate instance in memory for each occurrence. There are certain classes that
      *              json-io automatically treats as non-referenceable, like Strings, Enums, Class, and any Number
      *              instance (BigDecimal, AtomicLong, etc.)  You can add to this list. Often, non-referenceable classes
-     *              are useful for classes that can be defined in one line as a JSON, like a LocalDateTime, for example.
+     *              are useful for classes that can be defined in one line inJSON, like a LocalDateTime, for example.
      * @return boolean true if the passed in class is considered a non-referenceable class.
      */
     boolean isNonReferenceableClass(Class<?> clazz);

@@ -1425,7 +1425,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             newLine();
         }
 
-        out.write("\"" + ENUM + "\":");
+        String type = writeOptions.isEnumSetWrittenOldWay() ? ENUM : TYPE;
+        out.write("\"" + type + "\":");
 
         Enum<? extends Enum<?>> ee = null;
         if (!enumSet.isEmpty()) {

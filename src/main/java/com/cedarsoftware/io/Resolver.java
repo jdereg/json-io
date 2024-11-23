@@ -402,13 +402,12 @@ public abstract class Resolver {
         }
 
         // Try factory with type
-        Object mate = NO_FACTORY;
+        Object mate;
         if (targetType != null) {
             Class<?> factoryType = targetType;
             if (targetType.isEnum()) {
-                // If none of the single enum indicators are present, use EnumSet
-                if (jsonObj.get("name") == null && jsonObj.get("Enum.name") == null && jsonObj.get("value") == null) {
-                    factoryType = EnumSet.class;
+                if (jsonObj.getItems() != null) {
+                    factoryType = EnumSet.class;    // If @items is present, force it to use EnumSetFactory
                 }
             }
             mate = createInstanceUsingClassFactory(factoryType, jsonObj);

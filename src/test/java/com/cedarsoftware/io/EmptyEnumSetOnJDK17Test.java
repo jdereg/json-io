@@ -5,6 +5,8 @@ import java.util.Objects;
 
 import org.junit.jupiter.api.Test;
 
+import static com.cedarsoftware.io.JsonValue.ENUM;
+
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -57,10 +59,8 @@ public class EmptyEnumSetOnJDK17Test
     void testEmptyEnumSetOnJDK17()
     {
         Object o = EnumSet.noneOf(TestEnum.class);
-
         String json = TestUtil.toJson(o);
         EnumSet<?> es = TestUtil.toObjects(json, null);
-
         assert es.isEmpty();
     }
 
@@ -68,11 +68,11 @@ public class EmptyEnumSetOnJDK17Test
     void testEnumSetOnJDK17()
     {
         EnumSet<?> source = EnumSet.of(TestEnum.V1, TestEnum.V3);
-
-        String json = TestUtil.toJson(source);
-        Object obj = TestUtil.toObjects(json, null);
+        String json = TestUtil.toJson(source, new WriteOptionsBuilder().writeEnumSetOldWay(false).build());
+        assert !json.contains(ENUM);    // Make sure writeEnumSetOldWay writeOption is working
+        json = TestUtil.toJson(source);
+        assert json.contains(ENUM);
         EnumSet<?> target = TestUtil.toObjects(json, null);
-
         assert source.equals(target);
     }
 
@@ -80,10 +80,8 @@ public class EmptyEnumSetOnJDK17Test
     void testEnumSetInPoJoOnJDK17()
     {
         MultiVersioned m = new MultiVersioned(EnumSet.of(TestEnum.V1, TestEnum.V3), "what", EnumSet.of(Thread.State.NEW));
-
         String json = TestUtil.toJson(m);
         MultiVersioned target = TestUtil.toObjects(json, null);
-
         assert m.equals(target);
     }
 }
