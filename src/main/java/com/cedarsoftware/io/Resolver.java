@@ -351,10 +351,36 @@ public abstract class Resolver {
      * If the JsonObject contains a key '@type' then that is used, as the type was explicitly
      * set in the JSON stream.  If the key '@type' does not exist, then the passed in Class
      * is used to create the instance, handling creating an Array or regular Object
-     * instance.
-     * <br>
+     * instance.<p></p>
      * The '@type' is not often specified in the JSON input stream, as in many
      * cases it can be inferred from a field reference or array component type.
+     * For Enum handling, the following rules are applied:
+     * <p><pre>
+     * 1. Single Enum Instance:
+     *    JSON:     {"@type": "some.package.MyEnum", "name": "FOO"} or
+     *              {"@type": "some.package.MyEnum", "Enum.name": "FOO"}
+     *    Detect:   javaType is enum class AND (name or Enum.name or value exists)
+     *    Create:   Single enum instance
+     *    Factory:  EnumClassFactory
+     *
+     * 2. Empty EnumSet:
+     *    JSON:     {"@enum": "some.package.MyEnum"}
+     *    Detect:   javaType is enum class AND items is null/empty
+     *    Create:   Empty EnumSet of "some.package.MyEnum"
+     *    Factory:  EnumSetFactory
+     *
+     * 3. Populated EnumSet:
+     *    JSON:     {"@enum": "some.package.MyEnum", "@items": ["FOO", "BAR"]}
+     *    Detect:   javaType is enum class AND has non-empty items
+     *    Create:   Populated EnumSet of "some.package.MyEnum"
+     *    Factory:  EnumSetFactory
+     *
+     * 4. Legacy EnumSet:
+     *    JSON:     {"@type": "java.util.RegularEnumSet", "@items": [{"@type": "some.package.MyEnum", "name": "FOO"}]}
+     *    Detect:   javaType is EnumSet (coerced from RegularEnumSet)
+     *    Create:   EnumSet using type from first item
+     *    Factory:  EnumSetFactory
+     * </pre>
      *
      * @param jsonObj Map-of-Map representation of object to create.
      * @return a new Java object of the appropriate type (clazz) using the jsonObj to provide
@@ -384,20 +410,17 @@ public abstract class Resolver {
             } catch (Exception ignored) { }
         }
 
-        // Try factory with @type first
+        // Try factory with type
         Object mate = NO_FACTORY;
         if (targetType != null) {
-            mate = createInstanceUsingClassFactory(targetType, jsonObj);
-            if (mate != NO_FACTORY) {
-                return mate;
+            Class<?> factoryType = targetType;
+            if (targetType.isEnum()) {
+                // If none of the single enum indicators are present, use EnumSet
+                if (jsonObj.get("name") == null && jsonObj.get("Enum.name") == null && jsonObj.get("value") == null) {
+                    factoryType = EnumSet.class;
+                }
             }
-        }
-
-        // Try factory with @enum if exists
-        Class<?> enumClass = jsonObj.getEnumType();
-        if (enumClass != null) {
-            // Always use EnumSet.class as the factory type
-            mate = createInstanceUsingClassFactory(EnumSet.class, jsonObj);
+            mate = createInstanceUsingClassFactory(factoryType, jsonObj);
             if (mate != NO_FACTORY) {
                 return mate;
             }

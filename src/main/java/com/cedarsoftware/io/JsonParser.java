@@ -619,7 +619,7 @@ class JsonParser {
             error("Expected a String for " + ENUM + ", instead got: " + value);
         }
         Class<?> enumClass = stringToClass((String) value);
-        jObj.setEnumType(enumClass);
+        jObj.setJavaType(enumClass);  // Also set javaType
     }
 
     /**

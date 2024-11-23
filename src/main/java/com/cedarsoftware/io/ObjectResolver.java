@@ -283,9 +283,6 @@ public class ObjectResolver extends Resolver
 
         Object items = jsonObj.getItems();
 
-        // Get enum class directly since it's already resolved
-        Class<?> mayEnumClass = jsonObj.getEnumType();
-
         final Collection col = (Collection) jsonObj.getTarget();
         final boolean isList = col instanceof List;
         int idx = 0;
@@ -301,8 +298,7 @@ public class ObjectResolver extends Resolver
                     col.add(special);
                 } else if (element instanceof String || element instanceof Boolean || element instanceof Double || element instanceof Long) {
                     // Allow Strings, Booleans, Longs, and Doubles to be "inline" without Java object decoration (@id, @type, etc.)
-                    Enum<?> enumValue = mayEnumClass == null ? null : Enum.valueOf((Class<? extends Enum>) mayEnumClass, (String) element);
-                    col.add(mayEnumClass == null ? element : enumValue);
+                    col.add(element);
                 } else if (element.getClass().isArray()) {
                     final JsonObject jObj = new JsonObject();
                     jObj.setHintType(Object.class);
@@ -611,9 +607,6 @@ public class ObjectResolver extends Resolver
 
                                 if (injector != null && (injector.getType().getTypeParameters().length > 0 || injector.getGenericType() instanceof TypeVariable)) {
                                     Object pt = typeArgs[0];
-                                    if (entry.getValue() instanceof JsonObject && ((JsonObject) entry.getValue()).getEnumType() != null) {
-                                        pt = injector.getGenericType();
-                                    }
                                     stack2.addFirst(new Object[]{pt, entry.getValue()});
                                 }
                             }

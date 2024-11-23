@@ -7,7 +7,6 @@ import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -40,7 +39,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     // Explicit fields for meta data
     private Object items;
     private Object keys;
-    private Class<?> enumType;
 
     public String toString() {
         String jType = javaType == null ? "not set" : javaType.getName();
@@ -96,7 +94,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         hash = null;
     }
 
-    // New getters/setters for keys and enum type
+    // New getters/setters for keys
     public Object getKeys() {
         return keys;
     }
@@ -109,15 +107,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
             throw new JsonIoException("Argument 'keys' must be an array, type: " + keys.getClass().getName());
         }
         this.keys = keys;
-        hash = null;
-    }
-
-    public Class<?> getEnumType() {
-        return enumType;
-    }
-
-    protected void setEnumType(Class<?> enumType) {
-        this.enumType = enumType;
         hash = null;
     }
 
@@ -161,10 +150,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
                 result = 31 * result + hashCode(items, new IdentityHashMap<>());
             }
 
-            if (enumType != null) {
-                result = 31 * result + enumType.hashCode();
-            }
-
             if (!jsonStore.isEmpty()) {
                 result = 31 * result + jsonStore.hashCode();
             }
@@ -206,7 +191,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         if (!(obj instanceof JsonObject)) return false;
         JsonObject other = (JsonObject) obj;
 
-        if (!Objects.equals(enumType, other.enumType)) return false;
         if (!Arrays.deepEquals(new Object[]{items}, new Object[]{other.items})) return false;
         if (!Arrays.deepEquals(new Object[]{keys}, new Object[]{other.keys})) return false;
         return jsonStore.equals(other.jsonStore);
@@ -254,7 +238,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         jsonStore.clear();
         items = null;
         keys = null;
-        enumType = null;
         hash = null;
     }
 

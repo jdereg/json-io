@@ -6,9 +6,7 @@ import java.util.EnumSet;
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
-import com.cedarsoftware.io.MetaUtils;
 import com.cedarsoftware.io.Resolver;
-import com.cedarsoftware.util.ClassUtilities;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -29,68 +27,47 @@ import com.cedarsoftware.util.ClassUtilities;
  */
 public class EnumSetFactory implements JsonReader.ClassFactory {
     @SuppressWarnings({"unchecked", "rawtypes"})
-    @Override
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        if (!EnumSet.class.isAssignableFrom(c)) {
-            throw new JsonIoException("EnumSetFactory can only create EnumSet instances");
-        }
+        // Get enum class either from javaType or from first item in @items
+        Class<?> enumClass = jObj.getJavaType();
 
-        Class<? extends Enum> enumClass = (Class<? extends Enum>) jObj.getEnumType();
-        if (enumClass == null) {
-            enumClass = evaluateEnumSetTypeFromItems(jObj);
-        }
-
-        Object items = jObj.getItems();
-        if (items == null || Array.getLength(items) == 0) {
-            if (enumClass != null) {
-                return EnumSet.noneOf(enumClass);
-            }
-            return EnumSet.noneOf(MetaUtils.Dumpty.class);
-        }
-
-        if (enumClass == null) {
-            throw new JsonIoException("Could not determine enum type for non-empty EnumSet");
-        }
-
-        EnumSet enumSet = null;
-        int len = Array.getLength(items);
-        for (int i = 0; i < len; i++) {
-            Object item = Array.get(items, i);
-            Enum enumItem;
-            if (item instanceof String) {
-                enumItem = Enum.valueOf(enumClass, (String) item);
-            } else {
-                JsonObject itemObj = (JsonObject) item;
-                enumItem = Enum.valueOf(enumClass, (String) itemObj.get("name"));
-            }
-
-            if (enumSet == null) {
-                enumSet = EnumSet.of(enumItem);
-            } else {
-                enumSet.add(enumItem);
-            }
-        }
-
-        return enumSet;
-    }
-
-    @Override
-    public boolean isObjectFinal() {
-        return true;
-    }
-
-    @SuppressWarnings("unchecked")
-    private Class<? extends Enum<?>> evaluateEnumSetTypeFromItems(final JsonObject json) {
-        final Object items = json.getItems();
-        if (items != null && Array.getLength(items) != 0) {
-            Object value = Array.get(items, 0);
-            if (value instanceof JsonObject) {
-                Class<?> type = ((JsonObject) value).getJavaType();
-                if (type != null && type.isEnum()) {
-                    return (Class<? extends Enum<?>>) type;
+        if (!enumClass.isEnum()) {
+            Object items = jObj.getItems();
+            if (items != null && Array.getLength(items) > 0) {
+                Object firstItem = Array.get(items, 0);
+                if (firstItem instanceof JsonObject) {
+                    JsonObject jsonItem = (JsonObject) firstItem;
+                    enumClass = jsonItem.getJavaType();
                 }
             }
         }
-        return null;
+
+        if (enumClass == null || !enumClass.isEnum()) {
+            throw new JsonIoException("Unable to create EnumSet - no valid enum class found");
+        }
+
+        EnumSet enumSet = EnumSet.noneOf((Class<Enum>)enumClass);
+        Object items = jObj.getItems();
+        if (items == null || Array.getLength(items) == 0) {
+            return enumSet;
+        }
+
+        int len = Array.getLength(items);
+        for (int i = 0; i < len; i++) {
+            Object item = Array.get(items, i);
+            if (item instanceof JsonObject) {
+                // Old format - full enum objects
+                JsonObject jsonItem = (JsonObject) item;
+                enumSet.add(Enum.valueOf((Class)enumClass, (String)jsonItem.get("name")));
+            } else if (item instanceof String) {
+                // New format - just enum names
+                enumSet.add(Enum.valueOf((Class)enumClass, (String)item));
+            }
+        }
+        return enumSet;
+    }
+
+    public boolean isObjectFinal() {
+        return true;
     }
 }

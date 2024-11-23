@@ -145,6 +145,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
             try {
                 assertThat(actual[0]).isEqualTo(expected[0]);
             } catch (Throwable e) {
+                System.out.println("nestActual class=" + nestedActual.getClass().getName());
                 System.out.println("actual[0].getClass().getName() = " + actual[0].getClass().getName());
                 System.out.println("expected[0].getClass().getName() = " + expected[0].getClass().getName());
             }
