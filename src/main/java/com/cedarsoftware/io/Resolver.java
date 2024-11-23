@@ -356,30 +356,21 @@ public abstract class Resolver {
      * cases it can be inferred from a field reference or array component type.
      * For Enum handling, the following rules are applied:
      * <p><pre>
-     * 1. Single Enum Instance:
-     *    JSON:     {"@type": "some.package.MyEnum", "name": "FOO"} or
-     *              {"@type": "some.package.MyEnum", "Enum.name": "FOO"}
-     *    Detect:   javaType is enum class AND (name or Enum.name or value exists)
-     *    Create:   Single enum instance
-     *    Factory:  EnumClassFactory
+     * Detection Rules:
+     * 1. Single Enum Instance
+     *    Detect:  javaType.isEnum() AND has enum indicators (name/Enum.name/value)
+     *    Create:  Single enum instance using enum class
+     *    Factory: EnumClassFactory
      *
-     * 2. Empty EnumSet:
-     *    JSON:     {"@enum": "some.package.MyEnum"}
-     *    Detect:   javaType is enum class AND items is null/empty
-     *    Create:   Empty EnumSet of "some.package.MyEnum"
-     *    Factory:  EnumSetFactory
+     * 2. EnumSet Instance
+     *    Detect:  javaType.isEnum() AND no enum indicators present
+     *    Create:  EnumSet using enum class
+     *    Factory: EnumSetFactory
      *
-     * 3. Populated EnumSet:
-     *    JSON:     {"@enum": "some.package.MyEnum", "@items": ["FOO", "BAR"]}
-     *    Detect:   javaType is enum class AND has non-empty items
-     *    Create:   Populated EnumSet of "some.package.MyEnum"
-     *    Factory:  EnumSetFactory
-     *
-     * 4. Legacy EnumSet:
-     *    JSON:     {"@type": "java.util.RegularEnumSet", "@items": [{"@type": "some.package.MyEnum", "name": "FOO"}]}
-     *    Detect:   javaType is EnumSet (coerced from RegularEnumSet)
-     *    Create:   EnumSet using type from first item
-     *    Factory:  EnumSetFactory
+     * 3. Regular Class
+     *    Detect:  Non-enum javaType
+     *    Create:  Regular class instance
+     *    Factory: Standard Factory Logic
      * </pre>
      *
      * @param jsonObj Map-of-Map representation of object to create.
@@ -425,7 +416,7 @@ public abstract class Resolver {
                 return mate;
             }
         }
-        
+
         // Handle arrays
         Object items = jsonObj.getItems();
         Class<?> c = jsonObj.getJavaType();

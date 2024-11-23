@@ -228,8 +228,9 @@ class JsonParser {
 
             // process key-value pairing
             switch (field) {
+                case ENUM:  // Legacy support (@enum was used to indicate EnumSet in prior versions)
                 case TYPE:
-                    Class<?> type = loadType(value);    // TODO: Can we remove @enum and fold that into @type?
+                    Class<?> type = loadType(value);
                     jObj.setJavaType(type);
                     break;
 
@@ -247,10 +248,6 @@ class JsonParser {
 
                 case KEYS:
                     loadKeys(value, jObj);
-                    break;
-
-                case ENUM:
-                    loadEnum(value, jObj);
                     break;
 
                 default:

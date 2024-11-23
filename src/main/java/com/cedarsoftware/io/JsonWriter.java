@@ -1449,15 +1449,16 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
         writeBasicString(out, elementType.getName());
 
+        // EnumSets are always written with an @items so that the Resolver can determine if it is an enum or
+        // an EnumSet.
+        out.write(",");
+        newLine();
+        writeBasicString(out, ITEMS);
+        out.write(":[");
+
         if (!enumSet.isEmpty()) {
             Collection<Accessor> mapOfFields = writeOptions.getAccessorsForClass(elementType);
             int enumFieldsCount = mapOfFields.size();
-
-            out.write(",");
-            newLine();
-
-            writeBasicString(out, ITEMS);
-            out.write(":[");
             if (enumFieldsCount > 2) {
                 newLine();
             }
@@ -1483,10 +1484,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                     out.write('}');
                 }
             }
-
-            out.write("]");
         }
-
+        out.write("]");
         tabOut();
         out.write('}');
     }
