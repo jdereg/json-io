@@ -356,17 +356,17 @@ public abstract class Resolver {
      * <p><pre>
      * Detection Rules:
      * 1. Single Enum Instance
-     *    Detect:  javaType.isEnum() AND has enum indicators (name/Enum.name/value)
+     *    Detect:  javaType is an enum class (enumClass != null) AND jsonObj.getItems() == null
      *    Create:  Single enum instance using enum class
      *    Factory: EnumClassFactory
      *
      * 2. EnumSet Instance
-     *    Detect:  javaType.isEnum() AND no enum indicators present
+     *    Detect:  javaType is an enum class (enumClass != null) AND jsonObj.getItems() != null
      *    Create:  EnumSet using enum class
      *    Factory: EnumSetFactory
      *
      * 3. Regular Class
-     *    Detect:  Non-enum javaType
+     *    Detect:  Non-enum javaType (enumClass == null)
      *    Create:  Regular class instance
      *    Factory: Standard Factory Logic
      * </pre>
@@ -382,7 +382,7 @@ public abstract class Resolver {
         }
 
         // Coerce class first
-        Class targetType = jsonObj.getJavaType();
+        Class<?> targetType = jsonObj.getJavaType();
         jsonObj.setJavaType(coerceClassIfNeeded(targetType));
         targetType = jsonObj.getJavaType();
 
@@ -402,26 +402,18 @@ public abstract class Resolver {
         // Accurate enum detection
         Class<?> enumClass = MetaUtils.getClassIfEnum(targetType);
 
-        // Try factory with type
-        Object mate;
+        // Determine the factory type based on whether it's an EnumSet or a single Enum
+        Class<?> factoryType;
         if (enumClass != null) {
-            // Check for enum indicators to distinguish between single enum constant and EnumSet
-            boolean hasEnumIndicators = jsonObj.containsKey("name") || jsonObj.containsKey("Enum.name") || jsonObj.containsKey("value");
-
-            if (hasEnumIndicators) {
-                // Single enum constant
-                // Use EnumClassFactory
-                mate = createInstanceUsingClassFactory(enumClass, jsonObj);
-            } else {
-                // Possibly an EnumSet
-                // Use EnumSetFactory
-                mate = createInstanceUsingClassFactory(EnumSet.class, jsonObj);
-            }
+            boolean isEnumSet = jsonObj.getItems() != null;
+            factoryType = isEnumSet ? EnumSet.class : enumClass;
         } else {
-            // Non-enum types proceed as normal
-            mate = createInstanceUsingClassFactory(targetType, jsonObj);
+            factoryType = targetType;
         }
-        
+
+        // Single call to createInstanceUsingClassFactory
+        Object mate = createInstanceUsingClassFactory(factoryType, jsonObj);
+
         if (mate != NO_FACTORY) {
             return mate;
         }
