@@ -228,10 +228,13 @@ class JsonParser {
 
             // process key-value pairing
             switch (field) {
-                case ENUM:  // Legacy support (@enum was used to indicate EnumSet in prior versions)
                 case TYPE:
                     Class<?> type = loadType(value);
                     jObj.setJavaType(type);
+                    break;
+
+                case ENUM:  // Legacy support (@enum was used to indicate EnumSet in prior versions)
+                    loadEnum(value, jObj);
                     break;
 
                 case REF:
@@ -616,7 +619,12 @@ class JsonParser {
             error("Expected a String for " + ENUM + ", instead got: " + value);
         }
         Class<?> enumClass = stringToClass((String) value);
-        jObj.setJavaType(enumClass);  // Also set javaType
+        jObj.setJavaType(enumClass);
+
+        // Only set empty items if no items were specified in JSON
+        if (jObj.getItems() == null) {
+            jObj.setItems(new Object[0]);
+        }
     }
 
     /**

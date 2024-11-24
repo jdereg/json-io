@@ -17,6 +17,8 @@ import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.CollectionUtilities.listOf;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -161,15 +163,30 @@ public class NoTypeTest
     
     @Test
     void testSpecificRootsWithReturnAsJsonObjects() {
-        final String json = "[\"foo\", null ,\"baz\"]";
-
         // String[]
-        String msg = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), String[].class); }).getMessage();
-        assert msg.contains("Root type ([Ljava.lang.String;) cannot be converted to: [Ljava.lang.Object;");
+        String json = "[\"foo\", null ,\"baz\"]";
+        String[] strings = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), String[].class);
+        assert strings.length == 3;
+        assertEquals("foo", strings[0]);
+        assertNull(strings[1]);
+        assertEquals("baz", strings[2]);
 
-        String json2 = "75.1";
+        // Number[]
+        String json1 = "[16, null, 3.14159]";
+        Number[] numbers = TestUtil.toObjects(json1, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), Number[].class);
+        assert numbers.length == 3;
+        assertEquals(16, numbers[0]);
+        assertNull(numbers[1]);
+        assertEquals(3.14159, numbers[2]);
+
+        // error - cannot stuff Number[] with Strings
+        final String json2 = "[\"foo\", null ,\"baz\"]";
+        String msg = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json2, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), Number[].class); }).getMessage();
+        assert msg.contains("fix this");
+
+        String json3 = "75.1";
         // AtomicInteger
-        AtomicInteger x = TestUtil.toObjects(json2, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), AtomicInteger.class);
+        AtomicInteger x = TestUtil.toObjects(json3, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), AtomicInteger.class);
         assert x.get() == 75;   // Expected coercion into 'integer' space
     }
 

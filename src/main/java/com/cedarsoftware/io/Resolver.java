@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import com.cedarsoftware.io.JsonReader.MissingFieldHandler;
@@ -401,16 +402,34 @@ public abstract class Resolver {
             } catch (Exception ignored) { }
         }
 
+        // Accurate enum detection
+        Optional<Class<?>> enumClassOpt = MetaUtils.getClassIfEnum(targetType);
+        boolean isEnum = enumClassOpt.isPresent();
+
         // Try factory with type
         Object mate;
-        if (targetType != null) {
-            Class<?> factoryType = targetType;
-            if (targetType.isEnum()) {
-                if (jsonObj.getItems() != null) {
-                    factoryType = EnumSet.class;    // If @items is present, force it to use EnumSetFactory
-                }
+        if (isEnum) {
+            Class<?> enumClass = enumClassOpt.get();
+
+            // Check for enum indicators to distinguish between single enum constant and EnumSet
+            boolean hasEnumIndicators = jsonObj.containsKey("name") || jsonObj.containsKey("Enum.name") || jsonObj.containsKey("value");
+
+            if (hasEnumIndicators) {
+                // Single enum constant
+                // Use EnumClassFactory
+                mate = createInstanceUsingClassFactory(enumClass, jsonObj);
+            } else {
+                // Possibly an EnumSet
+                // Use EnumSetFactory
+                mate = createInstanceUsingClassFactory(EnumSet.class, jsonObj);
             }
-            mate = createInstanceUsingClassFactory(factoryType, jsonObj);
+
+            if (mate != NO_FACTORY) {
+                return mate;
+            }
+        } else {
+            // Non-enum types proceed as normal
+            mate = createInstanceUsingClassFactory(targetType, jsonObj);
             if (mate != NO_FACTORY) {
                 return mate;
             }

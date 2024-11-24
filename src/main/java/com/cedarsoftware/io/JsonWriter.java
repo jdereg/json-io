@@ -1425,69 +1425,87 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             newLine();
         }
 
-        String type = writeOptions.isEnumSetWrittenOldWay() ? ENUM : TYPE;
-        out.write("\"" + type + "\":");
+        String typeKey = writeOptions.isEnumSetWrittenOldWay() ? ENUM : TYPE;
+        out.write('\"');
+        out.write(typeKey);
+        out.write("\":");
 
-        Enum<? extends Enum<?>> ee = null;
-        if (!enumSet.isEmpty()) {
-            ee = enumSet.iterator().next();
-        } else {
-            EnumSet<? extends Enum<?>> complement = EnumSet.complementOf(enumSet);
-            if (!complement.isEmpty()) {
-                ee = complement.iterator().next();
+        // Obtain the actual Enum class
+        Class<?> enumClass = null;
+
+        // Attempt to get the enum class from the 'elementType' field of EnumSet
+        Field elementTypeField = writeOptions.getDeepDeclaredFields(EnumSet.class).get("elementType");
+        if (elementTypeField != null) {
+            enumClass = (Class<?>) getValueByReflect(enumSet, elementTypeField);
+            // Ensure we get the actual enum class, not an anonymous subclass
+            enumClass = MetaUtils.getClassIfEnum(enumClass).orElse(enumClass);
+        }
+
+        // If we couldn't get it from 'elementType', try to get from the first enum constant
+        if (enumClass == null) {
+            if (!enumSet.isEmpty()) {
+                Enum<?> e = enumSet.iterator().next();
+                enumClass = MetaUtils.getClassIfEnum(e.getClass()).orElse(e.getClass());
+            } else {
+                // EnumSet is empty; try to get the enum class from the complement
+                EnumSet<?> complement = EnumSet.complementOf(enumSet);
+                if (!complement.isEmpty()) {
+                    Enum<?> e = complement.iterator().next();
+                    enumClass = MetaUtils.getClassIfEnum(e.getClass()).orElse(e.getClass());
+                } else {
+                    // Cannot determine the enum class; use a placeholder
+                    enumClass = MetaUtils.Dumpty.class;
+                }
             }
         }
 
-        Field elementTypeField = writeOptions.getDeepDeclaredFields(EnumSet.class).get("elementType");
+        // Write the @type field with the actual enum class name
+        writeBasicString(out, enumClass.getName());
 
-        Class<?> elementType = (Class<?>) getValueByReflect(enumSet, elementTypeField);
-        if (elementType != null) {
-            // nice we got the right to sneak into
-        } else if (ee == null) {
-            elementType = MetaUtils.Dumpty.class;
-        } else {
-            elementType = ee.getClass();
-        }
-        writeBasicString(out, elementType.getName());
-
-        // EnumSets are always written with an @items so that the Resolver can determine if it is an enum or
-        // an EnumSet.
+        // EnumSets are always written with an @items key
         out.write(",");
         newLine();
         writeBasicString(out, ITEMS);
         out.write(":[");
+        boolean hasItems = !enumSet.isEmpty();
 
-        if (!enumSet.isEmpty()) {
-            Collection<Accessor> mapOfFields = writeOptions.getAccessorsForClass(elementType);
-            int enumFieldsCount = mapOfFields.size();
-            if (enumFieldsCount > 2) {
-                newLine();
-            }
+        if (hasItems) {
+            newLine();
+            tabIn();
 
             boolean firstInSet = true;
             for (Enum<?> e : enumSet) {
                 if (!firstInSet) {
                     out.write(",");
-                    if (enumFieldsCount > 2) {
-                        newLine();
-                    }
+                    newLine();
                 }
                 firstInSet = false;
 
+                // Determine whether to write the full enum object or just the name
+                Collection<Accessor> mapOfFields = writeOptions.getAccessorsForClass(e.getClass());
+                int enumFieldsCount = mapOfFields.size();
+
                 if (enumFieldsCount <= 2) {
+                    // Write the enum name as a string
                     writeJsonUtf8String(out, e.name());
                 } else {
-                    boolean firstInEntry = true;
+                    // Write the enum as a JSON object with its fields
                     out.write('{');
+                    boolean firstInEntry = true;
                     for (Accessor f : mapOfFields) {
                         firstInEntry = writeField(e, firstInEntry, f.getUniqueFieldName(), f);
                     }
                     out.write('}');
                 }
             }
+
+            tabOut();
+            newLine();
         }
-        out.write("]");
+
+        out.write(']');
         tabOut();
+        newLine();
         out.write('}');
     }
 

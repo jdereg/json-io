@@ -150,16 +150,29 @@ public class MetaUtils {
     }
 
     public static Optional<Class<?>> getClassIfEnum(Class<?> c) {
-        if (c.isEnum()) {
-            return Optional.of(c);
-        }
-
-        if (!Enum.class.isAssignableFrom(c)) {
+        if (c == null) {
             return Optional.empty();
         }
 
-        Class<?> enclosingClass = c.getEnclosingClass();
-        return enclosingClass != null && enclosingClass.isEnum() ? Optional.of(enclosingClass) : Optional.empty();
+        // Step 1: Traverse up the class hierarchy
+        Class<?> current = c;
+        while (current != null && current != Object.class) {
+            if (current.isEnum() && !Enum.class.equals(current)) {
+                return Optional.of(current);
+            }
+            current = current.getSuperclass();
+        }
+
+        // Step 2: Traverse the enclosing classes
+        current = c.getEnclosingClass();
+        while (current != null) {
+            if (current.isEnum() && !Enum.class.equals(current)) {
+                return Optional.of(current);
+            }
+            current = current.getEnclosingClass();
+        }
+
+        return Optional.empty();
     }
 
     static void throwIfSecurityConcern(Class<?> securityConcern, Class<?> c) {
@@ -201,7 +214,7 @@ public class MetaUtils {
      * @return List of values that are best ordered to match the passed in parameter types.  This
      * list will be the same length as the passed in parameterTypes list.
      */
-    public static List<Object> matchArgumentsToParameters(Converter converter, Collection<Object> values, Parameter[] parameterTypes, boolean useNull) {
+    private static List<Object> matchArgumentsToParameters(Converter converter, Collection<Object> values, Parameter[] parameterTypes, boolean useNull) {
         List<Object> answer = new ArrayList<>();
         if (parameterTypes == null || parameterTypes.length == 0) {
             return answer;
@@ -366,7 +379,7 @@ public class MetaUtils {
         }
     }
 
-    public static String createCacheKey(Class<?> c, Collection<?> args) {
+    private static String createCacheKey(Class<?> c, Collection<?> args) {
         StringBuilder s = new StringBuilder(c.getName());
         for (Object o : args) {
             if (o == null) {

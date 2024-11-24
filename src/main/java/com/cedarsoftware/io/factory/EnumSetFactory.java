@@ -2,10 +2,12 @@ package com.cedarsoftware.io.factory;
 
 import java.lang.reflect.Array;
 import java.util.EnumSet;
+import java.util.Optional;
 
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
+import com.cedarsoftware.io.MetaUtils;
 import com.cedarsoftware.io.Resolver;
 
 /**
@@ -28,40 +30,65 @@ import com.cedarsoftware.io.Resolver;
 public class EnumSetFactory implements JsonReader.ClassFactory {
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        // Get enum class either from javaType or from first item in @items
-        Class<?> enumClass = jObj.getJavaType();
+        // Attempt to get the actual enum class from the provided class 'c'
+        Optional<Class<?>> enumClassOpt = MetaUtils.getClassIfEnum(jObj.getJavaType());
+        Class<?> enumClass = enumClassOpt.orElse(null);
 
-        if (!enumClass.isEnum()) {
+        // If enumClass is null or not an enum, try to get it from the first item in @items
+        if (enumClass == null) {
             Object items = jObj.getItems();
             if (items != null && Array.getLength(items) > 0) {
                 Object firstItem = Array.get(items, 0);
                 if (firstItem instanceof JsonObject) {
                     JsonObject jsonItem = (JsonObject) firstItem;
-                    enumClass = jsonItem.getJavaType();
+                    Optional<Class<?>> itemEnumClassOpt = MetaUtils.getClassIfEnum(jsonItem.getJavaType());
+                    enumClass = itemEnumClassOpt.orElse(null);
+                } else if (firstItem instanceof String) {
+                    // If items are simple strings, we need to rely on additional information
+                    // Since we cannot determine the enum class from the string, throw an exception
+                    throw new JsonIoException("Unable to determine enum class from items in EnumSet");
                 }
             }
         }
 
+        // If we still cannot determine the enum class, throw an exception
         if (enumClass == null || !enumClass.isEnum()) {
             throw new JsonIoException("Unable to create EnumSet - no valid enum class found");
         }
 
-        EnumSet enumSet = EnumSet.noneOf((Class<Enum>)enumClass);
+        // Create an empty EnumSet of the correct type
+        EnumSet enumSet = EnumSet.noneOf((Class<Enum>) enumClass);
+        jObj.setTarget(enumSet);  // Set the EnumSet as the target object for further population
+
         Object items = jObj.getItems();
         if (items == null || Array.getLength(items) == 0) {
-            return enumSet;
+            return enumSet;  // Return empty EnumSet
         }
 
+        // Iterate over the items and populate the EnumSet
         int len = Array.getLength(items);
         for (int i = 0; i < len; i++) {
             Object item = Array.get(items, i);
             if (item instanceof JsonObject) {
-                // Old format - full enum objects
+                // Object format
                 JsonObject jsonItem = (JsonObject) item;
-                enumSet.add(Enum.valueOf((Class)enumClass, (String)jsonItem.get("name")));
+                // Resolve the enum class from the item's class
+                Optional<Class<?>> itemEnumClassOpt = MetaUtils.getClassIfEnum(jsonItem.getJavaType());
+                Class<?> itemEnumClass = itemEnumClassOpt.orElse(enumClass);
+
+                String enumName = (String) jsonItem.get("name");
+                if (enumName == null) {
+                    throw new JsonIoException("Enum constant missing 'name' field");
+                }
+                Enum<?> enumConstant = Enum.valueOf((Class<Enum>) itemEnumClass, enumName);
+                enumSet.add(enumConstant);
             } else if (item instanceof String) {
-                // New format - just enum names
-                enumSet.add(Enum.valueOf((Class)enumClass, (String)item));
+                // Just enum names
+                String enumName = (String) item;
+                Enum<?> enumConstant = Enum.valueOf((Class<Enum>) enumClass, enumName);
+                enumSet.add(enumConstant);
+            } else {
+                throw new JsonIoException("Unexpected item type in EnumSet: " + item.getClass());
             }
         }
         return enumSet;

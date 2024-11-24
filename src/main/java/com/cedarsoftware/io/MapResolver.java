@@ -193,7 +193,19 @@ public class MapResolver extends Resolver {
     public void assignField(final JsonObject jsonObj, final Injector injector, final Object rhs) {
     }
 
-    Object resolveArray(Class<?> suggestedType, List<Object> list) {
-        return list.toArray();
+    Object resolveArray(Class<?> suggestedType, List<Object> list)
+    {
+        if (suggestedType == null || suggestedType == Object.class) {
+            // No suggested type, so use Object[]
+            return list.toArray();
+        }
+
+        JsonObject jsonArray = new JsonObject();
+        jsonArray.setTarget(Array.newInstance(suggestedType, list.size()));
+        jsonArray.setItems(list.toArray());
+        traverseJsonObject(jsonArray);
+//        jsonArray.setFinished();
+//        return jsonArray.getTarget();
+        return jsonArray;
     }
 }

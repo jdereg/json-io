@@ -246,8 +246,13 @@ public class JsonReader implements Closeable
         return returnValue;
     }
 
+    /**
+     * When return JsonObjects, verify return type
+     * @param rootType Class passed as rootType to return type
+     * @param returnValue the value returned, primitive, JsonObject, Object[], ...
+     */
     private <T> void verifyRootType(Class<T> rootType, T returnValue) {
-        if (readOptions.isReturningJavaObjects() || rootType == null) {
+        if (rootType == null || readOptions.isReturningJavaObjects()) {
             return;
         }
 
@@ -263,10 +268,8 @@ public class JsonReader implements Closeable
             throw new JsonIoException("Root type (" + rootType.getName() + ") must be a Map type or null when JSON is an object { }");
         }
 
-        if (returnValue.getClass().isArray()) {
-            if (!rootType.isArray() && !(returnValue instanceof JsonObject && ((JsonObject) returnValue).isArray())) {
-                throw new JsonIoException("Root type (" + rootType.getName() + ") must be an array type or null when JSON is an array [ ]");
-            }
+        if (returnValue.getClass().isArray() && rootType.isArray()) {
+            return;
         }
 
         throw new JsonIoException("Root type (" + rootType.getName() + ") cannot be converted to: " + returnValue.getClass().getName());
