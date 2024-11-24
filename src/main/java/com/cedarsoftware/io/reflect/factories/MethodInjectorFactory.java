@@ -2,7 +2,6 @@ package com.cedarsoftware.io.reflect.factories;
 
 import java.lang.reflect.Field;
 import java.util.Map;
-import java.util.Optional;
 
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.io.reflect.InjectorFactory;
@@ -25,12 +24,25 @@ import com.cedarsoftware.io.reflect.InjectorFactory;
  *         limitations under the License.
  */
 public class MethodInjectorFactory implements InjectorFactory {
-    @Override
+    /**
+     * Creates an {@link Injector} for the specified field, using optional custom method mappings and a unique name.
+     *
+     * <p>
+     * This method determines the appropriate method name to use when injecting a value into the given field.
+     * It first checks for a custom method name mapping in the provided {@code nonStandardNames} map.
+     * If a custom method name is found for the field, it uses that method name.
+     * Otherwise, it generates a default setter method name based on the field name.
+     * </p>
+     *
+     * @param field             the {@link Field} for which the injector is to be created
+     * @param nonStandardNames  a map of classes to field-to-method name mappings, used for custom method names
+     * @param uniqueName        a unique identifier for the injector, used to distinguish it from others
+     * @return an {@link Injector} configured with the appropriate method to inject values into the field
+     */
     public Injector createInjector(Field field, Map<Class<?>, Map<String, String>> nonStandardNames, String uniqueName) {
-
         final String fieldName = field.getName();
-        final Optional<String> possibleMethod = getMapping(nonStandardNames, field.getDeclaringClass(), fieldName);
-        final String method = possibleMethod.orElse(createSetterName(fieldName));
+        final String possibleMethod = getMapping(nonStandardNames, field.getDeclaringClass(), fieldName);
+        final String method = (possibleMethod != null) ? possibleMethod : createSetterName(fieldName);
 
         return Injector.create(field, method, uniqueName);
     }

@@ -2,7 +2,6 @@ package com.cedarsoftware.io.reflect;
 
 import java.lang.reflect.Field;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -33,8 +32,16 @@ public interface InjectorFactory {
      */
     Injector createInjector(Field field, Map<Class<?>, Map<String, String>> nonStandardNames, String uniqueName);
 
-    default Optional<String> getMapping(Map<Class<?>, Map<String, String>> classToMapping, Class<?> c, String fieldName) {
+    /**
+     * Retrieves the mapping for the specified class and field name.
+     *
+     * @param classToMapping the map containing class-to-mapping associations
+     * @param c the class for which to retrieve the mapping
+     * @param fieldName the field name for which to retrieve the mapping
+     * @return the mapped value, or {@code null} if no mapping exists for the class or field name
+     */
+    default String getMapping(Map<Class<?>, Map<String, String>> classToMapping, Class<?> c, String fieldName) {
         Map<String, String> mapping = classToMapping.get(c);
-        return mapping == null ? Optional.empty() : Optional.ofNullable(mapping.get(fieldName));
+        return (mapping != null) ? mapping.get(fieldName) : null;
     }
 }
