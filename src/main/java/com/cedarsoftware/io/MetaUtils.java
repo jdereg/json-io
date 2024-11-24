@@ -36,7 +36,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
-import java.util.Optional;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.SortedMap;
@@ -149,16 +148,16 @@ public class MetaUtils {
         }
     }
 
-    public static Optional<Class<?>> getClassIfEnum(Class<?> c) {
+    public static Class<?> getClassIfEnum(Class<?> c) {
         if (c == null) {
-            return Optional.empty();
+            return null;
         }
 
         // Step 1: Traverse up the class hierarchy
         Class<?> current = c;
         while (current != null && current != Object.class) {
             if (current.isEnum() && !Enum.class.equals(current)) {
-                return Optional.of(current);
+                return current;
             }
             current = current.getSuperclass();
         }
@@ -167,12 +166,12 @@ public class MetaUtils {
         current = c.getEnclosingClass();
         while (current != null) {
             if (current.isEnum() && !Enum.class.equals(current)) {
-                return Optional.of(current);
+                return current;
             }
             current = current.getEnclosingClass();
         }
 
-        return Optional.empty();
+        return null;
     }
 
     static void throwIfSecurityConcern(Class<?> securityConcern, Class<?> c) {

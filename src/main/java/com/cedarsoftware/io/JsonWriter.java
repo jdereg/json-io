@@ -21,7 +21,6 @@ import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 
 import com.cedarsoftware.io.reflect.Accessor;
 import com.cedarsoftware.util.FastWriter;
@@ -1438,20 +1437,23 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         if (elementTypeField != null) {
             enumClass = (Class<?>) getValueByReflect(enumSet, elementTypeField);
             // Ensure we get the actual enum class, not an anonymous subclass
-            enumClass = MetaUtils.getClassIfEnum(enumClass).orElse(enumClass);
+            Class<?> actualEnumClass = MetaUtils.getClassIfEnum(enumClass);
+            enumClass = (actualEnumClass != null) ? actualEnumClass : enumClass;
         }
 
         // If we couldn't get it from 'elementType', try to get from the first enum constant
         if (enumClass == null) {
             if (!enumSet.isEmpty()) {
                 Enum<?> e = enumSet.iterator().next();
-                enumClass = MetaUtils.getClassIfEnum(e.getClass()).orElse(e.getClass());
+                Class<?> actualEnumClass = MetaUtils.getClassIfEnum(e.getClass());
+                enumClass = (actualEnumClass != null) ? actualEnumClass : e.getClass();
             } else {
                 // EnumSet is empty; try to get the enum class from the complement
                 EnumSet<?> complement = EnumSet.complementOf(enumSet);
                 if (!complement.isEmpty()) {
                     Enum<?> e = complement.iterator().next();
-                    enumClass = MetaUtils.getClassIfEnum(e.getClass()).orElse(e.getClass());
+                    Class<?> actualEnumClass = MetaUtils.getClassIfEnum(e.getClass());
+                    enumClass = (actualEnumClass != null) ? actualEnumClass : e.getClass();
                 } else {
                     // Cannot determine the enum class; use a placeholder
                     enumClass = MetaUtils.Dumpty.class;
@@ -1643,8 +1645,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
 
         if (declaredType.isEnum() && declaredType.isAssignableFrom(objectClass)) {
-            Optional<Class<?>> optionalClass = MetaUtils.getClassIfEnum(objectClass);
-            return declaredType != optionalClass.orElse(null);
+            Class<?> enumClass = MetaUtils.getClassIfEnum(objectClass);
+            return !declaredType.equals(enumClass);
         }
 
         return true;

@@ -17,7 +17,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
@@ -1074,9 +1073,9 @@ public class ReadOptionsBuilder {
                 return throwableFactory;
             }
 
-            Optional optional = MetaUtils.getClassIfEnum(c);
+            Class<?> enumClass = MetaUtils.getClassIfEnum(c);
 
-            if (optional.isPresent()) {
+            if (enumClass != null) {
                 return enumFactory;
             }
 

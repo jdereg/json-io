@@ -1,7 +1,5 @@
 package com.cedarsoftware.io.factory;
 
-import java.util.Optional;
-
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
@@ -30,14 +28,14 @@ public class EnumClassFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
 
         String name = getEnumName(jObj);
-        Optional<Class<?>> cls = MetaUtils.getClassIfEnum(c);
+        Class<?> clazz = MetaUtils.getClassIfEnum(c);
 
-        if (!cls.isPresent()) {
+        if (clazz == null) {
             throw new JsonIoException("Unable to load enum: " + c + ", class not found or is not an Enum.");
         }
 
         if (name != null) {
-            return jObj.setFinishedTarget(this.fromString(cls.get(), name), false);
+            return jObj.setFinishedTarget(this.fromString(clazz, name), false);
         }
 
         Object value = jObj.getValue();

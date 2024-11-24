@@ -408,7 +408,7 @@ class EnumTests {
     @ParameterizedTest
     @MethodSource("getClassIfEnumTests")
     public void getClassIfEnum_returnsEnumClass(Class input, Class expected) {
-        Assertions.assertThat(MetaUtils.getClassIfEnum(input).get()).isEqualTo(expected);
+        Assertions.assertThat(MetaUtils.getClassIfEnum(input)).isEqualTo(expected);
     }
 
 

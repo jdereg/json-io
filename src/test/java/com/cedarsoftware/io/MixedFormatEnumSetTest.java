@@ -2,6 +2,10 @@ package com.cedarsoftware.io;
 
 import org.junit.jupiter.api.Test;
 import java.util.EnumSet;
+
+import static com.cedarsoftware.io.JsonValue.ENUM;
+import static com.cedarsoftware.io.JsonValue.ITEMS;
+import static com.cedarsoftware.io.JsonValue.TYPE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -43,7 +47,6 @@ class MixedFormatEnumSetTest {
 
         // Write it out to see the format
         String json = TestUtil.toJson(source);
-        System.out.println("Mixed format output:\n" + json);
 
         EnumSet<?> target = TestUtil.toObjects(json, null);
 
@@ -79,9 +82,9 @@ class MixedFormatEnumSetTest {
     @Test
     void testEnum_differentFormats() {
         // Test reading individual enums in different formats
-        String nameFormat = "{\"@type\":\"" + ComplexEnum.class.getName() + "\", \"name\":\"ONE\"}";
-        String enumNameFormat = "{\"@type\":\"" + ComplexEnum.class.getName() + "\", \"Enum.name\":\"TWO\"}";
-        String valueFormat = "{\"@type\":\"" + ComplexEnum.class.getName() + "\", \"value\":\"THREE\"}";
+        String nameFormat = "{\"" + TYPE + "\":\"" + ComplexEnum.class.getName() + "\", \"name\":\"ONE\"}";
+        String enumNameFormat = "{\"" + TYPE + "\":\"" + ComplexEnum.class.getName() + "\", \"Enum.name\":\"TWO\"}";
+        String valueFormat = "{\"" + TYPE + "\":\"" + ComplexEnum.class.getName() + "\", \"value\":\"THREE\"}";
 
         ComplexEnum one = TestUtil.toObjects(nameFormat, null);
         ComplexEnum two = TestUtil.toObjects(enumNameFormat, null);
@@ -156,10 +159,7 @@ class MixedFormatEnumSetTest {
 
         String jsonWithOptions = TestUtil.toJson(source, options);
         String jsonDefault = TestUtil.toJson(source, new WriteOptionsBuilder().writeEnumSetOldWay(false).build());
-
-        System.out.println("JSON with options:\n" + jsonWithOptions);
-        System.out.println("JSON default:\n" + jsonDefault);
-
+        
         // Both formats should deserialize correctly
         @SuppressWarnings("unchecked")
         EnumSet<ComplexEnum> targetWithOptions = TestUtil.toObjects(jsonWithOptions, null);
@@ -180,21 +180,10 @@ class MixedFormatEnumSetTest {
     }
 
     @Test
-    void testFoo() {
-        ComplexEnum one = ComplexEnum.ONE;
-        ComplexEnum two = ComplexEnum.TWO;
-        ComplexEnum three = ComplexEnum.THREE;
-
-        System.out.println("ONE: " + MetaUtils.getClassIfEnum(one.getClass()).orElse(null));
-        System.out.println("TWO: " + MetaUtils.getClassIfEnum(two.getClass()).orElse(null));
-        System.out.println("THREE: " + MetaUtils.getClassIfEnum(three.getClass()).orElse(null));
-    }
-
-    @Test
     void testEnumSet_withMixedLegacyAndNewFormats() {
         // Create EnumSet using legacy format
-        String legacyJson = "{\"@enum\":\"" + ComplexEnum.class.getName()
-                + "\",\"@items\":[\"ONE\",\"TWO\"]}";
+        String legacyJson = "{\"" + ENUM + "\":\"" + ComplexEnum.class.getName()
+                + "\",\"" + ITEMS + "\":[\"ONE\",\"TWO\"]}";
 
         // Create same EnumSet using new format
         EnumSet<ComplexEnum> source = EnumSet.of(ComplexEnum.ONE, ComplexEnum.TWO);

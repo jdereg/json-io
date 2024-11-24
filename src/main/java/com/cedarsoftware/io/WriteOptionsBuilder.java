@@ -1088,9 +1088,14 @@ public class WriteOptionsBuilder {
 
         public JsonWriter.JsonClassWriter findCustomWriter(Class<?> c) {
             JsonWriter.JsonClassWriter writer = MetaUtils.findClosest(c, customWrittenClasses, nullWriter);
-            return writer != nullWriter ? writer : MetaUtils.getClassIfEnum(c).isPresent() ? enumWriter : nullWriter;
+            if (writer != nullWriter) {
+                return writer;
+            } else {
+                Class<?> enumClass = MetaUtils.getClassIfEnum(c);
+                return (enumClass != null) ? enumWriter : nullWriter;
+            }
         }
-
+        
         public Object getCustomOption(String key)
         {
             return customOptions.get(key);

@@ -40,7 +40,6 @@ class EnumSetFormatTest {
         // Test simple enum format (<=2 fields)
         EnumSet<SimpleEnum> simpleSource = EnumSet.of(SimpleEnum.A, SimpleEnum.B);
         String simpleJson = TestUtil.toJson(simpleSource);
-        System.out.println("Simple enum format:\n" + simpleJson);
 
         EnumSet<?> simpleTarget = TestUtil.toObjects(simpleJson, null);
         assertThat(simpleTarget).isEqualTo(simpleSource);
@@ -48,7 +47,6 @@ class EnumSetFormatTest {
         // Test complex enum format (>2 fields)
         EnumSet<VerboseEnum> verboseSource = EnumSet.of(VerboseEnum.TEST);
         String verboseJson = TestUtil.toJson(verboseSource);
-        System.out.println("\nComplex enum format:\n" + verboseJson);
 
         EnumSet<?> verboseTarget = TestUtil.toObjects(verboseJson, null);
         assertThat(verboseTarget).isEqualTo(verboseSource);

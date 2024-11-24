@@ -13,14 +13,11 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import com.cedarsoftware.io.JsonReader.MissingFieldHandler;
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.convert.Converter;
-
-import static com.cedarsoftware.io.JsonValue.ITEMS;
 
 /**
  * This class is used to convert a source of Java Maps that were created from
@@ -58,7 +55,7 @@ public abstract class Resolver {
     final Collection<Missingfields> missingFields = new ArrayList<>();
     private ReadOptions readOptions;
     private ReferenceTracker references;
-    private Converter converter;
+    private final Converter converter;
     private SealedSupplier sealedSupplier = new SealedSupplier();
 
     private static final Set<String> convertableValues = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
@@ -403,14 +400,11 @@ public abstract class Resolver {
         }
 
         // Accurate enum detection
-        Optional<Class<?>> enumClassOpt = MetaUtils.getClassIfEnum(targetType);
-        boolean isEnum = enumClassOpt.isPresent();
+        Class<?> enumClass = MetaUtils.getClassIfEnum(targetType);
 
         // Try factory with type
         Object mate;
-        if (isEnum) {
-            Class<?> enumClass = enumClassOpt.get();
-
+        if (enumClass != null) {
             // Check for enum indicators to distinguish between single enum constant and EnumSet
             boolean hasEnumIndicators = jsonObj.containsKey("name") || jsonObj.containsKey("Enum.name") || jsonObj.containsKey("value");
 
@@ -423,16 +417,13 @@ public abstract class Resolver {
                 // Use EnumSetFactory
                 mate = createInstanceUsingClassFactory(EnumSet.class, jsonObj);
             }
-
-            if (mate != NO_FACTORY) {
-                return mate;
-            }
         } else {
             // Non-enum types proceed as normal
             mate = createInstanceUsingClassFactory(targetType, jsonObj);
-            if (mate != NO_FACTORY) {
-                return mate;
-            }
+        }
+        
+        if (mate != NO_FACTORY) {
+            return mate;
         }
 
         // Handle arrays
@@ -631,7 +622,7 @@ public abstract class Resolver {
      * Create peer Java object to the passed in root JsonObject.  In the special case that root is an Object[],
      * then create a JsonObject to wrap it, set the passed in Object[] to be the target of the JsonObject, ensure
      * that the root Object[] items are copied to the JsonObject, and then return the JsonObject wrapper.  If
-     * called with a primitive (anythning else), just return it.
+     * called with a primitive (anything else), just return it.
      */
     Object createJavaFromJson(Object root) {
         if (root instanceof Object[]) {

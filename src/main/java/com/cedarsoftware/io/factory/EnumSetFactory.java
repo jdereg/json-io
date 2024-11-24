@@ -2,7 +2,6 @@ package com.cedarsoftware.io.factory;
 
 import java.lang.reflect.Array;
 import java.util.EnumSet;
-import java.util.Optional;
 
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
@@ -31,8 +30,7 @@ public class EnumSetFactory implements JsonReader.ClassFactory {
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
         // Attempt to get the actual enum class from the provided class 'c'
-        Optional<Class<?>> enumClassOpt = MetaUtils.getClassIfEnum(jObj.getJavaType());
-        Class<?> enumClass = enumClassOpt.orElse(null);
+        Class<?> enumClass = MetaUtils.getClassIfEnum(jObj.getJavaType());
 
         // If enumClass is null or not an enum, try to get it from the first item in @items
         if (enumClass == null) {
@@ -41,8 +39,7 @@ public class EnumSetFactory implements JsonReader.ClassFactory {
                 Object firstItem = Array.get(items, 0);
                 if (firstItem instanceof JsonObject) {
                     JsonObject jsonItem = (JsonObject) firstItem;
-                    Optional<Class<?>> itemEnumClassOpt = MetaUtils.getClassIfEnum(jsonItem.getJavaType());
-                    enumClass = itemEnumClassOpt.orElse(null);
+                    enumClass = MetaUtils.getClassIfEnum(jsonItem.getJavaType());
                 } else if (firstItem instanceof String) {
                     // If items are simple strings, we need to rely on additional information
                     // Since we cannot determine the enum class from the string, throw an exception
@@ -73,8 +70,10 @@ public class EnumSetFactory implements JsonReader.ClassFactory {
                 // Object format
                 JsonObject jsonItem = (JsonObject) item;
                 // Resolve the enum class from the item's class
-                Optional<Class<?>> itemEnumClassOpt = MetaUtils.getClassIfEnum(jsonItem.getJavaType());
-                Class<?> itemEnumClass = itemEnumClassOpt.orElse(enumClass);
+                Class<?> itemEnumClass = MetaUtils.getClassIfEnum(jsonItem.getJavaType());
+                if (itemEnumClass == null) {
+                    itemEnumClass = enumClass;
+                }
 
                 String enumName = (String) jsonItem.get("name");
                 if (enumName == null) {
