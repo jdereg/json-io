@@ -381,67 +381,91 @@ public abstract class Resolver {
             return target;
         }
 
-        // Coerce class first
-        Class<?> targetType = jsonObj.getJavaType();
-        jsonObj.setJavaType(coerceClassIfNeeded(targetType));
-        targetType = jsonObj.getJavaType();
+        // Resolve target type with proper coercion and enum handling
+        Class<?> targetType = resolveTargetType(jsonObj);
 
-        // Check for a 'Converter' conversion
-        if (jsonObj.hasValue() && jsonObj.getValue() != null) {
-            if (converter.isConversionSupportedFor(jsonObj.getValue().getClass(), targetType)) {
-                Object value = converter.convert(jsonObj.getValue(), targetType);
-                return jsonObj.setFinishedTarget(value, true);
-            }
-        } else if (!jsonObj.isEmpty() && converter.isConversionSupportedFor(Map.class, targetType)) {
+        // Attempt conversion using the Converter
+        Object sourceValue = jsonObj.hasValue() ? jsonObj.getValue() : null;
+        Class<?> sourceType = sourceValue != null ? sourceValue.getClass() : (!jsonObj.isEmpty() ? Map.class : null);
+
+        if (sourceType != null && converter.isConversionSupportedFor(sourceType, targetType)) {
             try {
-                Object value = converter.convert(jsonObj, targetType);
+                Object value = converter.convert(sourceValue != null ? sourceValue : jsonObj, targetType);
                 return jsonObj.setFinishedTarget(value, true);
             } catch (Exception ignored) { }
         }
 
-        // Accurate enum detection
-        Class<?> enumClass = MetaUtils.getClassIfEnum(targetType);
+        // Determine the factory type, considering enums and collections
+        Class<?> factoryType = determineFactoryType(jsonObj, targetType);
 
-        // If it's an enum but also has a coerced type, use the coerced type instead
-        if (enumClass != null) {
-            Class<?> coercedClass = readOptions.getCoercedClass(enumClass);
-            if (coercedClass != null) {
-                Class<?> coercedEnumClass = MetaUtils.getClassIfEnum(coercedClass);
-                if (coercedEnumClass != null) {
-                    enumClass = coercedEnumClass;
-                    targetType = coercedEnumClass;  // Update target type to coerced enum
-                    jsonObj.setJavaType(coercedEnumClass);
-                }
-            }
-        }
-
-        // Determine the factory type based on whether it's an EnumSet or a single Enum
-        Class<?> factoryType;
-        if (enumClass != null) {
-            boolean isEnumSet = jsonObj.getItems() != null;
-            factoryType = isEnumSet ? EnumSet.class : enumClass;
-        } else {
-            factoryType = targetType;
-        }
-
-        // Single call to createInstanceUsingClassFactory
+        // Try creating an instance using the class factory
         Object mate = createInstanceUsingClassFactory(factoryType, jsonObj);
-
         if (mate != NO_FACTORY) {
             return mate;
         }
 
-        // Handle arrays
-        Object items = jsonObj.getItems();
-        Class<?> c = jsonObj.getJavaType();
-        if (c.isArray() || (items != null && c == Object.class && jsonObj.getKeys() == null)) {
-            int size = (items == null) ? 0 : Array.getLength(items);
-            mate = Array.newInstance(c.isArray() ? c.getComponentType() : Object.class, size);
-            jsonObj.setTarget(mate);
-            return mate;
+        // Handle array creation
+        if (shouldCreateArray(jsonObj, targetType)) {
+            mate = createArrayInstance(jsonObj, targetType);
+            return jsonObj.setTarget(mate);
         }
 
+        // Fallback to creating an instance using the type directly
         return createInstanceUsingType(jsonObj);
+    }
+
+    // Resolve target type with proper coercion and enum handling
+    private Class<?> resolveTargetType(JsonObject jsonObj) {
+        Class<?> targetType = coerceClassIfNeeded(jsonObj.getJavaType());
+        jsonObj.setJavaType(targetType);
+
+        Class<?> enumClass = MetaUtils.getClassIfEnum(targetType);
+        if (enumClass != null) {
+            Class<?> coercedEnumClass = getCoercedEnumClass(enumClass);
+            if (coercedEnumClass != null) {
+                targetType = coercedEnumClass;
+                jsonObj.setJavaType(coercedEnumClass);
+            }
+        }
+        return targetType;
+    }
+
+    private Class<?> coerceClassIfNeeded(Class<?> type) {
+        if (type == null) {
+            return null;
+        }
+        Class clazz = readOptions.getCoercedClass(type);
+        return clazz == null ? type : clazz;
+    }
+
+    private Class<?> getCoercedEnumClass(Class<?> enumClass) {
+        Class<?> coercedClass = readOptions.getCoercedClass(enumClass);
+        if (coercedClass != null) {
+            return MetaUtils.getClassIfEnum(coercedClass);
+        }
+        return null;
+    }
+
+    // Determine the factory type, considering enums and collections
+    private Class<?> determineFactoryType(JsonObject jsonObj, Class<?> targetType) {
+        Class<?> enumClass = MetaUtils.getClassIfEnum(targetType);
+        if (enumClass != null) {
+            boolean isEnumSet = jsonObj.getItems() != null;
+            return isEnumSet ? EnumSet.class : enumClass;
+        }
+        return targetType;
+    }
+
+    private boolean shouldCreateArray(JsonObject jsonObj, Class<?> targetType) {
+        Object items = jsonObj.getItems();
+        return targetType.isArray() || (items != null && targetType == Object.class && jsonObj.getKeys() == null);
+    }
+
+    private Object createArrayInstance(JsonObject jsonObj, Class<?> targetType) {
+        Object items = jsonObj.getItems();
+        int size = (items == null) ? 0 : Array.getLength(items);
+        Class<?> componentType = targetType.isArray() ? targetType.getComponentType() : Object.class;
+        return Array.newInstance(componentType, size);
     }
 
     /**
@@ -500,14 +524,6 @@ public abstract class Resolver {
         }
 
         return jsonObj.setTarget(target);
-    }
-
-    private Class<?> coerceClassIfNeeded(Class<?> type) {
-        if (type == null) {
-            return null;
-        }
-        Class clazz = readOptions.getCoercedClass(type);
-        return clazz == null ? type : clazz;
     }
 
     /**
