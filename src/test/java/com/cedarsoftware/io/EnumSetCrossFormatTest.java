@@ -33,7 +33,6 @@ class EnumSetCrossFormatTest {
 
         // Create container with both formats
         String json = TestUtil.toJson(source);
-        System.out.println("Mixed formats in container:\n" + json);
 
         MultiFormatContainer target = TestUtil.toObjects(json, null);
 
@@ -51,7 +50,6 @@ class EnumSetCrossFormatTest {
         source.add(EnumSet.of(SecondEnum.X2));                    // Another EnumSet
 
         String json = TestUtil.toJson(source);
-        System.out.println("Mixed formats in collection:\n" + json);
 
         List<Object> target = TestUtil.toObjects(json, null);
 
@@ -79,14 +77,12 @@ class EnumSetCrossFormatTest {
 
         // First round - write and read
         String json1 = TestUtil.toJson(source);
-        System.out.println("First format:\n" + json1);
 
         @SuppressWarnings("unchecked")
         EnumSet<FirstEnum> intermediate = TestUtil.toObjects(json1, null);
 
         // Second round - write and read again
         String json2 = TestUtil.toJson(intermediate);
-        System.out.println("Second format:\n" + json2);
 
         @SuppressWarnings("unchecked")
         EnumSet<FirstEnum> target = TestUtil.toObjects(json2, null);
@@ -119,7 +115,6 @@ class EnumSetCrossFormatTest {
         source.put(key2, value2);
 
         String json = TestUtil.toJson(source);
-        System.out.println("Complex object graph:\n" + json);
 
         Map<EnumSet<FirstEnum>, List<EnumSet<SecondEnum>>> target = TestUtil.toObjects(json, null);
 
@@ -156,7 +151,6 @@ class EnumSetCrossFormatTest {
 
         // Write it back out and verify new format
         String newJson = TestUtil.toJson(result);
-        System.out.println("Converted to new format:\n" + newJson);
 
         // Should be able to read it back in new format
         @SuppressWarnings("unchecked")

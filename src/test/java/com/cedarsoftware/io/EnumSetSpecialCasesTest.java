@@ -39,7 +39,6 @@ class EnumSetSpecialCasesTest {
     void testEnumSet_regularEnumSetWithAllValues() {
         EnumSet<Enum64> source = EnumSet.allOf(Enum64.class);
         String json = TestUtil.toJson(source);
-        System.out.println(json);
         EnumSet<?> target = TestUtil.toObjects(json, null);
 
         assertThat(target)
@@ -56,7 +55,6 @@ class EnumSetSpecialCasesTest {
     void testEnumSet_jumboEnumSetWithAllValues() {
         EnumSet<Enum65> source = EnumSet.allOf(Enum65.class);
         String json = TestUtil.toJson(source);
-        System.out.println(json);
         EnumSet<?> target = TestUtil.toObjects(json, null);
 
         assertThat(target)
@@ -74,7 +72,6 @@ class EnumSetSpecialCasesTest {
         // Create using RegularEnumSet
         EnumSet<Enum64> source = EnumSet.of(Enum64.A00, Enum64.A63);
         String json = TestUtil.toJson(source);
-        System.out.println(json);
 
         // Verify coercion in JSON format
         assertThat(json).doesNotContain("RegularEnumSet");
@@ -92,7 +89,6 @@ class EnumSetSpecialCasesTest {
         // Create using JumboEnumSet
         EnumSet<Enum65> source = EnumSet.of(Enum65.B00, Enum65.B64);
         String json = TestUtil.toJson(source);
-        System.out.println(json);
 
         // Verify coercion in JSON format
         assertThat(json).doesNotContain("JumboEnumSet");
@@ -110,7 +106,6 @@ class EnumSetSpecialCasesTest {
         // Test with singleton enum set
         EnumSet<Enum64> source = EnumSet.of(Enum64.A00);
         String json = TestUtil.toJson(source);
-        System.out.println(json);
 
         EnumSet<?> target = TestUtil.toObjects(json, null);
 
@@ -131,8 +126,7 @@ class EnumSetSpecialCasesTest {
                 .build();
 
         String prettyJson = TestUtil.toJson(source, prettyOptions);
-        System.out.println(prettyJson);
-        
+
         // Test with pretty printing off
         WriteOptions compactOptions = new WriteOptionsBuilder()
                 .prettyPrint(false)
@@ -160,13 +154,11 @@ class EnumSetSpecialCasesTest {
         long start = System.nanoTime();
         String regularJson = TestUtil.toJson(regular);
         long regularTime = System.nanoTime() - start;
-        System.out.println("regular=" + regularTime);
 
         start = System.nanoTime();
         String jumboJson = TestUtil.toJson(jumbo);
         long jumboTime = System.nanoTime() - start;
-        System.out.println("jumbo=" + jumboTime);
-        
+
         // Both should deserialize successfully
         EnumSet<?> regularTarget = TestUtil.toObjects(regularJson, null);
         EnumSet<?> jumboTarget = TestUtil.toObjects(jumboJson, null);

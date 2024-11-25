@@ -402,6 +402,19 @@ public abstract class Resolver {
         // Accurate enum detection
         Class<?> enumClass = MetaUtils.getClassIfEnum(targetType);
 
+        // If it's an enum but also has a coerced type, use the coerced type instead
+        if (enumClass != null) {
+            Class<?> coercedClass = readOptions.getCoercedClass(enumClass);
+            if (coercedClass != null) {
+                Class<?> coercedEnumClass = MetaUtils.getClassIfEnum(coercedClass);
+                if (coercedEnumClass != null) {
+                    enumClass = coercedEnumClass;
+                    targetType = coercedEnumClass;  // Update target type to coerced enum
+                    jsonObj.setJavaType(coercedEnumClass);
+                }
+            }
+        }
+
         // Determine the factory type based on whether it's an EnumSet or a single Enum
         Class<?> factoryType;
         if (enumClass != null) {

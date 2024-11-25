@@ -38,3 +38,4 @@ java.util.TreeMap$KeySet = java.util.TreeSet
 java.util.TreeMap$Values = java.util.ArrayList
 
 java.util.RegularEnumSet = java.util.EnumSet
+java.util.JumboEnumSet = java.util.EnumSet

@@ -599,7 +599,7 @@ public class ReadOptionsBuilder {
     }
 
     /**
-     * @param type  String class name
+     * @param type  Class to alias
      * @param alias String shorter name to use, typically.
      * @return ReadOptionsBuilder for chained access.
      */
