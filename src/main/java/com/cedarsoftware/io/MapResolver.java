@@ -137,53 +137,78 @@ public class MapResolver extends Resolver {
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      */
     protected void traverseCollection(final JsonObject jsonObj) {
-        final Object items = jsonObj.getItems();
+        Object items = jsonObj.getItems();
         if (items == null || Array.getLength(items) == 0) {
             return;
         }
 
+        Object target = jsonObj.getTarget() != null ? jsonObj.getTarget() : jsonObj.getItems();
         final ReferenceTracker refTracker = getReferences();
         final Converter converter = getConverter();
         final int len = Array.getLength(items);
 
-        for (int i=0; i < len; i++) {
+        // Cache the base component type of the array from the target
+        Class<?> componentType = Object.class;
+        if (jsonObj.getTarget() != null) {
+            componentType = jsonObj.getTarget().getClass();
+            while (componentType.isArray()) {
+                componentType = componentType.getComponentType();
+            }
+        }
+
+        for (int i = 0; i < len; i++) {
             Object element = Array.get(items, i);
 
-            if (element instanceof Object[]) {   // array element inside Collection
+            if (element == null) {
+                Array.set(target, i, null);
+            } else if (element.getClass().isArray()) {   // Array element inside Collection
                 JsonObject jsonObject = new JsonObject();
                 jsonObject.setItems(element);
                 push(jsonObject);
+            } else if (converter.isConversionSupportedFor(element.getClass(), componentType)) {
+                // Convert the element to the base component type
+                Object convertedValue = converter.convert(element, componentType);
+                Array.set(target, i, convertedValue);
             } else if (element instanceof JsonObject) {
                 JsonObject jsonObject = (JsonObject) element;
                 Long refId = jsonObject.getReferenceId();
 
                 if (refId == null) {
-                    // When the JsonObject inside a Collection or Array is convertable from Map to it's destination type,
-                    // make the conversion.  This way, even in Map of Maps mode, the value associated to the String key
-                    // field will be the correct "convertable" type (more than primitives, ZonedDateTime, etc. all of those
-                    // will be placed on the value-side of the Map
+                    // Convert JsonObject to its destination type if possible
                     Class<?> type = jsonObject.getJavaType();
                     if (type != null && converter.isConversionSupportedFor(Map.class, type)) {
-                        Array.set(items, i, converter.convert(jsonObject, type));
+                        Array.set(target, i, converter.convert(jsonObject, type));
                         jsonObject.setFinished();
                     } else {
                         push(jsonObject);
                     }
-                } else {    // connect reference
+                } else {    // Connect reference
                     JsonObject refObject = refTracker.getOrThrow(refId);
                     Class<?> type = refObject.getJavaType();
-                    
+
                     if (type != null && converter.isConversionSupportedFor(Map.class, type)) {
                         refObject.setFinishedTarget(converter.convert(refObject, type), true);
-                        Array.set(items, i, refObject.getTarget());
+                        Array.set(target, i, refObject.getTarget());
                     } else {
-                        Array.set(items, i, refObject);
+                        Array.set(target, i, refObject);
                     }
+                }
+            } else {
+                try {
+                    Array.set(target, i, element);
+                } catch (Exception e) {
+                    String elementType = element.getClass().getName();
+                    String valueRepresentation = String.valueOf(element);
+                    String arrayType = target.getClass().getSimpleName();
+
+                    throw new JsonIoException("Cannot set '" + elementType + "' (value: " + valueRepresentation + ") into '" +
+                            arrayType + "' at index " + i + ". Type mismatch between value and array type.");
                 }
             }
         }
         jsonObj.setFinished();
-        jsonObj.setTarget(null);  // don't waste space (used for typed return, not generic Map return)
+        jsonObj.setTarget(null);  // Don't waste space (used for typed return, not generic Map return)
+        jsonObj.setItems(target);
     }
 
     protected void traverseArray(JsonObject jsonObj) {

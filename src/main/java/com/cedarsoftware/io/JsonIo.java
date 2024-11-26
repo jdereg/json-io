@@ -220,7 +220,7 @@ public class JsonIo {
             readOptions = new ReadOptionsBuilder(readOptions).returnAsJavaObjects().build();
         }
         JsonReader reader = new JsonReader(readOptions);
-        return reader.toJavaObjects(jsonObject, rootType);
+        return reader.resolveObjects(jsonObject, rootType);
     }
 
     /**

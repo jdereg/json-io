@@ -4,16 +4,12 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Deque;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import com.cedarsoftware.io.JsonReader.MissingFieldHandler;
 import com.cedarsoftware.io.reflect.Injector;
@@ -57,66 +53,6 @@ public abstract class Resolver {
     private ReferenceTracker references;
     private final Converter converter;
     private SealedSupplier sealedSupplier = new SealedSupplier();
-
-    private static final Set<String> convertableValues = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-            "byte",
-            "java.lang.Byte",
-            "short",
-            "java.lang.Short",
-            "int",
-            "java.lang.Integer",
-            "java.util.concurrent.atomic.AtomicInteger",
-            "long",
-            "java.lang.Long",
-            "java.util.concurrent.atomic.AtomicLong",
-            "float",
-            "java.lang.Float",
-            "double",
-            "java.lang.Double",
-            "boolean",
-            "java.lang.Boolean",
-            "java.util.concurrent.atomic.AtomicBoolean",
-//            "char",
-            "java.lang.Character",
-            "date",
-            "java.util.Date",
-            "BigInt",
-            "java.math.BigInteger",
-            "BigDec",
-            "java.math.BigDecimal",
-            "class",
-            "java.lang.Class",
-            "string",
-            "java.lang.String",
-            "java.lang.StringBuffer",
-            "java.lang.StringBuilder",
-            "java.sql.Date",
-            "java.sql.Timestamp",
-            "java.time.OffsetDateTime",
-            "java.net.URI",
-            "java.net.URL",
-            "java.util.Calendar",
-            "java.util.GregorianCalendar",
-            "java.util.Locale",
-            "java.util.UUID",
-            "java.util.TimeZone",
-            "java.time.Duration",
-            "java.time.Instant",
-            "java.time.MonthDay",
-            "java.time.OffsetDateTime",
-            "java.time.OffsetTime",
-            "java.time.LocalDate",
-            "java.time.LocalDateTime",
-            "java.time.LocalTime",
-            "java.time.Period",
-            "java.time.Year",
-            "java.time.YearMonth",
-            "java.time.ZonedDateTime",
-            "java.time.ZoneId",
-            "java.time.ZoneOffset",
-            "java.time.ZoneRegion",
-            "sun.util.calendar.ZoneInfo"
-    )));
 
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
@@ -636,7 +572,7 @@ public abstract class Resolver {
     }
 
     public boolean isConvertable(Class<?> type) {
-        return convertableValues.contains(type.getName());
+        return Number.class.isAssignableFrom(type) || converter.isConversionSupportedFor(type, type);
     }
 
     /**

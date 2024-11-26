@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -207,25 +208,37 @@ public class JsonReader implements Closeable
     public <T> T readObject(Class<T> rootType) {
         T returnValue;
         try {
+            verifyRootType(rootType);
             returnValue = (T) parser.readValue(rootType);
             if (returnValue == null) {
                 return null;    // easy, done.
             }
-            verifyRootType(rootType, returnValue);
         } catch (JsonIoException e) {
             throw e;
         } catch (Exception e) {
             throw new JsonIoException(getErrorMessage("error parsing JSON value"), e);
         }
+        
+        boolean asMaps = readOptions.isReturningJsonObjects();
 
         // JSON [] at root
-        if (returnValue instanceof Object[]) {
+        if (returnValue.getClass().isArray()) {
             JsonObject rootObj = new JsonObject();
             rootObj.setTarget(returnValue);
             rootObj.setItems(returnValue);
-            T graph = toJavaObjects(rootObj, rootType);
-            boolean asMaps = readOptions.isReturningJsonObjects();
-            return asMaps ? returnValue : graph;
+            T graph = resolveObjects(rootObj, rootType);
+            if (graph != null) {
+                return graph;
+            }
+            return returnValue;
+        }
+
+        if (returnValue instanceof JsonObject && ((JsonObject)returnValue).isArray()) {
+            T graph = resolveObjects((JsonObject)returnValue, rootType);
+            if (graph != null) {
+                return graph;
+            }
+            return (T) ((JsonObject) returnValue).getItems();
         }
 
         // JSON {} at root
@@ -249,35 +262,51 @@ public class JsonReader implements Closeable
     /**
      * When return JsonObjects, verify return type
      * @param rootType Class passed as rootType to return type
-     * @param returnValue the value returned, primitive, JsonObject, Object[], ...
      */
-    private <T> void verifyRootType(Class<T> rootType, T returnValue) {
+    private <T> void verifyRootType(Class<T> rootType) {
         if (rootType == null || readOptions.isReturningJavaObjects()) {
             return;
         }
 
-        Converter converter = resolver.getConverter();
-        if (converter.isConversionSupportedFor(rootType, returnValue.getClass()) || converter.isConversionSupportedFor(returnValue.getClass(), rootType)) {
-            return;
-        }
-
-        if (returnValue instanceof JsonObject) {
-            if (Map.class.isAssignableFrom(rootType)) {
-                return;
+        // If rootType is an array, drill down to the ultimate component type
+        Class<?> typeToCheck = rootType;
+        if (rootType.isArray()) {
+            while (typeToCheck.isArray()) {
+                typeToCheck = typeToCheck.getComponentType();
             }
-            throw new JsonIoException("Root type (" + rootType.getName() + ") must be a Map type or null when JSON is an object { }");
         }
 
-        if (returnValue.getClass().isArray() && rootType.isArray()) {
+        // Perform the checks on typeToCheck
+        if (getResolver().getConverter().isConversionSupportedFor(typeToCheck, typeToCheck)) {
             return;
         }
 
-        throw new JsonIoException("Root type (" + rootType.getName() + ") cannot be converted to: " + returnValue.getClass().getName());
+        if (Number.class.isAssignableFrom(typeToCheck)) {
+            return;
+        }
+
+        if (Collection.class.isAssignableFrom(typeToCheck)) {
+            return;
+        }
+        
+        if (Map.class.isAssignableFrom(typeToCheck)) {
+            return;
+        }
+
+        throw new JsonIoException("In readOptions.isReturningJsonObjects() mode, the rootType '" + rootType.getName() +
+                "' is not supported. Allowed types are:\n" +
+                "- null\n" +
+                "- primitive types (e.g., int, boolean) and their wrapper classes (e.g., Integer, Boolean)\n" +
+                "- types supported by Converter.convert()\n" +
+                "- Map or any of its subclasses\n" +
+                "- Collection or any of its subclasses\n" +
+                "- Arrays (of any depth) of the above types\n" +
+                "Please use one of these types as the rootType when readOptions.isReturningJsonObjects() is enabled.");
     }
 
     private <T> T determineReturnValueWhenJsonObjectRoot(Class<T> rootType, T returnValue) {
         boolean asMaps = readOptions.isReturningJsonObjects();
-        T graph = toJavaObjects((JsonObject) returnValue, rootType);
+        T graph = resolveObjects((JsonObject) returnValue, rootType);
 
         // Handle the case where no specific rootType is provided
         if (rootType == null) {
@@ -330,7 +359,7 @@ public class JsonReader implements Closeable
      * @return a typed Java instance that was serialized into JSON.
      */
     @SuppressWarnings("unchecked")
-    protected <T> T toJavaObjects(JsonObject rootObj, Class<T> root) {
+    protected <T> T resolveObjects(JsonObject rootObj, Class<T> root) {
         try {
             if (root == null) {
                 root = rootObj.getJavaType() == null ? (Class<T>)Object.class : (Class<T>)rootObj.getJavaType();

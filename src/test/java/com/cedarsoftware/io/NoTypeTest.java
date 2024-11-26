@@ -65,7 +65,7 @@ public class NoTypeTest
     {
         String json = MetaUtils.loadResourceAsString("noTypes/person.json");
         String msg = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), Person.class); }).getMessage();
-        assert msg.contains("must be a Map type or null when JSON is an object { }");
+        assert msg.contains("isReturningJsonObjects");
     }
 
     @Test
@@ -105,7 +105,7 @@ public class NoTypeTest
             Object o = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), Person[].class);
             fail();
         } catch (JsonIoException e) {
-            assert e.getMessage().contains("Root type ([Lcom.cedarsoftware.io.NoTypeTest$Person;) cannot be converted to: [Ljava.lang.Object;");
+            assert e.getMessage().contains("isReturningJsonObjects");
         }
     }
 
@@ -175,14 +175,14 @@ public class NoTypeTest
         String json1 = "[16, null, 3.14159]";
         Number[] numbers = TestUtil.toObjects(json1, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), Number[].class);
         assert numbers.length == 3;
-        assertEquals(16, numbers[0]);
+        assertEquals(16L, numbers[0]);
         assertNull(numbers[1]);
         assertEquals(3.14159, numbers[2]);
 
         // error - cannot stuff Number[] with Strings
         final String json2 = "[\"foo\", null ,\"baz\"]";
         String msg = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json2, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), Number[].class); }).getMessage();
-        assert msg.contains("fix this");
+        assert msg.contains("Type mismatch");
 
         String json3 = "75.1";
         // AtomicInteger
