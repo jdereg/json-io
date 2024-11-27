@@ -48,10 +48,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class ArrayTest
+class ArrayTest
 {
     @Test
-    public void testArray()
+    void testArray()
     {
         ManyArrays obj = new ManyArrays();
         obj.init();
@@ -444,23 +444,21 @@ public class ArrayTest
     }
 
     @Test
-    public void testReconstituteObjectArray()
+    void testReconstituteObjectArray()
     {
         Date now = new Date();
         TestObject to = new TestObject("football");
         TimeZone tz = TimeZone.getTimeZone("EST");
-        Collection col = new ArrayList<>();
+        Collection<Object> col = new ArrayList<>();
         col.add("Collection inside array");
         col.add(tz);
         col.add(now);
         Object[] objs = new Object[]{now, 123.45d, 0.04f, "This is a string", null, true, to, tz, col, (short) 7, (byte) -127};
         Object[] two = new Object[]{objs, "bella", objs};
         String json0 = TestUtil.toJson(two);
-        TestUtil.printLine("json0=" + json0);
 
         Object[] array = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         String json1 = TestUtil.toJson(array);
-        TestUtil.printLine("json1=" + json1);
 
         // Read back into typed Java objects, the Maps of Maps versus what was dumped out
         Object[] result = TestUtil.toObjects(json1, null);
@@ -500,7 +498,7 @@ public class ArrayTest
     }
 
     @Test
-    public void testReconstituteObjectArrayTypes()
+    void testReconstituteObjectArrayTypes()
     {
         TestUtil.printLine("testReconstituteObjectArrayTypes");
         Object[] bytes = new Object[]{_CONST_BYTE, _CONST_BYTE};
@@ -650,7 +648,7 @@ public class ArrayTest
     }
 
     @Test
-    public void testReconstituteTypedArray()
+    void testReconstituteTypedArray()
     {
         String[] strs = new String[]{"tom", "dick", "harry"};
         Object[] objs = new Object[]{strs, "a", strs};
@@ -676,7 +674,7 @@ public class ArrayTest
     }
 
     @Test
-    public void testReconstituteArray()
+    void testReconstituteArray()
     {
         ManyArrays testArray = new ManyArrays();
         testArray.init();
@@ -693,7 +691,7 @@ public class ArrayTest
     }
 
     @Test
-    public void testReconstituteEmptyObject()
+    void testReconstituteEmptyObject()
     {
         Empty empty = new Empty();
         String json0 = TestUtil.toJson(empty);
@@ -735,7 +733,7 @@ public class ArrayTest
     }
 
     @Test
-    public void testBadArray()
+    void testBadArray()
     {
         String json = "[1, 10, 100,]";
         Object[] array = TestUtil.toObjects(json, null);
@@ -823,7 +821,7 @@ public class ArrayTest
     }
 
     @Test
-    public void testEmptyArray()
+    void testEmptyArray()
     {
         String json = "{\"@type\":\"[Ljava.lang.String;\"}";
         String[] s = TestUtil.toObjects(json, null);
@@ -831,7 +829,7 @@ public class ArrayTest
     }
 
     @Test
-    public void testMultiDimensionalArrays()
+    void testMultiDimensionalArrays()
     {
         int[][][][] x = {{{{0,1},{0,1}},{{0,1},{0,1}}},{{{0,1},{0,1}},{{0,1},{0,1}}}};
 
@@ -902,7 +900,7 @@ public class ArrayTest
     }
 
     @Test
-    public void testObjectArrayStringReference()
+    void testObjectArrayStringReference()
     {
         String s = "dogs";
         String json = TestUtil.toJson(new Object[]{s, s});
@@ -914,7 +912,7 @@ public class ArrayTest
     }
 
     @Test
-    public void testStringArrayStringReference()
+    void testStringArrayStringReference()
     {
         String s = "dogs";
         String json = TestUtil.toJson(new String[]{s, s});
@@ -926,7 +924,7 @@ public class ArrayTest
     }
 
     @Test
-    public void testReferencedEmptyArray()
+    void testReferencedEmptyArray()
     {
         String[] array = new String[0];
         Object[] refArray = new Object[]{array};
@@ -938,7 +936,7 @@ public class ArrayTest
     }
 
     @Test
-    public void testUntypedArray()
+    void testUntypedArray()
     {
         Object[] args = TestUtil.toObjects("[\"string\",17, null, true, false, [], -1273123,32131, 1e6, 3.14159, -9223372036854775808, 9223372036854775807]", null);
 
@@ -966,7 +964,7 @@ public class ArrayTest
     }
 
     @Test
-    public void testArrayListSaveAndRestoreGenericJSON() throws Throwable
+    void testArrayListSaveAndRestoreGenericJSON() throws Throwable
     {
         List<Integer> numbers = new ArrayList<>();
         numbers.add(10);
@@ -986,7 +984,7 @@ public class ArrayTest
     }
 
     @Test
-    public void testToEnsureAtEIsWorking() throws Throwable
+    void testToEnsureAtEIsWorking() throws Throwable
     {
         String[] testArray = new String[1];
         testArray[0] = "Test";
@@ -1195,7 +1193,7 @@ public class ArrayTest
     private static final Float _CONST_FLOAT = 56.56f;
     private static final Double _CONST_DOUBLE = 66.66d;
 
-    public static class CharArrayTest
+    static class CharArrayTest
     {
         public Character[] getChars_a()
         {

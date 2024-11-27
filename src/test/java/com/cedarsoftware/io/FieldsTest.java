@@ -218,7 +218,6 @@ public class FieldsTest
         ManyFields testFields = new ManyFields();
         testFields.init();
         String json0 = TestUtil.toJson(testFields);
-        TestUtil.printLine("json0=" + json0);
         Map testFields2 = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
 
         String json1 = TestUtil.toJson(testFields2);

@@ -221,8 +221,6 @@ public abstract class Resolver {
 
     protected abstract void traverseArray(JsonObject jsonObj);
 
-    public abstract void assignField(final JsonObject jsonObj, final Injector injector, final Object rhs);
-
     protected void cleanup() {
         patchUnresolvedReferences();
         rehashMaps();
@@ -575,6 +573,19 @@ public abstract class Resolver {
         return Number.class.isAssignableFrom(type) || converter.isConversionSupportedFor(type, type);
     }
 
+    protected void setArrayElement(Object array, int index, Object element) {
+        try {
+            Array.set(array, index, element);
+        } catch (Exception e) {
+            String elementType = element == null ? "null" : element.getClass().getName();
+            String valueRepresentation = String.valueOf(element);
+            String arrayType = array.getClass().getSimpleName();
+
+            throw new IllegalArgumentException("Cannot set '" + elementType + "' (value: " + valueRepresentation + ") into '" +
+                    arrayType + "' at index " + index + ". Type mismatch between value and array type.");
+        }
+    }
+
     /**
      * Create peer Java object to the passed in root JsonObject.  In the special case that root is an Object[],
      * then create a JsonObject to wrap it, set the passed in Object[] to be the target of the JsonObject, ensure
@@ -597,5 +608,5 @@ public abstract class Resolver {
         }
     }
 
-    abstract Object resolveArray(Class<?> suggestedType, List<Object> list);
+    protected abstract Object resolveArray(Class<?> suggestedType, List<Object> list);
 }

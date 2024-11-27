@@ -219,26 +219,23 @@ public class JsonReader implements Closeable
             throw new JsonIoException(getErrorMessage("error parsing JSON value"), e);
         }
         
-        boolean asMaps = readOptions.isReturningJsonObjects();
+        // Handle JSON [] at root
+        JsonObject rootObj = null;
 
-        // JSON [] at root
         if (returnValue.getClass().isArray()) {
-            JsonObject rootObj = new JsonObject();
+            rootObj = new JsonObject();
             rootObj.setTarget(returnValue);
             rootObj.setItems(returnValue);
+        } else if (returnValue instanceof JsonObject && ((JsonObject) returnValue).isArray()) {
+            rootObj = (JsonObject) returnValue;
+        }
+
+        if (rootObj != null) {
             T graph = resolveObjects(rootObj, rootType);
             if (graph != null) {
                 return graph;
             }
-            return returnValue;
-        }
-
-        if (returnValue instanceof JsonObject && ((JsonObject)returnValue).isArray()) {
-            T graph = resolveObjects((JsonObject)returnValue, rootType);
-            if (graph != null) {
-                return graph;
-            }
-            return (T) ((JsonObject) returnValue).getItems();
+            return (T) rootObj.getItems();
         }
 
         // JSON {} at root
@@ -274,14 +271,13 @@ public class JsonReader implements Closeable
             while (typeToCheck.isArray()) {
                 typeToCheck = typeToCheck.getComponentType();
             }
+            if (resolver.isConvertable(typeToCheck) || typeToCheck == Object.class) {
+                return;
+            }
         }
 
         // Perform the checks on typeToCheck
-        if (getResolver().getConverter().isConversionSupportedFor(typeToCheck, typeToCheck)) {
-            return;
-        }
-
-        if (Number.class.isAssignableFrom(typeToCheck)) {
+        if (getResolver().isConvertable(typeToCheck)) {
             return;
         }
 

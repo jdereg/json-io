@@ -282,7 +282,6 @@ public class ObjectResolver extends Resolver
         }
 
         Object items = jsonObj.getItems();
-
         final Collection col = (Collection) jsonObj.getTarget();
         final boolean isList = col instanceof List;
         int idx = 0;
@@ -296,7 +295,7 @@ public class ObjectResolver extends Resolver
                     col.add(null);
                 } else if ((special = readWithFactoryIfExists(element, null)) != null) {
                     col.add(special);
-                } else if (element instanceof String || element instanceof Boolean || element instanceof Double || element instanceof Long) {
+                } else if (isConvertable(element.getClass())) {
                     // Allow Strings, Booleans, Longs, and Doubles to be "inline" without Java object decoration (@id, @type, etc.)
                     col.add(element);
                 } else if (element.getClass().isArray()) {
@@ -338,7 +337,7 @@ public class ObjectResolver extends Resolver
             }
         }
 
-        jsonObj.clear();   // Reduce memory required during processing
+        jsonObj.setFinished();
     }
 
     /**
@@ -376,13 +375,13 @@ public class ObjectResolver extends Resolver
                 if (compType.isEnum() && special instanceof String) {
                     special = Enum.valueOf(compType, (String) special);
                 }
-                Array.set(array, i, special);
+                setArrayElement(array, i, special);
             } else if (element.getClass().isArray()) {   // Array of arrays
                 if (char[].class == compType) {   // Specially handle char[] because we are writing these
                     // out as UTF-8 strings for compactness and speed.
                     Object[] jsonArray = (Object[]) element;
                     if (jsonArray.length == 0) {
-                        Array.set(array, i, new char[]{});
+                        setArrayElement(array, i, new char[]{});
                     } else {
                         final String value = (String) jsonArray[0];
                         final int numChars = value.length();
@@ -390,7 +389,7 @@ public class ObjectResolver extends Resolver
                         for (int j = 0; j < numChars; j++) {
                             chars[j] = value.charAt(j);
                         }
-                        Array.set(array, i, chars);
+                        setArrayElement(array, i, chars);
                     }
                 } else {
                     // Prep a JsonObject for array[i]
@@ -399,7 +398,7 @@ public class ObjectResolver extends Resolver
                     jsonArray.setHintType(compType);
 
                     // create and set it into enclosing array
-                    Array.set(array, i, createInstance(jsonArray)); // Enclosing [i] assigned to []
+                    setArrayElement(array, i, createInstance(jsonArray));  // Enclosing [i] assigned to []
 
                     // traverse items within this array - if non-primitive
                     push(jsonArray);
@@ -411,14 +410,14 @@ public class ObjectResolver extends Resolver
                 if (ref != null) {    // Connect reference
                     JsonObject refObject = refTracker.getOrThrow(ref);
                     if (refObject.getTarget() != null) {   // Array element with reference to existing object
-                        Array.set(array, i, refObject.getTarget());
+                        setArrayElement(array, i, refObject.getTarget());
                     } else {    // Array with a forward reference as an element
                         unresolvedRefs.add(new UnresolvedReference(jsonObj, i, ref));
                     }
                 } else {    // Convert JSON HashMap to Java Object instance and assign values
                     jsonElement.setHintType(compType);
                     Object arrayElement = createInstance(jsonElement);
-                    Array.set(array, i, arrayElement);
+                    setArrayElement(array, i, arrayElement);
                     boolean isNonRefClass = readOptions.isNonReferenceableClass(arrayElement.getClass());
                     if (!isNonRefClass && !jsonElement.isFinished) {
                         // Skip walking primitives and completed objects.
@@ -427,14 +426,14 @@ public class ObjectResolver extends Resolver
                 }
             } else {
                 if (element instanceof String && ((String) element).trim().isEmpty() && compType != String.class && compType != Object.class) {   // Allow an entry of "" in the array to set the array element to null, *if* the array type is NOT String[] and NOT Object[]
-                    Array.set(array, i, null);
+                    setArrayElement(array, i, null);
                 } else {
-                    Array.set(array, i, element);
+                    setArrayElement(array, i, element);
                 }
             }
         }
-        jsonObj.setFinished();
         jsonObj.clear();
+        jsonObj.setFinished();
     }
 
     /**
@@ -663,7 +662,7 @@ public class ObjectResolver extends Resolver
         return null;
     }
 
-    Object resolveArray(Class<?> suggestedType, List<Object> list)
+    protected Object resolveArray(Class<?> suggestedType, List<Object> list)
     {
         if (suggestedType == null || suggestedType == Object.class) {
             // No suggested type, so use Object[]
@@ -673,9 +672,6 @@ public class ObjectResolver extends Resolver
         JsonObject jsonArray = new JsonObject();
         jsonArray.setTarget(Array.newInstance(suggestedType, list.size()));
         jsonArray.setItems(list.toArray());
-        traverseJsonObject(jsonArray);
-//        jsonArray.setFinished();
-//        return jsonArray.getTarget();
         return jsonArray;
     }
 }

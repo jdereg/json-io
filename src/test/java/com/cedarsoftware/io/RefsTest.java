@@ -233,7 +233,7 @@ class RefsTest
     {
         String json = MetaUtils.loadResourceAsString("references/chainRef.json");
         JsonObject jsonObj = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
-        String christmas = (String) jsonObj.get("date");
+        LocalDate christmas = (LocalDate) jsonObj.get("date");
         Object[] children =  (Object[])jsonObj.get("children");
         assert children.length == 6;
         assert children[0] instanceof JsonObject;

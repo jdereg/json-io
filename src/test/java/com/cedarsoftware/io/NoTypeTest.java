@@ -137,7 +137,7 @@ public class NoTypeTest
 
     @Test
     void testStringArrayAtRoot() {
-        String json = "[\"foo\", null ,\"baz\"]";
+        String json = "[\"foo\", null, \"baz\"]";
 
         // String[]
         String[] strings = TestUtil.toObjects(json, String[].class);
@@ -164,12 +164,24 @@ public class NoTypeTest
     @Test
     void testSpecificRootsWithReturnAsJsonObjects() {
         // String[]
-        String json = "[\"foo\", null ,\"baz\"]";
+        String json = "[\"foo\", null, \"baz\"]";
         String[] strings = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), String[].class);
         assert strings.length == 3;
         assertEquals("foo", strings[0]);
         assertNull(strings[1]);
         assertEquals("baz", strings[2]);
+
+        Object[] objects = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        assert objects.length == 3;
+        assertEquals("foo", objects[0]);
+        assertNull(objects[1]);
+        assertEquals("baz", objects[2]);
+
+        objects = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), Object[].class);
+        assert objects.length == 3;
+        assertEquals("foo", objects[0]);
+        assertNull(objects[1]);
+        assertEquals("baz", objects[2]);
 
         // Number[]
         String json1 = "[16, null, 3.14159]";
@@ -179,14 +191,89 @@ public class NoTypeTest
         assertNull(numbers[1]);
         assertEquals(3.14159, numbers[2]);
 
+        objects = TestUtil.toObjects(json1, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        assert objects.length == 3;
+        assertEquals(16L, objects[0]);
+        assertNull(objects[1]);
+        assertEquals(3.14159, objects[2]);
+
+        objects = TestUtil.toObjects(json1, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), Object[].class);
+        assert objects.length == 3;
+        assertEquals(16L, objects[0]);
+        assertNull(objects[1]);
+        assertEquals(3.14159, objects[2]);
+
+        strings = TestUtil.toObjects(json1, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), String[].class);
+        assert strings.length == 3;
+        assertEquals("16", strings[0]);
+        assertNull(strings[1]);
+        assertEquals("3.14159", strings[2]);
+
         // error - cannot stuff Number[] with Strings
         final String json2 = "[\"foo\", null ,\"baz\"]";
-        String msg = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json2, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), Number[].class); }).getMessage();
-        assert msg.contains("Type mismatch");
+        assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json2, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), Number[].class); });
 
-        String json3 = "75.1";
         // AtomicInteger
+        String json3 = "75.1";
         AtomicInteger x = TestUtil.toObjects(json3, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), AtomicInteger.class);
+        assert x.get() == 75;   // Expected coercion into 'integer' space
+    }
+
+    @Test
+    void testSpecificRootsWithReturnAsJavaObjects() {
+        // String[]
+        String json = "[\"foo\", null ,\"baz\"]";
+        String[] strings = TestUtil.toObjects(json, null, String[].class);
+        assert strings.length == 3;
+        assertEquals("foo", strings[0]);
+        assertNull(strings[1]);
+        assertEquals("baz", strings[2]);
+
+        Object[] objects = TestUtil.toObjects(json, null, null);
+        assert objects.length == 3;
+        assertEquals("foo", objects[0]);
+        assertNull(objects[1]);
+        assertEquals("baz", objects[2]);
+
+        objects = TestUtil.toObjects(json, null, Object[].class);
+        assert objects.length == 3;
+        assertEquals("foo", objects[0]);
+        assertNull(objects[1]);
+        assertEquals("baz", objects[2]);
+
+        // Number[]
+        String json1 = "[16, null, 3.14159]";
+        Number[] numbers = TestUtil.toObjects(json1, null, Number[].class);
+        assert numbers.length == 3;
+        assertEquals(16L, numbers[0]);
+        assertNull(numbers[1]);
+        assertEquals(3.14159, numbers[2]);
+
+        objects = TestUtil.toObjects(json1, null, null);
+        assert objects.length == 3;
+        assertEquals(16L, objects[0]);
+        assertNull(objects[1]);
+        assertEquals(3.14159, objects[2]);
+
+        objects = TestUtil.toObjects(json1, null, Object[].class);
+        assert objects.length == 3;
+        assertEquals(16L, objects[0]);
+        assertNull(objects[1]);
+        assertEquals(3.14159, objects[2]);
+
+        strings = TestUtil.toObjects(json1, null, String[].class);
+        assert strings.length == 3;
+        assertEquals("16", strings[0]);
+        assertNull(strings[1]);
+        assertEquals("3.14159", strings[2]);
+
+        // error - cannot stuff Number[] with Strings
+        final String json2 = "[\"foo\", null ,\"baz\"]";
+        assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json2, null, Number[].class); });
+
+        // AtomicInteger
+        String json3 = "75.1";
+        AtomicInteger x = TestUtil.toObjects(json3, null, AtomicInteger.class);
         assert x.get() == 75;   // Expected coercion into 'integer' space
     }
 

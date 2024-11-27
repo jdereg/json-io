@@ -170,7 +170,10 @@ class JsonParser {
                 JsonObject jObj = readJsonObject(suggestedType);
                 return jObj;
             case '[':
-                Object array = readArray(suggestedType == null ? null : suggestedType.getComponentType());
+                if (suggestedType != null && suggestedType.isArray()) {
+                    suggestedType = suggestedType.getComponentType();
+                }
+                Object array = readArray(suggestedType == null ? null : suggestedType);
                 return array;
             case ']':   // empty array
                 input.pushback(']');
@@ -610,7 +613,7 @@ class JsonParser {
     }
 
     /**
-     * Load the @enum field listed in the JSON
+     * Load the @enum (EnumSet) field listed in the JSON
      *
      * @param value Object should be a String, if not exception is thrown. It is the class of the Enum.
      */
@@ -623,7 +626,7 @@ class JsonParser {
 
         // Only set empty items if no items were specified in JSON
         if (jObj.getItems() == null) {
-            jObj.setItems(new Object[0]);
+            jObj.setItems(new Object[0]);   // Indicate EnumSet (has both @type and @items)
         }
     }
 

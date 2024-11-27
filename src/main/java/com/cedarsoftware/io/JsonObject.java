@@ -5,9 +5,10 @@ import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.IdentityHashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+
+import com.cedarsoftware.util.CompactLinkedMap;
 
 /**
  * This class holds a JSON object in a LinkedHashMap.
@@ -33,7 +34,7 @@ import java.util.Set;
  *         limitations under the License.
  */
 public class JsonObject extends JsonValue implements Map<Object, Object> {
-    private final Map<Object, Object> jsonStore = new LinkedHashMap<>();
+    private final Map<Object, Object> jsonStore = new CompactLinkedMap<>();
     private Integer hash = null;
 
     // Explicit fields for meta data

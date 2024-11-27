@@ -1,9 +1,8 @@
 package com.cedarsoftware.io;
 
 import java.lang.reflect.Array;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.util.Date;
+import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
@@ -91,7 +90,6 @@ public class MapResolver extends Resolver {
                 if (injector != null) {
                     boolean isNonRefClass = readOptions.isNonReferenceableClass(injector.getType());
                     if (isNonRefClass) {
-                        // This will be JsonPrimitive.setValue() in the future (clean)
                         jObj.setValue(converter.convert(jObj.getValue(), injector.getType()));
                         continue;
                     }
@@ -105,14 +103,14 @@ public class MapResolver extends Resolver {
                     push(jObj);
                 }
             } else if (injector != null) {
-                // The code below is 'upgrading' the RHS values in the passed in JsonObject Map
+                // The code below is 'upgrading' the RHS values in the JsonObject Map
                 // by using the @type class name (when specified and exists), to coerce the vanilla
                 // JSON values into the proper types defined by the class listed in @type.  This is
                 // a cool feature of json-io, that even when reading a map-of-maps JSON file, it will
                 // improve the final types of values in the maps RHS, to be of the field type that
                 // was optionally specified in @type.
                 final Class<?> fieldType = injector.getType();
-                if (Primitives.isPrimitive(fieldType) || BigDecimal.class.equals(fieldType) || BigInteger.class.equals(fieldType) || Date.class.equals(fieldType)) {
+                if (converter.isConversionSupportedFor(rhs.getClass(), fieldType)) {
                     Object fieldValue = converter.convert(rhs, fieldType);
                     jsonObj.put(fieldName, fieldValue);
                 } else if (rhs instanceof String) {
@@ -128,15 +126,41 @@ public class MapResolver extends Resolver {
     }
 
     /**
-     * Process java.util.Collection and it's derivatives.  Collections are written specially
-     * so that the serialization does not expose the Collection's internal structure, for
-     * example a TreeSet.  All entries are processed, except unresolved references, which
-     * are filled in later.  For an indexable collection, the unresolved references are set
-     * back into the proper element location.  For non-indexable collections (Sets), the
-     * unresolved references are added via .add().
-     * @param jsonObj a Map-of-Map representation of the JSON input stream.
+     * Handles nested array elements, whether they come as JsonObject instances or raw arrays.
+     *
+     * @param element        The array element to handle.
+     * @param componentType  The immediate component type of the current array level.
+     * @param target         The parent array where the nested array should be assigned.
+     * @param index          The index in the parent array.
      */
-    protected void traverseCollection(final JsonObject jsonObj) {
+    private void handleNestedArray(Object element, Class<?> componentType, Object target, int index) {
+        JsonObject jsonObject = null;
+
+        if (element instanceof JsonObject && ((JsonObject) element).isArray()) {
+            jsonObject = (JsonObject) element;
+        } else if (element != null && element.getClass().isArray()) {
+            jsonObject = new JsonObject();
+            jsonObject.setItems(element);
+        }
+
+        if (jsonObject != null) {
+            if (componentType.isArray()) {
+                // Set the hintType to guide createInstance to instantiate the correct array type
+                jsonObject.setHintType(componentType);
+
+                // Create a new array instance using createInstance, which respects the hintType
+                Object arrayElement = createInstance(jsonObject);
+
+                // Assign the newly created array to the parent array's element
+                setArrayElement(target, index, arrayElement);
+
+            }
+            // Push the JsonObject for further processing
+            push(jsonObject);
+        }
+    }
+
+    protected void traverseArray(JsonObject jsonObj) {
         Object items = jsonObj.getItems();
         if (items == null || Array.getLength(items) == 0) {
             return;
@@ -147,11 +171,11 @@ public class MapResolver extends Resolver {
         final Converter converter = getConverter();
         final int len = Array.getLength(items);
 
-        // Cache the base component type of the array from the target
+        // Determine the immediate component type of the current array level
         Class<?> componentType = Object.class;
         if (jsonObj.getTarget() != null) {
             componentType = jsonObj.getTarget().getClass();
-            while (componentType.isArray()) {
+            if (componentType.isArray()) {
                 componentType = componentType.getComponentType();
             }
         }
@@ -161,15 +185,16 @@ public class MapResolver extends Resolver {
 
             if (element == null) {
                 Array.set(target, i, null);
-            } else if (element.getClass().isArray()) {   // Array element inside Collection
-                JsonObject jsonObject = new JsonObject();
-                jsonObject.setItems(element);
-                push(jsonObject);
-            } else if (converter.isConversionSupportedFor(element.getClass(), componentType)) {
+            } else if (element.getClass().isArray() || (element instanceof JsonObject && ((JsonObject) element).isArray())) {
+                // Handle nested arrays using the unified helper method
+                handleNestedArray(element, componentType, target, i);
+            }
+            else if (converter.isConversionSupportedFor(element.getClass(), componentType)) {
                 // Convert the element to the base component type
                 Object convertedValue = converter.convert(element, componentType);
-                Array.set(target, i, convertedValue);
-            } else if (element instanceof JsonObject) {
+                setArrayElement(target, i, convertedValue);
+            }
+            else if (element instanceof JsonObject) {
                 JsonObject jsonObject = (JsonObject) element;
                 Long refId = jsonObject.getReferenceId();
 
@@ -177,7 +202,8 @@ public class MapResolver extends Resolver {
                     // Convert JsonObject to its destination type if possible
                     Class<?> type = jsonObject.getJavaType();
                     if (type != null && converter.isConversionSupportedFor(Map.class, type)) {
-                        Array.set(target, i, converter.convert(jsonObject, type));
+                        Object converted = converter.convert(jsonObject, type);
+                        setArrayElement(target, i, converted);
                         jsonObject.setFinished();
                     } else {
                         push(jsonObject);
@@ -187,38 +213,172 @@ public class MapResolver extends Resolver {
                     Class<?> type = refObject.getJavaType();
 
                     if (type != null && converter.isConversionSupportedFor(Map.class, type)) {
-                        refObject.setFinishedTarget(converter.convert(refObject, type), true);
-                        Array.set(target, i, refObject.getTarget());
+                        Object convertedRef = converter.convert(refObject, type);
+                        refObject.setFinishedTarget(convertedRef, true);
+                        setArrayElement(target, i, refObject.getTarget());
                     } else {
-                        Array.set(target, i, refObject);
+                        setArrayElement(target, i, refObject);
                     }
                 }
             } else {
-                try {
-                    Array.set(target, i, element);
-                } catch (Exception e) {
-                    String elementType = element.getClass().getName();
-                    String valueRepresentation = String.valueOf(element);
-                    String arrayType = target.getClass().getSimpleName();
-
-                    throw new JsonIoException("Cannot set '" + elementType + "' (value: " + valueRepresentation + ") into '" +
-                            arrayType + "' at index " + i + ". Type mismatch between value and array type.");
-                }
+                setArrayElement(target, i, element);
             }
         }
-        jsonObj.setFinished();
-        jsonObj.setTarget(null);  // Don't waste space (used for typed return, not generic Map return)
         jsonObj.setItems(target);
+        jsonObj.setFinished();
     }
 
-    protected void traverseArray(JsonObject jsonObj) {
-        traverseCollection(jsonObj);
+    /**
+     * Traverse a JsonObject representing a collection (array) and deserialize its elements.
+     *
+     * @param jsonObj The JsonObject representing the collection.
+     */
+    @Override
+    protected void traverseCollection(final JsonObject jsonObj) {
+        if (jsonObj.isFinished) {
+            return;
+        }
+
+        Object items = jsonObj.getItems();
+        Collection<Object> col = (Collection<Object>) jsonObj.getTarget();
+        if (col == null) {
+            col = (Collection<Object>)createInstance(jsonObj);
+        }
+        final boolean isList = col instanceof List;
+        int idx = 0;
+
+        if (items != null) {
+            int len = Array.getLength(items);
+            for (int i=0; i < len; i++) {
+                Object element = Array.get(items, i);
+                Object special;
+                if (element == null) {
+                    col.add(null);
+                } else if (element instanceof String || element instanceof Boolean || element instanceof Double || element instanceof Long) {
+                    // Allow Strings, Booleans, Longs, and Doubles to be "inline" without Java object decoration (@id, @type, etc.)
+                    col.add(element);
+                } else if (element.getClass().isArray()) {
+                    final JsonObject jObj = new JsonObject();
+                    jObj.setHintType(Object.class);
+                    jObj.setItems(element);
+                    createInstance(jObj);
+                    col.add(jObj.getTarget());
+                    push(jObj);
+                } else { // if (element instanceof JsonObject)
+                    final JsonObject jObj = (JsonObject) element;
+                    final Long ref = jObj.getReferenceId();
+
+                    if (ref != null) {
+                        JsonObject refObject = getReferences().getOrThrow(ref);
+
+                        if (refObject.getTarget() != null) {
+                            col.add(refObject.getTarget());
+                        } else {
+                            unresolvedRefs.add(new UnresolvedReference(jsonObj, idx, ref));
+                            if (isList) {   // Index-able collection, so set 'null' as element for now - will be patched in later.
+                                col.add(null);
+                            }
+                        }
+                    } else {
+                        jObj.setHintType(Object.class);
+                        createInstance(jObj);
+                        boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getJavaType());
+                        if (!isNonRefClass) {
+                            traverseSpecificType(jObj);
+                        }
+
+                        if (!(col instanceof EnumSet)) {   // EnumSet has already had it's items added to it.
+                            col.add(jObj.getTarget());
+                        }
+                    }
+                }
+                idx++;
+            }
+        }
+
+        jsonObj.setFinished();
     }
 
-    public void assignField(final JsonObject jsonObj, final Injector injector, final Object rhs) {
+    /**
+     * Overrides the createJavaFromJson method to handle multi-dimensional arrays when rootType is null.
+     *
+     * @param root The root object to create from.
+     * @return The instantiated Java object.
+     */
+    @Override
+    Object createJavaFromJson(Object root) {
+        if (root instanceof Object[]) {
+            int depth = getArrayDepth(root);
+            Object multiDimArray = createMultiDimensionalArray(root, depth);
+            JsonObject array = new JsonObject();
+            array.setTarget(multiDimArray);
+            array.setItems(multiDimArray);
+            push(array);
+            return multiDimArray;
+        } else if (root instanceof JsonObject) {
+            Object ret = createInstance((JsonObject) root);
+            push((JsonObject) root);
+            return ret;
+        } else {
+            return root;
+        }
     }
 
-    Object resolveArray(Class<?> suggestedType, List<Object> list)
+    /**
+     * Determines the depth of a multi-dimensional array.
+     *
+     * @param array The array object.
+     * @return The depth of the array.
+     */
+    private int getArrayDepth(Object array) {
+        if (array == null || !array.getClass().isArray()) {
+            return 0;
+        }
+        int depth = 0;
+        Class<?> arrayClass = array.getClass();
+        while (arrayClass.isArray()) {
+            depth++;
+            arrayClass = arrayClass.getComponentType();
+        }
+        return depth;
+    }
+
+    /**
+     * Recursively creates a multi-dimensional array based on the detected depth.
+     *
+     * @param array The array object.
+     * @param depth The depth of the array.
+     * @return The multi-dimensional array.
+     */
+    private Object createMultiDimensionalArray(Object array, int depth) {
+        if (depth == 1) {
+            return array;
+        }
+        if (array == null || !array.getClass().isArray()) {
+            throw new IllegalArgumentException("Expected an array, but received: " +
+                    (array == null ? "null" : array.getClass().getName()));
+        }
+
+        int length = Array.getLength(array);
+        Class<?> componentType = array.getClass().getComponentType();
+
+        // Create a new array instance with the same component type
+        Object newArray = Array.newInstance(componentType, length);
+
+        for (int i = 0; i < length; i++) {
+            Object elem = Array.get(array, i);
+            if (elem != null && elem.getClass().isArray()) {
+                Object nestedArray = createMultiDimensionalArray(elem, depth - 1);
+                Array.set(newArray, i, nestedArray);
+            } else {
+                Array.set(newArray, i, null);
+            }
+        }
+
+        return newArray;
+    }
+
+    protected Object resolveArray(Class<?> suggestedType, List<Object> list)
     {
         if (suggestedType == null || suggestedType == Object.class) {
             // No suggested type, so use Object[]
@@ -226,11 +386,13 @@ public class MapResolver extends Resolver {
         }
 
         JsonObject jsonArray = new JsonObject();
-        jsonArray.setTarget(Array.newInstance(suggestedType, list.size()));
+        if (Collection.class.isAssignableFrom(suggestedType)) {
+            jsonArray.setHintType(suggestedType);
+            jsonArray.setTarget(createInstance(jsonArray));
+        } else {
+            jsonArray.setTarget(Array.newInstance(suggestedType, list.size()));
+        }
         jsonArray.setItems(list.toArray());
-        traverseJsonObject(jsonArray);
-//        jsonArray.setFinished();
-//        return jsonArray.getTarget();
         return jsonArray;
     }
 }
