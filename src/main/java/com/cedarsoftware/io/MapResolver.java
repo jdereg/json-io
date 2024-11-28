@@ -306,7 +306,7 @@ public class MapResolver extends Resolver {
      * @return The instantiated Java object.
      */
     @Override
-    Object createJavaFromJson(Object root) {
+    public Object createJavaFromJson(Object root) {
         if (root instanceof Object[]) {
             int depth = getArrayDepth(root);
             Object multiDimArray = createMultiDimensionalArray(root, depth);
