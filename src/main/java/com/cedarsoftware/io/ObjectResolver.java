@@ -670,7 +670,12 @@ public class ObjectResolver extends Resolver
         }
 
         JsonObject jsonArray = new JsonObject();
-        jsonArray.setTarget(Array.newInstance(suggestedType, list.size()));
+        if (Collection.class.isAssignableFrom(suggestedType)) {
+            jsonArray.setHintType(suggestedType);
+            jsonArray.setTarget(createInstance(jsonArray));
+        } else {
+            jsonArray.setTarget(Array.newInstance(suggestedType, list.size()));
+        }
         jsonArray.setItems(list.toArray());
         return jsonArray;
     }

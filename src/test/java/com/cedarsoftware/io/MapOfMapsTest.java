@@ -5,11 +5,14 @@ import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Calendar;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
@@ -21,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -110,7 +114,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void testGenericInfoMap()
+    void testGenericInfoMap()
     {
         String className = PointMap.class.getName();
         String json = "{\"@type\":\"" + className + "\",\"points\":{\"@type\":\"java.util.HashMap\",\"@keys\":[{\"x\":10,\"y\":20}],\"@items\":[{\"x\":1,\"y\":2}]}}";
@@ -136,7 +140,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void testGenericMap()
+    void testGenericMap()
     {
         String json = "{\"traits\":{\"ui:attributes\":{\"type\":\"text\",\"label\":\"Risk Type\",\"maxlength\":\"30\"},\"v:max\":\"1\",\"v:min\":\"1\",\"v:regex\":\"[[0-9][a-z][A-Z]]\",\"db:attributes\":{\"selectColumn\":\"QR.RISK_TYPE_REF_ID\",\"table\":\"QUOTE_RISK\",\"tableAlias\":\"QR\",\"column\":\"QUOTE_ID\",\"columnName\":\"QUOTE_ID\",\"columnAlias\":\"c:riskType\",\"joinTable\":\"QUOTE\",\"joinAlias\":\"Q\",\"joinColumn\":\"QUOTE_ID\"},\"r:exists\":true,\"r:value\":\"risk\"}}";
         TestUtil.printLine("json = " + json);
@@ -153,7 +157,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void testGenericArrayWithMap()
+    void testGenericArrayWithMap()
     {
         String json = "[{\"traits\":{\"ui:attributes\":{\"type\":\"text\",\"label\":\"Risk Type\",\"maxlength\":\"30\"},\"v:max\":\"1\",\"v:min\":\"1\",\"v:regex\":\"[[0-9][a-z][A-Z]]\",\"db:attributes\":{\"selectColumn\":\"QR.RISK_TYPE_REF_ID\",\"table\":\"QUOTE_RISK\",\"tableAlias\":\"QR\",\"column\":\"QUOTE_ID\",\"columnName\":\"QUOTE_ID\",\"columnAlias\":\"c:riskType\",\"joinTable\":\"QUOTE\",\"joinAlias\":\"Q\",\"joinColumn\":\"QUOTE_ID\"},\"r:exists\":true,\"r:value\":\"risk\"}},{\"key1\":1,\"key2\":2}]";
         TestUtil.printLine("json = " + json);
@@ -176,7 +180,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void testRhsPrimitiveTypesAreCoercedWhenTypeIsPresent()
+    void testRhsPrimitiveTypesAreCoercedWhenTypeIsPresent()
     {
         // This test ensures that if @type information is written into the JSON, even if it is read
         // using jsonToMaps(), the type info will be used to correct the RHS values from default
@@ -207,7 +211,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void testMapOfMapsSimpleArray()
+    void testMapOfMapsSimpleArray()
     {
         String s = "[{\"@ref\":1},{\"name\":\"Jack\",\"age\":21,\"@id\":1}]";
         Object[] list = TestUtil.toObjects(s, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
@@ -215,7 +219,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void testMapOfMapsWithFieldAndArray()
+    void testMapOfMapsWithFieldAndArray()
     {
         String s = "[{\"name\":\"Jack\",\"age\":21,\"@id\":1},{\"@ref\":1},{\"@ref\":2},{\"husband\":{\"@ref\"" +
                 ":1}},{\"wife\":{\"@ref\":2}},{\"attendees\":[{\"@ref\":1},{\"@ref\":2}]},{\"name\":\"Jill\",\"age\"" +
@@ -245,19 +249,18 @@ class MapOfMapsTest
     }
 
     @Test
-    public void testMapOfMapsMap()
+    void testMapOfMapsMap()
     {
-        Map stuff = new TreeMap();
+        Map<Object, Object> stuff = new TreeMap<>();
         stuff.put("a", "alpha");
         Object testObj = new TestObject("test object");
         stuff.put("b", testObj);
         stuff.put("c", testObj);
         stuff.put(testObj, 1.0f);
         String json = TestUtil.toJson(stuff);
-        TestUtil.printLine("json=" + json);
 
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
-        TestUtil.printLine("map=" + map);
+        Map<Object, Object> map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+
         Object aa = map.get("a");
         Map bb = (Map) map.get("b");
         Map cc = (Map) map.get("c");
@@ -266,11 +269,84 @@ class MapOfMapsTest
         assertEquals("test object", bb.get("_name"));
         assertNull(bb.get("_other"));
         assertEquals(bb, cc);
-        assertEquals(4, map.size());// contains @type entry
+        assertEquals(4, map.size());// contains a, b, c, and TestObject as keys
     }
 
     @Test
-    public void testMapOfMapsPrimitivesInArray()
+    void testMapOfMapsSet()
+    {
+        Comparator<Object> mixedTypeComparator = (o1, o2) -> {
+            if (o1 == o2) {
+                return 0;
+            }
+            if (o1 == null) {
+                return -1;
+            }
+            if (o2 == null) {
+                return 1;
+            }
+
+            // Compare based on class names to group different types together
+            String className1 = o1.getClass().getName();
+            String className2 = o2.getClass().getName();
+            int classComparison = className1.compareTo(className2);
+            if (classComparison != 0) {
+                return classComparison;
+            }
+
+            // If both objects are of the same type and implement Comparable, use their natural ordering
+            if (o1 instanceof Comparable && o2 instanceof Comparable) {
+                try {
+                    return ((Comparable<Object>) o1).compareTo(o2);
+                } catch (ClassCastException e) {
+                    // If objects are not mutually comparable, fallback to class name comparison
+                    return classComparison;
+                }
+            }
+
+            // Fallback to class name comparison if natural ordering is not possible
+            return classComparison;
+        };
+        Set<Object> stuff = new TreeSet<>(mixedTypeComparator);
+        stuff.add("a");
+        Object testObj = new TestObject("b");
+        stuff.add(testObj);
+        stuff.add("c");
+        String json = TestUtil.toJson(stuff);
+
+        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Object[] items = (Object[])((JsonObject)map).getItems();
+        assert items.length == 3;
+        assertEquals(((JsonObject)items[0]).get("_name"), "b");
+        assertEquals("a", items[1]);
+        assertEquals("c", items[2]);
+    }
+
+    @Test
+    void testReturnJsonObjectsDoesNotConvertRootWhenRootTypeIsNull()
+    {
+        TestObject kid = new TestObject("kid");
+        Object testObj = new TestObject("test object", kid);
+        String json = TestUtil.toJson(testObj);
+        
+        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        assert map instanceof JsonObject;   // Not TestObject
+        assertEquals("test object", map.get("_name"));
+        assert map.get("_other") instanceof Map;
+
+        assertThrows(JsonIoException.class, () -> {TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), TestObject.class); });
+
+        TestObject testObj1 = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        assert DeepEquals.deepEquals(testObj, testObj1);
+        assert testObj1._other instanceof TestObject;
+
+        testObj1 = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), TestObject.class);
+        assert DeepEquals.deepEquals(testObj, testObj1);
+        assert testObj1._other instanceof TestObject;
+    }
+
+    @Test
+    void testMapOfMapsPrimitivesInArray()
     {
         Date date = new Date();
         Calendar cal = Calendar.getInstance();
@@ -289,7 +365,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void testBadInputForMapAPI()
+    void testBadInputForMapAPI()
     {
         Object o = null;
         try
@@ -306,7 +382,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void testToMaps()
+    void testToMaps()
     {
         JsonObject map = TestUtil.toObjects("{\"num\":0,\"nullValue\":null,\"string\":\"yo\"}", new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         assertNotNull(map);
@@ -320,7 +396,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void testUntyped()
+    void testUntyped()
     {
         String json = "{\"age\":46,\"name\":\"jack\",\"married\":false,\"salary\":125000.07,\"notes\":null,\"address1\":{\"@ref\":77},\"address2\":{\"@id\":77,\"street\":\"1212 Pennsylvania ave\",\"city\":\"Washington\"}}";
         Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
@@ -338,7 +414,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void writeJsonObjectMapWithStringKeys()
+    void writeJsonObjectMapWithStringKeys()
     {
         String json = "{\n  \"@type\":\"LinkedHashMap\",\n  \"age\":\"36\",\n  \"name\":\"chris\"\n}";
         Map<String, String> map1 = new LinkedHashMap<>(2);
@@ -357,7 +433,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void writeMapWithStringKeys()
+    void writeMapWithStringKeys()
     {
         String json = "{\"@type\":\"LinkedHashMap\",\"age\":\"36\",\"name\":\"chris\"}";
         Map<String, String> map1 = new LinkedHashMap<>(2);
@@ -373,7 +449,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void testJsonObjectToJava()
+    void testJsonObjectToJava()
     {
         TestObject test = new TestObject("T.O.");
         TestObject child = new TestObject("child");
@@ -387,7 +463,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void testLongKeyedMap()
+    void testLongKeyedMap()
     {
         Map<Long, String> map = new LinkedHashMap<>(5);
         map.put(0L, "alpha");
@@ -404,7 +480,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void testBooleanKeyedMap()
+    void testBooleanKeyedMap()
     {
         Map<Boolean, String> map = new LinkedHashMap<>(2);
         map.put(false, "alpha");
@@ -418,7 +494,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void testDoubleKeyedMap()
+    void testDoubleKeyedMap()
     {
         Map<Double, String> map = new LinkedHashMap<>(3);
         map.put(0.0d, "alpha");
@@ -434,7 +510,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void testStringKeyedMap()
+    void testStringKeyedMap()
     {
         Map<String, Long> map = new LinkedHashMap<>(3);
         map.put("alpha", 0L);
@@ -452,7 +528,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void testCircularReference()
+    void testCircularReference()
     {
         TestObject a = new TestObject("a");
         TestObject b = new TestObject("b");
@@ -473,7 +549,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void testRefsInMapOfMaps()
+    void testRefsInMapOfMaps()
     {
         Person p = new Person();
         p.setName("Charlize Theron");
@@ -497,7 +573,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void testRefToArrayInMapOfMaps()
+    void testRefToArrayInMapOfMaps()
     {
         Person p = new Person();
         p.setName("Charlize Theron");
@@ -530,7 +606,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void testSkipNullFieldsMapOfMaps()
+    void testSkipNullFieldsMapOfMaps()
     {
         String json = "{\"first\":\"Sam\",\"middle\":null,\"last\":\"Adams\"}";
         Map person = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), Map.class);
@@ -551,7 +627,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void testSkipNullFieldsMapOfMaps2()
+    void testSkipNullFieldsMapOfMaps2()
     {
         String json = "{\"first\":\"Sam\",\"middle\":null,\"last\":\"Adams\"}";
         Map person = TestUtil.toObjects(json, new ReadOptionsBuilder()
@@ -567,7 +643,7 @@ class MapOfMapsTest
     }
 
     @Test
-    public void testSkipNullFieldsTyped()
+    void testSkipNullFieldsTyped()
     {
         Person p = new Person();
         p.setName("Sam Adams");

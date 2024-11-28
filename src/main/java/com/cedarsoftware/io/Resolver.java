@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.cedarsoftware.io.JsonReader.MissingFieldHandler;
-import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.convert.Converter;
 
 /**
@@ -46,7 +45,7 @@ public abstract class Resolver {
     final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
     private final Map<Object, Object> visited = new IdentityHashMap<>();
     protected final Deque<JsonObject> stack = new ArrayDeque<>();
-    private final Collection<Object[]> prettyMaps = new ArrayList<>();
+    private final Collection<JsonObject> mapsToRehash = new ArrayList<>();
     // store the missing field found during deserialization to notify any client after the complete resolution is done
     final Collection<Missingfields> missingFields = new ArrayList<>();
     private ReadOptions readOptions;
@@ -226,7 +225,7 @@ public abstract class Resolver {
         rehashMaps();
         references.clear();
         unresolvedRefs.clear();
-        prettyMaps.clear();
+        mapsToRehash.clear();
         handleMissingFields();
         missingFields.clear();
         stack.clear();
@@ -268,7 +267,7 @@ public abstract class Resolver {
 
         // Save these for later so that unresolved references inside keys or values
         // get patched first, and then build the Maps.
-        prettyMaps.add(new Object[]{jsonObj, keys, items});
+        mapsToRehash.add(jsonObj);
     }
 
     private void buildCollection(Object arrayContent) {
@@ -506,11 +505,8 @@ public abstract class Resolver {
      * and you would need to provide a custom reader for that set.
      */
     private void rehashMaps() {
-        final boolean useMapsLocal = readOptions.isReturningJsonObjects();
-
-        for (Object[] mapPieces : prettyMaps) {
-            JsonObject jsonObj = (JsonObject) mapPieces[0];
-            jsonObj.rehashMaps(useMapsLocal, (Object[]) mapPieces[1], (Object[]) mapPieces[2]);
+        for (JsonObject jsonObj : mapsToRehash) {
+            jsonObj.rehashMaps();
         }
     }
 
@@ -592,7 +588,7 @@ public abstract class Resolver {
      * that the root Object[] items are copied to the JsonObject, and then return the JsonObject wrapper.  If
      * called with a primitive (anything else), just return it.
      */
-    Object createJavaFromJson(Object root) {
+    public Object createJavaFromJson(Object root) {
         if (root instanceof Object[]) {
             JsonObject array = new JsonObject();
             array.setTarget(root);

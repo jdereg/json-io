@@ -146,12 +146,10 @@ class RootsTest
         ZonedDateTime zdt = ZonedDateTime.parse("2024-04-22T01:34:57.170836-04:00[America/New_York]");
         String json = TestUtil.toJson(zdt, new WriteOptionsBuilder().build());
 
-        assertThatThrownBy(() -> { ZonedDateTime zdt2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
+        ZonedDateTime zdt1 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
                 .build(), null);
-        })
-                .isInstanceOf(ClassCastException.class)
-                .hasMessageContaining("com.cedarsoftware.io.JsonObject cannot be cast");
+        assertEquals(zdt, zdt1);
 
         // When forced, it's ok.
         ZonedDateTime zdt2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
@@ -163,14 +161,12 @@ class RootsTest
     @Test
     void testRootConvertableJsonPrimitiveCousinConvertsToJavaAtomicLong()
     {
-        Number number = new AtomicLong(16);
+        AtomicLong number = new AtomicLong(16);
         String json = TestUtil.toJson(number, new WriteOptionsBuilder().build());
-        Object what = TestUtil.toObjects(json, new ReadOptionsBuilder()
+        Long what = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
                 .build(), null);
-        assert what instanceof JsonObject;
-        Map<?,?> map = (Map<?,?>) what;
-        assert map.get("value").equals(16L);
+        assertEquals(number.get(), what);
 
         // Specifying root of AtomicLong.class below "trumps" returnAsNativeJsonObjects()
         Number number2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
@@ -194,12 +190,11 @@ class RootsTest
     {
         Number number = Byte.valueOf("16");
         String json = TestUtil.toJson(number, new WriteOptionsBuilder().build());
+        
         Object what = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
                 .build(), null);
-        assert what instanceof JsonObject;
-        Map<?,?> map = (Map<?,?>) what;
-        assert map.get("value").equals(16L);
+        assertEquals((byte)16, what);
 
         Number number2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
@@ -222,12 +217,10 @@ class RootsTest
     {
         OffsetDateTime odt = OffsetDateTime.parse("2024-04-27T22:11:01-08:00");
         String json = TestUtil.toJson(odt, new WriteOptionsBuilder().build());
-        Object what = TestUtil.toObjects(json, new ReadOptionsBuilder()
+        OffsetDateTime what = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
                 .build(), null);
-        assert what instanceof JsonObject;
-        Map<?,?> map = (Map<?,?>) what;
-        assert map.get("value").equals(odt.toString());
+        assertEquals(odt, what);
 
         OffsetDateTime odt2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
@@ -306,12 +299,11 @@ class RootsTest
     void testRootConvertableJsonPrimitiveCousinConvertsToJavaStringBuilder()
     {
         String json = "{\"@type\":\"StringBuilder\",\"value\":\"json-io\"}";
+
         Object what = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
                 .build(), null);
-        assert what instanceof JsonObject;
-        Map<?,?> map = (Map<?,?>) what;
-        assert map.get("value").equals("json-io");
+        assertEquals("json-io", what);
 
         StringBuilder b2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()

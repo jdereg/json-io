@@ -36,6 +36,9 @@ public class TestObject implements Comparable, Serializable
 
     public int compareTo(Object that)
     {
+        if (that instanceof String) {
+            return _name.compareTo((String) that);
+        }
         if (!(that instanceof TestObject))
         {
             return 1;

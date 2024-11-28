@@ -296,19 +296,20 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         return new AbstractMap.SimpleImmutableEntry<>(keys, items);
     }
 
-    void rehashMaps(boolean useMapsLocal, Object[] keyz, Object[] itemz) {
-        Map<Object, Object> targetMap = useMapsLocal ? this : (Map<Object, Object>) target;
-        Object sourceKeys = useMapsLocal ? getKeys() : keyz;
-        Object sourceValues = useMapsLocal ? getItems() : itemz;
-
-        jsonStore.clear();
-        keys = null;
-        items = null;
+    void rehashMaps() {
+        Map<Object, Object> targetMap = (Map<Object, Object>) target;
         hash = null;
 
-        int len = Array.getLength(sourceKeys);
+        int len = Array.getLength(keys);
         for (int i = 0; i < len; i++) {
-            targetMap.put(Array.get(sourceKeys, i), Array.get(sourceValues, i));
+            Object key = Array.get(keys, i);
+            Object value = Array.get(items, i);
+            put(key, value);
+            if (targetMap != null) {
+                targetMap.put(key, value);
+            }
         }
+        keys = null;
+        items = null;
     }
 }

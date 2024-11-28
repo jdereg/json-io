@@ -3,13 +3,27 @@ package com.cedarsoftware.io;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.NavigableSet;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.UUID;
+import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -21,11 +35,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-public class JsonIoCastingTests {
+class JsonIoCastingTests {
 
     // Basic primitive and object type tests
     @Test
-    public void testPrimitiveNumberCasting() {
+    void testPrimitiveNumberCasting() {
         ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
 
         // Integer types
@@ -41,7 +55,7 @@ public class JsonIoCastingTests {
     }
 
     @Test
-    public void testComplexNumberCasting() {
+    void testComplexNumberCasting() {
         ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
 
         // BigInteger & BigDecimal
@@ -57,7 +71,7 @@ public class JsonIoCastingTests {
     }
 
     @Test
-    public void testStringCasting() {
+    void testStringCasting() {
         ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
 
         assertEquals("test", TestUtil.toObjects("\"test\"", options, null));
@@ -66,7 +80,7 @@ public class JsonIoCastingTests {
     }
 
     @Test
-    public void testDateAndUUIDCasting() {
+    void testDateAndUUIDCasting() {
         ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
 
         UUID uuid = UUID.randomUUID();
@@ -80,7 +94,7 @@ public class JsonIoCastingTests {
 
     // Array tests
     @Test
-    public void testSimpleArrayCasting() {
+    void testSimpleArrayCasting() {
         ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
 
         // Object array with mixed types
@@ -99,7 +113,7 @@ public class JsonIoCastingTests {
     }
 
     @Test
-    public void testNestedArrayCasting() {
+    void testNestedArrayCasting() {
         ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
 
         // Nested arrays with nulls
@@ -112,7 +126,7 @@ public class JsonIoCastingTests {
 
     // Collection tests
     @Test
-    public void testCollectionCasting() {
+    void testCollectionCasting() {
         ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
 
         // List
@@ -132,7 +146,7 @@ public class JsonIoCastingTests {
     }
 
     @Test
-    public void testNestedCollectionCasting() {
+    void testNestedCollectionCasting() {
         ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
 
         // Nested List with mixed types and nulls
@@ -146,7 +160,7 @@ public class JsonIoCastingTests {
     }
 
     @Test
-    public void testNestedArrayCastingVariations() {
+    void testNestedArrayCastingVariations() {
         ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
 
         // Test 1: Basic nested array without type specification
@@ -184,7 +198,7 @@ public class JsonIoCastingTests {
     }
 
     @Test
-    public void testPrimitiveArrayCasting() {
+    void testPrimitiveArrayCasting() {
         ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
 
         // Test primitive array casting
@@ -202,7 +216,7 @@ public class JsonIoCastingTests {
     }
 
     @Test
-    public void testNestedArrayWithTypeCoercion() {
+    void testNestedArrayWithTypeCoercion() {
         ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
 
         // Test coercion of string numbers to Long
@@ -213,7 +227,7 @@ public class JsonIoCastingTests {
     }
 
     @Test
-    public void testDeeplyNestedArrayCasting() {
+    void testDeeplyNestedArrayCasting() {
         ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
 
         // Triple nested arrays
@@ -225,7 +239,7 @@ public class JsonIoCastingTests {
     }
 
     @Test
-    public void testMixedNestedArrayCasting() {
+    void testMixedNestedArrayCasting() {
         ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
 
         // Nested arrays with mixed types and nulls
@@ -234,5 +248,133 @@ public class JsonIoCastingTests {
         Object[][] result = TestUtil.toObjects(json, options, Object[][].class);
         assertArrayEquals(expected, result);
         assert DeepEquals.deepEquals(expected, result);
+    }
+
+    @Test
+    void testSpecificCollectionTypes() {
+        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+
+        // TreeSet (maintains natural order)
+        String json = "[3, 1, 2, 5, 4]";
+        TreeSet<Long> treeSetResult = TestUtil.toObjects(json, options, TreeSet.class);
+        assertEquals(Arrays.asList(1L, 2L, 3L, 4L, 5L), new ArrayList<>(treeSetResult));
+
+        // LinkedHashSet (maintains insertion order)
+        LinkedHashSet<Long> linkedSetResult = TestUtil.toObjects(json, options, LinkedHashSet.class);
+        assertEquals(Arrays.asList(3L, 1L, 2L, 5L, 4L), new ArrayList<>(linkedSetResult));
+
+        // ConcurrentSkipListSet (thread-safe sorted set)
+        ConcurrentSkipListSet<Long> concurrentSetResult = TestUtil.toObjects(json, options, ConcurrentSkipListSet.class);
+        assertEquals(Arrays.asList(1L, 2L, 3L, 4L, 5L), new ArrayList<>(concurrentSetResult));
+
+        // CopyOnWriteArraySet (thread-safe set)
+        CopyOnWriteArraySet<Long> cowSetResult = TestUtil.toObjects(json, options, CopyOnWriteArraySet.class);
+        assertEquals(new HashSet<>(Arrays.asList(3L, 1L, 2L, 5L, 4L)), new HashSet<>(cowSetResult));
+    }
+
+    @Test
+    void testSpecificListTypes() {
+        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+
+        String json = "[1, 2, 3]";
+
+        // LinkedList
+        LinkedList<Long> linkedListResult = TestUtil.toObjects(json, options, LinkedList.class);
+        assertEquals(Arrays.asList(1L, 2L, 3L), linkedListResult);
+
+        // Vector (synchronized)
+        Vector<Long> vectorResult = TestUtil.toObjects(json, options, Vector.class);
+        assertEquals(Arrays.asList(1L, 2L, 3L), vectorResult);
+
+        // CopyOnWriteArrayList (thread-safe)
+        CopyOnWriteArrayList<Long> cowListResult = TestUtil.toObjects(json, options, CopyOnWriteArrayList.class);
+        assertEquals(Arrays.asList(1L, 2L, 3L), cowListResult);
+    }
+
+    @Test
+    void testMapTypes() {
+        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+
+        // Basic HashMap
+        String json = "{\"a\":1, \"b\":2, \"c\":3}";
+        Map<String, Long> mapResult = TestUtil.toObjects(json, options, Map.class);
+        assertEquals(3, mapResult.size());
+        assertEquals(1L, mapResult.get("a"));
+        assertEquals(2L, mapResult.get("b"));
+        assertEquals(3L, mapResult.get("c"));
+
+        // TreeMap (sorted by keys)
+        TreeMap<String, Long> treeMapResult = TestUtil.toObjects(json, options, TreeMap.class);
+        assertEquals(Arrays.asList("a", "b", "c"), new ArrayList<>(treeMapResult.keySet()));
+
+        // LinkedHashMap (maintains insertion order)
+        LinkedHashMap<String, Long> linkedMapResult = TestUtil.toObjects(json, options, LinkedHashMap.class);
+        assertEquals(Arrays.asList("a", "b", "c"), new ArrayList<>(linkedMapResult.keySet()));
+
+        // ConcurrentHashMap (thread-safe)
+        ConcurrentHashMap<String, Long> concurrentMapResult = TestUtil.toObjects(json, options, ConcurrentHashMap.class);
+        assertEquals(3, concurrentMapResult.size());
+        assertEquals(1L, concurrentMapResult.get("a"));
+    }
+
+    @Test
+    void testNestedMapsAndCollections() {
+        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+
+        // Map with nested collections
+        String json = "{\"list\":[1,2,3], \"set\":[4,5,6], \"map\":{\"x\":7,\"y\":8}}";
+        Map<String, Object> result = TestUtil.toObjects(json, options, Map.class);
+
+        assert DeepEquals.deepEquals(new Object[] {1L, 2L, 3L}, result.get("list"));
+        assert DeepEquals.deepEquals(new Object[] {4L, 5L, 6L}, result.get("set"));
+
+        @SuppressWarnings("unchecked")
+        Map<String, Long> nestedMap = (Map<String, Long>) result.get("map");
+        assertEquals(7L, nestedMap.get("x"));
+        assertEquals(8L, nestedMap.get("y"));
+    }
+
+    @Test
+    void testComplexMapStructures() {
+        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+
+        // Map with mixed value types
+        String json = "{\"string\":\"text\", \"number\":42, \"boolean\":true, \"null\":null, \"array\":[1,2,3]}";
+        Map<String, Object> result = TestUtil.toObjects(json, options, Map.class);
+
+        assertEquals("text", result.get("string"));
+        assertEquals(42L, result.get("number"));
+        assertEquals(true, result.get("boolean"));
+        assertNull(result.get("null"));
+        assert DeepEquals.deepEquals(new Object[] {1L, 2L, 3L}, result.get("array"));
+
+        // Nested maps
+        String nestedJson = "{\"level1\":{\"level2\":{\"level3\":\"value\"}}}";
+        Map<String, Object> nestedResult = TestUtil.toObjects(nestedJson, options, Map.class);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> level1 = (Map<String, Object>) nestedResult.get("level1");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> level2 = (Map<String, Object>) level1.get("level2");
+        assertEquals("value", level2.get("level3"));
+    }
+
+    @Test
+    void testNavigableCollections() {
+        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+
+        // NavigableSet
+        String setJson = "[5,2,8,1,9]";
+        NavigableSet<Long> navSetResult = TestUtil.toObjects(setJson, options, NavigableSet.class);
+        assertEquals(1L, navSetResult.first());
+        assertEquals(9L, navSetResult.last());
+        assertEquals(5L, navSetResult.ceiling(4L));
+
+        // NavigableMap
+        String mapJson = "{\"a\":1,\"c\":3,\"b\":2}";
+        NavigableMap<String, Long> navMapResult = TestUtil.toObjects(mapJson, options, NavigableMap.class);
+        assertEquals("a", navMapResult.firstKey());
+        assertEquals("c", navMapResult.lastKey());
+        assertEquals("b", navMapResult.ceilingKey("b"));
     }
 }

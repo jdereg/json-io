@@ -117,16 +117,11 @@ public class LocaleTest
     }
 
     @Test
-    void testLocaleInMapOfMaps()
-    {
+    void testLocaleInMapOfMaps() {
         Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
         String json = TestUtil.toJson(locale);
-        TestUtil.printLine("json=" + json);
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
-
-        assertThat(map)
-                .hasSize(1)
-                .containsEntry("value", "en-US");
+        Locale locale1 = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        assertEquals(locale, locale1);
     }
 
     @Test
