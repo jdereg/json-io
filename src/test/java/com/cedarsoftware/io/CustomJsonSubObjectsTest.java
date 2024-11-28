@@ -116,7 +116,7 @@ class CustomJsonSubObjectsTest
 	}
 
 	@Test
-	void testCustomReaderSimple()
+	void testCustomReaderSimpleJavaMode()
 	{
 		// You do not need to create all the aliases, I did that to make the JSON look cleaner.
 		ReadOptionsBuilder readOptions = new ReadOptionsBuilder()
@@ -151,7 +151,6 @@ class CustomJsonSubObjectsTest
 
 		assert DeepEquals.deepEquals(p1, p2);
 	}
-
 
 	/* Here's the JSON that was Written/Read
 	{

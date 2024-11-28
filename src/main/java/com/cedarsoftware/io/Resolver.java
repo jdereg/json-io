@@ -589,7 +589,7 @@ public abstract class Resolver {
      * called with a primitive (anything else), just return it.
      */
     public Object createJavaFromJson(Object root) {
-        if (root instanceof Object[]) {
+        if (root != null && root.getClass().isArray()) {
             JsonObject array = new JsonObject();
             array.setTarget(root);
             array.setItems(root);

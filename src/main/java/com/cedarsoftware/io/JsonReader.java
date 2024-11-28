@@ -24,6 +24,7 @@ import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.FastByteArrayInputStream;
 import com.cedarsoftware.util.FastReader;
 import com.cedarsoftware.util.convert.Converter;
+import com.cedarsoftware.util.convert.DefaultConverterOptions;
 
 /**
  * Read an object graph in JSON format and make it available in Java objects, or
@@ -188,6 +189,7 @@ public class JsonReader implements Closeable
         this(input, readOptions, new DefaultReferenceTracker());
     }
 
+    static boolean oneshot = true;
     public JsonReader(InputStream inputStream, ReadOptions readOptions, ReferenceTracker references) {
         this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
         Converter converter = new Converter(this.readOptions.getConverterOptions());
@@ -198,6 +200,12 @@ public class JsonReader implements Closeable
         this.parser = new JsonParser(this.input, this.resolver);
         localConverter = new Converter(this.readOptions.getConverterOptions());
         setupLocalConverter();
+        if (oneshot) {
+            oneshot = !oneshot;
+            String json = JsonIo.toJson(localConverter.getSupportedConversions(), new WriteOptionsBuilder().prettyPrint(true).showTypeInfoNever().build());
+            System.out.println("json-io supported conversions (source type to target types):");
+            System.out.println(json);
+        }
     }
 
     /**
