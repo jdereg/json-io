@@ -8,6 +8,7 @@ import com.cedarsoftware.io.models.MismatchedGetter;
 import com.cedarsoftware.io.models.ObjectSerializationIssue;
 import com.cedarsoftware.io.reflect.models.Permission;
 import com.cedarsoftware.io.reflect.models.SecurityGroup;
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -141,6 +142,6 @@ class SerializationErrorTests {
     }
 
     private String loadJsonForTest(String fileName) {
-        return MetaUtils.loadResourceAsString("errors/" + fileName);
+        return ClassUtilities.loadResourceAsString("errors/" + fileName);
     }
 }

@@ -1,8 +1,6 @@
 package com.cedarsoftware.io;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
@@ -12,8 +10,8 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.net.URI;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -23,7 +21,6 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
@@ -50,11 +47,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.ExceptionUtilities;
+import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
 import static java.lang.reflect.Modifier.isProtected;
@@ -91,7 +87,6 @@ public class MetaUtils {
     private static Unsafe unsafe;
     private static final Map<Class<?>, Supplier<Object>> DIRECT_CLASS_MAPPING = new HashMap<>();
     private static final Map<Class<?>, Supplier<Object>> ASSIGNABLE_CLASS_MAPPING = new LinkedHashMap<>();
-    private static final Pattern extraQuotes = Pattern.compile("^\"*(.*?)\"*$");
 
     static {
         DIRECT_CLASS_MAPPING.put(Date.class, Date::new);
@@ -109,7 +104,8 @@ public class MetaUtils {
         DIRECT_CLASS_MAPPING.put(AtomicBoolean.class, AtomicBoolean::new);
         DIRECT_CLASS_MAPPING.put(AtomicInteger.class, AtomicInteger::new);
         DIRECT_CLASS_MAPPING.put(AtomicLong.class, AtomicLong::new);
-        DIRECT_CLASS_MAPPING.put(URL.class, () -> safelyIgnoreException(() -> new URL("http://localhost"), null));
+        DIRECT_CLASS_MAPPING.put(URL.class, () -> ExceptionUtilities.safelyIgnoreException(() -> new URL("http://localhost"), null));
+        DIRECT_CLASS_MAPPING.put(URI.class, () -> ExceptionUtilities.safelyIgnoreException(() -> new URI("http://localhost"), null));
         DIRECT_CLASS_MAPPING.put(Object.class, Object::new);
         DIRECT_CLASS_MAPPING.put(String.class, () -> "");
         DIRECT_CLASS_MAPPING.put(BigInteger.class, () -> BigInteger.ZERO);
@@ -174,13 +170,13 @@ public class MetaUtils {
         return null;
     }
 
-    static void throwIfSecurityConcern(Class<?> securityConcern, Class<?> c) {
+    private static void throwIfSecurityConcern(Class<?> securityConcern, Class<?> c) {
         if (securityConcern.isAssignableFrom(c)) {
-            throw new JsonIoException("For security reasons, json-io does not allow instantiation of: " + securityConcern.getName());
+            throw new IllegalArgumentException("For security reasons, json-io does not allow instantiation of: " + securityConcern.getName());
         }
     }
 
-    static Object getArgForType(Converter converter, Class<?> argType) {
+    private static Object getArgForType(Converter converter, Class<?> argType) {
         if (Primitives.isPrimitive(argType)) {
             return converter.convert(null, argType);  // Get the defaults (false, 0, 0.0d, etc.)
         }
@@ -402,26 +398,55 @@ public class MetaUtils {
     }
 
     /**
-     * Create a new instance of the passed in class c.  You can optionally pass in argument values that will
-     * be best-matched to a constructor on c.  You can pass in null or an empty list, in which case, other
-     * techniques will be used to attempt to instantiate the class.  For security reasons, Process, ClassLoader,
-     * ProcessBuilder, Constructor, Method, and Field cannot be instantiated.
-     * @param c Class to instantiate.
-     * @param argumentValues List of values to supply to a constructor on 'c'.  The constructor chosen on 'c'
-     *                       will be the one with a combination of the most fields that are satisfied with
-     *                       non-null values from the 'argumentsValues.'  The method will attempt to use values
-     *                       from the list as constructor arguments for the passed in class c, ordering them
-     *                       to best-fit the constructor, by matching the class type of the argument values
-     *                       to the class types of the parameters on 'c' constructors.  It will use all
-     *                       constructors exhaustively, until it is successful.  If not, then it will look at
-     *                       the 'unsafe' setting and attempt to use that.
-     * @return an instance of the passed in class.
-     * @throws JsonIoException if it could not instantiate the passed in class.  In that case, it is best to
-     * create a ClassFactory for this specific class, and add that to the ReadOptions as an instantiator
-     * that is associated to the class 'c'.  In the ClassFactory, the JsonObject containing the data from the
-     * associated JsonObject { } is passed in, allowing you to instantiate and load the values in one operation.
-     * If you do that, and no further sub-objects exist, or you load the sub-objects in your ClassFactory,
-     * make sure to return 'true' for isObjectFinal().
+     * Create a new instance of the specified class, optionally using provided constructor arguments.
+     * <p>
+     * This method attempts to instantiate a class using the following strategies in order:
+     * <ol>
+     *     <li>Using cached constructor information from previous successful instantiations</li>
+     *     <li>Matching constructor parameters with provided argument values</li>
+     *     <li>Using default values for unmatched parameters</li>
+     *     <li>Using unsafe instantiation (if enabled)</li>
+     * </ol>
+     *
+     * <p>Constructor selection prioritizes:
+     * <ul>
+     *     <li>Public over non-public constructors</li>
+     *     <li>Protected over private constructors</li>
+     *     <li>Constructors with more non-null argument matches</li>
+     *     <li>Constructors with more parameters</li>
+     * </ul>
+     *
+     * @param converter Converter instance used to convert null values to appropriate defaults for primitive types
+     * @param c Class to instantiate
+     * @param argumentValues Optional collection of values to match to constructor parameters. Can be null or empty.
+     * @return A new instance of the specified class
+     * @throws IllegalArgumentException if:
+     *         <ul>
+     *             <li>The class cannot be instantiated</li>
+     *             <li>The class is a security-sensitive class (Process, ClassLoader, etc.)</li>
+     *             <li>The class is an unknown interface</li>
+     *         </ul>
+     * @throws IllegalStateException if constructor invocation fails
+     *
+     * <p><b>Security Note:</b> For security reasons, this method prevents instantiation of:
+     * <ul>
+     *     <li>ProcessBuilder</li>
+     *     <li>Process</li>
+     *     <li>ClassLoader</li>
+     *     <li>Constructor</li>
+     *     <li>Method</li>
+     *     <li>Field</li>
+     * </ul>
+     *
+     * <p><b>Usage Example:</b>
+     * <pre>{@code
+     * // Create instance with no arguments
+     * MyClass obj1 = (MyClass) newInstance(converter, MyClass.class, null);
+     *
+     * // Create instance with constructor arguments
+     * List<Object> args = Arrays.asList("arg1", 42);
+     * MyClass obj2 = (MyClass) newInstance(converter, MyClass.class, args);
+     * }</pre>
      */
     public static Object newInstance(Converter converter, Class<?> c, Collection<?> argumentValues) {
         throwIfSecurityConcern(ProcessBuilder.class, c);
@@ -443,7 +468,7 @@ public class MetaUtils {
         CachedConstructor cachedConstructor = constructors.get(cacheKey);
         if (cachedConstructor == null) {
             if (c.isInterface()) {
-                throw new JsonIoException("Cannot instantiate unknown interface: " + c.getName());
+                throw new IllegalArgumentException("Cannot instantiate unknown interface: " + c.getName());
             }
 
             final Constructor<?>[] declaredConstructors = c.getDeclaredConstructors();
@@ -503,7 +528,7 @@ public class MetaUtils {
             }
         }
 
-        throw new JsonIoException("Unable to instantiate: " + c.getName());
+        throw new IllegalArgumentException("Unable to instantiate: " + c.getName());
     }
 
     // Try instantiation via unsafe (if turned on).  It is off by default.  Use
@@ -565,26 +590,30 @@ public class MetaUtils {
     public static void setFieldValue(Field field, Object instance, Object value) {
         try {
             if (instance == null) {
-                throw new JsonIoException("Attempting to set field: " + field.getName() + " on null object.");
+                throw new IllegalStateException("Attempting to set field: " + field.getName() + " on null object.");
             }
             field.set(instance, value);
         } catch (IllegalAccessException e) {
-            throw new JsonIoException("Cannot set field: " + field.getName() + " on class: " + instance.getClass().getName() + " as field is not accessible.  Add a ClassFactory implementation to create the needed class, and use JsonReader.assignInstantiator() to associate your ClassFactory to the class: " + instance.getClass().getName(), e);
+            throw new IllegalStateException("Cannot set field: " + field.getName() + " on class: " + instance.getClass().getName() + " as field is not accessible.  Add a ClassFactory implementation to create the needed class, and use JsonReader.assignInstantiator() to associate your ClassFactory to the class: " + instance.getClass().getName(), e);
         }
     }
 
     public static void trySetAccessible(AccessibleObject object) {
-        safelyIgnoreException(() -> object.setAccessible(true));
+        ExceptionUtilities.safelyIgnoreException(() -> object.setAccessible(true));
     }
 
+    /**
+     * @deprecated As of version 2.19.0.  Use ExceptionUtilities.safelyIgnoreException(Callable, T)
+     */
+    @Deprecated
     public static <T> T safelyIgnoreException(Callable<T> callable, T defaultValue) {
-        try {
-            return callable.call();
-        } catch (Throwable e) {
-            return defaultValue;
-        }
+        return ExceptionUtilities.safelyIgnoreException(callable, defaultValue);
     }
 
+    /**
+     * @deprecated As of version 2.19.0.  Use ExceptionUtilities.safelyIgnoreException(Runnable)
+     */
+    @Deprecated
     public static void safelyIgnoreException(Runnable runnable) {
         try {
             runnable.run();
@@ -593,22 +622,32 @@ public class MetaUtils {
     }
 
     /**
-     * Use this method when you don't want a length check to
-     * throw a NullPointerException when
+     * Returns the length of the given string. If the string is {@code null}, it returns {@code 0} instead of throwing a {@code NullPointerException}.
      *
-     * @param s string to return length of
-     * @return 0 if string is null, otherwise the length of string.
+     * @param s the string whose length is to be determined
+     * @return {@code 0} if the string is {@code null}, otherwise the length of the string
+     *
+     * @deprecated As of version X.Y, replaced by {@link StringUtilities#length(String)}.
+     *             This method is no longer recommended for use and may be removed in future releases.
+     *             Use {@link StringUtilities#length(String)} to safely determine the length of a string without risking a {@code NullPointerException}.
      */
+    @Deprecated
     public static int length(final String s) {
-        return s == null ? 0 : s.length();
+        return StringUtilities.length(s);
     }
 
     /**
      * Returns the length of the trimmed string.  If the length is
      * null then it returns 0.
+     *
+     * @param s the string to get the trimmed length of
+     * @return the length of the trimmed string, or 0 if the input is null
+     * @deprecated This method is deprecated and will be removed in a future version.
+     *             Use {@link StringUtilities#trimLength(String)} directly instead.
      */
+    @Deprecated
     public static int trimLength(final String s) {
-        return (s == null) ? 0 : s.trim().length();
+        return StringUtilities.trimLength(s);
     }
 
     /**
@@ -630,12 +669,6 @@ public class MetaUtils {
                 c.equals(Class.class);
     }
 
-    static Set<String> commaSeparatedStringToSet(String commaSeparatedString) {
-        return Arrays.stream(commaSeparatedString.split(","))
-                .map(String::trim)
-                .collect(Collectors.toSet());
-    }
-
     /**
      * Load in a Map-style properties file. Expects key and value to be separated by a = (whitespace ignored).
      * Ignores lines beginning with a # and it also ignores blank lines.
@@ -644,7 +677,7 @@ public class MetaUtils {
     public static Map<String, String> loadMapDefinition(String resName) {
         Map<String, String> map = new LinkedHashMap<>();
         try {
-            String contents = MetaUtils.loadResourceAsString(resName);
+            String contents = ClassUtilities.loadResourceAsString(resName);
             Scanner scanner = new Scanner(contents);
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
@@ -655,7 +688,7 @@ public class MetaUtils {
             }
             scanner.close();
         } catch (Exception e) {
-            throw new JsonIoException("Error reading in " + resName + ". The file should be in the resources folder. The contents are expected to have two strings separated by '='. You can use # or blank lines in the file, they will be skipped.");
+            throw new IllegalArgumentException("Error reading in " + resName + ". The file should be in the resources folder. The contents are expected to have two strings separated by '='. You can use # or blank lines in the file, they will be skipped.");
         }
         return map;
     }
@@ -669,7 +702,7 @@ public class MetaUtils {
     public static Set<String> loadSetDefinition(String resName) {
         Set<String> set = new LinkedHashSet<>();
         try {
-            String contents = MetaUtils.loadResourceAsString(resName);
+            String contents = ClassUtilities.loadResourceAsString(resName);
             Scanner scanner = new Scanner(contents);
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine().trim();
@@ -679,7 +712,7 @@ public class MetaUtils {
             }
             scanner.close();
         } catch (Exception e) {
-            throw new JsonIoException("Error reading in " + resName + ". The file should be in the resources folder. The contents have a single String per line.  You can use # (comment) or blank lines in the file, they will be skipped.");
+            throw new IllegalArgumentException("Error reading in " + resName + ". The file should be in the resources folder. The contents have a single String per line.  You can use # (comment) or blank lines in the file, they will be skipped.");
         }
         return set;
     }
@@ -688,85 +721,78 @@ public class MetaUtils {
      * Loads resource content as a String.
      * @param resourceName Name of the resource file.
      * @return Content of the resource file as a String.
+     * @deprecated This method is deprecated and will be removed in a future version.
+     *             Use {@link ClassUtilities#loadResourceAsString(String)} directly instead.
      */
+    @Deprecated
     public static String loadResourceAsString(String resourceName) {
-        byte[] resourceBytes = loadResourceAsBytes(resourceName);
-        return new String(resourceBytes, StandardCharsets.UTF_8);
+        return ClassUtilities.loadResourceAsString(resourceName);
     }
 
     /**
      * Loads resource content as a byte[].
      * @param resourceName Name of the resource file.
      * @return Content of the resource file as a byte[].
+     * @throws IllegalArgumentException if the resource cannot be found
+     * @throws UncheckedIOException if there is an error reading the resource
+     * @throws NullPointerException if resourceName is null
+     * @deprecated This method is deprecated and will be removed in a future version.
+     *             Use {@link ClassUtilities#loadResourceAsBytes(String)} directly instead.
      */
+    @Deprecated
     public static byte[] loadResourceAsBytes(String resourceName) {
-        try (InputStream inputStream = ClassUtilities.getClassLoader(MetaUtils.class).getResourceAsStream(resourceName)) {
-            if (inputStream == null) {
-                throw new JsonIoException("Resource not found: " + resourceName);
-            }
-            return readInputStreamFully(inputStream);
-        } catch (Exception e) {
-            throw new JsonIoException("Error reading resource: " + resourceName, e);
-        }
+        return ClassUtilities.loadResourceAsBytes(resourceName);
     }
-
+    
     /**
-     * Reads an InputStream fully and returns its content as a byte array.
+     * Removes all leading and trailing double quotes from a String. Multiple consecutive quotes
+     * at the beginning or end of the string will all be removed.
+     * <p>
+     * Examples:
+     * <ul>
+     *     <li>"text" → text</li>
+     *     <li>""text"" → text</li>
+     *     <li>"""text""" → text</li>
+     *     <li>"text with "quotes" inside" → text with "quotes" inside</li>
+     * </ul>
      *
-     * @param inputStream InputStream to read.
-     * @return Content of the InputStream as byte array.
-     * @throws IOException if an I/O error occurs.
+     * @param input the String from which to remove quotes (may be null)
+     * @return the String with all leading and trailing quotes removed, or null if input was null
+     * @deprecated This method has been moved to {@link com.cedarsoftware.util.StringUtilities#removeLeadingAndTrailingQuotes(String)}.
+     * Please use {@code StringUtilities.removeLeadingAndTrailingQuotes()} instead.
+     * This method will be removed in a future release.
      */
-    private static byte[] readInputStreamFully(InputStream inputStream) throws IOException {
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        byte[] data = new byte[1024];
-        int nRead;
-        while ((nRead = inputStream.read(data, 0, data.length)) != -1) {
-            buffer.write(data, 0, nRead);
-        }
-        buffer.flush();
-        return buffer.toByteArray();
-    }
-
-    /**
-     * Strip leading and trailing double quotes from the passed in String. If there are more than one
-     * set of quotes, ""this is weird"" then all leading and trailing quotes will be removed, yielding
-     * this is weird.  Note that: ["""this is "really" weird""] will be: [this is "really" weird].
-     */
+    @Deprecated
     public static String removeLeadingAndTrailingQuotes(String input) {
-        Matcher m = extraQuotes.matcher(input);
-        if (m.find()) {
-            input = m.group(1);
-        }
-        return input;
+        return StringUtilities.removeLeadingAndTrailingQuotes(input);
     }
 
     /**
-     * Fetch the closest inherited class for the passed in Class.  This method always fetches the closest class
-     * or returns the default class, doing the complicated inheritance distance checking.  This method is only
-     * called when a cache miss has happened.  A sentinel 'defaultClass' is returned when no class is found.
-     * This prevents future cache misses from re-attempting to find classes that do not have a custom writer.
+     * Finds the closest matching class in an inheritance hierarchy from a map of candidate classes.
+     * <p>
+     * This method searches through a map of candidate classes to find the one that is most closely
+     * related to the input class in terms of inheritance distance. The search prioritizes:
+     * <ul>
+     *     <li>Exact class match (returns immediately)</li>
+     *     <li>Closest superclass/interface in the inheritance hierarchy</li>
+     * </ul>
+     * <p>
+     * This method is typically used for cache misses when looking up class-specific handlers
+     * or processors.
      *
-     * @param clazz Class of object for which fetch the closest inherited class
-     * @param workerClasses The classes to search through
-     * @param defaultClass  the class to return when no viable class was found.
-     * @return Class the closest class found or defaultClass if none found.
+     * @param <T> The type of value stored in the workerClasses map
+     * @param clazz The class to find a match for (must not be null)
+     * @param workerClasses Map of candidate classes and their associated values (must not be null)
+     * @param defaultClass Default value to return if no suitable match is found
+     * @return The value associated with the closest matching class, or defaultClass if no match found
+     * @throws NullPointerException if clazz or workerClasses is null
+     * @deprecated This method is deprecated and will be removed in a future version.
+     *             Use {@link ClassUtilities#findClosest(Class, Map, Object)} directly instead.
+     *
+     * @see ClassUtilities#computeInheritanceDistance(Class, Class)
      */
+    @Deprecated
     public static <T> T findClosest(Class<?> clazz, Map<Class<?>, T> workerClasses, T defaultClass) {
-        T closest = defaultClass;
-        int minDistance = Integer.MAX_VALUE;
-
-        for (Map.Entry<Class<?>, T> entry : workerClasses.entrySet()) {
-            Class<?> clz = entry.getKey();
-            if (clz == clazz) {
-                return entry.getValue();
-            }
-            int distance = ClassUtilities.computeInheritanceDistance(clazz, clz);
-            if (distance != -1 && distance < minDistance) {
-                minDistance = distance;
-                closest = entry.getValue();
-            }
-        }
-        return closest;
+        return ClassUtilities.findClosest(clazz, workerClasses, defaultClass);
     }
 }

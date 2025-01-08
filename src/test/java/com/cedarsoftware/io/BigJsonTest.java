@@ -2,6 +2,7 @@ package com.cedarsoftware.io;
 
 import java.util.Map;
 
+import com.cedarsoftware.util.ClassUtilities;
 import org.junit.jupiter.api.RepeatedTest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,7 +31,7 @@ class BigJsonTest
     @RepeatedTest(2)
     void testBigJsonToJava()
     {
-        String json = MetaUtils.loadResourceAsString("big/big5D.json");
+        String json = ClassUtilities.loadResourceAsString("big/big5D.json");
         Map map = TestUtil.toObjects(json, null);
         assertEquals("big5D", map.get("ncube"));
         assertEquals(0L, map.get("defaultCellValue"));
@@ -41,7 +42,7 @@ class BigJsonTest
     @RepeatedTest(2)
     void testBigJsonToMaps()
     {
-        String json = MetaUtils.loadResourceAsString("big/big5D.json");
+        String json = ClassUtilities.loadResourceAsString("big/big5D.json");
         Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         assertEquals("big5D", map.get("ncube"));
         assertEquals(0L, map.get("defaultCellValue"));

@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.ClassUtilities;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -238,7 +239,7 @@ public class TimeZoneTests
     @MethodSource("argumentsForOldFormatValidation")
     void testTimezone_readingJsonWithOldFormat_stillWorks(String fileName, String expectedTimeZone) throws Exception
     {
-        String json = MetaUtils.loadResourceAsString("timezone/" + fileName);
+        String json = ClassUtilities.loadResourceAsString("timezone/" + fileName);
         TimeZone actual = TestUtil.toObjects(json, null);
 
         assertThat(actual.getID()).isEqualTo(expectedTimeZone);

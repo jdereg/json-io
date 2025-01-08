@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.ReflectionUtils;
 import org.junit.jupiter.api.Test;
@@ -50,7 +51,7 @@ public class SecurityTest
         Method method = ReflectionUtils.getMethod(SecurityTest.class, "testSecureWrites", (Class<?>[])null);
         assert method != null;
         attemptToWriteDisallowedClass(method);
-        Collection<Field> fields = ReflectionUtils.getDeepDeclaredFields(SecurityTest.class);
+        Collection<Field> fields = ReflectionUtils.getAllDeclaredFields(SecurityTest.class);
         attemptToWriteDisallowedClass(fields.toArray()[0]);
         Constructor<?> constructor = ReflectionUtils.getConstructor(SecurityTest.class, (Class<?>[])null);
         attemptToWriteDisallowedClass(constructor);
@@ -125,12 +126,12 @@ public class SecurityTest
     @Test
     public void testSecureReads()
     {
-        verifyReadInstantiationSecurity(MetaUtils.loadResourceAsString("security/processBuilder.json"));
-        verifyReadInstantiationSecurity(MetaUtils.loadResourceAsString("security/process.json"));
-        verifyReadInstantiationSecurity(MetaUtils.loadResourceAsString("security/classLoader.json"));
-        verifyReadInstantiationSecurity(MetaUtils.loadResourceAsString("security/constructor.json"));
-        verifyReadInstantiationSecurity(MetaUtils.loadResourceAsString("security/method.json"));
-        verifyReadInstantiationSecurity(MetaUtils.loadResourceAsString("security/field.json"));
+        verifyReadInstantiationSecurity(ClassUtilities.loadResourceAsString("security/processBuilder.json"));
+        verifyReadInstantiationSecurity(ClassUtilities.loadResourceAsString("security/process.json"));
+        verifyReadInstantiationSecurity(ClassUtilities.loadResourceAsString("security/classLoader.json"));
+        verifyReadInstantiationSecurity(ClassUtilities.loadResourceAsString("security/constructor.json"));
+        verifyReadInstantiationSecurity(ClassUtilities.loadResourceAsString("security/method.json"));
+        verifyReadInstantiationSecurity(ClassUtilities.loadResourceAsString("security/field.json"));
     }
 
     private void verifyReadInstantiationSecurity(String json)

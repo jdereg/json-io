@@ -2,6 +2,7 @@ package com.cedarsoftware.io;
 
 import java.time.LocalDateTime;
 
+import com.cedarsoftware.util.ClassUtilities;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -120,7 +121,7 @@ class LocalDateTimeTests extends SerializationDeserializationMinimumTests<LocalD
     }
 
     private String loadJsonForTest(String fileName) {
-        return MetaUtils.loadResourceAsString("localdatetime/" + fileName);
+        return ClassUtilities.loadResourceAsString("localdatetime/" + fileName);
     }
 
     private static class NestedLocalDateTime {

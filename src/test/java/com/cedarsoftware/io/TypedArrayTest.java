@@ -1,6 +1,7 @@
 package com.cedarsoftware.io;
 
 import com.cedarsoftware.io.models.array.Customer;
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
@@ -8,7 +9,7 @@ class TypedArrayTest {
 
     @Test
     void testCreateCustomer() {
-        String json = MetaUtils.loadResourceAsString("customer/customer.json");
+        String json = ClassUtilities.loadResourceAsString("customer/customer.json");
         Customer customer = TestUtil.toObjects(json, Customer.class);
         String json2 = TestUtil.toJson(customer);
         Customer customer2 = TestUtil.toObjects(json2, Customer.class);

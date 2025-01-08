@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import com.cedarsoftware.io.reflect.Accessor;
+import com.cedarsoftware.util.ExceptionUtilities;
 import com.cedarsoftware.util.FastWriter;
 
 import static com.cedarsoftware.io.JsonValue.ENUM;
@@ -469,7 +470,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         for (final Accessor accessor : fields)
         {
-            MetaUtils.safelyIgnoreException(() -> {
+            ExceptionUtilities.safelyIgnoreException(() -> {
                 final Object o = accessor.retrieve(obj);
                 if (o != null) {   // Trace through objects that can reference other objects
                     stack.addFirst(o);

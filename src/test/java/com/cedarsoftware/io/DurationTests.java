@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.Date;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -206,6 +207,6 @@ class DurationTests {
     }
 
     private String loadJsonForTest(String fileName) {
-        return MetaUtils.loadResourceAsString("duration/" + fileName);
+        return ClassUtilities.loadResourceAsString("duration/" + fileName);
     }
 }

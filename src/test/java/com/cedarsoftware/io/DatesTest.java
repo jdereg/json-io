@@ -6,8 +6,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
 
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Converter;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -485,7 +485,7 @@ class DatesTest
     @Test
     void testTimestampAsValue()
     {
-        String json = MetaUtils.loadResourceAsString("timestamp/timestamp-as-value.json");
+        String json = ClassUtilities.loadResourceAsString("timestamp/timestamp-as-value.json");
         Timestamp ts = TestUtil.toObjects(json, null);
         Calendar cal = Converter.convert(ts, Calendar.class);
         assert cal.get(Calendar.MONTH) == 11;

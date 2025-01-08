@@ -37,21 +37,6 @@ class InternalAPIsTest
     }
 
     @Test
-    void testCleanString()
-    {
-        String s = MetaUtils.removeLeadingAndTrailingQuotes("\"Foo\"");
-        assert "Foo".equals(s);
-        s = MetaUtils.removeLeadingAndTrailingQuotes("Foo");
-        assert "Foo".equals(s);
-        s = MetaUtils.removeLeadingAndTrailingQuotes("\"Foo");
-        assert "Foo".equals(s);
-        s = MetaUtils.removeLeadingAndTrailingQuotes("Foo\"");
-        assert "Foo".equals(s);
-        s = MetaUtils.removeLeadingAndTrailingQuotes("\"\"Foo\"\"");
-        assert "Foo".equals(s);
-    }
-
-    @Test
     void testProtectedAPIs()
     {
         FastByteArrayOutputStream fbao = new FastByteArrayOutputStream();

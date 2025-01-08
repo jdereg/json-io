@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.DeepEquals;
 import org.assertj.core.util.Arrays;
 import org.junit.jupiter.api.Test;
@@ -135,7 +136,7 @@ class InstantTests {
     }
 
     private String loadJson(String fileName) {
-        return MetaUtils.loadResourceAsString("instant/" + fileName);
+        return ClassUtilities.loadResourceAsString("instant/" + fileName);
     }
 
 

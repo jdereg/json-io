@@ -2,9 +2,8 @@ package com.cedarsoftware.io;
 
 import java.util.Map;
 
+import com.cedarsoftware.util.ClassUtilities;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -27,7 +26,7 @@ public class NCubeTest {
     @Test
     void testNCubeJson()
     {
-        String json = MetaUtils.loadResourceAsString("errors/ncube.json");
+        String json = ClassUtilities.loadResourceAsString("errors/ncube.json");
         Map map = TestUtil.toObjects(json, null);
         TestUtil.toJson(map, null);
     }

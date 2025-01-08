@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.cedarsoftware.io.reflect.Injector;
-import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
 /**
@@ -496,7 +495,7 @@ public class ObjectResolver extends Resolver
 
         if (jsonObj.getTarget() == null) {
             if (jsonObj.hasValue()) {
-                if (getConverter().isConversionSupportedFor(jsonObj.getValue().getClass(), c)) {
+                if (getConverter().isSimpleTypeConversionSupported(jsonObj.getValue().getClass(), c)) {
                     Object target = getConverter().convert(jsonObj.getValue(), c);
                     return jsonObj.setFinishedTarget(target, true);
                 }

@@ -3,6 +3,7 @@ package com.cedarsoftware.io;
 import java.io.Serializable;
 import java.util.EnumSet;
 
+import com.cedarsoftware.util.ClassUtilities;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -27,7 +28,7 @@ class OldSetTest {
     }
 
     private String loadJson(final String fileName) {
-        return MetaUtils.loadResourceAsString("enumSet/" + fileName).trim();
+        return ClassUtilities.loadResourceAsString("enumSet/" + fileName).trim();
     }
 
     public static class ManySets implements Serializable {

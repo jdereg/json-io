@@ -14,6 +14,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
@@ -81,7 +82,7 @@ class MapOfMapsTest
     @Test
     void testForwardRefNegId()
     {
-        Object doc = TestUtil.toObjects(MetaUtils.loadResourceAsString("references/forwardRefNegId.json"), new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Object doc = TestUtil.toObjects(ClassUtilities.loadResourceAsString("references/forwardRefNegId.json"), new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         Object[] items = (Object[]) doc;
         assertEquals(2, items.length);
         Map male = (Map) items[0];

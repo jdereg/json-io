@@ -31,6 +31,7 @@ import java.util.stream.Stream;
 
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Converter;
+import com.cedarsoftware.util.StringUtilities;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -164,13 +165,6 @@ public class MetaUtilsTests {
         assertThat(actual).isEqualTo("bar");
     }
 
-    @Test
-    void convertTrimQuotes() {
-        String s = "\"\"\"This is \"really\" weird.\"\"\"";
-        String x = MetaUtils.removeLeadingAndTrailingQuotes(s);
-        assert "This is \"really\" weird.".equals(x);
-    }
-
     private static Stream<Arguments> commaSeparatedStringArguments() {
         return Stream.of(
                 Arguments.of(" foo, bar, qux, quy "),
@@ -180,7 +174,7 @@ public class MetaUtilsTests {
     @ParameterizedTest
     @MethodSource("commaSeparatedStringArguments")
     void testCommaSeparatedStringToSet(String commaSeparatedString) {
-        Set<String> set = MetaUtils.commaSeparatedStringToSet(commaSeparatedString);
+        Set<String> set = StringUtilities.commaSeparatedStringToSet(commaSeparatedString);
         assertThat(set).contains("foo", "bar", "qux", "quy");
     }
 

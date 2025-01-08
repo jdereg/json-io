@@ -1,7 +1,8 @@
 package com.cedarsoftware.io;
 
-import org.junit.jupiter.api.Test;
 import java.util.EnumSet;
+
+import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.io.JsonValue.ENUM;
 import static com.cedarsoftware.io.JsonValue.ITEMS;
@@ -56,11 +57,11 @@ class EmptyEnumSetTest {
     }
 
     @Test
-    void testEmptyEnumSet_withSpecifiedType() {
+    void testEmptyEnumSet_withSpecifiedTypeAtRoot() {
         // Create with explicit type
         EnumSet<TestEnum> source = EnumSet.noneOf(TestEnum.class);
         String json = TestUtil.toJson(source);
-        EnumSet<TestEnum> target = TestUtil.toObjects(json, EnumSet.class);
+        EnumSet<TestEnum> target = (EnumSet<TestEnum>)(Object)TestUtil.toObjects(json, TestEnum.class);
 
         assertThat(target)
                 .isNotNull()

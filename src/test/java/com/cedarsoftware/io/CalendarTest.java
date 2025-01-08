@@ -13,6 +13,7 @@ import java.util.TimeZone;
 import java.util.stream.Stream;
 
 import com.cedarsoftware.io.factory.ConvertableFactory;
+import com.cedarsoftware.util.ClassUtilities;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -350,7 +351,7 @@ public class CalendarTest
     }
 
     private String loadJsonForTest(String fileName) {
-        return MetaUtils.loadResourceAsString("calendar/" + fileName);
+        return ClassUtilities.loadResourceAsString("calendar/" + fileName);
     }
 
     private static void assertCalendar(Calendar calendar, String zoneId, int year, int month, int day, int hour, int minute, int second, int millis) {

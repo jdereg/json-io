@@ -135,20 +135,20 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         assertThat(expected[0]).isSameAs(expected[1]);
 
         // asserts
-        if (nestedActual instanceof OffsetDateTime) {
-            long differenceInNanos = Math.abs(Duration.between((OffsetDateTime) nestedExpected, (OffsetDateTime) nestedActual).toNanos());
+        if (actual[0] instanceof OffsetDateTime) {
+            long differenceInNanos = Math.abs(Duration.between((OffsetDateTime) expected[0], (OffsetDateTime) actual[0]).toNanos());
             // Check if the difference is less than or equal to 1,000 nanoseconds (1 microsecond).
             // This is needed because the OffsetDateTime can be off by 1 nanosecond during conversions between types.
             assert differenceInNanos < 1_000;  // Allow for < 1 micro-second difference
+
+            differenceInNanos = Math.abs(Duration.between((OffsetDateTime) expected[1], (OffsetDateTime) actual[1]).toNanos());
+            // Check if the difference is less than or equal to 1,000 nanoseconds (1 microsecond).
+            // This is needed because the OffsetDateTime can be off by 1 nanosecond during conversions between types.
+            assert differenceInNanos < 1_000;  // Allow for < 1 micro-second difference
+
             assertReferentialIdentity(actual[0], actual[1]);
         } else {
-            try {
-                assertThat(actual[0]).isEqualTo(expected[0]);
-            } catch (Throwable e) {
-                System.out.println("nestActual class=" + nestedActual.getClass().getName());
-                System.out.println("actual[0].getClass().getName() = " + actual[0].getClass().getName());
-                System.out.println("expected[0].getClass().getName() = " + expected[0].getClass().getName());
-            }
+            assertThat(actual[0]).isEqualTo(expected[0]);
             assertThat(actual[1]).isEqualTo(expected[1]);
             assertReferentialIdentity(actual[0], actual[1]);
         }

@@ -13,6 +13,7 @@ import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
 
+import com.cedarsoftware.util.convert.CollectionsWrappers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
@@ -379,7 +380,7 @@ class JDK9ImmutableTest
         String json = JsonIo.toJson(nodes, new WriteOptionsBuilder().build());
 
         // Deserialize the list
-        final List<Node> deserializedNodes = JsonIo.toObjects(json, new ReadOptionsBuilder().build(), List.class);
+        final List<Node> deserializedNodes = JsonIo.toObjects(json, new ReadOptionsBuilder().build(), CollectionsWrappers.getUnmodifiableListClass());
 
         // Assertions to check if the forward reference is maintained after deserialization
         assertEquals("Node2", deserializedNodes.get(0).next.name);
@@ -409,7 +410,7 @@ class JDK9ImmutableTest
                 "}";
 
         // Deserialize the list (hand created to force forward reference)
-        final List<Node> deserializedNodes2 = JsonIo.toObjects(json, new ReadOptionsBuilder().build(), List.class);
+        final List<Node> deserializedNodes2 = JsonIo.toObjects(json, new ReadOptionsBuilder().build(), CollectionsWrappers.getUnmodifiableListClass());
         assertThrows(UnsupportedOperationException.class, () -> deserializedNodes.add(node2));
 
         // Assertions to check if the forward reference is maintained after deserialization
@@ -437,7 +438,7 @@ class JDK9ImmutableTest
         String json = JsonIo.toJson(nodes, new WriteOptionsBuilder().build());
         
         // Deserialize the list
-        final Set<Node> deserializedNodes = JsonIo.toObjects(json, new ReadOptionsBuilder().build(), Set.class);
+        final Set<Node> deserializedNodes = JsonIo.toObjects(json, new ReadOptionsBuilder().build(), CollectionsWrappers.getUnmodifiableSetClass());
         assert deepEquals(nodes, deserializedNodes);
         assertThrows(UnsupportedOperationException.class, () -> deserializedNodes.add(node1));
         // Assertions to check if the forward reference is maintained after deserialization
@@ -478,7 +479,7 @@ class JDK9ImmutableTest
                 "}";
 
         // Deserialize the list (hand created to force forward reference)
-        final Set<Node> deserializedNodes2 = JsonIo.toObjects(json, new ReadOptionsBuilder().build(), Set.class);
+        final Set<Node> deserializedNodes2 = JsonIo.toObjects(json, new ReadOptionsBuilder().build(), CollectionsWrappers.getUnmodifiableSetClass());
         // Assertions to check if the forward reference is maintained after deserialization
         i = deserializedNodes2.iterator();
         node1st = i.next();

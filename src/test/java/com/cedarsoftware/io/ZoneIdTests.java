@@ -4,6 +4,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.ClassUtilities;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -193,7 +194,7 @@ class ZoneIdTests extends SerializationDeserializationMinimumTests<ZoneId> {
     }
 
     private String loadJsonForTest(String fileName) {
-        return MetaUtils.loadResourceAsString("zoneId/" + fileName);
+        return ClassUtilities.loadResourceAsString("zoneId/" + fileName);
     }
 
 }

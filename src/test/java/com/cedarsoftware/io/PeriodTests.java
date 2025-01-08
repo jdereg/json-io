@@ -3,6 +3,7 @@ package com.cedarsoftware.io;
 import java.time.Period;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.ClassUtilities;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -80,7 +81,7 @@ class PeriodTests {
     }
 
     private String loadJsonForTest(String fileName) {
-        return MetaUtils.loadResourceAsString("period/" + fileName);
+        return ClassUtilities.loadResourceAsString("period/" + fileName);
     }
 
 }

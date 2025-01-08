@@ -11,9 +11,9 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.gson.JsonParser;
-
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.DeepEquals;
+import com.google.gson.JsonParser;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.CollectionUtilities.listOf;
@@ -52,7 +52,7 @@ public class NoTypeTest
     @Test
     void personTestToPerson()
     {
-        String json = MetaUtils.loadResourceAsString("noTypes/person.json");
+        String json = ClassUtilities.loadResourceAsString("noTypes/person.json");
         Person person = TestUtil.toObjects(json, Person.class);
         assert person.name.equals("Joe");
         assert person.age == 50;
@@ -63,7 +63,7 @@ public class NoTypeTest
     @Test
     void personTestToPersonWithReadOptionJavaObjects()
     {
-        String json = MetaUtils.loadResourceAsString("noTypes/person.json");
+        String json = ClassUtilities.loadResourceAsString("noTypes/person.json");
         String msg = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), Person.class); }).getMessage();
         assert msg.contains("isReturningJsonObjects");
     }
@@ -71,7 +71,7 @@ public class NoTypeTest
     @Test
     void personTestToMap()
     {
-        String json = MetaUtils.loadResourceAsString("noTypes/person.json");
+        String json = ClassUtilities.loadResourceAsString("noTypes/person.json");
         Map<String, Object> person = TestUtil.toObjects(json, Map.class);
         assert person.get("name").equals("Joe");
         assert (long)person.get("age") == 50L;  // Comes in as Long because all JSON integer values are long
@@ -82,7 +82,7 @@ public class NoTypeTest
     @Test
     void personsTestWithPersonArrayRoot()
     {
-        String json = MetaUtils.loadResourceAsString("noTypes/persons.json");
+        String json = ClassUtilities.loadResourceAsString("noTypes/persons.json");
         Person[] persons = TestUtil.toObjects(json, Person[].class);
         
         assert persons[0].name.equals("Joe");
@@ -99,7 +99,7 @@ public class NoTypeTest
     @Test
     void personsTestWithPersonArrayRootAsNativeJsonObjects()
     {
-        String json = MetaUtils.loadResourceAsString("noTypes/persons.json");
+        String json = ClassUtilities.loadResourceAsString("noTypes/persons.json");
 
         try {
             Object o = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), Person[].class);
@@ -112,7 +112,7 @@ public class NoTypeTest
     @Test
     void personsTestWithNullRoot()
     {
-        String json = MetaUtils.loadResourceAsString("noTypes/persons.json");
+        String json = ClassUtilities.loadResourceAsString("noTypes/persons.json");
         Object[] persons = TestUtil.toObjects(json, null);
         Map<String, Object> joe = (Map<String, Object>)persons[0];
         Map<String, Object> jane = (Map<String, Object>) persons[1];
@@ -131,7 +131,7 @@ public class NoTypeTest
     @Test
     void personsTestWithMapRoot()
     {
-        String json = MetaUtils.loadResourceAsString("noTypes/persons.json");
+        String json = ClassUtilities.loadResourceAsString("noTypes/persons.json");
         assertThrows(ClassCastException.class, () -> { Map x = TestUtil.toObjects(json, Map.class); });
     }
 

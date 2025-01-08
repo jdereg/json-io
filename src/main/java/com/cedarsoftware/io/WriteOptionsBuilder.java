@@ -1087,7 +1087,7 @@ public class WriteOptionsBuilder {
         }
 
         public JsonWriter.JsonClassWriter findCustomWriter(Class<?> c) {
-            JsonWriter.JsonClassWriter writer = MetaUtils.findClosest(c, customWrittenClasses, nullWriter);
+            JsonWriter.JsonClassWriter writer = ClassUtilities.findClosest(c, customWrittenClasses, nullWriter);
             if (writer != nullWriter) {
                 return writer;
             } else {

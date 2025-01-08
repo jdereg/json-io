@@ -11,6 +11,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.stream.Stream;
 
 import com.cedarsoftware.io.models.NestedZonedDateTime;
+import com.cedarsoftware.util.ClassUtilities;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -104,7 +105,7 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
     }
 
     private String loadJsonForTest(String fileName) {
-        return MetaUtils.loadResourceAsString("zoneddatetime/" + fileName);
+        return ClassUtilities.loadResourceAsString("zoneddatetime/" + fileName);
     }
 
     @Override

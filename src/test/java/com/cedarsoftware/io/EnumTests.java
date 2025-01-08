@@ -7,7 +7,9 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import com.cedarsoftware.io.models.FoodType;
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
+import com.google.gson.JsonParser;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -17,7 +19,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.assertj.core.api.Assertions.assertThat;
-import com.google.gson.JsonParser;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -596,7 +597,7 @@ class EnumTests {
     }
 
     private String loadJson(String fileName) {
-        return MetaUtils.loadResourceAsString("enums/" + fileName).trim();
+        return ClassUtilities.loadResourceAsString("enums/" + fileName).trim();
     }
 
     private <T> T loadObject(String fileName) {

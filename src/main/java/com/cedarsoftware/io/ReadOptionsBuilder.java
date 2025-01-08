@@ -5,7 +5,6 @@ import java.lang.reflect.Field;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -37,6 +36,7 @@ import com.cedarsoftware.util.LRUCache;
 import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.convert.CommonValues;
 import com.cedarsoftware.util.convert.Convert;
+import com.cedarsoftware.util.convert.Converter;
 import com.cedarsoftware.util.convert.ConverterOptions;
 
 import static com.cedarsoftware.io.MetaUtils.loadMapDefinition;
@@ -379,11 +379,10 @@ public class ReadOptionsBuilder {
      * @param conversionFunction functional interface to run Conversion.
      * @return ReadOptionsBuilder for chained access.
      */
-
     public ReadOptionsBuilder addConverterOverride(Class<?> source, Class<?> target, Convert<?> conversionFunction) {
         source = ClassUtilities.toPrimitiveWrapperClass(source);
         target = ClassUtilities.toPrimitiveWrapperClass(target);
-        options.converterOptions.converterOverrides.put(new AbstractMap.SimpleImmutableEntry<>(source, target), conversionFunction);
+        options.converterOptions.converterOverrides.put(new Converter.ConversionPair(source, target), conversionFunction);
         return this;
     }
 
@@ -847,7 +846,7 @@ public class ReadOptionsBuilder {
         private Character trueChar = CommonValues.CHARACTER_ONE;
         private Character falseChar = CommonValues.CHARACTER_ZERO;
         private Map<String, Object> customOptions = new ConcurrentHashMap<>();
-        private Map<Map.Entry<Class<?>, Class<?>>, Convert<?>> converterOverrides = new ConcurrentHashMap<>(100, .8f);
+        private Map<Converter.ConversionPair, Convert<?>> converterOverrides = new ConcurrentHashMap<>(100, .8f);
 
         public ZoneId getZoneId() {
             return zoneId;
@@ -873,7 +872,7 @@ public class ReadOptionsBuilder {
             return falseChar;
         }
 
-        public Map<Map.Entry<Class<?>, Class<?>>, Convert<?>> getConverterOverrides() {
+        public Map<Converter.ConversionPair, Convert<?>> getConverterOverrides() {
             return converterOverrides;
         }
 
@@ -1101,7 +1100,7 @@ public class ReadOptionsBuilder {
          * @return JsonClassReader for the custom class (if one exists), null otherwise.
          */
         public JsonReader.JsonClassReader getCustomReader(Class<?> c) {
-            JsonReader.JsonClassReader reader = readerCache.computeIfAbsent(c, cls -> MetaUtils.findClosest(c, customReaderClasses, nullReader));
+            JsonReader.JsonClassReader reader = readerCache.computeIfAbsent(c, cls -> ClassUtilities.findClosest(c, customReaderClasses, nullReader));
             return reader == nullReader ? null : reader;
         }
 
@@ -1304,7 +1303,7 @@ public class ReadOptionsBuilder {
             }
 
             Set<String> resultSet = ConcurrentHashMap.newKeySet();
-            resultSet.addAll(MetaUtils.commaSeparatedStringToSet(entry.getValue()));
+            resultSet.addAll(StringUtilities.commaSeparatedStringToSet(entry.getValue()));
             builtMap.put(clazz, resultSet);
         }
         return builtMap;
@@ -1325,7 +1324,7 @@ public class ReadOptionsBuilder {
             }
 
             Map<String, String> mapping = nonStandardMapping.computeIfAbsent(clazz, c -> new ConcurrentHashMap<>());
-            Set<String> pairs = MetaUtils.commaSeparatedStringToSet(mappings);
+            Set<String> pairs = StringUtilities.commaSeparatedStringToSet(mappings);
             for (String pair : pairs) {
                 String[] fieldAlias = pair.split(":");
                 mapping.put(fieldAlias[0], fieldAlias[1]);

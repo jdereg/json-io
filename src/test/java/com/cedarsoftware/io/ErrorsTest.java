@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Converter;
 import org.junit.jupiter.api.Test;
 
@@ -304,7 +305,7 @@ class ErrorsTest
     @Test
     public void testAliasedTypes()
     {
-        String json = MetaUtils.loadResourceAsString("errors/aliasedTypes.json");
+        String json = ClassUtilities.loadResourceAsString("errors/aliasedTypes.json");
         Object[] items = TestUtil.toObjects(json, null);
 
         assert items.length == 12 : "Expected 12 items, but got " + items.length;

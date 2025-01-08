@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
+import com.cedarsoftware.util.ClassUtilities;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -70,7 +71,7 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
     }
 
     private String loadJsonForTest(String fileName) {
-        return MetaUtils.loadResourceAsString("offsetdatetime/" + fileName);
+        return ClassUtilities.loadResourceAsString("offsetdatetime/" + fileName);
     }
 
     @Override

@@ -73,6 +73,7 @@ java.util.Vector = Vector
 java.util.HashMap = HashMap
 java.util.HashMap$KeySet = HashMapKeySet
 java.util.HashMap$Values = HashMapValues
+java.util.HashSet = HashSet
 java.util.IdentityHashMap = IdentityHashMap
 java.util.IdentityHashMap$KeySet = IdentityHashMapKeySet
 java.util.IdentityHashMap$Values = IdentityHashMapValues
@@ -82,6 +83,7 @@ java.util.Properties = Properties
 java.util.TreeMap = TreeMap
 java.util.TreeMap$KeySet = TreeMapKeySet
 java.util.TreeMap$Values = TreeMapValues
+java.util.TreeSet = TreeSet
 
 # Atomics
 java.util.concurrent.atomic.AtomicBoolean = AtomicBoolean

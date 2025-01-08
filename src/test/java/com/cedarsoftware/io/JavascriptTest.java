@@ -3,6 +3,7 @@ package com.cedarsoftware.io;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 
+import com.cedarsoftware.util.ClassUtilities;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnJre;
 import org.junit.jupiter.api.condition.JRE;
@@ -33,7 +34,7 @@ class JavascriptTest
     void testJsonUtilRefInsideArray() throws Exception
     {
         ScriptEngine engine = scm.getEngineByName("JavaScript");
-        String jsonUtil = MetaUtils.loadResourceAsString("jsonUtil.js");
+        String jsonUtil = ClassUtilities.loadResourceAsString("jsonUtil.js");
         engine.eval(jsonUtil);
         engine.eval("var json = '[{\"@id\":1,\"_name\":\"Charlize\",\"_other\":null},{\"@ref\":1}]';\n" +
                 "var array = JSON.parse(json)\n" +
@@ -52,7 +53,7 @@ class JavascriptTest
     void testJsonUtilForwardRefInsideArray() throws Exception
     {
         ScriptEngine engine = scm.getEngineByName("JavaScript");;
-        String jsonUtil = MetaUtils.loadResourceAsString("jsonUtil.js");
+        String jsonUtil = ClassUtilities.loadResourceAsString("jsonUtil.js");
         engine.eval(jsonUtil);
         engine.eval("var json = '[{\"@ref\":1}, {\"@id\":1,\"_name\":\"Charlize\",\"_other\":null}]';\n" +
                 "var array = JSON.parse(json)\n" +
@@ -71,7 +72,7 @@ class JavascriptTest
     void testJsonUtilRefInsideObject() throws Exception
     {
         ScriptEngine engine = scm.getEngineByName("JavaScript");
-        String jsonUtil = MetaUtils.loadResourceAsString("jsonUtil.js");
+        String jsonUtil = ClassUtilities.loadResourceAsString("jsonUtil.js");
         engine.eval(jsonUtil);
         engine.eval("var json = '{\"@id\":1,\"_name\":\"Alpha\",\"_other\":{\"_name\":\"Bravo\",\"_other\":{\"@ref\":1}}}';\n" +
                 "var testObj = JSON.parse(json)\n" +
@@ -93,7 +94,7 @@ class JavascriptTest
     void testJsonUtilRefCycle() throws Exception
     {
         ScriptEngine engine = scm.getEngineByName("JavaScript");
-        String jsonUtil = MetaUtils.loadResourceAsString("jsonUtil.js");
+        String jsonUtil = ClassUtilities.loadResourceAsString("jsonUtil.js");
         engine.eval(jsonUtil);
         engine.eval("var json = '[{\"@id\":1,\"_name\":\"Alpha\",\"_other\":{\"@ref\":2}},{\"@id\":2,\"_name\":\"Bravo\",\"_other\":{\"@ref\":1}}]';\n" +
                 "var array = JSON.parse(json);\n" +

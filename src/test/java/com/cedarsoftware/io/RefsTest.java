@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.cedarsoftware.util.ClassUtilities;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -231,7 +232,7 @@ class RefsTest
     @Test
     public void testRefChainAsJsonObjects()
     {
-        String json = MetaUtils.loadResourceAsString("references/chainRef.json");
+        String json = ClassUtilities.loadResourceAsString("references/chainRef.json");
         JsonObject jsonObj = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         LocalDate christmas = (LocalDate) jsonObj.get("date");
         Object[] children =  (Object[])jsonObj.get("children");
@@ -253,7 +254,7 @@ class RefsTest
     {
         DateWithChildren dc = new DateWithChildren();
 
-        String json = MetaUtils.loadResourceAsString("references/chainRef.json");
+        String json = ClassUtilities.loadResourceAsString("references/chainRef.json");
         DateWithChildren root = TestUtil.toObjects(json, null);
         DateWithChildren[] children =  root.children;
         assert children.length == 6;

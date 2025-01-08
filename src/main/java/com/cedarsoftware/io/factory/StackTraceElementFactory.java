@@ -4,8 +4,8 @@ import java.lang.reflect.Constructor;
 
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
-import com.cedarsoftware.io.MetaUtils;
 import com.cedarsoftware.io.Resolver;
+import com.cedarsoftware.util.ExceptionUtilities;
 
 /**
  * Factory class to create Throwable instances.  Needed for JDK17+ as the only way to set the
@@ -43,8 +43,8 @@ public class StackTraceElementFactory implements JsonReader.ClassFactory {
     private static final Constructor<?> constructor2;
 
     static {
-        constructor1 = MetaUtils.safelyIgnoreException(() -> StackTraceElement.class.getConstructor(String.class, String.class, String.class, int.class), null);
-        constructor2 = MetaUtils.safelyIgnoreException(() -> StackTraceElement.class.getConstructor(String.class, String.class, String.class, String.class, String.class, String.class, int.class), null);
+        constructor1 = ExceptionUtilities.safelyIgnoreException(() -> StackTraceElement.class.getConstructor(String.class, String.class, String.class, int.class), null);
+        constructor2 = ExceptionUtilities.safelyIgnoreException(() -> StackTraceElement.class.getConstructor(String.class, String.class, String.class, String.class, String.class, String.class, int.class), null);
     }
 
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
@@ -58,14 +58,14 @@ public class StackTraceElementFactory implements JsonReader.ClassFactory {
         String moduleVersion = (String) jObj.get(MODULE_VERSION);
 
         if (constructor2 != null) {
-            StackTraceElement element = MetaUtils.safelyIgnoreException(() -> (StackTraceElement) constructor2.newInstance(classLoaderName, moduleName, moduleVersion, declaringClass, methodName, fileName, lineNumber.intValue()), null);
+            StackTraceElement element = ExceptionUtilities.safelyIgnoreException(() -> (StackTraceElement) constructor2.newInstance(classLoaderName, moduleName, moduleVersion, declaringClass, methodName, fileName, lineNumber.intValue()), null);
             if (element != null) {
                 return element;
             }
         }
 
         if (constructor1 != null) {
-            StackTraceElement element = MetaUtils.safelyIgnoreException(() -> (StackTraceElement) constructor1.newInstance(declaringClass, methodName, fileName, lineNumber.intValue()), null);
+            StackTraceElement element = ExceptionUtilities.safelyIgnoreException(() -> (StackTraceElement) constructor1.newInstance(declaringClass, methodName, fileName, lineNumber.intValue()), null);
             if (element != null) {
                 return element;
             }

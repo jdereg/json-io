@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Objects;
 
 import com.cedarsoftware.io.factory.ThrowableFactory;
+import com.cedarsoftware.util.StringUtilities;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -188,7 +189,7 @@ class ExceptionSerializeTest
     void testExceptionWithThrowableConstructor_andStackTracesIsNotFiltered() {
         ExceptionWithThrowableConstructor t1 = new ExceptionWithThrowableConstructor(new ExceptionWithStringConstructor("doo"));
 
-        String json = TestUtil.toJson(t1, new WriteOptionsBuilder().addExcludedFields(Throwable.class, MetaUtils.commaSeparatedStringToSet("backtrace,depth,suppressedExceptions")).build());
+        String json = TestUtil.toJson(t1, new WriteOptionsBuilder().addExcludedFields(Throwable.class, StringUtilities.commaSeparatedStringToSet("backtrace,depth,suppressedExceptions")).build());
         Throwable t2 = TestUtil.toObjects(json, null);
 
         assertThat(json).contains("stackTrace");
@@ -212,8 +213,8 @@ class ExceptionSerializeTest
         ExceptionWithThrowableConstructor t1 = new ExceptionWithThrowableConstructor(new ExceptionWithStringConstructor("doo"));
 
     String json = TestUtil.toJson(t1, new WriteOptionsBuilder()
-                .addExcludedFields(ExceptionWithThrowableConstructor.class, MetaUtils.commaSeparatedStringToSet("backtrace,depth,suppressedExceptions,stackTrace"))
-                .addExcludedFields(Throwable.class, MetaUtils.commaSeparatedStringToSet("backtrace,depth,suppressedExceptions"))
+                .addExcludedFields(ExceptionWithThrowableConstructor.class, StringUtilities.commaSeparatedStringToSet("backtrace,depth,suppressedExceptions,stackTrace"))
+                .addExcludedFields(Throwable.class, StringUtilities.commaSeparatedStringToSet("backtrace,depth,suppressedExceptions"))
                 .build());
 
         Throwable t2 = TestUtil.toObjects(json, null);

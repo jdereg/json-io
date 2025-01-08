@@ -291,7 +291,8 @@ class MapsTest
 
         String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().build());
         UnmodifiableStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), UnmodifiableStuff.class);
-        assert DeepEquals.deepEquals(stuff, stuff2);
+        Map<String, Object> options = new HashMap<>();
+        assert DeepEquals.deepEquals(stuff, stuff2, options);
         assertThrows(UnsupportedOperationException.class, () -> stuff2.unmodifiableCollection.add("a"));
     }
 
@@ -331,7 +332,8 @@ class MapsTest
 
         String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().build());
         SynchronizedStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), SynchronizedStuff.class);
-        assert DeepEquals.deepEquals(stuff, stuff2);
+        Map<String, Object> options = new HashMap<>();
+        assert DeepEquals.deepEquals(stuff, stuff2, options);
     }
 
     private static class ConcurrentStuff {

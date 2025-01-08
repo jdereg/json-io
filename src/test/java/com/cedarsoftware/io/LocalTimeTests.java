@@ -3,6 +3,7 @@ package com.cedarsoftware.io;
 import java.time.LocalTime;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.ClassUtilities;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -97,7 +98,7 @@ class LocalTimeTests extends SerializationDeserializationMinimumTests<LocalTime>
     }
 
     private String loadJsonForTest(String fileName) {
-        return MetaUtils.loadResourceAsString("localtime/" + fileName);
+        return ClassUtilities.loadResourceAsString("localtime/" + fileName);
     }
 
     public static class NestedLocalTime {

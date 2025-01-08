@@ -8,6 +8,8 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -17,14 +19,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.cedarsoftware.io.util.CollectionArrayConverter;
-import com.cedarsoftware.util.CompactLinkedMap;
-import com.cedarsoftware.util.CompactLinkedSet;
 import com.cedarsoftware.util.Convention;
+import com.cedarsoftware.util.ExceptionUtilities;
 import com.cedarsoftware.util.FastByteArrayInputStream;
 import com.cedarsoftware.util.FastReader;
 import com.cedarsoftware.util.convert.Converter;
-import com.cedarsoftware.util.convert.DefaultConverterOptions;
 
 /**
  * Read an object graph in JSON format and make it available in Java objects, or
@@ -189,7 +188,6 @@ public class JsonReader implements Closeable
         this(input, readOptions, new DefaultReferenceTracker());
     }
 
-//    static boolean oneshot = true;
     public JsonReader(InputStream inputStream, ReadOptions readOptions, ReferenceTracker references) {
         this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
         Converter converter = new Converter(this.readOptions.getConverterOptions());
@@ -199,13 +197,6 @@ public class JsonReader implements Closeable
                 new ObjectResolver(this.readOptions, references, converter);
         this.parser = new JsonParser(this.input, this.resolver);
         localConverter = new Converter(this.readOptions.getConverterOptions());
-        setupLocalConverter();
-//        if (oneshot) {
-//            oneshot = !oneshot;
-//            String json = JsonIo.toJson(localConverter.getSupportedConversions(), new WriteOptionsBuilder().prettyPrint(true).showTypeInfoNever().build());
-//            System.out.println("json-io supported conversions (source type to target types):");
-//            System.out.println(json);
-//        }
     }
 
     /**
@@ -269,14 +260,6 @@ public class JsonReader implements Closeable
         }
 
         return returnValue;
-    }
-
-    /**
-     * Initializes the 'convo' Converter with the necessary conversions.
-     */
-    private void setupLocalConverter() {
-        CollectionArrayConverter arrayConverter = new CollectionArrayConverter(localConverter);
-        arrayConverter.setupConversions(localConverter);
     }
 
     /**
@@ -736,9 +719,9 @@ public class JsonReader implements Closeable
      */
     private Class<?> getFallbackType(Class<?> javaType) {
         if (SortedSet.class.isAssignableFrom(javaType)) {
-            return CompactLinkedSet.class;
+            return LinkedHashSet.class;
         } else if (SortedMap.class.isAssignableFrom(javaType)) {
-            return CompactLinkedMap.class;
+            return LinkedHashMap.class;
         }
         return null;
     }
@@ -853,7 +836,7 @@ public class JsonReader implements Closeable
         } catch (Exception e) {
             // Safely close the stream if the read options specify to do so
             if (readOptions.isCloseStream()) {
-                MetaUtils.safelyIgnoreException(this::close);
+                ExceptionUtilities.safelyIgnoreException(this::close);
             }
 
             // Rethrow known JsonIoExceptions directly

@@ -21,11 +21,10 @@ import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import com.google.gson.JsonParser;
-
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
 import com.cedarsoftware.util.SealableList;
+import com.google.gson.JsonParser;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
@@ -857,7 +856,6 @@ class CollectionTests {
 
             _imm_lst_0 = listOf();
             _imm_lst_1 = listOf("One");
-
         }
 
         private Collection[] _cols;

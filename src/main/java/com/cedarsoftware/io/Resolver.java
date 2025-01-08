@@ -566,6 +566,9 @@ public abstract class Resolver {
     }
 
     public boolean isConvertable(Class<?> type) {
+        if (type.isArray() || Collection.class.isAssignableFrom(type)) {
+            return false;
+        }
         return Number.class.isAssignableFrom(type) || converter.isConversionSupportedFor(type, type);
     }
 

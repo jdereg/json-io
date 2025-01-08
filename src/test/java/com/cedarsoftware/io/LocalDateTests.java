@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Date;
 
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
@@ -155,7 +156,7 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
     }
 
     private String loadJsonForTest(String fileName) {
-        return MetaUtils.loadResourceAsString("localdate/" + fileName);
+        return ClassUtilities.loadResourceAsString("localdate/" + fileName);
     }
 
 

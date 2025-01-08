@@ -2,7 +2,6 @@ package com.cedarsoftware.io;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
@@ -119,5 +118,4 @@ class TransientTest
         trans = TestUtil.toObjects(json, null);
         assertEquals(trans.main._name, "Roswell");
     }
-
 }
