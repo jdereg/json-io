@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.cedarsoftware.io.JsonReader.MissingFieldHandler;
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
 /**
@@ -352,7 +353,7 @@ public abstract class Resolver {
         Class<?> targetType = coerceClassIfNeeded(jsonObj.getJavaType());
         jsonObj.setJavaType(targetType);
 
-        Class<?> enumClass = MetaUtils.getClassIfEnum(targetType);
+        Class<?> enumClass = ClassUtilities.getClassIfEnum(targetType);
         if (enumClass != null) {
             Class<?> coercedEnumClass = getCoercedEnumClass(enumClass);
             if (coercedEnumClass != null) {
@@ -374,14 +375,14 @@ public abstract class Resolver {
     private Class<?> getCoercedEnumClass(Class<?> enumClass) {
         Class<?> coercedClass = readOptions.getCoercedClass(enumClass);
         if (coercedClass != null) {
-            return MetaUtils.getClassIfEnum(coercedClass);
+            return ClassUtilities.getClassIfEnum(coercedClass);
         }
         return null;
     }
 
     // Determine the factory type, considering enums and collections
     private Class<?> determineFactoryType(JsonObject jsonObj, Class<?> targetType) {
-        Class<?> enumClass = MetaUtils.getClassIfEnum(targetType);
+        Class<?> enumClass = ClassUtilities.getClassIfEnum(targetType);
         if (enumClass != null) {
             boolean isEnumSet = jsonObj.getItems() != null;
             return isEnumSet ? EnumSet.class : enumClass;

@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.ExceptionUtilities;
 import com.cedarsoftware.util.FastByteArrayInputStream;
@@ -95,7 +96,7 @@ public class JsonReader implements Closeable
          * override the isObjectFinal() method below and return true.
          */
         default Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-            return MetaUtils.newInstance(resolver.getConverter(), c, null);
+            return ClassUtilities.newInstance(resolver.getConverter(), c, null);
         }
         
         /**

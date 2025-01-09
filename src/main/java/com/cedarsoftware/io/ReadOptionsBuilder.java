@@ -1072,7 +1072,7 @@ public class ReadOptionsBuilder {
                 return throwableFactory;
             }
 
-            Class<?> enumClass = MetaUtils.getClassIfEnum(c);
+            Class<?> enumClass = ClassUtilities.getClassIfEnum(c);
 
             if (enumClass != null) {
                 return enumFactory;

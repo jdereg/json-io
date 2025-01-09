@@ -4,6 +4,7 @@ package com.cedarsoftware.io;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.cedarsoftware.util.ClassUtilities;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -70,7 +71,7 @@ public class SunMiscTest
     @Test
     public void testDirectCreation()
     {
-        MetaUtils.setUseUnsafe(true);
+        ClassUtilities.setUseUnsafe(true);
         // this test will fail without directCreation
         Dog.OtherShoe shoe = Dog.OtherShoe.construct();
         Dog.OtherShoe oShoe = TestUtil.toObjects(TestUtil.toJson(shoe), null);
@@ -80,7 +81,7 @@ public class SunMiscTest
 
         try
         {
-            MetaUtils.setUseUnsafe(false);
+            ClassUtilities.setUseUnsafe(false);
             shoe = Dog.OtherShoe.construct();
             TestUtil.toObjects(TestUtil.toJson(shoe), null);
             fail();
@@ -91,7 +92,7 @@ public class SunMiscTest
         }
 
 
-        MetaUtils.setUseUnsafe(true);
+        ClassUtilities.setUseUnsafe(true);
         // this test will fail without directCreation
         Dog.OtherShoe.construct();
         oShoe = TestUtil.toObjects(TestUtil.toJson(shoe), null);
@@ -105,10 +106,10 @@ public class SunMiscTest
         String json = "{\"@type\":\"" + ShouldBeImpossibleToInstantiate.class.getName() + "\", \"x\":50}";
         assertThrows(Exception.class, () -> {  TestUtil.toObjects(json, null); });
 
-        MetaUtils.setUseUnsafe(true);
+        ClassUtilities.setUseUnsafe(true);
         ShouldBeImpossibleToInstantiate s = TestUtil.toObjects(json, null);
         assert s.x == 50;
-        MetaUtils.setUseUnsafe(false);
+        ClassUtilities.setUseUnsafe(false);
     }
 
     public static class ShouldBeImpossibleToInstantiate

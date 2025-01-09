@@ -6,8 +6,8 @@ import java.util.ArrayList;
 
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
-import com.cedarsoftware.io.MetaUtils;
 import com.cedarsoftware.io.Resolver;
+import com.cedarsoftware.util.ExceptionUtilities;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -62,7 +62,7 @@ public class RecordFactory implements JsonReader.ClassFactory {
                 }
 
                 Constructor<?> constructor = c.getDeclaredConstructor(lParameterTypes.toArray(new Class[0]));
-                MetaUtils.trySetAccessible(constructor);
+                ExceptionUtilities.safelyIgnoreException(() -> constructor.setAccessible(true));
                 return constructor.newInstance(lParameterValues.toArray(new Object[0]));
             } catch (NoSuchMethodException e) {
                 throw new RuntimeException("Record de-serialization only works with java>=16.", e);

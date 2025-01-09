@@ -53,6 +53,8 @@ import static java.time.temporal.ChronoField.YEAR;
  */
 public class Writers
 {
+    private static final ThreadLocal<SimpleDateFormat> dateFormat = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
+    
     private Writers () {}
 
     /**
@@ -215,9 +217,9 @@ public class Writers
         {
             Calendar cal = (Calendar) obj;
             // TODO:  shouldn't this be the one inside the WriterContext?  and shouldn't there be a back up of parseDate() here?
-            MetaUtils.dateFormat.get().setTimeZone(cal.getTimeZone());
+            dateFormat.get().setTimeZone(cal.getTimeZone());
             output.write("\"time\":\"");
-            output.write(MetaUtils.dateFormat.get().format(cal.getTime()));
+            output.write(dateFormat.get().format(cal.getTime()));
             output.write("\",\"zone\":\"");
             output.write(cal.getTimeZone().getID());
             output.write('"');

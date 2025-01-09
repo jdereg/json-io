@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import com.cedarsoftware.io.reflect.Accessor;
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.ExceptionUtilities;
 import com.cedarsoftware.util.FastWriter;
 
@@ -1406,7 +1407,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             writePrimitive(o, getWriteOptions().isWriteLongsAsStrings());
         } else if (o instanceof String) {   // Never do an @ref to a String (they are treated as logical primitives and intern'ed on read)
             writeJsonUtf8String(out, (String) o);
-        } else if (getWriteOptions().isNeverShowingType() && MetaUtils.isPrimitive(o.getClass())) {   // If neverShowType, then force primitives (and primitive wrappers)
+        } else if (getWriteOptions().isNeverShowingType() && ClassUtilities.isPrimitive(o.getClass())) {   // If neverShowType, then force primitives (and primitive wrappers)
             // to be output with toString() - prevents {"value":6} for example
             writePrimitive(o, false);
         } else {
@@ -1438,7 +1439,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         if (elementTypeField != null) {
             enumClass = (Class<?>) getValueByReflect(enumSet, elementTypeField);
             // Ensure we get the actual enum class, not an anonymous subclass
-            Class<?> actualEnumClass = MetaUtils.getClassIfEnum(enumClass);
+            Class<?> actualEnumClass = ClassUtilities.getClassIfEnum(enumClass);
             enumClass = (actualEnumClass != null) ? actualEnumClass : enumClass;
         }
 
@@ -1446,14 +1447,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         if (enumClass == null) {
             if (!enumSet.isEmpty()) {
                 Enum<?> e = enumSet.iterator().next();
-                Class<?> actualEnumClass = MetaUtils.getClassIfEnum(e.getClass());
+                Class<?> actualEnumClass = ClassUtilities.getClassIfEnum(e.getClass());
                 enumClass = (actualEnumClass != null) ? actualEnumClass : e.getClass();
             } else {
                 // EnumSet is empty; try to get the enum class from the complement
                 EnumSet<?> complement = EnumSet.complementOf(enumSet);
                 if (!complement.isEmpty()) {
                     Enum<?> e = complement.iterator().next();
-                    Class<?> actualEnumClass = MetaUtils.getClassIfEnum(e.getClass());
+                    Class<?> actualEnumClass = ClassUtilities.getClassIfEnum(e.getClass());
                     enumClass = (actualEnumClass != null) ? actualEnumClass : e.getClass();
                 } else {
                     // Cannot determine the enum class; use a placeholder
@@ -1646,7 +1647,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
 
         if (declaredType.isEnum() && declaredType.isAssignableFrom(objectClass)) {
-            Class<?> enumClass = MetaUtils.getClassIfEnum(objectClass);
+            Class<?> enumClass = ClassUtilities.getClassIfEnum(objectClass);
             return !declaredType.equals(enumClass);
         }
 

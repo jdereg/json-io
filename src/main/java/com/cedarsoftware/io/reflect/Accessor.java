@@ -7,7 +7,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 
-import com.cedarsoftware.io.MetaUtils;
+import com.cedarsoftware.util.ExceptionUtilities;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -49,7 +49,7 @@ public class Accessor {
 
     public static Accessor createFieldAccessor(Field field, String uniqueFieldName) {
         if (!(Modifier.isPublic(field.getModifiers()) && Modifier.isPublic(field.getDeclaringClass().getModifiers()))) {
-            MetaUtils.trySetAccessible(field);
+            ExceptionUtilities.safelyIgnoreException(() -> field.setAccessible(true));
         }
 
         try {

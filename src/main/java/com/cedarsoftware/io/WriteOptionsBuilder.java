@@ -1091,7 +1091,7 @@ public class WriteOptionsBuilder {
             if (writer != nullWriter) {
                 return writer;
             } else {
-                Class<?> enumClass = MetaUtils.getClassIfEnum(c);
+                Class<?> enumClass = ClassUtilities.getClassIfEnum(c);
                 return (enumClass != null) ? enumWriter : nullWriter;
             }
         }
