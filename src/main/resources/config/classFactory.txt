@@ -136,6 +136,13 @@ sun.util.calendar.ZoneInfo = Convertable
 [Ljava.time.ZoneOffset; = ArrayFactory
 [Ljava.time.ZoneRegion; = ArrayFactory
 
+java.lang.Throwable = com.cedarsoftware.io.factory.ThrowableFactory
+
+# Use factory classes to re-create Singleton Collections classes as they are not easily instantiated
+java.util.Collections$SingletonList = com.cedarsoftware.io.factory.SingletonFactory
+java.util.Collections$SingletonSet = com.cedarsoftware.io.factory.SingletonFactory
+java.util.Collections$SingletonMap = com.cedarsoftware.io.factory.SingletonFactory
+
 # Use factory classes to re-create empty Collections classes as they are not easily instantiated
 java.util.Collections$EmptyEnumeration = com.cedarsoftware.io.factory.EmptyEnumerationFactory
 java.util.Collections$EmptyIterator = com.cedarsoftware.io.factory.EmptyIteratorFactory

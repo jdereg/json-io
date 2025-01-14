@@ -6,10 +6,6 @@ java.time.ZoneRegion = java.time.ZoneId
 
 java.util.Arrays$ArrayList = java.util.ArrayList
 
-java.util.Collections$SingletonList = com.cedarsoftware.io.util.SingletonList
-java.util.Collections$SingletonSet = com.cedarsoftware.io.util.SingletonSet
-java.util.Collections$SingletonMap = com.cedarsoftware.io.util.SingletonMap
-
 java.util.Collections$SynchronizedCollection = com.cedarsoftware.util.ConcurrentList
 java.util.Collections$SynchronizedList = com.cedarsoftware.util.ConcurrentList
 java.util.Collections$SynchronizedRandomAccessList = com.cedarsoftware.util.ConcurrentList

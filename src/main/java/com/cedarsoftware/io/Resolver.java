@@ -322,11 +322,15 @@ public abstract class Resolver {
         Object sourceValue = jsonObj.hasValue() ? jsonObj.getValue() : null;
         Class<?> sourceType = sourceValue != null ? sourceValue.getClass() : (!jsonObj.isEmpty() ? Map.class : null);
 
-        if (sourceType != null && converter.isConversionSupportedFor(sourceType, targetType)) {
-            try {
-                Object value = converter.convert(sourceValue != null ? sourceValue : jsonObj, targetType);
-                return jsonObj.setFinishedTarget(value, true);
-            } catch (Exception ignored) { }
+        // Other than exceptions, see if there is a converter that can handle the conversion
+        if (!Throwable.class.isAssignableFrom(targetType)) {
+            if (sourceType != null && converter.isConversionSupportedFor(sourceType, targetType)) {
+                try {
+                    Object value = converter.convert(sourceValue != null ? sourceValue : jsonObj, targetType);
+                    return jsonObj.setFinishedTarget(value, true);
+                } catch (Exception ignored) {
+                }
+            }
         }
 
         // Determine the factory type, considering enums and collections
@@ -417,13 +421,13 @@ public abstract class Resolver {
                 jsonObject.setJavaType(Map.class);
                 mate = jsonObject;
             } else {
-                mate = MetaUtils.newInstance(converter, unknownClass, null);   // can add constructor arg values
+                mate = ClassUtilities.newInstance(converter, unknownClass, null);   // can add constructor arg values
             }
         } else {
             // Handle regular field.object reference
             // ClassFactory already consulted above, likely regular business/data classes.
             // If the newInstance(c) fails, it throws a JsonIoException.
-            mate = MetaUtils.newInstance(converter, c, null);  // can add constructor arg values
+            mate = ClassUtilities.newInstance(converter, c, null);  // can add constructor arg values
         }
         return jsonObj.setTarget(mate);
     }

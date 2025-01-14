@@ -109,10 +109,8 @@ java.sql.Timestamp = Timestamp
 #   for infinite clean round-trips.
 java.util.Collections$SingletonList = SingletonList
 com.cedarsoftware.io.util.SingletonList = SingletonList
-
 java.util.Collections$SingletonSet = SingletonSet
 com.cedarsoftware.io.util.SingletonSet = SingletonSet
-
 java.util.Collections$SingletonMap = SingletonMap
 com.cedarsoftware.io.util.SingletonMap = SingletonMap
 

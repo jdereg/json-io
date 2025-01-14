@@ -1,12 +1,15 @@
 package com.cedarsoftware.io;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 import com.cedarsoftware.io.factory.ThrowableFactory;
+import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.StringUtilities;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -402,10 +405,71 @@ class ExceptionSerializeTest
         assert t3.getMessage().equals("java.lang.Throwable: hello"); // Throwable took the causes message and back-copied it to the outer Throwable
         assert t3.getCause().getMessage().equals("hello");
 
-        assert t4.getMessage() == null;
+        assert StringUtilities.isEmpty(t4.getMessage());
         assert t4.getCause() == null;
     }
 
+    @Test
+    void testInvalidCoordinateException_fullyPopulated() {
+        Set<String> coordKeys = setOf("key1", "key2", "key3");
+        Set<Integer> reqKeys = setOf(3, 1, 2);
+
+        InvalidCoordinateException e1 = new InvalidCoordinateException(
+                "Missing required coordinate key: key4",
+                "testCube",
+                coordKeys,
+                reqKeys
+        );
+
+        String json = JsonIo.toJson(e1, null);
+        Exception e2 = JsonIo.toObjects(json, new ReadOptionsBuilder().build(), InvalidCoordinateException.class);
+        
+        assertThat(e2)
+                .isInstanceOf(InvalidCoordinateException.class)
+                .hasMessage("Missing required coordinate key: key4");
+
+        assert DeepEquals.deepEquals(e1, e2);
+    }
+
+    @Test
+    void testInvalidCoordinateException_mostlyNull() {
+        InvalidCoordinateException e1 = new InvalidCoordinateException(
+                null,
+                null,
+                null,
+                null
+        );
+
+        String json = TestUtil.toJson(e1);
+        InvalidCoordinateException e2 = TestUtil.toObjects(json, null);
+
+        assertThat(e2)
+                .isInstanceOf(InvalidCoordinateException.class)
+                .hasMessage("");
+
+        assertThat(e2.getCubeName()).isNull();
+        assertThat(e2.getCoordinateKeys()).isNull();
+        assertThat(e2.getRequiredKeys()).isNull();
+    }
+
+    @Test
+    void testInvalidCoordinateException_deepEquals() {
+        Set<String> coordKeys = setOf("key1", "key2", "key3");
+        Set<String> reqKeys = setOf("key1", "key2", "key4");
+
+        InvalidCoordinateException e1 = new InvalidCoordinateException(
+                "Missing required coordinate key: key4",
+                "testCube",
+                coordKeys,
+                reqKeys
+        );
+
+        String json = TestUtil.toJson(e1);
+        InvalidCoordinateException e2 = TestUtil.toObjects(json, null);
+
+        assertThat(DeepEquals.deepEquals(e1, e2)).isTrue();
+    }
+    
     void methodThatThrowsException() {
         throw new IllegalArgumentException("foo");
     }
@@ -513,4 +577,35 @@ class ExceptionSerializeTest
             return this.randomThoughts;
         }
     }
+
+    static class InvalidCoordinateException extends IllegalArgumentException implements Serializable
+    {
+        private final String cubeName;
+        private final Set coordinateKeys;
+        private final Set requiredKeys;
+
+        InvalidCoordinateException(String msg, String cubeName, Set coordinateKeys, Set requiredKeys)
+        {
+            super(msg);
+            this.cubeName = cubeName;
+            this.coordinateKeys = coordinateKeys;
+            this.requiredKeys = requiredKeys;
+        }
+
+        String getCubeName()
+        {
+            return cubeName;
+        }
+
+        Set getCoordinateKeys()
+        {
+            return coordinateKeys;
+        }
+
+        Set getRequiredKeys()
+        {
+            return requiredKeys;
+        }
+    }
+
 }

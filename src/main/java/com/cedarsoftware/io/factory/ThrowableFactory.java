@@ -5,8 +5,8 @@ import java.util.List;
 
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
-import com.cedarsoftware.io.MetaUtils;
 import com.cedarsoftware.io.Resolver;
+import com.cedarsoftware.util.ClassUtilities;
 
 import static com.cedarsoftware.util.CollectionUtilities.setOf;
 
@@ -56,7 +56,7 @@ public class ThrowableFactory implements JsonReader.ClassFactory
         gatherRemainingValues(resolver, jObj, arguments, setOf(DETAIL_MESSAGE, CAUSE, STACK_TRACE));
 
         // Only need the values
-        Throwable t = (Throwable) MetaUtils.newInstance(resolver.getConverter(), c, arguments);
+        Throwable t = (Throwable) ClassUtilities.newInstance(resolver.getConverter(), c, arguments);
 
         if (t.getCause() == null && cause != null) {
             t.initCause(cause);
