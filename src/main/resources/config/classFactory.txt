@@ -164,11 +164,11 @@ java.util.Collections$UnmodifiableMap = com.cedarsoftware.io.factory.SealableMap
 java.util.Collections$UnmodifiableSortedMap = com.cedarsoftware.io.factory.SealableNavigableMapFactory
 java.util.Collections$UnmodifiableNavigableMap = com.cedarsoftware.io.factory.SealableNavigableMapFactory
 
-com.cedarsoftware.util.SealableList = com.cedarsoftware.io.factory.SealableListFactory
-com.cedarsoftware.util.SealableSet = com.cedarsoftware.io.factory.SealableSetFactory
-com.cedarsoftware.util.SealableNavigableSet = com.cedarsoftware.io.factory.SealableNavigableSetFactory
-com.cedarsoftware.util.SealableMap = com.cedarsoftware.io.factory.SealableMapFactory
-com.cedarsoftware.util.SealableNavigableMap = com.cedarsoftware.io.factory.SealableNavigableMapFactory
+com.cedarsoftware.io.util.SealableList = com.cedarsoftware.io.factory.SealableListFactory
+com.cedarsoftware.io.util.SealableSet = com.cedarsoftware.io.factory.SealableSetFactory
+com.cedarsoftware.io.util.SealableNavigableSet = com.cedarsoftware.io.factory.SealableNavigableSetFactory
+com.cedarsoftware.io.util.SealableMap = com.cedarsoftware.io.factory.SealableMapFactory
+com.cedarsoftware.io.util.SealableNavigableMap = com.cedarsoftware.io.factory.SealableNavigableMapFactory
 
 java.util.ImmutableCollections$ListN = com.cedarsoftware.io.factory.ImmutableListFactory
 java.util.ImmutableCollections$List12 = com.cedarsoftware.io.factory.ImmutableListFactory

@@ -3,7 +3,7 @@ package com.cedarsoftware.io.factory;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
-import com.cedarsoftware.util.SealableMap;
+import com.cedarsoftware.io.util.SealableMap;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

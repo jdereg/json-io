@@ -74,9 +74,4 @@ public class ThrowableFactory implements JsonReader.ClassFactory
         }
         return t;
     }
-
-    public boolean isObjectFinal()
-    {
-        return false;
-    }
 }

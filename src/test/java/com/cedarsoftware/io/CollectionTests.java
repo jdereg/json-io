@@ -21,9 +21,9 @@ import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import com.cedarsoftware.io.util.SealableList;
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
-import com.cedarsoftware.util.SealableList;
 import com.google.gson.JsonParser;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
