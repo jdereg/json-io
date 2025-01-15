@@ -6,6 +6,7 @@ java.time.ZoneRegion = java.time.ZoneId
 
 java.util.Arrays$ArrayList = java.util.ArrayList
 
+# Either coerce the following types or write a ClassFactory for them
 java.util.Collections$SynchronizedCollection = com.cedarsoftware.util.ConcurrentList
 java.util.Collections$SynchronizedList = com.cedarsoftware.util.ConcurrentList
 java.util.Collections$SynchronizedRandomAccessList = com.cedarsoftware.util.ConcurrentList

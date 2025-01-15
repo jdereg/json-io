@@ -43,6 +43,7 @@ java.lang.String = Convertable
 java.lang.StackTraceElement = com.cedarsoftware.io.factory.StackTraceElementFactory
 java.lang.StringBuffer = Convertable
 java.lang.StringBuilder = Convertable
+java.lang.Throwable = com.cedarsoftware.io.factory.ThrowableFactory
 
 # java.net
 java.net.URL = Convertable
@@ -136,43 +137,41 @@ sun.util.calendar.ZoneInfo = Convertable
 [Ljava.time.ZoneOffset; = ArrayFactory
 [Ljava.time.ZoneRegion; = ArrayFactory
 
-java.lang.Throwable = com.cedarsoftware.io.factory.ThrowableFactory
-
 # Use factory classes to re-create Singleton Collections classes as they are not easily instantiated
 java.util.Collections$SingletonList = com.cedarsoftware.io.factory.SingletonFactory
 java.util.Collections$SingletonSet = com.cedarsoftware.io.factory.SingletonFactory
 java.util.Collections$SingletonMap = com.cedarsoftware.io.factory.SingletonFactory
 
 # Use factory classes to re-create empty Collections classes as they are not easily instantiated
-java.util.Collections$EmptyEnumeration = com.cedarsoftware.io.factory.EmptyEnumerationFactory
-java.util.Collections$EmptyIterator = com.cedarsoftware.io.factory.EmptyIteratorFactory
-java.util.Collections$EmptyListIterator = com.cedarsoftware.io.factory.EmptyListIteratorFactory
-java.util.Collections$EmptyList = com.cedarsoftware.io.factory.EmptyListFactory
-java.util.Collections$EmptySet = com.cedarsoftware.io.factory.EmptySetFactory
-java.util.Collections$UnmodifiableNavigableSet$EmptyNavigableSet = com.cedarsoftware.io.factory.EmptyNavigableSetFactory
-java.util.Collections$EmptyMap = com.cedarsoftware.io.factory.EmptyMapFactory
-java.util.Collections$UnmodifiableNavigableMap$EmptyNavigableMap = com.cedarsoftware.io.factory.EmptyNavigableMapFactory
+java.util.Collections$EmptyEnumeration = com.cedarsoftware.io.factory.EmptyFactory
+java.util.Collections$EmptyIterator = com.cedarsoftware.io.factory.EmptyFactory
+java.util.Collections$EmptyListIterator = com.cedarsoftware.io.factory.EmptyFactory
+java.util.Collections$EmptyList = com.cedarsoftware.io.factory.EmptyFactory
+java.util.Collections$EmptySet = com.cedarsoftware.io.factory.EmptyFactory
+java.util.Collections$UnmodifiableNavigableSet$EmptyNavigableSet = com.cedarsoftware.io.factory.EmptyFactory
+java.util.Collections$EmptyMap = com.cedarsoftware.io.factory.EmptyFactory
+java.util.Collections$UnmodifiableNavigableMap$EmptyNavigableMap = com.cedarsoftware.io.factory.EmptyFactory
 
 # Use factory classes to re-create unmodifiable Collections classes
-java.util.Collections$UnmodifiableCollection = com.cedarsoftware.io.factory.SealableListFactory
-java.util.Collections$UnmodifiableList = com.cedarsoftware.io.factory.SealableListFactory
-java.util.Collections$UnmodifiableRandomAccessList = com.cedarsoftware.io.factory.SealableListFactory
-java.util.Collections$UnmodifiableSet = com.cedarsoftware.io.factory.SealableSetFactory
-java.util.Collections$UnmodifiableSortedSet = com.cedarsoftware.io.factory.SealableNavigableSetFactory
-java.util.Collections$UnmodifiableNavigableSet = com.cedarsoftware.io.factory.SealableNavigableSetFactory
-java.util.Collections$UnmodifiableMap = com.cedarsoftware.io.factory.SealableMapFactory
-java.util.Collections$UnmodifiableSortedMap = com.cedarsoftware.io.factory.SealableNavigableMapFactory
-java.util.Collections$UnmodifiableNavigableMap = com.cedarsoftware.io.factory.SealableNavigableMapFactory
+java.util.Collections$UnmodifiableCollection = com.cedarsoftware.io.factory.SealableFactory
+java.util.Collections$UnmodifiableList = com.cedarsoftware.io.factory.SealableFactory
+java.util.Collections$UnmodifiableRandomAccessList = com.cedarsoftware.io.factory.SealableFactory
+java.util.Collections$UnmodifiableSet = com.cedarsoftware.io.factory.SealableFactory
+java.util.Collections$UnmodifiableSortedSet = com.cedarsoftware.io.factory.SealableFactory
+java.util.Collections$UnmodifiableNavigableSet = com.cedarsoftware.io.factory.SealableFactory
+java.util.Collections$UnmodifiableMap = com.cedarsoftware.io.factory.SealableFactory
+java.util.Collections$UnmodifiableSortedMap = com.cedarsoftware.io.factory.SealableFactory
+java.util.Collections$UnmodifiableNavigableMap = com.cedarsoftware.io.factory.SealableFactory
 
-com.cedarsoftware.io.util.SealableList = com.cedarsoftware.io.factory.SealableListFactory
-com.cedarsoftware.io.util.SealableSet = com.cedarsoftware.io.factory.SealableSetFactory
-com.cedarsoftware.io.util.SealableNavigableSet = com.cedarsoftware.io.factory.SealableNavigableSetFactory
-com.cedarsoftware.io.util.SealableMap = com.cedarsoftware.io.factory.SealableMapFactory
-com.cedarsoftware.io.util.SealableNavigableMap = com.cedarsoftware.io.factory.SealableNavigableMapFactory
+com.cedarsoftware.io.util.SealableList = com.cedarsoftware.io.factory.SealableFactory
+com.cedarsoftware.io.util.SealableSet = com.cedarsoftware.io.factory.SealableFactory
+com.cedarsoftware.io.util.SealableNavigableSet = com.cedarsoftware.io.factory.SealableFactory
+com.cedarsoftware.io.util.SealableMap = com.cedarsoftware.io.factory.SealableFactory
+com.cedarsoftware.io.util.SealableNavigableMap = com.cedarsoftware.io.factory.SealableFactory
 
-java.util.ImmutableCollections$ListN = com.cedarsoftware.io.factory.ImmutableListFactory
-java.util.ImmutableCollections$List12 = com.cedarsoftware.io.factory.ImmutableListFactory
-java.util.ImmutableCollections$SetN = com.cedarsoftware.io.factory.ImmutableSetFactory
-java.util.ImmutableCollections$Set12 = com.cedarsoftware.io.factory.ImmutableSetFactory
+java.util.ImmutableCollections$ListN = com.cedarsoftware.io.factory.SealableFactory
+java.util.ImmutableCollections$List12 = com.cedarsoftware.io.factory.SealableFactory
+java.util.ImmutableCollections$SetN = com.cedarsoftware.io.factory.SealableFactory
+java.util.ImmutableCollections$Set12 = com.cedarsoftware.io.factory.SealableFactory
 
 java.util.EnumSet = com.cedarsoftware.io.factory.EnumSetFactory

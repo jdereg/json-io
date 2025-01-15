@@ -122,14 +122,19 @@ com.cedarsoftware.io.util.SingletonMap = SingletonMap
 java.util.Collections$UnmodifiableCollection = UnmodifiableCollection
 java.util.Collections$UnmodifiableRandomAccessList = UnmodifiableRandomAccessList
 com.cedarsoftware.io.util.SealableList = UnmodifiableRandomAccessList
+
 java.util.Collections$UnmodifiableSet = UnmodifiableSet
 com.cedarsoftware.io.util.SealableSet = UnmodifiableSet
 java.util.Collections$UnmodifiableSortedSet = UnmodifiableSortedSet
+
 java.util.Collections$UnmodifiableNavigableSet = UnmodifiableNavigableSet
 com.cedarsoftware.io.util.SealableNavigableSet = UnmodifiableNavigableSet
+
 java.util.Collections$UnmodifiableMap = UnmodifiableMap
 com.cedarsoftware.io.util.SealableMap = UnmodifiableMap
+
 java.util.Collections$UnmodifiableSortedMap = UnmodifiableSortedMap
+
 java.util.Collections$UnmodifiableNavigableMap = UnmodifiableNavigableMap
 com.cedarsoftware.io.util.SealableNavigableMap = UnmodifiableNavigableMap
 

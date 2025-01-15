@@ -1,16 +1,22 @@
 package com.cedarsoftware.io.factory;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.NavigableSet;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
 
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
-import com.cedarsoftware.io.util.SingletonList;
-import com.cedarsoftware.io.util.SingletonMap;
-import com.cedarsoftware.io.util.SingletonSet;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -29,16 +35,26 @@ import com.cedarsoftware.io.util.SingletonSet;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class SingletonFactory implements JsonReader.ClassFactory {
-    @Override
+public class EmptyFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        if (List.class.isAssignableFrom(c)) {
-            return new SingletonList<>();
+        if (NavigableSet.class.isAssignableFrom(c) || SortedSet.class.isAssignableFrom(c)) {
+            return Collections.emptyNavigableSet();
         } else if (Set.class.isAssignableFrom(c)) {
-            return new SingletonSet<>();
+            return Collections.emptySet();
+        } else if (List.class.isAssignableFrom(c) || Collection.class.isAssignableFrom(c)) {
+            return Collections.emptyList();
+        } else if (NavigableMap.class.isAssignableFrom(c) || SortedMap.class.isAssignableFrom(c)) {
+            return Collections.emptyNavigableMap();
         } else if (Map.class.isAssignableFrom(c)) {
-            return new SingletonMap<>();
+            return Collections.emptyMap();
+        } else if (ListIterator.class.isAssignableFrom(c)) {
+            return Collections.emptyListIterator();
+        } else if (Iterator.class.isAssignableFrom(c)) {
+            return Collections.emptyIterator();
+        } else if (Enumeration.class.isAssignableFrom(c)) {
+            return Collections.emptyEnumeration();
         }
-        throw new JsonIoException("SingletonFactory handed Class for which it was not expecting: " + c.getName());
+        throw new JsonIoException("EmptyFactory handed Class for which it was not expecting: " + c.getName());
     }
 }
+

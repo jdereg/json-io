@@ -35,7 +35,7 @@ public class ImmutableTest
         strings = Collections.unmodifiableSet(strings);
         // Simple object with a list field, behaves the same with a class
 
-        // Serialize foo with a singletonList, then deserialization throws
+        // Serialize foo with a unmodifiableSet, then deserialization comes in with SeableSet
         String json = TestUtil.toJson(strings);
         Object o = TestUtil.toObjects(json, null);
     }
