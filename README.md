@@ -3,10 +3,17 @@ json-io
 [![Maven Central](https://badgen.net/maven/v/maven-central/com.cedarsoftware/json-io)](https://central.sonatype.com/search?q=json-io&namespace=com.cedarsoftware)
 [![Javadoc](https://javadoc.io/badge/com.cedarsoftware/json-io.svg)](http://www.javadoc.io/doc/com.cedarsoftware/json-io)
 
-Useful tool for Java serialization to and from JSON format.
-Available on [Maven Central](https://central.sonatype.com/search?q=json-io&namespace=com.cedarsoftware).
-This library has <b>no dependencies</b> on other libraries for runtime other than our own `java-util.`
-The `json-io.jar`file is `220K` and `java-util` is `336K.` Compatible with JDK1.8 through JDK 23.
+json-io is a powerful and lightweight Java library that simplifies JSON serialization and deserialization while handling complex object graphs with ease. Unlike basic JSON parsers, json-io preserves object references, handles polymorphic types, and maintains cyclic relationships in your data structures. Whether you're working with sophisticated domain models, dealing with legacy Java objects, or need high-performance JSON processing, json-io provides a robust solution with minimal configuration.
+
+Key Features:
+- Preserves object references and handles cyclic relationships
+- Supports polymorphic types and complex object graphs
+- Zero external dependencies (other than java-util)
+- Fully compatible with both JPMS and OSGi environments
+- Lightweight (224K for json-io.jar, 405K for java-util)
+- Compatible with JDK 1.8 through JDK 23
+- Extensive configuration options via ReadOptions and WriteOptions
+- Featured on [json.org](http://json.org)
 ## Compatibility
 
 ### JPMS (Java Platform Module System)
