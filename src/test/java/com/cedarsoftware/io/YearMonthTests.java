@@ -105,7 +105,7 @@ class YearMonthTests extends SerializationDeserializationMinimumTests<YearMonth>
         YearMonth date = YearMonth.of(2014, 10);
         String json = TestUtil.toJson(date);
         YearMonth result = TestUtil.toObjects(json, null);
-        assertThat(result).isEqualTo(date);
+        assert result.equals(date);
     }
 
     @Test
