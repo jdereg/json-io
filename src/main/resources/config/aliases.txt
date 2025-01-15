@@ -164,6 +164,17 @@ java.util.Collections$SynchronizedMap = SynchronizedMap
 java.util.Collections$SynchronizedSortedMap = SynchronizedSortedMap
 java.util.Collections$SynchronizedNavigableMap = SynchronizedNavigableMap
 
+# Collections "checked" types
+java.util.Collections$CheckedCollection = CheckedCollection
+java.util.Collections$CheckedList = CheckedList
+java.util.Collections$CheckedRandomAccessList = CheckedRandomAccessList
+java.util.Collections$CheckedSet = CheckedSet
+java.util.Collections$CheckedSortedSet = CheckedSortedSet
+java.util.Collections$CheckedNavigableSet = CheckedNavigableSet
+java.util.Collections$CheckedMap = CheckedMap
+java.util.Collections$CheckedSortedMap = CheckedSortedMap
+java.util.Collections$CheckedNavigableMap = CheckedNavigableMap
+
 # Collections "concurrent" types
 java.util.concurrent.ConcurrentHashMap = ConcurrentHashMap
 java.util.concurrent.ConcurrentSkipListMap = ConcurrentSkipListMap

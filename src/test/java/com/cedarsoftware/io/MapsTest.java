@@ -456,7 +456,8 @@ class MapsTest
         assertNull(root._map_obj.get(null));
 
         assertEquals(2, root._map_con.size());
-        assertTrue(root._map_con instanceof ConcurrentHashMap);
+        Map syncMap = Collections.synchronizedMap(new LinkedHashMap<>());
+        assertTrue(syncMap.getClass().isAssignableFrom(root._map_con.getClass()));
         i = root._map_con.entrySet().iterator();
         while (i.hasNext())
         {

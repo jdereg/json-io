@@ -37,7 +37,7 @@ import com.cedarsoftware.io.util.SealableSet;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class SealableFactory implements JsonReader.ClassFactory {
+public class UnmodifiableFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
         SealedSupplier supplier = resolver.getSealedSupplier();
         if (NavigableSet.class.isAssignableFrom(c) || SortedSet.class.isAssignableFrom(c)) {

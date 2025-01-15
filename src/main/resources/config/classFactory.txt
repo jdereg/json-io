@@ -137,12 +137,12 @@ sun.util.calendar.ZoneInfo = Convertable
 [Ljava.time.ZoneOffset; = ArrayFactory
 [Ljava.time.ZoneRegion; = ArrayFactory
 
-# Use factory classes to re-create Singleton Collections classes as they are not easily instantiated
+# Use factory classes to re-create "singleton" Collections classes as they are not easily instantiated
 java.util.Collections$SingletonList = com.cedarsoftware.io.factory.SingletonFactory
 java.util.Collections$SingletonSet = com.cedarsoftware.io.factory.SingletonFactory
 java.util.Collections$SingletonMap = com.cedarsoftware.io.factory.SingletonFactory
 
-# Use factory classes to re-create empty Collections classes as they are not easily instantiated
+# Use factory classes to re-create "empty" Collections classes as they are not easily instantiated
 java.util.Collections$EmptyEnumeration = com.cedarsoftware.io.factory.EmptyFactory
 java.util.Collections$EmptyIterator = com.cedarsoftware.io.factory.EmptyFactory
 java.util.Collections$EmptyListIterator = com.cedarsoftware.io.factory.EmptyFactory
@@ -152,26 +152,48 @@ java.util.Collections$UnmodifiableNavigableSet$EmptyNavigableSet = com.cedarsoft
 java.util.Collections$EmptyMap = com.cedarsoftware.io.factory.EmptyFactory
 java.util.Collections$UnmodifiableNavigableMap$EmptyNavigableMap = com.cedarsoftware.io.factory.EmptyFactory
 
-# Use factory classes to re-create unmodifiable Collections classes
-java.util.Collections$UnmodifiableCollection = com.cedarsoftware.io.factory.SealableFactory
-java.util.Collections$UnmodifiableList = com.cedarsoftware.io.factory.SealableFactory
-java.util.Collections$UnmodifiableRandomAccessList = com.cedarsoftware.io.factory.SealableFactory
-java.util.Collections$UnmodifiableSet = com.cedarsoftware.io.factory.SealableFactory
-java.util.Collections$UnmodifiableSortedSet = com.cedarsoftware.io.factory.SealableFactory
-java.util.Collections$UnmodifiableNavigableSet = com.cedarsoftware.io.factory.SealableFactory
-java.util.Collections$UnmodifiableMap = com.cedarsoftware.io.factory.SealableFactory
-java.util.Collections$UnmodifiableSortedMap = com.cedarsoftware.io.factory.SealableFactory
-java.util.Collections$UnmodifiableNavigableMap = com.cedarsoftware.io.factory.SealableFactory
+# Use factory classes to re-create "unmodifiable" Collections classes
+java.util.Collections$UnmodifiableCollection = com.cedarsoftware.io.factory.UnmodifiableFactory
+java.util.Collections$UnmodifiableList = com.cedarsoftware.io.factory.UnmodifiableFactory
+java.util.Collections$UnmodifiableRandomAccessList = com.cedarsoftware.io.factory.UnmodifiableFactory
+java.util.Collections$UnmodifiableSet = com.cedarsoftware.io.factory.UnmodifiableFactory
+java.util.Collections$UnmodifiableSortedSet = com.cedarsoftware.io.factory.UnmodifiableFactory
+java.util.Collections$UnmodifiableNavigableSet = com.cedarsoftware.io.factory.UnmodifiableFactory
+java.util.Collections$UnmodifiableMap = com.cedarsoftware.io.factory.UnmodifiableFactory
+java.util.Collections$UnmodifiableSortedMap = com.cedarsoftware.io.factory.UnmodifiableFactory
+java.util.Collections$UnmodifiableNavigableMap = com.cedarsoftware.io.factory.UnmodifiableFactory
 
-com.cedarsoftware.io.util.SealableList = com.cedarsoftware.io.factory.SealableFactory
-com.cedarsoftware.io.util.SealableSet = com.cedarsoftware.io.factory.SealableFactory
-com.cedarsoftware.io.util.SealableNavigableSet = com.cedarsoftware.io.factory.SealableFactory
-com.cedarsoftware.io.util.SealableMap = com.cedarsoftware.io.factory.SealableFactory
-com.cedarsoftware.io.util.SealableNavigableMap = com.cedarsoftware.io.factory.SealableFactory
+# Use SynchronizedFactory to instantiate "synchronized" Collections classes
+java.util.Collections$SynchronizedCollection = com.cedarsoftware.io.factory.SynchronizedFactory
+java.util.Collections$SynchronizedList = com.cedarsoftware.io.factory.SynchronizedFactory
+java.util.Collections$SynchronizedRandomAccessList = com.cedarsoftware.io.factory.SynchronizedFactory
+java.util.Collections$SynchronizedSet = com.cedarsoftware.io.factory.SynchronizedFactory
+java.util.Collections$SynchronizedSortedSet = com.cedarsoftware.io.factory.SynchronizedFactory
+java.util.Collections$SynchronizedNavigableSet = com.cedarsoftware.io.factory.SynchronizedFactory
+java.util.Collections$SynchronizedMap = com.cedarsoftware.io.factory.SynchronizedFactory
+java.util.Collections$SynchronizedSortedMap = com.cedarsoftware.io.factory.SynchronizedFactory
+java.util.Collections$SynchronizedNavigableMap = com.cedarsoftware.io.factory.SynchronizedFactory
 
-java.util.ImmutableCollections$ListN = com.cedarsoftware.io.factory.SealableFactory
-java.util.ImmutableCollections$List12 = com.cedarsoftware.io.factory.SealableFactory
-java.util.ImmutableCollections$SetN = com.cedarsoftware.io.factory.SealableFactory
-java.util.ImmutableCollections$Set12 = com.cedarsoftware.io.factory.SealableFactory
+# Use CheckedFactory to instantiate "checked" Collections classes
+java.util.Collections$CheckedCollection = com.cedarsoftware.io.factory.CheckedFactory
+java.util.Collections$CheckedList = com.cedarsoftware.io.factory.CheckedFactory
+java.util.Collections$CheckedRandomAccessList = com.cedarsoftware.io.factory.CheckedFactory
+java.util.Collections$CheckedSet = com.cedarsoftware.io.factory.CheckedFactory
+java.util.Collections$CheckedSortedSet = com.cedarsoftware.io.factory.CheckedFactory
+java.util.Collections$CheckedNavigableSet = com.cedarsoftware.io.factory.CheckedFactory
+java.util.Collections$CheckedMap = com.cedarsoftware.io.factory.CheckedFactory
+java.util.Collections$CheckedSortedMap = com.cedarsoftware.io.factory.CheckedFactory
+java.util.Collections$CheckedNavigableMap = com.cedarsoftware.io.factory.CheckedFactory
+
+com.cedarsoftware.io.util.SealableList = com.cedarsoftware.io.factory.UnmodifiableFactory
+com.cedarsoftware.io.util.SealableSet = com.cedarsoftware.io.factory.UnmodifiableFactory
+com.cedarsoftware.io.util.SealableNavigableSet = com.cedarsoftware.io.factory.UnmodifiableFactory
+com.cedarsoftware.io.util.SealableMap = com.cedarsoftware.io.factory.UnmodifiableFactory
+com.cedarsoftware.io.util.SealableNavigableMap = com.cedarsoftware.io.factory.UnmodifiableFactory
+
+java.util.ImmutableCollections$ListN = com.cedarsoftware.io.factory.UnmodifiableFactory
+java.util.ImmutableCollections$List12 = com.cedarsoftware.io.factory.UnmodifiableFactory
+java.util.ImmutableCollections$SetN = com.cedarsoftware.io.factory.UnmodifiableFactory
+java.util.ImmutableCollections$Set12 = com.cedarsoftware.io.factory.UnmodifiableFactory
 
 java.util.EnumSet = com.cedarsoftware.io.factory.EnumSetFactory

@@ -881,4 +881,165 @@ class CollectionTests {
         private List<String> _imm_lst_0;
         private List<String> _imm_lst_1;
     }
+
+    @Test
+    public void testCheckedList() {
+        // Create a checked List of Strings
+        List<String> originalList = Collections.checkedList(
+                new ArrayList<>(),
+                String.class
+        );
+        originalList.add("one");
+        originalList.add("two");
+        originalList.add("three");
+
+        // Serialize to JSON
+        String json = JsonIo.toJson(originalList, WriteOptionsBuilder.getDefaultWriteOptions());
+
+        // Deserialize back
+        List<?> deserializedList = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), null);
+
+        // Verify
+        assertEquals(originalList.size(), deserializedList.size());
+        assertEquals(originalList, deserializedList);
+
+        // Verify type checking still works
+        // If we ever decide to write checked types to JSON, and then honor them, uncomment below.
+//        try {
+//            ((List)deserializedList).add(123); // Should throw ClassCastException
+//            fail("Should have thrown ClassCastException");
+//        } catch (ClassCastException e) {
+//            // Expected
+//        }
+    }
+
+    @Test
+    public void testCheckedSet() {
+        // Create a checked Set of Integers
+        Set<Integer> originalSet = Collections.checkedSet(
+                new HashSet<>(),
+                Integer.class
+        );
+        originalSet.add(1);
+        originalSet.add(2);
+        originalSet.add(3);
+
+        // Serialize to JSON
+        String json = JsonIo.toJson(originalSet, WriteOptionsBuilder.getDefaultWriteOptions());
+
+        // Deserialize back
+        Set<?> deserializedSet = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), null);
+
+        // Verify
+        assertEquals(originalSet.size(), deserializedSet.size());
+        assertEquals(originalSet, deserializedSet);
+
+        // Verify type checking still works
+        // If we ever decide to write checked types to JSON, and then honor them, uncomment below.
+//        try {
+//            ((Set)deserializedSet).add("string"); // Should throw ClassCastException
+//            fail("Should have thrown ClassCastException");
+//        } catch (ClassCastException e) {
+//            // Expected
+//        }
+    }
+
+    @Test
+    public void testCheckedMap() {
+        // Create a checked Map with String keys and Integer values
+        Map<String, Integer> originalMap = Collections.checkedMap(
+                new HashMap<>(),
+                String.class,
+                Integer.class
+        );
+        originalMap.put("one", 1);
+        originalMap.put("two", 2);
+        originalMap.put("three", 3);
+
+        // Serialize to JSON
+        String json = JsonIo.toJson(originalMap, WriteOptionsBuilder.getDefaultWriteOptions());
+
+        // Deserialize back
+        Map<?, ?> deserializedMap = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), null);
+
+        // Verify
+        assertEquals(originalMap.size(), deserializedMap.size());
+        assertEquals(originalMap, deserializedMap);
+
+        // Verify type checking still works
+        // If we ever decide to write checked types to JSON, and then honor them, uncomment below.
+//        try {
+//            ((Map)deserializedMap).put(123, "string"); // Should throw ClassCastException
+//            fail("Should have thrown ClassCastException");
+//        } catch (ClassCastException e) {
+//            // Expected
+//        }
+    }
+
+    @Test
+    public void testCheckedSortedSet() {
+        // Create a checked SortedSet of Strings
+        SortedSet<String> originalSet = Collections.checkedSortedSet(
+                new TreeSet<>(),
+                String.class
+        );
+        originalSet.add("apple");
+        originalSet.add("banana");
+        originalSet.add("cherry");
+
+        // Serialize to JSON
+        String json = JsonIo.toJson(originalSet, WriteOptionsBuilder.getDefaultWriteOptions());
+
+        // Deserialize back
+        SortedSet<?> deserializedSet = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), null);
+
+        // Verify
+        assertEquals(originalSet.size(), deserializedSet.size());
+        assertEquals(originalSet, deserializedSet);
+        assertEquals(originalSet.first(), deserializedSet.first());
+        assertEquals(originalSet.last(), deserializedSet.last());
+
+        // Verify type checking still works
+        // If we ever decide to write checked types to JSON, and then honor them, uncomment below.
+//        try {
+//            ((SortedSet)deserializedSet).add(123); // Should throw ClassCastException
+//            fail("Should have thrown ClassCastException");
+//        } catch (ClassCastException e) {
+//            // Expected
+//        }
+    }
+
+    @Test
+    public void testCheckedSortedMap() {
+        // Create a checked SortedMap with String keys and Integer values
+        SortedMap<String, Integer> originalMap = Collections.checkedSortedMap(
+                new TreeMap<>(),
+                String.class,
+                Integer.class
+        );
+        originalMap.put("a", 1);
+        originalMap.put("b", 2);
+        originalMap.put("c", 3);
+
+        // Serialize to JSON
+        String json = JsonIo.toJson(originalMap, WriteOptionsBuilder.getDefaultWriteOptions());
+
+        // Deserialize back
+        SortedMap<?, ?> deserializedMap = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), null);
+
+        // Verify
+        assertEquals(originalMap.size(), deserializedMap.size());
+        assertEquals(originalMap, deserializedMap);
+        assertEquals(originalMap.firstKey(), deserializedMap.firstKey());
+        assertEquals(originalMap.lastKey(), deserializedMap.lastKey());
+
+        // Verify type checking still works
+        // If we ever decide to write checked types to JSON, and then honor them, uncomment below.
+//        try {
+//            ((SortedMap)deserializedMap).put(123, "string"); // Should throw ClassCastException
+//            fail("Should have thrown ClassCastException");
+//        } catch (ClassCastException e) {
+//            // Expected
+//        }
+    }
 }
