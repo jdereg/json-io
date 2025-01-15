@@ -1,9 +1,11 @@
 ### Revision History
-#### 4.31.0
+#### 4.32.0
   * EnumSet can now be written with @type or @enum, controlled by a WriteOption (writeEnumSetOldWay).  Currently, the default is `true,` write the old way for backward compatibility. This will change in a future release.
   * JsonObject simplified, with `@keys` and `@items` now as explicit fields.
   * JsonObject simplified, enumType has been removed, as it is now stored in JavaType field.
   * Root object types like `Person[].class` or `String[].class` supported for casting, as opposed to only `Object[].class.`
+#### 4.31.0
+  * scrub release.
 #### 4.30.0
   * Root object type's like `Person[].class,` `String[].class,` can now be specified as the `rootType` and the return value will be `Person[],` `String[],` or a `ClassCastException` if the JSON data does not match the type.
   * `JsonIo.formatJson()` three parameter version removed. Use the one (1) parameter API that takes the JSON to format. It runs much faster, as it no longer deserializes/serializes, but walks the JSON `String` directly.
