@@ -489,6 +489,9 @@ public class JsonIo {
         return builder;
     }
 
+    public static String PREFIX = "-~";
+    public static String SUFFIX = "~-";
+
     //
     // READ Option Keys (older method of specifying options) -----------------------------------------------------------
     //

@@ -1,13 +1,14 @@
 package com.cedarsoftware.io;
 
+import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.math.BigDecimal;
-import java.math.BigInteger;
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -75,6 +76,8 @@ public class JsonReader implements Closeable
     private final ReadOptions readOptions;
     private final JsonParser parser;
     private final Converter localConverter;
+    private final boolean isRoot;
+
     /**
      * Subclass this interface and create a class that will return a new instance of the
      * passed in Class (c).  Your factory subclass will be called when json-io encounters an
@@ -174,9 +177,8 @@ public class JsonReader implements Closeable
      * @param inputStream InputStream that will be offering JSON.
      * @return FastReader wrapped around the passed in inputStream, translating from InputStream to InputStreamReader.
      */
-    protected FastReader getReader(InputStream inputStream)
-    {
-        return new FastReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8), 8192, 10);
+    protected FastReader getReader(InputStream inputStream) {
+        return new FastReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8), 65536, 10);
     }
 
     /**
@@ -190,6 +192,7 @@ public class JsonReader implements Closeable
     }
 
     public JsonReader(InputStream inputStream, ReadOptions readOptions, ReferenceTracker references) {
+        this.isRoot = true;   // When root is true, the resolver has .cleanup() called on it upon JsonReader finalization
         this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
         Converter converter = new Converter(this.readOptions.getConverterOptions());
         this.input = getReader(inputStream);
@@ -212,59 +215,167 @@ public class JsonReader implements Closeable
         this(new FastByteArrayInputStream(new byte[]{}), readOptions);
     }
 
+    /**
+     * Use this constructor to resolve JsonObjects into Java, for example, in a ClassFactory or custom reader.
+     * Then use jsonReader.jsonObjectsToJava(rootJsonObject) to turn JsonObject graph (sub-graph) into Java.
+     *
+     * @param resolver Resolver, obtained from ClassFactory.newInstance() or CustomReader.read().
+     */
+    public JsonReader(Resolver resolver) {
+        this.isRoot = false;    // If not root, .cleanup() is not called when the JsonReader is finalized
+        this.resolver = resolver;
+        this.readOptions = resolver.getReadOptions();
+        this.localConverter = resolver.getConverter();
+        this.input = getReader(new ByteArrayInputStream(new byte[0]));  // Graph is already read-in when using this API
+        this.parser = new JsonParser(input, resolver);
+    }
+
+    /**
+     * Reads and parses a JSON structure from the underlying {@code parser}, then returns
+     * an object of type {@code T}. The parsing and return type resolution follow these steps:
+     *
+     * <ul>
+     *   <li>Attempts to parse the top-level JSON element (e.g. object, array, or primitive) and
+     *   produce an initial {@code returnValue} of type {@code T} (as inferred or declared).</li>
+     *   <li>If the parsed value is {@code null}, simply returns {@code null}.</li>
+     *   <li>If the value is recognized as an “array-like” structure (either an actual Java array or
+     *   a {@link JsonObject} flagged as an array), it delegates to {@code handleArrayRoot()} to build
+     *   the final result object.</li>
+     *   <li>If the value is a {@link JsonObject} at the root, it delegates to
+     *   {@code determineReturnValueWhenJsonObjectRoot()} for further resolution.</li>
+     *   <li>Otherwise (if it’s a primitive or other type), it may convert the result
+     *   to {@code rootType} if needed/possible.</li>
+     * </ul>
+     *
+     * @param <T>       The expected return type.
+     * @param rootType  The class token representing the desired return type. May be {@code null},
+     *                  in which case the type is inferred from the JSON content or defaults to
+     *                  the parser’s best guess.
+     * @return          The fully resolved and (if applicable) type-converted object.
+     *                  Could be {@code null} if the JSON explicitly represents a null value.
+     * @throws JsonIoException if there is any error parsing or resolving the JSON content,
+     *         or if type conversion fails (e.g., when the actual type does not match
+     *         the requested {@code rootType} and no valid conversion is available).
+     */
     public <T> T readObject(Class<T> rootType) {
-        T returnValue;
+        verifyRootType(rootType);
+
+        final T returnValue;
         try {
-            verifyRootType(rootType);
+            // Attempt to parse the JSON into an object
             returnValue = (T) parser.readValue(rootType);
-            if (returnValue == null) {
-                return null;    // easy, done.
-            }
         } catch (JsonIoException e) {
             throw e;
         } catch (Exception e) {
+            // Wrap any other exception
             throw new JsonIoException(getErrorMessage("error parsing JSON value"), e);
         }
-        
-        // Handle JSON [] at root
-        JsonObject rootObj = null;
 
+        return (T) toJava(rootType, returnValue);
+    }
+
+    /**
+     * Only use from ClassFactory or CustomReader
+     */
+    public Object toJava(Class<?> rootType, Object root) {
+        if (root == null) {
+            return null;
+        }
+
+        boolean isJava = resolver.getReadOptions().isReturningJavaObjects();
+
+        // 1) Handle a root-level array
+        if (isRootArray(root)) {
+            Object o = handleArrayRoot(rootType, root);
+            // Fetch root (dig for it) if we have JsonObject and return type is Java
+            if (isJava && o instanceof JsonObject && ((JsonObject) o).target != null) {
+                o = ((JsonObject) o).target;
+            }
+            return o;
+        }
+
+        // 2) Handle a root-level JsonObject
+        if (root instanceof JsonObject) {
+            Object o = handleObjectRoot(rootType, root);
+            // Fetch root (dig for it) if we have JsonObject and return type is Java
+            if (isJava && o instanceof JsonObject && ((JsonObject) o).target != null) {
+                o = ((JsonObject) o).target;
+            }
+            return o;
+        }
+
+        // 3) Otherwise, it’s a primitive (String, Boolean, Number, etc.) or convertible
+        return convertIfNeeded(rootType, root);
+    }
+
+    /**
+     * Returns true if the parsed object represents a root-level “array,”
+     * meaning either an actual Java array, or a JsonObject marked as an array.
+     */
+    private boolean isRootArray(Object value) {
+        if (value.getClass().isArray()) {
+            return true;
+        }
+        return (value instanceof JsonObject) && ((JsonObject) value).isArray();
+    }
+
+    /**
+     * Handles the case where the top-level element is an array (either a real Java array,
+     * or a JsonObject that’s flagged as an array).
+     */
+    @SuppressWarnings("unchecked")
+    private Object handleArrayRoot(Class<?> rootType, Object returnValue) {
+        JsonObject rootObj;
+
+        // If it’s actually a Java array
         if (returnValue.getClass().isArray()) {
             rootObj = new JsonObject();
             rootObj.setTarget(returnValue);
             rootObj.setItems(returnValue);
-        } else if (returnValue instanceof JsonObject && ((JsonObject) returnValue).isArray()) {
+        } else {
+            // Otherwise, it’s a JsonObject that has isArray() == true
             rootObj = (JsonObject) returnValue;
         }
 
-        if (rootObj != null) {
-            T graph = resolveObjects(rootObj, rootType);
-            if (graph != null) {
-                return graph;
-            }
-            return (T) rootObj.getItems();
+        // Attempt to build the final graph object
+        Object graph = resolveObjects(rootObj, rootType);
+        if (graph == null) {
+            // If resolveObjects returned null, fall back on the items as the final object
+            graph = rootObj.getItems();
         }
 
-        // JSON {} at root
-        if (returnValue instanceof JsonObject) {
-            return determineReturnValueWhenJsonObjectRoot(rootType, returnValue);
-        }
-
-        // JSON Primitive (String, Boolean, Double, Long), or convertible types
-        if (rootType != null) {
-            Converter converter = resolver.getConverter();
-            if (converter.isConversionSupportedFor(returnValue.getClass(), rootType)) {
-                return converter.convert(returnValue, rootType);
-            }
-
-            throw new JsonIoException(getErrorMessage("Return type mismatch, expected: " + rootType.getName() + ", actual: " + returnValue.getClass().getName()));
-        }
-
-        return returnValue;
+        // Perform any needed type conversion before returning
+        return convertIfNeeded(rootType, graph);
     }
 
     /**
-     * When return JsonObjects, verify return type
+     * Converts returnValue to the desired rootType if necessary and possible.
+     */
+    @SuppressWarnings("unchecked")
+    private Object convertIfNeeded(Class<?> rootType, Object returnValue) {
+        if (rootType == null) {
+            // If no specific type was requested, return as-is
+            return returnValue;
+        }
+
+        // If the value is already the desired type (or a subtype), just return
+        if (rootType.isAssignableFrom(returnValue.getClass())) {
+            return returnValue;
+        }
+
+        // If there's a known converter from the actual type -> requested rootType, use it
+        if (localConverter.isConversionSupportedFor(returnValue.getClass(), rootType)) {
+            return localConverter.convert(returnValue, rootType);
+        }
+
+        // Houston, we have a type mismatch
+        throw new ClassCastException(
+                getErrorMessage("Return type mismatch, expected: " + rootType.getName() +
+                        ", actual: " + returnValue.getClass().getName()));
+    }
+
+    /**
+     * When return JsonObjects, verify return type (bound to mostly built-in convertable types
      * @param rootType Class passed as rootType to return type
      */
     private <T> void verifyRootType(Class<T> rootType) {
@@ -278,13 +389,13 @@ public class JsonReader implements Closeable
             while (typeToCheck.isArray()) {
                 typeToCheck = typeToCheck.getComponentType();
             }
-            if (resolver.isConvertable(typeToCheck) || typeToCheck == Object.class) {
+            if (localConverter.isSimpleTypeConversionSupported(typeToCheck, typeToCheck) || typeToCheck == Object.class) {
                 return;
             }
         }
 
         // Perform the checks on typeToCheck
-        if (getResolver().isConvertable(typeToCheck)) {
+        if (localConverter.isSimpleTypeConversionSupported(typeToCheck, typeToCheck)) {
             return;
         }
 
@@ -304,400 +415,120 @@ public class JsonReader implements Closeable
                 "- Map or any of its subclasses\n" +
                 "- Collection or any of its subclasses\n" +
                 "- Arrays (of any depth) of the above types\n" +
-                "Please use one of these types as the rootType when readOptions.isReturningJsonObjects() is enabled.");
+                "Please use one of these types as the rootType, or enable readOptions.isReturningJavaObjects().");
     }
 
     /**
-     * Determines the appropriate return value based on the provided {@code rootType}, {@code returnJson} option,
-     * and the presence of a {@code @type} annotation within the JSON object.
-     *
-     * <p>The method evaluates several conditions to decide whether to convert the JSON object to a specified
-     * type, retain it as a basic JSON structure, or return it as-is. This ensures flexibility and consistency
-     * in handling various data types, aligning with developer expectations and standard behaviors of
-     * JSON libraries like Jackson and GSON.
-     *
-     * <p>The following decision table outlines the logic used to determine the return value:
-     *
-     * <table border="1" cellpadding="5" cellspacing="0">
-     *   <thead>
-     *     <tr>
-     *       <th>Row</th>
-     *       <th>C1: {@code rootType} Specified</th>
-     *       <th>C2: Conversion Supported</th>
-     *       <th>C3: {@code returnJson}</th>
-     *       <th>C4: Has {@code @type}</th>
-     *       <th>C5: Not a Built-In Primitive</th>
-     *       <th>C6: Convertable</th>
-     *       <th>C7: {@code @type} Convertible to Basic Type</th>
-     *       <th>Action</th>
-     *     </tr>
-     *   </thead>
-     *   <tbody>
-     *     <tr>
-     *       <td>1</td>
-     *       <td><strong>Yes</strong></td>
-     *       <td><strong>Yes</strong></td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td><strong>A1:</strong> Convert and return</td>
-     *     </tr>
-     *     <tr>
-     *       <td>2</td>
-     *       <td><strong>Yes</strong></td>
-     *       <td><strong>No</strong></td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td><strong>A2:</strong> Return {@code graph}</td>
-     *     </tr>
-     *     <tr>
-     *       <td>3</td>
-     *       <td><strong>No</strong></td>
-     *       <td>-</td>
-     *       <td><strong>Yes</strong></td>
-     *       <td><strong>Yes</strong></td>
-     *       <td><strong>Yes</strong></td>
-     *       <td>-</td>
-     *       <td><strong>Yes</strong></td>
-     *       <td><strong>A4:</strong> Convert to basic type and return</td>
-     *     </tr>
-     *     <tr>
-     *       <td>4</td>
-     *       <td><strong>No</strong></td>
-     *       <td>-</td>
-     *       <td><strong>Yes</strong></td>
-     *       <td><strong>Yes</strong></td>
-     *       <td><strong>Yes</strong></td>
-     *       <td>-</td>
-     *       <td><strong>No</strong></td>
-     *       <td><strong>A3:</strong> Return {@code returnValue}</td>
-     *     </tr>
-     *     <tr>
-     *       <td>5</td>
-     *       <td><strong>No</strong></td>
-     *       <td>-</td>
-     *       <td><strong>Yes</strong></td>
-     *       <td><strong>No</strong></td>
-     *       <td>-</td>
-     *       <td><strong>Yes</strong></td>
-     *       <td>-</td>
-     *       <td><strong>A2:</strong> Return {@code graph}</td>
-     *     </tr>
-     *     <tr>
-     *       <td>6</td>
-     *       <td><strong>No</strong></td>
-     *       <td>-</td>
-     *       <td><strong>Yes</strong></td>
-     *       <td><strong>No</strong></td>
-     *       <td>-</td>
-     *       <td><strong>No</strong></td>
-     *       <td>-</td>
-     *       <td><strong>A3:</strong> Return {@code returnValue}</td>
-     *     </tr>
-     *     <tr>
-     *       <td>7</td>
-     *       <td><strong>No</strong></td>
-     *       <td>-</td>
-     *       <td><strong>No</strong></td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td><strong>A2:</strong> Return {@code graph}</td>
-     *     </tr>
-     *   </tbody>
-     * </table>
-     *
-     * <h3>Conditions Explained</h3>
+     * Handles the top-level case where the parsed JSON is represented as a non-array
+     * {@link JsonObject}. This method applies fallback type logic if needed, resolves
+     * references to build the final object graph, and then performs any necessary
+     * conversions depending on:
      * <ul>
-     *   <li><strong>C1:</strong> <em>rootType Specified</em> - Determines if a specific root type was provided.</li>
-     *   <li><strong>C2:</strong> <em>Conversion Supported</em> - Checks if conversion from the current type to {@code rootType} is supported.</li>
-     *   <li><strong>C3:</strong> <em>returnJson</em> - Indicates if the return should be in JSON object form.</li>
-     *   <li><strong>C4:</strong> <em>Has @type</em> - Checks if the JSON object contains a {@code @type} annotation.</li>
-     *   <li><strong>C5:</strong> <em>Not a Built-In Primitive</em> - Determines if the resolved graph is a complex type rather than a primitive.</li>
-     *   <li><strong>C6:</strong> <em>Convertable</em> - Checks if the graph can be converted to a basic type without {@code @type}.</li>
-     *   <li><strong>C7:</strong> <em>{@code @type} Convertible to Basic Type</em> - Determines if the type specified by {@code @type} can be converted to a fundamental JSON type.</li>
+     *   <li>Whether {@code returnJsonObjects} (i.e. “JSON mode”) is enabled, or</li>
+     *   <li>A specific {@code rootType} is requested by the caller.</li>
      * </ul>
      *
-     * <h3>Actions Explained</h3>
-     * <ul>
-     *   <li><strong>A1:</strong> <em>Convert and return</em> - Converts the graph to the specified {@code rootType} and returns the converted value.</li>
-     *   <li><strong>A2:</strong> <em>Return graph</em> - Returns the resolved graph as-is.</li>
-     *   <li><strong>A3:</strong> <em>Return {@code returnValue}</em> - Returns the original JSON object without conversion.</li>
-     *   <li><strong>A4:</strong> <em>Convert to basic type and return</em> - Converts the graph to a basic type as determined by {@code getJsonSynonymType} and returns the converted value.</li>
-     * </ul>
-     *
-     * <h3>Examples</h3>
-     * <ul>
-     *   <li>
-     *     <strong>Example 1:</strong><br>
-     *     <code>JSON Input:</code>
-     *     <pre>{@code
-     * {"@type":"StringBuilder","value":"json-io"}
-     * }</pre>
-     *     <code>returnJson:</code> <strong>true</strong><br>
-     *     <code>rootType:</code> <strong>null</strong><br>
-     *     <strong>Result:</strong> Returns a <code>String</code> with value "json-io".
-     *   </li>
-     *   <li>
-     *     <strong>Example 2:</strong><br>
-     *     <code>JSON Input:</code>
-     *     <pre>{@code
-     * {"@type":"AtomicInteger","value":123}
-     * }</pre>
-     *     <code>returnJson:</code> <strong>true</strong><br>
-     *     <code>rootType:</code> <strong>null</strong><br>
-     *     <strong>Result:</strong> Returns an <code>Integer</code> with value 123.
-     *   </li>
-     *   <li>
-     *     <strong>Example 3:</strong><br>
-     *     <code>JSON Input:</code>
-     *     <pre>{@code
-     * {"@type":"UUID","value":"123e4567-e89b-12d3-a456-426614174000"}
-     * }</pre>
-     *     <code>returnJson:</code> <strong>true</strong><br>
-     *     <code>rootType:</code> <strong>null</strong><br>
-     *     <strong>Result:</strong> Returns a <code>UUID</code> instance representing the provided UUID string.
-     *   </li>
-     * </ul>
-     *
-     * <h3>Decision Table Summary</h3>
-     *
-     * <table border="1" cellpadding="5" cellspacing="0">
-     *   <thead>
-     *     <tr>
-     *       <th>Row</th>
-     *       <th>C1: {@code rootType} Specified</th>
-     *       <th>C2: Conversion Supported</th>
-     *       <th>C3: {@code returnJson}</th>
-     *       <th>C4: Has {@code @type}</th>
-     *       <th>C5: Not a Built-In Primitive</th>
-     *       <th>C6: Convertable</th>
-     *       <th>C7: {@code @type} Convertible to Basic Type</th>
-     *       <th><strong>Action</strong></th>
-     *     </tr>
-     *   </thead>
-     *   <tbody>
-     *     <tr>
-     *       <td>1</td>
-     *       <td><strong>Yes</strong></td>
-     *       <td><strong>Yes</strong></td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td><strong>A1:</strong> Convert and return</td>
-     *     </tr>
-     *     <tr>
-     *       <td>2</td>
-     *       <td><strong>Yes</strong></td>
-     *       <td><strong>No</strong></td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td><strong>A2:</strong> Return {@code graph}</td>
-     *     </tr>
-     *     <tr>
-     *       <td>3</td>
-     *       <td><strong>No</strong></td>
-     *       <td>-</td>
-     *       <td><strong>Yes</strong></td>
-     *       <td><strong>Yes</strong></td>
-     *       <td><strong>Yes</strong></td>
-     *       <td>-</td>
-     *       <td><strong>Yes</strong></td>
-     *       <td><strong>A4:</strong> Convert to basic type and return</td>
-     *     </tr>
-     *     <tr>
-     *       <td>4</td>
-     *       <td><strong>No</strong></td>
-     *       <td>-</td>
-     *       <td><strong>Yes</strong></td>
-     *       <td><strong>Yes</strong></td>
-     *       <td><strong>Yes</strong></td>
-     *       <td>-</td>
-     *       <td><strong>No</strong></td>
-     *       <td><strong>A3:</strong> Return {@code returnValue}</td>
-     *     </tr>
-     *     <tr>
-     *       <td>5</td>
-     *       <td><strong>No</strong></td>
-     *       <td>-</td>
-     *       <td><strong>Yes</strong></td>
-     *       <td><strong>No</strong></td>
-     *       <td>-</td>
-     *       <td><strong>Yes</strong></td>
-     *       <td>-</td>
-     *       <td><strong>A2:</strong> Return {@code graph}</td>
-     *     </tr>
-     *     <tr>
-     *       <td>6</td>
-     *       <td><strong>No</strong></td>
-     *       <td>-</td>
-     *       <td><strong>Yes</strong></td>
-     *       <td><strong>No</strong></td>
-     *       <td>-</td>
-     *       <td><strong>No</strong></td>
-     *       <td>-</td>
-     *       <td><strong>A3:</strong> Return {@code returnValue}</td>
-     *     </tr>
-     *     <tr>
-     *       <td>7</td>
-     *       <td><strong>No</strong></td>
-     *       <td>-</td>
-     *       <td><strong>No</strong></td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td>-</td>
-     *       <td><strong>A2:</strong> Return {@code graph}</td>
-     *     </tr>
-     *   </tbody>
-     * </table>
-     *
-     * <h3>Decision Paths Explained</h3>
+     * <p>The high-level steps are:</p>
      * <ol>
-     *   <li>
-     *     <strong>When {@code rootType} is specified:</strong>
+     *   <li><strong>Fallback type check:</strong> If a special case applies, update the
+     *       {@code @type} in the {@link JsonObject} before resolution.</li>
+     *   <li><strong>Resolution:</strong> Call {@code resolveObjects()} to hydrate the
+     *       parsed structure into a Java object graph (could be any type, including a
+     *       Collection, Map, bean, or even {@code null}).</li>
+     *   <li><strong>Null handling:</strong> If the resolved {@code graph} is {@code null},
+     *       this method returns the original {@code JsonObject} (i.e., {@code returnValue}).</li>
+     *   <li><strong>rootType handling (Java mode or JSON mode):</strong>
      *     <ul>
-     *       <li><strong>If</strong> conversion to {@code rootType} is supported, <strong>then</strong> convert and return the converted value (<em>A1</em>).</li>
-     *       <li><strong>Else</strong>, return the resolved {@code graph} as-is (<em>A2</em>).</li>
-     *     </ul>
-     *   </li>
-     *   <li>
-     *     <strong>When {@code rootType} is not specified and {@code returnJson} is {@code true}:</strong>
-     *     <ul>
-     *       <li><strong>If</strong> the JSON object has a {@code @type} and the graph is not a built-in primitive:
-     *         <ul>
-     *           <li><strong>If</strong> the {@code @type} is convertible to a basic type, <strong>then</strong> convert to the basic type and return (<em>A4</em>).</li>
-     *           <li><strong>Else</strong>, return the original {@code JsonObject} without conversion (<em>A3</em>).</li>
-     *         </ul>
-     *       </li>
-     *       <li><strong>If</strong> the JSON object does not have a {@code @type}:
-     *         <ul>
-     *           <li><strong>If</strong> the graph is convertible, <strong>then</strong> return the converted {@code graph} (<em>A2</em>).</li>
-     *           <li><strong>Else</strong>, return the original {@code JsonObject} without conversion (<em>A3</em>).</li>
-     *         </ul>
-     *       </li>
-     *     </ul>
-     *   </li>
-     *   <li>
-     *     <strong>When {@code returnJson} is {@code false}:</strong>
-     *     <ul>
-     *       <li>Always return the resolved {@code graph}, regardless of {@code @type} (<em>A2</em>).</li>
+     *       <li>If the caller specified a non-null {@code rootType}, check if the {@code graph}
+     *           is already assignable to it. Otherwise attempt a conversion if supported,
+     *           or just return the unconverted object if not.</li>
+     *       <li>If no {@code rootType} is given, we fall back to either returning the fully
+     *           resolved Java object (when {@code returnJsonObjects == false}), or the raw
+     *           {@link JsonObject} (when {@code returnJsonObjects == true}), except in cases
+     *           where a “simple type” conversion can be applied.</li>
      *     </ul>
      *   </li>
      * </ol>
      *
-     * <h3>Supported Extended JDK Classes</h3>
-     * <ul>
-     *   <li><strong>ZonedDateTime:</strong> Converted to {@code ZonedDateTime} instance.</li>
-     *   <li><strong>UUID:</strong> Converted to {@code UUID} instance.</li>
-     *   <li><strong>Date:</strong> Converted to {@code Date} instance.</li>
-     *   <li><strong>BigInteger:</strong> Preserved as {@code BigInteger} to maintain precision and capacity.</li>
-     *   <li><strong>BigDecimal:</strong> Preserved as {@code BigDecimal} to maintain precision and capacity.</li>
-     *   All conversions supported by java-util Converter are used on simple return types.
-     * </ul>
-     *
-     * <h3>Examples</h3>
-     * <ul>
-     *   <li>
-     *     <strong>Example 1:</strong><br>
-     *     <code>JSON Input:</code>
-     *     <pre>{@code
-     * {"@type":"BigInteger","value":123456789012345678901234567890}
-     * }</pre>
-     *     <code>returnJson:</code> <strong>true</strong><br>
-     *     <code>rootType:</code> <strong>null</strong><br>
-     *     <strong>Result:</strong> Returns a <code>BigInteger</code> instance representing the provided value.
-     *   </li>
-     *   <li>
-     *     <strong>Example 2:</strong><br>
-     *     <code>JSON Input:</code>
-     *     <pre>{@code
-     * {"@type":"BigDecimal","value":12345.67890}
-     * }</pre>
-     *     <code>returnJson:</code> <strong>true</strong><br>
-     *     <code>rootType:</code> <strong>null</strong><br>
-     *     <strong>Result:</strong> Returns a <code>BigDecimal</code> instance representing the provided value.
-     *   </li>
-     * </ul>
-     *
-     * @param <T>         The generic type parameter representing the expected return type.
-     * @param rootType    The class of the type that the user expects as the root type. Can be {@code null}.
-     * @param returnValue The JSON object to be evaluated and potentially converted.
-     * @return The appropriate return value based on the evaluation of the provided parameters and JSON content.
+     * @param rootType   the expected return type (may be {@code null} for type inference)
+     * @param returnValue the initial parsed representation (expected to be a {@code JsonObject})
+     * @return           the resolved and (if necessary) converted object graph or the raw
+     *                   {@code JsonObject}, depending on mode and convertibility
      */
-    private <T> T determineReturnValueWhenJsonObjectRoot(Class<T> rootType, T returnValue) {
+    @SuppressWarnings("unchecked")
+    private Object handleObjectRoot(Class<?> rootType, Object returnValue) {
         boolean returnJson = readOptions.isReturningJsonObjects();
-        Converter converter = resolver.getConverter();
 
-        // Special case not mentioned in the Javadocs:
-        // 1. rootType argument passed in, is null.
-        // 2. returnJsonObjects = true (returnJavaObjects does not use this path)
-        // 3. root JSON has {"@type": Collection or Map}
-        // 4. item within the Collection or Map would violate the contract of the container.
-        // 5. If all that holds true, then add a 'fallback' case for it.  See "fallback" APIs for examples.
-        if (returnValue instanceof JsonObject) {
-            JsonObject jObj = (JsonObject) returnValue;
-            if (shouldFallbackToDefaultType(returnJson, rootType, jObj.getJavaType())) {
-                Class<?> fallbackType = getFallbackType(jObj.getJavaType());
-                jObj.setJavaType(fallbackType);
-            }
+        // 1) If a fallback condition applies, update the @type before resolution
+        JsonObject jObj = (JsonObject) returnValue;
+        if (shouldFallbackToDefaultType(returnJson, rootType, jObj.getJavaType())) {
+            Class<?> fallbackType = getFallbackType(jObj.getJavaType());
+            jObj.setJavaType(fallbackType);
         }
 
-        T graph = resolveObjects((JsonObject) returnValue, rootType);
+        // 2) Resolve internal references/build the graph
+        Object graph = resolveObjects(jObj, rootType);
 
-        // Case 1 & 2: rootType is specified
+        // If the resolved graph is null, return the original JsonObject
+        // (many tests rely on this exact behavior)
+        if (graph == null) {
+            return returnValue;
+        }
+
+        // 3) If the caller specified a particular rootType...
         if (rootType != null) {
-            // Attempt conversion with the convo converter
+            // If already assignable, just return it
+            if (rootType.isAssignableFrom(graph.getClass())) {
+                return graph;
+            }
+            // Otherwise, try converting
             if (localConverter.isConversionSupportedFor(graph.getClass(), rootType)) {
-                return (T) localConverter.convert(graph, rootType);
+                return localConverter.convert(graph, rootType);
             }
 
-            // If no conversion is supported, return the graph as-is
+            Set<Class<?>> skipRoots = new HashSet<>();
+            skipRoots.add(Object.class);
+            skipRoots.add(Serializable.class);
+            skipRoots.add(Cloneable.class);
+
+            Set<Class<?>> commonAncestors = ClassUtilities.findLowestCommonSupertypesExcluding(graph.getClass(), rootType, skipRoots);
+            if (commonAncestors.isEmpty()) {
+                throw new ClassCastException("Return type mismatch, expected: " + rootType.getName() +
+                        ", actual: " + graph.getClass().getName());
+            }
             return graph;
         }
 
-        // Cases 3, 4, 5, 6, 7: rootType is not specified
+        // 4) No rootType was specified. Decide based on "JSON mode" vs. "JavaObjects" mode.
         if (returnJson) {
-            JsonObject jsonObject = (JsonObject) returnValue;
-            Class<?> javaType = jsonObject.getJavaType();
+            // --- JSON Mode ---
+            Class<?> javaType = jObj.getJavaType();
 
-            if (javaType != null) { // C4: Has @type
-                // Check if the javaType is convertable
-                if (resolver.isConvertable(javaType)) {
-                    // C7: Convert to the basic type if supported
+            // If there's an @type, check if it's recognized as a "simple" type
+            if (javaType != null) {
+                if (localConverter.isSimpleTypeConversionSupported(javaType, javaType) || Number.class.isAssignableFrom(javaType)) {
+                    // Convert to the corresponding basic type if possible
                     Class<?> basicType = getJsonSynonymType(javaType);
-                    @SuppressWarnings("unchecked")
-                    T converted = (T) converter.convert(returnValue, basicType);
-                    return converted;
+                    return localConverter.convert(returnValue, basicType);
                 }
-
-                // C5: If not built-in primitive and not convertable, return as JsonObject
+                // If it's not a built-in primitive or convertible, we return the raw JsonObject
                 if (!isBuiltInPrimitive(graph)) {
                     return returnValue;
                 }
             }
 
-            // C6: Convertable without @type or if @type is present but not convertible
-            if (resolver.isConvertable(graph.getClass())) {
+            // If no @type or it's not convertible,
+            // check if the *resolved graph* can remain a "simple" type
+            if (localConverter.isSimpleTypeConversionSupported(graph.getClass(), graph.getClass())) {
                 return graph;
-            } else {
-                return returnValue;
             }
+
+            // Otherwise, just return the raw JsonObject
+            return returnValue;
         }
 
-        // Case 7: returnJson is false
-        return graph; // JavaObjects mode - return resolved graph
+        // 5) In JavaObjects mode with no specified rootType, return the resolved graph
+        return graph;
     }
 
     /**
@@ -769,18 +600,7 @@ public class JsonReader implements Closeable
             return false;
         }
         Class<?> cls = obj.getClass();
-        return cls.isPrimitive() ||
-                cls == String.class ||
-                cls == Boolean.class ||
-                cls == Byte.class ||
-                cls == Short.class ||
-                cls == Integer.class ||
-                cls == Long.class ||
-                cls == Float.class ||
-                cls == Double.class ||
-                cls == Character.class ||
-                cls == BigDecimal.class ||
-                cls == BigInteger.class;
+        return localConverter.isSimpleTypeConversionSupported(cls, cls);
     }
 
     /**
@@ -853,7 +673,9 @@ public class JsonReader implements Closeable
              * This ensures that any internal caches or temporary data structures
              * used during the conversion process are properly cleared.
              */
-            resolver.cleanup();
+            if (isRoot) {
+                resolver.cleanup();
+            }
         }
     }
 

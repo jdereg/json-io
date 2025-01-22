@@ -132,7 +132,8 @@ public class NoTypeTest
     void personsTestWithMapRoot()
     {
         String json = ClassUtilities.loadResourceAsString("noTypes/persons.json");
-        assertThrows(ClassCastException.class, () -> { Map x = TestUtil.toObjects(json, Map.class); });
+        Exception e = assertThrows(JsonIoException.class, () -> { Map x = TestUtil.toObjects(json, Map.class); });
+        assert e.getCause() instanceof ClassCastException;
     }
 
     @Test

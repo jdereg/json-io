@@ -49,9 +49,18 @@ java.lang.Throwable = com.cedarsoftware.io.factory.ThrowableFactory
 java.net.URL = Convertable
 java.net.URI = Convertable
 
+# java.nio
+java.nio.ByteBuffer = com.cedarsoftware.io.factory.ByteBufferFactory
+java.nio.DirectByteBuffer = com.cedarsoftware.io.factory.ByteBufferFactory
+java.nio.MappedByteBuffer = com.cedarsoftware.io.factory.ByteBufferFactory
+java.nio.HeapByteBuffer = com.cedarsoftware.io.factory.ByteBufferFactory
+
+java.nio.CharBuffer = com.cedarsoftware.io.factory.CharBufferFactory
+java.nio.HeapCharBuffer = com.cedarsoftware.io.factory.CharBufferFactory
+
 # java.sql
 java.sql.Date = Convertable
-java.sql.Timestamp = Convertable
+java.sql.Timestamp = com.cedarsoftware.io.factory.TimestampFactory
 
 # java.time
 java.time.Duration = Convertable
@@ -191,9 +200,13 @@ com.cedarsoftware.io.util.SealableNavigableSet = com.cedarsoftware.io.factory.Un
 com.cedarsoftware.io.util.SealableMap = com.cedarsoftware.io.factory.UnmodifiableFactory
 com.cedarsoftware.io.util.SealableNavigableMap = com.cedarsoftware.io.factory.UnmodifiableFactory
 
+# List.of() and Set.of() support
 java.util.ImmutableCollections$ListN = com.cedarsoftware.io.factory.UnmodifiableFactory
 java.util.ImmutableCollections$List12 = com.cedarsoftware.io.factory.UnmodifiableFactory
 java.util.ImmutableCollections$SetN = com.cedarsoftware.io.factory.UnmodifiableFactory
 java.util.ImmutableCollections$Set12 = com.cedarsoftware.io.factory.UnmodifiableFactory
 
 java.util.EnumSet = com.cedarsoftware.io.factory.EnumSetFactory
+
+# CompactMap
+com.cedarsoftware.util.CompactMap = com.cedarsoftware.io.factory.CompactMapFactory

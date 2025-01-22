@@ -1,4 +1,10 @@
 ### Revision History
+#### 4.33.0
+  * New custom `ClassFactory` classes are easier to write:
+    * See [examples](user-guide.md#classfactory-and-customwriter-examples)
+  * `ByteBuffer` and `CharBuffer` now natively supported.
+  * `CompactMap` supported added via `CompactMapFactory` and `CompactMapWriter`.
+  * `Sealable*` tests moved from `java-util` to `json-io` (and so have the `Sealable*` classes).
 #### 4.32.0
   * EnumSet can now be written with @type or @enum, controlled by a WriteOption (writeEnumSetOldWay).  Currently, the default is `true,` write the old way for backward compatibility. This will change in a future release.
   * JsonObject simplified, with `@keys` and `@items` now as explicit fields.

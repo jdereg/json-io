@@ -5,7 +5,7 @@
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io</artifactId>
     <packaging>bundle</packaging>
-    <version>4.32.0</version>
+    <version>4.33.0</version>
     <description>Java JSON serialization</description>
     <url>https://github.com/jdereg/json-io</url>
 
@@ -27,7 +27,7 @@
         <!-- remove source encoding warnings from maven output -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <version.java-util>3.0.0</version.java-util>
+        <version.java-util>3.0.2</version.java-util>
         <!-- testing only -->
         <version.junit-jupiter-params>5.11.4</version.junit-jupiter-params>
         <version.assertj-core>3.27.2</version.assertj-core>

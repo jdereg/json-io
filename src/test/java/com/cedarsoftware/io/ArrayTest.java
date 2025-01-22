@@ -13,6 +13,7 @@ import java.util.GregorianCalendar;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.stream.Stream;
 
@@ -1166,8 +1167,7 @@ class ArrayTest
 
     private static Stream<Arguments> stringVariants() {
         return Stream.of(
-                Arguments.of(10, 20, 30),
-                Arguments.of("10", "20", "30"),
+                Arguments.of("10", "20", "30"),  // Only keep string variants
                 Arguments.of(new StringBuilder("10"), new StringBuilder("20"), new StringBuilder("30")),
                 Arguments.of(new StringBuffer("10"), new StringBuffer("20"), new StringBuffer("30"))
         );
@@ -1175,13 +1175,30 @@ class ArrayTest
 
     @ParameterizedTest
     @MethodSource("stringVariants")
-    void testObjectArray_withLongsWrittenAsStrings_andNeverShowTypes_writesLikeStringVariants() {
-        Object[] array = {10L, 20L, 30L};
+    void testObjectArray_withLongsWrittenAsStrings_andNeverShowTypes_writesLikeStringVariants(Object arg1, Object arg2, Object arg3) {
+        // The variant we're comparing against (string-like values)
+        Object[] variantArray = {arg1, arg2, arg3};
+        String variantJson = TestUtil.toJson(variantArray, new WriteOptionsBuilder().showTypeInfoNever().build());
 
-        WriteOptions options = new WriteOptionsBuilder().writeLongsAsStrings(true).showTypeInfoNever().build();
+        // The Long array we're testing
+        Object[] longArray = {10L, 20L, 30L};
+        WriteOptions longOptions = new WriteOptionsBuilder()
+                .writeLongsAsStrings(true)
+                .showTypeInfoNever()
+                .build();
 
-        String json = TestUtil.toJson(array, options);
-        assertThat(json).isEqualTo("[\"10\",\"20\",\"30\"]");
+        String longJson = TestUtil.toJson(longArray, longOptions);
+        assertThat(longJson).isEqualTo(variantJson);
+
+        Collection<String> col = TestUtil.toObjects(longJson, ReadOptionsBuilder.getDefaultReadOptions(), Set.class);
+        assert col.size() == 3;
+        assert col.containsAll(Arrays.asList("10", "20", "30"));
+
+        String[] values = TestUtil.toObjects(longJson, ReadOptionsBuilder.getDefaultReadOptions(), String[].class);
+        assert values.length == 3;
+        assert values[0].equals("10");
+        assert values[1].equals("20");
+        assert values[2].equals("30");
     }
 
     private static final Date _testDate = new Date();

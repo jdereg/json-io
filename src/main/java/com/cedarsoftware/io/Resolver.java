@@ -318,6 +318,15 @@ public abstract class Resolver {
         // Resolve target type with proper coercion and enum handling
         Class<?> targetType = resolveTargetType(jsonObj);
 
+        // Determine the factory type, considering enums and collections
+        Class<?> factoryType = determineFactoryType(jsonObj, targetType);
+
+        // Try creating an instance using the class factory
+        Object mate = createInstanceUsingClassFactory(factoryType, jsonObj);
+        if (mate != NO_FACTORY) {
+            return mate;
+        }
+
         // Attempt conversion using the Converter
         Object sourceValue = jsonObj.hasValue() ? jsonObj.getValue() : null;
         Class<?> sourceType = sourceValue != null ? sourceValue.getClass() : (!jsonObj.isEmpty() ? Map.class : null);
@@ -331,15 +340,6 @@ public abstract class Resolver {
                 } catch (Exception ignored) {
                 }
             }
-        }
-
-        // Determine the factory type, considering enums and collections
-        Class<?> factoryType = determineFactoryType(jsonObj, targetType);
-
-        // Try creating an instance using the class factory
-        Object mate = createInstanceUsingClassFactory(factoryType, jsonObj);
-        if (mate != NO_FACTORY) {
-            return mate;
         }
 
         // Handle array creation
@@ -523,11 +523,12 @@ public abstract class Resolver {
             jsonObject.javaType = jsonObject.hintType;
         }
 
+        Class<?> javaType = jsonObject.javaType;
         // TODO: Support multiple dimensions
         // TODO: Support char
-        if (jsonObject.javaType.isArray() && isConvertable(jsonObject.javaType.getComponentType())) {
+        if (javaType.isArray() && converter.isSimpleTypeConversionSupported(javaType.getComponentType(), javaType)) {
             Object jsonItems = jsonObject.getItems();
-            Class<?> componentType = jsonObject.javaType.getComponentType();
+            Class<?> componentType = javaType.getComponentType();
             if (jsonItems == null) {    // empty array
                 jsonObject.setFinishedTarget(null, true);
                 return true;
@@ -555,12 +556,12 @@ public abstract class Resolver {
             return true;
         }
 
-        if (!isConvertable(jsonObject.javaType)) {
+        if (!converter.isSimpleTypeConversionSupported(javaType, javaType)) {
             return false;
         }
 
         try {
-            Object value = converter.convert(jsonObject, jsonObject.javaType);
+            Object value = converter.convert(jsonObject, javaType);
             jsonObject.setFinishedTarget(value, true);
             return true;
         } catch (Exception e) {
@@ -568,13 +569,6 @@ public abstract class Resolver {
             jioe.setStackTrace(e.getStackTrace());
             throw jioe;
         }
-    }
-
-    public boolean isConvertable(Class<?> type) {
-        if (type.isArray() || Collection.class.isAssignableFrom(type)) {
-            return false;
-        }
-        return Number.class.isAssignableFrom(type) || converter.isConversionSupportedFor(type, type);
     }
 
     protected void setArrayElement(Object array, int index, Object element) {
@@ -587,28 +581,6 @@ public abstract class Resolver {
 
             throw new IllegalArgumentException("Cannot set '" + elementType + "' (value: " + valueRepresentation + ") into '" +
                     arrayType + "' at index " + index + ". Type mismatch between value and array type.");
-        }
-    }
-
-    /**
-     * Create peer Java object to the passed in root JsonObject.  In the special case that root is an Object[],
-     * then create a JsonObject to wrap it, set the passed in Object[] to be the target of the JsonObject, ensure
-     * that the root Object[] items are copied to the JsonObject, and then return the JsonObject wrapper.  If
-     * called with a primitive (anything else), just return it.
-     */
-    public Object createJavaFromJson(Object root) {
-        if (root != null && root.getClass().isArray()) {
-            JsonObject array = new JsonObject();
-            array.setTarget(root);
-            array.setItems(root);
-            push(array);    // resolver - you do the rest of the mapping
-            return root;
-        } else if (root instanceof JsonObject) {
-            Object ret = createInstance((JsonObject) root);
-            push((JsonObject) root);    // thank you, resolver
-            return ret;
-        } else {
-            return root;
         }
     }
 

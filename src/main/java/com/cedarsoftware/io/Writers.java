@@ -26,6 +26,9 @@ import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
 
+import com.cedarsoftware.util.Converter;
+
+import static com.cedarsoftware.io.JsonValue.VALUE;
 import static java.time.temporal.ChronoField.DAY_OF_MONTH;
 import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
 import static java.time.temporal.ChronoField.YEAR;
@@ -51,25 +54,24 @@ import static java.time.temporal.ChronoField.YEAR;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class Writers
-{
+public class Writers {
     private static final ThreadLocal<SimpleDateFormat> dateFormat = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
-    
-    private Writers () {}
+
+    private Writers() {
+    }
 
     /**
      * Used as a template to write out types that will have a primitive form.
      * Uses the default key of "value" unless overridden
      */
-    public static class PrimitiveTypeWriter implements JsonWriter.JsonClassWriter
-    {
-        protected String getKey() { return "value"; }
+    public static class PrimitiveTypeWriter implements JsonWriter.JsonClassWriter {
+        protected String getKey() {
+            return VALUE;
+        }
 
 
-        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException
-        {
-            if (showType)
-            {
+        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+            if (showType) {
                 JsonWriter.writeBasicString(output, getKey());
                 output.write(':');
             }
@@ -78,16 +80,19 @@ public class Writers
         }
 
         @Override
-        public boolean hasPrimitiveForm(WriterContext writerContext) { return true; }
+        public boolean hasPrimitiveForm(WriterContext writerContext) {
+            return true;
+        }
     }
 
     /**
      * Used as a template to write out primitive value types such as int, boolean, etc. that we extract as a String,
      * but we do not put in quotes.  Uses the default key of "value" unless overridden
      */
-    public static class PrimitiveValueWriter extends PrimitiveTypeWriter
-    {
-        public String extractString(Object o) { return o.toString(); }
+    public static class PrimitiveValueWriter extends PrimitiveTypeWriter {
+        public String extractString(Object o) {
+            return o.toString();
+        }
 
 
         /**
@@ -151,9 +156,10 @@ public class Writers
      * Used as a template to write out primitive String types.
      * Uses default key of "value" and encodes the string.
      */
-    public static class PrimitiveUtf8StringWriter extends PrimitiveTypeWriter
-    {
-        public String extractString(Object o) { return o.toString(); }
+    public static class PrimitiveUtf8StringWriter extends PrimitiveTypeWriter {
+        public String extractString(Object o) {
+            return o.toString();
+        }
 
         public void writePrimitiveForm(Object o, Writer output, WriterContext writerContext) throws IOException {
             JsonWriter.writeJsonUtf8String(output, extractString(o));
@@ -172,49 +178,35 @@ public class Writers
         }
     }
 
-    /**
-     * This can be used when you know your objects are going to be represented as strings,
-     * but won't need any UTF-8 escaping.  This saves a little time on the write.
-     */
-    public static class PrimitiveBasicStringWriter extends PrimitiveTypeWriter {
+    public static class TimeZoneWriter extends PrimitiveUtf8StringWriter {
+        @Override
         public String extractString(Object o) {
-            return o.toString();
-        }
-
-        @Override
-        public void writePrimitiveForm(Object o, Writer output, WriterContext writerContext) throws IOException {
-            JsonWriter.writeBasicString(output, extractString(o));
+            return ((TimeZone) o).getID();
         }
     }
 
-    public static class TimeZoneWriter extends PrimitiveUtf8StringWriter
-    {
+    public static class ClassWriter extends PrimitiveUtf8StringWriter {
         @Override
-        public String extractString(Object o) { return ((TimeZone)o).getID(); }
+        public String extractString(Object o) {
+            return ((Class<?>) o).getName();
+        }
     }
 
-    public static class ClassWriter extends PrimitiveUtf8StringWriter
-    {
-        @Override
-        public String extractString(Object o) { return ((Class<?>)o).getName(); }
-    }
-
-    public static class EnumsAsStringWriter extends PrimitiveUtf8StringWriter
-    {
+    public static class EnumsAsStringWriter extends PrimitiveUtf8StringWriter {
         @Override
         protected String getKey() {
             return "name";
         }
 
         @Override
-        public String extractString(Object o) { return ((Enum<?>)o).name(); }
+        public String extractString(Object o) {
+            return ((Enum<?>) o).name();
+        }
     }
 
-    public static class CalendarWriter implements JsonWriter.JsonClassWriter
-    {
+    public static class CalendarWriter implements JsonWriter.JsonClassWriter {
         @Override
-        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException
-        {
+        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
             Calendar cal = (Calendar) obj;
             // TODO:  shouldn't this be the one inside the WriterContext?  and shouldn't there be a back up of parseDate() here?
             dateFormat.get().setTimeZone(cal.getTimeZone());
@@ -245,9 +237,8 @@ public class Writers
             Date date = (Date) o;
             return new SimpleDateFormat(dateFormat).format(date);
         }
-        
-        String getDateFormat()
-        {
+
+        String getDateFormat() {
             return dateFormat;
         }
     }
@@ -366,71 +357,59 @@ public class Writers
         }
     }
 
-    public static class TimestampWriter implements JsonWriter.JsonClassWriter
-    {
-        public void write(Object o, boolean showType, Writer output, WriterContext writerContext) throws IOException
-        {
-            Timestamp tstamp = (Timestamp) o;
-            output.write("\"time\":\"");
-            output.write(Long.toString((tstamp.getTime() / 1000) * 1000));
-            output.write("\",\"nanos\":\"");
-            output.write(Integer.toString(tstamp.getNanos()));
-            output.write('"');
+    public static class TimestampWriter implements JsonWriter.JsonClassWriter {
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            Timestamp timestamp = (Timestamp) o;
+            String ts = Converter.convert(timestamp, String.class);
+            JsonWriter.writeBasicString(output, ts);
+        }
+
+        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+            if (showType) {
+                JsonWriter.writeBasicString(output, VALUE);
+                output.write(':');
+            }
+
+            writePrimitiveForm(obj, output, context);
+        }
+
+        public boolean hasPrimitiveForm(WriterContext context) {
+            return true;
         }
     }
 
-    public static class JsonStringWriter extends PrimitiveUtf8StringWriter {}
+    public static class JsonStringWriter extends PrimitiveUtf8StringWriter {
+    }
 
-    public static class LocaleWriter extends PrimitiveValueWriter
-    {
-//        public void write(Object obj, boolean showType, Writer output) throws IOException
-//        {
-//            Locale locale = (Locale) obj;
-//
-//            output.write("\"language\":\"");
-//            output.write(locale.getLanguage());
-//            output.write("\",\"country\":\"");
-//            output.write(locale.getCountry());
-//            output.write("\",\"variant\":\"");
-//            output.write(locale.getVariant());
-//            output.write('"');
-//        }
-
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException
-        {
+    public static class LocaleWriter extends PrimitiveValueWriter {
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
             Locale locale = (Locale) o;
             JsonWriter.writeBasicString(output, locale.toLanguageTag());
         }
     }
 
-    public static class BigIntegerWriter extends PrimitiveValueWriter
-    {
+    public static class BigIntegerWriter extends PrimitiveValueWriter {
         @Override
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException
-        {
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
             BigInteger big = (BigInteger) o;
             JsonWriter.writeBasicString(output, big.toString(10));
         }
     }
 
-    public static class BigDecimalWriter extends PrimitiveValueWriter
-    {
+    public static class BigDecimalWriter extends PrimitiveValueWriter {
         @Override
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException
-        {
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
             BigDecimal big = (BigDecimal) o;
             JsonWriter.writeBasicString(output, big.toPlainString());
         }
     }
 
-    public static class UUIDWriter implements JsonWriter.JsonClassWriter
-    {
+    public static class UUIDWriter implements JsonWriter.JsonClassWriter {
         /**
          * To preserve backward compatibility with previous serialized format the internal fields must be stored as longs
          */
         @Override
-        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException
-        {
+        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
             UUID uuid = (UUID) obj;
             output.write("\"value\":\"");
             output.write(uuid.toString());
@@ -438,15 +417,16 @@ public class Writers
         }
 
         @Override
-        public boolean hasPrimitiveForm(WriterContext writerContext) { return true; }
+        public boolean hasPrimitiveForm(WriterContext writerContext) {
+            return true;
+        }
 
         /**
          * We can use the String representation for easier handling, but this may break backwards compatibility
          * if an earlier library version is used
          */
         @Override
-        public void writePrimitiveForm(Object o, Writer writer, WriterContext writerContext) throws IOException
-        {
+        public void writePrimitiveForm(Object o, Writer writer, WriterContext writerContext) throws IOException {
             UUID buffer = (UUID) o;
             JsonWriter.writeBasicString(writer, buffer.toString());
         }

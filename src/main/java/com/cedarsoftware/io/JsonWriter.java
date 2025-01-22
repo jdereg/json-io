@@ -132,6 +132,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
          */
         default void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
         }
+
+        default String getTypeName(Object o) {
+            return o.getClass().getName();
+        }
     }
 
     /**
@@ -268,27 +272,23 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
     /**
      * Perform the actual custom writing for an array element that has a custom writer.
-     * @param arrayComponentClass Class type of the array
+     * @param clazz Class type of the array
      * @param o Object instance to write
      * @param showType boolean indicating whether @type should be output.
      * @param output Writer to write the JSON to (if there is a custom writer for o's Class).
      * @return true if the array element was written, false otherwise.
      */
-    protected boolean writeCustom(Class<?> arrayComponentClass, Object o, boolean showType, Writer output) throws IOException
-    {
-        if (writeOptions.isNeverShowingType())
-        {
+    protected boolean writeCustom(Class<?> clazz, Object o, boolean showType, Writer output) throws IOException {
+        if (writeOptions.isNeverShowingType()) {
             showType = false;
         }
         JsonClassWriter closestWriter = writeOptions.getCustomWriter(o.getClass());
 
-        if (closestWriter == null)
-        {
+        if (closestWriter == null) {
             return false;
         }
 
-        if (writeOptionalReference(o))
-        {
+        if (writeOptionalReference(o)) {
             return true;
         }
 
@@ -303,23 +303,20 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         output.write('{');
         tabIn();
-        if (referenced)
-        {
+        if (referenced) {
             writeId(getId(o));
-            if (showType)
-            {
+            if (showType) {
                 output.write(',');
                 newLine();
             }
         }
 
-        if (showType)
-        {
-            writeType(o.getClass().getName(), output);
+        if (showType) {
+            String typeName = closestWriter.getTypeName(o);
+            writeType(typeName, output);
         }
 
-        if (referenced || showType)
-        {
+        if (referenced || showType) {
             output.write(',');
             newLine();
         }

@@ -84,15 +84,11 @@ public class WriteOptionsBuilder {
 
         defWriteOptions = new WriteOptionsBuilder().build();
 
-        // low-level alias support (bigint, bigdec, class, date, and string)
-        // class, date, and string are already within ClassUtilities.
+        // low-level alias support (bigint, bigdec)
         ClassUtilities.addPermanentClassAlias(BigInteger.class, "bigint");
         ClassUtilities.addPermanentClassAlias(BigInteger.class, "BigInt");
         ClassUtilities.addPermanentClassAlias(BigDecimal.class, "bigdec");
         ClassUtilities.addPermanentClassAlias(BigDecimal.class, "BigDec");
-        ClassUtilities.addPermanentClassAlias(BigDecimal.class, "Class");
-        ClassUtilities.addPermanentClassAlias(BigDecimal.class, "String");
-        ClassUtilities.addPermanentClassAlias(BigDecimal.class, "Date");
     }
 
     /**
@@ -1086,7 +1082,7 @@ public class WriteOptionsBuilder {
             return writer == nullWriter ? null : writer;
         }
 
-        public JsonWriter.JsonClassWriter findCustomWriter(Class<?> c) {
+        JsonWriter.JsonClassWriter findCustomWriter(Class<?> c) {
             JsonWriter.JsonClassWriter writer = ClassUtilities.findClosest(c, customWrittenClasses, nullWriter);
             if (writer != nullWriter) {
                 return writer;

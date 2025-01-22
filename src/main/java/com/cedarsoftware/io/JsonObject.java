@@ -2,13 +2,12 @@ package com.cedarsoftware.io;
 
 import java.lang.reflect.Array;
 import java.util.AbstractMap;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
-
-import com.cedarsoftware.util.CompactLinkedMap;
 
 /**
  * This class holds a JSON object in a LinkedHashMap.
@@ -34,7 +33,8 @@ import com.cedarsoftware.util.CompactLinkedMap;
  *         limitations under the License.
  */
 public class JsonObject extends JsonValue implements Map<Object, Object> {
-    private final Map<Object, Object> jsonStore = new CompactLinkedMap<>();
+//    private final Map<Object, Object> jsonStore = CompactMap.builder().compactSize(40).insertionOrder().build();
+    private final Map<Object, Object> jsonStore = new LinkedHashMap<>();
     private Integer hash = null;
 
     // Explicit fields for meta data
@@ -187,16 +187,59 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         return result;
     }
 
+    @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
         if (!(obj instanceof JsonObject)) return false;
         JsonObject other = (JsonObject) obj;
 
-        if (!Arrays.deepEquals(new Object[]{items}, new Object[]{other.items})) return false;
-        if (!Arrays.deepEquals(new Object[]{keys}, new Object[]{other.keys})) return false;
+        // Compare 'items' shallowly (element-by-element if both are arrays).
+        if (!shallowArrayEquals(this.items, other.items)) {
+            return false;
+        }
+
+        // Compare 'keys' shallowly (element-by-element if both are arrays).
+        if (!shallowArrayEquals(this.keys, other.keys)) {
+            return false;
+        }
+
+        // Compare the Map portion the standard way.
         return jsonStore.equals(other.jsonStore);
     }
 
+    /**
+     * Compare two Objects if both are arrays, element by element,
+     * otherwise do a simple Object.equals().
+     */
+    private static boolean shallowArrayEquals(Object arr1, Object arr2) {
+        if (arr1 == arr2) {
+            return true;            // Same reference or both null
+        }
+        if (arr1 == null || arr2 == null) {
+            return false;           // One is null, the other is not
+        }
+
+        // If both are arrays, compare lengths and elements with .equals()
+        if (arr1.getClass().isArray() && arr2.getClass().isArray()) {
+            int len1 = Array.getLength(arr1);
+            int len2 = Array.getLength(arr2);
+            if (len1 != len2) {
+                return false;
+            }
+            for (int i = 0; i < len1; i++) {
+                Object e1 = Array.get(arr1, i);
+                Object e2 = Array.get(arr2, i);
+                if (!Objects.equals(e1, e2)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // Fallback if not arrays: just do a regular equals check
+        return Objects.equals(arr1, arr2);
+    }
+    
     public boolean isEmpty() {
         return size() < 1;
     }
@@ -304,6 +347,13 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         for (int i = 0; i < len; i++) {
             Object key = Array.get(keys, i);
             Object value = Array.get(items, i);
+            
+            if (key instanceof String) {
+                String k = (String) key;
+                if (k.startsWith(JsonIo.PREFIX) && k.endsWith(JsonIo.SUFFIX)) {
+                    continue;
+                }
+            }
             put(key, value);
             if (targetMap != null) {
                 targetMap.put(key, value);

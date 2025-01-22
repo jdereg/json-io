@@ -92,7 +92,17 @@ java.util.concurrent.atomic.AtomicLong = AtomicLong
 
 # java.io
 java.io.File = File
+
+# java.nio
 java.nio.file.Path = Path
+
+# Alias all ByteBuffer types to ByteBuffer, as only the "remaining" bytes are serialized (position to limit)
+java.nio.DirectByteBuffer = ByteBuffer
+java.nio.MappedByteBuffer = ByteBuffer
+java.nio.HeapByteBuffer = ByteBuffer
+
+java.nio.CharBuffer = CharBuffer
+java.nio.HeapCharBuffer = CharBuffer
 
 # java.net
 java.net.URL = URL

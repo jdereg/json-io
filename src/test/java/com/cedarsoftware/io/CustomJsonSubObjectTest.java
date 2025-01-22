@@ -49,7 +49,8 @@ class CustomJsonSubObjectTest
 
 			// Handle the complex field types by delegating to the Resolver, which will place these on its internal
 			// work stack, and ultimately map the values from the JsonObject (Map) to the peer Java instance.
-			person.kid = (TestObjectKid) resolver.createJavaFromJson(map.get("kid"));
+			JsonReader reader = new JsonReader(resolver);
+			person.kid = (TestObjectKid) reader.toJava(TestObjectKid.class, map.get("kid"));
 			return person;
 		}
 	}

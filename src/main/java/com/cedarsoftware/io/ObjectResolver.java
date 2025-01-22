@@ -60,7 +60,6 @@ import com.cedarsoftware.util.convert.Converter;
 @SuppressWarnings({ "rawtypes", "unchecked", "Convert2Diamond" })
 public class ObjectResolver extends Resolver
 {
-    private final ClassLoader classLoader;
     /**
      * Constructor
      * @param readOptions Options to use while reading.
@@ -68,7 +67,6 @@ public class ObjectResolver extends Resolver
     protected ObjectResolver(ReadOptions readOptions, ReferenceTracker references, Converter converter)
     {
         super(readOptions, references, converter);
-        classLoader = readOptions.getClassLoader();
     }
 
     /**
@@ -280,6 +278,7 @@ public class ObjectResolver extends Resolver
             return;
         }
 
+        Converter converter = getConverter();
         Object items = jsonObj.getItems();
         final Collection col = (Collection) jsonObj.getTarget();
         final boolean isList = col instanceof List;
@@ -294,7 +293,7 @@ public class ObjectResolver extends Resolver
                     col.add(null);
                 } else if ((special = readWithFactoryIfExists(element, null)) != null) {
                     col.add(special);
-                } else if (isConvertable(element.getClass())) {
+                } else if (converter.isSimpleTypeConversionSupported(element.getClass(), element.getClass())) {
                     // Allow Strings, Booleans, Longs, and Doubles to be "inline" without Java object decoration (@id, @type, etc.)
                     col.add(element);
                 } else if (element.getClass().isArray()) {

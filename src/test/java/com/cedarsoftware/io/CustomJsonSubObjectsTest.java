@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -11,6 +12,8 @@ import com.cedarsoftware.util.CompactMap;
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.convert.Converter;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -61,10 +64,11 @@ class CustomJsonSubObjectsTest
 
 			// Handle the complex field types by delegating to the Resolver, which will place these on its internal
 			// work stack, and ultimately map the values from the JsonObject (Map) to the peer Java instance.
-			person.kids = (TestObjectKid[]) resolver.createJavaFromJson(map.get("kids"));
-			person.friends = (Object[]) resolver.createJavaFromJson(map.get("friends"));
-			person.pets = (List<TestObjectKid>) resolver.createJavaFromJson(map.get("pets"));
-			person.items = (Map<String, Object>) resolver.createJavaFromJson(map.get("items"));
+			JsonReader reader = new JsonReader(resolver);
+			person.kids = (TestObjectKid[]) reader.toJava(TestObjectKid[].class, map.get("kids"));
+			person.friends = (Object[]) reader.toJava(Object[].class, map.get("friends"));
+			person.pets = (List<TestObjectKid>) reader.toJava(List.class, map.get("pets"));
+			person.items = (Map<String, Object>) reader.toJava(Map.class, map.get("items"));
 			return person;
 		}
 	}
@@ -149,7 +153,8 @@ class CustomJsonSubObjectsTest
 		String json = JsonIo.toJson(p1, writeOptions.build());
 		Person p2 = JsonIo.toObjects(json, readOptions.build(), Person.class);
 
-		assert DeepEquals.deepEquals(p1, p2);
+		Map options = new HashMap<>();
+		assertTrue(DeepEquals.deepEquals(p1, p2, options));
 	}
 
 	/* Here's the JSON that was Written/Read
