@@ -598,7 +598,7 @@ class ArrayTest
 
     @Test
     void testReconstitute_withGregorianCalendars_whenArrayTypeIsCalendar() {
-        GregorianCalendar cal = (GregorianCalendar) Calendar.getInstance(TimeZone.getTimeZone("GMT-05:00"));
+        GregorianCalendar cal = (GregorianCalendar) Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
         GregorianCalendar[] calendarz = new GregorianCalendar[]{cal, cal};
         testReconstituteArrayHelper(calendarz);
     }

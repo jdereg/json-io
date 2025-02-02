@@ -1,6 +1,4 @@
 {
   "@type": "java.time.LocalTime",
-  "hour": 17,
-  "minute": 15,
-  "second": 16
+  "localTime": "17:15:16"
 }

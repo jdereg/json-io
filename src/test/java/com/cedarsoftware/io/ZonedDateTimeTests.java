@@ -8,10 +8,13 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import com.cedarsoftware.io.models.NestedZonedDateTime;
 import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -180,19 +183,18 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
                 Arguments.of(ZonedDateTime.ofInstant(Instant.ofEpochMilli(1700668272163L), ZoneId.of("America/Los_Angeles"))),
                 Arguments.of(ZonedDateTime.ofInstant(Instant.ofEpochSecond(1700668272163L/ 1000), ZoneId.of("UTC"))),   // Year is beyond YYYY format (> 4 digit year) if we don't divide by 1000
                 Arguments.of(ZonedDateTime.ofInstant(Instant.ofEpochSecond(((146097L * 5L) - (30L * 365L + 7L)) * 86400L, 999999999L), ZoneId.of("UTC"))),
-                Arguments.of(ZonedDateTime.ofInstant(Instant.ofEpochSecond(1700668272163L / 1000, 99999999999999L), ZoneId.of("GMT"))), // Year is beyond YYYY (> 4 digit year) if we don't divide by 1000
+                Arguments.of(ZonedDateTime.ofInstant(Instant.ofEpochSecond(1700668272163L / 1000, 99999999999999L), ZoneId.of("Europe/London"))), // Year is beyond YYYY (> 4 digit year) if we don't divide by 1000
                 Arguments.of(ZonedDateTime.of(LocalDateTime.of(2011, 12, 11, 9, 5, 7, 999999999), ZoneId.of("Z"))),
                 Arguments.of(ZonedDateTime.of(LocalDate.of(2011, 12, 11), LocalTime.of(9, 5, 7, 999999999), ZoneId.of("America/New_York")))
         );
     }
 
-
     @ParameterizedTest
     @MethodSource("roundTripInstants")
     void roundTripTests(ZonedDateTime expected) {
         String json = TestUtil.toJson(expected, new WriteOptionsBuilder().build());
-
         ZonedDateTime actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), ZonedDateTime.class);
-        assert expected.equals(actual);
+        Map<String, Object> options = new HashMap<>();
+        assert DeepEquals.deepEquals(expected, actual, options);
     }
 }

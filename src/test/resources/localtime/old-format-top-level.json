@@ -1,7 +1,4 @@
 {
   "@type": "java.time.LocalTime",
-  "hour": 17,
-  "minute": 15,
-  "second": 16,
-  "nanos": 78998
+  "localTime": "17:15:16.78998"
 }

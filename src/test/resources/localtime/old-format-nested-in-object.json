@@ -2,10 +2,7 @@
   "@type": "com.cedarsoftware.io.LocalTimeTests$NestedLocalTime",
   "one": {
     "@id": 1,
-    "hour": 9,
-    "minute": 12,
-    "second": 15,
-    "nanos": 999999
+    "localTime": "09:12:15.999999"
   },
   "two": {
     "@ref": 1

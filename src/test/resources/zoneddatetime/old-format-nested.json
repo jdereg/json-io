@@ -1,24 +1,10 @@
 {
   "@type": "com.cedarsoftware.io.models.NestedZonedDateTime",
   "date1": {
-    "time": "2023-10-22T12:03:01.4539375",
-    "offset": {
-      "totalSeconds": 10800
-    },
-    "zone": {
-      "@type": "java.time.ZoneRegion",
-      "id": "Asia/Aden"
-    }
+    "value": "2023-10-22T12:03:01.4539375+03:00[Asia/Aden]"
   },
   "date2": {
-    "time": "2022-12-23T12:03:00.4549357",
-    "offset": {
-      "totalSeconds": 10800
-    },
-    "zone": {
-      "@type": "java.time.ZoneRegion",
-      "id": "Asia/Aden"
-    }
+    "value": "2022-12-23T12:03:00.4549357+03:00[Asia/Aden]"
   },
   "holiday": "Festivus",
   "value": 999

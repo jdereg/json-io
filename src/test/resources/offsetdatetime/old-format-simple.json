@@ -1,5 +1,4 @@
 {
   "@type": "java.time.OffsetDateTime",
-  "time": "2019-12-15T09:07:16.000002",
-  "offset": "Z"
+  "offsetDateTime": "2019-12-15T09:07:16.000002Z"
 }

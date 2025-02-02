@@ -3,7 +3,6 @@ package com.cedarsoftware.io;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -381,11 +380,8 @@ public class JsonIo {
         WriteOptionsBuilder builder = new WriteOptionsBuilder();
 
         Object dateFormat = optionalArgs.get(DATE_FORMAT);
-        if (dateFormat instanceof String)
-        {
-            builder.dateTimeFormat((String) dateFormat);
-        } else if (dateFormat instanceof SimpleDateFormat) {
-            builder.dateTimeFormat(((SimpleDateFormat) dateFormat).toPattern());
+        if (dateFormat != null) {
+            builder.isoDateFormat();
         }
 
         Boolean showType = com.cedarsoftware.util.Converter.convert(optionalArgs.get(TYPE), Boolean.class);

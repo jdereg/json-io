@@ -1,11 +1,9 @@
 {
   "@type": "com.cedarsoftware.io.CalendarTest$TestCalendar",
   "_cal": {
-    "time": "2023-11-19T17:31:09.257-0500",
-    "zone": "America/New_York"
+    "calendar": "2023-11-19T17:31:09.257[America/New_York]"
   },
   "_greg": {
-    "time": "1965-12-17T14:30:16.257-0800",
-    "zone": "PST"
+    "calendar": "1965-12-17T14:30:16.257[America/Los_Angeles]"
   }
 }

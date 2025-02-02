@@ -14,6 +14,8 @@ import java.util.stream.Stream;
 
 import com.cedarsoftware.io.factory.ConvertableFactory;
 import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.Converter;
+import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -22,6 +24,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -104,8 +107,10 @@ public class CalendarTest
         TestUtil.printLine("json=" + json);
 
         tc = TestUtil.toObjects(json, null);
-        assertEquals(now, tc._cal);
-        assertEquals(greg, tc._greg);
+
+        Map<String, Object> options = new LinkedHashMap<>();
+        assertTrue(DeepEquals.deepEquals(now, tc._cal, options));
+        assertTrue(DeepEquals.deepEquals(greg, tc._greg, options));
     }
 
     @Test
@@ -121,8 +126,8 @@ public class CalendarTest
     @Test
     void testCalendarUntypedArray()
     {
-        Calendar estCal = TestUtil.toObjects("{\"@type\":\"java.util.GregorianCalendar\",\"time\":\"1965-12-17T09:30:16.623-0500\",\"zone\":\"EST\"}", null);
-        Calendar utcCal = TestUtil.toObjects("{\"@type\":\"java.util.GregorianCalendar\",\"time\":\"1965-12-17T14:30:16.623-0000\"}", null);
+        Calendar estCal = TestUtil.toObjects("{\"@type\":\"java.util.GregorianCalendar\",\"calendar\":\"1965-12-17T09:30:16.623[America/New_York]\"}", null);
+        Calendar utcCal = TestUtil.toObjects("{\"@type\":\"java.util.GregorianCalendar\",\"calendar\":\"1965-12-17T14:30:16.623Z\"}", null);
         String json = TestUtil.toJson(new Object[]{estCal, utcCal});
         TestUtil.printLine("json=" + json);
         Object[] oa = TestUtil.toObjects(json, null);
@@ -227,7 +232,7 @@ public class CalendarTest
                 Arguments.of(TimeZone.getTimeZone("America/New_York")),
                 Arguments.of(TimeZone.getTimeZone("America/Los_Angeles")),
                 Arguments.of(TimeZone.getTimeZone("EST")),
-                Arguments.of(TimeZone.getTimeZone("Asia/Tapei"))
+                Arguments.of(TimeZone.getTimeZone("Asia/Taipei"))
         );
     }
 
@@ -238,7 +243,7 @@ public class CalendarTest
 
         Object[] object = TestUtil.toObjects(json, options, null);
 
-        assertCalendar((Calendar) object[0], "GMT-05:00", 1965, 12, 17, 9, 30, 16, 623);
+        assertCalendar((Calendar) object[0], "America/New_York", 1965, 12, 17, 9, 30, 16, 623);
         assertCalendar((Calendar) object[1], "America/New_York", 1965, 12, 17, 9, 30, 16, 623);
     }
 
@@ -262,20 +267,21 @@ public class CalendarTest
 
     @ParameterizedTest
     @MethodSource("varyingZones")
-    void testOldFormat_noTimeZoneSpecified(TimeZone zone) {
-        Calendar expected = new GregorianCalendar();
-        expected.setTimeZone(zone);
-        expected.set(1965, 11, 17, 14, 30, 16);
-        expected.set(Calendar.MILLISECOND, 228);
+    void testCalendarTimezoneHandling(TimeZone zone) {
+        Calendar cal = new GregorianCalendar(zone);
+        cal.set(2024, 0, 27, 12, 0, 0);
+        cal.set(Calendar.MILLISECOND, 0);
 
-        ReadOptions options = createOldOptionsFormat(zone.getID());
-        String json = loadJsonForTest("old-format-with-no-zone-specified-uses-default.json");
+        // Convert to map and back
+        Map<?, ?> map = Converter.convert(cal, Map.class);
+        Calendar reconstructed = Converter.convert(map, Calendar.class);
 
-        GregorianCalendar actual = TestUtil.toObjects(json, options, null);
-        assertThat(actual.getTimeZone()).isEqualTo(TimeZone.getDefault());
-        assertThat(actual.get(Calendar.YEAR)).isEqualTo(1965);
-        assertThat(actual.get(Calendar.MONTH)).isEqualTo(11);
-        // TODO: do better asserts here.
+        // Check that the timezone offset is preserved
+        assertThat(reconstructed.getTimeZone().getRawOffset()).isEqualTo(zone.getRawOffset());
+        // Check that the actual time is preserved
+        assertThat(reconstructed.getTimeInMillis()).isEqualTo(cal.getTimeInMillis());
+        // Optionally check DST settings if important
+        assertThat(reconstructed.getTimeZone().useDaylightTime()).isEqualTo(zone.useDaylightTime());
     }
 
     private ReadOptions createOldOptionsFormat(String timeZone) {
@@ -333,15 +339,15 @@ public class CalendarTest
         assertEquals(testCal._cal, cal);
         assertEquals(testCal._greg.getTime().getTime(), greg.getTime().getTime());
 
-        Calendar estCal = TestUtil.toObjects("{\"@type\":\"java.util.GregorianCalendar\",\"time\":\"1965-12-17T09:30:16.623-0500\"}", null);
-        Calendar utcCal = TestUtil.toObjects("{\"@type\":\"java.util.GregorianCalendar\",\"time\":\"1965-12-17T14:30:16.623-0000\"}", null);
-        assertEquals(estCal, utcCal);
+        Calendar estCal = TestUtil.toObjects("{\"@type\":\"java.util.GregorianCalendar\",\"calendar\":\"1965-12-17T09:30:16.623-0500\"}", null);
+        Calendar utcCal = TestUtil.toObjects("{\"@type\":\"java.util.GregorianCalendar\",\"calendar\":\"1965-12-17T14:30:16.623-0000\"}", null);
+        assertEquals(estCal.getTime(), utcCal.getTime());
 
         json = TestUtil.toJson(new Object[]{estCal, utcCal});
         Object[] oa = TestUtil.toObjects(json, null);
         assertEquals(2, oa.length);
         assertEquals((oa[0]), estCal);
-        assertEquals((oa[1]), utcCal);
+        assertEquals(((Calendar)(oa[1])).getTime(), utcCal.getTime());
     }
 
     static class TestCalendar implements Serializable

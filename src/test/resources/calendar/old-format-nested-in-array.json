@@ -1,7 +1,6 @@
 [
   {
     "@type": "java.util.GregorianCalendar",
-    "time": "2023-11-19T18:19:15.476-0500",
-    "zone": "America/New_York"
+    "calendar": "2023-11-19T18:19:15.476[America/New_York]"
   }
 ]

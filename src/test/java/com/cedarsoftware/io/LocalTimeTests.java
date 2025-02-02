@@ -67,7 +67,7 @@ class LocalTimeTests extends SerializationDeserializationMinimumTests<LocalTime>
 
     private static Stream<Arguments> checkDifferentFormatsByFile() {
         return Stream.of(
-                Arguments.of("old-format-top-level.json", 17, 15, 16, 78998),
+                Arguments.of("old-format-top-level.json", 17, 15, 16, 789980000),
                 Arguments.of("old-format-top-level-missing-nano.json", 17, 15, 16, 0),
                 Arguments.of("old-format-top-level-missing-nano-and-second.json", 17, 15, 0, 0)
         );
@@ -86,8 +86,10 @@ class LocalTimeTests extends SerializationDeserializationMinimumTests<LocalTime>
     void testOldFormat_nestedLevel() {
         String json = loadJsonForTest("old-format-nested-in-object.json");
         NestedLocalTime nested = TestUtil.toObjects(json, null);
-
-        assertLocalTime(nested.one, 9, 12, 15, 999999);
+        LocalTime lt = nested.getOne();
+        System.out.println("lt = " + lt);
+        System.out.println("lt.getNano() = " + lt.getNano());
+        assertLocalTime(nested.one, 9, 12, 15, 999999000);
     }
 
     private void assertLocalTime(LocalTime time, int hour, int minute, int second, int nano) {

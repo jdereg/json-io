@@ -795,7 +795,7 @@ class MapsTest
         map.put("BigInteger", new BigInteger("55"));
         map.put("BigDecimal", new BigDecimal("3.33333"));
 
-        final String str = TestUtil.toJson(map, new WriteOptionsBuilder().isoDateTimeFormat().build());
+        final String str = TestUtil.toJson(map, new WriteOptionsBuilder().isoDateFormat().build());
 
         TestUtil.printLine(str + "\n");
 
@@ -984,7 +984,6 @@ class MapsTest
         set.add(ints);
         set.add(longs);
         String json = TestUtil.toJson(set);
-        System.out.println(json);
         CompactSet<Object> set2 = TestUtil.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), CompactSet.class);
         assert DeepEquals.deepEquals(set, set2);
     }

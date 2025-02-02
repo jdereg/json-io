@@ -1,21 +1,9 @@
 {
   "@type": "com.cedarsoftware.io.OffsetDateTimeTests$NestedOffsetDateTime",
   "one": {
-    "time": {
-      "@id": 1,
-      "value": "2019-12-15T09:07:16.000002"
-    },
-    "offset": {
-      "@id": 2,
-      "value": "Z"
-    }
+    "offsetDateTime": "2019-12-15T09:07:16.000002Z"
   },
   "two": {
-    "time": {
-      "@ref": 1
-    },
-    "offset": {
-      "@ref": 2
-    }
+    "offsetDateTime": "2019-12-15T09:07:16.000002Z"
   }
 }

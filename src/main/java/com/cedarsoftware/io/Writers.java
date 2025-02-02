@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -20,8 +19,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.SignStyle;
 import java.time.temporal.TemporalAccessor;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
@@ -206,40 +203,61 @@ public class Writers {
 
     public static class CalendarWriter implements JsonWriter.JsonClassWriter {
         @Override
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            String formatted = Converter.convert(o, String.class);
+            JsonWriter.writeBasicString(output, formatted);
+        }
+
         public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
-            Calendar cal = (Calendar) obj;
-            // TODO:  shouldn't this be the one inside the WriterContext?  and shouldn't there be a back up of parseDate() here?
-            dateFormat.get().setTimeZone(cal.getTimeZone());
-            output.write("\"time\":\"");
-            output.write(dateFormat.get().format(cal.getTime()));
-            output.write("\",\"zone\":\"");
-            output.write(cal.getTimeZone().getID());
-            output.write('"');
+            if (showType) {
+                JsonWriter.writeBasicString(output, "calendar");
+                output.write(':');
+            }
+
+            writePrimitiveForm(obj, output, context);
+        }
+
+        public boolean hasPrimitiveForm(WriterContext context) {
+            return true;
         }
     }
 
     public static class DateAsLongWriter extends PrimitiveValueWriter {
         @Override
         public String extractString(Object o) {
-            return Long.toString(((Date) o).getTime());
+            if (o instanceof java.sql.Date) {
+                // Just use the date's built-in toString - it's already in JDBC format
+                return o.toString();
+            } else {
+                return Long.toString(((java.util.Date) o).getTime());
+            }
         }
     }
-
-    public static class DateWriter extends PrimitiveUtf8StringWriter {
-        // could change to DateFormatter.ofPattern to keep from creating new objects
-        private final String dateFormat;
-
-        public DateWriter(String format) {
-            this.dateFormat = format;
+    
+    public static class DateWriter implements JsonWriter.JsonClassWriter {
+        @Override
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            String formatted = Converter.convert(o, String.class);
+            JsonWriter.writeBasicString(output, formatted);
         }
 
-        public String extractString(Object o) {
-            Date date = (Date) o;
-            return new SimpleDateFormat(dateFormat).format(date);
+        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+            if (showType) {
+                String key;
+                if (obj instanceof java.sql.Date) {
+                    key = "sqlDate";
+                } else {
+                    key = "date";
+                }
+                JsonWriter.writeBasicString(output, key);
+                output.write(':');
+            }
+
+            writePrimitiveForm(obj, output, context);
         }
 
-        String getDateFormat() {
-            return dateFormat;
+        public boolean hasPrimitiveForm(WriterContext context) {
+            return true;
         }
     }
 
@@ -255,9 +273,6 @@ public class Writers {
         }
 
         public void writePrimitiveForm(Object o, Writer output, WriterContext writerContext) throws IOException {
-
-            //TODO:  Change to using converter and having the writeOptions provide a zoneId;
-            //TODO:  If we're going to provide a LocalDateAsLong we should also provide a LocalDateTimeAsLong
             LocalDate localDate = (LocalDate) o;
             ZonedDateTime zonedDateTime = localDate.atStartOfDay(zoneId);
 
@@ -358,15 +373,15 @@ public class Writers {
     }
 
     public static class TimestampWriter implements JsonWriter.JsonClassWriter {
+        @Override
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            Timestamp timestamp = (Timestamp) o;
-            String ts = Converter.convert(timestamp, String.class);
-            JsonWriter.writeBasicString(output, ts);
+            String formatted = Converter.convert(o, String.class);
+            JsonWriter.writeBasicString(output, formatted);
         }
 
         public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
             if (showType) {
-                JsonWriter.writeBasicString(output, VALUE);
+                JsonWriter.writeBasicString(output, "timestamp");
                 output.write(':');
             }
 

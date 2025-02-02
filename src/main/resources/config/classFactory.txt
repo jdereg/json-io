@@ -60,7 +60,7 @@ java.nio.HeapCharBuffer = com.cedarsoftware.io.factory.CharBufferFactory
 
 # java.sql
 java.sql.Date = Convertable
-java.sql.Timestamp = com.cedarsoftware.io.factory.TimestampFactory
+java.sql.Timestamp = Convertable
 
 # java.time
 java.time.Duration = Convertable

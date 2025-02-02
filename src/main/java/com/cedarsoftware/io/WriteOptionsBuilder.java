@@ -636,23 +636,14 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * Change the date-time format to the ISO date format: "yyyy-MM-dd".  This is for java.util.Data and
-     * java.sql.Date.
+     * Change the date-time format to the ISO date format: "yyyy-MM-ddThh:mm:ss.SSSZ".  This is for java.util.Date and
+     * java.sql.Date.  The fractional sections are omitted if millis are 0.
      *
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder isoDateFormat() {
-        return dateTimeFormat(ISO_DATE_FORMAT);
-    }
-
-    /**
-     * Change the date-time format to the ISO date-time format: "yyyy-MM-dd'T'HH:mm:ss" (default).  This is
-     * for java.util.Date and java.sql.Date.
-     *
-     * @return WriteOptionsBuilder for chained access.
-     */
-    public WriteOptionsBuilder isoDateTimeFormat() {
-        return dateTimeFormat(ISO_DATE_TIME_FORMAT);
+        addCustomWrittenClass(Date.class, new Writers.DateWriter());
+        return this;
     }
 
     /**
@@ -664,18 +655,6 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder longDateFormat() {
         addCustomWrittenClass(Date.class, new Writers.DateAsLongWriter());
-        return this;
-    }
-
-    /**
-     * Change the date-time format to the passed in format.  The format pattens can be found in the Java Doc
-     * for the java.time.format.DateTimeFormatter class.  There are many constants you can use, as well as
-     * the definition of how to construct your own patterns.  This is for java.util.Date and java.sql.Date.
-     *
-     * @return WriteOptionsBuilder for chained access.
-     */
-    public WriteOptionsBuilder dateTimeFormat(String format) {
-        addCustomWrittenClass(Date.class, new Writers.DateWriter(format));
         return this;
     }
     

@@ -76,7 +76,7 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
 
     @Test
     void testOldFormat_topLevel_withType() {
-        String json = "{ \"@type\" : \"java.time.LocalDate\", \"year\" : 2023, \"month\": 4, \"day\": 5 }";
+        String json = "{ \"@type\" : \"java.time.LocalDate\", \"localDate\" : \"2023-4-5\" }";
         LocalDate localDate = TestUtil.toObjects(json, null);
 
         assert localDate.getYear() == 2023;

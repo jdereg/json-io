@@ -1,12 +1,10 @@
 [
   {
     "@type": "java.util.GregorianCalendar",
-    "time": "1965-12-17T09:30:16.623-0500",
-    "zone": "EST"
+    "calendar": "1965-12-17T09:30:16.623[America/New_York]"
   },
   {
     "@type": "java.util.GregorianCalendar",
-    "time": "1965-12-17T09:30:16.623-0500",
-    "zone": "America/New_York"
+    "calendar": "1965-12-17T09:30:16.623[America/New_York]"
   }
 ]

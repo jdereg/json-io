@@ -646,12 +646,8 @@ Customizing date formats ensures that json-io outputs date information in a way 
 >#### `boolean` isLongDateFormat()
 >- [ ] Returns `true` if `java.util.Date` and `java.sql.Date` are being written in `long` (numeric) format.
 
->#### `WriteOptionsBuilder` dateTimeFormat(`String format`)
->- [ ] Changes the date-time format to the passed in format.
 >#### `WriteOptionsBuilder` isoDateFormat()
->- [ ] Changes the date-time format to the ISO date format: "yyyy-MM-dd".
->#### `WriteOptionsBuilder` isoDateTimeFormat()
->- [ ] Changes the date-time format to the ISO date-time format: "yyyy-MM-dd'T'HH:mm:ss".
+>- [ ] Changes the date-time format to the ISO date format: "yyyy-MM-ddThh:mm:ss.SSSZ".  If millis are 0, the fractional portion is omitted.
 >#### `WriteOptionsBuilder` longDateFormat()
 >- [ ] Changes the `java.util.Date` and `java.sql.Date` format output to a `long,` the number of seconds since Jan 1, 1970 at midnight. For speed, the default format is `long.`Returns `WriteOptionsBuilder` for chained access.
 

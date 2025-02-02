@@ -1,4 +1,6 @@
 ### Revision History
+#### 4.34.0
+  * Improved Date and java.sql.Date handling within Converters.
 #### 4.33.0
   * New custom `ClassFactory` classes are easier to write:
     * See [examples](user-guide.md#classfactory-and-customwriter-examples)

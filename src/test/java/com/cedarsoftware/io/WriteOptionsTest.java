@@ -413,10 +413,7 @@ class WriteOptionsTest {
 
     @Test
     void testIsLongFormat_whenIsoDateTimeFormat_returnsFalse() {
-        WriteOptions options = new WriteOptionsBuilder()
-                .isoDateTimeFormat()
-                .build();
-
+        WriteOptions options = new WriteOptionsBuilder().isoDateFormat().build();
         assertThat(options.isLongDateFormat()).isFalse();
     }
 
@@ -438,9 +435,7 @@ class WriteOptionsTest {
 
     @Test
     void testWritingIsoDateTimeFormat() {
-        WriteOptions options = new WriteOptionsBuilder()
-                .isoDateTimeFormat()
-                .build();
+        WriteOptions options = new WriteOptionsBuilder().isoDateFormat().build();
 
         Date now = new Date();
         Date[] dates = new Date[]{now};
@@ -452,18 +447,6 @@ class WriteOptionsTest {
         //this date time format does not support ms, so don't use the more accurate isEqualTo
 //        assertThat(dates2).isEqualTo(dates);
 //        assertThat(dates2[0]).isEqualTo(now);
-    }
-
-    @Test
-    void testCustomFormat_thatIncludesMilliseconds() {
-        WriteOptions options = new WriteOptionsBuilder()
-                .addCustomWrittenClass(Date.class, new Writers.DateWriter("yyyy-MM-dd'T'HH:mm:ss.SSSZ"))
-                .build();
-
-        Date now = new Date();
-        String json = TestUtil.toJson(now, options);
-        Date date2 = TestUtil.toObjects(json, Date.class);
-        assertEquals(date2, now);
     }
 
     @Test
