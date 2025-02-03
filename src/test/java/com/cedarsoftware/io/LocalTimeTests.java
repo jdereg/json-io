@@ -87,8 +87,6 @@ class LocalTimeTests extends SerializationDeserializationMinimumTests<LocalTime>
         String json = loadJsonForTest("old-format-nested-in-object.json");
         NestedLocalTime nested = TestUtil.toObjects(json, null);
         LocalTime lt = nested.getOne();
-        System.out.println("lt = " + lt);
-        System.out.println("lt.getNano() = " + lt.getNano());
         assertLocalTime(nested.one, 9, 12, 15, 999999000);
     }
 

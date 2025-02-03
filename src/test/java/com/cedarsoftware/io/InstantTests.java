@@ -90,8 +90,8 @@ class InstantTests {
 
     private static Stream<Arguments> parsingErrors() {
         return Stream.of(
-                Arguments.of(1700668272163L, "+55862-01-12T13:22:43Z", "{\"@type\":\"Instant\",\"value\":\"+55862-01-12T13:22:43Z\"}"),
-                Arguments.of(-1700668272163L, "-51923-12-19T10:37:17Z", "{\"@type\":\"Instant\",\"value\":\"-51923-12-19T10:37:17Z\"}")
+                Arguments.of(1700668272163L, "+55862-01-12T13:22:43Z", "{\"@type\":\"Instant\",\"instant\":\"+55862-01-12T13:22:43Z\"}"),
+                Arguments.of(-1700668272163L, "-51923-12-19T10:37:17Z", "{\"@type\":\"Instant\",\"instant\":\"-51923-12-19T10:37:17Z\"}")
         );
     }
 
@@ -132,7 +132,7 @@ class InstantTests {
     void testOldFormatWithNothing() {
         assertThatThrownBy(() -> TestUtil.toObjects(loadJson("old-format-missing-fields.json"), Instant.class))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Map to 'Instant' the map must include: [seconds, nanos (optional)], [value], or [_v] as keys with associated values");
+                .hasMessageContaining("Map to 'Instant' the map must include: [instant], [value], or [_v] as keys with associated values");
     }
 
     private String loadJson(String fileName) {

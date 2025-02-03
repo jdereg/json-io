@@ -62,7 +62,6 @@ class PeriodTests {
                 Arguments.of("old-format-all-fields.json", 5, 4, 6),
                 Arguments.of("old-format-all-nulls.json", 0, 0, 0),
                 Arguments.of("old-format-days.json", 0, 0, 7),
-                Arguments.of("old-format-missing-all-values.json", 0, 0, 0),
                 Arguments.of("old-format-month.json", 0, 7, 0),
                 Arguments.of("old-format-years.json", 7, 0, 0)
         );

@@ -86,7 +86,7 @@ class YearTests extends SerializationDeserializationMinimumTests<Year> {
 
     @Override
     protected void assertT1_serializedWithoutType_parsedAsJsonTypes(Year expected, Object actual) {
-        assertThat(actual).isEqualTo(1950L);
+        assertThat(actual).isEqualTo("1950");
     }
 
     private static Stream<Arguments> argumentsForOldFormat() {

@@ -34,20 +34,20 @@ java.nio.CharBuffer = com.cedarsoftware.io.writers.CharBufferWriter
 java.sql.Date = com.cedarsoftware.io.Writers$DateWriter
 java.sql.Timestamp = com.cedarsoftware.io.Writers$TimestampWriter
 
-java.time.Duration = com.cedarsoftware.io.writers.DurationWriter
-java.time.Instant = com.cedarsoftware.io.writers.InstantWriter
+java.time.Duration = com.cedarsoftware.io.Writers$DurationWriter
+java.time.Instant = com.cedarsoftware.io.Writers$InstantWriter
 java.time.LocalDate = com.cedarsoftware.io.Writers$LocalDateWriter
 java.time.LocalDateTime = com.cedarsoftware.io.Writers$LocalDateTimeWriter
 java.time.LocalTime = com.cedarsoftware.io.Writers$LocalTimeWriter
 java.time.MonthDay = com.cedarsoftware.io.Writers$MonthDayWriter
 java.time.OffsetDateTime = com.cedarsoftware.io.Writers$OffsetDateTimeWriter
 java.time.OffsetTime = com.cedarsoftware.io.Writers$OffsetTimeWriter
-java.time.Period = com.cedarsoftware.io.writers.PeriodWriter
+java.time.Period = com.cedarsoftware.io.Writers$PeriodWriter
 java.time.Year = com.cedarsoftware.io.Writers$YearWriter
 java.time.YearMonth = com.cedarsoftware.io.Writers$YearMonthWriter
 java.time.ZonedDateTime = com.cedarsoftware.io.Writers$ZonedDateTimeWriter
 java.time.ZoneId = com.cedarsoftware.io.writers.ZoneIdWriter
-java.time.ZoneOffset = com.cedarsoftware.io.writers.ZoneOffsetWriter
+java.time.ZoneOffset = com.cedarsoftware.io.Writers$ZoneOffsetWriter
 
 java.util.Calendar = com.cedarsoftware.io.Writers$CalendarWriter
 java.util.concurrent.atomic.AtomicBoolean = com.cedarsoftware.io.Writers$PrimitiveValueWriter

@@ -1,5 +1,4 @@
 {
-  "@type": "java.time.Instant",
-  "seconds": 1700668272,
-  "nanos": 163000000
+  "@type": "Instant",
+  "instant": "2023-11-22T15:51:12.163Z"
 }

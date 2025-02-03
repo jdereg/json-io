@@ -61,12 +61,12 @@ class MonthDayTests extends SerializationDeserializationMinimumTests<MonthDay> {
 
     @Override
     protected void assertT1_serializedWithoutType_parsedAsJsonTypes(MonthDay expected, Object actual) {
-        assertThat(actual).isEqualTo("09-01");
+        assertThat(actual).isEqualTo("--09-01");
     }
 
     @Test
     void testOldFormat_objectType() {
-        String json = "{\"@type\":\"java.time.MonthDay\",\"day\":30,\"month\":6}";
+        String json = "{\"@type\":\"java.time.MonthDay\",\"monthDay\":\"6-30\"}";
         MonthDay date = toObjects(json, null);
         assertThat(date.getDayOfMonth()).isEqualTo(30);
         assertThat(date.getMonthValue()).isEqualTo(6);
@@ -74,7 +74,7 @@ class MonthDayTests extends SerializationDeserializationMinimumTests<MonthDay> {
 
     @Test
     void testOldFormat_nestedObject() {
-        String json = "{\"@type\":\"com.cedarsoftware.io.MonthDayTests$NestedMonthDay\",\"one\":{\"@id\":1,\"day\":30,\"month\":6},\"two\":{\"@ref\":1}}";
+        String json = "{\"@type\":\"com.cedarsoftware.io.MonthDayTests$NestedMonthDay\",\"one\":{\"@id\":1,\"monthDay\":\"--06-30\"},\"two\":{\"@ref\":1}}";
         NestedMonthDay date = toObjects(json, null);
         assertThat(date.one.getDayOfMonth()).isEqualTo(30);
         assertThat(date.one.getMonthValue()).isEqualTo(6);

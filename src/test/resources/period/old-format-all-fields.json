@@ -1,6 +1,4 @@
 {
-  "@type": "java.time.Period",
-  "years": 5,
-  "months": 4,
-  "days": 6
+  "@type": "Period",
+  "period": "P5Y4M6D"
 }

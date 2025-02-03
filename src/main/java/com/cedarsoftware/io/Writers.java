@@ -4,16 +4,19 @@ import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.MonthDay;
 import java.time.OffsetDateTime;
 import java.time.OffsetTime;
+import java.time.Period;
 import java.time.Year;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -52,7 +55,6 @@ import static java.time.temporal.ChronoField.YEAR;
  *         limitations under the License.
  */
 public class Writers {
-    private static final ThreadLocal<SimpleDateFormat> dateFormat = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
 
     private Writers() {
     }
@@ -222,14 +224,17 @@ public class Writers {
         }
     }
 
-    public static class DateAsLongWriter extends PrimitiveValueWriter {
+    public static class DateAsLongWriter extends DateWriter {
         @Override
-        public String extractString(Object o) {
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            String formatted;
             if (o instanceof java.sql.Date) {
                 // Just use the date's built-in toString - it's already in JDBC format
-                return o.toString();
+                formatted = o.toString();
+                JsonWriter.writeBasicString(output, formatted);
             } else {
-                return Long.toString(((java.util.Date) o).getTime());
+                formatted = Long.toString(((java.util.Date) o).getTime());
+                output.write(formatted);
             }
         }
     }
@@ -285,12 +290,8 @@ public class Writers {
         }
     }
 
-    public static class TemporalWriter<T extends TemporalAccessor> extends PrimitiveTypeWriter {
-        protected DateTimeFormatter formatter;
-
-        public void setFormatter(DateTimeFormatter formatter) {
-            this.formatter = formatter;
-        }
+    public abstract static class TemporalWriter<T extends TemporalAccessor> extends PrimitiveTypeWriter {
+        protected abstract DateTimeFormatter getFormatter();
 
         @SuppressWarnings("unchecked")
         public void writePrimitiveForm(Object obj, Writer output, WriterContext writerContext) throws IOException {
@@ -298,77 +299,223 @@ public class Writers {
         }
 
         protected void writePrimitiveForm(T temporal, Writer output) throws IOException {
-            JsonWriter.writeBasicString(output, this.formatter.format(temporal));
+            JsonWriter.writeBasicString(output, getFormatter().format(temporal));
         }
     }
 
     public static class LocalDateWriter extends TemporalWriter<LocalDate> {
-        public LocalDateWriter() {
-            setFormatter(DateTimeFormatter.ISO_LOCAL_DATE);
+        private static final DateTimeFormatter FORMATTER = new DateTimeFormatterBuilder()
+                .append(DateTimeFormatter.ISO_LOCAL_DATE)
+                .toFormatter();
+
+        @Override
+        protected DateTimeFormatter getFormatter() {
+            return FORMATTER;
+        }
+
+        @Override
+        protected String getKey() {
+            return "localDate";
         }
     }
 
     public static class LocalTimeWriter extends TemporalWriter<LocalTime> {
-        public LocalTimeWriter() {
-            setFormatter(DateTimeFormatter.ISO_LOCAL_TIME);
+        private static final DateTimeFormatter FORMATTER = new DateTimeFormatterBuilder()
+                .append(DateTimeFormatter.ISO_LOCAL_TIME)
+                .toFormatter();
+
+        @Override
+        protected DateTimeFormatter getFormatter() {
+            return FORMATTER;
+        }
+
+        @Override
+        protected String getKey() {
+            return "localTime";
         }
     }
 
     public static class LocalDateTimeWriter extends TemporalWriter<LocalDateTime> {
-        public LocalDateTimeWriter() {
-            setFormatter(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        private static final DateTimeFormatter FORMATTER = new DateTimeFormatterBuilder()
+                .append(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                .toFormatter();
+
+        @Override
+        protected DateTimeFormatter getFormatter() {
+            return FORMATTER;
+        }
+
+        @Override
+        protected String getKey() {
+            return "localDateTime";
         }
     }
 
     public static class ZonedDateTimeWriter extends TemporalWriter<ZonedDateTime> {
-        public ZonedDateTimeWriter() {
-            setFormatter(DateTimeFormatter.ISO_ZONED_DATE_TIME);
+        private static final DateTimeFormatter FORMATTER = new DateTimeFormatterBuilder()
+                .append(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+                .appendLiteral('[')
+                .appendZoneId()
+                .appendLiteral(']')
+                .toFormatter();
+
+        @Override
+        protected DateTimeFormatter getFormatter() {
+            return FORMATTER;
+        }
+
+        @Override
+        protected String getKey() {
+            return "zonedDateTime";
+        }
+
+        @Override
+        protected void writePrimitiveForm(ZonedDateTime temporal, Writer output) throws IOException {
+            // If it's UTC/Z, convert to explicit UTC zone
+            if (temporal.getZone().equals(ZoneOffset.UTC) || temporal.getZone().getId().equals("Z")) {
+                temporal = temporal.withZoneSameInstant(ZoneId.of("UTC"));
+            }
+            JsonWriter.writeBasicString(output, this.getFormatter().format(temporal));
         }
     }
 
     public static class YearMonthWriter extends TemporalWriter<YearMonth> {
-
-        public static final DateTimeFormatter FORMATTER = new DateTimeFormatterBuilder()
-                .appendValue(YEAR, 4, 10, SignStyle.EXCEEDS_PAD)
+        private static final DateTimeFormatter FORMATTER = new DateTimeFormatterBuilder()
+                .appendValue(YEAR, 4, 19, SignStyle.EXCEEDS_PAD)  // Support negative years and up to 19 digits
                 .appendLiteral('-')
                 .appendValue(MONTH_OF_YEAR, 2)
                 .toFormatter();
 
-        public YearMonthWriter() {
-            setFormatter(FORMATTER);
+        @Override
+        protected DateTimeFormatter getFormatter() {
+            return FORMATTER;
+        }
+
+        @Override
+        protected String getKey() {
+            return "yearMonth";
         }
     }
 
-    public static class MonthDayWriter extends TemporalWriter<YearMonth> {
-
-        public static final DateTimeFormatter FORMATTER = new DateTimeFormatterBuilder()
+    public static class MonthDayWriter extends TemporalWriter<MonthDay> {
+        private static final DateTimeFormatter FORMATTER = new DateTimeFormatterBuilder()
+                .appendLiteral("--")
                 .appendValue(MONTH_OF_YEAR, 2)
                 .appendLiteral('-')
                 .appendValue(DAY_OF_MONTH, 2)
                 .toFormatter();
 
-        public MonthDayWriter() {
-            setFormatter(FORMATTER);
+        @Override
+        protected DateTimeFormatter getFormatter() {
+            return FORMATTER;
         }
-    }
-
-    public static class YearWriter extends PrimitiveValueWriter {
 
         @Override
-        public String extractString(Object o) {
-            return Integer.toString(((Year) o).getValue());
+        protected String getKey() {
+            return "monthDay";
         }
     }
-
+    
     public static class OffsetTimeWriter extends TemporalWriter<OffsetTime> {
-        public OffsetTimeWriter() {
-            setFormatter(DateTimeFormatter.ISO_OFFSET_TIME);
+        private static final DateTimeFormatter FORMATTER = new DateTimeFormatterBuilder()
+                .append(DateTimeFormatter.ISO_OFFSET_TIME)
+                .toFormatter();
+
+        @Override
+        protected DateTimeFormatter getFormatter() {
+            return FORMATTER;
+        }
+
+        @Override
+        protected String getKey() {
+            return "offsetTime";
+        }
+    }
+    
+    public static class OffsetDateTimeWriter extends TemporalWriter<OffsetDateTime> {
+        private static final DateTimeFormatter FORMATTER = new DateTimeFormatterBuilder()
+                .append(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+                .toFormatter();
+
+        @Override
+        protected DateTimeFormatter getFormatter() {
+            return FORMATTER;
+        }
+
+        @Override
+        protected String getKey() {
+            return "offsetDateTime";
         }
     }
 
-    public static class OffsetDateTimeWriter extends TemporalWriter<OffsetDateTime> {
-        public OffsetDateTimeWriter() {
-            setFormatter(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+    public static class InstantWriter extends TemporalWriter<Instant> {
+        private static final DateTimeFormatter FORMATTER = new DateTimeFormatterBuilder()
+                .append(DateTimeFormatter.ISO_INSTANT)
+                .toFormatter();
+
+        @Override
+        protected DateTimeFormatter getFormatter() {
+            return FORMATTER;
+        }
+
+        @Override
+        protected String getKey() {
+            return "instant";
+        }
+    }
+
+    public static class ZoneOffsetWriter extends TemporalWriter<ZoneOffset> {
+        @Override
+        protected DateTimeFormatter getFormatter() {
+            return null;  // Not used for ZoneOffset
+        }
+
+        @Override
+        protected String getKey() {
+            return "zoneOffset";
+        }
+
+        @Override
+        protected void writePrimitiveForm(ZoneOffset offset, Writer output) throws IOException {
+            JsonWriter.writeBasicString(output, offset.getId());  // Uses ISO-8601 format
+        }
+    }
+    
+    public static class DurationWriter implements JsonWriter.JsonClassWriter {
+        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+            Duration duration = (Duration) obj;
+            output.write("\"seconds\":");
+            output.write("" + duration.getSeconds());
+            output.write(",\"nanos\":");
+            output.write("" + duration.getNano());
+        }
+    }
+
+    public static class PeriodWriter extends Writers.PrimitiveUtf8StringWriter {
+        public String getKey() {
+            return "period";
+        }
+
+        @Override
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            Period d = (Period) o;
+            JsonWriter.writeBasicString(output, d.toString());
+        }
+    }
+
+    public static class YearWriter extends TemporalWriter<Year> {
+        private static final DateTimeFormatter FORMATTER = new DateTimeFormatterBuilder()
+                .appendValue(YEAR, 4, 19, SignStyle.EXCEEDS_PAD)  // Support negative years and up to 19 digits
+                .toFormatter();
+
+        @Override
+        protected DateTimeFormatter getFormatter() {
+            return FORMATTER;
+        }
+
+        @Override
+        protected String getKey() {
+            return "year";
         }
     }
 

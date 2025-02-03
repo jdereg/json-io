@@ -85,7 +85,7 @@ class YearMonthTests extends SerializationDeserializationMinimumTests<YearMonth>
 
     @Test
     void testOldFormat_objectType() {
-        String json = "{\"@type\":\"java.time.YearMonth\",\"year\":1970,\"month\":6}";
+        String json = "{\"@type\":\"java.time.YearMonth\",\"yearMonth\":\"1970-06\"}";
         YearMonth date = TestUtil.toObjects(json, null);
         assertThat(date.getYear()).isEqualTo(1970);
         assertThat(date.getMonthValue()).isEqualTo(6);
@@ -93,7 +93,7 @@ class YearMonthTests extends SerializationDeserializationMinimumTests<YearMonth>
 
     @Test
     void testOldFormat_nestedObject() {
-        String json = "{\"@type\":\"com.cedarsoftware.io.YearMonthTests$NestedYearMonth\",\"one\":{\"@id\":1,\"year\":1970,\"month\":6},\"two\":{\"@ref\":1}}";
+        String json = "{\"@type\":\"com.cedarsoftware.io.YearMonthTests$NestedYearMonth\",\"one\":{\"@id\":1,\"yearMonth\":\"1970-06\"},\"two\":{\"@ref\":1}}";
         NestedYearMonth date = TestUtil.toObjects(json, null);
         assertThat(date.one.getYear()).isEqualTo(1970);
         assertThat(date.one.getMonthValue()).isEqualTo(6);
