@@ -3,6 +3,7 @@ package com.cedarsoftware.util.io;
 import java.util.EnumSet;
 import java.util.Objects;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -24,9 +25,24 @@ import org.junit.Test;
  */
 public class TestEmptyEnumSetOnJDK17
 {
-    static enum TestEnum
+    enum TestEnum
     {
         V1, V2, V3
+    }
+
+    static class Property<T> {
+        EnumSet<TestEnum> versions;
+
+        public Property(EnumSet<TestEnum> versions) {
+            this.versions = versions;
+        }
+
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Property<?> property = (Property<?>) o;
+            return Objects.equals(versions, property.versions);
+        }
     }
 
     static class MultiVersioned
@@ -50,6 +66,26 @@ public class TestEmptyEnumSetOnJDK17
 
         public int hashCode() {
             return Objects.hash(versions, dummy);
+        }
+    }
+
+    static class HigherClass {
+        Property<String> versioned;
+
+        public HigherClass(final Property<String> versioned) {
+            this.versioned = versioned;
+        }
+
+        @Override
+        public boolean equals(final Object object) {
+            if (!(object instanceof HigherClass)) return false;
+            final HigherClass that = (HigherClass) object;
+            return Objects.equals(versioned, that.versioned);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(versioned);
         }
     }
 
@@ -84,5 +120,16 @@ public class TestEmptyEnumSetOnJDK17
         MultiVersioned target = (MultiVersioned) JsonReader.jsonToJava(json);
 
         assert m.equals(target);
+    }
+
+    @Test
+    public void testEnumSetInsideParameterizedChild() {
+        Property<String> m = new Property<>(EnumSet.of(TestEnum.V1, TestEnum.V3));
+        HigherClass h = new HigherClass(m);
+
+        String json = JsonWriter.objectToJson(h);
+        HigherClass target = (HigherClass) JsonReader.jsonToJava(json);
+
+        Assert.assertEquals(h, target);
     }
 }
