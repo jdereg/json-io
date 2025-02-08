@@ -22,9 +22,11 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.SignStyle;
 import java.time.temporal.TemporalAccessor;
+import java.util.Currency;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 import com.cedarsoftware.util.Converter;
 
@@ -224,36 +226,23 @@ public class Writers {
         }
     }
 
-    public static class DateAsLongWriter extends DateWriter {
-        @Override
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            String formatted;
-            if (o instanceof java.sql.Date) {
-                // Just use the date's built-in toString - it's already in JDBC format
-                formatted = o.toString();
-                JsonWriter.writeBasicString(output, formatted);
-            } else {
-                formatted = Long.toString(((java.util.Date) o).getTime());
-                output.write(formatted);
-            }
-        }
-    }
-    
     public static class DateWriter implements JsonWriter.JsonClassWriter {
         @Override
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            String formatted = Converter.convert(o, String.class);
-            JsonWriter.writeBasicString(output, formatted);
+            if (o instanceof java.sql.Date) {
+                // Write just the date portion - no time, no timezone
+                String formatted = ((java.sql.Date) o).toLocalDate().toString();
+                JsonWriter.writeBasicString(output, formatted);
+            } else {
+                // Regular Date uses the converter's string format
+                String formatted = Converter.convert(o, String.class);
+                JsonWriter.writeBasicString(output, formatted);
+            }
         }
 
         public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
             if (showType) {
-                String key;
-                if (obj instanceof java.sql.Date) {
-                    key = "sqlDate";
-                } else {
-                    key = "date";
-                }
+                String key = (obj instanceof java.sql.Date) ? "sqlDate" : "date";
                 JsonWriter.writeBasicString(output, key);
                 output.write(':');
             }
@@ -266,6 +255,20 @@ public class Writers {
         }
     }
 
+    public static class DateAsLongWriter extends DateWriter {
+        @Override
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (o instanceof java.sql.Date) {
+                // Same pure date format for sql.Date in both writers
+                String formatted = ((java.sql.Date) o).toLocalDate().toString();
+                JsonWriter.writeBasicString(output, formatted);
+            } else {
+                // Regular Date uses milliseconds
+                output.write(Long.toString(((java.util.Date) o).getTime()));
+            }
+        }
+    }
+    
     public static class LocalDateAsLong extends PrimitiveTypeWriter {
         private final ZoneId zoneId;
 
@@ -484,10 +487,9 @@ public class Writers {
     public static class DurationWriter implements JsonWriter.JsonClassWriter {
         public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
             Duration duration = (Duration) obj;
-            output.write("\"seconds\":");
-            output.write("" + duration.getSeconds());
-            output.write(",\"nanos\":");
-            output.write("" + duration.getNano());
+            output.write("\"duration\":\"");
+            output.write(duration.toString());
+            output.write("\"");
         }
     }
 
@@ -555,6 +557,22 @@ public class Writers {
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
             BigInteger big = (BigInteger) o;
             JsonWriter.writeBasicString(output, big.toString(10));
+        }
+    }
+
+    public static class PatternWriter extends PrimitiveValueWriter {
+        @Override
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            Pattern pattern = (Pattern) o;
+            JsonWriter.writeJsonUtf8String(output, pattern.pattern());
+        }
+    }
+
+    public static class CurrencyWriter extends PrimitiveValueWriter {
+        @Override
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            Currency currency = (Currency) o;
+            JsonWriter.writeJsonUtf8String(output, currency.getCurrencyCode());
         }
     }
 

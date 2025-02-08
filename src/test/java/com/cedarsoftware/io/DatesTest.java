@@ -5,7 +5,6 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Calendar;
 import java.util.Date;
@@ -407,17 +406,18 @@ class DatesTest
     @Test
     void testSqlDate2() {
         // Given
-        long now = 1703043551033L; // This represents the full epoch in UTC.
-        // Construct our expected objects (for direct comparison)
+        long now = 1703043551033L; // full epoch in UTC.
+        // Construct expected objects:
         Date expectedUtilDate = new Date(now);
-        // For java.sql.Date, create it as a literal date (interpreting 'now' in UTC):
+
+        // Compute expected LocalDate using the same zone as your converter (e.g., Asia/Tokyo)
         LocalDate expectedLD = Instant.ofEpochMilli(now)
-                .atZone(ZoneOffset.UTC)
+                .atZone(ZoneId.systemDefault())
                 .toLocalDate();
         java.sql.Date expectedSqlDate = java.sql.Date.valueOf(expectedLD);
-        // For Timestamp, we expect the complete value to be included.
+
+        // For Timestamp, set up as before
         Timestamp expectedTimestamp = new Timestamp(now);
-        // (If your Timestamp conversion uses separate fields for nanos, it should result in nanos=33000000.)
         expectedTimestamp.setNanos(33000000);  // ensuring the fractional part is set
 
         String json = "{\"@type\":\"[Ljava.util.Date;\",\"@items\":[1703043551033,{\"@type\":\"java.sql.Date\", \"sqlDate\":1703043551033},{\"@type\":\"java.sql.Timestamp\",\"epochMillis\":\"1703043551000\"}]}";
@@ -429,23 +429,18 @@ class DatesTest
         // Then
         assertEquals(3, dates2.length);
 
-        // For a plain java.util.Date, simply compare the underlying epoch:
+        // For plain java.util.Date
         assertEquals(expectedUtilDate.getTime(), dates2[0].getTime());
 
-        // For a java.sql.Date, compare by their literal date string (or equivalently compare LocalDate).
-        // (This avoids any unintended time zone arithmetic.)
-        assertEquals(expectedSqlDate.toString(), dates2[1].toString());
-        
-        // Optionally, you could also convert to LocalDate and compare:
+        // For java.sql.Date, compare by string (or LocalDate)
+        assertEquals(expectedSqlDate, dates2[1]);
         LocalDate ldFromActual = Instant.ofEpochMilli(dates2[1].getTime())
-                .atZone(ZoneOffset.UTC)
+                .atZone(ZoneId.systemDefault())
                 .toLocalDate();
         assertEquals(expectedLD, ldFromActual);
 
-        // For the Timestamp:
+        // For Timestamp:
         Timestamp stamp = (Timestamp) dates2[2];
-        // The JSON provides "epochMillis": "1703043551000" and nanos: 33000000,
-        // so the full value should be 1703043551000 + 33 = 1703043551033.
         assertEquals(1703043551000L, stamp.getTime());
     }
 

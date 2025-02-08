@@ -50,11 +50,11 @@ public class UUIDTest
 
         String json2 = "{\"@type\":\"" + TestUUIDFields.class.getName() + "\", \"internals\": {\"@type\": \"java.util.UUID\", \"leastSigBits\":-7929886640328317609}}";
         thrown = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json2, null); });
-        assert thrown.getMessage().contains("Map to 'UUID' the map must include: [UUID], [mostSigBits, leastSigBits], [value], or [_v] as keys with associated values");
+        assert thrown.getMessage().contains("Map to 'UUID' the map must include: [UUID], [value], [_v], or [mostSigBits, leastSigBits] as key with associated value");
 
         String json3 = "{\"@type\":\"" + TestUUIDFields.class.getName() + "\", \"internals\": {\"@type\": \"java.util.UUID\", \"mostSigBits\":7280309849777586861}}";
         thrown = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json3, null); });
-        assert thrown.getMessage().contains("Map to 'UUID' the map must include: [UUID], [mostSigBits, leastSigBits], [value], or [_v] as keys with associated values");
+        assert thrown.getMessage().contains("Map to 'UUID' the map must include: [UUID], [value], [_v], or [mostSigBits, leastSigBits] as key with associated value");
     }
 
     @Test

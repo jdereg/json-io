@@ -49,15 +49,15 @@ public class LocaleTest
         assertEquals(locale, us);
         
         Throwable e = assertThrows(Exception.class, () -> { TestUtil.toObjects("{\"@type\":\"java.util.Locale\"}", null); });
-        assertTrue(e.getMessage().contains("convert from Map to 'Locale' the map must include: [language, country (optional), script (optional), variant (optional)], [value], or [_v] as keys with associated values"));
+        assertTrue(e.getMessage().contains("Map to 'Locale' the map must include: [locale], [value], or [_v] as key with associated value"));
 
-        json = "{\"@type\":\"java.util.Locale\",\"language\":\"en\"}";
+        json = "{\"@type\":\"java.util.Locale\",\"locale\":\"en\"}";
         locale = TestUtil.toObjects(json, null);
         assertEquals("en", locale.getLanguage());
         assertEquals("", locale.getCountry());
         assertEquals("", locale.getVariant());
 
-        json = "{\"@type\":\"java.util.Locale\",\"language\":\"en\",\"country\":\"US\"}";
+        json = "{\"@type\":\"java.util.Locale\",\"locale\":\"en-US\"}";
         locale = TestUtil.toObjects(json, null);
         assertEquals("en", locale.getLanguage());
         assertEquals("US", locale.getCountry());

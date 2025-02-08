@@ -53,11 +53,14 @@ java.util.Calendar = com.cedarsoftware.io.Writers$CalendarWriter
 java.util.concurrent.atomic.AtomicBoolean = com.cedarsoftware.io.Writers$PrimitiveValueWriter
 java.util.concurrent.atomic.AtomicInteger = com.cedarsoftware.io.Writers$PrimitiveValueWriter
 java.util.concurrent.atomic.AtomicLong = com.cedarsoftware.io.Writers$PrimitiveValueWriter
+java.util.Currency = com.cedarsoftware.io.Writers$CurrencyWriter
 java.util.Date = com.cedarsoftware.io.Writers$DateAsLongWriter
 java.util.GregorianCalendar = com.cedarsoftware.io.Writers$CalendarWriter
 java.util.Locale = com.cedarsoftware.io.Writers$LocaleWriter
 java.util.TimeZone = com.cedarsoftware.io.Writers$TimeZoneWriter
 java.util.UUID = com.cedarsoftware.io.Writers$UUIDWriter
+
+java.util.regex.Pattern = com.cedarsoftware.io.Writers$PatternWriter
 
 sun.util.calendar.ZoneInfo = com.cedarsoftware.io.Writers$TimeZoneWriter
 

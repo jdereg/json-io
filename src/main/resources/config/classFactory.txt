@@ -30,12 +30,15 @@ java.math.BigInteger = Convertable
 java.util.concurrent.atomic.AtomicBoolean = Convertable
 java.util.concurrent.atomic.AtomicInteger = Convertable
 java.util.concurrent.atomic.AtomicLong = Convertable
+java.util.Currency = Convertable
 java.util.Date = Convertable
 java.util.Calendar = Convertable
 java.util.GregorianCalendar = Convertable
 java.util.Locale = Convertable
 java.util.UUID = Convertable
 java.util.TimeZone = Convertable
+
+java.util.regex.Pattern = Convertable
 
 # java.lang
 java.lang.Class = Convertable

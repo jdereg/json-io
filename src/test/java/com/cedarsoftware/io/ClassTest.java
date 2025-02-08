@@ -77,7 +77,7 @@ public class ClassTest
         String json = "{\"@type\":\"class\"}";
         assertThatThrownBy(() -> TestUtil.toObjects(json, null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Map to 'Class' the map must include: [value] or [_v] as keys with associated values");
+                .hasMessageContaining("Map to 'Class' the map must include: [class], [value], or [_v] as key with associated value");
 
     }
 

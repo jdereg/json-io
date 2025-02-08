@@ -1,5 +1,4 @@
 {
   "@type": "java.time.Duration",
-  "seconds": 9000,
-  "nanos": 9000
+  "duration": "9000.000009"
 }
