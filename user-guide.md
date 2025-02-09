@@ -104,7 +104,7 @@ have lots of additional information for how to register your factory classes wit
 - Custom `ClassFactory` and `JsonClassWriter` built for [CompactMap](https://github.com/jdereg/java-util/blob/master/userguide.md#compactmap)
 
   - [CompactMap reader](src/main/java/com/cedarsoftware/io/factory/CompactMapFactory.java) (`ClassFactory`)
-  - [CompactMap writer](src/main/java/com/cedarsoftware/io/factory/CompactMapWriter.java)  (`JsonClassWriter`)
+  - [CompactMap writer](src/main/java/com/cedarsoftware/io/writers/CompactMapWriter.java)  (`JsonClassWriter`)
 
 ### Order of Type Resolution and Substitution
 
