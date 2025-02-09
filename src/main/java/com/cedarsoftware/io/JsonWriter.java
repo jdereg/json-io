@@ -1700,51 +1700,38 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         writer.write('\"');
     }
 
-    private static void writeChar(Writer writer, char c) throws IOException {
-        if (c < ' ') {    // Anything less than ASCII space, write either in \\u00xx form, or the special \t, \n, etc. form
-            switch (c) {
-                case '\b':
-                    writer.write("\\b");
-                    break;
-                case '\f':
-                    writer.write("\\f");
-                    break;
-                case '\n':
-                    writer.write("\\n");
-                    break;
-                case '\r':
-                    writer.write("\\r");
-                    break;
-                case '\t':
-                    writer.write("\\t");
-                    break;
-                default:
-                    writer.write(String.format("\\u%04X", (int) c));
-                    break;
-            }
-        } else if (c == '\\' || c == '"') {
-            writer.write('\\');
-            writer.write(c);
-        } else {   // Anything else - write in UTF-8 form (multibyte encoded) (OutputStreamWriter is UTF-8)
-            writer.write(c);
-        }
-    }
-
-    /**
-     * Write out special characters "\b, \f, \t, \n, \r", as such, backslash as \\
-     * quote as \" and values less than an ASCII space (20hex) as "\\u00xx" format,
-     * characters in the range of ASCII space to a '~' as ASCII, and anything higher in UTF-8.
-     *
-     * @param output Writer to which the UTF-8 string will be written to
-     * @param s      String to be written in UTF-8 format on the output stream.
-     * @throws IOException if an error occurs writing to the output stream.
-     */
     public static void writeJsonUtf8String(final Writer output, String s) throws IOException {
+        if (s == null) {
+            output.write("null");
+            return;
+        }
         output.write('\"');
         final int len = s.length();
 
-        for (int i = 0; i < len; i++) {
-            writeChar(output, s.charAt(i));
+        for (int i = 0; i < len; ) {
+            int codePoint = s.codePointAt(i);
+            if (codePoint < 0x20) {
+                // Control characters
+                switch (codePoint) {
+                    case '\b': output.write("\\b"); break;
+                    case '\f': output.write("\\f"); break;
+                    case '\n': output.write("\\n"); break;
+                    case '\r': output.write("\\r"); break;
+                    case '\t': output.write("\\t"); break;
+                    default: output.write(String.format("\\u%04x", codePoint));
+                }
+            }
+            else if (codePoint == '"') {
+                output.write("\\\"");
+            }
+            else if (codePoint == '\\') {
+                output.write("\\\\");
+            }
+            else {
+                // For all other characters (including valid surrogate pairs), write directly
+                output.write(s, i, Character.charCount(codePoint));
+            }
+            i += Character.charCount(codePoint);
         }
         output.write('\"');
     }

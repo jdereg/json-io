@@ -29,7 +29,7 @@
         <version.java-util>3.0.3</version.java-util>
         <!-- testing only -->
         <version.junit-jupiter-params>5.11.4</version.junit-jupiter-params>
-        <version.assertj-core>3.27.2</version.assertj-core>
+        <version.assertj-core>3.27.3</version.assertj-core>
         <version.gson>2.11.0</version.gson>
         <version.jackson-core>2.18.2</version.jackson-core>
 

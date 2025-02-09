@@ -1,6 +1,8 @@
 ### Revision History
-#### 4.34.0
-  * Improved Date and java.sql.Date handling within Converters.
+#### 4.40.0
+  * All Time and Date classes compressed to a single String representation in JSON, uses ISO format when possible.
+  * Java's `Pattern` and `Currency` support added
+  * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.0.2` to `3.0.3.`
 #### 4.33.0
   * New custom `ClassFactory` classes are easier to write:
     * See [examples](user-guide.md#classfactory-and-customwriter-examples)

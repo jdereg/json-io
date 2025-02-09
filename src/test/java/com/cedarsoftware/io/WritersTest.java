@@ -18,7 +18,6 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.Locale;
 import java.util.TimeZone;
 
 import com.cedarsoftware.util.DeepEquals;
@@ -47,9 +46,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class WritersTest {
     @Test
     void testUnusedAPIs() throws Exception {
-        Writers.LocaleWriter lw = new Writers.LocaleWriter();
-        lw.writePrimitiveForm(Locale.getDefault(), new StringWriter(), null);
-
         Writers.JsonStringWriter jsw = new Writers.JsonStringWriter();
         jsw.write(8, false, new StringWriter(), null);
     }

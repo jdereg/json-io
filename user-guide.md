@@ -84,26 +84,27 @@ JsonWriter.JsonClassWriter // Create a class that implements this interface
 ```
 
 Your `JsonReader.ClassFactory` class is called after the JSON is parsed and `json-io` is converting all the Maps to
-Java instances.  Your factory class is passed the JsonObject (a Map) with the fields and values from the JSON so that 
+Java instances.  Your factory class is passed the `JsonObject` (a `Map`) with the fields and values from the JSON so that 
 you can **create** your class and **populate** it at the same time.  Use the `Resolver` to load complex fields
 of your class (Non-primitives, Object[]'s, typed arrays, Lists, Maps), making things easy - you only have to worry about
 the primitives in your class (see the examples below for how to 'tee up' the `Resolver` to load the sub-graph for
 you.)
 
-The [code examples](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectsTest.java) below show how to tell `json-io` 
-to associate your `CustomFactory` and `CustomWriter` to particular classes. Often you don't need to resort to a `CustomFactory,` 
-however, when you run into that one difficult class, these tools allow you to breeze through creating, reading, and 
-writing it. The [WriteOptions Reference](/user-guide-writeOptions.md) and [ReadOptions Reference](/user-guide-readOptions.md) 
-have lots of additional information for Read/Write options. 
-
+The [code examples](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectsTest.java) below show how to write a `ClassFactory` and `JSonClassWriter`.  There is a JUnit test case in the example
+that illustrates how to associate your `ClassFactory` and `JsonClassWriter` to particular
+classes. The [WriteOptions Reference](/user-guide-writeOptions.md) and [ReadOptions Reference](/user-guide-readOptions.md) 
+have lots of additional information for how to register your factory classes with the `ReadOptionsBuilder` and `WriteOptionsBuilder`.
 
 ### ClassFactory and CustomWriter Examples
 
-[Example Code - Primitive fields](/src/test/java/com/cedarsoftware/io/CustomJsonTest.java)
+- [Primitive fields](/src/test/java/com/cedarsoftware/io/CustomJsonTest.java)
+- [Primitive and non-primitive fields (sub-graph)](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectTest.java)
+- [Primitive, array, type array, List, Map](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectsTest.java)
 
-[Example Code - Primitive and non-primitive fields (sub-object)](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectTest.java)
+- Custom `ClassFactory` and `JsonClassWriter` built for [CompactMap](https://github.com/jdereg/java-util/blob/master/userguide.md#compactmap)
 
-[Example Code - Primitive, array, type array, List, Map](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectsTest.java)
+  - [CompactMap reader](src/main/java/com/cedarsoftware/io/factory/CompactMapFactory.java) (`ClassFactory`)
+  - [CompactMap writer](src/main/java/com/cedarsoftware/io/factory/CompactMapWriter.java)  (`JsonClassWriter`)
 
 ### Order of Type Resolution and Substitution
 
