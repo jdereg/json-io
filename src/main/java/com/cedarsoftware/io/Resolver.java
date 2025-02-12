@@ -172,7 +172,7 @@ public abstract class Resolver {
             return null;
         }
 
-        // Resolve any reference: if the JsonObject is a reference, fetch the actual object.
+        // If the JsonObject is a reference, resolve it.
         if (rootObj.isReference()) {
             rootObj = getReferences().get(rootObj.refId);
             if (rootObj != null) {
@@ -180,10 +180,11 @@ public abstract class Resolver {
             }
         }
 
-        // If the JsonObject has already been converted, return its target.
+        // If already converted, return its target.
         if (rootObj.isFinished) {
             return (T) rootObj.getTarget();
         } else {
+            // If the full type is not yet set and we have a provided rootType, set it.
             if (rootObj.getFullType() == null && rootType != null) {
                 rootObj.setFullType(rootType);
             }
@@ -404,6 +405,7 @@ public abstract class Resolver {
         Class<?> targetType = coerceClassIfNeeded(jsonObj.getJavaType());
         jsonObj.setJavaType(targetType);
 
+        // If the target type is an enum, perform enum coercion.
         Class<?> enumClass = ClassUtilities.getClassIfEnum(targetType);
         if (enumClass != null) {
             Class<?> coercedEnumClass = getCoercedEnumClass(enumClass);
@@ -563,16 +565,15 @@ public abstract class Resolver {
     }
 
     public boolean valueToTarget(JsonObject jsonObject) {
-        if (jsonObject.javaType == null) {
-            if (jsonObject.fullType == null) {
+        if (jsonObject.getJavaType() == null) {
+            if (jsonObject.getFullType() == null) {
                 return false;
             }
-            jsonObject.javaType = JsonValue.extractRawClass(jsonObject.fullType);
+            jsonObject.setJavaType(JsonValue.extractRawClass(jsonObject.getFullType()));
         }
 
-        Class<?> javaType = jsonObject.javaType;
-        // TODO: Support multiple dimensions
-        // TODO: Support char
+        Class<?> javaType = jsonObject.getJavaType();
+        // For arrays, attempt simple type conversion.
         if (javaType.isArray() && converter.isSimpleTypeConversionSupported(javaType.getComponentType(), javaType)) {
             Object jsonItems = jsonObject.getItems();
             Class<?> componentType = javaType.getComponentType();
