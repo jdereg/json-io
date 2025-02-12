@@ -294,15 +294,14 @@ public class ObjectResolver extends Resolver
         final boolean isList = col instanceof List;
         int idx = 0;
 
-        // Determine the generic (element) type from jsonObj's full type.
+        // Extract the element type from the full type, defaulting to Object if not set.
         Type fullType = jsonObj.getFullType();
-        // Default to Object if not available.
         Type elementType = Object.class;
         if (fullType instanceof ParameterizedType) {
             ParameterizedType pt = (ParameterizedType) fullType;
             Type[] typeArgs = pt.getActualTypeArguments();
-            if (typeArgs.length > 0) {
-                elementType = typeArgs[0];   // It's a Collection, so there is only one type argument.
+            if (typeArgs != null && typeArgs.length > 0) {
+                elementType = typeArgs[0];
             }
         }
 
@@ -310,7 +309,7 @@ public class ObjectResolver extends Resolver
             jsonObj.setFinished();
             return;
         }
-        
+
         int len = Array.getLength(items);
         for (int i = 0; i < len; i++) {
             Object element = Array.get(items, i);
@@ -318,49 +317,46 @@ public class ObjectResolver extends Resolver
             if (element == null) {
                 col.add(null);
             } else if ((special = readWithFactoryIfExists(element, JsonValue.extractRawClass(elementType))) != null) {
-                // Use custom factory/converter if available.
+                // Use custom converter if available.
                 col.add(special);
             } else if (converter.isSimpleTypeConversionSupported(element.getClass(), element.getClass())) {
-                // Allow simple types (e.g. String, Boolean, Number) to be used as-is.
+                // Simple types: add as is.
                 col.add(element);
             } else if (element.getClass().isArray()) {
-                // For array elements, attempt to determine the array component type from the generic info.
+                // For array elements inside the collection, use the helper to extract the array component type.
                 JsonObject jObj = new JsonObject();
-                Type arrayComponentType = Object.class;
-                // If the collection's element type is itself an array type, extract its component type.
-                if (elementType instanceof GenericArrayType) {
-                    arrayComponentType = ((GenericArrayType) elementType).getGenericComponentType();
-                } else if (elementType instanceof Class<?> && ((Class<?>) elementType).isArray()) {
-                    arrayComponentType = ((Class<?>) elementType).getComponentType();
+                Type arrayComponentType = JsonValue.extractArrayComponentType(elementType);
+                if (arrayComponentType == null) {
+                    arrayComponentType = Object.class;
                 }
-                jObj.setFullType(arrayComponentType); // set the refined type on the JsonObject
+                jObj.setFullType(arrayComponentType);
                 jObj.setItems(element);
                 createInstance(jObj);
                 col.add(jObj.getTarget());
                 push(jObj);
-            } else { // element is assumed to be a JsonObject.
+            } else {
+                // Otherwise, assume the element is a JsonObject.
                 JsonObject jObj = (JsonObject) element;
                 final Long ref = jObj.getReferenceId();
-
-                if (ref != null) {  // Handle forward or circular references.
+                if (ref != null) {
                     JsonObject refObject = getReferences().getOrThrow(ref);
                     if (refObject.getTarget() != null) {
                         col.add(refObject.getTarget());
                     } else {
                         unresolvedRefs.add(new UnresolvedReference(jsonObj, idx, ref));
-                        if (isList) {   // For indexable collections, temporarily add null.
+                        if (isList) {
                             col.add(null);
                         }
                     }
                 } else {
-                    // Set the element's full type to the component type extracted above.
+                    // Set the element's full type to the extracted element type.
                     jObj.setFullType(elementType);
                     createInstance(jObj);
                     boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getJavaType());
                     if (!isNonRefClass) {
                         traverseSpecificType(jObj);
                     }
-                    if (!(col instanceof EnumSet)) {  // For collections like EnumSet, items are already added.
+                    if (!(col instanceof EnumSet)) {
                         col.add(jObj.getTarget());
                     }
                 }
@@ -394,21 +390,12 @@ public class ObjectResolver extends Resolver
         // Get the raw component type from the array as a fallback.
         final Class<?> fallbackCompType = array.getClass().getComponentType();
 
-        // Now try to get the effective component type from the full type information.
-        Type fullType = jsonObj.getFullType();
-        Type effectiveComponentType = null;
-        if (fullType != null) {
-            if (fullType instanceof GenericArrayType) {
-                effectiveComponentType = ((GenericArrayType) fullType).getGenericComponentType();
-            } else if (fullType instanceof Class<?> && ((Class<?>) fullType).isArray()) {
-                effectiveComponentType = ((Class<?>) fullType).getComponentType();
-            }
-        }
-        // If no full type is available, fall back to the raw component type.
+        // Use the helper to extract the effective component type from the full type.
+        Type effectiveComponentType = JsonValue.extractArrayComponentType(jsonObj.getFullType());
         if (effectiveComponentType == null) {
             effectiveComponentType = fallbackCompType;
         }
-        // For operations that need a Class (for instantiation or lookup), extract the raw type.
+        // For operations that require a Class, extract the raw type.
         final Class effectiveRawComponentType = JsonValue.extractRawClass(effectiveComponentType);
         final Object jsonItems = jsonObj.getItems();
 
@@ -425,7 +412,7 @@ public class ObjectResolver extends Resolver
                 setArrayElement(array, i, special);
             } else if (element.getClass().isArray()) {   // Array of arrays
                 if (char[].class == effectiveRawComponentType) {
-                    // Special handling for char[] arrays: they are stored as UTF-8 strings.
+                    // Special handling for char[] arrays.
                     Object[] jsonArray = (Object[]) element;
                     if (jsonArray.length == 0) {
                         setArrayElement(array, i, new char[]{});
@@ -439,21 +426,18 @@ public class ObjectResolver extends Resolver
                         setArrayElement(array, i, chars);
                     }
                 } else {
-                    // Prepare a JsonObject for this array element.
                     JsonObject jsonArray = new JsonObject();
                     jsonArray.setItems(element);
-                    // Instead of using a fixed hint, set the full type on the child JsonObject.
+                    // Set the full type using the effective component type.
                     jsonArray.setFullType(effectiveComponentType);
-                    // Create an instance from the JsonObject and assign it to the array.
                     setArrayElement(array, i, createInstance(jsonArray));
-                    // If the array element is non-primitive, push it for further traversal.
                     push(jsonArray);
                 }
             } else if (element instanceof JsonObject) {
                 JsonObject jsonElement = (JsonObject) element;
                 Long ref = jsonElement.getReferenceId();
 
-                if (ref != null) {  // Handle references.
+                if (ref != null) {
                     JsonObject refObject = refTracker.getOrThrow(ref);
                     if (refObject.getTarget() != null) {
                         setArrayElement(array, i, refObject.getTarget());
@@ -461,7 +445,7 @@ public class ObjectResolver extends Resolver
                         unresolvedRefs.add(new UnresolvedReference(jsonObj, i, ref));
                     }
                 } else {
-                    // Set the element’s type to the effective component type.
+                    // Set the full type on the element.
                     jsonElement.setFullType(effectiveComponentType);
                     Object arrayElement = createInstance(jsonElement);
                     setArrayElement(array, i, arrayElement);
@@ -471,7 +455,6 @@ public class ObjectResolver extends Resolver
                     }
                 }
             } else {
-                // Allow an entry of "" in the array to null out the element if the type is not String or Object.
                 if (element instanceof String && ((String) element).trim().isEmpty()
                         && effectiveRawComponentType != String.class
                         && effectiveRawComponentType != Object.class) {

@@ -358,45 +358,44 @@ public abstract class Resolver {
      * enough hints to get the right class instantiated.  It is not populated when returned.
      */
     Object createInstance(JsonObject jsonObj) {
+        // If an instance is already set, return it.
         Object target = jsonObj.getTarget();
         if (target != null) {
             return target;
         }
 
-        // Resolve target type with proper coercion and enum handling
+        // Use the refined fullType (if available) to determine the target type.
         Class<?> targetType = resolveTargetType(jsonObj);
 
-        // Determine the factory type, considering enums and collections
+        // Determine the factory type, considering enums and collections.
         Class<?> factoryType = determineFactoryType(jsonObj, targetType);
 
-        // Try creating an instance using the class factory
+        // Try creating an instance using the class factory.
         Object mate = createInstanceUsingClassFactory(factoryType, jsonObj);
         if (mate != NO_FACTORY) {
             return mate;
         }
 
-        // Attempt conversion using the Converter
+        // Attempt conversion using the Converter.
         Object sourceValue = jsonObj.hasValue() ? jsonObj.getValue() : null;
         Class<?> sourceType = sourceValue != null ? sourceValue.getClass() : (!jsonObj.isEmpty() ? Map.class : null);
 
-        // Other than exceptions, see if there is a converter that can handle the conversion
         if (!Throwable.class.isAssignableFrom(targetType)) {
             if (sourceType != null && converter.isConversionSupportedFor(sourceType, targetType)) {
                 try {
                     Object value = converter.convert(sourceValue != null ? sourceValue : jsonObj, targetType);
                     return jsonObj.setFinishedTarget(value, true);
-                } catch (Exception ignored) {
-                }
+                } catch (Exception ignored) { }
             }
         }
 
-        // Handle array creation
+        // Handle array creation.
         if (shouldCreateArray(jsonObj, targetType)) {
             mate = createArrayInstance(jsonObj, targetType);
             return jsonObj.setTarget(mate);
         }
 
-        // Fallback to creating an instance using the type directly
+        // Fallback: create an instance using the type directly.
         return createInstanceUsingType(jsonObj);
     }
 
@@ -405,7 +404,7 @@ public abstract class Resolver {
         Class<?> targetType = coerceClassIfNeeded(jsonObj.getJavaType());
         jsonObj.setJavaType(targetType);
 
-        // If the target type is an enum, perform enum coercion.
+        // Handle enum coercion as before.
         Class<?> enumClass = ClassUtilities.getClassIfEnum(targetType);
         if (enumClass != null) {
             Class<?> coercedEnumClass = getCoercedEnumClass(enumClass);

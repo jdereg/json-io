@@ -216,15 +216,15 @@ public abstract class JsonValue {
         if (type == null) {
             return null;
         }
-        if (type instanceof Class<?>) {
+        if (type instanceof GenericArrayType) {
+            return ((GenericArrayType) type).getGenericComponentType();
+        } else if (type instanceof Class<?>) {
             Class<?> cls = (Class<?>) type;
             if (cls.isArray()) {
                 return cls.getComponentType();
             }
-        } else if (type instanceof GenericArrayType) {
-            return ((GenericArrayType) type).getGenericComponentType();
         }
-        // Fallback: if it's not an array, just return the original type.
-        return type;
+        // If it is not an array type, return null to indicate no component type.
+        return null;
     }
 }
