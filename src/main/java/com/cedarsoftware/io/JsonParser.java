@@ -2,6 +2,7 @@ package com.cedarsoftware.io;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -152,7 +153,7 @@ class JsonParser {
      * Read a JSON value (see json.org).  A value can be a JSON object, array, string, number, ("true", "false"), or "null".
      * @param suggestedType JsonValue Owning entity.
      */
-    Object readValue(Class<?> suggestedType) throws IOException {
+    Object readValue(Type suggestedType) throws IOException {
         if (curParseDepth > maxParseDepth) {
             error("Maximum parsing depth exceeded");
         }
@@ -170,11 +171,8 @@ class JsonParser {
                 JsonObject jObj = readJsonObject(suggestedType);
                 return jObj;
             case '[':
-                if (suggestedType != null && suggestedType.isArray()) {
-                    suggestedType = suggestedType.getComponentType();
-                }
-                Object array = readArray(suggestedType == null ? null : suggestedType);
-                return array;
+                Type elementType = JsonValue.extractArrayComponentType(suggestedType);
+                return readArray(elementType);
             case ']':   // empty array
                 input.pushback(']');
                 return EMPTY_ARRAY;
@@ -202,37 +200,43 @@ class JsonParser {
      * from an @type field, containing field type, or containing array type, then the javaType will be set on the
      * JsonObject.
      */
-    private JsonObject readJsonObject(Class<?> suggestedType) throws IOException {
+    private JsonObject readJsonObject(Type suggestedType) throws IOException {
         JsonObject jObj = new JsonObject();
-        jObj.setHintType(suggestedType);
+
+        // Set the refined type on the JsonObject.
+        jObj.setFullType(suggestedType);
         final FastReader in = input;
 
-        // Start reading the object, skip white space and find {
-        skipWhitespaceRead(true);           // Burn '{'
+        // Start reading the object: skip whitespace and consume '{'
+        skipWhitespaceRead(true);  // Consume the '{'
         jObj.line = in.getLine();
         jObj.col = in.getCol();
         int c = skipWhitespaceRead(true);
         if (c == '}') {    // empty object
-            // Using new JsonObject() below will prevent @id/@ref if more than one {} appears in the JSON.
+            // Return a new, empty JsonObject (prevents @id/@ref from interfering)
             return new JsonObject();
         }
         in.pushback((char) c);
         ++curParseDepth;
 
-        Map<String, Injector> injectors = readOptions.getDeepInjectorMap(suggestedType);
+        // Obtain the injector map.
+        Map<String, Injector> injectors = readOptions.getDeepInjectorMap(JsonValue.extractRawClass(suggestedType));
 
         while (true) {
             String field = readFieldName();
             if (substitutes.containsKey(field)) {
                 field = substitutes.get(field);
             }
+            // For each field, look up the injector. The injector itself carries a Type if available.
             Injector injector = injectors.get(field);
-            Object value = readValue(injector == null ? null : injector.getType());
+            Object value = readValue(injector == null ? null : injector.getGenericType());
 
-            // process key-value pairing
+            // Process key-value pairing.
             switch (field) {
                 case TYPE:
+                    // loadType returns a Class<?> from the provided value.
                     Class<?> type = loadType(value);
+                    jObj.setFullType(type);
                     jObj.setJavaType(type);
                     break;
 
@@ -257,7 +261,7 @@ class JsonParser {
                     break;
 
                 default:
-                    jObj.put(field, value); // Load key/value pair
+                    jObj.put(field, value); // Store the key/value pair.
                     break;
             }
 
@@ -276,13 +280,13 @@ class JsonParser {
     /**
      * Read a JSON array
      */
-    private Object readArray(Class<?> suggestedType) throws IOException {
+    private Object readArray(Type suggestedType) throws IOException {
         final List<Object> list = new ArrayList<>();
         ++curParseDepth;
 
         while (true) {
+            // Pass along the full Type to readValue so that any generic information is preserved.
             Object value = readValue(suggestedType);
-
             if (value != EMPTY_ARRAY) {
                 list.add(value);
             }

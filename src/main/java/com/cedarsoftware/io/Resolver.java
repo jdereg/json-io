@@ -2,6 +2,7 @@ package com.cedarsoftware.io;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.Type;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -112,23 +113,66 @@ public abstract class Resolver {
     }
 
     /**
-     * This method converts a rootObj Map, (which contains nested Maps
-     * and so forth representing a Java Object graph), to a Java
-     * object instance.  The rootObj map came from using the JsonReader
-     * to parse a JSON graph (using the API that puts the graph
-     * into Maps, not the typed representation).
+     * <h2>Convert a Parsed JsonObject to a Fully Resolved Java Object</h2>
      *
-     * @param rootObj JsonObject instance that was the rootObj object from the
-     * @param root    When you know the type you will be returning.  Can be null (effectively Map.class)
-     *                JSON input that was parsed in an earlier call to JsonReader.
-     * @return a typed Java instance that was serialized into JSON.
+     * <p>
+     * This method converts a root-level {@code JsonObject}—a Map-of-Maps representation of parsed JSON—into an actual
+     * Java object instance. The {@code JsonObject} is typically produced by a prior call to {@code JsonIo.toObjects(String)}
+     * or {@code JsonIo.toObjects(InputStream)} when using the {@code ReadOptions.returnAsNativeJsonObjects()} setting.
+     * The conversion process uses the provided <code>root</code> parameter, a {@link java.lang.reflect.Type} that represents
+     * the expected root type (including any generic type parameters). Although the full type information is preserved for
+     * resolution, the {@code JsonObject}'s legacy {@code hintType} field (which remains a {@code Class<?>}) is set using the
+     * raw class extracted from the provided type.
+     * </p>
+     *
+     * <p>
+     * The resolution process works as follows:
+     * </p>
+     * <ol>
+     *   <li>
+     *     <strong>Reference Resolution:</strong> If the {@code JsonObject} is a reference, it is resolved using the internal
+     *     reference map. If a referenced object is found, it is returned immediately.
+     *   </li>
+     *   <li>
+     *     <strong>Already Converted Check:</strong> If the {@code JsonObject} has already been fully converted (i.e. its
+     *     {@code isFinished} flag is set), then its target (the converted Java object) is returned.
+     *   </li>
+     *   <li>
+     *     <strong>Instance Creation and Traversal:</strong> Otherwise, the method sets the hint type on the {@code JsonObject}
+     *     (using the raw class extracted from the provided full {@code Type}), creates a new instance (if necessary),
+     *     and then traverses the object graph to resolve nested references and perform conversions.
+     *   </li>
+     * </ol>
+     *
+     * <h3>Parameters</h3>
+     * <ul>
+     *   <li>
+     *     <b>rootObj</b> - The root {@code JsonObject} (a Map-of-Maps) representing the parsed JSON data.
+     *   </li>
+     *   <li>
+     *     <b>root</b> - A {@code Type} representing the expected Java type (including full generic details) for the resulting
+     *     object. If {@code null}, type inference defaults to a generic {@code Map} representation.
+     *   </li>
+     * </ul>
+     *
+     * <h3>Return Value</h3>
+     * <p>
+     * Returns a Java object that represents the fully resolved version of the JSON data. Depending on the JSON structure
+     * and the provided type hint, the result may be a user-defined DTO, a collection, an array, or a primitive value.
+     * </p>
+     *
+     * @param rootObj the root {@code JsonObject} representing parsed JSON data.
+     * @param rootType a {@code Type} representing the expected Java type (with full generic details) for the root object; may be {@code null}.
+     * @param <T> the type of the resulting Java object.
+     * @return a fully resolved Java object representing the JSON data.
      */
     @SuppressWarnings("unchecked")
-    public <T> T toJavaObjects(JsonObject rootObj, Class<T> root) {
+    public <T> T toJavaObjects(JsonObject rootObj, Type rootType) {
         if (rootObj == null) {
             return null;
         }
 
+        // Resolve any reference: if the JsonObject is a reference, fetch the actual object.
         if (rootObj.isReference()) {
             rootObj = getReferences().get(rootObj.refId);
             if (rootObj != null) {
@@ -136,12 +180,15 @@ public abstract class Resolver {
             }
         }
 
-        if (rootObj.isFinished) {   // Called on a JsonObject that has already been converted
+        // If the JsonObject has already been converted, return its target.
+        if (rootObj.isFinished) {
             return (T) rootObj.getTarget();
         } else {
-            rootObj.setHintType(root);
-            Object instance = rootObj.getTarget() == null ? createInstance(rootObj) : rootObj.getTarget();
-            if (rootObj.isFinished) {   // Factory method instantiated and completely loaded the object.
+            if (rootObj.getFullType() == null && rootType != null) {
+                rootObj.setFullType(rootType);
+            }
+            Object instance = (rootObj.getTarget() == null ? createInstance(rootObj) : rootObj.getTarget());
+            if (rootObj.isFinished) {
                 return (T) instance;
             } else {
                 return traverseJsonObject(rootObj);
@@ -215,7 +262,7 @@ public abstract class Resolver {
 
     public abstract void traverseFields(final JsonObject jsonObj);
 
-    protected abstract Object readWithFactoryIfExists(final Object o, final Class<?> compType);
+    protected abstract Object readWithFactoryIfExists(final Object o, final Type compType);
 
     protected abstract void traverseCollection(JsonObject jsonObj);
 
@@ -517,10 +564,10 @@ public abstract class Resolver {
 
     public boolean valueToTarget(JsonObject jsonObject) {
         if (jsonObject.javaType == null) {
-            if (jsonObject.hintType == null) {
+            if (jsonObject.fullType == null) {
                 return false;
             }
-            jsonObject.javaType = jsonObject.hintType;
+            jsonObject.javaType = JsonValue.extractRawClass(jsonObject.fullType);
         }
 
         Class<?> javaType = jsonObject.javaType;
@@ -584,5 +631,5 @@ public abstract class Resolver {
         }
     }
 
-    protected abstract Object resolveArray(Class<?> suggestedType, List<Object> list);
+    protected abstract Object resolveArray(Type suggestedType, List<Object> list);
 }

@@ -51,7 +51,7 @@ public class RecordFactory implements JsonReader.ClassFactory {
                     String parameterName = (String) recordComponent.getClass().getMethod("getName").invoke(recordComponent);
                     JsonObject paramValueJsonObj = new JsonObject();
 
-                    paramValueJsonObj.setJavaType(type);
+                    paramValueJsonObj.setFullType(type);
                     paramValueJsonObj.setValue(jsonObj.get(parameterName));
 
                     if (resolver.valueToTarget(paramValueJsonObj)) {

@@ -33,7 +33,6 @@ import java.util.Set;
  *         limitations under the License.
  */
 public class JsonObject extends JsonValue implements Map<Object, Object> {
-//    private final Map<Object, Object> jsonStore = CompactMap.builder().compactSize(40).insertionOrder().build();
     private final Map<Object, Object> jsonStore = new LinkedHashMap<>();
     private Integer hash = null;
 

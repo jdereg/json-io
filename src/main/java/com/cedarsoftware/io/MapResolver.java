@@ -1,6 +1,7 @@
 package com.cedarsoftware.io;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
@@ -50,7 +51,7 @@ public class MapResolver extends Resolver {
         super(readOptions, references, converter);
     }
 
-    protected Object readWithFactoryIfExists(Object o, Class<?> compType) {
+    protected Object readWithFactoryIfExists(Object o, Type compType) {
         // No custom reader support for maps
         return null;
     }
@@ -146,7 +147,7 @@ public class MapResolver extends Resolver {
         if (jsonObject != null) {
             if (componentType.isArray()) {
                 // Set the hintType to guide createInstance to instantiate the correct array type
-                jsonObject.setHintType(componentType);
+                jsonObject.setFullType(componentType);
 
                 // Create a new array instance using createInstance, which respects the hintType
                 Object arrayElement = createInstance(jsonObject);
@@ -251,7 +252,6 @@ public class MapResolver extends Resolver {
             int len = Array.getLength(items);
             for (int i=0; i < len; i++) {
                 Object element = Array.get(items, i);
-                Object special;
                 if (element == null) {
                     col.add(null);
                 } else if (element instanceof String || element instanceof Boolean || element instanceof Double || element instanceof Long) {
@@ -259,7 +259,7 @@ public class MapResolver extends Resolver {
                     col.add(element);
                 } else if (element.getClass().isArray()) {
                     final JsonObject jObj = new JsonObject();
-                    jObj.setHintType(Object.class);
+                    jObj.setFullType(Object.class);
                     jObj.setItems(element);
                     createInstance(jObj);
                     col.add(jObj.getTarget());
@@ -280,7 +280,7 @@ public class MapResolver extends Resolver {
                             }
                         }
                     } else {
-                        jObj.setHintType(Object.class);
+                        jObj.setFullType(Object.class);
                         createInstance(jObj);
                         boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getJavaType());
                         if (!isNonRefClass) {
@@ -298,21 +298,29 @@ public class MapResolver extends Resolver {
 
         jsonObj.setFinished();
     }
-    
-    protected Object resolveArray(Class<?> suggestedType, List<Object> list)
-    {
-        if (suggestedType == null || suggestedType == Object.class) {
-            // No suggested type, so use Object[]
+
+    protected Object resolveArray(Type suggestedType, List<Object> list) {
+        // Extract the raw class from the provided Type.
+        Class<?> rawType = (suggestedType == null) ? null : JsonValue.extractRawClass(suggestedType);
+
+        // If there's no suggested type or the raw type is Object, just return an Object[].
+        if (suggestedType == null || rawType == Object.class) {
             return list.toArray();
         }
 
         JsonObject jsonArray = new JsonObject();
-        if (Collection.class.isAssignableFrom(suggestedType)) {
-            jsonArray.setHintType(suggestedType);
+
+        // Store the full, refined type (which may include generics) in the JsonObject.
+        jsonArray.setFullType(suggestedType);
+        
+        // If the raw type is assignable from Collection, create an instance accordingly.
+        if (Collection.class.isAssignableFrom(rawType)) {
             jsonArray.setTarget(createInstance(jsonArray));
         } else {
-            jsonArray.setTarget(Array.newInstance(suggestedType, list.size()));
+            // Otherwise, assume it's an array type and create a new array instance.
+            jsonArray.setTarget(Array.newInstance(rawType, list.size()));
         }
+
         jsonArray.setItems(list.toArray());
         return jsonArray;
     }
