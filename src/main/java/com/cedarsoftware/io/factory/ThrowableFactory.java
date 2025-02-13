@@ -41,7 +41,7 @@ public class ThrowableFactory implements JsonReader.ClassFactory
         List<Object> arguments = new ArrayList<>();
         String message = (String) jObj.get(DETAIL_MESSAGE);
         JsonObject jsonCause = (JsonObject) jObj.get(CAUSE);
-        Class<Throwable> causeType = jsonCause == null ? Throwable.class : (Class<Throwable>)jsonCause.getJavaType();
+        Class<Throwable> causeType = jsonCause == null ? Throwable.class : (Class<Throwable>)jsonCause.getFullType();
         causeType = causeType == null ? Throwable.class : causeType;
         Throwable cause = resolver.toJavaObjects(jsonCause, causeType);
 

@@ -106,10 +106,6 @@ public abstract class JsonValue {
 
     public void setJavaType(Class<?> type) {
         javaType = type;
-        // Set fullType to the provided type if not already set.
-        if (fullType == null) {
-            fullType = type;
-        }
     }
 
     public Type getFullType() {
@@ -120,8 +116,8 @@ public abstract class JsonValue {
         fullType = type;
         // For backward compatibility during the migration, set the legacy fields
         if (type != null) {
-            Class<?> raw = JsonValue.extractRawClass(type);
             if (this.javaType == null) {
+                Class<?> raw = extractRawClass(type);
                 this.javaType = raw;
             }
         }
@@ -207,7 +203,6 @@ public abstract class JsonValue {
             return Object.class;
         } else {
             // Unknown type – you might log or throw an error here.
-//            System.out.println("Unrecognized Type: " + type);
             return null;
         }
     }
