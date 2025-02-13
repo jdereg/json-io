@@ -172,7 +172,7 @@ public class ObjectResolver extends Resolver
             } else {    // Direct assignment for nested objects.
                 Object fieldObject = jsRhs.getTarget();
                 injector.inject(target, fieldObject);
-                boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jsRhs.getJavaType());
+                boolean isNonRefClass = getReadOptions().isNonReferenceableClass(JsonValue.extractRawClass(jsRhs.getFullType()));
                 if (!isNonRefClass) {
                     // If the object is reference-able, process it further.
                     push(jsRhs);
@@ -224,9 +224,9 @@ public class ObjectResolver extends Resolver
                     storeMissingField(target, missingField, refObject.getTarget());
                 } else {   // Assign ObjectMap's to Object (or derived) fields
                     // check that jObj as a type
-                    if (jObj.getJavaType() != null) {
+                    if (jObj.getFullType() != null) {
                         Object javaInstance = createInstance(jObj);
-                        boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getJavaType());
+                        boolean isNonRefClass = getReadOptions().isNonReferenceableClass(JsonValue.extractRawClass(jObj.getFullType()));
                         // TODO: Check is finished here?
                         if (!isNonRefClass && !jObj.isFinished) {
                             push((JsonObject) rhs);
@@ -352,7 +352,7 @@ public class ObjectResolver extends Resolver
                     // Set the element's full type to the extracted element type.
                     jObj.setFullType(elementType);
                     createInstance(jObj);
-                    boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getJavaType());
+                    boolean isNonRefClass = getReadOptions().isNonReferenceableClass(JsonValue.extractRawClass(jObj.getFullType()));
                     if (!isNonRefClass) {
                         traverseSpecificType(jObj);
                     }
@@ -507,7 +507,7 @@ public class ObjectResolver extends Resolver
                 return null;
             }
             if (jsonObj.getTarget() == null) {   // Use the '@type' field information
-                c = jsonObj.getJavaType();
+                c = JsonValue.extractRawClass(jsonObj.getFullType());
                 if (c == null || rawInferred == null) {
                     return null;
                 }
@@ -517,7 +517,7 @@ public class ObjectResolver extends Resolver
                     return factoryCreated;
                 }
             } else {   // Type inferred from an already created target object
-                c = jsonObj.getJavaType();
+                c = JsonValue.extractRawClass(jsonObj.getFullType());
             }
         } else {
             // If o is not a JsonObject, use the inferred type.

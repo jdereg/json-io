@@ -466,7 +466,7 @@ public abstract class Resolver {
             Class<?> unknownClass = readOptions.getUnknownTypeClass();
             if (unknownClass == null) {
                 JsonObject jsonObject = new JsonObject();
-                jsonObject.setJavaType(Map.class);
+                jsonObject.setFullType(Map.class);
                 mate = jsonObject;
             } else {
                 mate = ClassUtilities.newInstance(converter, unknownClass, null);   // can add constructor arg values
