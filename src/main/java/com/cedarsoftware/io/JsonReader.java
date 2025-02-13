@@ -534,12 +534,13 @@ public class JsonReader implements Closeable
         // 4) If no rootType was specified, decide based on the "JSON mode" setting.
         if (returnJson) {
             // --- JSON Mode ---
-            Class<?> javaType = jObj.getJavaType();
+            Type javaType = jObj.getFullType();
             if (javaType != null) {
                 // If there's an @type and it's a simple type (or Number), convert to its basic type.
-                if (localConverter.isSimpleTypeConversionSupported(javaType, javaType) ||
-                        Number.class.isAssignableFrom(javaType)) {
-                    Class<?> basicType = getJsonSynonymType(javaType);
+                Class<?> javaClass = JsonValue.extractRawClass(javaType);
+                if (localConverter.isSimpleTypeConversionSupported(javaClass, javaClass) ||
+                        Number.class.isAssignableFrom(javaClass)) {
+                    Class<?> basicType = getJsonSynonymType(javaClass);
                     return localConverter.convert(returnValue, basicType);
                 }
                 // If it's not a built-in primitive or convertible, return the raw JsonObject.
@@ -694,7 +695,7 @@ public class JsonReader implements Closeable
         try {
             // Determine the root type if not explicitly provided
             if (rootType == null) {
-                rootType = rootObj.getJavaType() == null ? (Class<T>) Object.class : (Class<T>) rootObj.getJavaType();
+                rootType = rootObj.getFullType() == null ? Object.class : (Class<T>) rootObj.getFullType();
             }
 
             // Delegate the conversion to the resolver using the converter
