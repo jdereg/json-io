@@ -113,6 +113,11 @@ public abstract class JsonValue {
     }
 
     public void setFullType(Type type) {
+        if (type == Object.class || type == null) {
+            if (fullType != null) {
+                return;
+            }
+        }
         fullType = type;
         // For backward compatibility during the migration, set the legacy fields
         if (type != null) {

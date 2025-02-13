@@ -184,10 +184,7 @@ public abstract class Resolver {
         if (rootObj.isFinished) {
             return (T) rootObj.getTarget();
         } else {
-            // If the full type is not yet set and we have a provided rootType, set it.
-            if (rootObj.getFullType() == null && rootType != null) {
-                rootObj.setFullType(rootType);
-            }
+            rootObj.setFullType(rootType);  // Won't override fullType if already set.
             Object instance = (rootObj.getTarget() == null ? createInstance(rootObj) : rootObj.getTarget());
             if (rootObj.isFinished) {
                 return (T) instance;
@@ -401,6 +398,9 @@ public abstract class Resolver {
 
     // Resolve target type with proper coercion and enum handling
     private Class<?> resolveTargetType(JsonObject jsonObj) {
+        if (jsonObj.getFullType() == Object.class && jsonObj.getJavaType() != Object.class) {
+            System.out.println("FullType is Object, but JavaType is not Object");
+        }
         Class<?> targetType = coerceClassIfNeeded(jsonObj.getJavaType());
         jsonObj.setJavaType(targetType);
 
