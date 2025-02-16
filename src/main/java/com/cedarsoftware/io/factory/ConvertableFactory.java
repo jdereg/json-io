@@ -36,9 +36,7 @@ public class ConvertableFactory<T> implements JsonReader.ClassFactory {
     @Override
     public T newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
         if (jObj.hasValue()) {
-            // TODO: surprised we are seeing any entries come through here since we check these in the resolver
-            // TODO:  turns out this was factory tests and invalid conversions.
-            // TODO:  probably need to leave for invalid conversions (or check for invalid and throw our own exception).
+            // "Primitive" types, essentially Converter-able types.
             Object converted = resolver.getConverter().convert(jObj.getValue(), getType());
             return (T) jObj.setFinishedTarget(converted, true);
         }

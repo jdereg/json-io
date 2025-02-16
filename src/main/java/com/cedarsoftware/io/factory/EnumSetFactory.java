@@ -6,6 +6,7 @@ import java.util.EnumSet;
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
+import com.cedarsoftware.io.JsonValue;
 import com.cedarsoftware.io.Resolver;
 import com.cedarsoftware.util.ClassUtilities;
 
@@ -30,7 +31,7 @@ public class EnumSetFactory implements JsonReader.ClassFactory {
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
         // Attempt to get the actual enum class from the provided class 'c'
-        Class<?> enumClass = ClassUtilities.getClassIfEnum(jObj.getJavaType());
+        Class<?> enumClass = ClassUtilities.getClassIfEnum(JsonValue.extractRawClass(jObj.getJavaType()));
 
         // If enumClass is null or not an enum, try to get it from the first item in @items
         if (enumClass == null) {
@@ -39,7 +40,7 @@ public class EnumSetFactory implements JsonReader.ClassFactory {
                 Object firstItem = Array.get(items, 0);
                 if (firstItem instanceof JsonObject) {
                     JsonObject jsonItem = (JsonObject) firstItem;
-                    enumClass = ClassUtilities.getClassIfEnum(jsonItem.getJavaType());
+                    enumClass = ClassUtilities.getClassIfEnum(JsonValue.extractRawClass(jsonItem.getType()));
                 } else if (firstItem instanceof String) {
                     // If items are simple strings, we need to rely on additional information
                     // Since we cannot determine the enum class from the string, throw an exception
@@ -70,7 +71,7 @@ public class EnumSetFactory implements JsonReader.ClassFactory {
                 // Object format
                 JsonObject jsonItem = (JsonObject) item;
                 // Resolve the enum class from the item's class
-                Class<?> itemEnumClass = ClassUtilities.getClassIfEnum(jsonItem.getJavaType());
+                Class<?> itemEnumClass = ClassUtilities.getClassIfEnum(JsonValue.extractRawClass(jsonItem.getType()));
                 if (itemEnumClass == null) {
                     itemEnumClass = enumClass;
                 }

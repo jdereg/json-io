@@ -695,7 +695,7 @@ public class JsonReader implements Closeable
         try {
             // Determine the root type if not explicitly provided
             if (rootType == null) {
-                rootType = rootObj.getType() == null ? Object.class : (Class<T>) rootObj.getType();
+                rootType = rootObj.getType() == null ? Object.class : rootObj.getType();
             }
 
             // Delegate the conversion to the resolver using the converter

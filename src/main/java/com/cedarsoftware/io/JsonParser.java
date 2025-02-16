@@ -626,7 +626,7 @@ class JsonParser {
             error("Expected a String for " + ENUM + ", instead got: " + value);
         }
         Class<?> enumClass = stringToClass((String) value);
-        jObj.setJavaType(enumClass);
+        jObj.setType(enumClass);
 
         // Only set empty items if no items were specified in JSON
         if (jObj.getItems() == null) {

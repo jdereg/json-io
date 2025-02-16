@@ -80,9 +80,7 @@ public abstract class JsonValue {
     public Object setTarget(Object target) {
         this.target = target;
         if (target != null) {
-            setJavaType(target.getClass());
-            // If fullType has not already been set, default it to the target's class.
-            this.type = target.getClass();
+            setType(target.getClass());
         }
         return target;
     }
