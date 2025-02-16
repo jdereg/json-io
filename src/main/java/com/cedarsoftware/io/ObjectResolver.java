@@ -587,7 +587,7 @@ public class ObjectResolver extends Resolver
                                 stack2.addFirst(new Object[]{t, vals});
                             } else if (vals instanceof Object[]) {
                                 JsonObject coll = new JsonObject();
-                                coll.setJavaType(clazz);
+                                coll.setType(clazz);
                                 coll.setItems(vals);
                                 List items = Arrays.asList((Object[]) vals);
                                 stack2.addFirst(new Object[]{t, items});

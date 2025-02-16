@@ -368,7 +368,7 @@ public abstract class Resolver {
             return target;
         }
 
-        // Use the refined fullType (if available) to determine the target type.
+        // Use the refined Type (if available) to determine the target type.
         Class<?> targetType = resolveTargetType(jsonObj);
 
         // Determine the factory type, considering enums and collections.
@@ -419,7 +419,7 @@ public abstract class Resolver {
             Class<?> coercedEnumClass = getCoercedEnumClass(enumClass);
             if (coercedEnumClass != null) {
                 targetType = coercedEnumClass;
-                jsonObj.setJavaType(coercedEnumClass);
+                jsonObj.setType(coercedEnumClass);
             }
         }
         return targetType;
