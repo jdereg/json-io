@@ -40,7 +40,7 @@ public abstract class JsonValue {
     public static final String SHORT_REF = "@r";
     public static final String VALUE = "value";
     protected Class<?> javaType = null;
-    protected Type fullType = null;
+    protected Type type = null;
     protected Object target = null;
     protected boolean isFinished = false;
     protected long id = -1L;
@@ -82,9 +82,7 @@ public abstract class JsonValue {
         if (target != null) {
             setJavaType(target.getClass());
             // If fullType has not already been set, default it to the target's class.
-            if (this.fullType == null) {
-                this.fullType = target.getClass();
-            }
+            this.type = target.getClass();
         }
         return target;
     }
@@ -108,17 +106,17 @@ public abstract class JsonValue {
         javaType = type;
     }
 
-    public Type getFullType() {
-        return fullType;
+    public Type getType() {
+        return type;
     }
 
-    public void setFullType(Type type) {
+    public void setType(Type type) {
         if (type == Object.class || type == null) {
-            if (fullType != null) {
+            if (this.type != null) {
                 return;
             }
         }
-        fullType = type;
+        this.type = type;
         // For backward compatibility during the migration, set the legacy fields
         if (type != null) {
             if (this.javaType == null) {
@@ -134,7 +132,7 @@ public abstract class JsonValue {
             return javaType.getName();
         }
 
-        return extractRawClass(fullType).getName();
+        return extractRawClass(type).getName();
     }
 
     public long getId() {

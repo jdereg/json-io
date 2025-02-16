@@ -9,8 +9,6 @@ import com.cedarsoftware.io.JsonValue;
 import com.cedarsoftware.io.Resolver;
 import com.cedarsoftware.util.convert.Converter;
 
-import static com.cedarsoftware.io.JsonValue.ITEMS;
-
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -55,7 +53,7 @@ public class ArrayFactory<T> implements JsonReader.ClassFactory {
                 do {
                     // Allow for {@type:long, value:{@type:int, value:3}}  (and so on...)
                     JsonObject jsonObject = (JsonObject) val;
-                    type = jsonObject.getFullType();
+                    type = jsonObject.getType();
                     if (!jsonObject.hasValue()) {
                         break;
                     }

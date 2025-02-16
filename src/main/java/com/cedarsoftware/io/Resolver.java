@@ -184,7 +184,7 @@ public abstract class Resolver {
         if (rootObj.isFinished) {
             return (T) rootObj.getTarget();
         } else {
-            rootObj.setFullType(rootType);  // Won't override fullType if already set.
+            rootObj.setType(rootType);  // Won't override fullType if already set.
             Object instance = (rootObj.getTarget() == null ? createInstance(rootObj) : rootObj.getTarget());
             if (rootObj.isFinished) {
                 return (T) instance;
@@ -237,12 +237,19 @@ public abstract class Resolver {
         } else if (jsonObj.isMap()) {
             traverseMap(jsonObj);
         } else {
-            Object special;
-            if ((special = readWithFactoryIfExists(jsonObj, null)) != null) {
-                jsonObj.setTarget(special);
-            } else {
-                traverseFields(jsonObj);
-            }
+            traverseObject(jsonObj);
+        }
+    }
+
+    protected void traverseObject(JsonObject jsonObj) {
+        if (jsonObj.isFinished) {
+            return;
+        }
+        Object special;
+        if ((special = readWithFactoryIfExists(jsonObj, null)) != null) {
+            jsonObj.setTarget(special);
+        } else {
+            traverseFields(jsonObj);
         }
     }
 
@@ -398,8 +405,10 @@ public abstract class Resolver {
 
     // Resolve target type with proper coercion and enum handling
     private Class<?> resolveTargetType(JsonObject jsonObj) {
-        if (jsonObj.getFullType() == Object.class && jsonObj.getJavaType() != Object.class) {
-            System.out.println("FullType is Object, but JavaType is not Object");
+        if (jsonObj.getType() == Object.class && jsonObj.getJavaType() != Object.class) {
+            System.out.println("FullType = " + jsonObj.getType().getTypeName());
+            System.out.println("JavaType = " + jsonObj.getJavaTypeName());
+            System.out.println();
         }
         Class<?> targetType = coerceClassIfNeeded(jsonObj.getJavaType());
         jsonObj.setJavaType(targetType);
@@ -466,7 +475,7 @@ public abstract class Resolver {
             Class<?> unknownClass = readOptions.getUnknownTypeClass();
             if (unknownClass == null) {
                 JsonObject jsonObject = new JsonObject();
-                jsonObject.setFullType(Map.class);
+                jsonObject.setType(Map.class);
                 mate = jsonObject;
             } else {
                 mate = ClassUtilities.newInstance(converter, unknownClass, null);   // can add constructor arg values
@@ -565,10 +574,10 @@ public abstract class Resolver {
 
     public boolean valueToTarget(JsonObject jsonObject) {
         if (jsonObject.getJavaType() == null) {
-            if (jsonObject.getFullType() == null) {
+            if (jsonObject.getType() == null) {
                 return false;
             }
-            jsonObject.setJavaType(JsonValue.extractRawClass(jsonObject.getFullType()));
+            jsonObject.setJavaType(JsonValue.extractRawClass(jsonObject.getType()));
         }
 
         Class<?> javaType = jsonObject.getJavaType();

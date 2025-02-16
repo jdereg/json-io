@@ -147,7 +147,7 @@ public class MapResolver extends Resolver {
         if (jsonObject != null) {
             if (componentType.isArray()) {
                 // Set the hintType to guide createInstance to instantiate the correct array type
-                jsonObject.setFullType(componentType);
+                jsonObject.setType(componentType);
 
                 // Create a new array instance using createInstance, which respects the hintType
                 Object arrayElement = createInstance(jsonObject);
@@ -201,7 +201,7 @@ public class MapResolver extends Resolver {
 
                 if (refId == null) {
                     // Convert JsonObject to its destination type if possible
-                    Class<?> type = jsonObject.getJavaType();
+                    Class<?> type = JsonValue.extractRawClass(jsonObject.getType());
                     if (type != null && converter.isConversionSupportedFor(Map.class, type)) {
                         Object converted = converter.convert(jsonObject, type);
                         setArrayElement(target, i, converted);
@@ -211,7 +211,7 @@ public class MapResolver extends Resolver {
                     }
                 } else {    // Connect reference
                     JsonObject refObject = refTracker.getOrThrow(refId);
-                    Class<?> type = refObject.getJavaType();
+                    Class<?> type = JsonValue.extractRawClass(refObject.getType());
 
                     if (type != null && converter.isConversionSupportedFor(Map.class, type)) {
                         Object convertedRef = converter.convert(refObject, type);
@@ -259,7 +259,7 @@ public class MapResolver extends Resolver {
                     col.add(element);
                 } else if (element.getClass().isArray()) {
                     final JsonObject jObj = new JsonObject();
-                    jObj.setFullType(Object.class);
+                    jObj.setType(Object.class);
                     jObj.setItems(element);
                     createInstance(jObj);
                     col.add(jObj.getTarget());
@@ -280,9 +280,9 @@ public class MapResolver extends Resolver {
                             }
                         }
                     } else {
-                        jObj.setFullType(Object.class);
+                        jObj.setType(Object.class);
                         createInstance(jObj);
-                        boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getJavaType());
+                        boolean isNonRefClass = getReadOptions().isNonReferenceableClass(JsonValue.extractRawClass(jObj.getType()));
                         if (!isNonRefClass) {
                             traverseSpecificType(jObj);
                         }
@@ -311,7 +311,7 @@ public class MapResolver extends Resolver {
         JsonObject jsonArray = new JsonObject();
 
         // Store the full, refined type (which may include generics) in the JsonObject.
-        jsonArray.setFullType(suggestedType);
+        jsonArray.setType(suggestedType);
         
         // If the raw type is assignable from Collection, create an instance accordingly.
         if (Collection.class.isAssignableFrom(rawType)) {

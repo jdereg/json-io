@@ -70,13 +70,13 @@ class ArrayTest
         assertNull(root._empty_b);
         assertEquals(0, root._empty_c.length);
         assertEquals(2, root._empty_d.length);
-        assertEquals(root._empty_d[0], new Empty());
+        assertEquals(new Empty(), root._empty_d[0]);
         assertNull(root._empty_d[1]);
         assertEquals(1, root._empty_e.length);
         assertEquals(0, root._empty_e[0].length);
         assertEquals(4, root._empty_f.length);
         assertEquals(2, root._empty_f[0].length);
-        assertEquals(root._empty_f[0][0], new Empty());
+        assertEquals(new Empty(), root._empty_f[0][0]);
         assertNull(root._empty_f[0][1]);
         assertNull(root._empty_f[1]);
         assertEquals(0, root._empty_f[2].length);

@@ -113,10 +113,6 @@ sun.util.calendar.ZoneInfo = Convertable
 [Ljava.lang.Float; = ArrayFactory
 [Ljava.lang.Double; = ArrayFactory
 
-[Ljava.util.concurrent.atomic.AtomicBoolean; = ArrayFactory
-[Ljava.util.concurrent.atomic.AtomicInteger; = ArrayFactory
-[Ljava.util.concurrent.atomic.AtomicLong; = ArrayFactory
-
 [Ljava.lang.Class; = ArrayFactory
 [Ljava.lang.String; = ArrayFactory
 [Ljava.sql.Date; = ArrayFactory
@@ -126,7 +122,10 @@ sun.util.calendar.ZoneInfo = Convertable
 [Ljava.math.BigInteger; = ArrayFactory
 
 [Ljava.util.Calendar; = ArrayFactory
+[Ljava.util.Currency; = ArrayFactory
 [Ljava.util.Date; = ArrayFactory
+[Ljava.util.Locale; = ArrayFactory
+[Ljava.util.regex.Pattern; = ArrayFactory
 [Ljava.util.concurrent.atomic.AtomicBoolean; = ArrayFactory
 [Ljava.util.concurrent.atomic.AtomicInteger; = ArrayFactory
 [Ljava.util.concurrent.atomic.AtomicLong; = ArrayFactory

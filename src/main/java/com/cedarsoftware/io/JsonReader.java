@@ -125,9 +125,9 @@ public class JsonReader implements Closeable
 
                 if (entry.getValue() instanceof JsonObject) {
                     JsonObject sub = (JsonObject) entry.getValue();
-                    Object value = resolver.toJavaObjects(sub, sub.getFullType());
+                    Object value = resolver.toJavaObjects(sub, sub.getType());
 
-                    if (value != null && sub.getFullType() != null) {
+                    if (value != null && sub.getType() != null) {
                         arguments.add(value);
                     }
                 }
@@ -332,7 +332,7 @@ public class JsonReader implements Closeable
         // If it’s actually a Java array
         if (returnValue.getClass().isArray()) {
             rootObj = new JsonObject();
-            rootObj.setFullType(rootType);
+            rootObj.setType(rootType);
             rootObj.setTarget(returnValue);
             rootObj.setItems(returnValue);
         } else {
@@ -490,11 +490,11 @@ public class JsonReader implements Closeable
         // Convert the provided rootType (a full Type) to its raw Class form
         Class<?> rawRootType = (rootType == null ? null : JsonValue.extractRawClass(rootType));
 
-        Class<?> rawJObjClass = JsonValue.extractRawClass(jObj.getFullType());
+        Class<?> rawJObjClass = JsonValue.extractRawClass(jObj.getType());
         if (isSubstituteSortedCollectionNeeded(returnJson, rawRootType, rawJObjClass)) {
             Class<?> fallbackType = getSubstituteCollection(rawJObjClass);
             jObj.setJavaType(null);
-            jObj.setFullType(fallbackType);
+            jObj.setType(fallbackType);
         }
 
         // 2) Resolve internal references/build the object graph.
@@ -534,7 +534,7 @@ public class JsonReader implements Closeable
         // 4) If no rootType was specified, decide based on the "JSON mode" setting.
         if (returnJson) {
             // --- JSON Mode ---
-            Type javaType = jObj.getFullType();
+            Type javaType = jObj.getType();
             if (javaType != null) {
                 // If there's an @type and it's a simple type (or Number), convert to its basic type.
                 Class<?> javaClass = JsonValue.extractRawClass(javaType);
@@ -695,7 +695,7 @@ public class JsonReader implements Closeable
         try {
             // Determine the root type if not explicitly provided
             if (rootType == null) {
-                rootType = rootObj.getFullType() == null ? Object.class : (Class<T>) rootObj.getFullType();
+                rootType = rootObj.getType() == null ? Object.class : (Class<T>) rootObj.getType();
             }
 
             // Delegate the conversion to the resolver using the converter

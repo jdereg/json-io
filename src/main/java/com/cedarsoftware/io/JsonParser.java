@@ -204,7 +204,7 @@ class JsonParser {
         JsonObject jObj = new JsonObject();
 
         // Set the refined type on the JsonObject.
-        jObj.setFullType(suggestedType);
+        jObj.setType(suggestedType);
         final FastReader in = input;
 
         // Start reading the object: skip whitespace and consume '{'
@@ -236,7 +236,7 @@ class JsonParser {
                 case TYPE:
                     // loadType returns a Class<?> from the provided value.
                     Class<?> type = loadType(value);
-                    jObj.setFullType(type);
+                    jObj.setType(type);
                     jObj.setJavaType(type);
                     break;
 

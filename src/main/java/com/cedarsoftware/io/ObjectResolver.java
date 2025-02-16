@@ -1,7 +1,6 @@
 package com.cedarsoftware.io;
 
 import java.lang.reflect.Array;
-import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
@@ -15,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.cedarsoftware.io.reflect.Injector;
+import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.convert.Converter;
 
 /**
@@ -130,7 +130,6 @@ public class ObjectResolver extends Resolver
         // @type (fullType) on them if the JSON source is from JSON.stringify(). Deep traverse the values and
         // assign the full generic type based on the parameterized type.
         if (rhs instanceof JsonObject) {
-            // (Optional: Remove this block eventually.)
             if (fieldType instanceof ParameterizedType) {
                 markUntypedObjects(fieldType, rhs, rawFieldType);
             }
@@ -138,10 +137,10 @@ public class ObjectResolver extends Resolver
             // Ensure that the JsonObject has its full type set.
             final JsonObject jObj = (JsonObject) rhs;
             if (fieldType != null) {
-                jObj.setFullType(fieldType);
+                jObj.setType(fieldType);
             } else {
                 // Fallback: set to the raw type.
-                jObj.setFullType(rawFieldType);
+                jObj.setType(rawFieldType);
             }
         }
 
@@ -153,7 +152,7 @@ public class ObjectResolver extends Resolver
             // If the RHS is an array, wrap it in a JsonObject and stamp it with the full field type.
             final Object[] elements = (Object[]) rhs;
             JsonObject jsonArray = new JsonObject();
-            jsonArray.setFullType(fieldType);
+            jsonArray.setType(fieldType);
             jsonArray.setItems(elements);
             createInstance(jsonArray);
             injector.inject(target, jsonArray.getTarget());
@@ -172,7 +171,7 @@ public class ObjectResolver extends Resolver
             } else {    // Direct assignment for nested objects.
                 Object fieldObject = jsRhs.getTarget();
                 injector.inject(target, fieldObject);
-                boolean isNonRefClass = getReadOptions().isNonReferenceableClass(JsonValue.extractRawClass(jsRhs.getFullType()));
+                boolean isNonRefClass = getReadOptions().isNonReferenceableClass(JsonValue.extractRawClass(jsRhs.getType()));
                 if (!isNonRefClass) {
                     // If the object is reference-able, process it further.
                     push(jsRhs);
@@ -224,9 +223,9 @@ public class ObjectResolver extends Resolver
                     storeMissingField(target, missingField, refObject.getTarget());
                 } else {   // Assign ObjectMap's to Object (or derived) fields
                     // check that jObj as a type
-                    if (jObj.getFullType() != null) {
+                    if (jObj.getType() != null) {
                         Object javaInstance = createInstance(jObj);
-                        boolean isNonRefClass = getReadOptions().isNonReferenceableClass(JsonValue.extractRawClass(jObj.getFullType()));
+                        boolean isNonRefClass = getReadOptions().isNonReferenceableClass(JsonValue.extractRawClass(jObj.getType()));
                         // TODO: Check is finished here?
                         if (!isNonRefClass && !jObj.isFinished) {
                             push((JsonObject) rhs);
@@ -295,7 +294,7 @@ public class ObjectResolver extends Resolver
         int idx = 0;
 
         // Extract the element type from the full type, defaulting to Object if not set.
-        Type fullType = jsonObj.getFullType();
+        Type fullType = jsonObj.getType();
         Type elementType = Object.class;
         if (fullType instanceof ParameterizedType) {
             ParameterizedType pt = (ParameterizedType) fullType;
@@ -329,7 +328,7 @@ public class ObjectResolver extends Resolver
                 if (arrayComponentType == null) {
                     arrayComponentType = Object.class;
                 }
-                jObj.setFullType(arrayComponentType);
+                jObj.setType(arrayComponentType);
                 jObj.setItems(element);
                 createInstance(jObj);
                 col.add(jObj.getTarget());
@@ -350,9 +349,9 @@ public class ObjectResolver extends Resolver
                     }
                 } else {
                     // Set the element's full type to the extracted element type.
-                    jObj.setFullType(elementType);
+                    jObj.setType(elementType);
                     createInstance(jObj);
-                    boolean isNonRefClass = getReadOptions().isNonReferenceableClass(JsonValue.extractRawClass(jObj.getFullType()));
+                    boolean isNonRefClass = getReadOptions().isNonReferenceableClass(JsonValue.extractRawClass(jObj.getType()));
                     if (!isNonRefClass) {
                         traverseSpecificType(jObj);
                     }
@@ -391,7 +390,7 @@ public class ObjectResolver extends Resolver
         final Class<?> fallbackCompType = array.getClass().getComponentType();
 
         // Use the helper to extract the effective component type from the full type.
-        Type effectiveComponentType = JsonValue.extractArrayComponentType(jsonObj.getFullType());
+        Type effectiveComponentType = JsonValue.extractArrayComponentType(jsonObj.getType());
         if (effectiveComponentType == null) {
             effectiveComponentType = fallbackCompType;
         }
@@ -429,7 +428,7 @@ public class ObjectResolver extends Resolver
                     JsonObject jsonArray = new JsonObject();
                     jsonArray.setItems(element);
                     // Set the full type using the effective component type.
-                    jsonArray.setFullType(effectiveComponentType);
+                    jsonArray.setType(effectiveComponentType);
                     setArrayElement(array, i, createInstance(jsonArray));
                     push(jsonArray);
                 }
@@ -446,7 +445,7 @@ public class ObjectResolver extends Resolver
                     }
                 } else {
                     // Set the full type on the element.
-                    jsonElement.setFullType(effectiveComponentType);
+                    jsonElement.setType(effectiveComponentType);
                     Object arrayElement = createInstance(jsonElement);
                     setArrayElement(array, i, arrayElement);
                     boolean isNonRefClass = readOptions.isNonReferenceableClass(arrayElement.getClass());
@@ -478,92 +477,76 @@ public class ObjectResolver extends Resolver
      * @return The Java object converted from the passed-in object o, or null if there is no custom reader.
      */
     protected Object readWithFactoryIfExists(final Object o, final Type inferredType) {
-        if (o == null) {
-            throw new JsonIoException("Bug in json-io, null must be checked before calling this method.");
-        }
+        Convention.throwIfNull(o, "Bug in json-io, null must be checked before calling this method.");
         ReadOptions readOptions = getReadOptions();
 
-        // Extract the raw type from the full generic type, if available.
+        // Extract the raw type from the suggested inferred type.
         Class<?> rawInferred = (inferredType != null) ? JsonValue.extractRawClass(inferredType) : null;
-
-        // If a non-null inferred type is provided but the options say not to use a custom reader, bail.
         if (rawInferred != null && readOptions.isNotCustomReaderClass(rawInferred)) {
             return null;
         }
-
-        // If 'o' is not a JsonObject and we have no type information, there's nothing to do.
-        final boolean isJsonObject = o instanceof JsonObject;
-        if (!isJsonObject && rawInferred == null) {
+        if (!(o instanceof JsonObject) && rawInferred == null) {
             return null;
         }
 
         JsonObject jsonObj;
-        Class<?> c;
+        Class<?> targetClass;
 
-        // Set up the class type to check against custom reader classes.
-        if (isJsonObject) {
+        if (o instanceof JsonObject) {
             jsonObj = (JsonObject) o;
-            if (jsonObj.isReference()) {   // No custom reader for an @ref
-                return null;
+            if (jsonObj.isReference()) {
+                return null; // no factory for references.
             }
-            if (jsonObj.getTarget() == null) {   // Use the '@type' field information
-                c = JsonValue.extractRawClass(jsonObj.getFullType());
-                if (c == null || rawInferred == null) {
+            if (jsonObj.getTarget() == null) {
+                targetClass = JsonValue.extractRawClass(jsonObj.getType());
+                if (targetClass == null || rawInferred == null) {
                     return null;
                 }
-                jsonObj.setFullType(c);
+                // Attempt early instance creation.
                 Object factoryCreated = createInstance(jsonObj);
-                if (factoryCreated != null && jsonObj.isFinished) {
+                if (factoryCreated != null && jsonObj.isFinished()) {
                     return factoryCreated;
                 }
-            } else {   // Type inferred from an already created target object
-                c = JsonValue.extractRawClass(jsonObj.getFullType());
+            } else {
+                targetClass = JsonValue.extractRawClass(jsonObj.getType());
             }
         } else {
-            // If o is not a JsonObject, use the inferred type.
-            c = rawInferred.equals(Object.class) ? o.getClass() : rawInferred;
+            // o is not a JsonObject; use the inferred type (or o.getClass() if rawInferred is Object).
+            targetClass = rawInferred.equals(Object.class) ? o.getClass() : rawInferred;
             jsonObj = new JsonObject();
             jsonObj.setValue(o);
-            jsonObj.setFullType(c);
+            jsonObj.setType(targetClass);
         }
 
-        if (readOptions.isNotCustomReaderClass(c)) {
-            // Explicitly instructed not to use a custom reader for this class.
+        if (readOptions.isNotCustomReaderClass(targetClass)) {
             return null;
         }
 
-        if (jsonObj.getTarget() == null) {
-            if (jsonObj.hasValue()) {
-                if (getConverter().isSimpleTypeConversionSupported(jsonObj.getValue().getClass(), c)) {
-                    Object target = getConverter().convert(jsonObj.getValue(), c);
-                    return jsonObj.setFinishedTarget(target, true);
-                }
+        // Simple type conversion if possible.
+        if (jsonObj.getTarget() == null && jsonObj.hasValue()) {
+            if (getConverter().isSimpleTypeConversionSupported(jsonObj.getValue().getClass(), targetClass)) {
+                Object converted = getConverter().convert(jsonObj.getValue(), targetClass);
+                return jsonObj.setFinishedTarget(converted, true);
             }
         }
 
-        // If a custom class factory exists, use it.
-        JsonReader.ClassFactory classFactory = readOptions.getClassFactory(c);
+        // Try custom class factory.
+        JsonReader.ClassFactory classFactory = readOptions.getClassFactory(targetClass);
         if (classFactory != null && jsonObj.getTarget() == null) {
-            Object target = createInstanceUsingClassFactory(c, jsonObj);
+            Object target = createInstanceUsingClassFactory(targetClass, jsonObj);
             if (jsonObj.isFinished()) {
                 return target;
             }
         }
 
-        // Use a custom reader if one exists.
-        JsonReader.JsonClassReader closestReader = readOptions.getCustomReader(c);
-        if (closestReader == null) {
+        // Finally, try a custom reader.
+        JsonReader.JsonClassReader reader = readOptions.getCustomReader(targetClass);
+        if (reader == null) {
             return null;
         }
-
-        Object read = closestReader.read(o, this);
-        if (read == null) {
-            return null;
-        }
-        // Make sure to place a pointer to the custom read object on the JsonObject.
-        return jsonObj.setFinishedTarget(read, true);
+        Object read = reader.read(o, this);
+        return (read != null) ? jsonObj.setFinishedTarget(read, true) : null;
     }
-
 
     private void markUntypedObjects(final Type type, final Object rhs, final Class<?> fieldType)
     {
@@ -580,7 +563,7 @@ public class ObjectResolver extends Resolver
                 ParameterizedType pType = (ParameterizedType) t;
                 Type[] typeArgs = pType.getActualTypeArguments();
 
-                if (typeArgs == null || typeArgs.length < 1 || clazz == null) {
+                if (typeArgs.length < 1 || clazz == null) {
                     continue;
                 }
 
@@ -636,12 +619,31 @@ public class ObjectResolver extends Resolver
                         for (Map.Entry<Object, Object> entry : jObj.entrySet()) {
                             final String fieldName = (String) entry.getKey();
                             if (!fieldName.startsWith("this$")) {
-                                // TODO: If more than one type, need to associate correct typeArgs entry to value
                                 Injector injector = classFields.get(fieldName);
-
-                                if (injector != null && (injector.getType().getTypeParameters().length > 0 || injector.getGenericType() instanceof TypeVariable)) {
-                                    Object pt = typeArgs[0];
-                                    stack2.addFirst(new Object[]{pt, entry.getValue()});
+                                if (injector != null) {
+                                    Type genericType = injector.getGenericType();
+                                    if (genericType instanceof TypeVariable) {
+                                        TypeVariable<?> tv = (TypeVariable<?>) genericType;
+                                        // Get the type parameters declared on the class that declares this field.
+                                        TypeVariable<?>[] params = tv.getGenericDeclaration().getTypeParameters();
+                                        int index = -1;
+                                        for (int i = 0; i < params.length; i++) {
+                                            if (params[i].getName().equals(tv.getName())) {
+                                                index = i;
+                                                break;
+                                            }
+                                        }
+                                        // If we found a matching index, and it is within the bounds of typeArgs, use it.
+                                        if (index != -1 && index < typeArgs.length) {
+                                            Object actualType = typeArgs[index];
+                                            stack2.addFirst(new Object[]{actualType, entry.getValue()});
+                                        }
+                                    } else if (containsTypeVariable(genericType)) {
+                                        // If the generic type contains a type variable (perhaps nested), use the first type argument.
+                                        // (You might improve this logic to substitute each type variable appropriately.)
+                                        Object actualType = typeArgs[0];
+                                        stack2.addFirst(new Object[]{actualType, entry.getValue()});
+                                    }
                                 }
                             }
                         }
@@ -651,6 +653,26 @@ public class ObjectResolver extends Resolver
                 stampTypeOnJsonObject(instance, t);
             }
         }
+    }
+
+    /**
+     * Recursively checks whether the provided type (or any of its components) is a TypeVariable.
+     *
+     * @param type the type to check
+     * @return true if the type or any type argument is a TypeVariable; false otherwise.
+     */
+    private boolean containsTypeVariable(Type type) {
+        if (type instanceof TypeVariable) {
+            return true;
+        } else if (type instanceof ParameterizedType) {
+            ParameterizedType pt = (ParameterizedType) type;
+            for (Type arg : pt.getActualTypeArguments()) {
+                if (containsTypeVariable(arg)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static void getTemplateTraverseWorkItem(final Deque<Object[]> stack2, final Object items, final Type type) {
@@ -668,15 +690,13 @@ public class ObjectResolver extends Resolver
         }
     }
 
-    // Mark 'type' on JsonObject when the type is missing and it is a 'leaf'
+    // Mark 'type' on JsonObject when the type is missing and is a 'leaf'
     // node (no further subtypes in it's parameterized type definition)
     private static void stampTypeOnJsonObject(final Object o, final Type t) {
-        Class<?> clazz = t instanceof Class ? (Class<?>) t : getRawType(t);
-
-        if (o instanceof JsonObject && clazz != null) {
+        if (o instanceof JsonObject && t != null) {
             JsonObject jObj = (JsonObject) o;
-            if (jObj.getJavaType() == null && jObj.getTarget() == null) {
-                jObj.setJavaType(clazz);
+            if (jObj.getType() == null && jObj.getTarget() == null) {
+                jObj.setType(t);
             }
         }
     }
@@ -705,7 +725,7 @@ public class ObjectResolver extends Resolver
 
         JsonObject jsonArray = new JsonObject();
         // Store the full refined type in the JsonObject.
-        jsonArray.setFullType(suggestedType);
+        jsonArray.setType(suggestedType);
 
         // Extract the underlying raw class to use for reflection operations.
         Class<?> rawType = JsonValue.extractRawClass(suggestedType);
