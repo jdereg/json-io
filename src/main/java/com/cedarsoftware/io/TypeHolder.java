@@ -27,7 +27,7 @@ import java.lang.reflect.Type;
  *
  * @param <T> the type that is being captured
  */
-public abstract class TypeHolder<T> {
+public class TypeHolder<T> {
     private final Type type;
 
     @SuppressWarnings("unchecked")

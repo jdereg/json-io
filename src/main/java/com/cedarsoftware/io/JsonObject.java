@@ -41,14 +41,14 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     private Object keys;
 
     public String toString() {
-        String jType = javaType == null ? "not set" : javaType.getName();
+        String jType = type == null ? "not set" : type.getTypeName();
         String targetInfo = target == null ? "null" : jType;
         return "JsonObject(id:" + id + ", type:" + jType + ", target:" + targetInfo + ", line:" + line + ", col:" + col + ", size:" + size() + ")";
     }
 
     // Map APIs
     public boolean isMap() {
-        return target instanceof Map || (javaType != null && Map.class.isAssignableFrom(javaType));
+        return target instanceof Map || (type != null && Map.class.isAssignableFrom(getRawType()));
     }
 
     // Collection APIs
@@ -60,7 +60,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
             return false;
         }
         if (items != null && keys == null) {
-            Class<?> type = javaType;
+            Class<?> type = getRawType();
             return type != null && !type.isArray();
         }
         return false;
@@ -69,8 +69,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     // Array APIs
     public boolean isArray() {
         if (target == null) {
-            if (javaType != null) {
-                return javaType.isArray();
+            if (type != null) {
+                return getRawType().isArray();
             }
             return items != null && keys == null;
         }

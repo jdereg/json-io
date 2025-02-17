@@ -405,8 +405,8 @@ public abstract class Resolver {
 
     // Resolve target type with proper coercion and enum handling
     private Class<?> resolveTargetType(JsonObject jsonObj) {
-        Class<?> targetType = coerceClassIfNeeded(jsonObj.getJavaType());
-        jsonObj.setJavaType(targetType);
+        Class<?> targetType = coerceClassIfNeeded(jsonObj.getRawType());
+        jsonObj.setType(targetType);
 
         // Handle enum coercion as before.
         Class<?> enumClass = ClassUtilities.getClassIfEnum(targetType);
@@ -462,7 +462,7 @@ public abstract class Resolver {
      * Create an instance of a Java class using the JavaType field on the jsonObj.
      */
     private Object createInstanceUsingType(JsonObject jsonObj) {
-        Class<?> c = jsonObj.getJavaType();
+        Class<?> c = jsonObj.getRawType();
         boolean useMaps = readOptions.isReturningJsonObjects();
         Object mate;
 
@@ -568,14 +568,11 @@ public abstract class Resolver {
     }
 
     public boolean valueToTarget(JsonObject jsonObject) {
-        if (jsonObject.getJavaType() == null) {
-            if (jsonObject.getType() == null) {
-                return false;
-            }
-            jsonObject.setJavaType(jsonObject.getRawType());
+        if (jsonObject.getType() == null) {
+            return false;
         }
 
-        Class<?> javaType = jsonObject.getJavaType();
+        Class<?> javaType = jsonObject.getRawType();
         // For arrays, attempt simple type conversion.
         if (javaType.isArray() && converter.isSimpleTypeConversionSupported(javaType.getComponentType(), javaType)) {
             Object jsonItems = jsonObject.getItems();
@@ -592,8 +589,8 @@ public abstract class Resolver {
                     Object item = Array.get(jsonItems, i);
                     if (item instanceof JsonObject) {
                         JsonObject jObj = (JsonObject) item;
-                        if (jObj.getJavaType() != null) {
-                            type = jObj.getJavaType();
+                        if (jObj.getType() != null) {
+                            type = jObj.getRawType();
                         }
                     }
                     Array.set(javaArray, i, converter.convert(item, type));

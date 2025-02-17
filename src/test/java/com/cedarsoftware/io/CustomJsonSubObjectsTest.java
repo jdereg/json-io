@@ -151,10 +151,15 @@ class CustomJsonSubObjectsTest
 
 		Person p1 = createPersonJohn();
 		String json = JsonIo.toJson(p1, writeOptions.build());
+		System.out.println(json);
 		Person p2 = JsonIo.toObjects(json, readOptions.build(), Person.class);
 
 		Map options = new HashMap<>();
-		assertTrue(DeepEquals.deepEquals(p1, p2, options));
+		boolean equals = DeepEquals.deepEquals(p1, p2, options);
+		if (!equals) {
+			System.out.println(options.get("diff"));
+		}
+		assertTrue(equals);
 	}
 
 	/* Here's the JSON that was Written/Read

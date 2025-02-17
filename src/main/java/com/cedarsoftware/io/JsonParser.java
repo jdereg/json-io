@@ -238,7 +238,6 @@ class JsonParser {
                     // loadType returns a Class<?> from the provided value.
                     Class<?> type = loadType(value);
                     jObj.setType(type);
-                    jObj.setJavaType(type);
                     break;
 
                 case ENUM:  // Legacy support (@enum was used to indicate EnumSet in prior versions)

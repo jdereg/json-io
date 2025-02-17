@@ -39,7 +39,7 @@ public class RecordFactory implements JsonReader.ClassFactory {
                 ArrayList<Class<?>> lParameterTypes = new ArrayList<>(jsonObj.size());
                 ArrayList<Object> lParameterValues = new ArrayList<>(jsonObj.size());
 
-                Class<?> c = jsonObj.getJavaType();
+                Class<?> c = jsonObj.getRawType();
                 // the record components are per definition in the constructor parameter order
                 // we implement this with reflection due to code compatibility Java<16
                 Method getRecordComponents = Class.class.getMethod("getRecordComponents");

@@ -30,7 +30,7 @@ public class EnumSetFactory implements JsonReader.ClassFactory {
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
         // Attempt to get the actual enum class from the provided class 'c'
-        Class<?> enumClass = ClassUtilities.getClassIfEnum(jObj.getJavaType());
+        Class<?> enumClass = ClassUtilities.getClassIfEnum(jObj.getRawType());
 
         // If enumClass is null or not an enum, try to get it from the first item in @items
         if (enumClass == null) {

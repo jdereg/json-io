@@ -494,7 +494,6 @@ public class JsonReader implements Closeable
         
         if (isSubstituteSortedCollectionNeeded(returnJson, rawRootType, rawJObjClass)) {
             Class<?> fallbackType = getSubstituteCollection(rawJObjClass);
-            jObj.setJavaType(null);
             jObj.setType(fallbackType);
         }
 

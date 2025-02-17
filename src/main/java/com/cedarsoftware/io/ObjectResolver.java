@@ -135,10 +135,16 @@ public class ObjectResolver extends Resolver
                 markUntypedObjects(fieldType, rhs, rawFieldType);
             }
 
-            // Resolve the field type in the context of the target object.
-            Type resolvedFieldType = TypeUtilities.resolveFieldType(fieldType, target);
             final JsonObject jObj = (JsonObject) rhs;
-            jObj.setType(resolvedFieldType);
+            Type explicitType = jObj.getType();
+            if (explicitType != null && !TypeUtilities.containsUnresolvedType(explicitType)) {
+                // If the field has an explicit type, use it.
+                jObj.setType(explicitType);
+            } else {
+                // Resolve the field type in the context of the target object.
+                Type resolvedFieldType = TypeUtilities.resolveFieldType(fieldType, target);
+                jObj.setType(resolvedFieldType);
+            }
         }
 
         Object special;

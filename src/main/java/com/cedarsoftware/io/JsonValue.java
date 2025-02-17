@@ -38,7 +38,6 @@ public abstract class JsonValue {
     public static final String SHORT_ID = "@i";
     public static final String SHORT_REF = "@r";
     public static final String VALUE = "value";
-    protected Class<?> javaType = null;
     protected Type type = null;
     protected Object target = null;
     protected boolean isFinished = false;
@@ -95,20 +94,14 @@ public abstract class JsonValue {
 
     abstract public boolean isArray();
     
-    public Class<?> getJavaType() {
-        return javaType;
-    }
-
-    public void setJavaType(Class<?> type) {
-        javaType = type;
-    }
-
     public Type getType() {
         return type;
     }
 
     public void setType(Type type) {
         if (containsUnresolvedType(type)) {
+            // Don't allow a TypeVariable of T, V or any other unresolved type to be set.
+            // Forces resolution ahead of calling this method.
             throw new RuntimeException("Unresolved type: " + type);
         }
         if (type == Object.class || type == null) {
@@ -117,13 +110,6 @@ public abstract class JsonValue {
             }
         }
         this.type = type;
-        // For backward compatibility during the migration, set the legacy fields
-        if (type != null) {
-            if (this.javaType == null) {
-                Class<?> raw = getRawType();
-                this.javaType = raw;
-            }
-        }
     }
 
     public Class<?> getRawType() {
@@ -131,11 +117,6 @@ public abstract class JsonValue {
     }
 
     String getJavaTypeName() {
-        // Then try javaType (resolved class)
-        if (javaType != null) {
-            return javaType.getName();
-        }
-
         return getRawType().getName();
     }
 
@@ -151,15 +132,13 @@ public abstract class JsonValue {
      * A JsonObject starts off with an id of -1.  Also, an id of 0 is not considered a valid id.
      * It must be 1 or greater.  JsonWriter utilizes this fact.
      */
-    public boolean hasId()
-    {
+    public boolean hasId() {
         return id > 0L;
     }
 
-    void clear()
-    {
+    void clear() {
         id = -1;
-        javaType = null;
+        type = null;
         refId = null;
     }
 }
