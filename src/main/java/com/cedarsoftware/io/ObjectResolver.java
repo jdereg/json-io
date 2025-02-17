@@ -625,26 +625,12 @@ public class ObjectResolver extends Resolver
                                 if (injector != null) {
                                     Type genericType = injector.getGenericType();
                                     if (genericType instanceof TypeVariable) {
-                                        TypeVariable<?> tv = (TypeVariable<?>) genericType;
-                                        // Get the type parameters declared on the class that declares this field.
-                                        TypeVariable<?>[] params = tv.getGenericDeclaration().getTypeParameters();
-                                        int index = -1;
-                                        for (int i = 0; i < params.length; i++) {
-                                            if (params[i].getName().equals(tv.getName())) {
-                                                index = i;
-                                                break;
-                                            }
-                                        }
-                                        // If we found a matching index, and it is within the bounds of typeArgs, use it.
-                                        if (index != -1 && index < typeArgs.length) {
-                                            Object actualType = typeArgs[index];
-                                            stack2.addFirst(new Object[]{actualType, entry.getValue()});
-                                        }
-                                    } else if (containsTypeVariable(genericType)) {
-                                        // If the generic type contains a type variable (perhaps nested), use the first type argument.
-                                        // (You might improve this logic to substitute each type variable appropriately.)
-                                        Object actualType = typeArgs[0];
-                                        stack2.addFirst(new Object[]{actualType, entry.getValue()});
+                                        // Resolve the type variable using the parent type 't'.
+                                        Type resolved = TypeUtilities.resolveFieldType(t, genericType);
+                                        stack2.addFirst(new Object[]{ resolved, entry.getValue() });
+                                    } else if (TypeUtilities.containsUnresolvedType(genericType)) {
+                                        // Fallback: use the first type argument.
+                                        stack2.addFirst(new Object[]{ typeArgs[0], entry.getValue() });
                                     }
                                 }
                             }
@@ -655,26 +641,6 @@ public class ObjectResolver extends Resolver
                 stampTypeOnJsonObject(instance, t);
             }
         }
-    }
-
-    /**
-     * Recursively checks whether the provided type (or any of its components) is a TypeVariable.
-     *
-     * @param type the type to check
-     * @return true if the type or any type argument is a TypeVariable; false otherwise.
-     */
-    private boolean containsTypeVariable(Type type) {
-        if (type instanceof TypeVariable) {
-            return true;
-        } else if (type instanceof ParameterizedType) {
-            ParameterizedType pt = (ParameterizedType) type;
-            for (Type arg : pt.getActualTypeArguments()) {
-                if (containsTypeVariable(arg)) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     private static void getTemplateTraverseWorkItem(final Deque<Object[]> stack2, final Object items, final Type type) {
