@@ -5,8 +5,8 @@ import java.lang.reflect.Type;
 
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
-import com.cedarsoftware.io.JsonValue;
 import com.cedarsoftware.io.Resolver;
+import com.cedarsoftware.util.TypeUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
 /**
@@ -63,7 +63,7 @@ public class ArrayFactory<T> implements JsonReader.ClassFactory {
                 if (type == null) {
                     type = componentType;
                 }
-                val = resolver.getConverter().convert(val, JsonValue.extractRawClass(type));
+                val = resolver.getConverter().convert(val, TypeUtilities.getRawClass(type));
 
             } else {
                 val = resolver.getConverter().convert(val, componentType);

@@ -405,11 +405,6 @@ public abstract class Resolver {
 
     // Resolve target type with proper coercion and enum handling
     private Class<?> resolveTargetType(JsonObject jsonObj) {
-        if (jsonObj.getType() == Object.class && jsonObj.getJavaType() != Object.class) {
-            System.out.println("FullType = " + jsonObj.getType().getTypeName());
-            System.out.println("JavaType = " + jsonObj.getJavaTypeName());
-            System.out.println();
-        }
         Class<?> targetType = coerceClassIfNeeded(jsonObj.getJavaType());
         jsonObj.setJavaType(targetType);
 
@@ -577,7 +572,7 @@ public abstract class Resolver {
             if (jsonObject.getType() == null) {
                 return false;
             }
-            jsonObject.setJavaType(JsonValue.extractRawClass(jsonObject.getType()));
+            jsonObject.setJavaType(jsonObject.getRawType());
         }
 
         Class<?> javaType = jsonObject.getJavaType();

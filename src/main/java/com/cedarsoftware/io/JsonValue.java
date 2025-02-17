@@ -1,11 +1,10 @@
 package com.cedarsoftware.io;
 
-import java.lang.reflect.Array;
-import java.lang.reflect.GenericArrayType;
-import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
-import java.lang.reflect.WildcardType;
+
+import com.cedarsoftware.util.TypeUtilities;
+
+import static com.cedarsoftware.util.TypeUtilities.containsUnresolvedType;
 
 /**
  * This class is the parent class for all parsed JSON objects, arrays, or primitive values.
@@ -109,6 +108,9 @@ public abstract class JsonValue {
     }
 
     public void setType(Type type) {
+        if (containsUnresolvedType(type)) {
+            throw new RuntimeException("Unresolved type: " + type);
+        }
         if (type == Object.class || type == null) {
             if (this.type != null) {
                 return;
@@ -118,10 +120,14 @@ public abstract class JsonValue {
         // For backward compatibility during the migration, set the legacy fields
         if (type != null) {
             if (this.javaType == null) {
-                Class<?> raw = extractRawClass(type);
+                Class<?> raw = getRawType();
                 this.javaType = raw;
             }
         }
+    }
+
+    public Class<?> getRawType() {
+        return TypeUtilities.getRawClass(type);
     }
 
     String getJavaTypeName() {
@@ -130,7 +136,7 @@ public abstract class JsonValue {
             return javaType.getName();
         }
 
-        return extractRawClass(type).getName();
+        return getRawType().getName();
     }
 
     public long getId() {
@@ -155,72 +161,5 @@ public abstract class JsonValue {
         id = -1;
         javaType = null;
         refId = null;
-    }
-
-    /**
-     * Centralized method that extracts the raw Class from a given Type.
-     */
-    public static Class<?> extractRawClass(Type type) {
-        if (type instanceof Class<?>) {
-            // Simple non-generic type.
-            return (Class<?>) type;
-        } else if (type instanceof ParameterizedType) {
-            // For something like List<String>, return List.class.
-            ParameterizedType pType = (ParameterizedType) type;
-            Type rawType = pType.getRawType();
-            if (rawType instanceof Class<?>) {
-                return (Class<?>) rawType;
-            } else {
-                // This is unexpected, but could happen in some corner cases.
-                return null;
-            }
-        } else if (type instanceof GenericArrayType) {
-            // For a generic array type (e.g., T[] or List<String>[]),
-            // first get the component type, then build an array class.
-            GenericArrayType arrayType = (GenericArrayType) type;
-            Type componentType = arrayType.getGenericComponentType();
-            Class<?> componentClass = extractRawClass(componentType);
-            if (componentClass != null) {
-                // Create an array instance with length 0 and get its class.
-                return Array.newInstance(componentClass, 0).getClass();
-            }
-            return null;
-        } else if (type instanceof WildcardType) {
-            // For wildcard types like "? extends Number", use the first upper bound.
-            WildcardType wildcardType = (WildcardType) type;
-            Type[] upperBounds = wildcardType.getUpperBounds();
-            if (upperBounds != null && upperBounds.length > 0) {
-                return extractRawClass(upperBounds[0]);
-            }
-            return null;
-        } else if (type instanceof TypeVariable) {
-            // For type variables (like T), you might want to pick the first bound.
-            // (Often, T's bound is Object if no explicit bound is specified.)
-            TypeVariable<?> typeVar = (TypeVariable<?>) type;
-            Type[] bounds = typeVar.getBounds();
-            if (bounds != null && bounds.length > 0) {
-                return extractRawClass(bounds[0]);
-            }
-            return Object.class;
-        } else {
-            // Unknown type – you might log or throw an error here.
-            return null;
-        }
-    }
-
-    public static Type extractArrayComponentType(Type type) {
-        if (type == null) {
-            return null;
-        }
-        if (type instanceof GenericArrayType) {
-            return ((GenericArrayType) type).getGenericComponentType();
-        } else if (type instanceof Class<?>) {
-            Class<?> cls = (Class<?>) type;
-            if (cls.isArray()) {
-                return cls.getComponentType();
-            }
-        }
-        // If it is not an array type, return null to indicate no component type.
-        return null;
     }
 }

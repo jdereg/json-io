@@ -15,6 +15,7 @@ import java.util.Map;
 
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.Convention;
+import com.cedarsoftware.util.TypeUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
 /**
@@ -115,7 +116,7 @@ public class ObjectResolver extends Resolver
         // Obtain the full generic type for the field.
         final Type fieldType = injector.getGenericType();
         // Compute the raw type for operations that require a Class (e.g., primitive checks).
-        final Class<?> rawFieldType = JsonValue.extractRawClass(fieldType);
+        final Class<?> rawFieldType = TypeUtilities.getRawClass(fieldType);
 
         if (rhs == null) {   // Logically clear field
             if (rawFieldType.isPrimitive()) {
@@ -134,14 +135,10 @@ public class ObjectResolver extends Resolver
                 markUntypedObjects(fieldType, rhs, rawFieldType);
             }
 
-            // Ensure that the JsonObject has its full type set.
+            // Resolve the field type in the context of the target object.
+            Type resolvedFieldType = TypeUtilities.resolveFieldType(fieldType, target);
             final JsonObject jObj = (JsonObject) rhs;
-            if (fieldType != null) {
-                jObj.setType(fieldType);
-            } else {
-                // Fallback: set to the raw type.
-                jObj.setType(rawFieldType);
-            }
+            jObj.setType(resolvedFieldType);
         }
 
         Object special;
@@ -171,7 +168,7 @@ public class ObjectResolver extends Resolver
             } else {    // Direct assignment for nested objects.
                 Object fieldObject = jsRhs.getTarget();
                 injector.inject(target, fieldObject);
-                boolean isNonRefClass = getReadOptions().isNonReferenceableClass(JsonValue.extractRawClass(jsRhs.getType()));
+                boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jsRhs.getRawType());
                 if (!isNonRefClass) {
                     // If the object is reference-able, process it further.
                     push(jsRhs);
@@ -225,8 +222,7 @@ public class ObjectResolver extends Resolver
                     // check that jObj as a type
                     if (jObj.getType() != null) {
                         Object javaInstance = createInstance(jObj);
-                        boolean isNonRefClass = getReadOptions().isNonReferenceableClass(JsonValue.extractRawClass(jObj.getType()));
-                        // TODO: Check is finished here?
+                        boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getRawType());
                         if (!isNonRefClass && !jObj.isFinished) {
                             push((JsonObject) rhs);
                         }
@@ -315,7 +311,7 @@ public class ObjectResolver extends Resolver
             Object special;
             if (element == null) {
                 col.add(null);
-            } else if ((special = readWithFactoryIfExists(element, JsonValue.extractRawClass(elementType))) != null) {
+            } else if ((special = readWithFactoryIfExists(element, TypeUtilities.getRawClass(elementType))) != null) {
                 // Use custom converter if available.
                 col.add(special);
             } else if (converter.isSimpleTypeConversionSupported(element.getClass(), element.getClass())) {
@@ -324,7 +320,7 @@ public class ObjectResolver extends Resolver
             } else if (element.getClass().isArray()) {
                 // For array elements inside the collection, use the helper to extract the array component type.
                 JsonObject jObj = new JsonObject();
-                Type arrayComponentType = JsonValue.extractArrayComponentType(elementType);
+                Type arrayComponentType = TypeUtilities.extractArrayComponentType(elementType);
                 if (arrayComponentType == null) {
                     arrayComponentType = Object.class;
                 }
@@ -351,7 +347,7 @@ public class ObjectResolver extends Resolver
                     // Set the element's full type to the extracted element type.
                     jObj.setType(elementType);
                     createInstance(jObj);
-                    boolean isNonRefClass = getReadOptions().isNonReferenceableClass(JsonValue.extractRawClass(jObj.getType()));
+                    boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getRawType());
                     if (!isNonRefClass) {
                         traverseSpecificType(jObj);
                     }
@@ -390,12 +386,12 @@ public class ObjectResolver extends Resolver
         final Class<?> fallbackCompType = array.getClass().getComponentType();
 
         // Use the helper to extract the effective component type from the full type.
-        Type effectiveComponentType = JsonValue.extractArrayComponentType(jsonObj.getType());
+        Type effectiveComponentType = TypeUtilities.extractArrayComponentType(jsonObj.getType());
         if (effectiveComponentType == null) {
             effectiveComponentType = fallbackCompType;
         }
         // For operations that require a Class, extract the raw type.
-        final Class effectiveRawComponentType = JsonValue.extractRawClass(effectiveComponentType);
+        final Class effectiveRawComponentType = TypeUtilities.getRawClass(effectiveComponentType);
         final Object jsonItems = jsonObj.getItems();
 
         for (int i = 0; i < len; i++) {
@@ -481,7 +477,7 @@ public class ObjectResolver extends Resolver
         ReadOptions readOptions = getReadOptions();
 
         // Extract the raw type from the suggested inferred type.
-        Class<?> rawInferred = (inferredType != null) ? JsonValue.extractRawClass(inferredType) : null;
+        Class<?> rawInferred = (inferredType != null) ? TypeUtilities.getRawClass(inferredType) : null;
         if (rawInferred != null && readOptions.isNotCustomReaderClass(rawInferred)) {
             return null;
         }
@@ -498,7 +494,7 @@ public class ObjectResolver extends Resolver
                 return null; // no factory for references.
             }
             if (jsonObj.getTarget() == null) {
-                targetClass = JsonValue.extractRawClass(jsonObj.getType());
+                targetClass = jsonObj.getRawType();
                 if (targetClass == null || rawInferred == null) {
                     return null;
                 }
@@ -508,7 +504,7 @@ public class ObjectResolver extends Resolver
                     return factoryCreated;
                 }
             } else {
-                targetClass = JsonValue.extractRawClass(jsonObj.getType());
+                targetClass = jsonObj.getRawType();
             }
         } else {
             // o is not a JsonObject; use the inferred type (or o.getClass() if rawInferred is Object).
@@ -719,7 +715,7 @@ public class ObjectResolver extends Resolver
 
     protected Object resolveArray(Type suggestedType, List<Object> list) {
         // If no suggested type is provided or its raw type is Object, simply return an Object[]
-        if (suggestedType == null || JsonValue.extractRawClass(suggestedType) == Object.class) {
+        if (suggestedType == null || TypeUtilities.getRawClass(suggestedType) == Object.class) {
             return list.toArray();
         }
 
@@ -728,7 +724,7 @@ public class ObjectResolver extends Resolver
         jsonArray.setType(suggestedType);
 
         // Extract the underlying raw class to use for reflection operations.
-        Class<?> rawType = JsonValue.extractRawClass(suggestedType);
+        Class<?> rawType = TypeUtilities.getRawClass(suggestedType);
 
         // If the raw type is a Collection, create an instance accordingly.
         if (Collection.class.isAssignableFrom(rawType)) {

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.cedarsoftware.io.reflect.Injector;
+import com.cedarsoftware.util.TypeUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
 /**
@@ -201,7 +202,7 @@ public class MapResolver extends Resolver {
 
                 if (refId == null) {
                     // Convert JsonObject to its destination type if possible
-                    Class<?> type = JsonValue.extractRawClass(jsonObject.getType());
+                    Class<?> type = jsonObject.getRawType();
                     if (type != null && converter.isConversionSupportedFor(Map.class, type)) {
                         Object converted = converter.convert(jsonObject, type);
                         setArrayElement(target, i, converted);
@@ -211,7 +212,7 @@ public class MapResolver extends Resolver {
                     }
                 } else {    // Connect reference
                     JsonObject refObject = refTracker.getOrThrow(refId);
-                    Class<?> type = JsonValue.extractRawClass(refObject.getType());
+                    Class<?> type = refObject.getRawType();
 
                     if (type != null && converter.isConversionSupportedFor(Map.class, type)) {
                         Object convertedRef = converter.convert(refObject, type);
@@ -282,7 +283,7 @@ public class MapResolver extends Resolver {
                     } else {
                         jObj.setType(Object.class);
                         createInstance(jObj);
-                        boolean isNonRefClass = getReadOptions().isNonReferenceableClass(JsonValue.extractRawClass(jObj.getType()));
+                        boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getRawType());
                         if (!isNonRefClass) {
                             traverseSpecificType(jObj);
                         }
@@ -301,7 +302,7 @@ public class MapResolver extends Resolver {
 
     protected Object resolveArray(Type suggestedType, List<Object> list) {
         // Extract the raw class from the provided Type.
-        Class<?> rawType = (suggestedType == null) ? null : JsonValue.extractRawClass(suggestedType);
+        Class<?> rawType = (suggestedType == null) ? null : TypeUtilities.getRawClass(suggestedType);
 
         // If there's no suggested type or the raw type is Object, just return an Object[].
         if (suggestedType == null || rawType == Object.class) {

@@ -146,7 +146,7 @@ class RefsTest
         assertSame(root._cycle_a._other, root._cycle_b);
         assertSame(root._cycle_b._other, root._cycle_a);
 
-        assertEquals(root._polymorphic.getClass(), TestObjectKid.class);
+        assertEquals(TestObjectKid.class, root._polymorphic.getClass());
         TestObjectKid kid = (TestObjectKid) root._polymorphic;
         assert "dilbert".equals(kid._name);
         assert "dilbert@myotherdrive.com".equals(kid._email);

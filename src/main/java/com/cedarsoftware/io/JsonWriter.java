@@ -892,7 +892,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
         int len = jObj.size();
         Class<?> arrayClass;
-        Class<?> jsonObjectType = JsonValue.extractRawClass(jObj.getType());
+        Class<?> jsonObjectType = jObj.getRawType();
+        
         if (jsonObjectType == null || Object[].class.equals(jsonObjectType)) {
             arrayClass = Object[].class;
         } else {
@@ -983,7 +984,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         {
             showType = false;
         }
-        Class<?> colClass = JsonValue.extractRawClass(jObj.getType());
+        Class<?> colClass = jObj.getRawType();
         boolean referenced = adjustIfReferenced(jObj);
         final Writer output = this.out;
         int len = jObj.size();
@@ -1159,7 +1160,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 newLine();
             }
             writeType(jObj.getJavaTypeName(), output);
-            type = JsonValue.extractRawClass(jObj.getType());
+            type = jObj.getRawType();
         }
 
         if (jObj.isEmpty())

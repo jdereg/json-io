@@ -27,6 +27,7 @@ import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.ExceptionUtilities;
 import com.cedarsoftware.util.FastByteArrayInputStream;
 import com.cedarsoftware.util.FastReader;
+import com.cedarsoftware.util.TypeUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
 /**
@@ -360,7 +361,7 @@ public class JsonReader implements Closeable
             // If no specific type was requested, return as-is
             return returnValue;
         }
-        Class<?> rootClass = JsonValue.extractRawClass(rootType);
+        Class<?> rootClass = TypeUtilities.getRawClass(rootType);
 
         // If the value is already the desired type (or a subtype), just return
         if (rootClass.isAssignableFrom(returnValue.getClass())) {
@@ -388,7 +389,7 @@ public class JsonReader implements Closeable
         }
 
         // Obtain the raw Class for the rootType.
-        Class<?> rawRootType = JsonValue.extractRawClass(rootType);
+        Class<?> rawRootType = TypeUtilities.getRawClass(rootType);
         // We'll use typeToCheck to drill down in case of arrays.
         Type typeToCheck = rootType;
 
@@ -408,7 +409,7 @@ public class JsonReader implements Closeable
                 break;
             }
             // After drilling down, get the raw class of the ultimate component.
-            Class<?> ultimateRawType = JsonValue.extractRawClass(typeToCheck);
+            Class<?> ultimateRawType = TypeUtilities.getRawClass(typeToCheck);
             if (localConverter.isSimpleTypeConversionSupported(ultimateRawType, ultimateRawType)
                     || (ultimateRawType != null && ultimateRawType.equals(Object.class))) {
                 return;
@@ -421,7 +422,7 @@ public class JsonReader implements Closeable
         }
 
         // For further checks, extract the raw class from the (possibly drilled-down) type.
-        Class<?> rawTypeToCheck = JsonValue.extractRawClass(typeToCheck);
+        Class<?> rawTypeToCheck = TypeUtilities.getRawClass(typeToCheck);
         if (rawTypeToCheck != null) {
             if (Collection.class.isAssignableFrom(rawTypeToCheck)) {
                 return;
@@ -488,9 +489,9 @@ public class JsonReader implements Closeable
         JsonObject jObj = (JsonObject) returnValue;
 
         // Convert the provided rootType (a full Type) to its raw Class form
-        Class<?> rawRootType = (rootType == null ? null : JsonValue.extractRawClass(rootType));
-
-        Class<?> rawJObjClass = JsonValue.extractRawClass(jObj.getType());
+        Class<?> rawRootType = (rootType == null ? null : TypeUtilities.getRawClass(rootType));
+        Class<?> rawJObjClass = jObj.getRawType();
+        
         if (isSubstituteSortedCollectionNeeded(returnJson, rawRootType, rawJObjClass)) {
             Class<?> fallbackType = getSubstituteCollection(rawJObjClass);
             jObj.setJavaType(null);
@@ -537,7 +538,7 @@ public class JsonReader implements Closeable
             Type javaType = jObj.getType();
             if (javaType != null) {
                 // If there's an @type and it's a simple type (or Number), convert to its basic type.
-                Class<?> javaClass = JsonValue.extractRawClass(javaType);
+                Class<?> javaClass = TypeUtilities.getRawClass(javaType);
                 if (localConverter.isSimpleTypeConversionSupported(javaClass, javaClass) ||
                         Number.class.isAssignableFrom(javaClass)) {
                     Class<?> basicType = getJsonSynonymType(javaClass);

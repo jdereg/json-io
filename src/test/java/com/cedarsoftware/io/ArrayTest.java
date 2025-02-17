@@ -1004,10 +1004,9 @@ class ArrayTest
         assertNotNull(empty);
         assertEquals(0, empty.length);
 
-        // TODO: This test should work
-//        List<?> emptyList = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), ArrayList.class);
-//        assertNotNull(emptyList);
-//        assertTrue(emptyList.isEmpty());
+        List<?> emptyList = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), ArrayList.class);
+        assertNotNull(emptyList);
+        assertTrue(emptyList.isEmpty());
     }
 
     @Test
@@ -1023,7 +1022,7 @@ class ArrayTest
         assertEquals(0, empty2.length);
 
         // TODO: This test should work
-//        List<List<?>> outerList = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), ArrayList.class);
+//        List<List<?>> outerList = JsonIo.toObjectsGeneric(json, new ReadOptionsBuilder().build(), new TypeHolder<List<List<?>>>(){});
 //        assertEquals(2, outerList.size());
 //
 //        List<?> emptyList1 = (List)outer[0];

@@ -42,12 +42,7 @@ public class ConvertableFactory<T> implements JsonReader.ClassFactory {
         }
 
         resolveReferences(resolver, jObj);
-
         Class<?> javaType = jObj.getJavaType();
-
-        if (javaType == null) {
-            javaType = getType();
-        }
         Object converted = resolver.getConverter().convert(jObj, javaType);
         return (T) jObj.setFinishedTarget(converted, true);
     }

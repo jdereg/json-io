@@ -737,7 +737,6 @@ public class WritersTest {
         // Test reading GMT and writing as Etc/GMT
         ZonedDateTime gmtInput = ZonedDateTime.parse("2024-02-02T12:00:00Z[GMT]");
         String json = JsonIo.toJson(gmtInput, WriteOptionsBuilder.getDefaultWriteOptions());
-        System.out.println("JSON output: " + json);  // Let's see what we're actually getting
         ZonedDateTime restored = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), ZonedDateTime.class);
 
         // Instead of checking the JSON string directly, verify the restored object

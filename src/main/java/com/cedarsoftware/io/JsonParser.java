@@ -13,6 +13,7 @@ import java.util.Map;
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.FastReader;
+import com.cedarsoftware.util.TypeUtilities;
 
 import static com.cedarsoftware.io.JsonObject.ENUM;
 import static com.cedarsoftware.io.JsonObject.ID;
@@ -171,7 +172,7 @@ class JsonParser {
                 JsonObject jObj = readJsonObject(suggestedType);
                 return jObj;
             case '[':
-                Type elementType = JsonValue.extractArrayComponentType(suggestedType);
+                Type elementType = TypeUtilities.extractArrayComponentType(suggestedType);
                 return readArray(elementType);
             case ']':   // empty array
                 input.pushback(']');
@@ -220,7 +221,7 @@ class JsonParser {
         ++curParseDepth;
 
         // Obtain the injector map.
-        Map<String, Injector> injectors = readOptions.getDeepInjectorMap(JsonValue.extractRawClass(suggestedType));
+        Map<String, Injector> injectors = readOptions.getDeepInjectorMap(TypeUtilities.getRawClass(suggestedType));
 
         while (true) {
             String field = readFieldName();
