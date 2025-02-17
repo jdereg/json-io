@@ -299,7 +299,7 @@ public class JsonReader implements Closeable
 
         // 2) Handle a root-level JsonObject
         if (root instanceof JsonObject) {
-            Object o = handleObjectRoot(rootType, root);
+            Object o = handleObjectRoot(rootType, (JsonObject)root);
             // Fetch root (dig for it) if we have JsonObject and return type is Java
             if (isJava && o instanceof JsonObject && ((JsonObject) o).target != null) {
                 o = ((JsonObject) o).target;
@@ -477,32 +477,31 @@ public class JsonReader implements Closeable
      *
      * @param rootType the expected return type (as a {@link java.lang.reflect.Type}), including any generic type information;
      *                 may be {@code null} for type inference.
-     * @param returnValue the initial parsed representation (expected to be a {@code JsonObject}).
+     * @param jsonObj the initial parsed representation
      * @return the resolved and, if necessary, converted object graph, or the raw {@code JsonObject}, depending on the mode
      *         and convertibility.
      */
     @SuppressWarnings("unchecked")
-    private Object handleObjectRoot(Type rootType, Object returnValue) {
+    private Object handleObjectRoot(Type rootType, JsonObject jsonObj) {
         boolean returnJson = readOptions.isReturningJsonObjects();
 
         // 1) Fallback type check: If a fallback condition applies, update the @type in the JsonObject.
-        JsonObject jObj = (JsonObject) returnValue;
 
         // Convert the provided rootType (a full Type) to its raw Class form
         Class<?> rawRootType = (rootType == null ? null : TypeUtilities.getRawClass(rootType));
-        Class<?> rawJObjClass = jObj.getRawType();
-        
+        Class<?> rawJObjClass = jsonObj.getRawType();
+
         if (isSubstituteSortedCollectionNeeded(returnJson, rawRootType, rawJObjClass)) {
             Class<?> fallbackType = getSubstituteCollection(rawJObjClass);
-            jObj.setType(fallbackType);
+            jsonObj.setType(fallbackType);
         }
 
         // 2) Resolve internal references/build the object graph.
-        Object graph = resolveObjects(jObj, rootType);
+        Object graph = resolveObjects(jsonObj, rootType);
 
         // If resolution produced null, return the original JsonObject.
         if (graph == null) {
-            return returnValue;
+            return jsonObj;
         }
 
         // 3) If a specific rootType was provided...
@@ -534,18 +533,18 @@ public class JsonReader implements Closeable
         // 4) If no rootType was specified, decide based on the "JSON mode" setting.
         if (returnJson) {
             // --- JSON Mode ---
-            Type javaType = jObj.getType();
+            Type javaType = jsonObj.getType();
             if (javaType != null) {
                 // If there's an @type and it's a simple type (or Number), convert to its basic type.
                 Class<?> javaClass = TypeUtilities.getRawClass(javaType);
                 if (localConverter.isSimpleTypeConversionSupported(javaClass, javaClass) ||
                         Number.class.isAssignableFrom(javaClass)) {
                     Class<?> basicType = getJsonSynonymType(javaClass);
-                    return localConverter.convert(returnValue, basicType);
+                    return localConverter.convert(jsonObj, basicType);
                 }
                 // If it's not a built-in primitive or convertible, return the raw JsonObject.
                 if (!isBuiltInPrimitive(graph)) {
-                    return returnValue;
+                    return jsonObj;
                 }
             }
             // If no @type or it isn't convertible, check if the resolved graph can remain a "simple" type.
@@ -553,7 +552,7 @@ public class JsonReader implements Closeable
                 return graph;
             }
             // Otherwise, return the raw JsonObject.
-            return returnValue;
+            return jsonObj;
         }
 
         // 5) In JavaObjects mode with no specified rootType, return the resolved graph.

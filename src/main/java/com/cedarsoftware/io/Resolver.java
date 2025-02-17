@@ -184,7 +184,10 @@ public abstract class Resolver {
         if (rootObj.isFinished) {
             return (T) rootObj.getTarget();
         } else {
-            rootObj.setType(rootType);  // Won't override fullType if already set.
+            if (rootObj.getType() == null) {
+                // If there is no explicit type hint in the JSON, use the provided root type.
+                rootObj.setType(rootType);
+            }
             Object instance = (rootObj.getTarget() == null ? createInstance(rootObj) : rootObj.getTarget());
             if (rootObj.isFinished) {
                 return (T) instance;
