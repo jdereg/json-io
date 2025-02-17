@@ -178,7 +178,7 @@ public class JsonIo {
      * <p>
      * This method serializes the given Java source object into its JSON representation. It supports both standard Java
      * objects and instances of {@code JsonObject} (e.g. a parsed Map-of-Maps obtained via a previous call to
-     * {@code toObjects(...)} when using {@code readOptions.returnAsNativeJsonObjects()}). The conversion respects the
+     * {@code toObjects(...)} when using {@code readOptions.returnAsJsonObjects()}). The conversion respects the
      * configuration specified in the provided {@code WriteOptions}. If no write options are provided, the default settings
      * will be applied.
      * </p>
@@ -254,7 +254,7 @@ public class JsonIo {
      * <p>
      * This method serializes the given Java source object into JSON and writes the output to the provided
      * {@code OutputStream}. It supports both standard Java objects and {@code JsonObject} instances (which may have been
-     * produced earlier via {@code toObjects(...)} when using {@code readOptions.returnAsNativeJsonObjects()}). The
+     * produced earlier via {@code toObjects(...)} when using {@code readOptions.returnAsJsonObjects()}). The
      * serialization process is governed by the supplied {@code WriteOptions}. If no options are provided, the default
      * settings are used.
      * </p>
@@ -381,7 +381,7 @@ public class JsonIo {
      *     <tr>
      *       <td style="border: 1px solid gray;"><b>Deserialization Mode</b></td>
      *       <td style="border: 1px solid gray;">Either into Java DTOs or into native {@code JsonObject} maps,
-     *       depending on {@code ReadOptions} (e.g., {@code returnAsNativeJsonObjects()}).</td>
+     *       depending on {@code ReadOptions} (e.g., {@code returnAsJsonObjects()}).</td>
      *     </tr>
      *     <tr>
      *       <td style="border: 1px solid gray;"><b>Type Hint</b></td>
@@ -640,7 +640,7 @@ public class JsonIo {
      * configuration in {@code ReadOptions}, the result may be:
      * <ul>
      *   <li>A user-defined DTO (if a concrete {@code rootType} is provided).</li>
-     *   <li>A native {@code JsonObject} (Map-of-Maps) when {@code ReadOptions.returnAsNativeJsonObjects()} is enabled.</li>
+     *   <li>A native {@code JsonObject} (Map-of-Maps) when {@code ReadOptions.returnAsJsonObjects()} is enabled.</li>
      *   <li>An array or {@code Collection} if the JSON represents an array.</li>
      *   <li>A primitive (String, Number, Boolean, or null) if the JSON represents a JSON primitive.</li>
      * </ul>
@@ -789,7 +789,7 @@ public class JsonIo {
      * <p>
      * This method converts a root {@code JsonObject} (a Map-of-Maps representation of parsed JSON) into an actual Java object
      * graph. The parsed {@code JsonObject} is typically produced by calling {@code JsonIo.toObjects(String)} or
-     * {@code JsonIo.toObjects(InputStream)} with {@code ReadOptions.returnAsNativeJsonObjects()} enabled. This intermediate
+     * {@code JsonIo.toObjects(InputStream)} with {@code ReadOptions.returnAsJsonObjects()} enabled. This intermediate
      * representation contains metadata (such as an {@code @type} field) that allows the correct resolution of Java objects.
      * </p>
      *
@@ -839,7 +839,7 @@ public class JsonIo {
      *   <li>
      *     <b>jsonObject</b> - The {@code JsonObject} (Map-of-Maps) that represents the parsed JSON data. This is generally
      *     obtained via a prior call to {@code toObjects(String)} or {@code toObjects(InputStream)} when using
-     *     {@code ReadOptions.returnAsNativeJsonObjects()}.
+     *     {@code ReadOptions.returnAsJsonObjects()}.
      *   </li>
      *   <li>
      *     <b>readOptions</b> - A {@code ReadOptions} instance that controls the resolution process. If {@code null}, default
@@ -935,7 +935,7 @@ public class JsonIo {
      *   <li>
      *     <b>jsonObject</b> - The native {@code JsonObject} (Map-of-Maps) representing parsed JSON data. This object is typically
      *     produced by a previous call to {@code toObjects(String)} or {@code toObjects(InputStream)} when using
-     *     {@code ReadOptions.returnAsNativeJsonObjects()}.
+     *     {@code ReadOptions.returnAsJsonObjects()}.
      *   </li>
      *   <li>
      *     <b>readOptions</b> - A {@code ReadOptions} instance that configures the resolution process (e.g., whether to return
@@ -1043,7 +1043,7 @@ public class JsonIo {
         boolean useMaps = com.cedarsoftware.util.Converter.convert(optionalArgs.get(USE_MAPS), boolean.class);
 
         if (useMaps) {
-            builder.returnAsNativeJsonObjects();
+            builder.returnAsJsonObjects();
         } else {
             builder.returnAsJavaObjects();
         }

@@ -233,7 +233,7 @@ class RefsTest
     public void testRefChainAsJsonObjects()
     {
         String json = ClassUtilities.loadResourceAsString("references/chainRef.json");
-        JsonObject jsonObj = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        JsonObject jsonObj = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         LocalDate christmas = (LocalDate) jsonObj.get("date");
         Object[] children =  (Object[])jsonObj.get("children");
         assert children.length == 6;
@@ -272,7 +272,7 @@ class RefsTest
     @Test
     void testConvertableReferences() {
         String json = "[{\"@ref\":1},{\"@id\":1,\"@type\":\"ZonedDateTime\",\"value\":\"2024-04-21T14:55:53.77587-04:00[America/New_York]\"}]";
-        Object[] dates = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Object[] dates = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         ZonedDateTime zdt1 = (ZonedDateTime) dates[0];
         ZonedDateTime zdt2 = (ZonedDateTime) dates[1];
         assertEquals(zdt1, zdt2);

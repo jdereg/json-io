@@ -218,7 +218,7 @@ public class FieldsTest
         ManyFields testFields = new ManyFields();
         testFields.init();
         String json0 = TestUtil.toJson(testFields);
-        Map testFields2 = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Map testFields2 = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
 
         String json1 = TestUtil.toJson(testFields2);
         TestUtil.printLine("json1=" + json1);
@@ -262,7 +262,7 @@ public class FieldsTest
 
         String json = TestUtil.toJson(human, new WriteOptionsBuilder()
                 .addIncludedFields(c, strings).build());
-        Map<String, Object> check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Map<String, Object> check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
 
         assertThat(check)
                 .hasSize(expectedSize)
@@ -277,7 +277,7 @@ public class FieldsTest
         painful.setName("Android rocks");
         painful.setAge(50);
 
-        ReadOptions readOptions = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().returnAsJsonObjects().build();
         WriteOptions writeOptions = new WriteOptionsBuilder().addIncludedFields(includedFields).build();
         String json = TestUtil.toJson(painful, writeOptions);
         Map check = TestUtil.toObjects(json, readOptions, null);
@@ -292,7 +292,7 @@ public class FieldsTest
         painful.setName("Android rocks");
         painful.setAge(50);
 
-        ReadOptions readOptions = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().returnAsJsonObjects().build();
         WriteOptions writeOptions = new WriteOptionsBuilder().addIncludedFields(includedFields).build();
         String json = TestUtil.toJson(painful, writeOptions);
         Map check = TestUtil.toObjects(json, readOptions, null);
@@ -308,7 +308,7 @@ public class FieldsTest
         painful.setName("Android rocks");
         painful.setAge(50);
 
-        ReadOptions readOptions = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().returnAsJsonObjects().build();
         WriteOptions writeOptions = new WriteOptionsBuilder().addIncludedFields(includedFields).build();
         String json = TestUtil.toJson(painful, writeOptions);
         Map check = TestUtil.toObjects(json, readOptions, null);
@@ -325,7 +325,7 @@ public class FieldsTest
         painful.setName("Android rocks");
         painful.setAge(50);
 
-        ReadOptions readOptions = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().returnAsJsonObjects().build();
         WriteOptions writeOptions = new WriteOptionsBuilder().addExcludedFields(excludedFields).build();
         String json = TestUtil.toJson(painful, writeOptions);
         Map check = TestUtil.toObjects(json, readOptions, null);
@@ -341,7 +341,7 @@ public class FieldsTest
         painful.setName("Android rocks");
         painful.setAge(50);
 
-        ReadOptions readOptions = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().returnAsJsonObjects().build();
 
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .addExcludedField(PainfulToSerialize.class, "classLoader")
@@ -374,7 +374,7 @@ public class FieldsTest
 
         String json = TestUtil.toJson(painful, new WriteOptionsBuilder()
                 .addExcludedFields(PainfulToSerialize.class, listOf("classLoader")).build());
-        Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         assertEquals(1, check.size());
         assertTrue(check.containsKey("name"));
     }
@@ -388,7 +388,7 @@ public class FieldsTest
 
         String json = TestUtil.toJson(painful, new WriteOptionsBuilder()
                 .addExcludedFields(PainfulToSerialize.class, listOf("classLoader")).build());
-        Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         assertEquals(2, check.size());
         assertTrue(check.containsKey("name"));
         assertTrue(check.containsKey("age"));
@@ -403,7 +403,7 @@ public class FieldsTest
         String json = TestUtil.toJson(painful, new WriteOptionsBuilder()
                 .addIncludedFields(PainfulToSerialize.class, listOf("name"))
                 .addExcludedFields(PainfulToSerialize.class, listOf("name", "classLoader")).build());
-        Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         assertEquals(0, check.size());
     }
     @Test
@@ -416,7 +416,7 @@ public class FieldsTest
         String json = TestUtil.toJson(painful, new WriteOptionsBuilder()
                 .addIncludedFields(PainfulToSerialize.class, listOf("name", "classLoader"))
                 .addExcludedFields(PainfulToSerialize.class, listOf("classLoader")).build());
-        Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         assertEquals(1, check.size());
         assertTrue(check.containsKey("name"));
     }

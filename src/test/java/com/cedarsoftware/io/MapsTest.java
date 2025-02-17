@@ -494,7 +494,7 @@ class MapsTest
         testMap.init();
         String json0 = TestUtil.toJson(testMap);
         TestUtil.printLine("json0=" + json0);
-        Map testMap2 = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Map testMap2 = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
 
         String json1 = TestUtil.toJson(testMap2);
         TestUtil.printLine("json1=" + json1);
@@ -608,9 +608,9 @@ class MapsTest
     void testMapToMapCompatibility()
     {
         String json0 = "{\"rows\":[{\"columns\":[{\"name\":\"FOO\",\"value\":\"9000\"},{\"name\":\"VON\",\"value\":\"0001-01-01\"},{\"name\":\"BAR\",\"value\":\"0001-01-01\"}]},{\"columns\":[{\"name\":\"FOO\",\"value\":\"9713\"},{\"name\":\"VON\",\"value\":\"0001-01-01\"},{\"name\":\"BAR\",\"value\":\"0001-01-01\"}]}],\"selectedRows\":\"110\"}";
-        Map root = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Map root = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         String json1 = TestUtil.toJson(root);
-        Map root2 = TestUtil.toObjects(json1, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Map root2 = TestUtil.toObjects(json1, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         assertTrue(DeepEquals.deepEquals(root, root2));
 
         // Will be different because @keys and @items get inserted during processing
@@ -678,7 +678,7 @@ class MapsTest
         String json0 = TestUtil.toJson(map);
         TestUtil.printLine("json0=" + json0);
 
-        map = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        map = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         String json1 = TestUtil.toJson(map);
         TestUtil.printLine("json1=" + json1);
 
@@ -696,7 +696,7 @@ class MapsTest
         String json0 = TestUtil.toJson(root);
         TestUtil.printLine("json0=" + json0);
 
-        Object[] array = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Object[] array = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
 
@@ -717,7 +717,7 @@ class MapsTest
         String json0 = TestUtil.toJson(smt);
         TestUtil.printLine("json0=" + json0);
 
-        Map result = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Map result = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         String json1 = TestUtil.toJson(result);
         TestUtil.printLine("json1=" + json1);
 
@@ -799,7 +799,7 @@ class MapsTest
 
         TestUtil.printLine(str + "\n");
 
-        ReadOptions readOptions = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().returnAsJsonObjects().build();
         final Map<String, Object> map2 = TestUtil.toObjects(str, readOptions, null);
 
         // for debugging
@@ -860,7 +860,7 @@ class MapsTest
         String json0 = TestUtil.toJson(tmv, new WriteOptionsBuilder().build());
 
         // First convert to Maps (native JSON objects)
-        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         String json1 = TestUtil.toJson(objAsMap);
 
         // Then convert back to objects
@@ -878,7 +878,7 @@ class MapsTest
         String json0 = TestUtil.toJson(tmk, new WriteOptionsBuilder().build());
 
         // First convert to Maps (native JSON objects)
-        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         String json1 = TestUtil.toJson(objAsMap);
 
         // Then convert back to objects
@@ -896,7 +896,7 @@ class MapsTest
         String json0 = TestUtil.toJson(tmkvc, new WriteOptionsBuilder().build());
 
         // First convert to Maps (native JSON objects)
-        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         String json1 = TestUtil.toJson(objAsMap);
 
         // Then convert back to objects
@@ -913,7 +913,7 @@ class MapsTest
         String json0 = TestUtil.toJson(tmvn);
 
         // Convert to Maps (native JSON objects)
-        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         String json1 = TestUtil.toJson(objAsMap);
 
         // Convert back to objects
@@ -931,7 +931,7 @@ class MapsTest
         String json0 = TestUtil.toJson(tmkn);
 
         // Convert to Maps (native JSON objects)
-        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         String json1 = TestUtil.toJson(objAsMap);
 
         // Convert back to objects
@@ -949,7 +949,7 @@ class MapsTest
         String json0 = TestUtil.toJson(tmkvcn);
 
         // Convert to Maps (native JSON objects)
-        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         String json1 = TestUtil.toJson(objAsMap);
 
         // Convert back to objects

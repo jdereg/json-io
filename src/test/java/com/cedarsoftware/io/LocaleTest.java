@@ -120,7 +120,7 @@ public class LocaleTest
     void testLocaleInMapOfMaps() {
         Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
         String json = TestUtil.toJson(locale);
-        Locale locale1 = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Locale locale1 = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         assertEquals(locale, locale1);
     }
 

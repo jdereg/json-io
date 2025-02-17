@@ -563,8 +563,16 @@ public class ObjectResolver extends Resolver
             Object[] item = stack.removeFirst();
             final Type t = (Type) item[0];
             final Object instance = item[1];
+            
+            if (instance == null) {
+                continue;
+            }
+            
             if (t instanceof ParameterizedType) {
                 Class<?> clazz = TypeUtilities.getRawClass(t);
+                if (clazz.isArray()) {
+                    System.out.println(clazz.getName());
+                }
                 ParameterizedType pType = (ParameterizedType) t;
                 Type[] typeArgs = pType.getActualTypeArguments();
 
@@ -586,11 +594,8 @@ public class ObjectResolver extends Resolver
                         Object[] array = (Object[]) instance;
                         for (int i = 0; i < array.length; i++) {
                             Object vals = array[i];
-                            stack.addFirst(new Object[]{t, vals});
 
-                            if (vals instanceof JsonObject) {
-                                stack.addFirst(new Object[]{t, vals});
-                            } else if (vals instanceof Object[]) {
+                            if (vals instanceof Object[]) {
                                 JsonObject coll = new JsonObject();
                                 coll.setType(clazz);
                                 coll.setItems(vals);
@@ -611,7 +616,7 @@ public class ObjectResolver extends Resolver
                         final Object array = jObj.getItems();
                         if (array != null) {
                             int len = Array.getLength(array);
-                            for (int i=0; i < len; i++) {
+                            for (int i = 0; i < len; i++) {
                                 Object o = Array.get(array, i);
                                 stack.addFirst(new Object[]{typeArgs[0], o});
                             }

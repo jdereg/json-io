@@ -69,14 +69,14 @@ class DatesTest
         TestDateField tdf = TestUtil.toObjects(json, null);
         assertNull(tdf.getFromString());
 
-        Map jObj = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Map jObj = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         assertNull(jObj.get("fromString"));
 
         json = "{\"@type\":\"" + thisClass + "\",\"fromString\":null,\"dates\":[\"\"]}";
         tdf = TestUtil.toObjects(json, null);
         assertNull(tdf.getDates()[0]);
 
-        jObj = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        jObj = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         json = TestUtil.toJson(jObj);
         tdf = TestUtil.toObjects(json, null);
         assertNull(tdf.getDates()[0]);

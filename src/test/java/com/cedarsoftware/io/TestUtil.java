@@ -36,7 +36,7 @@ public class TestUtil {
 
     public static <T> Object serializeDeserializeAsMaps(T initial) {
         String json = toJson(initial, new WriteOptionsBuilder().showTypeInfoNever().build());
-        return toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        return toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
     }
 
     public static boolean isDebug() {

@@ -147,13 +147,13 @@ class RootsTest
         String json = TestUtil.toJson(zdt, new WriteOptionsBuilder().build());
 
         ZonedDateTime zdt1 = TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
+                .returnAsJsonObjects()
                 .build(), null);
         assertEquals(zdt, zdt1);
 
         // When forced, it's ok.
         ZonedDateTime zdt2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
+                .returnAsJsonObjects()
                 .build(), ZonedDateTime.class);
         assertEquals(zdt2, zdt);
     }
@@ -164,13 +164,13 @@ class RootsTest
         AtomicLong number = new AtomicLong(16);
         String json = TestUtil.toJson(number, new WriteOptionsBuilder().build());
         Long what = TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
+                .returnAsJsonObjects()
                 .build(), null);
         assertEquals(number.get(), what);
 
-        // Specifying root of AtomicLong.class below "trumps" returnAsNativeJsonObjects()
+        // Specifying root of AtomicLong.class below "trumps" returnAsJsonObjects()
         Number number2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
+                .returnAsJsonObjects()
                 .build(), AtomicLong.class);
         assert deepEquals(number2, new AtomicLong(16));
 
@@ -192,12 +192,12 @@ class RootsTest
         String json = TestUtil.toJson(number, new WriteOptionsBuilder().build());
         
         Object what = TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
+                .returnAsJsonObjects()
                 .build(), null);
         assertEquals((byte)16, what);
 
         Number number2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
+                .returnAsJsonObjects()
                 .build(), Byte.class);
         assertEquals(number2, Byte.valueOf("16"));
 
@@ -218,12 +218,12 @@ class RootsTest
         OffsetDateTime odt = OffsetDateTime.parse("2024-04-27T22:11:01-08:00");
         String json = TestUtil.toJson(odt, new WriteOptionsBuilder().build());
         OffsetDateTime what = TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
+                .returnAsJsonObjects()
                 .build(), null);
         assertEquals(odt, what);
 
         OffsetDateTime odt2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
+                .returnAsJsonObjects()
                 .build(), OffsetDateTime.class);
         assertEquals(odt2, odt);
 
@@ -243,12 +243,12 @@ class RootsTest
     {
         String json = "{\"@type\":\"string\",\"value\":\"json-io\"}";
         Object what = TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
+                .returnAsJsonObjects()
                 .build(), null);
         assertEquals(what, "json-io");
 
         String s2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
+                .returnAsJsonObjects()
                 .build(), String.class);
         assertEquals(s2, "json-io");
 
@@ -268,19 +268,19 @@ class RootsTest
     {
         String json = "{\"@type\":\"long\",\"value\":16}";
         Object what = TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
+                .returnAsJsonObjects()
                 .build(), null);
         assertEquals(what, 16L);
 
         json = "{\"@type\":\"long\",\"value\":\"16\"}";
         what = TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
+                .returnAsJsonObjects()
                 .build(), null);
         assertEquals(what, 16L);
 
         json = "{\"@type\":\"long\",\"value\":\"16\"}";
         long l2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
+                .returnAsJsonObjects()
                 .build(), long.class);
         assertEquals(l2, 16L);
 
@@ -301,17 +301,17 @@ class RootsTest
         String json = "{\"@type\":\"StringBuilder\",\"value\":\"json-io\"}";
 
         Object what = TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
+                .returnAsJsonObjects()
                 .build(), null);
         assertEquals("json-io", what);
 
         StringBuilder b2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
+                .returnAsJsonObjects()
                 .build(), StringBuilder.class);
         assert deepEquals(b2, new StringBuilder("json-io"));
 
         String sb = TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
+                .returnAsJsonObjects()
                 .build(), String.class);    // String.class forces the conversion.
         assert deepEquals(sb, "json-io");
 

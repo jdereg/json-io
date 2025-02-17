@@ -95,7 +95,7 @@ public class SetTest {
 
         // Step 3: Deserialize the JSON to Set.class with returnJsonObjects=true
         ReadOptions readOptions = new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
+                .returnAsJsonObjects()
                 .build();
         Set<?> deserializedSet = (Set<?>) TestUtil.toObjects(json, readOptions, Set.class);
 
@@ -171,7 +171,7 @@ public class SetTest {
 
         // Step 3: Deserialize the JSON to Object[].class with returnJsonObjects=true
         ReadOptions readOptions = new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
+                .returnAsJsonObjects()
                 .build();
         String[] deserializedArray = TestUtil.toObjects(json, readOptions, String[].class);
 

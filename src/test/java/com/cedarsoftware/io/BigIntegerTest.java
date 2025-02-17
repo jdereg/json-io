@@ -70,7 +70,7 @@ class BigIntegerTest
         assertEquals(new BigInteger("1"), tbi.values[5]);
         assertEquals(new BigInteger("999"), tbi.values[6]);
 
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         json = TestUtil.toJson(map);
         tbi = TestUtil.toObjects(json, null);
         assertEquals(new BigInteger("314159"), tbi.fromString);
@@ -99,7 +99,7 @@ class BigIntegerTest
     void testAssignBigIntegerStringToMaps()
     {
         String json = "{\"@type\":\"" + TestBigIntegerField.class.getName() + "\",\"fromString\":\"\"}";
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         assert map.get("fromString") instanceof BigInteger;
         BigInteger bigInt = (BigInteger) map.get("fromString");
         assert bigInt.longValue() == 0;

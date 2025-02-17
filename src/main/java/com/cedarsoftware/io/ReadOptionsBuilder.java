@@ -439,8 +439,19 @@ public class ReadOptionsBuilder {
     /**
      * Set to return as JSON_OBJECTS's (faster, useful for large, more simple object data sets). This returns as
      * native json types (Map, Object[], long, double, boolean)
+     * @deprecated use {@link ReadOptionsBuilder#returnAsJsonObjects()} instead.
      */
+    @Deprecated
     public ReadOptionsBuilder returnAsNativeJsonObjects() {
+        options.returnType = ReadOptions.ReturnType.JSON_OBJECTS;
+        return this;
+    }
+
+    /**
+     * Set to return as JSON_OBJECTS's (faster, useful for large, more simple object data sets). This returns as
+     * native json types (Map, Object[], long, double, boolean)
+     */
+    public ReadOptionsBuilder returnAsJsonObjects() {
         options.returnType = ReadOptions.ReturnType.JSON_OBJECTS;
         return this;
     }

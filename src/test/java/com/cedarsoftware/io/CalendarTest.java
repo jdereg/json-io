@@ -182,7 +182,7 @@ public class CalendarTest
         String json = TestUtil.toJson(new Object[]{now});
         TestUtil.printLine("json=" + json);
 
-        Object[] items = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Object[] items = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         Calendar item = (Calendar) items[0];
         assertEquals(item, now);
     }

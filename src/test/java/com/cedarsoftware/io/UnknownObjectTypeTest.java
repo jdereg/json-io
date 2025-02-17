@@ -31,7 +31,7 @@ public class UnknownObjectTypeTest
     {
         String json = "{\"@type\":\"foo.bar.baz.Qux\", \"name\":\"Joe\"}";
         JsonObject myParams = TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
+                .returnAsJsonObjects()
                 .failOnUnknownType(false)
                 .build(), null);
         Object inputParams = JsonIo.toObjects(myParams, new ReadOptionsBuilder().build(), null);

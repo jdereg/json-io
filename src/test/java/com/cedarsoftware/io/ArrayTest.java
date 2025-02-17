@@ -458,7 +458,7 @@ class ArrayTest
         Object[] two = new Object[]{objs, "bella", objs};
         String json0 = TestUtil.toJson(two);
 
-        Object[] array = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Object[] array = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         String json1 = TestUtil.toJson(array);
 
         // Read back into typed Java objects, the Maps of Maps versus what was dumped out
@@ -491,7 +491,7 @@ class ArrayTest
         json0 = TestUtil.toJson(ta);
         TestUtil.printLine("json0=" + json0);
 
-        Map map = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Map map = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         json1 = TestUtil.toJson(map);
         TestUtil.printLine("json1=" + json1);
 
@@ -609,7 +609,7 @@ class ArrayTest
         String json0 = TestUtil.toJson(foo);
         TestUtil.printLine("json0=" + json0);
 
-        Object array = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Object array = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
         assertEquals(json0, json1);
@@ -622,7 +622,7 @@ class ArrayTest
         String json0 = TestUtil.toJson(empty);
         TestUtil.printLine("json0=" + json0);
 
-        empty = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        empty = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         assertNotNull(empty);
         assertNotNull(empty);
         assertEquals(0, empty.length);
@@ -635,7 +635,7 @@ class ArrayTest
         json0 = TestUtil.toJson(list);
         TestUtil.printLine("json0=" + json0);
 
-        list = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        list = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         assertNotNull(list);
         assertEquals(2, list.length);
         JsonObject e1 = (JsonObject) list[0];
@@ -655,7 +655,7 @@ class ArrayTest
         Object[] objs = new Object[]{strs, "a", strs};
         String json0 = TestUtil.toJson(objs);
         TestUtil.printLine("json0=" + json0);
-        Object array = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Object array = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
 
@@ -681,7 +681,7 @@ class ArrayTest
         testArray.init();
         String json0 = TestUtil.toJson(testArray);
         TestUtil.printLine("json0=" + json0);
-        Map testArray2 = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Map testArray2 = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
 
         String json1 = TestUtil.toJson(testArray2);
         TestUtil.printLine("json1=" + json1);
@@ -698,7 +698,7 @@ class ArrayTest
         String json0 = TestUtil.toJson(empty);
         TestUtil.printLine("json0=" + json0);
 
-        Map m = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Map m = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         assertTrue(m.isEmpty());
 
         String json1 = TestUtil.toJson(m);
@@ -1038,7 +1038,7 @@ class ArrayTest
         String json0 = TestUtil.toJson(ta, new WriteOptionsBuilder().build());
 
         // First convert to Maps
-        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         String json1 = TestUtil.toJson(objAsMap);
 
         // Then convert back to objects

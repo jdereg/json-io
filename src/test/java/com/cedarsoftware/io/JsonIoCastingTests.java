@@ -40,7 +40,7 @@ class JsonIoCastingTests {
     // Basic primitive and object type tests
     @Test
     void testPrimitiveNumberCasting() {
-        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
 
         // Integer types
         assertEquals(16L, (Long)TestUtil.toObjects("16", options, null));
@@ -56,7 +56,7 @@ class JsonIoCastingTests {
 
     @Test
     void testComplexNumberCasting() {
-        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
 
         // BigInteger & BigDecimal
         assertEquals(new BigInteger("16"), TestUtil.toObjects("16", options, BigInteger.class));
@@ -72,7 +72,7 @@ class JsonIoCastingTests {
 
     @Test
     void testStringCasting() {
-        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
 
         assertEquals("test", TestUtil.toObjects("\"test\"", options, null));
         assertEquals("test", TestUtil.toObjects("\"test\"", options, String.class));
@@ -81,7 +81,7 @@ class JsonIoCastingTests {
 
     @Test
     void testDateAndUUIDCasting() {
-        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
 
         UUID uuid = UUID.randomUUID();
         assertEquals(uuid, TestUtil.toObjects("\"" + uuid + "\"", options, UUID.class));
@@ -95,7 +95,7 @@ class JsonIoCastingTests {
     // Array tests
     @Test
     void testSimpleArrayCasting() {
-        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
 
         // Object array with mixed types
         String json = "[1, 2.0, \"three\", null]";
@@ -114,7 +114,7 @@ class JsonIoCastingTests {
 
     @Test
     void testNestedArrayCasting() {
-        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
 
         // Nested arrays with nulls
         String json = "[[1, null, 3], null, [4, 5, null]]";
@@ -127,7 +127,7 @@ class JsonIoCastingTests {
     // Collection tests
     @Test
     void testCollectionCasting() {
-        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
 
         // List
         String json = "[1, 2, 3]";
@@ -147,7 +147,7 @@ class JsonIoCastingTests {
 
     @Test
     void testNestedCollectionCasting() {
-        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
 
         // Nested List with mixed types and nulls
         String json = "[[1, null, \"three\"], null, [4.0, true, null]]";
@@ -161,7 +161,7 @@ class JsonIoCastingTests {
 
     @Test
     void testNestedArrayCastingVariations() {
-        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
 
         // Test 1: Basic nested array without type specification
         String json1 = "[[1, null, 3], null, [4, 5, null]]";
@@ -199,7 +199,7 @@ class JsonIoCastingTests {
 
     @Test
     void testPrimitiveArrayCasting() {
-        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
 
         // Test primitive array casting
         String json = "[1, 2, 3]";
@@ -217,7 +217,7 @@ class JsonIoCastingTests {
 
     @Test
     void testNestedArrayWithTypeCoercion() {
-        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
 
         // Test coercion of string numbers to Long
         String json = "[[\"1\", null, \"3\"], null, [\"4\", \"5\", null]]";
@@ -228,7 +228,7 @@ class JsonIoCastingTests {
 
     @Test
     void testDeeplyNestedArrayCasting() {
-        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
 
         // Triple nested arrays
         String json = "[[[1], [2, 3]], null, [[4, 5], [6, null]]]";
@@ -240,7 +240,7 @@ class JsonIoCastingTests {
 
     @Test
     void testMixedNestedArrayCasting() {
-        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
 
         // Nested arrays with mixed types and nulls
         String json = "[[1, null, \"three\"], null, [4.0, true, null]]";
@@ -252,7 +252,7 @@ class JsonIoCastingTests {
 
     @Test
     void testSpecificCollectionTypes() {
-        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
 
         // TreeSet (maintains natural order)
         String json = "[3, 1, 2, 5, 4]";
@@ -274,7 +274,7 @@ class JsonIoCastingTests {
 
     @Test
     void testSpecificListTypes() {
-        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
 
         String json = "[1, 2, 3]";
 
@@ -293,7 +293,7 @@ class JsonIoCastingTests {
 
     @Test
     void testMapTypes() {
-        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
 
         // Basic HashMap
         String json = "{\"a\":1, \"b\":2, \"c\":3}";
@@ -319,7 +319,7 @@ class JsonIoCastingTests {
 
     @Test
     void testNestedMapsAndCollections() {
-        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
 
         // Map with nested collections
         String json = "{\"list\":[1,2,3], \"set\":[4,5,6], \"map\":{\"x\":7,\"y\":8}}";
@@ -336,7 +336,7 @@ class JsonIoCastingTests {
 
     @Test
     void testComplexMapStructures() {
-        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
 
         // Map with mixed value types
         String json = "{\"string\":\"text\", \"number\":42, \"boolean\":true, \"null\":null, \"array\":[1,2,3]}";
@@ -361,7 +361,7 @@ class JsonIoCastingTests {
 
     @Test
     void testNavigableCollections() {
-        ReadOptions options = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
 
         // NavigableSet
         String setJson = "[5,2,8,1,9]";

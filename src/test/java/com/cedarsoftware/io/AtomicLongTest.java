@@ -79,7 +79,7 @@ class AtomicLongTest
     void testAssignAtomicLongStringToMaps()
     {
         String json = "{\"@type\":\"" + TestAtomicLongField.class.getName() + "\",\"strValue\":\"\"}";
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         assertNull(map.get("fromString"));      // allowing "" to null out non-primitive fields in map-of-map mode
     }
 

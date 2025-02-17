@@ -88,7 +88,7 @@ public class FloatTest
 
         try
         {
-            TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+            TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
             fail();
         }
         catch (JsonIoException ignore)

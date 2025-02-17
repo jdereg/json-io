@@ -61,7 +61,7 @@ public class OverlappingMemberVariableNamesTest
         assertEquals(child.getParentName(), roundTrip.getParentName());
         assertEquals(child.getChildName(), roundTrip.getChildName());
 
-        JsonObject jObj = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        JsonObject jObj = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
         String json1 = TestUtil.toJson(jObj);
         assertEquals(json, json1);
     }

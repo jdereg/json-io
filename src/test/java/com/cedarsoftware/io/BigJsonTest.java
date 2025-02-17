@@ -3,7 +3,7 @@ package com.cedarsoftware.io;
 import java.util.Map;
 
 import com.cedarsoftware.util.ClassUtilities;
-import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -28,25 +28,33 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  */
 class BigJsonTest
 {
-    @RepeatedTest(2)
+    @Test
     void testBigJsonToJava()
     {
+        ReadOptions readOptions = new ReadOptionsBuilder().returnAsJavaObjects().build();
         String json = ClassUtilities.loadResourceAsString("big/big5D.json");
-        Map map = TestUtil.toObjects(json, null);
-        assertEquals("big5D", map.get("ncube"));
-        assertEquals(0L, map.get("defaultCellValue"));
-        assertNotNull(map.get("axes"));
-        assertNotNull(map.get("cells"));
+        
+        for (int i=0; i < 1; i++) {
+            Map map = TestUtil.toObjects(json, readOptions,null);
+            assertEquals("big5D", map.get("ncube"));
+            assertEquals(0L, map.get("defaultCellValue"));
+            assertNotNull(map.get("axes"));
+            assertNotNull(map.get("cells"));
+        }
     }
 
-    @RepeatedTest(2)
+    @Test
     void testBigJsonToMaps()
     {
+        ReadOptions readOptions = new ReadOptionsBuilder().returnAsJsonObjects().build();
         String json = ClassUtilities.loadResourceAsString("big/big5D.json");
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
-        assertEquals("big5D", map.get("ncube"));
-        assertEquals(0L, map.get("defaultCellValue"));
-        assertNotNull(map.get("axes"));
-        assertNotNull(map.get("cells"));
+
+        for (int i=0; i < 1; i++) {
+            Map map = TestUtil.toObjects(json, readOptions, null);
+            assertEquals("big5D", map.get("ncube"));
+            assertEquals(0L, map.get("defaultCellValue"));
+            assertNotNull(map.get("axes"));
+            assertNotNull(map.get("cells"));
+        }
     }
 }

@@ -118,7 +118,7 @@ public abstract class Resolver {
      * <p>
      * This method converts a root-level {@code JsonObject}—a Map-of-Maps representation of parsed JSON—into an actual
      * Java object instance. The {@code JsonObject} is typically produced by a prior call to {@code JsonIo.toObjects(String)}
-     * or {@code JsonIo.toObjects(InputStream)} when using the {@code ReadOptions.returnAsNativeJsonObjects()} setting.
+     * or {@code JsonIo.toObjects(InputStream)} when using the {@code ReadOptions.returnAsJsonObjects()} setting.
      * The conversion process uses the provided <code>root</code> parameter, a {@link java.lang.reflect.Type} that represents
      * the expected root type (including any generic type parameters). Although the full type information is preserved for
      * resolution, the {@code JsonObject}'s legacy {@code hintType} field (which remains a {@code Class<?>}) is set using the

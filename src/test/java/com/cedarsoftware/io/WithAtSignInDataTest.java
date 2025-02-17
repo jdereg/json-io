@@ -30,7 +30,7 @@ public class WithAtSignInDataTest
         Map<String, Object> map = TestUtil.toObjects(json, new ReadOptionsBuilder().failOnUnknownType(false).build(), null);
         assertTheHeckOutOfThisStructure(map);
         map = TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
+                .returnAsJsonObjects()
                 .failOnUnknownType(false)
                 .build(), null);
         assertTheHeckOutOfThisStructure(map);
