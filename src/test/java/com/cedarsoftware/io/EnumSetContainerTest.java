@@ -102,6 +102,28 @@ class EnumSetContainerTest {
     }
 
     @Test
+    void testEnumSet_asClassFieldEmptyLegacyWritten() {
+        String json = "{" +
+                "  \"@type\" : \"com.cedarsoftware.io.EnumSetContainerTest$EnumSetContainer\"," +
+                "  \"set1\" : {" +
+                "    \"@type\": \"java.util.RegularEnumSet\"" +
+                "  }," +
+                "  \"set2\" : {" +
+                "    \"@type\": \"java.util.RegularEnumSet\"" +
+                "  }," +
+                "  \"nullSet\" : {" +
+                "    \"@type\": \"java.util.RegularEnumSet\"" +
+                "  }\n" +
+                "}";
+
+        EnumSetContainer target = TestUtil.toObjects(json, null);
+
+        assertThat(target.set1).isNull();
+        assertThat(target.set2).isNull();
+        assertThat(target.nullSet).isNull();
+    }
+
+    @Test
     void testEnumSet_inNestedCollections() {
         // Map<String, List<EnumSet<TestEnum>>>
         Map<String, List<EnumSet<TestEnum>>> source = new LinkedHashMap<>();

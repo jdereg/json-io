@@ -45,6 +45,9 @@ public class EnumSetFactory implements JsonReader.ClassFactory {
                     // Since we cannot determine the enum class from the string, throw an exception
                     throw new JsonIoException("Unable to determine enum class from items in EnumSet");
                 }
+            } else {
+                // in case field is serialized without values, but it's mentioned as java.util.RegularEnumSet
+                return null;
             }
         }
 

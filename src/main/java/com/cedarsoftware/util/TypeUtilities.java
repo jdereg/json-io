@@ -256,7 +256,7 @@ public class TypeUtilities {
      * Resolves a suggested type against a field's generic type.
      * Useful for collections, maps, and arrays.
      *
-     * @param suggestedType the full parent type (e.g., ThreeType<Point, String, Point>)
+     * @param suggestedType the full parent type (e.g., ThreeType&lt;Point, String, Point&gt;)
      * @param fieldGenericType the declared generic type of the field
      * @return the resolved type based on the suggested type
      */
@@ -292,7 +292,7 @@ public class TypeUtilities {
      * Resolves a field’s declared generic type by substituting type variables
      * using the actual type arguments from the parent type.
      *
-     * @param suggestedType the full parent type (e.g., ThreeType<Point, String, Point>)
+     * @param suggestedType the full parent type (e.g., ThreeType&lt;Point, String, Point&gt;)
      * @param fieldType the declared generic type of the field (e.g., T)
      * @return the resolved type (e.g., Point) if substitution is possible;
      *         otherwise, returns fieldType.

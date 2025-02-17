@@ -132,7 +132,7 @@ public class ObjectResolver extends Resolver
         // assign the full generic type based on the parameterized type.
         if (rhs instanceof JsonObject) {
             if (fieldType instanceof ParameterizedType) {
-                markUntypedObjects(fieldType, rhs, rawFieldType);
+                markUntypedObjects(fieldType, (JsonObject)rhs);
             }
 
             final JsonObject jObj = (JsonObject) rhs;
@@ -550,18 +550,21 @@ public class ObjectResolver extends Resolver
         return (read != null) ? jsonObj.setFinishedTarget(read, true) : null;
     }
 
-    private void markUntypedObjects(final Type type, final Object rhs, final Class<?> fieldType)
-    {
-        final Deque<Object[]> stack2 = new ArrayDeque<>();
-        stack2.addFirst(new Object[]{type, rhs});
+    private void markUntypedObjects(final Type type, final JsonObject rhs) {
+        if (rhs.isFinished) {
+            return;     // Already marked.
+        }
+        final Deque<Object[]> stack = new ArrayDeque<>();
+        Class<?> fieldClass = TypeUtilities.getRawClass(type);
+        Map<String, Injector> classFields = getReadOptions().getDeepInjectorMap(fieldClass);
+        stack.addFirst(new Object[]{type, rhs});
 
-        Map<String, Injector> classFields = getReadOptions().getDeepInjectorMap(fieldType);
-        while (!stack2.isEmpty()) {
-            Object[] item = stack2.removeFirst();
+        while (!stack.isEmpty()) {
+            Object[] item = stack.removeFirst();
             final Type t = (Type) item[0];
             final Object instance = item[1];
             if (t instanceof ParameterizedType) {
-                Class<?> clazz = getRawType(t);
+                Class<?> clazz = TypeUtilities.getRawClass(t);
                 ParameterizedType pType = (ParameterizedType) t;
                 Type[] typeArgs = pType.getActualTypeArguments();
 
@@ -576,32 +579,32 @@ public class ObjectResolver extends Resolver
                     Map.Entry<Object, Object> pair = jsonObj.asTwoArrays();
                     Object keys = pair.getKey();
                     Object items = pair.getValue();
-                    getTemplateTraverseWorkItem(stack2, keys, typeArgs[0]);
-                    getTemplateTraverseWorkItem(stack2, items, typeArgs[1]);
+                    getTemplateTraverseWorkItem(stack, keys, typeArgs[0]);
+                    getTemplateTraverseWorkItem(stack, items, typeArgs[1]);
                 } else if (Collection.class.isAssignableFrom(clazz)) {
                     if (instance instanceof Object[]) {
                         Object[] array = (Object[]) instance;
                         for (int i = 0; i < array.length; i++) {
                             Object vals = array[i];
-                            stack2.addFirst(new Object[]{t, vals});
+                            stack.addFirst(new Object[]{t, vals});
 
                             if (vals instanceof JsonObject) {
-                                stack2.addFirst(new Object[]{t, vals});
+                                stack.addFirst(new Object[]{t, vals});
                             } else if (vals instanceof Object[]) {
                                 JsonObject coll = new JsonObject();
                                 coll.setType(clazz);
                                 coll.setItems(vals);
                                 List items = Arrays.asList((Object[]) vals);
-                                stack2.addFirst(new Object[]{t, items});
+                                stack.addFirst(new Object[]{t, items});
                                 array[i] = coll;
                             } else {
-                                stack2.addFirst(new Object[]{t, vals});
+                                stack.addFirst(new Object[]{t, vals});
                             }
                         }
                     } else if (instance instanceof Collection) {
                         final Collection col = (Collection) instance;
                         for (Object o : col) {
-                            stack2.addFirst(new Object[]{typeArgs[0], o});
+                            stack.addFirst(new Object[]{typeArgs[0], o});
                         }
                     } else if (instance instanceof JsonObject) {
                         final JsonObject jObj = (JsonObject) instance;
@@ -610,7 +613,7 @@ public class ObjectResolver extends Resolver
                             int len = Array.getLength(array);
                             for (int i=0; i < len; i++) {
                                 Object o = Array.get(array, i);
-                                stack2.addFirst(new Object[]{typeArgs[0], o});
+                                stack.addFirst(new Object[]{typeArgs[0], o});
                             }
                         }
                     }
@@ -627,10 +630,10 @@ public class ObjectResolver extends Resolver
                                     if (genericType instanceof TypeVariable) {
                                         // Resolve the type variable using the parent type 't'.
                                         Type resolved = TypeUtilities.resolveFieldType(t, genericType);
-                                        stack2.addFirst(new Object[]{ resolved, entry.getValue() });
+                                        stack.addFirst(new Object[]{ resolved, entry.getValue() });
                                     } else if (TypeUtilities.containsUnresolvedType(genericType)) {
                                         // Fallback: use the first type argument.
-                                        stack2.addFirst(new Object[]{ typeArgs[0], entry.getValue() });
+                                        stack.addFirst(new Object[]{ typeArgs[0], entry.getValue() });
                                     }
                                 }
                             }
@@ -643,17 +646,17 @@ public class ObjectResolver extends Resolver
         }
     }
 
-    private static void getTemplateTraverseWorkItem(final Deque<Object[]> stack2, final Object items, final Type type) {
+    private static void getTemplateTraverseWorkItem(final Deque<Object[]> stack, final Object items, final Type type) {
         if (items == null || Array.getLength(items) < 1) {
             return;
         }
-        Class<?> rawType = getRawType(type);
+        Class<?> rawType = TypeUtilities.getRawClass(type);
         if (rawType != null && Collection.class.isAssignableFrom(rawType)) {
-            stack2.add(new Object[]{type, items});
+            stack.add(new Object[]{type, items});
         } else {
             int len = Array.getLength(items);
             for (int i = 0; i < len; i++) {
-                stack2.add(new Object[]{type, Array.get(items, i)});
+                stack.add(new Object[]{type, Array.get(items, i)});
             }
         }
     }
@@ -663,26 +666,10 @@ public class ObjectResolver extends Resolver
     private static void stampTypeOnJsonObject(final Object o, final Type t) {
         if (o instanceof JsonObject && t != null) {
             JsonObject jObj = (JsonObject) o;
-            if (jObj.getType() == null && jObj.getTarget() == null) {
+            if (jObj.getType() == null) {
                 jObj.setType(t);
             }
         }
-    }
-
-    /**
-     * Given the passed in Type t, return the raw type of it, if the passed in value is a ParameterizedType.
-     * @param t Type to attempt to get raw type from.
-     * @return Raw type obtained from the passed in parameterized type or null if T is not a ParameterizedType
-     */
-    private static Class<?> getRawType(final Type t) {
-        if (t instanceof ParameterizedType) {
-            ParameterizedType pType = (ParameterizedType) t;
-
-            if (pType.getRawType() instanceof Class) {
-                return (Class) pType.getRawType();
-            }
-        }
-        return null;
     }
 
     protected Object resolveArray(Type suggestedType, List<Object> list) {
