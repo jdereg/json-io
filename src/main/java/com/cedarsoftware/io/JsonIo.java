@@ -15,6 +15,7 @@ import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.FastByteArrayInputStream;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
+import com.cedarsoftware.util.TypeHolder;
 import com.cedarsoftware.util.convert.Converter;
 import com.cedarsoftware.util.convert.DefaultConverterOptions;
 
