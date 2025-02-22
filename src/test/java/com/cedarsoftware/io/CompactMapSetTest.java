@@ -7,7 +7,6 @@ import java.util.Set;
 import com.cedarsoftware.util.CompactMap;
 import com.cedarsoftware.util.CompactSet;
 import com.cedarsoftware.util.DeepEquals;
-import com.cedarsoftware.util.TypeHolder;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
