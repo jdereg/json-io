@@ -149,7 +149,7 @@ public class TypeUtilities {
      * @param target the target instance that holds the field
      * @return the resolved type
      */
-    public static Type resolveFieldType(Type fieldType, Object target) {
+    public static Type resolveFieldTypeUsingInstance(Type fieldType, Object target) {
         if (fieldType == null) {
             return null;
         }
@@ -164,13 +164,13 @@ public class TypeUtilities {
             Type[] actualArgs = pt.getActualTypeArguments();
             Type[] resolvedArgs = new Type[actualArgs.length];
             for (int i = 0; i < actualArgs.length; i++) {
-                resolvedArgs[i] = resolveFieldType(actualArgs[i], target);
+                resolvedArgs[i] = resolveFieldTypeUsingInstance(actualArgs[i], target);
             }
             return new ParameterizedTypeImpl((Class<?>) pt.getRawType(), resolvedArgs, pt.getOwnerType());
         } else if (fieldType instanceof GenericArrayType) {
             GenericArrayType gat = (GenericArrayType) fieldType;
             Type compType = gat.getGenericComponentType();
-            Type resolvedCompType = resolveFieldType(compType, target);
+            Type resolvedCompType = resolveFieldTypeUsingInstance(compType, target);
             return new GenericArrayTypeImpl(resolvedCompType);
         } else if (fieldType instanceof WildcardType) {
             WildcardType wt = (WildcardType) fieldType;
@@ -178,15 +178,71 @@ public class TypeUtilities {
             Type[] lowerBounds = wt.getLowerBounds();
             // Resolve bounds recursively.
             for (int i = 0; i < upperBounds.length; i++) {
-                upperBounds[i] = resolveFieldType(upperBounds[i], target);
+                upperBounds[i] = resolveFieldTypeUsingInstance(upperBounds[i], target);
             }
             for (int i = 0; i < lowerBounds.length; i++) {
-                lowerBounds[i] = resolveFieldType(lowerBounds[i], target);
+                lowerBounds[i] = resolveFieldTypeUsingInstance(lowerBounds[i], target);
             }
             return new WildcardTypeImpl(upperBounds, lowerBounds);
         } else {
             return fieldType;
         }
+    }
+
+    public static Type resolveFieldTypeRecursivelyUsingParent(Type parentType, Type fieldType) {
+        if (fieldType instanceof ParameterizedType) {
+            ParameterizedType pt = (ParameterizedType) fieldType;
+            Type[] args = pt.getActualTypeArguments();
+            Type[] resolvedArgs = new Type[args.length];
+            for (int i = 0; i < args.length; i++) {
+                resolvedArgs[i] = resolveFieldTypeRecursivelyUsingParent(parentType, args[i]);
+            }
+            return new ParameterizedTypeImpl((Class<?>) pt.getRawType(), resolvedArgs, pt.getOwnerType());
+        } else if (fieldType instanceof GenericArrayType) {
+            GenericArrayType gat = (GenericArrayType) fieldType;
+            Type compType = gat.getGenericComponentType();
+            Type resolvedCompType = resolveFieldTypeRecursivelyUsingParent(parentType, compType);
+            return new GenericArrayTypeImpl(resolvedCompType);
+        } else if (fieldType instanceof WildcardType) {
+            WildcardType wt = (WildcardType) fieldType;
+            Type[] upperBounds = wt.getUpperBounds();
+            Type[] lowerBounds = wt.getLowerBounds();
+            for (int i = 0; i < upperBounds.length; i++) {
+                upperBounds[i] = resolveFieldTypeRecursivelyUsingParent(parentType, upperBounds[i]);
+            }
+            for (int i = 0; i < lowerBounds.length; i++) {
+                lowerBounds[i] = resolveFieldTypeRecursivelyUsingParent(parentType, lowerBounds[i]);
+            }
+            return new WildcardTypeImpl(upperBounds, lowerBounds);
+        } else if (fieldType instanceof TypeVariable) {
+            return resolveFieldTypeUsingParent(parentType, fieldType);
+        } else {
+            return fieldType;
+        }
+    }
+
+    /**
+     * Resolves a field’s declared generic type by substituting type variables
+     * using the actual type arguments from the parent type.
+     *
+     * @param suggestedType the full parent type (e.g., ThreeType&lt;Point, String, Point&gt;)
+     * @param fieldType the declared generic type of the field (e.g., T)
+     * @return the resolved type (e.g., Point) if substitution is possible;
+     *         otherwise, returns fieldType.
+     */
+    public static Type resolveFieldTypeUsingParent(Type suggestedType, Type fieldType) {
+        if (fieldType instanceof TypeVariable && suggestedType instanceof ParameterizedType) {
+            ParameterizedType parentType = (ParameterizedType) suggestedType;
+            TypeVariable<?> typeVar = (TypeVariable<?>) fieldType;
+            // Get the type parameters declared on the raw parent class.
+            TypeVariable<?>[] typeParams = ((Class<?>) parentType.getRawType()).getTypeParameters();
+            for (int i = 0; i < typeParams.length; i++) {
+                if (typeParams[i].getName().equals(typeVar.getName())) {
+                    return parentType.getActualTypeArguments()[i];
+                }
+            }
+        }
+        return fieldType;
     }
 
     /**
@@ -286,30 +342,6 @@ public class TypeUtilities {
             }
         }
         return fieldGenericType;
-    }
-
-    /**
-     * Resolves a field’s declared generic type by substituting type variables
-     * using the actual type arguments from the parent type.
-     *
-     * @param suggestedType the full parent type (e.g., ThreeType&lt;Point, String, Point&gt;)
-     * @param fieldType the declared generic type of the field (e.g., T)
-     * @return the resolved type (e.g., Point) if substitution is possible;
-     *         otherwise, returns fieldType.
-     */
-    public static Type resolveFieldType(Type suggestedType, Type fieldType) {
-        if (fieldType instanceof TypeVariable && suggestedType instanceof ParameterizedType) {
-            ParameterizedType parentType = (ParameterizedType) suggestedType;
-            TypeVariable<?> typeVar = (TypeVariable<?>) fieldType;
-            // Get the type parameters declared on the raw parent class.
-            TypeVariable<?>[] typeParams = ((Class<?>) parentType.getRawType()).getTypeParameters();
-            for (int i = 0; i < typeParams.length; i++) {
-                if (typeParams[i].getName().equals(typeVar.getName())) {
-                    return parentType.getActualTypeArguments()[i];
-                }
-            }
-        }
-        return fieldType;
     }
 
     // --- Internal implementations of Type interfaces ---

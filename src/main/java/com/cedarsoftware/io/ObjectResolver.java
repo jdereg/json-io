@@ -3,9 +3,8 @@ package com.cedarsoftware.io;
 import java.lang.reflect.Array;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
 import java.util.ArrayDeque;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.EnumSet;
@@ -142,7 +141,7 @@ public class ObjectResolver extends Resolver
                 jObj.setType(explicitType);
             } else {
                 // Resolve the field type in the context of the target object.
-                Type resolvedFieldType = TypeUtilities.resolveFieldType(fieldType, target);
+                Type resolvedFieldType = TypeUtilities.resolveFieldTypeUsingInstance(fieldType, target);
                 jObj.setType(resolvedFieldType);
             }
         }
@@ -570,9 +569,6 @@ public class ObjectResolver extends Resolver
             
             if (t instanceof ParameterizedType) {
                 Class<?> clazz = TypeUtilities.getRawClass(t);
-                if (clazz.isArray()) {
-                    System.out.println(clazz.getName());
-                }
                 ParameterizedType pType = (ParameterizedType) t;
                 Type[] typeArgs = pType.getActualTypeArguments();
 
@@ -580,7 +576,9 @@ public class ObjectResolver extends Resolver
                     continue;
                 }
 
-                stampTypeOnJsonObject(instance, t);
+                // Assuming 'type' is the parent's type and 't' is the field type that needs resolution:
+                Type resolvedType = TypeUtilities.resolveFieldTypeRecursivelyUsingParent(type, t);
+                stampTypeOnJsonObject(instance, resolvedType);
 
                 if (Map.class.isAssignableFrom(clazz)) {
                     JsonObject jsonObj = (JsonObject) instance; // Maps are brought in as JsonObjects
@@ -590,18 +588,28 @@ public class ObjectResolver extends Resolver
                     getTemplateTraverseWorkItem(stack, keys, typeArgs[0]);
                     getTemplateTraverseWorkItem(stack, items, typeArgs[1]);
                 } else if (Collection.class.isAssignableFrom(clazz)) {
-                    if (instance instanceof Object[]) {
-                        Object[] array = (Object[]) instance;
-                        for (int i = 0; i < array.length; i++) {
-                            Object vals = array[i];
+                    if (instance.getClass().isArray()) {
+                        int len = Array.getLength(instance);
+                        for (int i = 0; i < len; i++) {
+                            Object vals = Array.get(instance, i);
+                            if (vals == null) {
+                                continue;
+                            }
 
-                            if (vals instanceof Object[]) {
+                            // Check if 'vals' is an array of any type
+                            if (vals.getClass().isArray()) {
+                                // Convert the inner array to a List in a type-agnostic way
+                                int innerLen = Array.getLength(vals);
+                                List<Object> items = new ArrayList<>(innerLen);
+                                for (int j = 0; j < innerLen; j++) {
+                                    items.add(Array.get(vals, j));
+                                }
+
                                 JsonObject coll = new JsonObject();
                                 coll.setType(clazz);
                                 coll.setItems(vals);
-                                List items = Arrays.asList((Object[]) vals);
                                 stack.addFirst(new Object[]{t, items});
-                                array[i] = coll;
+                                Array.set(instance, i, coll);
                             } else {
                                 stack.addFirst(new Object[]{t, vals});
                             }
@@ -628,19 +636,21 @@ public class ObjectResolver extends Resolver
 
                         for (Map.Entry<Object, Object> entry : jObj.entrySet()) {
                             final String fieldName = (String) entry.getKey();
-                            if (!fieldName.startsWith("this$")) {
-                                Injector injector = classFields.get(fieldName);
-                                if (injector != null) {
-                                    Type genericType = injector.getGenericType();
-                                    if (genericType instanceof TypeVariable) {
-                                        // Resolve the type variable using the parent type 't'.
-                                        Type resolved = TypeUtilities.resolveFieldType(t, genericType);
-                                        stack.addFirst(new Object[]{ resolved, entry.getValue() });
-                                    } else if (TypeUtilities.containsUnresolvedType(genericType)) {
-                                        // Fallback: use the first type argument.
-                                        stack.addFirst(new Object[]{ typeArgs[0], entry.getValue() });
-                                    }
+                            if (fieldName.startsWith("this$")) {
+                                continue;
+                            }
+                            Injector injector = classFields.get(fieldName);
+                            if (injector != null) {
+                                Type genericType = injector.getGenericType();
+                                // Resolve the field's type using the parent type 't'
+                                Type resolved = TypeUtilities.resolveFieldTypeUsingParent(t, genericType);
+
+                                // If resolution didn't fully resolve the type, use a fallback
+                                if (TypeUtilities.containsUnresolvedType(resolved)) {
+                                    resolved = typeArgs[0];  // fallback: use the first type argument
                                 }
+
+                                stack.addFirst(new Object[]{ resolved, entry.getValue() });
                             }
                         }
                     }
@@ -672,7 +682,7 @@ public class ObjectResolver extends Resolver
         if (o instanceof JsonObject && t != null) {
             JsonObject jObj = (JsonObject) o;
             if (jObj.getType() == null) {
-                jObj.setType(t);
+                jObj.type = t;  // By-pass setter because it could throw an unresolved type exception and we don't have the full type.
             }
         }
     }

@@ -205,7 +205,9 @@ class JsonParser {
         JsonObject jObj = new JsonObject();
 
         // Set the refined type on the JsonObject.
-        jObj.setType(suggestedType);
+        Type resolvedSuggestedType = TypeUtilities.resolveFieldTypeRecursivelyUsingParent(suggestedType, suggestedType);
+        jObj.setType(resolvedSuggestedType);
+        
         final FastReader in = input;
 
         // Start reading the object: skip whitespace and consume '{'
@@ -228,14 +230,21 @@ class JsonParser {
             if (substitutes.containsKey(field)) {
                 field = substitutes.get(field);
             }
-            // For each field, look up the injector. The injector itself carries a Type if available.
+
+            // For each field, look up the injector.
             Injector injector = injectors.get(field);
-            Object value = readValue(injector == null ? null : injector.getGenericType());
+            Type fieldGenericType = injector == null ? null : injector.getGenericType();
+
+            // If a field generic type is provided, resolve it using the parent's (i.e. jObj's) resolved type.
+            if (fieldGenericType != null) {
+                // Use the parent's type (which has been resolved) as context to resolve the field type.
+                fieldGenericType = TypeUtilities.resolveFieldTypeRecursivelyUsingParent(suggestedType, fieldGenericType);
+            }
+            Object value = readValue(fieldGenericType);
 
             // Process key-value pairing.
             switch (field) {
                 case TYPE:
-                    // loadType returns a Class<?> from the provided value.
                     Class<?> type = loadType(value);
                     jObj.setType(type);
                     break;
