@@ -205,7 +205,7 @@ class JsonParser {
         JsonObject jObj = new JsonObject();
 
         // Set the refined type on the JsonObject.
-        Type resolvedSuggestedType = TypeUtilities.resolveFieldTypeRecursivelyUsingParent(suggestedType, suggestedType);
+        Type resolvedSuggestedType = TypeUtilities.resolveTypeRecursivelyUsingParent(suggestedType, suggestedType);
         jObj.setType(resolvedSuggestedType);
         
         final FastReader in = input;
@@ -238,7 +238,7 @@ class JsonParser {
             // If a field generic type is provided, resolve it using the parent's (i.e. jObj's) resolved type.
             if (fieldGenericType != null) {
                 // Use the parent's type (which has been resolved) as context to resolve the field type.
-                fieldGenericType = TypeUtilities.resolveFieldTypeRecursivelyUsingParent(suggestedType, fieldGenericType);
+                fieldGenericType = TypeUtilities.resolveTypeRecursivelyUsingParent(suggestedType, fieldGenericType);
             }
             Object value = readValue(fieldGenericType);
 

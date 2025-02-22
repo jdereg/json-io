@@ -141,7 +141,7 @@ public class ObjectResolver extends Resolver
                 jObj.setType(explicitType);
             } else {
                 // Resolve the field type in the context of the target object.
-                Type resolvedFieldType = TypeUtilities.resolveFieldTypeUsingInstance(fieldType, target);
+                Type resolvedFieldType = TypeUtilities.resolveTypeUsingInstance(target, fieldType);
                 jObj.setType(resolvedFieldType);
             }
         }
@@ -253,8 +253,7 @@ public class ObjectResolver extends Resolver
      * stores the missing field and their values to call back the handler at the end of the resolution, cause some
      * reference may need to be resolved later.
      */
-    private void storeMissingField(Object target, String missingField, Object value)
-    {
+    private void storeMissingField(Object target, String missingField, Object value) {
         missingFields.add(new Missingfields(target, missingField, value));
     }
     
@@ -262,8 +261,7 @@ public class ObjectResolver extends Resolver
      * @param o Object to turn into a String
      * @return .toString() version of o or "null" if o is null.
      */
-    private static String safeToString(Object o)
-    {
+    private static String safeToString(Object o) {
         if (o == null) {
             return "null";
         }
@@ -577,7 +575,7 @@ public class ObjectResolver extends Resolver
                 }
 
                 // Assuming 'type' is the parent's type and 't' is the field type that needs resolution:
-                Type resolvedType = TypeUtilities.resolveFieldTypeRecursivelyUsingParent(type, t);
+                Type resolvedType = TypeUtilities.resolveTypeRecursivelyUsingParent(type, t);
                 stampTypeOnJsonObject(instance, resolvedType);
 
                 if (Map.class.isAssignableFrom(clazz)) {
