@@ -4,7 +4,7 @@ import java.lang.reflect.Type;
 
 import com.cedarsoftware.util.TypeUtilities;
 
-import static com.cedarsoftware.util.TypeUtilities.containsUnresolvedType;
+import static com.cedarsoftware.util.TypeUtilities.hasUnresolvedType;
 
 /**
  * This class is the parent class for all parsed JSON objects, arrays, or primitive values.
@@ -99,7 +99,7 @@ public abstract class JsonValue {
     }
 
     public void setType(Type type) {
-        if (containsUnresolvedType(type)) {
+        if (hasUnresolvedType(type)) {
             // Don't allow a TypeVariable of T, V or any other unresolved type to be set.
             // Forces resolution ahead of calling this method.
             throw new RuntimeException("Unresolved type: " + type);

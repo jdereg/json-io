@@ -136,7 +136,7 @@ public class ObjectResolver extends Resolver
 
             final JsonObject jObj = (JsonObject) rhs;
             Type explicitType = jObj.getType();
-            if (explicitType != null && !TypeUtilities.containsUnresolvedType(explicitType)) {
+            if (explicitType != null && !TypeUtilities.hasUnresolvedType(explicitType)) {
                 // If the field has an explicit type, use it.
                 jObj.setType(explicitType);
             } else {
@@ -641,10 +641,10 @@ public class ObjectResolver extends Resolver
                             if (injector != null) {
                                 Type genericType = injector.getGenericType();
                                 // Resolve the field's type using the parent type 't'
-                                Type resolved = TypeUtilities.resolveFieldTypeUsingParent(t, genericType);
+                                Type resolved = TypeUtilities.resolveType(t, genericType);
 
                                 // If resolution didn't fully resolve the type, use a fallback
-                                if (TypeUtilities.containsUnresolvedType(resolved)) {
+                                if (TypeUtilities.hasUnresolvedType(resolved)) {
                                     resolved = typeArgs[0];  // fallback: use the first type argument
                                 }
 
