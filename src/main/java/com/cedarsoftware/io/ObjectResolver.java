@@ -575,7 +575,7 @@ public class ObjectResolver extends Resolver
                 }
 
                 // Assuming 'type' is the parent's type and 't' is the field type that needs resolution:
-                Type resolvedType = TypeUtilities.resolveTypeRecursivelyUsingParent(type, t);
+                Type resolvedType = TypeUtilities.resolveType(type, t);
                 stampTypeOnJsonObject(instance, resolvedType);
 
                 if (Map.class.isAssignableFrom(clazz)) {
