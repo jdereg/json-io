@@ -382,7 +382,7 @@ public class ReadOptionsBuilder {
     public ReadOptionsBuilder addConverterOverride(Class<?> source, Class<?> target, Convert<?> conversionFunction) {
         source = ClassUtilities.toPrimitiveWrapperClass(source);
         target = ClassUtilities.toPrimitiveWrapperClass(target);
-        options.converterOptions.converterOverrides.put(new Converter.ConversionPair(source, target), conversionFunction);
+        options.converterOptions.converterOverrides.put(Converter.pair(source, target), conversionFunction);
         return this;
     }
 
