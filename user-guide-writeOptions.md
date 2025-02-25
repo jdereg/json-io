@@ -12,7 +12,7 @@ created from another `WriteOptions` instance by using `new WriteOptionsBuilder(w
 
 ---
 ### Constructors
-The `ClassLoader` in the `WriteOptionsBuilder` is utilized to convert `String` class names into `Class` instances. 
+The `ClassLoader` in the `WriteOptionsBuilder` is utilized to convert `String` class names into `Class` instances.
 This feature allows dynamic class loading during the serialization process, ensuring that the correct class types are
 associated with the serialized data.
 
@@ -26,14 +26,14 @@ In the descriptions below, the first set of APIs listed are the "getter" (read) 
 the `WriteOptions`. The methods listed subsequently are the "setter" APIs on the `WriteOptionsBuilder`, which are used
 to configure and activate various options.
 
-Additionally, the `WriteOptionsBuilder` "setter" APIs are designed to return the `WriteOptionsBuilder` itself, 
+Additionally, the `WriteOptionsBuilder` "setter" APIs are designed to return the `WriteOptionsBuilder` itself,
 facilitating chained method calls for streamlined configuration. This chaining allows for the concise and fluent setting
 of multiple options in a single statement.
 
 ### ClassLoader
 
 The `ClassLoader` in the `WriteOptionsBuilder` is utilized to convert `String` class names into `Class` instances. This
-functionality is essential for dynamically loading classes during the serialization process, ensuring that the 
+functionality is essential for dynamically loading classes during the serialization process, ensuring that the
 appropriate class types are used based on the class names specified in the options.
 >#### `ClassLoader` getClassLoader()
 >- [ ] Returns the ClassLoader to resolve String class names.
@@ -51,9 +51,9 @@ appropriate class types are used based on the class names specified in the optio
 
 These meta-keys enhance the efficiency of the JSON format by supporting circular references (e.g., A => B => C => A), reducing memory usage, and preserving the original object graph's structure through serialization.
 >#### `boolean` isShortMetaKeys()
->- [ ] Returns `true` if instructed to use short meta-keys (@i => @id, @r => @ref, @t => @type, @k => @keys, 
-@v => @values, @e => @items), `false` for full size. `false` is the default.
- 
+>- [ ] Returns `true` if instructed to use short meta-keys (@i => @id, @r => @ref, @t => @type, @k => @keys,
+   @v => @values, @e => @items), `false` for full size. `false` is the default.
+
 >#### `WriteOptionsBuilder` shortMetaKeys(`boolean shortMetaKeys`)
 >- [ ] Sets to boolean `true` to turn on short meta-keys, `false` for long.
 
@@ -65,16 +65,16 @@ Aliasing is a feature in `json-io` that simplifies JSON output by converting ful
 - **Adding Custom Aliases**: You can add custom aliases for your classes within the application. For instance, adding an alias from `com.mycompany.Foo` to `Foo` will also automatically generate aliases for array types such as `Foo[]`, `Foo[][]`, and `Foo[][][]`, ensuring consistency across all usages of the class in JSON.
 - **Scope of Aliases**: The aliases added affect only the instance of `WriteOptions` created from a `WriteOptionsBuilder`. To apply aliases across all instances throughout the JVM's lifecycle, refer to the [application-scoped options](/user-guide-writeOptions.md#application-scoped-options-full-lifecycle-of-jvm) section.
 - **External Alias Configuration**: Alternatively, you can manage aliases by creating an [aliases.txt](/src/main/resources/config/aliases.txt) file and placing
-it in the class path. `json-io` provides a comprehensive default list, but you can override this by providing your own
-file.
+  it in the class path. `json-io` provides a comprehensive default list, but you can override this by providing your own
+  file.
 >#### `String` getTypeNameAlias(`String typeName`)
 >- [ ] Alias Type Names, e.g. "ArrayList" instead of "java.util.ArrayList".
->#### `Map<String, String>` aliases()      
+>#### `Map<String, String>` aliases()
 >- [ ] Returns `Map<String, String>` containing all String class names to alias names.
 
 >#### `WriteOptionsBuilder` aliasTypeNames(`Map<String, String> aliasTypeNames`)
 >- [ ] Puts the `Map` containing String class names to alias names. The passed in `Map` will be `putAll()` copied overwriting any
-entries that match values in the passed in Map. New entries in the Map are added.
+   entries that match values in the passed in Map. New entries in the Map are added.
 >#### `WriteOptionsBuilder` aliasTypeName(`String typeName, String alias`)
 >- [ ] Sets the alias for a given class name.
 >#### `WriteOptionsBuilder` aliasTypeName(`Class, String alias`)
@@ -88,7 +88,7 @@ entries that match values in the passed in Map. New entries in the Map are added
 
 The `@type` field in `json-io` is used to provide hints to `JsonReader` about which classes to instantiate. Typically, `json-io` is able to automatically determine the Java type (class) of an object based on the field type of an object, the component type of an array, or if a root class is explicitly specified. However, there are scenarios where the type cannot be directly inferred.
 
-For example, consider a field in a class declared as an `Object`. If more complex, derived instances are assigned to 
+For example, consider a field in a class declared as an `Object`. If more complex, derived instances are assigned to
 this `Object` field, `json-io` needs additional information to correctly handle serialization and deserialization.
 In such cases, `json-io` includes an `@type=typename` entry in the JSON object to specify the exact class type that should be instantiated. This ensures that the JsonReader knows to instantiate and populate the specific class with the data from the input JSON.
 
@@ -110,7 +110,7 @@ This mechanism is crucial for maintaining the fidelity of the object graph when 
 
 ### Pretty Print
 
-To generate more readable JSON output with multiple lines and indentations, enable the pretty-print feature in 
+To generate more readable JSON output with multiple lines and indentations, enable the pretty-print feature in
 `json-io.` This feature formats the JSON output to be visually structured, which is particularly helpful for debugging
 or when viewing the JSON data directly. Conversely, if compactness is preferred, especially for network transmission or
 storage efficiency, you can disable pretty printing to produce a single-line, unindented JSON output.
@@ -118,10 +118,10 @@ storage efficiency, you can disable pretty printing to produce a single-line, un
 To activate pretty printing, configure your serialization settings accordingly:
 
 >#### `boolean` isPrettyPrint()
->- [ ] Returns the pretty-print setting, `true` being on, using lots of vertical white-space and indentations, `false` will output JSON in one line. The default is `false.` 
+>- [ ] Returns the pretty-print setting, `true` being on, using lots of vertical white-space and indentations, `false` will output JSON in one line. The default is `false.`
 
 >#### `WriteOptionsBuilder` prettyPrint(`boolean prettyPrint`)
->- [ ] Sets the 'prettyPrint' setting, `true` to turn on, `false` will turn off. The default setting is `false.` 
+>- [ ] Sets the 'prettyPrint' setting, `true` to turn on, `false` will turn off. The default setting is `false.`
 
 ### lruSize - LRU Size [Cache of fields and filters]
 Set the maximum number of `Class` to `Field` mappings and `Class` to accessor mappings. This will allow infrequently used `Class's`
@@ -135,7 +135,7 @@ to drop from the cache - they will be dynamically added back if not in the cache
 ### Automatically Close OutputStream (or Not)
 
 In `json-io`, you have the option to automatically close the `OutputStream` after writing JSON output or to leave it
-open for further writing. This feature is particularly useful in scenarios where multiple JSON objects need to be written 
+open for further writing. This feature is particularly useful in scenarios where multiple JSON objects need to be written
 sequentially to the same stream.
 
 #### Example Use Case: NDJSON Format
@@ -143,24 +143,24 @@ NDJSON (Newline Delimited JSON) is a format where multiple JSON objects are sepa
 
 ```java
    WriteOptions options = new WriteOptionsBuilder().closeStream(false).build();
-   OutputStream outputStream = new FileOutputStream("output.ndjson");
+OutputStream outputStream = new FileOutputStream("output.ndjson");
    try {
-        JsonIo.toJson(object1, outputStream, options);
-        JsonIo.toJson(object2, outputStream, options);  
-        // Continue writing more JSON objects
-   } finally { 
-      outputStream.close(); // Ensure the stream is closed after all operations are complete
+           JsonIo.toJson(outputStream, object1, options);
+        JsonIo.toJson(outputStream, object2, options);
+// Continue writing more JSON objects
+   } finally {
+           outputStream.close(); // Ensure the stream is closed after all operations are complete
    }
 ```
 #### Benefits
 This setup ensures that the OutputStream remains open for additional writes, making it ideal for formats like NDJSON or
-when batch processing multiple JSON outputs. Refer to the user guide's starting section for a comprehensive example and 
+when batch processing multiple JSON outputs. Refer to the user guide's starting section for a comprehensive example and
 additional guidance.
 >#### `boolean` isCloseStream()
 >- [ ] Returns `true` if set to automatically close stream after write (the default), or `false`to leave stream open after writing to it.
 
 >#### `WriteOptionsBuilder` closeStream(`boolean closeStream`)
->- [ ] Sets the 'closeStream' setting, `true` to turn on, `false` will turn off. The default setting is `true.` 
+>- [ ] Sets the 'closeStream' setting, `true` to turn on, `false` will turn off. The default setting is `true.`
 
 ### `Long` as String
 
@@ -188,7 +188,7 @@ In `json-io`, you have the option to configure how `null` values are handled dur
 #### Configuring `null` Value Exclusion
 To exclude `null` values from the JSON output, you need to activate this setting in the `WriteOptions`. This can be particularly beneficial in scenarios where minimizing the JSON size is critical or where the presence of `null` values offers no additional value:
 >#### `boolean` isSkipNullFields()
->- [ ] Returns `true` indicating fields with null values will not be written, `false` will still output the field with an associated null value. The default is `false.` 
+>- [ ] Returns `true` indicating fields with null values will not be written, `false` will still output the field with an associated null value. The default is `false.`
 
 >#### `WriteOptionsBuilder` skipNullFields(`boolean skipNullFields`)
 >- [ ] Sets the boolean where `true` indicates fields with null values will not be written to the JSON, `false` will allow the field to still be written.
@@ -198,19 +198,19 @@ To exclude `null` values from the JSON output, you need to activate this setting
 `json-io` provides flexible serialization options for Java `Map` instances, accommodating different types of keys.
 
 #### Default Handling of `Map` Keys
-- **String Keys**: If all keys in the `Map` are `Strings,` `json-io` serializes the `Map` as a standard JSON object 
-`{},` using the `Map's,` keys as the keys in the JSON object.
+- **String Keys**: If all keys in the `Map` are `Strings,` `json-io` serializes the `Map` as a standard JSON object
+  `{},` using the `Map's,` keys as the keys in the JSON object.
 - **Object Keys**: When the keys are not all strings (e.g., they are objects), `json-io` handles this by serializing the
-keys and values separately. The keys are placed in an array under an `@keys` tag, and the corresponding values are
-listed in an `@values` array. This ensures that the structure and associations within the `Map` are preserved.
+  keys and values separately. The keys are placed in an array under an `@keys` tag, and the corresponding values are
+  listed in an `@values` array. This ensures that the structure and associations within the `Map` are preserved.
 
 #### Configuration Option
-If you prefer a consistent format for all `Map` instances, regardless of the key types, you can enable a setting to 
+If you prefer a consistent format for all `Map` instances, regardless of the key types, you can enable a setting to
 always serialize `Maps` using the `@keys:[], @values:[]` format. This option eliminates the special treatment for
 `Maps` with string-only keys:
 
 >#### `boolean` isForceMapOutputAsTwoArrays()
->- [ ] Returns `true` if set to force Java Maps to be written out as two parallel arrays, once for keys, one array for values. The default is `false.` 
+>- [ ] Returns `true` if set to force Java Maps to be written out as two parallel arrays, once for keys, one array for values. The default is `false.`
 
 >#### `WriteOptionsBuilder` forceMapOutputAsTwoArrays(`boolean forceMapOutputAsTwoArrays`)
 >- [ ] Sets the boolean 'forceMapOutputAsTwoArrays' setting. If Map's have String keys they are written as normal JSON objects. With this setting enabled, Maps are written as two parallel arrays.
@@ -222,11 +222,11 @@ Handling special floating point values such as NaN (Not a Number) and Infinity (
 #### Considerations for Enabling this Feature:
 - **Compatibility**: While enabling the serialization of NaN and Infinity can be useful for applications that understand and can process these values, be cautious as other systems and APIs might not support them, leading to potential interoperability issues.
 > #### `boolean` isAllowNanAndInfinity
->- [ ] Returns `true` if set to allow serialization of `NaN` and `Infinity` for `doubles` and `floats.` 
+>- [ ] Returns `true` if set to allow serialization of `NaN` and `Infinity` for `doubles` and `floats.`
 
 >#### `WriteOptionsBuilder` allowNanAndInfinity(`boolean allow`)
 >- [ ] true will allow `doubles` and `floats` to be output as `NaN` and `INFINITY,` `false` and these values will come across
-   as `null.` 
+   as `null.`
 
 ### Enum Options in `json-io`
 
@@ -234,9 +234,9 @@ Enums in Java are commonly used as a discrete list of values, but there are inst
 
 #### Handling Enum Fields
 The `WriteOptions` of `json-io` provide a flexible set of configurations that allow developers to customize
-how enums and `EnumSet` objects are serialized into JSON. These options determine whether enums are written 
+how enums and `EnumSet` objects are serialized into JSON. These options determine whether enums are written
 as simple strings, detailed objects with `public` and `private` fields, or represented using specific metadata
-like `@enum` or `@type.` By adjusting these settings, users can balance between backward compatibility and 
+like `@enum` or `@type.` By adjusting these settings, users can balance between backward compatibility and
 newer, streamlined serialization formats. Below is a detailed breakdown of the available options and their
 effects.
 
@@ -255,22 +255,22 @@ Here's how you configure these options in `json-io`:
 >#### `WriteOptionsBuilder` writeEnumAsJsonObject(`boolean writePublicFieldsOnly`)
 >- [ ] Sets the option to write all the member fields of an enum, using JSON { } format for the enum, to allow for multiple fields. Setting this option to `true` or `false` (include/exclude private fields), turns off the writeEnumsAsString() option. This option is off by default - enums are written as `String` by default.
 >#### `WriteOptionsBuilder` writeEnumSetOldWay(`boolean writeEnumSetOldWay`)
->- [ ] Sets the option to write `EnumSet` with `@enum=elementTypeClassName` or `@type=elementTypeClassName`. The default is true (@enum) for backward compatibility. This will change in a future release. 
+>- [ ] Sets the option to write `EnumSet` with `@enum=elementTypeClassName` or `@type=elementTypeClassName`. The default is true (@enum) for backward compatibility. This will change in a future release.
 
 ### Customizing JSON Output with `JsonClassWriter`
 
-If you need tailored JSON output for specific Java classes, `json-io` allows you to author and associate a custom 
+If you need tailored JSON output for specific Java classes, `json-io` allows you to author and associate a custom
 writer (`JsonClassWriter`) to any class. This customization can significantly enhance how your data is serialized,
 offering precise control over the output format.
 
 #### How It Works:
 - **Create a `JsonClassWriter`**: Implement a `JsonClassWriter` for the class whose output you wish to customize. This
-writer will define how the class is serialized into JSON.
-- **Select Fields and Formatting**: Within your custom writer, you have the freedom to select which fields to include 
-and how they should be formatted. This is particularly useful for classes where only certain fields need to be exposed, 
-or where standard serialization does not meet your needs.
-- **Associate the Writer**: Once you've created your `JsonClassWriter`, associate it with the class it should 
-serialize. `json-io` will then use your custom writer each time it serializes an instance of that class.
+  writer will define how the class is serialized into JSON.
+- **Select Fields and Formatting**: Within your custom writer, you have the freedom to select which fields to include
+  and how they should be formatted. This is particularly useful for classes where only certain fields need to be exposed,
+  or where standard serialization does not meet your needs.
+- **Associate the Writer**: Once you've created your `JsonClassWriter`, associate it with the class it should
+  serialize. `json-io` will then use your custom writer each time it serializes an instance of that class.
 
 #### Example Implementation:
 Here is a simple example of how you might set up a `JsonClassWriter`:
@@ -289,7 +289,7 @@ public class MyCustomWriter implements JsonClassWriter {
 // Associate the custom writer with the class
 new WriteOptionsBuilder().addWriter(MyCustomClass.class, new MyCustomWriter());
 ```
-This example shows a custom writer for MyCustomClass that selectively serializes only a specific field. 
+This example shows a custom writer for MyCustomClass that selectively serializes only a specific field.
 This approach can be adapted to any class to meet your specific serialization needs.
 
 >#### `JsonWriter.JsonClassWriter` getCustomWrittenClass( `Class` )
@@ -304,22 +304,22 @@ This approach can be adapted to any class to meet your specific serialization ne
 
 ### "Not" Customized Class Writers
 
-In `json-io,` customized writers are typically associated with a specific class and its derivatives. However, there are 
-situations where the inheritance model might inadvertently cause a class to be handled by a custom writer when this is 
-not desired. To address this, you can specify classes that should not use customized writers, effectively overriding 
+In `json-io,` customized writers are typically associated with a specific class and its derivatives. However, there are
+situations where the inheritance model might inadvertently cause a class to be handled by a custom writer when this is
+not desired. To address this, you can specify classes that should not use customized writers, effectively overriding
 the inheritance behavior.
 
 #### How It Works:
 - **Priority of "Not" Customized List**: Classes added to the "Not" customized list take precedence over those on the
-customized list. This ensures that even if a class or its parent is associated with a custom writer, you can exclude it 
-explicitly, allowing the default `json-io` JSON writer to handle its serialization.
-- **Using the Default Writer**: By placing a class on the "Not" customized list, `json-io` reverts to using the 
-standard serialization mechanism for that class, bypassing any custom writer logic that might otherwise apply due to 
-class inheritance.
+  customized list. This ensures that even if a class or its parent is associated with a custom writer, you can exclude it
+  explicitly, allowing the default `json-io` JSON writer to handle its serialization.
+- **Using the Default Writer**: By placing a class on the "Not" customized list, `json-io` reverts to using the
+  standard serialization mechanism for that class, bypassing any custom writer logic that might otherwise apply due to
+  class inheritance.
 
 #### Benefits:
-This feature is particularly useful in complex inheritance structures where you need fine-grained control over 
-serialization behavior, ensuring that certain classes are serialized in a standard, predictable manner regardless of 
+This feature is particularly useful in complex inheritance structures where you need fine-grained control over
+serialization behavior, ensuring that certain classes are serialized in a standard, predictable manner regardless of
 the broader customization strategy.
 
 >#### `boolean` isNotCustomWrittenClass( `Class` )
@@ -336,25 +336,25 @@ In `json-io,` you have the flexibility to define custom options — key-value pa
 
 #### How It Works:
 - **Defining Custom Options**: Custom options are essentially string keys associated with values of your choice. Once
-defined, these options can be accessed by custom writers during the serialization process, enabling them to adjust their
-behavior based on the options provided.
-- **Usage in Custom Writers**: When a custom writer is invoked, it can retrieve and utilize these custom options to 
-make decisions about how to serialize particular aspects of an object. This capability is especially useful for 
-implementing advanced serialization logic that depends on runtime conditions or specific application requirements.
+  defined, these options can be accessed by custom writers during the serialization process, enabling them to adjust their
+  behavior based on the options provided.
+- **Usage in Custom Writers**: When a custom writer is invoked, it can retrieve and utilize these custom options to
+  make decisions about how to serialize particular aspects of an object. This capability is especially useful for
+  implementing advanced serialization logic that depends on runtime conditions or specific application requirements.
 >#### `WriteOptionsBuilder` addCustomOption(`String key, Object value`)
->- [ ] Add the custom key/value pair to your WriteOptions. These will be a available to any custom writers you add.  If you add a key with a value of null associated to it, that will remove the custom option. 
+>- [ ] Add the custom key/value pair to your WriteOptions. These will be a available to any custom writers you add.  If you add a key with a value of null associated to it, that will remove the custom option.
 
 ### Included Fields
 
-The "Included Fields" feature in `json-io` provides a mechanism to selectively control the serialization of fields 
-within a class. This approach acts as a whitelist, allowing you to specify exactly which fields should be included in 
+The "Included Fields" feature in `json-io` provides a mechanism to selectively control the serialization of fields
+within a class. This approach acts as a whitelist, allowing you to specify exactly which fields should be included in
 the JSON output for a particular class.
 
 #### How It Works:
-- **Field Selection**: By specifying fields in the "Included Fields" setting, you dictate that only these fields will 
-be serialized when an instance of the class is processed. This is particularly useful for classes with numerous fields where only a subset is relevant for the JSON output.
-- **Whitelist Approach**: This feature adopts a whitelist approach, ensuring that serialization is limited to only 
-those fields explicitly listed.
+- **Field Selection**: By specifying fields in the "Included Fields" setting, you dictate that only these fields will
+  be serialized when an instance of the class is processed. This is particularly useful for classes with numerous fields where only a subset is relevant for the JSON output.
+- **Whitelist Approach**: This feature adopts a whitelist approach, ensuring that serialization is limited to only
+  those fields explicitly listed.
 
 #### Handling Conflicts:
 - **Precedence Rules**: If a field appears in both the "Includes" and "Excludes" lists, the "Excludes" list will take precedence. This ensures that the exclusion rules override the inclusion rules in cases of conflict.
@@ -391,15 +391,15 @@ Using the "Included Fields" feature effectively allows developers to fine-tune t
 ### Excluded Fields
 
 The "Excluded Fields" feature in `json-io` offers a way to selectively prevent certain fields from being serialized
-in the JSON output. This feature works as a blacklist, where you can specify which fields should be excluded for a 
+in the JSON output. This feature works as a blacklist, where you can specify which fields should be excluded for a
 particular class.
 
 #### How It Works:
-- **Field Exclusion**: By specifying fields in the "Excluded Fields" setting, you ensure that these fields are not 
-included when an instance of the class is serialized. This is effective when a class has many fields but only a few 
-need to be omitted from the JSON output.
-- **Blacklist Approach**: This approach provides a straightforward way to exclude specific fields, which can be 
-useful for privacy considerations, omitting unnecessary `ClassLoader` fields, or other sensitive data.
+- **Field Exclusion**: By specifying fields in the "Excluded Fields" setting, you ensure that these fields are not
+  included when an instance of the class is serialized. This is effective when a class has many fields but only a few
+  need to be omitted from the JSON output.
+- **Blacklist Approach**: This approach provides a straightforward way to exclude specific fields, which can be
+  useful for privacy considerations, omitting unnecessary `ClassLoader` fields, or other sensitive data.
 
 #### Handling Conflicts:
 - **Precedence Rules**: In cases where fields are specified in both the "Includes" and "Excludes" lists, the fields in the "Excludes" list will take precedence. This ensures that exclusion rules override inclusion rules where there is a conflict.
@@ -413,7 +413,7 @@ WriteOptions options = new WriteOptionsBuilder()
         .build();
 String json = JsonIo.toJson(instanceOfMyClass, options);
 ```
-In this setup, field3 and field4 of MyClass will not appear in the JSON output, regardless of how many other fields 
+In this setup, field3 and field4 of MyClass will not appear in the JSON output, regardless of how many other fields
 the class may have.
 
 #### Benefits:
@@ -438,30 +438,30 @@ Utilizing the "Excluded Fields" feature effectively allows developers to manage 
 ### Non-Standard Accessors
 
 The "Non-Standard Accessors" feature in `json-io` provides the flexibility to define custom accessor methods for
-properties in Java objects that do not adhere to the conventional getter/setter naming patterns. This is particularly 
+properties in Java objects that do not adhere to the conventional getter/setter naming patterns. This is particularly
 useful for interacting with properties where the accessor methods have unique names.
 
 #### Use Case:
-- **Custom Accessor Names**: Some classes, such as `java.time.Instant`, use non-standard methods like `getEpochSecond()` 
-to access properties, which do not follow the traditional `getPropertyName()` format. This can pose challenges when 
-these methods need to be used for serializing properties into JSON, especially in environments like Java 17+ where 
-reflective access to private fields is restricted.
+- **Custom Accessor Names**: Some classes, such as `java.time.Instant`, use non-standard methods like `getEpochSecond()`
+  to access properties, which do not follow the traditional `getPropertyName()` format. This can pose challenges when
+  these methods need to be used for serializing properties into JSON, especially in environments like Java 17+ where
+  reflective access to private fields is restricted.
 
 #### Default Accessors:
-- **JDK Classes**: For many JDK classes, json-io has already configured these non-standard accessors by default. For 
-example, accessors for `java.time.Instant` and similar classes are pre-defined, facilitating easier integration and usage 
-without additional configuration.
+- **JDK Classes**: For many JDK classes, json-io has already configured these non-standard accessors by default. For
+  example, accessors for `java.time.Instant` and similar classes are pre-defined, facilitating easier integration and usage
+  without additional configuration.
 
 #### Benefits:
 - **Compatibility with Java 17+**: Ensures that json-io can continue to function seamlessly with Java versions that enforce stricter encapsulation by using public methods to access property values.
 - **Flexibility in Serialization**: Allows developers to precisely control how properties are accessed and serialized, accommodating various coding styles and requirements.
-By enabling custom accessors for non-standard method names, developers can enhance the adaptability and robustness of their serialization logic in json-io, ensuring compatibility across different Java versions and compliance with modern encapsulation practices.
+  By enabling custom accessors for non-standard method names, developers can enhance the adaptability and robustness of their serialization logic in json-io, ensuring compatibility across different Java versions and compliance with modern encapsulation practices.
 
 #### Configuring Non-Standard Accessors:
 This option allows `json-io` to recognize and utilize these non-standard method names as accessors during serialization, ensuring that property values can be correctly retrieved and included in the JSON output.
 >#### `WriteOptionsBuilder` addNonStandardGetter(`Class, String fieldName, String methodName`)
->- [ ] Add another field and non-standard method to the Class's list of non-standard accessors. 
-For the example above, use `addNonStandardMapping(Instant.class, "second", "getEpochSecond").`
+>- [ ] Add another field and non-standard method to the Class's list of non-standard accessors.
+   For the example above, use `addNonStandardMapping(Instant.class, "second", "getEpochSecond").`
 
 ### FieldFilters
 
@@ -487,7 +487,7 @@ This allows for highly granular control over which fields are serialized, based 
 - **StaticFieldFilter**: Another example that excludes all static fields from being serialized.
 
 #### Implementing a Custom FieldFilter:
-Here’s how you might define and add a custom `FieldFilter`:
+Here's how you might define and add a custom `FieldFilter`:
 
 ```java
 public class MyCustomFieldFilter implements FieldFilter {
@@ -508,11 +508,11 @@ easy way to identify the filter if you need to remove it.
 #### Benefits:
 - **Enhanced Flexibility**: Allows developers to tailor the serialization process to specific requirements, excluding fields based on a wide range of attributes.
 - **Increased Security**: Enables the exclusion of sensitive fields, such as those marked as private or transient, from the serialization process.
-By utilizing FieldFilters, developers gain a powerful tool to customize the serialization behavior of json-io, ensuring that only relevant and appropriate data is included in the JSON output.
+  By utilizing FieldFilters, developers gain a powerful tool to customize the serialization behavior of json-io, ensuring that only relevant and appropriate data is included in the JSON output.
 >#### `WriteOptionsBuilder` addFieldFilter(`String filterName, FieldFilter filter`)
->- [ ] Add a named `FielFilter` to the field filter chain. 
+>- [ ] Add a named `FielFilter` to the field filter chain.
 >#### `WriteOptionsBuilder` removeFieldFilter(`String filterName`)
->- [ ] Remove a named `FieldFilter` from the field filter chain. 
+>- [ ] Remove a named `FieldFilter` from the field filter chain.
 
 ### Method Filters
 
@@ -523,14 +523,14 @@ By utilizing FieldFilters, developers gain a powerful tool to customize the seri
 - **Exclusion Logic**: If a filter returns `true` for a method, that method is excluded from being used to access data. Instead, `json-io` will revert to direct field access techniques. This is particularly beneficial if a method, such as a getter, triggers undesirable side effects.
 
 #### Criteria for Filtering:
-Filters can be applied based on any aspect of the method’s signature or behavior, including:
+Filters can be applied based on any aspect of the method's signature or behavior, including:
 - Method name
 - Owning class
 - Visibility (public, private, protected)
 - Whether the method is static or non-static
 
 #### Example Usage:
-Here’s how you might implement and add a `MethodFilter` to exclude all static methods from being used in serialization:
+Here's how you might implement and add a `MethodFilter` to exclude all static methods from being used in serialization:
 
 ```java
 public class StaticMethodFilter implements MethodFilter {
@@ -555,20 +555,20 @@ By using Method Filters, developers can fine-tune how json-io accesses data duri
 
 >#### `WriteOptionsBuilder` addMethodFilter(`String filterName, MethodFilter filter`)
 >- [ ] Add a named `MethodFilter` filter to the method filter chain. Write a subclass of `MethodFilter` and add it to
-the `WriteOptionsBuilder` using this method, or use the `WriteOptionsBuilder.addPermanent*()` APIs to install it as 
-default in all created `WriteOptions.`
+   the `WriteOptionsBuilder` using this method, or use the `WriteOptionsBuilder.addPermanent*()` APIs to install it as
+   default in all created `WriteOptions.`
 >#### `WriteOptionsBuilder` addNamedMethodFilter(`String filterName, Class name, String methodName`)
 >- [ ] Add a `NamedMethodFilter` filter to the method filter chain.  You supply the Class name and the String name
-of the accessor (getter), and it will create a NamedMethodFilter for you, and add it to the method filter list. Any accessor 
-method (getter) matching this, will not be used and instead direct field level access will be used to obtain the value
-from the field (reflection, etc.) when writing JSON.
+   of the accessor (getter), and it will create a NamedMethodFilter for you, and add it to the method filter list. Any accessor
+   method (getter) matching this, will not be used and instead direct field level access will be used to obtain the value
+   from the field (reflection, etc.) when writing JSON.
 >#### `WriteOptionsBuilder` removeMethodFilter(`String filterName, MethodFilter filter`)
 >- [ ] Remove a named `MethodFilter` to the field filter chain.
 
 ### Method Accessor
 
-In `json-io`, "Method Accessors" are used to define how properties are accessed during serialization, typically 
-through getter methods. By default, `json-io` recognizes standard "get" and "is" prefixes for method accessors. 
+In `json-io`, "Method Accessors" are used to define how properties are accessed during serialization, typically
+through getter methods. By default, `json-io` recognizes standard "get" and "is" prefixes for method accessors.
 However, you can extend this functionality by defining custom accessor patterns and adding them to the method accessor chain.
 
 #### Customizing Accessors:
@@ -580,33 +580,33 @@ Suppose you have methods in your classes that use a prefix other than "get" or "
 
 ```java
 public class MyCustomAccessor implements MethodAccessor {
-    @Override
-    public boolean isAccessor(Method method) {
-        // Check if the method name starts with 'fetch' and it returns a value
-        return method.getName().startsWith("fetch") && method.getParameterTypes().length == 0;
-    }
+   @Override
+   public boolean isAccessor(Method method) {
+      // Check if the method name starts with 'fetch' and it returns a value
+      return method.getName().startsWith("fetch") && method.getParameterTypes().length == 0;
+   }
 
-    @Override
-    public String getFieldNameFromAccessor(Method method) {
-        // Convert method name from 'fetchFieldName' to 'fieldName'
-        return method.getName().substring(5, 6).toLowerCase() + method.getName().substring(6);
-    }
+   @Override
+   public String getFieldNameFromAccessor(Method method) {
+      // Convert method name from 'fetchFieldName' to 'fieldName'
+      return method.getName().substring(5, 6).toLowerCase() + method.getName().substring(6);
+   }
 }
 
 // Add the custom accessor to json-io
 new WriteOptionsBuilder().addMethodAccessor(new MyCustomAccessor());
 ```
-This example shows how to set up a custom accessor for methods that start with "fetch," adapting json-io to use these 
+This example shows how to set up a custom accessor for methods that start with "fetch," adapting json-io to use these
 methods as getters during serialization.
 
 #### Benefits:
 
 - **Enhanced Compatibility**: Allows json-io to handle a wider range of getter conventions, making it more adaptable
-to different coding styles.
-- **Customization**: Enables precise control over which methods are used to access properties, ensuring that the 
-serialized JSON matches specific requirements.
+  to different coding styles.
+- **Customization**: Enables precise control over which methods are used to access properties, ensuring that the
+  serialized JSON matches specific requirements.
 
- 
+
 By leveraging custom method accessors, developers can significantly increase the adaptability and accuracy of JSON serialization in json-io, ensuring that it aligns perfectly with the application's data access patterns.
 
 >#### `WriteOptionsBuilder` addAccessorFactory(`AccessorFactory accessorFactory`)
@@ -615,23 +615,23 @@ By leveraging custom method accessors, developers can significantly increase the
 ### Date Formatting for `java.util.Date` and `java.sql.Date`
 
 In `json-io`, you can customize the serialization format for `java.util.Date` and `java.sql.Date` fields. By default,
-these date types are serialized into JSON as numeric timestamps (long format), which are compact and efficient for 
+these date types are serialized into JSON as numeric timestamps (long format), which are compact and efficient for
 processing. However, this may not always be suitable depending on the application's requirements.
 
 #### Configuring Date Formats:
 - **Default Numeric Format**: The default serialization uses the numeric representation of the date (milliseconds
-since the Unix epoch), which is fast to serialize and deserialize but might not be human-readable.
+  since the Unix epoch), which is fast to serialize and deserialize but might not be human-readable.
 - **Custom String Formats**: If a more readable format is required, you can specify a custom date format using any of
-the standard JDK date formatting options. For example, you can use formats like `"yyyy-MM-dd'T'HH:mm:ss"` to get 
-an ISO 8601 compliant representation.
+  the standard JDK date formatting options. For example, you can use formats like `"yyyy-MM-dd'T'HH:mm:ss"` to get
+  an ISO 8601 compliant representation.
 
 #### Example Usage:
 To set a custom date format in `json-io`, you can use the following approach:
 
 ```java
 WriteOptions options = new WriteOptionsBuilder()
-    .dateFormat("yyyy-MM-dd'T'HH:mm:ss")
-    .build();
+        .dateFormat("yyyy-MM-dd'T'HH:mm:ss")
+        .build();
 String json = JsonIo.toJson(yourDateObject, options);
 ```
 This configuration will serialize date fields in the specified ISO date time format, making the JSON output more human-readable.
@@ -641,7 +641,7 @@ This configuration will serialize date fields in the specified ISO date time for
 #### Benefits:
 - **Flexibility**: Allows the serialization format to be tailored to the needs of different applications, improving interoperability and readability.
 - **Standard Compliance**: By using ISO formats or other standard date formats, the serialized JSON can be more easily consumed by various systems and services.
-Customizing date formats ensures that json-io outputs date information in a way that best fits the application's data handling and presentation requirements.
+  Customizing date formats ensures that json-io outputs date information in a way that best fits the application's data handling and presentation requirements.
 
 >#### `boolean` isLongDateFormat()
 >- [ ] Returns `true` if `java.util.Date` and `java.sql.Date` are being written in `long` (numeric) format.
@@ -653,9 +653,9 @@ Customizing date formats ensures that json-io outputs date information in a way 
 
 ### Non-Referenceable Classes (Opposite of Instance Folding)
 
-In `json-io`, small immutable classes are often treated as primitives, meaning there is no need to use `@id`/`@ref` 
+In `json-io`, small immutable classes are often treated as primitives, meaning there is no need to use `@id`/`@ref`
 mechanisms typically required for object referencing. This approach is automatically applied to all primitives,
-primitive wrappers, `BigInteger`, `BigDecimal`, `Atomic*`, `java.util.Date`, `String`, `Class`, and similar immutable 
+primitive wrappers, `BigInteger`, `BigDecimal`, `Atomic*`, `java.util.Date`, `String`, `Class`, and similar immutable
 objects, which are marked as non-referenceable by default.
 
 #### Customizing Non-Referenceable Classes:
@@ -673,14 +673,14 @@ To mark additional classes as non-referenceable in `json-io`, you might configur
 new WriteOptionsBuilder().addNonReferenceable(MyImmutableClass.class);
 ```
 
-This configuration treats instances of MyImmutableClass as primitives, not using @id/@ref for them, simplifying the 
+This configuration treats instances of MyImmutableClass as primitives, not using @id/@ref for them, simplifying the
 JSON output while still maintaining a clear and accurate representation of the data.
 
 #### Benefits:
 - **Simplicity**: Treating simple, immutable objects as primitives simplifies the JSON output.
 - **Performance**: Reduces the complexity of the serialization process by avoiding unnecessary references.
 - **Customization**: Allows developers to tailor the serialization behavior to match the needs of their application,
-balancing between accuracy of data representation and simplicity of output.
+  balancing between accuracy of data representation and simplicity of output.
 
 By carefully selecting which classes are marked as non-referenceable, developers can optimize the serialization process in json-io to suit their specific requirements for data integrity and readability.
 
@@ -688,30 +688,30 @@ By carefully selecting which classes are marked as non-referenceable, developers
 >- [ ] Checks if a class is non-referenceable. Returns `true` if the passed in class is considered a non-referenceable class.
 
 >#### `WriteOptionsBuilder` addNonReferenceableClass( `Class` )
->- [ ] Adds a class to be considered "non-referenceable." 
+>- [ ] Adds a class to be considered "non-referenceable."
 
 ---
 ## Application Scoped Options (Full Lifecycle of JVM)
 
-`json-io` allows the configuration of application-scoped options, which are settings that persist for the entire 
+`json-io` allows the configuration of application-scoped options, which are settings that persist for the entire
 lifecycle of the JVM. These settings ensure that all instances of `WriteOptions` are automatically configured with
 the specified options from the startup of your application or service until its shutdown.
 
 ### Understanding Application Scoped Options:
-- **Scope**: These options are set at the application level and affect every `WriteOptions` instance created during the 
-JVM's lifecycle. This eliminates the need to repeatedly configure these settings for each instance.
+- **Scope**: These options are set at the application level and affect every `WriteOptions` instance created during the
+  JVM's lifecycle. This eliminates the need to repeatedly configure these settings for each instance.
 - **Persistence**: The settings are maintained in static memory throughout the JVM session, meaning they do not modify
-any files on disk but are retained across all operations during the session.
+  any files on disk but are retained across all operations during the session.
 - **Lifecycle**: The term "JVM Lifecycle" refers to the period from when the application starts up to when it shuts down.
-All changes to the application-scoped options during this period will affect any new instances of `WriteOptions` created.
+  All changes to the application-scoped options during this period will affect any new instances of `WriteOptions` created.
 
 ### Benefits:
-- **Consistency**: Ensures a consistent configuration across all serialization operations without manual reconfiguration 
-for each instance.
+- **Consistency**: Ensures a consistent configuration across all serialization operations without manual reconfiguration
+  for each instance.
 - **Efficiency**: Reduces the overhead of repeatedly setting options for each new `WriteOptions` instance, simplifying
-code and reducing the potential for configuration errors.
+  code and reducing the potential for configuration errors.
 - **Control**: Provides centralized control over the serialization settings, which is especially useful in large
-applications where `WriteOptions` are frequently used.
+  applications where `WriteOptions` are frequently used.
 
 Application-scoped options provide a powerful mechanism to manage serialization settings globally, enhancing uniformity
 and reducing the complexity of managing individual WriteOptions instances throughout an application's runtime.
@@ -744,8 +744,8 @@ In this example, all aliases for classes within the com.mycompany package are re
 Instead of programmatically removing aliases, you can manage aliases through a configuration file:
 
 - **Aliases File**: You can place an [aliases.txt](/src/main/resources/config/aliases.txt) file in the class path with
-your preferred aliases. json-io includes a comprehensive list of default aliases, but you can override these by
-providing your own file.
+  your preferred aliases. json-io includes a comprehensive list of default aliases, but you can override these by
+  providing your own file.
 
 ```
 # Example content of aliases.txt
@@ -753,25 +753,25 @@ java.util.ArrayList=ArrayList
 com.mycompany.MyClass=MyAlias
 ```
 
-This file-based approach allows for static configuration of aliases, which might be easier to manage depending on your 
+This file-based approach allows for static configuration of aliases, which might be easier to manage depending on your
 deployment and development processes.
 
 #### Benefits:
-- **Flexibility and Control**: Offers the ability to fine-tune which aliases are used in the serialization process, 
-providing greater control over how data is represented in JSON.
-- **Adaptability**: Facilitates the adaptation of serialization strategies without requiring code changes, especially 
-useful in environments where classes or packages are dynamically loaded or updated.
+- **Flexibility and Control**: Offers the ability to fine-tune which aliases are used in the serialization process,
+  providing greater control over how data is represented in JSON.
+- **Adaptability**: Facilitates the adaptation of serialization strategies without requiring code changes, especially
+  useful in environments where classes or packages are dynamically loaded or updated.
 
 By using the `removePermanentAliasTypeNamesMatching()` method, developers can ensure the 'write' side never gets ahead of
-the 'read' side.  
+the 'read' side.
 
 >#### WriteOptionsBuilder.removePermanentAliasTypeNamesMatching(`String classNamePattern`)
 
 ### addPermanentNotExportedField
-Call this method to add a permanent (JVM lifetime) excluded (not exported) field name of class.  All `WriteOptions` will 
+Call this method to add a permanent (JVM lifetime) excluded (not exported) field name of class.  All `WriteOptions` will
 automatically be created with the named field on the not-exported list.
 
->#### WriteOptionsBuilder.addPermanentNotExportedField(`Class<?> clazz, String fieldName`) 
+>#### WriteOptionsBuilder.addPermanentNotExportedField(`Class<?> clazz, String fieldName`)
 
 ### addPermanentNonRef
 
@@ -784,8 +784,8 @@ useful for small, immutable classes.
 
 Call this method to add a permanent (JVM lifetime) custom JSON writer to `json-io.`  It will associate the
 `clazz` to the writer you pass in.  The writers are found with `isAssignableFrom().` If this is too broad, causing too
-many classes to be associated to the custom writer, you can indicate that `json-io` should not use a custom write for a 
-particular class, by calling the `addNotCustomWrittenClass()` method. 
+many classes to be associated to the custom writer, you can indicate that `json-io` should not use a custom write for a
+particular class, by calling the `addNotCustomWrittenClass()` method.
 
 >#### WriteOptionsBuilder.addPermanentWriter(`Class<?> clazz, JsonWriter.JsonClassWriter writer`)
 
@@ -809,14 +809,14 @@ In this setup, `json-io` will use `getEpochSecond` instead of the expected `getS
 an `Instant` object.
 
 #### Preconfigured Accessors:
-- **JDK Classes**: It's worth noting that many non-standard accessors for JDK classes are already configured by default 
-in `json-io,` including the one for `java.time.Instant.` This preconfiguration simplifies integration and reduces the
-need for additional setup in common use cases.
+- **JDK Classes**: It's worth noting that many non-standard accessors for JDK classes are already configured by default
+  in `json-io,` including the one for `java.time.Instant.` This preconfiguration simplifies integration and reduces the
+  need for additional setup in common use cases.
 #### Benefits:
-- **Flexibility and Compatibility**: This feature provides flexibility in handling classes with non-standard getter 
-methods and ensures compatibility with Java's encapsulation policies post-Java 16.
+- **Flexibility and Compatibility**: This feature provides flexibility in handling classes with non-standard getter
+  methods and ensures compatibility with Java's encapsulation policies post-Java 16.
 - **Streamlined Integration**: By preconfiguring getters for common classes and allowing custom configurations,
-`json-io` facilitates streamlined integration and usage, even with complex object models.
+  `json-io` facilitates streamlined integration and usage, even with complex object models.
 
 The `addPermanentNonStandardGetter()` API enhances the robustness of JSON serialization in json-io, accommodating advanced use cases and modern Java functionalities.
 
@@ -825,7 +825,7 @@ The `addPermanentNonStandardGetter()` API enhances the robustness of JSON serial
 ### addPermanentFieldFilter
 >#### WriteOptionsBuilder.addPermanentFieldFilter(`String name, FieldFilter fieldFilter`)
 
-Add a FieldFilter that is JVM lifecycle scoped. All WriteOptions instance will contain this filter. A FieldFilter is 
+Add a FieldFilter that is JVM lifecycle scoped. All WriteOptions instance will contain this filter. A FieldFilter is
 used to filter (eliminate) a particular field from being serialized.  This allows you to filter a field by a field
 characteristic, for example, you can eliminate a particular type of field that occurs on Enums. See EnumFieldFilter for
 an example.
@@ -850,9 +850,9 @@ Works like the `addPermanentMethodFilter()` with one simple difference.  Whereas
 this API you pass it the `Class` and method name to filter, and it will create a `NamedMethodFilter` for you. No need
 to create a new `MethodFilter` subclass.
 
-To call the API, pass a unique name that is unique across all MethodFilters, the Class on which the accessor (getter) 
+To call the API, pass a unique name that is unique across all MethodFilters, the Class on which the accessor (getter)
 resides, and the name of the method.
->#### WriteOptionsBuilder.addPermanentNamedMethodFilter(`String name, Class<?> clazz, String methodName`) 
+>#### WriteOptionsBuilder.addPermanentNamedMethodFilter(`String name, Class<?> clazz, String methodName`)
 
 ### addPermanentAccessorFactory
 Add an `AccessorFactory` that is JVM lifecycle scoped.  All `WriteOptions` instances will contain this `AccessorFactory.`

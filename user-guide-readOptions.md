@@ -1,12 +1,12 @@
 ## Controlling the input JSON using `ReadOptions`
-To configure read options for use with `JsonIo.toObjects(),` you need to set up a `ReadOptions` instance using the
-`ReadOptionsBuilder.` Here’s how you can create and customize a new `ReadOptions` instance:
+To configure read options for use with `JsonIo.toJava()`, you need to set up a `ReadOptions` instance using the
+`ReadOptionsBuilder`. Here's how you can create and customize a new `ReadOptions` instance:
 ```java           
 ReadOptions readOptions = new ReadOptionsBuilder()
 .feature1()
 .feature2(args)
 .build();
-JsonIo.toObjects(root, readOptions, rootClass);
+JsonIo.toJava(json, readOptions).asClass(Employee.class);
 ```
 **Detailed Steps:**
 
@@ -15,16 +15,16 @@ _Initialization:_ Start by creating a `ReadOptionsBuilder` instance.
 _Feature Toggle:_ Enable or disable features by calling the corresponding methods on the builder. Each method corresponds
 to a specific feature you might want to enable (like `.feature1()`) or configure (like `.feature2(args)`).
 
-_Finalization:_ Call the `.build()` method to finalize and create a read-only `ReadOptions` instance. Once built, 
+_Finalization:_ Call the `.build()` method to finalize and create a read-only `ReadOptions` instance. Once built,
 `ReadOptions` are immutable and can be safely reused across multiple read operations.
 
 **Additional Tips:**
 
 _Documentation:_ For more detailed information on the available features and methods, refer to the Javadoc documentation
-for `ReadOptionsBuilder.`
+for `ReadOptionsBuilder`.
 
 _Multiple Instances:_ You can create multiple `ReadOptions` instances for different scenarios. Each instance is stateless
-once constructed. 
+once constructed.
 
 _Copying Instances:_ If you need to create a new `ReadOptions` instance based on an existing one, use `new
 ReadOptionsBuilder(readOptionsToCopyFrom)` to start with the copied settings.
@@ -34,11 +34,11 @@ By following these guidelines, you can effectively manage how JSON data is proce
 
 
 ### Constructors
-Create new instances of`ReadOptions.`
+Create new instances of`ReadOptions`.
 >#### new ReadOptionsBuilder().feature1().feature2(args).build()
 >- [ ] Start with default options and add in feature1 and feature2(requires argument) and make read-only.
 >#### new ReadOptionsBuilder(`ReadOptions other`)
->- [ ] Copy all settings from the passed in 'other'`ReadOptions.`
+>- [ ] Copy all settings from the passed in 'other'`ReadOptions`.
 
 ### Class Loader
 The`ClassLoader`in the`ReadOptons`is used by `json-io` to turn `String` class names into`Class`instances.
@@ -46,16 +46,16 @@ The`ClassLoader`in the`ReadOptons`is used by `json-io` to turn `String` class na
 >- [ ] Returns the ClassLoader to resolve String class names into Class instances.
 
 >#### `ReadOptionsBuilder`classLoader(`ClassLoader loader`)
->- [ ] Sets the ClassLoader to resolve String class names when reading JSON. 
+>- [ ] Sets the ClassLoader to resolve String class names when reading JSON.
 
 ### Handling Unknown Types
 When parsing JSON, you might encounter class names that do not exist in your JVM. This feature allows you to control
 the behavior in such cases.
 
-**Default Behavior:** By default, if the parser encounters an unknown class name, it will fail, and a `JsonIoException` is 
+**Default Behavior:** By default, if the parser encounters an unknown class name, it will fail, and a `JsonIoException` is
 thrown. This ensures that all types used in your JSON must be known and available.
 
-**Handling with LinkedHashMap:** If you prefer not to have the parsing fail on unknown types, you can disable this default 
+**Handling with LinkedHashMap:** If you prefer not to have the parsing fail on unknown types, you can disable this default
 behavior. Instead, the parser will create a `LinkedHashMap` to store the content of the JSON object. This approach is
 beneficial because a `LinkedHashMap` can dynamically store any field encountered in the JSON, regardless of the class structure.
 
@@ -63,17 +63,17 @@ beneficial because a `LinkedHashMap` can dynamically store any field encountered
 the JSON data. This custom class should ideally be a type of Map to ensure that it can handle any arbitrary set of JSON
 keys and values. Using maps for unknown types provides flexibility, allowing JSON data to be parsed into a usable format even when the exact class structure is not predefined in the JVM.
 >#### `boolean` isFailOnUnknownType()
->- [ ] Returns`true` if an 'unknownTypeClass' is set,`false`if it is not set. The default setting is `true.` 
+>- [ ] Returns`true` if an 'unknownTypeClass' is set,`false`if it is not set. The default setting is `true.`
 >####  `Class` getUnknownTypeClass()
 >- [ ] Get the Class used to store content when the indicated class cannot be loaded by the JVM.  Defaults to`null.` When`null`, `LinkedHashMap` is used. It is usually best to use a `Map` derivative, as it will be able to have the various field names encountered to be 'set' into it.
 
 >#### `ReadOptionsBuilder` failOnUnknownType(`boolean fail`)
 >- [ ] Set to`true`to indicate that an exception should be thrown if an unknown class type is encountered,`false`otherwise.
    If`fail`is`false,`then the default class used will be`LinkedHashMap` for the particular JSON object encountered. You can
-   set this to your own class using the`unknownTypeClass()`feature. The default setting is `true.` 
+   set this to your own class using the`unknownTypeClass()`feature. The default setting is `true.`
 >#### `ReadOptionsBuilder` unknownTypeClass(`Class`)
 >- [ ] Set the class to use (defaults to`LinkedHashMap.class`) when a JSON object is encountered and there is no
-   corresponding Java class to instantiate to receive the values. 
+   corresponding Java class to instantiate to receive the values.
 
 ### MaxDepth - Security protection
 Set the maximum object nesting level so that no`StackOverflowExceptions`happen.  Instead, you will get a`JsonIoException`letting
@@ -82,11 +82,11 @@ you know that the maximum object nesting level has been reached.
 >- [ ] Return the max nesting depth for JSON {...}
 
 > #### `ReadOptionsBuilder` maxDepth(`int depth`)
->- [ ] Set the max depth to allow for nested JSON {...}.  Set this to prevent security risk from`StackOverflow`attack 
-vectors. 
+>- [ ] Set the max depth to allow for nested JSON {...}.  Set this to prevent security risk from`StackOverflow`attack
+   vectors.
 
 ### lruSize - LRU Size [Cache of fields and filters]
-Set the maximum number of `Class` to `Field` mappings and `Class` to filter mappings. This will allow infrequently used `Class's` 
+Set the maximum number of `Class` to `Field` mappings and `Class` to filter mappings. This will allow infrequently used `Class's`
 to drop from the cache - they will be dynamically added back if not in the cache.  Reduces operational memory foot print.
 > #### `int` lruSize()
 >- [ ] Return the LRU size. Default is 1000.
@@ -111,7 +111,7 @@ These settings provide flexibility in how large or special floating point number
 >- [ ] Returns`true`if set to allow serialization of`NaN`and`Infinity`for`doubles`and`floats.`
 >#### `ReadOptionsBuilder` allowNanAndInfinity(`boolean allow`)
 >- [ ] true will allow`doubles`and`floats`to be output as`NaN`and`INFINITY`,`false`and these values will come across
-   as`null.` 
+   as`null.`
 
 >#### `boolean` isFloatingPointDouble()
 >- [ ] return `true` if floating point values should always be returned as `Double.`  This is the default.
@@ -127,7 +127,7 @@ These settings provide flexibility in how large or special floating point number
 >- [ ] Set Floating Point types to be returned as either `Double` or `BigDecimal,` depending on precision required to hold the number sourced from JSON.
 >#### `boolean` isFloatingPointBoth()
 >- [ ] return `true` if floating point values should always be returned dynamically, as `Double` or `BigDecimal,`
-favoring `Double` except when precision would be lost, then `BigDecimal` is returned.
+   favoring `Double` except when precision would be lost, then `BigDecimal` is returned.
 
 ### Integer Options
 
@@ -155,8 +155,8 @@ These settings offer flexibility in dealing with large integers, ensuring that y
 >- [ ] return `true` if integer values should always be returned dynamically, as `Long` or `BigInteger,` favoring `Long` except when precision would be lost, then `BigInteger` is returned.
 >#### `ReadOptionsBuilder` integerTypeBoth()
 >- [ ] Set integer types to be returned as either `Long` or `BigInteger,` depending on precision required to hold the
-number sourced from JSON.  If the value is within the range of `Long.MIN_VALUE` to `Long.MAX_VALUE,` then `Long` will be returned
-otherwise a `BigInteger` will be returned.
+   number sourced from JSON.  If the value is within the range of `Long.MIN_VALUE` to `Long.MAX_VALUE,` then `Long` will be returned
+   otherwise a `BigInteger` will be returned.
 
 ### Close Stream
 
@@ -171,7 +171,7 @@ For specific examples and implementation details, refer to the example at the be
 >- [ ] Returns `true` if set to automatically close stream after read (the default), or `false`to leave stream open after reading from it.
 
 >#### `ReadOptionsBuilder` closeStream(`boolean closeStream`)
->- [ ] Sets the 'closeStream' setting,`true`to turn on,`false`will turn off. The default setting is`false.` 
+>- [ ] Sets the 'closeStream' setting,`true`to turn on,`false`will turn off. The default setting is`false.`
 
 ### Aliasing - Shorten Class Names in @type
 
@@ -193,15 +193,48 @@ Aliasing simplifies JSON output by converting fully qualified Java class names i
 >- [ ] Returns `Map<String, String>` containing String class names to alias names. Use this API to see default aliases.
 >#### `ReadOptionsBuilder` aliasTypeNames(`Map<String, String> aliasTypeNames`)
 >- [ ] Puts the`Map`containing String class names to alias names. The passed in`Map`will be `putAll()` copied overwriting any
-entries that match values in the passed in Map. New entries in the Map are added.  
+   entries that match values in the passed in Map. New entries in the Map are added.
 >#### `ReadOptionsBuilder` aliasTypeName(`String typeName, String alias`)
->- [ ] Sets the alias for a given class name. 
+>- [ ] Sets the alias for a given class name.
 >#### `ReadOptionsBuilder` aliasTypeName(`Class, String alias`)
 >- [ ] Sets the alias for a given class.
 >#### `ReadOptionsBuilder` removeAliasTypeNamesMatching(`String typeNamePattern`)
->- [ ] Remove alias entries from this `ReadOptionsBuilder` instance where the Java fully qualified string class name 
-matches the passed in wildcard pattern. The `typeNamePattern` matches using a wild-card pattern, where * matches
-anything and ? matches one character. As many * or ? can be used as needed.
+>- [ ] Remove alias entries from this `ReadOptionsBuilder` instance where the Java fully qualified string class name
+   matches the passed in wildcard pattern. The `typeNamePattern` matches using a wild-card pattern, where * matches
+   anything and ? matches one character. As many * or ? can be used as needed.
+
+### JSON Object Conversion Mode
+
+`json-io` provides two modes for processing JSON data, controlled by the `returnAsJsonObjects()` and `returnAsJavaObjects()` methods:
+
+- **returnAsJsonObjects()**: When this mode is enabled, parsed JSON is returned as a graph of Maps and primitive types (JsonObjects), not as fully instantiated Java objects. This is useful when:
+    - You want to examine or modify the JSON structure before final deserialization
+    - The classes referenced in the JSON are not available in your JVM
+    - You need to perform operations on the raw JSON data structure
+
+- **returnAsJavaObjects()**: This is the default mode, where JSON is fully converted to Java objects of the specified target types. This provides a direct mapping between JSON and your domain model.
+
+Example with JsonObjects mode:
+```java
+ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
+Map<String, Object> jsonMap = JsonIo.toJava(json, options).asClass(Map.class);
+// Modify the map if needed
+jsonMap.put("name", "Updated Name");
+// Later convert to Java objects if desired
+Person person = JsonIo.toJava(jsonMap, new ReadOptionsBuilder().build()).asClass(Person.class);
+```
+
+>#### `boolean` isReturningJsonObjects()
+>- [ ] Returns `true` if parser is configured to return Map of Maps (JsonObjects) instead of instantiated Java objects.
+
+>#### `ReadOptionsBuilder` returnAsJsonObjects()
+>- [ ] Configure parser to return Map of Maps (JsonObjects) instead of instantiated Java objects.
+
+>#### `boolean` isReturningJavaObjects()
+>- [ ] Returns `true` if parser is configured to return fully instantiated Java objects (default behavior).
+
+>#### `ReadOptionsBuilder` returnAsJavaObjects()
+>- [ ] Configure parser to return fully instantiated Java objects (default behavior).
 
 ### Class Coercion
 
@@ -209,70 +242,70 @@ Class coercion is a powerful feature in `json-io` that allows you to transform s
 implementations during the JSON parsing process. This can be particularly useful for converting derivative classes into
 more generic or usable forms when they are loaded into memory.
 
-- **Example Conversion**: For instance, `json-io` can convert `java.util.Collections$UnmodifiableRandomAccessList` into 
-a more flexible `ArrayList`. This allows for mutable operations post-deserialization that are not possible with the original unmodifiable class.
+- **Example Conversion**: For instance, `json-io` can convert `java.util.Collections$UnmodifiableRandomAccessList` into
+  a more flexible `ArrayList`. This allows for mutable operations post-deserialization that are not possible with the original unmodifiable class.
 
 
 - **Handling Collection Variants**: The library already includes substitutions for many common JDK collection variants,
-such as singletons, synchronized collections, and various unmodifiable collections. These pre-configured substitutions 
-ensure that collection types are coerced into their most usable forms without additional configuration.
+  such as singletons, synchronized collections, and various unmodifiable collections. These pre-configured substitutions
+  ensure that collection types are coerced into their most usable forms without additional configuration.
 
 
-- **Custom Coercions**: You can extend this list by adding custom class coercions as needed. This feature enables you to 
-specify alternative classes for specific types that might not be as straightforward or as flexible as required by your
-application's logic.
+- **Custom Coercions**: You can extend this list by adding custom class coercions as needed. This feature enables you to
+  specify alternative classes for specific types that might not be as straightforward or as flexible as required by your
+  application's logic.
 
 By leveraging class coercion, you can ensure that the objects resulting from JSON deserialization fit seamlessly into the operational context of your application, enhancing both functionality and developer convenience.
 >#### `boolean` isClassCoerced(`String className`)
 >- [ ] Return`true`if the passed in Class name is being coerced to another type, `false`otherwise.
->#### `Class` getCoercedClass(`Class`) 
+>#### `Class` getCoercedClass(`Class`)
 >- [ ] Fetch the coerced class for the passed in fully qualified class name.
 
 >#### `ReadOptionsBuilder` coerceClass(`String sourceClassName, Class destClass`)
 >- [ ] Coerce a class from one type (named in the JSON) to another type.  For example, converting
-`java.util.Collections$SingletonSet`to a`LinkedHashSet.class.`
+   `java.util.Collections$SingletonSet`to a`LinkedHashSet.class.`
 
 ### Missing Field Handler
 
-The Missing Field Handler feature in `json-io` addresses scenarios where JSON contains fields that do not exist on the 
+The Missing Field Handler feature in `json-io` addresses scenarios where JSON contains fields that do not exist on the
 target Java object. This feature helps manage how such discrepancies are handled during the deserialization process.
 
 - **Functionality**: If a field in the JSON data does not correspond to any field on the Java object, rather than
-ignoring it or causing an error, `json-io` allows you to set up a handler that is specifically invoked for these missing fields.
+  ignoring it or causing an error, `json-io` allows you to set up a handler that is specifically invoked for these missing fields.
 
-- **Notification**: The designated handler, configured through the `JsonReader.MissingFieldHandler` interface, is 
-notified of all missing fields once deserialization completes. This allows for custom logic to be executed in response, 
-such as logging missing information or taking corrective measures.
+- **Notification**: The designated handler, configured through the `JsonReader.MissingFieldHandler` interface, is
+  notified of all missing fields once deserialization completes. This allows for custom logic to be executed in response,
+  such as logging missing information or taking corrective measures.
 
-- **Further Details**: For more comprehensive information on implementing and utilizing the `JsonReader.MissingFieldHandler`, 
-refer to its Javadoc documentation.
+- **Further Details**: For more comprehensive information on implementing and utilizing the `JsonReader.MissingFieldHandler`,
+  refer to its Javadoc documentation.
 
 This feature is particularly useful in maintaining robustness and flexibility in your application's data handling strategy, ensuring that unexpected data does not lead to unhandled exceptions or data integrity issues.
 
 >#### `JsonReader.MissingFieldHandler` getMissingFieldHandler()
->- [ ]  Fetch the method that will be called when a field in the JSON is read in, yet there is no corresponding 
-field on the destination object to receive the value.
+>- [ ]  Fetch the method that will be called when a field in the JSON is read in, yet there is no corresponding
+   field on the destination object to receive the value.
 
 >#### `ReadOptionsBuilder` missingFieldHandler(`JsonReader.MissingFieldHandler missingFieldHandler`)
->- [ ] Pass the`missing field handler`to be called when a field in the JSON is read in, yet there is no corresponding field on the 
-destination object to receive the value.
+>- [ ] Pass the`missing field handler`to be called when a field in the JSON is read in, yet there is no corresponding field on the
+   destination object to receive the value.
 
 ### Class Factory
 
-In cases where `json-io` encounters difficulties instantiating a class or reading its data correctly through default 
+In cases where `json-io` encounters difficulties instantiating a class or reading its data correctly through default
 processes, you can utilize the `ClassFactory` feature for a tailored solution.
 
 - **Purpose of Class Factory**: A `ClassFactory` is designed to create instances of a specific class and populate them
-with data directly from the JSON being parsed. This approach is particularly useful for classes that have non-standard 
-constructors or initialization patterns that `json-io` does not handle natively.
+  with data directly from the JSON being parsed. This approach is particularly useful for classes that have non-standard
+  constructors or initialization patterns that `json-io` does not handle natively.
 
-- **How It Works**: When a JSON object is encountered that maps to a class associated with a `ClassFactory`, the factory 
-is invoked with the JSON data. It is the responsibility of the `ClassFactory` to construct an instance of the class, 
-ensuring that all necessary data from the JSON is correctly translated and loaded into the new object.
+- **How It Works**: When a JSON object is encountered that maps to a class associated with a `ClassFactory`, the factory
+  is invoked with the JSON data. It is the responsibility of the `ClassFactory` to construct an instance of the class,
+  ensuring that all necessary data from the JSON is correctly translated and loaded into the new object.
 
-- **Advantages Over Custom Readers**: Using a `ClassFactory` is generally preferred over a `CustomReader` for class 
-instantiation because it integrates more seamlessly with the standard deserialization process, maintaining consistency 
-and reducing the potential for errors or data mismatches.
+- **Advantages Over Custom Readers**: Using a `ClassFactory` is generally preferred over a `CustomReader` for class
+  instantiation because it integrates more seamlessly with the standard deserialization process, maintaining consistency
+  and reducing the potential for errors or data mismatches.
 
 This feature allows for high customization and flexibility in how classes are instantiated from JSON data, enabling `json-io` to be effectively used with a wider range of Java classes, including those with complex construction requirements.
 
@@ -283,11 +316,11 @@ This feature allows for high customization and flexibility in how classes are in
 
 >#### `ReadOptionsBuilder` setClassFactories(`Map<Class, ? extends JsonReader.ClassFactory> factories`)
 >- [ ] Associate multiple ClassFactory instances to Classes that needs help being constructed and read in. The
-`Map`of entries associate`Class`to`ClassFactory.` The`ClassFactory`class knows how to instantiate and load
-the class associated to it.
+   `Map`of entries associate`Class`to`ClassFactory.` The`ClassFactory`class knows how to instantiate and load
+   the class associated to it.
 >#### `ReadOptionsBuilder` addClassFactory(`Class clazz, JsonReader.ClassFactory factory`)
 >- [ ] Associate a`ClassFactory`to a`Class`that needs help being constructed and read in. If you use this method
-more than once for the same class, the last`ClassFactory`associated to the class will overwrite any prior associations.
+   more than once for the same class, the last`ClassFactory`associated to the class will overwrite any prior associations.
 
 ### Custom Readers
 
@@ -295,30 +328,30 @@ Custom Readers in `json-io` offer a specialized mechanism for handling JSON dese
 does not meet specific needs. They allow for detailed customization of the JSON-to-object conversion process.  This approach
 will likely be deprecated in a future release as using a `ClassFactory` is a superset capability (create AND load).
 
-- **Purpose of Custom Readers**: Custom Readers are designed to manage the deserialization of JSON content for specific 
-classes, particularly when standard methods fail or require customization. They can also be applied to derived classes, 
-ensuring consistent handling across a class hierarchy.
+- **Purpose of Custom Readers**: Custom Readers are designed to manage the deserialization of JSON content for specific
+  classes, particularly when standard methods fail or require customization. They can also be applied to derived classes,
+  ensuring consistent handling across a class hierarchy.
 
-- **Recommendation to Use Class Factory First**: Before implementing a Custom Reader, it's advisable to consider using 
-a `ClassFactory`. This approach typically offers more straightforward integration with `json-io`'s deserialization 
-process, allowing for both instance creation and data loading simultaneously, thereby reducing complexity and potential issues.
+- **Recommendation to Use Class Factory First**: Before implementing a Custom Reader, it's advisable to consider using
+  a `ClassFactory`. This approach typically offers more straightforward integration with `json-io`'s deserialization
+  process, allowing for both instance creation and data loading simultaneously, thereby reducing complexity and potential issues.
 
 - **Handling Unwanted Associations**: Occasionally, a Custom Reader might inadvertently apply to classes for which it
-was not intended. To prevent this, you can explicitly exclude certain classes from being processed by a Custom Reader by
-adding them to the Not-Custom-Reader list. This ensures that only the intended classes are affected by the custom deserialization logic.
+  was not intended. To prevent this, you can explicitly exclude certain classes from being processed by a Custom Reader by
+  adding them to the Not-Custom-Reader list. This ensures that only the intended classes are affected by the custom deserialization logic.
 
 Custom Readers provide a powerful tool for extending and customizing the behavior of `json-io`, making it possible to tailor the deserialization process to fit exact requirements, particularly for complex or non-standard class structures.
 
 >#### `Map<Class, JsonReader.JsonClassReader>` getCustomReaderClasses()
 >- [ ] Fetch`Map`of`Class`to custom`JsonClassReader's` used to read JSON when the class is encountered during
- serialization to JSON.  This is the entire`Map`of Custom Readers.
+   serialization to JSON.  This is the entire`Map`of Custom Readers.
 >#### `boolean` isCustomReaderClass(`Class`)
 >- [ ] Return`true`if there is a custom reader class associated to the passed in class, `false` otherwise.
 
 >#### `ReadOptionsBuilder` setCustomReaderClasses(`Map<? extends Class>, ? extends JsonReader.JsonClassReader> customReaderClasses`)
->- [ ]  Set all custom readers at once.  Pass in a`Map`of`Class`to`JsonReader.JsonClassReader.` Set the passed 
-in`Map`as the established`Map`of custom readers to be used when reading JSON. Using this method  more than once, will
-set the custom readers to only the values from the`Map`in the last call made.
+>- [ ]  Set all custom readers at once.  Pass in a`Map`of`Class`to`JsonReader.JsonClassReader.` Set the passed
+   in`Map`as the established`Map`of custom readers to be used when reading JSON. Using this method  more than once, will
+   set the custom readers to only the values from the`Map`in the last call made.
 >#### `ReadOptionsBuilder` addCustomReaderClass(`Class, JsonReader.JsonClassReader customReader`)
 > - [ ] Add a single association of a class to a custom reader.  If you add another associated reader to the same class, the last one added will overwrite the prior association.
 
@@ -329,31 +362,31 @@ Custom Reader. This feature is particularly useful in managing class inheritance
 unintentionally apply to subclasses.
 
 - **Purpose**: This list allows you to specify classes that should not be associated with any Custom Reader. By adding
-a class to this list, you ensure that it bypasses the custom deserialization process, even if a Custom Reader exists
-that could potentially apply due to class inheritance.
+  a class to this list, you ensure that it bypasses the custom deserialization process, even if a Custom Reader exists
+  that could potentially apply due to class inheritance.
 
 - **Use Case**: It's often used to maintain the default deserialization behavior for certain classes within a hierarchy
-that otherwise might inherit a Custom Reader's behavior, which could lead to incorrect or unwanted data handling.
+  that otherwise might inherit a Custom Reader's behavior, which could lead to incorrect or unwanted data handling.
 
 - **Implementation**: Simply add the classes you want to exclude to the Not Custom Reader list. This straightforward
-approach helps maintain clarity and control over which classes are affected by custom deserialization logic, ensuring
-that only the intended classes are modified.
+  approach helps maintain clarity and control over which classes are affected by custom deserialization logic, ensuring
+  that only the intended classes are modified.
 
 This functionality is essential for maintaining precise control over the deserialization process in complex inheritance
 scenarios, preventing unwanted side effects from broadly applied Custom Readers.
 
 >#### `boolean` isNotCustomReaderClass(`Class`)
->- [ ]  Pass in Class to check if it's on the not-customized list.  Classes are added to this list when a class is being 
-picked up through inheritance, and you don't want it to have a custom reader associated to it.
+>- [ ]  Pass in Class to check if it's on the not-customized list.  Classes are added to this list when a class is being
+   picked up through inheritance, and you don't want it to have a custom reader associated to it.
 >#### `Set<Class<?>>` getNotCustomReadClasses()
->- [ ] Fetch the`Set`of all Classes on the not-customized list. 
+>- [ ] Fetch the`Set`of all Classes on the not-customized list.
 
->#### `ReadOptionsBuilder` addNotCustomReaderClass(`Class notCustomClass`) 
+>#### `ReadOptionsBuilder` addNotCustomReaderClass(`Class notCustomClass`)
 >- [ ] Add a class to the not-customized list - the list of classes that you do not want to be picked up by
-a custom reader (that could happen through inheritance). 
->#### `ReadOptionsBuilder` setNotCustomReaderClasses(`Collection<Class> notCustomClasses`) 
->- [ ] Initialize the list of classes on the non-customized list.  All prior associations will be dropped and this 
-`Collection` will establish the new list.
+   a custom reader (that could happen through inheritance).
+>#### `ReadOptionsBuilder` setNotCustomReaderClasses(`Collection<Class> notCustomClasses`)
+>- [ ] Initialize the list of classes on the non-customized list.  All prior associations will be dropped and this
+   `Collection` will establish the new list.
 
 ### Non-Referenceable Classes (Opposite of Instance Folding)
 
@@ -396,7 +429,7 @@ There are already two built-in `FieldFilters`, one for filtering out static fiel
 
 - **Scope of Application Settings**: Once set, these options persist across the JVM lifecycle, ensuring that every `ReadOptions` instance inherits the same configurations without needing individual setup. This simplifies the management of read options across various parts of your application.
 
-- **Impact on the JVM**: These settings do not alter any files on disk or engage in any operations outside of the JVM's memory. Instead, they modify static memory allocations that influence the behavior of `ReadOptions` instances created during the JVM’s operation.
+- **Impact on the JVM**: These settings do not alter any files on disk or engage in any operations outside of the JVM's memory. Instead, they modify static memory allocations that influence the behavior of `ReadOptions` instances created during the JVM's operation.
 
 - **Advantages**: By using these permanent settings, you ensure a consistent configuration that is maintained across all operations, reducing redundancy and potential for configuration errors in individual instances.
 
@@ -455,7 +488,7 @@ This feature enhances the manageability and clarity of JSON output and input wit
 
 The `removePermanentAliasTypeNamesMatching` method in `json-io` is designed to permanently remove aliases based on specified wildcard patterns from the "base" `ReadOptionsBuilder`. This ensures that any new instances of `ReadOptions` created from `ReadOptionsBuilders` will not include these aliases for the duration of the JVM's lifetime.
 
-- **Purpose**: This method is used to delete alias entries that you no longer wish to use, affecting how JSON is read and recognized within your application. 
+- **Purpose**: This method is used to delete alias entries that you no longer wish to use, affecting how JSON is read and recognized within your application.
 
 - **Caution on Usage**: While it's generally safe to maintain a broad set of aliases within `ReadOptions`, be cautious when removing aliases, especially on the 'read' side, to avoid disrupting data ingestion. Conversely, managing `WriteOptions` should be done more stringently, especially in microservice environments where consistent alias interpretation across services is critical.
 
@@ -494,7 +527,7 @@ The `addPermanentNonReferenceableClass` method in `json-io` allows you to design
 
 - **Impact**: By marking a class as non-referenceable, you ensure that instances of this class in JSON are always serialized directly rather than as references. This can greatly simplify the JSON output and prevent unnecessary complexity in the data structure.
 
-- **Application Scope**: Once a class is added to the non-referenceable list, this configuration is applied globally across all `ReadOptions` instances created during the JVM’s runtime. This means there is no need to repeatedly specify this setting for each new instance, enhancing consistency and reducing setup redundancy.
+- **Application Scope**: Once a class is added to the non-referenceable list, this configuration is applied globally across all `ReadOptions` instances created during the JVM's runtime. This means there is no need to repeatedly specify this setting for each new instance, enhancing consistency and reducing setup redundancy.
 
 - **Use Cases**: Typically used for small, immutable objects that are frequently instantiated with the same values, such as `Color` objects, custom `Money` or `Quantity` classes, which do not change once created and are used extensively throughout an application.
 
@@ -529,4 +562,3 @@ The `addPermanentNonStandardSetter` method in `json-io` allows you to define cus
 - **Example Usage**: An example of using this feature is with the `Throwable` class in Java. Typically, to set a cause on a `Throwable`, the `initCause()` method is used instead of a standard setter. Configuring `addPermanentNonStandardSetter(Throwable.class, "cause", "initCause")` instructs `json-io` to use `initCause()` to set the cause from the JSON data:
 
 >#### ReadOptionsBuilder.addPermanentNonStandardSetter(`Class<?> clazz, String fieldName, String setterName`)
-
