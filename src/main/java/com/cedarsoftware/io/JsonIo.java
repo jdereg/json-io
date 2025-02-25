@@ -3,15 +3,8 @@ package com.cedarsoftware.io;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 
 import com.cedarsoftware.io.prettyprint.JsonPrettyPrinter;
-import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.FastByteArrayInputStream;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
@@ -19,222 +12,109 @@ import com.cedarsoftware.util.convert.Converter;
 import com.cedarsoftware.util.convert.DefaultConverterOptions;
 
 /**
- * <h1>JsonIo Main API</h1>
- *
+ * JsonIo is the main entry point for converting between JSON and Java objects.
  * <p>
- * JsonIo is the primary API for converting between JSON and Java object graphs. It supports both
- * serialization (Java &rarr; JSON) and deserialization (JSON &rarr; Java) using a variety of input
- * and output forms.
- * </p>
- *
- * <h2>Conversion Options</h2>
- * <table style="border-collapse: collapse; border: 1px solid gray;" cellpadding="4" cellspacing="0">
- *   <thead>
- *     <tr style="background-color: #ddd;">
- *       <th style="border: 1px solid gray;">Conversion Type</th>
- *       <th style="border: 1px solid gray;">Input</th>
- *       <th style="border: 1px solid gray;">Output</th>
- *       <th style="border: 1px solid gray;">Example API</th>
- *     </tr>
- *   </thead>
- *   <tbody>
- *     <tr>
- *       <td style="border: 1px solid gray;" rowspan="2"><b>Serialization</b></td>
- *       <td style="border: 1px solid gray;">Java Object or JsonObject (Map-of-Maps)</td>
- *       <td style="border: 1px solid gray;">JSON String</td>
- *       <td style="border: 1px solid gray;">
- *         <pre>
- * String json = JsonIo.toJson(javaObject, writeOptions);
- *         </pre>
- *       </td>
- *     </tr>
- *     <tr>
- *       <td style="border: 1px solid gray;">Java Object or JsonObject</td>
- *       <td style="border: 1px solid gray;">JSON to OutputStream</td>
- *       <td style="border: 1px solid gray;">
- *         <pre>
- * JsonIo.toJson(outputStream, javaObject, writeOptions);
- *         </pre>
- *       </td>
- *     </tr>
- *     <tr>
- *       <td style="border: 1px solid gray;" rowspan="3"><b>Deserialization</b></td>
- *       <td style="border: 1px solid gray;">JSON (String or InputStream)</td>
- *       <td style="border: 1px solid gray;">Java Object or JsonObject (Map-of-Maps)</td>
- *       <td style="border: 1px solid gray;">
- *         <pre>
- * MyClass obj = JsonIo.toObjects(json, readOptions, MyClass.class);
- *         </pre>
- *       </td>
- *     </tr>
- *     <tr>
- *       <td style="border: 1px solid gray;">JSON (String or InputStream)</td>
- *       <td style="border: 1px solid gray;">Java Objects (DTOs) via resolution</td>
- *       <td style="border: 1px solid gray;">
- *         <pre>
- * MyClass obj = JsonIo.toObjects(json, readOptions, MyClass.class);
- *         </pre>
- *       </td>
- *     </tr>
- *     <tr>
- *       <td style="border: 1px solid gray;">JsonObject (Map-of-Maps) root</td>
- *       <td style="border: 1px solid gray;">Java Objects (DTOs)</td>
- *       <td style="border: 1px solid gray;">
- *         <pre>
- * MyClass obj = JsonIo.toObjects(jsonObject, readOptions, MyClass.class);
- *         </pre>
- *       </td>
- *     </tr>
- *   </tbody>
- * </table>
- *
- * <h2>Generic Type Support</h2>
+ * This API uses a fluent builder pattern that splits JSON conversion into two parts:
+ * <ol>
+ *   <li>The <b>initial conversion</b>:
+ *       <ul>
+ *         <li>For writing, you convert a Java object (or an intermediate JsonObject/Map)
+ *             to JSON (either as a String or directly to an OutputStream).</li>
+ *         <li>For reading, you start by parsing JSON from a source (String, InputStream, or an in-memory JsonObject),
+ *             and obtain a builder.</li>
+ *       </ul>
+ *   </li>
+ *   <li>The <b>completion</b>:
+ *       <ul>
+ *         <li>Call either {@code asClass()} (for a concrete target class) or {@code asType()}
+ *             (to support generic types via a TypeHolder) to complete the conversion.</li>
+ *       </ul>
+ *   </li>
+ * </ol>
  * <p>
- * For cases where you need to preserve full generic type information, use the <b>TypeHolder</b> overloads.
- * This allows you to capture complete type details (including parameterized types) and ensures that the full
- * generic details are preserved. For example:
- * </p>
- *
- * <pre>
- * // For simple, non-generic types:
- * Point p = JsonIo.toObjects(json, readOptions, Point.class);
- *
- * // For generic types:
- * TypeHolder&lt;List&lt;Point&gt;&gt; holder = new TypeHolder&lt;List&lt;Point&gt;&gt;() {};
- * List&lt;Point&gt; points = JsonIo.toObjects(json, readOptions, holder);
- * </pre>
- *
- * <h2>Usage Scenarios</h2>
+ * <b>Usage Examples:</b>
  * <ul>
  *   <li>
- *     <b>One-step Conversion:</b> Directly convert between Java objects and JSON (options #1 and #3 above).
- *     Use these when you have a known DTO.
+ *     <b>1. Converting a Java object to JSON:</b>
+ *     <pre>
+ *     // Convert a Java object to a JSON String:
+ *     String json = JsonIo.toJson(myObject, writeOptions);
+ *
+ *     // Write a Java object as JSON to an OutputStream:
+ *     JsonIo.toJson(outputStream, myObject, writeOptions);
+ *     </pre>
  *   </li>
  *   <li>
- *     <b>Two-step Conversion:</b> First parse the JSON into a JsonObject (Map-of-Maps), then resolve it
- *     into Java objects. This is useful if you need to inspect or modify the JSON structure before
- *     object resolution.
+ *     <b>2. Reading JSON into fully resolved Java objects:</b>
+ *     <pre>
+ *     // From a JSON String into a specific class:
+ *     Person person = JsonIo.toJava(jsonString, readOptions).asClass(Person.class);
+ *
+ *     // From an InputStream into a generic type (using TypeHolder):
+ *     List&lt;Person&gt; people = JsonIo.toJava(inputStream, readOptions)
+ *                                    .asType(new TypeHolder&lt;List&lt;Person&gt;&gt;(){});
+ *     </pre>
  *   </li>
  *   <li>
- *     <b>Raw JSON Processing:</b> If you require high performance or need to work with extremely large data sets,
- *     you can parse JSON into native JsonObjects. This approach avoids binding to specific DTOs, letting you
- *     walk the map structure and process the data in a streaming or iterative fashion.
+ *     <b>3. Reading JSON into an intermediate representation (JsonObject/Map):</b>
+ *     <pre>
+ *     // Configure the ReadOptions to force returning JsonObjects (typically Maps)
+ *     ReadOptions read = new ReadOptionsBuilder()
+ *                                           .returnAsJsonObjects()
+ *                                           .build();
+ *
+ *     // Parse the JSON into a Map (or nested Map structure)
+ *     Map&lt;String, Object&gt; jsonMap = JsonIo.toJava(jsonString, read).asClass(Map.class);
+ *     </pre>
+ *     In this case, simple Java types may be converted (or left as is for Map types),
+ *     and collection types will be converted appropriately.
  *   </li>
  * </ul>
- *
- * <h2>Input Variants</h2>
- * <ul>
- *   <li>
- *     <b>JSON Source:</b> The JSON content can be provided either as a <code>String</code> or an
- *     <code>InputStream</code>.
- *   </li>
- *   <li>
- *     <b>Java Object vs. JsonObject:</b> For serialization, you may supply a standard Java object or a
- *     <code>JsonObject</code> (a Map-of-Maps representing parsed JSON).
- *   </li>
- * </ul>
- *
  * <p>
- * In summary, JsonIo is designed to offer flexible and powerful conversion capabilities:
+ * Note:
  * <ul>
- *   <li>Convert between Java objects and JSON with extensive configuration via <code>WriteOptions</code>
- *       and <code>ReadOptions</code>.</li>
- *   <li>Support both simple type hints (using <code>Class&lt;T&gt;</code>) and full generic type details
- *       (using <code>TypeHolder&lt;T&gt;</code>).</li>
- *   <li>Provide options for both direct conversion and multi-step processing (parse then resolve).</li>
+ *   <li>The builder returned by the initial JSON reading call must be completed with a call
+ *       to either {@code asClass()} or {@code asType()} to perform the final conversion.</li>
+ *   <li>The nature of the resulting object—whether it is a fully resolved Java object or an intermediate
+ *       representation (typically a Map)—is determined by the ReadOptions settings passed to the call.</li>
  * </ul>
- * </p>
- *
- * <p>
- * <b>Note:</b> For advanced use cases that require full generic type fidelity (e.g., deserializing a
- * <code>List&lt;Point&gt;</code>), the <code>TypeHolder</code>-based overloads are recommended. For simpler cases,
- * passing <code>Point.class</code> is perfectly acceptable.
- * </p>
- *
- * @author John DeRegnaucourt (jdereg@gmail.com)
- * @author Kenny Partlow (kpartlow@gmail.com)
- *         <br>
- *         Copyright (c) Cedar Software LLC
- *         <br><br>
- *         Licensed under the Apache License, Version 2.0 (the "License");
- *         you may not use this file except in compliance with the License.
- *         You may obtain a copy of the License at
- *         <br><br>
- *         <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
- *         <br><br>
- *         Unless required by applicable law or agreed to in writing, software
- *         distributed under the License is distributed on an "AS IS" BASIS,
- *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *         See the License for the specific language governing permissions and
- *         limitations under the License.
  */
 public class JsonIo {
 
     private JsonIo() {}
 
     /**
-     * <h2>Convert a Java Object to JSON</h2>
-     *
+     * Converts a Java object to a JSON string representation.
      * <p>
-     * This method serializes the given Java source object into its JSON representation. It supports both standard Java
-     * objects and instances of {@code JsonObject} (e.g. a parsed Map-of-Maps obtained via a previous call to
-     * {@code toObjects(...)} when using {@code readOptions.returnAsJsonObjects()}). The conversion respects the
-     * configuration specified in the provided {@code WriteOptions}. If no write options are provided, the default settings
-     * will be applied.
-     * </p>
+     * This method serializes the provided source object into a JSON string according to the
+     * specified write options. The source object can be any Java object, including primitives,
+     * collections, arrays, custom classes, or even an intermediate JsonObject (Map) representation
+     * that was obtained from a previous read operation.
      *
-     * <h3>Key Features</h3>
-     * <ul>
-     *   <li>Handles complex object graphs, including nested objects and collections.</li>
-     *   <li>Respects custom serialization options (pretty printing, type hints, circular references, etc.) via {@code WriteOptions}.</li>
-     *   <li>Supports both direct Java objects and pre-parsed {@code JsonObject} representations.</li>
-     *   <li>Automatically closes the underlying streams when finished (using try-with-resources).</li>
-     * </ul>
-     *
-     * <h3>Usage Examples</h3>
+     * <h3>Examples:</h3>
      * <pre>
-     * // Simple serialization of a Java object:
-     * MyBean bean = new MyBean(...);
-     * String json = JsonIo.toJson(bean, null);  // Uses default write options
+     * // Basic usage with default options
+     * String json = JsonIo.toJson(myObject, null);
      *
-     * // Serialization with custom options:
-     * WriteOptions options = WriteOptionsBuilder.getDefaultWriteOptions();
-     * options.setPrettyPrint(true);
-     * String jsonPretty = JsonIo.toJson(bean, options);
+     * // With custom write options
+     * WriteOptions options = new WriteOptionsBuilder()
+     *     .prettyPrint(true)
+     *     .showTypeInfoMinimal()
+     *     .build();
+     * String json = JsonIo.toJson(myObject, options);
      *
-     * // Serialization of a JsonObject (Map-of-Maps):
-     * JsonObject jsonMap = JsonIo.toObjects(jsonInput, readOptions, MyBean.class);
-     * String jsonString = JsonIo.toJson(jsonMap, writeOptions);
+     * // Converting a Map/JsonObject to JSON
+     * Map&lt;String, Object&gt; map = JsonIo.toJava(jsonString, readOptions).asClass(Map.class);
+     * // ... modify the map ...
+     * String updatedJson = JsonIo.toJson(map, writeOptions);
      * </pre>
      *
-     * <h3>Parameters</h3>
-     * <ul>
-     *   <li><b>srcObject</b> - The source object to serialize. This can be any Java instance, including a {@code JsonObject}
-     *       that was produced by a prior call to {@code toObjects(...)} with the appropriate read options.</li>
-     *   <li><b>writeOptions</b> - A {@code WriteOptions} instance that configures the serialization process (e.g.,
-     *       pretty printing, custom type handling, output formatting, etc.). If {@code null} is provided, default options
-     *       will be used.</li>
-     * </ul>
-     *
-     * <h3>Returns</h3>
-     * <p>
-     * A {@code String} containing the JSON representation of the source object.
-     * </p>
-     *
-     * <h3>Exceptions</h3>
-     * <ul>
-     *   <li>{@code JsonIoException} - Thrown if an error occurs during the serialization process.</li>
-     * </ul>
-     *
-     * <p>
-     * <b>Note:</b> This method leverages an internal {@code JsonWriter} to perform the serialization, ensuring that
-     * the output is correctly formatted and that resources are properly managed.
-     * </p>
-     *
-     * @param srcObject the Java object (or {@code JsonObject}) to be serialized into JSON format.
-     * @param writeOptions the configuration options controlling the JSON output; may be {@code null} to use defaults.
-     * @return a {@code String} representing the JSON serialization of the provided source object.
-     * @throws JsonIoException if an error occurs during serialization.
+     * @param srcObject the Java object to convert to JSON; can be any object including primitives,
+     *                  collections, custom classes, or a JsonObject/Map
+     * @param writeOptions configuration options for controlling the JSON output format;
+     *                     if null, default options will be used
+     * @return a JSON string representation of the source object
+     * @throws JsonIoException if an error occurs during the serialization process
      */
     public static String toJson(Object srcObject, WriteOptions writeOptions) {
         FastByteArrayOutputStream out = new FastByteArrayOutputStream();
@@ -249,89 +129,40 @@ public class JsonIo {
     }
 
     /**
-     * <h2>Serialize a Java Object to JSON and Write to an OutputStream</h2>
-     *
+     * Writes a Java object as JSON directly to an OutputStream.
      * <p>
-     * This method serializes the given Java source object into JSON and writes the output to the provided
-     * {@code OutputStream}. It supports both standard Java objects and {@code JsonObject} instances (which may have been
-     * produced earlier via {@code toObjects(...)} when using {@code readOptions.returnAsJsonObjects()}). The
-     * serialization process is governed by the supplied {@code WriteOptions}. If no options are provided, the default
-     * settings are used.
-     * </p>
-     *
-     * <h3>Key Features</h3>
-     * <ul>
-     *   <li>
-     *     <b>Stream-based Serialization:</b> Directly writes JSON to an {@code OutputStream} which is useful for streaming
-     *     output, NDJSON, or writing to network sockets.
-     *   </li>
-     *   <li>
-     *     <b>Automatic Resource Management:</b> The method uses a try-with-resources block to ensure that the
-     *     underlying {@code JsonWriter} is closed automatically. By default, the {@code OutputStream} is also closed
-     *     after writing. To prevent closing the stream (e.g., when writing multiple JSON objects), set
-     *     {@code writeOptions.closeStream(false)}.
-     *   </li>
-     *   <li>
-     *     <b>Flexible Input:</b> The source object can be a Java object or a pre-parsed {@code JsonObject} (Map-of-Maps).
-     *   </li>
-     * </ul>
-     *
-     * <h3>Usage Example</h3>
+     * This method serializes the provided source object into JSON and writes the result to the specified
+     * output stream. This is useful for scenarios where you want to stream JSON output directly to a file,
+     * network connection, or other destination without creating an intermediate string representation.
      * <p>
-     * If you want to capture the JSON output as a String, you can wrap your target stream (such as a
-     * {@code ByteArrayOutputStream}) around your original {@code OutputStream}. For example:
-     * </p>
+     * By default, the output stream is closed after writing. To keep it open (e.g., when writing multiple
+     * objects), configure the write options with {@code writeOptions.closeStream(false)}.
+     *
+     * <h3>Examples:</h3>
      * <pre>
-     * // Wrap the original output stream
-     * ByteArrayOutputStream baos = new ByteArrayOutputStream(originalOutputStream);
+     * // Write JSON to a file
+     * try (FileOutputStream fos = new FileOutputStream("data.json")) {
+     *     JsonIo.toJson(fos, myObject, writeOptions);
+     * }
      *
-     * // Write JSON to the wrapped stream
-     * JsonIo.toJson(baos, sourceObject, writeOptions);
+     * // Stream multiple objects without closing between writes
+     * WriteOptions options = new WriteOptionsBuilder()
+     *     .closeStream(false)
+     *     .build();
      *
-     * // Flush and convert the written bytes to a String
-     * baos.flush();
-     * String json = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+     * for (MyObject obj : objects) {
+     *     JsonIo.toJson(outputStream, obj, options);
+     *     // The stream remains open for the next object
+     * }
+     * outputStream.close(); // Close manually when done
      * </pre>
      *
-     * <h3>Parameters</h3>
-     * <ul>
-     *   <li>
-     *     <b>out</b> - The {@code OutputStream} where the JSON output will be written. This parameter must not be
-     *     {@code null}.
-     *   </li>
-     *   <li>
-     *     <b>source</b> - The Java object (or {@code JsonObject}) to be serialized into JSON.
-     *   </li>
-     *   <li>
-     *     <b>writeOptions</b> - An instance of {@code WriteOptions} that configures the serialization process
-     *     (e.g., pretty printing, custom type handling, output formatting). If {@code null} is provided, default options
-     *     are used.
-     *   </li>
-     * </ul>
-     *
-     * <h3>Return Value</h3>
-     * <p>
-     * This method does not return a value. Instead, it writes the JSON representation of the source object directly to
-     * the provided {@code OutputStream}.
-     * </p>
-     *
-     * <h3>Exceptions</h3>
-     * <ul>
-     *   <li>
-     *     {@code JsonIoException} - Thrown if an error occurs during the serialization process.
-     *   </li>
-     * </ul>
-     *
-     * <p>
-     * <b>Note:</b> By default, the {@code OutputStream} will be closed after writing. If you need to keep the stream
-     * open (for example, when writing multiple JSON objects in NDJSON format), set
-     * {@code writeOptions.closeStream(false)}.
-     * </p>
-     *
-     * @param out the {@code OutputStream} destination for the JSON output; must not be {@code null}.
-     * @param source the Java object (or {@code JsonObject}) to convert to JSON format.
-     * @param writeOptions the configuration options controlling JSON output; may be {@code null} to use default settings.
-     * @throws JsonIoException if an error occurs during serialization.
+     * @param out the output stream where the JSON will be written; must not be null
+     * @param source the Java object to convert to JSON
+     * @param writeOptions configuration options controlling the JSON output format;
+     *                     if null, default options will be used
+     * @throws JsonIoException if an error occurs during serialization
+     * @throws IllegalArgumentException if the output stream is null
      */
     public static void toJson(OutputStream out, Object source, WriteOptions writeOptions) {
         Convention.throwIfNull(out, "OutputStream cannot be null");
@@ -355,650 +186,194 @@ public class JsonIo {
     }
 
     /**
-     * <h2>Deserialize JSON to Java Objects</h2>
-     *
+     * Begins the process of converting a JSON string to Java objects.
      * <p>
-     * This method converts the provided JSON (as a {@code String}) into a corresponding Java object graph.
-     * It supports conversion into fully resolved Java DTOs as well as native {@code JsonObject} representations (Map-of-Maps),
-     * depending on the settings in {@code ReadOptions}. The optional {@code rootType} parameter hints at the target type
-     * for the root object. If {@code rootType} is {@code null}, JsonIo attempts to determine the appropriate type based on
-     * the JSON structure and any embedded type metadata (e.g. via an "@type" property).
-     * </p>
+     * This method is the first step in a two-step JSON parsing process. It takes a JSON string and
+     * parsing options, and returns a builder that can complete the conversion to the desired Java type.
+     * The returned builder provides two completion methods:
+     * <ul>
+     *   <li>{@code asClass(Class)} - For converting to a specific class</li>
+     *   <li>{@code asType(TypeHolder)} - For converting to a generic type like {@code List<Person>}</li>
+     * </ul>
      *
-     * <h3>Conversion Overview</h3>
-     * <table style="border-collapse: collapse; border: 1px solid gray;" cellpadding="4" cellspacing="0">
-     *   <thead>
-     *     <tr style="background-color: #ddd;">
-     *       <th style="border: 1px solid gray;">Aspect</th>
-     *       <th style="border: 1px solid gray;">Details</th>
-     *     </tr>
-     *   </thead>
-     *   <tbody>
-     *     <tr>
-     *       <td style="border: 1px solid gray;"><b>Input</b></td>
-     *       <td style="border: 1px solid gray;">JSON content as a {@code String}</td>
-     *     </tr>
-     *     <tr>
-     *       <td style="border: 1px solid gray;"><b>Deserialization Mode</b></td>
-     *       <td style="border: 1px solid gray;">Either into Java DTOs or into native {@code JsonObject} maps,
-     *       depending on {@code ReadOptions} (e.g., {@code returnAsJsonObjects()}).</td>
-     *     </tr>
-     *     <tr>
-     *       <td style="border: 1px solid gray;"><b>Type Hint</b></td>
-     *       <td style="border: 1px solid gray;">Provided via the {@code rootType} parameter. If not supplied,
-     *       a best-guess is made:
-     *         <ul>
-     *           <li>JSON objects (<code>{ ... }</code>) become {@code Map} or user-specified DTOs.</li>
-     *           <li>JSON arrays (<code>[ ... ]</code>) become arrays or {@code Collection}s.</li>
-     *           <li>Primitives (e.g. <code>"text"</code>, numbers, booleans) are returned as the corresponding Java types.</li>
-     *         </ul>
-     *       </td>
-     *     </tr>
-     *   </tbody>
-     * </table>
-     *
-     * <h3>Usage Examples</h3>
+     * <h3>Examples:</h3>
      * <pre>
-     * // 1. Deserialization into a specific DTO:
-     * MyClass obj = JsonIo.toObjects(jsonString, readOptions, MyClass.class);
+     * // Parse JSON to a specific class
+     * Person person = JsonIo.toJava(jsonString, options).asClass(Person.class);
      *
-     * // 2. Deserialization when JSON contains embedded type metadata:
-     * //    If {@code jsonString} contains an "@type" property, that type will be used instead.
-     * MyClass obj = JsonIo.toObjects(jsonString, readOptions, MyClass.class);
+     * // Parse to a generic collection type
+     * List&lt;Person&gt; people = JsonIo.toJava(jsonString, options)
+     *                               .asType(new TypeHolder&lt;List&lt;Person&gt;&gt;(){});
      *
-     * // 3. Deserialization into native JsonObjects (Map-of-Maps):
-     * JsonObject jsonObj = JsonIo.toObjects(jsonString, readOptions, null);
-     *
-     * // 4. For generic type support (advanced usage), use the TypeHolder overload:
-     * //    TypeHolder&lt;List&lt;Point&gt;&gt; holder = new TypeHolder&lt;List&lt;Point&gt;&gt;() {};
-     * //    List&lt;Point&gt; points = JsonIo.toObjects(jsonString, readOptions, holder);
+     * // Parse to an intermediate Map representation
+     * ReadOptions mapOptions = new ReadOptionsBuilder()
+     *                              .returnAsJsonObjects()
+     *                              .build();
+     * Map&lt;String, Object&gt; dataMap = JsonIo.toJava(jsonString, mapOptions).asClass(Map.class);
      * </pre>
      *
-     * <h3>Parameters</h3>
+     * <p>The behavior of this method is controlled by the {@code ReadOptions}. In particular:
      * <ul>
-     *   <li>
-     *     <b>json</b> - A {@code String} containing the JSON content. If {@code null}, an empty string is used.
-     *   </li>
-     *   <li>
-     *     <b>readOptions</b> - A {@code ReadOptions} instance that configures how the JSON is deserialized (e.g.,
-     *     whether to return native {@code JsonObject} maps, how to handle unknown types, etc.). If {@code null}, the
-     *     default options are used.
-     *   </li>
-     *   <li>
-     *     <b>rootType</b> - A {@code Class&lt;T&gt;} that represents the desired root type for the returned object.
-     *     If {@code null}, or if the JSON includes an "@type" meta-property, JsonIo will attempt to infer the correct type.
-     *   </li>
+     *   <li>With {@code ReadOptions.returnAsJavaObjects()} (default), the result will be fully
+     *       instantiated Java objects of the specified type.</li>
+     *   <li>With {@code ReadOptions.returnAsJsonObjects()}, the result will be the intermediate Map
+     *       representation (JsonObjects) that can later be manipulated or converted.</li>
      * </ul>
      *
-     * <h3>Return Value</h3>
-     * <p>
-     * Returns an instance of type {@code T} representing the deserialized JSON. Depending on the input and read options,
-     * this might be a user-defined DTO, a collection, an array, or a native {@code JsonObject} (Map-of-Maps).
-     * </p>
-     *
-     * <h3>Exceptions</h3>
-     * <ul>
-     *   <li>
-     *     {@code JsonIoException} - Thrown if an error occurs during deserialization.
-     *   </li>
-     * </ul>
-     *
-     * <p>
-     * <b>Note:</b> For cases requiring full generic type support (e.g., deserializing a <code>List&lt;Point&gt;</code>),
-     * consider using the {@code TypeHolder}-based overloads. For simple, non-generic types, passing a raw class (e.g.,
-     * <code>MyClass.class</code>) is sufficient.
-     * </p>
-     *
-     * @param json the JSON content as a {@code String}; if {@code null}, an empty string is assumed.
-     * @param readOptions the configuration options controlling the deserialization process; may be {@code null} to use defaults.
-     * @param rootType a {@code Class&lt;T&gt;} representing the expected root type of the returned object; if {@code null},
-     *                 a best-guess is made based on the JSON content and type metadata.
-     * @param <T> the type of the resulting Java object.
-     * @return an instance of type {@code T} representing the deserialized JSON.
-     * @throws JsonIoException if an error occurs during deserialization.
+     * @param json the JSON string to parse; if null, an empty string will be used
+     * @param readOptions configuration options for controlling how the JSON is parsed;
+     *                    if null, default options will be used
+     * @return a builder to complete the conversion by specifying the target type
      */
-    public static <T> T toObjects(String json, ReadOptions readOptions, Class<T> rootType) {
-        return toObjectsGeneric(json, readOptions, TypeHolder.of(rootType));
+    public static JavaStringBuilder toJava(String json, ReadOptions readOptions) {
+        return new JavaStringBuilder(json, readOptions);
     }
 
     /**
-     * <h2>Deserialize JSON to Java Objects with Full Generic Type Information</h2>
-     *
+     * Begins the process of converting JSON from an InputStream to Java objects.
      * <p>
-     * This method converts the provided JSON content (as a {@code String}) into the corresponding Java object graph,
-     * leveraging a {@code TypeHolder} to capture full generic type details. This overload is particularly useful for
-     * cases where the target type includes generic parameters (for example, {@code List<Point>}) that would be lost
-     * if a simple {@code Class<T>} were used.
-     * </p>
+     * This method is the first step in a two-step JSON parsing process. It takes a JSON input stream and
+     * parsing options, and returns a builder that can complete the conversion to the desired Java type.
+     * The returned builder provides two completion methods:
+     * <ul>
+     *   <li>{@code asClass(Class)} - For converting to a specific class</li>
+     *   <li>{@code asType(TypeHolder)} - For converting to a generic type like {@code List<Person>}</li>
+     * </ul>
      *
-     * <h3>Conversion Overview</h3>
-     * <table style="border-collapse: collapse; border: 1px solid gray;" cellpadding="4" cellspacing="0">
-     *   <thead>
-     *     <tr style="background-color: #ddd;">
-     *       <th style="border: 1px solid gray;">Aspect</th>
-     *       <th style="border: 1px solid gray;">Details</th>
-     *     </tr>
-     *   </thead>
-     *   <tbody>
-     *     <tr>
-     *       <td style="border: 1px solid gray;"><b>Input</b></td>
-     *       <td style="border: 1px solid gray;">JSON content as a {@code String}</td>
-     *     </tr>
-     *     <tr>
-     *       <td style="border: 1px solid gray;"><b>Type Hint</b></td>
-     *       <td style="border: 1px solid gray;">
-     *         Provided via a {@code TypeHolder<T>} that preserves the full generic type information (e.g.,
-     *         {@code List<Point>} or {@code Map<String, List<Point>>}).
-     *       </td>
-     *     </tr>
-     *     <tr>
-     *       <td style="border: 1px solid gray;"><b>Output</b></td>
-     *       <td style="border: 1px solid gray;">
-     *         A Java object graph of type {@code T} representing the deserialized JSON. This may be a DTO, collection, array,
-     *         or a native {@code JsonObject} (Map-of-Maps), depending on the JSON structure and the provided {@code ReadOptions}.
-     *       </td>
-     *     </tr>
-     *   </tbody>
-     * </table>
+     * <p>By default, the input stream is closed after reading. To keep it open (e.g., when reading multiple
+     * JSON objects), configure the read options with {@code readOptions.closeStream(false)}.
      *
-     * <h3>Usage Examples</h3>
+     * <h3>Examples:</h3>
      * <pre>
-     * // Example 1: Deserializing into a raw type (Point)
-     * TypeHolder&lt;Point&gt; holder1 = TypeHolder.of(Point.class);
-     * Point point = JsonIo.toObjects(jsonString, readOptions, holder1);
+     * // Parse JSON from a file
+     * try (FileInputStream fis = new FileInputStream("data.json")) {
+     *     Person person = JsonIo.toJava(fis, options).asClass(Person.class);
+     * }
      *
-     * // Example 2: Deserializing into a generic List of Points:
-     * TypeHolder holder2 = new TypeHolder&lt;List&lt;Point&gt;&gt;();
-     * List&lt;Point&gt; points = JsonIo.toObjects(jsonString, readOptions, holder2);
-     *
-     * // Advanced Example: Deserializing into a Map of String to List&lt;Point&gt;
-     * TypeHolder mapType = new TypeHolder&lt;Map&lt;String, List&lt;Point&gt;&gt;&gt;();
-     * Map&lt;String, List&lt;Point&gt;&gt; map = JsonIo.toObjects(jsonString, readOptions, holder3);
+     * // Parse JSON from a stream to a generic type
+     * List&lt;Person&gt; people = JsonIo.toJava(inputStream, options)
+     *                               .asType(new TypeHolder&lt;List&lt;Person&gt;&gt;(){});
      * </pre>
      *
-     * <h3>Parameters</h3>
-     * <ul>
-     *   <li>
-     *     <b>json</b> - A {@code String} containing the JSON content to be deserialized. If {@code null}, an empty string is assumed.
-     *   </li>
-     *   <li>
-     *     <b>readOptions</b> - A {@code ReadOptions} instance that configures the deserialization process. For example, it
-     *     may control the handling of unknown types, type coercion, and the format of the returned objects. If {@code null},
-     *     default settings are applied.
-     *   </li>
-     *   <li>
-     *     <b>rootTypeHolder</b> - A {@code TypeHolder<T>} encapsulating the full target type (including generics) for deserialization.
-     *     Use this overload to preserve complete type details (e.g., pass {@code TypeHolder.of(new TypeReference<List<Point>>() {}.getType())}).
-     *   </li>
-     * </ul>
-     *
-     * <h3>Return Value</h3>
-     * <p>
-     * Returns an instance of type {@code T} representing the deserialized JSON object graph. Depending on the JSON structure
-     * and the read options, this may be a user-defined DTO, a collection, an array, or a native {@code JsonObject} (Map-of-Maps).
-     * </p>
-     *
-     * <h3>Exceptions</h3>
-     * <ul>
-     *   <li>
-     *     {@code JsonIoException} - Thrown if an error occurs during deserialization.
-     *   </li>
-     * </ul>
-     *
-     * <p>
-     * <b>Note:</b> This overload wraps the JSON {@code String} into an {@code InputStream} and delegates to the corresponding
-     * {@code toObjects(InputStream, ReadOptions, TypeHolder<T>)} method. It is especially useful for preserving generic type
-     * information that would otherwise be lost when using a simple {@code Class<T>} argument.
-     * </p>
-     *
-     * @param json the JSON content as a {@code String}; if {@code null}, an empty string is assumed.
-     * @param readOptions the options that control the deserialization process; may be {@code null} to use default settings.
-     * @param rootTypeHolder a {@code TypeHolder<T>} encapsulating the full target type (including generics) for deserialization.
-     * @param <T> the type of the resulting Java object.
-     * @return an instance of type {@code T} representing the deserialized JSON object graph.
-     * @throws JsonIoException if an error occurs during deserialization.
+     * @param in the input stream containing JSON; must not be null
+     * @param readOptions configuration options for controlling how the JSON is parsed;
+     *                    if null, default options will be used
+     * @return a builder to complete the conversion by specifying the target type
+     * @throws IllegalArgumentException if the input stream is null
      */
-    public static <T> T toObjectsGeneric(String json, ReadOptions readOptions, TypeHolder<T> rootTypeHolder) {
-        if (json == null) {
-            json = "";
-        }
-        // Wrap the string in an InputStream and delegate
-        return toObjectsGeneric(new FastByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)), readOptions, rootTypeHolder);
+    public static JavaStreamBuilder toJava(InputStream in, ReadOptions readOptions) {
+        return new JavaStreamBuilder(in, readOptions);
     }
 
     /**
-     * <h2>Deserialize JSON from an InputStream to Java Objects</h2>
-     *
+     * Begins the process of converting a JsonObject (Map representation) to fully resolved Java objects.
      * <p>
-     * This method reads JSON content from the supplied {@code InputStream} and converts it into a corresponding Java object
-     * graph. The deserialization process is governed by the provided {@code ReadOptions}. By default, the InputStream is closed
-     * after processing; to keep it open (e.g., when processing NDJSON or streaming multiple JSON objects), set
-     * {@code readOptions.closeStream(false)}.
-     * </p>
+     * This method is part of the two-phase parsing capability of JsonIo. It takes a JsonObject (typically a Map
+     * structure that was returned from a previous call with {@code ReadOptions.returnAsJsonObjects()}) and
+     * converts it to a specific Java type. This allows you to examine and modify the parsed JSON structure
+     * before finalizing the conversion to Java objects.
+     * <p>
+     * The returned builder provides two completion methods:
+     * <ul>
+     *   <li>{@code asClass(Class)} - For converting to a specific class</li>
+     *   <li>{@code asType(TypeHolder)} - For converting to a generic type like {@code List<Person>}</li>
+     * </ul>
      *
-     * <h3>Conversion Overview</h3>
-     * <table style="border-collapse: collapse; border: 1px solid gray;" cellpadding="4" cellspacing="0">
-     *   <thead>
-     *     <tr style="background-color: #ddd;">
-     *       <th style="border: 1px solid gray;">Aspect</th>
-     *       <th style="border: 1px solid gray;">Details</th>
-     *     </tr>
-     *   </thead>
-     *   <tbody>
-     *     <tr>
-     *       <td style="border: 1px solid gray;"><b>Input</b></td>
-     *       <td style="border: 1px solid gray;">JSON content via an {@code InputStream}</td>
-     *     </tr>
-     *     <tr>
-     *       <td style="border: 1px solid gray;"><b>Type Hint</b></td>
-     *       <td style="border: 1px solid gray;">
-     *         The optional {@code rootType} parameter provides a hint for the expected Java type of the root object.
-     *         If {@code null} or if the JSON includes an "@type" meta-property, JsonIo attempts to determine the appropriate type.
-     *       </td>
-     *     </tr>
-     *     <tr>
-     *       <td style="border: 1px solid gray;"><b>Output</b></td>
-     *       <td style="border: 1px solid gray;">
-     *         A Java object graph that may be a user-defined DTO, a native {@code JsonObject} (Map-of-Maps), an array,
-     *         a collection, or a primitive (String, Number, Boolean, or null) depending on the JSON structure and
-     *         {@code ReadOptions}.
-     *       </td>
-     *     </tr>
-     *   </tbody>
-     * </table>
-     *
-     * <h3>Usage Examples</h3>
+     * <h3>Examples:</h3>
      * <pre>
-     * // 1. Deserialize JSON from an InputStream into a specific DTO:
-     * MyClass obj = JsonIo.toObjects(inputStream, readOptions, MyClass.class);
+     * // First parse JSON to a Map representation
+     * ReadOptions mapOptions = new ReadOptionsBuilder()
+     *                              .returnAsJsonObjects()
+     *                              .build();
+     * Map&lt;String, Object&gt; jsonMap = JsonIo.toJava(jsonString, mapOptions).asClass(Map.class);
      *
-     * // 2. Deserialize JSON into native JsonObjects when type inference is desired:
-     * JsonObject jsonObj = JsonIo.toObjects(inputStream, readOptions, null);
+     * // Modify the map structure if needed
+     * jsonMap.put("extraProperty", "new value");
+     *
+     * // Then convert the modified structure to Java objects
+     * Person person = JsonIo.toJava(jsonMap, readOptions).asClass(Person.class);
      * </pre>
      *
-     * <h3>Parameters</h3>
-     * <ul>
-     *   <li>
-     *     <b>in</b> - The {@code InputStream} from which JSON content is read. This parameter must not be {@code null}.
-     *     By default, the stream will be closed after processing.
-     *   </li>
-     *   <li>
-     *     <b>readOptions</b> - A {@code ReadOptions} instance that configures how the JSON is processed. This includes
-     *     options such as whether to return native {@code JsonObject} maps, how to handle unknown types, and type coercion.
-     *     If {@code null}, the default settings are used.
-     *   </li>
-     *   <li>
-     *     <b>rootType</b> - A {@code Class<T>} that represents the expected root type of the resulting Java object.
-     *     If {@code null} or if the JSON includes a type hint (e.g., an "@type" property), JsonIo will attempt to infer
-     *     the correct type based on the JSON content.
-     *   </li>
-     * </ul>
-     *
-     * <h3>Return Value</h3>
-     * <p>
-     * Returns an instance of type {@code T} representing the deserialized JSON object graph. Depending on the input and the
-     * configuration in {@code ReadOptions}, the result may be:
-     * <ul>
-     *   <li>A user-defined DTO (if a concrete {@code rootType} is provided).</li>
-     *   <li>A native {@code JsonObject} (Map-of-Maps) when {@code ReadOptions.returnAsJsonObjects()} is enabled.</li>
-     *   <li>An array or {@code Collection} if the JSON represents an array.</li>
-     *   <li>A primitive (String, Number, Boolean, or null) if the JSON represents a JSON primitive.</li>
-     * </ul>
-     * </p>
-     *
-     * <h3>Exceptions</h3>
-     * <ul>
-     *   <li>
-     *     {@code JsonIoException} - Thrown if an error occurs during deserialization.
-     *   </li>
-     * </ul>
-     *
-     * <p>
-     * <b>Note:</b> The provided {@code rootType} is used as a type hint. However, if the JSON content contains an
-     * "@type" property, that metadata takes precedence. If no type is specified (i.e., {@code rootType} is {@code null}),
-     * JsonIo will attempt to deduce the appropriate type based on the structure of the JSON.
-     * </p>
-     *
-     * @param in the {@code InputStream} from which JSON content is read; must not be {@code null}.
-     * @param readOptions the configuration options controlling the deserialization process; may be {@code null} to use default settings.
-     * @param rootType a {@code Class<T>} representing the expected root type of the resulting Java object; may be {@code null}
-     *                 to allow for type inference.
-     * @param <T> the type of the resulting Java object.
-     * @return an instance of type {@code T} representing the deserialized JSON object graph.
-     * @throws JsonIoException if an error occurs during deserialization.
+     * @param jsonObject the JsonObject (typically a Map) to convert; must not be null
+     * @param readOptions configuration options for controlling the conversion;
+     *                    if null, default options will be used
+     * @return a builder to complete the conversion by specifying the target type
+     * @throws IllegalArgumentException if the jsonObject is null
      */
-    public static <T> T toObjects(InputStream in, ReadOptions readOptions, Class<T> rootType) {
-        return toObjectsGeneric(in, readOptions, TypeHolder.of(rootType));
+    public static JavaObjectBuilder toJava(JsonObject jsonObject, ReadOptions readOptions) {
+        return new JavaObjectBuilder(jsonObject, readOptions);
     }
 
     /**
-     * <h2>Deserialize JSON from an InputStream to Java Objects with Full Generic Type Information</h2>
-     *
+     * Formats a JSON string with proper indentation and line breaks for readability.
      * <p>
-     * This method reads JSON content from the supplied {@code InputStream} and converts it into a corresponding Java object
-     * graph. It leverages a {@code TypeHolder<T>} to capture and preserve full generic type details, ensuring that complex
-     * parameterized types (e.g. {@code List<Point>}) are handled correctly. This overload is especially useful when the target
-     * type includes generic parameters that would be lost if only a raw {@code Class<T>} were provided.
-     * </p>
+     * This method takes a potentially minified or poorly formatted JSON string and converts it
+     * to a well-formatted, human-readable version with proper indentation and line breaks.
+     * This is useful for debugging, logging, or displaying JSON in a user interface.
+     * <p>
+     * Note that the formatting is purely cosmetic and does not change the semantic meaning
+     * of the JSON content.
      *
-     * <h3>Conversion Overview</h3>
-     * <table style="border-collapse: collapse; border: 1px solid gray;" cellpadding="4" cellspacing="0">
-     *   <thead>
-     *     <tr style="background-color: #ddd;">
-     *       <th style="border: 1px solid gray;">Aspect</th>
-     *       <th style="border: 1px solid gray;">Details</th>
-     *     </tr>
-     *   </thead>
-     *   <tbody>
-     *     <tr>
-     *       <td style="border: 1px solid gray;"><b>Input</b></td>
-     *       <td style="border: 1px solid gray;">JSON content via an {@code InputStream}</td>
-     *     </tr>
-     *     <tr>
-     *       <td style="border: 1px solid gray;"><b>Type Hint</b></td>
-     *       <td style="border: 1px solid gray;">
-     *         Provided via a {@code TypeHolder<T>} which preserves the full generic type (e.g., {@code List<Point>}).
-     *         This ensures that all type parameters are retained during deserialization.
-     *       </td>
-     *     </tr>
-     *     <tr>
-     *       <td style="border: 1px solid gray;"><b>Output</b></td>
-     *       <td style="border: 1px solid gray;">
-     *         A Java object graph of type {@code T} that may be a DTO, collection, array, or native {@code JsonObject}
-     *         (Map-of-Maps), depending on the JSON structure and the configuration in {@code ReadOptions}.
-     *       </td>
-     *     </tr>
-     *   </tbody>
-     * </table>
-     *
-     * <h3>Usage Example</h3>
+     * <h3>Example:</h3>
      * <pre>
-     * // Example: Deserializing a JSON InputStream into a generic List of Points:
-     * TypeHolder&lt;List&lt;Point&gt;&gt; holder = new TypeHolder&lt;List&lt;Point&gt;&gt;() {};
-     * List&lt;Point&gt; points = JsonIo.toObjects(inputStream, readOptions, holder);
+     * String minifiedJson = "{\"name\":\"John\",\"age\":30,\"address\":{\"city\":\"New York\",\"zip\":\"10001\"}}";
+     * String prettyJson = JsonIo.formatJson(minifiedJson);
+     * System.out.println(prettyJson);
+     * // Output:
+     * // {
+     * //   "name": "John",
+     * //   "age": 30,
+     * //   "address": {
+     * //     "city": "New York",
+     * //     "zip": "10001"
+     * //   }
+     * // }
      * </pre>
      *
-     * <h3>Parameters</h3>
-     * <ul>
-     *   <li>
-     *     <b>in</b> - The {@code InputStream} from which JSON content is read. This parameter must not be {@code null}.
-     *     By default, the stream will be closed after processing unless {@code readOptions.closeStream(false)} is set.
-     *   </li>
-     *   <li>
-     *     <b>readOptions</b> - A {@code ReadOptions} instance that configures how the JSON is processed (e.g., type coercion,
-     *     handling of unknown types, whether to return native {@code JsonObject} maps, etc.). If {@code null}, default settings are used.
-     *   </li>
-     *   <li>
-     *     <b>rootTypeHolder</b> - A {@code TypeHolder<T>} that encapsulates the complete target type, including generic parameters.
-     *     This is used to ensure that the full type information is preserved during deserialization.
-     *   </li>
-     * </ul>
-     *
-     * <h3>Return Value</h3>
-     * <p>
-     * Returns an instance of type {@code T} representing the deserialized JSON object graph. Depending on the JSON content and
-     * the provided read options, the result may be a user-defined DTO, a collection, an array, or a native {@code JsonObject}.
-     * </p>
-     *
-     * <h3>Exceptions</h3>
-     * <ul>
-     *   <li>
-     *     {@code JsonIoException} - Thrown if an error occurs during the deserialization process.
-     *   </li>
-     * </ul>
-     *
-     * <p>
-     * <b>Note:</b> This overload wraps the JSON content from the {@code InputStream} and delegates to the internal deserialization
-     * logic using the full type information extracted from the provided {@code TypeHolder}. This is essential for preserving
-     * generic type details that would be lost if only a raw {@code Class<T>} were used.
-     * </p>
-     *
-     * @param in the {@code InputStream} from which JSON content is read; must not be {@code null}.
-     * @param readOptions the configuration options controlling the deserialization process; may be {@code null} to use default settings.
-     * @param rootTypeHolder a {@code TypeHolder<T>} that encapsulates the full target type (including generics) for deserialization.
-     * @param <T> the type of the resulting Java object.
-     * @return an instance of type {@code T} representing the deserialized JSON object graph.
-     * @throws JsonIoException if an error occurs during deserialization.
-     */
-    public static <T> T toObjectsGeneric(InputStream in, ReadOptions readOptions, TypeHolder<T> rootTypeHolder) {
-        Convention.throwIfNull(in, "InputStream cannot be null");
-        if (readOptions == null) {
-            readOptions = ReadOptionsBuilder.getDefaultReadOptions();
-        }
-
-        JsonReader jr = null;
-        try {
-            jr = new JsonReader(in, readOptions);
-            // Instead of passing a Class, pass the full Type from the TypeHolder.
-            T root = jr.readObject(rootTypeHolder.getType());
-            return root;
-        } catch (JsonIoException je) {
-            throw je;
-        } catch (Exception e) {
-            throw new JsonIoException(e);
-        } finally {
-            if (jr != null && readOptions.isCloseStream()) {
-                jr.close();
-            }
-        }
-    }
-
-    /**
-     * <h2>Resolve a Native JsonObject to a Fully Resolved Java Object Graph</h2>
-     *
-     * <p>
-     * This method converts a root {@code JsonObject} (a Map-of-Maps representation of parsed JSON) into an actual Java object
-     * graph. The parsed {@code JsonObject} is typically produced by calling {@code JsonIo.toObjects(String)} or
-     * {@code JsonIo.toObjects(InputStream)} with {@code ReadOptions.returnAsJsonObjects()} enabled. This intermediate
-     * representation contains metadata (such as an {@code @type} field) that allows the correct resolution of Java objects.
-     * </p>
-     *
-     * <h3>Conversion Overview</h3>
-     * <table style="border-collapse: collapse; border: 1px solid gray;" cellpadding="4" cellspacing="0">
-     *   <thead>
-     *     <tr style="background-color: #ddd;">
-     *       <th style="border: 1px solid gray;">Aspect</th>
-     *       <th style="border: 1px solid gray;">Details</th>
-     *     </tr>
-     *   </thead>
-     *   <tbody>
-     *     <tr>
-     *       <td style="border: 1px solid gray;"><b>Input</b></td>
-     *       <td style="border: 1px solid gray;">A {@code JsonObject} (Map-of-Maps) representing parsed JSON data.</td>
-     *     </tr>
-     *     <tr>
-     *       <td style="border: 1px solid gray;"><b>Type Hint</b></td>
-     *       <td style="border: 1px solid gray;">
-     *           A {@code Class<T>} that indicates the expected Java type of the root object. If the {@code JsonObject}
-     *           contains an embedded type hint (e.g., via an {@code @type} property), that metadata will be used.
-     *       </td>
-     *     </tr>
-     *     <tr>
-     *       <td style="border: 1px solid gray;"><b>Output</b></td>
-     *       <td style="border: 1px solid gray;">
-     *           A fully resolved Java object graph of type {@code T} which may be a user-defined DTO, a collection, an array,
-     *           or a primitive type, depending on the JSON structure and configuration.
-     *       </td>
-     *     </tr>
-     *   </tbody>
-     * </table>
-     *
-     * <h3>Usage Examples</h3>
-     * <pre>
-     * // Example 1: Convert a native JsonObject (Map-of-Maps) into a specific DTO:
-     * JsonObject jsonObj = JsonIo.toObjects(jsonString, readOptions, null);
-     * MyClass obj = JsonIo.toObjects(jsonObj, readOptions, MyClass.class);
-     *
-     * // Example 2: If no type hint is provided, the resolver attempts to infer the type:
-     * JsonObject jsonObj = JsonIo.toObjects(jsonString, readOptions, null);
-     * Object result = JsonIo.toObjects(jsonObj, readOptions, null);
-     * </pre>
-     *
-     * <h3>Parameters</h3>
-     * <ul>
-     *   <li>
-     *     <b>jsonObject</b> - The {@code JsonObject} (Map-of-Maps) that represents the parsed JSON data. This is generally
-     *     obtained via a prior call to {@code toObjects(String)} or {@code toObjects(InputStream)} when using
-     *     {@code ReadOptions.returnAsJsonObjects()}.
-     *   </li>
-     *   <li>
-     *     <b>readOptions</b> - A {@code ReadOptions} instance that controls the resolution process. If {@code null}, default
-     *     settings are applied. If the options do not already specify that Java objects should be returned, they are updated
-     *     to do so.
-     *   </li>
-     *   <li>
-     *     <b>rootType</b> - A {@code Class<T>} that represents the expected Java type for the root object in the resolved
-     *     object graph. If {@code null}, or if the {@code JsonObject} contains an embedded type hint (e.g., an {@code @type}
-     *     property), JsonIo will attempt to deduce the appropriate type.
-     *   </li>
-     * </ul>
-     *
-     * <h3>Return Value</h3>
-     * <p>
-     * Returns a Java object graph of type {@code T} representing the resolved JSON. Depending on the input JSON structure
-     * and provided type hint, the result might be a user-defined DTO, an array, a collection, or even a primitive value
-     * (e.g., String, Number, Boolean, or null).
-     * </p>
-     *
-     * <h3>Notes</h3>
-     * <p>
-     * This method performs the "resolution" phase of deserialization. It converts the intermediate {@code JsonObject}
-     * representation—containing all the JSON data and meta-information—into a fully resolved Java object graph.
-     * </p>
-     *
-     * <p>
-     * If you have already converted JSON into a native {@code JsonObject} and simply wish to re-resolve it into Java objects,
-     * this method is appropriate. Otherwise, use the other {@code toObjects(...)} overloads to parse and resolve in a single step.
-     * </p>
-     *
-     * @param jsonObject a {@code JsonObject} (Map-of-Maps) representing parsed JSON data.
-     * @param readOptions the configuration options for JSON processing; if {@code null}, default settings are used.
-     * @param rootType a {@code Class<T>} representing the expected root type of the resulting Java object; if {@code null},
-     *                 JsonIo will attempt to infer the type from the {@code JsonObject} metadata.
-     * @param <T> the type of the resulting Java object.
-     * @return a Java object graph of type {@code T} representing the resolved JSON.
-     */
-    public static <T> T toObjects(JsonObject jsonObject, ReadOptions readOptions, Class<T> rootType) {
-        return toObjectsGeneric(jsonObject, readOptions, TypeHolder.of(rootType));
-    }
-
-    /**
-     * <h2>Resolve a Native JsonObject to a Fully Resolved Java Object Graph with Full Generic Type Information</h2>
-     *
-     * <p>
-     * This method converts a native {@code JsonObject} (a Map-of-Maps representation of parsed JSON) into a fully resolved
-     * Java object graph. It leverages a {@code TypeHolder<T>} to capture and preserve the complete generic type details of the
-     * target object. This is particularly useful when the root type includes generic parameters (e.g., {@code List<Point>})
-     * that cannot be fully expressed with a raw {@code Class<T>} alone.
-     * </p>
-     *
-     * <h3>Conversion Overview</h3>
-     * <table style="border-collapse: collapse; border: 1px solid gray;" cellpadding="4" cellspacing="0">
-     *   <thead>
-     *     <tr style="background-color: #ddd;">
-     *       <th style="border: 1px solid gray;">Aspect</th>
-     *       <th style="border: 1px solid gray;">Details</th>
-     *     </tr>
-     *   </thead>
-     *   <tbody>
-     *     <tr>
-     *       <td style="border: 1px solid gray;"><b>Input</b></td>
-     *       <td style="border: 1px solid gray;">A native {@code JsonObject} (Map-of-Maps) that represents parsed JSON data.</td>
-     *     </tr>
-     *     <tr>
-     *       <td style="border: 1px solid gray;"><b>Type Hint</b></td>
-     *       <td style="border: 1px solid gray;">
-     *         Provided via a {@code TypeHolder<T>}, which encapsulates the full target type, including any generic parameters.
-     *         This ensures that complete type information (e.g. {@code List<Point>}) is preserved during resolution.
-     *       </td>
-     *     </tr>
-     *     <tr>
-     *       <td style="border: 1px solid gray;"><b>Output</b></td>
-     *       <td style="border: 1px solid gray;">
-     *         A fully resolved Java object graph of type {@code T}. Depending on the JSON structure and the settings in
-     *         {@code ReadOptions}, the result may be a user-defined DTO, a collection, an array, or a primitive value.
-     *       </td>
-     *     </tr>
-     *   </tbody>
-     * </table>
-     *
-     * <h3>Usage Example</h3>
-     * <pre>
-     * // Example: Resolve a native JsonObject into a generic List of Points
-     * JsonObject jsonObj = ...; // Obtained via a prior call to JsonIo.toObjects(String) or toObjects(InputStream)
-     * TypeHolder&lt;List&lt;Point&gt;&gt; holder = new TypeHolder&lt;List&lt;Point&gt;&gt;() {};
-     * List&lt;Point&gt; points = JsonIo.toObjects(jsonObj, readOptions, holder);
-     * </pre>
-     *
-     * <h3>Parameters</h3>
-     * <ul>
-     *   <li>
-     *     <b>jsonObject</b> - The native {@code JsonObject} (Map-of-Maps) representing parsed JSON data. This object is typically
-     *     produced by a previous call to {@code toObjects(String)} or {@code toObjects(InputStream)} when using
-     *     {@code ReadOptions.returnAsJsonObjects()}.
-     *   </li>
-     *   <li>
-     *     <b>readOptions</b> - A {@code ReadOptions} instance that configures the resolution process (e.g., whether to return
-     *     fully resolved Java objects or native {@code JsonObject} maps). If {@code null}, default settings are applied.
-     *   </li>
-     *   <li>
-     *     <b>rootTypeHolder</b> - A {@code TypeHolder<T>} that encapsulates the complete target type (including generics) for
-     *     the resulting Java object graph.
-     *   </li>
-     * </ul>
-     *
-     * <h3>Return Value</h3>
-     * <p>
-     * Returns an instance of type {@code T} representing the fully resolved Java object graph. Depending on the JSON content
-     * and type hint, this might be a user-defined DTO, an array, a collection, or a primitive value (e.g., String, Number,
-     * Boolean, or null).
-     * </p>
-     *
-     * <h3>Notes</h3>
-     * <p>
-     * This method performs the resolution phase of deserialization. It converts the intermediate native {@code JsonObject}
-     * (which includes JSON data and meta-information such as an "@type" property) into a fully resolved Java object graph,
-     * using the full type information provided by the {@code TypeHolder}. This is critical for accurately reconstructing
-     * parameterized types.
-     * </p>
-     *
-     * @param jsonObject a {@code JsonObject} (Map-of-Maps) representing the parsed JSON data.
-     * @param readOptions the configuration options for JSON processing; if {@code null}, default settings are used.
-     * @param rootTypeHolder a {@code TypeHolder<T>} encapsulating the full target type (including generics) for resolution.
-     * @param <T> the type of the resulting Java object.
-     * @return an instance of type {@code T} representing the fully resolved Java object graph.
-     */
-    public static <T> T toObjectsGeneric(JsonObject jsonObject, ReadOptions readOptions, TypeHolder<T> rootTypeHolder) {
-        if (readOptions == null) {
-            readOptions = ReadOptionsBuilder.getDefaultReadOptions();
-        } else if (!readOptions.isReturningJavaObjects()) {
-            readOptions = new ReadOptionsBuilder(readOptions).returnAsJavaObjects().build();
-        }
-        JsonReader reader = new JsonReader(readOptions);
-        // Pass the full Type to the resolver.
-        return reader.resolveObjects(jsonObject, rootTypeHolder.getType());
-    }
-
-    /**
-     * Format the passed in JSON into multi-line, indented format, commonly used in JSON online editors.
-     * @param json String JSON content.
-     * @return String JSON formatted in human-readable, standard multi-line, indented format.
+     * @param json the JSON string to format; if invalid JSON is provided, the method may throw an exception
+     * @return a formatted, indented JSON string for improved readability
      */
     public static String formatJson(String json) {
         return JsonPrettyPrinter.prettyPrint(json);
     }
 
     /**
-     * Copy an object graph using JSON.
-     * @param source Object root object to copy
-     * @param readOptions ReadOptions feature settings. Can be null for default ReadOptions.
-     * @param writeOptions WriteOptions feature settings. Can be null for default WriteOptions.
-     * @return A new, duplicate instance of the original.
+     * Creates a deep copy of an object by serializing it to JSON and then deserializing it back.
+     * <p>
+     * This method provides a convenient way to create a completely detached copy of an object graph.
+     * It works by converting the object to JSON and then back to a new instance, effectively "cloning"
+     * the entire object structure including all nested objects.
+     * <p>
+     * This approach can be particularly useful when you need to:
+     * <ul>
+     *   <li>Create a true deep copy of a complex object graph</li>
+     *   <li>Detach an object from its original references</li>
+     *   <li>Create a snapshot of an object's state</li>
+     * </ul>
+     *
+     * <h3>Example:</h3>
+     * <pre>
+     * // Create a deep copy of an object
+     * Person original = new Person("John", 30);
+     * Person copy = JsonIo.deepCopy(original, null, null);
+     *
+     * // Verify the copy is independent
+     * original.setName("Jane");
+     * System.out.println(copy.getName()); // Still "John"
+     * </pre>
+     *
+     * <p>The method sets special write options to ensure proper copying, but you can provide
+     * custom read and write options to further control the process if needed.
+     *
+     * @param <T> the type of the object being copied
+     * @param source the object to copy; if null, null will be returned
+     * @param readOptions options for controlling deserialization; if null, default options will be used
+     * @param writeOptions options for controlling serialization; if null, default options will be used
+     * @return a deep copy of the original object, or null if the source was null
      */
     @SuppressWarnings("unchecked")
     public static <T> T deepCopy(Object source, ReadOptions readOptions, WriteOptions writeOptions) {
         if (source == null) {
-            // They asked to copy null.  The copy of null is null.
             return null;
         }
 
@@ -1008,300 +383,391 @@ public class JsonIo {
         }
 
         String json = toJson(source, writeOptions);
-        return (T) toObjects(json, readOptions, source.getClass());
+        return (T) toJava(json, readOptions).asClass(source.getClass());
     }
 
     /**
-     * Call this method to see all the conversions offered.
-     * @param args String[] of command line arguments
+     * Converts a JSON string to a Java object of the specified class.
+     * <p>
+     * <i>Note: This method will be deprecated in a future release. Please use the {@link #toJava(String, ReadOptions)}
+     * method with {@code asClass()} or {@code asType()} instead.</i>
+     * <p>
+     * This method parses the provided JSON string and converts it to an instance of the specified class.
+     *
+     * <h3>Example:</h3>
+     * <pre>
+     * // Legacy approach:
+     * Person person = JsonIo.toObjects(jsonString, readOptions, Person.class);
+     *
+     * // Recommended new approach:
+     * Person person = JsonIo.toJava(jsonString, readOptions).asClass(Person.class);
+     * </pre>
+     *
+     * @param <T> the type of the resulting Java object
+     * @param json the JSON string to parse
+     * @param readOptions options for controlling the parsing; if null, default options will be used
+     * @param rootType the class to convert the JSON to
+     * @return an instance of the specified class populated from the JSON
+     */
+    public static <T> T toObjects(String json, ReadOptions readOptions, Class<T> rootType) {
+        return toJava(json, readOptions).asClass(rootType);
+    }
+
+    /**
+     * Converts JSON from an InputStream to a Java object of the specified class.
+     * <p>
+     * <i>Note: This method will be deprecated in a future release. Please use the {@link #toJava(InputStream, ReadOptions)}
+     * method with {@code asClass()} or {@code asType()} instead.</i>
+     * <p>
+     * This method reads JSON from the provided input stream and converts it to an instance of the specified class.
+     *
+     * <h3>Example:</h3>
+     * <pre>
+     * // Legacy approach:
+     * Person person = JsonIo.toObjects(inputStream, readOptions, Person.class);
+     *
+     * // Recommended new approach:
+     * Person person = JsonIo.toJava(inputStream, readOptions).asClass(Person.class);
+     * </pre>
+     *
+     * @param <T> the type of the resulting Java object
+     * @param in the input stream containing JSON
+     * @param readOptions options for controlling the parsing; if null, default options will be used
+     * @param rootType the class to convert the JSON to
+     * @return an instance of the specified class populated from the JSON
+     */
+    public static <T> T toObjects(InputStream in, ReadOptions readOptions, Class<T> rootType) {
+        return toJava(in, readOptions).asClass(rootType);
+    }
+
+    /**
+     * Converts a JsonObject (Map representation) to a Java object of the specified class.
+     * <p>
+     * <i>Note: This method will be deprecated in a future release. Please use the {@link #toJava(JsonObject, ReadOptions)}
+     * method with {@code asClass()} or {@code asType()} instead.</i>
+     * <p>
+     * This method converts the provided JsonObject to an instance of the specified class.
+     *
+     * <h3>Example:</h3>
+     * <pre>
+     * // Legacy approach:
+     * Person person = JsonIo.toObjects(jsonObject, readOptions, Person.class);
+     *
+     * // Recommended new approach:
+     * Person person = JsonIo.toJava(jsonObject, readOptions).asClass(Person.class);
+     * </pre>
+     *
+     * @param <T> the type of the resulting Java object
+     * @param jsonObject the JsonObject to convert
+     * @param readOptions options for controlling the conversion; if null, default options will be used
+     * @param rootType the class to convert the JsonObject to
+     * @return an instance of the specified class populated from the JsonObject
+     */
+    public static <T> T toObjects(JsonObject jsonObject, ReadOptions readOptions, Class<T> rootType) {
+        return toJava(jsonObject, readOptions).asClass(rootType);
+    }
+
+    /**
+     * Builder for converting a JSON string to Java objects.
+     * <p>
+     * This builder completes the JSON parsing process started by {@link #toJava(String, ReadOptions)}.
+     * It provides methods to specify the target type for the deserialization.
+     */
+    public static final class JavaStringBuilder {
+        private final String json;
+        private final ReadOptions readOptions;
+
+        JavaStringBuilder(String json, ReadOptions readOptions) {
+            this.json = json != null ? json : "";
+            this.readOptions = readOptions != null ? readOptions : ReadOptionsBuilder.getDefaultReadOptions();
+        }
+
+        /**
+         * Completes the JSON parsing by specifying a target class.
+         * <p>
+         * This method finishes the conversion process by parsing the JSON string into an
+         * instance of the specified class. The method is suitable for converting to:
+         * <ul>
+         *   <li>Concrete Java classes (e.g., {@code Person.class})</li>
+         *   <li>Primitive wrapper classes (e.g., {@code Integer.class})</li>
+         *   <li>Interface types like {@code Map.class} or {@code List.class} (which will use appropriate implementations)</li>
+         * </ul>
+         * <p>
+         * For generic types like {@code List<Person>}, use the {@link #asType(TypeHolder)} method instead.
+         *
+         * <h3>Examples:</h3>
+         * <pre>
+         * // Convert to a specific class
+         * Person person = JsonIo.toJava(jsonString, readOptions).asClass(Person.class);
+         *
+         * // Convert to a Map
+         * Map&lt;String, Object&gt; map = JsonIo.toJava(jsonString, readOptions).asClass(Map.class);
+         *
+         * // Convert to a List (note: without generic type information)
+         * List list = JsonIo.toJava(jsonString, readOptions).asClass(List.class);
+         * </pre>
+         *
+         * <p>The behavior is affected by the ReadOptions:
+         * <ul>
+         *   <li>With {@code returnAsJavaObjects()} (default), this method attempts to create fully
+         *       instantiated objects of the specified class.</li>
+         *   <li>With {@code returnAsJsonObjects()}, this method returns an intermediate representation,
+         *       typically Map objects, that can be manipulated before further processing.</li>
+         * </ul>
+         *
+         * @param <T> the type to convert the JSON to
+         * @param clazz the target class; if null, the type will be inferred from the JSON
+         * @return an instance of the specified class populated from the JSON
+         * @throws JsonIoException if an error occurs during parsing or conversion
+         */
+        public <T> T asClass(Class<T> clazz) {
+            return asType(TypeHolder.forClass(clazz));
+        }
+
+        /**
+         * Completes the JSON parsing by specifying a generic type.
+         * <p>
+         * This method is particularly useful for handling generic types like {@code List<Person>}
+         * or {@code Map<String, List<Integer>>}, where the full type information cannot be
+         * expressed with a simple Class object.
+         * <p>
+         * The TypeHolder captures the complete generic type information at compile time,
+         * allowing JsonIo to properly handle the generics during deserialization.
+         *
+         * <h3>Examples:</h3>
+         * <pre>
+         * // Convert to a List of Person objects
+         * List&lt;Person&gt; people = JsonIo.toJava(jsonString, readOptions)
+         *                              .asType(new TypeHolder&lt;List&lt;Person&gt;&gt;(){});
+         *
+         * // Convert to a Map with generic parameters
+         * Map&lt;String, List&lt;Integer&gt;&gt; map = JsonIo.toJava(jsonString, readOptions)
+         *                                          .asType(new TypeHolder&lt;Map&lt;String, List&lt;Integer&gt;&gt;&gt;(){});
+         * </pre>
+         *
+         * @param <T> the type to convert the JSON to
+         * @param typeHolder a TypeHolder instance capturing the full generic type
+         * @return an object of the specified type populated from the JSON
+         * @throws JsonIoException if an error occurs during parsing or conversion
+         */
+        public <T> T asType(TypeHolder<T> typeHolder) {
+            try {
+                return parseJson(typeHolder);
+            } catch (JsonIoException je) {
+                throw je;
+            } catch (Exception e) {
+                throw new JsonIoException(e);
+            }
+        }
+
+        private <T> T parseJson(TypeHolder<T> typeHolder) throws Exception {
+            FastByteArrayInputStream in = new FastByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
+            JsonReader jr = new JsonReader(in, readOptions);
+            T root = jr.readObject(typeHolder.getType());
+            if (readOptions.isCloseStream()) {
+                jr.close();
+            }
+            return root;
+        }
+    }
+
+    /**
+     * Builder for converting JSON from an InputStream to Java objects.
+     * <p>
+     * This builder completes the JSON parsing process started by {@link #toJava(InputStream, ReadOptions)}.
+     * It provides methods to specify the target type for the deserialization.
+     */
+    public static final class JavaStreamBuilder {
+        private final InputStream in;
+        private final ReadOptions readOptions;
+
+        JavaStreamBuilder(InputStream in, ReadOptions readOptions) {
+            Convention.throwIfNull(in, "InputStream cannot be null");
+            this.in = in;
+            this.readOptions = readOptions != null ? readOptions : ReadOptionsBuilder.getDefaultReadOptions();
+        }
+
+        /**
+         * Completes the JSON parsing by specifying a target class.
+         * <p>
+         * This method finishes the conversion process by parsing the JSON from the input stream into an
+         * instance of the specified class. The method is suitable for converting to:
+         * <ul>
+         *   <li>Concrete Java classes (e.g., {@code Person.class})</li>
+         *   <li>Primitive wrapper classes (e.g., {@code Integer.class})</li>
+         *   <li>Interface types like {@code Map.class} or {@code List.class} (which will use appropriate implementations)</li>
+         * </ul>
+         * <p>
+         * For generic types like {@code List<Person>}, use the {@link #asType(TypeHolder)} method instead.
+         *
+         * <h3>Examples:</h3>
+         * <pre>
+         * // Read from a file
+         * try (FileInputStream fis = new FileInputStream("data.json")) {
+         *     Person person = JsonIo.toJava(fis, readOptions).asClass(Person.class);
+         * }
+         * </pre>
+         *
+         * @param <T> the type to convert the JSON to
+         * @param clazz the target class; if null, the type will be inferred from the JSON
+         * @return an instance of the specified class populated from the JSON
+         * @throws JsonIoException if an error occurs during parsing or conversion
+         */
+        public <T> T asClass(Class<T> clazz) {
+            return asType(TypeHolder.forClass(clazz));
+        }
+
+        /**
+         * Completes the JSON parsing by specifying a generic type.
+         * <p>
+         * This method is particularly useful for handling generic types like {@code List<Person>}
+         * or {@code Map<String, List<Integer>>}, where the full type information cannot be
+         * expressed with a simple Class object.
+         * <p>
+         * The TypeHolder captures the complete generic type information at compile time,
+         * allowing JsonIo to properly handle the generics during deserialization.
+         *
+         * <h3>Examples:</h3>
+         * <pre>
+         * // Read from a network stream
+         * List&lt;Person&gt; people = JsonIo.toJava(inputStream, readOptions)
+         *                              .asType(new TypeHolder&lt;List&lt;Person&gt;&gt;(){});
+         * </pre>
+         *
+         * @param <T> the type to convert the JSON to
+         * @param typeHolder a TypeHolder instance capturing the full generic type
+         * @return an object of the specified type populated from the JSON
+         * @throws JsonIoException if an error occurs during parsing or conversion
+         */
+        public <T> T asType(TypeHolder<T> typeHolder) {
+            JsonReader jr = null;
+            try {
+                jr = new JsonReader(in, readOptions);
+                T root = jr.readObject(typeHolder.getType());
+                return root;
+            } catch (JsonIoException je) {
+                throw je;
+            } catch (Exception e) {
+                throw new JsonIoException(e);
+            } finally {
+                if (jr != null && readOptions.isCloseStream()) {
+                    jr.close();
+                }
+            }
+        }
+    }
+
+    /**
+     * Builder for converting a JsonObject (Map representation) to fully resolved Java objects.
+     * <p>
+     * This builder completes the conversion process started by {@link #toJava(JsonObject, ReadOptions)}.
+     * It provides methods to specify the target type for the conversion from the intermediate
+     * JsonObject representation to fully resolved Java objects.
+     */
+    public static final class JavaObjectBuilder {
+        private final JsonObject jsonObject;
+        private final ReadOptions readOptions;
+
+        JavaObjectBuilder(JsonObject jsonObject, ReadOptions readOptions) {
+            Convention.throwIfNull(jsonObject, "JsonObject cannot be null");
+            this.jsonObject = jsonObject;
+            this.readOptions = readOptions != null ? readOptions : ReadOptionsBuilder.getDefaultReadOptions();
+        }
+
+        /**
+         * Completes the conversion by specifying a target class.
+         * <p>
+         * This method converts the JsonObject (Map representation) into an instance of the
+         * specified class. This is useful when you have a JsonObject obtained from a previous
+         * parsing step (using {@code ReadOptions.returnAsJsonObjects()}) and want to convert
+         * it to a concrete Java object.
+         * <p>
+         * This method is suitable for converting to:
+         * <ul>
+         *   <li>Concrete Java classes (e.g., {@code Person.class})</li>
+         *   <li>Primitive wrapper classes (e.g., {@code Integer.class})</li>
+         *   <li>Interface types like {@code Map.class} or {@code List.class} (which will use appropriate implementations)</li>
+         * </ul>
+         * <p>
+         * For generic types like {@code List<Person>}, use the {@link #asType(TypeHolder)} method instead.
+         *
+         * <h3>Example:</h3>
+         * <pre>
+         * // First parse JSON to a Map representation
+         * ReadOptions mapOptions = new ReadOptionsBuilder()
+         *                              .returnAsJsonObjects()
+         *                              .build();
+         * Map&lt;String, Object&gt; jsonMap = JsonIo.toJava(jsonString, mapOptions).asClass(Map.class);
+         *
+         * // Modify the map
+         * jsonMap.put("age", 31);
+         *
+         * // Then convert to a Java object
+         * Person person = JsonIo.toJava(jsonMap, readOptions).asClass(Person.class);
+         * </pre>
+         *
+         * @param <T> the type to convert the JsonObject to
+         * @param clazz the target class; if null, the type will be inferred from the JsonObject
+         * @return an instance of the specified class populated from the JsonObject
+         */
+        public <T> T asClass(Class<T> clazz) {
+            return asType(TypeHolder.forClass(clazz));
+        }
+
+        /**
+         * Completes the conversion by specifying a generic type.
+         * <p>
+         * This method is particularly useful for handling generic types like {@code List<Person>}
+         * or {@code Map<String, List<Integer>>}, where the full type information cannot be
+         * expressed with a simple Class object.
+         * <p>
+         * The TypeHolder captures the complete generic type information at compile time,
+         * allowing JsonIo to properly handle the generics during conversion.
+         *
+         * <h3>Example:</h3>
+         * <pre>
+         * // First parse JSON to a Map representation
+         * ReadOptions mapOptions = new ReadOptionsBuilder()
+         *                              .returnAsJsonObjects()
+         *                              .build();
+         * Map&lt;String, Object&gt; jsonMap = JsonIo.toJava(jsonString, mapOptions).asClass(Map.class);
+         *
+         * // Then convert to a generic collection
+         * List&lt;Person&gt; people = JsonIo.toJava(jsonMap, readOptions)
+         *                             .asType(new TypeHolder&lt;List&lt;Person&gt;&gt;(){});
+         * </pre>
+         *
+         * @param <T> the type to convert the JsonObject to
+         * @param typeHolder a TypeHolder instance capturing the full generic type
+         * @return an object of the specified type populated from the JsonObject
+         */
+        public <T> T asType(TypeHolder<T> typeHolder) {
+            ReadOptions effectiveOptions = readOptions;
+            if (!effectiveOptions.isReturningJavaObjects()) {
+                effectiveOptions = new ReadOptionsBuilder(effectiveOptions).returnAsJavaObjects().build();
+            }
+
+            JsonReader reader = new JsonReader(effectiveOptions);
+            return reader.resolveObjects(jsonObject, typeHolder.getType());
+        }
+    }
+
+    /**
+     * Displays a list of all supported type conversions in JsonIo.
+     * <p>
+     * When executed directly, this method prints out a comprehensive JSON representation of all
+     * the type conversions supported by the underlying Converter used by JsonIo. This includes
+     * conversions between primitive types, temporal types, collections, and more specialized
+     * Java types.
+     * <p>
+     * This information is useful for understanding the range of automatic type conversions
+     * that JsonIo can perform during deserialization.
+     *
+     * @param args command line arguments (not used)
      */
     public static void main(String[] args) {
         String json = toJson(new Converter(new DefaultConverterOptions()).getSupportedConversions(), new WriteOptionsBuilder().prettyPrint(true).showTypeInfoNever().build());
         System.out.println("json-io supported conversions (source type to target types):");
         System.out.println(json);
     }
-
-    /**
-     * Convert an old-style Map of options to a ReadOptionsBuilder. It is not recommended to use this API long term,
-     * however, this API will be the fastest route to bridge an old installation using json-io to the new API.
-     * @param optionalArgs Map of old json-io options
-     * @return ReadOptionsBuilder
-     * @deprecated - This exists to show how the old {@code Map<String, Object>} options are crreated using ReadOptionsBuilder.
-     */
-    @Deprecated
-    public static ReadOptionsBuilder getReadOptionsBuilder(Map<String, Object> optionalArgs) {
-        if (optionalArgs == null) {
-            optionalArgs = new HashMap<>();
-        }
-        ReadOptionsBuilder builder = new ReadOptionsBuilder();
-
-        int maxParseDepth = 1000;
-        if (optionalArgs.containsKey(MAX_PARSE_DEPTH)) {
-            maxParseDepth = com.cedarsoftware.util.Converter.convert(optionalArgs.get(MAX_PARSE_DEPTH), int.class);
-        }
-        builder.maxDepth(maxParseDepth);
-        boolean useMaps = com.cedarsoftware.util.Converter.convert(optionalArgs.get(USE_MAPS), boolean.class);
-
-        if (useMaps) {
-            builder.returnAsJsonObjects();
-        } else {
-            builder.returnAsJavaObjects();
-        }
-
-        boolean failOnUnknownType = com.cedarsoftware.util.Converter.convert(optionalArgs.get(FAIL_ON_UNKNOWN_TYPE), boolean.class);
-        builder.failOnUnknownType(failOnUnknownType);
-
-        Object loader = optionalArgs.get(CLASSLOADER);
-        ClassLoader classLoader;
-        if (loader instanceof ClassLoader) {
-            classLoader = (ClassLoader) loader;
-        } else {
-            classLoader = ClassUtilities.getClassLoader(JsonIo.class);
-        }
-        builder.classLoader(classLoader);
-
-        Object type = optionalArgs.get("UNKNOWN_TYPE");
-        if (type == null) {
-            type = optionalArgs.get(UNKNOWN_OBJECT);
-        }
-        if (type instanceof Boolean) {
-            builder.failOnUnknownType(true);
-        } else if (type instanceof String) {
-            Class<?> unknownType = ClassUtilities.forName((String) type, classLoader);
-            builder.unknownTypeClass(unknownType);
-            builder.failOnUnknownType(false);
-        }
-
-        Object aliasMap = optionalArgs.get(TYPE_NAME_MAP);
-        if (aliasMap instanceof Map) {
-            Map<String, String> aliases = (Map<String, String>) aliasMap;
-            for (Map.Entry<String, String> entry : aliases.entrySet()) {
-                builder.aliasTypeName(entry.getKey(), entry.getValue());
-            }
-        }
-
-        Object missingFieldHandler = optionalArgs.get(MISSING_FIELD_HANDLER);
-        if (missingFieldHandler instanceof com.cedarsoftware.io.JsonReader.MissingFieldHandler) {
-            builder.missingFieldHandler((com.cedarsoftware.io.JsonReader.MissingFieldHandler) missingFieldHandler);
-        }
-
-        Object customReaderMap = optionalArgs.get(CUSTOM_READER_MAP);
-        if (customReaderMap instanceof Map) {
-            Map<String, Object> customReaders = (Map<String, Object>) customReaderMap;
-            for (Map.Entry<String, Object> entry : customReaders.entrySet()) {
-                try {
-                    Class<?> clazz = Class.forName(entry.getKey());
-                    builder.addCustomReaderClass(clazz, (com.cedarsoftware.io.JsonReader.JsonClassReader) entry.getValue());
-                } catch (ClassNotFoundException e) {
-                    String message = "Custom json-io reader class: " + entry.getKey() + " not found.";
-                    throw new com.cedarsoftware.io.JsonIoException(message, e);
-                } catch (ClassCastException e) {
-                    String message = "Custom json-io reader for: " + entry.getKey() + " must be an instance of com.cedarsoftware.io.JsonReader.JsonClassReader.";
-                    throw new com.cedarsoftware.io.JsonIoException(message, e);
-                }
-            }
-        }
-
-        Object notCustomReadersObject = optionalArgs.get(NOT_CUSTOM_READER_MAP);
-        if (notCustomReadersObject instanceof Iterable) {
-            Iterable<Class<?>> notCustomReaders = (Iterable<Class<?>>) notCustomReadersObject;
-            for (Class<?> notCustomReader : notCustomReaders)
-            {
-                builder.addNotCustomReaderClass(notCustomReader);
-            }
-        }
-
-        for (Map.Entry<String, Object> entry : optionalArgs.entrySet()) {
-            if (OPTIONAL_READ_KEYS.contains(entry.getKey())) {
-                continue;
-            }
-            builder.addCustomOption(entry.getKey(), entry.getValue());
-        }
-
-        return builder;
-    }
-
-    /**
-     * Convert an old-style Map of options to a WriteOptionsBuilder. It is not recommended to use this API long term,
-     * however, this API will be the fastest route to bridge an old installation using json-io to the new API.
-     * @param optionalArgs Map of old json-io options
-     * @return WriteOptionsBuilder
-     * @deprecated - This exists to show how the old {@code Map<String, Object>} options are crreated using WriteptionsBuilder.
-     */
-    @Deprecated
-    public static WriteOptionsBuilder getWriteOptionsBuilder(Map<String, Object> optionalArgs) {
-        if (optionalArgs == null) {
-            optionalArgs = new HashMap<>();
-        }
-
-        WriteOptionsBuilder builder = new WriteOptionsBuilder();
-
-        Object dateFormat = optionalArgs.get(DATE_FORMAT);
-        if (dateFormat != null) {
-            builder.isoDateFormat();
-        }
-
-        Boolean showType = com.cedarsoftware.util.Converter.convert(optionalArgs.get(TYPE), Boolean.class);
-        if (showType == null) {
-            builder.showTypeInfoMinimal();
-        } else if (showType) {
-            builder.showTypeInfoAlways();
-        } else {
-            builder.showTypeInfoNever();
-        }
-
-        boolean prettyPrint = com.cedarsoftware.util.Converter.convert(optionalArgs.get(PRETTY_PRINT), boolean.class);
-        builder.prettyPrint(prettyPrint);
-
-        boolean writeLongsAsStrings = com.cedarsoftware.util.Converter.convert(optionalArgs.get(WRITE_LONGS_AS_STRINGS), boolean.class);
-        builder.writeLongsAsStrings(writeLongsAsStrings);
-
-        boolean shortMetaKeys = com.cedarsoftware.util.Converter.convert(optionalArgs.get(SHORT_META_KEYS), boolean.class);
-        builder.shortMetaKeys(shortMetaKeys);
-
-        boolean skipNullFields = com.cedarsoftware.util.Converter.convert(optionalArgs.get(SKIP_NULL_FIELDS), boolean.class);
-        builder.skipNullFields(skipNullFields);
-
-        boolean forceMapOutputAsTwoArrays = com.cedarsoftware.util.Converter.convert(optionalArgs.get(FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS), boolean.class);
-        builder.forceMapOutputAsTwoArrays(forceMapOutputAsTwoArrays);
-
-        boolean writeEnumsAsJsonObject = com.cedarsoftware.util.Converter.convert(optionalArgs.get(ENUM_PUBLIC_ONLY), boolean.class);
-        builder.writeEnumAsJsonObject(writeEnumsAsJsonObject);
-
-        Object loader = optionalArgs.get(CLASSLOADER);
-        ClassLoader classLoader;
-        if (loader instanceof ClassLoader) {
-            classLoader = (ClassLoader) loader;
-        } else {
-            classLoader = ClassUtilities.getClassLoader(JsonIo.class);
-        }
-        builder.classLoader(classLoader);
-
-        Object aliasMap = optionalArgs.get(TYPE_NAME_MAP);
-        if (aliasMap instanceof Map) {
-            Map<String, String> aliases = (Map<String, String>) aliasMap;
-            for (Map.Entry<String, String> entry : aliases.entrySet()) {
-                builder.aliasTypeName(entry.getKey(), entry.getValue());
-            }
-        }
-
-        Object customWriterMap = optionalArgs.get(CUSTOM_WRITER_MAP);
-        if (customWriterMap instanceof Map) {
-            Map<String, Object> customWriters = (Map<String, Object>) customWriterMap;
-            for (Map.Entry<String, Object> entry : customWriters.entrySet()) {
-                try {
-                    Class<?> clazz = Class.forName(entry.getKey());
-                    builder.addCustomWrittenClass(clazz, (com.cedarsoftware.io.JsonWriter.JsonClassWriter) entry.getValue());
-                } catch (ClassNotFoundException e) {
-                    String message = "Custom json-io writer class: " + entry.getKey() + " not found.";
-                    throw new com.cedarsoftware.io.JsonIoException(message, e);
-                } catch (ClassCastException e) {
-                    String message = "Custom json-io writer for: " + entry.getKey() + " must be an instance of com.cedarsoftware.io.JsonWriter.JsonClassWriter.";
-                    throw new com.cedarsoftware.io.JsonIoException(message, e);
-                }
-            }
-        }
-
-        Object notCustomWritersObject = optionalArgs.get(NOT_CUSTOM_WRITER_MAP);
-        if (notCustomWritersObject instanceof Iterable) {
-            Iterable<Class<?>> notCustomWriters = (Iterable<Class<?>>) notCustomWritersObject;
-            for (Class<?> notCustomWriter : notCustomWriters)
-            {
-                builder.addNotCustomWrittenClass(notCustomWriter);
-            }
-        }
-
-        Object fieldSpecifiers = optionalArgs.get(FIELD_SPECIFIERS);
-        if (fieldSpecifiers instanceof Map) {
-            Map<Class<?>, Collection<String>> includedFields = (Map<Class<?>, Collection<String>>) fieldSpecifiers;
-            for (Map.Entry<Class<?>, Collection<String>> entry : includedFields.entrySet()) {
-                for (String fieldName : entry.getValue()) {
-                    builder.addIncludedField(entry.getKey(), fieldName);
-                }
-            }
-        }
-
-        Object fieldBlackList = optionalArgs.get(FIELD_NAME_BLACK_LIST);
-        if (fieldBlackList instanceof Map) {
-            Map<Class<?>, Collection<String>> excludedFields = (Map<Class<?>, Collection<String>>) fieldBlackList;
-            for (Map.Entry<Class<?>, Collection<String>> entry : excludedFields.entrySet()) {
-                for (String fieldName : entry.getValue()) {
-                    builder.addExcludedField(entry.getKey(), fieldName);
-                }
-            }
-        }
-
-        for (Map.Entry<String, Object> entry : optionalArgs.entrySet())
-        {
-            if (OPTIONAL_WRITE_KEYS.contains(entry.getKey())) {
-                continue;
-            }
-            builder.addCustomOption(entry.getKey(), entry.getValue());
-        }
-
-        return builder;
-    }
-
-    public static String PREFIX = "-~";
-    public static String SUFFIX = "~-";
-
-    //
-    // READ Option Keys (older method of specifying options) -----------------------------------------------------------
-    //
-    /** If set, this maps class ==> CustomReader */
-    public static final String CUSTOM_READER_MAP = "CUSTOM_READERS";
-    /** If set, this indicates that no custom reader should be used for the specified class ==> CustomReader */
-    public static final String NOT_CUSTOM_READER_MAP = "NOT_CUSTOM_READERS";
-    /** If set, the read-in JSON will be turned into a Map of Maps (JsonObject) representation */
-    public static final String USE_MAPS = "USE_MAPS";
-    /** What to do when an object is found and 'type' cannot be determined. */
-    public static final String UNKNOWN_OBJECT = "UNKNOWN_OBJECT";
-    /** Will fail JSON parsing if 'type' class defined but is not on classpath. */
-    public static final String FAIL_ON_UNKNOWN_TYPE = "FAIL_ON_UNKNOWN_TYPE";
-    /** If set, this map will be used when writing @type values - allows short-hand abbreviations type names */
-    public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";
-    /** If set, this object will be called when a field is present in the JSON but missing from the corresponding class */
-    public static final String MISSING_FIELD_HANDLER = "MISSING_FIELD_HANDLER";
-    /** If set, use the specified ClassLoader */
-    public static final String CLASSLOADER = "CLASSLOADER";
-    /** Default maximum parsing depth */
-    public static final String MAX_PARSE_DEPTH = "MAX_PARSE_DEPTH";
-    private static final Set<String> OPTIONAL_READ_KEYS = new HashSet<>(Arrays.asList(
-            CUSTOM_READER_MAP, NOT_CUSTOM_READER_MAP, USE_MAPS, UNKNOWN_OBJECT, "UNKNOWN_TYPE", FAIL_ON_UNKNOWN_TYPE,
-            TYPE_NAME_MAP, MISSING_FIELD_HANDLER, CLASSLOADER));
-    
-    //
-    // WRITE Option Keys (older method of specifying options) -----------------------------------------------------------
-    //
-    /** If set, this maps class ==> CustomWriter */
-    public static final String CUSTOM_WRITER_MAP = "CUSTOM_WRITERS";
-    /** If set, this maps class ==> CustomWriter */
-    public static final String NOT_CUSTOM_WRITER_MAP = "NOT_CUSTOM_WRITERS";
-    /** Set the date format to use within the JSON output */
-    public static final String DATE_FORMAT = "DATE_FORMAT";
-    /** Constant for use as DATE_FORMAT value */
-    public static final String ISO_DATE_FORMAT = "yyyy-MM-dd";
-    /** Constant for use as DATE_FORMAT value */
-    public static final String ISO_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
-    /** Force @type always */
-    public static final String TYPE = "TYPE";
-    /** Force nicely formatted JSON output */
-    public static final String PRETTY_PRINT = "PRETTY_PRINT";
-    /** Set value to a {@code Map<Class, List<String>>} which will be used to control which fields on a class are output */
-    public static final String FIELD_SPECIFIERS = "FIELD_SPECIFIERS";
-    /** Set value to a {@code Map<Class, List<String>>} which will be used to control which fields on a class are not output. Black list has always priority to FIELD_SPECIFIERS */
-    public static final String FIELD_NAME_BLACK_LIST = "FIELD_NAME_BLACK_LIST";
-    /** If set, indicates that private variables of ENUMs are not to be serialized */
-    public static final String ENUM_PUBLIC_ONLY = "ENUM_PUBLIC_ONLY";
-    /** If set, longs are written in quotes (Javascript safe) */
-    public static final String WRITE_LONGS_AS_STRINGS = "WLAS";
-    /** If set, then @type -> @t, @keys -> @k, @items -> @i */
-    public static final String SHORT_META_KEYS = "SHORT_META_KEYS";
-    /** If set, null fields are not written */
-    public static final String SKIP_NULL_FIELDS = "SKIP_NULL";
-    /** If set to true all maps are transferred to the format @keys[],@items[] regardless of the key_type */
-    public static final String FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS = "FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS";
-    private static final Set<String> OPTIONAL_WRITE_KEYS = new HashSet<>(Arrays.asList(
-            CUSTOM_WRITER_MAP, NOT_CUSTOM_WRITER_MAP, DATE_FORMAT, TYPE, PRETTY_PRINT, ENUM_PUBLIC_ONLY, WRITE_LONGS_AS_STRINGS,
-            TYPE_NAME_MAP, SHORT_META_KEYS, SKIP_NULL_FIELDS, CLASSLOADER, FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS));
 }

@@ -5,7 +5,7 @@ import java.io.Writer;
 import java.util.Map;
 import java.util.Set;
 
-import com.cedarsoftware.io.JsonIo;
+import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.WriterContext;
 import com.cedarsoftware.util.CompactMap;
 import com.cedarsoftware.util.ReflectionUtils;
@@ -53,11 +53,11 @@ public class CompactMapWriter implements JsonClassWriter {
         int compactSize = (int) ReflectionUtils.call(map, "compactSize");
         String ordering = (String) ReflectionUtils.call(map, "getOrdering");
         String singleKey = (String) ReflectionUtils.call(map, "getSingleValueKey");
-        output.write("\"" + JsonIo.PREFIX + "caseSensitive" + JsonIo.SUFFIX +"\":" + caseSensitive);
-        output.write(",\"" + JsonIo.PREFIX + "compactSize" + JsonIo.SUFFIX + "\":" + compactSize);
-        output.write(",\"" + JsonIo.PREFIX + "order" + JsonIo.SUFFIX + "\":\"" + ordering);
-        output.write("\",\"" + JsonIo.PREFIX + "singleKey" + JsonIo.SUFFIX + "\":\"" + singleKey);
-        output.write("\",\"" + JsonIo.PREFIX + "entries" + JsonIo.SUFFIX + "\":[");
+        output.write("\"" + JsonObject.FIELD_PREFIX + "caseSensitive" + JsonObject.FIELD_SUFFIX +"\":" + caseSensitive);
+        output.write(",\"" + JsonObject.FIELD_PREFIX + "compactSize" + JsonObject.FIELD_SUFFIX + "\":" + compactSize);
+        output.write(",\"" + JsonObject.FIELD_PREFIX + "order" + JsonObject.FIELD_SUFFIX + "\":\"" + ordering);
+        output.write("\",\"" + JsonObject.FIELD_PREFIX + "singleKey" + JsonObject.FIELD_SUFFIX + "\":\"" + singleKey);
+        output.write("\",\"" + JsonObject.FIELD_PREFIX + "entries" + JsonObject.FIELD_SUFFIX + "\":[");
         boolean first = true;
         Set<Map.Entry<Object, Object>> entries = ((Map<Object, Object>) map).entrySet();
         for (Map.Entry<Object, Object> entry : entries) {

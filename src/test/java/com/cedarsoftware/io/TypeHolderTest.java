@@ -1,11 +1,14 @@
 package com.cedarsoftware.io;
 
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
-
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
+
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -51,7 +54,7 @@ class TypeHolderTest {
     @Test
     void testStaticOfMethodWithRawClass() {
         // Use the static of() method with a raw class (String.class)
-        TypeHolder<String> holder = TypeHolder.of(String.class);
+        TypeHolder<String> holder = TypeHolder.forClass(String.class);
         Type type = holder.getType();
 
         // The type should be exactly String.class
@@ -65,7 +68,7 @@ class TypeHolderTest {
         Type capturedType = holder.getType();
 
         // Use the static of() method to wrap the captured type
-        TypeHolder<List<Integer>> holder2 = TypeHolder.of(capturedType);
+        TypeHolder<List<Integer>> holder2 = TypeHolder.forType(capturedType);
         Type type2 = holder2.getType();
 
         // The type from holder2 should equal the captured type
@@ -75,7 +78,7 @@ class TypeHolderTest {
     @Test
     void testToStringMethod() {
         // Create a TypeHolder using the of() method with a raw class
-        TypeHolder<Integer> holder = TypeHolder.of(Integer.class);
+        TypeHolder<Integer> holder = TypeHolder.forClass(Integer.class);
         String typeString = holder.toString();
 
         // For a raw class, toString() returns the class name prefixed with "class "

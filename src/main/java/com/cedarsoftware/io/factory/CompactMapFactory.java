@@ -3,7 +3,6 @@ package com.cedarsoftware.io.factory;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.cedarsoftware.io.JsonIo;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
@@ -37,10 +36,10 @@ public class CompactMapFactory implements JsonReader.ClassFactory {
         Converter converter = resolver.getConverter();
 
         // Create Map
-        boolean caseSensitive = converter.convert(map.get(JsonIo.PREFIX + "caseSensitive" + JsonIo.SUFFIX), boolean.class);
-        int compactSize = converter.convert(map.get(JsonIo.PREFIX + "compactSize" + JsonIo.SUFFIX), int.class);
-        String order = converter.convert(map.get(JsonIo.PREFIX + "order" + JsonIo.SUFFIX), String.class);
-        String singleKey = converter.convert(map.get(JsonIo.PREFIX + "singleKey" + JsonIo.SUFFIX), String.class);
+        boolean caseSensitive = converter.convert(map.get(JsonObject.FIELD_PREFIX + "caseSensitive" + JsonObject.FIELD_SUFFIX), boolean.class);
+        int compactSize = converter.convert(map.get(JsonObject.FIELD_PREFIX + "compactSize" + JsonObject.FIELD_SUFFIX), int.class);
+        String order = converter.convert(map.get(JsonObject.FIELD_PREFIX + "order" + JsonObject.FIELD_SUFFIX), String.class);
+        String singleKey = converter.convert(map.get(JsonObject.FIELD_PREFIX + "singleKey" + JsonObject.FIELD_SUFFIX), String.class);
 
         Map<String, Object> options = new HashMap<>();
         options.put(CompactMap.CASE_SENSITIVE, caseSensitive);
@@ -62,7 +61,7 @@ public class CompactMapFactory implements JsonReader.ClassFactory {
         JsonReader reader = new JsonReader(resolver);
 
         // Fill Map
-        Object[] entries = (Object[])map.get(JsonIo.PREFIX + "entries" + JsonIo.SUFFIX);
+        Object[] entries = (Object[])map.get(JsonObject.FIELD_PREFIX + "entries" + JsonObject.FIELD_SUFFIX);
 
         if (entries != null) {
             for (int i = 0; i < entries.length; i++) {

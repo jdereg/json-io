@@ -116,8 +116,11 @@ public abstract class JsonValue {
         return TypeUtilities.getRawClass(type);
     }
 
-    String getJavaTypeName() {
-        return getRawType().getName();
+    public String getRawTypeName() {
+        if (type != null) {
+            return TypeUtilities.getRawClass(type).getName();
+        }
+        return null;
     }
 
     public long getId() {
@@ -140,5 +143,32 @@ public abstract class JsonValue {
         id = -1;
         type = null;
         refId = null;
+    }
+
+    /**
+     * Do not use this method.  Call getRawTypeName() instead.
+     * @deprecated
+     */
+    @Deprecated
+    String getJavaTypeName() {
+        return getRawType().getName();
+    }
+
+    /**
+     * Do not use this method.  Call setType() instead.
+     * @deprecated
+     */
+    @Deprecated
+    public void setJavaType(Class<?> type) {
+        setType(type);
+    }
+
+    /**
+     * Do not use this method.  Call getType() or getRawType() instead.
+     * @deprecated
+     */
+    @Deprecated
+    public Class<?> getJavaType() {
+        return getRawType();
     }
 }

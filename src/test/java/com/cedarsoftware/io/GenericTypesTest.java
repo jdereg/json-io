@@ -218,7 +218,7 @@ public class GenericTypesTest {
 
         String json = JsonIo.toJson(original, null);
 
-        Object readObj = JsonIo.toObjectsGeneric(json, null, new TypeHolder<NestedGeneric<Integer>>() {});
+        Object readObj = JsonIo.toJava(json, null).asType(new TypeHolder<NestedGeneric<Integer>>() {});
         assertEquals(original, readObj, "Deserialized NestedGeneric<Integer> should equal the original");
 
         readObj = JsonIo.toObjects(json, null, null);

@@ -33,6 +33,8 @@ import java.util.Set;
  *         limitations under the License.
  */
 public class JsonObject extends JsonValue implements Map<Object, Object> {
+    public static String FIELD_PREFIX = "-~";
+    public static String FIELD_SUFFIX = "~-";
     private final Map<Object, Object> jsonStore = new LinkedHashMap<>();
     private Integer hash = null;
 
@@ -349,7 +351,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
             
             if (key instanceof String) {
                 String k = (String) key;
-                if (k.startsWith(JsonIo.PREFIX) && k.endsWith(JsonIo.SUFFIX)) {
+                if (k.startsWith(FIELD_PREFIX) && k.endsWith(FIELD_SUFFIX)) {
                     continue;
                 }
             }

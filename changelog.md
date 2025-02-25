@@ -1,6 +1,39 @@
 ### Revision History
+#### 4.50 Major Improvements to Type Resolution and API Usability
+* **Enhanced Type System Support**
+  * `json-io` now leverages `java-util`'s sophisticated `TypeUtilities` framework to provide comprehensive resolution of complex Java generics:
+      * Full support for `ParameterizedTypes` (e.g., `Map<String, List<Person>>`)
+      * Proper handling of `GenericArrayTypes` for arrays with generic components
+      * Resolution of `TypeVariables` in generic class hierarchies
+      * Support for `WildcardTypes` (`? extends`, `? super`) in generic declarations
+      * These improvements enable more accurate field type inferencing during Java object resolution, particularly for complex nested generic structures.
+* **New Type-Aware API Capabilities**
+  * Added advanced type specification via the new `TypeHolder` class:
+      * Enables capturing and preserving full generic type information at runtime
+      * Allows specifying complex parameterized types as deserialization targets
+      * Example: `new TypeHolder<Map<String, List<Person>>>() {}`
+  * The `JsonIo` class now accepts `TypeHolder` instances, allowing precise type targeting beyond what's possible with raw `Class` references alone.
+* **Fluent Builder API for Improved Developer Experience**
+  * Introduced a new fluent builder pattern through the `JsonIo.toJava()` API family:
+      * More intuitive, chainable API that clearly separates the input source from the target type
+      * Provides dedicated methods for different input types (String, InputStream, JsonObject)
+      * Offers type-specific terminal operations:
+          * `asClass(Class<T>)` for simple class-based conversion
+          * `asType(TypeHolder<T>)` for generic type conversion
+      * Examples:
+        ```java
+        // Simple class conversion
+        Person person = JsonIo.toJava(jsonString, options).asClass(Person.class);
+      
+        // Complex generic type conversion
+        List<Person> people = JsonIo.toJava(jsonString, options)
+                                  .asType(new TypeHolder<List<Person>>(){});
+        ```
+      * Eliminates ambiguity in method signatures while providing a more expressive API
+      * Facilitates better IDE code completion and suggestion
+* Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.0.3` to `3.1.0.`
 #### 4.40.0
-  * All Time and Date classes compressed to a single String representation in JSON, uses ISO format when possible.
+  * All Time and Date classes compressed to a single String representation in JSON, uses ISO formats when possible.
   * Java's `Pattern` and `Currency` support added
   * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.0.2` to `3.0.3.`
 #### 4.33.0

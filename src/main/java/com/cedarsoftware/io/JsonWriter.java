@@ -1118,7 +1118,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 output.write(',');
                 newLine();
             }
-            String type = jObj.getJavaTypeName();
+            String type = jObj.getRawTypeName();
             if (type != null)
             {
                 writeType(type, output);
@@ -1159,7 +1159,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 output.write(',');
                 newLine();
             }
-            writeType(jObj.getJavaTypeName(), output);
+            writeType(jObj.getRawTypeName(), output);
             type = jObj.getRawType();
         }
 

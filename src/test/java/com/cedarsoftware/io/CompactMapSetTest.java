@@ -20,7 +20,7 @@ public class CompactMapSetTest {
         map.put("c", "charlie");
         map.put("d", "delta");
         String json = JsonIo.toJson(map, WriteOptionsBuilder.getDefaultWriteOptions());
-        Map map2 = JsonIo.toObjectsGeneric(json, ReadOptionsBuilder.getDefaultReadOptions(), new TypeHolder<Map<String, String>>(){});
+        Map map2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asType(new TypeHolder<Map<String, String>>(){});
         Map<String, Object> options = new HashMap<>();
         boolean equals = DeepEquals.deepEquals(map, map2, options);
         if (!equals) {

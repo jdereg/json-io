@@ -138,7 +138,7 @@ public class TestUtil {
         TestInfo testInfo = new TestInfo();
         try {
             long start = System.nanoTime();
-            testInfo.obj = JsonIo.toObjects(json, options, root);
+            testInfo.obj = JsonIo.toJava(json, options).asClass(root);
             testInfo.nanos = System.nanoTime() - start;
         } catch (Exception e) {
             testInfo.t = e;

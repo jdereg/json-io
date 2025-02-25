@@ -6,8 +6,8 @@ import java.lang.reflect.Type;
 /**
  * TypeHolder captures a generic Type (including parameterized types) at runtime.
  * It is typically used via anonymous subclassing to capture generic type information.
- * However, when you already have a Type (such as a raw Class or a fully parameterized type),
- * you can use the static {@code of()} method to create a TypeHolder instance.
+ * However, when you already have a Type (such as a raw Class or a fully parameterized type), you can
+ * use the static {@code forType()} and {@code forClass()} methods to create a TypeHolder instance.
  *
  * <p>Example usage via anonymous subclassing:</p>
  * <pre>
@@ -15,17 +15,33 @@ import java.lang.reflect.Type;
  *     Type captured = holder.getType();
  * </pre>
  *
- * <p>Example usage using the {@code of()} method:</p>
+ * <p>Example usage using the {@code of()} methods:</p>
  * <pre>
  *     // With a raw class:
- *     TypeHolder&lt;Point&gt; holder = TypeHolder.of(Point.class);
+ *     TypeHolder&lt;Point&gt; holder1 = TypeHolder.forClass(Point.class);
  *
  *     // With a parameterized type (if you already have one):
  *     Type type = new TypeReference&lt;List&lt;Point&gt;&gt;() {}.getType();
- *     TypeHolder&lt;List&lt;Point&gt;&gt; holder2 = TypeHolder.of(type);
+ *     TypeHolder&lt;List&lt;Point&gt;&gt; holder2 = TypeHolder.forType(type);
  * </pre>
  *
  * @param <T> the type that is being captured
+ *
+ * @author John DeRegnaucourt (jdereg@gmail.com)
+ *         <br>
+ *         Copyright (c) Cedar Software LLC
+ *         <br><br>
+ *         Licensed under the Apache License, Version 2.0 (the "License");
+ *         you may not use this file except in compliance with the License.
+ *         You may obtain a copy of the License at
+ *         <br><br>
+ *         <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
+ *         <br><br>
+ *         Unless required by applicable law or agreed to in writing, software
+ *         distributed under the License is distributed on an "AS IS" BASIS,
+ *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *         See the License for the specific language governing permissions and
+ *         limitations under the License.
  */
 public class TypeHolder<T> {
     private final Type type;
@@ -33,7 +49,6 @@ public class TypeHolder<T> {
     /**
      * Default constructor that uses anonymous subclassing to capture the type parameter.
      */
-    @SuppressWarnings("unchecked")
     protected TypeHolder() {
         // The anonymous subclass's generic superclass is a ParameterizedType,
         // from which we can extract the actual type argument.
@@ -48,9 +63,9 @@ public class TypeHolder<T> {
     }
 
     /**
-     * New constructor used to explicitly set the type.
+     * Constructor used to explicitly set the type.
      *
-     * @param type the Type to be held
+     * @param type the Type to be held; must not be null.
      */
     protected TypeHolder(Type type) {
         this.type = type;
@@ -73,24 +88,38 @@ public class TypeHolder<T> {
 
     /**
      * Creates a TypeHolder instance that wraps the given Type.
-     * This factory method is useful when you already have a Type (or Class) and
-     * wish to use the generic API without anonymous subclassing.
+     * This factory method is useful when you already have a Type and wish to use the generic API
+     * without anonymous subclassing.
      *
      * <p>Example usage:</p>
      * <pre>
-     * // For a raw class:
-     * TypeHolder&lt;Point&gt; holder = TypeHolder.of(Point.class);
-     *
-     * // For a parameterized type:
-     * Type type = new TypeReference&lt;List&lt;Point&gt;&gt;() {}.getType();
-     * TypeHolder&lt;List&lt;Point&gt;&gt; holder2 = TypeHolder.of(type);
+     *     // For a parameterized type:
+     *     Type type = new TypeReference&lt;List&lt;Point&gt;&gt;() {}.getType();
+     *     TypeHolder&lt;List&lt;Point&gt;&gt; holder = TypeHolder.forType(type);
      * </pre>
      *
      * @param type the Type to wrap in a TypeHolder
      * @param <T> the type parameter
      * @return a TypeHolder instance that returns the given type via {@link #getType()}
      */
-    public static <T> TypeHolder<T> of(final Type type) {
+    public static <T> TypeHolder<T> forType(Type type) {
         return new TypeHolder<T>(type) {};
+    }
+
+    /**
+     * Creates a TypeHolder instance that wraps the given Class.
+     * This overload is provided for convenience when you have a Class instance.
+     *
+     * <p>Example usage:</p>
+     * <pre>
+     *     TypeHolder&lt;Point&gt; holder = TypeHolder.forClass(Point.class);
+     * </pre>
+     *
+     * @param clazz the Class to wrap in a TypeHolder
+     * @param <T> the type parameter
+     * @return a TypeHolder instance that returns the given Class as a Type via {@link #getType()}
+     */
+    public static <T> TypeHolder<T> forClass(Class<T> clazz) {
+        return new TypeHolder<T>(clazz) {};
     }
 }
