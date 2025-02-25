@@ -3,7 +3,7 @@
  * traverse JSON object tree in two passes, once to record @id's of objects, and
  * a second pass to replace @ref fields with objects identified by @id fields.
  *
- * Copyright 2010-2015 John DeRegnaucourt
+ * Copyright 2010-2025 John DeRegnaucourt
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
