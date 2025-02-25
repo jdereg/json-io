@@ -18,19 +18,23 @@ import com.cedarsoftware.util.convert.DefaultConverterOptions;
  * <ol>
  *   <li>The <b>initial conversion</b>:
  *       <ul>
- *         <li>For writing, you convert a Java object (or an intermediate JsonObject/Map)
- *             to JSON (either as a String or directly to an OutputStream).</li>
- *         <li>For reading, you start by parsing JSON from a source (String, InputStream, or an in-memory JsonObject),
+ *         <li>For writing, you convert a Java object (or an intermediate {@code JsonObject}/{@code Map})
+ *             to JSON (either as a {@code String} or directly to an {@code OutputStream}).</li>
+ *         <li>For reading, you start by parsing JSON from a source ({@code String}, {@code InputStream}, or an in-memory {@code JsonObject}),
  *             and obtain a builder.</li>
  *       </ul>
  *   </li>
  *   <li>The <b>completion</b>:
  *       <ul>
  *         <li>Call either {@code asClass()} (for a concrete target class) or {@code asType()}
- *             (to support generic types via a TypeHolder) to complete the conversion.</li>
+ *             (to support generic types via a {@code TypeHolder}) to complete the conversion.</li>
  *       </ul>
  *   </li>
  * </ol>
+ * <p>
+ * <i>Note: JsonIo includes extensive type conversion capabilities for both primitive and complex types.
+ * To view the complete list of supported conversions, examine the output of
+ * {@link #main(String[])} or simply run the class directly from the command line.</i>
  * <p>
  * <b>Usage Examples:</b>
  * <ul>
@@ -66,18 +70,35 @@ import com.cedarsoftware.util.convert.DefaultConverterOptions;
  *     // Parse the JSON into a Map (or nested Map structure)
  *     Map&lt;String, Object&gt; jsonMap = JsonIo.toJava(jsonString, read).asClass(Map.class);
  *     </pre>
- *     In this case, simple Java types may be converted (or left as is for Map types),
- *     and collection types will be converted appropriately.
+ *     In this case, simple Java types may be converted (or left as is for {@code Map} types),
+ *     and {@code Collection} types will be converted appropriately.
  *   </li>
  * </ul>
  * <p>
- * Note:
+ * <b>Note:</b>
  * <ul>
  *   <li>The builder returned by the initial JSON reading call must be completed with a call
  *       to either {@code asClass()} or {@code asType()} to perform the final conversion.</li>
  *   <li>The nature of the resulting object—whether it is a fully resolved Java object or an intermediate
- *       representation (typically a Map)—is determined by the ReadOptions settings passed to the call.</li>
+ *       representation (typically a {@code Map})—is determined by the {@code ReadOptionBuilder}
+ *       settings ({@code returnAsJavaObjects()} or {@code returnAsJsonObjects()}) passed to the call.</li>
  * </ul>
+ * 
+ * @author John DeRegnaucourt (jdereg@gmail.com)
+ *         <br>
+ *         Copyright (c) Cedar Software LLC
+ *         <br><br>
+ *         Licensed under the Apache License, Version 2.0 (the "License");
+ *         you may not use this file except in compliance with the License.
+ *         You may obtain a copy of the License at
+ *         <br><br>
+ *         <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
+ *         <br><br>
+ *         Unless required by applicable law or agreed to in writing, software
+ *         distributed under the License is distributed on an "AS IS" BASIS,
+ *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *         See the License for the specific language governing permissions and
+ *         limitations under the License.
  */
 public class JsonIo {
 
@@ -756,17 +777,26 @@ public class JsonIo {
      * Displays a list of all supported type conversions in JsonIo.
      * <p>
      * When executed directly, this method prints out a comprehensive JSON representation of all
-     * the type conversions supported by the underlying Converter used by JsonIo. This includes
+     * the type conversions supported by the underlying {@code Converter} used by JsonIo. This includes
      * conversions between primitive types, temporal types, collections, and more specialized
      * Java types.
      * <p>
-     * This information is useful for understanding the range of automatic type conversions
-     * that JsonIo can perform during deserialization.
+     * The extensive conversion capabilities are powered by the
+     * <a href="https://github.com/jdereg/java-util">java-util</a> library's {@code Converter} framework,
+     * which provides a robust system for transforming between nearly any Java types.
+     * <p>
+     * <b>Pro Tip:</b> Run this method to see the full range of automatic type conversions
+     * available in JsonIo. This can be helpful when working with heterogeneous data or when
+     * you need to convert between different Java types during deserialization.
+     * <pre>
+     * java -cp your-classpath com.cedarsoftware.io.JsonIo
+     * </pre>
      *
      * @param args command line arguments (not used)
      */
     public static void main(String[] args) {
-        String json = toJson(new Converter(new DefaultConverterOptions()).getSupportedConversions(), new WriteOptionsBuilder().prettyPrint(true).showTypeInfoNever().build());
+        String json = toJson(new Converter(new DefaultConverterOptions()).getSupportedConversions(),
+                new WriteOptionsBuilder().prettyPrint(true).showTypeInfoNever().build());
         System.out.println("json-io supported conversions (source type to target types):");
         System.out.println(json);
     }

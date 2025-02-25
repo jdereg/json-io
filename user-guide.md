@@ -10,14 +10,13 @@ Employee emp;
 String json = JsonIo.toJson(emp, writeOptions);
 ```
 This example will convert the `Employee` instance to a JSON String, including nested sub-objects.  If
-`JsonIo.toObjects(json, readOptions, Employee.class)` were used on this JSON `String,` a new Java `Employee` instance would be returned.  
+`JsonIo.toJava(json, readOptions).asClass(Employee.class)` were used on this JSON String, a new Java `Employee` instance would be returned.
+See `WriteOptions` reference for list of all `WriteOptions` and instructions on how to use.
 
-See [WriteOptions reference](/user-guide-writeOptions.md) for list of all `WriteOptions` and instructions on how to use.
-
-_Example 2: String to Java object_
+Example 2: String to Java object
 ```java
 String json = // String JSON representing Employee instance
-Employee employee = JsonIo.toObjects(json, readOptions, Employee.class);
+Employee employee = JsonIo.toJava(json, readOptions).asClass(Employee.class);
 ```
 This will convert the JSON String back to a Java Object graph. 
 
@@ -27,7 +26,7 @@ _Example 3: Java Object to `OutputStream`_
 ```java
 Employee emp;
 // emp obtained from data store...
-JsonIo.toJson(outputStream, emp, writeOptions);       
+JsonIo.toJson(outputStream, emp, writeOptions);
 ```
 In this example, a Java object is written to an `OutputStream` in JSON format.  The stream is closed when finished.  If
 you need to keep the `OutputStream` open (e.g. NDJSON), then set `writeOptions.closeStream(false).` Example:
@@ -42,7 +41,7 @@ outputStream.close();
 
 _Example 4: `InputStream` to Java object_
 ```java
-Employee emp = JsonIo.toObjects(stream, readOptions, Employee.class);
+List<Employee> list = JsonIo.toJava(stream, readOptions).asType(new TypeHolder<List<Employee>>(){});
 ```
 In this example, an`InputStream`is supplying the JSON.
 
@@ -53,7 +52,7 @@ associative array.  When reading from a JSON `String` or`InputStream`of JSON, us
 ```java 
 String json = // or InputStream to JSON providing source
 ReadOptions readOptions = new ReadOptionsBuilder().returnAsJsonObjects().build();
-Map root = JsonIo.toObjects(json, readOptions, Map.class);    
+Map root = JsonIo.toJava(json, readOptions).asClass(Map.class);
 ```
 See the `ReadOptions` below for the feature control options. In the provided example, rather than returning the objects
 converted into Java classes, the raw JSON values are parsed and returned as `Maps`. This forms a graph consisting of all 
