@@ -28,10 +28,7 @@ import com.cedarsoftware.util.ExceptionUtilities;
 import com.cedarsoftware.util.FastWriter;
 
 import static com.cedarsoftware.io.JsonValue.ENUM;
-import static com.cedarsoftware.io.JsonValue.ID;
 import static com.cedarsoftware.io.JsonValue.ITEMS;
-import static com.cedarsoftware.io.JsonValue.SHORT_ID;
-import static com.cedarsoftware.io.JsonValue.SHORT_TYPE;
 import static com.cedarsoftware.io.JsonValue.TYPE;
 
 /**
@@ -76,6 +73,13 @@ import static com.cedarsoftware.io.JsonValue.TYPE;
  */
 public class JsonWriter implements WriterContext, Closeable, Flushable
 {
+    // Add these as class fields
+    private static final String ID_SHORT = "\"@i\":";
+    private static final String ID_LONG = "\"@id\":";
+    private static final String TYPE_SHORT = "\"@t\":\"";
+    private static final String TYPE_LONG = "\"@type\":\"";
+    private final String idPrefix;
+    private final String typePrefix;
     private static final Object[] byteStrings = new Object[256];
     private static final String NEW_LINE = System.lineSeparator();
     private static final Long ZERO = 0L;
@@ -156,6 +160,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     public JsonWriter(OutputStream out, WriteOptions writeOptions) {
         this.out = new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
         this.writeOptions = writeOptions == null ? WriteOptionsBuilder.getDefaultWriteOptions() : writeOptions;
+        
+        // Pre-compute based on options
+        this.idPrefix = this.writeOptions.isShortMetaKeys() ? ID_SHORT : ID_LONG;
+        this.typePrefix = this.writeOptions.isShortMetaKeys() ? TYPE_SHORT : TYPE_LONG;
     }
 
     public WriteOptions getWriteOptions() {
@@ -562,17 +570,17 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
     }
 
-    private void writeId(final String id) throws IOException
-    {
-        out.write(writeOptions.isShortMetaKeys() ? "\"" + SHORT_ID + "\":" : "\"" + ID + "\":");
+    private void writeId(final String id) throws IOException {
+        out.write(idPrefix);
         out.write(id == null ? "0" : id);
     }
 
+    // Optimized writeType method
     private void writeType(String name, Writer output) throws IOException {
         if (writeOptions.isNeverShowingType()) {
             return;
         }
-        output.write(writeOptions.isShortMetaKeys() ? "\"" + SHORT_TYPE + "\":\"" : "\"" + TYPE + "\":\"");
+        output.write(typePrefix);
         String alias = writeOptions.getTypeNameAlias(name);
         output.write(alias);
         output.write('"');
