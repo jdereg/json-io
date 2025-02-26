@@ -759,7 +759,8 @@ public class JsonIo {
          * </pre>
          *
          * @param <T> the type to convert the JsonObject to
-         * @param typeHolder a TypeHolder instance capturing the full generic type
+         * @param typeHolder a TypeHolder instance capturing the full generic type. It can be null, and JsonIo will
+         *                   do it's best to infer type's/classes, though we recommend passing a Type.
          * @return an object of the specified type populated from the JsonObject
          */
         public <T> T asType(TypeHolder<T> typeHolder) {
