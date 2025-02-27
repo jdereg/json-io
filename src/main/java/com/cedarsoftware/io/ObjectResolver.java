@@ -523,8 +523,9 @@ public class ObjectResolver extends Resolver
 
         // Simple type conversion if possible.
         if (jsonObj.getTarget() == null && jsonObj.hasValue()) {
-            if (getConverter().isSimpleTypeConversionSupported(jsonObj.getValue().getClass(), targetClass)) {
-                Object converted = getConverter().convert(jsonObj.getValue(), targetClass);
+            Object value = jsonObj.getValue();
+            if (getConverter().isSimpleTypeConversionSupported(value.getClass(), targetClass)) {
+                Object converted = getConverter().convert(value, targetClass);
                 return jsonObj.setFinishedTarget(converted, true);
             }
         }
