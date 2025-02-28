@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.cedarsoftware.io.JsonReader.MissingFieldHandler;
+import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
@@ -540,9 +541,10 @@ public abstract class Resolver {
                 }
             } else {    // Fix field forward reference
                 Field field = getReadOptions().getDeepDeclaredFields(objToFix.getClass()).get(ref.field);
-                if (field != null) {
+                Map<String, Injector> injectors = getReadOptions().getDeepInjectorMap(objToFix.getClass());
+                if (field != null && injectors.containsKey(field.getName())) {
                     try {
-                        MetaUtils.setFieldValue(field, objToFix, objReferenced.getTarget());    // patch field here
+                        injectors.get(field.getName()).inject(objToFix, objReferenced.getTarget());
                     } catch (Exception e) {
                         throw new JsonIoException("Error setting field while resolving references '" + field.getName() + "', @ref = " + ref.refId, e);
                     }

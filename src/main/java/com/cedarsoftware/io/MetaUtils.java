@@ -82,6 +82,7 @@ public class MetaUtils {
         return (V) map.get(key);
     }
 
+    @Deprecated
     public static void setFieldValue(Field field, Object instance, Object value) {
         try {
             if (instance == null) {
@@ -96,6 +97,7 @@ public class MetaUtils {
     /**
      * Legacy API that many applications consumed.
      */
+    @Deprecated
     public static boolean isLogicalPrimitive(Class<?> c) {
         return ClassUtilities.isPrimitive(c) ||
                 c.equals(String.class) ||

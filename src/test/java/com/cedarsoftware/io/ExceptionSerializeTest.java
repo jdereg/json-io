@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -428,7 +430,12 @@ class ExceptionSerializeTest
                 .isInstanceOf(InvalidCoordinateException.class)
                 .hasMessage("Missing required coordinate key: key4");
 
-        assert DeepEquals.deepEquals(e1, e2);
+        Map<String, Object> options = new HashMap<>();
+        boolean equals = DeepEquals.deepEquals(e1, e2, options);
+        if (!equals) {
+            System.out.println(options.get("diff"));
+        }
+        assert equals;
     }
 
     @Test

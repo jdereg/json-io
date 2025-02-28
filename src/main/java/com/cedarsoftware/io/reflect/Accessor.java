@@ -28,10 +28,6 @@ import com.cedarsoftware.util.ExceptionUtilities;
  */
 public class Accessor {
     private final String uniqueFieldName;
-
-    /**
-     * The field we are trying to access with this method handle
-     */
     private final Field field;
     private final boolean isMethod;
     private final String fieldOrMethodName;
@@ -48,15 +44,17 @@ public class Accessor {
     }
 
     public static Accessor createFieldAccessor(Field field, String uniqueFieldName) {
+        // Ensure field is accessible if needed.
         if (!(Modifier.isPublic(field.getModifiers()) && Modifier.isPublic(field.getDeclaringClass().getModifiers()))) {
             ExceptionUtilities.safelyIgnoreException(() -> field.setAccessible(true));
         }
-
         try {
+            // Try creating a MethodHandle-based accessor.
             MethodHandle handle = MethodHandles.lookup().unreflectGetter(field);
             return new Accessor(field, handle, uniqueFieldName, field.getName(), Modifier.isPublic(field.getModifiers()), false);
         } catch (IllegalAccessException ex) {
-            return null;
+            // Fallback: create an accessor that uses field.get() directly.
+            return new Accessor(field, null, uniqueFieldName, field.getName(), Modifier.isPublic(field.getModifiers()), false);
         }
     }
 
@@ -72,21 +70,24 @@ public class Accessor {
 
     public Object retrieve(Object o) {
         try {
-            if (methodHandle == null) {
-                return field.get(o);
+            if (methodHandle != null) {
+                try {
+                    return methodHandle.invoke(o);
+                } catch (Throwable t) {
+                    // Fallback: if the method handle invocation fails, try using field.get()
+                    return field.get(o);
+                }
             } else {
-                return methodHandle.invoke(o);
+                return field.get(o);
             }
         } catch (Throwable t) {
+            // On failure, return null.
             return null;
         }
     }
 
-    /**
-     * @return MethodHandle or null if there is none.
-     */
     public MethodHandle getMethodHandle() {
-         return methodHandle;
+        return methodHandle;
     }
 
     public boolean isMethod() {
@@ -125,10 +126,6 @@ public class Accessor {
         return fieldOrMethodName;
     }
 
-    /**
-     * This will be the modifiers of the field or method that defines this MethodHandle
-     * (or Field) itself if we had to fall back to field access.
-     */
     public boolean isPublic() {
         return isPublic;
     }

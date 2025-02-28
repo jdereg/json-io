@@ -263,7 +263,12 @@ class CollectionTests {
 
         ManyCollections testCol3 = TestUtil.toObjects(json1, null);
         assertCollection(testCol3);// Re-written from Map of Maps and re-loaded correctly
-        assert DeepEquals.deepEquals(testCol2, testCol3);
+        Map options = new HashMap();
+        boolean equals = DeepEquals.deepEquals(testCol2, testCol3, options);
+        if (!equals) {
+            System.out.println(options.get("diff"));
+        }
+        assert equals;
     }
 
     @Test

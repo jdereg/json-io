@@ -11,8 +11,8 @@ import com.cedarsoftware.util.ClassUtilities;
 import static com.cedarsoftware.util.CollectionUtilities.setOf;
 
 /**
- * Factory class to create Throwable instances.  Needed for JDK17+ as the only way to set the
- * 'detailMessage' field on a Throwable is via its constructor.
+ * Factory class to create Throwable instances.
+ * 
  * <p>
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
