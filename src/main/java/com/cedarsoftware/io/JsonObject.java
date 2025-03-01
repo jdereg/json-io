@@ -40,7 +40,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
 
     // Explicit fields for meta data
     private Object items;
-    private Object keys;
+    private Object[] keys;
 
     public String toString() {
         String jType = type == null ? "not set" : type.getTypeName();
@@ -101,7 +101,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         return keys;
     }
 
-    void setKeys(Object keys) {
+    void setKeys(Object[] keys) {
         if (keys == null) {
             throw new JsonIoException("Argument 'keys' cannot be null");
         }
@@ -306,7 +306,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
      * and @items. During parsing, these make it into the JsonObject, and this method moves them from the jsonStore
      * to the explicit member variables. No code should be written that depends on this.
      */
-    Map.Entry<Object, Object> asTwoArrays() {
+    Map.Entry<Object[], Object[]> asTwoArrays() {
         if (keys == null && items == null && !isReference()) {
             // Only convert regular fields to arrays, not meta fields
             final Object[] newKeys = new Object[jsonStore.size()];
@@ -337,7 +337,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
             throw new JsonIoException("@keys and @items must be same length");
         }
 
-        return new AbstractMap.SimpleImmutableEntry<>(keys, items);
+        return new AbstractMap.SimpleImmutableEntry<>(keys, (Object[])items);
     }
 
     void rehashMaps() {

@@ -691,7 +691,7 @@ class JsonParser {
         if (!value.getClass().isArray()) {
             error("Expected @keys to have an array [], but found: " + value.getClass().getName());
         }
-        jObj.setKeys(value);
+        jObj.setKeys((Object[])value);
     }
 
     private Class<?> stringToClass(String className) {

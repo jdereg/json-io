@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -31,6 +30,7 @@ import com.cedarsoftware.io.reflect.filters.FieldFilter;
 import com.cedarsoftware.io.reflect.filters.field.EnumFieldFilter;
 import com.cedarsoftware.io.reflect.filters.field.StaticFieldFilter;
 import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.ClassValueMap;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.LRUCache;
 import com.cedarsoftware.util.StringUtilities;
@@ -905,28 +905,28 @@ public class ReadOptionsBuilder {
         private ReadOptions.Integers integerType = Integers.LONG;
         private boolean allowNanAndInfinity = false;
         private Map<String, String> aliasTypeNames = new LinkedHashMap<>();
-        private Map<Class<?>, Class<?>> coercedTypes = new LinkedHashMap<>();
-        private Set<Class<?>> notCustomReadClasses = new LinkedHashSet<>();
-        private Map<Class<?>, JsonReader.JsonClassReader> customReaderClasses = new LinkedHashMap<>();
-        private Map<Class<?>, JsonReader.ClassFactory> classFactoryMap = new LinkedHashMap<>();
+        private Map<Class<?>, Class<?>> coercedTypes = new ClassValueMap<>();
+        private Set<Class<?>> notCustomReadClasses = Collections.newSetFromMap(new ClassValueMap<>());
+        private Map<Class<?>, JsonReader.JsonClassReader> customReaderClasses = new ClassValueMap<>();
+        private Map<Class<?>, JsonReader.ClassFactory> classFactoryMap = new ClassValueMap<>();
         private Set<Class<?>> nonRefClasses = new LinkedHashSet<>();
-        private Map<Class<?>, Set<String>> excludedFieldNames = new LinkedHashMap<>();
-        private Map<Class<?>, Set<String>> fieldsNotImported = new LinkedHashMap<>();
+        private Map<Class<?>, Set<String>> excludedFieldNames = new ClassValueMap<>();
+        private Map<Class<?>, Set<String>> fieldsNotImported = new ClassValueMap<>();
         private List<FieldFilter> fieldFilters = new ArrayList<>();
         private List<InjectorFactory> injectorFactories = new ArrayList<>();
         private Map<String, Object> customOptions = new LinkedHashMap<>();
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
-        private Map<Class<?>, Map<String, Injector>> injectorsCache = new LRUCache<>(lruSize);
-        private Map<Class<?>, Map<String, String>> nonStandardSetters = new HashMap<>();
+        private Map<Class<?>, Map<String, Injector>> injectorsCache = new ClassValueMap<>();
+        private Map<Class<?>, Map<String, String>> nonStandardSetters = new ClassValueMap<>();
 
         // Runtime cache (not feature options)
-        private final Map<Class<?>, JsonReader.JsonClassReader> readerCache = new ConcurrentHashMap<>(300);
+        private final Map<Class<?>, JsonReader.JsonClassReader> readerCache = new ClassValueMap<>();
         private final JsonReader.ClassFactory throwableFactory = new ThrowableFactory();
         private final JsonReader.ClassFactory enumFactory = new EnumClassFactory();
 
         //  Cache of fields used for accessors. Controlled by ignoredFields
-        private Map<Class<?>, Map<String, Field>> classMetaCache = new LRUCache<>(lruSize);
+        private Map<Class<?>, Map<String, Field>> classMetaCache = new ClassValueMap<>();
         
         /**
          * Default constructor. Prevent instantiation outside of package.
@@ -1004,8 +1004,8 @@ public class ReadOptionsBuilder {
         /**
          * @return boolean true if the passed in Class name is being coerced to another type, false otherwise.
          */
-        public boolean isClassCoerced(String className) {
-            return coercedTypes.containsKey(className);
+        public boolean isClassCoerced(Class<?> clazz) {
+            return coercedTypes.containsKey(clazz);
         }
 
         /**

@@ -481,13 +481,17 @@ public class ObjectResolver extends Resolver
 
         // Extract the raw type from the suggested inferred type.
         Class<?> rawInferred = (inferredType != null) ? TypeUtilities.getRawClass(inferredType) : null;
-        if (rawInferred != null && readOptions.isNotCustomReaderClass(rawInferred)) {
-            return null;
-        }
-        if (!(o instanceof JsonObject) && rawInferred == null) {
+
+        // Early exit if no raw type available
+        if (rawInferred == null && !(o instanceof JsonObject)) {
             return null;
         }
 
+        // Check if we should skip due to not using custom reader for this type
+        if (rawInferred != null && readOptions.isNotCustomReaderClass(rawInferred)) {
+            return null;
+        }
+        
         JsonObject jsonObj;
         Class<?> targetClass;
 
@@ -517,7 +521,7 @@ public class ObjectResolver extends Resolver
             jsonObj.setType(targetClass);
         }
 
-        if (readOptions.isNotCustomReaderClass(targetClass)) {
+        if (targetClass != rawInferred && readOptions.isNotCustomReaderClass(targetClass)) {
             return null;
         }
 
@@ -581,9 +585,9 @@ public class ObjectResolver extends Resolver
 
                 if (Map.class.isAssignableFrom(clazz)) {
                     JsonObject jsonObj = (JsonObject) instance; // Maps are brought in as JsonObjects
-                    Map.Entry<Object, Object> pair = jsonObj.asTwoArrays();
-                    Object keys = pair.getKey();
-                    Object items = pair.getValue();
+                    Map.Entry<Object[], Object[]> pair = jsonObj.asTwoArrays();
+                    Object[] keys = pair.getKey();
+                    Object[] items = pair.getValue();
                     getTemplateTraverseWorkItem(stack, keys, typeArgs[0]);
                     getTemplateTraverseWorkItem(stack, items, typeArgs[1]);
                 } else if (Collection.class.isAssignableFrom(clazz)) {
@@ -660,7 +664,7 @@ public class ObjectResolver extends Resolver
         }
     }
 
-    private static void getTemplateTraverseWorkItem(final Deque<Object[]> stack, final Object items, final Type type) {
+    private static void getTemplateTraverseWorkItem(final Deque<Object[]> stack, final Object[] items, final Type type) {
         if (items == null || Array.getLength(items) < 1) {
             return;
         }
@@ -668,9 +672,9 @@ public class ObjectResolver extends Resolver
         if (rawType != null && Collection.class.isAssignableFrom(rawType)) {
             stack.add(new Object[]{type, items});
         } else {
-            int len = Array.getLength(items);
-            for (int i = 0; i < len; i++) {
-                stack.add(new Object[]{type, Array.get(items, i)});
+            int len = items.length;
+            for (Object item : items) {
+                stack.add(new Object[]{type, item});
             }
         }
     }

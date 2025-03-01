@@ -311,9 +311,9 @@ public abstract class Resolver {
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      */
     protected void traverseMap(JsonObject jsonObj) {
-        Map.Entry<Object, Object> pair = jsonObj.asTwoArrays();
-        final Object keys = pair.getKey();
-        final Object items = pair.getValue();
+        Map.Entry<Object[], Object[]> pair = jsonObj.asTwoArrays();
+        final Object[] keys = pair.getKey();
+        final Object[] items = pair.getValue();
 
         if (keys == null) {  // If keys is null, items is also null due to JsonObject validation
             return;
@@ -327,7 +327,7 @@ public abstract class Resolver {
         mapsToRehash.add(jsonObj);
     }
 
-    private void buildCollection(Object arrayContent) {
+    private void buildCollection(Object[] arrayContent) {
         final JsonObject collection = new JsonObject();
         collection.setItems(arrayContent);
         collection.setTarget(arrayContent);
@@ -425,9 +425,6 @@ public abstract class Resolver {
     }
 
     private Class<?> coerceClassIfNeeded(Class<?> type) {
-        if (type == null) {
-            return null;
-        }
         Class clazz = readOptions.getCoercedClass(type);
         return clazz == null ? type : clazz;
     }

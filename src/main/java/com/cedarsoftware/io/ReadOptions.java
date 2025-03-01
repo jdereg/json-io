@@ -131,9 +131,9 @@ public interface ReadOptions {
     String getTypeNameAlias(String typeName);
 
     /**
-     * @return boolean true if the passed in Class name is being coerced to another type, false otherwise.
+     * @return boolean true if the passed in Class is being coerced to another type, false otherwise.
      */
-    boolean isClassCoerced(String className);
+    boolean isClassCoerced(Class<?> clazz);
 
     /**
      * Fetch the coerced class for the passed in fully qualified class name.
