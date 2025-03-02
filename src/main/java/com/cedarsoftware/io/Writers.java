@@ -108,10 +108,10 @@ public class Writers {
          */
         @SuppressWarnings("unchecked")
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            if (!context.getWriteOptions().isAllowNanAndInfinity() && isNanOrInfinity((T) o)) {
-                output.write("null");
-            } else {
+            if (context.getWriteOptions().isAllowNanAndInfinity() || !isNanOrInfinity((T) o)) {
                 output.write(o.toString());
+            } else {
+                output.write("null");
             }
         }
 

@@ -24,7 +24,6 @@ import java.util.Map.Entry;
 
 import com.cedarsoftware.io.reflect.Accessor;
 import com.cedarsoftware.util.ClassUtilities;
-import com.cedarsoftware.util.ExceptionUtilities;
 import com.cedarsoftware.util.FastWriter;
 
 import static com.cedarsoftware.io.JsonValue.ENUM;
@@ -411,11 +410,21 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     private void processArray(Object array, Deque<Object> stack) {
         final Class<?> componentType = array.getClass().getComponentType();
         if (!writeOptions.isNonReferenceableClass(componentType)) {
-            final int len = Array.getLength(array);
-            for (int i = 0; i < len; i++) {
-                final Object element = Array.get(array, i);
-                if (element != null) {
-                    stack.addFirst(element);
+            // If Object[], access it using [] for speed, versus Array.get() (reflection)
+            if (componentType == Object.class) {
+                for (final Object element : (Object[]) array) {
+                    if (element != null) {
+                        stack.addFirst(element);
+                    }
+                }
+            }
+            else {
+                final int len = Array.getLength(array);
+                for (int i = 0; i < len; i++) {
+                    final Object element = Array.get(array, i);
+                    if (element != null) {
+                        stack.addFirst(element);
+                    }
                 }
             }
         }
@@ -423,13 +432,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
     private void processJsonObject(JsonObject jsonObj, Deque<Object> stack) {
         // Traverse items (array elements)
-        Object items = jsonObj.getItems();
+        Object[] items = jsonObj.getItems();
         if (items != null) {
             processArray(items, stack);
         }
 
         // Traverse keys (for JsonObject representing maps)
-        Object keys = jsonObj.getKeys();
+        Object[] keys = jsonObj.getKeys();
         if (keys != null) {
             processArray(keys, stack);
         }
@@ -474,14 +483,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         // then use it, otherwise use reflection.
         Collection<Accessor> fields = writeOptions.getAccessorsForClass(obj.getClass());
 
-        for (final Accessor accessor : fields)
-        {
-            ExceptionUtilities.safelyIgnoreException(() -> {
-                final Object o = accessor.retrieve(obj);
-                if (o != null) {   // Trace through objects that can reference other objects
-                    stack.addFirst(o);
-                }
-            });
+        for (final Accessor accessor : fields) {
+            final Object o = accessor.retrieve(obj);
+            if (o != null) {   // Trace through objects that can reference other objects
+                stack.addFirst(o);
+            }
         }
     }
 
@@ -949,11 +955,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
         tabIn();
 
-        Object items = jObj.getItems();
+        Object[] items = jObj.getItems();
         final int lenMinus1 = len - 1;
 
         for (int i = 0; i < len; i++) {
-            final Object value = Array.get(items, i);
+            final Object value = items[i];
 
             if (value == null) {
                 output.write("null");
@@ -986,10 +992,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
     }
 
-    private void writeJsonObjectCollection(JsonObject jObj, boolean showType) throws IOException
-    {
-        if (writeOptions.isNeverShowingType())
-        {
+    private void writeJsonObjectCollection(JsonObject jObj, boolean showType) throws IOException {
+        if (writeOptions.isNeverShowingType()) {
             showType = false;
         }
         Class<?> colClass = jObj.getRawType();
@@ -997,21 +1001,17 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         final Writer output = this.out;
         int len = jObj.size();
 
-        if (referenced || showType || len == 0)
-        {
+        if (referenced || showType || len == 0) {
             output.write('{');
             tabIn();
         }
 
-        if (referenced)
-        {
+        if (referenced) {
             writeId(String.valueOf(jObj.id));
         }
 
-        if (showType)
-        {
-            if (referenced)
-            {
+        if (showType) {
+            if (referenced) {
                 output.write(',');
                 newLine();
             }
@@ -1019,8 +1019,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             writeType(colClass.getName(), output);
         }
 
-        if (len == 0)
-        {
+        if (len == 0) {
             tabOut();
             output.write('}');
             return;
@@ -1028,16 +1027,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         beginCollection(showType, referenced);
 
-        Object items = jObj.getItems();
-        final int itemsLen = Array.getLength(items);
+        Object[] items = jObj.getItems();
+        final int itemsLen = items.length;
         final int itemsLenMinus1 = itemsLen - 1;
 
-        for (int i=0; i < itemsLen; i++)
-        {
-            writeCollectionElement(Array.get(items, i));
+        for (int i = 0; i < itemsLen; i++) {
+            writeCollectionElement(items[i]);
 
-            if (i != itemsLenMinus1)
-            {
+            if (i != itemsLenMinus1) {
                 output.write(',');
                 newLine();
             }
@@ -1045,8 +1042,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         tabOut();
         output.write("]");
-        if (showType || referenced)
-        {
+        if (showType || referenced) {
             tabOut();
             output.write('}');
         }

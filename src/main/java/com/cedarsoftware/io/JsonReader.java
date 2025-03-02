@@ -335,7 +335,7 @@ public class JsonReader implements Closeable
             rootObj = new JsonObject();
             rootObj.setType(rootType);
             rootObj.setTarget(returnValue);
-            rootObj.setItems(returnValue);
+            rootObj.setItems((Object[])returnValue);
         } else {
             // Otherwise, it’s a JsonObject that has isArray() == true
             rootObj = (JsonObject) returnValue;

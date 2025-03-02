@@ -287,7 +287,7 @@ public class ObjectResolver extends Resolver
         }
 
         Converter converter = getConverter();
-        Object items = jsonObj.getItems();
+        Object[] items = jsonObj.getItems();
         final Collection col = (Collection) jsonObj.getTarget();
         final boolean isList = col instanceof List;
         int idx = 0;
@@ -298,7 +298,7 @@ public class ObjectResolver extends Resolver
         if (fullType instanceof ParameterizedType) {
             ParameterizedType pt = (ParameterizedType) fullType;
             Type[] typeArgs = pt.getActualTypeArguments();
-            if (typeArgs != null && typeArgs.length > 0) {
+            if (typeArgs.length > 0) {
                 elementType = typeArgs[0];
             }
         }
@@ -308,9 +308,7 @@ public class ObjectResolver extends Resolver
             return;
         }
 
-        int len = Array.getLength(items);
-        for (int i = 0; i < len; i++) {
-            Object element = Array.get(items, i);
+        for (Object element : items) {
             Object special;
             if (element == null) {
                 col.add(null);
@@ -328,7 +326,7 @@ public class ObjectResolver extends Resolver
                     arrayComponentType = Object.class;
                 }
                 jObj.setType(arrayComponentType);
-                jObj.setItems(element);
+                jObj.setItems((Object[]) element);
                 createInstance(jObj);
                 col.add(jObj.getTarget());
                 push(jObj);
@@ -395,14 +393,14 @@ public class ObjectResolver extends Resolver
         }
         // For operations that require a Class, extract the raw type.
         final Class effectiveRawComponentType = TypeUtilities.getRawClass(effectiveComponentType);
-        final Object jsonItems = jsonObj.getItems();
+        final Object[] jsonItems = jsonObj.getItems();
 
         for (int i = 0; i < len; i++) {
-            final Object element = Array.get(jsonItems, i);
+            final Object element = jsonItems[i];
             Object special;
 
             if (element == null) {
-                Array.set(array, i, null);
+                setArrayElement(array, i, null);
             } else if ((special = readWithFactoryIfExists(element, effectiveRawComponentType)) != null) {
                 if (effectiveRawComponentType.isEnum() && special instanceof String) {
                     special = Enum.valueOf(effectiveRawComponentType, (String) special);
@@ -425,7 +423,7 @@ public class ObjectResolver extends Resolver
                     }
                 } else {
                     JsonObject jsonArray = new JsonObject();
-                    jsonArray.setItems(element);
+                    jsonArray.setItems((Object[])element);
                     // Set the full type using the effective component type.
                     jsonArray.setType(effectiveComponentType);
                     setArrayElement(array, i, createInstance(jsonArray));
@@ -610,7 +608,7 @@ public class ObjectResolver extends Resolver
 
                                 JsonObject coll = new JsonObject();
                                 coll.setType(clazz);
-                                coll.setItems(vals);
+                                coll.setItems((Object[])vals);
                                 stack.addFirst(new Object[]{t, items});
                                 Array.set(instance, i, coll);
                             } else {
@@ -624,11 +622,9 @@ public class ObjectResolver extends Resolver
                         }
                     } else if (instance instanceof JsonObject) {
                         final JsonObject jObj = (JsonObject) instance;
-                        final Object array = jObj.getItems();
+                        final Object[] array = jObj.getItems();
                         if (array != null) {
-                            int len = Array.getLength(array);
-                            for (int i = 0; i < len; i++) {
-                                Object o = Array.get(array, i);
+                            for (Object o : array) {
                                 stack.addFirst(new Object[]{typeArgs[0], o});
                             }
                         }

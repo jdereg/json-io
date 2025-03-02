@@ -1,7 +1,6 @@
 package com.cedarsoftware.io;
 
 import java.awt.*;
-import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Calendar;
@@ -316,7 +315,7 @@ class MapOfMapsTest
         String json = TestUtil.toJson(stuff);
 
         Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
-        Object[] items = (Object[])((JsonObject)map).getItems();
+        Object[] items = ((JsonObject)map).getItems();
         assert items.length == 3;
         assertEquals(((JsonObject)items[0]).get("_name"), "b");
         assertEquals("a", items[1]);
@@ -597,10 +596,10 @@ class MapOfMapsTest
         assert array[0] == array[1];                // Same instance of List
         JsonObject objList1 = (JsonObject) array[0];
         assert objList1.isArray();
-        Object list1 = objList1.getItems();
-        assert Array.get(list1, 0) == Array.get(list1, 1);                // Same Person instance
-        assert Array.get(list1, 0) != Array.get(list1, 2);                // Not same Person instance
-        assert DeepEquals.deepEquals(Array.get(list1, 2), Array.get(list1, 1));  // Although difference instance, same contents
+        Object[] list1 = objList1.getItems();
+        assert list1[0] == list1[1];                // Same Person instance
+        assert list1[0] != list1[2];                // Not same Person instance
+        assert DeepEquals.deepEquals(list1[2], list1[1]);  // Although difference instance, same contents
 
         Map objList2 = (Map) array[1];
         assert objList1 == objList2;                // Same JsonObject instance

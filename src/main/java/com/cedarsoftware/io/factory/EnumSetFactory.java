@@ -1,6 +1,5 @@
 package com.cedarsoftware.io.factory;
 
-import java.lang.reflect.Array;
 import java.util.EnumSet;
 
 import com.cedarsoftware.io.JsonIoException;
@@ -34,9 +33,9 @@ public class EnumSetFactory implements JsonReader.ClassFactory {
 
         // If enumClass is null or not an enum, try to get it from the first item in @items
         if (enumClass == null) {
-            Object items = jObj.getItems();
-            if (items != null && Array.getLength(items) > 0) {
-                Object firstItem = Array.get(items, 0);
+            Object[] items = jObj.getItems();
+            if (items != null && items.length > 0) {
+                Object firstItem = items[0];
                 if (firstItem instanceof JsonObject) {
                     JsonObject jsonItem = (JsonObject) firstItem;
                     enumClass = ClassUtilities.getClassIfEnum(jsonItem.getRawType());
@@ -60,15 +59,13 @@ public class EnumSetFactory implements JsonReader.ClassFactory {
         EnumSet enumSet = EnumSet.noneOf((Class<Enum>) enumClass);
         jObj.setTarget(enumSet);  // Set the EnumSet as the target object for further population
 
-        Object items = jObj.getItems();
-        if (items == null || Array.getLength(items) == 0) {
+        Object[] items = jObj.getItems();
+        if (items == null) {
             return enumSet;  // Return empty EnumSet
         }
 
         // Iterate over the items and populate the EnumSet
-        int len = Array.getLength(items);
-        for (int i = 0; i < len; i++) {
-            Object item = Array.get(items, i);
+        for (Object item : items) {
             if (item instanceof JsonObject) {
                 // Object format
                 JsonObject jsonItem = (JsonObject) item;

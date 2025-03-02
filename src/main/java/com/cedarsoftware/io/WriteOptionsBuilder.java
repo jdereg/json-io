@@ -28,6 +28,8 @@ import com.cedarsoftware.io.reflect.filters.field.StaticFieldFilter;
 import com.cedarsoftware.io.reflect.filters.method.DefaultMethodFilter;
 import com.cedarsoftware.io.reflect.filters.method.NamedMethodFilter;
 import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.ClassValueMap;
+import com.cedarsoftware.util.ClassValueSet;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.LRUCache;
 import com.cedarsoftware.util.ReflectionUtils;
@@ -58,10 +60,10 @@ public class WriteOptionsBuilder {
     public static final String ISO_DATE_FORMAT = "yyyy-MM-dd";
     public static final String ISO_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
-    private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
-    private static final Set<Class<?>> BASE_NON_REFS = ConcurrentHashMap.newKeySet();
-    static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ConcurrentHashMap<>();
-    private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_GETTERS = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ClassValueMap<>();
+    private static final Set<Class<?>> BASE_NON_REFS = Collections.newSetFromMap(new ClassValueMap<>());
+    static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ClassValueMap<>();
+    private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_GETTERS = new ClassValueMap<>();
     private static final Map<String, FieldFilter> BASE_FIELD_FILTERS = new ConcurrentHashMap<>();
     private static final Map<String, MethodFilter> BASE_METHOD_FILTERS = new ConcurrentHashMap<>();
     private static final Map<String, AccessorFactory> BASE_ACCESSOR_FACTORIES = new ConcurrentHashMap<>();
@@ -825,26 +827,25 @@ public class WriteOptionsBuilder {
         private boolean closeStream = true;
         private JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
         private ClassLoader classLoader = ClassUtilities.getClassLoader(DefaultWriteOptions.class);
-        private Map<Class<?>, Set<String>> includedFieldNames = new LinkedHashMap<>();
-        private Map<Class<?>, Map<String, String>> nonStandardGetters = new LinkedHashMap<>();
+        private Map<Class<?>, Set<String>> includedFieldNames = new ClassValueMap<>();
+        private Map<Class<?>, Map<String, String>> nonStandardGetters = new ClassValueMap<>();
         private Map<String, String> aliasTypeNames = new LinkedHashMap<>();
-        private Set<Class<?>> notCustomWrittenClasses = new LinkedHashSet<>();
-        private Set<Class<?>> nonRefClasses = new LinkedHashSet<>();
-        private Map<Class<?>, Set<String>> excludedFieldNames = new LinkedHashMap<>();
+        private Set<Class<?>> notCustomWrittenClasses = new ClassValueSet();
+        private Set<Class<?>> nonRefClasses = new ClassValueSet();
+        private Map<Class<?>, Set<String>> excludedFieldNames = new ClassValueMap<>();
         private Map<String, FieldFilter> fieldFilters = new LinkedHashMap<>();
         private Map<String, MethodFilter> methodFilters = new LinkedHashMap<>();
         private Map<String, AccessorFactory> accessorFactories = new LinkedHashMap<>();
-        private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses = new LinkedHashMap<>();
+        private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses = new ClassValueMap<>();
         private Map<String, Object> customOptions = new LinkedHashMap<>();
 
         // Runtime caches (not feature options), since looking up writers can be expensive
-        // when one does not exist, we cache the write or a nullWriter if one does not exist.
-        private final Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
+        // when one does not exist, we cache the writer or a nullWriter if one does not exist.
+        private final Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ClassValueMap<>();
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
-        private Map<Class<?>, List<Accessor>> accessorsCache = new LRUCache<>(lruSize);
-
-        private Map<Class<?>, Map<String, Field>> classMetaCache = new LRUCache<>(lruSize);
+        private Map<Class<?>, List<Accessor>> accessorsCache = new ClassValueMap<>();
+        private Map<Class<?>, Map<String, Field>> classMetaCache = new ClassValueMap<>();
 
         /**
          * Default Constructor.  Prevent instantiation outside of package.

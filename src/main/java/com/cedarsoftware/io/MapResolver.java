@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.cedarsoftware.io.reflect.Injector;
+import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.TypeUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
@@ -82,7 +83,7 @@ public class MapResolver extends Resolver {
             } else if (rhs.getClass().isArray()) {   // RHS is an array
                 // Trace the contents of the array (so references inside the array and into the array work)
                 JsonObject jsonArray = new JsonObject();
-                jsonArray.setItems(rhs);
+                jsonArray.setItems((Object[])rhs);
                 push(jsonArray);
 
                 // Assign the array directly to the Map key (field name)
@@ -142,7 +143,7 @@ public class MapResolver extends Resolver {
             jsonObject = (JsonObject) element;
         } else if (element != null && element.getClass().isArray()) {
             jsonObject = new JsonObject();
-            jsonObject.setItems(element);
+            jsonObject.setItems((Object[])element);
         }
 
         if (jsonObject != null) {
@@ -163,15 +164,14 @@ public class MapResolver extends Resolver {
     }
 
     protected void traverseArray(JsonObject jsonObj) {
-        Object items = jsonObj.getItems();
-        if (items == null || Array.getLength(items) == 0) {
+        Object[] items = jsonObj.getItems();
+        if (ArrayUtilities.isEmpty(items)) {
             return;
         }
 
-        Object target = jsonObj.getTarget() != null ? jsonObj.getTarget() : jsonObj.getItems();
+        Object target = jsonObj.getTarget() != null ? jsonObj.getTarget() : items;
         final ReferenceTracker refTracker = getReferences();
         final Converter converter = getConverter();
-        final int len = Array.getLength(items);
 
         // Determine the immediate component type of the current array level
         Class<?> componentType = Object.class;
@@ -182,11 +182,12 @@ public class MapResolver extends Resolver {
             }
         }
 
+        final int len = items.length;
         for (int i = 0; i < len; i++) {
-            Object element = Array.get(items, i);
+            Object element = items[i];
 
             if (element == null) {
-                Array.set(target, i, null);
+                setArrayElement(target, i, null);
             } else if (element.getClass().isArray() || (element instanceof JsonObject && ((JsonObject) element).isArray())) {
                 // Handle nested arrays using the unified helper method
                 handleNestedArray(element, componentType, target, i);
@@ -226,7 +227,6 @@ public class MapResolver extends Resolver {
                 setArrayElement(target, i, element);
             }
         }
-        jsonObj.setItems(target);
         jsonObj.setFinished();
     }
 
@@ -241,7 +241,7 @@ public class MapResolver extends Resolver {
             return;
         }
 
-        Object items = jsonObj.getItems();
+        Object[] items = jsonObj.getItems();
         Collection<Object> col = (Collection<Object>) jsonObj.getTarget();
         if (col == null) {
             col = (Collection<Object>)createInstance(jsonObj);
@@ -250,9 +250,7 @@ public class MapResolver extends Resolver {
         int idx = 0;
 
         if (items != null) {
-            int len = Array.getLength(items);
-            for (int i=0; i < len; i++) {
-                Object element = Array.get(items, i);
+            for (Object element : items) {
                 if (element == null) {
                     col.add(null);
                 } else if (element instanceof String || element instanceof Boolean || element instanceof Double || element instanceof Long) {
@@ -260,8 +258,8 @@ public class MapResolver extends Resolver {
                     col.add(element);
                 } else if (element.getClass().isArray()) {
                     final JsonObject jObj = new JsonObject();
-                    jObj.setType(Object.class);
-                    jObj.setItems(element);
+                    jObj.setType(Object[].class);
+                    jObj.setItems((Object[]) element);
                     createInstance(jObj);
                     col.add(jObj.getTarget());
                     push(jObj);

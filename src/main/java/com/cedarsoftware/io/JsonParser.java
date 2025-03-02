@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.cedarsoftware.io.reflect.Injector;
+import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.FastReader;
 import com.cedarsoftware.util.TypeUtilities;
@@ -262,7 +263,7 @@ class JsonParser {
                     break;
 
                 case ITEMS:
-                    loadItems(value, jObj);
+                    loadItems((Object[])value, jObj);
                     break;
 
                 case KEYS:
@@ -639,7 +640,7 @@ class JsonParser {
 
         // Only set empty items if no items were specified in JSON
         if (jObj.getItems() == null) {
-            jObj.setItems(new Object[0]);   // Indicate EnumSet (has both @type and @items)
+            jObj.setItems(ArrayUtilities.EMPTY_OBJECT_ARRAY);   // Indicate EnumSet (has both @type and @items)
         }
     }
 
@@ -668,7 +669,7 @@ class JsonParser {
      * @param value Object should be an array, if not exception is thrown.  It is the value associated to the @items field.
      * @param jObj  JsonObject representing the current item in the JSON being loaded.
      */
-    private void loadItems(Object value, JsonObject jObj) {
+    private void loadItems(Object[] value, JsonObject jObj) {
         if (value == null) {
             return;
         }

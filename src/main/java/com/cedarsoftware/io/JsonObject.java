@@ -39,7 +39,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     private Integer hash = null;
 
     // Explicit fields for meta data
-    private Object items;
+    private Object[] items;
     private Object[] keys;
 
     public String toString() {
@@ -80,12 +80,12 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     }
 
     // Return the array that this JSON object wraps. This is used when there is a Collection class (like ArrayList)
-    // represented in the JSON. This also occurs if a specified array type is used (not Object[], but Integer[], for example).
-    public Object getItems() {
+    // represented in the JSON. 
+    public Object[] getItems() {
         return items;
     }
 
-    void setItems(Object array) {
+    void setItems(Object[] array) {
         if (array == null) {
             throw new JsonIoException("Argument array cannot be null");
         }
@@ -97,7 +97,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     }
 
     // New getters/setters for keys
-    public Object getKeys() {
+    public Object[] getKeys() {
         return keys;
     }
 
@@ -177,10 +177,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         seen.put(array, null);  // Mark as being processed
 
         int result = 1;
-        int length = Array.getLength(array);
 
-        for (int i = 0; i < length; i++) {
-            Object item = Array.get(array, i);
+        for (Object item : (Object[])array) {
             result = 31 * result + hashCode(item, seen);
         }
 
@@ -212,7 +210,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
      * Compare two Objects if both are arrays, element by element,
      * otherwise do a simple Object.equals().
      */
-    private static boolean shallowArrayEquals(Object arr1, Object arr2) {
+    private static boolean shallowArrayEquals(Object[] arr1, Object[] arr2) {
         if (arr1 == arr2) {
             return true;            // Same reference or both null
         }
@@ -221,24 +219,20 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         }
 
         // If both are arrays, compare lengths and elements with .equals()
-        if (arr1.getClass().isArray() && arr2.getClass().isArray()) {
-            int len1 = Array.getLength(arr1);
-            int len2 = Array.getLength(arr2);
-            if (len1 != len2) {
+        
+        int len1 = Array.getLength(arr1);
+        int len2 = Array.getLength(arr2);
+        if (len1 != len2) {
+            return false;
+        }
+        for (int i = 0; i < len1; i++) {
+            Object e1 = arr1[i];
+            Object e2 = arr2[i];
+            if (!Objects.equals(e1, e2)) {
                 return false;
             }
-            for (int i = 0; i < len1; i++) {
-                Object e1 = Array.get(arr1, i);
-                Object e2 = Array.get(arr2, i);
-                if (!Objects.equals(e1, e2)) {
-                    return false;
-                }
-            }
-            return true;
         }
-
-        // Fallback if not arrays: just do a regular equals check
-        return Objects.equals(arr1, arr2);
+        return true;
     }
     
     public boolean isEmpty() {
@@ -344,10 +338,10 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         Map<Object, Object> targetMap = (Map<Object, Object>) target;
         hash = null;
 
-        int len = Array.getLength(keys);
+        int len = keys.length;
         for (int i = 0; i < len; i++) {
-            Object key = Array.get(keys, i);
-            Object value = Array.get(items, i);
+            Object key = keys[i];
+            Object value = items[i];
             
             if (key instanceof String) {
                 String k = (String) key;

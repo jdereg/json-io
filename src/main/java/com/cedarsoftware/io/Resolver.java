@@ -448,13 +448,13 @@ public abstract class Resolver {
     }
 
     private boolean shouldCreateArray(JsonObject jsonObj, Class<?> targetType) {
-        Object items = jsonObj.getItems();
+        Object[] items = jsonObj.getItems();
         return targetType.isArray() || (items != null && targetType == Object.class && jsonObj.getKeys() == null);
     }
 
     private Object createArrayInstance(JsonObject jsonObj, Class<?> targetType) {
-        Object items = jsonObj.getItems();
-        int size = (items == null) ? 0 : Array.getLength(items);
+        Object[] items = jsonObj.getItems();
+        int size = (items == null) ? 0 : items.length;
         Class<?> componentType = targetType.isArray() ? targetType.getComponentType() : Object.class;
         return Array.newInstance(componentType, size);
     }
@@ -577,18 +577,18 @@ public abstract class Resolver {
         Class<?> javaType = jsonObject.getRawType();
         // For arrays, attempt simple type conversion.
         if (javaType.isArray() && converter.isSimpleTypeConversionSupported(javaType.getComponentType(), javaType)) {
-            Object jsonItems = jsonObject.getItems();
+            Object[] jsonItems = jsonObject.getItems();
             Class<?> componentType = javaType.getComponentType();
             if (jsonItems == null) {    // empty array
                 jsonObject.setFinishedTarget(null, true);
                 return true;
             }
-            int len = Array.getLength(jsonItems);
+            int len = jsonItems.length;
             Object javaArray = Array.newInstance(componentType, len);
             for (int i = 0; i < len; i++) {
                 try {
                     Class<?> type = componentType;
-                    Object item = Array.get(jsonItems, i);
+                    Object item = jsonItems[i];
                     if (item instanceof JsonObject) {
                         JsonObject jObj = (JsonObject) item;
                         if (jObj.getType() != null) {
@@ -623,7 +623,11 @@ public abstract class Resolver {
 
     protected void setArrayElement(Object array, int index, Object element) {
         try {
-            Array.set(array, index, element);
+            if (Object[].class == array.getClass()) {
+                ((Object[])array)[index] = element;
+            } else {
+                Array.set(array, index, element);
+            }
         } catch (Exception e) {
             String elementType = element == null ? "null" : element.getClass().getName();
             String valueRepresentation = String.valueOf(element);
