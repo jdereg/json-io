@@ -1,6 +1,8 @@
 package com.cedarsoftware.io;
 
 import java.lang.reflect.Type;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.cedarsoftware.util.TypeUtilities;
 
@@ -38,13 +40,16 @@ public abstract class JsonValue {
     public static final String SHORT_ID = "@i";
     public static final String SHORT_REF = "@r";
     public static final String VALUE = "value";
-    protected Type type = null;
+    Type type = null;
     protected Object target = null;
     protected boolean isFinished = false;
     protected long id = -1L;
     protected Long refId = null;
     protected int line;
     protected int col;
+
+    // Cache for storing whether a Type is fully resolved.
+    private static final Map<Type, Boolean> typeResolvedCache = new ConcurrentHashMap<>();
 
     public int getLine() {
         return line;
@@ -98,17 +103,32 @@ public abstract class JsonValue {
         return type;
     }
 
+    /**
+     * Sets the type on this JsonValue.
+     * Uses a cache to avoid repeated resolution checks for the same types.
+     */
     public void setType(Type type) {
-        if (hasUnresolvedType(type)) {
+        if (type == null || type == this.type || type.equals(this.type)) {
+            return;
+        }
+        if (type == Object.class && this.type != null) {
+            return;
+        }
+
+        // Check cache for previously resolved types
+        Boolean isResolved = typeResolvedCache.get(type);
+        if (isResolved == null) {
+            // Type hasn't been seen before - check if it's resolved
+            isResolved = !hasUnresolvedType(type);
+            typeResolvedCache.put(type, isResolved);
+        }
+
+        if (!isResolved) {
             // Don't allow a TypeVariable of T, V or any other unresolved type to be set.
             // Forces resolution ahead of calling this method.
-            throw new RuntimeException("Unresolved type: " + type);
+            throw new JsonIoException("Unresolved type: " + type);
         }
-        if (type == Object.class || type == null) {
-            if (this.type != null) {
-                return;
-            }
-        }
+
         this.type = type;
     }
 

@@ -661,14 +661,13 @@ public class ObjectResolver extends Resolver
     }
 
     private static void getTemplateTraverseWorkItem(final Deque<Object[]> stack, final Object[] items, final Type type) {
-        if (items == null || Array.getLength(items) < 1) {
+        if (items == null || items.length < 1) {
             return;
         }
         Class<?> rawType = TypeUtilities.getRawClass(type);
         if (rawType != null && Collection.class.isAssignableFrom(rawType)) {
             stack.add(new Object[]{type, items});
         } else {
-            int len = items.length;
             for (Object item : items) {
                 stack.add(new Object[]{type, item});
             }

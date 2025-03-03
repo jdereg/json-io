@@ -32,7 +32,6 @@ import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.ClassValueMap;
 import com.cedarsoftware.util.ClassValueSet;
 import com.cedarsoftware.util.Convention;
-import com.cedarsoftware.util.LRUCache;
 import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.convert.CommonValues;
 import com.cedarsoftware.util.convert.Convert;
@@ -70,6 +69,11 @@ public class ReadOptionsBuilder {
     private static final Set<Class<?>> BASE_NON_REFS = ConcurrentHashMap.newKeySet();
     private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_SETTERS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Set<String>> BASE_NOT_IMPORTED_FIELDS = new ConcurrentHashMap<>();
+    
+    // Cache of fields used for accessors. Controlled by ignoredFields
+    private static final Map<Class<?>, Map<String, Field>> classMetaCache = new ClassValueMap<>();
+    private static final Map<Class<?>, Map<String, Injector>> injectorsCache = new ClassValueMap<>();
+
     private final static ReadOptions defReadOptions;
     private final DefaultReadOptions options;
 
@@ -114,7 +118,6 @@ public class ReadOptionsBuilder {
         options.customReaderClasses.putAll(BASE_READERS);
         options.classFactoryMap.putAll(BASE_CLASS_FACTORIES);
         options.nonRefClasses.addAll(BASE_NON_REFS);
-        options.nonStandardSetters.putAll(BASE_NONSTANDARD_SETTERS);
         options.excludedFieldNames.putAll(WriteOptionsBuilder.BASE_EXCLUDED_FIELD_NAMES);
         options.fieldsNotImported.putAll(BASE_NOT_IMPORTED_FIELDS);
     }
@@ -160,9 +163,6 @@ public class ReadOptionsBuilder {
             options.fieldsNotImported.clear();
             options.fieldsNotImported.putAll(other.fieldsNotImported);
 
-            options.nonStandardSetters.clear();
-            options.nonStandardSetters.putAll(other.nonStandardSetters);
-
             options.coercedTypes.clear();
             options.coercedTypes.putAll(other.coercedTypes);
 
@@ -177,13 +177,6 @@ public class ReadOptionsBuilder {
 
             options.nonRefClasses.clear();
             options.nonRefClasses.addAll(other.nonRefClasses);
-
-            // Copy caches
-            options.injectorsCache = new LRUCache<>(other.lruSize);
-            options.injectorsCache.putAll(other.injectorsCache);
-
-            options.classMetaCache = new LRUCache<>(other.lruSize);
-            options.classMetaCache.putAll(other.classMetaCache);
         }
     }
 
@@ -309,21 +302,21 @@ public class ReadOptionsBuilder {
     /**
      * @return ReadOptions - built options
      */
+    @SuppressWarnings("unchecked")
     public ReadOptions build() {
         options.clearCaches();
         options.aliasTypeNames = Collections.unmodifiableMap(options.aliasTypeNames);
-        options.coercedTypes = Collections.unmodifiableMap(options.coercedTypes);
+        options.coercedTypes = ((ClassValueMap)options.coercedTypes).unmodifiableView();
         options.notCustomReadClasses = ((ClassValueSet)options.notCustomReadClasses).unmodifiableView();
-        options.customReaderClasses = Collections.unmodifiableMap(options.customReaderClasses);
-        options.classFactoryMap = Collections.unmodifiableMap(options.classFactoryMap);
-        options.nonRefClasses = Collections.unmodifiableSet(options.nonRefClasses);
+        options.customReaderClasses = ((ClassValueMap)options.customReaderClasses).unmodifiableView();
+        options.classFactoryMap = ((ClassValueMap)options.classFactoryMap).unmodifiableView();
+        options.nonRefClasses = ((ClassValueSet)options.nonRefClasses).unmodifiableView();
         options.converterOptions.converterOverrides = Collections.unmodifiableMap(options.converterOptions.converterOverrides);
         options.converterOptions.customOptions = Collections.unmodifiableMap(options.converterOptions.customOptions);
-        options.excludedFieldNames = Collections.unmodifiableMap(options.excludedFieldNames);
-        options.fieldsNotImported = Collections.unmodifiableMap(options.fieldsNotImported);
+        options.excludedFieldNames = ((ClassValueMap)options.excludedFieldNames).unmodifiableView();
+        options.fieldsNotImported = ((ClassValueMap)options.fieldsNotImported).unmodifiableView();
         options.fieldFilters = Collections.unmodifiableList(options.fieldFilters);
         options.injectorFactories = Collections.unmodifiableList(options.injectorFactories);
-        options.nonStandardSetters = Collections.unmodifiableMap(options.nonStandardSetters);
         options.customOptions = Collections.unmodifiableMap(options.customOptions);
         return options;
     }
@@ -577,13 +570,7 @@ public class ReadOptionsBuilder {
      */
     public ReadOptionsBuilder lruSize(int lruSize) {
         options.lruSize = lruSize;
-        Map<Class<?>, Map<String, Injector>> injectorCacheCopy = options.injectorsCache;
-        options.injectorsCache = new LRUCache<>(options.getLruSize());
-        options.injectorsCache.putAll(injectorCacheCopy);
-
-        Map<Class<?>, Map<String, Field>> classMetaCacheCopy = options.classMetaCache;
-        options.classMetaCache = new LRUCache<>(options.getLruSize());
-        options.classMetaCache.putAll(classMetaCacheCopy);
+        // Not used at the moment, but may be used at a later point
         return this;
     }
 
@@ -916,18 +903,11 @@ public class ReadOptionsBuilder {
         private List<InjectorFactory> injectorFactories = new ArrayList<>();
         private Map<String, Object> customOptions = new LinkedHashMap<>();
 
-        // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
-        private Map<Class<?>, Map<String, Injector>> injectorsCache = new ClassValueMap<>();
-        private Map<Class<?>, Map<String, String>> nonStandardSetters = new ClassValueMap<>();
-
         // Runtime cache (not feature options)
         private final Map<Class<?>, JsonReader.JsonClassReader> readerCache = new ClassValueMap<>();
         private final JsonReader.ClassFactory throwableFactory = new ThrowableFactory();
         private final JsonReader.ClassFactory enumFactory = new EnumClassFactory();
 
-        //  Cache of fields used for accessors. Controlled by ignoredFields
-        private Map<Class<?>, Map<String, Field>> classMetaCache = new ClassValueMap<>();
-        
         /**
          * Default constructor. Prevent instantiation outside of package.
          */
@@ -1182,7 +1162,6 @@ public class ReadOptionsBuilder {
         }
 
         public void clearCaches() {
-            classMetaCache.clear();
             injectorsCache.clear();
         }
 
@@ -1211,7 +1190,7 @@ public class ReadOptionsBuilder {
         private Injector findInjector(Field field, String key) {
             for (final InjectorFactory factory : this.injectorFactories) {
                 try {
-                    final Injector injector = factory.createInjector(field, this.nonStandardSetters, key);
+                    final Injector injector = factory.createInjector(field, BASE_NONSTANDARD_SETTERS, key);
 
                     if (injector != null) {
                         return injector;
@@ -1220,6 +1199,15 @@ public class ReadOptionsBuilder {
                 }
             }
             return null;
+        }
+
+        public ConverterOptions getConverterOptions() {
+            return this.converterOptions;
+        }
+
+        public Object getCustomOption(String key)
+        {
+            return customOptions.get(key);
         }
 
         /**
@@ -1231,15 +1219,6 @@ public class ReadOptionsBuilder {
          */
         public Map<String, Field> getDeepDeclaredFields(final Class<?> c) {
             return classMetaCache.computeIfAbsent(c, this::buildDeepFieldMap);
-        }
-
-        public ConverterOptions getConverterOptions() {
-            return this.converterOptions;
-        }
-
-        public Object getCustomOption(String key)
-        {
-            return customOptions.get(key);
         }
 
         /**

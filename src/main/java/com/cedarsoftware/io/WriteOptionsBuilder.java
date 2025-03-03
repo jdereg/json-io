@@ -57,8 +57,6 @@ import com.cedarsoftware.util.StringUtilities;
  */
 public class WriteOptionsBuilder {
     // Constants
-    public static final String ISO_DATE_FORMAT = "yyyy-MM-dd";
-    public static final String ISO_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ClassValueMap<>();
     private static final Set<Class<?>> BASE_NON_REFS = Collections.newSetFromMap(new ClassValueMap<>());
@@ -69,6 +67,8 @@ public class WriteOptionsBuilder {
     private static final Map<String, AccessorFactory> BASE_ACCESSOR_FACTORIES = new ConcurrentHashMap<>();
     private static final WriteOptions defWriteOptions;
     private final DefaultWriteOptions options;
+
+    private static final Map<Class<?>, Map<String, Field>> classMetaCache = new ClassValueMap<>();
 
     static {
         ReadOptionsBuilder.loadBaseAliasMappings(WriteOptionsBuilder::addPermanentAlias);
@@ -174,9 +174,6 @@ public class WriteOptionsBuilder {
             // Copy caches
             options.accessorsCache = new LRUCache<>(other.lruSize);
             options.accessorsCache.putAll(other.accessorsCache);
-
-            options.classMetaCache = new LRUCache<>(other.lruSize);
-            options.classMetaCache.putAll(other.classMetaCache);
         }
     }
 
@@ -424,10 +421,6 @@ public class WriteOptionsBuilder {
         Map<Class<?>, List<Accessor>> accessorCacheCopy = options.accessorsCache;
         options.accessorsCache = new LRUCache<>(options.getLruSize());
         options.accessorsCache.putAll(accessorCacheCopy);
-
-        Map<Class<?>, Map<String, Field>> classMetaCacheCopy = options.classMetaCache;
-        options.classMetaCache = new LRUCache<>(options.getLruSize());
-        options.classMetaCache.putAll(classMetaCacheCopy);
         return this;
     }
     
@@ -799,16 +792,16 @@ public class WriteOptionsBuilder {
     @SuppressWarnings("unchecked")
     public WriteOptions build() {
         options.clearCaches();
-        options.includedFieldNames = Collections.unmodifiableMap(options.includedFieldNames);
-        options.nonStandardGetters = Collections.unmodifiableMap(options.nonStandardGetters);
+        options.includedFieldNames = ((ClassValueMap)options.includedFieldNames).unmodifiableView();
+        options.nonStandardGetters = ((ClassValueMap)options.nonStandardGetters).unmodifiableView();
         options.aliasTypeNames = Collections.unmodifiableMap(options.aliasTypeNames);
-        options.notCustomWrittenClasses = Collections.unmodifiableSet(options.notCustomWrittenClasses);
-        options.nonRefClasses = Collections.unmodifiableSet(options.nonRefClasses);
-        options.excludedFieldNames = Collections.unmodifiableMap(options.excludedFieldNames);
+        options.notCustomWrittenClasses = ((ClassValueSet)options.notCustomWrittenClasses).unmodifiableView();
+        options.nonRefClasses = ((ClassValueSet)options.nonRefClasses).unmodifiableView();
+        options.excludedFieldNames = ((ClassValueMap)options.excludedFieldNames).unmodifiableView();
         options.fieldFilters = Collections.unmodifiableMap(options.fieldFilters);
         options.methodFilters = Collections.unmodifiableMap(options.methodFilters);
         options.accessorFactories = Collections.unmodifiableMap(options.accessorFactories);
-        options.customWrittenClasses = Collections.unmodifiableMap(options.customWrittenClasses);
+        options.customWrittenClasses = ((ClassValueMap)options.customWrittenClasses).unmodifiableView();
         options.customOptions = Collections.unmodifiableMap(options.customOptions);
         return options;
     }
@@ -845,7 +838,6 @@ public class WriteOptionsBuilder {
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
         private Map<Class<?>, List<Accessor>> accessorsCache = new ClassValueMap<>();
-        private Map<Class<?>, Map<String, Field>> classMetaCache = new ClassValueMap<>();
 
         /**
          * Default Constructor.  Prevent instantiation outside of package.
