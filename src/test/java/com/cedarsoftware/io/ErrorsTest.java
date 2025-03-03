@@ -125,7 +125,7 @@ class ErrorsTest
         String json = "\"\\u5h1t\"";
         assertThatThrownBy(() -> TestUtil.toObjects(json, null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Expected hexadecimal digits");
+                .hasMessageContaining("Expected hexadecimal digit");
     }
 
     @Test

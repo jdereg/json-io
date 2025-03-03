@@ -137,7 +137,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     }
 
     public boolean hasValue() {
-        return containsKey(VALUE) && size() == 1;
+        return size() == 1 && containsKey(VALUE);
     }
 
     public int hashCode() {

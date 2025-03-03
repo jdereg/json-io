@@ -68,8 +68,6 @@ public class WriteOptionsBuilder {
     private static final WriteOptions defWriteOptions;
     private final DefaultWriteOptions options;
 
-    private static final Map<Class<?>, Map<String, Field>> classMetaCache = new ClassValueMap<>();
-
     static {
         ReadOptionsBuilder.loadBaseAliasMappings(WriteOptionsBuilder::addPermanentAlias);
         loadBaseWriters();
@@ -174,6 +172,9 @@ public class WriteOptionsBuilder {
             // Copy caches
             options.accessorsCache = new LRUCache<>(other.lruSize);
             options.accessorsCache.putAll(other.accessorsCache);
+
+            options.classMetaCache = new LRUCache<>(other.lruSize);
+            options.classMetaCache.putAll(other.classMetaCache);
         }
     }
 
@@ -421,6 +422,10 @@ public class WriteOptionsBuilder {
         Map<Class<?>, List<Accessor>> accessorCacheCopy = options.accessorsCache;
         options.accessorsCache = new LRUCache<>(options.getLruSize());
         options.accessorsCache.putAll(accessorCacheCopy);
+
+        Map<Class<?>, Map<String, Field>> classMetaCacheCopy = options.classMetaCache;
+        options.classMetaCache = new LRUCache<>(options.getLruSize());
+        options.classMetaCache.putAll(classMetaCacheCopy);
         return this;
     }
     
@@ -838,6 +843,7 @@ public class WriteOptionsBuilder {
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
         private Map<Class<?>, List<Accessor>> accessorsCache = new ClassValueMap<>();
+        private Map<Class<?>, Map<String, Field>> classMetaCache = new ClassValueMap<>();
 
         /**
          * Default Constructor.  Prevent instantiation outside of package.
