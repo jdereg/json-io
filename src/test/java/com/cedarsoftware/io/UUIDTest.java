@@ -112,6 +112,7 @@ public class UUIDTest
         TestUUIDFields t = new TestUUIDFields();
         t. fromString = uuid;
         String json = TestUtil.toJson(t);
+        System.out.println(json);
         TestUUIDFields tut = TestUtil.toObjects(json, null);
         assert tut.fromString.equals(uuid);
     }
