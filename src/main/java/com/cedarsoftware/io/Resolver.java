@@ -214,26 +214,17 @@ public abstract class Resolver {
         while (!stack.isEmpty()) {
             final JsonObject jsonObj = stack.pop();
 
-            if (jsonObj.isReference()) {
-                continue;
-            }
             if (jsonObj.isFinished) {
                 continue;
             }
-            if (visited.containsKey(jsonObj)) {
-                jsonObj.setFinished();
-                continue;
-            }
+
             visited.put(jsonObj, null);
             traverseSpecificType(jsonObj);
         }
         return (T) root.getTarget();
     }
 
-    public void traverseSpecificType(JsonObject jsonObj) {
-        if (jsonObj.isFinished) {
-            return;
-        }
+    protected void traverseSpecificType(JsonObject jsonObj) {
         if (jsonObj.isArray()) {
             traverseArray(jsonObj);
         } else if (jsonObj.isCollection()) {
@@ -311,6 +302,10 @@ public abstract class Resolver {
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      */
     protected void traverseMap(JsonObject jsonObj) {
+        if (jsonObj.isFinished) {
+            return;
+        }
+        jsonObj.setFinished();
         Map.Entry<Object[], Object[]> pair = jsonObj.asTwoArrays();
         final Object[] keys = pair.getKey();
         final Object[] items = pair.getValue();
@@ -622,20 +617,68 @@ public abstract class Resolver {
     }
 
     protected void setArrayElement(Object array, int index, Object element) {
-        try {
-            if (Object[].class == array.getClass()) {
+        // Fast path: Most common case is setting to Object[] array
+        if (array instanceof Object[]) {
+            try {
                 ((Object[])array)[index] = element;
-            } else {
-                Array.set(array, index, element);
+                return;
+            } catch (ArrayStoreException e) {
+                // Let it fall through to the error handling below
             }
-        } catch (Exception e) {
-            String elementType = element == null ? "null" : element.getClass().getName();
-            String valueRepresentation = String.valueOf(element);
-            String arrayType = array.getClass().getSimpleName();
+        } else {
+            // For primitive arrays, use type-specific assignments to avoid boxing/unboxing
+            Class<?> componentType = array.getClass().getComponentType();
 
-            throw new IllegalArgumentException("Cannot set '" + elementType + "' (value: " + valueRepresentation + ") into '" +
-                    arrayType + "' at index " + index + ". Type mismatch between value and array type.");
+            // Use if/else instead of reflection for common primitive types
+            try {
+                if (componentType == int.class) {
+                    ((int[])array)[index] = element == null ? 0 : ((Number)element).intValue();
+                    return;
+                } else if (componentType == long.class) {
+                    ((long[])array)[index] = element == null ? 0L : ((Number)element).longValue();
+                    return;
+                } else if (componentType == double.class) {
+                    ((double[])array)[index] = element == null ? 0.0 : ((Number)element).doubleValue();
+                    return;
+                } else if (componentType == boolean.class) {
+                    ((boolean[])array)[index] = element != null && (element instanceof Boolean) && (Boolean)element;
+                    return;
+                } else if (componentType == byte.class) {
+                    ((byte[])array)[index] = element == null ? 0 : ((Number)element).byteValue();
+                    return;
+                } else if (componentType == char.class) {
+                    if (element == null) {
+                        ((char[])array)[index] = '\0';
+                    } else if (element instanceof Character) {
+                        ((char[])array)[index] = (Character)element;
+                    } else if (element instanceof String && ((String)element).length() > 0) {
+                        ((char[])array)[index] = ((String)element).charAt(0);
+                    } else {
+                        ((char[])array)[index] = '\0';
+                    }
+                    return;
+                } else if (componentType == short.class) {
+                    ((short[])array)[index] = element == null ? 0 : ((Number)element).shortValue();
+                    return;
+                } else if (componentType == float.class) {
+                    ((float[])array)[index] = element == null ? 0.0f : ((Number)element).floatValue();
+                    return;
+                } else {
+                    // For other array types, fall back to reflection
+                    Array.set(array, index, element);
+                    return;
+                }
+            } catch (ClassCastException | NullPointerException e) {
+                // Let it fall through to the error handling below
+            }
         }
+
+        // Error handling
+        String elementType = element == null ? "null" : element.getClass().getName();
+        String arrayType = array.getClass().getComponentType().getName() + "[]";
+
+        throw new IllegalArgumentException("Cannot set '" + elementType + "' (value: " + element +
+                ") into '" + arrayType + "' at index " + index);
     }
 
     protected abstract Object resolveArray(Type suggestedType, List<Object> list);

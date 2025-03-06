@@ -58,15 +58,14 @@ import com.cedarsoftware.util.convert.Converter;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-@SuppressWarnings({ "rawtypes", "unchecked", "Convert2Diamond" })
+@SuppressWarnings({ "rawtypes", "unchecked"})
 public class ObjectResolver extends Resolver
 {
     /**
      * Constructor
      * @param readOptions Options to use while reading.
      */
-    protected ObjectResolver(ReadOptions readOptions, ReferenceTracker references, Converter converter)
-    {
+    protected ObjectResolver(ReadOptions readOptions, ReferenceTracker references, Converter converter) {
         super(readOptions, references, converter);
     }
 
@@ -81,6 +80,7 @@ public class ObjectResolver extends Resolver
         if (jsonObj.isFinished) {
             return;
         }
+        jsonObj.setFinished();
 
         final Object javaMate = jsonObj.getTarget();
         final Iterator<Map.Entry<Object, Object>> i = jsonObj.entrySet().iterator();
@@ -89,10 +89,10 @@ public class ObjectResolver extends Resolver
         final Map<String, Injector> injectorMap = readOptions.getDeepInjectorMap(cls);
 
         while (i.hasNext()) {
-            Map.Entry<Object, Object> e = i.next();
-            String key = (String) e.getKey();
+            Map.Entry<Object, Object> entry = i.next();
+            String key = (String) entry.getKey();
             final Injector injector = injectorMap.get(key);
-            Object rhs = e.getValue();
+            Object rhs = entry.getValue();
             if (injector != null) {
                 assignField(jsonObj, injector, rhs);
             } else if (readOptions.getMissingFieldHandler() != null) {
@@ -100,7 +100,6 @@ public class ObjectResolver extends Resolver
             }
             // Else: no handler so ignore.
         }
-        jsonObj.setFinished();
     }
 
     /**
@@ -285,8 +284,9 @@ public class ObjectResolver extends Resolver
         if (jsonObj.isFinished) {
             return;
         }
+        jsonObj.setFinished();
 
-        Converter converter = getConverter();
+        final Converter converter = getConverter();
         Object[] items = jsonObj.getItems();
         final Collection col = (Collection) jsonObj.getTarget();
         final boolean isList = col instanceof List;
@@ -304,21 +304,22 @@ public class ObjectResolver extends Resolver
         }
 
         if (items == null) {
-            jsonObj.setFinished();
             return;
         }
 
+        Class<?> elementClass;
         for (Object element : items) {
             Object special;
+            elementClass = element == null ? null : element.getClass();
             if (element == null) {
                 col.add(null);
             } else if ((special = readWithFactoryIfExists(element, TypeUtilities.getRawClass(elementType))) != null) {
                 // Use custom converter if available.
                 col.add(special);
-            } else if (converter.isSimpleTypeConversionSupported(element.getClass(), element.getClass())) {
+            } else if (converter.isSimpleTypeConversionSupported(elementClass, elementClass)) {
                 // Simple types: add as is.
                 col.add(element);
-            } else if (element.getClass().isArray()) {
+            } else if (elementClass.isArray()) {
                 // For array elements inside the collection, use the helper to extract the array component type.
                 JsonObject jObj = new JsonObject();
                 Type arrayComponentType = TypeUtilities.extractArrayComponentType(elementType);
@@ -359,7 +360,6 @@ public class ObjectResolver extends Resolver
             }
             idx++;
         }
-        jsonObj.setFinished();
     }
 
     /**
@@ -374,6 +374,7 @@ public class ObjectResolver extends Resolver
         if (jsonObj.isFinished) {
             return;
         }
+        jsonObj.setFinished();
         final int len = jsonObj.size();
         if (len == 0) {
             return;
@@ -413,12 +414,7 @@ public class ObjectResolver extends Resolver
                     if (jsonArray.length == 0) {
                         setArrayElement(array, i, new char[]{});
                     } else {
-                        final String value = (String) jsonArray[0];
-                        final int numChars = value.length();
-                        final char[] chars = new char[numChars];
-                        for (int j = 0; j < numChars; j++) {
-                            chars[j] = value.charAt(j);
-                        }
+                        final char[] chars = ((String) jsonArray[0]).toCharArray();
                         setArrayElement(array, i, chars);
                     }
                 } else {
@@ -461,7 +457,6 @@ public class ObjectResolver extends Resolver
             }
         }
         jsonObj.clear();
-        jsonObj.setFinished();
     }
 
     /**
@@ -475,7 +470,8 @@ public class ObjectResolver extends Resolver
      */
     protected Object readWithFactoryIfExists(final Object o, final Type inferredType) {
         Convention.throwIfNull(o, "Bug in json-io, null must be checked before calling this method.");
-        ReadOptions readOptions = getReadOptions();
+        final ReadOptions readOptions = getReadOptions();
+        final Converter converter = getConverter();
 
         // Extract the raw type from the suggested inferred type.
         Class<?> rawInferred = (inferredType != null) ? TypeUtilities.getRawClass(inferredType) : null;
@@ -526,8 +522,8 @@ public class ObjectResolver extends Resolver
         // Simple type conversion if possible.
         if (jsonObj.getTarget() == null && jsonObj.hasValue()) {
             Object value = jsonObj.getValue();
-            if (getConverter().isSimpleTypeConversionSupported(value.getClass(), targetClass)) {
-                Object converted = getConverter().convert(value, targetClass);
+            if (converter.isSimpleTypeConversionSupported(value.getClass(), targetClass)) {
+                Object converted = converter.convert(value, targetClass);
                 return jsonObj.setFinishedTarget(converted, true);
             }
         }

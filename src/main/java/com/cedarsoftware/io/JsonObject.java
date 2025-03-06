@@ -128,16 +128,16 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     }
     
     public void setValue(Object o) {
-        put(VALUE, o);
+        jsonStore.put(VALUE, o);
         hash = null;
     }
 
     public Object getValue() {
-        return get(VALUE);
+        return jsonStore.get(VALUE);
     }
 
     public boolean hasValue() {
-        return size() == 1 && containsKey(VALUE);
+        return size() == 1 && jsonStore.containsKey(VALUE);
     }
 
     public int hashCode() {

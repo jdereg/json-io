@@ -149,7 +149,7 @@ public class SetTest {
 
         // Step 3: Deserialize the JSON to Object[].class in default mode
         ReadOptions readOptions = new ReadOptionsBuilder().build(); // Default options
-        Object[] deserializedArray = (Object[]) TestUtil.toObjects(json, readOptions, Object[].class);
+        Object[] deserializedArray = TestUtil.toObjects(json, readOptions, Object[].class);
 
         // Step 4: Assertions
         assertNotNull(deserializedArray, "Deserialized array should not be null");

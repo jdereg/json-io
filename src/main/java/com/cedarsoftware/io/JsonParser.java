@@ -83,6 +83,8 @@ class JsonParser {
     private final Map<Number, Number> numberCache;
     private final Map<String, String> substitutes;
 
+    private static final ThreadLocal<char[]> STRING_BUFFER = ThreadLocal.withInitial(() -> new char[4096]);
+    
     // Primary static cache that never changes
     private static final Map<String, String> STATIC_STRING_CACHE = new ConcurrentHashMap<>(64);
     private static final Map<Number, Number> STATIC_NUMBER_CACHE = new ConcurrentHashMap<>(16);
@@ -128,6 +130,7 @@ class JsonParser {
                 "", "true", "True", "TRUE", "false", "False", "FALSE",
                 "null", "yes", "Yes", "YES", "no", "No", "NO",
                 "on", "On", "ON", "off", "Off", "OFF",
+                "id", "ID", "type", "value", "name",
                 ID, REF, ITEMS, TYPE, KEYS,
                 "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
         };
@@ -575,29 +578,90 @@ class JsonParser {
      * @throws IOException for stream errors or parsing errors.
      */
     private String readString() throws IOException {
-        // Reuse StringBuilder for better performance
-        final StringBuilder str = strBuf;
-        str.setLength(0);
         final FastReader in = input;
-
-        // Lookup tables for character handling
         final char[] ESCAPE_CHARS = ESCAPE_CHAR_MAP;
         final int[] HEX_VALUES = HEX_VALUE_MAP;
 
-        // Main loop with optimized path for non-escape characters
+        // Get thread-local buffer to avoid allocation
+        char[] buffer = STRING_BUFFER.get();
+        int pos = 0;
+
+        // Fast path for simple strings (no escapes)
         while (true) {
             int c = in.read();
             if (c == -1) {
                 error("EOF reached while reading JSON string");
             }
 
-            // Fast path for regular characters (most common)
+            // String termination
+            if (c == '"') {
+                // Check root level validation
+                if (curParseDepth == 0) {
+                    c = skipWhitespaceRead(false);
+                    if (c != -1) {
+                        throw new JsonIoException("EOF expected, content found after string");
+                    }
+                }
+
+                // For simple strings, create string directly from buffer
+                return cacheString(new String(buffer, 0, pos));
+            }
+
+            // Escape sequence - switch to StringBuilder for complex case
+            if (c == '\\') {
+                // Initialize StringBuilder only when needed
+                StringBuilder sb = strBuf;
+                sb.setLength(0);
+
+                // Copy current buffer contents to StringBuilder
+                sb.append(buffer, 0, pos);
+
+                // Handle the escape sequence
+                c = in.read();
+                if (c == -1) {
+                    error("EOF reached while reading escape sequence");
+                }
+
+                // Process first escape
+                processEscape(sb, c, in, ESCAPE_CHARS, HEX_VALUES);
+
+                // Continue with StringBuilder-based processing for the rest of the string
+                return readStringWithEscapes(sb, in, ESCAPE_CHARS, HEX_VALUES);
+            }
+
+            // Regular character
+            if (pos >= buffer.length) {
+                // Buffer full, switch to StringBuilder
+                StringBuilder sb = strBuf;
+                sb.setLength(0);
+                sb.append(buffer, 0, pos);
+                sb.append((char) c);
+                return readStringWithEscapes(sb, in, ESCAPE_CHARS, HEX_VALUES);
+            }
+
+            // Add to buffer
+            buffer[pos++] = (char) c;
+        }
+    }
+
+    /**
+     * Continue reading a string with StringBuilder after encountering an escape sequence.
+     */
+    private String readStringWithEscapes(StringBuilder sb, FastReader in,
+                                         char[] ESCAPE_CHARS, int[] HEX_VALUES) throws IOException {
+        while (true) {
+            int c = in.read();
+            if (c == -1) {
+                error("EOF reached while reading JSON string");
+            }
+
+            // Fast path for regular characters
             if (c != '\\' && c != '"') {
-                str.append((char) c);
+                sb.append((char) c);
                 continue;
             }
 
-            // Handle string termination
+            // String termination
             if (c == '"') {
                 // Check root level validation
                 if (curParseDepth == 0) {
@@ -615,92 +679,100 @@ class JsonParser {
                 error("EOF reached while reading escape sequence");
             }
 
-            // Handle escape using lookup table for common escapes
-            if (c < ESCAPE_CHARS.length) {
-                char escaped = ESCAPE_CHARS[c];
-                if (escaped != '\0') {
-                    str.append(escaped);
-                    continue;
-                }
-            }
+            processEscape(sb, c, in, ESCAPE_CHARS, HEX_VALUES);
+        }
 
-            // Special handling for Unicode escape
-            if (c == 'u') {
-                // Optimized hex parsing using lookup table
-                int value = 0;
-                for (int i = 0; i < 4; i++) {
-                    c = in.read();
-                    if (c == -1) {
-                        error("EOF reached while reading Unicode escape sequence");
-                    }
+        return cacheString(sb.toString());
+    }
 
-                    int digit = (c < 128) ? HEX_VALUES[c] : -1;
-                    if (digit < 0) {
-                        error("Expected hexadecimal digit, got: " + (char)c);
-                    }
-                    value = (value << 4) | digit;
-                }
-
-                // Handle surrogate pairs
-                if (value >= 0xD800 && value <= 0xDBFF) {
-                    // Look for a low surrogate
-                    int next = in.read();
-                    if (next == '\\') {
-                        next = in.read();
-                        if (next == 'u') {
-                            // Parse the potential low surrogate
-                            int lowSurrogate = 0;
-                            for (int i = 0; i < 4; i++) {
-                                c = in.read();
-                                if (c == -1) {
-                                    error("EOF reached while reading Unicode escape sequence");
-                                }
-
-                                int digit = (c < 128) ? HEX_VALUES[c] : -1;
-                                if (digit < 0) {
-                                    error("Expected hexadecimal digit, got: " + (char)c);
-                                }
-                                lowSurrogate = (lowSurrogate << 4) | digit;
-                            }
-
-                            // Check if valid surrogate pair
-                            if (lowSurrogate >= 0xDC00 && lowSurrogate <= 0xDFFF) {
-                                // Valid pair - append as code point
-                                int codePoint = 0x10000 + ((value - 0xD800) << 10) + (lowSurrogate - 0xDC00);
-                                str.appendCodePoint(codePoint);
-                                continue;
-                            } else {
-                                // Not a valid pair - append separately
-                                str.append((char)value);
-                                str.append((char)lowSurrogate);
-                                continue;
-                            }
-                        } else {
-                            // Not a \\u sequence - push back and append high surrogate
-                            in.pushback((char)next);
-                            in.pushback('\\');
-                        }
-                    } else {
-                        // Not a backslash - push back and append high surrogate
-                        if (next != -1) {
-                            in.pushback((char)next);
-                        }
-                    }
-                }
-
-                // Regular Unicode character or high surrogate without low surrogate
-                str.append((char)value);
-            } else {
-                error("Invalid character escape sequence specified: " + (char)c);
+    /**
+     * Process a single escape sequence and append to StringBuilder
+     */
+    private void processEscape(StringBuilder sb, int c, FastReader in,
+                               char[] ESCAPE_CHARS, int[] HEX_VALUES) throws IOException {
+        // Handle common escapes via lookup table
+        if (c < ESCAPE_CHARS.length) {
+            char escaped = ESCAPE_CHARS[c];
+            if (escaped != '\0') {
+                sb.append(escaped);
+                return;
             }
         }
 
-        // Use optimized string caching for the result
-        return cacheString(str);
+        // Unicode escape sequence
+        if (c == 'u') {
+            int value = 0;
+            for (int i = 0; i < 4; i++) {
+                c = in.read();
+                if (c == -1) {
+                    error("EOF reached while reading Unicode escape sequence");
+                }
+
+                int digit = (c < 128) ? HEX_VALUES[c] : -1;
+                if (digit < 0) {
+                    error("Expected hexadecimal digit, got: " + (char)c);
+                }
+                value = (value << 4) | digit;
+            }
+
+            // Handle surrogate pairs
+            if (value >= 0xD800 && value <= 0xDBFF) {
+                // Look for a low surrogate
+                int next = in.read();
+                if (next == '\\') {
+                    next = in.read();
+                    if (next == 'u') {
+                        // Parse the potential low surrogate
+                        int lowSurrogate = 0;
+                        for (int i = 0; i < 4; i++) {
+                            c = in.read();
+                            if (c == -1) {
+                                error("EOF reached while reading Unicode escape sequence");
+                            }
+
+                            int digit = (c < 128) ? HEX_VALUES[c] : -1;
+                            if (digit < 0) {
+                                error("Expected hexadecimal digit, got: " + (char)c);
+                            }
+                            lowSurrogate = (lowSurrogate << 4) | digit;
+                        }
+
+                        // Check if valid surrogate pair
+                        if (lowSurrogate >= 0xDC00 && lowSurrogate <= 0xDFFF) {
+                            // Valid pair - append as code point
+                            int codePoint = 0x10000 + ((value - 0xD800) << 10) + (lowSurrogate - 0xDC00);
+                            sb.appendCodePoint(codePoint);
+                            return;
+                        } else {
+                            // Not a valid pair - append separately
+                            sb.append((char)value);
+                            sb.append((char)lowSurrogate);
+                            return;
+                        }
+                    } else {
+                        // Not a \\u sequence - push back and append high surrogate
+                        in.pushback((char)next);
+                        in.pushback('\\');
+                    }
+                } else {
+                    // Not a backslash - push back and append high surrogate
+                    if (next != -1) {
+                        in.pushback((char)next);
+                    }
+                }
+            }
+
+            // Regular Unicode character or high surrogate without low surrogate
+            sb.append((char)value);
+        } else {
+            error("Invalid character escape sequence specified: " + (char)c);
+        }
     }
 
-    // Optimized string cache implementation
-    private String cacheString(StringBuilder str) {
+    /**
+     * Optimized string caching that handles both buffer-direct and StringBuilder cases
+     */
+    private String cacheString(String str) {
         final int length = str.length();
 
         // Fast path for empty strings
@@ -710,22 +782,19 @@ class JsonParser {
 
         // Fast path for very small strings - use interning
         if (length <= 2) {
-            return str.toString().intern();
+            return str.intern();
         }
-
-        // Create the string once
-        final String s = str.toString();
 
         // For small to medium strings, use the cache
         if (length < 33) {
-            final String cachedInstance = stringCache.get(s);
+            final String cachedInstance = stringCache.get(str);
             if (cachedInstance != null) {
                 return cachedInstance;
             }
-            stringCache.put(s, s);
+            stringCache.put(str, str);
         }
 
-        return s;
+        return str;
     }
 
     /**
@@ -869,232 +938,5 @@ class JsonParser {
 
     private String getMessage(String msg) {
         return msg + "\nline: " + input.getLine() + ", col: " + input.getCol() + "\n" + input.getLastSnippet();
-    }
-
-    /**
-     * Efficient buffer for text handling that minimizes memory allocation.
-     * Inspired by Jackson's implementation with some simplifications.
-     */
-    public final class TextBuffer {
-        // Buffer segments for building large strings without large reallocations
-        private static final int DEFAULT_SEGMENT_SIZE = 2000;
-        private static final int MAX_SEGMENT_SIZE = 256000;
-
-        // Reusable primary buffer shared across parsing operations
-        private char[] currentBuffer;
-        private int currentSize; // Current size used in buffer
-        private int currentStartOffset; // Offset into the current buffer
-
-        // For very large strings, we need segments
-        private ArrayList<char[]> segments;
-        private final ArrayList<char[]> recycledBuffers; // Pool of reusable buffers
-
-        // Total characters in segments, excluding current segment
-        private int segmentSize;
-
-        /**
-         * Create a new text buffer with default configuration
-         */
-        public TextBuffer() {
-            currentBuffer = new char[DEFAULT_SEGMENT_SIZE];
-            recycledBuffers = new ArrayList<>(8);
-        }
-
-        /**
-         * Reset the buffer for reuse
-         */
-        public void reset() {
-            currentSize = 0;
-            currentStartOffset = 0;
-            segmentSize = 0;
-
-            // Recycle segments if we have any
-            if (segments != null) {
-                if (recycledBuffers.size() < 8) { // Limit recycled buffers
-                    recycledBuffers.addAll(segments);
-                }
-                segments = null;
-            }
-        }
-
-        /**
-         * Empty the buffer and get the current segment to append to
-         * @return A buffer to append characters to
-         */
-        public char[] emptyAndGetCurrentSegment() {
-            reset();
-            return currentBuffer;
-        }
-
-        /**
-         * Mark the current segment as full and allocate a new one
-         * @return The new current segment
-         */
-        public char[] finishCurrentSegment() {
-            // Allocate segments list if this is the first overflow
-            if (segments == null) {
-                segments = new ArrayList<>();
-            }
-
-            // Add current buffer to segments
-            segments.add(currentBuffer);
-            segmentSize += currentSize;
-
-            // Get a recycled buffer or create a new one with exponential growth
-            int newSize = Math.min(MAX_SEGMENT_SIZE, currentBuffer.length * 2);
-
-            if (!recycledBuffers.isEmpty() && recycledBuffers.get(0).length >= newSize) {
-                // Use a recycled buffer
-                currentBuffer = recycledBuffers.remove(recycledBuffers.size() - 1);
-            } else {
-                // Create a new buffer
-                currentBuffer = new char[newSize];
-            }
-
-            currentSize = 0;
-            currentStartOffset = 0;
-            return currentBuffer;
-        }
-
-        /**
-         * Set the current length of characters in the current segment
-         */
-        public void setCurrentLength(int len) {
-            currentSize = len;
-        }
-
-        /**
-         * Get the total size of the text in the buffer
-         */
-        public int size() {
-            return segmentSize + currentSize;
-        }
-
-        /**
-         * Get the contiguous buffer if text is contiguous (no segments)
-         */
-        public char[] getTextBuffer() {
-            return currentBuffer;
-        }
-
-        /**
-         * Get the starting offset into the buffer
-         */
-        public int getTextOffset() {
-            return currentStartOffset;
-        }
-
-        /**
-         * Convert the buffer contents to a string
-         */
-        public String contentsAsString() {
-            if (segments == null) {
-                // Fast path - single buffer
-                return new String(currentBuffer, currentStartOffset, currentSize);
-            } else {
-                // Need to combine segments
-                return buildString();
-            }
-        }
-
-        /**
-         * Build a string from all segments
-         */
-        private String buildString() {
-            int totalSize = size();
-            if (totalSize == 0) {
-                return "";
-            }
-
-            // Allocate exact-sized buffer
-            char[] result = new char[totalSize];
-            int offset = 0;
-
-            // Copy all segments first
-            for (int i = 0; segments != null && i < segments.size(); i++) {
-                char[] segment = segments.get(i);
-                int segLen = (i == segments.size() - 1) ?
-                        currentSize : segment.length;
-                System.arraycopy(segment, 0, result, offset, segLen);
-                offset += segLen;
-            }
-
-            // Copy current segment last
-            System.arraycopy(currentBuffer, currentStartOffset, result, offset, currentSize);
-
-            return new String(result);
-        }
-
-        /**
-         * Add a char to the current segment, expanding if needed
-         */
-        public void append(char c) {
-            if (currentSize >= currentBuffer.length) {
-                finishCurrentSegment();
-            }
-            currentBuffer[currentSize++] = c;
-        }
-
-        /**
-         * Add a range of chars to the buffer, expanding as needed
-         */
-        public void append(char[] chars, int start, int length) {
-            // Fast path for simple case
-            if (length <= (currentBuffer.length - currentSize)) {
-                System.arraycopy(chars, start, currentBuffer, currentSize, length);
-                currentSize += length;
-                return;
-            }
-
-            // Slow path for overflow
-            int offset = start;
-            int remaining = length;
-
-            while (remaining > 0) {
-                int available = currentBuffer.length - currentSize;
-                int toCopy = Math.min(available, remaining);
-
-                System.arraycopy(chars, offset, currentBuffer, currentSize, toCopy);
-                currentSize += toCopy;
-
-                offset += toCopy;
-                remaining -= toCopy;
-
-                if (remaining > 0) {
-                    finishCurrentSegment();
-                }
-            }
-        }
-
-        /**
-         * Add characters from a string, expanding as needed
-         */
-        public void append(String str, int offset, int len) {
-            // Fast path for simple case
-            if (len <= (currentBuffer.length - currentSize)) {
-                str.getChars(offset, offset + len, currentBuffer, currentSize);
-                currentSize += len;
-                return;
-            }
-
-            // Slow path for overflow
-            int strOffset = offset;
-            int remaining = len;
-
-            while (remaining > 0) {
-                int available = currentBuffer.length - currentSize;
-                int toCopy = Math.min(available, remaining);
-
-                str.getChars(strOffset, strOffset + toCopy, currentBuffer, currentSize);
-                currentSize += toCopy;
-
-                strOffset += toCopy;
-                remaining -= toCopy;
-
-                if (remaining > 0) {
-                    finishCurrentSegment();
-                }
-            }
-        }
     }
 }
