@@ -7,6 +7,7 @@
       * Resolution of `TypeVariables` in generic class hierarchies
       * Support for `WildcardTypes` (`? extends`, `? super`) in generic declarations
       * These improvements enable more accurate field type inferencing during Java object resolution, particularly for complex nested generic structures.
+  * Performance improvements in parsing and resolving. 
 * **New Type-Aware API Capabilities**
   * Added advanced type specification via the new `TypeHolder` class:
       * Enables capturing and preserving full generic type information at runtime
