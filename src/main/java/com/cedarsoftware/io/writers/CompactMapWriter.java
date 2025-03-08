@@ -5,7 +5,7 @@ import java.io.Writer;
 import java.util.Map;
 import java.util.Set;
 
-import com.cedarsoftware.io.JsonObject;
+import com.cedarsoftware.io.JsonWriter;
 import com.cedarsoftware.io.WriterContext;
 import com.cedarsoftware.util.CompactMap;
 import com.cedarsoftware.util.ReflectionUtils;
@@ -32,47 +32,76 @@ import static com.cedarsoftware.io.JsonWriter.JsonClassWriter;
 public class CompactMapWriter implements JsonClassWriter {
     @Override
     public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
-        /*
-        "com.cedarsoftware.util.CompactMap$LinkedHashMap_CS_S70_Id_Ins”
-        
-        {"@type": "com.cedarsoftware.util.CompactMap",
-          "~|caseSensitive|~": true,
-          "~|compactSize|~": 70,
-          "~|singleKey|~": "Id",
-          "~|ordering|~": "Insertion",
-          "~|entries|~": [
-            { "key": "Id",    "value": 42 },
-            { "key": "Name",  "value": "Alice" },
-            { "key": "Active","value": true }
-          ]
-        }
-        */
-
         CompactMap map = (CompactMap) obj;
-        boolean caseSensitive = !((boolean) ReflectionUtils.call(map, "isCaseInsensitive"));
-        int compactSize = (int) ReflectionUtils.call(map, "compactSize");
-        String ordering = (String) ReflectionUtils.call(map, "getOrdering");
+
+        // Write config section
+        output.write("\"config\":{");
+        output.write("\"caseSensitive\":" + !((boolean) ReflectionUtils.call(map, "isCaseInsensitive")));
+        output.write(",\"compactSize\":" + (int) ReflectionUtils.call(map, "compactSize"));
+        output.write(",\"order\":\"" + (String) ReflectionUtils.call(map, "getOrdering") + "\"");
         String singleKey = (String) ReflectionUtils.call(map, "getSingleValueKey");
-        output.write("\"" + JsonObject.FIELD_PREFIX + "caseSensitive" + JsonObject.FIELD_SUFFIX +"\":" + caseSensitive);
-        output.write(",\"" + JsonObject.FIELD_PREFIX + "compactSize" + JsonObject.FIELD_SUFFIX + "\":" + compactSize);
-        output.write(",\"" + JsonObject.FIELD_PREFIX + "order" + JsonObject.FIELD_SUFFIX + "\":\"" + ordering);
-        output.write("\",\"" + JsonObject.FIELD_PREFIX + "singleKey" + JsonObject.FIELD_SUFFIX + "\":\"" + singleKey);
-        output.write("\",\"" + JsonObject.FIELD_PREFIX + "entries" + JsonObject.FIELD_SUFFIX + "\":[");
-        boolean first = true;
-        Set<Map.Entry<Object, Object>> entries = ((Map<Object, Object>) map).entrySet();
-        for (Map.Entry<Object, Object> entry : entries) {
-            if (first) {
-                first = false;
-            } else {
-                output.write(',');
-            }
-            output.write("{\"key\":");
-            context.writeImpl(entry.getKey(), showType);
-            output.write(",\"value\":");
-            context.writeImpl(entry.getValue(), showType);
-            output.write('}');
+        if (singleKey != null && !singleKey.isEmpty()) {
+            output.write(",\"singleKey\":\"" + singleKey + "\"");
         }
-        output.write("]");
+        output.write("},");
+
+        // Start data section
+        output.write("\"data\":{");
+
+        // Check if all keys are strings and not forcing two arrays
+        boolean allStringKeys = true;
+        if (!context.getWriteOptions().isForceMapOutputAsTwoArrays()) {
+            Set<Map.Entry<Object, Object>> entries = ((Map<Object, Object>) map).entrySet();
+            for (Map.Entry<Object, Object> entry : entries) {
+                if (!(entry.getKey() instanceof String)) {
+                    allStringKeys = false;
+                    break;
+                }
+            }
+        } else {
+            allStringKeys = false;  // Force array format if setting is enabled
+        }
+
+        // Write entries in appropriate format
+        if (allStringKeys) {
+            // Standard JSON object format for string keys
+            boolean first = true;
+            for (Map.Entry<Object, Object> entry : ((Map<Object, Object>) map).entrySet()) {
+                if (first) {
+                    first = false;
+                } else {
+                    output.write(',');
+                }
+                String key = (String) entry.getKey();
+                JsonWriter.writeJsonUtf8String(output, key);
+                output.write(':');
+                context.writeImpl(entry.getValue(), showType);
+            }
+        } else {
+            // Use json-io's standard @keys/@items format for non-string keys
+            Set<Map.Entry<Object, Object>> entries = ((Map<Object, Object>) map).entrySet();
+            int size = entries.size();
+            Object[] keys = new Object[size];
+            Object[] values = new Object[size];
+
+            int i = 0;
+            for (Map.Entry<Object, Object> entry : entries) {
+                keys[i] = entry.getKey();
+                values[i] = entry.getValue();
+                i++;
+            }
+
+            // Write @keys array
+            output.write("\"@keys\":");
+            context.writeImpl(keys, showType);
+
+            // Write @items array
+            output.write(",\"@items\":");
+            context.writeImpl(values, showType);
+        }
+
+        // Close data section
+        output.write("}");
     }
 
     public String getTypeName(Object o) {

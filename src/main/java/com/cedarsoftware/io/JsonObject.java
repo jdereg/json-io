@@ -334,26 +334,34 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         return new AbstractMap.SimpleImmutableEntry<>(keys, (Object[])items);
     }
 
+    /**
+     * Rehash map entries from keys/items arrays to the target map and jsonStore.
+     * Called during the resolution process to ensure proper map structure.
+     */
     void rehashMaps() {
-        Map<Object, Object> targetMap = (Map<Object, Object>) target;
-        hash = null;
+        if (keys == null || items == null) {
+            return; // Nothing to do if arrays aren't present
+        }
 
-        int len = keys.length;
+        hash = null; // Invalidate hash
+        Map<Object, Object> targetMap = (Map<Object, Object>) target;
+
+        // Transfer all entries from keys/items arrays to jsonStore and target
+        final int len = keys.length;
         for (int i = 0; i < len; i++) {
             Object key = keys[i];
             Object value = items[i];
-            
-            if (key instanceof String) {
-                String k = (String) key;
-                if (k.startsWith(FIELD_PREFIX) && k.endsWith(FIELD_SUFFIX)) {
-                    continue;
-                }
-            }
-            put(key, value);
+
+            // Add to JsonObject's internal store
+            jsonStore.put(key, value);
+
+            // Add to target map if available
             if (targetMap != null) {
                 targetMap.put(key, value);
             }
         }
+
+        // Clear arrays to free memory
         keys = null;
         items = null;
     }

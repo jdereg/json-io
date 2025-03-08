@@ -971,7 +971,13 @@ class MapsTest
         map.put("longs", longs);
         String json = TestUtil.toJson(map);
         CompactMap<Object, Object> map2 = TestUtil.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), CompactMap.class);
-        assert DeepEquals.deepEquals(map, map2);
+
+        Map<String, Object> options = new HashMap<>();
+        boolean equals = DeepEquals.deepEquals(map, map2, options);
+        if (!equals) {
+            System.out.println(options.get("diff"));
+        }
+        assert equals;
     }
 
     @Test

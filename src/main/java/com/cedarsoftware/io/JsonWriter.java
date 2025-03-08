@@ -1703,17 +1703,27 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         writer.write('\"');
     }
 
+    /**
+     * Writes a JSON string value to the output, properly escaped according to JSON specifications.
+     * Handles control characters, quotes, backslashes, and properly processes Unicode code points.
+     *
+     * @param output The Writer to write to
+     * @param s The string to be written as a JSON string value
+     * @throws IOException If an I/O error occurs
+     */
     public static void writeJsonUtf8String(final Writer output, String s) throws IOException {
         if (s == null) {
             output.write("null");
             return;
         }
+
         output.write('\"');
         final int len = s.length();
 
         for (int i = 0; i < len; ) {
             int codePoint = s.codePointAt(i);
-            if (codePoint < 0x20) {
+
+            if (codePoint < 0x20 || codePoint == 0x7F) {  // Add DEL (0x7F) control character
                 // Control characters
                 switch (codePoint) {
                     case '\b': output.write("\\b"); break;
@@ -1730,12 +1740,39 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             else if (codePoint == '\\') {
                 output.write("\\\\");
             }
-            else {
-                // For all other characters (including valid surrogate pairs), write directly
+            // Optional: Handle forward slash escaping for </script> prevention
+            else if (codePoint == '/') {
+                // Some JSON encoders escape '/' to prevent issues with </script> in HTML
+                // Uncomment if you want this behavior
+                // output.write("\\/");
+                output.write('/');
+            }
+            else if (codePoint >= 0x80 && codePoint <= 0xFFFF) {
+                // Non-ASCII characters below surrogate range
+                // For maximum compatibility, you might want to escape these
+                // However, direct output is also valid with proper UTF-8 encoding
+
+                // Choose one approach:
+
+                // 1. Direct output (works with proper UTF-8, more compact)
+                output.write(s, i, Character.charCount(codePoint));
+
+                // 2. Always escape (maximum compatibility, especially for older parsers)
+                // output.write(String.format("\\u%04x", codePoint));
+            }
+            else if (codePoint > 0xFFFF) {
+                // Supplementary characters (beyond BMP)
+                // Your code already handles this correctly by using Character.charCount
                 output.write(s, i, Character.charCount(codePoint));
             }
+            else {
+                // ASCII characters (except control chars, quotes, backslashes)
+                output.write(s, i, Character.charCount(codePoint));
+            }
+
             i += Character.charCount(codePoint);
         }
+
         output.write('\"');
     }
 }
