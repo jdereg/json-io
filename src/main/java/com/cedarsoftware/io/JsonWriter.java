@@ -1751,18 +1751,15 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 // Non-ASCII characters below surrogate range
                 // For maximum compatibility, you might want to escape these
                 // However, direct output is also valid with proper UTF-8 encoding
-
-                // Choose one approach:
-
+                // Choosing one approach:
                 // 1. Direct output (works with proper UTF-8, more compact)
                 output.write(s, i, Character.charCount(codePoint));
-
+                // Alternatively, if you want to escape:
                 // 2. Always escape (maximum compatibility, especially for older parsers)
                 // output.write(String.format("\\u%04x", codePoint));
             }
             else if (codePoint > 0xFFFF) {
                 // Supplementary characters (beyond BMP)
-                // Your code already handles this correctly by using Character.charCount
                 output.write(s, i, Character.charCount(codePoint));
             }
             else {
