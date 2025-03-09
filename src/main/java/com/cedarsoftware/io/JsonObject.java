@@ -2,9 +2,12 @@ package com.cedarsoftware.io;
 
 import java.lang.reflect.Array;
 import java.util.AbstractMap;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -33,8 +36,6 @@ import java.util.Set;
  *         limitations under the License.
  */
 public class JsonObject extends JsonValue implements Map<Object, Object> {
-    public static String FIELD_PREFIX = "-~";
-    public static String FIELD_SUFFIX = "~-";
     private final Map<Object, Object> jsonStore = new LinkedHashMap<>();
     private Integer hash = null;
 
@@ -85,7 +86,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         return items;
     }
 
-    void setItems(Object[] array) {
+    public void setItems(Object[] array) {
         if (array == null) {
             throw new JsonIoException("Argument array cannot be null");
         }
@@ -239,19 +240,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         return size() < 1;
     }
 
-    public boolean containsKey(Object key) {
-        // Delegate to jsonStore for other keys
-        return jsonStore.containsKey(key);
-    }
-
-    public boolean containsValue(Object value) {
-        return jsonStore.containsValue(value);
-    }
-
-    public Object get(Object key) {
-        return jsonStore.get(key);
-    }
-
     public Object remove(Object key) {
         hash = null;
 
@@ -280,17 +268,121 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         hash = null;
     }
 
+    @Override
+    public boolean containsKey(Object key) {
+        // Check keys array if present
+        if (keys != null) {
+            for (Object k : keys) {
+                if (Objects.equals(key, k)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        // Otherwise delegate to jsonStore
+        return jsonStore.containsKey(key);
+    }
+
+    @Override
+    public boolean containsValue(Object value) {
+        // Check items array if present
+        if (items != null) {
+            for (Object v : items) {
+                if (Objects.equals(value, v)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        // Otherwise delegate to jsonStore
+        return jsonStore.containsValue(value);
+    }
+
+    @Override
+    public Object get(Object key) {
+        // Check keys/items arrays if present
+        if (keys != null && items != null) {
+            for (int i = 0; i < keys.length; i++) {
+                if (Objects.equals(key, keys[i])) {
+                    return items[i];
+                }
+            }
+            return null;
+        }
+        // Otherwise delegate to jsonStore
+        return jsonStore.get(key);
+    }
+
+    @Override
     public Set<Object> keySet() {
+        // If we have keys array, convert to a Set
+        if (keys != null) {
+            return new LinkedHashSet<>(Arrays.asList(keys));
+        }
+        // Otherwise use jsonStore's keySet
         return jsonStore.keySet();
     }
 
+    @Override
     public Collection<Object> values() {
+        // If we have items array, convert to a Collection
+        if (items != null) {
+            Collection<Object> valueList = new LinkedHashSet<>();
+            Collections.addAll(valueList, items);
+            return valueList;
+        }
+        // Otherwise use jsonStore's values
         return jsonStore.values();
     }
 
+    @Override
     public Set<Entry<Object, Object>> entrySet() {
+        // If we have keys/items arrays, create entries from them
+        if (keys != null && items != null) {
+            Set<Entry<Object, Object>> entrySet = new LinkedHashSet<>();
+            for (int i = 0; i < keys.length; i++) {
+                final int index = i;
+                entrySet.add(new Entry<Object, Object>() {
+                    @Override
+                    public Object getKey() {
+                        return keys[index];
+                    }
+
+                    @Override
+                    public Object getValue() {
+                        return items[index];
+                    }
+
+                    @Override
+                    public Object setValue(Object value) {
+                        Object oldValue = items[index];
+                        items[index] = value;
+                        hash = null;
+                        return oldValue;
+                    }
+
+                    @Override
+                    public boolean equals(Object o) {
+                        if (!(o instanceof Map.Entry)) return false;
+                        Map.Entry<?,?> e = (Map.Entry<?,?>) o;
+                        return Objects.equals(keys[index], e.getKey()) &&
+                                Objects.equals(items[index], e.getValue());
+                    }
+
+                    @Override
+                    public int hashCode() {
+                        return (keys[index] == null ? 0 : keys[index].hashCode()) ^
+                                (items[index] == null ? 0 : items[index].hashCode());
+                    }
+                });
+            }
+            return entrySet;
+        }
+        // Otherwise use jsonStore's entrySet
         return jsonStore.entrySet();
     }
+
+    // *****************************************************************************************************************
 
     /**
      * Return the keys/values of this Map as a Map.Entry, where the key is Object[] of keys, and the value is
@@ -331,7 +423,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
             throw new JsonIoException("@keys and @items must be same length");
         }
 
-        return new AbstractMap.SimpleImmutableEntry<>(keys, (Object[])items);
+        return new AbstractMap.SimpleImmutableEntry<>(keys, items);
     }
 
     /**

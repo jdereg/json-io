@@ -133,7 +133,7 @@ public class NoTypeTest
     {
         String json = ClassUtilities.loadResourceAsString("noTypes/persons.json");
         Exception e = assertThrows(JsonIoException.class, () -> { Map x = TestUtil.toObjects(json, Map.class); });
-        assert e.getCause() instanceof ClassCastException;
+        assert e.getCause() instanceof IllegalArgumentException;
     }
 
     @Test

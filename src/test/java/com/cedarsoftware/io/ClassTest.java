@@ -68,7 +68,7 @@ public class ClassTest
         String json = "\"foo.bar.baz.Qux\"";
         assertThatThrownBy(() -> TestUtil.toObjects(json, Class.class))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Cannot convert String 'foo.bar.baz.Qux' to class.  Class not found");
+                .hasMessageContaining("Return type mismatch. Expecting: java.lang.Class, found: java.lang.String");
     }
 
     @Test
@@ -104,7 +104,7 @@ public class ClassTest
         String json = "16.0";
         assertThatThrownBy(() -> TestUtil.toObjects(json, Class.class))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Return type mismatch, expected: java.lang.Class, actual: java.lang.Double");
+                .hasMessageContaining("Return type mismatch. Expecting: java.lang.Class, found: java.lang.Double");
     }
 
     @Test

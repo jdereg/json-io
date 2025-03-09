@@ -13,6 +13,8 @@ import com.cedarsoftware.util.ReflectionUtils;
 import static com.cedarsoftware.io.JsonWriter.JsonClassWriter;
 
 /**
+ * Writer for CompactMap instances that produces a shortened configuration format.
+ *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
@@ -34,18 +36,51 @@ public class CompactMapWriter implements JsonClassWriter {
     public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
         CompactMap map = (CompactMap) obj;
 
-        // Write config section
-        output.write("\"config\":{");
-        output.write("\"caseSensitive\":" + !((boolean) ReflectionUtils.call(map, "isCaseInsensitive")));
-        output.write(",\"compactSize\":" + (int) ReflectionUtils.call(map, "compactSize"));
-        output.write(",\"order\":\"" + (String) ReflectionUtils.call(map, "getOrdering") + "\"");
+        // Get configuration values
+        boolean caseSensitive = !((boolean) ReflectionUtils.call(map, "isCaseInsensitive"));
+        int compactSize = (int) ReflectionUtils.call(map, "compactSize");
+        String ordering = (String) ReflectionUtils.call(map, "getOrdering");
         String singleKey = (String) ReflectionUtils.call(map, "getSingleValueKey");
-        if (singleKey != null && !singleKey.isEmpty()) {
-            output.write(",\"singleKey\":\"" + singleKey + "\"");
-        }
-        output.write("},");
 
-        // Start data section
+        // Get the map implementation class - simplified approach
+        String mapImplClass;
+        try {
+            // Use getNewMap() to get the actual map type
+            Map<?, ?> newMap = (Map<?, ?>) ReflectionUtils.call(map, "getNewMap");
+            mapImplClass = newMap.getClass().getName();
+        } catch (Exception e) {
+            // Fallback to HashMap if we can't get the map type
+            mapImplClass = "java.util.HashMap";
+        }
+
+        // Generate shortened config string: mapClassFullName/CS|CI/S{size}/{singleKey}/{order}
+        StringBuilder config = new StringBuilder();
+        config.append(mapImplClass).append('/');
+        config.append(caseSensitive ? "CS" : "CI").append('/');
+        config.append('S').append(compactSize).append('/');
+        config.append(singleKey == null ? "-" : singleKey).append('/');
+
+        // Map ordering codes to short form
+        String orderCode;
+        switch (ordering) {
+            case CompactMap.SORTED:
+                orderCode = "Sort";
+                break;
+            case CompactMap.REVERSE:
+                orderCode = "Rev";
+                break;
+            case CompactMap.INSERTION:
+                orderCode = "Ins";
+                break;
+            default:
+                orderCode = "Unord";
+        }
+        config.append(orderCode);
+
+        // Write shortened config
+        output.write("\"config\":\"" + config + "\",");
+
+        // Write data section
         output.write("\"data\":{");
 
         // Check if all keys are strings and not forcing two arrays
@@ -100,10 +135,10 @@ public class CompactMapWriter implements JsonClassWriter {
             context.writeImpl(values, showType);
         }
 
-        // Close data section
         output.write("}");
     }
 
+    @Override
     public String getTypeName(Object o) {
         return CompactMap.class.getName();
     }

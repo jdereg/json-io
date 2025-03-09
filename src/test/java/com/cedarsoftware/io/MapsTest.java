@@ -4,6 +4,7 @@ import java.awt.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
@@ -970,8 +971,7 @@ class MapsTest
         map.put(longs, "longs");
         map.put("longs", longs);
         String json = TestUtil.toJson(map);
-        CompactMap<Object, Object> map2 = TestUtil.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), CompactMap.class);
-
+        CompactMap<Object, Object> map2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asType(new TypeHolder<CompactMap<Object, Object>>() {});
         Map<String, Object> options = new HashMap<>();
         boolean equals = DeepEquals.deepEquals(map, map2, options);
         if (!equals) {
@@ -981,7 +981,7 @@ class MapsTest
     }
 
     @Test
-    void testCompactSet() {
+    void testCompactSetOriginal() {
         CompactSet<Object> set = CompactSet.builder().compactSize(3).build();
         int[] ints = new int[]{1, 2, 3};
         long[] longs = new long[]{4, 5, 6};
@@ -990,8 +990,133 @@ class MapsTest
         set.add(ints);
         set.add(longs);
         String json = TestUtil.toJson(set);
-        CompactSet<Object> set2 = TestUtil.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), CompactSet.class);
-        assert DeepEquals.deepEquals(set, set2);
+        CompactSet<Object> set2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asType(new TypeHolder<CompactSet<Object>>(){});
+        boolean equals = DeepEquals.deepEquals(set, set2);
+        if (!equals) {
+            System.out.println(json);
+        }
+        assert equals;
+    }
+    
+    @Test
+    void testCompactSet() {
+        CompactSet<Object> set = CompactSet.builder().compactSize(3).build();
+        int[] ints = new int[]{1, 2, 3};
+        long[] longs = new long[]{4, 5, 6};
+        Object[] first = new Object[] {ints, longs};
+        set.add(first);
+        set.add(ints);
+        set.add(longs);
+
+        String json = TestUtil.toJson(set);
+
+        CompactSet<Object> set2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asType(new TypeHolder<CompactSet<Object>>(){});
+        boolean equals = DeepEquals.deepEquals(set, set2);
+        if (!equals) {
+            // Debug the sets
+            System.out.println(json);
+            System.out.println("Original set: " + debugSet(set));
+            System.out.println("Deserialized set: " + debugSet(set2));
+        }
+
+        // Check if arrays are equal, not necessarily the same instance
+        assert equals;
+    }
+
+    private String debugSet(CompactSet<Object> set) {
+        StringBuilder sb = new StringBuilder("Set[");
+        for (Object obj : set) {
+            if (obj == null) {
+                sb.append("null");
+            } else if (obj.getClass().isArray()) {
+                sb.append(debugArray(obj)).append("@").append(System.identityHashCode(obj));
+            } else {
+                sb.append(obj).append("@").append(System.identityHashCode(obj));
+            }
+            sb.append(", ");
+        }
+        if (!set.isEmpty()) {
+            sb.setLength(sb.length() - 2);
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+    private String debugArray(Object array) {
+        if (array instanceof int[]) {
+            return Arrays.toString((int[]) array);
+        } else if (array instanceof long[]) {
+            return Arrays.toString((long[]) array);
+        } else if (array instanceof Object[]) {
+            Object[] objs = (Object[]) array;
+            StringBuilder sb = new StringBuilder("[");
+            for (Object obj : objs) {
+                if (obj == null) {
+                    sb.append("null");
+                } else if (obj.getClass().isArray()) {
+                    sb.append(debugArray(obj));
+                } else {
+                    sb.append(obj);
+                }
+                sb.append(", ");
+            }
+            if (objs.length > 0) {
+                sb.setLength(sb.length() - 2);
+            }
+            sb.append("]");
+            return sb.toString();
+        }
+        return array.toString();
+    }
+
+    // Helper to check if arrays are equal in content but not necessarily the same instance
+    private boolean arraysEqual(CompactSet<Object> set1, CompactSet<Object> set2) {
+        if (set1.size() != set2.size()) return false;
+
+        // Convert to lists for easier comparison
+        List<Object> list1 = new ArrayList<>(set1);
+        List<Object> list2 = new ArrayList<>(set2);
+
+        for (int i = 0; i < list1.size(); i++) {
+            Object o1 = list1.get(i);
+            Object o2 = list2.get(i);
+
+            if (!objectsEqual(o1, o2)) return false;
+        }
+
+        return true;
+    }
+
+    private boolean objectsEqual(Object o1, Object o2) {
+        if (o1 == o2) return true;
+        if (o1 == null || o2 == null) return false;
+
+        if (o1.getClass().isArray() && o2.getClass().isArray()) {
+            return arrayContentsEqual(o1, o2);
+        }
+
+        return o1.equals(o2);
+    }
+
+    private boolean arrayContentsEqual(Object a1, Object a2) {
+        if (a1 instanceof int[] && a2 instanceof int[]) {
+            return Arrays.equals((int[]) a1, (int[]) a2);
+        } else if (a1 instanceof long[] && a2 instanceof long[]) {
+            return Arrays.equals((long[]) a1, (long[]) a2);
+        } else if (a1 instanceof Object[] && a2 instanceof Object[]) {
+            Object[] o1 = (Object[]) a1;
+            Object[] o2 = (Object[]) a2;
+
+            if (o1.length != o2.length) return false;
+
+            for (int i = 0; i < o1.length; i++) {
+                if (!objectsEqual(o1[i], o2[i])) return false;
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     public static class TestMapKeys {

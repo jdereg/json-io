@@ -6,9 +6,12 @@ import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.CompactMap;
 
 /**
+ * Factory for creating CompactMap instances from JSON with shortened configuration format.
+ *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
@@ -27,30 +30,61 @@ import com.cedarsoftware.util.CompactMap;
  */
 public class CompactMapFactory implements JsonReader.ClassFactory {
     @Override
+    @SuppressWarnings("unchecked")
     public Map newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
         // Extract config and data sections
         Object configObj = jObj.get("config");
         Object dataObj = jObj.get("data");
 
-        if (!(configObj instanceof Map)) {
-            throw new JsonIoException("CompactMap requires a config section");
+        if (!(configObj instanceof String)) {
+            throw new JsonIoException("CompactMap requires a config string");
         }
 
         if (!(dataObj instanceof Map)) {
             throw new JsonIoException("CompactMap requires a data section");
         }
 
-        // Cast to appropriate types
-        Map<String, Object> config = (Map<String, Object>) configObj;
-        JsonObject dataJson = (JsonObject) dataObj;
+        // Parse config string: mapClass/CS|CI/S{size}/{singleKey}/{order}
+        String configStr = (String) configObj;
+        String[] parts = configStr.split("/");
 
-        // Get configuration parameters
-        boolean caseSensitive = (Boolean) config.getOrDefault("caseSensitive", true);
-        int compactSize = ((Number) config.getOrDefault("compactSize", 64)).intValue();
-        String order = (String) config.getOrDefault("order", CompactMap.INSERTION);
-        String singleKey = (String) config.getOrDefault("singleKey", null);
+        if (parts.length != 5) {
+            throw new JsonIoException("Invalid CompactMap config format: " + configStr);
+        }
 
-        // Build the CompactMap with the right configuration
+        // Extract config values
+        String mapClassName = parts[0];
+        boolean caseSensitive = "CS".equals(parts[1]);
+        int compactSize = Integer.parseInt(parts[2].substring(1)); // Skip 'S' prefix
+        String singleKey = "-".equals(parts[3]) ? null : parts[3];
+        String orderCode = parts[4];
+
+        // Map orderCode back to CompactMap constants
+        String order;
+        switch (orderCode) {
+            case "Sort":
+                order = CompactMap.SORTED;
+                break;
+            case "Rev":
+                order = CompactMap.REVERSE;
+                break;
+            case "Ins":
+                order = CompactMap.INSERTION;
+                break;
+            case "Unord":
+            default:
+                order = CompactMap.UNORDERED;
+                break;
+        }
+
+        // Load the map class directly by name (it should be fully qualified)
+        Class<? extends Map> mapImplClass = null;
+        Class<?> cls = ClassUtilities.forName(mapClassName, ClassUtilities.getClassLoader());
+        if (Map.class.isAssignableFrom(cls)) {
+            mapImplClass = (Class<? extends Map>) cls;
+        }
+
+        // Build CompactMap with the right configuration
         CompactMap.Builder<Object, Object> builder = CompactMap.builder()
                 .caseSensitive(caseSensitive)
                 .compactSize(compactSize);
@@ -59,75 +93,52 @@ public class CompactMapFactory implements JsonReader.ClassFactory {
             builder.singleValueKey(singleKey);
         }
 
-        if (CompactMap.SORTED.equals(order)) {
-            builder.sortedOrder();
-        } else if (CompactMap.REVERSE.equals(order)) {
-            builder.reverseOrder();
-        } else if (CompactMap.INSERTION.equals(order)) {
-            builder.insertionOrder();
-        } else {
-            builder.noOrder();
+        switch (order) {
+            case CompactMap.SORTED:
+                builder.sortedOrder();
+                break;
+            case CompactMap.REVERSE:
+                builder.reverseOrder();
+                break;
+            case CompactMap.INSERTION:
+                builder.insertionOrder();
+                break;
+            default:
+                builder.noOrder();
+                break;
+        }
+
+        // Set the map type if we found a valid class
+        if (mapImplClass != null) {
+            builder.mapType(mapImplClass);
         }
 
         CompactMap<Object, Object> cmap = builder.build();
-
-        // Now process the data section, which can be in either format
-
-        // Get the keys and items from the data JsonObject
-        Object[] dataKeys = dataJson.getKeys();
-        Object[] dataItems = dataJson.getItems();
-
+        Map<Object, Object> data = (Map<Object, Object>) dataObj;
         JsonReader reader = new JsonReader(resolver);
 
-        if (dataKeys != null && dataItems != null) {
-            // Handle data in @keys/@items format
-            for (int i = 0; i < dataKeys.length; i++) {
-                Object key = dataKeys[i];
-                Object value = dataItems[i];
-
-                // Skip metadata keys
-                if (key instanceof String && ((String) key).startsWith("@")) {
-                    continue;
-                }
-
-                // Resolve JsonObjects
-                if (key instanceof JsonObject) {
-                    key = reader.toJava(((JsonObject) key).getType(), key);
-                }
-                if (value instanceof JsonObject) {
-                    value = reader.toJava(((JsonObject) value).getType(), value);
-                }
-
-                // Add to the CompactMap
-                cmap.put(key, value);
+        // Process all entries in the data section
+        for (Map.Entry<Object, Object> entry : data.entrySet()) {
+            Object key = entry.getKey();
+            Object value = entry.getValue();
+            
+            // Resolve JsonObjects
+            if (key instanceof JsonObject) {
+                key = reader.toJava(((JsonObject) key).getType(), key);
             }
-        } else {
-            // Handle data in regular object format with string keys
-            for (Map.Entry<Object, Object> entry : dataJson.entrySet()) {
-                Object key = entry.getKey();
-                Object value = entry.getValue();
-
-                // Skip special fields and metadata
-                if (key instanceof String && ((String) key).startsWith("@")) {
-                    continue;
-                }
-
-                // Resolve JsonObjects
-                if (value instanceof JsonObject) {
-                    value = reader.toJava(((JsonObject) value).getType(), value);
-                }
-
-                // Add to the CompactMap
-                cmap.put(key, value);
+            if (value instanceof JsonObject) {
+                value = reader.toJava(((JsonObject) value).getType(), value);
             }
+
+            // Add to the CompactMap
+            cmap.put(key, value);
         }
 
         // Remove config and data from the original JsonObject
-        // to prevent them from becoming entries
         jObj.remove("config");
         jObj.remove("data");
 
-        // Set the target of the JsonObject to our CompactMap
+        // Set the target
         jObj.setTarget(cmap);
 
         return cmap;

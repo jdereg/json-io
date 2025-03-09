@@ -66,3 +66,6 @@ sun.util.calendar.ZoneInfo = com.cedarsoftware.io.Writers$TimeZoneWriter
 
 # CompactMap
 com.cedarsoftware.util.CompactMap = com.cedarsoftware.io.writers.CompactMapWriter
+
+# CompactSet
+com.cedarsoftware.util.CompactSet = com.cedarsoftware.io.writers.CompactSetWriter

@@ -368,15 +368,13 @@ public class JsonReader implements Closeable
             return returnValue;
         }
 
-        // If there's a known converter from the actual type -> requested rootType, use it
-        if (localConverter.isConversionSupportedFor(returnValue.getClass(), rootClass)) {
+        // If the rootType is a primitive type, try to convert to its wrapper class
+        try {
             return localConverter.convert(returnValue, rootClass);
+        } catch (Exception e) {
+            throw new JsonIoException("Return type mismatch. Expecting: " +
+                    rootClass.getName() + ", found: " + returnValue.getClass().getName(), e);
         }
-
-        // Houston, we have a type mismatch
-        throw new ClassCastException(
-                getErrorMessage("Return type mismatch, expected: " + rootClass.getName() +
-                        ", actual: " + returnValue.getClass().getName()));
     }
 
     /**

@@ -312,7 +312,7 @@ public class MapResolver extends Resolver {
         // Store the full, refined type (which may include generics) in the JsonObject.
         jsonArray.setType(suggestedType);
         
-        // If the raw type is assignable from Collection, create an instance accordingly.
+        // If the Collection is assignable from raw type, create a Collection instance accordingly.
         if (Collection.class.isAssignableFrom(rawType)) {
             jsonArray.setTarget(createInstance(jsonArray));
         } else {

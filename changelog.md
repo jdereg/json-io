@@ -1,4 +1,8 @@
 ### Revision History
+#### 4.51.0
+* Updated `CompactMap` and `CompactSet` serialization format. Simplified the format to include a **config** and a **data** section.  The **config** section contains the configuration parameters for the `CompactMap/CompactSet` in a terse form. The **data** section contains the `Map` key/values or the `Set` elements.
+* Added many new tests.
+* Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.1.1` to `3.2.0.`
 #### 4.50 Major Improvements to Type Resolution and API Usability
 * **Enhanced Type System Support**
   * `json-io` now leverages `java-util`'s sophisticated `TypeUtilities` framework to provide comprehensive resolution of complex Java generics:

@@ -212,3 +212,6 @@ java.util.EnumSet = com.cedarsoftware.io.factory.EnumSetFactory
 
 # CompactMap
 com.cedarsoftware.util.CompactMap = com.cedarsoftware.io.factory.CompactMapFactory
+
+# CompactSet
+com.cedarsoftware.util.CompactSet = com.cedarsoftware.io.factory.CompactSetFactory
