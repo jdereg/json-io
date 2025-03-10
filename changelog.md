@@ -1,7 +1,23 @@
 ### Revision History
-#### 4.51.0
-* Updated `CompactMap` and `CompactSet` serialization format. Simplified the format to include a **config** and a **data** section.  The **config** section contains the configuration parameters for the `CompactMap/CompactSet` in a terse form. The **data** section contains the `Map` key/values or the `Set` elements.
-* Added many new tests.
+#### 4.51.0 CompactMap and CompactSet Enhancements
+* **JSON Serialization Improvements**
+  * Implemented specialized JSON serialization for `CompactMap` and `CompactSet` with optimized format
+  ```json
+  {"@type":"com.cedarsoftware.util.CompactMap","config":"java.util.HashMap/CS/S70/id/Unord","data":{...}}
+  {"@type":"com.cedarsoftware.util.CompactSet","config":"CI/S30/Ord","data":{...}}
+  ```
+  * Added tests to ensure reference identity maintained across JSON round-trips
+  * Preserved configuration details during serialization/deserialization
+* **Collection API Consistency**
+  * Aligned `CompactSet` API with `CompactMap` for better usability
+* **Improved JsonObject Implementation**
+  * Consistent `Map` Interface: Enhanced `JsonObject` to implement the `Map` interface more consistently:
+  * Fixed the internal storage mechanism to properly handle different storage states
+  * Ensured `Map` methods work correctly regardless of internal storage approach
+* **Documentation and Testing**
+  * Added comprehensive test suite for JSON serialization and deserialization
+  * Added tests for complex reference scenarios and edge cases
+  * Improved JavaDoc comments for new public methods
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.1.1` to `3.2.0.`
 #### 4.50 Major Improvements to Type Resolution and API Usability
 * **Enhanced Type System Support**
@@ -23,14 +39,14 @@
       * More intuitive, chainable API that clearly separates the input source from the target type
       * Provides dedicated methods for different input types (String, InputStream, JsonObject)
       * Offers type-specific terminal operations:
-          * `asClass(Class<T>)` for simple class-based conversion
-          * `asType(TypeHolder<T>)` for generic type conversion
+          * `asClass(Class<T>)` for simple class types
+          * `asType(TypeHolder<T>)` for complex generic types
       * Examples:
         ```java
-        // Simple class conversion
+        // Simple class types
         Person person = JsonIo.toJava(jsonString, options).asClass(Person.class);
       
-        // Complex generic type conversion
+        // Complex generic types
         List<Person> people = JsonIo.toJava(jsonString, options)
                                   .asType(new TypeHolder<List<Person>>(){});
         ```

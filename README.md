@@ -10,7 +10,7 @@ Key Features:
 - Supports polymorphic types and complex object graphs
 - Zero external dependencies (other than java-util)
 - Fully compatible with both JPMS and OSGi environments
-- Lightweight (`json-io.jar` is 249K, `java-util` is 449K)
+- Lightweight (`json-io.jar` is 256K, `java-util` is 449K)
 - Compatible with JDK 1.8 through JDK 23
 - Extensive configuration options via `ReadOptionsBuilder` and `WriteOptionsBuilder`
 - Featured on [json.org](http://json.org)
