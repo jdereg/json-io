@@ -7,6 +7,9 @@ ReadOptions readOptions = new ReadOptionsBuilder()
 .feature2(args)
 .build();
 JsonIo.toJava(json, readOptions).asClass(Employee.class);
+
+// Use a TypeHolder to specify the return type
+JsonIo.toJava(json, readOptions).asType(new TypeHolder<String, List<Long>>(){});
 ```
 **Detailed Steps:**
 
