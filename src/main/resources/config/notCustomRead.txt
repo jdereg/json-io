@@ -1,0 +1,12 @@
+#
+# The classes listed here are intended to never be written using a custom writer.  This is useful to
+# terminate a "custom writer" inheritance chain.  For example, if you have a custom writer for a
+# base class, and you don't want it to be used for a subclass, you can add the subclass to this list.
+#
+com.cedarsoftware.util.CompactCIHashSet
+com.cedarsoftware.util.CompactCILinkedSet
+com.cedarsoftware.util.CompactLinkedSet
+
+com.cedarsoftware.util.CompactCIHashMap
+com.cedarsoftware.util.CompactCILinkedMap
+com.cedarsoftware.util.CompactLinkedMap

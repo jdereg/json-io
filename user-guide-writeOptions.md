@@ -780,6 +780,15 @@ when being written out to JSON.  This means it will never have an @id nor @ref. 
 useful for small, immutable classes.
 >#### WriteOptionsBuilder.addPermanentNonRef(`Class<?> clazz`)
 
+### addPermanentNotCustomWrittenClass
+
+Register a class to be excluded from custom JSON serialization for the lifetime of the JVM.
+
+This method prevents the specified class from being serialized by any custom writer, even if it 
+inherits from a class that would normally use custom serialization. Once registered, this exclusion
+persists until the JVM terminates.
+>#### WriteOptionsBuilder.addPermanentNotCustomWrittenClass(`Class<?> clazz`)
+
 ### addPermanentWriter
 
 Call this method to add a permanent (JVM lifetime) custom JSON writer to `json-io.`  It will associate the

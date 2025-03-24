@@ -195,5 +195,15 @@ java.util.concurrent.ConcurrentHashMap$KeySetView = ConcurrentHashMapKeySetView
 java.util.concurrent.ConcurrentHashMap$ValuesView = ConcurrentHashMapValuesView
 java.util.concurrent.CopyOnWriteArrayList = CopyOnWriteArrayList
 java.util.concurrent.CopyOnWriteArraySet = CopyOnWriteArraySet
+
+# Cedar Software collections
 com.cedarsoftware.util.ConcurrentList = ConcurrentList
 com.cedarsoftware.util.ConcurrentSet = ConcurrentSet
+com.cedarsoftware.util.CompactMap = CompactMap
+com.cedarsoftware.util.CompactLinkedMap = CompactLinkedMap
+com.cedarsoftware.util.CompactCILinkedMap = CompactCILinkedMap
+com.cedarsoftware.util.CompactCIHashMap = CompactCIHashMap
+com.cedarsoftware.util.CompactSet = CompactSet
+com.cedarsoftware.util.CompactLinkedSet = CompactLinkedSet
+com.cedarsoftware.util.CompactCILinkedSet = CompactCILinkedSet
+com.cedarsoftware.util.CompactCIHashSet = CompactCIHashSet

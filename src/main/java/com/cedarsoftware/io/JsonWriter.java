@@ -24,6 +24,8 @@ import java.util.Map.Entry;
 
 import com.cedarsoftware.io.reflect.Accessor;
 import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.CompactMap;
+import com.cedarsoftware.util.CompactSet;
 import com.cedarsoftware.util.FastWriter;
 
 import static com.cedarsoftware.io.JsonValue.ENUM;
@@ -240,9 +242,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      */
     public boolean writeUsingCustomWriter(Object o, boolean showType, Writer output) {
         Class<?> c = o.getClass();
-        if (writeOptions.isNotCustomWrittenClass(c)) {
-            return false;
-        }
 
         try {
             return writeCustom(c, o, !writeOptions.isNeverShowingType() && showType, output);
@@ -251,6 +250,29 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
     }
 
+    private boolean isCustomWrittenClass(Class<?> c, Object o) {
+        // Exit early if the class is explicitly marked as not-custom-written.
+        if (writeOptions.isNotCustomWrittenClass(c)) {
+            return false;
+        }
+
+        // Exit early if there is no custom writer.
+        if (writeOptions.getCustomWriter(c) == null) {
+            return false;
+        }
+
+        // Exit early if 'o' is a CompactSet, and it is the default CompactSet.
+        if ((o instanceof CompactSet) && ((CompactSet<?>) o).isDefaultCompactSet()) {
+            return false;
+        }
+
+        // Exit early if 'o' is a CompactMap, and it is the default CompactMap.
+        if ((o instanceof CompactMap) && ((CompactMap<?, ?>) o).isDefaultCompactMap()) {
+            return false;
+        }
+        return true;
+    }
+    
     /**
      * Write the passed in array element to the JSON output, if any only if, there is a custom writer
      * for the class of the instance 'o'.
@@ -262,17 +284,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      */
     public boolean writeArrayElementIfMatching(Class<?> arrayComponentClass, Object o, boolean showType, Writer output)
     {
-        if (!arrayComponentClass.isAssignableFrom(o.getClass()) || writeOptions.isNotCustomWrittenClass(o.getClass()))
-        {
+        if (!arrayComponentClass.isAssignableFrom(o.getClass())) {
             return false;
         }
 
-        try
-        {
+        try {
             return writeCustom(arrayComponentClass, o, showType, output);
-        }
-        catch (IOException e)
-        {
+        } catch (IOException e) {
             throw new JsonIoException("Unable to write custom formatted object as array element:", e);
         }
     }
@@ -286,14 +304,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      * @return true if the array element was written, false otherwise.
      */
     protected boolean writeCustom(Class<?> clazz, Object o, boolean showType, Writer output) throws IOException {
+        if (!isCustomWrittenClass(clazz, o)) {
+            return false;
+        }
         if (writeOptions.isNeverShowingType()) {
             showType = false;
         }
-        JsonClassWriter closestWriter = writeOptions.getCustomWriter(o.getClass());
 
-        if (closestWriter == null) {
-            return false;
-        }
+        JsonClassWriter closestWriter = writeOptions.getCustomWriter(o.getClass());
 
         if (writeOptionalReference(o)) {
             return true;

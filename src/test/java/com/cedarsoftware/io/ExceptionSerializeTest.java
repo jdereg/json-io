@@ -69,7 +69,6 @@ class ExceptionSerializeTest
         }
     }
 
-
     public static class MyExceptionFactory extends ThrowableFactory
     {
         public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver)

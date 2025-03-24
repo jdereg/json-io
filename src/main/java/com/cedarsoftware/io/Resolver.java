@@ -8,13 +8,39 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Function;
 
 import com.cedarsoftware.io.JsonReader.MissingFieldHandler;
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.ClassValueMap;
+import com.cedarsoftware.util.CompactCIHashMap;
+import com.cedarsoftware.util.CompactCIHashSet;
+import com.cedarsoftware.util.CompactCILinkedMap;
+import com.cedarsoftware.util.CompactCILinkedSet;
+import com.cedarsoftware.util.CompactLinkedMap;
+import com.cedarsoftware.util.CompactLinkedSet;
+import com.cedarsoftware.util.CompactMap;
+import com.cedarsoftware.util.CompactSet;
+import com.cedarsoftware.util.ConcurrentList;
+import com.cedarsoftware.util.ConcurrentNavigableSetNullSafe;
+import com.cedarsoftware.util.ConcurrentSet;
+import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
 /**
@@ -329,6 +355,68 @@ public abstract class Resolver {
         push(collection);
     }
 
+    // Create a ClassValueMap for direct instantiation of certain classes
+    private static final ClassValueMap<Function<JsonObject, Object>> DEFAULT_INSTANTIATORS = new ClassValueMap<>();
+
+    static {
+        // Initialize the map with lambda factory instantiators for each class
+        DEFAULT_INSTANTIATORS.put(ArrayList.class, jsonObj -> new ArrayList<>());
+        DEFAULT_INSTANTIATORS.put(LinkedList.class, jsonObj -> new LinkedList<>());
+        DEFAULT_INSTANTIATORS.put(CopyOnWriteArrayList.class, jsonObj -> new CopyOnWriteArrayList<>());
+        DEFAULT_INSTANTIATORS.put(ConcurrentList.class, jsonObj -> new ConcurrentList<>());
+        DEFAULT_INSTANTIATORS.put(CompactCIHashMap.class, jsonObj -> new CompactCIHashMap<>());
+        DEFAULT_INSTANTIATORS.put(CompactCILinkedMap.class, jsonObj -> new CompactCILinkedMap<>());
+        DEFAULT_INSTANTIATORS.put(CompactLinkedMap.class, jsonObj -> new CompactLinkedMap<>());
+        DEFAULT_INSTANTIATORS.put(ConcurrentHashMap.class, jsonObj -> new ConcurrentHashMap<>());
+        DEFAULT_INSTANTIATORS.put(ConcurrentSkipListMap.class, jsonObj -> new ConcurrentSkipListMap<>());
+        DEFAULT_INSTANTIATORS.put(Vector.class, jsonObj -> new Vector<>());
+        DEFAULT_INSTANTIATORS.put(HashMap.class, jsonObj -> new HashMap<>());
+        DEFAULT_INSTANTIATORS.put(TreeMap.class, jsonObj -> new TreeMap<>());
+        DEFAULT_INSTANTIATORS.put(CompactCIHashSet.class, jsonObj -> new CompactCIHashSet<>());
+        DEFAULT_INSTANTIATORS.put(CompactCILinkedSet.class, jsonObj -> new CompactCILinkedSet<>());
+        DEFAULT_INSTANTIATORS.put(CompactLinkedSet.class, jsonObj -> new CompactLinkedSet<>());
+        DEFAULT_INSTANTIATORS.put(ConcurrentSkipListSet.class, jsonObj -> new ConcurrentSkipListSet<>());
+        DEFAULT_INSTANTIATORS.put(ConcurrentNavigableSetNullSafe.class, jsonObj -> new ConcurrentNavigableSetNullSafe<>());
+        DEFAULT_INSTANTIATORS.put(ConcurrentSet.class, jsonObj -> new ConcurrentSet<>());
+        DEFAULT_INSTANTIATORS.put(HashSet.class, jsonObj -> new HashSet<>());
+        DEFAULT_INSTANTIATORS.put(LinkedHashSet.class, jsonObj -> new LinkedHashSet<>());
+        DEFAULT_INSTANTIATORS.put(TreeSet.class, jsonObj -> new TreeSet<>());
+        DEFAULT_INSTANTIATORS.put(LinkedHashMap.class, jsonObj -> new LinkedHashMap<>());
+        DEFAULT_INSTANTIATORS.put(CompactMap.class, jsonObj -> {
+            // If the map does not have both config and data keys, then it is a regular CompactMap
+            // Note: CompactMap in custom form, has two key/values at the Object level (config and data)
+            if (!jsonObj.containsKey("config") || !jsonObj.containsKey("data")) {
+                return new CompactMap<>();
+            }
+
+            // if the map has both config and data keys, then make sure the config value has < 2 slashes to remain a pure CompactMap
+            Object configValue = jsonObj.get("config");
+            if (!(configValue instanceof String) ||
+                    ((String) configValue).split("/", -1).length < 3) {
+                return new CompactMap<>();
+            }
+
+            return null; // Return null to indicate custom factory should be used
+        });
+        DEFAULT_INSTANTIATORS.put(CompactSet.class, jsonObj -> {
+            // CompactSet instantiator with special logic
+
+            // If the set does not have both config and data keys, then it is a regular CompactSet
+            // Note: CompactSet in custom form, has two key/values at the Object level (config and data)
+            if (!jsonObj.containsKey("config") || !jsonObj.containsKey("data")) {
+                return new CompactSet<>();
+            }
+
+            // if the map has both config and data keys, then make sure the config value has < 2 slashes to remain a pure CompactSet
+            Object configValue = jsonObj.get("config");
+            if (!(configValue instanceof String) || StringUtilities.count((String) configValue, '/') < 2) {
+                return new CompactSet<>();
+            }
+
+            return null; // Return null to indicate custom factory should be used
+        });
+    }
+
     /**
      * This method creates a Java Object instance based on the passed in parameters.
      * If the JsonObject contains a key '@type' then that is used, as the type was explicitly
@@ -369,6 +457,20 @@ public abstract class Resolver {
 
         // Use the refined Type (if available) to determine the target type.
         Class<?> targetType = resolveTargetType(jsonObj);
+
+        // Check if we have a direct instantiator for this class
+        Function<JsonObject, Object> instantiator = DEFAULT_INSTANTIATORS.get(targetType);
+        if (instantiator != null) {
+            Object instance = instantiator.apply(jsonObj);
+            if (instance != null) {
+                return jsonObj.setTarget(instance);
+            }
+        }
+
+        // Knock out popular easy classes to instantiate and finish.
+        if (converter.isSimpleTypeConversionSupported(targetType, targetType)) {
+            return jsonObj.setFinishedTarget(converter.convert(jsonObj, targetType), true);
+        }
 
         // Determine the factory type, considering enums and collections.
         Class<?> factoryType = determineFactoryType(jsonObj, targetType);

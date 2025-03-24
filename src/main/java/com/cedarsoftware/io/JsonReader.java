@@ -326,7 +326,6 @@ public class JsonReader implements Closeable
      * Handles the case where the top-level element is an array (either a real Java array,
      * or a JsonObject that’s flagged as an array).
      */
-    @SuppressWarnings("unchecked")
     private Object handleArrayRoot(Type rootType, Object returnValue) {
         JsonObject rootObj;
 
@@ -479,7 +478,6 @@ public class JsonReader implements Closeable
      * @return the resolved and, if necessary, converted object graph, or the raw {@code JsonObject}, depending on the mode
      *         and convertibility.
      */
-    @SuppressWarnings("unchecked")
     private Object handleObjectRoot(Type rootType, JsonObject jsonObj) {
         boolean returnJson = readOptions.isReturningJsonObjects();
 

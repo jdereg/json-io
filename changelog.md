@@ -1,4 +1,10 @@
 ### Revision History
+#### 4.52.0 CompactMap and CompactSet Enhancements
+* `CompactMap` and `CompactSet` JSON formats improved - match historical formats, except when using builder pattern.
+* `ByteBuffer and CharBuffer` converstions to/from `Map` added.
+* Performance improvements in JSON serialization and deserialization.
+* Code simplification related to instance creation for common types.
+* Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.2.0` to `3.3.0.`
 #### 4.51.0 CompactMap and CompactSet Enhancements
 * **JSON Serialization Improvements**
   * Implemented specialized JSON serialization for `CompactMap` and `CompactSet` with optimized format

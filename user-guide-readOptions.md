@@ -22,6 +22,7 @@ _Finalization:_ Call the `.build()` method to finalize and create a read-only `R
 
 _Documentation:_ For more detailed information on the available features and methods, refer to the Javadoc documentation
 for `ReadOptionsBuilder`.
+for `ReadOptionsBuilder`.
 
 _Multiple Instances:_ You can create multiple `ReadOptions` instances for different scenarios. Each instance is stateless
 once constructed.
@@ -535,6 +536,22 @@ Adding classes to the non-referenceable list can significantly enhance the perfo
 
 >#### ReadOptionsBuilder.addPermanentNonReferenceableClass(Class<?> clazz)
 
+### Add Permanent Not Custom Read Class
+
+The `addPermanentNotCustomReadClass` method in `json-io` allows you to exempt specific classes from custom deserialization across the entire lifecycle of the JVM. This setting ensures these classes bypass any registered custom readers during JSON parsing.
+
+- **Purpose**: This method prevents a class from being processed by custom readers, even if it inherits from a class that would normally use custom deserialization. It essentially forces the class to use the default deserialization behavior.
+
+- **Impact**: By marking a class as not custom read, you ensure that instances of this class in JSON are always deserialized using the standard mechanisms, regardless of any custom readers that might apply through inheritance or direct registration.
+
+- **Application Scope**: Once a class is added to the not-custom-read list, this configuration is applied globally across all `ReadOptions` instances created during the JVM's runtime. This means there is no need to repeatedly specify this setting for each new instance, enhancing consistency and reducing setup redundancy.
+
+- **Use Cases**: Typically used when you need to override inheritance-based custom reader application, or when you want to ensure that certain classes are always deserialized using the default behavior regardless of other configuration settings.
+
+Adding classes to the not-custom-read list can help control deserialization behavior in complex class hierarchies, particularly when you need exceptions to your custom reader rules.
+
+>#### ReadOptionsBuilder.addPermanentNotCustomReadClass(Class<?> clazz)
+ 
 ### Add Permanent Not Imported Field
 
 The `addPermanentNotImportedField` method in `json-io` allows you to permanently exclude specific fields from being deserialized into Java objects. This feature is crucial for managing how JSON data is processed into Java representations, particularly when certain JSON fields should not be transferred into the resulting Java object.

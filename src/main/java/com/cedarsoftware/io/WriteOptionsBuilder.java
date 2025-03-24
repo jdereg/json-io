@@ -30,6 +30,7 @@ import com.cedarsoftware.io.reflect.filters.method.NamedMethodFilter;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.ClassValueMap;
 import com.cedarsoftware.util.ClassValueSet;
+import com.cedarsoftware.util.ConcurrentSet;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.LRUCache;
 import com.cedarsoftware.util.ReflectionUtils;
@@ -56,12 +57,13 @@ import com.cedarsoftware.util.StringUtilities;
  *         limitations under the License.
  */
 public class WriteOptionsBuilder {
-    // Constants
+    // The BASE_* Maps are regular ConcurrentHashMap's because they are not constantly searched, otherwise they would be ClassValueMaps.
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
-    private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ClassValueMap<>();
-    private static final Set<Class<?>> BASE_NON_REFS = Collections.newSetFromMap(new ClassValueMap<>());
-    static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ClassValueMap<>();
-    private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_GETTERS = new ClassValueMap<>();
+    private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
+    private static final Set<Class<?>> BASE_NON_REFS = new ConcurrentSet<>();
+    private static final Set<Class<?>> BASE_NOT_CUSTOM_WRITTEN = new ConcurrentSet<>();
+    static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_GETTERS = new ConcurrentHashMap<>();;
     private static final Map<String, FieldFilter> BASE_FIELD_FILTERS = new ConcurrentHashMap<>();
     private static final Map<String, MethodFilter> BASE_METHOD_FILTERS = new ConcurrentHashMap<>();
     private static final Map<String, AccessorFactory> BASE_ACCESSOR_FACTORIES = new ConcurrentHashMap<>();
@@ -72,6 +74,7 @@ public class WriteOptionsBuilder {
         ReadOptionsBuilder.loadBaseAliasMappings(WriteOptionsBuilder::addPermanentAlias);
         loadBaseWriters();
         loadBaseNonRefs();
+        loadBaseNotCustomWrittenClasses();
         loadBaseExcludedFields();
         loadBaseNonStandardGetters();
 
@@ -110,6 +113,7 @@ public class WriteOptionsBuilder {
         options.aliasTypeNames.putAll(BASE_ALIAS_MAPPINGS);
         options.customWrittenClasses.putAll(BASE_WRITERS);
         options.nonRefClasses.addAll(BASE_NON_REFS);
+        options.notCustomWrittenClasses.addAll(BASE_NOT_CUSTOM_WRITTEN);
         options.excludedFieldNames.putAll(BASE_EXCLUDED_FIELD_NAMES);
         options.fieldFilters.putAll(BASE_FIELD_FILTERS);
         options.methodFilters.putAll(BASE_METHOD_FILTERS);
@@ -224,6 +228,16 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentNonRef(Class<?> clazz) {
         BASE_NON_REFS.add(clazz);
+    }
+
+    /**
+     * Call this method to add a permanent (JVM lifetime) class that should not be written with a custom
+     * writer when being written out to JSON.
+     *
+     * @param clazz Class that will no longer be written with a custom writer.
+     */
+    public static void addPermanentNotCustomWrittenClass(Class<?> clazz) {
+        BASE_NOT_CUSTOM_WRITTEN.add(clazz);
     }
 
     /**
@@ -794,19 +808,18 @@ public class WriteOptionsBuilder {
      *
      * @return WriteOptionsBuilder for chained access.
      */
-    @SuppressWarnings("unchecked")
     public WriteOptions build() {
         options.clearCaches();
-        options.includedFieldNames = ((ClassValueMap)options.includedFieldNames).unmodifiableView();
-        options.nonStandardGetters = ((ClassValueMap)options.nonStandardGetters).unmodifiableView();
+        options.includedFieldNames = ((ClassValueMap<Set<String>>)options.includedFieldNames).unmodifiableView();
+        options.nonStandardGetters = ((ClassValueMap<Map<String, String>>)options.nonStandardGetters).unmodifiableView();
         options.aliasTypeNames = Collections.unmodifiableMap(options.aliasTypeNames);
         options.notCustomWrittenClasses = ((ClassValueSet)options.notCustomWrittenClasses).unmodifiableView();
         options.nonRefClasses = ((ClassValueSet)options.nonRefClasses).unmodifiableView();
-        options.excludedFieldNames = ((ClassValueMap)options.excludedFieldNames).unmodifiableView();
+        options.excludedFieldNames = ((ClassValueMap<Set<String>>)options.excludedFieldNames).unmodifiableView();
         options.fieldFilters = Collections.unmodifiableMap(options.fieldFilters);
         options.methodFilters = Collections.unmodifiableMap(options.methodFilters);
         options.accessorFactories = Collections.unmodifiableMap(options.accessorFactories);
-        options.customWrittenClasses = ((ClassValueMap)options.customWrittenClasses).unmodifiableView();
+        options.customWrittenClasses = ((ClassValueMap<JsonWriter.JsonClassWriter>)options.customWrittenClasses).unmodifiableView();
         options.customOptions = Collections.unmodifiableMap(options.customOptions);
         return options;
     }
@@ -1106,9 +1119,7 @@ public class WriteOptionsBuilder {
                     accessor = Accessor.createFieldAccessor(field, uniqueFieldName);
                 }
 
-                if (accessor != null) {
-                    accessors.add(accessor);
-                }
+                accessors.add(accessor);
             }
             return Collections.unmodifiableList(accessors);
         }
@@ -1221,32 +1232,50 @@ public class WriteOptionsBuilder {
             }
             Class<JsonWriter.JsonClassWriter> customWriter = (Class<JsonWriter.JsonClassWriter>) ClassUtilities.forName(writerClassName, classLoader);
             if (customWriter == null) {
-                System.out.println("Note: class not found (custom JsonClassWriter class): " + writerClassName + ", listed in resources/customWriters.txt as a custom writer for: " + className);
-            }
-            try {
-                JsonWriter.JsonClassWriter writer = customWriter.newInstance();
-                addPermanentWriter(clazz, writer);
-            } catch (Exception e) {
-                System.out.println("Note: class failed to instantiate (a custom JsonClassWriter class): " + writerClassName + ", listed in resources/customWriters.txt as a custom writer for: " + className);
+                System.out.println("Note: class not found (custom JsonClassWriter class): " + writerClassName + ", listed in config/customWriters.txt as a custom writer for: " + className);
+            } else {
+                try {
+                    JsonWriter.JsonClassWriter writer = customWriter.newInstance();
+                    addPermanentWriter(clazz, writer);
+                } catch (Exception e) {
+                    System.out.println("Note: class failed to instantiate (a custom JsonClassWriter class): " + writerClassName + ", listed in config/customWriters.txt as a custom writer for: " + className);
+                }
             }
         }
     }
 
     /**
      * Load the list of classes that are intended to be treated as non-referenceable, immutable classes.
-     *
-     * @return Set<Class < ?>> which is the loaded from resource/nonRefs.txt and verified to exist in JVM.
      */
-    static void loadBaseNonRefs() {
+    private static void loadBaseNonRefs() {
         Set<String> set = MetaUtils.loadSetDefinition("config/nonRefs.txt");
         ClassLoader classLoader = ClassUtilities.getClassLoader(WriteOptionsBuilder.class);
-        set.forEach((className) -> {
+        for (String className : set) {
             Class<?> clazz = ClassUtilities.forName(className, classLoader);
             if (clazz == null) {
-                System.out.println("Class: " + className + " undefined.  Cannot be used as non-referenceable class, listed in resources/nonRefs.txt");
+                System.out.println("Class: " + className + " undefined.  Cannot be used as non-referenceable class, listed in config/nonRefs.txt");
+            } else {
+                addPermanentNonRef(clazz);
             }
-            addPermanentNonRef(clazz);
-        });
+        }
+    }
+
+    /**
+     * Load the list of classes that are intended to not (never) be written using a custom writer.  This is useful to
+     * terminate a "custom writer" inheritance chain.  For example, if you have a custom writer for a base class, and
+     * you don't want it to be used for a subclass, you can add the subclass to this list.
+     */
+    private static void loadBaseNotCustomWrittenClasses() {
+        Set<String> set = MetaUtils.loadSetDefinition("config/notCustomWritten.txt");
+        ClassLoader classLoader = ClassUtilities.getClassLoader(WriteOptionsBuilder.class);
+        for (String className : set) {
+            Class<?> clazz = ClassUtilities.forName(className, classLoader);
+            if (clazz == null) {
+                System.out.println("Class: " + className + " undefined.  Cannot be used as to turn off custom writing for this class, listed in config/notCustomWritten.txt");
+            } else {
+                addPermanentNotCustomWrittenClass(clazz);
+            }
+        }
     }
     
     private static void loadBaseExcludedFields() {

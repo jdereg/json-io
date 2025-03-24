@@ -127,15 +127,13 @@ class CustomJsonSubObjectsTest
 				.addClassFactory(Person.class, new PersonFactory())
 				.aliasTypeName(Person.class, "Person")
 				.aliasTypeName(TestObjectKid.class, "TestObjKid")
-				.aliasTypeName(TestObjectKid[].class, "TestObjKid[]")
-				.aliasTypeName(CompactMap.class, "CompactMap");
+				.aliasTypeName(TestObjectKid[].class, "TestObjKid[]");
 
 		WriteOptionsBuilder writeOptions = new WriteOptionsBuilder()
 				.addCustomWrittenClass(Person.class, new PersonWriter())
 				.aliasTypeName(Person.class, "Person")
 				.aliasTypeName(TestObjectKid.class, "TestObjKid")
-				.aliasTypeName(TestObjectKid[].class, "TestObjKid[]")
-				.aliasTypeName(CompactMap.class, "CompactMap");
+				.aliasTypeName(TestObjectKid[].class, "TestObjKid[]");
 
 		// Note: You could use the ReadOptionsBuilder/WriteOptionsBuilder's static "addPermanent()" APIs instead of
 		// calling the ReadOptions/WriteOptions each time for transfer (for some options). This will set them for

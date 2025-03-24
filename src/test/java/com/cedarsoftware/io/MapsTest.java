@@ -971,6 +971,7 @@ class MapsTest
         map.put(longs, "longs");
         map.put("longs", longs);
         String json = TestUtil.toJson(map);
+//        System.out.println(json);
         CompactMap<Object, Object> map2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asType(new TypeHolder<CompactMap<Object, Object>>() {});
         Map<String, Object> options = new HashMap<>();
         boolean equals = DeepEquals.deepEquals(map, map2, options);

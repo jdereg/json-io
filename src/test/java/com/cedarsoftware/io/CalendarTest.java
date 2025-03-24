@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.stream.Stream;
 
-import com.cedarsoftware.io.factory.ConvertableFactory;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.DeepEquals;
@@ -285,12 +284,7 @@ public class CalendarTest
     }
 
     private ReadOptions createOldOptionsFormat(String timeZone) {
-        TimeZone zone = TimeZone.getTimeZone(timeZone);
-
-        return new ReadOptionsBuilder()
-                .addClassFactory(Calendar.class, new ConvertableFactory<>(Calendar.class))
-                .addClassFactory(GregorianCalendar.class, new ConvertableFactory<>(GregorianCalendar.class))
-                .build();
+        return new ReadOptionsBuilder().build();
     }
 
     @Test

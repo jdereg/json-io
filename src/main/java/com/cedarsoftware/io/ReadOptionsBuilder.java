@@ -19,7 +19,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 import com.cedarsoftware.io.factory.ArrayFactory;
-import com.cedarsoftware.io.factory.ConvertableFactory;
 import com.cedarsoftware.io.factory.EnumClassFactory;
 import com.cedarsoftware.io.factory.ThrowableFactory;
 import com.cedarsoftware.io.reflect.Injector;
@@ -31,6 +30,7 @@ import com.cedarsoftware.io.reflect.filters.field.StaticFieldFilter;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.ClassValueMap;
 import com.cedarsoftware.util.ClassValueSet;
+import com.cedarsoftware.util.ConcurrentSet;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.convert.CommonValues;
@@ -62,11 +62,13 @@ import static com.cedarsoftware.io.MetaUtils.loadMapDefinition;
  */
 public class ReadOptionsBuilder {
 
+    // The BASE_* Maps are regular ConcurrentHashMap's because they are not constantly searched, otherwise they would be ClassValueMaps.
     private static final Map<Class<?>, JsonReader.JsonClassReader> BASE_READERS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, JsonReader.ClassFactory> BASE_CLASS_FACTORIES = new ConcurrentHashMap<>();
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Class<?>> BASE_COERCED_TYPES = new ConcurrentHashMap<>();
-    private static final Set<Class<?>> BASE_NON_REFS = ConcurrentHashMap.newKeySet();
+    private static final Set<Class<?>> BASE_NON_REFS = new ConcurrentSet<>();
+    private static final Set<Class<?>> BASE_NOT_CUSTOM_READ = new ConcurrentSet<>();
     private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_SETTERS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Set<String>> BASE_NOT_IMPORTED_FIELDS = new ConcurrentHashMap<>();
     
@@ -84,6 +86,7 @@ public class ReadOptionsBuilder {
         loadBaseAliasMappings(ReadOptionsBuilder::addPermanentAlias);
         loadBaseCoercedTypes();
         loadBaseNonRefs();
+        loadBaseNotCustomReadClasses();
         loadBaseFieldsNotImported();
         loadBaseNonStandardSetters();
 
@@ -118,6 +121,7 @@ public class ReadOptionsBuilder {
         options.customReaderClasses.putAll(BASE_READERS);
         options.classFactoryMap.putAll(BASE_CLASS_FACTORIES);
         options.nonRefClasses.addAll(BASE_NON_REFS);
+        options.notCustomReadClasses.addAll(BASE_NOT_CUSTOM_READ);
         options.excludedFieldNames.putAll(WriteOptionsBuilder.BASE_EXCLUDED_FIELD_NAMES);
         options.fieldsNotImported.putAll(BASE_NOT_IMPORTED_FIELDS);
     }
@@ -278,6 +282,18 @@ public class ReadOptionsBuilder {
     }
 
     /**
+     * Add a class permanently (JVM lifecycle) to the Not-Custom reader list. All new ReadOptions instances created
+     * will automatically start with this, and you will not need to add it into the ReadOptions through the
+     * ReadOptionsBuilder each time.
+     *
+     * @param clazz Class to be added to the Not-Custom reader list.  A class that is on this list, will not use
+     *              a Custom Reader or Class Factory when read from the JSON.
+     */
+    public static void addPermanentNotCustomReadClass(Class<?> clazz) {
+        BASE_NOT_CUSTOM_READ.add(clazz);
+    }
+
+    /**
      * Add a field to a class that should not be imported. Any class's field added here will be excluded when read from
      * the JSON.  The value will not be set (injected) into the associated Java instance.
      * @param clazz Class on which fields will be excluded.
@@ -302,19 +318,18 @@ public class ReadOptionsBuilder {
     /**
      * @return ReadOptions - built options
      */
-    @SuppressWarnings("unchecked")
     public ReadOptions build() {
         options.clearCaches();
         options.aliasTypeNames = Collections.unmodifiableMap(options.aliasTypeNames);
-        options.coercedTypes = ((ClassValueMap)options.coercedTypes).unmodifiableView();
+        options.coercedTypes = ((ClassValueMap<Class<?>>)options.coercedTypes).unmodifiableView();
         options.notCustomReadClasses = ((ClassValueSet)options.notCustomReadClasses).unmodifiableView();
-        options.customReaderClasses = ((ClassValueMap)options.customReaderClasses).unmodifiableView();
-        options.classFactoryMap = ((ClassValueMap)options.classFactoryMap).unmodifiableView();
+        options.customReaderClasses = ((ClassValueMap<JsonReader.JsonClassReader>)options.customReaderClasses).unmodifiableView();
+        options.classFactoryMap = ((ClassValueMap<JsonReader.ClassFactory>)options.classFactoryMap).unmodifiableView();
         options.nonRefClasses = ((ClassValueSet)options.nonRefClasses).unmodifiableView();
         options.converterOptions.converterOverrides = Collections.unmodifiableMap(options.converterOptions.converterOverrides);
         options.converterOptions.customOptions = Collections.unmodifiableMap(options.converterOptions.customOptions);
-        options.excludedFieldNames = ((ClassValueMap)options.excludedFieldNames).unmodifiableView();
-        options.fieldsNotImported = ((ClassValueMap)options.fieldsNotImported).unmodifiableView();
+        options.excludedFieldNames = ((ClassValueMap<Set<String>>)options.excludedFieldNames).unmodifiableView();
+        options.fieldsNotImported = ((ClassValueMap<Set<String>>)options.fieldsNotImported).unmodifiableView();
         options.fieldFilters = Collections.unmodifiableList(options.fieldFilters);
         options.injectorFactories = Collections.unmodifiableList(options.injectorFactories);
         options.customOptions = Collections.unmodifiableMap(options.customOptions);
@@ -766,9 +781,7 @@ public class ReadOptionsBuilder {
                 continue;
             }
 
-            if (factoryClassName.equalsIgnoreCase("Convertable")) {
-                addPermanentClassFactory(clazz, new ConvertableFactory<>(clazz));
-            } else if (factoryClassName.equalsIgnoreCase("ArrayFactory")) {
+            if (factoryClassName.equalsIgnoreCase("ArrayFactory")) {
                 addPermanentClassFactory(clazz, new ArrayFactory<>(clazz));
             } else {
                 try {
@@ -1333,10 +1346,30 @@ public class ReadOptionsBuilder {
         for (String className : set) {
             Class<?> loadedClass = ClassUtilities.forName(className, classLoader);
 
-            if (loadedClass != null) {
-                addPermanentNonReferenceableClass(loadedClass);
+            if (loadedClass == null) {
+                System.out.println("Class: " + className + " undefined.  Cannot be used as non-referenceable class, listed in config/nonRefs.txt");
             } else {
-                throw new JsonIoException("Class: " + className + " is undefined.");
+                addPermanentNonReferenceableClass(loadedClass);
+            }
+        }
+    }
+
+    /**
+     * Load the list of classes that are intended to not (never) be read using a custom reader.  This is useful to
+     * terminate a "custom reader" inheritance chain.  For example, if you have a custom reader for a base class, and
+     * you don't want it to be used for a subclass, you can add the subclass to this list.
+     */
+    private static void loadBaseNotCustomReadClasses() {
+        final Set<String> set = MetaUtils.loadSetDefinition("config/notCustomRead.txt");
+        final ClassLoader classLoader = ClassUtilities.getClassLoader(ReadOptionsBuilder.class);
+
+        for (String className : set) {
+            Class<?> loadedClass = ClassUtilities.forName(className, classLoader);
+
+            if (loadedClass == null) {
+                System.out.println("Class: " + className + " undefined.  Cannot be used as to turn off custom reading for this class, listed in config/notCustomRead.txt");
+            } else {
+                addPermanentNotCustomReadClass(loadedClass);
             }
         }
     }

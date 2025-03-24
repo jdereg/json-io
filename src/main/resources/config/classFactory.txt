@@ -2,85 +2,9 @@
 # JsonReader.ClassFactory mappings
 #
 
-# Primitives
-char = Convertable
-boolean = Convertable
-byte = Convertable
-short = Convertable
-int = Convertable
-long = Convertable
-float = Convertable
-double = Convertable
-
-# Primitive Wrappers
-java.lang.Character = Convertable
-java.lang.Boolean = Convertable
-java.lang.Byte = Convertable
-java.lang.Short = Convertable
-java.lang.Integer = Convertable
-java.lang.Long = Convertable
-java.lang.Float = Convertable
-java.lang.Double = Convertable
-
-# java.math
-java.math.BigDecimal = Convertable
-java.math.BigInteger = Convertable
-
-# java.util
-java.util.concurrent.atomic.AtomicBoolean = Convertable
-java.util.concurrent.atomic.AtomicInteger = Convertable
-java.util.concurrent.atomic.AtomicLong = Convertable
-java.util.Currency = Convertable
-java.util.Date = Convertable
-java.util.Calendar = Convertable
-java.util.GregorianCalendar = Convertable
-java.util.Locale = Convertable
-java.util.UUID = Convertable
-java.util.TimeZone = Convertable
-
-java.util.regex.Pattern = Convertable
-
 # java.lang
-java.lang.Class = Convertable
-java.lang.String = Convertable
 java.lang.StackTraceElement = com.cedarsoftware.io.factory.StackTraceElementFactory
-java.lang.StringBuffer = Convertable
-java.lang.StringBuilder = Convertable
 java.lang.Throwable = com.cedarsoftware.io.factory.ThrowableFactory
-
-# java.net
-java.net.URL = Convertable
-java.net.URI = Convertable
-
-# java.nio
-java.nio.ByteBuffer = com.cedarsoftware.io.factory.ByteBufferFactory
-java.nio.DirectByteBuffer = com.cedarsoftware.io.factory.ByteBufferFactory
-java.nio.MappedByteBuffer = com.cedarsoftware.io.factory.ByteBufferFactory
-java.nio.HeapByteBuffer = com.cedarsoftware.io.factory.ByteBufferFactory
-
-java.nio.CharBuffer = com.cedarsoftware.io.factory.CharBufferFactory
-java.nio.HeapCharBuffer = com.cedarsoftware.io.factory.CharBufferFactory
-
-# java.sql
-java.sql.Date = Convertable
-java.sql.Timestamp = Convertable
-
-# java.time
-java.time.Duration = Convertable
-java.time.Instant = Convertable
-java.time.LocalDate = Convertable
-java.time.LocalDateTime = Convertable
-java.time.LocalTime = Convertable
-java.time.MonthDay = Convertable
-java.time.OffsetDateTime = Convertable
-java.time.OffsetTime = Convertable
-java.time.Period = Convertable
-java.time.Year = Convertable
-java.time.YearMonth = Convertable
-java.time.ZonedDateTime = Convertable
-java.time.ZoneId = Convertable
-java.time.ZoneOffset = Convertable
-java.time.ZoneRegion = Convertable
 
 # interface instantiates to...
 java.util.Collection = com.cedarsoftware.io.factory.CollectionFactory
@@ -93,7 +17,6 @@ java.util.Queue = com.cedarsoftware.io.factory.CollectionFactory
 java.util.Map = com.cedarsoftware.io.factory.MapFactory
 java.util.SortedMap = com.cedarsoftware.io.factory.MapFactory
 java.util.NavigableMap = com.cedarsoftware.io.factory.MapFactory
-sun.util.calendar.ZoneInfo = Convertable
 
 [C = com.cedarsoftware.io.factory.CharacterPrimArrayFactory
 [Z = ArrayFactory
