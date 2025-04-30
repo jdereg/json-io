@@ -1,4 +1,8 @@
 ### Revision History
+#### 4.53.0 Updated to use java-util 3.3.1
+* Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.3.0` to `3.3.1.`
+* Removed unused ClassFactories.
+* Added `ReadOptions/WriteOptions` ability to specify `notCustmoRead/Written` classes in `notCustomRead.txt` and `notCustomWritten.txt`
 #### 4.52.0 CompactMap and CompactSet Enhancements
 * `CompactMap` and `CompactSet` JSON formats improved - match historical formats, except when using builder pattern.
 * `ByteBuffer and CharBuffer` converstions to/from `Map` added.
