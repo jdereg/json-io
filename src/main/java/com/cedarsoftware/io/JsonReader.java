@@ -680,7 +680,7 @@ public class JsonReader implements Closeable
      *         interference with subsequent deserialization operations.</li>
      * </ul>
      *
-     * @implNote
+     * Implementation Note:
      * <p>This method is designed to handle both scenarios where type information is provided and where it
      * is absent. It ensures robust deserialization by falling back to generic types when necessary and by
      * leveraging type conversion mappings defined within the converter.</p>
