@@ -47,6 +47,8 @@ public abstract class JsonValue {
     protected Long refId = null;
     protected int line;
     protected int col;
+    // Hold the raw @type/@enum string when the class cannot be resolved during parsing
+    String typeName = null;
 
     // Cache for storing whether a Type is fully resolved.
     private static final Map<Type, Boolean> typeResolvedCache = new ConcurrentHashMap<>();
@@ -140,7 +142,15 @@ public abstract class JsonValue {
         if (type != null) {
             return TypeUtilities.getRawClass(type).getName();
         }
-        return null;
+        return typeName;
+    }
+
+    public String getTypeName() {
+        return typeName;
+    }
+
+    public void setTypeName(String typeName) {
+        this.typeName = typeName;
     }
 
     public long getId() {
@@ -162,6 +172,7 @@ public abstract class JsonValue {
     void clear() {
         id = -1;
         type = null;
+        typeName = null;
         refId = null;
     }
 
