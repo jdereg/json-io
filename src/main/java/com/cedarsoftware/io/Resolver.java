@@ -211,6 +211,7 @@ public abstract class Resolver {
         if (rootObj.isFinished) {
             return (T) rootObj.getTarget();
         } else {
+            resolvePendingType(rootObj);
             if (rootObj.getType() == null) {
                 // If there is no explicit type hint in the JSON, use the provided root type.
                 rootObj.setType(rootType);
@@ -455,6 +456,8 @@ public abstract class Resolver {
             return target;
         }
 
+        resolvePendingType(jsonObj);
+
         // Use the refined Type (if available) to determine the target type.
         Class<?> targetType = resolveTargetType(jsonObj);
 
@@ -547,6 +550,35 @@ public abstract class Resolver {
     private boolean shouldCreateArray(JsonObject jsonObj, Class<?> targetType) {
         Object[] items = jsonObj.getItems();
         return targetType.isArray() || (items != null && targetType == Object.class && jsonObj.getKeys() == null);
+    }
+
+    // Resolve any pending type name on the JsonObject to a concrete Class
+    protected void resolvePendingType(JsonObject jsonObj) {
+        if (jsonObj.getType() == null) {
+            String name = jsonObj.getTypeName();
+            if (name == null) {
+                return;
+            }
+
+            String alias = readOptions.getTypeNameAlias(name);
+            if (alias != null) {
+                name = alias;
+            }
+
+            Class<?> clazz = ClassUtilities.forName(name, readOptions.getClassLoader());
+            if (clazz == null) {
+                if (readOptions.isFailOnUnknownType()) {
+                    throw new JsonIoException("Unknown type (class) '" + name + "' not defined.");
+                }
+                clazz = readOptions.getUnknownTypeClass();
+                if (clazz == null) {
+                    clazz = LinkedHashMap.class;
+                }
+            }
+
+            jsonObj.setType(clazz);
+            jsonObj.setTypeName(null);
+        }
     }
 
     private Object createArrayInstance(JsonObject jsonObj, Class<?> targetType) {

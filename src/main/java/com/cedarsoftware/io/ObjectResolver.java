@@ -134,6 +134,7 @@ public class ObjectResolver extends Resolver
             }
 
             final JsonObject jObj = (JsonObject) rhs;
+            resolvePendingType(jObj);
             Type explicitType = jObj.getType();
             if (explicitType != null && !TypeUtilities.hasUnresolvedType(explicitType)) {
                 // If the field has an explicit type, use it.

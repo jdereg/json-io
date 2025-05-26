@@ -203,6 +203,7 @@ public class MapResolver extends Resolver {
 
                 if (refId == null) {
                     // Convert JsonObject to its destination type if possible
+                    resolvePendingType(jsonObject);
                     Class<?> type = jsonObject.getRawType();
                     if (type != null && converter.isConversionSupportedFor(Map.class, type)) {
                         Object converted = converter.convert(jsonObject, type);
@@ -213,6 +214,7 @@ public class MapResolver extends Resolver {
                     }
                 } else {    // Connect reference
                     JsonObject refObject = refTracker.getOrThrow(refId);
+                    resolvePendingType(refObject);
                     Class<?> type = refObject.getRawType();
 
                     if (type != null && converter.isConversionSupportedFor(Map.class, type)) {
@@ -281,6 +283,7 @@ public class MapResolver extends Resolver {
                     } else {
                         jObj.setType(Object.class);
                         createInstance(jObj);
+                        resolvePendingType(jObj);
                         boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getRawType());
                         if (!isNonRefClass) {
                             traverseSpecificType(jObj);
