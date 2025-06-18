@@ -128,10 +128,21 @@ have lots of additional information for how to register your factory classes wit
 - [Primitive and non-primitive fields (sub-graph)](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectTest.java)
 - [Primitive, array, type array, List, Map](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectsTest.java)
 
-- Custom `ClassFactory` and `JsonClassWriter` built for [CompactMap](https://github.com/jdereg/java-util/blob/master/userguide.md#compactmap)
+### CompactMap Usage
+
+Support for [CompactMap](https://github.com/jdereg/java-util/blob/master/userguide.md#compactmap) is built in.
+
+- Use `CompactMap` directly when the defaults work for you.
+- Choose a provided subclass from **java-util** for common configurations.
+- Derive your own subclass to bake in specific settings.
+- The `builder()` API allows per-instance configuration. It generates helper
+  classes at run time so the application must run with a full JDK, not just the
+  JRE.
+
+json-io includes:
 
   - [CompactMap reader](src/main/java/com/cedarsoftware/io/factory/CompactMapFactory.java) (`ClassFactory`)
-  - [CompactMap writer](src/main/java/com/cedarsoftware/io/writers/CompactMapWriter.java)  (`JsonClassWriter`)
+  - [CompactMap writer](src/main/java/com/cedarsoftware/io/writers/CompactMapWriter.java) (`JsonClassWriter`)
 
 ### Order of Type Resolution and Substitution
 
