@@ -14,6 +14,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import com.cedarsoftware.io.ReadOptions;
+import com.cedarsoftware.io.ReadOptionsBuilder;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class RecordDeserializationTest {
@@ -65,7 +68,8 @@ public class RecordDeserializationTest {
         Object testPojo = testCtor.newInstance(3, "myString", record);
 
         String json = JsonIo.toJson(testPojo, null);
-        Object clone = JsonIo.toJava(json, null).asClass(testClass);
+        ReadOptions options = new ReadOptionsBuilder().classLoader(loader).build();
+        Object clone = JsonIo.toJava(json, options).asClass(testClass);
 
         Field numberField = testClass.getField("number");
         Field stringField = testClass.getField("string");
