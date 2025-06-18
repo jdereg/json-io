@@ -785,7 +785,8 @@ public class JsonReader implements Closeable
     }
 
     private Class<?> stringToClass(String className) {
-        Class<?> clazz = ClassUtilities.forName(className, readOptions.getClassLoader());
+        String resolvedName = readOptions.getTypeNameAlias(className);
+        Class<?> clazz = ClassUtilities.forName(resolvedName, readOptions.getClassLoader());
         if (clazz == null) {
             if (readOptions.isFailOnUnknownType()) {
                 throw new JsonIoException("Unknown type (class) '" + className + "' not defined.");
