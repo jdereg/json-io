@@ -85,6 +85,9 @@ jsonMap.put("name", "John Doe");
 String updatedJson = JsonIo.toJson(jsonMap, writeOptions);
 ```
 
+Each `JsonObject` retains the raw `@type` value from the input JSON. Call
+`getTypeString()` to retrieve this value without triggering type resolution.
+
 ### Generic Type Support
 For working with generic types like `List<Employee>` or complex nested generics, use the `TypeHolder` class to preserve full generic type information:
 
