@@ -67,7 +67,7 @@
                         <version>${version.maven-compiler-plugin}</version>
                         <configuration>
                             <release>8</release>
-                            <testRelease>8</testRelease>
+                            <testRelease>21</testRelease>
                             <encoding>${project.build.sourceEncoding}</encoding>
                         </configuration>
                     </plugin>
