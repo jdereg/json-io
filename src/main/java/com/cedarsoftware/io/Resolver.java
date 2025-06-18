@@ -212,14 +212,7 @@ public abstract class Resolver {
             return (T) rootObj.getTarget();
         } else {
             if (rootObj.getType() == null) {
-                if (rootType != null) {
-                    rootObj.setType(rootType);
-                } else if (rootObj.getTypeString() != null) {
-                    Class<?> clazz = stringToClass(rootObj.getTypeString());
-                    rootObj.setType(clazz);
-                } else {
-                    rootObj.setType(rootType);
-                }
+                rootObj.setType(rootType);
             }
             Object instance = (rootObj.getTarget() == null ? createInstance(rootObj) : rootObj.getTarget());
             if (rootObj.isFinished) {
@@ -540,20 +533,6 @@ public abstract class Resolver {
         return null;
     }
 
-    private Class<?> stringToClass(String className) {
-        String resolvedName = readOptions.getTypeNameAlias(className);
-        Class<?> clazz = ClassUtilities.forName(resolvedName, readOptions.getClassLoader());
-        if (clazz == null) {
-            if (readOptions.isFailOnUnknownType()) {
-                throw new JsonIoException("Unknown type (class) '" + className + "' not defined.");
-            }
-            clazz = readOptions.getUnknownTypeClass();
-            if (clazz == null) {
-                clazz = LinkedHashMap.class;
-            }
-        }
-        return clazz;
-    }
 
     // Determine the factory type, considering enums and collections
     private Class<?> determineFactoryType(JsonObject jsonObj, Class<?> targetType) {
