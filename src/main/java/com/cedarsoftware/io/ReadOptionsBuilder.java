@@ -17,9 +17,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
+import java.lang.reflect.Method;
 
 import com.cedarsoftware.io.factory.ArrayFactory;
 import com.cedarsoftware.io.factory.EnumClassFactory;
+import com.cedarsoftware.io.factory.RecordFactory;
 import com.cedarsoftware.io.factory.ThrowableFactory;
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.io.reflect.InjectorFactory;
@@ -920,6 +922,17 @@ public class ReadOptionsBuilder {
         private final Map<Class<?>, JsonReader.JsonClassReader> readerCache = new ClassValueMap<>();
         private final JsonReader.ClassFactory throwableFactory = new ThrowableFactory();
         private final JsonReader.ClassFactory enumFactory = new EnumClassFactory();
+        private static final JsonReader.ClassFactory recordFactory = new RecordFactory();
+        private static final Method isRecordMethod;
+
+        static {
+            Method m = null;
+            try {
+                m = Class.class.getMethod("isRecord");
+            } catch (Exception ignore) {
+            }
+            isRecordMethod = m;
+        }
 
         /**
          * Default constructor. Prevent instantiation outside of package.
@@ -1082,7 +1095,22 @@ public class ReadOptionsBuilder {
                 return enumFactory;
             }
 
+            if (isRecord(c)) {
+                return recordFactory;
+            }
+
             return null;
+        }
+
+        private static boolean isRecord(Class<?> c) {
+            if (isRecordMethod == null || c == null) {
+                return false;
+            }
+            try {
+                return (Boolean) isRecordMethod.invoke(c);
+            } catch (Exception ignore) {
+                return false;
+            }
         }
 
         /**

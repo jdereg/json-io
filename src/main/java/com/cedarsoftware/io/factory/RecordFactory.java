@@ -29,6 +29,41 @@ import com.cedarsoftware.util.ExceptionUtilities;
 public class RecordFactory implements JsonReader.ClassFactory {
     private RecordFactory() {}
 
+    @Override
+    public Object newInstance(Class<?> c, JsonObject jsonObj, Resolver resolver) {
+        try {
+            ArrayList<Class<?>> lParameterTypes = new ArrayList<>(jsonObj.size());
+            ArrayList<Object> lParameterValues = new ArrayList<>(jsonObj.size());
+
+            Method getRecordComponents = Class.class.getMethod("getRecordComponents");
+            Object[] recordComponents = (Object[]) getRecordComponents.invoke(c);
+            for (Object recordComponent : recordComponents) {
+                Class<?> type = (Class<?>) recordComponent.getClass().getMethod("getType").invoke(recordComponent);
+                lParameterTypes.add(type);
+
+                String parameterName = (String) recordComponent.getClass().getMethod("getName").invoke(recordComponent);
+                JsonObject paramValueJsonObj = new JsonObject();
+
+                paramValueJsonObj.setType(type);
+                paramValueJsonObj.setValue(jsonObj.get(parameterName));
+
+                if (resolver.valueToTarget(paramValueJsonObj)) {
+                    lParameterValues.add(paramValueJsonObj.getTarget());
+                } else {
+                    lParameterValues.add(paramValueJsonObj.getValue());
+                }
+            }
+
+            Constructor<?> constructor = c.getDeclaredConstructor(lParameterTypes.toArray(new Class[0]));
+            ExceptionUtilities.safelyIgnoreException(() -> constructor.setAccessible(true));
+            return constructor.newInstance(lParameterValues.toArray(new Object[0]));
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException("Record de-serialization only works with java>=16.", e);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static class RecordReader implements JsonReader.JsonClassReader
     {
         public Object read(Object o, Resolver resolver)
