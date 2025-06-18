@@ -690,7 +690,13 @@ public class JsonReader implements Closeable
         try {
             // Determine the root type if not explicitly provided
             if (rootType == null) {
-                rootType = rootObj.getType() == null ? Object.class : rootObj.getType();
+                if (rootObj.getType() != null) {
+                    rootType = rootObj.getType();
+                } else if (rootObj.getTypeString() != null) {
+                    rootType = stringToClass(rootObj.getTypeString());
+                } else {
+                    rootType = Object.class;
+                }
             }
 
             // Delegate the conversion to the resolver using the converter
@@ -776,6 +782,20 @@ public class JsonReader implements Closeable
             return msg + "\nLast read: " + input.getLastSnippet() + "\nline: " + input.getLine() + ", col: " + input.getCol();
         }
         return msg;
+    }
+
+    private Class<?> stringToClass(String className) {
+        Class<?> clazz = ClassUtilities.forName(className, readOptions.getClassLoader());
+        if (clazz == null) {
+            if (readOptions.isFailOnUnknownType()) {
+                throw new JsonIoException("Unknown type (class) '" + className + "' not defined.");
+            }
+            clazz = readOptions.getUnknownTypeClass();
+            if (clazz == null) {
+                clazz = LinkedHashMap.class;
+            }
+        }
+        return clazz;
     }
 
     /**

@@ -343,9 +343,10 @@ class JsonParser {
             // Process key-value pairing.
             switch (field) {
                 case TYPE:
-                    Class<?> type = loadType(value);
+                    if (!(value instanceof String)) {
+                        error("Expected a String for " + TYPE + ", instead got: " + value);
+                    }
                     jObj.setTypeString((String) value);
-                    jObj.setType(type);
                     break;
 
                 case ENUM:  // Legacy support (@enum was used to indicate EnumSet in prior versions)
@@ -855,9 +856,7 @@ class JsonParser {
         if (!(value instanceof String)) {
             error("Expected a String for " + ENUM + ", instead got: " + value);
         }
-        Class<?> enumClass = stringToClass((String) value);
         jObj.setTypeString((String) value);
-        jObj.setType(enumClass);
 
         // Only set empty items if no items were specified in JSON
         if (jObj.getItems() == null) {
