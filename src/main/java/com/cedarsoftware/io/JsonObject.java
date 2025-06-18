@@ -42,9 +42,10 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     // Explicit fields for meta data
     private Object[] items;
     private Object[] keys;
+    private String typeString;
 
     public String toString() {
-        String jType = type == null ? "not set" : type.getTypeName();
+        String jType = typeString != null ? typeString : (type == null ? "not set" : type.getTypeName());
         String targetInfo = target == null ? "null" : jType;
         return "JsonObject(id:" + id + ", type:" + jType + ", target:" + targetInfo + ", line:" + line + ", col:" + col + ", size:" + size() + ")";
     }
@@ -111,6 +112,19 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         }
         this.keys = keys;
         hash = null;
+    }
+
+    /**
+     * Return the raw value provided for the {@code @type} field, if any.
+     *
+     * @return String containing the raw type name or {@code null} if none was provided
+     */
+    public String getTypeString() {
+        return typeString;
+    }
+
+    void setTypeString(String typeString) {
+        this.typeString = typeString;
     }
 
     public int size() {

@@ -344,6 +344,7 @@ class JsonParser {
             switch (field) {
                 case TYPE:
                     Class<?> type = loadType(value);
+                    jObj.setTypeString((String) value);
                     jObj.setType(type);
                     break;
 
@@ -855,6 +856,7 @@ class JsonParser {
             error("Expected a String for " + ENUM + ", instead got: " + value);
         }
         Class<?> enumClass = stringToClass((String) value);
+        jObj.setTypeString((String) value);
         jObj.setType(enumClass);
 
         // Only set empty items if no items were specified in JSON
