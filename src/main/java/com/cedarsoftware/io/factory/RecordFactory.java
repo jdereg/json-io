@@ -27,7 +27,7 @@ import com.cedarsoftware.util.ExceptionUtilities;
  *         limitations under the License.
  */
 public class RecordFactory implements JsonReader.ClassFactory {
-    private RecordFactory() {}
+    public RecordFactory() {}
 
     @Override
     public Object newInstance(Class<?> c, JsonObject jsonObj, Resolver resolver) {

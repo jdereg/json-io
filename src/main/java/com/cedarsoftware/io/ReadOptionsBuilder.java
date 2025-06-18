@@ -34,6 +34,7 @@ import com.cedarsoftware.util.ClassValueMap;
 import com.cedarsoftware.util.ClassValueSet;
 import com.cedarsoftware.util.ConcurrentSet;
 import com.cedarsoftware.util.Convention;
+import com.cedarsoftware.util.ReflectionUtils;
 import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.convert.CommonValues;
 import com.cedarsoftware.util.convert.Convert;
@@ -928,7 +929,7 @@ public class ReadOptionsBuilder {
         static {
             Method m = null;
             try {
-                m = Class.class.getMethod("isRecord");
+                m = ReflectionUtils.getMethod(Class.class, "isRecord");
             } catch (Exception ignore) {
             }
             isRecordMethod = m;
