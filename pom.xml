@@ -28,7 +28,9 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <version.java-util>3.3.3</version.java-util>
         <!-- testing only -->
+        <version.junit-jupiter-api>5.11.4</version.junit-jupiter-api>
         <version.junit-jupiter-params>5.11.4</version.junit-jupiter-params>
+        <version.mockito-junit-jupiter>4.11.0</version.mockito-junit-jupiter>
         <version.assertj-core>3.27.3</version.assertj-core>
         <version.gson>2.11.0</version.gson>
         <version.jackson-core>2.18.2</version.jackson-core>
@@ -67,7 +69,7 @@
                         <version>${version.maven-compiler-plugin}</version>
                         <configuration>
                             <release>8</release>
-                            <testRelease>21</testRelease>
+                            <testRelease>8</testRelease>
                             <encoding>${project.build.sourceEncoding}</encoding>
                         </configuration>
                     </plugin>
@@ -330,25 +332,16 @@
     </build>
 
     <dependencies>
-
-        <dependency>
-            <groupId>com.cedarsoftware</groupId>
-            <artifactId>java-util</artifactId>
-            <version>${version.java-util}</version>
-        </dependency>
-
-        <!-- ALL test-scope dependencies below -->
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-            <version>${version.junit-jupiter-params}</version>
-            <scope>test</scope>
-        </dependency>
-
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
-            <version>${version.junit-jupiter-params}</version>
+            <version>${version.junit-jupiter-api}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${version.junit-jupiter-api}</version>
             <scope>test</scope>
         </dependency>
 
@@ -360,9 +353,9 @@
         </dependency>
 
         <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>${version.gson}</version>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>${version.mockito-junit-jupiter}</version>
             <scope>test</scope>
         </dependency>
 
@@ -370,6 +363,19 @@
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
             <version>${version.assertj-core}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.cedarsoftware</groupId>
+            <artifactId>java-util</artifactId>
+            <version>${version.java-util}</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>${version.gson}</version>
             <scope>test</scope>
         </dependency>
 
