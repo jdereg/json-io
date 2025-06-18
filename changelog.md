@@ -4,6 +4,7 @@
 * Fixed deserialization of Java records
 * Tests now create record classes via reflection for JDK 8 compatibility
 * SealableNavigableMap now wraps returned entries to enforce immutability
+* Documentation expanded for CompactMap usage and builder() caveats
 #### 4.54.0 Updated to use java-util 3.3.1
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.3.1` to `3.3.2.`
 #### 4.53.0 Updated to use java-util 3.3.1
