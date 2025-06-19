@@ -18,6 +18,7 @@
 * Corrected assertion for `retainAll` result in `SealableNavigableSetAdditionalTest`
 * Tests avoid `ByteArrayOutputStream.toString(Charset)` for JDK 8 compatibility
 * Documentation updated with guidance for parsing JSON that references unknown classes
+* Enum alias/coercion tests now force type info to be written so enums deserialize correctly
 * RecordFactory now uses java-util `ReflectionUtils`
 * Fixed `EnumTests` to deserialize enums written as primitive strings by providing the root class
 * Added RecordReader test

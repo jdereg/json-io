@@ -29,6 +29,7 @@ class EnumAliasCoercionTest {
         // Add alias
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .aliasTypeName(OldEnum.class.getName(), "OldEnum")
+                .showTypeInfoAlways()
                 .build();
 
         // Write using alias
@@ -78,6 +79,7 @@ class EnumAliasCoercionTest {
         // Create write options with alias
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .aliasTypeName(OldEnum.class.getName(), "OldEnum")
+                .showTypeInfoAlways()
                 .build();
 
         // Write with alias
