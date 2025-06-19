@@ -97,7 +97,7 @@ class SealableNavigableSetAdditionalTest {
         assertTrue(set.addAll(asList(40, 50)));
         assertTrue(set.remove(Integer.valueOf(20)));
         assertTrue(set.removeAll(asList(10)));
-        assertTrue(set.retainAll(asList(30, 40, 50)));
+        assertFalse(set.retainAll(asList(30, 40, 50)));
         assertEquals(Integer.valueOf(30), set.pollFirst());
         assertEquals(Integer.valueOf(50), set.pollLast());
         set.clear();
