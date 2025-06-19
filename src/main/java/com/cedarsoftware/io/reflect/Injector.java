@@ -175,7 +175,7 @@ public class Injector {
     public static Injector create(Field field, String methodName, String uniqueFieldName) {
         // find method that returns void
         try {
-            MethodType methodType = MethodType.methodType(Void.class, field.getType());
+            MethodType methodType = MethodType.methodType(void.class, field.getType());
             MethodHandle handle = MethodHandles.publicLookup().findVirtual(field.getDeclaringClass(), methodName, methodType);
             return new Injector(field, handle, uniqueFieldName, methodName);
         } catch (NoSuchMethodException | IllegalAccessException ex) {
