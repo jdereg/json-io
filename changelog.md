@@ -30,6 +30,7 @@
 * SealableSet(Collection) now copies the supplied collection instead of wrapping it
 * Added unit test for Unicode surrogate pair escapes
 * Added APIs to remove permanent method filters and accessor factories
+* Fixed enum round-trip test to specify target class
 #### 4.54.0 Updated to use java-util 3.3.1
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.3.1` to `3.3.2.`
 #### 4.53.0 Updated to use java-util 3.3.1
