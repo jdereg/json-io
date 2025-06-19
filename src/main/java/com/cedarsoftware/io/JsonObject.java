@@ -91,9 +91,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         if (array == null) {
             throw new JsonIoException("Argument array cannot be null");
         }
-        if (!array.getClass().isArray()) {
-            throw new JsonIoException("Argument array must be an array, type: " + array.getClass().getName());
-        }
         this.items = array;
         hash = null;
     }
@@ -106,9 +103,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     void setKeys(Object[] keys) {
         if (keys == null) {
             throw new JsonIoException("Argument 'keys' cannot be null");
-        }
-        if (!keys.getClass().isArray()) {
-            throw new JsonIoException("Argument 'keys' must be an array, type: " + keys.getClass().getName());
         }
         this.keys = keys;
         hash = null;
