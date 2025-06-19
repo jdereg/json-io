@@ -14,6 +14,7 @@
 * Added RecordReader test
 * Added NamedMethodFilter tests and null-safe handling
 * Added tests for Injector's private constructors
+* Fixed `SealableNavigableSet.tailSet(E)` to include the starting element
 * Added unit tests for `SingletonList` covering uninitialized state and mutation restrictions
 * Fixed VarHandle reflection to allow private-constructor injector
 * RecordFactory now checks the Java version before using records

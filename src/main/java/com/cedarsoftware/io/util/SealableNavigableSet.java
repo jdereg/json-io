@@ -144,7 +144,7 @@ public class SealableNavigableSet<E> implements NavigableSet<E> {
         return new SealableNavigableSet<>(navSet.headSet(toElement, inclusive), sealedSupplier);
     }
     public SortedSet<E> tailSet(E fromElement) {
-        return tailSet(fromElement, false);
+        return tailSet(fromElement, true);
     }
     public NavigableSet<E> tailSet(E fromElement, boolean inclusive) {
         return new SealableNavigableSet<>(navSet.tailSet(fromElement, inclusive), sealedSupplier);
