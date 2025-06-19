@@ -3,6 +3,7 @@ package com.cedarsoftware.io.util;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.NavigableSet;
 import java.util.function.Supplier;
 
 import com.cedarsoftware.util.ConcurrentNavigableMapNullSafe;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -145,5 +147,35 @@ class SealableNavigableMapTest {
 
         sealed = true;
         assertThrows(UnsupportedOperationException.class, () -> descendingMap.put("minus one", -1));
+    }
+
+    @Test
+    void testEquals() {
+        NavigableMap<String, Integer> otherBacking = new ConcurrentNavigableMapNullSafe<>();
+        otherBacking.put("three", 3);
+        otherBacking.put(null, null);
+        otherBacking.put("one", 1);
+        otherBacking.put("two", 2);
+        SealableNavigableMap<String, Integer> other = new SealableNavigableMap<>(otherBacking, sealedSupplier);
+        assertEquals(unmodifiableMap, other);
+        other.put("four", 4);
+        assertNotEquals(unmodifiableMap, other);
+    }
+
+    @Test
+    void testToStringReflectsMapContents() {
+        assertEquals(map.toString(), unmodifiableMap.toString());
+        unmodifiableMap.put("four", 4);
+        assertEquals(map.toString(), unmodifiableMap.toString());
+    }
+
+    @Test
+    void testDescendingKeySetReflectsChanges() {
+        unmodifiableMap.put("zero", 0);
+        NavigableSet<String> keys = unmodifiableMap.descendingKeySet();
+        assertTrue(keys.contains("zero"));
+
+        sealed = true;
+        assertThrows(UnsupportedOperationException.class, () -> keys.add("minus one"));
     }
 }
