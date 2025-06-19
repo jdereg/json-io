@@ -18,6 +18,7 @@
 * Documentation updated with guidance for parsing JSON that references unknown classes
 * Enum alias/coercion tests now force type info to be written so enums deserialize correctly
 * RecordFactory now uses java-util `ReflectionUtils`
+* Added String-to-enum fallback conversion for root objects
 * Fixed NamedMethodFilter test by making Example class public
 * Added NamedMethodFilter tests and null-safe handling
 * Fixed `SealableNavigableSet.tailSet(E)` to include the starting element
