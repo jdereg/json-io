@@ -13,6 +13,7 @@
 * Fixed SealableNavigableSet.retainAll to correctly return modification status
 * Fixed SealableNavigableSet.addAll to report modifications
 * Corrected assertion for `retainAll` result in `SealableNavigableSetAdditionalTest`
+* Tests avoid `ByteArrayOutputStream.toString(Charset)` for JDK 8 compatibility
 * Documentation updated with guidance for parsing JSON that references unknown classes
 * RecordFactory now uses java-util `ReflectionUtils`
 * Added RecordReader test
