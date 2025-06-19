@@ -24,6 +24,7 @@
 * Fixed `SealableNavigableSet.tailSet(E)` to include the starting element
 * Expanded `SingletonList` tests for branch coverage
 * Fixed primitive array conversion handling in `Resolver.valueToTarget`
+* Fixed EnumSet traversal when enum element lacks a name
 * Fixed VarHandle reflection to allow private-constructor injector
 * Fixed VarHandle injection using a MethodHandle
 * Fixed VarHandle injection invocation for reflection-based Injector

@@ -279,6 +279,16 @@ public class MapResolver extends Resolver {
                             }
                         }
                     } else {
+                        if (col instanceof EnumSet) {
+                            Class<?> rawType = jObj.getRawType();
+                            boolean noEnumName = !jObj.containsKey("name") && !jObj.containsKey("Enum.name") && !jObj.hasValue();
+                            if (rawType != null && rawType.isEnum() && noEnumName) {
+                                jObj.setFinished();
+                                idx++;
+                                continue;
+                            }
+                        }
+
                         jObj.setType(Object.class);
                         createInstance(jObj);
                         boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getRawType());
