@@ -4,6 +4,7 @@
 * Fixed deserialization of Java records
 * Tests now create record classes via reflection for JDK 8 compatibility
 * SealableNavigableMap now wraps returned entries to enforce immutability
+* Preserve comparator when constructing `SealableNavigableSet` from a `SortedSet`
 * Documentation expanded for CompactMap usage and builder() caveats
 * JsonObject exposes `getTypeString()` with the raw `@type` value
 * Added tests for ModifierMaskFilter.
