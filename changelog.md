@@ -29,6 +29,7 @@
 * Fixed Injector method-based creation to correctly locate void setters
 * Injector.create now supports invoking package-private and private setter methods
 * SealableSet(Collection) now copies the supplied collection instead of wrapping it
+* Added unit tests for CharBufferWriter.
 #### 4.54.0 Updated to use java-util 3.3.1
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.3.1` to `3.3.2.`
 #### 4.53.0 Updated to use java-util 3.3.1
