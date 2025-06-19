@@ -4,6 +4,7 @@
 * Added class-level Javadoc for `ByteArrayWriter` describing Base64 encoding
 * Fixed deserialization of Java records
 * Tests now create record classes via reflection for JDK 8 compile compatibility.
+* InjectorPrivateConstructorsTest now uses `ReflectionUtils` for reflective calls.
 * Replaced `System.out.println` debug output with Java logging via `LoggingConfig`
 * SealableNavigableMap now wraps returned entries to enforce immutability
 * Preserve comparator when constructing `SealableNavigableSet` from a `SortedSet`
