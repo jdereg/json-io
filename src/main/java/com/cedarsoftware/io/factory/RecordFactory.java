@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
-import com.cedarsoftware.util.ExceptionUtilities;
 import com.cedarsoftware.util.ReflectionUtils;
 import com.cedarsoftware.util.SystemUtilities;
 
@@ -68,7 +67,6 @@ public class RecordFactory implements JsonReader.ClassFactory {
             if (constructor == null) {
                 throw new NoSuchMethodException("record constructor not found");
             }
-            ExceptionUtilities.safelyIgnoreException(() -> constructor.setAccessible(true));
             return constructor.newInstance(lParameterValues.toArray(new Object[0]));
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -117,7 +115,6 @@ public class RecordFactory implements JsonReader.ClassFactory {
                 if (constructor == null) {
                     throw new NoSuchMethodException("record constructor not found");
                 }
-                ExceptionUtilities.safelyIgnoreException(() -> constructor.setAccessible(true));
                 return constructor.newInstance(lParameterValues.toArray(new Object[0]));
             } catch (Exception e) {
                 throw new RuntimeException(e);
