@@ -25,6 +25,7 @@
 * Added NamedMethodFilter tests and null-safe handling
 * Fixed `SealableNavigableSet.tailSet(E)` to include the starting element
 * Expanded `SingletonList` tests for branch coverage
+* Added tests for Resolver.setArrayElement error paths and primitives
 * Fixed VarHandle reflection to allow private-constructor injector
 * RecordFactory now checks the Java version before using records
 * Fixed VarHandle injection using a MethodHandle
