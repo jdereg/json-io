@@ -7,6 +7,7 @@
 * Preserve comparator when constructing `SealableNavigableSet` from a `SortedSet`
 * Documentation expanded for CompactMap usage and builder() caveats
 * JsonObject exposes `getTypeString()` with the raw `@type` value
+* Added unit tests for `JsonObject` equality, hashing and helpers
 * Added tests for ModifierMaskFilter.
 * Added tests for `SealableSet` constructor, `toArray()` and `SealAwareEntry` equality.
 * Pinned core Maven plugin versions to prevent Maven 4 warnings
