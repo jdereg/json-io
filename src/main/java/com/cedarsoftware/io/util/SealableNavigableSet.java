@@ -84,7 +84,8 @@ public class SealableNavigableSet<E> implements NavigableSet<E> {
      */
     public SealableNavigableSet(SortedSet<E> set, Supplier<Boolean> sealedSupplier) {
         this.sealedSupplier = sealedSupplier;
-        navSet = new ConcurrentNavigableSetNullSafe<>(set);
+        navSet = new ConcurrentNavigableSetNullSafe<>(set.comparator());
+        navSet.addAll(set);
     }
 
     /**
