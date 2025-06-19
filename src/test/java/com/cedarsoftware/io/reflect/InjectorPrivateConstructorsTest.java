@@ -5,6 +5,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
+import com.cedarsoftware.util.ReflectionUtils;
+
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,12 +42,18 @@ class InjectorPrivateConstructorsTest {
 
         Class<?> methodHandlesClass = Class.forName("java.lang.invoke.MethodHandles");
         Class<?> lookupClass = Class.forName("java.lang.invoke.MethodHandles$Lookup");
-        Method lookupMethod = methodHandlesClass.getMethod("lookup");
+
+        Method lookupMethod = ReflectionUtils.getMethod(methodHandlesClass, "lookup");
         Object lookup = lookupMethod.invoke(null);
-        Method privateLookupInMethod = methodHandlesClass.getMethod("privateLookupIn", Class.class, lookupClass);
+
+        Method privateLookupInMethod = ReflectionUtils.getMethod(methodHandlesClass,
+                "privateLookupIn", Class.class, lookupClass);
         Object privateLookup = privateLookupInMethod.invoke(null, VarHandleTarget.class, lookup);
-        Method findVarHandleMethod = lookupClass.getMethod("findVarHandle", Class.class, String.class, Class.class);
-        Object varHandle = findVarHandleMethod.invoke(privateLookup, VarHandleTarget.class, "number", int.class);
+
+        Method findVarHandleMethod = ReflectionUtils.getMethod(lookupClass,
+                "findVarHandle", Class.class, String.class, Class.class);
+        Object varHandle = findVarHandleMethod.invoke(privateLookup,
+                VarHandleTarget.class, "number", int.class);
 
         Constructor<Injector> ctor = Injector.class.getDeclaredConstructor(Field.class, Object.class, String.class, String.class);
         ctor.setAccessible(true);

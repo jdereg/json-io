@@ -3,6 +3,7 @@
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.3.2` to `3.3.3.`
 * Fixed deserialization of Java records
 * Tests now create record classes via reflection for JDK 8 compile compatibility.
+* InjectorPrivateConstructorsTest now uses `ReflectionUtils` for reflective calls.
 * Replaced `System.out.println` debug output with Java logging via `LoggingConfig`
 * Added unit test for `DefaultConverterOptions.getCustomOption`
 * SealableNavigableMap now wraps returned entries to enforce immutability
