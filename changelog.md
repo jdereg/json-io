@@ -13,6 +13,7 @@
 * Added RecordReader test
 * Added NamedMethodFilter tests and null-safe handling
 * Added tests for Injector's private constructors
+* Fixed VarHandle reflection to allow private-constructor injector
 * RecordFactory now checks the Java version before using records
 * Added additional SealableList tests for remaining APIs
 * Added Injector tests for VarHandle injection and getters

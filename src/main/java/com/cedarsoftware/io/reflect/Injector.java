@@ -61,7 +61,10 @@ public class Injector {
 
                 varHandleClass = Class.forName("java.lang.invoke.VarHandle");
                 findVarHandleMethod = lookupClass.getMethod("findVarHandle", Class.class, String.class, Class.class);
-                varHandleSetMethod = varHandleClass.getMethod("set", Object.class, Object.class);
+                // VarHandle#set is declared with a varargs parameter. Retrieve the
+                // Method instance using the actual varargs signature so reflection
+                // invocation works across JDK versions.
+                varHandleSetMethod = varHandleClass.getMethod("set", Object[].class);
             } catch (Exception e) {
                 // VarHandle reflection setup failed.
                 lookup = null;
