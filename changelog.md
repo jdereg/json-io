@@ -18,6 +18,7 @@
 * Documentation updated with guidance for parsing JSON that references unknown classes
 * RecordFactory now uses java-util `ReflectionUtils`
 * Added RecordReader test
+* Added tests for WriteOptionsBuilder features
 * Added NamedMethodFilter tests and null-safe handling
 * Added tests for Injector's private constructors
 * Fixed `SealableNavigableSet.tailSet(E)` to include the starting element
