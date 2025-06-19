@@ -503,7 +503,7 @@ public abstract class Resolver {
         return createInstanceUsingType(jsonObj);
     }
 
-    // Resolve target type with proper coercion and enum handling
+    // Resolve a target type with proper coercion and enum handling
     private Class<?> resolveTargetType(JsonObject jsonObj) {
         Class<?> targetType = coerceClassIfNeeded(jsonObj.getRawType());
         jsonObj.setType(targetType);
