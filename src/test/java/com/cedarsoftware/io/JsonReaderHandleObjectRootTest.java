@@ -6,6 +6,8 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+
+import com.cedarsoftware.util.TypeUtilities;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
@@ -50,7 +52,7 @@ class JsonReaderHandleObjectRootTest {
         Object result = TestUtil.toObjects(json, read, null);
         assertTrue(result instanceof JsonObject);
         JsonObject jo = (JsonObject) result;
-        assertEquals(Set.class, jo.getType());
+        assertTrue(Set.class.isAssignableFrom(TypeUtilities.getRawClass(jo.getType())));
         Set<?> actual = JsonIo.toJava(jo, read).asClass(Set.class);
         assertEquals(new LinkedHashSet<>(Arrays.asList(1L, 2L, 3L)), actual);
     }

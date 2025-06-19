@@ -18,6 +18,7 @@
 * Enum alias/coercion tests now force type info to be written so enums deserialize correctly
 * Updated EnumBasicCreationTest to expect enum values serialized as simple strings
 * RecordFactory now uses java-util `ReflectionUtils`
+* Adjusted TreeSet substitution test to check assignability of Set type
 * Root-level enums with fields now include type info for reliable deserialization
 * Added String-to-enum fallback conversion for root objects
 * Fixed `SealableNavigableSet.tailSet(E)` to include the starting element
