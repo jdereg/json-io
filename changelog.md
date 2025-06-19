@@ -17,6 +17,7 @@
 * RecordFactory now checks the Java version before using records
 * Added additional SealableList tests for remaining APIs
 * Added Injector tests for VarHandle injection and getters
+* Added tests for `Accessor.getMethodHandle()` and `getGenericType()`
 * Fixed VarHandle injection using a MethodHandle
 * Fixed VarHandle injection invocation for reflection-based Injector
 #### 4.54.0 Updated to use java-util 3.3.1
