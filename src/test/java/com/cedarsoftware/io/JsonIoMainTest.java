@@ -26,7 +26,9 @@ class JsonIoMainTest {
         // older constructor to remain compatible with JDK 8.
         String output = new String(baos.toByteArray(), StandardCharsets.UTF_8);
         assertTrue(output.contains("json-io supported conversions"));
-        assertTrue(output.contains("java.lang.String"));
-        assertTrue(output.contains("java.lang.Integer"));
+        assertTrue(output.contains("String"));
+        assertTrue(output.contains("Integer"));
+        assertTrue(output.contains("ZonedDateTime"));
+        assertTrue(output.contains("byte[]"));
     }
 }
