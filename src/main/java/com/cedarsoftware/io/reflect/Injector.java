@@ -36,7 +36,7 @@ public class Injector {
     private static final Object LOOKUP;
     private static final Method PRIVATE_LOOKUP_IN_METHOD;
     private static final Method FIND_VAR_HANDLE_METHOD;
-    private static final Method VAR_HANDLE_SET_METHOD;
+    private static final MethodHandle VAR_HANDLE_SET_METHOD;
     private static final Class<?> VAR_HANDLE_CLASS;        // although appears unused, it is intentional for caching
 
     static {
@@ -46,7 +46,7 @@ public class Injector {
         Object lookup = null;
         Method privateLookupInMethod = null;
         Method findVarHandleMethod = null;
-        Method varHandleSetMethod = null;
+        MethodHandle varHandleSetMethod = null;
         Class<?> varHandleClass = null;
 
         if (javaVersion >= 9) {
@@ -61,10 +61,8 @@ public class Injector {
 
                 varHandleClass = Class.forName("java.lang.invoke.VarHandle");
                 findVarHandleMethod = lookupClass.getMethod("findVarHandle", Class.class, String.class, Class.class);
-                // VarHandle#set is declared with a varargs parameter. Retrieve the
-                // Method instance using the actual varargs signature so reflection
-                // invocation works across JDK versions.
-                varHandleSetMethod = varHandleClass.getMethod("set", Object[].class);
+                MethodType setType = MethodType.methodType(void.class, Object.class, Object.class);
+                varHandleSetMethod = MethodHandles.publicLookup().findVirtual(varHandleClass, "set", setType);
             } catch (Exception e) {
                 // VarHandle reflection setup failed.
                 lookup = null;
@@ -227,7 +225,7 @@ public class Injector {
         if (varHandle == null || VAR_HANDLE_SET_METHOD == null) {
             throw new JsonIoException("Unable to set field: " + getName() + " - VarHandle not available");
         }
-        VAR_HANDLE_SET_METHOD.invoke(varHandle, new Object[] {object, value});
+        VAR_HANDLE_SET_METHOD.invokeWithArguments(varHandle, object, value);
     }
 
     public Class<?> getType() {
