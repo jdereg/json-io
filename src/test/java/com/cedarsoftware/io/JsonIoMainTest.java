@@ -22,7 +22,9 @@ class JsonIoMainTest {
         } finally {
             System.setOut(originalOut);
         }
-        String output = baos.toString(StandardCharsets.UTF_8);
+        // JDK 10 added ByteArrayOutputStream.toString(Charset), so use the
+        // older constructor to remain compatible with JDK 8.
+        String output = new String(baos.toByteArray(), StandardCharsets.UTF_8);
         assertTrue(output.contains("json-io supported conversions"));
         assertTrue(output.contains("java.lang.String"));
         assertTrue(output.contains("java.lang.Integer"));
