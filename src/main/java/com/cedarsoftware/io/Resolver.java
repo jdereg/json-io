@@ -673,7 +673,9 @@ public abstract class Resolver {
 
         Class<?> javaType = jsonObject.getRawType();
         // For arrays, attempt simple type conversion.
-        if (javaType.isArray() && converter.isSimpleTypeConversionSupported(javaType.getComponentType(), javaType)) {
+        if (javaType.isArray() &&
+                converter.isSimpleTypeConversionSupported(javaType.getComponentType(),
+                        javaType.getComponentType())) {
             Object[] jsonItems = jsonObject.getItems();
             Class<?> componentType = javaType.getComponentType();
             if (jsonItems == null) {    // empty array
