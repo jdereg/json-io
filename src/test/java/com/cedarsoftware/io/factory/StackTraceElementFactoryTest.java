@@ -39,9 +39,38 @@ class StackTraceElementFactoryTest {
     }
 
     @Test
-    void isObjectFinal_returnTrue() {
+    void newInstance_uses4ArgConstructorWhen7ArgFails() {
         StackTraceElementFactory factory = new StackTraceElementFactory();
-        assertThat(factory.isObjectFinal()).isTrue();
+
+        Number lineNumber = new Number() {
+            private int calls;
+
+            @Override
+            public int intValue() {
+                if (calls++ == 0) {
+                    throw new RuntimeException("fail");
+                }
+                return 101;
+            }
+
+            @Override
+            public long longValue() { return intValue(); }
+            @Override
+            public float floatValue() { return intValue(); }
+            @Override
+            public double doubleValue() { return intValue(); }
+        };
+
+        JsonObject object = buildJsonObject("app", "module", "version", "declaringClass",
+                "methodName", "fileName", null);
+        object.put("lineNumber", lineNumber);
+
+        StackTraceElement element = (StackTraceElement) factory.newInstance(StackTraceElement.class, object, null);
+
+        assertThat(element.getLineNumber()).isEqualTo(101);
+        assertThat(element.getModuleName()).isNull();
+        assertThat(element.getModuleVersion()).isNull();
+        assertThat(element.getClassLoaderName()).isNull();
     }
 
     private JsonObject buildJsonObject(String classLoaderName, String moduleName, String moduleVersion, String declaringClass, String methodName, String fileName, Long lineNumber) {

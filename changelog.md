@@ -1,5 +1,5 @@
 ### Revision History
-#### 4.55.0 (unreleased) Updated to use java-util 3.3.1
+#### 4.55.0 (unreleased) Updated to use java-util 3.3.3
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.3.2` to `3.3.3.`
 * Fixed deserialization of Java records
 * Tests now create record classes via reflection for JDK 8 compatibility
