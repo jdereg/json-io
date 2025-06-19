@@ -73,6 +73,18 @@ import com.cedarsoftware.util.convert.DefaultConverterOptions;
  *     In this case, simple Java types may be converted (or left as is for {@code Map} types),
  *     and {@code Collection} types will be converted appropriately.
  *   </li>
+ *   <li>
+ *     <b>4. Parsing JSON with unknown class references:</b>
+ *     <pre>
+ *     ReadOptions opts = new ReadOptionsBuilder()
+ *                               .returnAsJsonObjects()
+ *                               .failOnUnknownType(false)
+ *                               .build();
+ *     Map&lt;String, Object&gt; graph = JsonIo.toJava(jsonString, opts).asClass(Map.class);
+ *     </pre>
+ *     This configuration allows any JSON to be read as a graph of maps, even when
+ *     the {@code @type} values refer to classes not present on the classpath.
+ *   </li>
  * </ul>
  * <p>
  * <b>Note:</b>

@@ -7,6 +7,7 @@
 * Documentation expanded for CompactMap usage and builder() caveats
 * JsonObject exposes `getTypeString()` with the raw `@type` value
 * Pinned core Maven plugin versions to prevent Maven 4 warnings
+* Documentation updated with guidance for parsing JSON that references unknown classes
 #### 4.54.0 Updated to use java-util 3.3.1
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.3.1` to `3.3.2.`
 #### 4.53.0 Updated to use java-util 3.3.1

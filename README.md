@@ -13,6 +13,7 @@ Key Features:
 - Lightweight (`json-io.jar` is 255K, `java-util` is 456K)
 - Compatible with JDK 1.8 through JDK 24
 - Extensive configuration options via `ReadOptionsBuilder` and `WriteOptionsBuilder`
+- Optionally parse JSON with unknown class references into a Map-of-Maps representation
 - Featured on [json.org](http://json.org)
 ## Compatibility
 

@@ -79,6 +79,16 @@ keys and values. Using maps for unknown types provides flexibility, allowing JSO
 >- [ ] Set the class to use (defaults to`LinkedHashMap.class`) when a JSON object is encountered and there is no
    corresponding Java class to instantiate to receive the values.
 
+_Example: Parse any JSON into a Map graph_
+```java
+ReadOptions opts = new ReadOptionsBuilder()
+        .returnAsJsonObjects()
+        .failOnUnknownType(false)
+        .build();
+Map<String, Object> graph = JsonIo.toJava(json, opts).asClass(Map.class);
+```
+This configuration prevents errors for unrecognized `@type` values and ensures all objects are stored as maps.
+
 ### MaxDepth - Security protection
 Set the maximum object nesting level so that no`StackOverflowExceptions`happen.  Instead, you will get a`JsonIoException`letting
 you know that the maximum object nesting level has been reached.

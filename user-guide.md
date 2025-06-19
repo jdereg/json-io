@@ -88,6 +88,23 @@ String updatedJson = JsonIo.toJson(jsonMap, writeOptions);
 Each `JsonObject` retains the raw `@type` value from the input JSON. Call
 `getTypeString()` to retrieve this value without triggering type resolution.
 
+### Parsing JSON with Unknown Classes
+If the JSON contains class references that are not available on the classpath,
+configure the reader to skip type resolution and return a graph of `Map`
+instances. This allows arbitrary JSON to be loaded, inspected, and
+re-serialized.
+
+```java
+ReadOptions opts = new ReadOptionsBuilder()
+        .returnAsJsonObjects()
+        .failOnUnknownType(false)
+        .build();
+Map<String, Object> graph = JsonIo.toJava(json, opts).asClass(Map.class);
+```
+
+All objects will be represented as Maps (or collections) so the entire structure
+can be traversed or modified without requiring the referenced classes.
+
 ### Generic Type Support
 For working with generic types like `List<Employee>` or complex nested generics, use the `TypeHolder` class to preserve full generic type information:
 
