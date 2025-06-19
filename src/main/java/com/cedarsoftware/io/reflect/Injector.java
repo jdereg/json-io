@@ -227,7 +227,7 @@ public class Injector {
         if (varHandle == null || VAR_HANDLE_SET_METHOD == null) {
             throw new JsonIoException("Unable to set field: " + getName() + " - VarHandle not available");
         }
-        VAR_HANDLE_SET_METHOD.invoke(varHandle, object, value);
+        VAR_HANDLE_SET_METHOD.invoke(varHandle, new Object[] {object, value});
     }
 
     public Class<?> getType() {
