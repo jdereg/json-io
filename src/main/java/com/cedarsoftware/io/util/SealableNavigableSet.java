@@ -156,7 +156,19 @@ public class SealableNavigableSet<E> implements NavigableSet<E> {
     public void clear() { throwIfSealed(); navSet.clear(); }
     public boolean remove(Object o) { throwIfSealed(); return navSet.remove(o); }
     public boolean removeAll(Collection<?> col) { throwIfSealed(); return navSet.removeAll(col); }
-    public boolean retainAll(Collection<?> col) { throwIfSealed(); return navSet.retainAll(col); }
+    public boolean retainAll(Collection<?> col) {
+        throwIfSealed();
+        boolean modified = false;
+        Iterator<E> it = navSet.iterator();
+        while (it.hasNext()) {
+            E e = it.next();
+            if (!col.contains(e)) {
+                it.remove();
+                modified = true;
+            }
+        }
+        return modified;
+    }
     public E pollFirst() { throwIfSealed(); return navSet.pollFirst(); }
     public E pollLast() { throwIfSealed(); return navSet.pollLast(); }
 
