@@ -19,6 +19,7 @@
 * Tests avoid `ByteArrayOutputStream.toString(Charset)` for JDK 8 compatibility
 * Documentation updated with guidance for parsing JSON that references unknown classes
 * RecordFactory now uses java-util `ReflectionUtils`
+* Fixed `EnumTests` to deserialize enums written as primitive strings by providing the root class
 * Added RecordReader test
 * Added tests for WriteOptionsBuilder features
 * Fixed NamedMethodFilter test by making Example class public
