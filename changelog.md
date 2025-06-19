@@ -21,6 +21,7 @@
 * Added unit tests for `SingletonList` covering uninitialized state and mutation restrictions
 * Expanded `SingletonList` tests for branch coverage
 * Fixed VarHandle reflection to allow private-constructor injector
+* Added unit tests for `SingletonMap` covering initialization, view collections, and equality
 * RecordFactory now checks the Java version before using records
 * Fixed VarHandle injection using a MethodHandle
 * Fixed VarHandle injection invocation for reflection-based Injector
