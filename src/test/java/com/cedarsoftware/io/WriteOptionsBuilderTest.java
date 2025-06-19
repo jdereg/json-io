@@ -174,5 +174,22 @@ public class WriteOptionsBuilderTest {
         opts2.getAccessorsForClass(Example.class);
         assertFalse(factory2.called);
     }
+
+    @Test
+    void testRemovePermanentAccessorFactory() {
+        TestAccessorFactory factory = new TestAccessorFactory();
+        WriteOptionsBuilder.addPermanentAccessorFactory("temp", factory);
+
+        WriteOptions opts = new WriteOptionsBuilder().build();
+        opts.getAccessorsForClass(Example.class);
+        assertTrue(factory.called);
+
+        factory.called = false;
+        WriteOptionsBuilder.removePermanentAccessorFactory("temp");
+
+        WriteOptions opts2 = new WriteOptionsBuilder().build();
+        opts2.getAccessorsForClass(Example.class);
+        assertFalse(factory.called);
+    }
 }
 
