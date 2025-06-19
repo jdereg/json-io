@@ -8,6 +8,7 @@
 * Documentation expanded for CompactMap usage and builder() caveats
 * JsonObject exposes `getTypeString()` with the raw `@type` value
 * Added tests for ModifierMaskFilter.
+* Added tests for `SealableSet` constructor, `toArray()` and `SealAwareEntry` equality.
 * Pinned core Maven plugin versions to prevent Maven 4 warnings
 * Fixed SealableNavigableSet.retainAll to correctly return modification status
 * Fixed SealableNavigableSet.addAll to report modifications
