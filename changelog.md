@@ -37,6 +37,7 @@
 * Fixed failing test for non-simple root type handling
 * Fixed enum round-trip test to specify target class
 * Added tests covering Pattern and Currency serialization
+* Updated JsonReaderHandleObjectRootTest to expect JsonIoException on return type mismatch
 #### 4.54.0 Updated to use java-util 3.3.1
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.3.1` to `3.3.2.`
 #### 4.53.0 Updated to use java-util 3.3.1

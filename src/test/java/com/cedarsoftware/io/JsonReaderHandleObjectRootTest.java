@@ -14,6 +14,8 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.cedarsoftware.io.JsonIoException;
+
 class JsonReaderHandleObjectRootTest {
 
     static class NullReader extends JsonReader {
@@ -75,7 +77,7 @@ class JsonReaderHandleObjectRootTest {
     @Test
     void incompatibleRootTypeThrows() {
         String json = "{\"@type\":\"java.util.concurrent.atomic.AtomicInteger\",\"value\":5}";
-        assertThrows(ClassCastException.class, () -> TestUtil.toObjects(json, List.class));
+        assertThrows(JsonIoException.class, () -> TestUtil.toObjects(json, List.class));
     }
 
     @Test
