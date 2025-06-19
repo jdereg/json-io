@@ -369,7 +369,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 } else if (!writeOptions.isAlwaysShowingType()) {
                     JsonClassWriter writer = writeOptions.getCustomWriter(obj.getClass());
                     if (writer instanceof Writers.EnumsAsStringWriter) {
-                        showType = false;
+                        String alias = writeOptions.getTypeNameAlias(obj.getClass().getName());
+                        if (alias.equals(obj.getClass().getName())) {
+                            showType = false;
+                        }
                     }
                 }
             }
