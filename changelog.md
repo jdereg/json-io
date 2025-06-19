@@ -28,6 +28,7 @@
 * Fixed primitive array conversion handling in `Resolver.valueToTarget`
 * Fixed EnumSet traversal when enum element lacks a name
 * Fixed VarHandle reflection to allow private-constructor injector
+* Added unit tests for JsonObject map-view methods
 * Fixed VarHandle injection using a MethodHandle
 * Fixed VarHandle injection invocation for reflection-based Injector
 * Fixed Injector method-based creation to correctly locate void setters
