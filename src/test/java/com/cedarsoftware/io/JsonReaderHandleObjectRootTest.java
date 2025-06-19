@@ -92,7 +92,7 @@ class JsonReaderHandleObjectRootTest {
         IdentityReader reader = new IdentityReader(opts);
         JsonObject obj = new JsonObject();
         obj.setTarget("hello");
-        obj.setType(Object.class);
+        obj.setType(Thread.class); // use a non-simple type
         Object result = reader.invokeHandle(null, obj);
         assertEquals("hello", result);
     }
