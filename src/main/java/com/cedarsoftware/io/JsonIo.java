@@ -5,6 +5,7 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
 import com.cedarsoftware.io.prettyprint.JsonPrettyPrinter;
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.FastByteArrayInputStream;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
@@ -117,7 +118,8 @@ import java.util.logging.Logger;
  */
 public class JsonIo {
 
-    private static final Logger LOG = LoggingConfig.getLogger(JsonIo.class);
+    private static final Logger LOG = Logger.getLogger(JsonIo.class.getName());
+    static { LoggingConfig.init(); }
 
     private JsonIo() {}
 

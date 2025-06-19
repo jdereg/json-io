@@ -31,7 +31,9 @@ public class TestUtil {
 
     public static <T> T serializeDeserialize(T initial) {
         String json = toJson(initial);
-        return toObjects(json, null);
+        @SuppressWarnings("unchecked")
+        Class<T> root = initial == null ? null : (Class<T>) initial.getClass();
+        return toObjects(json, root);
     }
 
     public static <T> Object serializeDeserializeAsMaps(T initial) {
