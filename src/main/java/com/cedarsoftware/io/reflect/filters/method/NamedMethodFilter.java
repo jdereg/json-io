@@ -28,7 +28,15 @@ public class NamedMethodFilter implements MethodFilter {
         this.methodName = methodName;
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Safely handles {@code null} arguments by returning {@code false}.
+     */
     public boolean filter(Class<?> clazz, String methodName) {
+        if (clazz == null || methodName == null) {
+            return false;
+        }
         return this.clazz.equals(clazz) && this.methodName.equals(methodName);
     }
 }

@@ -9,6 +9,7 @@ import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
 import com.cedarsoftware.util.ExceptionUtilities;
 import com.cedarsoftware.util.ReflectionUtils;
+import com.cedarsoftware.util.SystemUtilities;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -28,10 +29,15 @@ import com.cedarsoftware.util.ReflectionUtils;
  *         limitations under the License.
  */
 public class RecordFactory implements JsonReader.ClassFactory {
+    private static final boolean JAVA_16_OR_ABOVE = SystemUtilities.isJavaVersionAtLeast(16, 0);
+
     public RecordFactory() {}
 
     @Override
     public Object newInstance(Class<?> c, JsonObject jsonObj, Resolver resolver) {
+        if (!JAVA_16_OR_ABOVE) {
+            throw new RuntimeException("Record de-serialization only works with java>=16.");
+        }
         try {
             ArrayList<Class<?>> lParameterTypes = new ArrayList<>(jsonObj.size());
             ArrayList<Object> lParameterValues = new ArrayList<>(jsonObj.size());
@@ -64,8 +70,6 @@ public class RecordFactory implements JsonReader.ClassFactory {
             }
             ExceptionUtilities.safelyIgnoreException(() -> constructor.setAccessible(true));
             return constructor.newInstance(lParameterValues.toArray(new Object[0]));
-        } catch (NoSuchMethodException e) {
-            throw new RuntimeException("Record de-serialization only works with java>=16.", e);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -75,6 +79,9 @@ public class RecordFactory implements JsonReader.ClassFactory {
     {
         public Object read(Object o, Resolver resolver)
         {
+            if (!JAVA_16_OR_ABOVE) {
+                throw new RuntimeException("Record de-serialization only works with java>=16.");
+            }
             try {
                 JsonObject jsonObj = (JsonObject) o;
 
@@ -112,8 +119,6 @@ public class RecordFactory implements JsonReader.ClassFactory {
                 }
                 ExceptionUtilities.safelyIgnoreException(() -> constructor.setAccessible(true));
                 return constructor.newInstance(lParameterValues.toArray(new Object[0]));
-            } catch (NoSuchMethodException e) {
-                throw new RuntimeException("Record de-serialization only works with java>=16.", e);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

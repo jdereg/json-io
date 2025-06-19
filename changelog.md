@@ -1,15 +1,18 @@
 ### Revision History
-#### 4.55.0 (unreleased) Updated to use java-util 3.3.1
+#### 4.55.0 (unreleased) Updated to use java-util 3.3.3
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.3.2` to `3.3.3.`
 * Fixed deserialization of Java records
 * Tests now create record classes via reflection for JDK 8 compatibility
 * SealableNavigableMap now wraps returned entries to enforce immutability
 * Documentation expanded for CompactMap usage and builder() caveats
 * JsonObject exposes `getTypeString()` with the raw `@type` value
+* Added tests for ModifierMaskFilter.
 * Pinned core Maven plugin versions to prevent Maven 4 warnings
 * Documentation updated with guidance for parsing JSON that references unknown classes
 * RecordFactory now uses java-util `ReflectionUtils`
 * Added RecordReader test
+* Added NamedMethodFilter tests and null-safe handling
+* RecordFactory now checks the Java version before using records
 #### 4.54.0 Updated to use java-util 3.3.1
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.3.1` to `3.3.2.`
 #### 4.53.0 Updated to use java-util 3.3.1
