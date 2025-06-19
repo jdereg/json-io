@@ -44,18 +44,6 @@ implementation 'com.cedarsoftware:json-io:4.54.0'
  </dependency>
 ```
 
-##### Java Logging
-`json-io` uses `java.util.logging` instead of an external logging framework. This keeps the
-core library lightweight. The accompanying `LoggingConfig` class from `java-util` can route
-these logs to SLF4J or other frameworks:
-
-```java
-// Basic JUL setup
-LoggingConfig.configure();
-
-// Optionally forward JUL records to SLF4J
-LoggingConfig.bridgeHandlersToSLF4J();
-```
 ___
 
 ## User Guide
@@ -91,6 +79,51 @@ ___
 >  - Use [JsonReader.assignInstantiator()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.html#assignInstantiator-java.lang.Class-com.cedarsoftware.util.io.JsonReader.Factory-) when `json-io` cannot construct a particular class
 >  - Use [JsonWriter.JsonClassWriter](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonWriter.JsonClassWriter.html) or [JsonWriter.JsonClassWriterEx](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonWriter.JsonClassWriterEx.html) to customize particular class output JSON
 >- [ ] Updates will be 4.14.4, 4.14.5, ...
+
+### Redirecting java.util.logging
+
+This library relies solely on `java.util.logging.Logger` so that no additional
+logging dependencies are pulled in. Small libraries often take this approach to
+remain lightweight. Applications that prefer a different logging framework can
+redirect these messages using one of the adapters below.
+
+`java-util` provides `LoggingConfig` to apply a consistent console
+format. Call `LoggingConfig.init()` to use the default pattern or pass a
+custom pattern via `LoggingConfig.init("yyyy/MM/dd HH:mm:ss")`. The pattern
+can also be supplied with the system property `ju.log.dateFormat`.
+
+#### 1. SLF4J
+
+Add the `jul-to-slf4j` bridge and install it during startup:
+
+```java
+import org.slf4j.bridge.SLF4JBridgeHandler;
+
+SLF4JBridgeHandler.removeHandlersForRootLogger();
+SLF4JBridgeHandler.install();
+```
+
+SLF4J is the most common façade; it works with Logback, Log4j&nbsp;2 and many
+other implementations.
+
+#### 2. Logback
+
+Logback uses SLF4J natively, so the configuration is the same as above. Include
+`jul-to-slf4j` on the classpath and install the `SLF4JBridgeHandler`.
+
+#### 3. Log4j&nbsp;2
+
+Use the `log4j-jul` adapter and start the JVM with:
+
+```bash
+-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+```
+
+This routes all `java.util.logging` output to Log4j&nbsp;2.
+
+Most consumers are comfortable bridging JUL output when needed, so relying on
+`java.util.logging` by default generally is not considered burdensome.
+
 
 Featured on [json.org](http://json.org).
 
