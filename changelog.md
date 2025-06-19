@@ -13,15 +13,13 @@
 * Added RecordReader test
 * Added NamedMethodFilter tests and null-safe handling
 * Added tests for Injector's private constructors
-* Added unit tests for SingletonList utility class
+* Added unit tests for `SingletonList` covering uninitialized state and mutation restrictions
 * Fixed VarHandle reflection to allow private-constructor injector
 * RecordFactory now checks the Java version before using records
 * Fixed VarHandle injection using a MethodHandle
 * Fixed VarHandle injection invocation for reflection-based Injector
 * Fixed Injector method-based creation to correctly locate void setters
 * Injector.create now supports invoking package-private and private setter methods
-* Added tests for SealableNavigableMap.equals(), toString(), and descendingKeySet()
-* Added tests for SealableNavigableSet constructors
 #### 4.54.0 Updated to use java-util 3.3.1
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.3.1` to `3.3.2.`
 #### 4.53.0 Updated to use java-util 3.3.1
