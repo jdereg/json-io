@@ -73,6 +73,13 @@ class StackTraceElementFactoryTest {
 //        assertThat(element.getClassLoaderName()).isNull();
     }
 
+    @Test
+    void isObjectFinal_returnsTrue() {
+        StackTraceElementFactory factory = new StackTraceElementFactory();
+
+        assertThat(factory.isObjectFinal()).isTrue();
+    }
+
     private JsonObject buildJsonObject(String classLoaderName, String moduleName, String moduleVersion, String declaringClass, String methodName, String fileName, Long lineNumber) {
         JsonObject object = new JsonObject();
 
