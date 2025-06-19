@@ -173,12 +173,11 @@ public class Injector {
     }
 
     public static Injector create(Field field, String methodName, String uniqueFieldName) {
-        // find method that returns void
         try {
             MethodType methodType = MethodType.methodType(void.class, field.getType());
             MethodHandle handle = MethodHandles.lookup().findVirtual(field.getDeclaringClass(), methodName, methodType);
             return new Injector(field, handle, uniqueFieldName, methodName);
-        } catch (NoSuchMethodException | IllegalAccessException ex) {
+        } catch (NoSuchMethodException | IllegalAccessException e) {
             return null;
         }
     }
