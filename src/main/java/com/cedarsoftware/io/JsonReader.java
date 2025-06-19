@@ -367,7 +367,11 @@ public class JsonReader implements Closeable
             return returnValue;
         }
 
-        // If the rootType is a primitive type, try to convert to its wrapper class
+        // Allow simple String to Enum conversion when needed
+        if (rootClass.isEnum() && returnValue instanceof String) {
+            return Enum.valueOf((Class<Enum>) rootClass, (String) returnValue);
+        }
+
         try {
             return localConverter.convert(returnValue, rootClass);
         } catch (Exception e) {

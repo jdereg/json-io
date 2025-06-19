@@ -19,6 +19,7 @@
 * Enum alias/coercion tests now force type info to be written so enums deserialize correctly
 * Updated EnumBasicCreationTest to expect enum values serialized as simple strings
 * RecordFactory now uses java-util `ReflectionUtils`
+* Added String-to-enum fallback conversion for root objects
 * Fixed NamedMethodFilter test by making Example class public
 * Added NamedMethodFilter tests and null-safe handling
 * Fixed `SealableNavigableSet.tailSet(E)` to include the starting element
