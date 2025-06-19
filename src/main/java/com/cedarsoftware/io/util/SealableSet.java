@@ -55,7 +55,8 @@ public class SealableSet<T> implements Set<T> {
      */
     public SealableSet(Collection<T> col, Supplier<Boolean> sealedSupplier) {
         this.sealedSupplier = sealedSupplier;
-        this.set = new ConcurrentSet<>(col);
+        this.set = new ConcurrentSet<>();
+        this.set.addAll(col);
     }
 
     /**
