@@ -90,7 +90,7 @@ class EnumBasicCreationTest {
         TestEnumWithField[] values = TestEnumWithField.values();
         for (TestEnumWithField value : values) {
             String json = TestUtil.toJson(value);
-            TestEnumWithField target = TestUtil.toObjects(json, null);
+            TestEnumWithField target = TestUtil.toObjects(json, TestEnumWithField.class);
             assertThat(target).isEqualTo(value);
             assertThat(target.getDescription()).isEqualTo(value.getDescription());
         }

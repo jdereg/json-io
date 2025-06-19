@@ -10,8 +10,6 @@
 * JsonObject exposes `getTypeString()` with the raw `@type` value
 * Fixed TestUtil.serializeDeserialize to retain Enum type information
 * Added unit tests for `JsonObject` equality, hashing and helpers
-* Added tests for ModifierMaskFilter.
-* Added tests for `SealableSet` constructor, `toArray()` and `SealAwareEntry` equality.
 * Pinned core Maven plugin versions to prevent Maven 4 warnings
 * Fixed SealableNavigableSet.retainAll to correctly return modification status
 * Fixed SealableNavigableSet.addAll to report modifications
@@ -20,30 +18,20 @@
 * Documentation updated with guidance for parsing JSON that references unknown classes
 * Enum alias/coercion tests now force type info to be written so enums deserialize correctly
 * RecordFactory now uses java-util `ReflectionUtils`
-* Fixed `EnumTests` to deserialize enums written as primitive strings by providing the root class
-* Added RecordReader test
-* Added tests for WriteOptionsBuilder features
 * Fixed NamedMethodFilter test by making Example class public
 * Added NamedMethodFilter tests and null-safe handling
-* Added tests for Injector's private constructors
 * Fixed `SealableNavigableSet.tailSet(E)` to include the starting element
-* Added unit tests for `SingletonList` covering uninitialized state and mutation restrictions
 * Expanded `SingletonList` tests for branch coverage
 * Fixed VarHandle reflection to allow private-constructor injector
-* Added unit tests for `SingletonMap` covering initialization, view collections, and equality
-* Added tests for `ByteBufferWriter` covering array and direct buffers
 * RecordFactory now checks the Java version before using records
 * Fixed VarHandle injection using a MethodHandle
 * Fixed VarHandle injection invocation for reflection-based Injector
 * Fixed Injector method-based creation to correctly locate void setters
 * Injector.create now supports invoking package-private and private setter methods
-* Added tests for JsonReader default methods
 * SealableSet(Collection) now copies the supplied collection instead of wrapping it
 * Added unit test for Unicode surrogate pair escapes
-* Added tests for ObjectResolver.safeToString
-* Added tests for ReadOptionsBuilder configuration methods
-* Corrected Example visibility in WriteOptionsBuilder tests
 * Added APIs to remove permanent method filters and accessor factories
+* Fixed enum round-trip test to specify target class
 #### 4.54.0 Updated to use java-util 3.3.1
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.3.1` to `3.3.2.`
 #### 4.53.0 Updated to use java-util 3.3.1
