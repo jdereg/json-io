@@ -13,6 +13,7 @@
 * Added RecordReader test
 * Added NamedMethodFilter tests and null-safe handling
 * Added tests for Injector's private constructors
+* Added unit tests for `SingletonList` covering uninitialized state and mutation restrictions
 * Fixed VarHandle reflection to allow private-constructor injector
 * RecordFactory now checks the Java version before using records
 * Fixed VarHandle injection using a MethodHandle
