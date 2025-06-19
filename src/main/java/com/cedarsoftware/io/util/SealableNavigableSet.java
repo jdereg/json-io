@@ -153,7 +153,16 @@ public class SealableNavigableSet<E> implements NavigableSet<E> {
 
     // Mutable APIs
     public boolean add(E e) { throwIfSealed(); return navSet.add(e); }
-    public boolean addAll(Collection<? extends E> col) { throwIfSealed(); return navSet.addAll(col); }
+    public boolean addAll(Collection<? extends E> col) {
+        throwIfSealed();
+        boolean modified = false;
+        for (E e : col) {
+            if (navSet.add(e)) {
+                modified = true;
+            }
+        }
+        return modified;
+    }
     public void clear() { throwIfSealed(); navSet.clear(); }
     public boolean remove(Object o) { throwIfSealed(); return navSet.remove(o); }
     public boolean removeAll(Collection<?> col) { throwIfSealed(); return navSet.removeAll(col); }

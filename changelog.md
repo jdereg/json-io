@@ -10,6 +10,7 @@
 * Added tests for ModifierMaskFilter.
 * Pinned core Maven plugin versions to prevent Maven 4 warnings
 * Fixed SealableNavigableSet.retainAll to correctly return modification status
+* Fixed SealableNavigableSet.addAll to report modifications
 * Documentation updated with guidance for parsing JSON that references unknown classes
 * RecordFactory now uses java-util `ReflectionUtils`
 * Added RecordReader test
