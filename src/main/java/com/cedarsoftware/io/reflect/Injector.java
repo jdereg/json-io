@@ -174,16 +174,8 @@ public class Injector {
 
     public static Injector create(Field field, String methodName, String uniqueFieldName) {
         try {
-            Method method = field.getDeclaringClass().getDeclaredMethod(methodName, field.getType());
-            if (!method.isAccessible()) {
-                try {
-                    method.setAccessible(true);
-                } catch (Exception e) {
-                    return null;
-                }
-            }
-
-            MethodHandle handle = MethodHandles.lookup().unreflect(method);
+            MethodType methodType = MethodType.methodType(void.class, field.getType());
+            MethodHandle handle = MethodHandles.lookup().findVirtual(field.getDeclaringClass(), methodName, methodType);
             return new Injector(field, handle, uniqueFieldName, methodName);
         } catch (NoSuchMethodException | IllegalAccessException e) {
             return null;
