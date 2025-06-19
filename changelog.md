@@ -17,6 +17,7 @@
 * RecordFactory now checks the Java version before using records
 * Added additional SealableList tests for remaining APIs
 * Added Injector tests for VarHandle injection and getters
+* Fixed VarHandle injection invocation for reflection-based Injector
 #### 4.54.0 Updated to use java-util 3.3.1
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.3.1` to `3.3.2.`
 #### 4.53.0 Updated to use java-util 3.3.1
