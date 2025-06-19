@@ -33,6 +33,7 @@
 * Added unit test for Unicode surrogate pair escapes
 * Added APIs to remove permanent method filters and accessor factories
 * Added unit test for removePermanentAccessorFactory
+* Fixed failing test for non-simple root type handling
 * Fixed enum round-trip test to specify target class
 * Added tests covering Pattern and Currency serialization
 #### 4.54.0 Updated to use java-util 3.3.1
