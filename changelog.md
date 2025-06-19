@@ -4,6 +4,7 @@
 * Fixed deserialization of Java records
 * Tests now create record classes via reflection for JDK 8 compile compatibility.
 * Replaced `System.out.println` debug output with Java logging via `LoggingConfig`
+* Added unit test for `DefaultConverterOptions.getCustomOption`
 * SealableNavigableMap now wraps returned entries to enforce immutability
 * Preserve comparator when constructing `SealableNavigableSet` from a `SortedSet`
 * Documentation expanded for CompactMap usage and builder() caveats
