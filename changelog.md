@@ -2,14 +2,13 @@
 #### 4.55.0 (unreleased) Updated to use java-util 3.3.3
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.3.2` to `3.3.3.`
 * Fixed deserialization of Java records
-* Tests now create record classes via reflection for JDK 8 compatibility
+* Tests now create record classes via reflection for JDK 8 compile compatibility.
 * Replaced `System.out.println` debug output with Java logging via `LoggingConfig`
 * SealableNavigableMap now wraps returned entries to enforce immutability
 * Preserve comparator when constructing `SealableNavigableSet` from a `SortedSet`
 * Documentation expanded for CompactMap usage and builder() caveats
 * JsonObject exposes `getTypeString()` with the raw `@type` value
 * Fixed TestUtil.serializeDeserialize to retain Enum type information
-* Added unit tests for `JsonObject` equality, hashing and helpers
 * Pinned core Maven plugin versions to prevent Maven 4 warnings
 * Fixed SealableNavigableSet.retainAll to correctly return modification status
 * Fixed SealableNavigableSet.addAll to report modifications
@@ -21,19 +20,15 @@
 * RecordFactory now uses java-util `ReflectionUtils`
 * Root-level enums with fields now include type info for reliable deserialization
 * Added String-to-enum fallback conversion for root objects
-* Fixed NamedMethodFilter test by making Example class public
-* Added NamedMethodFilter tests and null-safe handling
 * Fixed `SealableNavigableSet.tailSet(E)` to include the starting element
 * Expanded `SingletonList` tests for branch coverage
-* Added tests for Resolver.setArrayElement error paths and primitives
-* Added tests for `Resolver.valueToTarget` array conversions
 * Fixed primitive array conversion handling in `Resolver.valueToTarget`
 * Fixed VarHandle reflection to allow private-constructor injector
-* RecordFactory now checks the Java version before using records
 * Fixed VarHandle injection using a MethodHandle
 * Fixed VarHandle injection invocation for reflection-based Injector
 * Fixed Injector method-based creation to correctly locate void setters
 * Injector.create now supports invoking package-private and private setter methods
+* RecordFactory now checks the Java version before using records
 * SealableSet(Collection) now copies the supplied collection instead of wrapping it
 * Added unit test for Unicode surrogate pair escapes
 * Added APIs to remove permanent method filters and accessor factories
