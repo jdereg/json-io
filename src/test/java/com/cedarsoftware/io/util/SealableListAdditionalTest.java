@@ -117,4 +117,11 @@ class SealableListAdditionalTest {
         other.add(40);
         assertNotEquals(list.hashCode(), other.hashCode());
     }
+
+    @Test
+    void testToStringReflectsListContents() {
+        assertEquals(Arrays.asList(10, 20, 30).toString(), list.toString());
+        list.add(40);
+        assertEquals(Arrays.asList(10, 20, 30, 40).toString(), list.toString());
+    }
 }
