@@ -43,6 +43,19 @@ implementation 'com.cedarsoftware:json-io:4.54.0'
    <version>4.54.0</version>
  </dependency>
 ```
+
+##### Java Logging
+`json-io` uses `java.util.logging` instead of an external logging framework. This keeps the
+core library lightweight. The accompanying `LoggingConfig` class from `java-util` can route
+these logs to SLF4J or other frameworks:
+
+```java
+// Basic JUL setup
+LoggingConfig.configure();
+
+// Optionally forward JUL records to SLF4J
+LoggingConfig.bridgeHandlersToSLF4J();
+```
 ___
 
 ## User Guide

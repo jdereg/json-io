@@ -10,6 +10,9 @@ import com.cedarsoftware.util.FastByteArrayInputStream;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
 import com.cedarsoftware.util.convert.Converter;
 import com.cedarsoftware.util.convert.DefaultConverterOptions;
+import com.cedarsoftware.util.LoggingConfig;
+
+import java.util.logging.Logger;
 
 /**
  * JsonIo is the main entry point for converting between JSON and Java objects.
@@ -113,6 +116,8 @@ import com.cedarsoftware.util.convert.DefaultConverterOptions;
  *         limitations under the License.
  */
 public class JsonIo {
+
+    private static final Logger LOG = LoggingConfig.getLogger(JsonIo.class);
 
     private JsonIo() {}
 
@@ -810,7 +815,7 @@ public class JsonIo {
     public static void main(String[] args) {
         String json = toJson(new Converter(new DefaultConverterOptions()).getSupportedConversions(),
                 new WriteOptionsBuilder().prettyPrint(true).showTypeInfoNever().build());
-        System.out.println("json-io supported conversions (source type to target types):");
-        System.out.println(json);
+        LOG.info("json-io supported conversions (source type to target types):");
+        LOG.info(json);
     }
 }

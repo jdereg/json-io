@@ -40,6 +40,10 @@ import com.cedarsoftware.util.convert.CommonValues;
 import com.cedarsoftware.util.convert.Convert;
 import com.cedarsoftware.util.convert.Converter;
 import com.cedarsoftware.util.convert.ConverterOptions;
+import com.cedarsoftware.util.LoggingConfig;
+
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static com.cedarsoftware.io.MetaUtils.loadMapDefinition;
 
@@ -64,6 +68,8 @@ import static com.cedarsoftware.io.MetaUtils.loadMapDefinition;
  *         limitations under the License.
  */
 public class ReadOptionsBuilder {
+
+    private static final Logger LOG = LoggingConfig.getLogger(ReadOptionsBuilder.class);
 
     // The BASE_* Maps are regular ConcurrentHashMap's because they are not constantly searched, otherwise they would be ClassValueMaps.
     private static final Map<Class<?>, JsonReader.JsonClassReader> BASE_READERS = new ConcurrentHashMap<>();
@@ -719,11 +725,11 @@ public class ReadOptionsBuilder {
     private void addUniqueAlias(String type, String alias) {
         Class<?> clazz = ClassUtilities.forName(type, options.getClassLoader());
         if (clazz == null) {
-            System.out.println("Unknown class: " + type + " cannot be added to the ReadOptions alias map.");
+            LOG.warning("Unknown class: " + type + " cannot be added to the ReadOptions alias map.");
         }
         String existType = options.aliasTypeNames.get(alias);
         if (existType != null) {
-            System.out.println("Non-unique ReadOptions alias: " + alias + " attempted assign to: " + type + ", but is already assigned to: " + existType);
+            LOG.warning("Non-unique ReadOptions alias: " + alias + " attempted assign to: " + type + ", but is already assigned to: " + existType);
         }
         options.aliasTypeNames.put(alias, type);
     }
@@ -780,7 +786,7 @@ public class ReadOptionsBuilder {
             Class<?> clazz = ClassUtilities.forName(className, classLoader);
 
             if (clazz == null) {
-                System.out.println("Skipping class: " + className + " not defined in JVM, but listed in resources/classFactories.txt");
+                LOG.fine("Skipping class: " + className + " not defined in JVM, but listed in resources/classFactories.txt");
                 continue;
             }
 
@@ -790,12 +796,12 @@ public class ReadOptionsBuilder {
                 try {
                     Class<? extends JsonReader.ClassFactory> factoryClass = (Class<? extends JsonReader.ClassFactory>) ClassUtilities.forName(factoryClassName, classLoader);
                     if (factoryClass == null) {
-                        System.out.println("Skipping class: " + factoryClassName + " not defined in JVM, but listed in resources/classFactories.txt, as factory for: " + className);
+                        LOG.fine("Skipping class: " + factoryClassName + " not defined in JVM, but listed in resources/classFactories.txt, as factory for: " + className);
                         continue;
                     }
                     addPermanentClassFactory(clazz, factoryClass.getConstructor().newInstance());
                 } catch (Exception e) {
-                    System.out.println("Unable to create JsonReader.ClassFactory class: " + factoryClassName + ", a factory class for: " + className + ", listed in resources/classFactories.txt");
+                    LOG.log(Level.FINE, "Unable to create JsonReader.ClassFactory class: " + factoryClassName + ", a factory class for: " + className + ", listed in resources/classFactories.txt", e);
                 }
             }
         }
@@ -819,10 +825,10 @@ public class ReadOptionsBuilder {
                 try {
                     addPermanentReader(clazz, customReaderClass.getConstructor().newInstance());
                 } catch (Exception e) {
-                    System.out.println("Note: could not instantiate (custom JsonClassReader class): " + readerClassName + " from resources/customReaders.txt");
+                    LOG.log(Level.FINE, "Note: could not instantiate (custom JsonClassReader class): " + readerClassName + " from resources/customReaders.txt", e);
                 }
             } else {
-                System.out.println("Class: " + className + " not defined in JVM, but listed in resources/customReaders.txt");
+                LOG.fine("Class: " + className + " not defined in JVM, but listed in resources/customReaders.txt");
             }
         }
     }
@@ -840,12 +846,12 @@ public class ReadOptionsBuilder {
             String destClassName = entry.getValue();
             Class<?> srcType = ClassUtilities.forName(srcClassName, classLoader);
             if (srcType == null) {
-                System.out.println("Skipping class coercion for source class: " + srcClassName + " (not found) to: " + destClassName + ", listed in resources/coercedTypes.txt");
+                LOG.fine("Skipping class coercion for source class: " + srcClassName + " (not found) to: " + destClassName + ", listed in resources/coercedTypes.txt");
                 continue;
             }
             Class<?> destType = ClassUtilities.forName(destClassName, classLoader);
             if (destType == null) {
-                System.out.println("Skipping class coercion for source class: " + srcClassName + " cannot be mapped to: " + destClassName + " (not found), listed in resources/coercedTypes.txt");
+                LOG.fine("Skipping class coercion for source class: " + srcClassName + " cannot be mapped to: " + destClassName + " (not found), listed in resources/coercedTypes.txt");
                 continue;
             }
             addPermanentCoercedType(srcType, destType);
@@ -1351,7 +1357,7 @@ public class ReadOptionsBuilder {
             String mappings = entry.getValue();
             Class<?> clazz = ClassUtilities.forName(className, classLoader);
             if (clazz == null) {
-                System.out.println("Class: " + className + " not defined in the JVM");
+                LOG.fine("Class: " + className + " not defined in the JVM");
                 continue;
             }
 
@@ -1376,7 +1382,7 @@ public class ReadOptionsBuilder {
             Class<?> loadedClass = ClassUtilities.forName(className, classLoader);
 
             if (loadedClass == null) {
-                System.out.println("Class: " + className + " undefined.  Cannot be used as non-referenceable class, listed in config/nonRefs.txt");
+                LOG.warning("Class: " + className + " undefined.  Cannot be used as non-referenceable class, listed in config/nonRefs.txt");
             } else {
                 addPermanentNonReferenceableClass(loadedClass);
             }
@@ -1396,7 +1402,7 @@ public class ReadOptionsBuilder {
             Class<?> loadedClass = ClassUtilities.forName(className, classLoader);
 
             if (loadedClass == null) {
-                System.out.println("Class: " + className + " undefined.  Cannot be used as to turn off custom reading for this class, listed in config/notCustomRead.txt");
+                LOG.warning("Class: " + className + " undefined.  Cannot be used as to turn off custom reading for this class, listed in config/notCustomRead.txt");
             } else {
                 addPermanentNotCustomReadClass(loadedClass);
             }
@@ -1417,7 +1423,7 @@ public class ReadOptionsBuilder {
             Class<?> clazz = ClassUtilities.forName(className, classLoader);
 
             if (clazz == null) {
-                System.out.println("Could not find class: " + className + " which has associated alias value: " + alias + " config/aliases.txt");
+                LOG.fine("Could not find class: " + className + " which has associated alias value: " + alias + " config/aliases.txt");
             } else {
                 // Add the alias and 1D to 3D array versions of it.
                 Class<?> clazz1 = Array.newInstance(clazz, 0).getClass();
