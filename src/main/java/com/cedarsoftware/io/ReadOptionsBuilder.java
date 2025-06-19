@@ -69,7 +69,8 @@ import static com.cedarsoftware.io.MetaUtils.loadMapDefinition;
  */
 public class ReadOptionsBuilder {
 
-    private static final Logger LOG = LoggingConfig.getLogger(ReadOptionsBuilder.class);
+    private static final Logger LOG = Logger.getLogger(ReadOptionsBuilder.class.getName());
+    static { LoggingConfig.init(); }
 
     // The BASE_* Maps are regular ConcurrentHashMap's because they are not constantly searched, otherwise they would be ClassValueMaps.
     private static final Map<Class<?>, JsonReader.JsonClassReader> BASE_READERS = new ConcurrentHashMap<>();

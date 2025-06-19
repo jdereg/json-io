@@ -61,7 +61,9 @@ import java.util.logging.Logger;
  *         limitations under the License.
  */
 public class WriteOptionsBuilder {
-    private static final Logger LOG = LoggingConfig.getLogger(WriteOptionsBuilder.class);
+    private static final Logger LOG = Logger.getLogger(WriteOptionsBuilder.class.getName());
+    static { LoggingConfig.init(); }
+
     // The BASE_* Maps are regular ConcurrentHashMap's because they are not constantly searched, otherwise they would be ClassValueMaps.
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
