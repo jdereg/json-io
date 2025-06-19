@@ -312,7 +312,7 @@ class EnumTests {
     @EnumSource(EnumWithValueField.class)
     void testEnum_thatHasValueField_parsedAsPrimitive(Enum<EnumWithValueField> item) {
         String json = TestUtil.toJson(item, new WriteOptionsBuilder().build());
-        EnumWithValueField actual = TestUtil.toObjects(json, null);
+        EnumWithValueField actual = TestUtil.toObjects(json, EnumWithValueField.class);
 
         assertThat(actual).isEqualTo(item);
     }
