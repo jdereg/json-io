@@ -8,7 +8,6 @@
 * Preserve comparator when constructing `SealableNavigableSet` from a `SortedSet`
 * Documentation expanded for CompactMap usage and builder() caveats
 * JsonObject exposes `getTypeString()` with the raw `@type` value
-* Added tests covering JsonReader.handleObjectRoot branches
 * Fixed TestUtil.serializeDeserialize to retain Enum type information
 * Pinned core Maven plugin versions to prevent Maven 4 warnings
 * Fixed SealableNavigableSet.retainAll to correctly return modification status
