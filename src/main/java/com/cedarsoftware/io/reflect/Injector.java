@@ -7,8 +7,11 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
+import java.util.Arrays;
 
 import com.cedarsoftware.io.JsonIoException;
+import com.cedarsoftware.util.ArrayUtilities;
+import com.cedarsoftware.util.CollectionUtilities;
 import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.StringUtilities;
 
@@ -221,11 +224,11 @@ public class Injector {
         }
     }
 
-    private void injectWithVarHandle(Object object, Object value) throws Exception {
+    private void injectWithVarHandle(Object object, Object value) throws Throwable {
         if (varHandle == null || VAR_HANDLE_SET_METHOD == null) {
             throw new JsonIoException("Unable to set field: " + getName() + " - VarHandle not available");
         }
-        VAR_HANDLE_SET_METHOD.invokeWithArguments(varHandle, object, value);
+        VAR_HANDLE_SET_METHOD.invokeWithArguments(CollectionUtilities.listOf(varHandle, object, value));
     }
 
     public Class<?> getType() {
