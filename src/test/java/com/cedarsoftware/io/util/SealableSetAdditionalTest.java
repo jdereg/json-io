@@ -11,7 +11,7 @@ class SealableSetAdditionalTest {
 
     @Test
     void testCollectionConstructorMakesCopy() {
-        Set<Integer> source = new LinkedHashSet<>(Arrays.asList(1, 2, 3));
+        Collection<Integer> source = new LinkedHashSet<>(Arrays.asList(1, 2, 3));
         Supplier<Boolean> sealedSupplier = () -> false;
         SealableSet<Integer> copy = new SealableSet<>(source, sealedSupplier);
         source.add(4);
