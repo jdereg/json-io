@@ -3,6 +3,7 @@ package com.cedarsoftware.io.factory;
 import java.util.stream.Stream;
 
 import com.cedarsoftware.io.JsonObject;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -35,6 +36,12 @@ class StackTraceElementFactoryTest {
         //assertThat(stackTrace.getModuleName()).isEqualTo(moduleName);
         //assertThat(stackTrace.getModuleVersion()).isEqualTo(moduleVersion);
         //assertThat(stackTrace.getClassLoaderName()).isEqualTo(classLoaderName);
+    }
+
+    @Test
+    void isObjectFinal_returnTrue() {
+        StackTraceElementFactory factory = new StackTraceElementFactory();
+        assertThat(factory.isObjectFinal()).isTrue();
     }
 
     private JsonObject buildJsonObject(String classLoaderName, String moduleName, String moduleVersion, String declaringClass, String methodName, String fileName, Long lineNumber) {
