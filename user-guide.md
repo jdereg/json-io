@@ -222,3 +222,13 @@ the complete list of supported conversions:
 // See all supported conversions
 java -cp your-classpath com.cedarsoftware.io.JsonIo
 ```
+
+#### Logging
+`json-io` logs through `java.util.logging` to avoid depending on a specific logging
+framework. Use the `LoggingConfig` helper from **java-util** if you wish to connect
+these logs to SLF4J or Log4J:
+
+```java
+LoggingConfig.configure();                 // standard JUL handlers
+LoggingConfig.bridgeHandlersToSLF4J();     // optional SLF4J bridge
+```

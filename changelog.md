@@ -3,7 +3,7 @@
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.3.2` to `3.3.3.`
 * Fixed deserialization of Java records
 * Tests now create record classes via reflection for JDK 8 compatibility
-* Enums written as strings no longer include `@type` at the top level
+* Replaced `System.out.println` debug output with Java logging via `LoggingConfig`
 * SealableNavigableMap now wraps returned entries to enforce immutability
 * Preserve comparator when constructing `SealableNavigableSet` from a `SortedSet`
 * Documentation expanded for CompactMap usage and builder() caveats

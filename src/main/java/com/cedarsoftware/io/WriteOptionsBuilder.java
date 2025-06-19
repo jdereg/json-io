@@ -35,6 +35,10 @@ import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.LRUCache;
 import com.cedarsoftware.util.ReflectionUtils;
 import com.cedarsoftware.util.StringUtilities;
+import com.cedarsoftware.util.LoggingConfig;
+
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Builder class for building the writeOptions.
@@ -57,6 +61,7 @@ import com.cedarsoftware.util.StringUtilities;
  *         limitations under the License.
  */
 public class WriteOptionsBuilder {
+    private static final Logger LOG = LoggingConfig.getLogger(WriteOptionsBuilder.class);
     // The BASE_* Maps are regular ConcurrentHashMap's because they are not constantly searched, otherwise they would be ClassValueMaps.
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
@@ -1227,18 +1232,18 @@ public class WriteOptionsBuilder {
             String writerClassName = entry.getValue();
             Class<?> clazz = ClassUtilities.forName(className, classLoader);
             if (clazz == null) {
-                System.out.println("Class: " + className + " not defined in the JVM, so custom writer: " + writerClassName + ", will not be used.");
+                LOG.warning("Class: " + className + " not defined in the JVM, so custom writer: " + writerClassName + ", will not be used.");
                 continue;
             }
             Class<JsonWriter.JsonClassWriter> customWriter = (Class<JsonWriter.JsonClassWriter>) ClassUtilities.forName(writerClassName, classLoader);
             if (customWriter == null) {
-                System.out.println("Note: class not found (custom JsonClassWriter class): " + writerClassName + ", listed in config/customWriters.txt as a custom writer for: " + className);
+                LOG.warning("Note: class not found (custom JsonClassWriter class): " + writerClassName + ", listed in config/customWriters.txt as a custom writer for: " + className);
             } else {
                 try {
                     JsonWriter.JsonClassWriter writer = customWriter.newInstance();
                     addPermanentWriter(clazz, writer);
                 } catch (Exception e) {
-                    System.out.println("Note: class failed to instantiate (a custom JsonClassWriter class): " + writerClassName + ", listed in config/customWriters.txt as a custom writer for: " + className);
+                    LOG.log(Level.WARNING, "Note: class failed to instantiate (a custom JsonClassWriter class): " + writerClassName + ", listed in config/customWriters.txt as a custom writer for: " + className, e);
                 }
             }
         }
@@ -1253,7 +1258,7 @@ public class WriteOptionsBuilder {
         for (String className : set) {
             Class<?> clazz = ClassUtilities.forName(className, classLoader);
             if (clazz == null) {
-                System.out.println("Class: " + className + " undefined.  Cannot be used as non-referenceable class, listed in config/nonRefs.txt");
+                LOG.warning("Class: " + className + " undefined.  Cannot be used as non-referenceable class, listed in config/nonRefs.txt");
             } else {
                 addPermanentNonRef(clazz);
             }
@@ -1271,7 +1276,7 @@ public class WriteOptionsBuilder {
         for (String className : set) {
             Class<?> clazz = ClassUtilities.forName(className, classLoader);
             if (clazz == null) {
-                System.out.println("Class: " + className + " undefined.  Cannot be used as to turn off custom writing for this class, listed in config/notCustomWritten.txt");
+                LOG.warning("Class: " + className + " undefined.  Cannot be used as to turn off custom writing for this class, listed in config/notCustomWritten.txt");
             } else {
                 addPermanentNotCustomWrittenClass(clazz);
             }
