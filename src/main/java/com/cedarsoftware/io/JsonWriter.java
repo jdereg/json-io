@@ -362,7 +362,18 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         traceReferences(obj);
         objVisited.clear();
         try {
-            writeImpl(obj, true);
+            boolean showType = true;
+            if (obj != null) {
+                if (writeOptions.isNeverShowingType()) {
+                    showType = false;
+                } else if (!writeOptions.isAlwaysShowingType()) {
+                    JsonClassWriter writer = writeOptions.getCustomWriter(obj.getClass());
+                    if (writer instanceof Writers.EnumsAsStringWriter) {
+                        showType = false;
+                    }
+                }
+            }
+            writeImpl(obj, showType);
         } catch (JsonIoException e) {
             throw e;
         } catch (Exception e) {

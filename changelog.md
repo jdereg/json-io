@@ -19,6 +19,8 @@
 * Documentation updated with guidance for parsing JSON that references unknown classes
 * RecordFactory now uses java-util `ReflectionUtils`
 * Added RecordReader test
+* Added tests for WriteOptionsBuilder features
+* Fixed NamedMethodFilter test by making Example class public
 * Added NamedMethodFilter tests and null-safe handling
 * Added tests for Injector's private constructors
 * Fixed `SealableNavigableSet.tailSet(E)` to include the starting element
@@ -37,6 +39,7 @@
 * Added unit test for Unicode surrogate pair escapes
 * Added tests for ObjectResolver.safeToString
 * Added tests for ReadOptionsBuilder configuration methods
+* Corrected Example visibility in WriteOptionsBuilder tests
 #### 4.54.0 Updated to use java-util 3.3.1
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.3.1` to `3.3.2.`
 #### 4.53.0 Updated to use java-util 3.3.1
