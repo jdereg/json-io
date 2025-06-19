@@ -8,6 +8,7 @@ import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
 import com.cedarsoftware.util.ExceptionUtilities;
+import com.cedarsoftware.util.ReflectionUtils;
 import com.cedarsoftware.util.SystemUtilities;
 
 /**
@@ -41,13 +42,16 @@ public class RecordFactory implements JsonReader.ClassFactory {
             ArrayList<Class<?>> lParameterTypes = new ArrayList<>(jsonObj.size());
             ArrayList<Object> lParameterValues = new ArrayList<>(jsonObj.size());
 
-            Method getRecordComponents = Class.class.getMethod("getRecordComponents");
+            Method getRecordComponents = ReflectionUtils.getMethod(Class.class, "getRecordComponents");
+            if (getRecordComponents == null) {
+                throw new NoSuchMethodException("getRecordComponents");
+            }
             Object[] recordComponents = (Object[]) getRecordComponents.invoke(c);
             for (Object recordComponent : recordComponents) {
-                Class<?> type = (Class<?>) recordComponent.getClass().getMethod("getType").invoke(recordComponent);
+                Class<?> type = (Class<?>) ReflectionUtils.call(recordComponent, "getType");
                 lParameterTypes.add(type);
 
-                String parameterName = (String) recordComponent.getClass().getMethod("getName").invoke(recordComponent);
+                String parameterName = (String) ReflectionUtils.call(recordComponent, "getName");
                 JsonObject paramValueJsonObj = new JsonObject();
 
                 paramValueJsonObj.setType(type);
@@ -60,7 +64,10 @@ public class RecordFactory implements JsonReader.ClassFactory {
                 }
             }
 
-            Constructor<?> constructor = c.getDeclaredConstructor(lParameterTypes.toArray(new Class[0]));
+            Constructor<?> constructor = ReflectionUtils.getConstructor(c, lParameterTypes.toArray(new Class[0]));
+            if (constructor == null) {
+                throw new NoSuchMethodException("record constructor not found");
+            }
             ExceptionUtilities.safelyIgnoreException(() -> constructor.setAccessible(true));
             return constructor.newInstance(lParameterValues.toArray(new Object[0]));
         } catch (Exception e) {
@@ -84,13 +91,16 @@ public class RecordFactory implements JsonReader.ClassFactory {
                 Class<?> c = jsonObj.getRawType();
                 // the record components are per definition in the constructor parameter order
                 // we implement this with reflection due to code compatibility Java<16
-                Method getRecordComponents = Class.class.getMethod("getRecordComponents");
+                Method getRecordComponents = ReflectionUtils.getMethod(Class.class, "getRecordComponents");
+                if (getRecordComponents == null) {
+                    throw new NoSuchMethodException("getRecordComponents");
+                }
                 Object[] recordComponents = (Object[]) getRecordComponents.invoke(c);
                 for (Object recordComponent : recordComponents) {
-                    Class<?> type = (Class<?>) recordComponent.getClass().getMethod("getType").invoke(recordComponent);
+                    Class<?> type = (Class<?>) ReflectionUtils.call(recordComponent, "getType");
                     lParameterTypes.add(type);
 
-                    String parameterName = (String) recordComponent.getClass().getMethod("getName").invoke(recordComponent);
+                    String parameterName = (String) ReflectionUtils.call(recordComponent, "getName");
                     JsonObject paramValueJsonObj = new JsonObject();
 
                     paramValueJsonObj.setType(type);
@@ -103,7 +113,10 @@ public class RecordFactory implements JsonReader.ClassFactory {
                     }
                 }
 
-                Constructor<?> constructor = c.getDeclaredConstructor(lParameterTypes.toArray(new Class[0]));
+                Constructor<?> constructor = ReflectionUtils.getConstructor(c, lParameterTypes.toArray(new Class[0]));
+                if (constructor == null) {
+                    throw new NoSuchMethodException("record constructor not found");
+                }
                 ExceptionUtilities.safelyIgnoreException(() -> constructor.setAccessible(true));
                 return constructor.newInstance(lParameterValues.toArray(new Object[0]));
             } catch (Exception e) {

@@ -9,6 +9,8 @@
 * Added tests for ModifierMaskFilter.
 * Pinned core Maven plugin versions to prevent Maven 4 warnings
 * Documentation updated with guidance for parsing JSON that references unknown classes
+* RecordFactory now uses java-util `ReflectionUtils`
+* Added RecordReader test
 * Added NamedMethodFilter tests and null-safe handling
 * RecordFactory now checks the Java version before using records
 #### 4.54.0 Updated to use java-util 3.3.1
