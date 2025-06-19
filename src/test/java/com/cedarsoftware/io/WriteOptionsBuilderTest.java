@@ -71,6 +71,8 @@ public class WriteOptionsBuilderTest {
 
         assertTrue(preMethod);
         assertFalse(postMethod);
+        // Remove the permanent filter to avoid side effects on other tests
+        WriteOptionsBuilder.removePermanentMethodFilter("test");
     }
 
     @Test
