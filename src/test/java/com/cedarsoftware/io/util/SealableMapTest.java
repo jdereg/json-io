@@ -2,6 +2,7 @@ package com.cedarsoftware.io.util;
 
 import java.util.AbstractMap;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -172,5 +173,33 @@ class SealableMapTest {
     void testNullValue() {
         map.put("99", null);
         assert map.get("99") == null;
+    }
+
+    @Test
+    void testConstructorWithMap() {
+        Map<String, Integer> backing = new LinkedHashMap<>();
+        backing.put("alpha", 1);
+        SealableMap<String, Integer> local = new SealableMap<>(backing, sealedSupplier);
+        assertEquals(1, local.get("alpha"));
+        backing.put("beta", 2);
+        assertEquals(2, local.get("beta"));
+        local.put("gamma", 3);
+        assertEquals(Integer.valueOf(3), backing.get("gamma"));
+    }
+
+    @Test
+    void testContainsValueAndToString() {
+        assertTrue(map.containsValue(2));
+        assertTrue(map.containsValue(null));
+        assertTrue(map.toString().contains("one"));
+    }
+
+    @Test
+    void testHashCodeMatchesBackingMap() {
+        Map<String, Integer> backing = new LinkedHashMap<>();
+        backing.put("a", 1);
+        backing.put("b", 2);
+        SealableMap<String, Integer> local = new SealableMap<>(backing, sealedSupplier);
+        assertEquals(backing.hashCode(), local.hashCode());
     }
 }
