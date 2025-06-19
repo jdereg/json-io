@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.lang.reflect.Field;
 
 import org.junit.jupiter.api.Test;
 
@@ -94,5 +95,21 @@ class ReadOptionsBuilderTest {
         assertThat(options.getConverterOptions().falseChar()).isEqualTo('N');
         assertThat(options.getCustomOption("foo")).isEqualTo("bar");
         assertTrue(options.isNonReferenceableClass(NonRefClass.class));
+    }
+
+    @Test
+    void testDefaultConverterOptionsGetCustomOption() throws Exception {
+        ReadOptionsBuilder.DefaultConverterOptions opts =
+                new ReadOptionsBuilder.DefaultConverterOptions();
+
+        Field field = ReadOptionsBuilder.DefaultConverterOptions.class
+                .getDeclaredField("customOptions");
+        field.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> map = (Map<String, Object>) field.get(opts);
+        map.put("bar", 123);
+
+        assertThat(opts.getCustomOption("bar")).isEqualTo(123);
+        assertNull(opts.getCustomOption("missing"));
     }
 }
