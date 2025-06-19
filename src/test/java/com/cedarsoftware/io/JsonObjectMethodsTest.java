@@ -173,5 +173,19 @@ class JsonObjectMethodsTest {
         assertFalse((boolean) m.invoke(null, new Object[]{"a"}, new Object[]{"b"}));
         assertTrue((boolean) m.invoke(null, new Object[]{"a", null}, new Object[]{"a", null}));
     }
+
+    @Test
+    void testSetItemsNullThrows() {
+        JsonObject obj = new JsonObject();
+        JsonIoException ex = assertThrows(JsonIoException.class, () -> obj.setItems(null));
+        assertTrue(ex.getMessage().toLowerCase().contains("cannot be null"));
+    }
+
+    @Test
+    void testSetKeysNullThrows() {
+        JsonObject obj = new JsonObject();
+        JsonIoException ex = assertThrows(JsonIoException.class, () -> obj.setKeys(null));
+        assertTrue(ex.getMessage().toLowerCase().contains("cannot be null"));
+    }
 }
 

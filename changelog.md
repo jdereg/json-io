@@ -4,7 +4,6 @@
 * Fixed deserialization of Java records
 * Tests now create record classes via reflection for JDK 8 compile compatibility.
 * Replaced `System.out.println` debug output with Java logging via `LoggingConfig`
-* Added unit test for `DefaultConverterOptions.getCustomOption`
 * SealableNavigableMap now wraps returned entries to enforce immutability
 * Preserve comparator when constructing `SealableNavigableSet` from a `SortedSet`
 * Documentation expanded for CompactMap usage and builder() caveats
@@ -40,7 +39,6 @@
 * Fixed enum round-trip test to specify target class
 * Added tests covering Pattern and Currency serialization
 * Updated JsonReaderHandleObjectRootTest to expect JsonIoException on return type mismatch
-* Added unit tests for ReadOptionsBuilder DefaultReadOptions `getLruSize()` and `isClassCoerced()`
 #### 4.54.0 Updated to use java-util 3.3.1
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.3.1` to `3.3.2.`
 #### 4.53.0 Updated to use java-util 3.3.1
