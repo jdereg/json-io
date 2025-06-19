@@ -4,11 +4,13 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ArgumentHelperTest
 {
@@ -64,6 +66,26 @@ class ArgumentHelperTest
                 Arguments.of(0),
                 Arguments.of(0L),
                 Arguments.of(Byte.valueOf((byte)0)))
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("numberWithDefaultValues")
+    void getNumberWithDefault_validInput_returnsExpected(Object input, Number def, Number expected) {
+        assertThat(ArgumentHelper.getNumberWithDefault(input, def)).isEqualTo(expected);
+    }
+
+    @Test
+    void getNumberWithDefault_nonNumber_throwsClassCastException() {
+        assertThatThrownBy(() -> ArgumentHelper.getNumberWithDefault("foo", 1))
+                .isInstanceOf(ClassCastException.class);
+    }
+
+    private static Stream<Arguments> numberWithDefaultValues() {
+        return Stream.of(
+                Arguments.of(null, 42, 42),
+                Arguments.of(Integer.valueOf(5), 9, Integer.valueOf(5)),
+                Arguments.of(3.14d, 0, 3.14d)
         );
     }
 }
