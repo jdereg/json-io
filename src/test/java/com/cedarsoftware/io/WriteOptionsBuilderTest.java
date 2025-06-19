@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class WriteOptionsBuilderTest {
 
-    static class Example {
+    public static class Example {
         public int value;
         public int getValue() { return value; }
     }
