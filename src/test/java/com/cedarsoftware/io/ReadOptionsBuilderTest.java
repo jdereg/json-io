@@ -98,18 +98,27 @@ class ReadOptionsBuilderTest {
     }
 
     @Test
-    void testDefaultConverterOptionsGetCustomOption() throws Exception {
-        ReadOptionsBuilder.DefaultConverterOptions opts =
-                new ReadOptionsBuilder.DefaultConverterOptions();
+    void testLruSize_defaultAndCustom() {
+        ReadOptions defaultOptions = new ReadOptionsBuilder().build();
+        assertThat(defaultOptions.getLruSize()).isEqualTo(1000);
 
-        Field field = ReadOptionsBuilder.DefaultConverterOptions.class
-                .getDeclaredField("customOptions");
-        field.setAccessible(true);
-        @SuppressWarnings("unchecked")
-        Map<String, Object> map = (Map<String, Object>) field.get(opts);
-        map.put("bar", 123);
+        ReadOptions customOptions = new ReadOptionsBuilder()
+                .lruSize(42)
+                .build();
+        assertThat(customOptions.getLruSize()).isEqualTo(42);
+    }
 
-        assertThat(opts.getCustomOption("bar")).isEqualTo(123);
-        assertNull(opts.getCustomOption("missing"));
+    static class SourceClass {}
+    static class DestinationClass {}
+
+    @Test
+    void testIsClassCoerced() {
+        ReadOptions options = new ReadOptionsBuilder()
+                .coerceClass(SourceClass.class.getName(), DestinationClass.class)
+                .build();
+
+        assertFalse(new ReadOptionsBuilder().build().isClassCoerced(SourceClass.class));
+        assertTrue(options.isClassCoerced(SourceClass.class));
+        assertThat(options.getCoercedClass(SourceClass.class)).isSameAs(DestinationClass.class);
     }
 }
