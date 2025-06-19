@@ -132,6 +132,8 @@ class MapResolverTraverseCollectionTest {
 
         resolver.traverseCollection(json);
 
-        assertThat((Collection<?>) json.getTarget()).containsExactly("a");
+        @SuppressWarnings("unchecked")
+        Collection<Object> target = (Collection<Object>) json.getTarget();
+        assertThat(target).containsExactly("a");
     }
 }
