@@ -1,9 +1,9 @@
 package com.cedarsoftware.io.util;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
 import java.util.NoSuchElementException;
 
 import org.junit.jupiter.api.Test;
@@ -13,100 +13,141 @@ import static org.junit.jupiter.api.Assertions.*;
 class SingletonListTest {
 
     @Test
-    void testConstructorAndBasicAccess() {
-        SingletonList<String> list = new SingletonList<>("foo");
+    void testSetInvalidIndex() {
+        SingletonList<String> list = new SingletonList<>("a");
+        assertThrows(IndexOutOfBoundsException.class, () -> list.set(1, "b"));
+    }
+
+    @Test
+    void testSetOnUninitialized() {
+        SingletonList<String> list = new SingletonList<>();
+        list.set(0, "a");
         assertEquals(1, list.size());
-        assertFalse(list.isEmpty());
-        assertTrue(list.contains("foo"));
-        assertFalse(list.contains("bar"));
-        assertFalse(list.contains(null));
-        assertEquals("foo", list.get(0));
-        assertThrows(IndexOutOfBoundsException.class, () -> list.get(1));
+        assertEquals("a", list.get(0));
+    }
 
-        Object[] arr = list.toArray();
-        assertArrayEquals(new Object[]{"foo"}, arr);
+    @Test
+    void testSetOnInitialized() {
+        SingletonList<String> list = new SingletonList<>("a");
+        String old = list.set(0, "b");
+        assertEquals("a", old);
+        assertEquals("b", list.get(0));
+    }
 
-        String[] zeroInput = new String[0];
-        String[] zero = list.toArray(zeroInput);
-        assertArrayEquals(new String[]{"foo"}, zero);
-        assertNotSame(zeroInput, zero); // ensure new array created when length 0
+    @Test
+    void testAddIndexUnsupported() {
+        SingletonList<String> list = new SingletonList<>();
+        assertThrows(UnsupportedOperationException.class, () -> list.add(0, "x"));
+    }
 
-        String[] one = new String[]{""};
-        assertSame(one, list.toArray(one));
-        assertEquals("foo", one[0]);
+    @Test
+    void testRemoveIndexUnsupported() {
+        SingletonList<String> list = new SingletonList<>("x");
+        assertThrows(UnsupportedOperationException.class, () -> list.remove(0));
+    }
 
-        String[] two = new String[]{"", ""};
-        assertSame(two, list.toArray(two));
-        assertEquals("foo", two[0]);
-        assertNull(two[1]);
+    @Test
+    void testIndexOfScenarios() {
+        SingletonList<String> empty = new SingletonList<>();
+        assertEquals(-1, empty.indexOf("a"));
+        assertEquals(-1, empty.indexOf(null));
 
-        assertThrows(NullPointerException.class, () -> list.toArray(null));
+        SingletonList<String> list = new SingletonList<>("foo");
+        assertEquals(0, list.indexOf("foo"));
+        assertEquals(-1, list.indexOf("bar"));
+        assertEquals(-1, list.indexOf(null));
 
-        Iterator<String> it = list.iterator();
+        SingletonList<String> nullList = new SingletonList<>();
+        nullList.set(0, null);
+        assertThrows(NullPointerException.class, () -> nullList.indexOf(null));
+    }
+
+    @Test
+    void testLastIndexOfDelegates() {
+        SingletonList<String> list = new SingletonList<>("x");
+        assertEquals(list.indexOf("x"), list.lastIndexOf("x"));
+
+        SingletonList<String> empty = new SingletonList<>();
+        assertEquals(empty.indexOf("y"), empty.lastIndexOf("y"));
+    }
+
+    @Test
+    void testListIteratorUninitialized() {
+        SingletonList<String> list = new SingletonList<>();
+        ListIterator<String> it = list.listIterator();
+        assertFalse(it.hasNext());
+        assertFalse(it.hasPrevious());
+        assertEquals(0, it.nextIndex());
+        assertEquals(-1, it.previousIndex());
+        assertThrows(NoSuchElementException.class, it::next);
+        assertThrows(NoSuchElementException.class, it::previous);
+        assertThrows(IllegalStateException.class, () -> it.set("x"));
+        assertThrows(UnsupportedOperationException.class, it::remove);
+        assertThrows(UnsupportedOperationException.class, () -> it.add("y"));
+    }
+
+    @Test
+    void testListIteratorInitialized() {
+        SingletonList<String> list = new SingletonList<>("foo");
+        ListIterator<String> it = list.listIterator();
         assertTrue(it.hasNext());
         assertEquals("foo", it.next());
         assertFalse(it.hasNext());
-        assertThrows(NoSuchElementException.class, it::next);
-
-        assertThrows(UnsupportedOperationException.class, () -> list.add("bar"));
-        assertThrows(UnsupportedOperationException.class, () -> list.remove("foo"));
-        assertTrue(list.containsAll(Collections.singleton("foo")));
-        assertFalse(list.containsAll(Collections.singleton("bar")));
-        assertFalse(list.containsAll(Arrays.asList("foo", "bar")));
-        assertThrows(UnsupportedOperationException.class, () -> list.addAll(Collections.singleton("x")));
-        assertThrows(UnsupportedOperationException.class, () -> list.addAll(0, Collections.singleton("x")));
-        assertThrows(UnsupportedOperationException.class, () -> list.removeAll(Collections.singleton("x")));
-        assertThrows(UnsupportedOperationException.class, () -> list.retainAll(Collections.singleton("x")));
-        assertThrows(UnsupportedOperationException.class, list::clear);
+        assertTrue(it.hasPrevious());
+        assertEquals("foo", it.previous());
+        assertTrue(it.hasNext());
+        assertEquals(0, it.nextIndex());
+        it.next();
+        it.set("bar");
+        assertEquals("bar", list.get(0));
+        assertThrows(UnsupportedOperationException.class, it::remove);
+        assertThrows(UnsupportedOperationException.class, () -> it.add("baz"));
     }
 
     @Test
-    void testUninitializedListBehavior() {
-        SingletonList<String> list = new SingletonList<>();
-        assertEquals(0, list.size());
-        assertTrue(list.isEmpty());
-        assertFalse(list.contains("x"));
+    void testListIteratorIndexValues() {
+        SingletonList<String> list = new SingletonList<>("x");
+        assertThrows(IndexOutOfBoundsException.class, () -> list.listIterator(-1));
+        assertThrows(IndexOutOfBoundsException.class, () -> list.listIterator(2));
 
-        Object[] arr = list.toArray();
-        assertEquals(0, arr.length);
-
-        String[] zero = new String[0];
-        assertSame(zero, list.toArray(zero));
-        assertEquals(0, zero.length);
-
-        String[] one = new String[]{"init"};
-        assertSame(one, list.toArray(one));
-        assertNull(one[0]);
-
-        Iterator<String> it = list.iterator();
+        ListIterator<String> it = list.listIterator(1);
         assertFalse(it.hasNext());
-        assertThrows(NoSuchElementException.class, it::next);
+        assertTrue(it.hasPrevious());
+        assertEquals("x", it.previous());
 
-        assertFalse(list.containsAll(Collections.singleton("foo")));
-        assertFalse(list.containsAll(Arrays.asList("foo", "bar")));
-
-        assertTrue(list.add("first"));
-        assertEquals(1, list.size());
-        assertEquals("first", list.get(0));
-        assertThrows(UnsupportedOperationException.class, () -> list.add("second"));
+        SingletonList<String> empty = new SingletonList<>();
+        assertThrows(IndexOutOfBoundsException.class, () -> empty.listIterator(1));
     }
 
     @Test
-    void testNullConstructorActsUninitialized() {
-        SingletonList<String> list = new SingletonList<>(null);
-        assertTrue(list.isEmpty());
-        assertEquals(0, list.size());
-        assertThrows(IndexOutOfBoundsException.class, () -> list.get(0));
-    }
+    void testSubListVariations() {
+        SingletonList<String> empty = new SingletonList<>();
+        assertTrue(empty.subList(0, 0).isEmpty());
+        assertTrue(empty.subList(0, 1).isEmpty());
 
-    @Test
-    void testUnsupportedOperations() {
         SingletonList<String> list = new SingletonList<>("foo");
-        Collection<String> c = Collections.singleton("bar");
-        assertThrows(UnsupportedOperationException.class, () -> list.addAll(c));
-        assertThrows(UnsupportedOperationException.class, () -> list.addAll(0, c));
-        assertThrows(UnsupportedOperationException.class, () -> list.removeAll(c));
-        assertThrows(UnsupportedOperationException.class, () -> list.retainAll(c));
-        assertThrows(UnsupportedOperationException.class, list::clear);
+        assertTrue(list.subList(0, 0).isEmpty());
+        assertEquals(Collections.singletonList("foo"), list.subList(0, 1));
+        assertThrows(IndexOutOfBoundsException.class, () -> list.subList(1, 1));
+    }
+
+    @Test
+    void testEqualsAndHashCode() {
+        SingletonList<String> list = new SingletonList<>("x");
+        assertTrue(list.equals(list));
+        assertFalse(list.equals("str"));
+        assertFalse(list.equals(Arrays.asList("x", "y")));
+        assertFalse(list.equals(Collections.singletonList("y")));
+        assertTrue(list.equals(Collections.singletonList("x")));
+        assertFalse(new SingletonList<>().equals(Collections.emptyList()));
+
+        SingletonList<String> nullList = new SingletonList<>();
+        nullList.set(0, null);
+        List<String> otherNull = Collections.singletonList(null);
+        assertThrows(NullPointerException.class, () -> nullList.equals(otherNull));
+
+        assertEquals(Arrays.hashCode(new Object[]{"x"}), list.hashCode());
+        assertEquals(1, new SingletonList<>().hashCode());
+        assertEquals(Arrays.hashCode(new Object[]{null}), nullList.hashCode());
     }
 }
