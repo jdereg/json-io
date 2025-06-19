@@ -13,6 +13,7 @@
 * Added RecordReader test
 * Added NamedMethodFilter tests and null-safe handling
 * Added tests for Injector's private constructors
+* Fixed VarHandle reflection to allow private-constructor injector
 * RecordFactory now checks the Java version before using records
 #### 4.54.0 Updated to use java-util 3.3.1
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.3.1` to `3.3.2.`
