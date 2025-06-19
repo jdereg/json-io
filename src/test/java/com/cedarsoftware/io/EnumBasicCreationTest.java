@@ -33,11 +33,11 @@ class EnumBasicCreationTest {
     void testEnum_currentFormat() {
         SimpleTestEnum source = SimpleTestEnum.BETA;
         String json = TestUtil.toJson(source);
-        SimpleTestEnum target = TestUtil.toObjects(json, null);
+        SimpleTestEnum target = TestUtil.toObjects(json, SimpleTestEnum.class);
 
         assertThat(target).isEqualTo(source);
-        assertThat(json).contains(TYPE);
-        assertThat(json).contains("\"name\":\"BETA\"");
+        assertThat(json).doesNotContain(TYPE);
+        assertThat(json).contains("BETA");
     }
 
     @Test
