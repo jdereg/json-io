@@ -137,6 +137,19 @@ public class JsonUnicodeTest {
     }
 
     @Test
+    public void testSurrogatePairEscapesInJson() throws IOException {
+        // JSON string containing explicit surrogate pair escape sequences for 🍺 (U+1F37A)
+        String json = "{\"text\":\"\\uD83C\\uDF7A\"}";
+
+        UnicodeContainer result = JsonIo.toJava(json, null).asClass(UnicodeContainer.class);
+
+        assertEquals("🍺", result.getText(), "Surrogate pair escapes should decode to emoji");
+        assertEquals(1, result.getText().codePointCount(0, result.getText().length()),
+                "Decoded text should contain one code point");
+        assertEquals(0x1F37A, result.getText().codePointAt(0), "Code point should match U+1F37A");
+    }
+
+    @Test
     public void testMixedUnicodeCharacters() throws IOException {
         // Create a really complex string with characters from all categories
         String complexString = "ASCII: abc123\n" +
