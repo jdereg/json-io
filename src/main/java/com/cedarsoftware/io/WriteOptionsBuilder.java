@@ -293,6 +293,15 @@ public class WriteOptionsBuilder {
     }
 
     /**
+     * Remove a permanently registered MethodFilter from json-io.
+     *
+     * @param name String name of the MethodFilter to remove.
+     */
+    public static void removePermanentMethodFilter(String name) {
+        BASE_METHOD_FILTERS.remove(name);
+    }
+
+    /**
      * Add a MethodFilter that is JVM lifecycle scoped. All WriteOptions instances will contain this filter.
      * @param name String name of this particular method filter instance.
      * @param clazz class that contains the method to be filtered (can be derived class, with field defined on parent class).
@@ -314,6 +323,15 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentAccessorFactory(String name, AccessorFactory factory) {
         BASE_ACCESSOR_FACTORIES.put(name, factory);
+    }
+
+    /**
+     * Remove a permanently registered AccessorFactory from json-io.
+     *
+     * @param name String name of the AccessorFactory to remove.
+     */
+    public static void removePermanentAccessorFactory(String name) {
+        BASE_ACCESSOR_FACTORIES.remove(name);
     }
 
     /**
@@ -794,7 +812,11 @@ public class WriteOptionsBuilder {
      * @return {@link WriteOptionsBuilder} for chained access.
      */
     public WriteOptionsBuilder addAccessorFactory(String factoryName, AccessorFactory accessorFactory) {
-        options.accessorFactories.put(factoryName, accessorFactory);
+        Map<String, AccessorFactory> map = new LinkedHashMap<>();
+        map.put(factoryName, accessorFactory);
+        map.putAll(options.accessorFactories);
+        options.accessorFactories.clear();
+        options.accessorFactories.putAll(map);
         return this;
     }
 

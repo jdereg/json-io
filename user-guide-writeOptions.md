@@ -864,6 +864,10 @@ To call the API, pass a unique name that is unique across all MethodFilters, the
 resides, and the name of the method.
 >#### WriteOptionsBuilder.addPermanentNamedMethodFilter(`String name, Class<?> clazz, String methodName`)
 
+### removePermanentMethodFilter
+Remove a permanently registered `MethodFilter` by its name.
+>#### WriteOptionsBuilder.removePermanentMethodFilter(`String name`)
+
 ### addPermanentAccessorFactory
 Add an `AccessorFactory` that is JVM lifecycle scoped.  All `WriteOptions` instances will contain this `AccessorFactory.`
 It is the job of an `AccessorFactory` to provide a possible method name for a particular field. `json-io` ships with
@@ -871,3 +875,7 @@ a `GetMethodAccessorFactory` and an `IsMethodAccessFactory.` These produce a pos
 When a field on a Java class is being accessed (read), and it cannot be obtained directly, then all `AccessoryFactory`
 instances will be consulted until an API can be used to read the field.
 >#### WriteOptionsBuilder.addPermanentAccessorFactory(`String name, AccessorFactory factory`)
+
+### removePermanentAccessorFactory
+Remove a permanently registered `AccessorFactory` by its name.
+>#### WriteOptionsBuilder.removePermanentAccessorFactory(`String name`)
