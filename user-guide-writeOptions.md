@@ -252,6 +252,7 @@ Here's how you configure these options in `json-io`:
 
 >#### `WriteOptionsBuilder` writeEnumsAsString()
 >- [ ] Sets the option to write enums as a `String.` This is the default option.  If you have called `writeEnumAsJsonObject(true or false),` call `writeEnumsAsString()`to return to enum output as `String.`
+- [ ] Top-level enums written as strings omit `@type` metadata.
 >#### `WriteOptionsBuilder` writeEnumAsJsonObject(`boolean writePublicFieldsOnly`)
 >- [ ] Sets the option to write all the member fields of an enum, using JSON { } format for the enum, to allow for multiple fields. Setting this option to `true` or `false` (include/exclude private fields), turns off the writeEnumsAsString() option. This option is off by default - enums are written as `String` by default.
 >#### `WriteOptionsBuilder` writeEnumSetOldWay(`boolean writeEnumSetOldWay`)
