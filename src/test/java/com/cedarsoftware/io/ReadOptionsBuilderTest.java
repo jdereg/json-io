@@ -95,4 +95,29 @@ class ReadOptionsBuilderTest {
         assertThat(options.getCustomOption("foo")).isEqualTo("bar");
         assertTrue(options.isNonReferenceableClass(NonRefClass.class));
     }
+
+    @Test
+    void testLruSize_defaultAndCustom() {
+        ReadOptions defaultOptions = new ReadOptionsBuilder().build();
+        assertThat(defaultOptions.getLruSize()).isEqualTo(1000);
+
+        ReadOptions customOptions = new ReadOptionsBuilder()
+                .lruSize(42)
+                .build();
+        assertThat(customOptions.getLruSize()).isEqualTo(42);
+    }
+
+    static class SourceClass {}
+    static class DestinationClass {}
+
+    @Test
+    void testIsClassCoerced() {
+        ReadOptions options = new ReadOptionsBuilder()
+                .coerceClass(SourceClass.class.getName(), DestinationClass.class)
+                .build();
+
+        assertFalse(new ReadOptionsBuilder().build().isClassCoerced(SourceClass.class));
+        assertTrue(options.isClassCoerced(SourceClass.class));
+        assertThat(options.getCoercedClass(SourceClass.class)).isSameAs(DestinationClass.class);
+    }
 }
