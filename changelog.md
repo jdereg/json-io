@@ -6,6 +6,7 @@
 * SealableNavigableMap now wraps returned entries to enforce immutability
 * Documentation expanded for CompactMap usage and builder() caveats
 * JsonObject exposes `getTypeString()` with the raw `@type` value
+* Added tests for ModifierMaskFilter.
 * Pinned core Maven plugin versions to prevent Maven 4 warnings
 * Documentation updated with guidance for parsing JSON that references unknown classes
 * RecordFactory now checks the Java version before using records
