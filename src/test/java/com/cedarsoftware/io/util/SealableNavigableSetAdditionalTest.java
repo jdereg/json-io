@@ -139,4 +139,34 @@ class SealableNavigableSetAdditionalTest {
         sealed = true;
         assertThrows(UnsupportedOperationException.class, it::remove);
     }
+
+    @Test
+    void testEquals() {
+        SealableNavigableSet<Integer> other = new SealableNavigableSet<>(sealedSupplier);
+        other.addAll(asList(10, 20, 30));
+        assertEquals(set, other);
+        other.add(40);
+        assertNotEquals(set, other);
+    }
+
+    @Test
+    void testToStringReflectsSetContents() {
+        NavigableSet<Integer> expected = new TreeSet<>(asList(10, 20, 30));
+        assertEquals(expected.toString(), set.toString());
+        set.add(40);
+        expected.add(40);
+        assertEquals(expected.toString(), set.toString());
+    }
+
+    @Test
+    void testPollFirstAndLast() {
+        assertEquals(Integer.valueOf(10), set.pollFirst());
+        assertEquals(Integer.valueOf(30), set.pollLast());
+        assertFalse(set.contains(10));
+        assertFalse(set.contains(30));
+
+        set.clear();
+        assertNull(set.pollFirst());
+        assertNull(set.pollLast());
+    }
 }
