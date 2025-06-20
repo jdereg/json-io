@@ -316,7 +316,7 @@ public class ObjectResolver extends Resolver
             } else if ((special = readWithFactoryIfExists(element, TypeUtilities.getRawClass(elementType))) != null) {
                 // Use custom converter if available.
                 col.add(special);
-            } else if (converter.isSimpleTypeConversionSupported(elementClass, elementClass)) {
+            } else if (converter.isSimpleTypeConversionSupported(elementClass)) {
                 // Simple types: add as is.
                 col.add(element);
             } else if (elementClass.isArray()) {
