@@ -224,7 +224,7 @@ java -cp your-classpath com.cedarsoftware.io.JsonIo
 ```
 
 ## LoggingConfig
-[Source](https://github.com/jdereg/java-util/src/main/java/com/cedarsoftware/util/LoggingConfig.java)
+[Source](https://github.com/jdereg/java-util/blob/master/src/main/java/com/cedarsoftware/util/LoggingConfig.java)
 
 `LoggingConfig` applies a consistent console format for `java.util.logging`.
 Call `LoggingConfig.init()` once during application startup. You may supply a
