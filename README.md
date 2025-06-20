@@ -83,7 +83,7 @@ ___
 ### Logging
 
 By design, `json-io` limits its dependences to `java-util` and no other libraries, keeping it small and easy to work with.  `json-io` uses the Java built-in `java.util.logging` for all output. See the
-[user guide](userguide.md#redirecting-javautillogging) for ways to route
+[user guide](/user-guide.md#redirecting-javautillogging) for ways to route
 these logs to SLF4J or Log4j&nbsp;2.
 
 Featured on [json.org](http://json.org).
