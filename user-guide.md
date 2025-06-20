@@ -223,12 +223,84 @@ the complete list of supported conversions:
 java -cp your-classpath com.cedarsoftware.io.JsonIo
 ```
 
-#### Logging
-`json-io` logs through `java.util.logging` to avoid depending on a specific logging
-framework. Use the `LoggingConfig` helper from **java-util** if you wish to connect
-these logs to SLF4J or Log4J:
+## LoggingConfig
+[Source](https://github.com/jdereg/java-util/src/main/java/com/cedarsoftware/util/LoggingConfig.java)
+
+`LoggingConfig` applies a consistent console format for `java.util.logging`.
+Call `LoggingConfig.init()` once during application startup. You may supply a
+custom timestamp pattern via `LoggingConfig.init("yyyy/MM/dd HH:mm:ss")` or the
+system property `ju.log.dateFormat`.
+
+## Redirecting java.util.logging
+
+`json-io` uses `java.util.logging.Logger` (JUL) internally so as to bring in no depencies to other libraries except `java-util`. Most applications prefer frameworks like SLF4J, Logback or Log4j&nbsp;2. You can bridge JUL to your chosen framework so that logs from this library integrate with the rest of your application.
+
+**All steps below are application-scoped**&mdash;set them up once during your application's initialization.
+
+---
+
+**Optional: Using JUL directly with consistent formatting**
+
+If you are not bridging to another framework, call `LoggingConfig.init()` early in your application's startup. This configures JUL's `ConsoleHandler` with a formatted pattern. Pass a custom pattern via `LoggingConfig.init("yyyy/MM/dd HH:mm:ss")` or set the system property `ju.log.dateFormat`.
 
 ```java
-LoggingConfig.configure();                 // standard JUL handlers
-LoggingConfig.bridgeHandlersToSLF4J();     // optional SLF4J bridge
+// Example initialization
+public static void main(String[] args) {
+    LoggingConfig.init();
+    // ... application startup
+}
 ```
+
+You may also start the JVM with
+
+```bash
+java -Dju.log.dateFormat="HH:mm:ss.SSS" -jar your-app.jar
+```
+
+---
+
+### Bridging JUL to other frameworks
+
+To route JUL messages to a different framework, add the appropriate bridge dependency and perform a one-time initialization.
+
+#### 1. SLF4J (Logback, Log4j&nbsp;1.x)
+
+Add `jul-to-slf4j` to your build and install the bridge:
+
+```xml
+<dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>jul-to-slf4j</artifactId>
+    <version>2.0.7</version>
+</dependency>
+```
+
+```java
+import org.slf4j.bridge.SLF4JBridgeHandler;
+
+public class MainApplication {
+    public static void main(String[] args) {
+        SLF4JBridgeHandler.removeHandlersForRootLogger();
+        SLF4JBridgeHandler.install();
+    }
+}
+```
+
+#### 2. Log4j&nbsp;2
+
+Add `log4j-jul` and set the `java.util.logging.manager` system property:
+
+```xml
+<dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-jul</artifactId>
+    <version>2.20.0</version>
+</dependency>
+```
+
+```bash
+java -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager \
+     -jar your-app.jar
+```
+
+Once configured, JUL output flows through your framework's configuration.
