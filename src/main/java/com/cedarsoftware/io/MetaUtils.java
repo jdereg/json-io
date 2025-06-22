@@ -208,7 +208,7 @@ public class MetaUtils {
      */
     @Deprecated
     public static Object newInstance(Converter converter, Class<?> c, Collection<?> argumentValues) {
-        return ClassUtilities.newInstance(converter, c, argumentValues);
+        return ClassUtilities.newInstance(c, argumentValues);
     }
 
     /**
