@@ -5,7 +5,7 @@
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io</artifactId>
     <packaging>bundle</packaging>
-    <version>4.55.0</version>
+    <version>4.56.0</version>
     <description>Java JSON serialization</description>
     <url>https://github.com/jdereg/json-io</url>
 
@@ -26,7 +26,7 @@
         <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ss.SSSZ</maven.build.timestamp.format>
         <!-- remove source encoding warnings from maven output -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <version.java-util>3.4.0</version.java-util>
+        <version.java-util>3.5.0</version.java-util>
         <!-- testing only -->
         <version.junit-jupiter-api>5.11.4</version.junit-jupiter-api>
         <version.junit-jupiter-params>5.11.4</version.junit-jupiter-params>

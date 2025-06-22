@@ -1,4 +1,5 @@
 ### Revision History
+#### 4.56.0 (Unreleased)
 #### 4.55.0 Updated to use java-util 3.4.0
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.3.2` to `3.4.0.`
 * Added class-level Javadoc for `ByteArrayWriter` describing Base64 encoding
