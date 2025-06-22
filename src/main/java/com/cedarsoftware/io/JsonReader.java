@@ -102,7 +102,7 @@ public class JsonReader implements Closeable
          * override the isObjectFinal() method below and return true.
          */
         default Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-            return ClassUtilities.newInstance(resolver.getConverter(), c, null);
+            return ClassUtilities.newInstance(resolver.getConverter(), c, jObj);
         }
         
         /**

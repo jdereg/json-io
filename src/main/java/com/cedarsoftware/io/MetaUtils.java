@@ -1,9 +1,11 @@
 package com.cedarsoftware.io;
 
 import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -11,8 +13,10 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
+import com.cedarsoftware.util.CaseInsensitiveMap;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.ExceptionUtilities;
+import com.cedarsoftware.util.ReflectionUtils;
 import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
@@ -80,18 +84,6 @@ public class MetaUtils {
         }
 
         return (V) map.get(key);
-    }
-
-    @Deprecated
-    public static void setFieldValue(Field field, Object instance, Object value) {
-        try {
-            if (instance == null) {
-                throw new IllegalStateException("Attempting to set field: " + field.getName() + " on null object.");
-            }
-            field.set(instance, value);
-        } catch (IllegalAccessException e) {
-            throw new IllegalStateException("Cannot set field: " + field.getName() + " on class: " + instance.getClass().getName() + " as field is not accessible.  Add a ClassFactory implementation to create the needed class, and use JsonReader.assignInstantiator() to associate your ClassFactory to the class: " + instance.getClass().getName(), e);
-        }
     }
 
     /**

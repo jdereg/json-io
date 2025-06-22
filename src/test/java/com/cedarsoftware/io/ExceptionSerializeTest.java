@@ -9,10 +9,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.cedarsoftware.io.factory.ThrowableFactory;
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.StringUtilities;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -40,6 +44,21 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ExceptionSerializeTest
 {
+    @BeforeAll
+    public static void enableDetailedLogging() {
+        Logger rootLogger = Logger.getLogger("");
+        rootLogger.setLevel(Level.FINEST);
+        if (rootLogger.getHandlers().length > 0) {
+            rootLogger.getHandlers()[0].setLevel(Level.FINEST);
+        }
+
+        // Disable noisy JMX/RMI logging
+        Logger.getLogger("javax.management").setLevel(Level.WARNING);
+        Logger.getLogger("sun.rmi").setLevel(Level.WARNING);
+        Logger.getLogger("java.io.serialization").setLevel(Level.WARNING);
+        Logger.getLogger("org.junit").setLevel(Level.WARNING);
+    }
+    
     public static class MyException extends RuntimeException {
         MyException(String message, Throwable cause, long val) {
             super(message, cause);
@@ -411,7 +430,13 @@ class ExceptionSerializeTest
     }
 
     @Test
-    void testInvalidCoordinateException_fullyPopulated() {
+    public void testInvalidCoordinateException_fullyPopulated() {
+        // Check logging levels
+        System.out.println("Root logger level: " + Logger.getLogger("").getLevel());
+        System.out.println("ConsoleHandler level: " + Logger.getLogger("").getHandlers()[0].getLevel());
+        System.out.println("ClassUtilities logger level: " + Logger.getLogger(ClassUtilities.class.getName()).getLevel());
+        System.out.println("ClassUtilities effective level: " + Logger.getLogger(ClassUtilities.class.getName()).getLevel());
+
         Set<String> coordKeys = setOf("key1", "key2", "key3");
         Set<Integer> reqKeys = setOf(3, 1, 2);
 
