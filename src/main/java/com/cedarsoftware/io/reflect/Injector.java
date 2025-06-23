@@ -137,8 +137,7 @@ public class Injector {
         boolean isFinal = Modifier.isFinal(field.getModifiers());
         if (isFinal && !IS_JDK17_OR_HIGHER) {
             try {
-                Field modifiersField = ReflectionUtils.getDeclaredField(Field.class, "modifiers");
-                modifiersField.setAccessible(true);
+                Field modifiersField = ReflectionUtils.getField(Field.class, "modifiers");
                 modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
             } catch (Exception ex) {
                 // If removal fails, still fall back to Field.set() injection.

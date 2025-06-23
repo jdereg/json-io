@@ -801,8 +801,8 @@ public class ReadOptionsBuilder {
                         LOG.fine("Skipping class: " + factoryClassName + " not defined in JVM, but listed in resources/classFactories.txt, as factory for: " + className);
                         continue;
                     }
-                    Constructor<? extends JsonReader.ClassFactory> ctor =
-                            ReflectionUtils.getConstructor(factoryClass);
+                    // Add this if javac issues an unchecked cast warning for this line
+                    Constructor<? extends JsonReader.ClassFactory> ctor = (Constructor<? extends JsonReader.ClassFactory>) ReflectionUtils.getConstructor(factoryClass);
                     addPermanentClassFactory(clazz, ctor.newInstance());
                 } catch (Exception e) {
                     LOG.log(Level.FINE, "Unable to create JsonReader.ClassFactory class: " + factoryClassName + ", a factory class for: " + className + ", listed in resources/classFactories.txt", e);
@@ -824,11 +824,11 @@ public class ReadOptionsBuilder {
             String readerClassName = entry.getValue();
             Class<?> clazz = ClassUtilities.forName(className, classLoader);
             if (clazz != null) {
-                Class<JsonReader.JsonClassReader> customReaderClass = (Class<JsonReader.JsonClassReader>) ClassUtilities.forName(readerClassName, classLoader);
+                Class<? extends JsonReader.JsonClassReader> customReaderClass = (Class<JsonReader.JsonClassReader>) ClassUtilities.forName(readerClassName, classLoader);
 
                 try {
-                    Constructor<JsonReader.JsonClassReader> ctor =
-                            ReflectionUtils.getConstructor(customReaderClass);
+                    // Add this if javac issues an unchecked cast warning for this line
+                    Constructor<? extends JsonReader.JsonClassReader> ctor = (Constructor<? extends JsonReader.JsonClassReader>) ReflectionUtils.getConstructor(customReaderClass);
                     addPermanentReader(clazz, ctor.newInstance());
                 } catch (Exception e) {
                     LOG.log(Level.FINE, "Note: could not instantiate (custom JsonClassReader class): " + readerClassName + " from resources/customReaders.txt", e);
@@ -1120,7 +1120,7 @@ public class ReadOptionsBuilder {
                 return false;
             }
             try {
-                return (Boolean) ReflectionUtils.call(c, "isRecord");
+                return (Boolean) isRecordMethod.invoke(c);
             } catch (Exception ignore) {
                 return false;
             }
@@ -1290,7 +1290,7 @@ public class ReadOptionsBuilder {
 
             Class<?> curr = clazz;
             while (curr != null) {
-                List<Field> fields = ReflectionUtils.getDeclaredFields(curr);
+                final Field[] fields = curr.getDeclaredFields();
                 final Set<String> excludedForClass = excludedFieldNames.get(curr);
 
                 if (excludedForClass != null) {
