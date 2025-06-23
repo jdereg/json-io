@@ -10,8 +10,11 @@ Key Features:
 - Supports polymorphic types and complex object graphs
 - Zero external dependencies (other than java-util)
 - Fully compatible with both JPMS and OSGi environments
-- Lightweight (`json-io.jar` is 258K, `java-util` is 471K)
+- Lightweight (`json-io.jar` is 265K, `java-util` is 485K)
 - Compatible with JDK 1.8 through JDK 24
+- As of version 4.56.0 the library is built with the `-parameters`
+  compiler flag. Parameter names are now retained for tasks such as
+  constructor discovery.
 - Extensive configuration options via `ReadOptionsBuilder` and `WriteOptionsBuilder`
 - Optionally parse JSON with unknown class references into a Map-of-Maps representation
 - Featured on [json.org](http://json.org)
@@ -64,7 +67,7 @@ ___
 >  - Use [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md) to configure `JsonIo`
 >  - Use [JsonReader.ClassFactory](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.55.0/com/cedarsoftware/io/JsonReader.ClassFactory.html) for difficult classes (hard to instantiate & fill)
 >  - Use [JsonWriter.JsonClassWriter](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.55.0/com/cedarsoftware/io/JsonWriter.JsonClassWriter.html) to customize the output JSON for a particular class
->- [ ] Updates will be 4.56.0, 4.57.0, ...
+>- [ ] Updates will be 4.57.0, 4.58.0, ...
 >### 4.14.x (supported)
 >- [ ] **Version**: [4.14.3](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/index.html)
 >- [ ] **Bundling**: Both JPMS (Java Platform Module System) and OSGi (Open Service Gateway initiative)
