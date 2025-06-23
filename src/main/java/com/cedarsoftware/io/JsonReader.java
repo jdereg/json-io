@@ -411,13 +411,13 @@ public class JsonReader implements Closeable
             }
             // After drilling down, get the raw class of the ultimate component.
             Class<?> ultimateRawType = TypeUtilities.getRawClass(typeToCheck);
-            if (localConverter.isSimpleTypeConversionSupported(ultimateRawType, ultimateRawType)
+            if (localConverter.isSimpleTypeConversionSupported(ultimateRawType)
                     || (ultimateRawType != null && ultimateRawType.equals(Object.class))) {
                 return;
             }
         } else {
             // For non-array types, check if the type is supported by simple conversion.
-            if (localConverter.isSimpleTypeConversionSupported(rawRootType, rawRootType)) {
+            if (localConverter.isSimpleTypeConversionSupported(rawRootType)) {
                 return;
             }
         }
@@ -537,7 +537,7 @@ public class JsonReader implements Closeable
             if (javaType != null) {
                 // If there's an @type and it's a simple type (or Number), convert to its basic type.
                 Class<?> javaClass = TypeUtilities.getRawClass(javaType);
-                if (localConverter.isSimpleTypeConversionSupported(javaClass, javaClass) ||
+                if (localConverter.isSimpleTypeConversionSupported(javaClass) ||
                         Number.class.isAssignableFrom(javaClass)) {
                     Class<?> basicType = getJsonSynonymType(javaClass);
                     return localConverter.convert(jsonObj, basicType);
@@ -548,7 +548,7 @@ public class JsonReader implements Closeable
                 }
             }
             // If no @type or it isn't convertible, check if the resolved graph can remain a "simple" type.
-            if (localConverter.isSimpleTypeConversionSupported(graph.getClass(), graph.getClass())) {
+            if (localConverter.isSimpleTypeConversionSupported(graph.getClass())) {
                 return graph;
             }
             // Otherwise, return the raw JsonObject.
@@ -646,7 +646,7 @@ public class JsonReader implements Closeable
             return false;
         }
         Class<?> cls = obj.getClass();
-        return localConverter.isSimpleTypeConversionSupported(cls, cls);
+        return localConverter.isSimpleTypeConversionSupported(cls);
     }
 
     /**

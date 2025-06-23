@@ -44,21 +44,21 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ExceptionSerializeTest
 {
-    @BeforeAll
-    public static void enableDetailedLogging() {
-        Logger rootLogger = Logger.getLogger("");
-        rootLogger.setLevel(Level.FINEST);
-        if (rootLogger.getHandlers().length > 0) {
-            rootLogger.getHandlers()[0].setLevel(Level.FINEST);
-        }
-
-        // Disable noisy JMX/RMI logging
-        Logger.getLogger("javax.management").setLevel(Level.WARNING);
-        Logger.getLogger("sun.rmi").setLevel(Level.WARNING);
-        Logger.getLogger("java.io.serialization").setLevel(Level.WARNING);
-        Logger.getLogger("org.junit").setLevel(Level.WARNING);
-    }
-    
+//    @BeforeAll
+//    public static void enableDetailedLogging() {
+//        Logger rootLogger = Logger.getLogger("");
+//        rootLogger.setLevel(Level.FINEST);
+//        if (rootLogger.getHandlers().length > 0) {
+//            rootLogger.getHandlers()[0].setLevel(Level.FINEST);
+//        }
+//
+//        // Disable noisy JMX/RMI logging
+//        Logger.getLogger("javax.management").setLevel(Level.WARNING);
+//        Logger.getLogger("sun.rmi").setLevel(Level.WARNING);
+//        Logger.getLogger("java.io.serialization").setLevel(Level.WARNING);
+//        Logger.getLogger("org.junit").setLevel(Level.WARNING);
+//    }
+//
     public static class MyException extends RuntimeException {
         MyException(String message, Throwable cause, long val) {
             super(message, cause);

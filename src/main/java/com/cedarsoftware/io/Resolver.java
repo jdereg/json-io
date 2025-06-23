@@ -72,7 +72,6 @@ import com.cedarsoftware.util.convert.Converter;
 public abstract class Resolver {
     private static final String NO_FACTORY = "_︿_ψ_☼";
     final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
-    private final Map<Object, Object> visited = new IdentityHashMap<>();
     protected final Deque<JsonObject> stack = new ArrayDeque<>();
     private final Collection<JsonObject> mapsToRehash = new ArrayList<>();
     // store the missing field found during deserialization to notify any client after the complete resolution is done
@@ -243,7 +242,6 @@ public abstract class Resolver {
                 continue;
             }
 
-            visited.put(jsonObj, null);
             traverseSpecificType(jsonObj);
         }
         return (T) root.getTarget();
@@ -302,7 +300,6 @@ public abstract class Resolver {
         handleMissingFields();
         missingFields.clear();
         stack.clear();
-        visited.clear();
         references = null;
         readOptions = null;
         sealedSupplier.seal();
@@ -422,7 +419,7 @@ public abstract class Resolver {
      * set in the JSON stream.  If the key '@type' does not exist, then the passed in Class
      * is used to create the instance, handling creating an Array or regular Object
      * instance.<p></p>
-     * The '@type' is not often specified in the JSON input stream, as in many
+     * The '@type' is seldom specified in the JSON input stream, as in many
      * cases it can be inferred from a field reference or array component type.
      * For Enum handling, the following rules are applied:
      * <p><pre>
@@ -467,7 +464,7 @@ public abstract class Resolver {
         }
 
         // Knock out popular easy classes to instantiate and finish.
-        if (converter.isSimpleTypeConversionSupported(targetType, targetType)) {
+        if (converter.isSimpleTypeConversionSupported(targetType)) {
             return jsonObj.setFinishedTarget(converter.convert(jsonObj, targetType), true);
         }
 
@@ -561,25 +558,19 @@ public abstract class Resolver {
      */
     private Object createInstanceUsingType(JsonObject jsonObj) {
         Class<?> c = jsonObj.getRawType();
-        boolean useMaps = readOptions.isReturningJsonObjects();
-        Object mate;
+        boolean isUnknownObject = c == Object.class && !readOptions.isReturningJsonObjects();
 
-        if (c == Object.class && !useMaps) {  // JsonObject
-            Class<?> unknownClass = readOptions.getUnknownTypeClass();
-            if (unknownClass == null) {
-                JsonObject jsonObject = new JsonObject();
-                jsonObject.setType(Map.class);
-                mate = jsonObject;
-            } else {
-                mate = ClassUtilities.newInstance(converter, unknownClass, null);   // can add constructor arg values
-            }
+        Object instance;
+        if (isUnknownObject && readOptions.getUnknownTypeClass() == null) {
+            JsonObject jsonObject = new JsonObject();
+            jsonObject.setType(Map.class);
+            instance = jsonObject;
         } else {
-            // Handle regular field.object reference
-            // ClassFactory already consulted above, likely regular business/data classes.
-            // If the newInstance(c) fails, it throws a JsonIoException.
-            mate = ClassUtilities.newInstance(converter, c, null);  // can add constructor arg values
+            Class<?> targetClass = isUnknownObject ? readOptions.getUnknownTypeClass() : c;
+            instance = ClassUtilities.newInstance(converter, targetClass, jsonObj);
         }
-        return jsonObj.setTarget(mate);
+
+        return jsonObj.setTarget(instance);
     }
 
     /**
@@ -705,7 +696,7 @@ public abstract class Resolver {
             return true;
         }
 
-        if (!converter.isSimpleTypeConversionSupported(javaType, javaType)) {
+        if (!converter.isSimpleTypeConversionSupported(javaType)) {
             return false;
         }
 
