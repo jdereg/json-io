@@ -9,6 +9,8 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.Arrays;
 
+import com.cedarsoftware.util.ReflectionUtils;
+
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.CollectionUtilities;
@@ -57,13 +59,15 @@ public class Injector {
                 Class<?> methodHandlesClass = Class.forName("java.lang.invoke.MethodHandles");
                 Class<?> lookupClass = Class.forName("java.lang.invoke.MethodHandles$Lookup");
 
-                Method lookupMethod = methodHandlesClass.getMethod("lookup");
+                Method lookupMethod = ReflectionUtils.getMethod(methodHandlesClass, "lookup");
                 lookup = lookupMethod.invoke(null);
 
-                privateLookupInMethod = methodHandlesClass.getMethod("privateLookupIn", Class.class, lookupClass);
+                privateLookupInMethod = ReflectionUtils.getMethod(methodHandlesClass,
+                        "privateLookupIn", Class.class, lookupClass);
 
                 varHandleClass = Class.forName("java.lang.invoke.VarHandle");
-                findVarHandleMethod = lookupClass.getMethod("findVarHandle", Class.class, String.class, Class.class);
+                findVarHandleMethod = ReflectionUtils.getMethod(lookupClass,
+                        "findVarHandle", Class.class, String.class, Class.class);
                 MethodType setType = MethodType.methodType(void.class, Object.class, Object.class);
                 varHandleSetMethod = MethodHandles.publicLookup().findVirtual(varHandleClass, "set", setType);
             } catch (Exception e) {
@@ -133,7 +137,7 @@ public class Injector {
         boolean isFinal = Modifier.isFinal(field.getModifiers());
         if (isFinal && !IS_JDK17_OR_HIGHER) {
             try {
-                Field modifiersField = Field.class.getDeclaredField("modifiers");
+                Field modifiersField = ReflectionUtils.getDeclaredField(Field.class, "modifiers");
                 modifiersField.setAccessible(true);
                 modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
             } catch (Exception ex) {
