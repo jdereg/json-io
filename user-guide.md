@@ -122,7 +122,7 @@ Map<String, List<Department<Employee>>> orgMap = JsonIo.toJava(json, readOptions
 Sometimes you will run into a class that does not want to serialize.  On the read-side, this can be a class that does
 not want to be instantiated easily.  A class that has private constructors, constructor with many difficult to supply
 arguments, etc. There are unlimited Java classes 'out-there' that `json-io` has never seen.  It can instantiate many classes, and
-resorts to a lot of "tricks" to make that happen.  However, if a particular class is not instantiating, add a
+resorts to a lot of "tricks" to make that happen.  As of version 4.56.0 the library itself is compiled with the `-parameters` flag, allowing `json-io` to match JSON fields directly to constructor parameter names when your classes are also compiled with this flag.  This greatly reduces the need for custom factories when classes have accessible constructors with named arguments.  However, if a particular class is not instantiating, add a
 `JsonReader.ClassFactory` (one that you write, which subclasses this interface) and associate it to the class you want to
 instantiate. See [examples](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectsTest.java) for how to do this.
 ```java
