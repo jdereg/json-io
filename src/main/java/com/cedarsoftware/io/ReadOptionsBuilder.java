@@ -2,6 +2,7 @@ package com.cedarsoftware.io;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.Constructor;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
@@ -800,7 +801,9 @@ public class ReadOptionsBuilder {
                         LOG.fine("Skipping class: " + factoryClassName + " not defined in JVM, but listed in resources/classFactories.txt, as factory for: " + className);
                         continue;
                     }
-                    addPermanentClassFactory(clazz, factoryClass.getConstructor().newInstance());
+                    Constructor<? extends JsonReader.ClassFactory> ctor =
+                            ReflectionUtils.getConstructor(factoryClass);
+                    addPermanentClassFactory(clazz, ctor.newInstance());
                 } catch (Exception e) {
                     LOG.log(Level.FINE, "Unable to create JsonReader.ClassFactory class: " + factoryClassName + ", a factory class for: " + className + ", listed in resources/classFactories.txt", e);
                 }
@@ -824,7 +827,9 @@ public class ReadOptionsBuilder {
                 Class<JsonReader.JsonClassReader> customReaderClass = (Class<JsonReader.JsonClassReader>) ClassUtilities.forName(readerClassName, classLoader);
 
                 try {
-                    addPermanentReader(clazz, customReaderClass.getConstructor().newInstance());
+                    Constructor<JsonReader.JsonClassReader> ctor =
+                            ReflectionUtils.getConstructor(customReaderClass);
+                    addPermanentReader(clazz, ctor.newInstance());
                 } catch (Exception e) {
                     LOG.log(Level.FINE, "Note: could not instantiate (custom JsonClassReader class): " + readerClassName + " from resources/customReaders.txt", e);
                 }
@@ -1115,7 +1120,7 @@ public class ReadOptionsBuilder {
                 return false;
             }
             try {
-                return (Boolean) isRecordMethod.invoke(c);
+                return (Boolean) ReflectionUtils.call(c, "isRecord");
             } catch (Exception ignore) {
                 return false;
             }
@@ -1285,7 +1290,7 @@ public class ReadOptionsBuilder {
 
             Class<?> curr = clazz;
             while (curr != null) {
-                final Field[] fields = curr.getDeclaredFields();
+                List<Field> fields = ReflectionUtils.getDeclaredFields(curr);
                 final Set<String> excludedForClass = excludedFieldNames.get(curr);
 
                 if (excludedForClass != null) {
