@@ -1290,7 +1290,7 @@ public class ReadOptionsBuilder {
 
             Class<?> curr = clazz;
             while (curr != null) {
-                final Field[] fields = curr.getDeclaredFields();
+                List<Field> fields = ReflectionUtils.getDeclaredFields(curr);
                 final Set<String> excludedForClass = excludedFieldNames.get(curr);
 
                 if (excludedForClass != null) {
