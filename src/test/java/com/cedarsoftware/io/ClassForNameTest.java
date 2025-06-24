@@ -67,8 +67,7 @@ public class ClassForNameTest
             this.clazz = clazz;
         }
 
-        public Class<?> loadClass(String className) throws ClassNotFoundException
-        {
+        public Class<?> loadClass(String className) {
             return findClass(className);
         }
 
