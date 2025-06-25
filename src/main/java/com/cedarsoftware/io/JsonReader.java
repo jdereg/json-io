@@ -115,25 +115,6 @@ public class JsonReader implements Closeable
         default boolean isObjectFinal() {
             return false;
         }
-
-        default void gatherRemainingValues(Resolver resolver, JsonObject jObj, List<Object> arguments, Set<String> excludedFields) {
-            Convention.throwIfNull(jObj, "JsonObject cannot be null");
-
-            for (Map.Entry<Object, Object> entry : jObj.entrySet()) {
-                if (excludedFields.contains(entry.getKey().toString()) || entry.getValue() == null) {
-                    continue;
-                }
-
-                if (entry.getValue() instanceof JsonObject) {
-                    JsonObject sub = (JsonObject) entry.getValue();
-                    Object value = resolver.toJavaObjects(sub, sub.getType());
-
-                    if (value != null && sub.getType() != null) {
-                        arguments.add(value);
-                    }
-                }
-            }
-        }
     }
 
     /**
@@ -158,6 +139,7 @@ public class JsonReader implements Closeable
 
     /**
      * Implement this interface to add a custom JSON reader.
+     * Recommended: Use ClassFactory instead - that allows you to instantiate and read the JSON object in one operation.
      */
     public interface JsonClassReader
     {

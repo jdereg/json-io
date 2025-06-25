@@ -1,26 +1,19 @@
 package com.cedarsoftware.io;
 
-import java.io.IOException;
 import java.io.Serializable;
-import java.io.Writer;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import com.cedarsoftware.io.factory.ThrowableFactory;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.StringUtilities;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import static com.cedarsoftware.io.JsonWriter.writeBasicString;
 import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static com.cedarsoftware.util.CollectionUtilities.setOf;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -87,61 +80,6 @@ class ExceptionSerializeTest
             super(s);
         }
     }
-
-    public static class MyExceptionFactory extends ThrowableFactory
-    {
-        public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver)
-        {
-            String msg = (String) jObj.get("detailMessage");
-            JsonObject jObjCause = (JsonObject) jObj.get("cause");
-            List<Object> arguments = new ArrayList<>();
-
-            Throwable cause = resolver.toJavaObjects(jObjCause, Throwable.class);
-
-            if (cause != null) {
-                arguments.add(cause);
-            }
-
-            gatherRemainingValues(resolver, jObj, arguments, setOf("detailMessage", "cause"));
-
-            MyException myEx = (MyException) createException(msg, cause);
-            Long rn = (Long) jObj.get("recordNumber");
-            if (rn != null)
-            {
-                myEx.recordNumber = rn;
-            }
-            return myEx;
-        }
-
-        protected Throwable createException(String msg, Throwable cause)
-        {
-            return new MyException(msg, cause, 0);
-        }
-    }
-
-    public static class MyExceptionWriter implements JsonWriter.JsonClassWriter
-    {
-        /**
-         * Only serialize the 'detailMessage' and 'cause' field.  Serialize the cause as a String.
-         * Do not write the stackTrace lines out.
-         */
-        public void write(Object obj, boolean showType, Writer output, WriterContext writerContext) throws IOException
-        {
-            MyException t = (MyException) obj;
-            output.write("\"detailMessage\":");
-            writeBasicString(output, t.getMessage());
-            output.write(",\"cause\":");
-            Throwable cause = t.getCause();
-            String json = TestUtil.toJson(cause, null);
-            output.write(json);
-            output.write(",");
-            output.write("\"recordNumber\":");
-            output.write(String.valueOf(t.recordNumber));
-        }
-
-        public boolean hasPrimitiveForm(WriterContext writerContext) { return false; }
-    }
-
     @Test
     void testIllegalArgumentException_withNoCause()
     {

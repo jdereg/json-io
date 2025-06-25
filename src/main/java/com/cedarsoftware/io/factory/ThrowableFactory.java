@@ -54,8 +54,6 @@ public class ThrowableFactory implements JsonReader.ClassFactory
             arguments.add(cause);
         }
 
-        gatherRemainingValues(resolver, jObj, arguments, setOf(DETAIL_MESSAGE, CAUSE, STACK_TRACE));
-
         // Only need the values
         Throwable t = (Throwable) ClassUtilities.newInstance(resolver.getConverter(), c, arguments);
 

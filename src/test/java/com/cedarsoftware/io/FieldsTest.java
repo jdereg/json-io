@@ -54,7 +54,7 @@ public class FieldsTest
         OuterObject expected = OuterObject.of(9, 12, "Happy Holidays", "Some Other Message");
         String json = TestUtil.toJson(expected);
         TestUtil.printLine(json);
-        OuterObject actual = TestUtil.toObjects(json, null);
+        OuterObject actual = TestUtil.toObjects(json, OuterObject.class);
         assertEquals(actual.getX(), expected.getX());
         assertEquals(actual.getY(), expected.getY());
         assertEquals(actual.getMessage1Holder().getMessage(), expected.getMessage1Holder().getMessage());

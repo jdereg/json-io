@@ -1098,6 +1098,7 @@ public class ReadOptionsBuilder {
                 return factory;
             }
 
+            // Special case exceptions - they will "inherit" from ThrowableFactory unless explicitly overridden in the classFactory.txt resource file.
             if (Throwable.class.isAssignableFrom(c)) {
                 return throwableFactory;
             }
@@ -1108,6 +1109,7 @@ public class ReadOptionsBuilder {
                 return enumFactory;
             }
 
+            // Special case Records - they will inherit from RecordFactory unless explicity overridden in the classFactory.txt resource file.
             if (isRecord(c)) {
                 return recordFactory;
             }
