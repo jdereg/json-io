@@ -97,8 +97,8 @@ public class JsonReader implements Closeable
          * @param c        Class of the object that needs to be created
          * @param jObj     JsonObject (if primitive type do jObj.getPrimitiveValue();
          * @param resolver Resolve instance that has references to ID Map, Converter, ReadOptions
-         * @return a new instance of C.  If you completely fill the new instance using
-         * the value(s) from object, and no further work is needed for construction, then
+         * @return a new instance of C.  If you fill the new instance using the value(s)
+         * from object, and no further work is needed for construction, then
          * override the isObjectFinal() method below and return true.
          */
         default Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {

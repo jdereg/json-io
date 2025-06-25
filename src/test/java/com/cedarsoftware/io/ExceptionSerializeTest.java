@@ -8,11 +8,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.StringUtilities;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -39,21 +41,21 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ExceptionSerializeTest
 {
-//    @BeforeAll
-//    public static void enableDetailedLogging() {
-//        Logger rootLogger = Logger.getLogger("");
+    @BeforeAll
+    public static void enableDetailedLogging() {
+        Logger rootLogger = Logger.getLogger("");
 //        rootLogger.setLevel(Level.FINEST);
 //        if (rootLogger.getHandlers().length > 0) {
 //            rootLogger.getHandlers()[0].setLevel(Level.FINEST);
 //        }
-//
-//        // Disable noisy JMX/RMI logging
-//        Logger.getLogger("javax.management").setLevel(Level.WARNING);
-//        Logger.getLogger("sun.rmi").setLevel(Level.WARNING);
-//        Logger.getLogger("java.io.serialization").setLevel(Level.WARNING);
-//        Logger.getLogger("org.junit").setLevel(Level.WARNING);
-//    }
-//
+
+        // Disable noisy JMX/RMI logging
+        Logger.getLogger("javax.management").setLevel(Level.WARNING);
+        Logger.getLogger("sun.rmi").setLevel(Level.WARNING);
+        Logger.getLogger("java.io.serialization").setLevel(Level.WARNING);
+        Logger.getLogger("org.junit").setLevel(Level.WARNING);
+    }
+
     public static class MyException extends RuntimeException {
         MyException(String message, Throwable cause, long val) {
             super(message, cause);

@@ -34,6 +34,19 @@ public class ThrowableFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
         Map<Object, Object> map = new LinkedHashMap<>(jObj);
 
+        // Convert all JsonObjects to their Java equivalents BEFORE passing to converter
+        for (Map.Entry<Object, Object> entry : jObj.entrySet()) {
+            Object value = entry.getValue();
+            if (value instanceof JsonObject) {
+                JsonObject jsonValue = (JsonObject) value;
+                Class<?> targetType = jsonValue.getRawType();
+                if (targetType != null) {
+                    value = resolver.toJavaObjects(jsonValue, targetType);
+                }
+            }
+            map.put(entry.getKey(), value);
+        }
+
         // Pre-process the cause to ensure it's properly typed
         JsonObject jsonCause = (JsonObject) jObj.get(CAUSE);
         if (jsonCause != null) {
