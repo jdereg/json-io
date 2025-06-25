@@ -35,23 +35,36 @@ public class ThrowableFactory implements JsonReader.ClassFactory
 
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver)
     {
-        Map<String, Object> map = new LinkedHashMap<>(jObj);
+        Map<String, Object> map = new LinkedHashMap<>();
 
-        // Convert cause up-front so we can init it later if needed
-        JsonObject jsonCause = (JsonObject) map.get(CAUSE);
-        Class<Throwable> causeType = jsonCause == null ? Throwable.class : (Class<Throwable>) jsonCause.getType();
-        causeType = causeType == null ? Throwable.class : causeType;
-        Throwable cause = resolver.toJavaObjects(jsonCause, causeType);
-        // Keep 'cause' key present so MapConversions can match constructors
-        map.put(CAUSE, cause);
-
-        // Alias for constructor parameter name
-        Object message = map.remove(DETAIL_MESSAGE);
+        // Alias for constructor parameter name. Ensure it is first in the map so
+        // that constructors without parameter names still receive it correctly.
+        Object message = jObj.get(DETAIL_MESSAGE);
         if (message == null) {
             message = "";
         }
         map.put("message", message);
         map.put("msg", message);
+
+        Throwable cause = null;
+
+        // Copy remaining properties preserving order, converting the cause as needed
+        for (Map.Entry<String, Object> entry : jObj.entrySet()) {
+            String key = entry.getKey();
+            if (DETAIL_MESSAGE.equals(key)) {
+                continue;
+            }
+
+            if (CAUSE.equals(key)) {
+                JsonObject jsonCause = (JsonObject) entry.getValue();
+                Class<Throwable> causeType = jsonCause == null ? Throwable.class : (Class<Throwable>) jsonCause.getType();
+                causeType = causeType == null ? Throwable.class : causeType;
+                cause = resolver.toJavaObjects(jsonCause, causeType);
+                map.put(CAUSE, cause); // Keep 'cause' key present so MapConversions can match constructors
+            } else {
+                map.put(key, entry.getValue());
+            }
+        }
 
         // Instantiate using Converter to leverage MapConversions
         Throwable t = resolver.getConverter().convert(map, c);
