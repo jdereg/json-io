@@ -5,6 +5,7 @@
 * Improved object instantiation logic to use parameter names when available
 * Expanded `ThrowableFactory` to support parameter name aliases
 * Throwable instantiation now delegates to `Converter` for faster construction
+* Fixed exception message selection when using `ThrowableFactory`
 * Minor fixes and test updates
 * Reflection usage in `ReadOptionsBuilder` and `Injector` now leverages `ReflectionUtils` caching
 #### 4.55.0

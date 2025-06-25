@@ -47,8 +47,12 @@ public class ThrowableFactory implements JsonReader.ClassFactory
         }
 
         // Alias for constructor parameter name
-        Object message = map.get(DETAIL_MESSAGE);
-        map.put("message", message == null ? "" : message);
+        Object message = map.remove(DETAIL_MESSAGE);
+        if (message == null) {
+            message = "";
+        }
+        map.put("message", message);
+        map.put("msg", message);
 
         // Instantiate using Converter to leverage MapConversions
         Throwable t = resolver.getConverter().convert(map, c);
