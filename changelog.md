@@ -4,6 +4,7 @@
 * Jar now built with the `-parameters` flag enabling constructor parameter name matching
 * Improved object instantiation logic to use parameter names when available
 * Expanded `ThrowableFactory` to support parameter name aliases
+* Throwable instantiation now delegates to `Converter` for faster construction
 * Minor fixes and test updates
 * Reflection usage in `ReadOptionsBuilder` and `Injector` now leverages `ReflectionUtils` caching
 #### 4.55.0
