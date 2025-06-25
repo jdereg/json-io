@@ -8,8 +8,6 @@ import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
 import com.cedarsoftware.util.ClassUtilities;
 
-import static com.cedarsoftware.util.CollectionUtilities.setOf;
-
 /**
  * Factory class to create Throwable instances.
  *
