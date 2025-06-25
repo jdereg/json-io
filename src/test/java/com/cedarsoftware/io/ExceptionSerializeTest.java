@@ -1,6 +1,8 @@
 package com.cedarsoftware.io;
 
 import java.io.Serializable;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Parameter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -300,8 +302,7 @@ class ExceptionSerializeTest
 
         // Here's the issue to verify - can the code that instantiates a derived exception class, get its
         // detail message up to the detailMessage field on Throwable?
-        assertThat(t2).hasMessage(t1.getMessage())
-                .hasNoCause();
+        assertThat(t2).hasMessage(t1.getMessage()).hasNoCause();
 
         assertThat(t2.getRandomThoughts()).isEqualTo(t1.getRandomThoughts());
         assertThat(t2.getErrorCount()).isNull();
@@ -369,6 +370,16 @@ class ExceptionSerializeTest
 
     @Test
     public void testInvalidCoordinateException_fullyPopulated() {
+        // Debug: Check if parameter names are available
+        Constructor<?>[] constructors = InvalidCoordinateException.class.getDeclaredConstructors();
+        for (Constructor<?> constructor : constructors) {
+            System.out.println("Constructor: " + constructor);
+            Parameter[] params = constructor.getParameters();
+            for (int i = 0; i < params.length; i++) {
+                System.out.println("  Parameter " + i + ": name='" + params[i].getName() + "', type=" + params[i].getType());
+            }
+        }
+
         // Check logging levels
         System.out.println("Root logger level: " + Logger.getLogger("").getLevel());
         System.out.println("ConsoleHandler level: " + Logger.getLogger("").getHandlers()[0].getLevel());
