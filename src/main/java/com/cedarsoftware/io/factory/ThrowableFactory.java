@@ -42,9 +42,8 @@ public class ThrowableFactory implements JsonReader.ClassFactory
         Class<Throwable> causeType = jsonCause == null ? Throwable.class : (Class<Throwable>) jsonCause.getType();
         causeType = causeType == null ? Throwable.class : causeType;
         Throwable cause = resolver.toJavaObjects(jsonCause, causeType);
-        if (cause != null) {
-            map.put(CAUSE, cause);
-        }
+        // Keep 'cause' key present so MapConversions can match constructors
+        map.put(CAUSE, cause);
 
         // Alias for constructor parameter name
         Object message = map.remove(DETAIL_MESSAGE);
