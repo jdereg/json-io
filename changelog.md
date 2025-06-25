@@ -7,6 +7,7 @@
 * Throwable instantiation now delegates to `Converter` for faster construction
 * Fixed exception message selection when using `ThrowableFactory`
 * Preserve null `cause` when constructing exceptions via `ThrowableFactory`
+* Ensure message field is written first to preserve constructor argument order
 * Minor fixes and test updates
 * Reflection usage in `ReadOptionsBuilder` and `Injector` now leverages `ReflectionUtils` caching
 #### 4.55.0
