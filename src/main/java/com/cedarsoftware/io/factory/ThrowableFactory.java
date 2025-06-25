@@ -1,12 +1,11 @@
 package com.cedarsoftware.io.factory;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
-import com.cedarsoftware.util.ClassUtilities;
 
 /**
  * Factory class to create Throwable instances.
@@ -36,24 +35,23 @@ public class ThrowableFactory implements JsonReader.ClassFactory
 
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver)
     {
-        List<Object> arguments = new ArrayList<>();
+        Map<String, Object> map = new LinkedHashMap<>(jObj);
 
-        // Get message, convert null to empty string
-        String message = (String) jObj.get(DETAIL_MESSAGE);
-        message = (message == null) ? "" : message;  // Convert null to empty string
-        arguments.add(message);  // Always add message
-
-        JsonObject jsonCause = (JsonObject) jObj.get(CAUSE);
-        Class<Throwable> causeType = jsonCause == null ? Throwable.class : (Class<Throwable>)jsonCause.getType();
+        // Convert cause up-front so we can init it later if needed
+        JsonObject jsonCause = (JsonObject) map.get(CAUSE);
+        Class<Throwable> causeType = jsonCause == null ? Throwable.class : (Class<Throwable>) jsonCause.getType();
         causeType = causeType == null ? Throwable.class : causeType;
         Throwable cause = resolver.toJavaObjects(jsonCause, causeType);
-
         if (cause != null) {
-            arguments.add(cause);
+            map.put(CAUSE, cause);
         }
 
-        // Only need the values
-        Throwable t = (Throwable) ClassUtilities.newInstance(resolver.getConverter(), c, arguments);
+        // Alias for constructor parameter name
+        Object message = map.get(DETAIL_MESSAGE);
+        map.put("message", message == null ? "" : message);
+
+        // Instantiate using Converter to leverage MapConversions
+        Throwable t = resolver.getConverter().convert(map, c);
 
         if (t.getCause() == null && cause != null) {
             t.initCause(cause);
