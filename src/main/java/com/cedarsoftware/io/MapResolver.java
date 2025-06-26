@@ -75,12 +75,18 @@ public class MapResolver extends Resolver {
 
         for (Map.Entry<Object, Object> e : jsonObj.entrySet()) {
             final String fieldName = (String) e.getKey();
-            final Injector injector = (injectorMap == null) ? null : injectorMap.get(fieldName);
             final Object rhs = e.getValue();
-
+            
             if (rhs == null) {
                 jsonObj.put(fieldName, null);
-            } else if (rhs.getClass().isArray()) {   // RHS is an array
+                continue;
+            }
+            
+            // Pre-cache class and injector to avoid repeated lookups
+            final Class<?> rhsClass = rhs.getClass();
+            final Injector injector = (injectorMap == null) ? null : injectorMap.get(fieldName);
+            
+            if (rhsClass.isArray()) {   // RHS is an array
                 // Trace the contents of the array (so references inside the array and into the array work)
                 JsonObject jsonArray = new JsonObject();
                 jsonArray.setItems((Object[])rhs);
@@ -91,9 +97,10 @@ public class MapResolver extends Resolver {
             } else if (rhs instanceof JsonObject) {
                 JsonObject jObj = (JsonObject) rhs;
                 if (injector != null) {
-                    boolean isNonRefClass = readOptions.isNonReferenceableClass(injector.getType());
+                    final Class<?> injectorType = injector.getType();
+                    boolean isNonRefClass = readOptions.isNonReferenceableClass(injectorType);
                     if (isNonRefClass) {
-                        jObj.setValue(converter.convert(jObj.getValue(), injector.getType()));
+                        jObj.setValue(converter.convert(jObj.getValue(), injectorType));
                         continue;
                     }
                 }
@@ -113,7 +120,7 @@ public class MapResolver extends Resolver {
                 // improve the final types of values in the maps RHS, to be of the field type that
                 // was optionally specified in @type.
                 final Class<?> fieldType = injector.getType();
-                if (converter.isConversionSupportedFor(rhs.getClass(), fieldType)) {
+                if (converter.isConversionSupportedFor(rhsClass, fieldType)) {
                     Object fieldValue = converter.convert(rhs, fieldType);
                     jsonObj.put(fieldName, fieldValue);
                 } else if (rhs instanceof String) {
@@ -176,9 +183,9 @@ public class MapResolver extends Resolver {
         // Determine the immediate component type of the current array level
         Class<?> componentType = Object.class;
         if (jsonObj.getTarget() != null) {
-            componentType = jsonObj.getTarget().getClass();
-            if (componentType.isArray()) {
-                componentType = componentType.getComponentType();
+            final Class<?> targetClass = jsonObj.getTarget().getClass();
+            if (targetClass.isArray()) {
+                componentType = targetClass.getComponentType();
             }
         }
 
@@ -188,7 +195,11 @@ public class MapResolver extends Resolver {
 
             if (element == null) {
                 setArrayElement(target, i, null);
-            } else if (element.getClass().isArray() || (element instanceof JsonObject && ((JsonObject) element).isArray())) {
+                continue;
+            }
+            
+            // Each element can be of different type - cannot cache class outside loop
+            if (element.getClass().isArray() || (element instanceof JsonObject && ((JsonObject) element).isArray())) {
                 // Handle nested arrays using the unified helper method
                 handleNestedArray(element, componentType, target, i);
             }
@@ -250,10 +261,18 @@ public class MapResolver extends Resolver {
         int idx = 0;
 
         if (items != null) {
+            // Cache readOptions to avoid repeated getter calls
+            final ReadOptions readOptions = getReadOptions();
+            
             for (Object element : items) {
                 if (element == null) {
                     col.add(null);
-                } else if (element instanceof String || element instanceof Boolean || element instanceof Double || element instanceof Long) {
+                    idx++;
+                    continue;
+                }
+                
+                // Each element can be of different type - cannot cache class outside loop
+                if (element instanceof String || element instanceof Boolean || element instanceof Double || element instanceof Long) {
                     // Allow Strings, Booleans, Longs, and Doubles to be "inline" without Java object decoration (@id, @type, etc.)
                     col.add(element);
                 } else if (element.getClass().isArray()) {
@@ -291,7 +310,7 @@ public class MapResolver extends Resolver {
 
                         jObj.setType(Object.class);
                         createInstance(jObj);
-                        boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getRawType());
+                        boolean isNonRefClass = readOptions.isNonReferenceableClass(jObj.getRawType());
                         if (!isNonRefClass) {
                             traverseSpecificType(jObj);
                         }
