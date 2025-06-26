@@ -457,17 +457,38 @@ class JsonParser {
      */
     private void readToken(String token) throws IOException {
         final int len = token.length();
-
-        for (int i = 1; i < len; i++) {
-            int c = input.read();
-            if (c == -1) {
-                error("EOF reached while reading token: " + token);
+        
+        // Optimized path for common short tokens
+        if (len <= 5) {
+            // Fast validation for common tokens: true, false, null
+            for (int i = 1; i < len; i++) {
+                int c = input.read();
+                if (c == -1) {
+                    error("EOF reached while reading token: " + token);
+                }
+                
+                // Fast ASCII lowercase conversion (faster than Character.toLowerCase)
+                if (c >= 'A' && c <= 'Z') {
+                    c += 32; // Convert uppercase to lowercase
+                }
+                
+                if (token.charAt(i) != c) {
+                    error("Expected token: " + token);
+                }
             }
-            c = Character.toLowerCase((char) c);
-            int loTokenChar = token.charAt(i);
+        } else {
+            // Fallback for longer tokens (infinity, etc.)
+            for (int i = 1; i < len; i++) {
+                int c = input.read();
+                if (c == -1) {
+                    error("EOF reached while reading token: " + token);
+                }
+                c = Character.toLowerCase((char) c);
+                int loTokenChar = token.charAt(i);
 
-            if (loTokenChar != c) {
-                error("Expected token: " + token);
+                if (loTokenChar != c) {
+                    error("Expected token: " + token);
+                }
             }
         }
     }
