@@ -49,6 +49,9 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     // Cached collections for array-based data
     private Set<Object> cachedKeySet;
     private Collection<Object> cachedValues;
+    
+    // Cache for sorted state to avoid repeated O(n) checks
+    private Boolean sortedCache;
 
     public String toString() {
         String jType = typeString != null ? typeString : (type == null ? "not set" : type.getTypeName());
@@ -115,9 +118,10 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         }
         this.keys = keys;
         hash = null;
-        // Invalidate cached collections
+        // Invalidate cached collections and sorted state
         cachedKeySet = null;
         cachedValues = null;
+        sortedCache = null;
     }
 
     /**
@@ -352,9 +356,10 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         items = null;
         keys = null;
         hash = null;
-        // Clear cached collections
+        // Clear cached collections and sorted state
         cachedKeySet = null;
         cachedValues = null;
+        sortedCache = null;
     }
 
     @Override
@@ -379,7 +384,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
                         return true;
                     }
                 }
-            } else if (isSorted(keys) && key instanceof String) {
+            } else if (isSorted() && key instanceof String) {
                 // Binary search for sorted String keys
                 return binarySearch(keys, key) >= 0;
             } else {
@@ -446,7 +451,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
                 }
             } else {
                 // For larger arrays, try binary search if keys appear sorted
-                if (isSorted(keys)) {
+                if (isSorted()) {
                     int index = binarySearch(keys, key);
                     if (index >= 0) {
                         return items[index];
@@ -469,8 +474,25 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     /**
      * Check if the keys array appears to be sorted for optimization purposes.
      * Only checks for String keys as they are the most common case.
+     * Uses caching to avoid repeated O(n) scans.
      */
-    private boolean isSorted(Object[] keys) {
+    private boolean isSorted() {
+        if (keys == null) return false;
+        
+        // Return cached result if available
+        if (sortedCache != null) {
+            return sortedCache;
+        }
+        
+        // Calculate and cache the result
+        sortedCache = calculateSorted();
+        return sortedCache;
+    }
+    
+    /**
+     * Calculate if the keys array is sorted (called only once per keys array).
+     */
+    private boolean calculateSorted() {
         if (keys.length < 2) return true;
         
         // Quick check - if not all strings, assume not sorted
@@ -736,8 +758,9 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         keys = null;
         items = null;
         
-        // Clear cached collections since we moved to jsonStore
+        // Clear cached collections and sorted state since we moved to jsonStore
         cachedKeySet = null;
         cachedValues = null;
+        sortedCache = null;
     }
 }

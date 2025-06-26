@@ -45,7 +45,21 @@ For each task item:
   - Claude 3.5s (Sonnet), Claude 3.5o (Opus)
   - Claude 4.0s (Sonnet), Claude 4.0o (Opus)
   - etc.
-- Configure git author appropriately for each commit
+
+#### Git Author Configuration
+**IMPORTANT**: Before making any commits, configure the git author identity using environment variables:
+
+```bash
+# Set git author identity (adjust version/model as appropriate)
+export GIT_AUTHOR_NAME="Claude 4.0s"
+export GIT_AUTHOR_EMAIL="claude4.0s@ai.assistant"
+export GIT_COMMITTER_NAME="Claude 4.0s" 
+export GIT_COMMITTER_EMAIL="claude4.0s@ai.assistant"
+
+# Then commit normally - the AI identity will be used automatically
+git add .
+git commit -m "Your commit message"
+````
 
 ### 4. Performance Monitoring
 - **Test suite tolerance**: ±5ms for json-io vs gson/jackson
