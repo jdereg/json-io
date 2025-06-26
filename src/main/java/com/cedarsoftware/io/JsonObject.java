@@ -310,15 +310,83 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     public Object get(Object key) {
         // Check keys/items arrays if present
         if (keys != null && items != null) {
-            for (int i = 0; i < keys.length; i++) {
-                if (Objects.equals(key, keys[i])) {
-                    return items[i];
+            // For small arrays, linear search is faster due to cache locality
+            if (keys.length <= 8) {
+                for (int i = 0; i < keys.length; i++) {
+                    if (Objects.equals(key, keys[i])) {
+                        return items[i];
+                    }
+                }
+            } else {
+                // For larger arrays, try binary search if keys appear sorted
+                if (isSorted(keys)) {
+                    int index = binarySearch(keys, key);
+                    if (index >= 0) {
+                        return items[index];
+                    }
+                } else {
+                    // Fall back to linear search
+                    for (int i = 0; i < keys.length; i++) {
+                        if (Objects.equals(key, keys[i])) {
+                            return items[i];
+                        }
+                    }
                 }
             }
             return null;
         }
         // Otherwise delegate to jsonStore
         return jsonStore.get(key);
+    }
+
+    /**
+     * Check if the keys array appears to be sorted for optimization purposes.
+     * Only checks for String keys as they are the most common case.
+     */
+    private boolean isSorted(Object[] keys) {
+        if (keys.length < 2) return true;
+        
+        // Quick check - if not all strings, assume not sorted
+        for (Object key : keys) {
+            if (!(key instanceof String)) {
+                return false;
+            }
+        }
+        
+        // Check if sorted
+        for (int i = 1; i < keys.length; i++) {
+            if (((String) keys[i-1]).compareTo((String) keys[i]) > 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Binary search for String keys in sorted array.
+     */
+    private int binarySearch(Object[] keys, Object key) {
+        if (!(key instanceof String)) {
+            return -1; // Binary search only for String keys
+        }
+        
+        String searchKey = (String) key;
+        int left = 0;
+        int right = keys.length - 1;
+        
+        while (left <= right) {
+            int mid = left + (right - left) / 2;
+            int cmp = searchKey.compareTo((String) keys[mid]);
+            
+            if (cmp == 0) {
+                return mid;
+            } else if (cmp < 0) {
+                right = mid - 1;
+            } else {
+                left = mid + 1;
+            }
+        }
+        return -1; // Not found
     }
 
     @Override
