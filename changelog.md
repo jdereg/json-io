@@ -15,6 +15,7 @@
 * Cache `keySet()` and `values()` collections in `JsonObject` to avoid repeated creation
 * Optimize `containsKey()` and `containsValue()` with early exit strategies and type filtering
 * Optimize `entrySet()` with custom iterator to reduce object allocations for array-based data
+* Optimize `hashCode()` calculation by avoiding IdentityHashMap overhead for simple arrays
 #### 4.55.0
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.3.2` to `3.4.0.`
 * Added class-level Javadoc for `ByteArrayWriter` describing Base64 encoding
