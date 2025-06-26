@@ -83,7 +83,9 @@ class JsonParser {
     private final Map<Number, Number> numberCache;
     private final Map<String, String> substitutes;
 
-    private static final ThreadLocal<char[]> STRING_BUFFER = ThreadLocal.withInitial(() -> new char[4096]);
+    // Optimized string buffer management with size-based strategy
+    private static final ThreadLocal<char[]> STRING_BUFFER = ThreadLocal.withInitial(() -> new char[1024]);
+    private static final ThreadLocal<char[]> LARGE_STRING_BUFFER = ThreadLocal.withInitial(() -> new char[8192]);
     
     // Primary static cache that never changes
     private static final Map<String, String> STATIC_STRING_CACHE = new ConcurrentHashMap<>(64);
@@ -711,12 +713,11 @@ class JsonParser {
 
             // Regular character
             if (pos >= buffer.length) {
-                // Buffer full, switch to StringBuilder
-                StringBuilder sb = strBuf;
-                sb.setLength(0);
-                sb.append(buffer, 0, pos);
-                sb.append((char) c);
-                return readStringWithEscapes(sb, in, ESCAPE_CHARS, HEX_VALUES);
+                // Standard buffer full, try large buffer before StringBuilder
+                char[] largeBuffer = LARGE_STRING_BUFFER.get();
+                System.arraycopy(buffer, 0, largeBuffer, 0, pos);
+                largeBuffer[pos++] = (char) c;
+                return readStringInBuffer(largeBuffer, pos);
             }
 
             // Add to buffer
@@ -875,6 +876,65 @@ class JsonParser {
         }
 
         return str;
+    }
+
+    /**
+     * Get optimized StringBuilder with dynamic capacity management
+     */
+    private StringBuilder getOptimizedStringBuilder(int estimatedSize) {
+        StringBuilder sb = strBuf;
+        sb.setLength(0);
+        
+        // Ensure capacity is appropriate for the estimated string size
+        int targetCapacity = Math.max(256, estimatedSize * 2); // Double estimated size for safety
+        if (sb.capacity() < targetCapacity) {
+            sb.ensureCapacity(targetCapacity);
+        }
+        
+        return sb;
+    }
+
+    /**
+     * Read string using large buffer for strings that don't fit in the standard buffer
+     */
+    private String readStringInBuffer(char[] largeBuffer, int initialPos) throws IOException {
+        final FastReader in = input;
+        int pos = initialPos;
+        
+        while (true) {
+            int c = in.read();
+            if (c == -1) {
+                error("EOF reached while reading JSON string");
+            }
+            
+            if (c == '"') {
+                return cacheString(new String(largeBuffer, 0, pos));
+            }
+            
+            if (c == '\\') {
+                // Switch to StringBuilder for complex processing
+                StringBuilder sb = getOptimizedStringBuilder(pos + 64);
+                sb.append(largeBuffer, 0, pos);
+                
+                // Process the escape and continue with StringBuilder
+                c = in.read();
+                if (c == -1) {
+                    error("EOF reached while reading escape sequence");
+                }
+                processEscape(sb, c, in, ESCAPE_CHAR_MAP, HEX_VALUE_MAP);
+                return readStringWithEscapes(sb, in, ESCAPE_CHAR_MAP, HEX_VALUE_MAP);
+            }
+            
+            if (pos >= largeBuffer.length) {
+                // Even large buffer is full, fall back to StringBuilder
+                StringBuilder sb = getOptimizedStringBuilder(pos + 64);
+                sb.append(largeBuffer, 0, pos);
+                sb.append((char) c);
+                return readStringWithEscapes(sb, in, ESCAPE_CHAR_MAP, HEX_VALUE_MAP);
+            }
+            
+            largeBuffer[pos++] = (char) c;
+        }
     }
 
     /**
