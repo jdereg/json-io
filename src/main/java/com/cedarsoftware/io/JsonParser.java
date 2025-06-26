@@ -506,12 +506,51 @@ class JsonParser {
             }
         }
 
+        // Fast path for simple single-digit integers only (very conservative optimization)
+        if (c >= '0' && c <= '9') {
+            int nextChar = in.read();
+            
+            // Only handle simple single-digit integers followed by delimiters
+            if (nextChar == -1 || nextChar == ',' || nextChar == '}' || nextChar == ']' ||
+                nextChar == ' ' || nextChar == '\t' || nextChar == '\n' || nextChar == '\r') {
+                // Push back the terminating character
+                if (nextChar != -1) {
+                    in.pushback((char) nextChar);
+                }
+                
+                // Simple single digit - return as Long
+                long value = c - '0';
+                final Number cachedInstance = numberCache.get(value);
+                if (cachedInstance != null) {
+                    return cachedInstance;
+                } else {
+                    numberCache.put(value, value);
+                    return value;
+                }
+            } else {
+                // Multi-digit or complex number, fall back to full parsing
+                in.pushback((char) nextChar);
+                return readNumberFallback(c);
+            }
+        }
+        
+        // Handle negative numbers and other cases
+        return readNumberFallback(c);
+    }
+    
+    /**
+     * Fallback number parsing using StringBuilder for complex cases.
+     */
+    private Number readNumberFallback(int firstChar) throws IOException {
+        final FastReader in = input;
+        boolean isFloat = false;
+        
         // We are sure we have a positive or negative number, so we read char by char.
         StringBuilder number = numBuf;
         number.setLength(0);
-        number.append((char) c);
+        number.append((char) firstChar);
         while (true) {
-            c = in.read();
+            int c = in.read();
             if ((c >= '0' && c <= '9') || c == '-' || c == '+') {
                 number.append((char) c);
             } else if (c == '.' || c == 'e' || c == 'E') {
