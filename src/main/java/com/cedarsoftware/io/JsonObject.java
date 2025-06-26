@@ -43,6 +43,10 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     private Object[] items;
     private Object[] keys;
     private String typeString;
+    
+    // Cached collections for array-based data
+    private Set<Object> cachedKeySet;
+    private Collection<Object> cachedValues;
 
     public String toString() {
         String jType = typeString != null ? typeString : (type == null ? "not set" : type.getTypeName());
@@ -93,6 +97,9 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         }
         this.items = array;
         hash = null;
+        // Invalidate cached collections
+        cachedKeySet = null;
+        cachedValues = null;
     }
 
     // New getters/setters for keys
@@ -106,6 +113,9 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         }
         this.keys = keys;
         hash = null;
+        // Invalidate cached collections
+        cachedKeySet = null;
+        cachedValues = null;
     }
 
     /**
@@ -274,6 +284,9 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         items = null;
         keys = null;
         hash = null;
+        // Clear cached collections
+        cachedKeySet = null;
+        cachedValues = null;
     }
 
     @Override
@@ -393,7 +406,10 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     public Set<Object> keySet() {
         // If we have keys array, convert to a Set
         if (keys != null) {
-            return new LinkedHashSet<>(Arrays.asList(keys));
+            if (cachedKeySet == null) {
+                cachedKeySet = new LinkedHashSet<>(Arrays.asList(keys));
+            }
+            return cachedKeySet;
         }
         // Otherwise use jsonStore's keySet
         return jsonStore.keySet();
@@ -403,9 +419,12 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     public Collection<Object> values() {
         // If we have items array, convert to a Collection
         if (items != null) {
-            Collection<Object> valueList = new LinkedHashSet<>();
-            Collections.addAll(valueList, items);
-            return valueList;
+            if (cachedValues == null) {
+                Collection<Object> valueList = new LinkedHashSet<>();
+                Collections.addAll(valueList, items);
+                cachedValues = valueList;
+            }
+            return cachedValues;
         }
         // Otherwise use jsonStore's values
         return jsonStore.values();
@@ -434,6 +453,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
                         Object oldValue = items[index];
                         items[index] = value;
                         hash = null;
+                        // Invalidate cached values since content changed
+                        cachedValues = null;
                         return oldValue;
                     }
 
@@ -532,5 +553,9 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         // Clear arrays to free memory
         keys = null;
         items = null;
+        
+        // Clear cached collections since we moved to jsonStore
+        cachedKeySet = null;
+        cachedValues = null;
     }
 }
