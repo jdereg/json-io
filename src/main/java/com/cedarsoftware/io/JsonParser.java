@@ -93,6 +93,7 @@ class JsonParser {
     // Static lookup tables for performance
     private static final char[] ESCAPE_CHAR_MAP = new char[128];
     private static final int[] HEX_VALUE_MAP = new int[128];
+    private static final boolean[] WHITESPACE_MAP = new boolean[128];
 
     static {
         // Initialize escape character map
@@ -117,6 +118,12 @@ class JsonParser {
         for (int i = 'A'; i <= 'F'; i++) {
             HEX_VALUE_MAP[i] = 10 + (i - 'A');
         }
+        
+        // Initialize whitespace map
+        WHITESPACE_MAP[' '] = true;
+        WHITESPACE_MAP['\t'] = true;
+        WHITESPACE_MAP['\n'] = true;
+        WHITESPACE_MAP['\r'] = true;
 
         // Initialize substitutions
         SUBSTITUTES.put(SHORT_ID, ID);
@@ -807,10 +814,11 @@ class JsonParser {
      */
     private int skipWhitespaceRead(boolean throwOnEof) throws IOException {
         final Reader in = input;
+        final boolean[] WHITESPACE = WHITESPACE_MAP;
         int c;
         do {
             c = in.read();
-        } while (c == ' ' || c == '\n' || c == '\r' || c == '\t');
+        } while (c >= 0 && c < 128 && WHITESPACE[c]);
 
         if (c == -1 && throwOnEof) {
             error("EOF reached prematurely");
