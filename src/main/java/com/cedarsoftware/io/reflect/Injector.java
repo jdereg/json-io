@@ -202,12 +202,17 @@ public class Injector {
                 injector.invoke(object, value);
             }
         } catch (ClassCastException e) {
+            // Cache field type to avoid repeated getType() calls
+            final Class<?> fieldType = field.getType();
+            final String fieldName = getName();
+            final String displayName = getDisplayName();
+            
             String msg = e.getMessage();
             if (StringUtilities.hasContent(msg) && msg.contains("LinkedHashMap")) {
-                throw new JsonIoException("Unable to set field: " + getName() + " using " + getDisplayName() + ".", e);
+                throw new JsonIoException("Unable to set field: " + fieldName + " using " + displayName + ".", e);
             }
             try {
-                Object convertedValue = Converter.convert(value, field.getType());
+                Object convertedValue = Converter.convert(value, fieldType);
                 if (varHandle != null) {
                     injectWithVarHandle(object, convertedValue);
                 } else if (useFieldSet) {
@@ -216,7 +221,7 @@ public class Injector {
                     injector.invoke(object, convertedValue);
                 }
             } catch (Throwable t) {
-                throw new JsonIoException("Unable to set field: " + getName() + " using " + getDisplayName() + ". Getting a ClassCastException.", e);
+                throw new JsonIoException("Unable to set field: " + fieldName + " using " + displayName + ". Getting a ClassCastException.", e);
             }
         } catch (Throwable t) {
             if (t instanceof JsonIoException) {

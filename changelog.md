@@ -9,6 +9,7 @@
 * Optimize `ObjectResolver.traverseCollection()` with early null exits and reduced getClass() calls
 * Optimize `MapResolver` methods with early null exits and cached method lookups
 * Optimize `JsonReader` methods by caching getClass() calls and using final variables
+* Optimize `Injector.inject()` exception handling with cached field information
 #### 4.56.0
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.4.0` to `3.5.0.`
 * Jar now built with the `-parameters` flag enabling constructor parameter name matching
