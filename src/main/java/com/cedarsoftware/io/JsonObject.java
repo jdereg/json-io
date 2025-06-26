@@ -2,10 +2,12 @@ package com.cedarsoftware.io;
 
 import java.lang.reflect.Array;
 import java.util.AbstractMap;
+import java.util.AbstractSet;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -480,49 +482,117 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     public Set<Entry<Object, Object>> entrySet() {
         // If we have keys/items arrays, create entries from them
         if (keys != null && items != null) {
-            Set<Entry<Object, Object>> entrySet = new LinkedHashSet<>();
-            for (int i = 0; i < keys.length; i++) {
-                final int index = i;
-                entrySet.add(new Entry<Object, Object>() {
-                    @Override
-                    public Object getKey() {
-                        return keys[index];
-                    }
-
-                    @Override
-                    public Object getValue() {
-                        return items[index];
-                    }
-
-                    @Override
-                    public Object setValue(Object value) {
-                        Object oldValue = items[index];
-                        items[index] = value;
-                        hash = null;
-                        // Invalidate cached values since content changed
-                        cachedValues = null;
-                        return oldValue;
-                    }
-
-                    @Override
-                    public boolean equals(Object o) {
-                        if (!(o instanceof Map.Entry)) return false;
-                        Map.Entry<?,?> e = (Map.Entry<?,?>) o;
-                        return Objects.equals(keys[index], e.getKey()) &&
-                                Objects.equals(items[index], e.getValue());
-                    }
-
-                    @Override
-                    public int hashCode() {
-                        return (keys[index] == null ? 0 : keys[index].hashCode()) ^
-                                (items[index] == null ? 0 : items[index].hashCode());
-                    }
-                });
-            }
-            return entrySet;
+            return new ArrayEntrySet();
         }
         // Otherwise use jsonStore's entrySet
         return jsonStore.entrySet();
+    }
+
+    /**
+     * Custom EntrySet implementation for array-based data that minimizes object allocations.
+     */
+    private class ArrayEntrySet extends AbstractSet<Entry<Object, Object>> {
+        @Override
+        public int size() {
+            return keys != null ? keys.length : 0;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return keys == null || keys.length == 0;
+        }
+
+        @Override
+        public Iterator<Entry<Object, Object>> iterator() {
+            return new ArrayEntryIterator();
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            if (!(o instanceof Map.Entry)) {
+                return false;
+            }
+            Map.Entry<?, ?> entry = (Map.Entry<?, ?>) o;
+            Object key = entry.getKey();
+            Object value = entry.getValue();
+            
+            // Find key in keys array and check if corresponding value matches
+            if (keys != null && items != null) {
+                for (int i = 0; i < keys.length; i++) {
+                    if (Objects.equals(keys[i], key)) {
+                        return Objects.equals(items[i], value);
+                    }
+                }
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Iterator for array-based entries that reuses a single Entry object.
+     */
+    private class ArrayEntryIterator implements Iterator<Entry<Object, Object>> {
+        private int index = 0;
+        private final ArrayEntry reusableEntry = new ArrayEntry();
+
+        @Override
+        public boolean hasNext() {
+            return keys != null && index < keys.length;
+        }
+
+        @Override
+        public Entry<Object, Object> next() {
+            if (!hasNext()) {
+                throw new java.util.NoSuchElementException();
+            }
+            reusableEntry.setIndex(index++);
+            return reusableEntry;
+        }
+    }
+
+    /**
+     * Reusable Entry implementation that references array positions.
+     */
+    private class ArrayEntry implements Entry<Object, Object> {
+        private int index;
+
+        void setIndex(int index) {
+            this.index = index;
+        }
+
+        @Override
+        public Object getKey() {
+            return keys[index];
+        }
+
+        @Override
+        public Object getValue() {
+            return items[index];
+        }
+
+        @Override
+        public Object setValue(Object value) {
+            Object oldValue = items[index];
+            items[index] = value;
+            hash = null;
+            // Invalidate cached values since content changed
+            cachedValues = null;
+            return oldValue;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof Map.Entry)) return false;
+            Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
+            return Objects.equals(keys[index], e.getKey()) &&
+                    Objects.equals(items[index], e.getValue());
+        }
+
+        @Override
+        public int hashCode() {
+            return (keys[index] == null ? 0 : keys[index].hashCode()) ^
+                    (items[index] == null ? 0 : items[index].hashCode());
+        }
     }
 
     // *****************************************************************************************************************
