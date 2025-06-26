@@ -2,6 +2,7 @@
 #### 4.57.0 (Unreleased)
 * Optimize `JsonParser.skipWhitespaceRead()` with lookup table for whitespace characters
 * Add fast path for single-digit integer parsing in `JsonParser.readNumber()`
+* Use switch statement instead of if-else chain in `JsonParser.readValue()` for better performance
 #### 4.56.0
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.4.0` to `3.5.0.`
 * Jar now built with the `-parameters` flag enabling constructor parameter name matching
