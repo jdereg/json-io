@@ -291,7 +291,11 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     }
     
     public boolean isEmpty() {
-        return size() < 1;
+        // Fast path: directly check emptiness without calculating size
+        if (items != null) {
+            return items.length == 0;
+        }
+        return jsonStore.isEmpty();
     }
 
     public Object remove(Object key) {
