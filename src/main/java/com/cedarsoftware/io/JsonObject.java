@@ -313,9 +313,37 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     }
 
     public void putAll(Map<?, ?> map) {
-        for (Entry<?, ?> entry : map.entrySet()) {
-            put(entry.getKey(), entry.getValue());
+        if (map == null || map.isEmpty()) {
+            return;
         }
+        
+        // Optimize for bulk operations when we're using jsonStore
+        if (keys == null && items == null) {
+            // Pre-size the jsonStore if it's beneficial
+            int newSize = jsonStore.size() + map.size();
+            if (jsonStore instanceof LinkedHashMap && jsonStore.size() == 0) {
+                // For empty LinkedHashMap, we can use the more efficient putAll
+                hash = null;
+                jsonStore.putAll(map);
+                return;
+            }
+        }
+        
+        // Invalidate hash once for the entire operation
+        hash = null;
+        
+        // Default behavior: iterate through entries
+        for (Entry<?, ?> entry : map.entrySet()) {
+            putInternal(entry.getKey(), entry.getValue());
+        }
+    }
+    
+    /**
+     * Internal put method that doesn't invalidate hash (for bulk operations).
+     */
+    private Object putInternal(Object key, Object value) {
+        // For other keys, delegate to jsonStore
+        return jsonStore.put(key, value);
     }
 
     public void clear() {
