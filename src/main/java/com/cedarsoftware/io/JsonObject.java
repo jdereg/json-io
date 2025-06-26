@@ -166,11 +166,11 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
             int result = 1;
 
             if (keys != null) {
-                result = 31 * result + hashCode(keys, new IdentityHashMap<>());
+                result = 31 * result + fastArrayHashCode(keys);
             }
 
             if (items != null) {
-                result = 31 * result + hashCode(items, new IdentityHashMap<>());
+                result = 31 * result + fastArrayHashCode(items);
             }
 
             if (!jsonStore.isEmpty()) {
@@ -182,6 +182,40 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         return hash;
     }
 
+    /**
+     * Fast hash code calculation for arrays that avoids IdentityHashMap overhead
+     * when possible, but falls back to cycle-safe calculation for complex nested arrays.
+     */
+    private int fastArrayHashCode(Object[] array) {
+        if (array == null) {
+            return 1;
+        }
+
+        // Quick check if array contains any arrays (nested structure)
+        boolean hasNestedArrays = false;
+        for (Object item : array) {
+            if (item != null && item.getClass().isArray()) {
+                hasNestedArrays = true;
+                break;
+            }
+        }
+
+        if (!hasNestedArrays) {
+            // Simple case - no nested arrays, use standard Arrays.hashCode equivalent
+            int result = 1;
+            for (Object item : array) {
+                result = 31 * result + (item == null ? 0 : item.hashCode());
+            }
+            return result;
+        } else {
+            // Complex case - has nested arrays, use cycle-safe calculation
+            return hashCode(array, new IdentityHashMap<>());
+        }
+    }
+
+    /**
+     * Cycle-safe hash code calculation for nested array structures.
+     */
     private int hashCode(Object array, Map<Object, Integer> seen) {
         if (array == null) {
             return 1;
