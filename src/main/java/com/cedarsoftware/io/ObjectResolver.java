@@ -83,19 +83,19 @@ public class ObjectResolver extends Resolver
         jsonObj.setFinished();
 
         final Object javaMate = jsonObj.getTarget();
-        final Iterator<Map.Entry<Object, Object>> i = jsonObj.entrySet().iterator();
         final Class<?> cls = javaMate.getClass();
-        ReadOptions readOptions = getReadOptions();
+        final ReadOptions readOptions = getReadOptions();
         final Map<String, Injector> injectorMap = readOptions.getDeepInjectorMap(cls);
+        final JsonReader.MissingFieldHandler missingFieldHandler = readOptions.getMissingFieldHandler();
 
-        while (i.hasNext()) {
-            Map.Entry<Object, Object> entry = i.next();
+        // Enhanced for-loop is more efficient than iterator for EntrySet
+        for (Map.Entry<Object, Object> entry : jsonObj.entrySet()) {
             String key = (String) entry.getKey();
             final Injector injector = injectorMap.get(key);
             Object rhs = entry.getValue();
             if (injector != null) {
                 assignField(jsonObj, injector, rhs);
-            } else if (readOptions.getMissingFieldHandler() != null) {
+            } else if (missingFieldHandler != null) {
                 handleMissingField(jsonObj, rhs, key);
             }
             // Else: no handler so ignore.
@@ -307,13 +307,22 @@ public class ObjectResolver extends Resolver
             return;
         }
 
-        Class<?> elementClass;
+        // Pre-compute raw element type to avoid repeated calls in loop
+        final Class<?> rawElementType = TypeUtilities.getRawClass(elementType);
+        final ReadOptions readOptions = getReadOptions();
+        
         for (Object element : items) {
-            Object special;
-            elementClass = element == null ? null : element.getClass();
             if (element == null) {
                 col.add(null);
-            } else if ((special = readWithFactoryIfExists(element, TypeUtilities.getRawClass(elementType))) != null) {
+                idx++;
+                continue;
+            }
+            
+            // Pre-cache element class to avoid repeated getClass() calls
+            final Class<?> elementClass = element.getClass();
+            Object special;
+            
+            if ((special = readWithFactoryIfExists(element, rawElementType)) != null) {
                 // Use custom converter if available.
                 col.add(special);
             } else if (converter.isSimpleTypeConversionSupported(elementClass)) {
@@ -395,6 +404,7 @@ public class ObjectResolver extends Resolver
         // For operations that require a Class, extract the raw type.
         final Class effectiveRawComponentType = TypeUtilities.getRawClass(effectiveComponentType);
         final Object[] jsonItems = jsonObj.getItems();
+        final boolean isEnumComponentType = effectiveRawComponentType.isEnum();
 
         for (int i = 0; i < len; i++) {
             final Object element = jsonItems[i];
@@ -403,7 +413,7 @@ public class ObjectResolver extends Resolver
             if (element == null) {
                 setArrayElement(array, i, null);
             } else if ((special = readWithFactoryIfExists(element, effectiveRawComponentType)) != null) {
-                if (effectiveRawComponentType.isEnum() && special instanceof String) {
+                if (isEnumComponentType && special instanceof String) {
                     special = Enum.valueOf(effectiveRawComponentType, (String) special);
                 }
                 setArrayElement(array, i, special);
