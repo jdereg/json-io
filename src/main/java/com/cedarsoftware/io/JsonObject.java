@@ -293,9 +293,33 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     public boolean containsKey(Object key) {
         // Check keys array if present
         if (keys != null) {
-            for (Object k : keys) {
-                if (Objects.equals(key, k)) {
-                    return true;
+            // Early exit for null key if no nulls in array
+            if (key == null) {
+                for (Object k : keys) {
+                    if (k == null) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            
+            // For non-null keys, use optimized search
+            if (keys.length <= 8) {
+                // Linear search for small arrays
+                for (Object k : keys) {
+                    if (key.equals(k)) {
+                        return true;
+                    }
+                }
+            } else if (isSorted(keys) && key instanceof String) {
+                // Binary search for sorted String keys
+                return binarySearch(keys, key) >= 0;
+            } else {
+                // Linear search fallback
+                for (Object k : keys) {
+                    if (Objects.equals(key, k)) {
+                        return true;
+                    }
                 }
             }
             return false;
@@ -308,9 +332,31 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     public boolean containsValue(Object value) {
         // Check items array if present
         if (items != null) {
-            for (Object v : items) {
-                if (Objects.equals(value, v)) {
-                    return true;
+            // Early exit for null value if no nulls in array
+            if (value == null) {
+                for (Object v : items) {
+                    if (v == null) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            
+            // For non-null values, optimize based on type
+            if (items.length <= 8) {
+                // Linear search for small arrays
+                for (Object v : items) {
+                    if (value.equals(v)) {
+                        return true;
+                    }
+                }
+            } else {
+                // For larger arrays, still use linear search but with early type check
+                Class<?> valueClass = value.getClass();
+                for (Object v : items) {
+                    if (v != null && v.getClass() == valueClass && value.equals(v)) {
+                        return true;
+                    }
                 }
             }
             return false;
