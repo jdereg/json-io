@@ -19,6 +19,7 @@
 * Add fast path for `isEmpty()` check to avoid size() calculation overhead
 * Optimize `putAll()` with bulk operations and single hash invalidation
 * Cache sorted state in `JsonObject` to eliminate O(n) scans on every `get()` operation for large arrays
+* Cache array lengths in `JsonObject` to eliminate expensive `Array.getLength()` JNI calls
 #### 4.55.0
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.3.2` to `3.4.0.`
 * Added class-level Javadoc for `ByteArrayWriter` describing Base64 encoding
