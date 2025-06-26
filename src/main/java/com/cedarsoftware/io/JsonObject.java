@@ -329,8 +329,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         
         // Optimize for bulk operations when we're using jsonStore
         if (keys == null && items == null) {
-            // Pre-size the jsonStore if it's beneficial
-            int newSize = jsonStore.size() + map.size();
             if (jsonStore instanceof LinkedHashMap && jsonStore.size() == 0) {
                 // For empty LinkedHashMap, we can use the more efficient putAll
                 hash = null;
