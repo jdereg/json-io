@@ -387,8 +387,21 @@ public abstract class Resolver {
 
             // if the map has both config and data keys, then make sure the config value has < 2 slashes to remain a pure CompactMap
             Object configValue = jsonObj.get("config");
-            if (!(configValue instanceof String) ||
-                    ((String) configValue).split("/", -1).length < 3) {
+            if (!(configValue instanceof String)) {
+                return new CompactMap<>();
+            }
+            
+            // Optimize: count slashes without split() to avoid array allocation
+            String config = (String) configValue;
+            int slashCount = 0;
+            for (int i = 0; i < config.length(); i++) {
+                if (config.charAt(i) == '/') {
+                    slashCount++;
+                    if (slashCount >= 2) break; // Early exit when threshold reached
+                }
+            }
+            
+            if (slashCount < 2) {
                 return new CompactMap<>();
             }
 
@@ -610,28 +623,36 @@ public abstract class Resolver {
      * that had not yet been encountered in the stream, make the final substitution.
      */
     private void patchUnresolvedReferences() {
+        // Group by class to avoid repeated injector map lookups
+        Map<Class<?>, Map<String, Injector>> injectorCache = new HashMap<>();
+        
         for (UnresolvedReference ref : unresolvedRefs) {
             Object objToFix = ref.referencingObj.getTarget();
             JsonObject objReferenced = this.references.getOrThrow(ref.refId);
+            Object referencedTarget = objReferenced.getTarget();
 
             if (ref.index >= 0) {    // Fix []'s and Collections containing a forward reference.
                 if (objToFix instanceof List) {
-                    List list = (List) objToFix;
-                    list.set(ref.index, objReferenced.getTarget());
+                    ((List) objToFix).set(ref.index, referencedTarget);
                 } else if (objToFix instanceof Collection) {   // Patch up Indexable Collections
-                    Collection col = (Collection) objToFix;
-                    col.add(objReferenced.getTarget());
+                    ((Collection) objToFix).add(referencedTarget);
                 } else {
-                    Array.set(objToFix, ref.index, objReferenced.getTarget());        // patch array element here
+                    Array.set(objToFix, ref.index, referencedTarget);        // patch array element here
                 }
             } else {    // Fix field forward reference
-                Field field = getReadOptions().getDeepDeclaredFields(objToFix.getClass()).get(ref.field);
-                Map<String, Injector> injectors = getReadOptions().getDeepInjectorMap(objToFix.getClass());
-                if (field != null && injectors.containsKey(field.getName())) {
+                Class<?> objClass = objToFix.getClass();
+                Map<String, Injector> injectors = injectorCache.get(objClass);
+                if (injectors == null) {
+                    injectors = getReadOptions().getDeepInjectorMap(objClass);
+                    injectorCache.put(objClass, injectors);
+                }
+                
+                Injector injector = injectors.get(ref.field);
+                if (injector != null) {
                     try {
-                        injectors.get(field.getName()).inject(objToFix, objReferenced.getTarget());
+                        injector.inject(objToFix, referencedTarget);
                     } catch (Exception e) {
-                        throw new JsonIoException("Error setting field while resolving references '" + field.getName() + "', @ref = " + ref.refId, e);
+                        throw new JsonIoException("Error setting field while resolving references '" + ref.field + "', @ref = " + ref.refId, e);
                     }
                 }
             }
