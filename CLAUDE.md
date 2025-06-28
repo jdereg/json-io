@@ -51,9 +51,9 @@ For each task item:
 
 ```bash
 # Set git author identity (adjust version/model as appropriate)
-export GIT_AUTHOR_NAME="Claude 4.0s"
+export GIT_AUTHOR_NAME="Claude4.0s"
 export GIT_AUTHOR_EMAIL="claude4.0s@ai.assistant"
-export GIT_COMMITTER_NAME="Claude 4.0s" 
+export GIT_COMMITTER_NAME="Claude4.0s" 
 export GIT_COMMITTER_EMAIL="claude4.0s@ai.assistant"
 
 # Then commit normally - the AI identity will be used automatically
