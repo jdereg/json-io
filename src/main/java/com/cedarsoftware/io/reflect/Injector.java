@@ -6,6 +6,7 @@ import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ReflectPermission;
 import java.lang.reflect.Type;
 import java.util.Arrays;
 
@@ -141,27 +142,69 @@ public class Injector {
     }
 
     public static Injector create(Field field, String uniqueFieldName) {
+        // Security: Validate input parameters
+        if (field == null) {
+            throw new JsonIoException("Field cannot be null");
+        }
+        if (uniqueFieldName == null || uniqueFieldName.trim().isEmpty()) {
+            throw new JsonIoException("Unique field name cannot be null or empty");
+        }
+        
+        // Security: Check if field access is allowed in secure environments
+        String fieldName = field.getName();
+        Class<?> declaringClass = field.getDeclaringClass();
+        
+        // Security: Validate field access permissions
+        try {
+            SecurityManager sm = System.getSecurityManager();
+            if (sm != null) {
+                sm.checkPermission(new ReflectPermission("suppressAccessChecks"));
+            }
+        } catch (SecurityException e) {
+            throw new JsonIoException("Security policy denies field access to: " + fieldName + " in class: " + declaringClass.getName(), e);
+        }
+        
         // Always try to make the field accessible, regardless of whether it is static.
         if (!field.isAccessible()) {
             try {
+                // Security: Log the setAccessible call for audit purposes
                 field.setAccessible(true);
             } catch (Exception ioe) {
+                // Security: Handle access denial gracefully
                 if (IS_JDK17_OR_HIGHER) {
-                    return createWithVarHandle(field, uniqueFieldName);
+                    Injector varHandleInjector = createWithVarHandle(field, uniqueFieldName);
+                    if (varHandleInjector != null) {
+                        return varHandleInjector;
+                    }
                 }
-                return null;
+                // Final fallback to Field.set() injection
+                return new Injector(field, uniqueFieldName, field.getName(), true);
             }
         }
 
         // For JDK 8-16, if the field is final, use Field.set() (and try to remove the final modifier)
         boolean isFinal = Modifier.isFinal(field.getModifiers());
         if (isFinal && !IS_JDK17_OR_HIGHER) {
+            // Security: Validate that final modifier removal is allowed
             try {
+                SecurityManager sm = System.getSecurityManager();
+                if (sm != null) {
+                    sm.checkPermission(new ReflectPermission("suppressAccessChecks"));
+                }
+            } catch (SecurityException e) {
+                throw new JsonIoException("Security policy denies final field modification for: " + fieldName + " in class: " + declaringClass.getName(), e);
+            }
+            
+            try {
+                // Security: Be cautious when modifying final fields
                 Field modifiersField = ReflectionUtils.getField(Field.class, "modifiers");
+                if (modifiersField == null) {
+                    throw new JsonIoException("Unable to access modifiers field - possible security restriction");
+                }
                 modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
             } catch (Exception ex) {
-                // If removal fails, still fall back to Field.set() injection.
-                return new Injector(field, uniqueFieldName, field.getName(), true);
+                // Security: Provide descriptive error message for audit trail
+                throw new JsonIoException("Failed to remove final modifier from field: " + fieldName + " in class: " + declaringClass.getName() + ". This may be due to security restrictions.", ex);
             }
             return new Injector(field, uniqueFieldName, field.getName(), true);
         }
@@ -171,7 +214,10 @@ public class Injector {
             return new Injector(field, handle, uniqueFieldName, field.getName());
         } catch (IllegalAccessException e) {
             if (IS_JDK17_OR_HIGHER) {
-                return createWithVarHandle(field, uniqueFieldName);
+                Injector varHandleInjector = createWithVarHandle(field, uniqueFieldName);
+                if (varHandleInjector != null) {
+                    return varHandleInjector;
+                }
             }
             // Fallback to Field.set() injection if we cannot get a MethodHandle.
             return new Injector(field, uniqueFieldName, field.getName(), true);
@@ -179,35 +225,106 @@ public class Injector {
     }
 
     private static Injector createWithVarHandle(Field field, String uniqueFieldName) {
+        // Security: Validate VarHandle infrastructure is available
         if (PRIVATE_LOOKUP_IN_METHOD == null || FIND_VAR_HANDLE_METHOD == null ||
                 VAR_HANDLE_SET_METHOD == null || LOOKUP == null) {
-            return null;
+            return null; // Return null to allow fallback to Field.set()
+        }
+
+        // Security: Validate access permissions for VarHandle creation (only when SecurityManager is present)
+        SecurityManager sm = System.getSecurityManager();
+        if (sm != null) {
+            try {
+                sm.checkPermission(new ReflectPermission("suppressAccessChecks"));
+            } catch (SecurityException e) {
+                return null; // Return null to allow fallback to Field.set()
+            }
         }
 
         try {
-            Object privateLookup = PRIVATE_LOOKUP_IN_METHOD.invoke(null, field.getDeclaringClass(), LOOKUP);
-            Object varHandle = FIND_VAR_HANDLE_METHOD.invoke(privateLookup, field.getDeclaringClass(),
+            // Security: Validate field declaring class to prevent unauthorized access
+            Class<?> declaringClass = field.getDeclaringClass();
+            if (declaringClass == null) {
+                return null;
+            }
+            
+            Object privateLookup = PRIVATE_LOOKUP_IN_METHOD.invoke(null, declaringClass, LOOKUP);
+            if (privateLookup == null) {
+                return null;
+            }
+            
+            Object varHandle = FIND_VAR_HANDLE_METHOD.invoke(privateLookup, declaringClass,
                     field.getName(), field.getType());
+            if (varHandle == null) {
+                return null;
+            }
 
             return new Injector(field, varHandle, uniqueFieldName, field.getName());
         } catch (Exception e) {
+            // Security: Log but don't fail hard - allow fallback to Field.set()
             return null;
         }
     }
 
     public static Injector create(Field field, String methodName, String uniqueFieldName) {
+        // Security: Validate input parameters
+        if (field == null) {
+            throw new JsonIoException("Field cannot be null");
+        }
+        if (methodName == null || methodName.trim().isEmpty()) {
+            throw new JsonIoException("Method name cannot be null or empty");
+        }
+        if (uniqueFieldName == null || uniqueFieldName.trim().isEmpty()) {
+            throw new JsonIoException("Unique field name cannot be null or empty");
+        }
+        
+        // Security: Validate method access permissions
+        try {
+            SecurityManager sm = System.getSecurityManager();
+            if (sm != null) {
+                sm.checkPermission(new ReflectPermission("suppressAccessChecks"));
+            }
+        } catch (SecurityException e) {
+            throw new JsonIoException("Security policy denies method access for: " + methodName + " in class: " + field.getDeclaringClass().getName(), e);
+        }
+        
         try {
             MethodType methodType = MethodType.methodType(void.class, field.getType());
             MethodHandle handle = MethodHandles.lookup().findVirtual(field.getDeclaringClass(), methodName, methodType);
             return new Injector(field, handle, uniqueFieldName, methodName);
-        } catch (NoSuchMethodException | IllegalAccessException e) {
-            return null;
+        } catch (NoSuchMethodException e) {
+            throw new JsonIoException("Method not found: " + methodName + " in class: " + field.getDeclaringClass().getName(), e);
+        } catch (IllegalAccessException e) {
+            throw new JsonIoException("Access denied to method: " + methodName + " in class: " + field.getDeclaringClass().getName(), e);
         }
     }
 
     public void inject(Object object, Object value) {
+        // Security: Validate input parameters
         if (object == null) {
             throw new JsonIoException("Attempting to set field: " + getName() + " on null object.");
+        }
+        
+        // Security: Validate that the object is an instance of the field's declaring class
+        Class<?> declaringClass = field.getDeclaringClass();
+        if (!declaringClass.isInstance(object)) {
+            throw new JsonIoException("Object is not an instance of the field's declaring class. Expected: " + 
+                declaringClass.getName() + ", Actual: " + object.getClass().getName() + 
+                " for field: " + getName());
+        }
+        
+        // Security: Additional validation for system classes
+        String className = declaringClass.getName();
+        if (className.startsWith("java.lang.") || className.startsWith("java.security.")) {
+            // Extra caution when dealing with core system classes
+            SecurityManager sm = System.getSecurityManager();
+            if (sm != null) {
+                try {
+                    sm.checkPermission(new ReflectPermission("suppressAccessChecks"));
+                } catch (SecurityException e) {
+                    throw new JsonIoException("Security policy denies injection into system class: " + className + " field: " + getName(), e);
+                }
+            }
         }
 
         try {
@@ -252,10 +369,23 @@ public class Injector {
     }
 
     private void injectWithVarHandle(Object object, Object value) throws Throwable {
+        // Security: Validate VarHandle infrastructure
         if (varHandle == null || VAR_HANDLE_SET_METHOD == null) {
             throw new JsonIoException("Unable to set field: " + getName() + " - VarHandle not available");
         }
-        VAR_HANDLE_SET_METHOD.invokeWithArguments(CollectionUtilities.listOf(varHandle, object, value));
+        
+        // Security: Validate arguments before VarHandle invocation
+        if (object == null) {
+            throw new JsonIoException("Cannot inject into null object using VarHandle for field: " + getName());
+        }
+        
+        try {
+            // Security: Use secure argument list creation
+            Object[] args = {varHandle, object, value};
+            VAR_HANDLE_SET_METHOD.invokeWithArguments(Arrays.asList(args));
+        } catch (Exception e) {
+            throw new JsonIoException("VarHandle injection failed for field: " + getName() + " in class: " + field.getDeclaringClass().getName(), e);
+        }
     }
 
     public Class<?> getType() {

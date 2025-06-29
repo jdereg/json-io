@@ -4,6 +4,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 
+import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
@@ -35,7 +36,7 @@ public class RecordFactory implements JsonReader.ClassFactory {
     @Override
     public Object newInstance(Class<?> c, JsonObject jsonObj, Resolver resolver) {
         if (!JAVA_16_OR_ABOVE) {
-            throw new RuntimeException("Record de-serialization only works with java>=16.");
+            throw new JsonIoException("Record de-serialization requires Java 16 or higher [current Java version: " + System.getProperty("java.version") + "]");
         }
         try {
             ArrayList<Class<?>> lParameterTypes = new ArrayList<>(jsonObj.size());
@@ -43,7 +44,7 @@ public class RecordFactory implements JsonReader.ClassFactory {
 
             Method getRecordComponents = ReflectionUtils.getMethod(Class.class, "getRecordComponents");
             if (getRecordComponents == null) {
-                throw new NoSuchMethodException("getRecordComponents");
+                throw new NoSuchMethodException("getRecordComponents method not found - Java 16+ required for Record support");
             }
             Object[] recordComponents = (Object[]) getRecordComponents.invoke(c);
             for (Object recordComponent : recordComponents) {
@@ -65,11 +66,17 @@ public class RecordFactory implements JsonReader.ClassFactory {
 
             Constructor<?> constructor = ReflectionUtils.getConstructor(c, lParameterTypes.toArray(new Class[0]));
             if (constructor == null) {
-                throw new NoSuchMethodException("record constructor not found");
+                throw new NoSuchMethodException("Record constructor not found for class: " + c.getName() + " with parameter types: " + lParameterTypes);
             }
             return constructor.newInstance(lParameterValues.toArray(new Object[0]));
+        } catch (JsonIoException e) {
+            throw e; // Re-throw JsonIoException as-is
+        } catch (NoSuchMethodException e) {
+            throw new JsonIoException("Failed to create Record instance: " + e.getMessage() + " [class: " + c.getName() + "]", e);
+        } catch (ReflectiveOperationException e) {
+            throw new JsonIoException("Failed to access Record components via reflection [class: " + c.getName() + "]", e);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new JsonIoException("Unexpected error creating Record instance [class: " + c.getName() + "]", e);
         }
     }
 
@@ -78,7 +85,7 @@ public class RecordFactory implements JsonReader.ClassFactory {
         public Object read(Object o, Resolver resolver)
         {
             if (!JAVA_16_OR_ABOVE) {
-                throw new RuntimeException("Record de-serialization only works with java>=16.");
+                throw new JsonIoException("Record de-serialization requires Java 16 or higher [current Java version: " + System.getProperty("java.version") + "]");
             }
             try {
                 JsonObject jsonObj = (JsonObject) o;
@@ -91,7 +98,7 @@ public class RecordFactory implements JsonReader.ClassFactory {
                 // we implement this with reflection due to code compatibility Java<16
                 Method getRecordComponents = ReflectionUtils.getMethod(Class.class, "getRecordComponents");
                 if (getRecordComponents == null) {
-                    throw new NoSuchMethodException("getRecordComponents");
+                    throw new NoSuchMethodException("getRecordComponents method not found - Java 16+ required for Record support");
                 }
                 Object[] recordComponents = (Object[]) getRecordComponents.invoke(c);
                 for (Object recordComponent : recordComponents) {
@@ -113,11 +120,20 @@ public class RecordFactory implements JsonReader.ClassFactory {
 
                 Constructor<?> constructor = ReflectionUtils.getConstructor(c, lParameterTypes.toArray(new Class[0]));
                 if (constructor == null) {
-                    throw new NoSuchMethodException("record constructor not found");
+                    throw new NoSuchMethodException("Record constructor not found for class: " + c.getName() + " with parameter types: " + lParameterTypes);
                 }
                 return constructor.newInstance(lParameterValues.toArray(new Object[0]));
+            } catch (JsonIoException e) {
+                throw e; // Re-throw JsonIoException as-is
+            } catch (ClassCastException e) {
+                throw new JsonIoException("Failed to read Record: invalid JSON object structure [expected JsonObject, got: " + o.getClass().getSimpleName() + "]", e);
+            } catch (NoSuchMethodException e) {
+                throw new JsonIoException("Failed to create Record instance: " + e.getMessage(), e);
+            } catch (ReflectiveOperationException e) {
+                throw new JsonIoException("Failed to access Record components via reflection [class: " + ((JsonObject)o).getRawType().getName() + "]", e);
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                String className = (o instanceof JsonObject) ? ((JsonObject)o).getRawType().getName() : "unknown";
+                throw new JsonIoException("Unexpected error reading Record [class: " + className + "]", e);
             }
         }
     }

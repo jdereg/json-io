@@ -84,8 +84,18 @@ class JsonParser {
     private final Map<String, String> substitutes;
 
     // Optimized string buffer management with size-based strategy
+    // Fix ThreadLocal resource leak by providing cleanup utilities
     private static final ThreadLocal<char[]> STRING_BUFFER = ThreadLocal.withInitial(() -> new char[1024]);
     private static final ThreadLocal<char[]> LARGE_STRING_BUFFER = ThreadLocal.withInitial(() -> new char[8192]);
+    
+    /**
+     * Clean up ThreadLocal resources to prevent memory leaks.
+     * Should be called when JsonParser processing is complete for the current thread.
+     */
+    public static void clearThreadLocalBuffers() {
+        STRING_BUFFER.remove();
+        LARGE_STRING_BUFFER.remove();
+    }
     
     // Primary static cache that never changes
     private static final Map<String, String> STATIC_STRING_CACHE = new ConcurrentHashMap<>(64);
@@ -774,7 +784,12 @@ class JsonParser {
      */
     private void processEscape(StringBuilder sb, int c, FastReader in,
                                char[] ESCAPE_CHARS, int[] HEX_VALUES) throws IOException {
-        // Handle common escapes via lookup table
+        // Fix bounds checking for escape processing - add comprehensive validation
+        if (c < 0 || c > 127) {
+            error("Invalid escape character code: " + c + " - escape characters must be ASCII (0-127)");
+        }
+        
+        // Handle common escapes via lookup table with bounds checking
         if (c < ESCAPE_CHARS.length) {
             char escaped = ESCAPE_CHARS[c];
             if (escaped != '\0') {
@@ -792,7 +807,12 @@ class JsonParser {
                     error("EOF reached while reading Unicode escape sequence");
                 }
 
-                int digit = (c < 128) ? HEX_VALUES[c] : -1;
+                // Enhanced bounds checking for hex values
+                if (c < 0 || c >= HEX_VALUES.length) {
+                    error("Invalid character in Unicode escape sequence: " + c + " (out of ASCII range)");
+                }
+                
+                int digit = HEX_VALUES[c];
                 if (digit < 0) {
                     error("Expected hexadecimal digit, got: " + (char)c);
                 }
@@ -814,7 +834,12 @@ class JsonParser {
                                 error("EOF reached while reading Unicode escape sequence");
                             }
 
-                            int digit = (c < 128) ? HEX_VALUES[c] : -1;
+                            // Enhanced bounds checking for surrogate pair hex values
+                            if (c < 0 || c >= HEX_VALUES.length) {
+                                error("Invalid character in Unicode escape sequence: " + c + " (out of ASCII range)");
+                            }
+                            
+                            int digit = HEX_VALUES[c];
                             if (digit < 0) {
                                 error("Expected hexadecimal digit, got: " + (char)c);
                             }
@@ -968,10 +993,24 @@ class JsonParser {
      * @param jObj  JsonObject representing the current item in the JSON being loaded.
      */
     private void loadId(Object value, JsonObject jObj) {
-        if (!(value instanceof Number)) {
-            error("Expected a number for " + ID + ", instead got: " + value);
+        // Fix null validation - add comprehensive null and type checks
+        if (value == null) {
+            error("Null value provided for " + ID + " field - expected a number");
         }
+        if (jObj == null) {
+            error("Null JsonObject provided to loadId method");
+        }
+        if (!(value instanceof Number)) {
+            error("Expected a number for " + ID + ", instead got: " + value.getClass().getSimpleName());
+        }
+        
         Long id = ((Number) value).longValue();
+        
+        // Validate ID range to prevent extreme values that could cause issues
+        if (id < -1000000000L || id > 1000000000L) {
+            error("ID value out of safe range: " + id + " - IDs must be between -1 billion and +1 billion");
+        }
+        
         references.put(id, jObj);
         jObj.setId(id);
     }
@@ -983,10 +1022,25 @@ class JsonParser {
      * @param jObj  JsonValue that will be stuffed with the reference id and marked as finished.
      */
     private void loadRef(Object value, JsonValue jObj) {
-        if (!(value instanceof Number)) {
-            error("Expected a number for " + REF + ", instead got: " + value);
+        // Fix null validation - add comprehensive null and type checks
+        if (value == null) {
+            error("Null value provided for " + REF + " field - expected a number");
         }
-        jObj.setReferenceId(((Number) value).longValue());
+        if (jObj == null) {
+            error("Null JsonValue provided to loadRef method");
+        }
+        if (!(value instanceof Number)) {
+            error("Expected a number for " + REF + ", instead got: " + value.getClass().getSimpleName());
+        }
+        
+        Long refId = ((Number) value).longValue();
+        
+        // Validate reference ID range to prevent extreme values that could cause issues
+        if (refId < -1000000000L || refId > 1000000000L) {
+            error("Reference ID value out of safe range: " + refId + " - reference IDs must be between -1 billion and +1 billion");
+        }
+        
+        jObj.setReferenceId(refId);
     }
 
     /**

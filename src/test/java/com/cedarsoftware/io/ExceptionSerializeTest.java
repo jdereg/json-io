@@ -371,22 +371,33 @@ class ExceptionSerializeTest
     }
 
     @Test
-    public void testInvalidCoordinateException_fullyPopulated() {
-        // Debug: Check if parameter names are available
+    void testInvalidCoordinateException_fullyPopulated() {
+        // Check that constructors are available and have proper parameter names (not the default synthetic names)
         Constructor<?>[] constructors = InvalidCoordinateException.class.getDeclaredConstructors();
+        assertThat(constructors).isNotEmpty();
         for (Constructor<?> constructor : constructors) {
-            System.out.println("Constructor: " + constructor);
             Parameter[] params = constructor.getParameters();
-            for (int i = 0; i < params.length; i++) {
-                System.out.println("  Parameter " + i + ": name='" + params[i].getName() + "', type=" + params[i].getType());
+            assertThat(params).isNotNull();
+            for (Parameter param : params) {
+                // Assuming compiled with -parameters flag so names should not be synthetic.
+                // You can adjust the condition based on expected names.
+                assertThat(param.getName()).doesNotMatch("^arg\\d+$");
             }
         }
 
-        // Check logging levels
-        System.out.println("Root logger level: " + Logger.getLogger("").getLevel());
-        System.out.println("ConsoleHandler level: " + Logger.getLogger("").getHandlers()[0].getLevel());
-        System.out.println("ClassUtilities logger level: " + Logger.getLogger(ClassUtilities.class.getName()).getLevel());
-        System.out.println("ClassUtilities effective level: " + Logger.getLogger(ClassUtilities.class.getName()).getLevel());
+        // Assert that logging is properly configured (levels can be null if inherited)
+        Logger rootLogger = Logger.getLogger("");
+        assertThat(rootLogger).isNotNull();
+
+        // Check handlers exist and are properly configured
+        if (rootLogger.getHandlers().length > 0) {
+            assertThat(rootLogger.getHandlers()[0]).isNotNull();
+            // Handler level can be null (will use logger's level)
+        }
+
+        // Class-specific logger can have null level (inherits from parent)
+        Logger classLogger = Logger.getLogger(ClassUtilities.class.getName());
+        assertThat(classLogger).isNotNull();
 
         Set<String> coordKeys = setOf("key1", "key2", "key3");
         Set<Integer> reqKeys = setOf(3, 1, 2);
@@ -400,7 +411,7 @@ class ExceptionSerializeTest
 
         String json = JsonIo.toJson(e1, null);
         Exception e2 = JsonIo.toObjects(json, new ReadOptionsBuilder().build(), InvalidCoordinateException.class);
-        
+
         assertThat(e2)
                 .isInstanceOf(InvalidCoordinateException.class)
                 .hasMessage("Missing required coordinate key: key4");
@@ -408,9 +419,9 @@ class ExceptionSerializeTest
         Map<String, Object> options = new HashMap<>();
         boolean equals = DeepEquals.deepEquals(e1, e2, options);
         if (!equals) {
-            System.out.println(options.get("diff"));
+            Logger.getLogger(ExceptionSerializeTest.class.getName()).warning(options.get("diff").toString());
         }
-        assert equals;
+        assertThat(equals).isTrue();
     }
 
     @Test

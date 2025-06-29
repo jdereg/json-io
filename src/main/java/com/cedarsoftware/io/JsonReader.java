@@ -352,9 +352,21 @@ public class JsonReader implements Closeable
             return returnValue;
         }
 
-        // Allow simple String to Enum conversion when needed
+        // Allow simple String to Enum conversion when needed with validation
         if (rootClass.isEnum() && returnValue instanceof String) {
-            return Enum.valueOf((Class<Enum>) rootClass, (String) returnValue);
+            String enumValue = (String) returnValue;
+            // Security: Validate enum string to prevent malicious input
+            if (enumValue == null || enumValue.trim().isEmpty()) {
+                throw new JsonIoException("Invalid enum value: null or empty string for enum type " + rootClass.getName());
+            }
+            if (enumValue.length() > 256) { // Reasonable limit for enum names
+                throw new JsonIoException("Invalid enum value: string too long (" + enumValue.length() + " chars) for enum type " + rootClass.getName());
+            }
+            try {
+                return Enum.valueOf((Class<Enum>) rootClass, enumValue.trim());
+            } catch (IllegalArgumentException e) {
+                throw new JsonIoException("Invalid enum value '" + enumValue + "' for enum type " + rootClass.getName(), e);
+            }
         }
 
         try {
@@ -757,6 +769,10 @@ public class JsonReader implements Closeable
         catch (Exception e) {
             throw new JsonIoException("Unable to close input", e);
         }
+        finally {
+            // Clean up ThreadLocal resources to prevent memory leaks
+            JsonParser.clearThreadLocalBuffers();
+        }
     }
 
     private String getErrorMessage(String msg)
@@ -777,10 +793,18 @@ public class JsonReader implements Closeable
      * Implementation of ReferenceTracker
      */
     static class DefaultReferenceTracker implements ReferenceTracker {
-
+        
+        // Security limits to prevent DoS attacks (generous limits for normal usage)
+        private static final int MAX_REFERENCES = 10000000; // 10M objects max
+        private static final int MAX_REFERENCE_CHAIN_DEPTH = 10000; // Max chain depth
+        
         final Map<Long, JsonObject> references = new HashMap<>();
 
         public JsonObject put(Long l, JsonObject o) {
+            // Security: Prevent unbounded memory growth via reference tracking
+            if (references.size() >= MAX_REFERENCES) {
+                throw new JsonIoException("Security limit exceeded: Maximum number of object references (" + MAX_REFERENCES + ") reached. Possible DoS attack.");
+            }
             return this.references.put(l, o);
         }
 
@@ -806,10 +830,19 @@ public class JsonReader implements Closeable
                 return null;
             }
 
+            // Security: Improve circular reference detection with persistent tracking
             Set<Long> visited = new HashSet<>();
+            int chainDepth = 0;
+            
             while (target.isReference()) {
+                // Security: Prevent infinite loops via chain depth limit
+                if (++chainDepth > MAX_REFERENCE_CHAIN_DEPTH) {
+                    throw new JsonIoException("Security limit exceeded: Reference chain depth (" + chainDepth + ") exceeds maximum (" + MAX_REFERENCE_CHAIN_DEPTH + "). Possible circular reference attack.");
+                }
+                
+                // Security: Enhanced circular reference detection
                 if (visited.contains(id)) {
-                    throw new JsonIoException("Circular reference detected in reference chain starting with id: " + id);
+                    throw new JsonIoException("Circular reference detected in reference chain starting with id: " + id + " at depth: " + chainDepth);
                 }
                 visited.add(id);
                 

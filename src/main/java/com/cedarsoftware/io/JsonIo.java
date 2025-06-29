@@ -214,12 +214,19 @@ public class JsonIo {
             writer = new JsonWriter(out, writeOptions);
             writer.write(source);
         } catch (Exception e) {
+            // Simplified exception handling - let JsonIoExceptions pass through unchanged
+            if (e instanceof JsonIoException) {
+                throw (JsonIoException) e;
+            }
             throw new JsonIoException("Unable to convert object and send in JSON format to OutputStream.", e);
-        }
-        finally {
-            if (writeOptions.isCloseStream()) {
-                if (writer != null) {
+        } finally {
+            if (writeOptions.isCloseStream() && writer != null) {
+                try {
                     writer.close();
+                } catch (Exception closeException) {
+                    // Log close exceptions but don't mask the original exception
+                    Logger.getLogger(JsonIo.class.getName()).warning(
+                        "Failed to close JsonWriter: " + closeException.getMessage());
                 }
             }
         }
@@ -690,8 +697,29 @@ public class JsonIo {
             } catch (Exception e) {
                 throw new JsonIoException(e);
             } finally {
-                if (jr != null && readOptions.isCloseStream()) {
-                    jr.close();
+                // Fix resource leak - ensure resources are always closed properly
+                if (jr != null) {
+                    try {
+                        if (readOptions.isCloseStream()) {
+                            jr.close();
+                        }
+                    } catch (Exception closeException) {
+                        // Log the close exception but don't mask the original exception
+                        Logger.getLogger(JsonIo.class.getName()).warning(
+                            "Failed to close JsonReader: " + closeException.getMessage());
+                    }
+                }
+                
+                // Also ensure the input stream is closed if closeStream is enabled
+                // This provides additional safety in case JsonReader.close() doesn't handle it
+                if (readOptions.isCloseStream() && in != null) {
+                    try {
+                        in.close();
+                    } catch (Exception streamCloseException) {
+                        // Log but don't throw - this is cleanup code
+                        Logger.getLogger(JsonIo.class.getName()).warning(
+                            "Failed to close InputStream: " + streamCloseException.getMessage());
+                    }
                 }
             }
         }

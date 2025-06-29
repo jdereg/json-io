@@ -38,20 +38,29 @@ import com.cedarsoftware.io.Resolver;
 public class CollectionFactory implements JsonReader.ClassFactory {
     @Override
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
+        // Optimize: Pre-size collections when JSON contains size information
+        Object[] items = jObj.getItems();
+        int initialCapacity = (items != null) ? items.length : 16;
+        
         if (Deque.class.isAssignableFrom(c)) {
-            return new ArrayDeque<>();
+            return new ArrayDeque<>(initialCapacity);
         } else if (Queue.class.isAssignableFrom(c)) {
+            // LinkedList doesn't have capacity constructor, use ArrayList for sized lists when possible
             return new LinkedList<>();
         } else if (List.class.isAssignableFrom(c)) {
-            return new ArrayList<>();
+            return new ArrayList<>(initialCapacity);
         } else if (NavigableSet.class.isAssignableFrom(c)) {
+            // TreeSet doesn't have capacity constructor
             return new TreeSet<>();
         } else if (SortedSet.class.isAssignableFrom(c)) {
+            // TreeSet doesn't have capacity constructor
             return new TreeSet<>();
         } else if (Set.class.isAssignableFrom(c)) {
-            return new LinkedHashSet<>();
+            // Calculate optimal initial capacity for load factor 0.75
+            int capacity = Math.max(16, (int)(initialCapacity / 0.75f) + 1);
+            return new LinkedHashSet<>(capacity);
         } else if (Collection.class.isAssignableFrom(c)) {
-            return new ArrayList<>();
+            return new ArrayList<>(initialCapacity);
         }
         throw new JsonIoException("CollectionFactory handed Class for which it was not expecting: " + c.getName());
     }

@@ -108,6 +108,75 @@ to drop from the cache - they will be dynamically added back if not in the cache
 > #### `ReadOptionsBuilder` lruSize(`int size`)
 >- [ ] Set the max LRU cache size
 
+### Security Limits - Advanced DoS Protection
+
+`json-io` provides configurable security limits to protect against denial-of-service (DoS) attacks via malicious JSON. These limits prevent unbounded memory consumption and excessive processing by enforcing reasonable bounds on various internal collections and processing stacks. **All limits default to `Integer.MAX_VALUE` (unlimited) for backward compatibility** - you must explicitly set them to enable protection.
+
+> #### `int` getMaxUnresolvedReferences()
+>- [ ] Return the maximum number of unresolved references allowed during JSON processing. Default is `Integer.MAX_VALUE` (unlimited).
+
+> #### `ReadOptionsBuilder` maxUnresolvedReferences(`int limit`)
+>- [ ] Set the maximum number of unresolved references allowed. Prevents memory exhaustion from DoS attacks via unbounded forward references. Recommended production value: `1000000`.
+
+> #### `int` getMaxStackDepth()
+>- [ ] Return the maximum traversal stack depth allowed during JSON processing. Default is `Integer.MAX_VALUE` (unlimited).
+
+> #### `ReadOptionsBuilder` maxStackDepth(`int limit`)
+>- [ ] Set the maximum traversal stack depth allowed. Prevents stack overflow attacks via deeply nested structures. Recommended production value: `10000`.
+
+> #### `int` getMaxMapsToRehash()
+>- [ ] Return the maximum number of maps that can be queued for rehashing. Default is `Integer.MAX_VALUE` (unlimited).
+
+> #### `ReadOptionsBuilder` maxMapsToRehash(`int limit`)
+>- [ ] Set the maximum number of maps that can be queued for rehashing. Prevents memory exhaustion from DoS attacks via excessive map creation. Recommended production value: `1000000`.
+
+> #### `int` getMaxMissingFields()
+>- [ ] Return the maximum number of missing fields that can be tracked. Default is `Integer.MAX_VALUE` (unlimited).
+
+> #### `ReadOptionsBuilder` maxMissingFields(`int limit`)
+>- [ ] Set the maximum number of missing fields that can be tracked. Prevents memory exhaustion from DoS attacks via excessive missing field tracking. Recommended production value: `100000`.
+
+**Example - Enabling Security Limits:**
+```java
+ReadOptions readOptions = new ReadOptionsBuilder()
+    .maxUnresolvedReferences(1000000)  // 1M max unresolved references
+    .maxStackDepth(10000)              // 10K max nesting depth
+    .maxMapsToRehash(1000000)          // 1M max maps to rehash
+    .maxMissingFields(100000)          // 100K max missing fields
+    .build();
+
+// These limits protect against malicious JSON while allowing normal usage
+Object result = JsonIo.toJava(json, readOptions);
+```
+
+**Permanent Security Limits (Application-Wide Configuration):**
+
+For production applications, you can set security limits permanently at JVM startup rather than configuring them for each `ReadOptions` instance. These permanent settings automatically apply to all new `ReadOptions` instances:
+
+```java
+// Set at application initialization (typically in main() or static initializer)
+ReadOptionsBuilder.addPermanentMaxUnresolvedReferences(1000000);  // 1M max unresolved references
+ReadOptionsBuilder.addPermanentMaxStackDepth(10000);             // 10K max nesting depth  
+ReadOptionsBuilder.addPermanentMaxMapsToRehash(1000000);         // 1M max maps to rehash
+ReadOptionsBuilder.addPermanentMaxMissingFields(100000);         // 100K max missing fields
+
+// All subsequent ReadOptions instances will automatically inherit these limits
+ReadOptions readOptions1 = new ReadOptionsBuilder().build();     // Has permanent limits
+ReadOptions readOptions2 = new ReadOptionsBuilder()              // Can override if needed
+    .maxStackDepth(5000)  // Override permanent setting for this instance
+    .build();
+```
+
+**When to Use Permanent vs. Local Settings:**
+- **Permanent Settings:** Use for application-wide security policies that should apply consistently
+- **Local Settings:** Use for specific parsing contexts that need different limits
+- **Recommendation:** Set conservative permanent limits at startup, override locally when needed
+
+**Security Trade-offs:**
+- **Benefits:** Protection against memory exhaustion and stack overflow attacks
+- **Costs:** Potential rejection of legitimately large JSON documents
+- **Recommendation:** Enable in production environments, tune limits based on your data patterns
+
 ### Floating Point Options
 
 Handling special floating point values and large numbers in JSON can be challenging due to limitations in standard formats and data types.

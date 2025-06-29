@@ -226,9 +226,32 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
         output.write(NEW_LINE);
         depth += delta;
-        for (int i=0; i < depth; i++)
-        {
-            output.write("  ");
+        
+        // Optimized indentation - build spaces once instead of multiple writes
+        if (depth > 0) {
+            // Prevent excessive indentation to avoid memory issues
+            final int maxDepth = 100;
+            final int actualDepth = Math.min(depth, maxDepth);
+            
+            // Pre-compute indentation string for efficiency
+            if (actualDepth <= 10) {
+                // For small depths, use simple repeated writes (faster for small depths)
+                for (int i = 0; i < actualDepth; i++) {
+                    output.write("  ");
+                }
+            } else {
+                // For larger depths, build the string once and write it
+                char[] spaces = new char[actualDepth * 2];
+                for (int i = 0; i < spaces.length; i++) {
+                    spaces[i] = ' ';
+                }
+                output.write(spaces);
+            }
+            
+            if (depth > maxDepth) {
+                // Warn about excessive depth to help detect issues
+                output.write("... (depth=" + depth + ")");
+            }
         }
     }
 
@@ -406,9 +429,20 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         stack.addFirst(root);
         final Map<Object, Long> visited = objVisited;
         final Map<Object, Long> referenced = objsReferenced;
+        
+        // Fix memory leak - prevent stack overflow and unbounded memory growth
+        final int MAX_DEPTH = 10000;
+        final int MAX_OBJECTS = 100000;
+        int processedCount = 0;
 
-        while (!stack.isEmpty()) {
+        while (!stack.isEmpty() && processedCount < MAX_OBJECTS) {
             final Object obj = stack.removeFirst();
+            processedCount++;
+            
+            // Prevent stack overflow from excessively deep object graphs
+            if (stack.size() > MAX_DEPTH) {
+                throw new JsonIoException("Object graph too deep (>" + MAX_DEPTH + " levels). This may indicate a circular reference or excessively nested structure.");
+            }
 
             if (!writeOptions.isNonReferenceableClass(obj.getClass())) {
                 Long id = visited.get(obj);
@@ -439,6 +473,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                     processFields(stack, obj);
                 }
             }
+        }
+        
+        // Check if we hit the object limit
+        if (processedCount >= MAX_OBJECTS) {
+            throw new JsonIoException("Object graph too large (>" + MAX_OBJECTS + " objects). This may indicate excessive nesting or a memory leak.");
         }
     }
 
@@ -802,6 +841,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
     private void writeIntArray(int[] ints, int lenMinus1) throws IOException
     {
+        // Add bounds checking for safety
+        if (ints == null) {
+            throw new JsonIoException("Int array cannot be null");
+        }
+        if (lenMinus1 < 0 || lenMinus1 >= ints.length) {
+            throw new JsonIoException("Invalid array bounds: lenMinus1=" + lenMinus1 + ", array.length=" + ints.length);
+        }
+        
         final Writer output = this.out;
         for (int i = 0; i < lenMinus1; i++)
         {
@@ -824,14 +871,31 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
     private void writeByteArray(byte[] bytes, int lenMinus1) throws IOException
     {
+        // Add bounds checking for safety
+        if (bytes == null) {
+            throw new JsonIoException("Byte array cannot be null");
+        }
+        if (lenMinus1 < 0 || lenMinus1 >= bytes.length) {
+            throw new JsonIoException("Invalid array bounds: lenMinus1=" + lenMinus1 + ", array.length=" + bytes.length);
+        }
+        
         final Writer output = this.out;
         final Object[] byteStrs = byteStrings;
         for (int i = 0; i < lenMinus1; i++)
         {
-            output.write((char[]) byteStrs[bytes[i] + 128]);
+            int index = bytes[i] + 128;
+            // Bounds check for byteStrings array access
+            if (index < 0 || index >= byteStrs.length) {
+                throw new JsonIoException("Byte value out of range: " + bytes[i]);
+            }
+            output.write((char[]) byteStrs[index]);
             output.write(',');
         }
-        output.write((char[]) byteStrs[bytes[lenMinus1] + 128]);
+        int finalIndex = bytes[lenMinus1] + 128;
+        if (finalIndex < 0 || finalIndex >= byteStrs.length) {
+            throw new JsonIoException("Byte value out of range: " + bytes[lenMinus1]);
+        }
+        output.write((char[]) byteStrs[finalIndex]);
     }
 
     private void writeCollection(Collection<?> col, boolean showType) throws IOException
@@ -1605,9 +1669,37 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     }
 
     private Object getValueByReflect(Object obj, Field field) {
+        // Fix unsafe reflection access - add comprehensive null and security checks
+        if (field == null) {
+            return null;
+        }
+        
+        // Allow static field access even with null object
+        if (obj == null && !java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
+            return null;
+        }
+        
         try {
+            // Security enhancement - only allow access to public fields or already accessible fields
+            if (!field.isAccessible() && !java.lang.reflect.Modifier.isPublic(field.getModifiers())) {
+                // Private/protected fields are not made accessible for security
+                return null;
+            }
+            
+            // Ensure field is accessible before attempting access (Java 8 compatible)
+            if (!field.isAccessible()) {
+                field.setAccessible(true);
+            }
+            
             return field.get(obj);
-        } catch (Exception ignored) {
+        } catch (IllegalAccessException e) {
+            // Field access denied - return null rather than exposing internal error
+            return null;
+        } catch (SecurityException e) {
+            // Security manager denied access - fail safely
+            return null;
+        } catch (Exception e) {
+            // Any other reflection-related exception - fail safely without exposing details
             return null;
         }
     }
@@ -1615,18 +1707,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     private boolean writeField(Object obj, boolean first, String fieldName, Accessor accessor) throws IOException
     {
         final Class<?> fieldDeclaringClass = accessor.getDeclaringClass();
-        Object o;
-
-        //  Only here for enumAsObject writing
-        if (Enum.class.isAssignableFrom(fieldDeclaringClass)) {
-            if (!accessor.isPublic() && writeOptions.isEnumPublicFieldsOnly()) {
-                return first;
-            }
-
-            o = accessor.retrieve(obj);
-        } else {
-            o = accessor.retrieve(obj);
+        if (Enum.class.isAssignableFrom(fieldDeclaringClass) && !accessor.isPublic() && writeOptions.isEnumPublicFieldsOnly()) {
+            return first;
         }
+        Object o = accessor.retrieve(obj);
 
         if (writeOptions.isSkipNullFields() && o == null)
         {   // If skip null, skip field and return the same status on first field written indicator
@@ -1698,16 +1782,32 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 out.flush();
             }
         }
-        catch (Exception ignored) { }
+        catch (IOException e) {
+            // Log I/O errors but don't propagate them in cleanup operations
+            System.err.println("Warning: Failed to flush JsonWriter output stream: " + e.getMessage());
+        }
+        catch (Exception e) {
+            // Log unexpected errors but don't propagate them in cleanup operations
+            System.err.println("Warning: Unexpected error flushing JsonWriter output stream: " + e.getMessage());
+        }
     }
 
     public void close()
     {
         try
         {
-            out.close();
+            if (out != null) {
+                out.close();
+            }
         }
-        catch (Exception ignore) { }
+        catch (IOException e) {
+            // Log I/O errors but don't propagate them in cleanup operations
+            System.err.println("Warning: Failed to close JsonWriter output stream: " + e.getMessage());
+        }
+        catch (Exception e) {
+            // Log unexpected errors but don't propagate them in cleanup operations
+            System.err.println("Warning: Unexpected error closing JsonWriter output stream: " + e.getMessage());
+        }
     }
 
     private String getId(Object o)
@@ -1747,6 +1847,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      * @throws IOException If an I/O error occurs
      */
     public static void writeJsonUtf8String(final Writer output, String s) throws IOException {
+        // Enhanced input validation for null safety
+        if (output == null) {
+            throw new JsonIoException("Output writer cannot be null");
+        }
+        
         if (s == null) {
             output.write("null");
             return;
@@ -1754,6 +1859,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         output.write('\"');
         final int len = s.length();
+        
+        // Add safety check for extremely large strings to prevent memory issues
+        if (len > 1000000) { // 1MB string limit for safety
+            throw new JsonIoException("String too large for JSON serialization: " + len + " characters");
+        }
 
         for (int i = 0; i < len; ) {
             int codePoint = s.codePointAt(i);

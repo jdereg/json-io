@@ -71,6 +71,10 @@ import com.cedarsoftware.util.convert.Converter;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class Resolver {
     private static final String NO_FACTORY = "_︿_ψ_☼";
+    
+    // Security limits to prevent DoS attacks via unbounded memory consumption
+    // These are now configurable via ReadOptions for backward compatibility
+    
     final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
     protected final Deque<JsonObject> stack = new ArrayDeque<>();
     private final Collection<JsonObject> mapsToRehash = new ArrayList<>();
@@ -280,6 +284,11 @@ public abstract class Resolver {
      * @param jsonObject JsonObject that supplies the source values for the Java peer (target)
      */
     public void push(JsonObject jsonObject) {
+        // Security: Prevent stack overflow via depth limiting
+        int maxStackDepth = readOptions.getMaxStackDepth();
+        if (maxStackDepth != Integer.MAX_VALUE && stack.size() >= maxStackDepth) {
+            throw new JsonIoException("Security limit exceeded: Maximum traversal stack depth (" + maxStackDepth + ") reached. Possible deeply nested attack.");
+        }
         stack.push(jsonObject);
     }
 
@@ -290,6 +299,31 @@ public abstract class Resolver {
     protected abstract void traverseCollection(JsonObject jsonObj);
 
     protected abstract void traverseArray(JsonObject jsonObj);
+
+    
+    /**
+     * Security-aware method to add unresolved references with size limits
+     */
+    protected void addUnresolvedReference(UnresolvedReference ref) {
+        // Security: Prevent unbounded memory growth via unresolved references
+        int maxUnresolvedRefs = readOptions.getMaxUnresolvedReferences();
+        if (maxUnresolvedRefs != Integer.MAX_VALUE && unresolvedRefs.size() >= maxUnresolvedRefs) {
+            throw new JsonIoException("Security limit exceeded: Maximum unresolved references (" + maxUnresolvedRefs + ") reached. Possible DoS attack.");
+        }
+        unresolvedRefs.add(ref);
+    }
+    
+    /**
+     * Security-aware method to add missing fields with size limits
+     */
+    protected void addMissingField(Missingfields field) {
+        // Security: Prevent unbounded memory growth via missing fields
+        int maxMissingFields = readOptions.getMaxMissingFields();
+        if (maxMissingFields != Integer.MAX_VALUE && missingFields.size() >= maxMissingFields) {
+            throw new JsonIoException("Security limit exceeded: Maximum missing fields (" + maxMissingFields + ") reached. Possible DoS attack.");
+        }
+        missingFields.add(field);
+    }
 
     protected void cleanup() {
         patchUnresolvedReferences();
@@ -341,6 +375,11 @@ public abstract class Resolver {
 
         // Save these for later so that unresolved references inside keys or values
         // get patched first, and then build the Maps.
+        // Security: Prevent unbounded memory growth via excessive map creation
+        int maxMapsToRehash = readOptions.getMaxMapsToRehash();
+        if (maxMapsToRehash != Integer.MAX_VALUE && mapsToRehash.size() >= maxMapsToRehash) {
+            throw new JsonIoException("Security limit exceeded: Maximum maps to rehash (" + maxMapsToRehash + ") reached. Possible DoS attack.");
+        }
         mapsToRehash.add(jsonObj);
     }
 
@@ -499,7 +538,13 @@ public abstract class Resolver {
                 try {
                     Object value = converter.convert(sourceValue != null ? sourceValue : jsonObj, targetType);
                     return jsonObj.setFinishedTarget(value, true);
-                } catch (Exception ignored) { }
+                } catch (Exception e) {
+                    // Conversion failed - continue with other resolution strategies
+                    // Only log in debug mode to avoid noise in normal operations
+                    if (Boolean.parseBoolean(System.getProperty("json-io.debug", "false"))) {
+                        System.err.println("Debug: Conversion failed for " + sourceType + " to " + targetType + ": " + e.getMessage());
+                    }
+                }
             }
         }
 

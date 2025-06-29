@@ -83,6 +83,12 @@ public class ReadOptionsBuilder {
     private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_SETTERS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Set<String>> BASE_NOT_IMPORTED_FIELDS = new ConcurrentHashMap<>();
     
+    // Base permanent security limits - default to unlimited for backward compatibility
+    private static volatile int BASE_MAX_UNRESOLVED_REFERENCES = Integer.MAX_VALUE;
+    private static volatile int BASE_MAX_STACK_DEPTH = Integer.MAX_VALUE;
+    private static volatile int BASE_MAX_MAPS_TO_REHASH = Integer.MAX_VALUE;
+    private static volatile int BASE_MAX_MISSING_FIELDS = Integer.MAX_VALUE;
+    
     // Cache of fields used for accessors. Controlled by ignoredFields
     private static final Map<Class<?>, Map<String, Field>> classMetaCache = new ClassValueMap<>();
     private static final Map<Class<?>, Map<String, Injector>> injectorsCache = new ClassValueMap<>();
@@ -135,6 +141,12 @@ public class ReadOptionsBuilder {
         options.notCustomReadClasses.addAll(BASE_NOT_CUSTOM_READ);
         options.excludedFieldNames.putAll(WriteOptionsBuilder.BASE_EXCLUDED_FIELD_NAMES);
         options.fieldsNotImported.putAll(BASE_NOT_IMPORTED_FIELDS);
+        
+        // Copy base permanent security limits
+        options.maxUnresolvedReferences = BASE_MAX_UNRESOLVED_REFERENCES;
+        options.maxStackDepth = BASE_MAX_STACK_DEPTH;
+        options.maxMapsToRehash = BASE_MAX_MAPS_TO_REHASH;
+        options.maxMissingFields = BASE_MAX_MISSING_FIELDS;
     }
 
     /**
@@ -161,6 +173,12 @@ public class ReadOptionsBuilder {
             options.missingFieldHandler = other.missingFieldHandler;
             options.decimalType = other.decimalType;
             options.integerType = other.integerType;
+            
+            // Copy security limits
+            options.maxUnresolvedReferences = other.maxUnresolvedReferences;
+            options.maxStackDepth = other.maxStackDepth;
+            options.maxMapsToRehash = other.maxMapsToRehash;
+            options.maxMissingFields = other.maxMissingFields;
 
             // Copy complex settings
             options.aliasTypeNames.clear();
@@ -324,6 +342,58 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentNonStandardSetter(Class<?> clazz, String fieldName, String alias) {
         BASE_NONSTANDARD_SETTERS.computeIfAbsent(clazz, k -> new ConcurrentHashMap<>()).put(fieldName, alias);
+    }
+    
+    /**
+     * Set a permanent (JVM lifecycle) maximum number of unresolved references allowed during JSON processing.
+     * All new ReadOptions instances created will automatically start with this setting, preventing the need to
+     * configure it for each ReadOptions instance.
+     * 
+     * @param maxUnresolvedReferences int maximum number of unresolved references allowed. Set this to prevent 
+     *                                memory exhaustion from DoS attacks via unbounded forward references.
+     *                                Use Integer.MAX_VALUE for unlimited (backward compatible default).
+     */
+    public static void addPermanentMaxUnresolvedReferences(int maxUnresolvedReferences) {
+        BASE_MAX_UNRESOLVED_REFERENCES = maxUnresolvedReferences;
+    }
+    
+    /**
+     * Set a permanent (JVM lifecycle) maximum traversal stack depth allowed during JSON processing.
+     * All new ReadOptions instances created will automatically start with this setting, preventing the need to
+     * configure it for each ReadOptions instance.
+     * 
+     * @param maxStackDepth int maximum traversal stack depth allowed. Set this to prevent stack overflow
+     *                      attacks via deeply nested structures. Use Integer.MAX_VALUE for unlimited 
+     *                      (backward compatible default).
+     */
+    public static void addPermanentMaxStackDepth(int maxStackDepth) {
+        BASE_MAX_STACK_DEPTH = maxStackDepth;
+    }
+    
+    /**
+     * Set a permanent (JVM lifecycle) maximum number of maps that can be queued for rehashing during JSON processing.
+     * All new ReadOptions instances created will automatically start with this setting, preventing the need to
+     * configure it for each ReadOptions instance.
+     * 
+     * @param maxMapsToRehash int maximum number of maps that can be queued for rehashing. Set this to prevent
+     *                        memory exhaustion from DoS attacks via excessive map creation. Use Integer.MAX_VALUE
+     *                        for unlimited (backward compatible default).
+     */
+    public static void addPermanentMaxMapsToRehash(int maxMapsToRehash) {
+        BASE_MAX_MAPS_TO_REHASH = maxMapsToRehash;
+    }
+    
+    /**
+     * Set a permanent (JVM lifecycle) maximum number of missing fields that can be tracked during JSON processing.
+     * All new ReadOptions instances created will automatically start with this setting, preventing the need to
+     * configure it for each ReadOptions instance.
+     * 
+     * @param maxMissingFields int maximum number of missing fields that can be tracked. Set this to prevent
+     *                         memory exhaustion from DoS attacks via excessive missing field tracking. 
+     *                         Use Integer.MAX_VALUE for unlimited (backward compatible default).
+     */
+    public static void addPermanentMaxMissingFields(int maxMissingFields) {
+        BASE_MAX_MISSING_FIELDS = maxMissingFields;
     }
     
     /**
@@ -586,6 +656,51 @@ public class ReadOptionsBuilder {
      */
     public ReadOptionsBuilder maxDepth(int maxDepth) {
         options.maxDepth = maxDepth;
+        return this;
+    }
+
+    /**
+     * @param maxUnresolvedReferences int maximum number of unresolved references allowed during JSON processing.
+     *                                Set this to prevent memory exhaustion from DoS attacks via unbounded 
+     *                                forward references. Default is Integer.MAX_VALUE (unlimited) for 
+     *                                backward compatibility.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder maxUnresolvedReferences(int maxUnresolvedReferences) {
+        options.maxUnresolvedReferences = maxUnresolvedReferences;
+        return this;
+    }
+
+    /**
+     * @param maxStackDepth int maximum traversal stack depth allowed during JSON processing.
+     *                      Set this to prevent stack overflow attacks via deeply nested structures.
+     *                      Default is Integer.MAX_VALUE (unlimited) for backward compatibility.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder maxStackDepth(int maxStackDepth) {
+        options.maxStackDepth = maxStackDepth;
+        return this;
+    }
+
+    /**
+     * @param maxMapsToRehash int maximum number of maps that can be queued for rehashing during JSON processing.
+     *                        Set this to prevent memory exhaustion from DoS attacks via excessive map creation.
+     *                        Default is Integer.MAX_VALUE (unlimited) for backward compatibility.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder maxMapsToRehash(int maxMapsToRehash) {
+        options.maxMapsToRehash = maxMapsToRehash;
+        return this;
+    }
+
+    /**
+     * @param maxMissingFields int maximum number of missing fields that can be tracked during JSON processing.
+     *                         Set this to prevent memory exhaustion from DoS attacks via excessive missing 
+     *                         field tracking. Default is Integer.MAX_VALUE (unlimited) for backward compatibility.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder maxMissingFields(int maxMissingFields) {
+        options.maxMissingFields = maxMissingFields;
         return this;
     }
 
@@ -919,6 +1034,13 @@ public class ReadOptionsBuilder {
         private ReadOptions.Decimals decimalType = Decimals.DOUBLE;
         private ReadOptions.Integers integerType = Integers.LONG;
         private boolean allowNanAndInfinity = false;
+        
+        // Security limits - default to unlimited for backward compatibility
+        private int maxUnresolvedReferences = Integer.MAX_VALUE;
+        private int maxStackDepth = Integer.MAX_VALUE;
+        private int maxMapsToRehash = Integer.MAX_VALUE;
+        private int maxMissingFields = Integer.MAX_VALUE;
+        
         private Map<String, String> aliasTypeNames = new LinkedHashMap<>();
         private Map<Class<?>, Class<?>> coercedTypes = new ClassValueMap<>();
         private Set<Class<?>> notCustomReadClasses = new ClassValueSet();
@@ -996,6 +1118,42 @@ public class ReadOptionsBuilder {
          */
         public int getMaxDepth() {
             return maxDepth;
+        }
+
+        /**
+         * @return int maximum number of unresolved references allowed during JSON processing.
+         * Once this limit is reached, a JsonIoException will be thrown to prevent memory exhaustion
+         * from DoS attacks via unbounded forward references. Default is Integer.MAX_VALUE (unlimited).
+         */
+        public int getMaxUnresolvedReferences() {
+            return maxUnresolvedReferences;
+        }
+
+        /**
+         * @return int maximum traversal stack depth allowed during JSON processing.
+         * Once this limit is reached, a JsonIoException will be thrown to prevent stack overflow
+         * attacks via deeply nested structures. Default is Integer.MAX_VALUE (unlimited).
+         */
+        public int getMaxStackDepth() {
+            return maxStackDepth;
+        }
+
+        /**
+         * @return int maximum number of maps that can be queued for rehashing during JSON processing.
+         * Once this limit is reached, a JsonIoException will be thrown to prevent memory exhaustion
+         * from DoS attacks via excessive map creation. Default is Integer.MAX_VALUE (unlimited).
+         */
+        public int getMaxMapsToRehash() {
+            return maxMapsToRehash;
+        }
+
+        /**
+         * @return int maximum number of missing fields that can be tracked during JSON processing.
+         * Once this limit is reached, a JsonIoException will be thrown to prevent memory exhaustion
+         * from DoS attacks via excessive missing field tracking. Default is Integer.MAX_VALUE (unlimited).
+         */
+        public int getMaxMissingFields() {
+            return maxMissingFields;
         }
         
         /**

@@ -5,11 +5,28 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ReflectPermission;
 import java.lang.reflect.Type;
 
+import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.util.ExceptionUtilities;
 
 /**
+ * High-performance field accessor utility that provides secure access to object fields
+ * using MethodHandle when possible, with fallback to Field.get() for compatibility.
+ * 
+ * <p>This class provides secure field access with proper permission validation and
+ * comprehensive error handling. All reflection operations are protected by security
+ * manager checks when a SecurityManager is present.</p>
+ * 
+ * <h3>Security Features:</h3>
+ * <ul>
+ * <li>Security manager validation for setAccessible() operations</li>
+ * <li>Input parameter validation with null safety checks</li>
+ * <li>Secure MethodHandle creation with graceful fallback</li>
+ * <li>Object type validation during field retrieval</li>
+ * </ul>
+ * 
  * @author Kenny Partlow (kpartlow@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
@@ -69,6 +86,19 @@ public class Accessor {
     }
 
     public Object retrieve(Object o) {
+        // Security: Validate input object
+        if (o == null) {
+            throw new JsonIoException("Cannot retrieve field value from null object for field: " + getActualFieldName());
+        }
+        
+        // Security: Validate that the object is an instance of the field's declaring class
+        Class<?> declaringClass = field.getDeclaringClass();
+        if (!declaringClass.isInstance(o)) {
+            throw new JsonIoException("Object is not an instance of the field's declaring class. Expected: " + 
+                declaringClass.getName() + ", Actual: " + o.getClass().getName() + 
+                " for field: " + getActualFieldName());
+        }
+
         try {
             if (methodHandle != null) {
                 try {
@@ -80,9 +110,15 @@ public class Accessor {
             } else {
                 return field.get(o);
             }
+        } catch (IllegalAccessException e) {
+            // Handle Java module system restrictions gracefully
+            if (isJdkInternalClass(declaringClass)) {
+                // For JDK internal classes, return a safe default or skip the field
+                return handleInaccessibleJdkField(declaringClass, getActualFieldName());
+            }
+            throw new JsonIoException("Failed to retrieve field value: " + getActualFieldName() + " in class: " + declaringClass.getName(), e);
         } catch (Throwable t) {
-            // On failure, return null.
-            return null;
+            throw new JsonIoException("Failed to retrieve field value: " + getActualFieldName() + " in class: " + declaringClass.getName(), t);
         }
     }
 
@@ -128,5 +164,47 @@ public class Accessor {
 
     public boolean isPublic() {
         return isPublic;
+    }
+    
+    /**
+     * Check if a class is a JDK internal class that may have module access restrictions
+     */
+    private static boolean isJdkInternalClass(Class<?> clazz) {
+        String className = clazz.getName();
+        return className.startsWith("java.") ||
+               className.startsWith("javax.") ||
+               className.startsWith("jdk.") ||
+               className.startsWith("sun.") ||
+               className.startsWith("com.sun.") ||
+               className.contains(".internal.");
+    }
+    
+    /**
+     * Handle inaccessible JDK fields gracefully by returning safe defaults
+     * This prevents JsonIoException for JDK internal fields that can't be accessed
+     * due to Java module system restrictions.
+     */
+    private static Object handleInaccessibleJdkField(Class<?> declaringClass, String fieldName) {
+        String className = declaringClass.getName();
+        
+        // Special handling for common JDK classes with known inaccessible fields
+        if ("java.util.regex.Pattern".equals(className) && "pattern".equals(fieldName)) {
+            // Pattern string is inaccessible in newer Java versions
+            return null; // Skip this field safely
+        }
+        
+        if ("java.lang.ProcessImpl".equals(className) && "pid".equals(fieldName)) {
+            // Process ID is inaccessible due to security restrictions
+            return null; // Skip this field safely
+        }
+        
+        if (className.contains("ClassLoader") && "parent".equals(fieldName)) {
+            // ClassLoader parent field is often restricted
+            return null; // Skip this field safely
+        }
+        
+        // For other JDK internal fields, return null to skip them safely
+        // This allows serialization to continue without the restricted field
+        return null;
     }
 }

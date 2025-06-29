@@ -37,7 +37,8 @@ public class JsonPrettyPrinter {
             return json;
         }
 
-        StringBuilder prettyJson = new StringBuilder();
+        // Optimize: Pre-size StringBuilder to reduce reallocations (estimate ~1.3x original size for formatting)
+        StringBuilder prettyJson = new StringBuilder((int) (json.length() * 1.3));
         int indentLevel = 0;
         boolean inString = false;
         boolean escape = false;

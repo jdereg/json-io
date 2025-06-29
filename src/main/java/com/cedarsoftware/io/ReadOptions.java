@@ -119,6 +119,34 @@ public interface ReadOptions {
     int getMaxDepth();
 
     /**
+     * @return int maximum number of unresolved references allowed during JSON processing.
+     * Once this limit is reached, a JsonIoException will be thrown to prevent memory exhaustion
+     * from DoS attacks via unbounded forward references. Default is Integer.MAX_VALUE (unlimited).
+     */
+    int getMaxUnresolvedReferences();
+
+    /**
+     * @return int maximum traversal stack depth allowed during JSON processing.
+     * Once this limit is reached, a JsonIoException will be thrown to prevent stack overflow
+     * attacks via deeply nested structures. Default is Integer.MAX_VALUE (unlimited).
+     */
+    int getMaxStackDepth();
+
+    /**
+     * @return int maximum number of maps that can be queued for rehashing during JSON processing.
+     * Once this limit is reached, a JsonIoException will be thrown to prevent memory exhaustion
+     * from DoS attacks via excessive map creation. Default is Integer.MAX_VALUE (unlimited).
+     */
+    int getMaxMapsToRehash();
+
+    /**
+     * @return int maximum number of missing fields that can be tracked during JSON processing.
+     * Once this limit is reached, a JsonIoException will be thrown to prevent memory exhaustion
+     * from DoS attacks via excessive missing field tracking. Default is Integer.MAX_VALUE (unlimited).
+     */
+    int getMaxMissingFields();
+
+    /**
      * @return int size of LRU Cache used to cache Class to Field and Class to injectors
      */
     int getLruSize();

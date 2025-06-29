@@ -27,7 +27,10 @@ import com.cedarsoftware.io.Writers;
 public class LongWriter extends Writers.PrimitiveTypeWriter {
     public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
         if (context.getWriteOptions().isWriteLongsAsStrings()) {
-            output.write(String.format("\"%d\"", (long)o));
+            // Optimize: avoid String.format() overhead for simple long-to-string conversion
+            output.write('"');
+            output.write(o.toString());
+            output.write('"');
         } else {
             output.write(o.toString());
         }

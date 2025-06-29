@@ -65,25 +65,64 @@ public class MetaUtils {
     }
 
     private static String getJsonStringToMaxLength(Object obj, int argCharLen) {
-        WriteOptions options = new WriteOptionsBuilder().shortMetaKeys(true).showTypeInfoNever().build();
-        String arg = JsonIo.toJson(obj, options);
-        if (arg.length() > argCharLen) {
-            arg = arg.substring(0, argCharLen) + "...";
+        // Security: Validate input parameters to prevent issues
+        if (argCharLen < 0) {
+            throw new JsonIoException("argCharLen cannot be negative: " + argCharLen);
         }
-        return arg;
+        
+        // Security: Limit maximum string length to prevent memory exhaustion
+        int maxAllowedLength = Math.min(argCharLen, 65536); // 64KB limit
+        
+        try {
+            WriteOptions options = new WriteOptionsBuilder().shortMetaKeys(true).showTypeInfoNever().build();
+            String arg = JsonIo.toJson(obj, options);
+            
+            // Security: Validate JSON string length before processing
+            if (arg.length() > maxAllowedLength) {
+                arg = arg.substring(0, maxAllowedLength) + "...";
+            }
+            return arg;
+        } catch (Exception e) {
+            // Security: Safely handle any JSON serialization errors
+            return "Error serializing object: " + e.getClass().getSimpleName();
+        }
     }
 
     public static <K, V> V getValueWithDefaultForNull(Map map, K key, V defaultValue) {
-        V value = (V) map.get(key);
-        return (value == null) ? defaultValue : value;
+        // Security: Validate map parameter to prevent null pointer exceptions
+        if (map == null) {
+            return defaultValue;
+        }
+        
+        try {
+            V value = (V) map.get(key);
+            return (value == null) ? defaultValue : value;
+        } catch (ClassCastException e) {
+            // Security: Handle unsafe casting gracefully
+            throw new JsonIoException("Type mismatch when retrieving value for key: " + key + 
+                ". Expected type: " + (defaultValue != null ? defaultValue.getClass().getName() : "null") + 
+                ", Actual type: " + (map.get(key) != null ? map.get(key).getClass().getName() : "null"), e);
+        }
     }
 
     public static <K, V> V getValueWithDefaultForMissing(Map map, K key, V defaultValue) {
+        // Security: Validate map parameter to prevent null pointer exceptions
+        if (map == null) {
+            return defaultValue;
+        }
+        
         if (!map.containsKey(key)) {
             return defaultValue;
         }
 
-        return (V) map.get(key);
+        try {
+            return (V) map.get(key);
+        } catch (ClassCastException e) {
+            // Security: Handle unsafe casting gracefully
+            throw new JsonIoException("Type mismatch when retrieving value for key: " + key + 
+                ". Expected type: " + (defaultValue != null ? defaultValue.getClass().getName() : "null") + 
+                ", Actual type: " + (map.get(key) != null ? map.get(key).getClass().getName() : "null"), e);
+        }
     }
 
     /**
@@ -106,20 +145,70 @@ public class MetaUtils {
      * @param resName String name of the resource file.
      */
     public static Map<String, String> loadMapDefinition(String resName) {
+        // Security: Validate resource name to prevent directory traversal attacks
+        if (resName == null || resName.trim().isEmpty()) {
+            throw new JsonIoException("Resource name cannot be null or empty");
+        }
+        
+        // Security: Prevent directory traversal attacks
+        if (resName.contains("..") || resName.contains("\\") || resName.startsWith("/")) {
+            throw new JsonIoException("Invalid resource name: " + resName + ". Resource names cannot contain '..' or path separators.");
+        }
+        
         Map<String, String> map = new LinkedHashMap<>();
+        Scanner scanner = null;
         try {
             String contents = ClassUtilities.loadResourceAsString(resName);
-            Scanner scanner = new Scanner(contents);
+            
+            // Security: Validate content size to prevent memory exhaustion
+            if (contents.length() > 1048576) { // 1MB limit
+                throw new JsonIoException("Resource file too large: " + resName + " (" + contents.length() + " bytes). Maximum allowed: 1MB");
+            }
+            
+            scanner = new Scanner(contents);
+            int lineCount = 0;
             while (scanner.hasNextLine()) {
+                // Security: Prevent unbounded line processing
+                if (++lineCount > 10000) {
+                    throw new JsonIoException("Resource file has too many lines: " + resName + " (" + lineCount + " lines). Maximum allowed: 10,000");
+                }
+                
                 String line = scanner.nextLine();
-                if (!line.trim().startsWith("#") && !line.isEmpty()) {
-                    String[] parts = line.split("=");
-                    map.put(parts[0].trim(), parts[1].trim());
+                
+                // Security: Validate line length to prevent memory issues
+                if (line.length() > 8192) {
+                    throw new JsonIoException("Line too long in resource file: " + resName + " (line " + lineCount + ", " + line.length() + " chars). Maximum allowed: 8KB per line");
+                }
+                
+                String trimmedLine = line.trim();
+                if (!trimmedLine.startsWith("#") && !trimmedLine.isEmpty()) {
+                    String[] parts = line.split("=", 2); // Limit to 2 parts to handle values with '='
+                    
+                    // Security: Validate that we have exactly 2 parts
+                    if (parts.length != 2) {
+                        throw new JsonIoException("Invalid format in resource file: " + resName + " at line " + lineCount + ". Expected format: key=value");
+                    }
+                    
+                    String key = parts[0].trim();
+                    String value = parts[1].trim();
+                    
+                    // Security: Validate key and value are not empty
+                    if (key.isEmpty()) {
+                        throw new JsonIoException("Empty key found in resource file: " + resName + " at line " + lineCount);
+                    }
+                    
+                    map.put(key, value);
                 }
             }
-            scanner.close();
         } catch (Exception e) {
-            throw new IllegalArgumentException("Error reading in " + resName + ". The file should be in the resources folder. The contents are expected to have two strings separated by '='. You can use # or blank lines in the file, they will be skipped.");
+            if (e instanceof JsonIoException) {
+                throw e; // Re-throw security validation errors
+            }
+            throw new JsonIoException("Error reading in " + resName + ". The file should be in the resources folder. The contents are expected to have two strings separated by '='. You can use # or blank lines in the file, they will be skipped.", e);
+        } finally {
+            if (scanner != null) {
+                scanner.close();
+            }
         }
         return map;
     }
@@ -132,19 +221,55 @@ public class MetaUtils {
      * @return the set of strings
      */
     public static Set<String> loadSetDefinition(String resName) {
+        // Security: Validate resource name to prevent directory traversal attacks
+        if (resName == null || resName.trim().isEmpty()) {
+            throw new JsonIoException("Resource name cannot be null or empty");
+        }
+        
+        // Security: Prevent directory traversal attacks
+        if (resName.contains("..") || resName.contains("\\") || resName.startsWith("/")) {
+            throw new JsonIoException("Invalid resource name: " + resName + ". Resource names cannot contain '..' or path separators.");
+        }
+        
         Set<String> set = new LinkedHashSet<>();
+        Scanner scanner = null;
         try {
             String contents = ClassUtilities.loadResourceAsString(resName);
-            Scanner scanner = new Scanner(contents);
+            
+            // Security: Validate content size to prevent memory exhaustion
+            if (contents.length() > 1048576) { // 1MB limit
+                throw new JsonIoException("Resource file too large: " + resName + " (" + contents.length() + " bytes). Maximum allowed: 1MB");
+            }
+            
+            scanner = new Scanner(contents);
+            int lineCount = 0;
             while (scanner.hasNextLine()) {
-                String line = scanner.nextLine().trim();
-                if (!line.startsWith("#") && !line.isEmpty()) {
-                    set.add(line);
+                // Security: Prevent unbounded line processing
+                if (++lineCount > 10000) {
+                    throw new JsonIoException("Resource file has too many lines: " + resName + " (" + lineCount + " lines). Maximum allowed: 10,000");
+                }
+                
+                String line = scanner.nextLine();
+                
+                // Security: Validate line length to prevent memory issues
+                if (line.length() > 8192) {
+                    throw new JsonIoException("Line too long in resource file: " + resName + " (line " + lineCount + ", " + line.length() + " chars). Maximum allowed: 8KB per line");
+                }
+                
+                String trimmedLine = line.trim();
+                if (!trimmedLine.startsWith("#") && !trimmedLine.isEmpty()) {
+                    set.add(trimmedLine);
                 }
             }
-            scanner.close();
         } catch (Exception e) {
-            throw new IllegalArgumentException("Error reading in " + resName + ". The file should be in the resources folder. The contents have a single String per line.  You can use # (comment) or blank lines in the file, they will be skipped.");
+            if (e instanceof JsonIoException) {
+                throw e; // Re-throw security validation errors
+            }
+            throw new JsonIoException("Error reading in " + resName + ". The file should be in the resources folder. The contents have a single String per line.  You can use # (comment) or blank lines in the file, they will be skipped.", e);
+        } finally {
+            if (scanner != null) {
+                scanner.close();
+            }
         }
         return set;
     }

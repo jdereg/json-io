@@ -31,12 +31,20 @@ import com.cedarsoftware.io.Resolver;
 public class MapFactory implements JsonReader.ClassFactory {
 
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
+        // Optimize: Pre-size maps when JSON contains size information
+        Object[] keys = jObj.getKeys();
+        int size = (keys != null) ? keys.length : 0;
+        
         if (NavigableMap.class.isAssignableFrom(c)) {
+            // TreeMap doesn't have capacity constructor
             return new TreeMap<>();
         } else if (SortedMap.class.isAssignableFrom(c)) {
+            // TreeMap doesn't have capacity constructor
             return new TreeMap<>();
         } else if (Map.class.isAssignableFrom(c)) {
-            return new LinkedHashMap<>();
+            // Calculate optimal initial capacity for load factor 0.75
+            int capacity = Math.max(16, (int)(size / 0.75f) + 1);
+            return new LinkedHashMap<>(capacity, 0.75f);
         }
         throw new JsonIoException("MapFactory handed Class for which it was not expecting: " + c.getName());
     }

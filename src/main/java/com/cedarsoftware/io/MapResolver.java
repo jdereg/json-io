@@ -4,6 +4,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -49,6 +50,9 @@ import com.cedarsoftware.util.convert.Converter;
  *         limitations under the License.
  */
 public class MapResolver extends Resolver {
+    // Performance: Cache for class-to-injector mappings to avoid repeated reflection lookups
+    private final Map<Class<?>, Map<String, Injector>> classInjectorCache = new HashMap<>();
+    
     protected MapResolver(ReadOptions readOptions, ReferenceTracker references, Converter converter) {
         super(readOptions, references, converter);
     }
@@ -68,7 +72,18 @@ public class MapResolver extends Resolver {
      */
     public void traverseFields(final JsonObject jsonObj) {
         final Object target = jsonObj.getTarget();
-        final Map<String, Injector> injectorMap = (target == null) ? null : getReadOptions().getDeepInjectorMap(target.getClass());
+        
+        // Performance: Cache injector maps to avoid repeated reflection calls
+        Map<String, Injector> injectorMap = null;
+        if (target != null) {
+            Class<?> targetClass = target.getClass();
+            injectorMap = classInjectorCache.get(targetClass);
+            if (injectorMap == null) {
+                injectorMap = getReadOptions().getDeepInjectorMap(targetClass);
+                classInjectorCache.put(targetClass, injectorMap);
+            }
+        }
+        
         final ReferenceTracker refTracker = getReferences();
         final Converter converter = getConverter();
         final ReadOptions readOptions = getReadOptions();
@@ -292,7 +307,8 @@ public class MapResolver extends Resolver {
                         if (refObject.getTarget() != null) {
                             col.add(refObject.getTarget());
                         } else {
-                            unresolvedRefs.add(new UnresolvedReference(jsonObj, idx, ref));
+                            // Security: Use secure method to add unresolved references
+                            addUnresolvedReference(new UnresolvedReference(jsonObj, idx, ref));
                             if (isList) {   // Index-able collection, so set 'null' as element for now - will be patched in later.
                                 col.add(null);
                             }
@@ -351,5 +367,15 @@ public class MapResolver extends Resolver {
 
         jsonArray.setItems(list.toArray());
         return jsonArray;
+    }
+    
+    /**
+     * Override parent cleanup to include performance caches
+     */
+    @Override
+    protected void cleanup() {
+        super.cleanup();
+        // Performance: Clear cache to free memory
+        classInjectorCache.clear();
     }
 }

@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +62,10 @@ import com.cedarsoftware.util.convert.Converter;
 @SuppressWarnings({ "rawtypes", "unchecked"})
 public class ObjectResolver extends Resolver
 {
+    // Performance: Cache for type resolutions to avoid expensive reflection operations
+    private final Map<String, Type> typeResolutionCache = new HashMap<>();
+    private final Map<Class<?>, Map<String, Injector>> classInjectorsCache = new HashMap<>();
+    
     /**
      * Constructor
      * @param readOptions Options to use while reading.
@@ -139,8 +144,14 @@ public class ObjectResolver extends Resolver
                 // If the field has an explicit type, use it.
                 jObj.setType(explicitType);
             } else {
-                // Resolve the field type in the context of the target object.
-                Type resolvedFieldType = TypeUtilities.resolveTypeUsingInstance(target, fieldType);
+                // Performance: Cache type resolutions to avoid expensive reflection operations
+                String cacheKey = target.getClass().getName() + ":" + injector.getName() + ":" + fieldType.getTypeName();
+                Type resolvedFieldType = typeResolutionCache.get(cacheKey);
+                if (resolvedFieldType == null) {
+                    // Resolve the field type in the context of the target object.
+                    resolvedFieldType = TypeUtilities.resolveTypeUsingInstance(target, fieldType);
+                    typeResolutionCache.put(cacheKey, resolvedFieldType);
+                }
                 jObj.setType(resolvedFieldType);
             }
         }
@@ -713,5 +724,16 @@ public class ObjectResolver extends Resolver
         }
         jsonArray.setItems(list.toArray());
         return jsonArray;
+    }
+    
+    /**
+     * Override parent cleanup to include performance caches
+     */
+    @Override
+    protected void cleanup() {
+        super.cleanup();
+        // Performance: Clear caches to free memory
+        typeResolutionCache.clear();
+        classInjectorsCache.clear();
     }
 }

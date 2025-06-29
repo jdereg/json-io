@@ -1,5 +1,46 @@
 ### Revision History
 #### 4.57.0 (Unreleased)
+* **SECURITY**: Fix critical type safety vulnerability in `ArgumentHelper.getNumberWithDefault()` - prevents ClassCastException attacks
+* **SECURITY**: Fix unsafe type casting in `JsonObject.rehashMaps()` - adds instanceof validation before casting 
+* **SECURITY**: Fix unsafe type casting in `JsonParser.loadItems()` - validates array types before casting
+* **SECURITY**: Fix infinite loop vulnerability in `JsonReader.DefaultReferenceTracker` - adds circular reference detection
+* **SECURITY**: Fix critical memory leak in `JsonValue` type cache - implements bounded cache with eviction to prevent OutOfMemoryError
+* **SECURITY**: Fix null pointer vulnerabilities in `JsonValue` - adds comprehensive null safety checks
+* **SECURITY**: Fix race condition in `JsonValue` type cache - uses atomic operations for thread safety
+* **SECURITY**: Fix memory leak in `JsonWriter.traceReferences()` - implements object count and depth limits to prevent unbounded memory growth
+* **SECURITY**: Fix unsafe reflection access in `JsonWriter.getValueByReflect()` - adds comprehensive null and security checks with graceful failure
+* **SECURITY**: Fix input validation in `JsonWriter.writeJsonUtf8String()` - adds null safety and string length limits to prevent memory issues  
+* **SECURITY**: Add bounds checking in `JsonWriter` primitive array writers - prevents buffer overflow attacks in byte and int array processing
+* **SECURITY**: Fix ThreadLocal resource leak in `JsonParser` - adds cleanup utility `clearThreadLocalBuffers()` to prevent memory leaks
+* **SECURITY**: Fix null validation in `JsonParser.loadId()` and `loadRef()` - adds comprehensive null checks and ID range validation to prevent attacks
+* **SECURITY**: Add bounds checking for escape processing in `JsonParser.processEscape()` - prevents buffer overflow in Unicode escape sequence handling
+* Fix resource leak in `JsonIo.JavaStreamBuilder.asType()` - ensures proper cleanup of JsonReader and InputStream resources with enhanced error handling
+* Simplify exception handling in `JsonIo.toJson()` methods - improves maintainability while preserving original JsonIoException types
+* Simplify cache management system in `JsonObject` - consolidates multiple cache variables into unified CacheState class for improved maintainability
+* **SECURITY**: Fix unbounded object reference tracking in `JsonReader.DefaultReferenceTracker` - adds configurable limits (10M objects, 10K chain depth) to prevent DoS attacks
+* **SECURITY**: Improve circular reference detection in `JsonReader.DefaultReferenceTracker` - enhanced tracking with depth limits and better error reporting
+* **SECURITY**: Add input validation for enum type coercion in `JsonReader` - validates enum string length and content to prevent malicious input attacks
+* **SECURITY**: Fix unbounded memory consumption in `Resolver` collections - adds configurable limits (1M objects, 10K stack depth) to prevent DoS attacks
+* **SECURITY**: Add bounds checking in `Resolver.setArrayElement()` method - validates array indices to prevent buffer overflow attacks
+* **SECURITY**: Implement depth limits for traversal operations in `Resolver` - prevents stack overflow via malicious deeply nested JSON structures
+* **SECURITY**: Fix unbounded collection processing in `MapResolver` - adds configurable limits (1M objects) to prevent memory exhaustion attacks
+* **SECURITY**: Improve type safety in `MapResolver` casting operations - adds validation before type conversions to prevent unsafe casting vulnerabilities
+* **SECURITY**: Add string length validation in `MapResolver` - prevents memory exhaustion via extremely large string fields (64KB limit)
+* **SECURITY**: Add reference ID validation in `MapResolver` - prevents malicious negative reference ID attacks
+* **SECURITY**: Fix directory traversal vulnerability in `MetaUtils.loadMapDefinition()` and `loadSetDefinition()` - adds resource path validation to prevent unauthorized file access
+* **SECURITY**: Add input validation in `MetaUtils` resource loading methods - prevents memory exhaustion via file size (1MB), line count (10K), and line length (8KB) limits
+* **SECURITY**: Improve type safety in `MetaUtils.getValueWithDefault()` methods - adds graceful handling of ClassCastException with detailed error messages
+* **SECURITY**: Add bounds checking in `MetaUtils.getJsonStringToMaxLength()` - prevents memory issues with 64KB string length limit and exception handling
+* **SECURITY**: Secure reflection operations in `Injector` class - adds comprehensive security manager validation for field access, setAccessible() calls, and final modifier removal
+* **SECURITY**: Enhance VarHandle security in `Injector` - adds permission checks and graceful fallback to Field.set() when VarHandle creation fails due to security restrictions
+* **SECURITY**: Add object type validation in `Injector.inject()` - prevents injection into incorrect object types and adds extra protection for system classes
+* **SECURITY**: Improve MethodHandle security in `Injector` - adds validation for method access permissions and proper error handling for access violations
+* **SECURITY**: Secure reflection operations in `Accessor` class - adds comprehensive security manager validation for field access, setAccessible() calls, and MethodHandle operations
+* **SECURITY**: Enhance field access security in `Accessor` - adds permission checks with graceful fallback to Field.get() when MethodHandle creation fails due to security restrictions
+* **SECURITY**: Add object type validation in `Accessor.retrieve()` - prevents field access on incorrect object types and adds extra protection for system classes
+* **SECURITY**: Improve error handling in `Accessor` - graceful fallback for JDK internal classes while maintaining security for user classes
+* Fix null pointer exception in `JsonReader.isRootArray()` - adds null guard
+* Optimize `JsonReader.getErrorMessage()` performance with StringBuilder to reduce GC pressure  
 * Optimize `JsonParser.skipWhitespaceRead()` with lookup table for whitespace characters
 * Add fast path for single-digit integer parsing in `JsonParser.readNumber()`
 * Use switch statement instead of if-else chain in `JsonParser.readValue()` for better performance
@@ -7,6 +48,11 @@
 * Optimize `JsonParser` string buffer management with size-based strategy
 * Optimize `Resolver.patchUnresolvedReferences()` with injector caching and reduced object lookups
 * Optimize `ObjectResolver.traverseCollection()` with early null exits and reduced getClass() calls
+* **SECURITY**: Add comprehensive security audit logging system via `SecurityAuditLogger` - provides detailed security event tracking, performance monitoring, and incident response capabilities for production deployment
+* **SECURITY**: Add comprehensive fuzz testing framework via `SecurityFuzzTest` - validates protection against malicious JSON inputs including deeply nested structures, large collections, massive strings, circular references, unicode injection, numeric overflow, and reference manipulation attacks  
+* **SECURITY**: Add advanced attack simulation testing via `SecurityAttackSimulationTest` - models real-world attack scenarios including billion laughs attacks, zip bombs, hash collision attacks, regex DoS attacks, prototype pollution attacks, timing attacks, memory disclosure attacks, and concurrent attacks
+* **SECURITY**: Add comprehensive performance benchmarking via `PerformanceBenchmarkTest` - validates that security improvements maintain excellent performance with detailed metrics for serialization, deserialization, large collections, reflection caching, and memory efficiency
+* **SECURITY**: Add production security documentation via `SECURITY.md` - comprehensive security guide covering security features, configuration, attack protection, best practices, incident response, and compliance for secure deployment
 * Optimize `MapResolver` methods with early null exits and cached method lookups
 * Optimize `JsonReader` methods by caching getClass() calls and using final variables
 * Optimize `Injector.inject()` exception handling with cached field information
