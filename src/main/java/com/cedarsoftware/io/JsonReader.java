@@ -298,6 +298,9 @@ public class JsonReader implements Closeable
      * meaning either an actual Java array, or a JsonObject marked as an array.
      */
     private boolean isRootArray(Object value) {
+        if (value == null) {
+            return false;
+        }
         if (value.getClass().isArray()) {
             return true;
         }
@@ -758,10 +761,16 @@ public class JsonReader implements Closeable
 
     private String getErrorMessage(String msg)
     {
-        if (input != null) {
-            return msg + "\nLast read: " + input.getLastSnippet() + "\nline: " + input.getLine() + ", col: " + input.getCol();
+        if (input == null) {
+            return msg;
         }
-        return msg;
+        
+        StringBuilder sb = new StringBuilder(msg.length() + 100); // Pre-size for efficiency
+        sb.append(msg)
+          .append("\nLast read: ").append(input.getLastSnippet())
+          .append("\nline: ").append(input.getLine())
+          .append(", col: ").append(input.getCol());
+        return sb.toString();
     }
 
     /**
@@ -797,8 +806,19 @@ public class JsonReader implements Closeable
                 return null;
             }
 
+            Set<Long> visited = new HashSet<>();
             while (target.isReference()) {
-                id = target.getReferenceId();
+                if (visited.contains(id)) {
+                    throw new JsonIoException("Circular reference detected in reference chain starting with id: " + id);
+                }
+                visited.add(id);
+                
+                Long nextId = target.getReferenceId();
+                if (nextId == null) {
+                    throw new JsonIoException("Reference id is null for object with id: " + id);
+                }
+                
+                id = nextId;
                 target = references.get(id);
                 if (target == null) {
                     return null;
