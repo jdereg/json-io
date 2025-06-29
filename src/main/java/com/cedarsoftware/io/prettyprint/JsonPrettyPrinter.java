@@ -1,5 +1,8 @@
 package com.cedarsoftware.io.prettyprint;
 
+import com.cedarsoftware.io.WriteOptions;
+import com.cedarsoftware.io.WriteOptionsBuilder;
+
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -25,6 +28,18 @@ public class JsonPrettyPrinter {
      * @return A pretty-printed JSON string.
      */
     public static String prettyPrint(String json) {
+        return prettyPrint(json, WriteOptionsBuilder.getDefaultWriteOptions());
+    }
+
+    /**
+     * Takes a compact JSON string and returns a pretty-printed version with proper indentation
+     * using the specified formatting options.
+     *
+     * @param json The compact JSON string.
+     * @param writeOptions WriteOptions containing formatting configuration.
+     * @return A pretty-printed JSON string.
+     */
+    public static String prettyPrint(String json, WriteOptions writeOptions) {
         if (json == null || json.isEmpty()) {
             return json;
         }
@@ -37,8 +52,9 @@ public class JsonPrettyPrinter {
             return json;
         }
 
-        // Optimize: Pre-size StringBuilder to reduce reallocations (estimate ~1.3x original size for formatting)
-        StringBuilder prettyJson = new StringBuilder((int) (json.length() * 1.3));
+        // Optimize: Pre-size StringBuilder to reduce reallocations using configurable multiplier
+        double bufferMultiplier = writeOptions.getBufferSizeMultiplier();
+        StringBuilder prettyJson = new StringBuilder((int) (json.length() * bufferMultiplier));
         int indentLevel = 0;
         boolean inString = false;
         boolean escape = false;
@@ -73,7 +89,7 @@ public class JsonPrettyPrinter {
                         if (!isNextCharClosing(json, i)) {
                             prettyJson.append('\n');
                             indentLevel++;
-                            appendIndentation(prettyJson, indentLevel);
+                            appendIndentation(prettyJson, indentLevel, writeOptions);
                         }
                         break;
                     case '}':
@@ -82,7 +98,7 @@ public class JsonPrettyPrinter {
                         if (!isPrevCharOpening(json, i)) {
                             prettyJson.append('\n');
                             indentLevel--;
-                            appendIndentation(prettyJson, indentLevel);
+                            appendIndentation(prettyJson, indentLevel, writeOptions);
                         } else {
                             // Decrease indentation level even if no newline is added
                             indentLevel--;
@@ -94,7 +110,7 @@ public class JsonPrettyPrinter {
                         // Peek ahead to see if the next non-whitespace character is not '}' or ']'
                         if (!isNextCharClosing(json, i)) {
                             prettyJson.append('\n');
-                            appendIndentation(prettyJson, indentLevel);
+                            appendIndentation(prettyJson, indentLevel, writeOptions);
                         }
                         break;
                     case ':':
@@ -188,10 +204,11 @@ public class JsonPrettyPrinter {
      *
      * @param sb          The StringBuilder to append to.
      * @param indentLevel The current indentation level.
+     * @param writeOptions WriteOptions containing indentation configuration.
      */
-    private static void appendIndentation(StringBuilder sb, int indentLevel) {
-        final int INDENT_SIZE = 2; // Number of spaces for each indentation level
-        for (int i = 0; i < indentLevel * INDENT_SIZE; i++) {
+    private static void appendIndentation(StringBuilder sb, int indentLevel, WriteOptions writeOptions) {
+        final int indentSize = writeOptions.getIndentationSize();
+        for (int i = 0; i < indentLevel * indentSize; i++) {
             sb.append(' ');
         }
     }

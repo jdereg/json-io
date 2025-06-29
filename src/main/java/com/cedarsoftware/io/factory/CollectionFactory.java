@@ -38,9 +38,14 @@ import com.cedarsoftware.io.Resolver;
 public class CollectionFactory implements JsonReader.ClassFactory {
     @Override
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
+        // Get configurable limits from ReadOptions
+        int defaultCapacity = resolver.getReadOptions().getDefaultCollectionCapacity();
+        float loadFactor = resolver.getReadOptions().getCollectionLoadFactor();
+        int minCapacity = resolver.getReadOptions().getMinCollectionCapacity();
+        
         // Optimize: Pre-size collections when JSON contains size information
         Object[] items = jObj.getItems();
-        int initialCapacity = (items != null) ? items.length : 16;
+        int initialCapacity = (items != null) ? items.length : defaultCapacity;
         
         if (Deque.class.isAssignableFrom(c)) {
             return new ArrayDeque<>(initialCapacity);
@@ -56,8 +61,8 @@ public class CollectionFactory implements JsonReader.ClassFactory {
             // TreeSet doesn't have capacity constructor
             return new TreeSet<>();
         } else if (Set.class.isAssignableFrom(c)) {
-            // Calculate optimal initial capacity for load factor 0.75
-            int capacity = Math.max(16, (int)(initialCapacity / 0.75f) + 1);
+            // Calculate optimal initial capacity for configurable load factor
+            int capacity = Math.max(minCapacity, (int)(initialCapacity / loadFactor) + 1);
             return new LinkedHashSet<>(capacity);
         } else if (Collection.class.isAssignableFrom(c)) {
             return new ArrayList<>(initialCapacity);

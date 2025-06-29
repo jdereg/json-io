@@ -14,7 +14,7 @@ class ResolverValueToTargetTest {
 
     private static class TestResolver extends Resolver {
         TestResolver(ReadOptions options) {
-            super(options, new DefaultReferenceTracker(), new Converter(options.getConverterOptions()));
+            super(options, new DefaultReferenceTracker(options), new Converter(options.getConverterOptions()));
         }
 
         boolean callValueToTarget(JsonObject obj) {

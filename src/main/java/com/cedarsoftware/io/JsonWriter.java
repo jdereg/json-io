@@ -229,19 +229,24 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         
         // Optimized indentation - build spaces once instead of multiple writes
         if (depth > 0) {
-            // Prevent excessive indentation to avoid memory issues
-            final int maxDepth = 100;
+            // Prevent excessive indentation to avoid memory issues using configurable limit
+            final int maxDepth = writeOptions.getMaxIndentationDepth();
             final int actualDepth = Math.min(depth, maxDepth);
             
-            // Pre-compute indentation string for efficiency
-            if (actualDepth <= 10) {
+            // Pre-compute indentation string for efficiency using configurable values
+            final int indentationThreshold = writeOptions.getIndentationThreshold();
+            final int indentationSize = writeOptions.getIndentationSize();
+            
+            if (actualDepth <= indentationThreshold) {
                 // For small depths, use simple repeated writes (faster for small depths)
                 for (int i = 0; i < actualDepth; i++) {
-                    output.write("  ");
+                    for (int j = 0; j < indentationSize; j++) {
+                        output.write(' ');
+                    }
                 }
             } else {
                 // For larger depths, build the string once and write it
-                char[] spaces = new char[actualDepth * 2];
+                char[] spaces = new char[actualDepth * indentationSize];
                 for (int i = 0; i < spaces.length; i++) {
                     spaces[i] = ' ';
                 }
@@ -430,9 +435,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         final Map<Object, Long> visited = objVisited;
         final Map<Object, Long> referenced = objsReferenced;
         
-        // Fix memory leak - prevent stack overflow and unbounded memory growth
-        final int MAX_DEPTH = 10000;
-        final int MAX_OBJECTS = 100000;
+        // Fix memory leak - prevent stack overflow and unbounded memory growth using configurable limits
+        final int MAX_DEPTH = writeOptions.getMaxObjectGraphDepth();
+        final int MAX_OBJECTS = writeOptions.getMaxObjectCount();
         int processedCount = 0;
 
         while (!stack.isEmpty() && processedCount < MAX_OBJECTS) {
@@ -749,7 +754,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         if (byte[].class == arrayType) {
             writeByteArray((byte[]) array, lenMinus1);
         } else if (char[].class == arrayType) {
-            writeJsonUtf8String(output, new String((char[]) array));
+            writeJsonUtf8String(output, new String((char[]) array), writeOptions.getMaxStringLength());
         } else if (short[].class == arrayType) {
             writeShortArray((short[]) array, lenMinus1);
         } else if (int[].class == arrayType) {
@@ -1066,9 +1071,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 final boolean forceType = isForceType(value.getClass(), componentClass);
                 if (writeArrayElementIfMatching(componentClass, value, forceType, output)) {
                 } else if (Character.class == componentClass || char.class == componentClass) {
-                    writeJsonUtf8String(output, (String) value);
+                    writeJsonUtf8String(output, (String) value, writeOptions.getMaxStringLength());
                 } else if (value instanceof String) {
-                    writeJsonUtf8String(output, (String) value);
+                    writeJsonUtf8String(output, (String) value, writeOptions.getMaxStringLength());
                 } else if (value instanceof Boolean || value instanceof Long || value instanceof Double) {
                     writePrimitive(value, forceType);
                 } else {   // Specific Class-type arrays - only force type when
@@ -1312,9 +1317,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             } else if (value instanceof Number || value instanceof Boolean) {
                 output.write(value.toString());
             } else if (value instanceof String) {
-                writeJsonUtf8String(output, (String) value);
+                writeJsonUtf8String(output, (String) value, writeOptions.getMaxStringLength());
             } else if (value instanceof Character) {
-                writeJsonUtf8String(output, String.valueOf(value));
+                writeJsonUtf8String(output, String.valueOf(value), writeOptions.getMaxStringLength());
             }
             else
             {
@@ -1458,7 +1463,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 continue;
             }
             
-            writeJsonUtf8String(output, (String) att2value.getKey());
+            writeJsonUtf8String(output, (String) att2value.getKey(), writeOptions.getMaxStringLength());
             output.write(":");
             writeCollectionElement(value);
 
@@ -1505,7 +1510,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         } else if (o instanceof Long) {
             writePrimitive(o, getWriteOptions().isWriteLongsAsStrings());
         } else if (o instanceof String) {   // Never do an @ref to a String (they are treated as logical primitives and intern'ed on read)
-            writeJsonUtf8String(out, (String) o);
+            writeJsonUtf8String(out, (String) o, writeOptions.getMaxStringLength());
         } else if (getWriteOptions().isNeverShowingType() && ClassUtilities.isPrimitive(o.getClass())) {   // If neverShowType, then force primitives (and primitive wrappers)
             // to be output with toString() - prevents {"value":6} for example
             writePrimitive(o, false);
@@ -1590,7 +1595,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
                 if (enumFieldsCount <= 2) {
                     // Write the enum name as a string
-                    writeJsonUtf8String(out, e.name());
+                    writeJsonUtf8String(out, e.name(), writeOptions.getMaxStringLength());
                 } else {
                     // Write the enum as a JSON object with its fields
                     out.write('{');
@@ -1841,12 +1846,26 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     /**
      * Writes a JSON string value to the output, properly escaped according to JSON specifications.
      * Handles control characters, quotes, backslashes, and properly processes Unicode code points.
+     * Uses default string length limit for backward compatibility.
      *
      * @param output The Writer to write to
      * @param s The string to be written as a JSON string value
      * @throws IOException If an I/O error occurs
      */
     public static void writeJsonUtf8String(final Writer output, String s) throws IOException {
+        writeJsonUtf8String(output, s, 1000000); // Use default 1MB limit for backward compatibility
+    }
+
+    /**
+     * Writes a JSON string value to the output, properly escaped according to JSON specifications.
+     * Handles control characters, quotes, backslashes, and properly processes Unicode code points.
+     *
+     * @param output The Writer to write to
+     * @param s The string to be written as a JSON string value
+     * @param maxStringLength Maximum allowed string length to prevent memory issues
+     * @throws IOException If an I/O error occurs
+     */
+    public static void writeJsonUtf8String(final Writer output, String s, int maxStringLength) throws IOException {
         // Enhanced input validation for null safety
         if (output == null) {
             throw new JsonIoException("Output writer cannot be null");
@@ -1860,9 +1879,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         output.write('\"');
         final int len = s.length();
         
-        // Add safety check for extremely large strings to prevent memory issues
-        if (len > 1000000) { // 1MB string limit for safety
-            throw new JsonIoException("String too large for JSON serialization: " + len + " characters");
+        // Add safety check for extremely large strings to prevent memory issues using configurable limit
+        if (len > maxStringLength) {
+            throw new JsonIoException("String too large for JSON serialization: " + len + " characters. Maximum allowed: " + maxStringLength);
         }
 
         for (int i = 0; i < len; ) {

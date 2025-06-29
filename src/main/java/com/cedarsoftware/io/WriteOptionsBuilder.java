@@ -74,6 +74,32 @@ public class WriteOptionsBuilder {
     private static final Map<String, FieldFilter> BASE_FIELD_FILTERS = new ConcurrentHashMap<>();
     private static final Map<String, MethodFilter> BASE_METHOD_FILTERS = new ConcurrentHashMap<>();
     private static final Map<String, AccessorFactory> BASE_ACCESSOR_FACTORIES = new ConcurrentHashMap<>();
+    
+    // Permanent security limits (JVM lifetime defaults)
+    private static volatile int permanentMaxIndentationDepth = 100;        // Maximum indentation depth to prevent memory exhaustion
+    private static volatile int permanentMaxObjectGraphDepth = 10000;      // Maximum object graph depth to prevent stack overflow  
+    private static volatile int permanentMaxObjectCount = 100000;          // Maximum object count to prevent memory exhaustion
+    private static volatile int permanentMaxStringLength = 1000000;        // Maximum string length (1MB) to prevent memory issues
+    
+    // Permanent formatting limits (JVM lifetime defaults)
+    private static volatile int permanentIndentationSize = 2;              // Number of spaces per indentation level
+    private static volatile double permanentBufferSizeMultiplier = 1.3;    // Buffer size multiplier for pretty-printing
+    private static volatile int permanentIndentationThreshold = 10;        // Threshold for indentation strategy switching
+    
+    // Permanent core configuration settings (JVM lifetime defaults)
+    private static volatile boolean BASE_SHORT_META_KEYS = false;
+    private static volatile WriteOptions.ShowType BASE_SHOW_TYPE_INFO = WriteOptions.ShowType.MINIMAL;
+    private static volatile boolean BASE_PRETTY_PRINT = false;
+    private static volatile int BASE_LRU_SIZE = 1000;
+    private static volatile boolean BASE_WRITE_LONGS_AS_STRINGS = false;
+    private static volatile boolean BASE_SKIP_NULL_FIELDS = false;
+    private static volatile boolean BASE_FORCE_MAP_OUTPUT_AS_TWO_ARRAYS = false;
+    private static volatile boolean BASE_ALLOW_NAN_AND_INFINITY = false;
+    private static volatile boolean BASE_ENUM_PUBLIC_FIELDS_ONLY = false;
+    private static volatile boolean BASE_ENUM_SET_WRITTEN_OLD_WAY = true;
+    private static volatile boolean BASE_CLOSE_STREAM = true;
+    private static volatile ClassLoader BASE_CLASS_LOADER = ClassUtilities.getClassLoader(WriteOptionsBuilder.class);
+    
     private static final WriteOptions defWriteOptions;
     private final DefaultWriteOptions options;
 
@@ -125,6 +151,35 @@ public class WriteOptionsBuilder {
         options.fieldFilters.putAll(BASE_FIELD_FILTERS);
         options.methodFilters.putAll(BASE_METHOD_FILTERS);
         options.accessorFactories.putAll(BASE_ACCESSOR_FACTORIES);
+        
+        // Initialize security limits with permanent values
+        options.maxIndentationDepth = permanentMaxIndentationDepth;
+        options.maxObjectGraphDepth = permanentMaxObjectGraphDepth;
+        options.maxObjectCount = permanentMaxObjectCount;
+        options.maxStringLength = permanentMaxStringLength;
+        
+        // Initialize formatting limits with permanent values
+        options.indentationSize = permanentIndentationSize;
+        options.bufferSizeMultiplier = permanentBufferSizeMultiplier;
+        options.indentationThreshold = permanentIndentationThreshold;
+        
+        // Initialize core configuration settings with permanent values
+        options.shortMetaKeys = BASE_SHORT_META_KEYS;
+        options.showTypeInfo = BASE_SHOW_TYPE_INFO;
+        options.prettyPrint = BASE_PRETTY_PRINT;
+        options.lruSize = BASE_LRU_SIZE;
+        options.writeLongsAsStrings = BASE_WRITE_LONGS_AS_STRINGS;
+        options.skipNullFields = BASE_SKIP_NULL_FIELDS;
+        options.forceMapOutputAsTwoArrays = BASE_FORCE_MAP_OUTPUT_AS_TWO_ARRAYS;
+        options.allowNanAndInfinity = BASE_ALLOW_NAN_AND_INFINITY;
+        options.enumPublicFieldsOnly = BASE_ENUM_PUBLIC_FIELDS_ONLY;
+        options.enumSetWrittenOldWay = BASE_ENUM_SET_WRITTEN_OLD_WAY;
+        options.closeStream = BASE_CLOSE_STREAM;
+        options.classLoader = BASE_CLASS_LOADER;
+        
+        // Initialize cache sizes with the permanent LRU size
+        options.accessorsCache = new LRUCache<>(BASE_LRU_SIZE);
+        options.classMetaCache = new LRUCache<>(BASE_LRU_SIZE);
     }
 
     /**
@@ -148,6 +203,17 @@ public class WriteOptionsBuilder {
             options.showTypeInfo = other.showTypeInfo;
             options.skipNullFields = other.skipNullFields;
             options.writeLongsAsStrings = other.writeLongsAsStrings;
+
+            // Copy security limits
+            options.maxIndentationDepth = other.maxIndentationDepth;
+            options.maxObjectGraphDepth = other.maxObjectGraphDepth;
+            options.maxObjectCount = other.maxObjectCount;
+            options.maxStringLength = other.maxStringLength;
+            
+            // Copy formatting limits
+            options.indentationSize = other.indentationSize;
+            options.bufferSizeMultiplier = other.bufferSizeMultiplier;
+            options.indentationThreshold = other.indentationThreshold;
 
             // Copy complex settings
             options.includedFieldNames.clear();
@@ -334,6 +400,253 @@ public class WriteOptionsBuilder {
      */
     public static void removePermanentAccessorFactory(String name) {
         BASE_ACCESSOR_FACTORIES.remove(name);
+    }
+
+    /**
+     * Call this method to set a permanent (JVM lifetime) maximum indentation depth limit for JSON pretty-printing.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     * 
+     * @param maxIndentationDepth int maximum indentation depth allowed during pretty-printing to prevent memory exhaustion.
+     *                            Must be at least 1. Default is 100.
+     */
+    public static void addPermanentMaxIndentationDepth(int maxIndentationDepth) {
+        if (maxIndentationDepth < 1) {
+            throw new JsonIoException("maxIndentationDepth must be at least 1, value: " + maxIndentationDepth);
+        }
+        permanentMaxIndentationDepth = maxIndentationDepth;
+    }
+
+    /**
+     * Call this method to set a permanent (JVM lifetime) maximum object graph depth limit for JSON serialization.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     * 
+     * @param maxObjectGraphDepth int maximum object graph depth allowed during serialization to prevent stack overflow.
+     *                            Must be at least 1. Default is 10,000.
+     */
+    public static void addPermanentMaxObjectGraphDepth(int maxObjectGraphDepth) {
+        if (maxObjectGraphDepth < 1) {
+            throw new JsonIoException("maxObjectGraphDepth must be at least 1, value: " + maxObjectGraphDepth);
+        }
+        permanentMaxObjectGraphDepth = maxObjectGraphDepth;
+    }
+
+    /**
+     * Call this method to set a permanent (JVM lifetime) maximum object count limit for JSON serialization.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     * 
+     * @param maxObjectCount int maximum number of objects allowed during serialization to prevent memory exhaustion.
+     *                       Must be at least 1. Default is 100,000.
+     */
+    public static void addPermanentMaxObjectCount(int maxObjectCount) {
+        if (maxObjectCount < 1) {
+            throw new JsonIoException("maxObjectCount must be at least 1, value: " + maxObjectCount);
+        }
+        permanentMaxObjectCount = maxObjectCount;
+    }
+
+    /**
+     * Call this method to set a permanent (JVM lifetime) maximum string length limit for JSON serialization.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     * 
+     * @param maxStringLength int maximum string length allowed during JSON serialization to prevent memory issues.
+     *                        Must be at least 1. Default is 1,000,000 characters (1MB).
+     */
+    public static void addPermanentMaxStringLength(int maxStringLength) {
+        if (maxStringLength < 1) {
+            throw new JsonIoException("maxStringLength must be at least 1, value: " + maxStringLength);
+        }
+        permanentMaxStringLength = maxStringLength;
+    }
+
+    /**
+     * Sets the permanent indentation size for all new WriteOptions instances.
+     * This value will be used as the default for all future WriteOptionsBuilder instances.
+     * @param indentationSize int number of spaces per indentation level for pretty-printing.
+     *                        Must be at least 1. Default is 2 spaces.
+     */
+    public static void addPermanentIndentationSize(int indentationSize) {
+        if (indentationSize < 1) {
+            throw new JsonIoException("indentationSize must be at least 1, value: " + indentationSize);
+        }
+        permanentIndentationSize = indentationSize;
+    }
+
+    /**
+     * Sets the permanent buffer size multiplier for all new WriteOptions instances.
+     * This value will be used as the default for all future WriteOptionsBuilder instances.
+     * @param bufferSizeMultiplier double buffer size multiplier for pretty-printing.
+     *                             Must be at least 1.0. Default is 1.3 (30% larger).
+     */
+    public static void addPermanentBufferSizeMultiplier(double bufferSizeMultiplier) {
+        if (bufferSizeMultiplier < 1.0) {
+            throw new JsonIoException("bufferSizeMultiplier must be at least 1.0, value: " + bufferSizeMultiplier);
+        }
+        permanentBufferSizeMultiplier = bufferSizeMultiplier;
+    }
+
+    /**
+     * Sets the permanent indentation threshold for all new WriteOptions instances.
+     * This value will be used as the default for all future WriteOptionsBuilder instances.
+     * @param indentationThreshold int threshold for switching indentation strategies.
+     *                             Must be at least 1. Default is 10.
+     */
+    public static void addPermanentIndentationThreshold(int indentationThreshold) {
+        if (indentationThreshold < 1) {
+            throw new JsonIoException("indentationThreshold must be at least 1, value: " + indentationThreshold);
+        }
+        permanentIndentationThreshold = indentationThreshold;
+    }
+
+    /**
+     * Call this method to set a permanent (JVM lifetime) class loader for JSON serialization.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     * 
+     * @param classLoader ClassLoader to use when writing JSON to resolve String named classes.
+     *                    Cannot be null. Default is the class loader of WriteOptionsBuilder.
+     */
+    public static void addPermanentClassLoader(ClassLoader classLoader) {
+        if (classLoader == null) {
+            throw new JsonIoException("classLoader cannot be null");
+        }
+        BASE_CLASS_LOADER = classLoader;
+    }
+
+    /**
+     * Call this method to set a permanent (JVM lifetime) short meta keys setting.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     * 
+     * @param shortMetaKeys boolean true to turn on short meta-keys (@i instead of @id, @r instead of @ref, etc.), false for long.
+     *                      Default is false.
+     */
+    public static void addPermanentShortMetaKeys(boolean shortMetaKeys) {
+        BASE_SHORT_META_KEYS = shortMetaKeys;
+    }
+
+    /**
+     * Call this method to set a permanent (JVM lifetime) type info display setting to always show.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     */
+    public static void addPermanentShowTypeInfoAlways() {
+        BASE_SHOW_TYPE_INFO = WriteOptions.ShowType.ALWAYS;
+    }
+
+    /**
+     * Call this method to set a permanent (JVM lifetime) type info display setting to never show.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     */
+    public static void addPermanentShowTypeInfoNever() {
+        BASE_SHOW_TYPE_INFO = WriteOptions.ShowType.NEVER;
+    }
+
+    /**
+     * Call this method to set a permanent (JVM lifetime) type info display setting to minimal.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     * This is the default setting.
+     */
+    public static void addPermanentShowTypeInfoMinimal() {
+        BASE_SHOW_TYPE_INFO = WriteOptions.ShowType.MINIMAL;
+    }
+
+    /**
+     * Call this method to set a permanent (JVM lifetime) pretty print setting.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     * 
+     * @param prettyPrint boolean true to turn on pretty-printing (lots of vertical white-space and indentations),
+     *                    false to output JSON in one line. Default is false.
+     */
+    public static void addPermanentPrettyPrint(boolean prettyPrint) {
+        BASE_PRETTY_PRINT = prettyPrint;
+    }
+
+    /**
+     * Call this method to set a permanent (JVM lifetime) LRU cache size.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     * 
+     * @param lruSize int size of LRU Cache used to cache Class to Field and Class to Accessor mappings.
+     *                Must be at least 1. Default is 1000.
+     */
+    public static void addPermanentLruSize(int lruSize) {
+        if (lruSize < 1) {
+            throw new JsonIoException("lruSize must be at least 1, value: " + lruSize);
+        }
+        BASE_LRU_SIZE = lruSize;
+    }
+
+    /**
+     * Call this method to set a permanent (JVM lifetime) write longs as strings setting.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     * 
+     * @param writeLongsAsStrings boolean true to write longs as Strings, false to write them as native JSON longs.
+     *                           Writing longs as Strings fixes precision errors in Javascript. Default is false.
+     */
+    public static void addPermanentWriteLongsAsStrings(boolean writeLongsAsStrings) {
+        BASE_WRITE_LONGS_AS_STRINGS = writeLongsAsStrings;
+    }
+
+    /**
+     * Call this method to set a permanent (JVM lifetime) skip null fields setting.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     * 
+     * @param skipNullFields boolean true indicates fields with null values will not be written,
+     *                       false will still output the field with an associated null value. Default is false.
+     */
+    public static void addPermanentSkipNullFields(boolean skipNullFields) {
+        BASE_SKIP_NULL_FIELDS = skipNullFields;
+    }
+
+    /**
+     * Call this method to set a permanent (JVM lifetime) force map output as two arrays setting.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     * 
+     * @param forceMapOutputAsTwoArrays boolean true will force Java Maps to be written as two parallel arrays,
+     *                                  false will write as one JSON object if all keys are Strings. Default is false.
+     */
+    public static void addPermanentForceMapOutputAsTwoArrays(boolean forceMapOutputAsTwoArrays) {
+        BASE_FORCE_MAP_OUTPUT_AS_TWO_ARRAYS = forceMapOutputAsTwoArrays;
+    }
+
+    /**
+     * Call this method to set a permanent (JVM lifetime) allow NaN and Infinity setting.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     * 
+     * @param allowNanAndInfinity boolean true will allow Double and Floats to be output as NAN and INFINITY,
+     *                           false and these values will come across as null. Default is false.
+     */
+    public static void addPermanentAllowNanAndInfinity(boolean allowNanAndInfinity) {
+        BASE_ALLOW_NAN_AND_INFINITY = allowNanAndInfinity;
+    }
+
+    /**
+     * Call this method to set a permanent (JVM lifetime) enum public fields only setting.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     * 
+     * @param enumPublicFieldsOnly boolean true indicates only public fields will be output on an Enum,
+     *                            false will include all fields. Default is false.
+     */
+    public static void addPermanentEnumPublicFieldsOnly(boolean enumPublicFieldsOnly) {
+        BASE_ENUM_PUBLIC_FIELDS_ONLY = enumPublicFieldsOnly;
+    }
+
+    /**
+     * Call this method to set a permanent (JVM lifetime) enum set written old way setting.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     * 
+     * @param enumSetWrittenOldWay boolean true indicates EnumSet instances are written with @enum instead of @type.
+     *                            Default is true for backward compatibility.
+     */
+    public static void addPermanentEnumSetWrittenOldWay(boolean enumSetWrittenOldWay) {
+        BASE_ENUM_SET_WRITTEN_OLD_WAY = enumSetWrittenOldWay;
+    }
+
+    /**
+     * Call this method to set a permanent (JVM lifetime) close stream setting.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     * 
+     * @param closeStream boolean true if the OutputStream should be closed when writing is finished,
+     *                   false to leave it open for continued writing. Default is true.
+     */
+    public static void addPermanentCloseStream(boolean closeStream) {
+        BASE_CLOSE_STREAM = closeStream;
     }
 
     /**
@@ -833,6 +1146,97 @@ public class WriteOptionsBuilder {
     }
 
     /**
+     * @param maxIndentationDepth int maximum indentation depth allowed during pretty-printing.
+     *                            Default is 100 levels. This prevents excessive memory usage from deeply nested indentations.
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder maxIndentationDepth(int maxIndentationDepth) {
+        if (maxIndentationDepth < 1) {
+            throw new JsonIoException("maxIndentationDepth must be at least 1, value: " + maxIndentationDepth);
+        }
+        options.maxIndentationDepth = maxIndentationDepth;
+        return this;
+    }
+
+    /**
+     * @param maxObjectGraphDepth int maximum object graph depth allowed during serialization.
+     *                            Default is 10,000 levels. This prevents excessive recursion from deeply nested object structures.
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder maxObjectGraphDepth(int maxObjectGraphDepth) {
+        if (maxObjectGraphDepth < 1) {
+            throw new JsonIoException("maxObjectGraphDepth must be at least 1, value: " + maxObjectGraphDepth);
+        }
+        options.maxObjectGraphDepth = maxObjectGraphDepth;
+        return this;
+    }
+
+    /**
+     * @param maxObjectCount int maximum number of objects allowed during serialization.
+     *                       Default is 100,000 objects. This prevents unbounded memory growth during large object graph processing.
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder maxObjectCount(int maxObjectCount) {
+        if (maxObjectCount < 1) {
+            throw new JsonIoException("maxObjectCount must be at least 1, value: " + maxObjectCount);
+        }
+        options.maxObjectCount = maxObjectCount;
+        return this;
+    }
+
+    /**
+     * @param maxStringLength int maximum string length allowed during JSON serialization.
+     *                        Default is 1,000,000 characters (1MB). This prevents excessive memory allocation for very large strings.
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder maxStringLength(int maxStringLength) {
+        if (maxStringLength < 1) {
+            throw new JsonIoException("maxStringLength must be at least 1, value: " + maxStringLength);
+        }
+        options.maxStringLength = maxStringLength;
+        return this;
+    }
+
+    /**
+     * @param indentationSize int number of spaces per indentation level for pretty-printing.
+     *                        Default is 2 spaces. Must be at least 1.
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder indentationSize(int indentationSize) {
+        if (indentationSize < 1) {
+            throw new JsonIoException("indentationSize must be at least 1, value: " + indentationSize);
+        }
+        options.indentationSize = indentationSize;
+        return this;
+    }
+
+    /**
+     * @param bufferSizeMultiplier double buffer size multiplier for pretty-printing.
+     *                             Default is 1.3 (30% larger). Must be at least 1.0.
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder bufferSizeMultiplier(double bufferSizeMultiplier) {
+        if (bufferSizeMultiplier < 1.0) {
+            throw new JsonIoException("bufferSizeMultiplier must be at least 1.0, value: " + bufferSizeMultiplier);
+        }
+        options.bufferSizeMultiplier = bufferSizeMultiplier;
+        return this;
+    }
+
+    /**
+     * @param indentationThreshold int threshold for switching indentation strategies.
+     *                             Default is 10. Must be at least 1.
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder indentationThreshold(int indentationThreshold) {
+        if (indentationThreshold < 1) {
+            throw new JsonIoException("indentationThreshold must be at least 1, value: " + indentationThreshold);
+        }
+        options.indentationThreshold = indentationThreshold;
+        return this;
+    }
+
+    /**
      * Seal the instance of this class so that no more changes can be made to it.
      *
      * @return WriteOptionsBuilder for chained access.
@@ -878,6 +1282,17 @@ public class WriteOptionsBuilder {
         private Map<String, AccessorFactory> accessorFactories = new LinkedHashMap<>();
         private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses = new ClassValueMap<>();
         private Map<String, Object> customOptions = new LinkedHashMap<>();
+
+        // Security limits with backward-compatible defaults
+        private int maxIndentationDepth = 100;         // Maximum indentation depth to prevent memory exhaustion
+        private int maxObjectGraphDepth = 10000;       // Maximum object graph depth to prevent stack overflow  
+        private int maxObjectCount = 100000;           // Maximum object count to prevent memory exhaustion
+        private int maxStringLength = 1000000;         // Maximum string length (1MB) to prevent memory issues
+        
+        // Formatting limits with backward-compatible defaults
+        private int indentationSize = 2;               // Number of spaces per indentation level for pretty-printing
+        private double bufferSizeMultiplier = 1.3;     // Buffer size multiplier for pretty-printing (30% larger)
+        private int indentationThreshold = 10;         // Threshold for switching indentation strategies
 
         // Runtime caches (not feature options), since looking up writers can be expensive
         // when one does not exist, we cache the writer or a nullWriter if one does not exist.
@@ -1123,6 +1538,62 @@ public class WriteOptionsBuilder {
 
         public Set<String> getExcludedFields(Class<?> c) {
             return Collections.unmodifiableSet(excludedFieldNames.get(c));
+        }
+
+        /**
+         * @return int maximum indentation depth allowed during pretty-printing to prevent memory exhaustion.
+         * Default is 100 levels. This prevents excessive memory usage from deeply nested indentations.
+         */
+        public int getMaxIndentationDepth() {
+            return maxIndentationDepth;
+        }
+
+        /**
+         * @return int maximum object graph depth allowed during serialization to prevent stack overflow.
+         * Default is 10,000 levels. This prevents excessive recursion from deeply nested object structures.
+         */
+        public int getMaxObjectGraphDepth() {
+            return maxObjectGraphDepth;
+        }
+
+        /**
+         * @return int maximum number of objects allowed during serialization to prevent memory exhaustion.
+         * Default is 100,000 objects. This prevents unbounded memory growth during large object graph processing.
+         */
+        public int getMaxObjectCount() {
+            return maxObjectCount;
+        }
+
+        /**
+         * @return int maximum string length allowed during JSON serialization to prevent memory issues.
+         * Default is 1,000,000 characters (1MB). This prevents excessive memory allocation for very large strings.
+         */
+        public int getMaxStringLength() {
+            return maxStringLength;
+        }
+
+        /**
+         * @return int number of spaces per indentation level for pretty-printing.
+         * Default is 2 spaces. This controls the indentation size when pretty-printing JSON.
+         */
+        public int getIndentationSize() {
+            return indentationSize;
+        }
+
+        /**
+         * @return double buffer size multiplier for pretty-printing.
+         * Default is 1.3 (30% larger). This controls how much extra buffer space is allocated for pretty-printing.
+         */
+        public double getBufferSizeMultiplier() {
+            return bufferSizeMultiplier;
+        }
+
+        /**
+         * @return int threshold for switching indentation strategies.
+         * Default is 10. This controls when to switch between different indentation strategies during pretty-printing.
+         */
+        public int getIndentationThreshold() {
+            return indentationThreshold;
         }
 
         public void clearCaches() {

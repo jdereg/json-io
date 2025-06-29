@@ -879,3 +879,93 @@ instances will be consulted until an API can be used to read the field.
 ### removePermanentAccessorFactory
 Remove a permanently registered `AccessorFactory` by its name.
 >#### WriteOptionsBuilder.removePermanentAccessorFactory(`String name`)
+
+## Add Permanent Core WriteOptions Settings
+
+The following methods allow you to set permanent (JVM lifetime) configuration settings that will be inherited by all new `WriteOptions` instances. These settings can still be overridden locally in specific instances, but provide global defaults for your application.
+
+### addPermanentClassLoader
+Sets the permanent `ClassLoader` for all new `WriteOptions` instances. This `ClassLoader` will be used to resolve String class names during JSON serialization.
+>#### WriteOptionsBuilder.addPermanentClassLoader(`ClassLoader classLoader`)
+
+### addPermanentShortMetaKeys
+Sets the permanent short meta keys setting for all new `WriteOptions` instances. When enabled, meta keys like `@id` become `@i`, `@ref` becomes `@r`, etc.
+>#### WriteOptionsBuilder.addPermanentShortMetaKeys(`boolean shortMetaKeys`)
+
+### addPermanentShowTypeInfo
+Sets the permanent type information display mode for all new `WriteOptions` instances. You can choose from three methods:
+- **Always**: Type information is always included in JSON output
+- **Never**: Type information is never included in JSON output  
+- **Minimal**: Type information is included only when necessary (default)
+
+>#### WriteOptionsBuilder.addPermanentShowTypeInfoAlways()
+>#### WriteOptionsBuilder.addPermanentShowTypeInfoNever()  
+>#### WriteOptionsBuilder.addPermanentShowTypeInfoMinimal()
+
+### addPermanentPrettyPrint
+Sets the permanent pretty print setting for all new `WriteOptions` instances. When enabled, JSON output includes vertical white-space and indentations for readability.
+>#### WriteOptionsBuilder.addPermanentPrettyPrint(`boolean prettyPrint`)
+
+### addPermanentLruSize
+Sets the permanent LRU cache size for all new `WriteOptions` instances. This cache stores Class-to-Field and Class-to-Accessor mappings to improve performance.
+>#### WriteOptionsBuilder.addPermanentLruSize(`int lruSize`)
+
+Example: Set a smaller cache for memory-constrained environments:
+```java
+WriteOptionsBuilder.addPermanentLruSize(500);
+WriteOptions options = new WriteOptionsBuilder().build(); // Uses 500 LRU size
+```
+
+### addPermanentWriteLongsAsStrings
+Sets the permanent write longs as strings setting for all new `WriteOptions` instances. When enabled, long values are written as strings to prevent precision loss in JavaScript.
+>#### WriteOptionsBuilder.addPermanentWriteLongsAsStrings(`boolean writeLongsAsStrings`)
+
+### addPermanentSkipNullFields
+Sets the permanent skip null fields setting for all new `WriteOptions` instances. When enabled, fields with null values are not included in JSON output.
+>#### WriteOptionsBuilder.addPermanentSkipNullFields(`boolean skipNullFields`)
+
+### addPermanentForceMapOutputAsTwoArrays
+Sets the permanent force map output as two arrays setting for all new `WriteOptions` instances. When enabled, all Maps are written as `@keys` and `@values` arrays regardless of key types.
+>#### WriteOptionsBuilder.addPermanentForceMapOutputAsTwoArrays(`boolean forceMapOutputAsTwoArrays`)
+
+### addPermanentAllowNanAndInfinity
+Sets the permanent allow NaN and Infinity setting for all new `WriteOptions` instances. When enabled, Double and Float NaN and Infinity values are serialized as-is rather than converted to null.
+>#### WriteOptionsBuilder.addPermanentAllowNanAndInfinity(`boolean allowNanAndInfinity`)
+
+### addPermanentEnumPublicFieldsOnly
+Sets the permanent enum public fields only setting for all new `WriteOptions` instances. When enabled, only public fields are included when serializing enums as objects.
+>#### WriteOptionsBuilder.addPermanentEnumPublicFieldsOnly(`boolean enumPublicFieldsOnly`)
+
+### addPermanentEnumSetWrittenOldWay
+Sets the permanent enum set written old way setting for all new `WriteOptions` instances. When enabled, EnumSet instances are written with `@enum` instead of `@type` for backward compatibility.
+>#### WriteOptionsBuilder.addPermanentEnumSetWrittenOldWay(`boolean enumSetWrittenOldWay`)
+
+### addPermanentCloseStream
+Sets the permanent close stream setting for all new `WriteOptions` instances. When enabled, the OutputStream is automatically closed after JSON writing is complete.
+>#### WriteOptionsBuilder.addPermanentCloseStream(`boolean closeStream`)
+
+### Combined Configuration Example
+You can configure multiple permanent settings together for your application's global defaults:
+
+```java
+// Set global defaults for your application
+WriteOptionsBuilder.addPermanentPrettyPrint(true);
+WriteOptionsBuilder.addPermanentSkipNullFields(true);
+WriteOptionsBuilder.addPermanentWriteLongsAsStrings(true);
+WriteOptionsBuilder.addPermanentLruSize(2000);
+
+// All future WriteOptions instances will inherit these settings
+WriteOptions options1 = new WriteOptionsBuilder().build();
+WriteOptions options2 = new WriteOptionsBuilder()
+    .prettyPrint(false)  // Override permanent setting locally
+    .build();
+
+// options1 uses: prettyPrint=true, skipNullFields=true, writeLongsAsStrings=true, lruSize=2000
+// options2 uses: prettyPrint=false, skipNullFields=true, writeLongsAsStrings=true, lruSize=2000
+```
+
+**Important Notes:**
+- Permanent settings are applied at JVM startup and affect all subsequent `WriteOptions` instances
+- Local instance settings always override permanent settings for that specific instance
+- Permanent settings are thread-safe and can be set from any thread
+- Changes to permanent settings do not affect already-created `WriteOptions` instances

@@ -69,7 +69,7 @@ import static com.cedarsoftware.util.MathUtilities.parseToMinimalNumericType;
 class JsonParser {
     private static final JsonObject EMPTY_ARRAY = new JsonObject();  // compared with ==
     private final FastReader input;
-    private final StringBuilder strBuf = new StringBuilder(256);
+    private final StringBuilder strBuf;
     private final StringBuilder numBuf = new StringBuilder();
     private int curParseDepth = 0;
     private final boolean allowNanAndInfinity;
@@ -85,9 +85,35 @@ class JsonParser {
 
     // Optimized string buffer management with size-based strategy
     // Fix ThreadLocal resource leak by providing cleanup utilities
-    private static final ThreadLocal<char[]> STRING_BUFFER = ThreadLocal.withInitial(() -> new char[1024]);
-    private static final ThreadLocal<char[]> LARGE_STRING_BUFFER = ThreadLocal.withInitial(() -> new char[8192]);
+    private static volatile int threadLocalBufferSize = 1024;
+    private static volatile int largeThreadLocalBufferSize = 8192;
     
+    // ThreadLocal buffers that respect the configured sizes
+    private static final ThreadLocal<char[]> STRING_BUFFER = new ThreadLocal<char[]>() {
+        @Override
+        protected char[] initialValue() {
+            return new char[threadLocalBufferSize];
+        }
+    };
+    
+    private static final ThreadLocal<char[]> LARGE_STRING_BUFFER = new ThreadLocal<char[]>() {
+        @Override
+        protected char[] initialValue() {
+            return new char[largeThreadLocalBufferSize];
+        }
+    };
+    
+    /**
+     * Configure the ThreadLocal buffer sizes. This should be called during application initialization
+     * to set buffer sizes that will be used by all future JsonParser instances.
+     * @param threadLocalBufferSize int size for ThreadLocal string processing buffers
+     * @param largeThreadLocalBufferSize int size for ThreadLocal large string processing buffers
+     */
+    static void configureThreadLocalBufferSizes(int threadLocalBufferSize, int largeThreadLocalBufferSize) {
+        JsonParser.threadLocalBufferSize = threadLocalBufferSize;
+        JsonParser.largeThreadLocalBufferSize = largeThreadLocalBufferSize;
+    }
+
     /**
      * Clean up ThreadLocal resources to prevent memory leaks.
      * Should be called when JsonParser processing is complete for the current thread.
@@ -265,6 +291,12 @@ class JsonParser {
         references = resolver.getReferences();
         maxParseDepth = readOptions.getMaxDepth();
         allowNanAndInfinity = readOptions.isAllowNanAndInfinity();
+        
+        // Initialize string buffer management using ReadOptions configuration
+        this.strBuf = new StringBuilder(readOptions.getStringBufferSize());
+        
+        // Configure static ThreadLocal buffer sizes for this parsing session
+        configureThreadLocalBufferSizes(readOptions.getThreadLocalBufferSize(), readOptions.getLargeThreadLocalBufferSize());
     }
 
     /**
@@ -1007,8 +1039,9 @@ class JsonParser {
         Long id = ((Number) value).longValue();
         
         // Validate ID range to prevent extreme values that could cause issues
-        if (id < -1000000000L || id > 1000000000L) {
-            error("ID value out of safe range: " + id + " - IDs must be between -1 billion and +1 billion");
+        long maxIdValue = readOptions.getMaxIdValue();
+        if (id < -maxIdValue || id > maxIdValue) {
+            error("ID value out of safe range: " + id + " - IDs must be between -" + maxIdValue + " and +" + maxIdValue);
         }
         
         references.put(id, jObj);
@@ -1036,8 +1069,9 @@ class JsonParser {
         Long refId = ((Number) value).longValue();
         
         // Validate reference ID range to prevent extreme values that could cause issues
-        if (refId < -1000000000L || refId > 1000000000L) {
-            error("Reference ID value out of safe range: " + refId + " - reference IDs must be between -1 billion and +1 billion");
+        long maxIdValue = readOptions.getMaxIdValue();
+        if (refId < -maxIdValue || refId > maxIdValue) {
+            error("Reference ID value out of safe range: " + refId + " - reference IDs must be between -" + maxIdValue + " and +" + maxIdValue);
         }
         
         jObj.setReferenceId(refId);

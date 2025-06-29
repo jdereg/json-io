@@ -136,6 +136,24 @@ to drop from the cache - they will be dynamically added back if not in the cache
 > #### `ReadOptionsBuilder` maxMissingFields(`int limit`)
 >- [ ] Set the maximum number of missing fields that can be tracked. Prevents memory exhaustion from DoS attacks via excessive missing field tracking. Recommended production value: `100000`.
 
+> #### `int` getMaxObjectReferences()
+>- [ ] Return the maximum number of object references that can be tracked during JSON processing. Default is `10,000,000`.
+
+> #### `ReadOptionsBuilder` maxObjectReferences(`int limit`)
+>- [ ] Set the maximum number of object references that can be tracked. Prevents memory exhaustion from DoS attacks via unbounded object reference growth. Recommended production value: `5000000`.
+
+> #### `int` getMaxReferenceChainDepth()
+>- [ ] Return the maximum depth of reference chains that can be traversed during JSON processing. Default is `10,000`.
+
+> #### `ReadOptionsBuilder` maxReferenceChainDepth(`int limit`)
+>- [ ] Set the maximum depth of reference chains that can be traversed. Prevents infinite loops from circular reference attacks. Recommended production value: `5000`.
+
+> #### `int` getMaxEnumNameLength()
+>- [ ] Return the maximum length of enum name strings during JSON processing. Default is `256`.
+
+> #### `ReadOptionsBuilder` maxEnumNameLength(`int limit`)
+>- [ ] Set the maximum length of enum name strings. Prevents memory exhaustion from DoS attacks via excessively long enum names. Recommended production value: `128`.
+
 **Example - Enabling Security Limits:**
 ```java
 ReadOptions readOptions = new ReadOptionsBuilder()
@@ -143,6 +161,9 @@ ReadOptions readOptions = new ReadOptionsBuilder()
     .maxStackDepth(10000)              // 10K max nesting depth
     .maxMapsToRehash(1000000)          // 1M max maps to rehash
     .maxMissingFields(100000)          // 100K max missing fields
+    .maxObjectReferences(5000000)      // 5M max object references
+    .maxReferenceChainDepth(5000)      // 5K max reference chain depth
+    .maxEnumNameLength(128)            // 128 chars max enum names
     .build();
 
 // These limits protect against malicious JSON while allowing normal usage
@@ -159,6 +180,9 @@ ReadOptionsBuilder.addPermanentMaxUnresolvedReferences(1000000);  // 1M max unre
 ReadOptionsBuilder.addPermanentMaxStackDepth(10000);             // 10K max nesting depth  
 ReadOptionsBuilder.addPermanentMaxMapsToRehash(1000000);         // 1M max maps to rehash
 ReadOptionsBuilder.addPermanentMaxMissingFields(100000);         // 100K max missing fields
+ReadOptionsBuilder.addPermanentMaxObjectReferences(5000000);     // 5M max object references
+ReadOptionsBuilder.addPermanentMaxReferenceChainDepth(5000);     // 5K max reference chain depth
+ReadOptionsBuilder.addPermanentMaxEnumNameLength(128);           // 128 chars max enum names
 
 // All subsequent ReadOptions instances will automatically inherit these limits
 ReadOptions readOptions1 = new ReadOptionsBuilder().build();     // Has permanent limits
@@ -661,3 +685,148 @@ The `addPermanentNonStandardSetter` method in `json-io` allows you to define cus
 - **Example Usage**: An example of using this feature is with the `Throwable` class in Java. Typically, to set a cause on a `Throwable`, the `initCause()` method is used instead of a standard setter. Configuring `addPermanentNonStandardSetter(Throwable.class, "cause", "initCause")` instructs `json-io` to use `initCause()` to set the cause from the JSON data:
 
 >#### ReadOptionsBuilder.addPermanentNonStandardSetter(`Class<?> clazz, String fieldName, String setterName`)
+
+### Add Permanent Core ReadOptions Settings
+
+`json-io` provides permanent configuration methods for core ReadOptions settings that affect fundamental JSON parsing behavior. These settings are applied globally across the JVM lifecycle and automatically inherited by all new `ReadOptions` instances.
+
+#### Add Permanent Max Depth
+
+The `addPermanentMaxDepth` method allows you to set a permanent maximum parsing depth limit that protects against stack overflow attacks via deeply nested JSON structures.
+
+- **Purpose**: This method establishes a global limit on JSON nesting depth to prevent `StackOverflowException` from malicious or malformed JSON. Once set, all new `ReadOptions` instances will inherit this limit automatically.
+
+- **Security Benefits**: By setting a permanent max depth, you ensure consistent protection across your entire application without needing to configure each `ReadOptions` instance individually.
+
+- **Validation**: The method validates that the depth limit is at least 1, throwing a `JsonIoException` for invalid values.
+
+- **Default Value**: The default permanent max depth is 1000, which provides good protection while allowing reasonable nesting levels for normal use cases.
+
+**Example Usage:**
+```java
+// Set at application startup for global protection
+ReadOptionsBuilder.addPermanentMaxDepth(500);  // Limit to 500 levels of nesting
+
+// All subsequent ReadOptions instances inherit this limit
+ReadOptions options1 = new ReadOptionsBuilder().build();     // Has 500 max depth
+ReadOptions options2 = new ReadOptionsBuilder()              // Can override if needed
+    .maxDepth(1000)  // Override permanent setting for this instance
+    .build();
+```
+
+>#### ReadOptionsBuilder.addPermanentMaxDepth(`int maxDepth`)
+
+#### Add Permanent LRU Size
+
+The `addPermanentLruSize` method allows you to set a permanent LRU cache size that controls memory usage for field and filter mappings across your application.
+
+- **Purpose**: This method establishes a global LRU cache size for `Class` to `Field` mappings and `Class` to filter mappings. The LRU cache automatically evicts infrequently used entries to control memory footprint.
+
+- **Memory Management**: By setting a permanent LRU size, you ensure consistent memory usage patterns across your application. Larger caches improve performance but use more memory, while smaller caches reduce memory usage but may require more frequent cache rebuilding.
+
+- **Validation**: The method validates that the LRU size is at least 1, throwing a `JsonIoException` for invalid values.
+
+- **Default Value**: The default permanent LRU size is 1000, which provides a good balance between performance and memory usage for most applications.
+
+**Example Usage:**
+```java
+// Set at application startup for consistent memory management
+ReadOptionsBuilder.addPermanentLruSize(1000);  // Larger cache for better performance
+
+// All subsequent ReadOptions instances inherit this cache size
+ReadOptions options = new ReadOptionsBuilder().build();     // Has 1000 LRU size
+```
+
+>#### ReadOptionsBuilder.addPermanentLruSize(`int lruSize`)
+
+#### Add Permanent Allow NaN and Infinity
+
+The `addPermanentAllowNanAndInfinity` method allows you to set a permanent policy for handling special floating point values (`NaN`, `+Infinity`, `-Infinity`) in JSON parsing.
+
+- **Purpose**: This method establishes a global policy for handling IEEE 754 special floating point values. When enabled, these values are preserved during JSON parsing; when disabled, they are converted to `null`.
+
+- **Compatibility Considerations**: While JSON specification does not natively support these values, enabling this feature allows compatibility with JSON produced by systems that include them. Disabling ensures strict JSON compliance.
+
+- **Default Value**: The default permanent setting is `false` (do not allow NaN and Infinity), ensuring strict JSON compliance by default.
+
+**Example Usage:**
+```java
+// Set at application startup for strict JSON compliance
+ReadOptionsBuilder.addPermanentAllowNanAndInfinity(true);   // Allow NaN/Infinity values
+
+// All subsequent ReadOptions instances inherit this policy
+ReadOptions options = new ReadOptionsBuilder().build();     // Has strict floating point handling
+```
+
+>#### ReadOptionsBuilder.addPermanentAllowNanAndInfinity(`boolean allowNanAndInfinity`)
+
+#### Add Permanent Fail On Unknown Type
+
+The `addPermanentFailOnUnknownType` method allows you to set a permanent policy for handling unknown class types encountered in JSON parsing.
+
+- **Purpose**: This method establishes a global policy for unknown type handling. When enabled, encountering an unknown `@type` in JSON causes a `JsonIoException`; when disabled, unknown types are converted to `LinkedHashMap` instances.
+
+- **Security Implications**: Enabling strict unknown type handling ensures that all types in your JSON are explicitly known and trusted. Disabling provides flexibility for handling dynamic or external JSON with unknown types.
+
+- **Default Value**: The default permanent setting is `true` (fail on unknown types), ensuring strict type validation and security by default.
+
+**Example Usage:**
+```java
+// Set at application startup for strict type validation
+ReadOptionsBuilder.addPermanentFailOnUnknownType(false); // Allow unknown types
+
+// All subsequent ReadOptions instances inherit this policy
+ReadOptions options = new ReadOptionsBuilder().build();     // Has strict type validation
+```
+
+>#### ReadOptionsBuilder.addPermanentFailOnUnknownType(`boolean failOnUnknownType`)
+
+#### Add Permanent Close Stream
+
+The `addPermanentCloseStream` method allows you to set a permanent policy for input stream handling after JSON parsing completes.
+
+- **Purpose**: This method establishes a global policy for stream management. When enabled, input streams are automatically closed after parsing; when disabled, streams remain open for potential subsequent operations.
+
+- **Resource Management**: Enabling automatic stream closing ensures proper resource cleanup and prevents resource leaks. Disabling is useful for scenarios like NDJSON (Newline Delimited JSON) where multiple JSON objects are read from the same stream.
+
+- **Default Value**: The default permanent setting is `true` (close streams automatically), promoting good resource management practices while allowing applications to opt out when needed.
+
+**Example Usage:**
+```java
+// Set at application startup for NDJSON handling
+ReadOptionsBuilder.addPermanentCloseStream(false);  // Keep streams open for multiple reads
+
+// All subsequent ReadOptions instances inherit this policy
+ReadOptions options = new ReadOptionsBuilder().build();     // Keeps streams open
+```
+
+>#### ReadOptionsBuilder.addPermanentCloseStream(`boolean closeStream`)
+
+**Combined Configuration Example:**
+
+```java
+// Configure all permanent core settings at application startup
+public class ApplicationConfig {
+    static {
+        // Security and performance settings
+        ReadOptionsBuilder.addPermanentMaxDepth(500);                    // Limit nesting depth
+        ReadOptionsBuilder.addPermanentLruSize(1000);                    // Optimize memory usage
+        
+        // JSON compatibility settings  
+        ReadOptionsBuilder.addPermanentAllowNanAndInfinity(true);        // Allow NaN/Infinity values
+        ReadOptionsBuilder.addPermanentFailOnUnknownType(false);         // Allow unknown types
+        
+        // Resource management settings
+        ReadOptionsBuilder.addPermanentCloseStream(true);                // Automatic cleanup
+    }
+}
+
+// All ReadOptions instances throughout the application automatically inherit these settings
+ReadOptions defaultOptions = new ReadOptionsBuilder().build();
+
+// Individual instances can still override permanent settings when needed
+ReadOptions customOptions = new ReadOptionsBuilder()
+    .maxDepth(1000)                    // Override permanent max depth
+    .allowNanAndInfinity(false)        // Override permanent NaN/Infinity policy
+    .build();
+```

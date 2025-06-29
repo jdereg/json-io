@@ -147,6 +147,80 @@ public interface ReadOptions {
     int getMaxMissingFields();
 
     /**
+     * @return int maximum number of object references that can be tracked during JSON processing.
+     * Once this limit is reached, a JsonIoException will be thrown to prevent memory exhaustion
+     * from DoS attacks via unbounded object reference growth. Default is 10,000,000 for backward compatibility.
+     */
+    int getMaxObjectReferences();
+
+    /**
+     * @return int maximum depth of reference chains that can be traversed during JSON processing.
+     * Once this limit is reached, a JsonIoException will be thrown to prevent infinite loops
+     * from circular reference attacks. Default is 10,000 for backward compatibility.
+     */
+    int getMaxReferenceChainDepth();
+
+    /**
+     * @return int maximum length of enum name strings during JSON processing.
+     * Once this limit is reached, a JsonIoException will be thrown to prevent memory exhaustion
+     * from DoS attacks via excessively long enum names. Default is 256 for backward compatibility.
+     */
+    int getMaxEnumNameLength();
+
+    /**
+     * @return long maximum absolute value for @id and @ref values during JSON processing.
+     * Once this limit is exceeded, a JsonIoException will be thrown to prevent issues with
+     * extreme ID values. Default is 1,000,000,000 for backward compatibility.
+     */
+    long getMaxIdValue();
+
+    /**
+     * @return int initial capacity for string parsing buffers during JSON processing.
+     * This affects memory allocation for string parsing operations. Default is 256 for backward compatibility.
+     */
+    int getStringBufferSize();
+
+    /**
+     * @return int size for ThreadLocal string processing buffers during JSON parsing.
+     * This affects memory allocation for string processing operations. Default is 1024 for backward compatibility.
+     */
+    int getThreadLocalBufferSize();
+
+    /**
+     * @return int size for ThreadLocal large string processing buffers during JSON parsing.
+     * This affects memory allocation for large string processing operations. Default is 8192 for backward compatibility.
+     */
+    int getLargeThreadLocalBufferSize();
+
+    /**
+     * @return int maximum allowed length for argument character processing in MetaUtils.
+     * Once this limit is exceeded, content will be truncated to prevent memory exhaustion.
+     * Default is 65536 (64KB) for backward compatibility.
+     */
+    int getMaxAllowedLength();
+
+    /**
+     * @return int maximum file content size in bytes when loading resource files in MetaUtils.
+     * Once this limit is exceeded, a JsonIoException will be thrown to prevent memory exhaustion
+     * from DoS attacks via oversized resource files. Default is 1048576 (1MB) for backward compatibility.
+     */
+    int getMaxFileContentSize();
+
+    /**
+     * @return int maximum number of lines when processing resource files in MetaUtils.
+     * Once this limit is exceeded, a JsonIoException will be thrown to prevent resource exhaustion
+     * from DoS attacks via files with excessive line counts. Default is 10000 for backward compatibility.
+     */
+    int getMaxLineCount();
+
+    /**
+     * @return int maximum length per line when processing resource files in MetaUtils.
+     * Once this limit is exceeded, a JsonIoException will be thrown to prevent memory exhaustion
+     * from DoS attacks via excessively long lines. Default is 8192 (8KB) for backward compatibility.
+     */
+    int getMaxLineLength();
+
+    /**
      * @return int size of LRU Cache used to cache Class to Field and Class to injectors
      */
     int getLruSize();
@@ -250,4 +324,40 @@ public interface ReadOptions {
      * @return Object value of the custom option
      */
     Object getCustomOption(String key);
+
+    /**
+     * @return int maximum size of the type resolution cache used by JsonValue to avoid repeated type checks.
+     * Default is 1,000 entries. This prevents unbounded memory growth while maintaining performance benefits.
+     * The cache is used to store whether Java Types are fully resolved (no type variables).
+     */
+    int getMaxTypeResolutionCacheSize();
+
+    /**
+     * @return int default initial capacity for newly created collections when no size information is available.
+     * This affects memory allocation for ArrayList, LinkedHashSet, and other collection types created during JSON parsing.
+     * Default is 16 for backward compatibility. Lower values save memory, higher values reduce reallocations.
+     */
+    int getDefaultCollectionCapacity();
+
+    /**
+     * @return float load factor used for hash-based collections (HashSet, LinkedHashSet, HashMap, LinkedHashMap).
+     * This controls when collections will resize based on their fill ratio. Default is 0.75f for backward compatibility.
+     * Lower values use more memory but provide better performance, higher values use less memory but may reduce performance.
+     */
+    float getCollectionLoadFactor();
+
+    /**
+     * @return int minimum initial capacity enforced for all collections regardless of detected size.
+     * This prevents extremely small initial allocations that could cause excessive reallocations.
+     * Default is 16 for backward compatibility. Set to 1 to disable minimum capacity enforcement.
+     */
+    int getMinCollectionCapacity();
+
+    /**
+     * @return int threshold for switching between linear and binary search in JsonObject operations.
+     * For arrays with size &lt;= this threshold, linear search is used for better cache locality.
+     * For larger arrays, more sophisticated search algorithms may be used if applicable.
+     * Default is 8 for backward compatibility based on performance testing.
+     */
+    int getLinearSearchThreshold();
 }

@@ -40,6 +40,9 @@ import java.util.Set;
 public class JsonObject extends JsonValue implements Map<Object, Object> {
     private final Map<Object, Object> jsonStore = new LinkedHashMap<>();
     private Integer hash = null;
+    
+    // Configurable performance threshold for switching between search algorithms
+    private static volatile int linearSearchThreshold = 8; // Default, can be configured
 
     // Explicit fields for meta data
     private Object[] items;
@@ -402,7 +405,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
             
             // For non-null keys, use optimized search  
             int keyLen = getKeysLength();
-            if (keyLen <= 8) {
+            if (keyLen <= linearSearchThreshold) {
                 // Linear search for small arrays
                 for (Object k : keys) {
                     if (key.equals(k)) {
@@ -442,7 +445,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
             
             // For non-null values, optimize based on type
             int itemLen = getItemsLength();
-            if (itemLen <= 8) {
+            if (itemLen <= linearSearchThreshold) {
                 // Linear search for small arrays
                 for (Object v : items) {
                     if (value.equals(v)) {
@@ -470,7 +473,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         if (keys != null && items != null) {
             // For small arrays, linear search is faster due to cache locality
             int keyLen = getKeysLength();
-            if (keyLen <= 8) {
+            if (keyLen <= linearSearchThreshold) {
                 for (int i = 0; i < keyLen; i++) {
                     if (Objects.equals(key, keys[i])) {
                         return items[i];
@@ -796,5 +799,30 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         
         // Clear consolidated cache since we moved to jsonStore
         cache.clear();
+    }
+
+    /**
+     * Sets the linear search threshold for JsonObject operations.
+     * This affects all JsonObject instances as the threshold is static.
+     * 
+     * @param threshold int threshold for switching between linear and binary search.
+     *                  For arrays with size &lt;= threshold, linear search is used for better cache locality.
+     *                  Must be at least 1.
+     * @throws JsonIoException if threshold is less than 1
+     */
+    public static void setLinearSearchThreshold(int threshold) {
+        if (threshold < 1) {
+            throw new JsonIoException("Linear search threshold must be at least 1, value: " + threshold);
+        }
+        linearSearchThreshold = threshold;
+    }
+
+    /**
+     * Gets the current linear search threshold for JsonObject operations.
+     * 
+     * @return int current linear search threshold
+     */
+    public static int getLinearSearchThreshold() {
+        return linearSearchThreshold;
     }
 }

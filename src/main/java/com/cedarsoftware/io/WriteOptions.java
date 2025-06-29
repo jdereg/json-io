@@ -225,4 +225,46 @@ public interface WriteOptions {
      * given class.
      */
     Set<String> getExcludedFields(Class<?> c);
+
+    /**
+     * @return int maximum indentation depth allowed during pretty-printing to prevent memory exhaustion.
+     * Default is 100 levels. This prevents excessive memory usage from deeply nested indentations.
+     */
+    int getMaxIndentationDepth();
+
+    /**
+     * @return int maximum object graph depth allowed during serialization to prevent stack overflow.
+     * Default is 10,000 levels. This prevents excessive recursion from deeply nested object structures.
+     */
+    int getMaxObjectGraphDepth();
+
+    /**
+     * @return int maximum number of objects allowed during serialization to prevent memory exhaustion.
+     * Default is 100,000 objects. This prevents unbounded memory growth during large object graph processing.
+     */
+    int getMaxObjectCount();
+
+    /**
+     * @return int maximum string length allowed during JSON serialization to prevent memory issues.
+     * Default is 1,000,000 characters (1MB). This prevents excessive memory allocation for very large strings.
+     */
+    int getMaxStringLength();
+
+    /**
+     * @return int number of spaces to use for each indentation level during pretty-printing.
+     * Default is 2 spaces. This controls the visual formatting of indented JSON output.
+     */
+    int getIndentationSize();
+
+    /**
+     * @return double multiplier for pre-sizing StringBuilder during pretty-printing.
+     * Default is 1.3 (30% larger than original). Higher values reduce reallocations but use more memory.
+     */
+    double getBufferSizeMultiplier();
+
+    /**
+     * @return int threshold for switching between indentation strategies during pretty-printing.
+     * Default is 10. For depths &lt;= threshold, uses simple repeated writes; for larger depths, builds character array.
+     */
+    int getIndentationThreshold();
 }

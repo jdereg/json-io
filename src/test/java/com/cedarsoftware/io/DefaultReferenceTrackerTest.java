@@ -11,7 +11,8 @@ class DefaultReferenceTrackerTest {
 
     @Test
     void sizeReturnsNumberOfTrackedReferences() {
-        JsonReader.DefaultReferenceTracker tracker = new JsonReader.DefaultReferenceTracker();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        JsonReader.DefaultReferenceTracker tracker = new JsonReader.DefaultReferenceTracker(readOptions);
 
         assertEquals(0, tracker.size());
 

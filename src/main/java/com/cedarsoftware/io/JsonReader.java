@@ -173,7 +173,8 @@ public class JsonReader implements Closeable
      *                    etc. If null, readOptions will use all defaults.
      */
     public JsonReader(InputStream input, ReadOptions readOptions) {
-        this(input, readOptions, new DefaultReferenceTracker());
+        this(input, readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions, 
+             new DefaultReferenceTracker(readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions));
     }
 
     public JsonReader(InputStream inputStream, ReadOptions readOptions, ReferenceTracker references) {
@@ -359,8 +360,9 @@ public class JsonReader implements Closeable
             if (enumValue == null || enumValue.trim().isEmpty()) {
                 throw new JsonIoException("Invalid enum value: null or empty string for enum type " + rootClass.getName());
             }
-            if (enumValue.length() > 256) { // Reasonable limit for enum names
-                throw new JsonIoException("Invalid enum value: string too long (" + enumValue.length() + " chars) for enum type " + rootClass.getName());
+            int maxEnumLength = readOptions.getMaxEnumNameLength();
+            if (enumValue.length() > maxEnumLength) {
+                throw new JsonIoException("Security limit exceeded: Enum name too long (" + enumValue.length() + " chars, max " + maxEnumLength + ") for enum type " + rootClass.getName());
             }
             try {
                 return Enum.valueOf((Class<Enum>) rootClass, enumValue.trim());
@@ -794,16 +796,18 @@ public class JsonReader implements Closeable
      */
     static class DefaultReferenceTracker implements ReferenceTracker {
         
-        // Security limits to prevent DoS attacks (generous limits for normal usage)
-        private static final int MAX_REFERENCES = 10000000; // 10M objects max
-        private static final int MAX_REFERENCE_CHAIN_DEPTH = 10000; // Max chain depth
-        
         final Map<Long, JsonObject> references = new HashMap<>();
+        private final ReadOptions readOptions;
+
+        public DefaultReferenceTracker(ReadOptions readOptions) {
+            this.readOptions = readOptions;
+        }
 
         public JsonObject put(Long l, JsonObject o) {
             // Security: Prevent unbounded memory growth via reference tracking
-            if (references.size() >= MAX_REFERENCES) {
-                throw new JsonIoException("Security limit exceeded: Maximum number of object references (" + MAX_REFERENCES + ") reached. Possible DoS attack.");
+            int maxReferences = readOptions.getMaxObjectReferences();
+            if (references.size() >= maxReferences) {
+                throw new JsonIoException("Security limit exceeded: Maximum number of object references (" + maxReferences + ") reached. Possible DoS attack.");
             }
             return this.references.put(l, o);
         }
@@ -836,8 +840,9 @@ public class JsonReader implements Closeable
             
             while (target.isReference()) {
                 // Security: Prevent infinite loops via chain depth limit
-                if (++chainDepth > MAX_REFERENCE_CHAIN_DEPTH) {
-                    throw new JsonIoException("Security limit exceeded: Reference chain depth (" + chainDepth + ") exceeds maximum (" + MAX_REFERENCE_CHAIN_DEPTH + "). Possible circular reference attack.");
+                int maxChainDepth = readOptions.getMaxReferenceChainDepth();
+                if (++chainDepth > maxChainDepth) {
+                    throw new JsonIoException("Security limit exceeded: Reference chain depth (" + chainDepth + ") exceeds maximum (" + maxChainDepth + "). Possible circular reference attack.");
                 }
                 
                 // Security: Enhanced circular reference detection

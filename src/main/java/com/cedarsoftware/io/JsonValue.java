@@ -51,12 +51,11 @@ public abstract class JsonValue {
 
     // Cache for storing whether a Type is fully resolved.
     // Uses bounded LRU cache to prevent memory leaks in long-running applications
+    private static volatile int maxCacheSize = 1000; // Default, can be configured
     private static final Map<Type, Boolean> typeResolvedCache = new ConcurrentHashMap<Type, Boolean>() {
-        private static final int MAX_CACHE_SIZE = 1000;
-        
         @Override
         public Boolean put(Type key, Boolean value) {
-            if (size() >= MAX_CACHE_SIZE) {
+            if (size() >= maxCacheSize) {
                 // Simple eviction strategy - clear cache when it gets too large
                 // This prevents unbounded growth while maintaining performance benefits
                 clear();
@@ -209,5 +208,47 @@ public abstract class JsonValue {
     @Deprecated
     public Class<?> getJavaType() {
         return getRawType();
+    }
+
+    /**
+     * Sets the maximum size of the type resolution cache.
+     * This affects all JsonValue instances as the cache is static.
+     * 
+     * @param cacheSize int maximum number of entries to cache. Must be at least 1.
+     * @throws JsonIoException if cacheSize is less than 1
+     */
+    public static void setMaxTypeResolutionCacheSize(int cacheSize) {
+        if (cacheSize < 1) {
+            throw new JsonIoException("Type resolution cache size must be at least 1, value: " + cacheSize);
+        }
+        maxCacheSize = cacheSize;
+        // Clear existing cache to apply new size limit immediately
+        typeResolvedCache.clear();
+    }
+
+    /**
+     * Gets the current maximum size of the type resolution cache.
+     * 
+     * @return int current maximum cache size
+     */
+    public static int getMaxTypeResolutionCacheSize() {
+        return maxCacheSize;
+    }
+
+    /**
+     * Gets the current number of entries in the type resolution cache.
+     * 
+     * @return int current cache size
+     */
+    public static int getTypeResolutionCacheSize() {
+        return typeResolvedCache.size();
+    }
+
+    /**
+     * Clears the type resolution cache.
+     * This may be useful for memory management in long-running applications.
+     */
+    public static void clearTypeResolutionCache() {
+        typeResolvedCache.clear();
     }
 }

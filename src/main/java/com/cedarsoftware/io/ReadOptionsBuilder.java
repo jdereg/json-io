@@ -89,6 +89,41 @@ public class ReadOptionsBuilder {
     private static volatile int BASE_MAX_MAPS_TO_REHASH = Integer.MAX_VALUE;
     private static volatile int BASE_MAX_MISSING_FIELDS = Integer.MAX_VALUE;
     
+    // Base permanent JsonReader-specific security limits - default to generous but finite values for backward compatibility
+    private static volatile int BASE_MAX_OBJECT_REFERENCES = 10000000;       // 10M objects max
+    private static volatile int BASE_MAX_REFERENCE_CHAIN_DEPTH = 10000;      // 10K chain depth max
+    private static volatile int BASE_MAX_ENUM_NAME_LENGTH = 256;             // 256 chars max
+    
+    // Base permanent JsonParser-specific security limits - default to backward compatible values
+    private static volatile long BASE_MAX_ID_VALUE = 1000000000L;            // ±1B ID range max
+    private static volatile int BASE_STRING_BUFFER_SIZE = 256;               // 256 chars initial capacity
+    private static volatile int BASE_THREAD_LOCAL_BUFFER_SIZE = 1024;        // 1024 chars ThreadLocal buffer
+    private static volatile int BASE_LARGE_THREAD_LOCAL_BUFFER_SIZE = 8192;  // 8192 chars large ThreadLocal buffer
+    
+    // Base permanent MetaUtils-specific security limits - default to backward compatible values
+    private static volatile int BASE_MAX_ALLOWED_LENGTH = 65536;             // 64KB max allowed length
+    private static volatile int BASE_MAX_FILE_CONTENT_SIZE = 1048576;        // 1MB max file content size
+    private static volatile int BASE_MAX_LINE_COUNT = 10000;                 // 10K max line count
+    private static volatile int BASE_MAX_LINE_LENGTH = 8192;                 // 8KB max line length
+    
+    // JsonValue-specific permanent security limits (JVM lifetime defaults)
+    private static volatile int BASE_MAX_TYPE_RESOLUTION_CACHE_SIZE = 1000;  // 1K cache entries max
+    
+    // Collection/Map Factory-specific permanent security limits - default to backward compatible values
+    private static volatile int BASE_DEFAULT_COLLECTION_CAPACITY = 16;      // 16 default collection capacity
+    private static volatile float BASE_COLLECTION_LOAD_FACTOR = 0.75f;      // 0.75 load factor for hash collections
+    private static volatile int BASE_MIN_COLLECTION_CAPACITY = 16;           // 16 minimum collection capacity
+    
+    // JsonObject-specific permanent performance limits - default to backward compatible values
+    private static volatile int BASE_LINEAR_SEARCH_THRESHOLD = 8;            // 8 linear search threshold
+    
+    // Core ReadOptions permanent settings - default to backward compatible values
+    private static volatile int BASE_MAX_DEPTH = 1000;                       // 1000 max parsing depth
+    private static volatile int BASE_LRU_SIZE = 1000;                        // 1000 LRU cache size
+    private static volatile boolean BASE_ALLOW_NAN_AND_INFINITY = false;     // false allow NaN/Infinity
+    private static volatile boolean BASE_FAIL_ON_UNKNOWN_TYPE = true;        // true fail on unknown type
+    private static volatile boolean BASE_CLOSE_STREAM = true;                // true close stream after parsing
+    
     // Cache of fields used for accessors. Controlled by ignoredFields
     private static final Map<Class<?>, Map<String, Field>> classMetaCache = new ClassValueMap<>();
     private static final Map<Class<?>, Map<String, Injector>> injectorsCache = new ClassValueMap<>();
@@ -147,6 +182,41 @@ public class ReadOptionsBuilder {
         options.maxStackDepth = BASE_MAX_STACK_DEPTH;
         options.maxMapsToRehash = BASE_MAX_MAPS_TO_REHASH;
         options.maxMissingFields = BASE_MAX_MISSING_FIELDS;
+        
+        // Copy base permanent JsonReader-specific security limits
+        options.maxObjectReferences = BASE_MAX_OBJECT_REFERENCES;
+        options.maxReferenceChainDepth = BASE_MAX_REFERENCE_CHAIN_DEPTH;
+        options.maxEnumNameLength = BASE_MAX_ENUM_NAME_LENGTH;
+        
+        // Copy base permanent JsonParser-specific security limits
+        options.maxIdValue = BASE_MAX_ID_VALUE;
+        options.stringBufferSize = BASE_STRING_BUFFER_SIZE;
+        options.threadLocalBufferSize = BASE_THREAD_LOCAL_BUFFER_SIZE;
+        options.largeThreadLocalBufferSize = BASE_LARGE_THREAD_LOCAL_BUFFER_SIZE;
+        
+        // Copy base permanent MetaUtils-specific security limits
+        options.maxAllowedLength = BASE_MAX_ALLOWED_LENGTH;
+        options.maxFileContentSize = BASE_MAX_FILE_CONTENT_SIZE;
+        options.maxLineCount = BASE_MAX_LINE_COUNT;
+        options.maxLineLength = BASE_MAX_LINE_LENGTH;
+        
+        // Copy base permanent JsonValue-specific security limits
+        options.maxTypeResolutionCacheSize = BASE_MAX_TYPE_RESOLUTION_CACHE_SIZE;
+        
+        // Copy base permanent Collection/Map Factory-specific security limits
+        options.defaultCollectionCapacity = BASE_DEFAULT_COLLECTION_CAPACITY;
+        options.collectionLoadFactor = BASE_COLLECTION_LOAD_FACTOR;
+        options.minCollectionCapacity = BASE_MIN_COLLECTION_CAPACITY;
+        
+        // Copy base permanent JsonObject-specific performance limits
+        options.linearSearchThreshold = BASE_LINEAR_SEARCH_THRESHOLD;
+        
+        // Copy base permanent core ReadOptions settings
+        options.maxDepth = BASE_MAX_DEPTH;
+        options.lruSize = BASE_LRU_SIZE;
+        options.allowNanAndInfinity = BASE_ALLOW_NAN_AND_INFINITY;
+        options.failOnUnknownType = BASE_FAIL_ON_UNKNOWN_TYPE;
+        options.closeStream = BASE_CLOSE_STREAM;
     }
 
     /**
@@ -179,6 +249,34 @@ public class ReadOptionsBuilder {
             options.maxStackDepth = other.maxStackDepth;
             options.maxMapsToRehash = other.maxMapsToRehash;
             options.maxMissingFields = other.maxMissingFields;
+            
+            // Copy JsonReader-specific security limits
+            options.maxObjectReferences = other.maxObjectReferences;
+            options.maxReferenceChainDepth = other.maxReferenceChainDepth;
+            options.maxEnumNameLength = other.maxEnumNameLength;
+            
+            // Copy JsonParser-specific security limits
+            options.maxIdValue = other.maxIdValue;
+            options.stringBufferSize = other.stringBufferSize;
+            options.threadLocalBufferSize = other.threadLocalBufferSize;
+            options.largeThreadLocalBufferSize = other.largeThreadLocalBufferSize;
+            
+            // Copy MetaUtils-specific security limits
+            options.maxAllowedLength = other.maxAllowedLength;
+            options.maxFileContentSize = other.maxFileContentSize;
+            options.maxLineCount = other.maxLineCount;
+            options.maxLineLength = other.maxLineLength;
+            
+            // Copy JsonValue-specific security limits
+            options.maxTypeResolutionCacheSize = other.maxTypeResolutionCacheSize;
+            
+            // Copy Collection/Map Factory-specific security limits
+            options.defaultCollectionCapacity = other.defaultCollectionCapacity;
+            options.collectionLoadFactor = other.collectionLoadFactor;
+            options.minCollectionCapacity = other.minCollectionCapacity;
+            
+            // Copy JsonObject-specific performance limits
+            options.linearSearchThreshold = other.linearSearchThreshold;
 
             // Copy complex settings
             options.aliasTypeNames.clear();
@@ -397,10 +495,275 @@ public class ReadOptionsBuilder {
     }
     
     /**
+     * Set a permanent (JVM lifecycle) maximum number of object references that can be tracked during JSON processing.
+     * All new ReadOptions instances created will automatically start with this setting, preventing the need to
+     * configure it for each ReadOptions instance.
+     * 
+     * @param maxObjectReferences int maximum number of object references that can be tracked. Set this to prevent
+     *                            memory exhaustion from DoS attacks via unbounded object reference growth.
+     *                            Use 10,000,000 for backward compatible default.
+     */
+    public static void addPermanentMaxObjectReferences(int maxObjectReferences) {
+        BASE_MAX_OBJECT_REFERENCES = maxObjectReferences;
+    }
+    
+    /**
+     * Set a permanent (JVM lifecycle) maximum depth of reference chains that can be traversed during JSON processing.
+     * All new ReadOptions instances created will automatically start with this setting, preventing the need to
+     * configure it for each ReadOptions instance.
+     * 
+     * @param maxReferenceChainDepth int maximum depth of reference chains that can be traversed. Set this to prevent
+     *                               infinite loops from circular reference attacks. Use 10,000 for backward
+     *                               compatible default.
+     */
+    public static void addPermanentMaxReferenceChainDepth(int maxReferenceChainDepth) {
+        BASE_MAX_REFERENCE_CHAIN_DEPTH = maxReferenceChainDepth;
+    }
+    
+    /**
+     * Set a permanent (JVM lifecycle) maximum length of enum name strings during JSON processing.
+     * All new ReadOptions instances created will automatically start with this setting, preventing the need to
+     * configure it for each ReadOptions instance.
+     * 
+     * @param maxEnumNameLength int maximum length of enum name strings. Set this to prevent memory exhaustion
+     *                          from DoS attacks via excessively long enum names. Use 256 for backward 
+     *                          compatible default.
+     */
+    public static void addPermanentMaxEnumNameLength(int maxEnumNameLength) {
+        BASE_MAX_ENUM_NAME_LENGTH = maxEnumNameLength;
+    }
+
+    /**
+     * Set a permanent (JVM lifecycle) maximum absolute value for @id and @ref values during JSON processing.
+     * All new ReadOptions instances created will automatically start with this setting, preventing the need to
+     * configure it for each ReadOptions instance.
+     * 
+     * @param maxIdValue long maximum absolute value for ID values. Set this to prevent issues with extreme ID values
+     *                   that could cause problems. Use 1,000,000,000 for backward compatible default.
+     */
+    public static void addPermanentMaxIdValue(long maxIdValue) {
+        BASE_MAX_ID_VALUE = maxIdValue;
+    }
+
+    /**
+     * Set a permanent (JVM lifecycle) initial capacity for string parsing buffers during JSON processing.
+     * All new ReadOptions instances created will automatically start with this setting, preventing the need to
+     * configure it for each ReadOptions instance.
+     * 
+     * @param stringBufferSize int initial capacity for string parsing buffers. This affects memory allocation for
+     *                         string parsing operations. Use 256 for backward compatible default.
+     */
+    public static void addPermanentStringBufferSize(int stringBufferSize) {
+        BASE_STRING_BUFFER_SIZE = stringBufferSize;
+    }
+
+    /**
+     * Set a permanent (JVM lifecycle) size for ThreadLocal string processing buffers during JSON parsing.
+     * All new ReadOptions instances created will automatically start with this setting, preventing the need to
+     * configure it for each ReadOptions instance.
+     * 
+     * @param threadLocalBufferSize int size for ThreadLocal buffers. This affects memory allocation for string
+     *                              processing operations. Use 1024 for backward compatible default.
+     */
+    public static void addPermanentThreadLocalBufferSize(int threadLocalBufferSize) {
+        if (threadLocalBufferSize < 1) {
+            throw new JsonIoException("threadLocalBufferSize must be at least 1, value: " + threadLocalBufferSize);
+        }
+        BASE_THREAD_LOCAL_BUFFER_SIZE = threadLocalBufferSize;
+    }
+
+    /**
+     * Set a permanent (JVM lifecycle) size for ThreadLocal large string processing buffers during JSON parsing.
+     * All new ReadOptions instances created will automatically start with this setting, preventing the need to
+     * configure it for each ReadOptions instance.
+     * 
+     * @param largeThreadLocalBufferSize int size for large ThreadLocal buffers. This affects memory allocation for
+     *                                   large string processing operations. Use 8192 for backward compatible default.
+     */
+    public static void addPermanentLargeThreadLocalBufferSize(int largeThreadLocalBufferSize) {
+        if (largeThreadLocalBufferSize < 1) {
+            throw new JsonIoException("largeThreadLocalBufferSize must be at least 1, value: " + largeThreadLocalBufferSize);
+        }
+        BASE_LARGE_THREAD_LOCAL_BUFFER_SIZE = largeThreadLocalBufferSize;
+    }
+
+    /**
+     * Set a permanent (JVM lifecycle) maximum allowed length for argument character processing in MetaUtils.
+     * All new ReadOptions instances created will automatically start with this setting, preventing the need to
+     * configure it for each ReadOptions instance.
+     * 
+     * @param maxAllowedLength int maximum allowed length for argument processing. Set this to prevent memory exhaustion
+     *                         when processing large arguments. Use 65536 (64KB) for backward compatible default.
+     */
+    public static void addPermanentMaxAllowedLength(int maxAllowedLength) {
+        BASE_MAX_ALLOWED_LENGTH = maxAllowedLength;
+    }
+
+    /**
+     * Set a permanent (JVM lifecycle) maximum file content size when loading resource files in MetaUtils.
+     * All new ReadOptions instances created will automatically start with this setting, preventing the need to
+     * configure it for each ReadOptions instance.
+     * 
+     * @param maxFileContentSize int maximum file content size in bytes. Set this to prevent memory exhaustion from
+     *                           oversized resource files. Use 1048576 (1MB) for backward compatible default.
+     */
+    public static void addPermanentMaxFileContentSize(int maxFileContentSize) {
+        BASE_MAX_FILE_CONTENT_SIZE = maxFileContentSize;
+    }
+
+    /**
+     * Set a permanent (JVM lifecycle) maximum number of lines when processing resource files in MetaUtils.
+     * All new ReadOptions instances created will automatically start with this setting, preventing the need to
+     * configure it for each ReadOptions instance.
+     * 
+     * @param maxLineCount int maximum number of lines. Set this to prevent resource exhaustion from files with
+     *                     excessive line counts. Use 10000 for backward compatible default.
+     */
+    public static void addPermanentMaxLineCount(int maxLineCount) {
+        BASE_MAX_LINE_COUNT = maxLineCount;
+    }
+
+    /**
+     * Set a permanent (JVM lifecycle) maximum length per line when processing resource files in MetaUtils.
+     * All new ReadOptions instances created will automatically start with this setting, preventing the need to
+     * configure it for each ReadOptions instance.
+     * 
+     * @param maxLineLength int maximum length per line. Set this to prevent memory exhaustion from excessively
+     *                      long lines. Use 8192 (8KB) for backward compatible default.
+     */
+    public static void addPermanentMaxLineLength(int maxLineLength) {
+        BASE_MAX_LINE_LENGTH = maxLineLength;
+    }
+
+    /**
+     * Call this method to set a permanent (JVM lifetime) maximum type resolution cache size for JsonValue.
+     * All ReadOptions instances will be initialized with this value unless explicitly overridden.
+     * 
+     * @param maxTypeResolutionCacheSize int maximum size of the type resolution cache used by JsonValue.
+     *                                   Must be at least 1. Default is 1,000.
+     */
+    public static void addPermanentMaxTypeResolutionCacheSize(int maxTypeResolutionCacheSize) {
+        if (maxTypeResolutionCacheSize < 1) {
+            throw new JsonIoException("maxTypeResolutionCacheSize must be at least 1, value: " + maxTypeResolutionCacheSize);
+        }
+        BASE_MAX_TYPE_RESOLUTION_CACHE_SIZE = maxTypeResolutionCacheSize;
+        // Apply to JsonValue's static cache immediately
+        JsonValue.setMaxTypeResolutionCacheSize(maxTypeResolutionCacheSize);
+    }
+
+    /**
+     * All new ReadOptions instances will use this default collection capacity.
+     * @param defaultCollectionCapacity int default initial capacity for collections during JSON processing.
+     *                                  Default is 16 for backward compatibility.
+     */
+    public static void addPermanentDefaultCollectionCapacity(int defaultCollectionCapacity) {
+        if (defaultCollectionCapacity < 1) {
+            throw new JsonIoException("defaultCollectionCapacity must be at least 1, value: " + defaultCollectionCapacity);
+        }
+        BASE_DEFAULT_COLLECTION_CAPACITY = defaultCollectionCapacity;
+    }
+
+    /**
+     * All new ReadOptions instances will use this collection load factor.
+     * @param collectionLoadFactor float load factor for hash-based collections during JSON processing.
+     *                             Default is 0.75f for backward compatibility.
+     */
+    public static void addPermanentCollectionLoadFactor(float collectionLoadFactor) {
+        if (collectionLoadFactor <= 0.0f || collectionLoadFactor >= 1.0f) {
+            throw new JsonIoException("collectionLoadFactor must be between 0.0 and 1.0 (exclusive), value: " + collectionLoadFactor);
+        }
+        BASE_COLLECTION_LOAD_FACTOR = collectionLoadFactor;
+    }
+
+    /**
+     * All new ReadOptions instances will use this minimum collection capacity.
+     * @param minCollectionCapacity int minimum collection capacity for collections during JSON processing.
+     *                              Default is 16 for backward compatibility.
+     */
+    public static void addPermanentMinCollectionCapacity(int minCollectionCapacity) {
+        if (minCollectionCapacity < 1) {
+            throw new JsonIoException("minCollectionCapacity must be at least 1, value: " + minCollectionCapacity);
+        }
+        BASE_MIN_COLLECTION_CAPACITY = minCollectionCapacity;
+    }
+
+    /**
+     * All new ReadOptions instances will use this linear search threshold.
+     * @param linearSearchThreshold int threshold for switching between linear and binary search in JsonObject operations.
+     *                               Default is 8 for backward compatibility.
+     */
+    public static void addPermanentLinearSearchThreshold(int linearSearchThreshold) {
+        if (linearSearchThreshold < 1) {
+            throw new JsonIoException("linearSearchThreshold must be at least 1, value: " + linearSearchThreshold);
+        }
+        BASE_LINEAR_SEARCH_THRESHOLD = linearSearchThreshold;
+        // Apply to JsonObject's static configuration immediately
+        JsonObject.setLinearSearchThreshold(linearSearchThreshold);
+    }
+
+    /**
+     * All new ReadOptions instances will use this maximum parsing depth.
+     * @param maxDepth int maximum depth for JSON parsing to prevent stack overflow attacks.
+     *                 Default is 1000 for backward compatibility.
+     */
+    public static void addPermanentMaxDepth(int maxDepth) {
+        if (maxDepth < 1) {
+            throw new JsonIoException("maxDepth must be at least 1, value: " + maxDepth);
+        }
+        BASE_MAX_DEPTH = maxDepth;
+    }
+
+    /**
+     * All new ReadOptions instances will use this LRU cache size.
+     * @param lruSize int size of the LRU cache for object references during JSON processing.
+     *                Default is 500 for backward compatibility.
+     */
+    public static void addPermanentLruSize(int lruSize) {
+        if (lruSize < 1) {
+            throw new JsonIoException("lruSize must be at least 1, value: " + lruSize);
+        }
+        BASE_LRU_SIZE = lruSize;
+    }
+
+    /**
+     * All new ReadOptions instances will use this NaN and Infinity handling setting.
+     * @param allowNanAndInfinity boolean whether to allow NaN and Infinity values in JSON parsing.
+     *                            Default is true for backward compatibility.
+     */
+    public static void addPermanentAllowNanAndInfinity(boolean allowNanAndInfinity) {
+        BASE_ALLOW_NAN_AND_INFINITY = allowNanAndInfinity;
+    }
+
+    /**
+     * All new ReadOptions instances will use this unknown type handling setting.
+     * @param failOnUnknownType boolean whether to fail when encountering unknown types in JSON.
+     *                          Default is false for backward compatibility.
+     */
+    public static void addPermanentFailOnUnknownType(boolean failOnUnknownType) {
+        BASE_FAIL_ON_UNKNOWN_TYPE = failOnUnknownType;
+    }
+
+    /**
+     * All new ReadOptions instances will use this stream closing setting.
+     * @param closeStream boolean whether to close input streams after JSON parsing.
+     *                    Default is true for backward compatibility.
+     */
+    public static void addPermanentCloseStream(boolean closeStream) {
+        BASE_CLOSE_STREAM = closeStream;
+    }
+    
+    /**
      * @return ReadOptions - built options
      */
     public ReadOptions build() {
         options.clearCaches();
+        
+        // Apply the type resolution cache size to JsonValue's static cache
+        JsonValue.setMaxTypeResolutionCacheSize(options.maxTypeResolutionCacheSize);
+        
+        // Apply the linear search threshold to JsonObject's static configuration
+        JsonObject.setLinearSearchThreshold(options.linearSearchThreshold);
+        
         options.aliasTypeNames = Collections.unmodifiableMap(options.aliasTypeNames);
         options.coercedTypes = ((ClassValueMap<Class<?>>)options.coercedTypes).unmodifiableView();
         options.notCustomReadClasses = ((ClassValueSet)options.notCustomReadClasses).unmodifiableView();
@@ -701,6 +1064,203 @@ public class ReadOptionsBuilder {
      */
     public ReadOptionsBuilder maxMissingFields(int maxMissingFields) {
         options.maxMissingFields = maxMissingFields;
+        return this;
+    }
+
+    /**
+     * @param maxObjectReferences int maximum number of object references that can be tracked during JSON processing.
+     *                            Set this to prevent memory exhaustion from DoS attacks via unbounded object 
+     *                            reference growth. Default is 10,000,000 for backward compatibility.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder maxObjectReferences(int maxObjectReferences) {
+        options.maxObjectReferences = maxObjectReferences;
+        return this;
+    }
+
+    /**
+     * @param maxReferenceChainDepth int maximum depth of reference chains that can be traversed during JSON processing.
+     *                               Set this to prevent infinite loops from circular reference attacks. 
+     *                               Default is 10,000 for backward compatibility.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder maxReferenceChainDepth(int maxReferenceChainDepth) {
+        options.maxReferenceChainDepth = maxReferenceChainDepth;
+        return this;
+    }
+
+    /**
+     * @param maxEnumNameLength int maximum length of enum name strings during JSON processing.
+     *                          Set this to prevent memory exhaustion from DoS attacks via excessively long 
+     *                          enum names. Default is 256 for backward compatibility.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder maxEnumNameLength(int maxEnumNameLength) {
+        options.maxEnumNameLength = maxEnumNameLength;
+        return this;
+    }
+
+    /**
+     * @param maxIdValue long maximum absolute value for @id and @ref values during JSON processing.
+     *                   Set this to prevent issues with extreme ID values that could cause problems.
+     *                   Default is 1,000,000,000 for backward compatibility.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder maxIdValue(long maxIdValue) {
+        options.maxIdValue = maxIdValue;
+        return this;
+    }
+
+    /**
+     * @param stringBufferSize int initial capacity for string parsing buffers during JSON processing.
+     *                         This affects memory allocation for string parsing operations.
+     *                         Default is 256 for backward compatibility.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder stringBufferSize(int stringBufferSize) {
+        options.stringBufferSize = stringBufferSize;
+        return this;
+    }
+
+    /**
+     * @param threadLocalBufferSize int size for ThreadLocal string processing buffers during JSON parsing.
+     *                              This affects memory allocation for string processing operations.
+     *                              Default is 1024 for backward compatibility.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder threadLocalBufferSize(int threadLocalBufferSize) {
+        if (threadLocalBufferSize < 1) {
+            throw new JsonIoException("threadLocalBufferSize must be at least 1, value: " + threadLocalBufferSize);
+        }
+        options.threadLocalBufferSize = threadLocalBufferSize;
+        return this;
+    }
+
+    /**
+     * @param largeThreadLocalBufferSize int size for ThreadLocal large string processing buffers during JSON parsing.
+     *                                   This affects memory allocation for large string processing operations.
+     *                                   Default is 8192 for backward compatibility.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder largeThreadLocalBufferSize(int largeThreadLocalBufferSize) {
+        if (largeThreadLocalBufferSize < 1) {
+            throw new JsonIoException("largeThreadLocalBufferSize must be at least 1, value: " + largeThreadLocalBufferSize);
+        }
+        options.largeThreadLocalBufferSize = largeThreadLocalBufferSize;
+        return this;
+    }
+
+    /**
+     * @param maxAllowedLength int maximum allowed length for argument character processing in MetaUtils.
+     *                         Set this to prevent memory exhaustion when processing large arguments.
+     *                         Default is 65536 (64KB) for backward compatibility.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder maxAllowedLength(int maxAllowedLength) {
+        options.maxAllowedLength = maxAllowedLength;
+        return this;
+    }
+
+    /**
+     * @param maxFileContentSize int maximum file content size in bytes when loading resource files in MetaUtils.
+     *                           Set this to prevent memory exhaustion from oversized resource files.
+     *                           Default is 1048576 (1MB) for backward compatibility.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder maxFileContentSize(int maxFileContentSize) {
+        options.maxFileContentSize = maxFileContentSize;
+        return this;
+    }
+
+    /**
+     * @param maxLineCount int maximum number of lines when processing resource files in MetaUtils.
+     *                     Set this to prevent resource exhaustion from files with excessive line counts.
+     *                     Default is 10000 for backward compatibility.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder maxLineCount(int maxLineCount) {
+        options.maxLineCount = maxLineCount;
+        return this;
+    }
+
+    /**
+     * @param maxLineLength int maximum length per line when processing resource files in MetaUtils.
+     *                      Set this to prevent memory exhaustion from excessively long lines.
+     *                      Default is 8192 (8KB) for backward compatibility.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder maxLineLength(int maxLineLength) {
+        options.maxLineLength = maxLineLength;
+        return this;
+    }
+
+    /**
+     * @param maxTypeResolutionCacheSize int maximum size of the type resolution cache used by JsonValue.
+     *                                   Default is 1,000 entries. This prevents unbounded memory growth while maintaining performance benefits.
+     *                                   The cache is used to store whether Java Types are fully resolved (no type variables).
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder maxTypeResolutionCacheSize(int maxTypeResolutionCacheSize) {
+        if (maxTypeResolutionCacheSize < 1) {
+            throw new JsonIoException("maxTypeResolutionCacheSize must be at least 1, value: " + maxTypeResolutionCacheSize);
+        }
+        options.maxTypeResolutionCacheSize = maxTypeResolutionCacheSize;
+        return this;
+    }
+
+    /**
+     * @param defaultCollectionCapacity int default initial capacity for collections during JSON processing.
+     *                                  This affects memory allocation for collection factory operations.
+     *                                  Default is 16 for backward compatibility.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder defaultCollectionCapacity(int defaultCollectionCapacity) {
+        if (defaultCollectionCapacity < 1) {
+            throw new JsonIoException("defaultCollectionCapacity must be at least 1, value: " + defaultCollectionCapacity);
+        }
+        options.defaultCollectionCapacity = defaultCollectionCapacity;
+        return this;
+    }
+
+    /**
+     * @param collectionLoadFactor float load factor for hash-based collections during JSON processing.
+     *                             This affects hash collection performance and memory usage.
+     *                             Default is 0.75f for backward compatibility.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder collectionLoadFactor(float collectionLoadFactor) {
+        if (collectionLoadFactor <= 0.0f || collectionLoadFactor >= 1.0f) {
+            throw new JsonIoException("collectionLoadFactor must be between 0.0 and 1.0 (exclusive), value: " + collectionLoadFactor);
+        }
+        options.collectionLoadFactor = collectionLoadFactor;
+        return this;
+    }
+
+    /**
+     * @param minCollectionCapacity int minimum collection capacity for collections during JSON processing.
+     *                              This sets a lower bound on collection sizes for performance reasons.
+     *                              Default is 16 for backward compatibility.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder minCollectionCapacity(int minCollectionCapacity) {
+        if (minCollectionCapacity < 1) {
+            throw new JsonIoException("minCollectionCapacity must be at least 1, value: " + minCollectionCapacity);
+        }
+        options.minCollectionCapacity = minCollectionCapacity;
+        return this;
+    }
+
+    /**
+     * @param linearSearchThreshold int threshold for switching between linear and binary search in JsonObject operations.
+     *                               For arrays with size &lt;= this threshold, linear search is used for better cache locality.
+     *                               Default is 8 for backward compatibility.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder linearSearchThreshold(int linearSearchThreshold) {
+        if (linearSearchThreshold < 1) {
+            throw new JsonIoException("linearSearchThreshold must be at least 1, value: " + linearSearchThreshold);
+        }
+        options.linearSearchThreshold = linearSearchThreshold;
         return this;
     }
 
@@ -1041,6 +1601,34 @@ public class ReadOptionsBuilder {
         private int maxMapsToRehash = Integer.MAX_VALUE;
         private int maxMissingFields = Integer.MAX_VALUE;
         
+        // JsonReader-specific security limits - default to generous but finite values for backward compatibility
+        private int maxObjectReferences = 10000000;       // 10M objects max (same as JsonReader hardcoded default)
+        private int maxReferenceChainDepth = 10000;       // 10K chain depth max (same as JsonReader hardcoded default)
+        private int maxEnumNameLength = 256;              // 256 chars max (same as JsonReader hardcoded default)
+        
+        // JsonParser-specific security limits - default to backward compatible values
+        private long maxIdValue = 1000000000L;            // ±1B ID range max (same as JsonParser hardcoded default)
+        private int stringBufferSize = 256;               // 256 chars initial capacity (same as JsonParser hardcoded default)
+        private int threadLocalBufferSize = 1024;         // 1024 chars ThreadLocal buffer (same as JsonParser hardcoded default)
+        private int largeThreadLocalBufferSize = 8192;    // 8192 chars large ThreadLocal buffer (same as JsonParser hardcoded default)
+        
+        // MetaUtils-specific security limits - default to backward compatible values
+        private int maxAllowedLength = 65536;             // 64KB max allowed length (same as MetaUtils hardcoded default)
+        private int maxFileContentSize = 1048576;         // 1MB max file content size (same as MetaUtils hardcoded default)
+        private int maxLineCount = 10000;                 // 10K max line count (same as MetaUtils hardcoded default)
+        private int maxLineLength = 8192;                 // 8KB max line length (same as MetaUtils hardcoded default)
+        
+        // JsonValue-specific security limits - default to backward compatible values
+        private int maxTypeResolutionCacheSize = 1000;    // 1K cache entries max (same as JsonValue hardcoded default)
+        
+        // Collection/Map Factory-specific security limits - default to backward compatible values
+        private int defaultCollectionCapacity = 16;       // 16 default collection capacity (same as CollectionFactory/MapFactory hardcoded default)
+        private float collectionLoadFactor = 0.75f;       // 0.75 load factor for hash collections (same as CollectionFactory/MapFactory hardcoded default)
+        private int minCollectionCapacity = 16;           // 16 minimum collection capacity (same as CollectionFactory/MapFactory hardcoded default)
+        
+        // JsonObject-specific performance limits - default to backward compatible values
+        private int linearSearchThreshold = 8;            // 8 linear search threshold (same as JsonObject hardcoded default)
+        
         private Map<String, String> aliasTypeNames = new LinkedHashMap<>();
         private Map<Class<?>, Class<?>> coercedTypes = new ClassValueMap<>();
         private Set<Class<?>> notCustomReadClasses = new ClassValueSet();
@@ -1154,6 +1742,70 @@ public class ReadOptionsBuilder {
          */
         public int getMaxMissingFields() {
             return maxMissingFields;
+        }
+
+        public int getMaxObjectReferences() {
+            return maxObjectReferences;
+        }
+
+        public int getMaxReferenceChainDepth() {
+            return maxReferenceChainDepth;
+        }
+
+        public int getMaxEnumNameLength() {
+            return maxEnumNameLength;
+        }
+
+        public long getMaxIdValue() {
+            return maxIdValue;
+        }
+
+        public int getStringBufferSize() {
+            return stringBufferSize;
+        }
+
+        public int getThreadLocalBufferSize() {
+            return threadLocalBufferSize;
+        }
+
+        public int getLargeThreadLocalBufferSize() {
+            return largeThreadLocalBufferSize;
+        }
+
+        public int getMaxAllowedLength() {
+            return maxAllowedLength;
+        }
+
+        public int getMaxFileContentSize() {
+            return maxFileContentSize;
+        }
+
+        public int getMaxLineCount() {
+            return maxLineCount;
+        }
+
+        public int getMaxLineLength() {
+            return maxLineLength;
+        }
+
+        public int getMaxTypeResolutionCacheSize() {
+            return maxTypeResolutionCacheSize;
+        }
+
+        public int getDefaultCollectionCapacity() {
+            return defaultCollectionCapacity;
+        }
+
+        public float getCollectionLoadFactor() {
+            return collectionLoadFactor;
+        }
+
+        public int getMinCollectionCapacity() {
+            return minCollectionCapacity;
+        }
+
+        public int getLinearSearchThreshold() {
+            return linearSearchThreshold;
         }
         
         /**
