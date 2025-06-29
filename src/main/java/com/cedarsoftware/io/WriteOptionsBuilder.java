@@ -1196,7 +1196,14 @@ public class WriteOptionsBuilder {
             Class<?> curr = c;
 
             while (curr != null) {
-                List<Field> fields = ReflectionUtils.getDeclaredFields(curr);
+                List<Field> fields;
+                try {
+                    fields = ReflectionUtils.getDeclaredFields(curr);
+                } catch (SecurityException e) {
+                    // Skip security-sensitive classes by treating them as having no accessible fields
+                    curr = curr.getSuperclass();
+                    continue;
+                }
                 final Set<String> excludedForClass = this.excludedFieldNames.get(curr);
 
                 if (excludedForClass != null) {
