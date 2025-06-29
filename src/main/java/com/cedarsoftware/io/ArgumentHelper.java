@@ -19,11 +19,17 @@ package com.cedarsoftware.io;
  */
 public class ArgumentHelper {
     /**
-     * @param setting Object setting value from JsonWriter args map.
-     * @return boolean true if the value is (boolean) true, Boolean.TRUE, "true" (any case), or non-zero if a Number.
+     * @param setting Object setting value from JsonWriter args map. Can be null.
+     * @return boolean true if the value is (boolean) true, Boolean.TRUE, "true" (any case), 
+     *         or non-zero if a Number. Returns false for null or unsupported types.
      */
     public static boolean isTrue(Object setting)
     {
+        if (setting == null)
+        {
+            return false;
+        }
+
         if (setting instanceof Boolean)
         {
             return Boolean.TRUE.equals(setting);
@@ -36,14 +42,27 @@ public class ArgumentHelper {
 
         if (setting instanceof Number)
         {
-            return ((Number)setting).intValue() != 0;
+            return ((Number)setting).doubleValue() != 0.0;
         }
 
         return false;
     }
 
+    /**
+     * Gets a Number from an Object with a default fallback.
+     * @param o Object that should be a Number, or null
+     * @param def Default Number to return if o is null
+     * @return The Number value of o, or def if o is null
+     * @throws IllegalArgumentException if o is not null and not a Number
+     */
     public static Number getNumberWithDefault(Object o, Number def) {
-        return o == null ? def : (Number) o;
+        if (o == null) {
+            return def;
+        }
+        if (o instanceof Number) {
+            return (Number) o;
+        }
+        throw new IllegalArgumentException("Expected Number but got: " + o.getClass().getSimpleName());
     }
 
 }

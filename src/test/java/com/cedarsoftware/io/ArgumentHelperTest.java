@@ -76,15 +76,16 @@ class ArgumentHelperTest
     }
 
     @Test
-    void getNumberWithDefault_nonNumber_throwsClassCastException() {
+    void getNumberWithDefault_nonNumber_throwsIllegalArgumentException() {
         assertThatThrownBy(() -> ArgumentHelper.getNumberWithDefault("foo", 1))
-                .isInstanceOf(ClassCastException.class);
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Expected Number but got: String");
     }
 
     private static Stream<Arguments> numberWithDefaultValues() {
         return Stream.of(
                 Arguments.of(null, 42, 42),
-                Arguments.of(Integer.valueOf(5), 9, Integer.valueOf(5)),
+                Arguments.of(5, 9, Integer.valueOf(5)),
                 Arguments.of(3.14d, 0, 3.14d)
         );
     }

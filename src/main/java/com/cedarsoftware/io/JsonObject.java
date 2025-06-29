@@ -752,7 +752,10 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         }
 
         hash = null; // Invalidate hash
-        Map<Object, Object> targetMap = (Map<Object, Object>) target;
+        Map<Object, Object> targetMap = null;
+        if (target instanceof Map) {
+            targetMap = (Map<Object, Object>) target;
+        }
 
         // Transfer all entries from keys/items arrays to jsonStore and target
         final int len = keysLength != null ? keysLength : keys.length;

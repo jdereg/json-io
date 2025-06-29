@@ -382,6 +382,9 @@ class JsonParser {
                     break;
 
                 case ITEMS:
+                    if (value != null && !value.getClass().isArray()) {
+                        error("Expected @items to have an array [], but found: " + value.getClass().getName());
+                    }
                     loadItems((Object[])value, jObj);
                     break;
 
