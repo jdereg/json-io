@@ -18,6 +18,26 @@ import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.StringUtilities;
 
 /**
+ * High-performance field injection utility that automatically adapts to different JDK versions
+ * for optimal performance and compatibility.
+ * 
+ * <p>This class uses the {@code java.version} system property to automatically detect the
+ * JDK version and select the most appropriate field injection strategy:</p>
+ * 
+ * <ul>
+ * <li><strong>JDK 8-16:</strong> Uses {@code Field.set()} for final fields and {@code MethodHandle} for regular fields</li>
+ * <li><strong>JDK 17+:</strong> Uses {@code VarHandle} for improved performance and module system compatibility</li>
+ * </ul>
+ * 
+ * <p>The JDK version detection and strategy selection is completely automatic and requires no
+ * user configuration. This ensures optimal performance across all supported JDK versions while
+ * maintaining compatibility with the module system introduced in JDK 9+.</p>
+ * 
+ * <h3>System Properties Used:</h3>
+ * <ul>
+ * <li>{@code java.version} - Automatically detected by the JVM to determine injection strategy</li>
+ * </ul>
+ * 
  * @author Ken Partlow (kpartlow@gmail.com)
  *         John DeRegnaucourt (jereg@gmail.com)
  *         <br>
@@ -258,6 +278,12 @@ public class Injector {
         return uniqueFieldName;
     }
 
+    /**
+     * Determines the Java major version by parsing the {@code java.version} system property.
+     * This method handles both legacy (1.8) and modern (9+) version numbering schemes.
+     * 
+     * @return the major Java version (e.g., 8 for Java 1.8, 17 for Java 17, etc.)
+     */
     private static int getJavaVersion() {
         String version = System.getProperty("java.version");
         if (version.startsWith("1.")) {

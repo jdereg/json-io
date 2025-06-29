@@ -304,3 +304,68 @@ java -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager \
 ```
 
 Once configured, JUL output flows through your framework's configuration.
+
+## System Properties
+
+json-io uses several system properties to control behavior and optimize performance. Most are handled automatically, but understanding them can be helpful for troubleshooting or advanced usage.
+
+### Runtime System Properties
+
+#### `java.version`
+**Used by**: `com.cedarsoftware.io.reflect.Injector` class  
+**Purpose**: Automatically detected to determine the optimal field injection strategy  
+**Values**: Automatically set by JVM  
+**Behavior**:
+- **JDK 8-16**: Uses `Field.set()` for final fields and `MethodHandle` for regular fields
+- **JDK 17+**: Uses `VarHandle` for improved performance and module system compatibility
+
+This is handled automatically by json-io and requires no user configuration. The library adapts its internal field injection mechanisms based on the detected JDK version for optimal performance and compatibility.
+
+### Test Environment Properties
+
+When running json-io's test suite, the following system properties are automatically set to ensure consistent behavior across different environments:
+
+#### Test Standardization Properties
+- **`user.timezone=America/New_York`**: Ensures consistent date/time handling
+- **`user.language=en`**: Standardizes locale-dependent behavior  
+- **`user.region=US`**: Sets region for locale consistency
+- **`user.country=US`**: Sets country for locale consistency
+
+These properties are set automatically during testing via Maven and generally don't affect runtime usage of json-io in applications.
+
+### Logging Configuration Properties
+
+#### `ju.log.dateFormat`
+**Used by**: `LoggingConfig.init()` method from java-util dependency  
+**Purpose**: Customizes timestamp format for java.util.logging output  
+**Default**: Standard timestamp format  
+**Example**:
+```bash
+java -Dju.log.dateFormat="yyyy/MM/dd HH:mm:ss" -jar your-app.jar
+```
+
+Or programmatically:
+```java
+LoggingConfig.init("yyyy/MM/dd HH:mm:ss");
+```
+
+### Maven Test Properties
+
+#### `-Dtest=...`
+**Used by**: Maven Surefire plugin  
+**Purpose**: Run specific test classes or patterns  
+**Examples**:
+```bash
+# Run a specific test class
+mvn test -Dtest=SecurityTest
+
+# Run tests matching a pattern
+mvn test -Dtest="*EnumSet*"
+
+# Run performance tests
+mvn test -Dtest=JsonPerformanceTest
+```
+
+## Environment Variables
+
+json-io does not use any environment variables for configuration. All behavior is controlled through Java APIs (ReadOptions/WriteOptions) or system properties as documented above.
