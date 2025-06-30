@@ -36,9 +36,17 @@ import com.cedarsoftware.util.LRUCache;
 import com.cedarsoftware.util.ReflectionUtils;
 import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.LoggingConfig;
+import com.cedarsoftware.util.convert.CommonValues;
+import com.cedarsoftware.util.convert.Convert;
+import com.cedarsoftware.util.convert.Converter;
+import com.cedarsoftware.util.convert.ConverterOptions;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.time.ZoneId;
+import java.util.Locale;
 
 /**
  * Builder class for building the writeOptions.
@@ -189,6 +197,11 @@ public class WriteOptionsBuilder {
         this();
         if (copy != null) {
             DefaultWriteOptions other = (DefaultWriteOptions) copy;
+
+            // Pointing this WriteOptions.converterOptions to the other WriteOptions.converterOptions
+            // is OK, as we are not (yet) changing any of the values. However, if we decide to override
+            // one of the ConverterOptions settings, then we must deep-copy the ConverterOptions.
+            options.converterOptions = other.converterOptions;
 
             // Copy simple settings
             options.allowNanAndInfinity = other.allowNanAndInfinity;
@@ -1257,6 +1270,49 @@ public class WriteOptionsBuilder {
         return options;
     }
 
+    public static class DefaultConverterOptions implements ConverterOptions {
+        private ZoneId zoneId = ZoneId.systemDefault();
+        private Locale locale = Locale.getDefault();
+        private Charset charset = StandardCharsets.UTF_8;
+        private ClassLoader classloader = ClassUtilities.getClassLoader(WriteOptionsBuilder.class);
+        private Character trueChar = CommonValues.CHARACTER_ONE;
+        private Character falseChar = CommonValues.CHARACTER_ZERO;
+        private Map<String, Object> customOptions = new ConcurrentHashMap<>();
+        private Map<Converter.ConversionPair, Convert<?>> converterOverrides = new ConcurrentHashMap<>(100, .8f);
+
+        public ZoneId getZoneId() {
+            return zoneId;
+        }
+
+        public Locale getLocale() {
+            return locale;
+        }
+
+        public Charset getCharset() {
+            return charset;
+        }
+
+        public ClassLoader getClassLoader() {
+            return classloader;
+        }
+
+        public Character trueChar() {
+            return trueChar;
+        }
+
+        public Character falseChar() {
+            return falseChar;
+        }
+
+        public Map<Converter.ConversionPair, Convert<?>> getConverterOverrides() {
+            return converterOverrides;
+        }
+
+        public <T> T getCustomOption(String name) {
+            return (T) customOptions.get(name);
+        }
+    }
+
     static class DefaultWriteOptions implements WriteOptions {
         private boolean shortMetaKeys = false;
         private ShowType showTypeInfo = WriteOptions.ShowType.MINIMAL;
@@ -1282,6 +1338,7 @@ public class WriteOptionsBuilder {
         private Map<String, AccessorFactory> accessorFactories = new LinkedHashMap<>();
         private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses = new ClassValueMap<>();
         private Map<String, Object> customOptions = new LinkedHashMap<>();
+        private DefaultConverterOptions converterOptions = new DefaultConverterOptions();
 
         // Security limits with backward-compatible defaults
         private int maxIndentationDepth = 100;         // Maximum indentation depth to prevent memory exhaustion
@@ -1530,6 +1587,10 @@ public class WriteOptionsBuilder {
         public Object getCustomOption(String key)
         {
             return customOptions.get(key);
+        }
+
+        public ConverterOptions getConverterOptions() {
+            return this.converterOptions;
         }
 
         public Set<String> getIncludedFields(Class<?> c) {

@@ -27,6 +27,7 @@ import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.CompactMap;
 import com.cedarsoftware.util.CompactSet;
 import com.cedarsoftware.util.FastWriter;
+import com.cedarsoftware.util.convert.Converter;
 
 import static com.cedarsoftware.io.JsonValue.ENUM;
 import static com.cedarsoftware.io.JsonValue.ITEMS;
@@ -85,6 +86,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     private static final String NEW_LINE = System.lineSeparator();
     private static final Long ZERO = 0L;
     private final WriteOptions writeOptions;
+    private final Converter converter;
     private final Map<Object, Long> objVisited = new IdentityHashMap<>();
     private final Map<Object, Long> objsReferenced = new IdentityHashMap<>();
     private final Writer out;
@@ -161,6 +163,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     public JsonWriter(OutputStream out, WriteOptions writeOptions) {
         this.out = new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
         this.writeOptions = writeOptions == null ? WriteOptionsBuilder.getDefaultWriteOptions() : writeOptions;
+        this.converter = new Converter(this.writeOptions.getConverterOptions());
         
         // Pre-compute based on options
         this.idPrefix = this.writeOptions.isShortMetaKeys() ? ID_SHORT : ID_LONG;
@@ -299,6 +302,23 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             return false;
         }
         return true;
+    }
+
+    /**
+     * Check if a type should be handled by Converter as a simple string.
+     * This is intentionally restrictive to avoid breaking existing serialization patterns.
+     * Currently only includes: java.awt.Color and other specific DTO types.
+     */
+    private boolean isConverterSimpleType(Class<?> clazz) {
+        // Start with Color as the primary use case
+        if (clazz == java.awt.Color.class) {
+            return true;
+        }
+        
+        // Future: Add other specific DTO types here as needed
+        // Examples might include: Point, Dimension, Rectangle, etc.
+        
+        return false;
     }
     
     /**
@@ -621,6 +641,22 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         if (writeOptions.isNeverShowingType()) {
             showType = false;
+        }
+
+        // Enhanced Converter Integration - only for specific DTO types that we want to handle as simple strings
+        // This is intentionally restrictive to avoid breaking existing serialization patterns
+        Class<?> objClass = obj.getClass();
+        if (isConverterSimpleType(objClass)) {
+            try {
+                String convertedValue = converter.convert(obj, String.class);
+                if (convertedValue != null) {
+                    writeJsonUtf8String(out, convertedValue);
+                    return;
+                }
+            } catch (Exception e) {
+                // Log conversion failure and continue to traditional serialization
+                // This allows fallback to reflection-based approach
+            }
         }
 
         if (writeUsingCustomWriter(obj, showType, out) || writeOptionalReference(obj)) {

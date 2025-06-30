@@ -517,7 +517,26 @@ public abstract class Resolver {
 
         // Knock out popular easy classes to instantiate and finish.
         if (converter.isSimpleTypeConversionSupported(targetType)) {
-            return jsonObj.setFinishedTarget(converter.convert(jsonObj, targetType), true);
+            Object result = converter.convert(jsonObj, targetType);
+            return jsonObj.setFinishedTarget(result, true);
+        }
+
+        // Enhanced Converter Integration - only for specific DTO types
+        // This is intentionally restrictive to avoid breaking existing serialization patterns
+        // Note: Skip Throwables as they require special factory handling for type preservation
+        if (!Throwable.class.isAssignableFrom(targetType) && isConverterSimpleType(targetType)) {
+            Object sourceValue = jsonObj.hasValue() ? jsonObj.getValue() : jsonObj;
+            Class<?> sourceType = determineSourceType(jsonObj, sourceValue);
+
+            if (sourceType != null && converter.isConversionSupportedFor(sourceType, targetType)) {
+                try {
+                    Object value = converter.convert(sourceValue, targetType);
+                    return jsonObj.setFinishedTarget(value, true);
+                } catch (Exception e) {
+                    // Log conversion failure and continue to factory system
+                    // This allows fallback to reflection-based approach
+                }
+            }
         }
 
         // Determine the factory type, considering enums and collections.
@@ -529,20 +548,21 @@ public abstract class Resolver {
             return mate;
         }
 
-        // Attempt conversion using the Converter.
-        Object sourceValue = jsonObj.hasValue() ? jsonObj.getValue() : null;
-        Class<?> sourceType = sourceValue != null ? sourceValue.getClass() : (!jsonObj.isEmpty() ? Map.class : null);
-
+        // Legacy converter attempt (kept for backward compatibility)
+        // Note: This is now redundant with enhanced converter above, but kept for safety
         if (!Throwable.class.isAssignableFrom(targetType)) {
-            if (sourceType != null && converter.isConversionSupportedFor(sourceType, targetType)) {
+            Object legacySourceValue = jsonObj.hasValue() ? jsonObj.getValue() : null;
+            Class<?> legacySourceType = legacySourceValue != null ? legacySourceValue.getClass() : (!jsonObj.isEmpty() ? Map.class : null);
+            
+            if (legacySourceType != null && converter.isConversionSupportedFor(legacySourceType, targetType)) {
                 try {
-                    Object value = converter.convert(sourceValue != null ? sourceValue : jsonObj, targetType);
+                    Object value = converter.convert(legacySourceValue != null ? legacySourceValue : jsonObj, targetType);
                     return jsonObj.setFinishedTarget(value, true);
                 } catch (Exception e) {
                     // Conversion failed - continue with other resolution strategies
                     // Only log in debug mode to avoid noise in normal operations
                     if (Boolean.parseBoolean(System.getProperty("json-io.debug", "false"))) {
-                        System.err.println("Debug: Conversion failed for " + sourceType + " to " + targetType + ": " + e.getMessage());
+                        System.err.println("Debug: Legacy conversion failed for " + legacySourceType + " to " + targetType + ": " + e.getMessage());
                     }
                 }
             }
@@ -588,6 +608,37 @@ public abstract class Resolver {
         return null;
     }
 
+    /**
+     * Enhanced source type detection for DTO conversion.
+     * This method analyzes the JsonObject structure to determine the most appropriate
+     * source type for Converter-based transformation.
+     */
+    private Class<?> determineSourceType(JsonObject jsonObj, Object sourceValue) {
+        if (sourceValue != null && sourceValue != jsonObj) {
+            return sourceValue.getClass();
+        }
+        
+        if (!jsonObj.isEmpty()) {
+            // Enhanced detection for Map-like JsonObjects representing DTOs
+            // Check for common DTO patterns that can be converted from Map representation
+            if (jsonObj.containsKey("r") && jsonObj.containsKey("g") && jsonObj.containsKey("b")) {
+                return Map.class; // Potential Color representation
+            }
+            if (jsonObj.containsKey("x") && jsonObj.containsKey("y")) {
+                return Map.class; // Potential Point representation  
+            }
+            if (jsonObj.containsKey("width") && jsonObj.containsKey("height")) {
+                return Map.class; // Potential Dimension representation
+            }
+            // Add more DTO patterns as needed
+            
+            return Map.class; // Default for non-empty JsonObjects
+        }
+        
+        return null;
+    }
+
+
 
     // Determine the factory type, considering enums and collections
     private Class<?> determineFactoryType(JsonObject jsonObj, Class<?> targetType) {
@@ -602,6 +653,23 @@ public abstract class Resolver {
     private boolean shouldCreateArray(JsonObject jsonObj, Class<?> targetType) {
         Object[] items = jsonObj.getItems();
         return targetType.isArray() || (items != null && targetType == Object.class && jsonObj.getKeys() == null);
+    }
+
+    /**
+     * Check if a type should be handled by Converter as a simple type.
+     * This is intentionally restrictive to avoid breaking existing serialization patterns.
+     * Currently only includes: java.awt.Color and other specific DTO types.
+     */
+    private boolean isConverterSimpleType(Class<?> clazz) {
+        // Start with Color as the primary use case
+        if (clazz == java.awt.Color.class) {
+            return true;
+        }
+        
+        // Future: Add other specific DTO types here as needed
+        // Examples might include: Point, Dimension, Rectangle, etc.
+        
+        return false;
     }
 
     private Object createArrayInstance(JsonObject jsonObj, Class<?> targetType) {

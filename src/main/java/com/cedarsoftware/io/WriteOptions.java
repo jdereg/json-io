@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.cedarsoftware.io.reflect.Accessor;
+import com.cedarsoftware.util.convert.ConverterOptions;
 
 /**
  * This class contains all the "feature" control (options) for controlling json-io's
@@ -267,4 +268,10 @@ public interface WriteOptions {
      * Default is 10. For depths &lt;= threshold, uses simple repeated writes; for larger depths, builds character array.
      */
     int getIndentationThreshold();
+
+    /**
+     * @return ConverterOptions configuration for the Converter used during JSON writing.
+     * This enables JsonWriter to leverage Converter for simple type transformations instead of reflection.
+     */
+    ConverterOptions getConverterOptions();
 }
