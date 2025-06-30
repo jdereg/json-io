@@ -1,5 +1,8 @@
 ### Revision History
 #### 4.57.0 (Unreleased)
+* **ENHANCEMENT**: Modernize public API generics with enhanced type safety - adds sophisticated generic bounds to JsonClassReader<T>, JsonClassWriter<T>, and collection handling methods following PECS principle for maximum flexibility while maintaining 100% backward compatibility
+* **ENHANCEMENT**: Improve collection method signatures with bounded wildcards - enhances WriteOptionsBuilder and ReadOptionsBuilder methods with sophisticated generic bounds like `Collection<? extends String>` and `Map<? extends Class<?>, ? extends Collection<? extends String>>` for better type safety and API flexibility
+* **FIX**: Resolve exception cause type preservation during JSON deserialization - fixes ThrowableFactory to properly maintain specific exception types (e.g., ExceptionWithStringConstructor) instead of falling back to generic Throwable, ensuring accurate exception reconstruction
 * **SECURITY**: Fix critical type safety vulnerability in `ArgumentHelper.getNumberWithDefault()` - prevents ClassCastException attacks
 * **SECURITY**: Fix unsafe type casting in `JsonObject.rehashMaps()` - adds instanceof validation before casting 
 * **SECURITY**: Fix unsafe type casting in `JsonParser.loadItems()` - validates array types before casting

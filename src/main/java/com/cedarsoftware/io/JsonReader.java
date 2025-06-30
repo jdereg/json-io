@@ -141,7 +141,7 @@ public class JsonReader implements Closeable
      * Implement this interface to add a custom JSON reader.
      * Recommended: Use ClassFactory instead - that allows you to instantiate and read the JSON object in one operation.
      */
-    public interface JsonClassReader
+    public interface JsonClassReader<T>
     {
         /**
          * Read a custom object. Only process the non-structural values for any given reader, and push the structural
@@ -152,7 +152,7 @@ public class JsonReader implements Closeable
          *                factory or reader that handles the "next level."  You can handle sub-objects here if you wanted.
          * @return Java Object that you filled out with values from the passed in jsonObj.
          */
-        default Object read(Object jsonObj, Resolver resolver) {
+        default T read(Object jsonObj, Resolver resolver) {
             throw new UnsupportedOperationException("You must implement this method and read the JSON content from jsonObj and copy the values from jsonObj to the target class, jsonObj.getTarget()");
         }
     }

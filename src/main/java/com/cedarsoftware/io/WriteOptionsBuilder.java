@@ -672,7 +672,7 @@ public class WriteOptionsBuilder {
      *                       be copied, and be the new baseline settings.
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder aliasTypeNames(Map<String, String> aliases) {
+    public WriteOptionsBuilder aliasTypeNames(Map<? extends String, ? extends String> aliases) {
         aliases.forEach(this::addUniqueAlias);
         return this;
     }
@@ -879,7 +879,7 @@ public class WriteOptionsBuilder {
      *                             the last call made.
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder setCustomWrittenClasses(Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses) {
+    public WriteOptionsBuilder setCustomWrittenClasses(Map<? extends Class<?>, ? extends JsonWriter.JsonClassWriter> customWrittenClasses) {
         options.customWrittenClasses.clear();
         addCustomWrittenClasses(customWrittenClasses);
         return this;
@@ -890,7 +890,7 @@ public class WriteOptionsBuilder {
      *                             writers map.
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder addCustomWrittenClasses(Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses) {
+    public WriteOptionsBuilder addCustomWrittenClasses(Map<? extends Class<?>, ? extends JsonWriter.JsonClassWriter> customWrittenClasses) {
         options.customWrittenClasses.putAll(customWrittenClasses);
         return this;
     }
@@ -922,7 +922,7 @@ public class WriteOptionsBuilder {
      *                         will be dropped and this Collection will establish the new list.
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder setNotCustomWrittenClasses(Collection<Class<?>> notCustomClasses) {
+    public WriteOptionsBuilder setNotCustomWrittenClasses(Collection<? extends Class<?>> notCustomClasses) {
         options.notCustomWrittenClasses.clear();
         options.notCustomWrittenClasses.addAll(notCustomClasses);
         return this;
@@ -944,7 +944,7 @@ public class WriteOptionsBuilder {
      * @param includedFieldNames Collection of String name of fields to include in written JSON.
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder addIncludedFields(Class<?> clazz, Collection<String> includedFieldNames) {
+    public WriteOptionsBuilder addIncludedFields(Class<?> clazz, Collection<? extends String> includedFieldNames) {
         options.includedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).addAll(includedFieldNames);
         return this;
     }
@@ -953,7 +953,7 @@ public class WriteOptionsBuilder {
      * @param includedFieldNames Map of Class's mapped to Collection of String field names to include in the written JSON.
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder addIncludedFields(Map<Class<?>, Collection<String>> includedFieldNames) {
+    public WriteOptionsBuilder addIncludedFields(Map<? extends Class<?>, ? extends Collection<? extends String>> includedFieldNames) {
         includedFieldNames.forEach(this::addIncludedFields);
         return this;
     }
@@ -973,7 +973,7 @@ public class WriteOptionsBuilder {
      * @param excludedFields Collection of String name of fields to exclude in written JSON.
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder addExcludedFields(Class<?> clazz, Collection<String> excludedFields) {
+    public WriteOptionsBuilder addExcludedFields(Class<?> clazz, Collection<? extends String> excludedFields) {
         options.excludedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).addAll(excludedFields);
         return this;
     }
@@ -982,7 +982,7 @@ public class WriteOptionsBuilder {
      * @param excludedFieldNames Map of Class's mapped to Collection of String field names to exclude from written JSON.
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder addExcludedFields(Map<Class<?>, Collection<String>> excludedFieldNames) {
+    public WriteOptionsBuilder addExcludedFields(Map<? extends Class<?>, ? extends Collection<? extends String>> excludedFieldNames) {
         excludedFieldNames.forEach(this::addExcludedFields);
         return this;
     }

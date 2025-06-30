@@ -55,12 +55,16 @@ public class ThrowableFactory implements JsonReader.ClassFactory {
                 // the map entry so the constructor receives a true null.
                 map.put(CAUSE, null);
             } else {
-                Class<Throwable> causeType = (Class<Throwable>) jsonCause.getType();
+                // Instead of trying to manually add @type, let the resolver handle the JsonObject directly
+                // This preserves all the type information that JsonObject contains
+                Class<?> causeType = jsonCause.getRawType();
                 if (causeType != null) {
-                    // Add type information to the cause map
-                    Map<Object, Object> causeMap = new LinkedHashMap<>(jsonCause);
-                    causeMap.put("@type", causeType.getName());
-                    map.put(CAUSE, causeMap);
+                    Object convertedCause = resolver.toJavaObjects(jsonCause, causeType);
+                    map.put(CAUSE, convertedCause);
+                } else {
+                    // If no specific type is available, default to Throwable
+                    Object convertedCause = resolver.toJavaObjects(jsonCause, Throwable.class);
+                    map.put(CAUSE, convertedCause);
                 }
             }
         }

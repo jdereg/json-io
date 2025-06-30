@@ -103,7 +103,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     /**
      * Implement this interface to customize the JSON output for a given class.
      */
-    public interface JsonClassWriter
+    public interface JsonClassWriter<T>
     {
         /**
          * When write() is called, it is expected that subclasses will write the appropriate JSON
@@ -115,7 +115,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
          * @param context  WriterContext to get writeOptions and other write access
          * @throws IOException if thrown by the writer.  Will be caught at a higher level and wrapped in JsonIoException.
          */
-        default void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException {
+        default void write(T o, boolean showType, Writer output, WriterContext context) throws IOException {
         }
         
         /**

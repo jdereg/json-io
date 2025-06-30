@@ -418,8 +418,7 @@ public class JsonIo {
      * @param writeOptions options for controlling serialization; if null, default options will be used
      * @return a deep copy of the original object, or null if the source was null
      */
-    @SuppressWarnings("unchecked")
-    public static <T> T deepCopy(Object source, ReadOptions readOptions, WriteOptions writeOptions) {
+    public static <T> T deepCopy(T source, ReadOptions readOptions, WriteOptions writeOptions) {
         if (source == null) {
             return null;
         }
@@ -430,7 +429,9 @@ public class JsonIo {
         }
 
         String json = toJson(source, writeOptions);
-        return (T) toJava(json, readOptions).asClass(source.getClass());
+        @SuppressWarnings("unchecked")
+        Class<T> clazz = (Class<T>) source.getClass();
+        return toJava(json, readOptions).asClass(clazz);
     }
 
     /**

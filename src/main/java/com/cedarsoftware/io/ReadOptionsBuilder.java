@@ -819,7 +819,7 @@ public class ReadOptionsBuilder {
      *                         will be dropped and this Collection will establish the new list.
      * @return ReadOptionsBuilder for chained access.
      */
-    public ReadOptionsBuilder replaceNotCustomReaderClasses(Collection<Class<?>> notCustomClasses) {
+    public ReadOptionsBuilder replaceNotCustomReaderClasses(Collection<? extends Class<?>> notCustomClasses) {
         options.notCustomReadClasses.clear();
         options.notCustomReadClasses.addAll(notCustomClasses);
         return this;
@@ -858,7 +858,7 @@ public class ReadOptionsBuilder {
      *                     and load the class in one step.
      * @return ReadOptionsBuilder for chained access.
      */
-    public ReadOptionsBuilder addCustomReaderClass(Class<?> clazz, JsonReader.JsonClassReader customReader) {
+    public <T> ReadOptionsBuilder addCustomReaderClass(Class<T> clazz, JsonReader.JsonClassReader<? super T> customReader) {
         options.customReaderClasses.put(clazz, customReader);
         return this;
     }
@@ -870,7 +870,7 @@ public class ReadOptionsBuilder {
      *                  and load the class associated to it.
      * @return ReadOptionsBuilder for chained access.
      */
-    public ReadOptionsBuilder replaceClassFactories(Map<Class<?>, ? extends JsonReader.ClassFactory> factories) {
+    public ReadOptionsBuilder replaceClassFactories(Map<? extends Class<?>, ? extends JsonReader.ClassFactory> factories) {
         options.classFactoryMap.clear();
         options.classFactoryMap.putAll(factories);
         return this;
