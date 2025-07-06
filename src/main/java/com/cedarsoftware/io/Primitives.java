@@ -21,8 +21,8 @@ import java.util.Set;
  *         limitations under the License.
  */
 public class Primitives {
-    static final Set<Class<?>> PRIMITIVE_WRAPPERS = new HashSet<>();
-    static final Set<Class<?>> NATIVE_JSON_TYPES = new HashSet<>();
+    private static final Set<Class<?>> PRIMITIVE_WRAPPERS = new HashSet<>();
+    private static final Set<Class<?>> NATIVE_JSON_TYPES = new HashSet<>();
 
     static {
         PRIMITIVE_WRAPPERS.add(Byte.class);
