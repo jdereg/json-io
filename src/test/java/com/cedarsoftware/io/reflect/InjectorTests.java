@@ -1,14 +1,15 @@
 package com.cedarsoftware.io.reflect;
 
-import com.cedarsoftware.io.JsonIoException;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import com.cedarsoftware.io.JsonIoException;
+
+import org.junit.jupiter.api.Test;
 
 class InjectorTests {
 
@@ -55,5 +56,35 @@ class InjectorTests {
         Throwable cause = ex.getCause();
         assertThat(cause).isInstanceOf(JsonIoException.class);
         assertThat(cause.getMessage()).contains("VarHandle not available");
+    }
+
+    @Test
+    void getJavaVersion_legacyVersion_returns8() {
+        assertThat(Injector.getJavaVersion("1.8.0_321")).isEqualTo(8);
+    }
+
+    @Test
+    void getJavaVersion_modernVersion_returns17() {
+        assertThat(Injector.getJavaVersion("17.0.2")).isEqualTo(17);
+    }
+
+    @Test
+    void getJavaVersion_singleDigitVersion_returns11() {
+        assertThat(Injector.getJavaVersion("11")).isEqualTo(11);
+    }
+
+    @Test
+    void getJavaVersion_malformedVersion_throwsException() {
+        assertThrows(NumberFormatException.class, () -> Injector.getJavaVersion("foo.bar"));
+    }
+
+    @Test
+    void getJavaVersion_shortLegacyVersion_returns8() {
+        assertThat(Injector.getJavaVersion("1.8")).isEqualTo(8);
+    }
+
+    @Test
+    void getJavaVersion_preReleaseVersion_returns17() {
+        assertThat(Injector.getJavaVersion("17-ea")).isEqualTo(17);
     }
 }

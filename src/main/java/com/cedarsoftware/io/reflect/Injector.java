@@ -21,24 +21,24 @@ import com.cedarsoftware.util.StringUtilities;
 /**
  * High-performance field injection utility that automatically adapts to different JDK versions
  * for optimal performance and compatibility.
- * 
+ *
  * <p>This class uses the {@code java.version} system property to automatically detect the
  * JDK version and select the most appropriate field injection strategy:</p>
- * 
+ *
  * <ul>
  * <li><strong>JDK 8-16:</strong> Uses {@code Field.set()} for final fields and {@code MethodHandle} for regular fields</li>
  * <li><strong>JDK 17+:</strong> Uses {@code VarHandle} for improved performance and module system compatibility</li>
  * </ul>
- * 
+ *
  * <p>The JDK version detection and strategy selection is completely automatic and requires no
  * user configuration. This ensures optimal performance across all supported JDK versions while
  * maintaining compatibility with the module system introduced in JDK 9+.</p>
- * 
+ *
  * <h3>System Properties Used:</h3>
  * <ul>
  * <li>{@code java.version} - Automatically detected by the JVM to determine injection strategy</li>
  * </ul>
- * 
+ *
  * @author Ken Partlow (kpartlow@gmail.com)
  *         John DeRegnaucourt (jereg@gmail.com)
  *         <br>
@@ -66,7 +66,7 @@ public class Injector {
     private static final Class<?> VAR_HANDLE_CLASS;        // although appears unused, it is intentional for caching
 
     static {
-        int javaVersion = getJavaVersion();
+        int javaVersion = getJavaVersion(System.getProperty("java.version"));
         IS_JDK17_OR_HIGHER = javaVersion >= 17;
 
         Object lookup = null;
@@ -149,11 +149,11 @@ public class Injector {
         if (uniqueFieldName == null || uniqueFieldName.trim().isEmpty()) {
             throw new JsonIoException("Unique field name cannot be null or empty");
         }
-        
+
         // Security: Check if field access is allowed in secure environments
         String fieldName = field.getName();
         Class<?> declaringClass = field.getDeclaringClass();
-        
+
         // Security: Validate field access permissions
         try {
             SecurityManager sm = System.getSecurityManager();
@@ -163,7 +163,7 @@ public class Injector {
         } catch (SecurityException e) {
             throw new JsonIoException("Security policy denies field access to: " + fieldName + " in class: " + declaringClass.getName(), e);
         }
-        
+
         // Always try to make the field accessible, regardless of whether it is static.
         if (!field.isAccessible()) {
             try {
@@ -194,7 +194,7 @@ public class Injector {
             } catch (SecurityException e) {
                 throw new JsonIoException("Security policy denies final field modification for: " + fieldName + " in class: " + declaringClass.getName(), e);
             }
-            
+
             try {
                 // Security: Be cautious when modifying final fields
                 Field modifiersField = ReflectionUtils.getField(Field.class, "modifiers");
@@ -247,12 +247,12 @@ public class Injector {
             if (declaringClass == null) {
                 return null;
             }
-            
+
             Object privateLookup = PRIVATE_LOOKUP_IN_METHOD.invoke(null, declaringClass, LOOKUP);
             if (privateLookup == null) {
                 return null;
             }
-            
+
             Object varHandle = FIND_VAR_HANDLE_METHOD.invoke(privateLookup, declaringClass,
                     field.getName(), field.getType());
             if (varHandle == null) {
@@ -277,7 +277,7 @@ public class Injector {
         if (uniqueFieldName == null || uniqueFieldName.trim().isEmpty()) {
             throw new JsonIoException("Unique field name cannot be null or empty");
         }
-        
+
         // Security: Validate method access permissions
         try {
             SecurityManager sm = System.getSecurityManager();
@@ -287,7 +287,7 @@ public class Injector {
         } catch (SecurityException e) {
             throw new JsonIoException("Security policy denies method access for: " + methodName + " in class: " + field.getDeclaringClass().getName(), e);
         }
-        
+
         try {
             MethodType methodType = MethodType.methodType(void.class, field.getType());
             MethodHandle handle = MethodHandles.lookup().findVirtual(field.getDeclaringClass(), methodName, methodType);
@@ -304,15 +304,15 @@ public class Injector {
         if (object == null) {
             throw new JsonIoException("Attempting to set field: " + getName() + " on null object.");
         }
-        
+
         // Security: Validate that the object is an instance of the field's declaring class
         Class<?> declaringClass = field.getDeclaringClass();
         if (!declaringClass.isInstance(object)) {
-            throw new JsonIoException("Object is not an instance of the field's declaring class. Expected: " + 
-                declaringClass.getName() + ", Actual: " + object.getClass().getName() + 
-                " for field: " + getName());
+            throw new JsonIoException("Object is not an instance of the field's declaring class. Expected: " +
+                    declaringClass.getName() + ", Actual: " + object.getClass().getName() +
+                    " for field: " + getName());
         }
-        
+
         // Security: Additional validation for system classes
         String className = declaringClass.getName();
         if (className.startsWith("java.lang.") || className.startsWith("java.security.")) {
@@ -343,7 +343,7 @@ public class Injector {
             final Class<?> fieldType = field.getType();
             final String fieldName = getName();
             final String displayName = getDisplayName();
-            
+
             String msg = e.getMessage();
             if (StringUtilities.hasContent(msg) && msg.contains("LinkedHashMap")) {
                 throw new JsonIoException("Unable to set field: " + fieldName + " using " + displayName + ".", e);
@@ -373,12 +373,12 @@ public class Injector {
         if (varHandle == null || VAR_HANDLE_SET_METHOD == null) {
             throw new JsonIoException("Unable to set field: " + getName() + " - VarHandle not available");
         }
-        
+
         // Security: Validate arguments before VarHandle invocation
         if (object == null) {
             throw new JsonIoException("Cannot inject into null object using VarHandle for field: " + getName());
         }
-        
+
         try {
             // Security: Use secure argument list creation
             Object[] args = {varHandle, object, value};
@@ -411,11 +411,10 @@ public class Injector {
     /**
      * Determines the Java major version by parsing the {@code java.version} system property.
      * This method handles both legacy (1.8) and modern (9+) version numbering schemes.
-     * 
+     *
      * @return the major Java version (e.g., 8 for Java 1.8, 17 for Java 17, etc.)
      */
-    private static int getJavaVersion() {
-        String version = System.getProperty("java.version");
+    static int getJavaVersion(final String version) {
         if (version.startsWith("1.")) {
             return Integer.parseInt(version.substring(2, 3));
         }
@@ -423,6 +422,13 @@ public class Injector {
         if (dot != -1) {
             return Integer.parseInt(version.substring(0, dot));
         }
+
+        int hyphen = version.indexOf('-');
+        if (hyphen != -1) {
+            // handle pre-release versions like "17-ea"
+            return Integer.parseInt(version.substring(0, hyphen));
+        }
+
         return Integer.parseInt(version);
     }
 }
