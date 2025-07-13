@@ -229,7 +229,7 @@ public class TestUtil {
 
     public static void printLine(String s) {
         if (debug) {
-            System.out.println(s);
+            logger.fine(s);
         }
     }
 

@@ -33,6 +33,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Stream;
+import java.util.logging.Logger;
 
 import com.cedarsoftware.io.models.ModelHoldingSingleHashMap;
 import com.cedarsoftware.util.CompactMap;
@@ -75,6 +76,8 @@ import static org.junit.jupiter.api.Assertions.fail;
  */
 class MapsTest
 {
+    private static final Logger LOG = Logger.getLogger(MapsTest.class.getName());
+
     public static WriteOptions showTypeNever = new WriteOptionsBuilder().showTypeInfoNever().build();
     public static WriteOptions showTypeAlways = new WriteOptionsBuilder().showTypeInfoNever().build();
     public static WriteOptions showTypeMinimal = new WriteOptionsBuilder().showTypeInfoNever().build();
@@ -971,12 +974,12 @@ class MapsTest
         map.put(longs, "longs");
         map.put("longs", longs);
         String json = TestUtil.toJson(map);
-//        System.out.println(json);
+//        LOG.fine(json);
         CompactMap<Object, Object> map2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asType(new TypeHolder<CompactMap<Object, Object>>() {});
         Map<String, Object> options = new HashMap<>();
         boolean equals = DeepEquals.deepEquals(map, map2, options);
         if (!equals) {
-            System.out.println(options.get("diff"));
+            LOG.fine(options.get("diff").toString());
         }
         assert equals;
     }
@@ -994,7 +997,7 @@ class MapsTest
         CompactSet<Object> set2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asType(new TypeHolder<CompactSet<Object>>(){});
         boolean equals = DeepEquals.deepEquals(set, set2);
         if (!equals) {
-            System.out.println(json);
+            LOG.fine(json);
         }
         assert equals;
     }
@@ -1015,9 +1018,9 @@ class MapsTest
         boolean equals = DeepEquals.deepEquals(set, set2);
         if (!equals) {
             // Debug the sets
-            System.out.println(json);
-            System.out.println("Original set: " + debugSet(set));
-            System.out.println("Deserialized set: " + debugSet(set2));
+            LOG.fine(json);
+            LOG.fine("Original set: " + debugSet(set));
+            LOG.fine("Deserialized set: " + debugSet(set2));
         }
 
         // Check if arrays are equal, not necessarily the same instance

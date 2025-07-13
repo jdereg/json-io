@@ -5,10 +5,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class JsonPerformanceTest {
+    private static final Logger LOG = Logger.getLogger(JsonPerformanceTest.class.getName());
 
     // A sample POJO with a variety of fields to simulate complex JSON
     public static class TestData {
@@ -91,11 +93,11 @@ public class JsonPerformanceTest {
         long jacksonReadTime = System.nanoTime() - start;
 
         // Output results (times in milliseconds)
-        System.out.println("Iterations: " + iterations);
-        System.out.println("JsonIo Write Time: " + (jsonIoWriteTime / 1_000_000.0) + " ms");
-        System.out.println("Jackson Write Time: " + (jacksonWriteTime / 1_000_000.0) + " ms");
-        System.out.println("JsonIo Read Time: " + (jsonIoReadTime / 1_000_000.0) + " ms");
-        System.out.println("Jackson Read Time: " + (jacksonReadTime / 1_000_000.0) + " ms");
+        LOG.info("Iterations: " + iterations);
+        LOG.info("JsonIo Write Time: " + (jsonIoWriteTime / 1_000_000.0) + " ms");
+        LOG.info("Jackson Write Time: " + (jacksonWriteTime / 1_000_000.0) + " ms");
+        LOG.info("JsonIo Read Time: " + (jsonIoReadTime / 1_000_000.0) + " ms");
+        LOG.info("Jackson Read Time: " + (jacksonReadTime / 1_000_000.0) + " ms");
     }
 
     private static TestData createTestData() {

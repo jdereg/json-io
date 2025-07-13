@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.logging.Logger;
 
 import com.cedarsoftware.util.CompactMap;
 import com.cedarsoftware.util.CompactSet;
@@ -35,6 +36,8 @@ import static org.junit.jupiter.api.Assertions.fail;
  *         limitations under the License.
  */
 public class CompactMapSetTest {
+    private static final Logger LOG = Logger.getLogger(CompactMapSetTest.class.getName());
+
     @Test
     void testCompactMap() {
         Map map = CompactMap.builder().insertionOrder().build();
@@ -47,7 +50,7 @@ public class CompactMapSetTest {
         Map<String, Object> options = new HashMap<>();
         boolean equals = DeepEquals.deepEquals(map, map2, options);
         if (!equals) {
-            System.out.println(options.get("diff"));
+            LOG.fine(options.get("diff").toString());
         }
         assertTrue(equals);
     }
@@ -64,8 +67,8 @@ public class CompactMapSetTest {
         Map<String, Object> options = new HashMap<>();
         boolean equals = DeepEquals.deepEquals(set, set2, options);
         if (!equals) {
-            System.out.println(json);
-            System.out.println(options.get("diff"));
+            LOG.fine(json);
+            LOG.fine(options.get("diff").toString());
         }
         assertTrue(equals);
     }
@@ -84,8 +87,8 @@ public class CompactMapSetTest {
         Map<String, Object> options = new HashMap<>();
         boolean equals = DeepEquals.deepEquals(set, deserializedSet, options);
         if (!equals) {
-            System.out.println(json);
-            System.out.println(options.get("diff"));
+            LOG.fine(json);
+            LOG.fine(options.get("diff").toString());
         }
         assertTrue(equals);
 
@@ -125,8 +128,8 @@ public class CompactMapSetTest {
         Map<String, Object> options = new HashMap<>();
         boolean equals = DeepEquals.deepEquals(set, deserializedSet, options);
         if (!equals) {
-            System.out.println(json);
-            System.out.println(options.get("diff"));
+            LOG.fine(json);
+            LOG.fine(options.get("diff").toString());
         }
         assertTrue(equals);
 
@@ -166,8 +169,8 @@ public class CompactMapSetTest {
         Map<String, Object> options = new HashMap<>();
         boolean equals = DeepEquals.deepEquals(set, deserializedSet, options);
         if (!equals) {
-            System.out.println(json);
-            System.out.println(options.get("diff"));
+            LOG.fine(json);
+            LOG.fine(options.get("diff").toString());
         }
         assertTrue(equals);
 
@@ -196,8 +199,8 @@ public class CompactMapSetTest {
         Map<String, Object> options = new HashMap<>();
         boolean equals = DeepEquals.deepEquals(set, deserializedSet, options);
         if (!equals) {
-            System.out.println(json);
-            System.out.println(options.get("diff"));
+            LOG.fine(json);
+            LOG.fine(options.get("diff").toString());
         }
         assertTrue(equals);
 
@@ -238,8 +241,8 @@ public class CompactMapSetTest {
         Map <String, Object> options = new HashMap<>();
         boolean equals = DeepEquals.deepEquals(set, deserializedSet, options);
         if (!equals) {
-            System.out.println(json);
-            System.out.println(options.get("diff"));
+            LOG.fine(json);
+            LOG.fine(options.get("diff").toString());
         }
         assertTrue(equals);
 

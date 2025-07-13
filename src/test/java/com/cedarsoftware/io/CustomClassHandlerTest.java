@@ -78,6 +78,26 @@ class CustomClassHandlerTest
 
             throw new IllegalArgumentException("stuff wasn't defined");
         }
+//        public static WeirdDate fromMapToWeirdDate(Object from, Converter converter) {
+//            Map<?, ?> map = (Map<?, ?>) from;
+//
+//            if (map.containsKey("stuff")) {
+//                Object stuffValue = map.get("stuff");
+//
+//                // Parse the ISO-like timestamp string directly using DateUtilities
+//                if (stuffValue instanceof String) {
+//                    String dateStr = (String) stuffValue;
+//                    Date date = com.cedarsoftware.util.DateUtilities.parseDate(dateStr);
+//                    return new WeirdDate(date);
+//                }
+//
+//                // Fallback to converter if it's not a string
+//                Date date = converter.convert(stuffValue, Date.class);
+//                return new WeirdDate(date);
+//            }
+//
+//            throw new IllegalArgumentException("stuff wasn't defined");
+//        }
 
         public static WeirdDate fromStringToWeirdDate(Object from, Converter converter) {
             String s = (String) from;

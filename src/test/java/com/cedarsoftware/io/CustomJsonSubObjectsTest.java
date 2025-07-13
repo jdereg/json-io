@@ -11,6 +11,7 @@ import java.util.Map;
 import com.cedarsoftware.util.CompactMap;
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.convert.Converter;
+import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -34,6 +35,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class CustomJsonSubObjectsTest
 {
+	private static final Logger LOG = Logger.getLogger(CustomJsonSubObjectsTest.class.getName());
+
 	static class Person {
 		private String firstName;
 		private String lastName;
@@ -154,7 +157,7 @@ class CustomJsonSubObjectsTest
 		Map options = new HashMap<>();
 		boolean equals = DeepEquals.deepEquals(p1, p2, options);
 		if (!equals) {
-			System.out.println(options.get("diff"));
+			LOG.fine(options.get("diff").toString());
 		}
 		assertTrue(equals);
 	}

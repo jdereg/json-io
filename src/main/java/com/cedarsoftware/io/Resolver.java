@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
+import java.util.logging.Logger;
 
 import com.cedarsoftware.io.JsonReader.MissingFieldHandler;
 import com.cedarsoftware.io.reflect.Injector;
@@ -70,6 +71,7 @@ import com.cedarsoftware.util.convert.Converter;
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class Resolver {
+    private static final Logger LOG = Logger.getLogger(Resolver.class.getName());
     private static final String NO_FACTORY = "_︿_ψ_☼";
     
     // Security limits to prevent DoS attacks via unbounded memory consumption
@@ -562,7 +564,7 @@ public abstract class Resolver {
                     // Conversion failed - continue with other resolution strategies
                     // Only log in debug mode to avoid noise in normal operations
                     if (Boolean.parseBoolean(System.getProperty("json-io.debug", "false"))) {
-                        System.err.println("Debug: Legacy conversion failed for " + legacySourceType + " to " + targetType + ": " + e.getMessage());
+                        LOG.fine("Legacy conversion failed for " + legacySourceType + " to " + targetType + ": " + e.getMessage());
                     }
                 }
             }
@@ -619,26 +621,11 @@ public abstract class Resolver {
         }
         
         if (!jsonObj.isEmpty()) {
-            // Enhanced detection for Map-like JsonObjects representing DTOs
-            // Check for common DTO patterns that can be converted from Map representation
-            if (jsonObj.containsKey("r") && jsonObj.containsKey("g") && jsonObj.containsKey("b")) {
-                return Map.class; // Potential Color representation
-            }
-            if (jsonObj.containsKey("x") && jsonObj.containsKey("y")) {
-                return Map.class; // Potential Point representation  
-            }
-            if (jsonObj.containsKey("width") && jsonObj.containsKey("height")) {
-                return Map.class; // Potential Dimension representation
-            }
-            // Add more DTO patterns as needed
-            
             return Map.class; // Default for non-empty JsonObjects
         }
         
         return null;
     }
-
-
 
     // Determine the factory type, considering enums and collections
     private Class<?> determineFactoryType(JsonObject jsonObj, Class<?> targetType) {
@@ -658,7 +645,7 @@ public abstract class Resolver {
     /**
      * Check if a type should be handled by Converter as a simple type.
      * This is intentionally restrictive to avoid breaking existing serialization patterns.
-     * Currently only includes: java.awt.Color and other specific DTO types.
+     * Currently only includes: java.awt.Color, java.awt.Rectangle, java.awt.Dimension and other specific DTO types.
      */
     private boolean isConverterSimpleType(Class<?> clazz) {
         // Start with Color as the primary use case
@@ -666,8 +653,18 @@ public abstract class Resolver {
             return true;
         }
         
+        // Add Rectangle support
+        if (clazz == java.awt.Rectangle.class) {
+            return true;
+        }
+        
+        // Add Dimension support
+        if (clazz == java.awt.Dimension.class) {
+            return true;
+        }
+        
         // Future: Add other specific DTO types here as needed
-        // Examples might include: Point, Dimension, Rectangle, etc.
+        // Examples might include: Point, Insets, etc.
         
         return false;
     }

@@ -14,12 +14,14 @@ import com.cedarsoftware.util.CompactMap;
 import com.cedarsoftware.util.CompactSet;
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.ReflectionUtils;
+import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 class CompactMapCustomTypeTest {
+    private static final Logger LOG = Logger.getLogger(CompactMapCustomTypeTest.class.getName());
 
     @Test
     void testCompactMapWithCustomMapType() {
@@ -43,16 +45,16 @@ class CompactMapCustomTypeTest {
         }
 
         // Print the class name for debugging
-//        System.out.println("CompactMap class: " + map.getClass().getName());
+//        LOG.fine("CompactMap class: " + map.getClass().getName());
 
         // Get a new map from the CompactMap to verify type
         Map<?, ?> newMap = (Map<?, ?>) ReflectionUtils.call(map, "getNewMap");
-//        System.out.println("New map type: " + newMap.getClass().getName());
+//        LOG.fine("New map type: " + newMap.getClass().getName());
         assertInstanceOf(CustomTestMap.class, newMap, "New map should be a CustomTestMap");
 
         // Serialize to JSON
         String json = JsonIo.toJson(map, null);
-//        System.out.println("JSON output: " + json);
+//        LOG.fine("JSON output: " + json);
 
         // Deserialize back
         CompactMap<String, String> restored = JsonIo.toJava(json, null).asType(new TypeHolder<CompactMap<String, String>>(){});
@@ -73,7 +75,7 @@ class CompactMapCustomTypeTest {
 
         // Get a new map from the restored CompactMap to verify type
         Map<?, ?> restoredNewMap = (Map<?, ?>) ReflectionUtils.call(restored, "getNewMap");
-//        System.out.println("Restored new map type: " + restoredNewMap.getClass().getName());
+//        LOG.fine("Restored new map type: " + restoredNewMap.getClass().getName());
         assertInstanceOf(CustomTestMap.class, restoredNewMap, "Restored map should create CustomTestMap instances");
     }
 
@@ -90,7 +92,7 @@ class CompactMapCustomTypeTest {
         assert 4 == (Integer) map.get("Apple");
 
         String json = JsonIo.toJson(map, null);
-//        System.out.println(json);
+//        LOG.fine(json);
         Map<String, Comparable<?>> map2 = JsonIo.toJava(json, null).asType(new TypeHolder<Map<String, Comparable<?>>>(){});
         assert DeepEquals.deepEquals(map, map2);
         assert map2 instanceof CompactMap;
@@ -109,7 +111,7 @@ class CompactMapCustomTypeTest {
         assert 4 == (Integer) map.get("apple");
 
         String json = JsonIo.toJson(map, null);
-//        System.out.println(json);
+//        LOG.fine(json);
         Map<String, Comparable<?>> map2 = JsonIo.toJava(json, null).asType(new TypeHolder<Map<String, Comparable<?>>>(){});
         assert DeepEquals.deepEquals(map, map2);
         assert map2 instanceof CompactMap;
@@ -128,7 +130,7 @@ class CompactMapCustomTypeTest {
         assert 4 == (Integer) map.get("APple");
 
         String json = JsonIo.toJson(map, null);
-//        System.out.println(json);
+//        LOG.fine(json);
         Map<String, Comparable<?>> map2 = JsonIo.toJava(json, null).asType(new TypeHolder<Map<String, Comparable<?>>>(){});
         assert DeepEquals.deepEquals(map, map2);
         assert map2 instanceof CompactCIHashMap;
@@ -147,7 +149,7 @@ class CompactMapCustomTypeTest {
         assert 4 == (Integer) map.get("APple");
 
         String json = JsonIo.toJson(map, null);
-//        System.out.println(json);
+//        LOG.fine(json);
         Map<String, Comparable<?>> map2 = JsonIo.toJava(json, null).asType(new TypeHolder<Map<String, Comparable<?>>>(){});
         assert DeepEquals.deepEquals(map, map2);
         assert map2 instanceof CompactCILinkedMap;
@@ -167,7 +169,7 @@ class CompactMapCustomTypeTest {
         assert 4 == (Integer) map.get("Apple");
 
         String json = JsonIo.toJson(map, null);
-//        System.out.println(json);
+//        LOG.fine(json);
         Map<String, Comparable<?>> map2 = JsonIo.toJava(json, null).asType(new TypeHolder<Map<String, Comparable<?>>>(){});
         assert DeepEquals.deepEquals(map, map2);
         assert map2 instanceof CompactLinkedMap;
@@ -187,7 +189,7 @@ class CompactMapCustomTypeTest {
         assert !set.contains("APPLE");
 
         String json = JsonIo.toJson(set, null);
-//        System.out.println(json);
+//        LOG.fine(json);
         Set<String> set2 = JsonIo.toJava(json, null).asType(new TypeHolder<Set<String>>(){});
         assert DeepEquals.deepEquals(set, set2);
         assert set2 instanceof CompactSet;
@@ -205,7 +207,7 @@ class CompactMapCustomTypeTest {
         assert set.contains("APPLE");
 
         String json = JsonIo.toJson(set, null);
-//        System.out.println(json);
+//        LOG.fine(json);
         Set<String> set2 = JsonIo.toJava(json, null).asType(new TypeHolder<Set<String>>(){});
         assert DeepEquals.deepEquals(set, set2);
         assert set2 instanceof CompactSet;
@@ -223,7 +225,7 @@ class CompactMapCustomTypeTest {
         assert set.contains("APPLE");
 
         String json = JsonIo.toJson(set, null);
-//        System.out.println(json);
+//        LOG.fine(json);
         Set<String> set2 = JsonIo.toJava(json, null).asType(new TypeHolder<Set<String>>(){});
         assert DeepEquals.deepEquals(set, set2);
         assert set2 instanceof CompactCIHashSet;
@@ -241,7 +243,7 @@ class CompactMapCustomTypeTest {
         assert set.contains("APPLE");
 
         String json = JsonIo.toJson(set, null);
-//        System.out.println(json);
+//        LOG.fine(json);
         Set<String> set2 = JsonIo.toJava(json, null).asType(new TypeHolder<Set<String>>(){});
         assert DeepEquals.deepEquals(set, set2);
         assert set2 instanceof CompactCILinkedSet;
@@ -261,7 +263,7 @@ class CompactMapCustomTypeTest {
         assert !set.contains("APPLE");
 
         String json = JsonIo.toJson(set, null);
-//        System.out.println(json);
+//        LOG.fine(json);
         Set<String> set2 = JsonIo.toJava(json, null).asType(new TypeHolder<Set<String>>(){});
         assert DeepEquals.deepEquals(set, set2);
         assert set2 instanceof CompactLinkedSet;

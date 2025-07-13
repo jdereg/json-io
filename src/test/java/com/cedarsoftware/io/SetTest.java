@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.logging.Logger;
 
 import org.junit.jupiter.api.Test;
 
@@ -32,6 +33,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *         limitations under the License.
  */
 public class SetTest {
+    private static final Logger LOG = Logger.getLogger(SetTest.class.getName());
+
     @Test
     public void testSet() {
         ManySets set = new ManySets();
@@ -218,9 +221,9 @@ public class SetTest {
      * Helps in debugging by printing the contents of a Set.
      */
     private void printSetContents(Set<?> set) {
-        System.out.println("Set contents:");
+        LOG.fine("Set contents:");
         for (Object obj : set) {
-            System.out.println(obj);
+            LOG.fine(obj.toString());
         }
     }
 

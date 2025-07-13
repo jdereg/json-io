@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.awt.Color;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -17,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * system for Map <-> Color transformations.
  */
 class AutomaticColorTest {
+    private static final Logger LOG = Logger.getLogger(AutomaticColorTest.class.getName());
 
     @Test
     void testColorSerializationAndDeserialization() {
@@ -25,11 +27,11 @@ class AutomaticColorTest {
 
         // When: We serialize and deserialize it
         String json = JsonIo.toJson(originalColor, new WriteOptionsBuilder().build());
-        System.out.println("Serialized JSON: " + json);
+        LOG.info("Serialized JSON: " + json);
         
         Object result = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(Color.class);
-        System.out.println("Deserialized result type: " + result.getClass());
-        System.out.println("Deserialized result: " + result);
+        LOG.info("Deserialized result type: " + result.getClass());
+        LOG.info("Deserialized result: " + result);
         
         Color deserializedColor = (Color) result;
 
@@ -112,7 +114,7 @@ class AutomaticColorTest {
         String json = JsonIo.toJson(colorMap, new WriteOptionsBuilder().build());
         
         // First, let's see what the JSON looks like
-        System.out.println("Color map JSON: " + json);
+        LOG.info("Color map JSON: " + json);
         
         // For now, we can't fully test this until java-util has Color conversion support
         // But we can verify the map structure is preserved
@@ -131,17 +133,17 @@ class AutomaticColorTest {
         
         // Check if Color is considered a "simple type" now
         boolean isSimpleType = converter.isSimpleTypeConversionSupported(Color.class);
-        System.out.println("Color is simple type: " + isSimpleType);
+        LOG.info("Color is simple type: " + isSimpleType);
         
         // Test Color to String conversion
         Color testColor = new Color(255, 128, 64, 192);
         if (isSimpleType) {
             String colorString = converter.convert(testColor, String.class);
-            System.out.println("Color to String: " + colorString);
+            LOG.info("Color to String: " + colorString);
             
             // Test String back to Color
             Color backToColor = converter.convert(colorString, Color.class);
-            System.out.println("String back to Color: " + backToColor);
+            LOG.info("String back to Color: " + backToColor);
             assertThat(backToColor).isEqualTo(testColor);
         }
         
@@ -155,7 +157,7 @@ class AutomaticColorTest {
         boolean isSupported = converter.isConversionSupportedFor(Map.class, Color.class);
         
         // Then: We can report the current state
-        System.out.println("Map to Color conversion supported: " + isSupported);
+        LOG.info("Map to Color conversion supported: " + isSupported);
         
         if (isSupported) {
             // This should work now with updated java-util

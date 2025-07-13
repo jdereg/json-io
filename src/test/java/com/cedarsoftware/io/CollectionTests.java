@@ -20,6 +20,7 @@ import java.util.SortedSet;
 import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.logging.Logger;
 
 import com.cedarsoftware.io.util.SealableList;
 import com.cedarsoftware.util.DeepEquals;
@@ -55,6 +56,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *         limitations under the License.
  */
 class CollectionTests {
+    private static final Logger LOG = Logger.getLogger(CollectionTests.class.getName());
+
     @Test
     void testCollection() {
         TestUtil.printLine("\nTestJsonReaderWriter.testCollection()");
@@ -71,7 +74,7 @@ class CollectionTests {
         writer.write(obj);
         writer.flush();
         // TODO: Uncomment to test identity counter strategies (currently incremental + only referenced)
-//        System.out.TestUtil.printLine("writer._identity = " + writer._identity)
+//        LOG.fine("writer._identity = " + writer._identity)
     }
 
     @Test
@@ -266,7 +269,7 @@ class CollectionTests {
         Map options = new HashMap();
         boolean equals = DeepEquals.deepEquals(testCol2, testCol3, options);
         if (!equals) {
-            System.out.println(options.get("diff"));
+            LOG.fine(options.get("diff").toString());
         }
         assert equals;
     }

@@ -21,6 +21,7 @@ import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.logging.Logger;
 
 import com.cedarsoftware.io.reflect.Accessor;
 import com.cedarsoftware.util.ClassUtilities;
@@ -75,6 +76,7 @@ import static com.cedarsoftware.io.JsonValue.TYPE;
  */
 public class JsonWriter implements WriterContext, Closeable, Flushable
 {
+    private static final Logger LOG = Logger.getLogger(JsonWriter.class.getName());
     // Add these as class fields
     private static final String ID_SHORT = "\"@i\":";
     private static final String ID_LONG = "\"@id\":";
@@ -316,7 +318,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
         
         // Future: Add other specific DTO types here as needed
-        // Examples might include: Point, Dimension, Rectangle, etc.
+        // Examples might include: Point, Dimension, Rectangle, Insets, etc.
         
         return false;
     }
@@ -1825,11 +1827,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
         catch (IOException e) {
             // Log I/O errors but don't propagate them in cleanup operations
-            System.err.println("Warning: Failed to flush JsonWriter output stream: " + e.getMessage());
+            LOG.warning("Failed to flush JsonWriter output stream: " + e.getMessage());
         }
         catch (Exception e) {
             // Log unexpected errors but don't propagate them in cleanup operations
-            System.err.println("Warning: Unexpected error flushing JsonWriter output stream: " + e.getMessage());
+            LOG.warning("Unexpected error flushing JsonWriter output stream: " + e.getMessage());
         }
     }
 
@@ -1843,11 +1845,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
         catch (IOException e) {
             // Log I/O errors but don't propagate them in cleanup operations
-            System.err.println("Warning: Failed to close JsonWriter output stream: " + e.getMessage());
+            LOG.warning("Failed to close JsonWriter output stream: " + e.getMessage());
         }
         catch (Exception e) {
             // Log unexpected errors but don't propagate them in cleanup operations
-            System.err.println("Warning: Unexpected error closing JsonWriter output stream: " + e.getMessage());
+            LOG.warning("Unexpected error closing JsonWriter output stream: " + e.getMessage());
         }
     }
 

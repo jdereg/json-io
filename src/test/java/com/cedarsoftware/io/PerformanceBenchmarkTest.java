@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Timeout;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -30,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *         limitations under the License.
  */
 public class PerformanceBenchmarkTest {
+    private static final Logger LOG = Logger.getLogger(PerformanceBenchmarkTest.class.getName());
 
     private WriteOptions writeOptions;
     private ReadOptions readOptions;
@@ -99,7 +101,7 @@ public class PerformanceBenchmarkTest {
         long endTime = System.nanoTime();
         
         double avgTimeMs = (endTime - startTime) / 1_000_000.0 / iterations;
-        System.out.println("Basic Serialization - Average time per operation: " + avgTimeMs + " ms");
+        LOG.info("Basic Serialization - Average time per operation: " + avgTimeMs + " ms");
         
         // Should complete in reasonable time (less than 1ms per operation for simple objects)
         assertTrue(avgTimeMs < 1.0, "Serialization performance degraded: " + avgTimeMs + " ms");
@@ -126,7 +128,7 @@ public class PerformanceBenchmarkTest {
         long endTime = System.nanoTime();
         
         double avgTimeMs = (endTime - startTime) / 1_000_000.0 / iterations;
-        System.out.println("Basic Deserialization - Average time per operation: " + avgTimeMs + " ms");
+        LOG.info("Basic Deserialization - Average time per operation: " + avgTimeMs + " ms");
         
         // Should complete in reasonable time
         assertTrue(avgTimeMs < 2.0, "Deserialization performance degraded: " + avgTimeMs + " ms");
@@ -154,7 +156,7 @@ public class PerformanceBenchmarkTest {
         long endTime = System.nanoTime();
         
         double avgTimeMs = (endTime - startTime) / 1_000_000.0 / iterations;
-        System.out.println("Large Collection Processing - Average time per operation: " + avgTimeMs + " ms");
+        LOG.info("Large Collection Processing - Average time per operation: " + avgTimeMs + " ms");
         
         // Should handle large collections efficiently (less than 50ms for 1000 items)
         assertTrue(avgTimeMs < 50.0, "Large collection performance degraded: " + avgTimeMs + " ms");
@@ -182,7 +184,7 @@ public class PerformanceBenchmarkTest {
         long endTime = System.nanoTime();
         
         double avgTimeMs = (endTime - startTime) / 1_000_000.0 / iterations;
-        System.out.println("Array Processing - Average time per operation: " + avgTimeMs + " ms");
+        LOG.info("Array Processing - Average time per operation: " + avgTimeMs + " ms");
         
         // Should handle arrays efficiently
         assertTrue(avgTimeMs < 20.0, "Array processing performance degraded: " + avgTimeMs + " ms");
@@ -215,7 +217,7 @@ public class PerformanceBenchmarkTest {
         long endTime = System.nanoTime();
         
         double avgTimeMs = (endTime - startTime) / 1_000_000.0 / iterations;
-        System.out.println("String Processing - Average time per operation: " + avgTimeMs + " ms");
+        LOG.info("String Processing - Average time per operation: " + avgTimeMs + " ms");
         
         // String processing should be efficient with our StringBuilder optimizations
         assertTrue(avgTimeMs < 15.0, "String processing performance degraded: " + avgTimeMs + " ms");
@@ -248,7 +250,7 @@ public class PerformanceBenchmarkTest {
         long endTime = System.nanoTime();
         
         double avgTimeMs = (endTime - startTime) / 1_000_000.0 / iterations;
-        System.out.println("Reflection Caching - Average time per operation: " + avgTimeMs + " ms");
+        LOG.info("Reflection Caching - Average time per operation: " + avgTimeMs + " ms");
         
         // Caching should improve performance for repeated operations
         assertTrue(avgTimeMs < 25.0, "Reflection caching performance degraded: " + avgTimeMs + " ms");
@@ -284,7 +286,7 @@ public class PerformanceBenchmarkTest {
         long endTime = System.nanoTime();
         
         double avgTimeMs = (endTime - startTime) / 1_000_000.0 / iterations;
-        System.out.println("Circular Reference Handling - Average time per operation: " + avgTimeMs + " ms");
+        LOG.info("Circular Reference Handling - Average time per operation: " + avgTimeMs + " ms");
         
         // Circular reference handling should be efficient
         assertTrue(avgTimeMs < 5.0, "Circular reference performance degraded: " + avgTimeMs + " ms");
@@ -315,7 +317,7 @@ public class PerformanceBenchmarkTest {
         long afterOperationsMemory = runtime.totalMemory() - runtime.freeMemory();
         long memoryUsed = afterOperationsMemory - initialMemory;
         
-        System.out.println("Memory used for 1000 operations: " + (memoryUsed / 1024 / 1024) + " MB");
+        LOG.info("Memory used for 1000 operations: " + (memoryUsed / 1024 / 1024) + " MB");
         
         // Clear references and force GC
         jsonStrings.clear();
@@ -325,7 +327,7 @@ public class PerformanceBenchmarkTest {
         
         // Memory should be released (allowing for some variance)
         long memoryLeaked = finalMemory - initialMemory;
-        System.out.println("Potential memory leak: " + (memoryLeaked / 1024 / 1024) + " MB");
+        LOG.info("Potential memory leak: " + (memoryLeaked / 1024 / 1024) + " MB");
         
         // Should not leak significant memory (less than 10MB variance)
         assertTrue(memoryLeaked < 10 * 1024 * 1024, "Potential memory leak detected: " + (memoryLeaked / 1024 / 1024) + " MB");
