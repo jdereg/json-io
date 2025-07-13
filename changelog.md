@@ -2,6 +2,8 @@
 #### 4.57.0 (Unreleased)
 * **ENHANCEMENT**: Replace System.out.println/System.err.println with proper Java logging - all console output now uses java.util.logging with appropriate levels (LOG.info() for user-visible results, LOG.fine() for debug information, LOG.warning() for errors) for better build output control and maintainability
 * **ENHANCEMENT**: Add comprehensive test suite for automatic Insets support - java.awt.Insets objects now have complete test coverage with 12 test scenarios including serialization/deserialization, arrays, complex objects, converter integration, and edge cases, complementing the existing Enhanced Converter Integration
+* **ENHANCEMENT**: Add comprehensive test suites for automatic Point, File, and Path support - java.awt.Point objects now have complete test coverage with 12 scenarios, java.io.File and java.nio.file.Path have test coverage for Enhanced Converter Integration capabilities, validating string ↔ object conversions and type support detection
+* **ENHANCEMENT**: Add aliases for AWT classes to improve JSON readability - java.awt.Point = Point, java.awt.Color = Color, java.awt.Rectangle = Rectangle, java.awt.Dimension = Dimension, java.awt.Insets = Insets aliases added to aliases.txt for cleaner JSON output without package prefixes
 #### 4.56.0
 * **ARCHITECTURAL**: Enhanced Converter support to/from: Point, Rectangle, Insets, Dimensions, Color, File, and Path to many other types.s  
 * **ARCHITECTURAL**: Enhanced Converter integration in Resolver.createInstance() - prioritizes java-util Converter over custom factories for specific DTO types like java.awt.Color, java.awt.Rectangle, and java.awt.Dimension, enabling automatic string ↔ Object conversions for designated types only

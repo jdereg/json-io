@@ -93,6 +93,13 @@ java.util.concurrent.atomic.AtomicLong = AtomicLong
 # java.io
 java.io.File = File
 
+# java.awt
+java.awt.Point = Point
+java.awt.Color = Color
+java.awt.Rectangle = Rectangle
+java.awt.Dimension = Dimension
+java.awt.Insets = Insets
+
 # java.nio
 java.nio.file.Path = Path
 
