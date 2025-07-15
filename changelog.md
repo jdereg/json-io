@@ -1,5 +1,7 @@
 ### Revision History
-#### 4.57.0 (Unreleased)
+#### 4.58.0 (Unreleased)
+#### 4.57.0
+* Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.6.0` to `3.7.0.`
 * **ENHANCEMENT**: Replace System.out.println/System.err.println with proper Java logging - all console output now uses java.util.logging with appropriate levels (LOG.info() for user-visible results, LOG.fine() for debug information, LOG.warning() for errors) for better build output control and maintainability
 * **ENHANCEMENT**: Add comprehensive test suite for automatic Insets support - java.awt.Insets objects now have complete test coverage with 12 test scenarios including serialization/deserialization, arrays, complex objects, converter integration, and edge cases, complementing the existing Enhanced Converter Integration
 * **ENHANCEMENT**: Add comprehensive test suites for automatic Point, File, and Path support - java.awt.Point objects now have complete test coverage with 12 scenarios, java.io.File and java.nio.file.Path have test coverage for Enhanced Converter Integration capabilities, validating string ↔ object conversions and type support detection
