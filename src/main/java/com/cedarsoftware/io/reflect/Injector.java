@@ -10,12 +10,9 @@ import java.lang.reflect.ReflectPermission;
 import java.lang.reflect.Type;
 import java.util.Arrays;
 
-import com.cedarsoftware.util.ReflectionUtils;
-
 import com.cedarsoftware.io.JsonIoException;
-import com.cedarsoftware.util.ArrayUtilities;
-import com.cedarsoftware.util.CollectionUtilities;
 import com.cedarsoftware.util.Converter;
+import com.cedarsoftware.util.ReflectionUtils;
 import com.cedarsoftware.util.StringUtilities;
 
 /**
@@ -66,7 +63,7 @@ public class Injector {
     private static final Class<?> VAR_HANDLE_CLASS;        // although appears unused, it is intentional for caching
 
     static {
-        int javaVersion = getJavaVersion();
+        int javaVersion = determineJdkMajorVersion();
         IS_JDK17_OR_HIGHER = javaVersion >= 17;
 
         Object lookup = null;
@@ -408,21 +405,32 @@ public class Injector {
         return uniqueFieldName;
     }
 
-    /**
-     * Determines the Java major version by parsing the {@code java.version} system property.
-     * This method handles both legacy (1.8) and modern (9+) version numbering schemes.
-     * 
-     * @return the major Java version (e.g., 8 for Java 1.8, 17 for Java 17, etc.)
-     */
-    private static int getJavaVersion() {
-        String version = System.getProperty("java.version");
-        if (version.startsWith("1.")) {
-            return Integer.parseInt(version.substring(2, 3));
+    //TODO: remove and wire to java-util API for this (3.8.0+)
+    private static int determineJdkMajorVersion() {
+        try {
+            Method versionMethod = ReflectionUtils.getMethod(Runtime.class, "version");
+            Object v = versionMethod.invoke(Runtime.getRuntime());
+            Method major = ReflectionUtils.getMethod(v.getClass(), "major");
+            return (Integer) major.invoke(v);
+        } catch (Exception ignore) {
+            try {
+                String version = System.getProperty("java.version");
+                if (version.startsWith("1.")) {
+                    return Integer.parseInt(version.substring(2, 3));
+                }
+                int dot = version.indexOf('.');
+                if (dot != -1) {
+                    return Integer.parseInt(version.substring(0, dot));
+                }
+                return Integer.parseInt(version);
+            } catch (Exception ignored) {
+                try {
+                    String spec = System.getProperty("java.specification.version");
+                    return spec.startsWith("1.") ? Integer.parseInt(spec.substring(2)) : Integer.parseInt(spec);
+                } catch (NumberFormatException e) {
+                    return -1;
+                }
+            }
         }
-        int dot = version.indexOf('.');
-        if (dot != -1) {
-            return Integer.parseInt(version.substring(0, dot));
-        }
-        return Integer.parseInt(version);
     }
 }

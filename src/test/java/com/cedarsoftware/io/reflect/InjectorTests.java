@@ -1,6 +1,7 @@
 package com.cedarsoftware.io.reflect;
 
 import com.cedarsoftware.io.JsonIoException;
+import com.cedarsoftware.util.SystemUtilities;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
