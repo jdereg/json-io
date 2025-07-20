@@ -9,3 +9,8 @@ CVS/
 .project
 .settings/
 .nondex
+
+# Documentation files (kept locally only)
+CLAUDE.md
+CODE_REVIEW.md
+ARCHITECTURAL_VISION.md
