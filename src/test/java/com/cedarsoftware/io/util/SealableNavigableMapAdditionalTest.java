@@ -33,10 +33,13 @@ class SealableNavigableMapAdditionalTest {
         source.put("d", 4); // changes to source should not appear
         assertFalse(map.containsKey("d"));
 
-        SortedMap<String, Integer> expected = new TreeMap<>();
-        expected.put("a", 1);
-        expected.put("b", 2);
-        expected.put("c", 3);
+        // Create expected map using the same constructor approach as 'map'
+        // to ensure they use the same underlying implementation for valid hashCode comparison
+        SortedMap<String, Integer> expectedSource = new TreeMap<>();
+        expectedSource.put("a", 1);
+        expectedSource.put("b", 2);
+        expectedSource.put("c", 3);
+        SealableNavigableMap<String, Integer> expected = new SealableNavigableMap<>(expectedSource, sealedSupplier);
         assertEquals(expected.hashCode(), map.hashCode());
 
         assertTrue(map.containsKey("b"));

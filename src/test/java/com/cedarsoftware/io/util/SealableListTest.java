@@ -176,7 +176,9 @@ class SealableListTest {
 
     @Test
     void testHashCode() {
-        SealableList<Integer> other = new SealableList<>(sealedSupplier);
+        // Create 'other' using the same underlying List implementation as 'list' 
+        // to ensure valid hashCode comparison
+        SealableList<Integer> other = new SealableList<>(new ArrayList<>(), sealedSupplier);
         other.add(10);
         other.add(20);
         other.add(30);
