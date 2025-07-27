@@ -1,5 +1,8 @@
 ### Revision History
-#### 4.58.0 (Unreleased)
+#### 4.60.0 (Unreleased)
+#### 4.59.0
+* Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.8.0` to `3.9.0.`
+#### 4.58.0 (no release)
 #### 4.57.0
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.6.0` to `3.7.0.`
 * **ENHANCEMENT**: Replace System.out.println/System.err.println with proper Java logging - all console output now uses java.util.logging with appropriate levels (LOG.info() for user-visible results, LOG.fine() for debug information, LOG.warning() for errors) for better build output control and maintainability
@@ -156,8 +159,8 @@
 * **JSON Serialization Improvements**
   * Implemented specialized JSON serialization for `CompactMap` and `CompactSet` with optimized format
   ```json
-  {"@type":"com.cedarsoftware.util.CompactMap","config":"java.util.HashMap/CS/S70/id/Unord","data":{...}}
-  {"@type":"com.cedarsoftware.util.CompactSet","config":"CI/S30/Ord","data":{...}}
+  [{"@type":"com.cedarsoftware.util.CompactMap","config":"java.util.HashMap/CS/S70/id/Unord","data":[]},
+  {"@type":"com.cedarsoftware.util.CompactSet","config":"CI/S30/Ord","data":[]}]
   ```
   * Added tests to ensure reference identity maintained across JSON round-trips
   * Preserved configuration details during serialization/deserialization
