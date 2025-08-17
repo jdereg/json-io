@@ -1,5 +1,6 @@
 package com.cedarsoftware.io;
 
+import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
@@ -37,7 +38,7 @@ import java.util.Set;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class JsonObject extends JsonValue implements Map<Object, Object> {
+public class JsonObject extends JsonValue implements Map<Object, Object>, Serializable {
     private final Map<Object, Object> jsonStore = new LinkedHashMap<>();
     private Integer hash = null;
     

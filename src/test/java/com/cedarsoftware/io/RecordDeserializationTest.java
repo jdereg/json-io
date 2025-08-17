@@ -30,6 +30,39 @@ public class RecordDeserializationTest {
     }
 
     @Test
+    public void testSimpleRecordRoundTrip() throws Exception {
+        Assumptions.assumeTrue(recordsSupported(), "Records not supported");
+
+        Path dir = Files.createTempDirectory("simpleRecordTest");
+        Path recordFile = dir.resolve("SimpleRecord.java");
+        Files.write(recordFile,
+                ("public record SimpleRecord(String subString, int iSubNumber) {}" + System.lineSeparator())
+                        .getBytes(StandardCharsets.UTF_8));
+
+        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+        int result = compiler.run(null, null, null, recordFile.toString(), "-d", dir.toString());
+        if (result != 0) {
+            throw new IllegalStateException("Compilation failed");
+        }
+
+        URLClassLoader loader = URLClassLoader.newInstance(new URL[]{dir.toUri().toURL()});
+        Class<?> recordClass = Class.forName("SimpleRecord", true, loader);
+
+        Constructor<?> recordCtor = recordClass.getDeclaredConstructor(String.class, int.class);
+        Object record = recordCtor.newInstance("subStringRecord", 44);
+
+        String json = JsonIo.toJson(record, null);
+        
+        ReadOptions options = new ReadOptionsBuilder().classLoader(loader).build();
+        Object clonedRecord = JsonIo.toJava(json, options).asClass(recordClass);
+        
+        Method subString = recordClass.getMethod("subString");
+        Method iSubNumber = recordClass.getMethod("iSubNumber");
+        assertEquals("subStringRecord", subString.invoke(clonedRecord), "Record field subString should be deserialized correctly");
+        assertEquals(44, iSubNumber.invoke(clonedRecord), "Record field iSubNumber should be deserialized correctly");
+    }
+
+    @Test
     public void testRecordRoundTrip() throws Exception {
         Assumptions.assumeTrue(recordsSupported(), "Records not supported");
 

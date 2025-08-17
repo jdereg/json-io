@@ -452,8 +452,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             return;
         }
 
-        final Deque<Object> stack = new ArrayDeque<>();
-        stack.addFirst(root);
+        // Use a wrapper class to track depth with each object
+        final Deque<Object[]> stack = new ArrayDeque<>();  // Object[] = {object, depth}
+        stack.addFirst(new Object[]{root, 0});
         final Map<Object, Long> visited = objVisited;
         final Map<Object, Long> referenced = objsReferenced;
         
@@ -463,11 +464,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         int processedCount = 0;
 
         while (!stack.isEmpty() && processedCount < MAX_OBJECTS) {
-            final Object obj = stack.removeFirst();
+            final Object[] objWithDepth = stack.removeFirst();
+            final Object obj = objWithDepth[0];
+            final int currentDepth = (Integer) objWithDepth[1];
             processedCount++;
             
-            // Prevent stack overflow from excessively deep object graphs
-            if (stack.size() > MAX_DEPTH) {
+            // Check actual depth, not stack size
+            if (currentDepth > MAX_DEPTH) {
                 throw new JsonIoException("Object graph too deep (>" + MAX_DEPTH + " levels). This may indicate a circular reference or excessively nested structure.");
             }
 
@@ -486,18 +489,19 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             }
 
             final Class<?> clazz = obj.getClass();
+            final int nextDepth = currentDepth + 1;
 
             if (clazz.isArray()) {
-                processArray(obj, stack);
+                processArray(obj, stack, nextDepth);
             } else if (obj instanceof JsonObject) {
-                processJsonObject((JsonObject) obj, stack);
+                processJsonObject((JsonObject) obj, stack, nextDepth);
             } else if (Map.class.isAssignableFrom(clazz)) {
-                processMap((Map<?, ?>) obj, stack);
+                processMap((Map<?, ?>) obj, stack, nextDepth);
             } else if (Collection.class.isAssignableFrom(clazz)) {
-                processCollection((Collection<?>) obj, stack);
+                processCollection((Collection<?>) obj, stack, nextDepth);
             } else {
                 if (!writeOptions.isNonReferenceableClass(clazz)) {
-                    processFields(stack, obj);
+                    processFields(stack, obj, nextDepth);
                 }
             }
         }
@@ -508,14 +512,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
     }
 
-    private void processArray(Object array, Deque<Object> stack) {
+    private void processArray(Object array, Deque<Object[]> stack, int depth) {
         final Class<?> componentType = array.getClass().getComponentType();
         if (!writeOptions.isNonReferenceableClass(componentType)) {
             // If Object[], access it using [] for speed, versus Array.get() (reflection)
             if (componentType == Object.class) {
                 for (final Object element : (Object[]) array) {
                     if (element != null) {
-                        stack.addFirst(element);
+                        stack.addFirst(new Object[]{element, depth});
                     }
                 }
             }
@@ -524,47 +528,47 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 for (int i = 0; i < len; i++) {
                     final Object element = Array.get(array, i);
                     if (element != null) {
-                        stack.addFirst(element);
+                        stack.addFirst(new Object[]{element, depth});
                     }
                 }
             }
         }
     }
 
-    private void processJsonObject(JsonObject jsonObj, Deque<Object> stack) {
+    private void processJsonObject(JsonObject jsonObj, Deque<Object[]> stack, int depth) {
         // Traverse items (array elements)
         Object[] items = jsonObj.getItems();
         if (items != null) {
-            processArray(items, stack);
+            processArray(items, stack, depth);
         }
 
         // Traverse keys (for JsonObject representing maps)
         Object[] keys = jsonObj.getKeys();
         if (keys != null) {
-            processArray(keys, stack);
+            processArray(keys, stack, depth);
         }
 
         // Traverse other entries in jsonStore (allows for Collections to have properties)
-        processMap(jsonObj, stack);
+        processMap(jsonObj, stack, depth);
     }
 
-    private void processMap(Map<?, ?> map, Deque<Object> stack) {
+    private void processMap(Map<?, ?> map, Deque<Object[]> stack, int depth) {
         for (Map.Entry<?, ?> entry : map.entrySet()) {
             Object key = entry.getKey();
             Object value = entry.getValue();
             if (key != null) {
-                stack.addFirst(key);
+                stack.addFirst(new Object[]{key, depth});
             }
             if (value != null) {
-                stack.addFirst(value);
+                stack.addFirst(new Object[]{value, depth});
             }
         }
     }
 
-    private void processCollection(Collection<?> collection, Deque<Object> stack) {
+    private void processCollection(Collection<?> collection, Deque<Object[]> stack, int depth) {
         for (Object item : collection) {
             if (item != null) {
-                stack.addFirst(item);
+                stack.addFirst(new Object[]{item, depth});
             }
         }
     }
@@ -578,7 +582,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      * @param obj Object root of graph
      * the JDK reflection operations.  This allows a subset of the actual fields on an object to be serialized.
      */
-    protected void processFields(final Deque<Object> stack, final Object obj)
+    protected void processFields(final Deque<Object[]> stack, final Object obj, int depth)
     {
         // If caller has special Field specifier for a given class
         // then use it, otherwise use reflection.
@@ -587,7 +591,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         for (final Accessor accessor : fields) {
             final Object o = accessor.retrieve(obj);
             if (o != null) {   // Trace through objects that can reference other objects
-                stack.addFirst(o);
+                stack.addFirst(new Object[]{o, depth});
             }
         }
     }

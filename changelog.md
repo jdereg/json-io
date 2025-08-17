@@ -1,5 +1,6 @@
 ### Revision History
 #### 4.60.0 (Unreleased)
+* **FIX**: Issue #424 - Fixed `maxObjectGraphDepth` incorrectly counting objects instead of actual depth. The depth limit was being triggered by the number of objects at the same level (e.g., a list with 12 elements at depth 2) rather than the actual nesting depth. The fix properly tracks depth for each object during traversal.
 #### 4.59.0
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.8.0` to `3.9.0.`
 #### 4.58.0 (no release)
