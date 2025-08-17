@@ -988,11 +988,12 @@ public class ReadOptionsBuilder {
 
     /**
      * Set a class to use when the JSON reader cannot instantiate a class. When that happens, it will throw
-     * a JsonIoException() if no 'unknownTypeClass' is set, otherwise it will create the instance of the class
-     * specified as the 'unknownTypeClass.' A common one to use, for example, if java.util.LinkedHashMap.
+     * a JsonIoException() if no 'unknownTypeClass' is set and failOnUnknownType is true. If failOnUnknownType
+     * is false and unknownTypeClass is null, it will create a JsonObject instance. Otherwise it will create 
+     * an instance of the class specified as the 'unknownTypeClass.' A common one to use is java.util.LinkedHashMap.
      *
-     * @param c Class to instantiate when a String specified class in the JSON cannot be instantiated.  Set to null
-     *          if you want a JsonIoException to be thrown when this happens.
+     * @param c Class to instantiate when a String specified class in the JSON cannot be instantiated. Set to null
+     *          to use the default JsonObject. Common alternatives include LinkedHashMap.class or HashMap.class.
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder unknownTypeClass(Class<?> c) {

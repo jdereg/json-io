@@ -1,6 +1,8 @@
 ### Revision History
 #### 4.60.0 (Unreleased)
 * **FIX**: Issue #424 - Fixed `maxObjectGraphDepth` incorrectly counting objects instead of actual depth. The depth limit was being triggered by the number of objects at the same level (e.g., a list with 12 elements at depth 2) rather than the actual nesting depth. The fix properly tracks depth for each object during traversal.
+* **DOCUMENTATION**: Issue #423 - Updated documentation to correctly reflect that the default unknown type is `JsonObject` (not `LinkedHashMap`). When `unknownTypeClass` is null and an unknown type is encountered, json-io creates a `JsonObject` which implements `Map`. Users can explicitly set `unknownTypeClass` to `LinkedHashMap.class` or any other Map implementation if desired.
+* **VERIFIED**: Issue #425 - Added comprehensive tests for nested JSON with `unknownTypeClass(LinkedHashMap.class)`. The reported issue of inner object values being duplicated to the outer level could not be reproduced in the current version. Tests confirm correct behavior with various nesting levels and configurations.
 #### 4.59.0
 * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `3.8.0` to `3.9.0.`
 #### 4.58.0 (no release)

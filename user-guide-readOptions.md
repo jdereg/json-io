@@ -59,25 +59,25 @@ the behavior in such cases.
 **Default Behavior:** By default, if the parser encounters an unknown class name, it will fail, and a `JsonIoException` is
 thrown. This ensures that all types used in your JSON must be known and available.
 
-**Handling with LinkedHashMap:** If you prefer not to have the parsing fail on unknown types, you can disable this default
-behavior. Instead, the parser will create a `LinkedHashMap` to store the content of the JSON object. This approach is
-beneficial because a `LinkedHashMap` can dynamically store any field encountered in the JSON, regardless of the class structure.
+**Handling with JsonObject:** If you prefer not to have the parsing fail on unknown types, you can disable this default
+behavior. Instead, the parser will create a `JsonObject` (which implements `Map`) to store the content of the JSON object. This approach is
+beneficial because a `JsonObject` can dynamically store any field encountered in the JSON, regardless of the class structure, and provides additional metadata about the JSON structure.
 
-**Custom Class Handling:** Alternatively, you can specify your own class to be used instead of `LinkedHashMap` for storing
+**Custom Class Handling:** Alternatively, you can specify your own class to be used instead of the default `JsonObject` for storing
 the JSON data. This custom class should ideally be a type of Map to ensure that it can handle any arbitrary set of JSON
-keys and values. Using maps for unknown types provides flexibility, allowing JSON data to be parsed into a usable format even when the exact class structure is not predefined in the JVM.
+keys and values. A common choice is `LinkedHashMap` to maintain insertion order. Using maps for unknown types provides flexibility, allowing JSON data to be parsed into a usable format even when the exact class structure is not predefined in the JVM.
 >#### `boolean` isFailOnUnknownType()
 >- [ ] Returns`true` if an 'unknownTypeClass' is set,`false`if it is not set. The default setting is `true.`
 >####  `Class` getUnknownTypeClass()
->- [ ] Get the Class used to store content when the indicated class cannot be loaded by the JVM.  Defaults to`null.` When`null`, `LinkedHashMap` is used. It is usually best to use a `Map` derivative, as it will be able to have the various field names encountered to be 'set' into it.
+>- [ ] Get the Class used to store content when the indicated class cannot be loaded by the JVM.  Defaults to`null.` When`null`, `JsonObject` is used (which implements `Map`). It is usually best to use a `Map` derivative, as it will be able to have the various field names encountered to be 'set' into it.
 
 >#### `ReadOptionsBuilder` failOnUnknownType(`boolean fail`)
 >- [ ] Set to`true`to indicate that an exception should be thrown if an unknown class type is encountered,`false`otherwise.
-   If`fail`is`false,`then the default class used will be`LinkedHashMap` for the particular JSON object encountered. You can
-   set this to your own class using the`unknownTypeClass()`feature. The default setting is `true.`
+   If`fail`is`false,`then the default class used will be`JsonObject` for the particular JSON object encountered. You can
+   set this to your own class using the`unknownTypeClass()`feature (e.g., `LinkedHashMap.class`). The default setting is `true.`
 >#### `ReadOptionsBuilder` unknownTypeClass(`Class`)
->- [ ] Set the class to use (defaults to`LinkedHashMap.class`) when a JSON object is encountered and there is no
-   corresponding Java class to instantiate to receive the values.
+>- [ ] Set the class to use (defaults to`JsonObject` when `null`) when a JSON object is encountered and there is no
+   corresponding Java class to instantiate to receive the values. Common alternatives include `LinkedHashMap.class` or `HashMap.class`.
 
 _Example: Parse any JSON into a Map graph_
 ```java
