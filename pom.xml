@@ -5,7 +5,7 @@
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io</artifactId>
     <packaging>bundle</packaging>
-    <version>4.59.0</version>
+    <version>4.60.0</version>
     <description>Java JSON serialization</description>
     <url>https://github.com/jdereg/json-io</url>
 
@@ -26,25 +26,25 @@
         <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ss.SSSZ</maven.build.timestamp.format>
         <!-- remove source encoding warnings from maven output -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <version.java-util>3.9.0</version.java-util>
+        <version.java-util>4.0.0</version.java-util>
         <!-- testing only -->
-        <version.junit-jupiter-api>5.13.3</version.junit-jupiter-api>
-        <version.junit-jupiter-params>5.13.3</version.junit-jupiter-params>
+        <version.junit-jupiter-api>5.13.4</version.junit-jupiter-api>
+        <version.junit-jupiter-params>5.13.4</version.junit-jupiter-params>
         <version.mockito-junit-jupiter>4.11.0</version.mockito-junit-jupiter>
         <version.assertj-core>3.27.3</version.assertj-core>
-        <version.gson>2.11.0</version.gson>
-        <version.jackson-core>2.18.2</version.jackson-core>
+        <version.gson>2.13.1</version.gson>
+        <version.jackson-core>2.19.2</version.jackson-core>
 
         <!-- Build maven-***-plugins-->
         <version.maven-jar-plugin>3.4.2</version.maven-jar-plugin>
         <version.maven-gpg-plugin>3.2.7</version.maven-gpg-plugin>
         <version.maven-compiler-plugin>3.14.0</version.maven-compiler-plugin>
-        <version.maven-javadoc-plugin>3.11.2</version.maven-javadoc-plugin>
+        <version.maven-javadoc-plugin>3.11.3</version.maven-javadoc-plugin>
         <version.maven-surefire-plugin>3.5.3</version.maven-surefire-plugin>
         <version.maven-source-plugin>3.3.1</version.maven-source-plugin>
         <version.maven-scr-plugin>1.26.4</version.maven-scr-plugin>
         <version.maven-bundle-plugin>6.0.0</version.maven-bundle-plugin>
-        <version.moditect-maven-plugin>1.2.2.Final</version.moditect-maven-plugin>
+        <version.moditect-maven-plugin>1.3.0.Final</version.moditect-maven-plugin>
 
         <!-- Core plugins explicitly pinned to avoid Maven 4 warnings -->
         <version.maven-resources-plugin>3.3.1</version.maven-resources-plugin>

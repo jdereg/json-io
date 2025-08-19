@@ -764,7 +764,7 @@ ReadOptions options = new ReadOptionsBuilder().build();     // Has strict floati
 
 The `addPermanentFailOnUnknownType` method allows you to set a permanent policy for handling unknown class types encountered in JSON parsing.
 
-- **Purpose**: This method establishes a global policy for unknown type handling. When enabled, encountering an unknown `@type` in JSON causes a `JsonIoException`; when disabled, unknown types are converted to `LinkedHashMap` instances.
+- **Purpose**: This method establishes a global policy for unknown type handling. When enabled, encountering an unknown `@type` in JSON causes a `JsonIoException`; when disabled, unknown types are converted to `JsonObject` instances (which implements `Map`).
 
 - **Security Implications**: Enabling strict unknown type handling ensures that all types in your JSON are explicitly known and trusted. Disabling provides flexibility for handling dynamic or external JSON with unknown types.
 
