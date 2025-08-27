@@ -3,7 +3,8 @@
   "command": {
     "@type": "java.util.ArrayList",
     "@items": [
-      "ipconfig"
+      "java",
+      "--version"
     ]
   },
   "directory": null,

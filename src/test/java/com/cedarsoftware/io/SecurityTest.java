@@ -43,7 +43,7 @@ public class SecurityTest
     @Test
     public void testSecureWrites() throws Exception
     {
-        ProcessBuilder builder = new ProcessBuilder("ipconfig");
+        ProcessBuilder builder = new ProcessBuilder("java", "--version");
         Process process = builder.start();
         attemptToWriteDisallowedClass(builder);
         attemptToWriteDisallowedClass(process);

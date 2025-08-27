@@ -1,5 +1,15 @@
 package com.cedarsoftware.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.NotSerializableException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -9,14 +19,13 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import com.cedarsoftware.util.DeepEquals;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -258,5 +267,26 @@ class JsonObjectTest
         JsonObject jObj2 = new JsonObject();
         jObj2.setItems(new Object[] {"hello", "goodbye"});
         assert DeepEquals.deepEquals(jObj, jObj2);
+    }
+
+    @Test
+    void testJsonObjectSerializable() throws IOException, ClassNotFoundException {
+        JsonObject testObject = new JsonObject();
+        testObject.put("key", "value");
+
+        byte[] serializedData = null;
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+            oos.writeObject(testObject);
+            oos.flush();
+            serializedData = baos.toByteArray();
+        } catch (NotSerializableException e) {
+            fail("JsonObject not Serilizable", e);
+        }
+
+        try (ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(serializedData))) {
+            JsonObject deserilized = (JsonObject) ois.readObject();
+            assertEquals(testObject, deserilized);
+        }
     }
 }

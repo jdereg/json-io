@@ -1,13 +1,14 @@
 package com.cedarsoftware.io.reflect.filters;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.lang.reflect.Field;
+
+import org.junit.jupiter.api.Test;
 
 import com.cedarsoftware.io.reflect.filters.field.EnumFieldFilter;
 import com.cedarsoftware.io.reflect.filters.models.CarEnumWithCustomFields;
 import com.cedarsoftware.io.reflect.filters.models.ColorEnum;
-import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 
 class EnumFieldFilterTests {
@@ -18,7 +19,7 @@ class EnumFieldFilterTests {
         Field[] fields = ColorEnum.class.getDeclaredFields();
 
         for (Field field : fields) {
-            assertThat(enumFilter.filter(field)).isFalse();
+            assertEquals(enumFilter.filter(field), field.isSynthetic(), field.getName());
         }
     }
 
@@ -28,7 +29,7 @@ class EnumFieldFilterTests {
         Field[] fields = CarEnumWithCustomFields.class.getDeclaredFields();
 
         for (Field field : fields) {
-            assertThat(enumFieldFilter.filter(field)).isFalse();
+            assertEquals(enumFieldFilter.filter(field), field.isSynthetic(), field.getName());
         }
     }
 
@@ -38,7 +39,7 @@ class EnumFieldFilterTests {
         Field[] fields = ColorEnum.BLUE.getClass().getDeclaredFields();
 
         for (Field field : fields) {
-            assertThat(enumFieldFilter.filter(field)).isFalse();
+            assertEquals(enumFieldFilter.filter(field), field.isSynthetic(), field.getName());
         }
     }
 }
