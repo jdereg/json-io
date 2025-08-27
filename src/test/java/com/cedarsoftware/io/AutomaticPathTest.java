@@ -48,7 +48,7 @@ class AutomaticPathTest {
         if (isSupported) {
             // This should work now with updated java-util
             Path convertedPath = converter.convert("/path/to/converted/file.txt", Path.class);
-            assertThat(convertedPath.toString()).isEqualTo("/path/to/converted/file.txt");
+            assertThat(convertedPath.toString().replace("\\", "/")).isEqualTo("/path/to/converted/file.txt");
         }
     }
 
@@ -61,7 +61,7 @@ class AutomaticPathTest {
         Path path = Paths.get(pathString);
         
         // Then: Basic properties should work
-        assertThat(path.toString()).isEqualTo(pathString);
+        assertThat(path.toString().replace("\\", "/")).isEqualTo(pathString);
         LOG.info("Path string: " + path.toString());
         LOG.info("Path file name: " + path.getFileName());
     }
@@ -103,7 +103,7 @@ class AutomaticPathTest {
         Path relativePath = Paths.get("./src/test/resources/data.json");
         
         // Then: Properties should work correctly
-        assertThat(relativePath.toString()).isEqualTo("./src/test/resources/data.json");
+        assertThat(relativePath.toString().replace("\\", "/")).isEqualTo("./src/test/resources/data.json");
         assertThat(relativePath.isAbsolute()).isFalse();
         LOG.info("Relative path: " + relativePath);
         LOG.info("Is absolute: " + relativePath.isAbsolute());
