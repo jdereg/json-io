@@ -51,7 +51,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     private String typeString;
     
     // Simplified cache management - consolidated into a single cache state class
-    private static class CacheState {
+    private static class CacheState implements Serializable {
         Set<Object> keySet;
         Collection<Object> values;
         Boolean sorted;
