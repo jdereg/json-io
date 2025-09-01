@@ -86,6 +86,11 @@ public abstract class Resolver {
     private ReferenceTracker references;
     private final Converter converter;
     private SealedSupplier sealedSupplier = new SealedSupplier();
+    
+    // Performance: Hoisted ReadOptions constants to avoid repeated method calls
+    private int maxUnresolvedRefs;
+    private int maxMapsToRehash;
+    private int maxMissingFields;
 
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
@@ -130,6 +135,18 @@ public abstract class Resolver {
         this.readOptions = readOptions;
         this.references = references;
         this.converter = converter;
+        
+        // Performance: Hoist ReadOptions constants (handle null for test cases)
+        if (readOptions != null) {
+            this.maxUnresolvedRefs = readOptions.getMaxUnresolvedReferences();
+            this.maxMapsToRehash = readOptions.getMaxMapsToRehash();
+            this.maxMissingFields = readOptions.getMaxMissingFields();
+        } else {
+            // Default values for test cases
+            this.maxUnresolvedRefs = Integer.MAX_VALUE;
+            this.maxMapsToRehash = Integer.MAX_VALUE;
+            this.maxMissingFields = Integer.MAX_VALUE;
+        }
     }
 
     public ReadOptions getReadOptions() {
@@ -308,7 +325,7 @@ public abstract class Resolver {
      */
     protected void addUnresolvedReference(UnresolvedReference ref) {
         // Security: Prevent unbounded memory growth via unresolved references
-        int maxUnresolvedRefs = readOptions.getMaxUnresolvedReferences();
+        // Performance: Use hoisted constant
         if (maxUnresolvedRefs != Integer.MAX_VALUE && unresolvedRefs.size() >= maxUnresolvedRefs) {
             throw new JsonIoException("Security limit exceeded: Maximum unresolved references (" + maxUnresolvedRefs + ") reached. Possible DoS attack.");
         }
@@ -320,7 +337,7 @@ public abstract class Resolver {
      */
     protected void addMissingField(Missingfields field) {
         // Security: Prevent unbounded memory growth via missing fields
-        int maxMissingFields = readOptions.getMaxMissingFields();
+        // Performance: Use hoisted constant
         if (maxMissingFields != Integer.MAX_VALUE && missingFields.size() >= maxMissingFields) {
             throw new JsonIoException("Security limit exceeded: Maximum missing fields (" + maxMissingFields + ") reached. Possible DoS attack.");
         }

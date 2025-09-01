@@ -299,7 +299,17 @@ public class ObjectResolver extends Resolver
 
         final Converter converter = getConverter();
         Object[] items = jsonObj.getItems();
+        if (items == null) {
+            return;
+        }
+        
         final Collection col = (Collection) jsonObj.getTarget();
+        
+        // Performance: Pre-size ArrayList to avoid repeated resizing
+        if (col instanceof ArrayList) {
+            ((ArrayList<?>) col).ensureCapacity(items.length);
+        }
+        
         final boolean isList = col instanceof List;
         int idx = 0;
 
@@ -314,10 +324,6 @@ public class ObjectResolver extends Resolver
             }
         }
 
-        if (items == null) {
-            return;
-        }
-
         // Pre-compute raw element type to avoid repeated calls in loop
         final Class<?> rawElementType = TypeUtilities.getRawClass(elementType);
         final ReadOptions readOptions = getReadOptions();
@@ -329,30 +335,19 @@ public class ObjectResolver extends Resolver
                 continue;
             }
             
+            // Performance: Check common primitive/simple types first for fast path
+            if (element instanceof String || element instanceof Boolean || 
+                element instanceof Long || element instanceof Double) {
+                col.add(element);
+                idx++;
+                continue;
+            }
+            
             // Pre-cache element class to avoid repeated getClass() calls
             final Class<?> elementClass = element.getClass();
-            Object special;
             
-            if ((special = readWithFactoryIfExists(element, rawElementType)) != null) {
-                // Use custom converter if available.
-                col.add(special);
-            } else if (converter.isSimpleTypeConversionSupported(elementClass)) {
-                // Simple types: add as is.
-                col.add(element);
-            } else if (elementClass.isArray()) {
-                // For array elements inside the collection, use the helper to extract the array component type.
-                JsonObject jObj = new JsonObject();
-                Type arrayComponentType = TypeUtilities.extractArrayComponentType(elementType);
-                if (arrayComponentType == null) {
-                    arrayComponentType = Object.class;
-                }
-                jObj.setType(arrayComponentType);
-                jObj.setItems((Object[]) element);
-                createInstance(jObj);
-                col.add(jObj.getTarget());
-                push(jObj);
-            } else {
-                // Otherwise, assume the element is a JsonObject.
+            if (element instanceof JsonObject) {
+                // Most common case after primitives - handle JsonObject
                 JsonObject jObj = (JsonObject) element;
                 final Long ref = jObj.getReferenceId();
                 if (ref != null) {
@@ -377,6 +372,29 @@ public class ObjectResolver extends Resolver
                         col.add(jObj.getTarget());
                     }
                 }
+            } else if (elementClass.isArray()) {
+                // For array elements inside the collection, use the helper to extract the array component type.
+                JsonObject jObj = new JsonObject();
+                Type arrayComponentType = TypeUtilities.extractArrayComponentType(elementType);
+                if (arrayComponentType == null) {
+                    arrayComponentType = Object.class;
+                }
+                jObj.setType(arrayComponentType);
+                jObj.setItems((Object[]) element);
+                createInstance(jObj);
+                col.add(jObj.getTarget());
+                push(jObj);
+            } else {
+                // Check for custom factory or converter support
+                Object special = readWithFactoryIfExists(element, rawElementType);
+                if (special != null) {
+                    col.add(special);
+                } else if (converter.isSimpleTypeConversionSupported(elementClass)) {
+                    col.add(element);
+                } else {
+                    // Unexpected type - add as is
+                    col.add(element);
+                }
             }
             idx++;
         }
@@ -395,10 +413,13 @@ public class ObjectResolver extends Resolver
             return;
         }
         jsonObj.setFinished();
-        final int len = jsonObj.size();
-        if (len == 0) {
+        
+        // Performance: Get items array once and use its length directly
+        final Object[] jsonItems = jsonObj.getItems();
+        if (jsonItems == null || jsonItems.length == 0) {
             return;
         }
+        final int len = jsonItems.length;
 
         final ReadOptions readOptions = getReadOptions();
         final ReferenceTracker refTracker = getReferences();
@@ -414,7 +435,6 @@ public class ObjectResolver extends Resolver
         }
         // For operations that require a Class, extract the raw type.
         final Class effectiveRawComponentType = TypeUtilities.getRawClass(effectiveComponentType);
-        final Object[] jsonItems = jsonObj.getItems();
         final boolean isEnumComponentType = effectiveRawComponentType.isEnum();
 
         for (int i = 0; i < len; i++) {
