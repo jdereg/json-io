@@ -47,7 +47,7 @@ class AutomaticFileTest {
         if (isSupported) {
             // This should work now with updated java-util
             File convertedFile = converter.convert("/path/to/converted/file.txt", File.class);
-            assertThat(convertedFile.getPath()).isEqualTo("/path/to/converted/file.txt");
+            assertThat(convertedFile.getPath().replace("\\", "/")).isEqualTo("/path/to/converted/file.txt");
         }
     }
 
@@ -60,7 +60,7 @@ class AutomaticFileTest {
         File file = new File(filePath);
         
         // Then: Basic properties should work
-        assertThat(file.getPath()).isEqualTo(filePath);
+        assertThat(file.getPath().replace("\\", "/")).isEqualTo(filePath);
         LOG.info("File path: " + file.getPath());
         LOG.info("File name: " + file.getName());
     }
