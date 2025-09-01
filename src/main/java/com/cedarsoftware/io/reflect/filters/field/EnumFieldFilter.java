@@ -30,6 +30,9 @@ public class EnumFieldFilter implements FieldFilter {
         }
 
         // Filter these fields out (return true for them)
-        return "internal".equals(fieldName) || "ENUM$VALUES".equalsIgnoreCase(fieldName) || "hash".equals(fieldName) || "ordinal".equals(fieldName);
+        // "$VALUES" is the synthetic field on standard JVMs, "ENUM$VALUES" on Windows JVM
+        return "internal".equals(fieldName) || "$VALUES".equals(fieldName) || 
+               "ENUM$VALUES".equalsIgnoreCase(fieldName) || "hash".equals(fieldName) || 
+               "ordinal".equals(fieldName);
     }
 }

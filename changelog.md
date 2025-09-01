@@ -1,6 +1,13 @@
 ### Revision History
 #### 4.61.0 (Unreleased)
 * **TEST**: Fixed `DistanceBetweenClassesTest.testPrimitives` to accommodate changes in java-util 4.0.1's `ClassUtilities.computeInheritanceDistance()` method. The method now correctly recognizes primitive widening conversions (e.g., byte to int returns distance 2, short to int returns distance 1).
+* **FIX**: PR #426 - Windows compatibility fixes for json-io:
+  * Fixed `JsonObject.CacheState` to implement `Serializable` for proper Java serialization support
+  * Fixed `EnumFieldFilter` to correctly handle both `$VALUES` (standard JVM) and `ENUM$VALUES` (Windows JVM) synthetic fields
+  * Fixed tests to handle Windows file path separators (backslash vs forward slash)
+  * Changed `SecurityTest` to use cross-platform `java --version` command instead of `ipconfig`
+  * Fixed `JsonObjectTest` serialization test typos
+  * Fixed `EnumFieldFilterTests` to properly validate enum field filtering behavior
 #### 4.60.0
 * **FIX**: Issue #424 - Fixed `maxObjectGraphDepth` incorrectly counting objects instead of actual depth. The depth limit was being triggered by the number of objects at the same level (e.g., a list with 12 elements at depth 2) rather than the actual nesting depth. The fix properly tracks depth for each object during traversal.
 * **DOCUMENTATION**: Issue #423 - Updated documentation to correctly reflect that the default unknown type is `JsonObject` (not `LinkedHashMap`). When `unknownTypeClass` is null and an unknown type is encountered, json-io creates a `JsonObject` which implements `Map`. Users can explicitly set `unknownTypeClass` to `LinkedHashMap.class` or any other Map implementation if desired.

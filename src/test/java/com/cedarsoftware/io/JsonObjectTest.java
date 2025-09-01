@@ -281,12 +281,12 @@ class JsonObjectTest
             oos.flush();
             serializedData = baos.toByteArray();
         } catch (NotSerializableException e) {
-            fail("JsonObject not Serilizable", e);
+            fail("JsonObject not Serializable", e);
         }
 
         try (ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(serializedData))) {
-            JsonObject deserilized = (JsonObject) ois.readObject();
-            assertEquals(testObject, deserilized);
+            JsonObject deserialized = (JsonObject) ois.readObject();
+            assertEquals(testObject, deserialized);
         }
     }
 }
