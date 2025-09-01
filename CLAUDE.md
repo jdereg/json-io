@@ -472,6 +472,46 @@ The test suite is comprehensive with over 150 test classes in `src/test/java/com
 - Immutable options objects after building
 - Proper exception handling with `JsonIoException`
 
+## Performance Optimization Guidelines
+
+### Key Learnings from Performance Optimization Work
+
+**CRITICAL: Always verify existing caching before adding new caches**
+
+1. **Check for Existing Caches First**
+   - Many json-io and java-util classes already have sophisticated internal caching
+   - Examples of already-cached components:
+     - `Converter` - Has excellent internal caching for type conversions
+     - `ReadOptionsBuilder.getClassFactory()` - Uses `classFactoryMap` internally
+     - `ReadOptionsBuilder.getDeepInjectorMap()` - Uses `injectorsCache.computeIfAbsent()`
+   - Adding redundant caching layers wastes memory and can actually hurt performance
+
+2. **Object Allocation Can Offset Caching Benefits**
+   - Creating cache key objects (e.g., TypeResolutionKey) may add more overhead than string concatenation
+   - Measure before and after - object allocation in hot paths can degrade performance
+   - Simple string keys may perform better than complex key objects in some cases
+
+3. **Simple Optimizations Often Win**
+   - Most effective optimizations are often the simplest:
+     - Hoisting constants out of loops (e.g., ReadOptions values)
+     - Pre-sizing collections when size is known (ArrayList.ensureCapacity)
+     - Optimizing branch order (check common cases first)
+     - Using direct array access instead of abstraction methods
+   - Complex optimizations should be justified by measurable improvements
+
+4. **Performance Testing Protocol**
+   - Always run full test suite first: `mvn test`
+   - Then run performance test: `mvn test -Dtest=zzLastTest`
+   - Note: zzLastTest requires other tests to run first to populate static accumulators
+   - Monitor the "Read JSON" metric in zzLastTest output
+   - Baseline performance target: ~270ms for Read JSON
+
+5. **Caching Anti-Patterns to Avoid**
+   - Double-caching: Don't cache results from methods that already cache internally
+   - Unbounded caches: Always consider memory implications
+   - Complex key objects: May add more overhead than they save
+   - Caching cheap computations: Some operations are faster than cache lookups
+
 ## Debugging Tips
 
 ### Running Individual Tests
