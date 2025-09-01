@@ -18,6 +18,8 @@
   * Pre-size ArrayList collections in traverseCollection() to avoid resizing
   * Optimized traverseCollection() branch order - check common primitives first for fast path
   * Hoisted ReadOptions constants (maxUnresolvedRefs, maxMapsToRehash, maxMissingFields) to avoid repeated method calls
+  * Replaced string concatenation in ObjectResolver type resolution cache with dedicated TypeResolutionKey class
+  * Pre-size ArrayList collections in MapResolver.traverseCollection() to avoid resizing
 #### 4.60.0
 * **FIX**: Issue #424 - Fixed `maxObjectGraphDepth` incorrectly counting objects instead of actual depth. The depth limit was being triggered by the number of objects at the same level (e.g., a list with 12 elements at depth 2) rather than the actual nesting depth. The fix properly tracks depth for each object during traversal.
 * **DOCUMENTATION**: Issue #423 - Updated documentation to correctly reflect that the default unknown type is `JsonObject` (not `LinkedHashMap`). When `unknownTypeClass` is null and an unknown type is encountered, json-io creates a `JsonObject` which implements `Map`. Users can explicitly set `unknownTypeClass` to `LinkedHashMap.class` or any other Map implementation if desired.

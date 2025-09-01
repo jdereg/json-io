@@ -62,9 +62,39 @@ import com.cedarsoftware.util.convert.Converter;
 @SuppressWarnings({ "rawtypes", "unchecked"})
 public class ObjectResolver extends Resolver
 {
+    // Performance: Key class for type resolution cache to avoid string concatenation
+    private static final class TypeResolutionKey {
+        private final Class<?> targetClass;
+        private final String fieldName;
+        private final Type fieldType;
+        private final int hash;
+        
+        TypeResolutionKey(Class<?> targetClass, String fieldName, Type fieldType) {
+            this.targetClass = targetClass;
+            this.fieldName = fieldName;
+            this.fieldType = fieldType;
+            // Pre-compute hash for performance
+            this.hash = 31 * (31 * targetClass.hashCode() + fieldName.hashCode()) + fieldType.hashCode();
+        }
+        
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof TypeResolutionKey)) return false;
+            TypeResolutionKey that = (TypeResolutionKey) o;
+            return targetClass.equals(that.targetClass) && 
+                   fieldName.equals(that.fieldName) && 
+                   fieldType.equals(that.fieldType);
+        }
+        
+        @Override
+        public int hashCode() {
+            return hash;
+        }
+    }
+    
     // Performance: Cache for type resolutions to avoid expensive reflection operations
-    private final Map<String, Type> typeResolutionCache = new HashMap<>();
-    private final Map<Class<?>, Map<String, Injector>> classInjectorsCache = new HashMap<>();
+    private final Map<TypeResolutionKey, Type> typeResolutionCache = new HashMap<>();
     
     /**
      * Constructor
@@ -145,7 +175,7 @@ public class ObjectResolver extends Resolver
                 jObj.setType(explicitType);
             } else {
                 // Performance: Cache type resolutions to avoid expensive reflection operations
-                String cacheKey = target.getClass().getName() + ":" + injector.getName() + ":" + fieldType.getTypeName();
+                TypeResolutionKey cacheKey = new TypeResolutionKey(target.getClass(), injector.getName(), fieldType);
                 Type resolvedFieldType = typeResolutionCache.get(cacheKey);
                 if (resolvedFieldType == null) {
                     // Resolve the field type in the context of the target object.
@@ -754,6 +784,5 @@ public class ObjectResolver extends Resolver
         super.cleanup();
         // Performance: Clear caches to free memory
         typeResolutionCache.clear();
-        classInjectorsCache.clear();
     }
 }

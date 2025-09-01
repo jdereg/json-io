@@ -2,6 +2,7 @@ package com.cedarsoftware.io;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -272,6 +273,12 @@ public class MapResolver extends Resolver {
         if (col == null) {
             col = (Collection<Object>)createInstance(jsonObj);
         }
+        
+        // Performance: Pre-size ArrayList to avoid repeated resizing
+        if (items != null && col instanceof ArrayList) {
+            ((ArrayList<?>) col).ensureCapacity(items.length);
+        }
+        
         final boolean isList = col instanceof List;
         int idx = 0;
 
