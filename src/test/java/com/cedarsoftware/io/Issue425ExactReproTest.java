@@ -1,5 +1,6 @@
 package com.cedarsoftware.io;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashMap;
@@ -11,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Exact reproduction test for Issue #425 as reported
  */
 public class Issue425ExactReproTest {
-    
+
     @Test
     public void testExactIssueAsReported() {
         String json = "{\"outer\":{\"inner\":\"value\"}}";
