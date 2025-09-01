@@ -300,12 +300,8 @@ class JsonParser {
         // Performance: Hoist maxIdValue to avoid repeated method calls
         this.maxIdValue = readOptions.getMaxIdValue();
 
-        // Performance: Only configure ThreadLocal buffer sizes if they differ from current values
-        int desiredSize = readOptions.getThreadLocalBufferSize();
-        int desiredLargeSize = readOptions.getLargeThreadLocalBufferSize();
-        if (desiredSize != threadLocalBufferSize || desiredLargeSize != largeThreadLocalBufferSize) {
-            configureThreadLocalBufferSizes(desiredSize, desiredLargeSize);
-        }
+        // Configure static ThreadLocal buffer sizes for this parsing session
+        configureThreadLocalBufferSizes(readOptions.getThreadLocalBufferSize(), readOptions.getLargeThreadLocalBufferSize());
     }
 
     /**
@@ -399,7 +395,6 @@ class JsonParser {
             // No type context - skip expensive injector work
             injectors = java.util.Collections.emptyMap();
         } else {
-            // Have type context - get injectors
             injectors = readOptions.getDeepInjectorMap(rawClass);
         }
 
@@ -621,7 +616,6 @@ class JsonParser {
                 if (cachedInstance != null) {
                     return cachedInstance;
                 } else {
-                    // Always cache single digit integers for reference equality
                     numberCache.put(value, value);
                     return value;
                 }
@@ -674,11 +668,7 @@ class JsonParser {
             if (cachedInstance != null) {
                 return cachedInstance;
             } else {
-                // Performance: Cache numbers with reasonable size limit
-                // Tests expect reference equality, so we need to cache
-                if (numberCache.size() < 2000) {
-                    numberCache.put(val, val);
-                }
+                numberCache.put(val, val);  // caching all numbers (LRU has upper limit)
                 return val;
             }
         }
@@ -1167,7 +1157,6 @@ class JsonParser {
 
     private Class<?> stringToClass(String className) {
         String resolvedName = readOptions.getTypeNameAlias(className);
-        // ClassUtilities.forName already has internal caching
         Class<?> clazz = ClassUtilities.forName(resolvedName, readOptions.getClassLoader());
         if (clazz == null) {
             if (readOptions.isFailOnUnknownType()) {
