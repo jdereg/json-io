@@ -8,6 +8,14 @@
   * Changed `SecurityTest` to use cross-platform `java --version` command instead of `ipconfig`
   * Fixed `JsonObjectTest` serialization test typos
   * Fixed `EnumFieldFilterTests` to properly validate enum field filtering behavior
+* **PERFORMANCE**: Parser optimizations:
+  * Skip injector resolution when there's no type context (null or Object.class), avoiding unnecessary reflection
+  * Bounded number cache to 2000 entries to prevent unbounded memory growth
+  * Only configure ThreadLocal buffer sizes when values differ from current settings
+  * Pre-size ArrayList for arrays (16 elements) to reduce resizing operations
+  * Removed duplicate array check in loadItems() method
+  * Hoisted ReadOptions.getMaxIdValue() to avoid repeated method calls
+  * Use Map.getOrDefault() for field substitutes to avoid double lookup
 #### 4.60.0
 * **FIX**: Issue #424 - Fixed `maxObjectGraphDepth` incorrectly counting objects instead of actual depth. The depth limit was being triggered by the number of objects at the same level (e.g., a list with 12 elements at depth 2) rather than the actual nesting depth. The fix properly tracks depth for each object during traversal.
 * **DOCUMENTATION**: Issue #423 - Updated documentation to correctly reflect that the default unknown type is `JsonObject` (not `LinkedHashMap`). When `unknownTypeClass` is null and an unknown type is encountered, json-io creates a `JsonObject` which implements `Map`. Users can explicitly set `unknownTypeClass` to `LinkedHashMap.class` or any other Map implementation if desired.
