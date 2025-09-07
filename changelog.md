@@ -1,5 +1,6 @@
 ### Revision History
 #### 4.61.0 (Unreleased)
+* **FEATURE**: Added `useUnsafe` option to `ReadOptions` to control unsafe object instantiation. When enabled, json-io can deserialize package-private classes, inner classes, and classes without accessible constructors. This feature is opt-in for security reasons and uses thread-local settings to prevent interference between concurrent deserializations.
 * **TEST**: Fixed `DistanceBetweenClassesTest.testPrimitives` to accommodate changes in java-util 4.0.1's `ClassUtilities.computeInheritanceDistance()` method. The method now correctly recognizes primitive widening conversions (e.g., byte to int returns distance 2, short to int returns distance 1).
 * **FIX**: PR #426 - Windows compatibility fixes for json-io:
   * Fixed `JsonObject.CacheState` to implement `Serializable` for proper Java serialization support

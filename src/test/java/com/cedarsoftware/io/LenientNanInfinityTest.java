@@ -79,7 +79,10 @@ class LenientNanInfinityTest
         TestUtil.printLine("a = " + a);
         TestUtil.printLine("json = " + json);
 
-        ReadOptions readOptions = new ReadOptionsBuilder().allowNanAndInfinity(true).build();
+        ReadOptions readOptions = new ReadOptionsBuilder()
+                .allowNanAndInfinity(true)
+                .useUnsafe(true)  // Enable unsafe mode for package-private outer class
+                .build();
         A newA = (A) TestUtil.toObjects(json, readOptions, null);
         TestUtil.printLine("newA = " + newA);
         
