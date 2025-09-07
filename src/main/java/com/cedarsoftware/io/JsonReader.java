@@ -102,19 +102,7 @@ public class JsonReader implements Closeable
          * override the isObjectFinal() method below and return true.
          */
         default Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-            // Enable unsafe mode temporarily if requested in ReadOptions
-            if (resolver.getReadOptions().isUseUnsafe()) {
-                ClassUtilities.setUseUnsafe(true);
-            }
-            
-            try {
-                return ClassUtilities.newInstance(resolver.getConverter(), c, jObj);
-            } finally {
-                // Restore to default state (off) after use
-                if (resolver.getReadOptions().isUseUnsafe()) {
-                    ClassUtilities.setUseUnsafe(false);
-                }
-            }
+            return ClassUtilities.newInstance(resolver.getConverter(), c, jObj);
         }
         
         /**
@@ -702,6 +690,13 @@ public class JsonReader implements Closeable
      */
     @SuppressWarnings("unchecked")
     protected <T> T resolveObjects(JsonObject rootObj, Type rootType) {
+        // Enable unsafe mode for the entire deserialization if requested
+        boolean wasUnsafeEnabled = false;
+        if (readOptions.isUseUnsafe()) {
+            ClassUtilities.setUseUnsafe(true);
+            wasUnsafeEnabled = true;
+        }
+        
         try {
             // Determine the root type if not explicitly provided
             if (rootType == null) {
@@ -725,6 +720,11 @@ public class JsonReader implements Closeable
             // Wrap other exceptions in a JsonIoException for consistency
             throw new JsonIoException(getErrorMessage(e.getMessage()), e);
         } finally {
+            // Restore unsafe mode to its original state
+            if (wasUnsafeEnabled) {
+                ClassUtilities.setUseUnsafe(false);
+            }
+            
             /*
              * Cleanup the resolver's state post-deserialization.
              * This ensures that any internal caches or temporary data structures

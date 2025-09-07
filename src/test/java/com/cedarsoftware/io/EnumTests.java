@@ -19,6 +19,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -74,7 +75,19 @@ class EnumTests {
                 .contains("@ref")
                 .contains("@i");
 
-        DuplicateRefEnum actual = TestUtil.toObjects(json, null);
+        // First, verify that deserialization fails without unsafe mode (package-private outer class)
+        try {
+            TestUtil.toObjects(json, null);
+            fail("Should have thrown JsonIoException when trying to instantiate package-private class without unsafe mode");
+        } catch (JsonIoException e) {
+            assertThat(e.getMessage()).contains("Unable to instantiate: com.cedarsoftware.io.EnumTests");
+        }
+
+        // Now verify it works with unsafe mode enabled
+        ReadOptions readOptions = new ReadOptionsBuilder()
+                .useUnsafe(true)  // Enable unsafe mode for package-private inner class
+                .build();
+        DuplicateRefEnum actual = TestUtil.toObjects(json, readOptions, DuplicateRefEnum.class);
 
         assertThat(actual.getEnum1())
                 .isSameAs(expected.getEnum1())
@@ -233,7 +246,19 @@ class EnumTests {
         String json = TestUtil.toJson(mc);
         assertThat(json).contains("Dude");
 
-        SimpleClass actual = TestUtil.toObjects(json, null);
+        // First, verify that deserialization fails without unsafe mode (package-private outer class)
+        try {
+            TestUtil.toObjects(json, null);
+            fail("Should have thrown JsonIoException when trying to instantiate package-private class without unsafe mode");
+        } catch (JsonIoException e) {
+            assertThat(e.getMessage()).contains("Unable to instantiate: com.cedarsoftware.io.EnumTests");
+        }
+
+        // Now verify it works with unsafe mode enabled
+        ReadOptions readOptions = new ReadOptionsBuilder()
+                .useUnsafe(true)  // Enable unsafe mode for package-private inner class
+                .build();
+        SimpleClass actual = TestUtil.toObjects(json, readOptions, SimpleClass.class);
         assertThat(actual.getName()).isEqualTo("Dude");
         assertThat(actual.getMyEnum()).isEqualTo(SimpleEnum.ONE);
     }
