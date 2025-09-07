@@ -102,7 +102,19 @@ public class JsonReader implements Closeable
          * override the isObjectFinal() method below and return true.
          */
         default Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-            return ClassUtilities.newInstance(resolver.getConverter(), c, jObj);
+            // Enable unsafe mode temporarily if requested in ReadOptions
+            if (resolver.getReadOptions().isUseUnsafe()) {
+                ClassUtilities.setUseUnsafe(true);
+            }
+            
+            try {
+                return ClassUtilities.newInstance(resolver.getConverter(), c, jObj);
+            } finally {
+                // Restore to default state (off) after use
+                if (resolver.getReadOptions().isUseUnsafe()) {
+                    ClassUtilities.setUseUnsafe(false);
+                }
+            }
         }
         
         /**

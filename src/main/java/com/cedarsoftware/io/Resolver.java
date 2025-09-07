@@ -707,7 +707,20 @@ public abstract class Resolver {
             instance = jsonObject;
         } else {
             Class<?> targetClass = isUnknownObject ? readOptions.getUnknownTypeClass() : c;
-            instance = ClassUtilities.newInstance(converter, targetClass, jsonObj);
+            
+            // Enable unsafe mode temporarily if requested in ReadOptions
+            if (readOptions.isUseUnsafe()) {
+                ClassUtilities.setUseUnsafe(true);
+            }
+            
+            try {
+                instance = ClassUtilities.newInstance(converter, targetClass, jsonObj);
+            } finally {
+                // Restore to default state (off) after use
+                if (readOptions.isUseUnsafe()) {
+                    ClassUtilities.setUseUnsafe(false);
+                }
+            }
         }
 
         return jsonObj.setTarget(instance);

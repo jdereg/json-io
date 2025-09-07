@@ -35,8 +35,15 @@ public class HardToInstantiateTest
     @Test
     public void testHardToInstantiateClass()
     {
+        // With unsafe mode enabled, objects can be instantiated even when their constructors 
+        // throw exceptions, because unsafe bypasses constructors
         String json = "{\"@type\":\"com.cedarsoftware.io.HardToInstantiateTest$Tough\",\"name\":\"Joe\",\"number\":9}";
-        Throwable t = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json, null); });
-        assert t.getMessage().toLowerCase().contains("unable to instantiate");
+        ReadOptions readOptions = new ReadOptionsBuilder()
+                .useUnsafe(true)  // Enable unsafe mode for this test
+                .build();
+        Tough tough = TestUtil.toObjects(json, readOptions, Tough.class);
+        assert tough != null;
+        assert "Joe".equals(tough.name);
+        assert tough.number == 9;
     }
 }

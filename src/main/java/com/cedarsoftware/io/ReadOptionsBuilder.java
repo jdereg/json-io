@@ -243,6 +243,7 @@ public class ReadOptionsBuilder {
             options.missingFieldHandler = other.missingFieldHandler;
             options.decimalType = other.decimalType;
             options.integerType = other.integerType;
+             options.useUnsafe = other.useUnsafe;
             
             // Copy security limits
             options.maxUnresolvedReferences = other.maxUnresolvedReferences;
@@ -1451,6 +1452,18 @@ public class ReadOptionsBuilder {
     }
 
     /**
+     * @param useUnsafe boolean set to 'true' to enable unsafe mode for object instantiation. When enabled,
+     *                  json-io can instantiate classes that have no public constructors, package-private classes,
+     *                  inner classes, and classes whose constructors throw exceptions. This bypasses normal Java
+     *                  constructor invocation. Default is 'false' for security reasons.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder useUnsafe(boolean useUnsafe) {
+        options.useUnsafe = useUnsafe;
+        return this;
+    }
+
+    /**
      * Load JsonReader.ClassFactory classes based on contents of resources/classFactory.txt.
      * Verify that classes listed are indeed valid classes loaded in the JVM.
      */
@@ -1595,6 +1608,7 @@ public class ReadOptionsBuilder {
         private ReadOptions.Decimals decimalType = Decimals.DOUBLE;
         private ReadOptions.Integers integerType = Integers.LONG;
         private boolean allowNanAndInfinity = false;
+        private boolean useUnsafe = false;  // Default to false for security
         
         // Security limits - default to unlimited for backward compatibility
         private int maxUnresolvedReferences = Integer.MAX_VALUE;
@@ -1807,6 +1821,10 @@ public class ReadOptionsBuilder {
 
         public int getLinearSearchThreshold() {
             return linearSearchThreshold;
+        }
+
+        public boolean isUseUnsafe() {
+            return useUnsafe;
         }
         
         /**

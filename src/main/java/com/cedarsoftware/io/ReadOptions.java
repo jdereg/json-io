@@ -360,4 +360,17 @@ public interface ReadOptions {
      * Default is 8 for backward compatibility based on performance testing.
      */
     int getLinearSearchThreshold();
+
+    /**
+     * @return boolean true if unsafe mode is enabled for object instantiation. When true, json-io will use
+     * sun.misc.Unsafe to instantiate objects that cannot be created through normal constructors, such as
+     * classes without public no-argument constructors, package-private classes, or inner classes.
+     * <br/><br/>
+     * This is particularly useful for deserializing objects that were not designed for serialization,
+     * but it bypasses normal Java object construction and security mechanisms. Use with caution.
+     * <br/><br/>
+     * Default is false for security reasons. Enable only when you need to deserialize classes that
+     * cannot be instantiated through normal means and you trust the JSON source.
+     */
+    boolean isUseUnsafe();
 }

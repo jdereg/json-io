@@ -201,6 +201,39 @@ ReadOptions readOptions2 = new ReadOptionsBuilder()              // Can override
 - **Costs:** Potential rejection of legitimately large JSON documents
 - **Recommendation:** Enable in production environments, tune limits based on your data patterns
 
+### Unsafe Mode - Object Instantiation
+Control whether to use `sun.misc.Unsafe` for instantiating objects that cannot be created through normal constructors.
+This includes package-private classes, inner classes, and classes without public no-argument constructors.
+
+> #### `boolean` isUseUnsafe()
+>- [ ] Return `true` if unsafe mode is enabled for object instantiation. Default is `false` for security.
+
+> #### `ReadOptionsBuilder` useUnsafe(`boolean useUnsafe`)
+>- [ ] Enable or disable unsafe mode for object instantiation. When enabled, json-io can instantiate classes that have no public constructors, package-private classes, inner classes, and classes whose constructors throw exceptions. This bypasses normal Java constructor invocation and security mechanisms.
+
+**Important Security Considerations:**
+- **Default:** Unsafe mode is `false` by default for security reasons
+- **When to Enable:** Only enable when you need to deserialize classes not designed for serialization AND you trust the JSON source
+- **Risks:** Bypasses Java's constructor validation and security checks
+- **Benefits:** Can deserialize any class regardless of constructor accessibility
+
+**Example - Enabling Unsafe Mode:**
+```java
+// Enable unsafe mode for deserializing problematic classes
+ReadOptions readOptions = new ReadOptionsBuilder()
+    .useUnsafe(true)  // Enable unsafe instantiation
+    .build();
+
+// Can now deserialize package-private, inner classes, etc.
+Object result = JsonIo.toJava(json, readOptions);
+```
+
+**Typical Use Cases for Unsafe Mode:**
+- Deserializing third-party classes without public constructors
+- Working with package-private or inner classes
+- Handling classes whose constructors throw exceptions
+- Cloning complex object graphs with restricted constructors
+
 ### Floating Point Options
 
 Handling special floating point values and large numbers in JSON can be challenging due to limitations in standard formats and data types.
