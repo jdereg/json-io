@@ -691,10 +691,13 @@ public class JsonReader implements Closeable
     @SuppressWarnings("unchecked")
     protected <T> T resolveObjects(JsonObject rootObj, Type rootType) {
         // Enable unsafe mode for the entire deserialization if requested
-        boolean wasUnsafeEnabled = false;
+        // For root readers, we manage the lifecycle. For nested readers, we just ensure it's on.
+        boolean shouldManageUnsafe = false;
+        
         if (readOptions.isUseUnsafe()) {
             ClassUtilities.setUseUnsafe(true);
-            wasUnsafeEnabled = true;
+            // Only the root JsonReader should manage (disable) unsafe mode at the end
+            shouldManageUnsafe = isRoot;
         }
         
         try {
@@ -721,7 +724,8 @@ public class JsonReader implements Closeable
             throw new JsonIoException(getErrorMessage(e.getMessage()), e);
         } finally {
             // Restore unsafe mode to its original state
-            if (wasUnsafeEnabled) {
+            // Only disable if we were the ones who enabled it
+            if (shouldManageUnsafe) {
                 ClassUtilities.setUseUnsafe(false);
             }
             
