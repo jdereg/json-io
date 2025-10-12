@@ -3,17 +3,14 @@ package com.cedarsoftware.io;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.logging.Logger;
 
 import com.cedarsoftware.io.prettyprint.JsonPrettyPrinter;
-import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.FastByteArrayInputStream;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
-import com.cedarsoftware.util.convert.Converter;
-import com.cedarsoftware.util.convert.DefaultConverterOptions;
 import com.cedarsoftware.util.LoggingConfig;
-
-import java.util.logging.Logger;
+import com.cedarsoftware.util.convert.Converter;
 
 /**
  * JsonIo is the main entry point for converting between JSON and Java objects.
@@ -608,7 +605,7 @@ public class JsonIo {
             }
         }
 
-        private <T> T parseJson(TypeHolder<T> typeHolder) throws Exception {
+        private <T> T parseJson(TypeHolder<T> typeHolder) {
             FastByteArrayInputStream in = new FastByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
             JsonReader jr = new JsonReader(in, readOptions);
             T root = jr.readObject(typeHolder.getType());
@@ -691,8 +688,7 @@ public class JsonIo {
             JsonReader jr = null;
             try {
                 jr = new JsonReader(in, readOptions);
-                T root = jr.readObject(typeHolder.getType());
-                return root;
+                return jr.readObject(typeHolder.getType());
             } catch (JsonIoException je) {
                 throw je;
             } catch (Exception e) {
@@ -844,7 +840,7 @@ public class JsonIo {
      * @param args command line arguments (not used)
      */
     public static void main(String[] args) {
-        String json = toJson(new Converter(new DefaultConverterOptions()).getSupportedConversions(),
+        String json = toJson(Converter.getSupportedConversions(),
                 new WriteOptionsBuilder().prettyPrint(true).showTypeInfoNever().build());
         LOG.info("json-io supported conversions (source type to target types):");
         LOG.info(json);
