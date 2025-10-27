@@ -138,3 +138,6 @@ com.cedarsoftware.util.CompactMap = com.cedarsoftware.io.factory.CompactMapFacto
 
 # CompactSet
 com.cedarsoftware.util.CompactSet = com.cedarsoftware.io.factory.CompactSetFactory
+
+# MultiKeyMap
+com.cedarsoftware.util.MultiKeyMap = com.cedarsoftware.io.factory.MultiKeyMapFactory

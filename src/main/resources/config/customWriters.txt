@@ -69,3 +69,6 @@ com.cedarsoftware.util.CompactMap = com.cedarsoftware.io.writers.CompactMapWrite
 
 # CompactSet
 com.cedarsoftware.util.CompactSet = com.cedarsoftware.io.writers.CompactSetWriter
+
+# MultiKeyMap
+com.cedarsoftware.util.MultiKeyMap = com.cedarsoftware.io.writers.MultiKeyMapWriter
