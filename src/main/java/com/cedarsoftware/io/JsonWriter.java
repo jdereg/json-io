@@ -2063,4 +2063,26 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     public void writeEndArray() throws IOException {
         out.write(']');
     }
+
+    /**
+     * Writes a JSON string value with proper quote escaping.
+     * Example: writeValue("Hello") produces "Hello"
+     */
+    @Override
+    public void writeValue(String value) throws IOException {
+        if (value == null) {
+            out.write("null");
+        } else {
+            writeJsonUtf8String(out, value, writeOptions.getMaxStringLength());
+        }
+    }
+
+    /**
+     * Writes a JSON value by serializing the given object.
+     * Example: writeValue(myObject) produces the full JSON representation
+     */
+    @Override
+    public void writeValue(Object value) throws IOException {
+        writeImpl(value, true);
+    }
 }

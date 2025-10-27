@@ -194,4 +194,60 @@ public interface WriterContext {
      * @see #writeStartArray()
      */
     void writeEndArray() throws IOException;
+
+    /**
+     * Writes a JSON string value with proper quote escaping.
+     * <p>
+     * Example: {@code writeValue("Hello")} produces {@code "Hello"}
+     * </p>
+     * <p>
+     * This method:
+     * <ul>
+     *   <li>Writes opening quote</li>
+     *   <li>Escapes special characters (quotes, backslashes, control characters)</li>
+     *   <li>Writes closing quote</li>
+     *   <li>Handles null by writing {@code null} (without quotes)</li>
+     * </ul>
+     * </p>
+     * <p>
+     * <b>Usage pattern:</b>
+     * <pre>{@code
+     * context.writeFieldName("name");
+     * context.writeValue("John Doe");
+     * // Produces: "name":"John Doe"
+     * }</pre>
+     * </p>
+     *
+     * @param value the string value to write (may be null)
+     * @throws IOException if an I/O error occurs
+     */
+    void writeValue(String value) throws IOException;
+
+    /**
+     * Writes a JSON value by serializing the given object.
+     * <p>
+     * Example: {@code writeValue(myObject)} produces the full JSON representation of myObject
+     * </p>
+     * <p>
+     * This method:
+     * <ul>
+     *   <li>Serializes the object with proper type information and reference tracking</li>
+     *   <li>Handles null by writing {@code null}</li>
+     *   <li>Handles primitives, strings, collections, maps, and custom objects</li>
+     *   <li>Handles circular references and object deduplication</li>
+     * </ul>
+     * </p>
+     * <p>
+     * <b>Usage pattern:</b>
+     * <pre>{@code
+     * context.writeFieldName("config");
+     * context.writeValue(configObject);
+     * // Produces: "config":{...serialized config...}
+     * }</pre>
+     * </p>
+     *
+     * @param value the object to serialize (may be null)
+     * @throws IOException if an I/O error occurs
+     */
+    void writeValue(Object value) throws IOException;
 }

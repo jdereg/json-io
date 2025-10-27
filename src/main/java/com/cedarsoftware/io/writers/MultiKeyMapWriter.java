@@ -69,9 +69,7 @@ public class MultiKeyMapWriter implements JsonClassWriter {
 
         // Write shortened config field (no leading comma for first custom field)
         context.writeFieldName("config");
-        output.write('\"');
-        output.write(config.toString());
-        output.write('\"');
+        context.writeValue(config.toString());
 
         // Extract all entries and write as array of {keys, value} objects
         Iterable<MultiKeyMap.MultiKeyEntry<?>> entriesIterable =
