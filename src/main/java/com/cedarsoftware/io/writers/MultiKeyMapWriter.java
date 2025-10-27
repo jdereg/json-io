@@ -67,14 +67,20 @@ public class MultiKeyMapWriter implements JsonClassWriter {
         config.append(valueBasedEquality ? "T" : "F").append('/');
         config.append(caseSensitive ? "T" : "F");
 
-        // Write shortened config
-        output.write("\"config\":\"" + config + "\",");
+        // Write shortened config field (no leading comma for first custom field)
+        context.writeFieldName("config");
+        output.write('\"');
+        output.write(config.toString());
+        output.write('\"');
 
         // Extract all entries and write as array of {keys, value} objects
         Iterable<MultiKeyMap.MultiKeyEntry<?>> entriesIterable =
             (Iterable<MultiKeyMap.MultiKeyEntry<?>>) com.cedarsoftware.util.ReflectionUtils.call(map, "entries");
 
-        output.write("\"entries\":[");
+        // Write entries array field (with leading comma for subsequent field)
+        output.write(',');
+        context.writeFieldName("entries");
+        context.writeStartArray();
 
         boolean first = true;
         for (MultiKeyMap.MultiKeyEntry<?> entry : entriesIterable) {
@@ -85,15 +91,15 @@ public class MultiKeyMapWriter implements JsonClassWriter {
 
             // Write each entry as {"keys":[...],"value":...}
             // Externalize markers (OPEN/CLOSE/SET_OPEN/SET_CLOSE/NULL_SENTINEL) to serializable strings
-            output.write("{\"keys\":");
+            context.writeStartObject();
+            context.writeFieldName("keys");
             Object[] externalizedKeys = MultiKeyMap.externalizeMarkers(entry.keys);
             context.writeImpl(externalizedKeys, showType);
-            output.write(",\"value\":");
-            context.writeImpl(entry.value, showType);
-            output.write("}");
+            context.writeObjectField("value", entry.value);
+            context.writeEndObject();
         }
 
-        output.write("]");
+        context.writeEndArray();
     }
 
     @Override

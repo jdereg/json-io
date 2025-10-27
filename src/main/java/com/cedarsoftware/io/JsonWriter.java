@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.EnumSet;
@@ -252,9 +253,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             } else {
                 // For larger depths, build the string once and write it
                 char[] spaces = new char[actualDepth * indentationSize];
-                for (int i = 0; i < spaces.length; i++) {
-                    spaces[i] = ' ';
-                }
+                Arrays.fill(spaces, ' ');
                 output.write(spaces);
             }
             
@@ -1977,5 +1976,91 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
 
         output.write('\"');
+    }
+
+    // ======================== Semantic Write API Implementation ========================
+
+    /**
+     * Writes a JSON field name followed by a colon.
+     * Example: writeFieldName("name") produces "name":
+     *
+     * Note: This method does not write commas. Writers should manually write commas
+     * between fields using output.write(',')
+     */
+    @Override
+    public void writeFieldName(String name) throws IOException {
+        out.write('\"');
+        out.write(name);
+        out.write("\":");
+    }
+
+    /**
+     * Writes a complete JSON string field with automatic comma handling.
+     * Example: writeStringField("name", "John") produces ,"name":"John"
+     *
+     * This method writes a LEADING comma, making it suitable for fields after the first field.
+     * For the first field in an object, either omit the comma manually or use writeFieldName()
+     * followed by the value.
+     */
+    @Override
+    public void writeStringField(String name, String value) throws IOException {
+        out.write(',');
+        out.write('\"');
+        out.write(name);
+        out.write("\":");
+        if (value == null) {
+            out.write("null");
+        } else {
+            writeJsonUtf8String(out, value, writeOptions.getMaxStringLength());
+        }
+    }
+
+    /**
+     * Writes a complete JSON object field with automatic serialization and comma handling.
+     * Example: writeObjectField("address", addressObj) produces ,"address":{...}
+     *
+     * This method writes a LEADING comma, making it suitable for fields after the first field.
+     * For the first field in an object, either omit the comma manually or use writeFieldName()
+     * followed by writeImpl().
+     */
+    @Override
+    public void writeObjectField(String name, Object value) throws IOException {
+        out.write(',');
+        out.write('\"');
+        out.write(name);
+        out.write("\":");
+        writeImpl(value, true);
+    }
+
+    /**
+     * Writes a JSON object opening brace.
+     */
+    @Override
+    public void writeStartObject() throws IOException {
+        out.write('{');
+    }
+
+    /**
+     * Writes a JSON object closing brace.
+     */
+    @Override
+    public void writeEndObject() throws IOException {
+        out.write('}');
+    }
+
+    /**
+     * Writes a JSON array opening bracket.
+     */
+    @Override
+    public void writeStartArray() throws IOException {
+        out.write('[');
+    }
+
+    /**
+     * Writes a JSON array closing bracket.
+     */
+    @Override
+    public void writeEndArray() throws IOException {
+        out.write(']');
     }
 }

@@ -1,5 +1,14 @@
 ### Revision History
 #### 4.62.0 (Unreleased)
+* **FEATURE**: Added semantic write API to `WriterContext` for easier custom writer implementation:
+  * **Added `writeFieldName(String name)`**: Writes a JSON field name with colon (e.g., `"name":`)
+  * **Added `writeStringField(String name, String value)`**: Writes a complete string field with leading comma (e.g., `,"name":"value"`)
+  * **Added `writeObjectField(String name, Object value)`**: Writes a complete object field with automatic serialization and leading comma
+  * **Added `writeStartObject()` / `writeEndObject()`**: Semantic methods for writing object braces
+  * **Added `writeStartArray()` / `writeEndArray()`**: Semantic methods for writing array brackets
+  * **Benefits**: Eliminates manual quote escaping, reduces boilerplate, prevents malformed JSON, provides Jackson-like semantic API
+  * **Updated `MultiKeyMapWriter`**: Refactored to use new semantic API as example implementation
+  * **Comprehensive Javadoc**: All methods include detailed documentation with usage examples and patterns
 * **FEATURE**: Added complete serialization support for `MultiKeyMap` (from java-util):
   * **Added `MultiKeyMapWriter`**: Custom writer that serializes MultiKeyMap with shortened configuration format and externalized markers
   * **Added `MultiKeyMapFactory`**: Custom factory that deserializes MultiKeyMap, reconstructing original Set/List/Array key structures
