@@ -1,5 +1,13 @@
 ### Revision History
 #### 4.62.0 (Unreleased)
+* **FEATURE**: Added complete serialization support for `MultiKeyMap` (from java-util):
+  * **Added `MultiKeyMapWriter`**: Custom writer that serializes MultiKeyMap with shortened configuration format and externalized markers
+  * **Added `MultiKeyMapFactory`**: Custom factory that deserializes MultiKeyMap, reconstructing original Set/List/Array key structures
+  * **Marker externalization**: Internal markers (OPEN, CLOSE, SET_OPEN, SET_CLOSE) are converted to consistent tilde notation (`~OPEN~`, `~CLOSE~`, `~SET_OPEN~`, `~SET_CLOSE~`) for clean JSON output
+  * **Collision handling**: User strings matching marker names are automatically escaped with `~~ESC~~` prefix to prevent data corruption
+  * **Null key support**: NULL_SENTINEL objects properly converted to/from null during serialization
+  * **Configuration preservation**: All MultiKeyMap settings (capacity, loadFactor, collectionKeyMode, flattenDimensions, simpleKeysMode, valueBasedEquality, caseSensitive) preserved during round-trip
+  * **Comprehensive test coverage**: 25 tests covering null keys, Set/List keys, nested arrays, complex objects, enums, temporal types, BigDecimal/BigInteger, UUID, primitive arrays, empty collections, marker collision, and string edge cases
 
 #### 4.61.0
 * **FEATURE**: Added `useUnsafe` option to `ReadOptions` to control unsafe object instantiation. When enabled, json-io can deserialize package-private classes, inner classes, and classes without accessible constructors. This feature is opt-in for security reasons and uses thread-local settings to prevent interference between concurrent deserializations.

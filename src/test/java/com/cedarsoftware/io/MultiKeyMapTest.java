@@ -639,31 +639,40 @@ public class MultiKeyMapTest {
     void testMultiKeyMapWithMarkerCollision() {
         MultiKeyMap<String> map = MultiKeyMap.<String>builder().build();
 
-        // CRITICAL TEST: What if someone uses our marker strings as actual keys?
-        // This tests that our externalization doesn't corrupt real data
+        // CRITICAL TEST: User strings that match marker names
+        // These should be escaped to prevent collision with internal markers
 
-        map.put("~~SET_OPEN~~", "value1");
-        map.put("~~SET_CLOSE~~", "value2");
-        map.put("~~OPEN~~", "value3");
-        map.put("~~CLOSE~~", "value4");
+        // Direct marker name collisions
+        map.put("~SET_OPEN~", "value1");
+        map.put("~SET_CLOSE~", "value2");
+        map.put("~OPEN~", "value3");
+        map.put("~CLOSE~", "value4");
 
-        // Test marker strings in multi-key
-        map.putMultiKey("value5", "~~SET_OPEN~~", "normal");
+        // Test marker name in multi-key
+        map.putMultiKey("value5", "~SET_OPEN~", "normal");
 
-        // Test marker strings in arrays
-        Object[] arrayWithMarkers = {"~~OPEN~~", "data", "~~CLOSE~~"};
+        // Test marker names in arrays
+        Object[] arrayWithMarkers = {"~OPEN~", "data", "~CLOSE~"};
         map.put(arrayWithMarkers, "value6");
+
+        // Test already-escaped strings (recursive escaping)
+        map.put("~~ESC~~^OPEN~", "value7");
+        map.put("~~ESC~~~~ESC~~^SET_OPEN~", "value8");
 
         String json = JsonIo.toJson(map, null);
         MultiKeyMap<String> deserializedMap = JsonIo.toJava(json, null).asType(new TypeHolder<MultiKeyMap<String>>(){});
 
-        // Verify marker strings as keys don't break serialization
-        assertEquals("value1", deserializedMap.get("~~SET_OPEN~~"));
-        assertEquals("value2", deserializedMap.get("~~SET_CLOSE~~"));
-        assertEquals("value3", deserializedMap.get("~~OPEN~~"));
-        assertEquals("value4", deserializedMap.get("~~CLOSE~~"));
-        assertEquals("value5", deserializedMap.getMultiKey("~~SET_OPEN~~", "normal"));
-        assertEquals("value6", deserializedMap.get(new Object[]{"~~OPEN~~", "data", "~~CLOSE~~"}));
+        // Verify marker name collisions are properly escaped/unescaped
+        assertEquals("value1", deserializedMap.get("~SET_OPEN~"));
+        assertEquals("value2", deserializedMap.get("~SET_CLOSE~"));
+        assertEquals("value3", deserializedMap.get("~OPEN~"));
+        assertEquals("value4", deserializedMap.get("~CLOSE~"));
+        assertEquals("value5", deserializedMap.getMultiKey("~SET_OPEN~", "normal"));
+        assertEquals("value6", deserializedMap.get(new Object[]{"~OPEN~", "data", "~CLOSE~"}));
+
+        // Verify recursive escaping works (these are user strings that already start with ~~ESC~~)
+        assertEquals("value7", deserializedMap.get("~~ESC~~^OPEN~"));
+        assertEquals("value8", deserializedMap.get("~~ESC~~~~ESC~~^SET_OPEN~"));
 
         assertEquals(map.size(), deserializedMap.size());
     }
