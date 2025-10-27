@@ -1,11 +1,18 @@
 package com.cedarsoftware.io;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.logging.Logger;
 
 import com.cedarsoftware.util.DeepEquals;
@@ -485,6 +492,215 @@ public class MultiKeyMapTest {
 
         Person lookupPerson3 = new Person("Alice", 30, "NYC");
         assertEquals("value3", deserializedMap.getMultiKey(lookupPerson3, Arrays.asList("a", "b")));
+
+        assertEquals(map.size(), deserializedMap.size());
+    }
+
+    // Helper enum for testing
+    enum Status {
+        ACTIVE, INACTIVE, PENDING
+    }
+
+    @Test
+    void testMultiKeyMapWithEnums() {
+        MultiKeyMap<String> map = MultiKeyMap.<String>builder().build();
+
+        // Test enum as key
+        map.put(Status.ACTIVE, "activeValue");
+
+        // Test enum in multi-key
+        map.putMultiKey("enumMultiKey", Status.PENDING, "suffix");
+
+        // Test enum in Set key
+        Set<Status> enumSet = new HashSet<>(Arrays.asList(Status.ACTIVE, Status.INACTIVE));
+        map.put(enumSet, "enumSetValue");
+
+        String json = JsonIo.toJson(map, null);
+        MultiKeyMap<String> deserializedMap = JsonIo.toJava(json, null).asType(new TypeHolder<MultiKeyMap<String>>(){});
+
+        assertEquals("activeValue", deserializedMap.get(Status.ACTIVE));
+        assertEquals("enumMultiKey", deserializedMap.getMultiKey(Status.PENDING, "suffix"));
+
+        Set<Status> lookupSet = new HashSet<>(Arrays.asList(Status.INACTIVE, Status.ACTIVE));
+        assertEquals("enumSetValue", deserializedMap.get(lookupSet));
+
+        assertEquals(map.size(), deserializedMap.size());
+    }
+
+    @Test
+    void testMultiKeyMapWithTemporalTypes() {
+        MultiKeyMap<String> map = MultiKeyMap.<String>builder().build();
+
+        // Test temporal types as keys
+        LocalDate date = LocalDate.of(2025, 10, 26);
+        map.put(date, "dateValue");
+
+        LocalDateTime dateTime = LocalDateTime.of(2025, 10, 26, 14, 30);
+        map.putMultiKey("dateTimeValue", dateTime, "suffix");
+
+        String json = JsonIo.toJson(map, null);
+        MultiKeyMap<String> deserializedMap = JsonIo.toJava(json, null).asType(new TypeHolder<MultiKeyMap<String>>(){});
+
+        assertEquals("dateValue", deserializedMap.get(LocalDate.of(2025, 10, 26)));
+        assertEquals("dateTimeValue", deserializedMap.getMultiKey(LocalDateTime.of(2025, 10, 26, 14, 30), "suffix"));
+
+        assertEquals(map.size(), deserializedMap.size());
+    }
+
+    @Test
+    void testMultiKeyMapWithBigNumbers() {
+        MultiKeyMap<String> map = MultiKeyMap.<String>builder().build();
+
+        // Test BigDecimal and BigInteger
+        BigDecimal decimal = new BigDecimal("123.456");
+        map.put(decimal, "decimalValue");
+
+        BigInteger bigInt = new BigInteger("999999999999999999");
+        map.putMultiKey("bigIntValue", bigInt, "suffix");
+
+        String json = JsonIo.toJson(map, null);
+        MultiKeyMap<String> deserializedMap = JsonIo.toJava(json, null).asType(new TypeHolder<MultiKeyMap<String>>(){});
+
+        assertEquals("decimalValue", deserializedMap.get(new BigDecimal("123.456")));
+        assertEquals("bigIntValue", deserializedMap.getMultiKey(new BigInteger("999999999999999999"), "suffix"));
+
+        assertEquals(map.size(), deserializedMap.size());
+    }
+
+    @Test
+    void testMultiKeyMapWithUUID() {
+        MultiKeyMap<String> map = MultiKeyMap.<String>builder().build();
+
+        // Test UUID as key
+        UUID uuid1 = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
+        map.put(uuid1, "uuidValue");
+
+        UUID uuid2 = UUID.randomUUID();
+        map.putMultiKey("uuidMultiKey", uuid2, "suffix");
+
+        String json = JsonIo.toJson(map, null);
+        MultiKeyMap<String> deserializedMap = JsonIo.toJava(json, null).asType(new TypeHolder<MultiKeyMap<String>>(){});
+
+        assertEquals("uuidValue", deserializedMap.get(UUID.fromString("550e8400-e29b-41d4-a716-446655440000")));
+        assertEquals("uuidMultiKey", deserializedMap.getMultiKey(uuid2, "suffix"));
+
+        assertEquals(map.size(), deserializedMap.size());
+    }
+
+    @Test
+    void testMultiKeyMapWithEmptyCollections() {
+        MultiKeyMap<String> map = MultiKeyMap.<String>builder().build();
+
+        // Test empty Set as key
+        Set<String> emptySet = new HashSet<>();
+        map.put(emptySet, "emptySetValue");
+
+        // NOTE: Empty List and empty Object[] are indistinguishable after serialization
+        // Both serialize to [] without markers, so they become equivalent
+        // We test empty array here as the canonical empty collection representation
+        Object[] emptyArray = new Object[0];
+        map.put(emptyArray, "emptyArrayValue");
+
+        String json = JsonIo.toJson(map, null);
+        MultiKeyMap<String> deserializedMap = JsonIo.toJava(json, null).asType(new TypeHolder<MultiKeyMap<String>>(){});
+
+        // Empty Set has markers so it remains distinct
+        assertEquals("emptySetValue", deserializedMap.get(new HashSet<>()));
+
+        // Empty array and empty list are equivalent after round-trip
+        assertEquals("emptyArrayValue", deserializedMap.get(new Object[0]));
+        assertEquals("emptyArrayValue", deserializedMap.get(Collections.emptyList())); // Same as empty array
+
+        assertEquals(map.size(), deserializedMap.size());
+    }
+
+    @Test
+    void testMultiKeyMapWithPrimitiveArrays() {
+        MultiKeyMap<String> map = MultiKeyMap.<String>builder().build();
+
+        // Test int array as key
+        int[] intArray = {1, 2, 3};
+        map.put(intArray, "intArrayValue");
+
+        // Test byte array as key
+        byte[] byteArray = {10, 20, 30};
+        map.put(byteArray, "byteArrayValue");
+
+        String json = JsonIo.toJson(map, null);
+        MultiKeyMap<String> deserializedMap = JsonIo.toJava(json, null).asType(new TypeHolder<MultiKeyMap<String>>(){});
+
+        assertEquals("intArrayValue", deserializedMap.get(new int[]{1, 2, 3}));
+        assertEquals("byteArrayValue", deserializedMap.get(new byte[]{10, 20, 30}));
+
+        assertEquals(map.size(), deserializedMap.size());
+    }
+
+    @Test
+    void testMultiKeyMapWithMarkerCollision() {
+        MultiKeyMap<String> map = MultiKeyMap.<String>builder().build();
+
+        // CRITICAL TEST: What if someone uses our marker strings as actual keys?
+        // This tests that our externalization doesn't corrupt real data
+
+        map.put("~~SET_OPEN~~", "value1");
+        map.put("~~SET_CLOSE~~", "value2");
+        map.put("~~OPEN~~", "value3");
+        map.put("~~CLOSE~~", "value4");
+
+        // Test marker strings in multi-key
+        map.putMultiKey("value5", "~~SET_OPEN~~", "normal");
+
+        // Test marker strings in arrays
+        Object[] arrayWithMarkers = {"~~OPEN~~", "data", "~~CLOSE~~"};
+        map.put(arrayWithMarkers, "value6");
+
+        String json = JsonIo.toJson(map, null);
+        MultiKeyMap<String> deserializedMap = JsonIo.toJava(json, null).asType(new TypeHolder<MultiKeyMap<String>>(){});
+
+        // Verify marker strings as keys don't break serialization
+        assertEquals("value1", deserializedMap.get("~~SET_OPEN~~"));
+        assertEquals("value2", deserializedMap.get("~~SET_CLOSE~~"));
+        assertEquals("value3", deserializedMap.get("~~OPEN~~"));
+        assertEquals("value4", deserializedMap.get("~~CLOSE~~"));
+        assertEquals("value5", deserializedMap.getMultiKey("~~SET_OPEN~~", "normal"));
+        assertEquals("value6", deserializedMap.get(new Object[]{"~~OPEN~~", "data", "~~CLOSE~~"}));
+
+        assertEquals(map.size(), deserializedMap.size());
+    }
+
+    @Test
+    void testMultiKeyMapWithStringEdgeCases() {
+        MultiKeyMap<String> map = MultiKeyMap.<String>builder().build();
+
+        // Test empty string as key
+        map.put("", "emptyStringValue");
+
+        // Test unicode/emoji strings
+        map.put("Hello 🌍", "emojiValue");
+
+        // Test very long string
+        StringBuilder sb = new StringBuilder(1000);
+        for (int i = 0; i < 1000; i++) {
+            sb.append('x');
+        }
+        String longString = sb.toString();
+        map.put(longString, "longStringValue");
+
+        // Test whitespace strings
+        map.put("   ", "whitespaceValue");
+
+        String json = JsonIo.toJson(map, null);
+        MultiKeyMap<String> deserializedMap = JsonIo.toJava(json, null).asType(new TypeHolder<MultiKeyMap<String>>(){});
+
+        assertEquals("emptyStringValue", deserializedMap.get(""));
+        assertEquals("emojiValue", deserializedMap.get("Hello 🌍"));
+
+        StringBuilder sb2 = new StringBuilder(1000);
+        for (int i = 0; i < 1000; i++) {
+            sb2.append('x');
+        }
+        assertEquals("longStringValue", deserializedMap.get(sb2.toString()));
+        assertEquals("whitespaceValue", deserializedMap.get("   "));
 
         assertEquals(map.size(), deserializedMap.size());
     }
