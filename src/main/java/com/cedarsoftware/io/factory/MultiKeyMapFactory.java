@@ -147,12 +147,14 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
                 }
             }
 
-            // Add to the MultiKeyMap using putMultiKey
-            if (keyComponents.length == 1) {
-                mkmap.put(keyComponents[0], value);
-            } else {
-                mkmap.putMultiKey(value, keyComponents);
-            }
+            // Internalize marker strings (~~OPEN~~, ~~SET_OPEN~~, etc.) back to marker objects
+            Object[] internalizedKeys = MultiKeyMap.internalizeMarkers(keyComponents);
+
+            // Reconstruct the original key structure (Set, List, Object[], or single value)
+            Object reconstructedKey = MultiKeyMap.reconstructKey(internalizedKeys);
+
+            // Add to the MultiKeyMap using the normal put method
+            mkmap.put(reconstructedKey, value);
         }
 
         // Remove config and entries from the original JsonObject

@@ -3,6 +3,7 @@ package com.cedarsoftware.io;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -237,5 +238,108 @@ public class MultiKeyMapTest {
 
         assertTrue(deserializedMap.getFlattenDimensions());
         assertEquals("flattenedValue", deserializedMap.get(nested));
+    }
+
+    @Test
+    void testMultiKeyMapWithSetKeys() {
+        MultiKeyMap<String> map = MultiKeyMap.<String>builder().build();
+
+        // Test with Set as a key component
+        Set<String> set1 = new HashSet<>(Arrays.asList("a", "b", "c"));
+        map.put(set1, "setValue1");
+
+        // Test with Set as part of multi-key
+        Set<Integer> set2 = new HashSet<>(Arrays.asList(1, 2, 3));
+        map.putMultiKey("setValue2", set2, "suffix");
+
+        String json = JsonIo.toJson(map, null);
+        MultiKeyMap<String> deserializedMap = JsonIo.toJava(json, null).asType(new TypeHolder<MultiKeyMap<String>>(){});
+
+        // Verify sets can be retrieved (order doesn't matter for sets)
+        Set<String> lookupSet1 = new HashSet<>(Arrays.asList("c", "a", "b")); // Different order
+        assertEquals("setValue1", deserializedMap.get(lookupSet1));
+
+        Set<Integer> lookupSet2 = new HashSet<>(Arrays.asList(3, 1, 2)); // Different order
+        assertEquals("setValue2", deserializedMap.getMultiKey(lookupSet2, "suffix"));
+
+        assertEquals(map.size(), deserializedMap.size());
+    }
+
+    @Test
+    void testMultiKeyMapWithListKeys() {
+        MultiKeyMap<String> map = MultiKeyMap.<String>builder().build();
+
+        // Test with List as a key component
+        List<String> list1 = Arrays.asList("a", "b", "c");
+        map.put(list1, "listValue1");
+
+        // Test with List as part of multi-key
+        List<Integer> list2 = Arrays.asList(1, 2, 3);
+        map.putMultiKey("listValue2", list2, "suffix");
+
+        String json = JsonIo.toJson(map, null);
+        MultiKeyMap<String> deserializedMap = JsonIo.toJava(json, null).asType(new TypeHolder<MultiKeyMap<String>>(){});
+
+        // Verify lists can be retrieved (order matters for lists)
+        assertEquals("listValue1", deserializedMap.get(Arrays.asList("a", "b", "c")));
+        assertEquals("listValue2", deserializedMap.getMultiKey(Arrays.asList(1, 2, 3), "suffix"));
+
+        // Different order should NOT match for lists
+        assertEquals(null, deserializedMap.get(Arrays.asList("c", "a", "b")));
+
+        assertEquals(map.size(), deserializedMap.size());
+    }
+
+    @Test
+    void testMultiKeyMapWithMixedSetAndListKeys() {
+        MultiKeyMap<String> map = MultiKeyMap.<String>builder().build();
+
+        // Test with mixed Set and List keys
+        Set<String> set = new HashSet<>(Arrays.asList("x", "y"));
+        List<String> list = Arrays.asList("a", "b");
+        map.putMultiKey("mixedValue1", set, list);
+
+        // Test with Set, Array, and List
+        Object[] array = new Object[]{"p", "q"};
+        map.putMultiKey("mixedValue2", set, array, list);
+
+        String json = JsonIo.toJson(map, null);
+        MultiKeyMap<String> deserializedMap = JsonIo.toJava(json, null).asType(new TypeHolder<MultiKeyMap<String>>(){});
+
+        // Verify mixed keys can be retrieved
+        Set<String> lookupSet = new HashSet<>(Arrays.asList("y", "x")); // Different order
+        assertEquals("mixedValue1", deserializedMap.getMultiKey(lookupSet, Arrays.asList("a", "b")));
+
+        assertEquals("mixedValue2", deserializedMap.getMultiKey(lookupSet, new Object[]{"p", "q"}, Arrays.asList("a", "b")));
+
+        assertEquals(map.size(), deserializedMap.size());
+    }
+
+    @Test
+    void testMultiKeyMapWithNestedCollections() {
+        MultiKeyMap<String> map = MultiKeyMap.<String>builder().build();
+
+        // Test with nested collections
+        List<List<String>> nestedList = Arrays.asList(
+                Arrays.asList("a", "b"),
+                Arrays.asList("c", "d")
+        );
+        map.put(nestedList, "nestedListValue");
+
+        // Test with nested set
+        // Note: Nested Set<Set<>> is a complex edge case due to Set equality/hashCode requirements
+        // TODO: Add support for nested Set keys in future enhancement
+        // Set<Set<Integer>> nestedSet = new HashSet<>();
+        // nestedSet.add(new HashSet<>(Arrays.asList(1, 2)));
+        // nestedSet.add(new HashSet<>(Arrays.asList(3, 4)));
+        // map.put(nestedSet, "nestedSetValue");
+
+        String json = JsonIo.toJson(map, null);
+        MultiKeyMap<String> deserializedMap = JsonIo.toJava(json, null).asType(new TypeHolder<MultiKeyMap<String>>(){});
+
+        assertEquals("nestedListValue", deserializedMap.get(nestedList));
+        // assertEquals("nestedSetValue", deserializedMap.get(nestedSet));
+
+        assertEquals(map.size(), deserializedMap.size());
     }
 }

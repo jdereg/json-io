@@ -84,9 +84,9 @@ public class MultiKeyMapWriter implements JsonClassWriter {
             first = false;
 
             // Write each entry as {"keys":[...],"value":...}
-            // Externalize NULL_SENTINEL to null before serializing
+            // Externalize markers (OPEN/CLOSE/SET_OPEN/SET_CLOSE/NULL_SENTINEL) to serializable strings
             output.write("{\"keys\":");
-            Object[] externalizedKeys = MultiKeyMap.externalizeNulls(entry.keys);
+            Object[] externalizedKeys = MultiKeyMap.externalizeMarkers(entry.keys);
             context.writeImpl(externalizedKeys, showType);
             output.write(",\"value\":");
             context.writeImpl(entry.value, showType);
