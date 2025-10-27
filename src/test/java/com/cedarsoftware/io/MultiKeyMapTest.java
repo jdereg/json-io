@@ -342,4 +342,150 @@ public class MultiKeyMapTest {
 
         assertEquals(map.size(), deserializedMap.size());
     }
+
+    @Test
+    void testMultiKeyMapWithNestedArraysAndNulls() {
+        MultiKeyMap<String> map = MultiKeyMap.<String>builder().build();
+
+        // Test with nested arrays containing nulls
+        Object[][] nestedArrayWithNulls = {
+                {"a", null, "b"},
+                {null, "c", null}
+        };
+        map.put(nestedArrayWithNulls, "nestedArrayValue");
+
+        // Test with array containing null at top level
+        Object[] arrayWithNull = new Object[]{"key1", null, "key2"};
+        map.put(arrayWithNull, "arrayWithNullValue");
+
+        String json = JsonIo.toJson(map, null);
+        MultiKeyMap<String> deserializedMap = JsonIo.toJava(json, null).asType(new TypeHolder<MultiKeyMap<String>>(){});
+
+        assertEquals("nestedArrayValue", deserializedMap.get(nestedArrayWithNulls));
+        assertEquals("arrayWithNullValue", deserializedMap.get(arrayWithNull));
+        assertEquals(map.size(), deserializedMap.size());
+    }
+
+    @Test
+    void testMultiKeyMapWithSetsContainingNulls() {
+        MultiKeyMap<String> map = MultiKeyMap.<String>builder().build();
+
+        // Test with Set containing null
+        Set<String> setWithNull = new HashSet<>(Arrays.asList("a", null, "b"));
+        map.put(setWithNull, "setWithNullValue");
+
+        // Test with multi-key where Set component has null
+        Set<Integer> setWithNullInt = new HashSet<>(Arrays.asList(1, null, 2));
+        map.putMultiKey("multiKeySetWithNull", setWithNullInt, "suffix");
+
+        String json = JsonIo.toJson(map, null);
+        MultiKeyMap<String> deserializedMap = JsonIo.toJava(json, null).asType(new TypeHolder<MultiKeyMap<String>>(){});
+
+        // Verify sets with nulls can be retrieved
+        Set<String> lookupSetWithNull = new HashSet<>(Arrays.asList(null, "b", "a")); // Different order
+        assertEquals("setWithNullValue", deserializedMap.get(lookupSetWithNull));
+
+        Set<Integer> lookupSetWithNullInt = new HashSet<>(Arrays.asList(null, 2, 1)); // Different order
+        assertEquals("multiKeySetWithNull", deserializedMap.getMultiKey(lookupSetWithNullInt, "suffix"));
+
+        assertEquals(map.size(), deserializedMap.size());
+    }
+
+    // Helper class for testing complex objects
+    static class Person {
+        String name;
+        int age;
+        String city;
+
+        Person() {} // For deserialization
+
+        Person(String name, int age, String city) {
+            this.name = name;
+            this.age = age;
+            this.city = city;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Person person = (Person) o;
+            return age == person.age &&
+                    java.util.Objects.equals(name, person.name) &&
+                    java.util.Objects.equals(city, person.city);
+        }
+
+        @Override
+        public int hashCode() {
+            return java.util.Objects.hash(name, age, city);
+        }
+    }
+
+    @Test
+    void testMultiKeyMapWithComplexObjectValues() {
+        MultiKeyMap<Person> map = MultiKeyMap.<Person>builder().build();
+
+        // Test with complex objects as values
+        Person person1 = new Person("Alice", 30, "NYC");
+        Person person2 = new Person("Bob", 25, "SF");
+        Person person3 = new Person("Charlie", 35, "LA");
+
+        map.put("key1", person1);
+        map.putMultiKey(person2, "composite", "key");
+
+        Set<String> setKey = new HashSet<>(Arrays.asList("x", "y"));
+        map.put(setKey, person3);
+
+        String json = JsonIo.toJson(map, null);
+        MultiKeyMap<Person> deserializedMap = JsonIo.toJava(json, null).asType(new TypeHolder<MultiKeyMap<Person>>(){});
+
+        // Verify complex objects are properly deserialized
+        Person retrieved1 = deserializedMap.get("key1");
+        assertEquals("Alice", retrieved1.name);
+        assertEquals(30, retrieved1.age);
+        assertEquals("NYC", retrieved1.city);
+
+        Person retrieved2 = deserializedMap.getMultiKey("composite", "key");
+        assertEquals("Bob", retrieved2.name);
+        assertEquals(25, retrieved2.age);
+        assertEquals("SF", retrieved2.city);
+
+        Person retrieved3 = deserializedMap.get(new HashSet<>(Arrays.asList("y", "x")));
+        assertEquals("Charlie", retrieved3.name);
+        assertEquals(35, retrieved3.age);
+        assertEquals("LA", retrieved3.city);
+
+        assertEquals(map.size(), deserializedMap.size());
+    }
+
+    @Test
+    void testMultiKeyMapWithComplexObjectKeys() {
+        MultiKeyMap<String> map = MultiKeyMap.<String>builder().build();
+
+        // Test with complex objects as keys
+        Person person1 = new Person("Alice", 30, "NYC");
+        Person person2 = new Person("Bob", 25, "SF");
+
+        map.put(person1, "value1");
+        map.putMultiKey("value2", person2, "suffix");
+
+        // Mix complex object with Set/List keys
+        List<String> list = Arrays.asList("a", "b");
+        map.putMultiKey("value3", person1, list);
+
+        String json = JsonIo.toJson(map, null);
+        MultiKeyMap<String> deserializedMap = JsonIo.toJava(json, null).asType(new TypeHolder<MultiKeyMap<String>>(){});
+
+        // Verify complex object keys work
+        Person lookupPerson1 = new Person("Alice", 30, "NYC");
+        assertEquals("value1", deserializedMap.get(lookupPerson1));
+
+        Person lookupPerson2 = new Person("Bob", 25, "SF");
+        assertEquals("value2", deserializedMap.getMultiKey(lookupPerson2, "suffix"));
+
+        Person lookupPerson3 = new Person("Alice", 30, "NYC");
+        assertEquals("value3", deserializedMap.getMultiKey(lookupPerson3, Arrays.asList("a", "b")));
+
+        assertEquals(map.size(), deserializedMap.size());
+    }
 }
