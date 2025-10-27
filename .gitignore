@@ -15,3 +15,6 @@ CLAUDE.md
 CODE_REVIEW.md
 ARCHITECTURAL_VISION.md
 RELEASE_PROCESS.md
+# Debug/test output files
+perf_results.txt
+test_output.txt
