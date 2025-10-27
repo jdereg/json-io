@@ -2085,4 +2085,58 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     public void writeValue(Object value) throws IOException {
         writeImpl(value, true);
     }
+
+    /**
+     * Writes a complete JSON array field start with automatic comma handling.
+     * Example: writeArrayFieldStart("items") produces ,"items":[
+     */
+    @Override
+    public void writeArrayFieldStart(String name) throws IOException {
+        out.write(',');
+        out.write('\"');
+        out.write(name);
+        out.write("\":[");
+    }
+
+    /**
+     * Writes a complete JSON object field start with automatic comma handling.
+     * Example: writeObjectFieldStart("config") produces ,"config":{
+     */
+    @Override
+    public void writeObjectFieldStart(String name) throws IOException {
+        out.write(',');
+        out.write('\"');
+        out.write(name);
+        out.write("\":{");
+    }
+
+    /**
+     * Writes a complete JSON number field with automatic comma handling.
+     * Example: writeNumberField("count", 42) produces ,"count":42
+     */
+    @Override
+    public void writeNumberField(String name, Number value) throws IOException {
+        out.write(',');
+        out.write('\"');
+        out.write(name);
+        out.write("\":");
+        if (value == null) {
+            out.write("null");
+        } else {
+            out.write(value.toString());
+        }
+    }
+
+    /**
+     * Writes a complete JSON boolean field with automatic comma handling.
+     * Example: writeBooleanField("active", true) produces ,"active":true
+     */
+    @Override
+    public void writeBooleanField(String name, boolean value) throws IOException {
+        out.write(',');
+        out.write('\"');
+        out.write(name);
+        out.write("\":");
+        out.write(value ? "true" : "false");
+    }
 }

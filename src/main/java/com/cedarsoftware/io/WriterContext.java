@@ -250,4 +250,133 @@ public interface WriterContext {
      * @throws IOException if an I/O error occurs
      */
     void writeValue(Object value) throws IOException;
+
+    /**
+     * Writes a complete JSON array field start with automatic comma handling.
+     * <p>
+     * Example: {@code writeArrayFieldStart("items")} produces {@code ,"items":[}
+     * </p>
+     * <p>
+     * This is a convenience method that combines three operations:
+     * <ul>
+     *   <li>Writes a leading comma (for proper JSON object formatting)</li>
+     *   <li>Writes the field name with quotes and colon</li>
+     *   <li>Writes the array opening bracket</li>
+     * </ul>
+     * </p>
+     * <p>
+     * <b>Usage pattern:</b>
+     * <pre>{@code
+     * context.writeArrayFieldStart("entries");
+     * for (Entry entry : entries) {
+     *     // Write array elements...
+     * }
+     * context.writeEndArray();
+     * // Produces: ,"entries":[...array elements...]
+     * }</pre>
+     * </p>
+     * <p>
+     * This method writes a LEADING comma, making it suitable for fields after the first field.
+     * </p>
+     *
+     * @param name the field name
+     * @throws IOException if an I/O error occurs
+     */
+    void writeArrayFieldStart(String name) throws IOException;
+
+    /**
+     * Writes a complete JSON object field start with automatic comma handling.
+     * <p>
+     * Example: {@code writeObjectFieldStart("config")} produces {@code ,"config":{@code \{}
+     * </p>
+     * <p>
+     * This is a convenience method that combines three operations:
+     * <ul>
+     *   <li>Writes a leading comma (for proper JSON object formatting)</li>
+     *   <li>Writes the field name with quotes and colon</li>
+     *   <li>Writes the object opening brace</li>
+     * </ul>
+     * </p>
+     * <p>
+     * <b>Usage pattern:</b>
+     * <pre>{@code
+     * context.writeObjectFieldStart("metadata");
+     * context.writeStringField("version", "1.0");
+     * context.writeNumberField("count", 42);
+     * context.writeEndObject();
+     * // Produces: ,"metadata":{"version":"1.0","count":42}
+     * }</pre>
+     * </p>
+     * <p>
+     * This method writes a LEADING comma, making it suitable for fields after the first field.
+     * </p>
+     *
+     * @param name the field name
+     * @throws IOException if an I/O error occurs
+     */
+    void writeObjectFieldStart(String name) throws IOException;
+
+    /**
+     * Writes a complete JSON number field with automatic comma handling.
+     * <p>
+     * Example: {@code writeNumberField("count", 42)} produces {@code ,"count":42}
+     * </p>
+     * <p>
+     * This method automatically:
+     * <ul>
+     *   <li>Writes a preceding comma (for proper JSON object formatting)</li>
+     *   <li>Escapes the field name</li>
+     *   <li>Writes the number value WITHOUT quotes (proper JSON number format)</li>
+     *   <li>Handles null values by writing {@code ,"name":null}</li>
+     * </ul>
+     * </p>
+     * <p>
+     * <b>Usage pattern:</b>
+     * <pre>{@code
+     * context.writeNumberField("capacity", 16);
+     * context.writeNumberField("loadFactor", 0.75f);
+     * context.writeNumberField("size", 100L);
+     * // Produces: ,"capacity":16,"loadFactor":0.75,"size":100
+     * }</pre>
+     * </p>
+     * <p>
+     * This method writes a LEADING comma, making it suitable for fields after the first field.
+     * </p>
+     *
+     * @param name the field name
+     * @param value the number value (may be null)
+     * @throws IOException if an I/O error occurs
+     */
+    void writeNumberField(String name, Number value) throws IOException;
+
+    /**
+     * Writes a complete JSON boolean field with automatic comma handling.
+     * <p>
+     * Example: {@code writeBooleanField("active", true)} produces {@code ,"active":true}
+     * </p>
+     * <p>
+     * This method automatically:
+     * <ul>
+     *   <li>Writes a preceding comma (for proper JSON object formatting)</li>
+     *   <li>Escapes the field name</li>
+     *   <li>Writes the boolean value WITHOUT quotes (proper JSON boolean format)</li>
+     * </ul>
+     * </p>
+     * <p>
+     * <b>Usage pattern:</b>
+     * <pre>{@code
+     * context.writeBooleanField("caseSensitive", true);
+     * context.writeBooleanField("enabled", false);
+     * // Produces: ,"caseSensitive":true,"enabled":false
+     * }</pre>
+     * </p>
+     * <p>
+     * This method writes a LEADING comma, making it suitable for fields after the first field.
+     * </p>
+     *
+     * @param name the field name
+     * @param value the boolean value
+     * @throws IOException if an I/O error occurs
+     */
+    void writeBooleanField(String name, boolean value) throws IOException;
 }

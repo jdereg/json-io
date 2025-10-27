@@ -75,10 +75,8 @@ public class MultiKeyMapWriter implements JsonClassWriter {
         Iterable<MultiKeyMap.MultiKeyEntry<?>> entriesIterable =
             (Iterable<MultiKeyMap.MultiKeyEntry<?>>) com.cedarsoftware.util.ReflectionUtils.call(map, "entries");
 
-        // Write entries array field (with leading comma for subsequent field)
-        output.write(',');
-        context.writeFieldName("entries");
-        context.writeStartArray();
+        // Write entries array field - combines comma + "entries":[ in one call!
+        context.writeArrayFieldStart("entries");
 
         boolean first = true;
         for (MultiKeyMap.MultiKeyEntry<?> entry : entriesIterable) {

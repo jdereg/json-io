@@ -1,16 +1,24 @@
 ### Revision History
 #### 4.62.0 (Unreleased)
-* **FEATURE**: Added semantic write API to `WriterContext` for easier custom writer implementation:
-  * **Added `writeFieldName(String name)`**: Writes a JSON field name with colon (e.g., `"name":`)
-  * **Added `writeValue(String value)`**: Writes a string value with proper quote escaping (e.g., `"Hello"`)
-  * **Added `writeValue(Object value)`**: Writes any object value with full serialization
-  * **Added `writeStringField(String name, String value)`**: Writes a complete string field with leading comma (e.g., `,"name":"value"`)
-  * **Added `writeObjectField(String name, Object value)`**: Writes a complete object field with automatic serialization and leading comma
-  * **Added `writeStartObject()` / `writeEndObject()`**: Semantic methods for writing object braces
-  * **Added `writeStartArray()` / `writeEndArray()`**: Semantic methods for writing array brackets
-  * **Benefits**: Eliminates manual quote escaping, reduces boilerplate, prevents malformed JSON, provides Jackson-like semantic API
-  * **Updated `MultiKeyMapWriter`**: Refactored to use new semantic API as example implementation (uses `writeFieldName()` + `writeValue()` pattern)
-  * **Comprehensive Javadoc**: All methods include detailed documentation with usage examples and patterns
+* **FEATURE**: Added comprehensive semantic write API to `WriterContext` for easier custom writer implementation (matches Jackson's API):
+  * **Basic field/value methods**:
+    * `writeFieldName(String name)` - Writes field name with colon (e.g., `"name":`)
+    * `writeValue(String value)` - Writes string value with proper quote escaping
+    * `writeValue(Object value)` - Writes any object value with full serialization
+  * **Complete field methods** (with leading comma):
+    * `writeStringField(String name, String value)` - Complete string field (e.g., `,"name":"value"`)
+    * `writeObjectField(String name, Object value)` - Complete object field with automatic serialization
+    * `writeNumberField(String name, Number value)` - Complete number field WITHOUT quotes (e.g., `,"count":42`)
+    * `writeBooleanField(String name, boolean value)` - Complete boolean field WITHOUT quotes (e.g., `,"active":true`)
+  * **Composite field methods** (combines comma + field name + opening bracket/brace):
+    * `writeArrayFieldStart(String name)` - Comma + field name + `[` in one call (e.g., `,"items":[`)
+    * `writeObjectFieldStart(String name)` - Comma + field name + `{` in one call (e.g., `,"config":{`)
+  * **Structural methods**:
+    * `writeStartObject()` / `writeEndObject()` - Object braces
+    * `writeStartArray()` / `writeEndArray()` - Array brackets
+  * **Benefits**: Eliminates manual quote escaping, reduces boilerplate, prevents malformed JSON, provides Jackson-like semantic API, matches Jackson's convenience
+  * **Updated `MultiKeyMapWriter`**: Refactored to use new semantic API (uses `writeArrayFieldStart()` for cleaner code)
+  * **Comprehensive Javadoc**: All 13 methods include detailed documentation with usage examples and patterns
 * **FEATURE**: Added complete serialization support for `MultiKeyMap` (from java-util):
   * **Added `MultiKeyMapWriter`**: Custom writer that serializes MultiKeyMap with shortened configuration format and externalized markers
   * **Added `MultiKeyMapFactory`**: Custom factory that deserializes MultiKeyMap, reconstructing original Set/List/Array key structures
