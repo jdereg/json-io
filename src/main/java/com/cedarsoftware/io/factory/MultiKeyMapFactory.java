@@ -1,5 +1,7 @@
 package com.cedarsoftware.io.factory;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -7,6 +9,7 @@ import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
+import com.cedarsoftware.io.util.SealableList;
 import com.cedarsoftware.util.MultiKeyMap;
 
 /**
@@ -83,104 +86,44 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
 
         MultiKeyMap<Object> mkmap = builder.build();
 
-        // Extract entries array - keep as JsonObject, don't resolve yet
+        // Extract entries array
         Object entriesObj = jObj.get("entries");
 
-        if (entriesObj == null) {
-            throw new JsonIoException("MultiKeyMap requires an entries array. Found keys: " + jObj.keySet());
-        }
+        if (entriesObj != null) {
+            Object[] entries = extractEntriesArray(entriesObj);
+            if (entries != null) {
+                // Create JsonReader for resolving each entry's key and value
+                JsonReader reader = new JsonReader(resolver);
 
-        // Entries should be an array (or JsonObject representing an array)
-        if (!(entriesObj instanceof Object[] || entriesObj instanceof JsonObject)) {
-            throw new JsonIoException("MultiKeyMap entries must be an array, got: " + entriesObj.getClass());
-        }
-
-        // Create a JsonReader for resolving fields individually
-        JsonReader reader = new JsonReader(resolver);
-
-        // Get entries as an array - but DON'T fully resolve nested structures yet
-        Object[] entries;
-        if (entriesObj instanceof Object[]) {
-            entries = (Object[]) entriesObj;
-        } else {
-            // It's a JsonObject - convert to array but keep entries as JsonObjects
-            JsonObject entriesJsonObj = (JsonObject) entriesObj;
-            Object itemsObj = entriesJsonObj.get("@items");
-            if (itemsObj instanceof Object[]) {
-                entries = (Object[]) itemsObj;
-            } else {
-                throw new JsonIoException("MultiKeyMap entries JsonObject missing @items");
-            }
-        }
-
-        // Populate the MultiKeyMap with entries
-        for (Object entryObj : entries) {
-            // Each entry should be a JsonObject with "keys" and "value"
-            if (!(entryObj instanceof JsonObject)) {
-                throw new JsonIoException("MultiKeyMap entry must be a JsonObject, got: " + entryObj.getClass());
-            }
-
-            JsonObject entryJsonObj = (JsonObject) entryObj;
-
-            // Check if the "keys" field exists (it can be null for null keys)
-            if (!entryJsonObj.containsKey("keys")) {
-                throw new JsonIoException("MultiKeyMap entry missing 'keys' field");
-            }
-
-            Object keysObj = entryJsonObj.get("keys");
-            Object valueObj = entryJsonObj.get("value");
-
-            // Resolve value using reader (handles both JsonObjects and plain values)
-            Object value = valueObj;
-            if (value instanceof JsonObject) {
-                value = reader.toJava(((JsonObject) value).getType(), value);
-            }
-
-            // Handle keys - resolve using reader.toJava() which handles all nested structures properly
-            Object key;
-
-            if (keysObj == null) {
-                // Null key
-                key = null;
-            } else if (keysObj instanceof JsonObject) {
-                // JsonObject that needs resolution - could be List, Set, or single object
-                JsonObject keyJsonObj = (JsonObject) keysObj;
-                java.lang.reflect.Type keyType = keyJsonObj.getType();
-
-                // Let reader.toJava() handle full resolution including nested structures
-                key = reader.toJava(keyType, keysObj);
-            } else {
-                // Simple value (String, Integer, etc.) - use as-is
-                key = keysObj;
-            }
-
-            // Add to the MultiKeyMap
-            // Keys from entrySet() are always Set/List/single (never Object[])
-            // Unwrap unmodifiable collections to ensure MultiKeyMap can process them
-            Object finalKey = key;
-            if (key instanceof List) {
-                // Unwrap List and any nested collections within it
-                List<?> keyList = (List<?>) key;
-                List<Object> unwrapped = new java.util.ArrayList<>(keyList.size());
-                for (Object element : keyList) {
-                    if (element instanceof java.util.Set) {
-                        unwrapped.add(new java.util.LinkedHashSet<>((java.util.Set<?>) element));
-                    } else if (element instanceof List) {
-                        unwrapped.add(new java.util.ArrayList<>((List<?>) element));
-                    } else {
-                        unwrapped.add(element);
+                // Process entries one-by-one, fully resolving each before put()
+                for (Object entryObj : entries) {
+                    if (!(entryObj instanceof JsonObject)) {
+                        continue;
                     }
+
+                    JsonObject entryJsonObj = (JsonObject) entryObj;
+                    Object key = entryJsonObj.get("keys");
+                    Object value = entryJsonObj.get("value");
+
+                    // Fully resolve the key
+                    if (key instanceof JsonObject) {
+                        key = reader.toJava(((JsonObject) key).getType(), key);
+                        // Convert SealableList to stable collection for hash stability
+                        key = convertToStableCollection(key);
+                    }
+
+                    // Fully resolve the value
+                    if (value instanceof JsonObject) {
+                        value = reader.toJava(((JsonObject) value).getType(), value);
+                    }
+
+                    // Now key has stable hashCode - safe to put()
+                    mkmap.put(key, value);
                 }
-                finalKey = unwrapped;
-            } else if (key instanceof java.util.Set) {
-                finalKey = new java.util.LinkedHashSet<>((java.util.Set<?>) key);
             }
-            // With COLLECTIONS_EXPANDED: put(List) will automatically expand the List into components
-            // With COLLECTIONS_NOT_EXPANDED: put(List) treats List as a single key
-            mkmap.put(finalKey, value);
         }
 
-        // Remove config and entries from the original JsonObject
+        // Remove custom fields
         jObj.remove("config");
         jObj.remove("entries");
 
@@ -188,5 +131,39 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
         jObj.setTarget(mkmap);
 
         return mkmap;
+    }
+
+    /**
+     * Converts SealableList to a stable collection with consistent hashCode.
+     * SealableList's hashCode changes as items are added, which breaks MultiKeyMap's
+     * hash-based lookup. We convert it to Collections.unmodifiableList which has
+     * stable hashCode based on content.
+     */
+    private Object convertToStableCollection(Object obj) {
+        if (obj instanceof SealableList) {
+            // Copy to ArrayList and wrap in unmodifiableList
+            // This gives us a collection with stable hashCode based on elements
+            SealableList<?> sealableList = (SealableList<?>) obj;
+            List<Object> copy = new ArrayList<>(sealableList);
+            return Collections.unmodifiableList(copy);
+        }
+        return obj;
+    }
+
+    /**
+     * Extracts the entries array from the JsonObject.
+     * Handles both direct array and JsonObject with @items.
+     */
+    private Object[] extractEntriesArray(Object entriesObj) {
+        if (entriesObj instanceof Object[]) {
+            return (Object[]) entriesObj;
+        } else if (entriesObj instanceof JsonObject) {
+            JsonObject entriesJsonObj = (JsonObject) entriesObj;
+            Object itemsObj = entriesJsonObj.get("@items");
+            if (itemsObj instanceof Object[]) {
+                return (Object[]) itemsObj;
+            }
+        }
+        return null;
     }
 }
