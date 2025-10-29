@@ -2,10 +2,7 @@ package com.cedarsoftware.io.writers;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.ArrayList;
-import java.util.List;
 
-import com.cedarsoftware.io.JsonWriter;
 import com.cedarsoftware.io.WriterContext;
 import com.cedarsoftware.util.MultiKeyMap;
 
@@ -71,27 +68,22 @@ public class MultiKeyMapWriter implements JsonClassWriter {
         context.writeFieldName("config");
         context.writeValue(config.toString());
 
-        // Extract all entries and write as array of {keys, value} objects
-        Iterable<MultiKeyMap.MultiKeyEntry<?>> entriesIterable =
-            (Iterable<MultiKeyMap.MultiKeyEntry<?>>) com.cedarsoftware.util.ReflectionUtils.call(map, "entries");
-
         // Write entries array field - combines comma + "entries":[ in one call!
         context.writeArrayFieldStart("entries");
 
-        boolean first = true;
-        for (MultiKeyMap.MultiKeyEntry<?> entry : entriesIterable) {
-            if (!first) {
-                output.write(',');
-            }
-            first = false;
-
-            // Write each entry as {"keys":[...],"value":...}
-            // Externalize markers (OPEN/CLOSE/SET_OPEN/SET_CLOSE/NULL_SENTINEL) to serializable strings
+        // Extract all entries using public API and write as array of {keys, value} objects
+        // Keys are now returned as native List (ordered), Set (unordered), or single items
+        for (java.util.Map.Entry<Object, ?> entry : map.entrySet()) {
+            // Write each entry as {"keys":...,"value":...}
+            // Keys are already in native JSON-friendly format (List/Set/single)
+            // - Single keys: written as-is
+            // - Multi-keys (ordered): written as ArrayList with @type
+            // - Multi-keys (unordered): written as LinkedHashSet with @type
+            // The writeStartObject() automatically handles comma insertion based on context
             context.writeStartObject();
             context.writeFieldName("keys");
-            Object[] externalizedKeys = MultiKeyMap.externalizeMarkers(entry.keys);
-            context.writeImpl(externalizedKeys, showType);
-            context.writeObjectField("value", entry.value);
+            context.writeImpl(entry.getKey(), showType);
+            context.writeObjectField("value", entry.getValue());
             context.writeEndObject();
         }
 

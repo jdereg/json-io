@@ -1,5 +1,6 @@
 package com.cedarsoftware.io.factory;
 
+import java.util.List;
 import java.util.Map;
 
 import com.cedarsoftware.io.JsonIoException;
@@ -82,79 +83,114 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
 
         MultiKeyMap<Object> mkmap = builder.build();
 
-        // Extract entries array
+        // Extract entries array - keep as JsonObject, don't resolve yet
         Object entriesObj = jObj.get("entries");
 
         if (entriesObj == null) {
             throw new JsonIoException("MultiKeyMap requires an entries array. Found keys: " + jObj.keySet());
         }
 
-        // Convert to Object[] if needed
-        Object[] entries;
-        if (entriesObj instanceof Object[]) {
-            entries = (Object[]) entriesObj;
-        } else if (entriesObj instanceof JsonObject) {
-            // Resolve the JsonObject to an array
-            entries = (Object[]) new JsonReader(resolver).toJava(Object[].class, entriesObj);
-        } else {
+        // Entries should be an array (or JsonObject representing an array)
+        if (!(entriesObj instanceof Object[] || entriesObj instanceof JsonObject)) {
             throw new JsonIoException("MultiKeyMap entries must be an array, got: " + entriesObj.getClass());
         }
 
-        // Create a JsonReader for resolving JsonObjects
+        // Create a JsonReader for resolving fields individually
         JsonReader reader = new JsonReader(resolver);
+
+        // Get entries as an array - but DON'T fully resolve nested structures yet
+        Object[] entries;
+        if (entriesObj instanceof Object[]) {
+            entries = (Object[]) entriesObj;
+        } else {
+            // It's a JsonObject - convert to array but keep entries as JsonObjects
+            JsonObject entriesJsonObj = (JsonObject) entriesObj;
+            Object itemsObj = entriesJsonObj.get("@items");
+            if (itemsObj instanceof Object[]) {
+                entries = (Object[]) itemsObj;
+            } else {
+                throw new JsonIoException("MultiKeyMap entries JsonObject missing @items");
+            }
+        }
 
         // Populate the MultiKeyMap with entries
         for (Object entryObj : entries) {
-            // Each entry should be a Map/JsonObject with "keys" and "value"
-            Map<String, Object> entryMap;
-            if (entryObj instanceof Map) {
-                entryMap = (Map<String, Object>) entryObj;
-            } else {
-                throw new JsonIoException("MultiKeyMap entry must be an object, got: " + entryObj.getClass());
+            // Each entry should be a JsonObject with "keys" and "value"
+            if (!(entryObj instanceof JsonObject)) {
+                throw new JsonIoException("MultiKeyMap entry must be a JsonObject, got: " + entryObj.getClass());
             }
 
+            JsonObject entryJsonObj = (JsonObject) entryObj;
+
             // Check if the "keys" field exists (it can be null for null keys)
-            if (!entryMap.containsKey("keys")) {
+            if (!entryJsonObj.containsKey("keys")) {
                 throw new JsonIoException("MultiKeyMap entry missing 'keys' field");
             }
 
-            Object keysObj = entryMap.get("keys");
-            Object valueObj = entryMap.get("value");
+            Object keysObj = entryJsonObj.get("keys");
+            Object valueObj = entryJsonObj.get("value");
 
-            // Convert keys to Object[]
-            Object[] keyComponents;
-            if (keysObj == null) {
-                // Null key - represented as array with single null element
-                keyComponents = new Object[]{null};
-            } else if (keysObj instanceof Object[]) {
-                keyComponents = (Object[]) keysObj;
-            } else if (keysObj instanceof JsonObject) {
-                keyComponents = (Object[]) reader.toJava(Object[].class, keysObj);
-            } else {
-                throw new JsonIoException("MultiKeyMap entry keys must be an array, got: " + keysObj.getClass());
-            }
-
-            // Resolve value if it's a JsonObject
+            // Resolve value using reader (handles both JsonObjects and plain values)
             Object value = valueObj;
             if (value instanceof JsonObject) {
                 value = reader.toJava(((JsonObject) value).getType(), value);
             }
 
-            // Resolve each key component if it's a JsonObject
-            for (int j = 0; j < keyComponents.length; j++) {
-                if (keyComponents[j] instanceof JsonObject) {
-                    keyComponents[j] = reader.toJava(((JsonObject) keyComponents[j]).getType(), keyComponents[j]);
+            // Handle keys - resolve using reader.toJava() which handles all nested structures properly
+            Object key;
+
+            if (keysObj == null) {
+                // Null key
+                key = null;
+            } else if (keysObj instanceof JsonObject) {
+                // JsonObject that needs resolution - could be List, Set, array, or single object
+                JsonObject keyJsonObj = (JsonObject) keysObj;
+                java.lang.reflect.Type keyType = keyJsonObj.getType();
+
+                if (keyType instanceof Class && ((Class<?>) keyType).isArray()) {
+                    // OLD FORMAT: Array with marker strings (~~OPEN~~, ~~SET_OPEN~~, etc.)
+                    // Resolve the array
+                    Object[] keyComponents = (Object[]) reader.toJava(Object[].class, keysObj);
+
+                    // Internalize marker strings back to marker objects
+                    Object[] internalizedKeys = MultiKeyMap.internalizeMarkers(keyComponents);
+
+                    // Reconstruct the original key structure
+                    key = MultiKeyMap.reconstructKey(internalizedKeys);
+                } else {
+                    // NEW FORMAT: List, Set, or single object
+                    // Let reader.toJava() handle full resolution including nested structures
+                    key = reader.toJava(keyType, keysObj);
                 }
+            } else {
+                // Simple value (String, Integer, etc.) - use as-is
+                key = keysObj;
             }
 
-            // Internalize marker strings (~~OPEN~~, ~~SET_OPEN~~, etc.) back to marker objects
-            Object[] internalizedKeys = MultiKeyMap.internalizeMarkers(keyComponents);
-
-            // Reconstruct the original key structure (Set, List, Object[], or single value)
-            Object reconstructedKey = MultiKeyMap.reconstructKey(internalizedKeys);
-
-            // Add to the MultiKeyMap using the normal put method
-            mkmap.put(reconstructedKey, value);
+            // Add to the MultiKeyMap
+            // Keys from entrySet() are always Set/List/single (never Object[])
+            // Unwrap unmodifiable collections to ensure MultiKeyMap can process them
+            Object finalKey = key;
+            if (key instanceof List) {
+                // Unwrap List and any nested collections within it
+                List<?> keyList = (List<?>) key;
+                List<Object> unwrapped = new java.util.ArrayList<>(keyList.size());
+                for (Object element : keyList) {
+                    if (element instanceof java.util.Set) {
+                        unwrapped.add(new java.util.LinkedHashSet<>((java.util.Set<?>) element));
+                    } else if (element instanceof List) {
+                        unwrapped.add(new java.util.ArrayList<>((List<?>) element));
+                    } else {
+                        unwrapped.add(element);
+                    }
+                }
+                finalKey = unwrapped;
+            } else if (key instanceof java.util.Set) {
+                finalKey = new java.util.LinkedHashSet<>((java.util.Set<?>) key);
+            }
+            // With COLLECTIONS_EXPANDED: put(List) will automatically expand the List into components
+            // With COLLECTIONS_NOT_EXPANDED: put(List) treats List as a single key
+            mkmap.put(finalKey, value);
         }
 
         // Remove config and entries from the original JsonObject

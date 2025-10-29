@@ -1,6 +1,6 @@
 ### Revision History
 #### 4.62.0 (Unreleased)
-* **FEATURE**: Added comprehensive semantic write API to `WriterContext` for easier custom writer implementation (matches Jackson's API):
+* **FEATURE**: Added comprehensive semantic write API to `WriterContext` for easier custom writer implementation:
   * **Basic field/value methods**:
     * `writeFieldName(String name)` - Writes field name with colon (e.g., `"name":`)
     * `writeValue(String value)` - Writes string value with proper quote escaping
@@ -16,7 +16,7 @@
   * **Structural methods**:
     * `writeStartObject()` / `writeEndObject()` - Object braces
     * `writeStartArray()` / `writeEndArray()` - Array brackets
-  * **Benefits**: Eliminates manual quote escaping, reduces boilerplate, prevents malformed JSON, provides Jackson-like semantic API, matches Jackson's convenience
+  * **Benefits**: Eliminates manual quote escaping, reduces boilerplate, prevents malformed JSON, provides Jackson-like semantic API
   * **Updated `MultiKeyMapWriter`**: Refactored to use new semantic API (uses `writeArrayFieldStart()` for cleaner code)
   * **Comprehensive Javadoc**: All 13 methods include detailed documentation with usage examples and patterns
 * **FEATURE**: Added complete serialization support for `MultiKeyMap` (from java-util):
@@ -27,6 +27,25 @@
   * **Null key support**: NULL_SENTINEL objects properly converted to/from null during serialization
   * **Configuration preservation**: All MultiKeyMap settings (capacity, loadFactor, collectionKeyMode, flattenDimensions, simpleKeysMode, valueBasedEquality, caseSensitive) preserved during round-trip
   * **Comprehensive test coverage**: 25 tests covering null keys, Set/List keys, nested arrays, complex objects, enums, temporal types, BigDecimal/BigInteger, UUID, primitive arrays, empty collections, marker collision, and string edge cases
+* **ENHANCEMENT**: Enhanced `WriterContext.writeValue()` with context-aware automatic comma management:
+  * **Context tracking**: JsonWriter now maintains a context stack (ARRAY_EMPTY, ARRAY_ELEMENT, OBJECT_EMPTY, OBJECT_FIELD) to track the current JSON structure state
+  * **Automatic comma insertion**: `writeValue(Object)` and `writeValue(String)` automatically insert commas based on context (e.g., between array elements, after object fields)
+  * **Benefits for custom writers**: Eliminates manual "boolean first" comma tracking pattern - writers can simply call `writeValue()` in loops without any comma logic
+  * **Design principle**: Unified API where one method (`writeValue()`) handles all value types (String, Number, Boolean, Object, null) with automatic type detection and comma management
+* **ENHANCEMENT**: Modernized custom writers to use new semantic WriterContext API:
+  * **Updated `ByteBufferWriter`**: Refactored to use `writeFieldName()` and `writeValue()` instead of manual output writing
+  * **Updated `CharBufferWriter`**: Refactored to use semantic API, eliminating 60+ lines of manual JSON escaping code
+  * **Updated `CompactMapWriter`**: Replaced reflection-based configuration access with public `getConfig()` API from java-util
+  * **Updated `CompactSetWriter`**: Refactored to use context-aware `writeValue()`, eliminating manual comma handling (removed "boolean first" pattern)
+  * **Updated `LongWriter`**: Added documentation explaining why primitive writers use direct output writing (comma handling already managed by framework)
+  * **Benefits**: Cleaner code, automatic JSON escaping, automatic comma management, better maintainability, consistent with new WriterContext patterns
+* **TEST**: Refactored buffer writer tests to use end-to-end JsonIo integration testing:
+  * **`ByteBufferWriterTest`**: Converted from null-context unit tests to 4 comprehensive JsonIo integration tests
+  * **`CharBufferWriterTest`**: Converted from null-context unit tests to 5 comprehensive JsonIo integration tests
+  * **Removed dead code**: Eliminated null-check fallback paths that could never execute in production (WriterContext is never null)
+  * **Enhanced coverage**: Added tests for empty buffers, full buffers, and comprehensive JSON escaping validation
+  * **Better testing**: Tests now verify writers work correctly through real JsonIo pipeline with actual WriterContext
+* **FIX**: Fixed critical bug in java-util's `ConcurrentList.toArray()` methods where null elements were incorrectly treated as "vanished due to concurrent removal", causing early loop termination and data loss. Added comprehensive test coverage (`testNullElementsInToArray()`) with 4 test scenarios covering nulls in various positions, array-backed and typed arrays, and edge cases.
 
 #### 4.61.0
 * **FEATURE**: Added `useUnsafe` option to `ReadOptions` to control unsafe object instantiation. When enabled, json-io can deserialize package-private classes, inner classes, and classes without accessible constructors. This feature is opt-in for security reasons and uses thread-local settings to prevent interference between concurrent deserializations.

@@ -30,63 +30,28 @@ public class CharBufferWriter implements JsonClassWriter {
     public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
         CharBuffer chars = (CharBuffer) obj;
 
-        output.write("\"value\":\"");
-
+        // Extract the string content from CharBuffer
+        String value;
         if (chars.hasArray()) {
             // Use the backing array directly
-            char[] array = chars.array();
             int offset = chars.arrayOffset() + chars.position();
-            int end = offset + chars.remaining();
-
-            // Process each character, escaping when needed
-            for (int i = offset; i < end; i++) {
-                char c = array[i];
-                switch (c) {
-                    case '"':  output.write("\\\""); break;
-                    case '\\': output.write("\\\\"); break;
-                    case '\b': output.write("\\b"); break;
-                    case '\f': output.write("\\f"); break;
-                    case '\n': output.write("\\n"); break;
-                    case '\r': output.write("\\r"); break;
-                    case '\t': output.write("\\t"); break;
-                    default:
-                        // Handle control characters
-                        if (c < ' ') {
-                            output.write(String.format("\\u%04x", (int) c));
-                        } else {
-                            output.write(c);
-                        }
-                }
-            }
+            int length = chars.remaining();
+            value = new String(chars.array(), offset, length);
         } else {
-            // Save position
+            // Save position and read into string
             int originalPosition = chars.position();
             try {
-                while (chars.hasRemaining()) {
-                    char c = chars.get();
-                    switch (c) {
-                        case '"':  output.write("\\\""); break;
-                        case '\\': output.write("\\\\"); break;
-                        case '\b': output.write("\\b"); break;
-                        case '\f': output.write("\\f"); break;
-                        case '\n': output.write("\\n"); break;
-                        case '\r': output.write("\\r"); break;
-                        case '\t': output.write("\\t"); break;
-                        default:
-                            // Handle control characters
-                            if (c < ' ') {
-                                output.write(String.format("\\u%04x", (int) c));
-                            } else {
-                                output.write(c);
-                            }
-                    }
-                }
+                char[] tmp = new char[chars.remaining()];
+                chars.get(tmp);
+                value = new String(tmp);
             } finally {
-                // Restore position
+                // Restore position to avoid side-effects
                 chars.position(originalPosition);
             }
         }
 
-        output.write("\"");
+        // Write "value":"<string>" using WriterContext API (handles escaping)
+        context.writeFieldName("value");
+        context.writeValue(value);
     }
 }

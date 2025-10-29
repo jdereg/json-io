@@ -285,6 +285,7 @@ public class MultiKeyMapTest {
         map.putMultiKey("listValue2", list2, "suffix");
 
         String json = JsonIo.toJson(map, null);
+
         MultiKeyMap<String> deserializedMap = JsonIo.toJava(json, null).asType(new TypeHolder<MultiKeyMap<String>>(){});
 
         // Verify lists can be retrieved (order matters for lists)
@@ -368,8 +369,16 @@ public class MultiKeyMapTest {
         String json = JsonIo.toJson(map, null);
         MultiKeyMap<String> deserializedMap = JsonIo.toJava(json, null).asType(new TypeHolder<MultiKeyMap<String>>(){});
 
-        assertEquals("nestedArrayValue", deserializedMap.get(nestedArrayWithNulls));
-        assertEquals("arrayWithNullValue", deserializedMap.get(arrayWithNull));
+        // After deserialization, array keys become List keys (new format behavior)
+        // Convert to Lists for lookup
+        List<List<Object>> nestedListKey = Arrays.asList(
+                Arrays.asList("a", null, "b"),
+                Arrays.asList(null, "c", null)
+        );
+        List<Object> listKey = Arrays.asList("key1", null, "key2");
+
+        assertEquals("nestedArrayValue", deserializedMap.get(nestedListKey));
+        assertEquals("arrayWithNullValue", deserializedMap.get(listKey));
         assertEquals(map.size(), deserializedMap.size());
     }
 

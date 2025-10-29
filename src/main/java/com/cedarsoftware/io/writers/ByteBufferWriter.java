@@ -8,7 +8,6 @@ import java.util.Base64;
 import com.cedarsoftware.io.WriterContext;
 
 import static com.cedarsoftware.io.JsonWriter.JsonClassWriter;
-import static com.cedarsoftware.io.JsonWriter.writeBasicString;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -62,8 +61,8 @@ public class ByteBufferWriter implements JsonClassWriter {
             }
         }
 
-        // Now write "value":"<encoded>" into the JSON output
-        output.write("\"value\":");
-        writeBasicString(output, encoded);
+        // Write "value":"<encoded>" using WriterContext API
+        context.writeFieldName("value");
+        context.writeValue(encoded);
     }
 }

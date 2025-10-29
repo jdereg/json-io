@@ -132,7 +132,7 @@ public interface WriterContext {
     void writeObjectField(String name, Object value) throws IOException;
 
     /**
-     * Writes a JSON object opening brace {@code {}.
+     * Writes a JSON object opening brace "{".
      * <p>
      * This should be paired with {@link #writeEndObject()} to properly close the object.
      * </p>
@@ -151,7 +151,7 @@ public interface WriterContext {
     void writeStartObject() throws IOException;
 
     /**
-     * Writes a JSON object closing brace {@code }}.
+     * Writes a JSON object closing brace "}".
      * <p>
      * This should be paired with a preceding {@link #writeStartObject()} call.
      * </p>
@@ -287,7 +287,7 @@ public interface WriterContext {
     /**
      * Writes a complete JSON object field start with automatic comma handling.
      * <p>
-     * Example: {@code writeObjectFieldStart("config")} produces {@code ,"config":{@code \{}
+     * Example: {@code writeObjectFieldStart("config")} produces <code>,"config":{</code>
      * </p>
      * <p>
      * This is a convenience method that combines three operations:

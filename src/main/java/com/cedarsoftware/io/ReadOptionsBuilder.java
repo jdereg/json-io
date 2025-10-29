@@ -76,7 +76,8 @@ public class ReadOptionsBuilder {
     // The BASE_* Maps are regular ConcurrentHashMap's because they are not constantly searched, otherwise they would be ClassValueMaps.
     private static final Map<Class<?>, JsonReader.JsonClassReader> BASE_READERS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, JsonReader.ClassFactory> BASE_CLASS_FACTORIES = new ConcurrentHashMap<>();
-    private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
+    // BASE_ALIAS_MAPPINGS uses LinkedHashMap to maintain insertion order so later aliases override earlier ones
+    private static final Map<String, String> BASE_ALIAS_MAPPINGS = Collections.synchronizedMap(new LinkedHashMap<>());
     private static final Map<Class<?>, Class<?>> BASE_COERCED_TYPES = new ConcurrentHashMap<>();
     private static final Set<Class<?>> BASE_NON_REFS = new ConcurrentSet<>();
     private static final Set<Class<?>> BASE_NOT_CUSTOM_READ = new ConcurrentSet<>();

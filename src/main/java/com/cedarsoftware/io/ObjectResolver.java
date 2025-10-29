@@ -301,7 +301,7 @@ public class ObjectResolver extends Resolver
         if (items == null) {
             return;
         }
-        
+
         final Collection col = (Collection) jsonObj.getTarget();
         
         // Performance: Pre-size ArrayList to avoid repeated resizing
@@ -326,16 +326,16 @@ public class ObjectResolver extends Resolver
         // Pre-compute raw element type to avoid repeated calls in loop
         final Class<?> rawElementType = TypeUtilities.getRawClass(elementType);
         final ReadOptions readOptions = getReadOptions();
-        
+
         for (Object element : items) {
             if (element == null) {
                 col.add(null);
                 idx++;
                 continue;
             }
-            
+
             // Performance: Check common primitive/simple types first for fast path
-            if (element instanceof String || element instanceof Boolean || 
+            if (element instanceof String || element instanceof Boolean ||
                 element instanceof Long || element instanceof Double) {
                 col.add(element);
                 idx++;
@@ -363,10 +363,12 @@ public class ObjectResolver extends Resolver
                     // Set the element's full type to the extracted element type.
                     jObj.setType(elementType);
                     createInstance(jObj);
+
                     boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getRawType());
                     if (!isNonRefClass) {
                         traverseSpecificType(jObj);
                     }
+
                     if (!(col instanceof EnumSet)) {
                         col.add(jObj.getTarget());
                     }

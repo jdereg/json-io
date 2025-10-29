@@ -25,14 +25,24 @@ import com.cedarsoftware.io.Writers;
  *         limitations under the License.
  */
 public class LongWriter extends Writers.PrimitiveTypeWriter {
+    /**
+     * Writes the primitive form of a Long value.
+     * <p>
+     * Note: This is a callback method called by the framework where comma handling
+     * is already managed by the caller. Therefore, we write directly to output rather
+     * than using context.writeValue() which would add unwanted comma management.
+     * </p>
+     */
     public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+        String value = o.toString();
         if (context.getWriteOptions().isWriteLongsAsStrings()) {
-            // Optimize: avoid String.format() overhead for simple long-to-string conversion
+            // Write long as quoted string for JavaScript compatibility
             output.write('"');
-            output.write(o.toString());
+            output.write(value);
             output.write('"');
         } else {
-            output.write(o.toString());
+            // Write long as unquoted number
+            output.write(value);
         }
     }
 }

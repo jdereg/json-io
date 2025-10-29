@@ -64,24 +64,19 @@ public class CompactSetWriter implements JsonClassWriter {
         }
         configStr.append(orderCode);
 
-        // Write shortened config
-        output.write("\"config\":\"" + configStr + "\",");
+        // Write shortened config field using semantic API
+        context.writeFieldName("config");
+        context.writeValue(configStr.toString());
 
-        // Write data array - using same key as CompactMap for consistency
-        output.write("\"data\":");
+        // Write data array using semantic API (automatically handles comma before field name)
+        context.writeArrayFieldStart("data");
 
-        // Write the elements as an array
-        output.write('[');
-        boolean first = true;
+        // Write elements - writeValue() handles commas automatically!
         for (Object element : set) {
-            if (first) {
-                first = false;
-            } else {
-                output.write(',');
-            }
-            context.writeImpl(element, showType);
+            context.writeValue(element);
         }
-        output.write(']');
+
+        context.writeEndArray();
     }
 
     @Override

@@ -96,6 +96,21 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     private long identity = 1;
     private int depth = 0;
 
+    // Context tracking for automatic comma management
+    private final Deque<WriteContext> contextStack = new ArrayDeque<>();
+
+    /**
+     * Tracks the current write context to enable automatic comma insertion.
+     * This eliminates the need for manual "boolean first" tracking in custom writers.
+     */
+    enum WriteContext {
+        ROOT,          // At document root
+        OBJECT_EMPTY,  // Inside object, no fields written yet
+        OBJECT_FIELD,  // Inside object, field(s) written
+        ARRAY_EMPTY,   // Inside array, no elements yet
+        ARRAY_ELEMENT  // Inside array, element(s) written
+    }
+
     static
     {
         for (short i = -128; i <= 127; i++)
@@ -1978,20 +1993,65 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         output.write('\"');
     }
 
+    // ======================== Context Stack Management ========================
+
+    /**
+     * Writes a comma if the current context requires it.
+     * This is called before writing array elements or object start/array start in array context.
+     * @throws IOException if an error occurs writing to the output stream
+     */
+    private void writeCommaIfNeeded() throws IOException {
+        WriteContext ctx = contextStack.peek();
+        if (ctx == WriteContext.OBJECT_FIELD || ctx == WriteContext.ARRAY_ELEMENT) {
+            out.write(',');
+        }
+    }
+
+    /**
+     * Updates the context after writing a value in an array.
+     * Transitions ARRAY_EMPTY to ARRAY_ELEMENT.
+     */
+    private void markArrayElementWritten() {
+        if (!contextStack.isEmpty()) {
+            WriteContext ctx = contextStack.peek();
+            if (ctx == WriteContext.ARRAY_EMPTY) {
+                contextStack.pop();
+                contextStack.push(WriteContext.ARRAY_ELEMENT);
+            }
+        }
+    }
+
+    /**
+     * Updates the context after writing a field in an object.
+     * Transitions OBJECT_EMPTY to OBJECT_FIELD.
+     */
+    private void markObjectFieldWritten() {
+        if (!contextStack.isEmpty()) {
+            WriteContext ctx = contextStack.peek();
+            if (ctx == WriteContext.OBJECT_EMPTY) {
+                contextStack.pop();
+                contextStack.push(WriteContext.OBJECT_FIELD);
+            }
+        }
+    }
+
     // ======================== Semantic Write API Implementation ========================
 
     /**
      * Writes a JSON field name followed by a colon.
      * Example: writeFieldName("name") produces "name":
-     *
-     * Note: This method does not write commas. Writers should manually write commas
-     * between fields using output.write(',')
+     * Automatically writes a comma before the field name if this is not the first field.
      */
     @Override
     public void writeFieldName(String name) throws IOException {
+        WriteContext ctx = contextStack.peek();
+        if (ctx == WriteContext.OBJECT_FIELD) {
+            out.write(',');
+        }
         out.write('\"');
         out.write(name);
         out.write("\":");
+        markObjectFieldWritten();
     }
 
     /**
@@ -2013,6 +2073,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         } else {
             writeJsonUtf8String(out, value, writeOptions.getMaxStringLength());
         }
+        markObjectFieldWritten();
     }
 
     /**
@@ -2030,65 +2091,89 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         out.write(name);
         out.write("\":");
         writeImpl(value, true);
+        markObjectFieldWritten();
     }
 
     /**
      * Writes a JSON object opening brace.
+     * Automatically writes a comma if needed based on context.
      */
     @Override
     public void writeStartObject() throws IOException {
+        writeCommaIfNeeded();
         out.write('{');
+        markArrayElementWritten();
+        contextStack.push(WriteContext.OBJECT_EMPTY);
     }
 
     /**
      * Writes a JSON object closing brace.
+     * Pops the object context from the stack.
      */
     @Override
     public void writeEndObject() throws IOException {
         out.write('}');
+        if (!contextStack.isEmpty()) {
+            contextStack.pop();
+        }
     }
 
     /**
      * Writes a JSON array opening bracket.
+     * Automatically writes a comma if needed based on context.
      */
     @Override
     public void writeStartArray() throws IOException {
+        writeCommaIfNeeded();
         out.write('[');
+        markArrayElementWritten();
+        contextStack.push(WriteContext.ARRAY_EMPTY);
     }
 
     /**
      * Writes a JSON array closing bracket.
+     * Pops the array context from the stack.
      */
     @Override
     public void writeEndArray() throws IOException {
         out.write(']');
+        if (!contextStack.isEmpty()) {
+            contextStack.pop();
+        }
     }
 
     /**
      * Writes a JSON string value with proper quote escaping.
      * Example: writeValue("Hello") produces "Hello"
+     * Automatically writes a comma if this is an array element and not the first element.
      */
     @Override
     public void writeValue(String value) throws IOException {
+        writeCommaIfNeeded();
         if (value == null) {
             out.write("null");
         } else {
             writeJsonUtf8String(out, value, writeOptions.getMaxStringLength());
         }
+        markArrayElementWritten();
     }
 
     /**
      * Writes a JSON value by serializing the given object.
      * Example: writeValue(myObject) produces the full JSON representation
+     * Automatically writes a comma if this is an array element and not the first element.
      */
     @Override
     public void writeValue(Object value) throws IOException {
+        writeCommaIfNeeded();
         writeImpl(value, true);
+        markArrayElementWritten();
     }
 
     /**
      * Writes a complete JSON array field start with automatic comma handling.
      * Example: writeArrayFieldStart("items") produces ,"items":[
+     * Manages context by marking the object field written and pushing array context.
      */
     @Override
     public void writeArrayFieldStart(String name) throws IOException {
@@ -2096,11 +2181,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         out.write('\"');
         out.write(name);
         out.write("\":[");
+        markObjectFieldWritten();
+        contextStack.push(WriteContext.ARRAY_EMPTY);
     }
 
     /**
      * Writes a complete JSON object field start with automatic comma handling.
      * Example: writeObjectFieldStart("config") produces ,"config":{
+     * Manages context by marking the object field written and pushing object context.
      */
     @Override
     public void writeObjectFieldStart(String name) throws IOException {
@@ -2108,6 +2196,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         out.write('\"');
         out.write(name);
         out.write("\":{");
+        markObjectFieldWritten();
+        contextStack.push(WriteContext.OBJECT_EMPTY);
     }
 
     /**
@@ -2125,6 +2215,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         } else {
             out.write(value.toString());
         }
+        markObjectFieldWritten();
     }
 
     /**
@@ -2138,5 +2229,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         out.write(name);
         out.write("\":");
         out.write(value ? "true" : "false");
+        markObjectFieldWritten();
     }
 }
