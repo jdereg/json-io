@@ -143,25 +143,12 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
                 // Null key
                 key = null;
             } else if (keysObj instanceof JsonObject) {
-                // JsonObject that needs resolution - could be List, Set, array, or single object
+                // JsonObject that needs resolution - could be List, Set, or single object
                 JsonObject keyJsonObj = (JsonObject) keysObj;
                 java.lang.reflect.Type keyType = keyJsonObj.getType();
 
-                if (keyType instanceof Class && ((Class<?>) keyType).isArray()) {
-                    // OLD FORMAT: Array with marker strings (~~OPEN~~, ~~SET_OPEN~~, etc.)
-                    // Resolve the array
-                    Object[] keyComponents = (Object[]) reader.toJava(Object[].class, keysObj);
-
-                    // Internalize marker strings back to marker objects
-                    Object[] internalizedKeys = MultiKeyMap.internalizeMarkers(keyComponents);
-
-                    // Reconstruct the original key structure
-                    key = MultiKeyMap.reconstructKey(internalizedKeys);
-                } else {
-                    // NEW FORMAT: List, Set, or single object
-                    // Let reader.toJava() handle full resolution including nested structures
-                    key = reader.toJava(keyType, keysObj);
-                }
+                // Let reader.toJava() handle full resolution including nested structures
+                key = reader.toJava(keyType, keysObj);
             } else {
                 // Simple value (String, Integer, etc.) - use as-is
                 key = keysObj;

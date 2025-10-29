@@ -1,5 +1,6 @@
 ### Revision History
 #### 4.62.0 (Unreleased)
+* **REMOVED**: `MultiKeyMapFactory` old format handling - Removed support for legacy array-with-marker-strings format that used `internalizeMarkers()` and old `reconstructKey()`. All MultiKeyMap serialization now uses the native List/Set format. Requires java-util 4.2.0+ which consolidated to single `reconstructKey()` method.
 * **FEATURE**: Added comprehensive semantic write API to `WriterContext` for easier custom writer implementation:
   * **Basic field/value methods**:
     * `writeFieldName(String name)` - Writes field name with colon (e.g., `"name":`)
