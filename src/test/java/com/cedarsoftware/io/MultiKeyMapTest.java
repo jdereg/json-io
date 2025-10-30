@@ -5,6 +5,7 @@ import java.math.BigInteger;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -721,5 +722,119 @@ public class MultiKeyMapTest {
         assertEquals("whitespaceValue", deserializedMap.get("   "));
 
         assertEquals(map.size(), deserializedMap.size());
+    }
+
+    @Test
+    void testMultiKeyMapWithDeeplyNestedCollections() {
+        // Test List<Set<List>> and Set<List<Set>> with both collection key modes
+
+        // ===== Test with COLLECTIONS_EXPANDED mode (default) =====
+        MultiKeyMap<String> expandedMap = MultiKeyMap.<String>builder()
+                .collectionKeyMode(MultiKeyMap.CollectionKeyMode.COLLECTIONS_EXPANDED)
+                .build();
+
+        // Test 1: List<Set<List<String>>>
+        List<Set<List<String>>> listSetList = new ArrayList<>();
+        Set<List<String>> innerSet1 = new HashSet<>();
+        innerSet1.add(Arrays.asList("a", "b", "c"));
+        innerSet1.add(Arrays.asList("d", "e"));
+        listSetList.add(innerSet1);
+
+        Set<List<String>> innerSet2 = new HashSet<>();
+        innerSet2.add(Arrays.asList("x", "y"));
+        listSetList.add(innerSet2);
+
+        expandedMap.put(listSetList, "listSetListValue");
+
+        // Test 2: Set<List<Set<Integer>>>
+        Set<List<Set<Integer>>> setListSet = new HashSet<>();
+        List<Set<Integer>> innerList1 = new ArrayList<>();
+        innerList1.add(new HashSet<>(Arrays.asList(1, 2, 3)));
+        innerList1.add(new HashSet<>(Arrays.asList(4, 5)));
+        setListSet.add(innerList1);
+
+        List<Set<Integer>> innerList2 = new ArrayList<>();
+        innerList2.add(new HashSet<>(Arrays.asList(6, 7)));
+        setListSet.add(innerList2);
+
+        expandedMap.put(setListSet, "setListSetValue");
+
+        // Test 3: List<Set<List<String>>> with nulls and empty collections
+        List<Set<List<String>>> listSetListWithNulls = new ArrayList<>();
+        Set<List<String>> setWithNulls = new HashSet<>();
+        setWithNulls.add(Arrays.asList("a", null, "b"));
+        setWithNulls.add(Collections.emptyList());
+        setWithNulls.add(Arrays.asList("c"));
+        listSetListWithNulls.add(setWithNulls);
+        listSetListWithNulls.add(new HashSet<>()); // Empty set
+
+        expandedMap.put(listSetListWithNulls, "listSetListWithNullsValue");
+
+        // Test 4: Set<List<Set<String>>> with nulls
+        Set<List<Set<String>>> setListSetWithNulls = new HashSet<>();
+        List<Set<String>> listWithNulls = new ArrayList<>();
+        listWithNulls.add(new HashSet<>(Arrays.asList("p", null)));
+        listWithNulls.add(new HashSet<>()); // Empty set
+        listWithNulls.add(new HashSet<>(Arrays.asList("q", "r")));
+        setListSetWithNulls.add(listWithNulls);
+
+        expandedMap.put(setListSetWithNulls, "setListSetWithNullsValue");
+
+        // Serialize and deserialize EXPANDED mode map
+        String expandedJson = JsonIo.toJson(expandedMap, null);
+        MultiKeyMap<String> deserializedExpanded = JsonIo.toJava(expandedJson, null).asType(new TypeHolder<MultiKeyMap<String>>(){});
+
+        // Verify EXPANDED mode - all nested collections should work
+        assertEquals(MultiKeyMap.CollectionKeyMode.COLLECTIONS_EXPANDED, deserializedExpanded.getCollectionKeyMode());
+        assertEquals("listSetListValue", deserializedExpanded.get(listSetList));
+        assertEquals("setListSetValue", deserializedExpanded.get(setListSet));
+        assertEquals("listSetListWithNullsValue", deserializedExpanded.get(listSetListWithNulls));
+        assertEquals("setListSetWithNullsValue", deserializedExpanded.get(setListSetWithNulls));
+        assertEquals(expandedMap.size(), deserializedExpanded.size());
+
+        // ===== Test with COLLECTIONS_NOT_EXPANDED mode =====
+        MultiKeyMap<String> notExpandedMap = MultiKeyMap.<String>builder()
+                .collectionKeyMode(MultiKeyMap.CollectionKeyMode.COLLECTIONS_NOT_EXPANDED)
+                .build();
+
+        // Test 1: Set<List<String>> as single key (MultiKeyMap will strip any outer wrapper)
+        Set<List<String>> setOfLists = new HashSet<>();
+        setOfLists.add(Arrays.asList("m", "n"));
+        setOfLists.add(Arrays.asList("o", "p"));
+
+        notExpandedMap.put(setOfLists, "notExpandedSetOfLists");
+
+        // Test 2: List<Set<Integer>> as single key
+        List<Set<Integer>> listOfSets = new ArrayList<>();
+        listOfSets.add(new HashSet<>(Arrays.asList(10, 20)));
+        listOfSets.add(new HashSet<>(Arrays.asList(30)));
+
+        notExpandedMap.put(listOfSets, "notExpandedListOfSets");
+
+        // Test 3: Set with nulls
+        Set<List<String>> setWithNullsNotExpanded = new HashSet<>();
+        setWithNullsNotExpanded.add(Arrays.asList("w", null));
+        setWithNullsNotExpanded.add(Collections.emptyList());
+
+        notExpandedMap.put(setWithNullsNotExpanded, "notExpandedWithNulls");
+
+        // Serialize and deserialize NOT_EXPANDED mode map
+        String notExpandedJson = JsonIo.toJson(notExpandedMap, null);
+        MultiKeyMap<String> deserializedNotExpanded = JsonIo.toJava(notExpandedJson, null).asType(new TypeHolder<MultiKeyMap<String>>(){});
+
+        // Verify NOT_EXPANDED mode - collections should be treated as single keys
+        assertEquals(MultiKeyMap.CollectionKeyMode.COLLECTIONS_NOT_EXPANDED, deserializedNotExpanded.getCollectionKeyMode());
+        assertEquals("notExpandedSetOfLists", deserializedNotExpanded.get(setOfLists));
+        assertEquals("notExpandedListOfSets", deserializedNotExpanded.get(listOfSets));
+        assertEquals("notExpandedWithNulls", deserializedNotExpanded.get(setWithNullsNotExpanded));
+        assertEquals(notExpandedMap.size(), deserializedNotExpanded.size());
+
+        // ===== Test cross-mode compatibility: verify different collection implementations match =====
+        // This tests that deserialized collections match fresh collections with same content
+        Set<List<String>> lookupSet = new HashSet<>();
+        lookupSet.add(Arrays.asList("m", "n"));
+        lookupSet.add(Arrays.asList("o", "p"));
+
+        assertEquals("notExpandedSetOfLists", deserializedNotExpanded.get(lookupSet));
     }
 }

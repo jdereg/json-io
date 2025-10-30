@@ -2,8 +2,10 @@ package com.cedarsoftware.io.factory;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
@@ -107,9 +109,11 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
 
                     // Fully resolve the key
                     if (key instanceof JsonObject) {
-                        key = reader.toJava(((JsonObject) key).getType(), key);
+                        JsonObject keyJsonObj = (JsonObject) key;
+                        key = reader.toJava(keyJsonObj.getType(), key);
                         // Convert SealableList to stable collection for hash stability
-                        key = convertToStableCollection(key);
+                        // Pass the original type info so we can preserve Set vs List distinction
+                        key = convertToStableCollection(key, keyJsonObj);
                     }
 
                     // Fully resolve the value
@@ -134,18 +138,43 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
     }
 
     /**
-     * Converts SealableList to a stable collection with consistent hashCode.
+     * Recursively converts SealableList to a stable collection with consistent hashCode.
      * SealableList's hashCode changes as items are added, which breaks MultiKeyMap's
-     * hash-based lookup. We convert it to Collections.unmodifiableList which has
-     * stable hashCode based on content.
+     * hash-based lookup. We convert it to Collections.unmodifiableList or unmodifiableSet
+     * based on the original JSON type, with stable hashCode based on content. This conversion
+     * is done recursively to handle deeply nested collections like List<Set<List<...>>>.
      */
-    private Object convertToStableCollection(Object obj) {
+    private Object convertToStableCollection(Object obj, JsonObject jsonObj) {
         if (obj instanceof SealableList) {
-            // Copy to ArrayList and wrap in unmodifiableList
-            // This gives us a collection with stable hashCode based on elements
             SealableList<?> sealableList = (SealableList<?>) obj;
-            List<Object> copy = new ArrayList<>(sealableList);
-            return Collections.unmodifiableList(copy);
+
+            // Check if the original type was a Set by looking at the @type field
+            Object typeObj = jsonObj.get("@type");
+            String typeName = typeObj != null ? typeObj.toString() : "";
+            boolean isSet = typeName.contains("Set") || typeName.contains("set");
+
+            if (isSet) {
+                // Convert to HashSet (items are already resolved)
+                // Return as HashSet, not UnmodifiableSet, so MultiKeyMap can handle it normally
+                Set<Object> copy = new HashSet<>();
+                for (Object item : sealableList) {
+                    copy.add(item);
+                }
+                return copy;
+            } else {
+                // Convert to unmodifiableList (items are already resolved)
+                List<Object> copy = new ArrayList<>();
+                for (Object item : sealableList) {
+                    copy.add(item);
+                }
+                return Collections.unmodifiableList(copy);
+            }
+        } else if (obj instanceof List) {
+            // Handle other List types - convert to unmodifiableList for stability
+            return Collections.unmodifiableList(new ArrayList<>((List<?>) obj));
+        } else if (obj instanceof Set) {
+            // Handle Sets - return as-is, MultiKeyMap will handle it correctly
+            return obj;
         }
         return obj;
     }
