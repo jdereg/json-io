@@ -2,7 +2,7 @@ package com.cedarsoftware.io.factory;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -143,15 +143,19 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
      * <p>
      * SealableList and SealableSet have unstable hashCodes that change as items are added,
      * which breaks MultiKeyMap's hash-based lookup. We convert them to stable collections
-     * (HashSet or UnmodifiableList) based on the original JSON type.
+     * (LinkedHashSet or UnmodifiableList) based on the original JSON type.
      * <p>
-     * Already-stable collections (HashSet, ArrayList) are returned as-is for performance,
-     * or wrapped in Unmodifiable for safety.
+     * Already-stable collections (LinkedHashSet, ArrayList) are returned as-is for performance.
+     * <p>
+     * Uses LinkedHashSet instead of HashSet to preserve iteration order from the source:
+     * - LinkedHashSet → preserves insertion order
+     * - TreeSet → preserves sorted order (as it appears in JSON)
+     * - HashSet → preserves iteration order (for consistency/debugging)
      * <p>
      * Performance notes:
      * - SealableList/SealableSet: Must convert (O(n)) due to hashCode instability
-     * - HashSet: Return as-is (O(1)) - already stable
-     * - ArrayList: Return as-is (O(1)) - already stable, MultiKeyMap will handle correctly
+     * - LinkedHashSet/ArrayList: Return as-is (O(1)) - already stable
+     * - LinkedHashSet overhead vs HashSet: Negligible (same O(1) operations, ~50% more memory)
      *
      * @param obj the object to convert (may be SealableList, SealableSet, List, Set, or other)
      * @param jsonObj the JsonObject containing type information (@type field)
@@ -168,8 +172,9 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
             boolean isSet = typeName.contains("Set") || typeName.contains("set");
 
             if (isSet) {
-                // Convert to HashSet - stable hashCode
-                Set<Object> copy = new HashSet<>(sealableList.size());
+                // Convert to LinkedHashSet - stable hashCode AND preserves order
+                // This maintains insertion order (LinkedHashSet), sorted order (TreeSet), or iteration order (HashSet)
+                Set<Object> copy = new LinkedHashSet<>(sealableList.size());
                 copy.addAll(sealableList);
                 return copy;
             } else {
@@ -181,8 +186,10 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
         // Handle SealableSet - MUST convert due to unstable hashCode
         if (obj instanceof SealableSet) {
             SealableSet<?> sealableSet = (SealableSet<?>) obj;
-            // Convert to HashSet - stable hashCode
-            return new HashSet<>(sealableSet);
+            // Convert to LinkedHashSet - stable hashCode AND preserves order
+            // SealableSet wraps the original Set (LinkedHashSet/TreeSet/HashSet), so this preserves
+            // the underlying Set's iteration order, whether it's insertion order, sorted order, or arbitrary order
+            return new LinkedHashSet<>(sealableSet);
         }
 
         // Handle already-stable List (ArrayList, etc.)
@@ -192,7 +199,7 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
             return obj;
         }
 
-        // Handle already-stable Set (HashSet, etc.)
+        // Handle already-stable Set (LinkedHashSet, HashSet, etc.)
         if (obj instanceof Set) {
             // Already stable - no conversion needed
             return obj;
