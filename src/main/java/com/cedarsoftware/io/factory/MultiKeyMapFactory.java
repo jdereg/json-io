@@ -12,6 +12,7 @@ import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
 import com.cedarsoftware.io.util.SealableList;
+import com.cedarsoftware.io.util.SealableSet;
 import com.cedarsoftware.util.MultiKeyMap;
 
 /**
@@ -138,13 +139,26 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
     }
 
     /**
-     * Recursively converts SealableList to a stable collection with consistent hashCode.
-     * SealableList's hashCode changes as items are added, which breaks MultiKeyMap's
-     * hash-based lookup. We convert it to Collections.unmodifiableList or unmodifiableSet
-     * based on the original JSON type, with stable hashCode based on content. This conversion
-     * is done recursively to handle deeply nested collections like List<Set<List<...>>>.
+     * Converts Sealable collections to stable collections with consistent hashCode.
+     * <p>
+     * SealableList and SealableSet have unstable hashCodes that change as items are added,
+     * which breaks MultiKeyMap's hash-based lookup. We convert them to stable collections
+     * (HashSet or UnmodifiableList) based on the original JSON type.
+     * <p>
+     * Already-stable collections (HashSet, ArrayList) are returned as-is for performance,
+     * or wrapped in Unmodifiable for safety.
+     * <p>
+     * Performance notes:
+     * - SealableList/SealableSet: Must convert (O(n)) due to hashCode instability
+     * - HashSet: Return as-is (O(1)) - already stable
+     * - ArrayList: Return as-is (O(1)) - already stable, MultiKeyMap will handle correctly
+     *
+     * @param obj the object to convert (may be SealableList, SealableSet, List, Set, or other)
+     * @param jsonObj the JsonObject containing type information (@type field)
+     * @return a stable collection suitable for use as MultiKeyMap key
      */
     private Object convertToStableCollection(Object obj, JsonObject jsonObj) {
+        // Handle SealableList - MUST convert due to unstable hashCode
         if (obj instanceof SealableList) {
             SealableList<?> sealableList = (SealableList<?>) obj;
 
@@ -154,28 +168,37 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
             boolean isSet = typeName.contains("Set") || typeName.contains("set");
 
             if (isSet) {
-                // Convert to HashSet (items are already resolved)
-                // Return as HashSet, not UnmodifiableSet, so MultiKeyMap can handle it normally
-                Set<Object> copy = new HashSet<>();
-                for (Object item : sealableList) {
-                    copy.add(item);
-                }
+                // Convert to HashSet - stable hashCode
+                Set<Object> copy = new HashSet<>(sealableList.size());
+                copy.addAll(sealableList);
                 return copy;
             } else {
-                // Convert to unmodifiableList (items are already resolved)
-                List<Object> copy = new ArrayList<>();
-                for (Object item : sealableList) {
-                    copy.add(item);
-                }
-                return Collections.unmodifiableList(copy);
+                // Convert to UnmodifiableList - stable hashCode
+                return Collections.unmodifiableList(new ArrayList<>(sealableList));
             }
-        } else if (obj instanceof List) {
-            // Handle other List types - convert to unmodifiableList for stability
-            return Collections.unmodifiableList(new ArrayList<>((List<?>) obj));
-        } else if (obj instanceof Set) {
-            // Handle Sets - return as-is, MultiKeyMap will handle it correctly
+        }
+
+        // Handle SealableSet - MUST convert due to unstable hashCode
+        if (obj instanceof SealableSet) {
+            SealableSet<?> sealableSet = (SealableSet<?>) obj;
+            // Convert to HashSet - stable hashCode
+            return new HashSet<>(sealableSet);
+        }
+
+        // Handle already-stable List (ArrayList, etc.)
+        // These are stable, so return as-is for optimal performance
+        if (obj instanceof List) {
+            // Already stable - no conversion needed
             return obj;
         }
+
+        // Handle already-stable Set (HashSet, etc.)
+        if (obj instanceof Set) {
+            // Already stable - no conversion needed
+            return obj;
+        }
+
+        // Not a collection - return as-is
         return obj;
     }
 
