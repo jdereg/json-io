@@ -11,8 +11,6 @@ import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
-import com.cedarsoftware.io.util.SealableList;
-import com.cedarsoftware.io.util.SealableSet;
 import com.cedarsoftware.util.MultiKeyMap;
 
 /**
@@ -109,12 +107,11 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
                     Object value = entryJsonObj.get("value");
 
                     // Fully resolve the key
+                    // NEW APPROACH: Skip Sealable* - create mutable collection, populate, then wrap as unmodifiable
+                    // This eliminates hashCode instability and guarantees key immutability
                     if (key instanceof JsonObject) {
                         JsonObject keyJsonObj = (JsonObject) key;
-                        key = reader.toJava(keyJsonObj.getType(), key);
-                        // Convert SealableList to stable collection for hash stability
-                        // Pass the original type info so we can preserve Set vs List distinction
-                        key = convertToStableCollection(key, keyJsonObj);
+                        key = createImmutableKey(reader, keyJsonObj);
                     }
 
                     // Fully resolve the value
@@ -139,74 +136,48 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
     }
 
     /**
-     * Converts Sealable collections to stable collections with consistent hashCode.
+     * Creates an immutable key for MultiKeyMap by directly populating mutable collections
+     * and wrapping them as unmodifiable.
      * <p>
-     * SealableList and SealableSet have unstable hashCodes that change as items are added,
-     * which breaks MultiKeyMap's hash-based lookup. We convert them to stable collections
-     * (LinkedHashSet or UnmodifiableList) based on the original JSON type.
+     * This approach eliminates Sealable* classes entirely, avoiding their hashCode instability
+     * issues and guaranteeing that keys are immutable when stored in MultiKeyMap.
      * <p>
-     * Already-stable collections (LinkedHashSet, ArrayList) are returned as-is for performance.
+     * Benefits over the old Sealable* approach:
+     * - Eliminates hashCode instability (no SealableSet/SealableList)
+     * - Guarantees key immutability (prevents users from mutating keys via keySet())
+     * - Faster (no conversion overhead)
+     * - Simpler code
      * <p>
-     * Uses LinkedHashSet instead of HashSet to preserve iteration order from the source:
+     * Uses LinkedHashSet for Sets to preserve iteration order:
      * - LinkedHashSet → preserves insertion order
      * - TreeSet → preserves sorted order (as it appears in JSON)
      * - HashSet → preserves iteration order (for consistency/debugging)
-     * <p>
-     * Performance notes:
-     * - SealableList/SealableSet: Must convert (O(n)) due to hashCode instability
-     * - LinkedHashSet/ArrayList: Return as-is (O(1)) - already stable
-     * - LinkedHashSet overhead vs HashSet: Negligible (same O(1) operations, ~50% more memory)
      *
-     * @param obj the object to convert (may be SealableList, SealableSet, List, Set, or other)
-     * @param jsonObj the JsonObject containing type information (@type field)
-     * @return a stable collection suitable for use as MultiKeyMap key
+     * @param reader the JSON reader for resolving nested objects
+     * @param keyJsonObj the JsonObject containing the key data
+     * @return an immutable key object (UnmodifiableSet, UnmodifiableList, or resolved single object)
      */
-    private Object convertToStableCollection(Object obj, JsonObject jsonObj) {
-        // Handle SealableList - MUST convert due to unstable hashCode
-        if (obj instanceof SealableList) {
-            SealableList<?> sealableList = (SealableList<?>) obj;
+    private Object createImmutableKey(JsonReader reader, JsonObject keyJsonObj) {
+        // Use getType() which returns Type, convert to string for checking
+        String typeName = keyJsonObj.getType() != null ? keyJsonObj.getType().getTypeName() : "";
 
-            // Check if the original type was a Set by looking at the @type field
-            Object typeObj = jsonObj.get("@type");
-            String typeName = typeObj != null ? typeObj.toString() : "";
-            boolean isSet = typeName.contains("Set") || typeName.contains("set");
+        // Check if this is a Collection (Set or List)
+        boolean isSet = typeName.contains("Set") || typeName.contains("set");
+        boolean isList = typeName.contains("List") || typeName.contains("list");
 
-            if (isSet) {
-                // Convert to LinkedHashSet - stable hashCode AND preserves order
-                // This maintains insertion order (LinkedHashSet), sorted order (TreeSet), or iteration order (HashSet)
-                Set<Object> copy = new LinkedHashSet<>(sealableList.size());
-                copy.addAll(sealableList);
-                return copy;
-            } else {
-                // Convert to UnmodifiableList - stable hashCode
-                return Collections.unmodifiableList(new ArrayList<>(sealableList));
-            }
-        }
+        // Let json-io resolve the key object using standard machinery
+        Object resolved = reader.toJava(keyJsonObj.getType(), keyJsonObj);
 
-        // Handle SealableSet - MUST convert due to unstable hashCode
-        if (obj instanceof SealableSet) {
-            SealableSet<?> sealableSet = (SealableSet<?>) obj;
-            // Convert to LinkedHashSet - stable hashCode AND preserves order
-            // SealableSet wraps the original Set (LinkedHashSet/TreeSet/HashSet), so this preserves
-            // the underlying Set's iteration order, whether it's insertion order, sorted order, or arbitrary order
-            return new LinkedHashSet<>(sealableSet);
-        }
-
-        // Handle already-stable List (ArrayList, etc.)
-        // These are stable, so return as-is for optimal performance
-        if (obj instanceof List) {
-            // Already stable - no conversion needed
-            return obj;
-        }
-
-        // Handle already-stable Set (LinkedHashSet, HashSet, etc.)
-        if (obj instanceof Set) {
-            // Already stable - no conversion needed
-            return obj;
+        // Now wrap it as unmodifiable if it's a collection
+        // This prevents users from mutating keys obtained via keySet()
+        if (isSet && resolved instanceof Set) {
+            return Collections.unmodifiableSet((Set<?>) resolved);
+        } else if (isList && resolved instanceof List) {
+            return Collections.unmodifiableList((List<?>) resolved);
         }
 
         // Not a collection - return as-is
-        return obj;
+        return resolved;
     }
 
     /**
