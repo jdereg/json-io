@@ -1,16 +1,12 @@
 package com.cedarsoftware.io.factory;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
+import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.MultiKeyMap;
 
 /**
@@ -53,13 +49,13 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
         }
 
         // Extract config values
-        int capacity = Integer.parseInt(parts[0]);
-        float loadFactor = Float.parseFloat(parts[1]);
+        int capacity = Converter.convert2int(parts[0]);
+        float loadFactor = Converter.convert2float(parts[1]);
         String modeCode = parts[2];
-        boolean flattenDimensions = "T".equals(parts[3]);
-        boolean simpleKeysMode = "T".equals(parts[4]);
-        boolean valueBasedEquality = "T".equals(parts[5]);
-        boolean caseSensitive = "T".equals(parts[6]);
+        boolean flattenDimensions = Converter.convert2boolean(parts[3]);
+        boolean simpleKeysMode = Converter.convert2boolean(parts[4]);
+        boolean valueBasedEquality = Converter.convert2boolean(parts[5]);
+        boolean caseSensitive = Converter.convert2boolean(parts[6]);
 
         // Map modeCode back to CollectionKeyMode
         MultiKeyMap.CollectionKeyMode collectionKeyMode;
@@ -111,7 +107,8 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
                     // This eliminates hashCode instability and guarantees key immutability
                     if (key instanceof JsonObject) {
                         JsonObject keyJsonObj = (JsonObject) key;
-                        key = createImmutableKey(reader, keyJsonObj);
+                        // Let json-io resolve the key object using standard machinery
+                        key = reader.toJava(keyJsonObj.getType(), keyJsonObj);
                     }
 
                     // Fully resolve the value
@@ -133,51 +130,6 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
         jObj.setTarget(mkmap);
 
         return mkmap;
-    }
-
-    /**
-     * Creates an immutable key for MultiKeyMap by directly populating mutable collections
-     * and wrapping them as unmodifiable.
-     * <p>
-     * This approach eliminates Sealable* classes entirely, avoiding their hashCode instability
-     * issues and guaranteeing that keys are immutable when stored in MultiKeyMap.
-     * <p>
-     * Benefits over the old Sealable* approach:
-     * - Eliminates hashCode instability (no SealableSet/SealableList)
-     * - Guarantees key immutability (prevents users from mutating keys via keySet())
-     * - Faster (no conversion overhead)
-     * - Simpler code
-     * <p>
-     * Uses LinkedHashSet for Sets to preserve iteration order:
-     * - LinkedHashSet → preserves insertion order
-     * - TreeSet → preserves sorted order (as it appears in JSON)
-     * - HashSet → preserves iteration order (for consistency/debugging)
-     *
-     * @param reader the JSON reader for resolving nested objects
-     * @param keyJsonObj the JsonObject containing the key data
-     * @return an immutable key object (UnmodifiableSet, UnmodifiableList, or resolved single object)
-     */
-    private Object createImmutableKey(JsonReader reader, JsonObject keyJsonObj) {
-        // Use getType() which returns Type, convert to string for checking
-        String typeName = keyJsonObj.getType() != null ? keyJsonObj.getType().getTypeName() : "";
-
-        // Check if this is a Collection (Set or List)
-        boolean isSet = typeName.contains("Set") || typeName.contains("set");
-        boolean isList = typeName.contains("List") || typeName.contains("list");
-
-        // Let json-io resolve the key object using standard machinery
-        Object resolved = reader.toJava(keyJsonObj.getType(), keyJsonObj);
-
-        // Now wrap it as unmodifiable if it's a collection
-        // This prevents users from mutating keys obtained via keySet()
-        if (isSet && resolved instanceof Set) {
-            return Collections.unmodifiableSet((Set<?>) resolved);
-        } else if (isList && resolved instanceof List) {
-            return Collections.unmodifiableList((List<?>) resolved);
-        }
-
-        // Not a collection - return as-is
-        return resolved;
     }
 
     /**
