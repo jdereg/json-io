@@ -148,6 +148,82 @@ have lots of additional information for how to register your factory classes wit
 - [Primitive and non-primitive fields (sub-graph)](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectTest.java)
 - [Primitive, array, type array, List, Map](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectsTest.java)
 
+### Writing Custom JsonClassWriter
+
+When creating custom writers, use the **WriterContext semantic API** for cleaner, safer code. The API provides methods that handle quote escaping, comma management, and proper JSON formatting automatically.
+
+**Basic Pattern:**
+```java
+class MyWriter implements JsonWriter.JsonClassWriter {
+    public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+        MyClass instance = (MyClass) obj;
+
+        // First field: no leading comma
+        context.writeFieldName("fieldName");
+        context.writeValue(instance.getFieldValue());
+
+        // Subsequent fields: automatic comma handling
+        context.writeStringField("name", instance.getName());
+        context.writeNumberField("count", instance.getCount());
+        context.writeObjectField("data", instance.getData());
+    }
+}
+```
+
+**Key Methods:**
+
+- **`writeFieldName(name)`** - Writes field name with colon (no comma): `"name":`
+- **`writeValue(value)`** - Writes any value with automatic type detection and escaping
+- **`writeStringField(name, value)`** - Complete string field with comma: `,"name":"value"`
+- **`writeNumberField(name, number)`** - Complete number field with comma: `,"count":42`
+- **`writeBooleanField(name, bool)`** - Complete boolean field with comma: `,"active":true`
+- **`writeObjectField(name, obj)`** - Complete object field with full serialization: `,"data":{...}`
+- **`writeArrayFieldStart(name)`** - Field name with opening bracket: `,"items":[`
+- **`writeObjectFieldStart(name)`** - Field name with opening brace: `,"config":{`
+
+**Why First Field is Different:**
+
+Custom writers are called *inside* the object that JsonWriter has already opened with `{`. The first field should NOT have a leading comma:
+
+```json
+{
+  "fieldName": "value",    // ← First field (no comma)
+  "name": "John",          // ← Subsequent fields (comma)
+  "count": 42
+}
+```
+
+**Complete Example:**
+```java
+// From CustomJsonSubObjectsTest.java
+static class PersonWriter implements JsonWriter.JsonClassWriter {
+    public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException {
+        Person p = (Person) o;
+
+        // First field: no leading comma
+        context.writeFieldName("first");
+        context.writeValue(p.firstName);
+
+        // Subsequent fields: include leading comma
+        context.writeStringField("last", p.lastName);
+        context.writeStringField("phone", p.phoneNumber);
+        context.writeStringField("dob", p.dob.toString());
+
+        // Complex types: automatic serialization with cycles/references
+        context.writeObjectField("kids", p.kids);      // Array
+        context.writeObjectField("pets", p.pets);      // List
+        context.writeObjectField("items", p.items);    // Map
+    }
+}
+```
+
+**Benefits:**
+- ✅ Automatic quote escaping (no manual `\"` handling)
+- ✅ Automatic comma management (no "boolean first" pattern)
+- ✅ Type-safe methods for primitives (no manual formatting)
+- ✅ Full support for complex types (cycles, references, @id/@ref)
+- ✅ Cleaner, more maintainable code
+
 ### CompactMap Usage
 
 Support for [CompactMap](https://github.com/jdereg/java-util/blob/master/userguide.md#compactmap) is built in.

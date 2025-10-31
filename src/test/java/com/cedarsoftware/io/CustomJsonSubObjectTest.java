@@ -58,16 +58,16 @@ class CustomJsonSubObjectTest
 	static class PersonWriter implements JsonWriter.JsonClassWriter {
 		public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException {
 			Person p = (Person) o;
-			output.write("\"first\":\"");
-			output.write(p.firstName);
-			output.write("\",\"last\":\"");
-			output.write(p.lastName);
-			output.write("\",\"phone\":\"");
-			output.write(p.phoneNumber);
-			output.write("\",\"dob\":\"");
-			output.write(p.dob.toString());
-			output.write("\",\"kid\":");
-			context.writeObject(p.kid, false, false);
+			// Using new WriterContext semantic API - handles quotes, escaping, commas automatically
+			// First field: no leading comma
+			context.writeFieldName("first");
+			context.writeValue(p.firstName);
+			// Subsequent fields: include leading comma
+			context.writeStringField("last", p.lastName);
+			context.writeStringField("phone", p.phoneNumber);
+			context.writeStringField("dob", p.dob.toString());
+			// writeObjectField handles sub-objects with full serialization
+			context.writeObjectField("kid", p.kid);
 		}
 	}
 

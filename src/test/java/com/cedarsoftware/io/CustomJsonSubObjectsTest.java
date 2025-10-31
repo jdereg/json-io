@@ -79,25 +79,21 @@ class CustomJsonSubObjectsTest
 	static class PersonWriter implements JsonWriter.JsonClassWriter {
 		public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException {
 			Person p = (Person) o;
-			// Changing the field names on the Person class
-			output.write("\"first\":\"");
-			output.write(p.firstName);
-			output.write("\",\"last\":\"");
-			output.write(p.lastName);
-			output.write("\",\"phone\":\"");
-			output.write(p.phoneNumber);
-			output.write("\",\"dob\":\"");
-			output.write(p.dob.toString());
+			// Using new WriterContext semantic API - cleaner, safer, automatic formatting
+			// First field: no leading comma
+			context.writeFieldName("first");
+			context.writeValue(p.firstName);
+			// Subsequent fields: include leading comma
+			context.writeStringField("last", p.lastName);
+			context.writeStringField("phone", p.phoneNumber);
+			context.writeStringField("dob", p.dob.toString());
 
-			// Handles substructure, with unknown depth here.
-			output.write("\",\"kids\":");
-			context.writeImpl(p.kids, true);
-			output.write(",\"friends\":");
-			context.writeImpl(p.friends, false);
-			output.write(",\"pets\":");
-			context.writeImpl(p.pets, true);
-			output.write(",\"items\":");
-			context.writeImpl(p.items, true);
+			// writeObjectField handles complex types (arrays, lists, maps) with full serialization
+			// Automatically handles cycles, references, and nested structures
+			context.writeObjectField("kids", p.kids);
+			context.writeObjectField("friends", p.friends);
+			context.writeObjectField("pets", p.pets);
+			context.writeObjectField("items", p.items);
 		}
 	}
 
