@@ -103,8 +103,6 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
                     Object value = entryJsonObj.get("value");
 
                     // Fully resolve the key
-                    // NEW APPROACH: Skip Sealable* - create mutable collection, populate, then wrap as unmodifiable
-                    // This eliminates hashCode instability and guarantees key immutability
                     if (key instanceof JsonObject) {
                         JsonObject keyJsonObj = (JsonObject) key;
                         // Let json-io resolve the key object using standard machinery
