@@ -275,16 +275,17 @@ public class MapResolver extends Resolver {
         int idx = 0;
 
         if (items != null) {
-            // Cache readOptions to avoid repeated getter calls
+            // Cache to avoid repeated getter calls
             final ReadOptions readOptions = getReadOptions();
-            
+            final ReferenceTracker refTracker = getReferences();
+
             for (Object element : items) {
                 if (element == null) {
                     col.add(null);
                     idx++;
                     continue;
                 }
-                
+
                 // Each element can be of different type - cannot cache class outside loop
                 if (element instanceof String || element instanceof Boolean || element instanceof Double || element instanceof Long) {
                     // Allow Strings, Booleans, Longs, and Doubles to be "inline" without Java object decoration (@id, @type, etc.)
@@ -301,7 +302,7 @@ public class MapResolver extends Resolver {
                     final Long ref = jObj.getReferenceId();
 
                     if (ref != null) {
-                        JsonObject refObject = getReferences().getOrThrow(ref);
+                        JsonObject refObject = refTracker.getOrThrow(ref);
 
                         if (refObject.getTarget() != null) {
                             col.add(refObject.getTarget());

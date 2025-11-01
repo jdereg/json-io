@@ -1,5 +1,6 @@
 ### Revision History
 #### 4.62.0 (Unreleased)
+* **PERFORMANCE**: Optimized `MapResolver.traverseCollection()` to cache `ReferenceTracker` outside loop, eliminating redundant `getReferences()` calls during collection traversal.
 * **PERFORMANCE**: Removed redundant injector map caches that duplicated `ReadOptions.getDeepInjectorMap()` caching:
   * Removed `MapResolver.classInjectorCache` instance field - Was caching results already cached by ReadOptions via ClassValueMap
   * Removed local `injectorCache` in `Resolver.patchUnresolvedReferences()` - Method-local cache was redundant
