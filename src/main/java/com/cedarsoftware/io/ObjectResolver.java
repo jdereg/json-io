@@ -62,9 +62,6 @@ import com.cedarsoftware.util.convert.Converter;
 @SuppressWarnings({ "rawtypes", "unchecked"})
 public class ObjectResolver extends Resolver
 {
-    // Performance: Cache for type resolutions to avoid expensive reflection operations
-    private final Map<String, Type> typeResolutionCache = new HashMap<>();
-    
     /**
      * Constructor
      * @param readOptions Options to use while reading.
@@ -143,14 +140,9 @@ public class ObjectResolver extends Resolver
                 // If the field has an explicit type, use it.
                 jObj.setType(explicitType);
             } else {
-                // Performance: Cache type resolutions to avoid expensive reflection operations
-                String cacheKey = target.getClass().getName() + ":" + injector.getName() + ":" + fieldType.getTypeName();
-                Type resolvedFieldType = typeResolutionCache.get(cacheKey);
-                if (resolvedFieldType == null) {
-                    // Resolve the field type in the context of the target object.
-                    resolvedFieldType = TypeUtilities.resolveTypeUsingInstance(target, fieldType);
-                    typeResolutionCache.put(cacheKey, resolvedFieldType);
-                }
+                // Resolve the field type in the context of the target object.
+                // TypeUtilities.resolveTypeUsingInstance() internally caches results.
+                Type resolvedFieldType = TypeUtilities.resolveTypeUsingInstance(target, fieldType);
                 jObj.setType(resolvedFieldType);
             }
         }
@@ -745,15 +737,5 @@ public class ObjectResolver extends Resolver
         }
         jsonArray.setItems(list.toArray());
         return jsonArray;
-    }
-    
-    /**
-     * Override parent cleanup to include performance caches
-     */
-    @Override
-    protected void cleanup() {
-        super.cleanup();
-        // Performance: Clear caches to free memory
-        typeResolutionCache.clear();
     }
 }

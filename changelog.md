@@ -1,5 +1,6 @@
 ### Revision History
 #### 4.62.0 (Unreleased)
+* **PERFORMANCE**: Removed redundant type resolution cache from `ObjectResolver` - Type resolution is already cached by `TypeUtilities.resolveType()` in java-util, making the additional cache layer unnecessary. Simplifies code and eliminates duplicate string concatenation overhead.
 * **FEATURE**: Added convenience read methods to `Resolver` for cleaner ClassFactory implementations:
   * **Primitive type methods**: `readString()`, `readInt()`, `readLong()`, `readFloat()`, `readDouble()`, `readBoolean()` - Automatic type conversion via Converter
   * **Complex type methods**: `readObject()`, `readArray()`, `readList()`, `readMap()` - Full deserialization with cycles and references support
