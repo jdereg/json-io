@@ -51,9 +51,6 @@ import com.cedarsoftware.util.convert.Converter;
  *         limitations under the License.
  */
 public class MapResolver extends Resolver {
-    // Performance: Cache for class-to-injector mappings to avoid repeated reflection lookups
-    private final Map<Class<?>, Map<String, Injector>> classInjectorCache = new HashMap<>();
-    
     protected MapResolver(ReadOptions readOptions, ReferenceTracker references, Converter converter) {
         super(readOptions, references, converter);
     }
@@ -73,18 +70,13 @@ public class MapResolver extends Resolver {
      */
     public void traverseFields(final JsonObject jsonObj) {
         final Object target = jsonObj.getTarget();
-        
-        // Performance: Cache injector maps to avoid repeated reflection calls
+
+        // Get injector map directly - ReadOptions.getDeepInjectorMap() already caches via ClassValueMap
         Map<String, Injector> injectorMap = null;
         if (target != null) {
-            Class<?> targetClass = target.getClass();
-            injectorMap = classInjectorCache.get(targetClass);
-            if (injectorMap == null) {
-                injectorMap = getReadOptions().getDeepInjectorMap(targetClass);
-                classInjectorCache.put(targetClass, injectorMap);
-            }
+            injectorMap = getReadOptions().getDeepInjectorMap(target.getClass());
         }
-        
+
         final ReferenceTracker refTracker = getReferences();
         final Converter converter = getConverter();
         final ReadOptions readOptions = getReadOptions();
@@ -374,15 +366,5 @@ public class MapResolver extends Resolver {
 
         jsonArray.setItems(list.toArray());
         return jsonArray;
-    }
-    
-    /**
-     * Override parent cleanup to include performance caches
-     */
-    @Override
-    protected void cleanup() {
-        super.cleanup();
-        // Performance: Clear cache to free memory
-        classInjectorCache.clear();
     }
 }

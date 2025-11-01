@@ -1,5 +1,9 @@
 ### Revision History
 #### 4.62.0 (Unreleased)
+* **PERFORMANCE**: Removed redundant injector map caches that duplicated `ReadOptions.getDeepInjectorMap()` caching:
+  * Removed `MapResolver.classInjectorCache` instance field - Was caching results already cached by ReadOptions via ClassValueMap
+  * Removed local `injectorCache` in `Resolver.patchUnresolvedReferences()` - Method-local cache was redundant
+  * Combined with ObjectResolver type cache removal: Overall ~4% improvement in deserialization performance
 * **PERFORMANCE**: Removed redundant type resolution cache from `ObjectResolver` - Type resolution is already cached by `TypeUtilities.resolveType()` in java-util, making the additional cache layer unnecessary. Simplifies code and eliminates duplicate string concatenation overhead.
 * **FEATURE**: Added convenience read methods to `Resolver` for cleaner ClassFactory implementations:
   * **Primitive type methods**: `readString()`, `readInt()`, `readLong()`, `readFloat()`, `readDouble()`, `readBoolean()` - Automatic type conversion via Converter

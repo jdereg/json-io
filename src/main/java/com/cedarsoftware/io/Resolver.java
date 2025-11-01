@@ -903,9 +903,6 @@ public abstract class Resolver {
      * that had not yet been encountered in the stream, make the final substitution.
      */
     private void patchUnresolvedReferences() {
-        // Group by class to avoid repeated injector map lookups
-        Map<Class<?>, Map<String, Injector>> injectorCache = new HashMap<>();
-        
         for (UnresolvedReference ref : unresolvedRefs) {
             Object objToFix = ref.referencingObj.getTarget();
             JsonObject objReferenced = this.references.getOrThrow(ref.refId);
@@ -920,13 +917,9 @@ public abstract class Resolver {
                     Array.set(objToFix, ref.index, referencedTarget);        // patch array element here
                 }
             } else {    // Fix field forward reference
-                Class<?> objClass = objToFix.getClass();
-                Map<String, Injector> injectors = injectorCache.get(objClass);
-                if (injectors == null) {
-                    injectors = getReadOptions().getDeepInjectorMap(objClass);
-                    injectorCache.put(objClass, injectors);
-                }
-                
+                // ReadOptions.getDeepInjectorMap() already caches via ClassValueMap - no local cache needed
+                Map<String, Injector> injectors = getReadOptions().getDeepInjectorMap(objToFix.getClass());
+
                 Injector injector = injectors.get(ref.field);
                 if (injector != null) {
                     try {
