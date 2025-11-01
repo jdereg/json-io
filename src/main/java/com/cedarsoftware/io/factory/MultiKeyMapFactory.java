@@ -32,16 +32,14 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
     @Override
     @SuppressWarnings("unchecked")
     public Map newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        // Extract config section
-        Object configObj = jObj.get("config");
+        // Extract config section using Resolver convenience method
+        String configStr = resolver.readString(jObj, "config");
 
-        if (!(configObj instanceof String)) {
-            throw new JsonIoException("MultiKeyMap requires a config string. Found keys: " + jObj.keySet() +
-                ", config=" + (configObj == null ? "null" : configObj.getClass().getName()));
+        if (configStr == null) {
+            throw new JsonIoException("MultiKeyMap requires a config string. Found keys: " + jObj.keySet());
         }
 
         // Parse config string: capacity/loadFactor/collectionKeyMode/flattenDimensions/simpleKeysMode/valueBasedEquality/caseSensitive
-        String configStr = (String) configObj;
         String[] parts = configStr.split("/");
 
         if (parts.length != 7) {

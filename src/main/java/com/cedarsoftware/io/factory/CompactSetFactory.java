@@ -32,15 +32,14 @@ public class CompactSetFactory implements JsonReader.ClassFactory {
     @Override
     @SuppressWarnings("unchecked")
     public Collection newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        // Extract config and data sections
-        Object configObj = jObj.get("config");
-        Object dataObj = jObj.get("data");
-
-        if (!(configObj instanceof String)) {
+        // Extract config section using Resolver convenience method
+        String configStr = resolver.readString(jObj, "config");
+        if (configStr == null) {
             throw new JsonIoException("CompactSet requires a config string");
         }
-        String configStr = (String) configObj;
 
+        // Extract data array directly (can be primitive array types like int[], so can't use readArray)
+        Object dataObj = jObj.get("data");
         if (!(dataObj instanceof Object[])) {
             throw new JsonIoException("CompactSet requires a data []");
         }

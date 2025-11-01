@@ -39,13 +39,12 @@ class CustomJsonTest
     static class PersonFactory implements JsonReader.ClassFactory {
 		public Object newInstance(Class<?> c, JsonObject jsonObject, Resolver resolver) {
 			Person person = new Person();		// Factory - create Java peer instance - root class only.
-			Map<String, Object> map = (Map) jsonObject;
-			Converter converter = resolver.getConverter();
 
-			person.firstName = converter.convert(map.get("first"), String.class);
-			person.lastName = converter.convert(map.get("last"), String.class);
-			person.phoneNumber = converter.convert(map.get("phone"), String.class);
-			person.dob = converter.convert(map.get("dob"), OffsetDateTime.class);
+			// Use Resolver convenience methods for cleaner code
+			person.firstName = resolver.readString(jsonObject, "first");
+			person.lastName = resolver.readString(jsonObject, "last");
+			person.phoneNumber = resolver.readString(jsonObject, "phone");
+			person.dob = resolver.readObject(jsonObject, "dob", OffsetDateTime.class);
 			return person;
 		}
 	}

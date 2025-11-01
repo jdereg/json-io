@@ -56,22 +56,17 @@ class CustomJsonSubObjectsTest
 		public Object newInstance(Class<?> c, JsonObject jsonObj, Resolver resolver) {
 			Person person = new Person();		// Factory - create Java peer instance - root class only.
 
-			Map<String, Object> map = (Map) jsonObj;
-			Converter converter = resolver.getConverter();
+			// Use Resolver convenience methods for cleaner code
+			person.firstName = resolver.readString(jsonObj, "first");
+			person.lastName = resolver.readString(jsonObj, "last");
+			person.phoneNumber = resolver.readString(jsonObj, "phone");
+			person.dob = resolver.readObject(jsonObj, "dob", OffsetDateTime.class);
 
-			// Scoop values from JsonObject
-			person.firstName = converter.convert(map.get("first"), String.class);
-			person.lastName = converter.convert(map.get("last"), String.class);
-			person.phoneNumber = converter.convert(map.get("phone"), String.class);
-			person.dob = converter.convert(map.get("dob"), OffsetDateTime.class);
-
-			// Handle the complex field types by delegating to the Resolver, which will place these on its internal
-			// work stack, and ultimately map the values from the JsonObject (Map) to the peer Java instance.
-			JsonReader reader = new JsonReader(resolver);
-			person.kids = (TestObjectKid[]) reader.toJava(TestObjectKid[].class, map.get("kids"));
-			person.friends = (Object[]) reader.toJava(Object[].class, map.get("friends"));
-			person.pets = (List<TestObjectKid>) reader.toJava(List.class, map.get("pets"));
-			person.items = (Map<String, Object>) reader.toJava(Map.class, map.get("items"));
+			// Handle complex field types using Resolver convenience methods
+			person.kids = resolver.readArray(jsonObj, "kids", TestObjectKid[].class);
+			person.friends = resolver.readArray(jsonObj, "friends", Object[].class);
+			person.pets = resolver.readList(jsonObj, "pets", TestObjectKid.class);
+			person.items = resolver.readMap(jsonObj, "items", String.class, Object.class);
 			return person;
 		}
 	}

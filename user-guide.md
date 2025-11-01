@@ -224,6 +224,79 @@ static class PersonWriter implements JsonWriter.JsonClassWriter {
 - ✅ Full support for complex types (cycles, references, @id/@ref)
 - ✅ Cleaner, more maintainable code
 
+### Writing Custom ClassFactory (Reader)
+
+When creating custom readers, use the **Resolver convenience API** for cleaner, safer code. The API provides methods that handle type conversion and complex object deserialization automatically.
+
+**Basic Pattern:**
+```java
+class MyFactory implements JsonReader.ClassFactory {
+    public Object newInstance(Class<?> c, JsonObject jsonObj, Resolver resolver) {
+        MyClass instance = new MyClass();
+
+        // Read primitives using convenience methods (automatic type conversion)
+        instance.name = resolver.readString(jsonObj, "name");
+        instance.count = resolver.readInt(jsonObj, "count");
+        instance.price = resolver.readDouble(jsonObj, "price");
+        instance.active = resolver.readBoolean(jsonObj, "active");
+
+        // Read complex types (automatic deserialization with cycles/references)
+        instance.data = resolver.readObject(jsonObj, "data", DataClass.class);
+        instance.items = resolver.readList(jsonObj, "items", ItemClass.class);
+        instance.config = resolver.readMap(jsonObj, "config", String.class, Object.class);
+
+        return instance;
+    }
+}
+```
+
+**Key Methods:**
+
+**Primitive Types:**
+- **`readString(jsonObj, fieldName)`** - Read string field with automatic conversion
+- **`readInt(jsonObj, fieldName)`** - Read int field with automatic conversion
+- **`readLong(jsonObj, fieldName)`** - Read long field with automatic conversion
+- **`readFloat(jsonObj, fieldName)`** - Read float field with automatic conversion
+- **`readDouble(jsonObj, fieldName)`** - Read double field with automatic conversion
+- **`readBoolean(jsonObj, fieldName)`** - Read boolean field with automatic conversion
+
+**Complex Types:**
+- **`readObject(jsonObj, fieldName, type)`** - Read and fully deserialize an object
+- **`readArray(jsonObj, fieldName, arrayType)`** - Read and deserialize a typed array (e.g., `String[].class`)
+- **`readList(jsonObj, fieldName, elementType)`** - Read and deserialize a List
+- **`readMap(jsonObj, fieldName, keyType, valueType)`** - Read and deserialize a Map
+
+**Complete Example:**
+```java
+// From CustomJsonSubObjectsTest.java
+static class PersonFactory implements JsonReader.ClassFactory {
+    public Object newInstance(Class<?> c, JsonObject jsonObj, Resolver resolver) {
+        Person person = new Person();
+
+        // Read primitives with automatic type conversion
+        person.firstName = resolver.readString(jsonObj, "first");
+        person.lastName = resolver.readString(jsonObj, "last");
+        person.phoneNumber = resolver.readString(jsonObj, "phone");
+        person.dob = resolver.readObject(jsonObj, "dob", OffsetDateTime.class);
+
+        // Read complex types with full deserialization
+        person.kids = resolver.readArray(jsonObj, "kids", TestObjectKid[].class);
+        person.friends = resolver.readArray(jsonObj, "friends", Object[].class);
+        person.pets = resolver.readList(jsonObj, "pets", TestObjectKid.class);
+        person.items = resolver.readMap(jsonObj, "items", String.class, Object.class);
+
+        return person;
+    }
+}
+```
+
+**Benefits:**
+- ✅ No manual Map casting or instanceof checks
+- ✅ Automatic type conversion via Converter
+- ✅ Full support for complex types (cycles, references, @id/@ref)
+- ✅ No need to create JsonReader manually for sub-objects
+- ✅ Cleaner, more maintainable code
+
 ### CompactMap Usage
 
 Support for [CompactMap](https://github.com/jdereg/java-util/blob/master/userguide.md#compactmap) is built in.

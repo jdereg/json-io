@@ -1,5 +1,12 @@
 ### Revision History
 #### 4.62.0 (Unreleased)
+* **FEATURE**: Added convenience read methods to `Resolver` for cleaner ClassFactory implementations:
+  * **Primitive type methods**: `readString()`, `readInt()`, `readLong()`, `readFloat()`, `readDouble()`, `readBoolean()` - Automatic type conversion via Converter
+  * **Complex type methods**: `readObject()`, `readArray()`, `readList()`, `readMap()` - Full deserialization with cycles and references support
+  * **Benefits**: No manual Map casting, no instanceof checks, eliminates boilerplate, symmetric API with WriterContext
+  * **Updated factories**: `MultiKeyMapFactory`, `CompactSetFactory`, `CompactMapFactory`, `EnumSetFactory` now use convenience methods
+  * **Updated examples**: `CustomJsonTest`, `CustomJsonSubObjectTest`, `CustomJsonSubObjectsTest` demonstrate usage
+  * **Comprehensive documentation**: Added "Writing Custom ClassFactory (Reader)" section to user-guide.md with complete examples
 * **ENHANCEMENT**: Simplified `MultiKeyMapFactory` key resolution - Removed unnecessary Collections.unmodifiable*() wrapping of collection keys to avoid Sealable* serialization issues when MultiKeyMap is re-serialized. Keys are resolved directly via reader.toJava() for cleaner, simpler code. Also improved config parsing to use Converter methods instead of manual parsing.
 * **REMOVED**: `MultiKeyMapFactory` old format handling - Removed support for legacy array-with-marker-strings format that used `internalizeMarkers()` and old `reconstructKey()`. All MultiKeyMap serialization now uses the native List/Set format. Requires java-util 4.2.0+ which consolidated to single `reconstructKey()` method.
 * **FEATURE**: Added comprehensive semantic write API to `WriterContext` for easier custom writer implementation:

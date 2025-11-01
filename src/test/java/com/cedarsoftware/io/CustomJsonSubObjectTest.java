@@ -39,18 +39,15 @@ class CustomJsonSubObjectTest
 	static class PersonFactory implements JsonReader.ClassFactory {
 		public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
 			Person person = new Person();		// Factory - create Java peer instance - root class only.
-			Map<String, Object> map = (Map) jObj;
-			Converter converter = resolver.getConverter();
 
-			person.firstName = converter.convert(map.get("first"), String.class);
-			person.lastName = converter.convert(map.get("last"), String.class);
-			person.phoneNumber = converter.convert(map.get("phone"), String.class);
-			person.dob = converter.convert(map.get("dob"), OffsetDateTime.class);
+			// Use Resolver convenience methods for cleaner code
+			person.firstName = resolver.readString(jObj, "first");
+			person.lastName = resolver.readString(jObj, "last");
+			person.phoneNumber = resolver.readString(jObj, "phone");
+			person.dob = resolver.readObject(jObj, "dob", OffsetDateTime.class);
 
-			// Handle the complex field types by delegating to the Resolver, which will place these on its internal
-			// work stack, and ultimately map the values from the JsonObject (Map) to the peer Java instance.
-			JsonReader reader = new JsonReader(resolver);
-			person.kid = (TestObjectKid) reader.toJava(TestObjectKid.class, map.get("kid"));
+			// Handle complex field types using Resolver convenience method
+			person.kid = resolver.readObject(jObj, "kid", TestObjectKid.class);
 			return person;
 		}
 	}

@@ -75,7 +75,7 @@ public class EnumSetFactory implements JsonReader.ClassFactory {
                     itemEnumClass = enumClass;
                 }
 
-                String enumName = (String) jsonItem.get("name");
+                String enumName = resolver.readString(jsonItem, "name");
                 if (enumName == null) {
                     throw new JsonIoException("Enum constant missing 'name' field");
                 }

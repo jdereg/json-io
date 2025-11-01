@@ -161,6 +161,159 @@ public abstract class Resolver {
         return converter;
     }
 
+    // ====================================================================================================
+    // Convenience methods for ClassFactory implementations
+    // ====================================================================================================
+
+    /**
+     * Convenience method for reading a String field from a JsonObject in ClassFactory implementations.
+     * Handles type conversion automatically.
+     *
+     * @param jsonObj the JsonObject (typically passed to ClassFactory.newInstance)
+     * @param fieldName the field name to read
+     * @return the String value, or null if not present or null
+     */
+    public String readString(JsonObject jsonObj, String fieldName) {
+        return converter.convert(jsonObj.get(fieldName), String.class);
+    }
+
+    /**
+     * Convenience method for reading an int field from a JsonObject in ClassFactory implementations.
+     * Handles type conversion automatically.
+     *
+     * @param jsonObj the JsonObject (typically passed to ClassFactory.newInstance)
+     * @param fieldName the field name to read
+     * @return the int value, or 0 if not present or null
+     */
+    public int readInt(JsonObject jsonObj, String fieldName) {
+        return converter.convert(jsonObj.get(fieldName), int.class);
+    }
+
+    /**
+     * Convenience method for reading a long field from a JsonObject in ClassFactory implementations.
+     * Handles type conversion automatically.
+     *
+     * @param jsonObj the JsonObject (typically passed to ClassFactory.newInstance)
+     * @param fieldName the field name to read
+     * @return the long value, or 0L if not present or null
+     */
+    public long readLong(JsonObject jsonObj, String fieldName) {
+        return converter.convert(jsonObj.get(fieldName), long.class);
+    }
+
+    /**
+     * Convenience method for reading a float field from a JsonObject in ClassFactory implementations.
+     * Handles type conversion automatically.
+     *
+     * @param jsonObj the JsonObject (typically passed to ClassFactory.newInstance)
+     * @param fieldName the field name to read
+     * @return the float value, or 0.0f if not present or null
+     */
+    public float readFloat(JsonObject jsonObj, String fieldName) {
+        return converter.convert(jsonObj.get(fieldName), float.class);
+    }
+
+    /**
+     * Convenience method for reading a double field from a JsonObject in ClassFactory implementations.
+     * Handles type conversion automatically.
+     *
+     * @param jsonObj the JsonObject (typically passed to ClassFactory.newInstance)
+     * @param fieldName the field name to read
+     * @return the double value, or 0.0 if not present or null
+     */
+    public double readDouble(JsonObject jsonObj, String fieldName) {
+        return converter.convert(jsonObj.get(fieldName), double.class);
+    }
+
+    /**
+     * Convenience method for reading a boolean field from a JsonObject in ClassFactory implementations.
+     * Handles type conversion automatically.
+     *
+     * @param jsonObj the JsonObject (typically passed to ClassFactory.newInstance)
+     * @param fieldName the field name to read
+     * @return the boolean value, or false if not present or null
+     */
+    public boolean readBoolean(JsonObject jsonObj, String fieldName) {
+        return converter.convert(jsonObj.get(fieldName), boolean.class);
+    }
+
+    /**
+     * Convenience method for reading a typed object field from a JsonObject in ClassFactory implementations.
+     * Handles full deserialization including complex types, cycles, and references.
+     *
+     * @param jsonObj the JsonObject (typically passed to ClassFactory.newInstance)
+     * @param fieldName the field name to read
+     * @param type the target type to convert to
+     * @return the fully deserialized object, or null if not present
+     */
+    @SuppressWarnings("unchecked")
+    public <T> T readObject(JsonObject jsonObj, String fieldName, Class<T> type) {
+        Object value = jsonObj.get(fieldName);
+        if (value == null) {
+            return null;
+        }
+        JsonReader reader = new JsonReader(this);
+        return (T) reader.toJava(type, value);
+    }
+
+    /**
+     * Convenience method for reading a typed array field from a JsonObject in ClassFactory implementations.
+     * Handles full deserialization including complex types, cycles, and references.
+     *
+     * @param jsonObj the JsonObject (typically passed to ClassFactory.newInstance)
+     * @param fieldName the field name to read
+     * @param arrayType the array type (e.g., String[].class, MyObject[].class)
+     * @return the fully deserialized array, or null if not present
+     */
+    @SuppressWarnings("unchecked")
+    public <T> T[] readArray(JsonObject jsonObj, String fieldName, Class<T[]> arrayType) {
+        Object value = jsonObj.get(fieldName);
+        if (value == null) {
+            return null;
+        }
+        JsonReader reader = new JsonReader(this);
+        return (T[]) reader.toJava(arrayType, value);
+    }
+
+    /**
+     * Convenience method for reading a List field from a JsonObject in ClassFactory implementations.
+     * Handles full deserialization including complex types, cycles, and references.
+     *
+     * @param jsonObj the JsonObject (typically passed to ClassFactory.newInstance)
+     * @param fieldName the field name to read
+     * @param elementType the element type (e.g., String.class, MyObject.class)
+     * @return the fully deserialized List, or null if not present
+     */
+    @SuppressWarnings("unchecked")
+    public <T> List<T> readList(JsonObject jsonObj, String fieldName, Class<T> elementType) {
+        Object value = jsonObj.get(fieldName);
+        if (value == null) {
+            return null;
+        }
+        JsonReader reader = new JsonReader(this);
+        return (List<T>) reader.toJava(List.class, value);
+    }
+
+    /**
+     * Convenience method for reading a Map field from a JsonObject in ClassFactory implementations.
+     * Handles full deserialization including complex types, cycles, and references.
+     *
+     * @param jsonObj the JsonObject (typically passed to ClassFactory.newInstance)
+     * @param fieldName the field name to read
+     * @param keyType the key type (e.g., String.class)
+     * @param valueType the value type (e.g., Object.class, MyObject.class)
+     * @return the fully deserialized Map, or null if not present
+     */
+    @SuppressWarnings("unchecked")
+    public <K, V> Map<K, V> readMap(JsonObject jsonObj, String fieldName, Class<K> keyType, Class<V> valueType) {
+        Object value = jsonObj.get(fieldName);
+        if (value == null) {
+            return null;
+        }
+        JsonReader reader = new JsonReader(this);
+        return (Map<K, V>) reader.toJava(Map.class, value);
+    }
+
     /**
      * <h2>Convert a Parsed JsonObject to a Fully Resolved Java Object</h2>
      *

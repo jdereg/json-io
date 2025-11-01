@@ -32,20 +32,19 @@ public class CompactMapFactory implements JsonReader.ClassFactory {
     @Override
     @SuppressWarnings("unchecked")
     public Map newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        // Extract config and data sections
-        Object configObj = jObj.get("config");
-        Object dataObj = jObj.get("data");
-
-        if (!(configObj instanceof String)) {
+        // Extract config section using Resolver convenience method
+        String configStr = resolver.readString(jObj, "config");
+        if (configStr == null) {
             throw new JsonIoException("CompactMap requires a config string");
         }
 
+        // Extract data section directly (already a Map)
+        Object dataObj = jObj.get("data");
         if (!(dataObj instanceof Map)) {
             throw new JsonIoException("CompactMap requires a data section");
         }
 
         // Parse config string: mapClass/CS|CI/S{size}/{singleKey}/{order}
-        String configStr = (String) configObj;
         String[] parts = configStr.split("/");
 
         if (parts.length != 5) {
