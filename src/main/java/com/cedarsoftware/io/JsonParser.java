@@ -466,8 +466,9 @@ class JsonParser {
      * Read a JSON array
      */
     private Object readArray(Type suggestedType) throws IOException {
-        // Performance: Pre-size ArrayList to reduce resizing
-        final List<Object> list = new ArrayList<>(16);
+        // Performance: Pre-size ArrayList to reduce resizing. Size of 64 eliminates
+        // 1-2 resize operations for typical JSON arrays while adding only ~200 bytes overhead.
+        final List<Object> list = new ArrayList<>(64);
         ++curParseDepth;
 
         while (true) {
