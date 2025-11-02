@@ -1,6 +1,6 @@
 package com.cedarsoftware.io;
 
-import java.awt.*;
+import com.cedarsoftware.util.geom.*;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;

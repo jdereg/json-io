@@ -321,23 +321,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     }
 
     /**
-     * Check if a type should be handled by Converter as a simple string.
-     * This is intentionally restrictive to avoid breaking existing serialization patterns.
-     * Currently only includes: java.awt.Color and other specific DTO types.
-     */
-    private boolean isConverterSimpleType(Class<?> clazz) {
-        // Start with Color as the primary use case
-        if (clazz == java.awt.Color.class) {
-            return true;
-        }
-        
-        // Future: Add other specific DTO types here as needed
-        // Examples might include: Point, Dimension, Rectangle, Insets, etc.
-        
-        return false;
-    }
-    
-    /**
      * Write the passed in array element to the JSON output, if any only if, there is a custom writer
      * for the class of the instance 'o'.
      * @param arrayComponentClass Class type of the array
@@ -506,7 +489,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             final int nextDepth = currentDepth + 1;
 
             if (clazz.isArray()) {
-                processArray(obj, stack, nextDepth);
+                processArray(obj, clazz, stack, nextDepth);
             } else if (obj instanceof JsonObject) {
                 processJsonObject((JsonObject) obj, stack, nextDepth);
             } else if (Map.class.isAssignableFrom(clazz)) {
@@ -526,8 +509,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
     }
 
-    private void processArray(Object array, Deque<Object[]> stack, int depth) {
-        final Class<?> componentType = array.getClass().getComponentType();
+    private void processArray(Object array, Class<?> arrayClass, Deque<Object[]> stack, int depth) {
+        final Class<?> componentType = arrayClass.getComponentType();
         if (!writeOptions.isNonReferenceableClass(componentType)) {
             // If Object[], access it using [] for speed, versus Array.get() (reflection)
             if (componentType == Object.class) {
@@ -553,13 +536,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         // Traverse items (array elements)
         Object[] items = jsonObj.getItems();
         if (items != null) {
-            processArray(items, stack, depth);
+            processArray(items, items.getClass(), stack, depth);
         }
 
         // Traverse keys (for JsonObject representing maps)
         Object[] keys = jsonObj.getKeys();
         if (keys != null) {
-            processArray(keys, stack, depth);
+            processArray(keys, keys.getClass(), stack, depth);
         }
 
         // Traverse other entries in jsonStore (allows for Collections to have properties)
@@ -663,28 +646,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             showType = false;
         }
 
-        // Enhanced Converter Integration - only for specific DTO types that we want to handle as simple strings
-        // This is intentionally restrictive to avoid breaking existing serialization patterns
-        Class<?> objClass = obj.getClass();
-        if (isConverterSimpleType(objClass)) {
-            try {
-                String convertedValue = converter.convert(obj, String.class);
-                if (convertedValue != null) {
-                    writeJsonUtf8String(out, convertedValue);
-                    return;
-                }
-            } catch (Exception e) {
-                // Log conversion failure and continue to traditional serialization
-                // This allows fallback to reflection-based approach
-            }
-        }
-
+        // Custom writers and references are checked first to preserve type information
         if (writeUsingCustomWriter(obj, showType, out) || writeOptionalReference(obj)) {
             return;
         }
 
-        if (obj.getClass().isArray()) {
-            writeArray(obj, showType);
+        final Class<?> objClass = obj.getClass();
+        if (objClass.isArray()) {
+            writeArray(obj, objClass, showType);
         } else if (obj instanceof EnumSet) {
             writeEnumSet((EnumSet<?>) obj);
         } else if (obj instanceof Collection) {
@@ -754,11 +723,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
     }
 
-    private void writeArray(final Object array, boolean showType) throws IOException {
+    private void writeArray(final Object array, final Class<?> arrayType, boolean showType) throws IOException {
         if (writeOptions.isNeverShowingType()) {
             showType = false;
         }
-        Class<?> arrayType = array.getClass();
         int len = Array.getLength(array);
         boolean referenced = objsReferenced.containsKey(array);
         boolean typeWritten = showType && !(arrayType.equals(Object[].class));

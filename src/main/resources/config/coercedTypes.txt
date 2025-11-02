@@ -25,3 +25,11 @@ java.util.TreeMap$Values = java.util.ArrayList
 
 java.util.RegularEnumSet = java.util.EnumSet
 java.util.JumboEnumSet = java.util.EnumSet
+
+# Coerce java.awt types to Cedar DTO types
+# This allows headless servers (without java.awt) to safely deserialize JSON containing java.awt types
+java.awt.Point = com.cedarsoftware.util.geom.Point
+java.awt.Color = com.cedarsoftware.util.geom.Color
+java.awt.Rectangle = com.cedarsoftware.util.geom.Rectangle
+java.awt.Dimension = com.cedarsoftware.util.geom.Dimension
+java.awt.Insets = com.cedarsoftware.util.geom.Insets

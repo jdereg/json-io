@@ -93,12 +93,20 @@ java.util.concurrent.atomic.AtomicLong = AtomicLong
 # java.io
 java.io.File = File
 
-# java.awt
+# java.awt and Cedar Software geom DTOs
+#   Intentionally re-using alias. WriteOptions keeps both (class -> alias).
+#   This will make Cedar DTO types write out like the alias for the JDK type.
+#   When read back in, it is "coerced" to Cedar DTO version for clean round-trips.
 java.awt.Point = Point
+com.cedarsoftware.util.geom.Point = Point
 java.awt.Color = Color
+com.cedarsoftware.util.geom.Color = Color
 java.awt.Rectangle = Rectangle
+com.cedarsoftware.util.geom.Rectangle = Rectangle
 java.awt.Dimension = Dimension
+com.cedarsoftware.util.geom.Dimension = Dimension
 java.awt.Insets = Insets
+com.cedarsoftware.util.geom.Insets = Insets
 
 # java.nio
 java.nio.file.Path = Path

@@ -1,6 +1,6 @@
 package com.cedarsoftware.io;
 
-import java.awt.*;
+import com.cedarsoftware.util.geom.*;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;

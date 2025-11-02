@@ -815,27 +815,26 @@ public abstract class Resolver {
     /**
      * Check if a type should be handled by Converter as a simple type.
      * This is intentionally restrictive to avoid breaking existing serialization patterns.
-     * Currently only includes: java.awt.Color, java.awt.Rectangle, java.awt.Dimension and other specific DTO types.
+     * Currently only includes: Cedar DTO types (Color, Dimension, Point, Rectangle, Insets).
      */
     private boolean isConverterSimpleType(Class<?> clazz) {
-        // Start with Color as the primary use case
-        if (clazz == java.awt.Color.class) {
+        // Cedar DTO types from java-util
+        if (clazz == com.cedarsoftware.util.geom.Color.class) {
             return true;
         }
-        
-        // Add Rectangle support
-        if (clazz == java.awt.Rectangle.class) {
+        if (clazz == com.cedarsoftware.util.geom.Dimension.class) {
             return true;
         }
-        
-        // Add Dimension support
-        if (clazz == java.awt.Dimension.class) {
+        if (clazz == com.cedarsoftware.util.geom.Point.class) {
             return true;
         }
-        
-        // Future: Add other specific DTO types here as needed
-        // Examples might include: Point, Insets, etc.
-        
+        if (clazz == com.cedarsoftware.util.geom.Rectangle.class) {
+            return true;
+        }
+        if (clazz == com.cedarsoftware.util.geom.Insets.class) {
+            return true;
+        }
+
         return false;
     }
 

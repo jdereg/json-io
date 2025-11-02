@@ -1,10 +1,10 @@
 package com.cedarsoftware.io;
 
+import com.cedarsoftware.util.geom.Color;
 import com.cedarsoftware.util.convert.Converter;
 import com.cedarsoftware.util.convert.DefaultConverterOptions;
 import org.junit.jupiter.api.Test;
 
-import java.awt.Color;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test automatic Color support through enhanced Converter integration.
- * These tests validate that java.awt.Color can be serialized and deserialized
+ * These tests validate that Cedar DTO Color can be serialized and deserialized
  * automatically without requiring custom factories, leveraging the Converter
  * system for Map <-> Color transformations.
  */
