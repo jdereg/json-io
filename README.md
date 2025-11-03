@@ -23,8 +23,6 @@ Key Features:
 
 Optimized for modern cloud deployments and container environments:
 
-- **Lightweight Footprint**: ~900KB total (json-io + java-util) - significantly smaller than Jackson (~2-3MB) or comparable full-featured libraries
-- **High Performance**: Recent optimizations deliver 8-12% faster serialization and 5-8% faster deserialization for typical workloads
 - **Zero Transitive Dependencies**: Only depends on java-util, eliminating dependency conflicts in microservices architectures
 - **Object Graph Preservation**: Essential for complex domain models in distributed systems - handles cycles and references that break other libraries
 - **Container-Ready**: JPMS and OSGi support enables efficient packaging with jlink for minimal container images
