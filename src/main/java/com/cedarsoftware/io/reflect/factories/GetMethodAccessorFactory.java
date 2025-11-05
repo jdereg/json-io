@@ -38,6 +38,17 @@ public class GetMethodAccessorFactory implements AccessorFactory {
      * @return String - returns the appropriate method name to access this fieldName.
      */
     private static String createGetterName(String fieldName) {
-        return "get" + Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
+        // Performance: Use char array to eliminate intermediate string allocations
+        // Previous implementation created 3 intermediate objects via string concatenation
+        if (fieldName.isEmpty()) {
+            return "get";
+        }
+        char[] chars = new char[fieldName.length() + 3];
+        chars[0] = 'g';
+        chars[1] = 'e';
+        chars[2] = 't';
+        chars[3] = Character.toUpperCase(fieldName.charAt(0));
+        fieldName.getChars(1, fieldName.length(), chars, 4);
+        return new String(chars);
     }
 }
