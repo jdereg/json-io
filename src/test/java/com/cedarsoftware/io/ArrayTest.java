@@ -1021,14 +1021,13 @@ class ArrayTest
         Object[] empty2 = (Object[])outer[1];
         assertEquals(0, empty2.length);
 
-        // TODO: This test should work
-//        List<List<?>> outerList = JsonIo.toObjectsGeneric(json, new ReadOptionsBuilder().build(), new TypeHolder<List<List<?>>>(){});
-//        assertEquals(2, outerList.size());
-//
-//        List<?> emptyList1 = (List)outer[0];
-//        assertEquals(0, emptyList1.size());
-//        List<?> emptyList2 = (List)outer[1];
-//        assertEquals(0, emptyList2.size());
+        List<List<?>> outerList = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asType(new TypeHolder<List<List<?>>>(){});
+        assertEquals(2, outerList.size());
+
+        List<?> emptyList1 = outerList.get(0);
+        assertEquals(0, emptyList1.size());
+        List<?> emptyList2 = outerList.get(1);
+        assertEquals(0, emptyList2.size());
     }
 
     @Test
