@@ -335,20 +335,10 @@ public class MultiKeyMapTest {
         );
         map.put(nestedList, "nestedListValue");
 
-        // Test with nested set
-        // Note: Nested Set<Set<>> is a complex edge case due to Set equality/hashCode requirements
-        // TODO: Add support for nested Set keys in future enhancement
-        // Set<Set<Integer>> nestedSet = new HashSet<>();
-        // nestedSet.add(new HashSet<>(Arrays.asList(1, 2)));
-        // nestedSet.add(new HashSet<>(Arrays.asList(3, 4)));
-        // map.put(nestedSet, "nestedSetValue");
-
         String json = JsonIo.toJson(map, null);
         MultiKeyMap<String> deserializedMap = JsonIo.toJava(json, null).asType(new TypeHolder<MultiKeyMap<String>>(){});
 
         assertEquals("nestedListValue", deserializedMap.get(nestedList));
-        // assertEquals("nestedSetValue", deserializedMap.get(nestedSet));
-
         assertEquals(map.size(), deserializedMap.size());
     }
 
