@@ -14,6 +14,7 @@ import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.ReflectionUtils;
 import com.cedarsoftware.util.StringUtilities;
+import com.cedarsoftware.util.SystemUtilities;
 
 /**
  * High-performance field injection utility that automatically adapts to different JDK versions
@@ -63,7 +64,7 @@ public class Injector {
     private static final Class<?> VAR_HANDLE_CLASS;        // although appears unused, it is intentional for caching
 
     static {
-        int javaVersion = determineJdkMajorVersion();
+        int javaVersion = SystemUtilities.currentJdkMajorVersion();
         IS_JDK17_OR_HIGHER = javaVersion >= 17;
 
         Object lookup = null;
@@ -112,6 +113,11 @@ public class Injector {
     private Object varHandle; // For JDK 17+ VarHandle-based injection
     private final boolean useFieldSet; // flag to use Field.set() instead of MethodHandle
 
+    // Cached values for performance - computed once at construction
+    private final Class<?> fieldType;
+    private final String fieldName;
+    private final boolean isSystemClass;
+
     // Constructor for MethodHandle injection
     public Injector(Field field, MethodHandle handle, String uniqueFieldName, String displayName) {
         this.field = field;
@@ -119,6 +125,12 @@ public class Injector {
         this.uniqueFieldName = uniqueFieldName;
         this.injector = handle;
         this.useFieldSet = false;
+
+        // Cache values for performance
+        this.fieldType = field.getType();
+        this.fieldName = field.getName();
+        String className = field.getDeclaringClass().getName();
+        this.isSystemClass = className.startsWith("java.lang.") || className.startsWith("java.security.");
     }
 
     // Constructor for Field.set() fallback injection
@@ -127,6 +139,12 @@ public class Injector {
         this.displayName = displayName;
         this.uniqueFieldName = uniqueFieldName;
         this.useFieldSet = useFieldSet;
+
+        // Cache values for performance
+        this.fieldType = field.getType();
+        this.fieldName = field.getName();
+        String className = field.getDeclaringClass().getName();
+        this.isSystemClass = className.startsWith("java.lang.") || className.startsWith("java.security.");
     }
 
     // Constructor for VarHandle-based injection (JDK 17+)
@@ -136,6 +154,12 @@ public class Injector {
         this.uniqueFieldName = uniqueFieldName;
         this.varHandle = varHandle;
         this.useFieldSet = false;
+
+        // Cache values for performance
+        this.fieldType = field.getType();
+        this.fieldName = field.getName();
+        String className = field.getDeclaringClass().getName();
+        this.isSystemClass = className.startsWith("java.lang.") || className.startsWith("java.security.");
     }
 
     public static Injector create(Field field, String uniqueFieldName) {
@@ -299,27 +323,17 @@ public class Injector {
     public void inject(Object object, Object value) {
         // Security: Validate input parameters
         if (object == null) {
-            throw new JsonIoException("Attempting to set field: " + getName() + " on null object.");
+            throw new JsonIoException("Attempting to set field: " + fieldName + " on null object.");
         }
-        
-        // Security: Validate that the object is an instance of the field's declaring class
-        Class<?> declaringClass = field.getDeclaringClass();
-        if (!declaringClass.isInstance(object)) {
-            throw new JsonIoException("Object is not an instance of the field's declaring class. Expected: " + 
-                declaringClass.getName() + ", Actual: " + object.getClass().getName() + 
-                " for field: " + getName());
-        }
-        
-        // Security: Additional validation for system classes
-        String className = declaringClass.getName();
-        if (className.startsWith("java.lang.") || className.startsWith("java.security.")) {
-            // Extra caution when dealing with core system classes
+
+        // Security: Additional validation for system classes (cached check)
+        if (isSystemClass) {
             SecurityManager sm = System.getSecurityManager();
             if (sm != null) {
                 try {
                     sm.checkPermission(new ReflectPermission("suppressAccessChecks"));
                 } catch (SecurityException e) {
-                    throw new JsonIoException("Security policy denies injection into system class: " + className + " field: " + getName(), e);
+                    throw new JsonIoException("Security policy denies injection into system class field: " + fieldName, e);
                 }
             }
         }
@@ -336,11 +350,6 @@ public class Injector {
                 injector.invoke(object, value);
             }
         } catch (ClassCastException e) {
-            // Cache field type to avoid repeated getType() calls
-            final Class<?> fieldType = field.getType();
-            final String fieldName = getName();
-            final String displayName = getDisplayName();
-            
             String msg = e.getMessage();
             if (StringUtilities.hasContent(msg) && msg.contains("LinkedHashMap")) {
                 throw new JsonIoException("Unable to set field: " + fieldName + " using " + displayName + ".", e);
@@ -361,7 +370,7 @@ public class Injector {
             if (t instanceof JsonIoException) {
                 throw (JsonIoException) t;
             }
-            throw new JsonIoException("Unable to set field: " + getName() + " using " + getDisplayName(), t);
+            throw new JsonIoException("Unable to set field: " + fieldName + " using " + displayName, t);
         }
     }
 
@@ -403,34 +412,5 @@ public class Injector {
 
     public String getUniqueFieldName() {
         return uniqueFieldName;
-    }
-
-    //TODO: remove and wire to java-util API for this (3.8.0+)
-    private static int determineJdkMajorVersion() {
-        try {
-            Method versionMethod = ReflectionUtils.getMethod(Runtime.class, "version");
-            Object v = versionMethod.invoke(Runtime.getRuntime());
-            Method major = ReflectionUtils.getMethod(v.getClass(), "major");
-            return (Integer) major.invoke(v);
-        } catch (Exception ignore) {
-            try {
-                String version = System.getProperty("java.version");
-                if (version.startsWith("1.")) {
-                    return Integer.parseInt(version.substring(2, 3));
-                }
-                int dot = version.indexOf('.');
-                if (dot != -1) {
-                    return Integer.parseInt(version.substring(0, dot));
-                }
-                return Integer.parseInt(version);
-            } catch (Exception ignored) {
-                try {
-                    String spec = System.getProperty("java.specification.version");
-                    return spec.startsWith("1.") ? Integer.parseInt(spec.substring(2)) : Integer.parseInt(spec);
-                } catch (NumberFormatException e) {
-                    return -1;
-                }
-            }
-        }
     }
 }
