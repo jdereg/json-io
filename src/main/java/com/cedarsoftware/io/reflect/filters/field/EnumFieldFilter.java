@@ -24,15 +24,17 @@ import com.cedarsoftware.io.reflect.filters.FieldFilter;
 public class EnumFieldFilter implements FieldFilter {
     public boolean filter(Field field) {
         Class<?> declaringClass = field.getDeclaringClass();
-        String fieldName = field.getName();
         if (!declaringClass.isEnum()) {
-            return false;
+            return false;  // Early exit for non-enums (99% of fields)
         }
+
+        // Only compute field name if we have an enum field
+        String fieldName = field.getName();
 
         // Filter these fields out (return true for them)
         // "$VALUES" is the synthetic field on standard JVMs, "ENUM$VALUES" on Windows JVM
-        return "internal".equals(fieldName) || "$VALUES".equals(fieldName) || 
-               "ENUM$VALUES".equalsIgnoreCase(fieldName) || "hash".equals(fieldName) || 
+        return "internal".equals(fieldName) || "$VALUES".equals(fieldName) ||
+               "ENUM$VALUES".equalsIgnoreCase(fieldName) || "hash".equals(fieldName) ||
                "ordinal".equals(fieldName);
     }
 }
