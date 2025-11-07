@@ -353,7 +353,7 @@ public class TestGraphComparator
     @Test
     public void testAlpha()
     {
-        // TODO: Need to find faster way to get last IP address (problem for unique id generator, not GraphComparator)
+        // Warm up UniqueIdGenerator static initialization before other tests
         UniqueIdGenerator.getUniqueId();
     }
 
