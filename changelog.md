@@ -1,5 +1,24 @@
 ### Revision History
-#### 4.63.0 (Unreleased)
+#### 4.63.0 - 2025-11-07
+* **DEPENDENCY**: Updated `java-util` to version 4.3.0 for new `DataGeneratorInputStream` utility and other enhancements.
+* **PERFORMANCE**: Optimized `Injector.inject()` hot path for ~12% read performance improvement:
+  * Removed redundant `declaringClass.isInstance(object)` check - Native call eliminated from every field injection
+  * Cached system class check as boolean field (computed once at construction vs per-injection)
+  * Cached field metadata (fieldType, fieldName, displayName) to avoid repeated method calls
+  * **Impact**: Read performance improved from 365ms to 322ms on benchmark suite (~12% faster)
+* **PERFORMANCE**: Optimized `EnumFieldFilter` to avoid unnecessary `field.getName()` call:
+  * Moved field name computation after `isEnum()` check for early exit on non-enum fields (99% of fields)
+  * Minor cold path optimization during class metadata setup
+* **FIX**: Fixed bug in `ArrayTest.testEmptySubArray()` test:
+  * Changed `JsonIo.toObjects()` to `JsonIo.toJava()` for correct API usage
+  * Fixed variable references from `outer[]` array to `outerList.get()` for proper type handling
+* **FIX**: Fixed 2 disabled security tests in `JsonReaderSecurityLimitsTest`:
+  * `testObjectReferencesLimit_ShouldUseConfiguredLimit` - Added `.asClass()` to trigger parsing and reference tracking
+  * `testReferenceChainDepthLimit_ShouldUseConfiguredLimit` - Created proper 4-level reference chain and added `.asClass()` to trigger resolution
+  * Both tests now properly validate DoS attack prevention mechanisms
+* **CLEANUP**: Removed 3 stale TODO comments:
+  * Removed outdated TODO in `MultiKeyMapTest` about nested Set support (already implemented and tested)
+  * Removed 2 misleading TODOs in `TestGraphComparator` and `TestGraphComparatorList` about IP address performance (no IP lookup exists, static init is fast)
 
 #### 4.62.0 - 2025-11-02
 * **PERFORMANCE**: Increased ArrayList initial capacity in `JsonParser.readArray()` from 16 to 64 - Reduces resize operations for typical JSON arrays. Each resize allocates new array (2x size), copies all elements, and triggers GC pressure. Initial capacity of 64 eliminates 1-2 resize operations for arrays with 16-64 elements while adding only ~200 bytes overhead per array. **Expected improvement**: 5-8% faster deserialization for JSON with arrays >16 elements (common in API responses, list endpoints, data exports).
