@@ -87,7 +87,6 @@ public class JsonReaderSecurityLimitsTest {
     }
 
     @Test
-    @Disabled("TODO: Fix test logic to properly trigger object reference limit")
     public void testObjectReferencesLimit_ShouldUseConfiguredLimit() {
         ReadOptions readOptions = new ReadOptionsBuilder()
                 .maxObjectReferences(3)  // Very low limit for testing
@@ -102,38 +101,42 @@ public class JsonReaderSecurityLimitsTest {
             largeJson.append("{\"@id\":").append(i).append(",\"value\":\"item").append(i).append("\"}");
         }
         largeJson.append("]");
-        
+
         // Should throw JsonIoException due to object reference limit
+        // Note: Must call .asClass() to trigger parsing and reference tracking
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toJava(largeJson.toString(), readOptions);
+            JsonIo.toJava(largeJson.toString(), readOptions).asClass(Object[].class);
         });
-        
+
         assertTrue(exception.getMessage().contains("Security limit exceeded"));
         assertTrue(exception.getMessage().contains("Maximum number of object references"));
     }
 
     @Test
-    @Disabled("TODO: Fix test logic to properly trigger reference chain depth limit")
     public void testReferenceChainDepthLimit_ShouldUseConfiguredLimit() {
         ReadOptions readOptions = new ReadOptionsBuilder()
                 .maxReferenceChainDepth(2)  // Very low limit for testing
                 .build();
 
         // Create JSON with chained @ref objects to create a deep reference chain
-        // This creates: obj1->ref2->ref3->ref4->ref5 (depth 4)
+        // The key is that objects themselves are references (not just fields containing @ref)
+        // This creates a chain: obj1 IS ref to obj2, obj2 IS ref to obj3, obj3 IS ref to obj4, obj4 is data
+        // When accessing obj1, it must resolve through: 1->2 (depth 1), 2->3 (depth 2), 3->4 (depth 3, exceeds limit)
+        // Note: We need 4 objects to create a chain depth of 3 (exceeding limit of 2)
         String deepReferenceJson = "["
-                + "{\"@id\":1,\"next\":{\"@ref\":2}},"
-                + "{\"@id\":2,\"@ref\":3},"
-                + "{\"@id\":3,\"@ref\":4},"
-                + "{\"@id\":4,\"@ref\":5},"
-                + "{\"@id\":5,\"value\":\"end\"}"
+                + "{\"@ref\":1},"               // Array element points to object 1
+                + "{\"@id\":1,\"@ref\":2},"     // Object 1 IS a reference to object 2
+                + "{\"@id\":2,\"@ref\":3},"     // Object 2 IS a reference to object 3
+                + "{\"@id\":3,\"@ref\":4},"     // Object 3 IS a reference to object 4
+                + "{\"@id\":4,\"value\":\"end\"}" // Object 4 is the actual data
                 + "]";
-        
+
         // Should throw JsonIoException due to reference chain depth limit
+        // Note: Must call .asClass() to trigger parsing and reference resolution
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toJava(deepReferenceJson, readOptions);
+            JsonIo.toJava(deepReferenceJson, readOptions).asClass(Object[].class);
         });
-        
+
         assertTrue(exception.getMessage().contains("Security limit exceeded"));
         assertTrue(exception.getMessage().contains("Reference chain depth"));
     }
