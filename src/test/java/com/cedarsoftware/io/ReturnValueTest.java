@@ -33,21 +33,21 @@ class ReturnValueTest
     void testReturnAsJsonObjectWithDoubleJsonPrimitive()
     {
         String json = "45.7";
-        Object x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object x = TestUtil.toMaps(json, null).asClass(null);
         assert x instanceof Double;
         assertEquals(45.7d, x);
 
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), null);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(null);
         assert x instanceof Double;
         assertEquals(45.7d, x);
 
         json = "\"45.7\"";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), double.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(double.class);
         assert x instanceof Double;
         assertEquals(45.7d, x);
 
         json = "true";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), Double.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(Double.class);
         assert x instanceof Double;
         assertEquals(1.0d, x);
     }
@@ -56,21 +56,21 @@ class ReturnValueTest
     void testReturnAsJsonObjectWithLongJsonPrimitive()
     {
         String json = "1234567890123456";
-        Object x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object x = TestUtil.toMaps(json, null).asClass(null);
         assert x instanceof Long;
         assertEquals(1234567890123456L, x);
 
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), null);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(null);
         assert x instanceof Long;
         assertEquals(1234567890123456L, x);
 
         json = "\"" + json + "\"";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), long.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(long.class);
         assert x instanceof Long;
         assertEquals(1234567890123456L, x);
 
         json = "true";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), Long.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(Long.class);
         assert x instanceof Long;
         assertEquals(1L, x);
     }
@@ -79,21 +79,21 @@ class ReturnValueTest
     void testReturnAsJsonObjectWithAtomicLongJsonPrimitive()
     {
         String json = "1234567890123456";
-        Object x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), AtomicLong.class);
+        Object x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(AtomicLong.class);
         assert x instanceof AtomicLong;
         assertEquals(1234567890123456L, ((AtomicLong)x).get());
 
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), AtomicLong.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(AtomicLong.class);
         assert x instanceof AtomicLong;
         assertEquals(1234567890123456L, ((AtomicLong)x).get());
 
         json = "\"" + json + "\"";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), AtomicLong.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(AtomicLong.class);
         assert x instanceof AtomicLong;
         assertEquals(1234567890123456L, ((AtomicLong)x).get());
 
         json = "true";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), AtomicLong.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(AtomicLong.class);
         assert x instanceof AtomicLong;
         assertEquals(1L, ((AtomicLong)x).get());
     }
@@ -102,21 +102,21 @@ class ReturnValueTest
     void testReturnAsJsonObjectWithStringJsonPrimitive()
     {
         String json = "\"quick brown fox\"";
-        Object x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object x = TestUtil.toMaps(json, null).asClass(null);
         assert x instanceof String;
         assertEquals("quick brown fox", x);
 
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), null);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(null);
         assert x instanceof String;
         assertEquals("quick brown fox", x);
 
         json = "42";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), String.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(String.class);
         assert x instanceof String;
         assertEquals("42", x);
 
         json = "true";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), String.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(String.class);
         assert x instanceof String;
         assertEquals("true", x);
     }
@@ -125,26 +125,26 @@ class ReturnValueTest
     void testReturnAsJsonObjectWithBooleanJsonPrimitive()
     {
         String json = "true";
-        Object x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object x = TestUtil.toMaps(json, null).asClass(null);
         assert x instanceof Boolean;
         assertEquals(true, x);
 
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), null);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(null);
         assert x instanceof Boolean;
         assertEquals(true, x);
 
         json = "\"true\"";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), boolean.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(boolean.class);
         assert x instanceof Boolean;
         assertEquals(true, x);
 
         json = "17.3";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), Boolean.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(Boolean.class);
         assert x instanceof Boolean;
         assertEquals(true, x);
 
         json = "0.0";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), Boolean.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(Boolean.class);
         assert x instanceof Boolean;
         assertEquals(false, x);
     }
@@ -153,26 +153,26 @@ class ReturnValueTest
     void testReturnAsJsonObjectWithAtomicBooleanJsonPrimitive()
     {
         String json = "true";
-        Object x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), AtomicBoolean.class);
+        Object x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(AtomicBoolean.class);
         assert x instanceof AtomicBoolean;
         assertEquals(true, ((AtomicBoolean)x).get());
 
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), AtomicBoolean.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(AtomicBoolean.class);
         assert x instanceof AtomicBoolean;
         assertEquals(true, ((AtomicBoolean)x).get());
 
         json = "\"true\"";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), AtomicBoolean.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(AtomicBoolean.class);
         assert x instanceof AtomicBoolean;
         assertEquals(true, ((AtomicBoolean)x).get());
 
         json = "17.3";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), AtomicBoolean.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(AtomicBoolean.class);
         assert x instanceof AtomicBoolean;
         assertEquals(true, ((AtomicBoolean)x).get());
 
         json = "0.0";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), AtomicBoolean.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(AtomicBoolean.class);
         assert x instanceof AtomicBoolean;
         assertEquals(false, ((AtomicBoolean)x).get());
     }
@@ -181,26 +181,26 @@ class ReturnValueTest
     void testReturnAsJsonObjectWithBigIntegerJsonPrimitive()
     {
         String json = "12345678901235678901234567890";
-        Object x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().integerTypeBoth().build(), null);
+        Object x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().integerTypeBoth().build()).asClass(null);
         assert x instanceof BigInteger;
         assertEquals(new BigInteger(json), x);
 
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().integerTypeBoth().build(), null);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().integerTypeBoth().build()).asClass(null);
         assert x instanceof BigInteger;
         assertEquals(new BigInteger(json), x);
 
         json = "\"" + json + "\"";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().integerTypeBigInteger().build(), BigInteger.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().integerTypeBigInteger().build()).asClass(BigInteger.class);
         assert x instanceof BigInteger;
         assertEquals(new BigInteger("12345678901235678901234567890"), x);
 
         json = "true";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), BigInteger.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(BigInteger.class);
         assert x instanceof BigInteger;
         assertEquals(BigInteger.valueOf(1), x);
 
         json = "7.7";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), BigInteger.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(BigInteger.class);
         assert x instanceof BigInteger;
         assertEquals(BigInteger.valueOf(7), x);
     }
@@ -209,11 +209,11 @@ class ReturnValueTest
     void testReturnAsJsonObjectWithBigIntegerJsonPrimitiveForceToLong()
     {
         String json = "12345678901235678901234567890";
-        Object x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().integerTypeLong().build(), Long.class);
+        Object x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().integerTypeLong().build()).asClass(Long.class);
         assert x instanceof Long;
         assertEquals(5098844603236747986L, x);    // Wrap around because forced to Long
 
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().integerTypeLong().build(), Long.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().integerTypeLong().build()).asClass(Long.class);
         assert x instanceof Long;
         assertEquals(5098844603236747986L, x);  // Wrap around because forced to Long
     }
@@ -222,21 +222,21 @@ class ReturnValueTest
     void testReturnAsJsonObjectWithBigDecimalJsonPrimitive()
     {
         String json = "12345678901235678901234567890.12345678901235678901234567890";
-        Object x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().floatPointBoth().build(), null);
+        Object x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().floatPointBoth().build()).asClass(null);
         assert x instanceof BigDecimal;
         assertEquals(new BigDecimal(json), x);
 
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().floatPointBigDecimal().build(), null);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().floatPointBigDecimal().build()).asClass(null);
         assert x instanceof BigDecimal;
         assertEquals(new BigDecimal(json), x);
 
         String quotedNum = "\"" + json + "\"";
-        x = TestUtil.toObjects(quotedNum, new ReadOptionsBuilder().returnAsJavaObjects().floatPointBoth().build(), BigDecimal.class);
+        x = TestUtil.toJava(quotedNum, new ReadOptionsBuilder().returnAsJavaObjects().floatPointBoth().build()).asClass(BigDecimal.class);
         assert x instanceof BigDecimal;
         assertEquals(new BigDecimal(json), x);
 
         json = "true";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), BigDecimal.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(BigDecimal.class);
         assert x instanceof BigDecimal;
         assertEquals(new BigDecimal(1), x);
     }
@@ -245,21 +245,21 @@ class ReturnValueTest
     void testReturnAsJsonObjectWithBigDecimalJsonPrimitiveForcedToDouble()
     {
         String json = "12345678901235678901234567890.12345678901235678901234567890";
-        Object x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), double.class);
+        Object x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(double.class);
         assert x instanceof Double;
         assertEquals(1.2345678901235679E28, x);      // Approximated because of Force to Double
 
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), double.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(double.class);
         assert x instanceof Double;
         assertEquals(1.2345678901235679E28, x);     // Approximated because of Force to Double
 
         json = "\"" + json + "\"";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), double.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(double.class);
         assert x instanceof Double;
         assertEquals(1.2345678901235679E28, x);     // Approximated because of Force to Double
 
         json = "true";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), double.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(double.class);
         assert x instanceof Double;
         assertEquals(1.0, x);     // Approximated because of Force to Double
     }
@@ -268,21 +268,21 @@ class ReturnValueTest
     void testReturnAsJsonObjectWithIntegerJsonPrimitive()
     {
         String json = "1234.7";
-        Object x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), Integer.class);
+        Object x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(Integer.class);
         assert x instanceof Integer;
         assertEquals(1234, x);
 
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), int.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(int.class);
         assert x instanceof Integer;
         assertEquals(1234, x);
 
         json = "\"" + json + "\"";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), int.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(int.class);
         assert x instanceof Integer;
         assertEquals(1234, x);
 
         json = "true";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), Integer.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(Integer.class);
         assert x instanceof Integer;
         assertEquals(1, x);
     }
@@ -291,21 +291,21 @@ class ReturnValueTest
     void testReturnAsJsonObjectWithAtomicIntegerJsonPrimitive()
     {
         String json = "1234.7";
-        Object x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), AtomicInteger.class);
+        Object x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(AtomicInteger.class);
         assert x instanceof AtomicInteger;
         assertEquals(1234, ((AtomicInteger)x).get());
 
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), AtomicInteger.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(AtomicInteger.class);
         assert x instanceof AtomicInteger;
         assertEquals(1234, ((AtomicInteger)x).get());
 
         json = "\"" + json + "\"";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), AtomicInteger.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(AtomicInteger.class);
         assert x instanceof AtomicInteger;
         assertEquals(1234, ((AtomicInteger)x).get());
 
         json = "true";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), AtomicInteger.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(AtomicInteger.class);
         assert x instanceof AtomicInteger;
         assertEquals(1, ((AtomicInteger)x).get());
     }
@@ -314,21 +314,21 @@ class ReturnValueTest
     void testReturnAsJsonObjectWithShortJsonPrimitive()
     {
         String json = "1234.7";
-        Object x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), short.class);
+        Object x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(short.class);
         assert x instanceof Short;
         assertEquals((short) 1234, x);
 
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), Short.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(Short.class);
         assert x instanceof Short;
         assertEquals((short) 1234, x);
 
         json = "\"" + json + "\"";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), Short.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(Short.class);
         assert x instanceof Short;
         assertEquals((short) 1234, x);
 
         json = "true";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), short.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(short.class);
         assert x instanceof Short;
         assertEquals((short) 1, x);
     }
@@ -337,21 +337,21 @@ class ReturnValueTest
     void testReturnAsJsonObjectWithByteJsonPrimitive()
     {
         String json = "16.9";
-        Object x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), byte.class);
+        Object x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(byte.class);
         assert x instanceof Byte;
         assertEquals((byte) 16, x);
 
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), byte.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(byte.class);
         assert x instanceof Byte;
         assertEquals((byte) 16, x);
 
         json = "\"" + json + "\"";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), byte.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(byte.class);
         assert x instanceof Byte;
         assertEquals((byte) 16, x);
 
         json = "true";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), byte.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(byte.class);
         assert x instanceof Byte;
         assertEquals((byte) 1, x);
     }
@@ -360,21 +360,21 @@ class ReturnValueTest
     void testReturnAsJsonObjectWithFloatJsonPrimitive()
     {
         String json = "16.9";
-        Object x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), float.class);
+        Object x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(float.class);
         assert x instanceof Float;
         assertEquals(16.9f, x);
 
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), float.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(float.class);
         assert x instanceof Float;
         assertEquals(16.9f, x);
 
         json = "\"" + json + "\"";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), Float.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(Float.class);
         assert x instanceof Float;
         assertEquals(16.9f, x);
 
         json = "true";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), Float.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(Float.class);
         assert x instanceof Float;
         assertEquals(1.0f, x);
     }
@@ -383,23 +383,23 @@ class ReturnValueTest
     void testReturnAsJsonObjectWithCharacterJsonPrimitive()
     {
         String json = "\"j\"";
-        Object x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), char.class);
+        Object x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(char.class);
         assert x instanceof Character;
         assertEquals('j', x);
 
         json = "65";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), char.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(char.class);
         assert x instanceof Character;
         assertEquals('A', x);
 
         json = "\"\\uDE4A\"";
 
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), Character.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(Character.class);
         assert x instanceof Character;
         assertEquals('\uDE4A', x);
 
         json = "true";
-        x = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJavaObjects().build(), Character.class);
+        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().build()).asClass(Character.class);
         assert x instanceof Character;
         assertEquals((char) 1, x);
     }

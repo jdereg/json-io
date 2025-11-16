@@ -30,7 +30,7 @@ public class UntypedArrayTest
         String jsonOut = TestUtil.toJson(obj);
         TestUtil.printLine(jsonOut);
 
-        ObjectArray root = TestUtil.toObjects(jsonOut, null);
+        ObjectArray root = TestUtil.toJava(jsonOut, null).asClass(null);
         assert DeepEquals.deepEquals(root, obj);
     }
 

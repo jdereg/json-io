@@ -39,7 +39,7 @@ class DurationTests {
     void testDuration_ofNanos() {
         Duration duration = Duration.ofNanos(500);
         String json = TestUtil.toJson(duration);
-        Duration actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        Duration actual = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(null);
         
         assertThat(actual).hasNanos(500);
     }
@@ -48,7 +48,7 @@ class DurationTests {
     void testDuration_ofMillis() {
         Duration duration = Duration.ofMillis(9000);
         String json = TestUtil.toJson(duration);
-        Duration actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        Duration actual = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(null);
 
         assertThat(actual)
                 .hasMillis(9000)
@@ -59,7 +59,7 @@ class DurationTests {
     void testDuration_ofSecondsAndNanos() {
         Duration duration = Duration.ofSeconds(9000, 9000);
         String json = TestUtil.toJson(duration);
-        Duration actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        Duration actual = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(null);
         
         assertThat(actual)
                 .hasSeconds(9000)
@@ -71,7 +71,7 @@ class DurationTests {
     void testDuration_ofDays() {
         Duration duration = Duration.ofDays(9);
         String json = TestUtil.toJson(duration);
-        Duration actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        Duration actual = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(null);
 
         assertThat(actual).hasDays(9);
     }
@@ -124,7 +124,7 @@ class DurationTests {
     @MethodSource("oldFormats")
     void oldFormatTests(String fileName, long days, long hours, long minutes, long seconds, long millis, long nanos) {
         String json = loadJsonForTest(fileName);
-        Duration d = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        Duration d = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(null);
 
         assertThat(d)
                 .hasDays(days)
@@ -174,7 +174,7 @@ class DurationTests {
         String json = TestUtil.toJson(durations);
         TestUtil.printLine("json=" + json);
 
-        durations = TestUtil.toObjects(json, null);
+        durations = TestUtil.toJava(json, null).asClass(null);
         assertEquals(2, durations.length);
         assertNotSame(durations[0], durations[1]);
         assertEquals(Duration.parse(s), durations[0]);
@@ -199,7 +199,7 @@ class DurationTests {
         da.durations = new Duration[] {durr, durr};
         da.otherDurations = new Object[] {durr, new Date(System.currentTimeMillis()), durr};
         String json = TestUtil.toJson(da);
-        DurationTests.DurationArray da2 = TestUtil.toObjects(json, null);
+        DurationTests.DurationArray da2 = TestUtil.toJava(json, null).asClass(null);
         assert da.durations.length == 2;
         assert da.otherDurations.length == 3;
 

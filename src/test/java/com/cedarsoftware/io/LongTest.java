@@ -35,7 +35,7 @@ public class LongTest
         ManyLongs test = new ManyLongs();
         String json = TestUtil.toJson(test);
         TestUtil.printLine("json = " + json);
-        ManyLongs that = TestUtil.toObjects(json, null);
+        ManyLongs that = TestUtil.toJava(json, null).asClass(null);
 
         Assertions.assertEquals(-1L, (long) that._arrayElement);
         Assertions.assertEquals(710L, that._polyRefTarget);
@@ -79,7 +79,7 @@ public class LongTest
         String json = TestUtil.toJson(x, options);
         assert json.contains("\"19\"");
 
-        Object y = TestUtil.toObjects(json, null);
+        Object y = TestUtil.toJava(json, null).asClass(null);
         assert y instanceof Long;
         Assertions.assertEquals(19L, (Long) y);
     }
@@ -95,7 +95,7 @@ public class LongTest
         assert json.contains("\"2\"");
         assert json.contains("\"3\"");
 
-        Object y = TestUtil.toObjects(json, null);
+        Object y = TestUtil.toJava(json, null).asClass(null);
         assert y instanceof Long[];
         Long[] longArray = (Long[]) y;
         Assertions.assertEquals(1L, longArray[0]);
@@ -113,7 +113,7 @@ public class LongTest
         assert json.contains("\"2\"");
         assert json.contains("\"3\"");
 
-        Object y = TestUtil.toObjects(json, null);
+        Object y = TestUtil.toJava(json, null).asClass(null);
         assert y instanceof Object[];
         Object[] objArray = (Object[])y;
         Assertions.assertEquals(1L, objArray[0]);
@@ -135,7 +135,7 @@ public class LongTest
         assert json.contains("\"2\"");
         assert json.contains("\"3\"");
 
-        Object y = TestUtil.toObjects(json, null);
+        Object y = TestUtil.toJava(json, null).asClass(null);
         assert y instanceof Collection;
         assert y instanceof List;
         List<Long> col = (List<Long>)y;
@@ -158,7 +158,7 @@ public class LongTest
                 .contains("\"49\"")
                 .contains("\"205\"");
 
-        Object y = TestUtil.toObjects(json, null);
+        Object y = TestUtil.toJava(json, null).asClass(null);
         assert y instanceof PhysicalAttributes;
         Assertions.assertEquals(49L, ((PhysicalAttributes) y).getAge());
         Assertions.assertEquals(205L, ((PhysicalAttributes) y).getWeight());

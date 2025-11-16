@@ -36,7 +36,7 @@ public class OverlappingMemberVariableNamesTest
         String json = TestUtil.toJson(outer);
         assert json.contains("this$");
 
-        Outer x = TestUtil.toObjects(json, null);
+        Outer x = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals(x.getName(), "Joe Outer");
         assertEquals(x.getFoo().getName(), "Jane Inner");
@@ -50,7 +50,7 @@ public class OverlappingMemberVariableNamesTest
         child.setParentName("parent");
 
         String json = TestUtil.toJson(child);
-        Child roundTrip = TestUtil.toObjects(json, null);
+        Child roundTrip = TestUtil.toJava(json, null).asClass(null);
         assert roundTrip.name.equals("child");
         assert roundTrip.getParentName().equals("parent");
 
@@ -61,7 +61,7 @@ public class OverlappingMemberVariableNamesTest
         assertEquals(child.getParentName(), roundTrip.getParentName());
         assertEquals(child.getChildName(), roundTrip.getChildName());
 
-        JsonObject jObj = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        JsonObject jObj = TestUtil.toMaps(json, null).asClass(null);
         String json1 = TestUtil.toJson(jObj);
         assertEquals(json, json1);
     }

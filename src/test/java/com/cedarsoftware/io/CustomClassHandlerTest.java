@@ -42,10 +42,10 @@ class CustomClassHandlerTest
 
         TestUtil.printLine("json=" + json);
 
-        WeirdDate date = TestUtil.toObjects(json, new ReadOptionsBuilder()
+        WeirdDate date = TestUtil.toJava(json, new ReadOptionsBuilder()
                 .addConverterOverride(Map.class, WeirdDate.class, WeirdDate::fromMapToWeirdDate)
                 .addConverterOverride(String.class, WeirdDate.class, WeirdDate::fromStringToWeirdDate)
-                .build(), null);
+                .build()).asClass(null);
         assertEquals(now, date);
 
         json = TestUtil.toJson(now, new WriteOptionsBuilder()

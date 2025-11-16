@@ -60,7 +60,7 @@ public class EmptyEnumSetOnJDK17Test
     {
         Object o = EnumSet.noneOf(TestEnum.class);
         String json = TestUtil.toJson(o);
-        EnumSet<?> es = TestUtil.toObjects(json, null);
+        EnumSet<?> es = TestUtil.toJava(json, null).asClass(null);
         assert es.isEmpty();
     }
 
@@ -72,7 +72,7 @@ public class EmptyEnumSetOnJDK17Test
         assert !json.contains(ENUM);    // Make sure writeEnumSetOldWay writeOption is working
         json = TestUtil.toJson(source);
         assert json.contains(ENUM);
-        EnumSet<?> target = TestUtil.toObjects(json, null);
+        EnumSet<?> target = TestUtil.toJava(json, null).asClass(null);
         assert source.equals(target);
     }
 
@@ -81,7 +81,7 @@ public class EmptyEnumSetOnJDK17Test
     {
         MultiVersioned m = new MultiVersioned(EnumSet.of(TestEnum.V1, TestEnum.V3), "what", EnumSet.of(Thread.State.NEW));
         String json = TestUtil.toJson(m);
-        MultiVersioned target = TestUtil.toObjects(json, null);
+        MultiVersioned target = TestUtil.toJava(json, null).asClass(null);
         assert m.equals(target);
     }
 }

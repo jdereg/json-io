@@ -744,17 +744,15 @@ public class WritersTest {
         assertEquals(gmtInput.toInstant(), restored.toInstant());
 
         // Test that we can read both formats
-        ZonedDateTime fromGMT = JsonIo.toObjects(
+        ZonedDateTime fromGMT = JsonIo.toJava(
                 "{\"@type\":\"ZonedDateTime\",\"zonedDateTime\":\"2024-02-02T12:00:00Z[GMT]\"}",
-                ReadOptionsBuilder.getDefaultReadOptions(),
-                ZonedDateTime.class
-        );
+                ReadOptionsBuilder.getDefaultReadOptions()
+        ).asClass(ZonedDateTime.class);
 
-        ZonedDateTime fromEtcGMT = JsonIo.toObjects(
+        ZonedDateTime fromEtcGMT = JsonIo.toJava(
                 "{\"@type\":\"ZonedDateTime\",\"zonedDateTime\":\"2024-02-02T12:00:00Z[Etc/GMT]\"}",
-                ReadOptionsBuilder.getDefaultReadOptions(),
-                ZonedDateTime.class
-        );
+                ReadOptionsBuilder.getDefaultReadOptions()
+        ).asClass(ZonedDateTime.class);
 
         // Verify both parse to the same instant and normalized zone
         assertEquals(fromGMT.toInstant(), fromEtcGMT.toInstant());

@@ -131,7 +131,7 @@ class MapsTest
         ManyMaps obj = new ManyMaps();
         obj.init();
         String jsonOut = TestUtil.toJson(obj);
-        ManyMaps root = TestUtil.toObjects(jsonOut, null);
+        ManyMaps root = TestUtil.toJava(jsonOut, null).asClass(null);
         assertMap(root);
         assert DeepEquals.deepEquals(obj, root);
     }
@@ -165,7 +165,7 @@ class MapsTest
         stuff.emptyNavigableMap = Collections.emptyNavigableMap();
 
         String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().build());
-        EmptyStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), EmptyStuff.class);
+        EmptyStuff stuff2 = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(EmptyStuff.class);
 
         try {
             stuff2.emptyList.add("a");
@@ -227,7 +227,7 @@ class MapsTest
         stuff.singletonMap = Collections.singletonMap("Solana", "Bitcoin");
 
         String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().build());
-        SingletonStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), SingletonStuff.class);
+        SingletonStuff stuff2 = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(SingletonStuff.class);
 
         assert stuff2.singletonList.size() == 1;
         assert stuff2.singletonSet.size() == 1;
@@ -297,7 +297,7 @@ class MapsTest
         stuff.unmodifiableNavigableMap = Collections.unmodifiableNavigableMap(navMap);
 
         String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().build());
-        UnmodifiableStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), UnmodifiableStuff.class);
+        UnmodifiableStuff stuff2 = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(UnmodifiableStuff.class);
         Map<String, Object> options = new HashMap<>();
         assert DeepEquals.deepEquals(stuff, stuff2, options);
         assertThrows(UnsupportedOperationException.class, () -> stuff2.unmodifiableCollection.add("a"));
@@ -338,7 +338,7 @@ class MapsTest
         stuff.synchronizedNavigableMap = Collections.synchronizedNavigableMap(navMap);
 
         String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().build());
-        SynchronizedStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), SynchronizedStuff.class);
+        SynchronizedStuff stuff2 = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(SynchronizedStuff.class);
         Map<String, Object> options = new HashMap<>();
         assert DeepEquals.deepEquals(stuff, stuff2, options);
     }
@@ -378,7 +378,7 @@ class MapsTest
         stuff.concurrentNavigableMap.put("baz", "qux");
 
         String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().build());
-        ConcurrentStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), ConcurrentStuff.class);
+        ConcurrentStuff stuff2 = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(ConcurrentStuff.class);
 
         assert DeepEquals.deepEquals(stuff, stuff2);
     }
@@ -392,7 +392,7 @@ class MapsTest
 
         ModelHoldingSingleHashMap model = new ModelHoldingSingleHashMap(map);
         String json = TestUtil.toJson(model, new WriteOptionsBuilder().showTypeInfoAlways().build());
-        ModelHoldingSingleHashMap actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        ModelHoldingSingleHashMap actual = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(null);
 
         Map<String, String> deserialized = actual.getMap();
         assertThat(deserialized)
@@ -411,7 +411,7 @@ class MapsTest
 
         ModelHoldingSingleHashMap model = new ModelHoldingSingleHashMap(map);
         String json = TestUtil.toJson(model, new WriteOptionsBuilder().build());
-        ModelHoldingSingleHashMap actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        ModelHoldingSingleHashMap actual = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(null);
 
         Map<String, String> deserialized = actual.getMap();
         assertThat(deserialized)
@@ -498,12 +498,12 @@ class MapsTest
         testMap.init();
         String json0 = TestUtil.toJson(testMap);
         TestUtil.printLine("json0=" + json0);
-        Map testMap2 = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Map testMap2 = TestUtil.toMaps(json0, null).asClass(null);
 
         String json1 = TestUtil.toJson(testMap2);
         TestUtil.printLine("json1=" + json1);
 
-        ManyMaps testMap3 = TestUtil.toObjects(json1, null);
+        ManyMaps testMap3 = TestUtil.toJava(json1, null).asClass(null);
         assertMap(testMap3);// Re-written from Map of Maps and re-loaded correctly
         assertEquals(json0, json1);
     }
@@ -522,7 +522,7 @@ class MapsTest
         map.put(a, b);
         String json = TestUtil.toJson(map);
         TestUtil.printLine("json = " + json);
-        map = TestUtil.toObjects(json, null);
+        map = TestUtil.toJava(json, null).asClass(null);
         assertNotNull(map);
         assertEquals(1, map.size());
         TestObject bb = (TestObject) map.get(new TestObject("A"));
@@ -538,7 +538,7 @@ class MapsTest
         map.put("a", "b");
         String json = TestUtil.toJson(map);
         TestUtil.printLine("json = " + json);
-        map = TestUtil.toObjects(json, null);
+        map = TestUtil.toJava(json, null).asClass(null);
         assertNotNull(map);
         assertEquals(1, map.size());
     }
@@ -557,7 +557,7 @@ class MapsTest
         arrayB[1] = new Point(30, 40);
         m.getContent().put(arrayB, "bar");
         String json = TestUtil.toJson(m);
-        MapArrayKey x = TestUtil.toObjects(json, null);
+        MapArrayKey x = TestUtil.toJava(json, null).asClass(null);
 
         Iterator<Map.Entry<Object[], String>> i = x.getContent().entrySet().iterator();
         Map.Entry<Object[], String> entry = i.next();
@@ -588,7 +588,7 @@ class MapsTest
         setB.add(new Point(30, 40));
         m.getContent().put(setB, "bar");
         String json = TestUtil.toJson(m);
-        MapSetKey x = TestUtil.toObjects(json, null);
+        MapSetKey x = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals("foo", x.getContent().get(setA));
         assertEquals("bar", x.getContent().get(setB));
@@ -597,14 +597,14 @@ class MapsTest
         m.setContent(new LinkedHashMap<>());
         m.getContent().put(null, null);
         json = TestUtil.toJson(m);
-        x = TestUtil.toObjects(json, null);
+        x = TestUtil.toJava(json, null).asClass(null);
         assertNull(x.getContent().get(null));
 
         m = new MapSetKey();
         m.setContent(new LinkedHashMap<>());
         m.getContent().put(new LinkedHashSet<>(), "Fargo");
         json = TestUtil.toJson(m);
-        x = TestUtil.toObjects(json, null);
+        x = TestUtil.toJava(json, null).asClass(null);
         assertEquals("Fargo", x.getContent().get(new LinkedHashSet<Point>()));
     }
 
@@ -612,9 +612,9 @@ class MapsTest
     void testMapToMapCompatibility()
     {
         String json0 = "{\"rows\":[{\"columns\":[{\"name\":\"FOO\",\"value\":\"9000\"},{\"name\":\"VON\",\"value\":\"0001-01-01\"},{\"name\":\"BAR\",\"value\":\"0001-01-01\"}]},{\"columns\":[{\"name\":\"FOO\",\"value\":\"9713\"},{\"name\":\"VON\",\"value\":\"0001-01-01\"},{\"name\":\"BAR\",\"value\":\"0001-01-01\"}]}],\"selectedRows\":\"110\"}";
-        Map root = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Map root = TestUtil.toMaps(json0, null).asClass(null);
         String json1 = TestUtil.toJson(root);
-        Map root2 = TestUtil.toObjects(json1, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Map root2 = TestUtil.toMaps(json1, null).asClass(null);
         assertTrue(DeepEquals.deepEquals(root, root2));
 
         // Will be different because @keys and @items get inserted during processing
@@ -627,7 +627,7 @@ class MapsTest
     {
         AssignToList atl = new AssignToList();
         String json = "{\"@id\":1,\"@type\":\"java.util.LinkedHashMap\",\"@keys\":[\"1000004947\",\"0000020985\",\"0000029443\",\"0000020994\"],\"@items\":[\"Me\",\"Fox, James\",\"Renewals, CORE\",\"Gade, Raja\"]}";
-        Map assignTo = TestUtil.toObjects(json, null);
+        Map assignTo = TestUtil.toJava(json, null).asClass(null);
         assert assignTo instanceof LinkedHashMap;
         atl.setAssignTo(assignTo);
         json = TestUtil.toJson(atl);
@@ -638,7 +638,7 @@ class MapsTest
     void testMapWithParameterizedTypes()
     {
         String json = "{\"@type\":\"" + ParameterizedMap.class.getName() + "\", \"content\":{\"foo\":{\"one\":{\"x\":1,\"y\":2},\"two\":{\"x\":10,\"y\":20}},\"bar\":{\"ten\":{\"x\":3,\"y\":4},\"twenty\":{\"x\":30,\"y\":40}}}}";
-        ParameterizedMap pCol = TestUtil.toObjects(json, null);
+        ParameterizedMap pCol = TestUtil.toJava(json, null).asClass(null);
         Map<String, Point> points = pCol.getContent().get("foo");
         assertNotNull(points);
         assertEquals(2, points.size());
@@ -656,22 +656,22 @@ class MapsTest
     void testOddMaps()
     {
         String json = "{\"@type\":\"HashMap\",\"@keys\":null,\"@items\":null}";
-        Map map = TestUtil.toObjects(json, null);
+        Map map = TestUtil.toJava(json, null).asClass(null);
         assertTrue(map instanceof HashMap);
         assertTrue(map.isEmpty());
 
         json = "{\"@type\":\"java.util.HashMap\"}";
-        map = TestUtil.toObjects(json, null);
+        map = TestUtil.toJava(json, null).asClass(null);
         assertTrue(map instanceof HashMap);
         assertTrue(map.isEmpty());
         
         final String json1 = "{\"@type\":\"HashMap\",\"@keys\":null,\"@items\":[]}";
-        Exception e = assertThrows(Exception.class, () -> { TestUtil.toObjects(json1, null);});
+        Exception e = assertThrows(Exception.class, () -> { TestUtil.toJava(json1, null).asClass(null);});
         assert e.getMessage().toLowerCase().contains("@keys or @items");
         assert e.getMessage().toLowerCase().contains("empty");
 
         final String json2 = "{\"@type\":\"HashMap\",\"@keys\":[1,2],\"@items\":[true]}";
-        e = assertThrows(Exception.class, () -> { TestUtil.toObjects(json2, null); });
+        e = assertThrows(Exception.class, () -> { TestUtil.toJava(json2, null).asClass(null); });
         assert e.getMessage().toLowerCase().contains("must be same length");
     }
 
@@ -682,11 +682,11 @@ class MapsTest
         String json0 = TestUtil.toJson(map);
         TestUtil.printLine("json0=" + json0);
 
-        map = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        map = TestUtil.toMaps(json0, null).asClass(null);
         String json1 = TestUtil.toJson(map);
         TestUtil.printLine("json1=" + json1);
 
-        map = TestUtil.toObjects(json1, null);
+        map = TestUtil.toJava(json1, null).asClass(null);
         assertTrue(map instanceof LinkedHashMap);
         assertTrue(map.isEmpty());
         assertEquals(json0, json1);
@@ -700,11 +700,11 @@ class MapsTest
         String json0 = TestUtil.toJson(root);
         TestUtil.printLine("json0=" + json0);
 
-        Object[] array = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object[] array = TestUtil.toMaps(json0, null).asClass(null);
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
 
-        root = TestUtil.toObjects(json1, null);
+        root = TestUtil.toJava(json1, null).asClass(null);
         assertEquals(2, root.length);
         assertTrue(root[0] instanceof Map);
         assertTrue(((Map) root[0]).isEmpty());
@@ -721,11 +721,11 @@ class MapsTest
         String json0 = TestUtil.toJson(smt);
         TestUtil.printLine("json0=" + json0);
 
-        Map result = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Map result = TestUtil.toMaps(json0, null).asClass(null);
         String json1 = TestUtil.toJson(result);
         TestUtil.printLine("json1=" + json1);
 
-        SimpleMapTest mapTest = TestUtil.toObjects(json1, null);
+        SimpleMapTest mapTest = TestUtil.toJava(json1, null).asClass(null);
         assertTrue(DeepEquals.deepEquals(mapTest.getMap(), smt.getMap()));
         assertEquals(json0, json1);
     }
@@ -733,19 +733,19 @@ class MapsTest
     @Test
     void testMapFromUnknown()
     {
-        Map map = TestUtil.toObjects("{\"a\":\"alpha\", \"b\":\"beta\"}", new ReadOptionsBuilder().unknownTypeClass(ConcurrentHashMap.class).build(), null);
+        Map map = TestUtil.toJava("{\"a\":\"alpha\", \"b\":\"beta\"}", new ReadOptionsBuilder().unknownTypeClass(ConcurrentHashMap.class).build()).asClass(null);
         assert map instanceof ConcurrentHashMap;
         assert map.size() == 2;
         assert map.get("a").equals("alpha");
         assert map.get("b").equals("beta");
 
-        map = TestUtil.toObjects("{\"a\":\"alpha\", \"b\":\"beta\"}", new ReadOptionsBuilder().unknownTypeClass(ConcurrentSkipListMap.class).build(), null);
+        map = TestUtil.toJava("{\"a\":\"alpha\", \"b\":\"beta\"}", new ReadOptionsBuilder().unknownTypeClass(ConcurrentSkipListMap.class).build()).asClass(null);
         assert map instanceof ConcurrentSkipListMap;
         assert map.size() == 2;
         assert map.get("a").equals("alpha");
         assert map.get("b").equals("beta");
 
-        map = TestUtil.toObjects("{\"a\":\"alpha\", \"b\":\"beta\"}", null);
+        map = TestUtil.toJava("{\"a\":\"alpha\", \"b\":\"beta\"}", null).asClass(null);
         assert map instanceof Map;// Default 'Map' type
         assert map.size() == 2;
         assert map.get("a").equals("alpha");
@@ -760,7 +760,7 @@ class MapsTest
         quoteInKeyMap.put("\"one\"", 1L);
         quoteInKeyMap.put("\"two\"", 2L);
         String json = TestUtil.toJson(quoteInKeyMap);
-        Map ret = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        Map ret = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(null);
         assert ret.size() == 3;
 
         assert ret.get(0L).equals(0L);
@@ -772,7 +772,7 @@ class MapsTest
         stringKeys.put("\"one\"", 1L);
         stringKeys.put("\"two\"", 2L);
         json = TestUtil.toJson(stringKeys);
-        ret = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        ret = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(null);
         assert ret.size() == 3;
 
         assert ret.get("\"zero\"").equals(0L);
@@ -804,7 +804,7 @@ class MapsTest
         TestUtil.printLine(str + "\n");
 
         ReadOptions readOptions = new ReadOptionsBuilder().returnAsJsonObjects().build();
-        final Map<String, Object> map2 = TestUtil.toObjects(str, readOptions, null);
+        final Map<String, Object> map2 = TestUtil.toJava(str, readOptions).asClass(null);
 
         // for debugging
         for (Map.Entry<String, Object> entry : map2.entrySet())
@@ -853,7 +853,7 @@ class MapsTest
         // in a special way.  Make sure that works.
         Map root1 = Collections.singletonMap("testCfgKey", "testCfgValue");
         String json = TestUtil.toJson(root1);
-        Map root2 = TestUtil.toObjects(json, null);
+        Map root2 = TestUtil.toJava(json, null).asClass(null);
         assert root2.get("testCfgKey").equals("testCfgValue");
         assert root1.get("testCfgKey").equals(root2.get("testCfgKey"));
     }
@@ -864,11 +864,11 @@ class MapsTest
         String json0 = TestUtil.toJson(tmv, new WriteOptionsBuilder().build());
 
         // First convert to Maps (native JSON objects)
-        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object objAsMap = TestUtil.toMaps(json0, null).asClass(null);
         String json1 = TestUtil.toJson(objAsMap);
 
         // Then convert back to objects
-        Object obj = TestUtil.toObjects(json1, new ReadOptionsBuilder().build(), null);
+        Object obj = TestUtil.toJava(json1, new ReadOptionsBuilder().build()).asClass(null);
         String json2 = TestUtil.toJson(obj);
 
         assertEquals(json0, json1);
@@ -882,11 +882,11 @@ class MapsTest
         String json0 = TestUtil.toJson(tmk, new WriteOptionsBuilder().build());
 
         // First convert to Maps (native JSON objects)
-        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object objAsMap = TestUtil.toMaps(json0, null).asClass(null);
         String json1 = TestUtil.toJson(objAsMap);
 
         // Then convert back to objects
-        Object obj = TestUtil.toObjects(json1, new ReadOptionsBuilder().build(), null);
+        Object obj = TestUtil.toJava(json1, new ReadOptionsBuilder().build()).asClass(null);
         String json2 = TestUtil.toJson(obj);
 
         assertEquals(json0, json1);
@@ -900,11 +900,11 @@ class MapsTest
         String json0 = TestUtil.toJson(tmkvc, new WriteOptionsBuilder().build());
 
         // First convert to Maps (native JSON objects)
-        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object objAsMap = TestUtil.toMaps(json0, null).asClass(null);
         String json1 = TestUtil.toJson(objAsMap);
 
         // Then convert back to objects
-        Object obj = TestUtil.toObjects(json1, new ReadOptionsBuilder().build(), null);
+        Object obj = TestUtil.toJava(json1, new ReadOptionsBuilder().build()).asClass(null);
         String json2 = TestUtil.toJson(obj);
 
         assertEquals(json0, json1);
@@ -917,11 +917,11 @@ class MapsTest
         String json0 = TestUtil.toJson(tmvn);
 
         // Convert to Maps (native JSON objects)
-        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object objAsMap = TestUtil.toMaps(json0, null).asClass(null);
         String json1 = TestUtil.toJson(objAsMap);
 
         // Convert back to objects
-        Object obj = TestUtil.toObjects(json1, null);
+        Object obj = TestUtil.toJava(json1, null).asClass(null);
         String json2 = TestUtil.toJson(obj);
 
         assertEquals(json0, json1);
@@ -935,11 +935,11 @@ class MapsTest
         String json0 = TestUtil.toJson(tmkn);
 
         // Convert to Maps (native JSON objects)
-        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object objAsMap = TestUtil.toMaps(json0, null).asClass(null);
         String json1 = TestUtil.toJson(objAsMap);
 
         // Convert back to objects
-        Object obj = TestUtil.toObjects(json1, null);
+        Object obj = TestUtil.toJava(json1, null).asClass(null);
         String json2 = TestUtil.toJson(obj);
 
         assertEquals(json0, json1);
@@ -953,11 +953,11 @@ class MapsTest
         String json0 = TestUtil.toJson(tmkvcn);
 
         // Convert to Maps (native JSON objects)
-        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object objAsMap = TestUtil.toMaps(json0, null).asClass(null);
         String json1 = TestUtil.toJson(objAsMap);
 
         // Convert back to objects
-        Object obj = TestUtil.toObjects(json1, null);
+        Object obj = TestUtil.toJava(json1, null).asClass(null);
         String json2 = TestUtil.toJson(obj);
 
         assertEquals(json0, json1);

@@ -99,14 +99,14 @@ class YearTests extends SerializationDeserializationMinimumTests<Year> {
     @ParameterizedTest
     @MethodSource("argumentsForOldFormat")
     void testOldFormat_objectType(String json) {
-        Year date = TestUtil.toObjects(json, null);
+        Year date = TestUtil.toJava(json, null).asClass(null);
         assertThat(date.getValue()).isEqualTo(1970);
     }
 
     @Test
     void testOldFormat_nestedObject() {
         String json = "{\"@type\":\"com.cedarsoftware.io.YearTests$NestedYear\",\"dateTime1\":{\"@id\":1,\"year\":1970},\"dateTime2\":{\"@ref\":1}}";
-        NestedYear date = TestUtil.toObjects(json, null);
+        NestedYear date = TestUtil.toJava(json, null).asClass(null);
         assertEquals(1970, date.dateTime1.getValue());
         assertSame(date.dateTime1, date.dateTime2);
     }
@@ -115,7 +115,7 @@ class YearTests extends SerializationDeserializationMinimumTests<Year> {
     void testTopLevel_serializesAsISODate() {
         Year date = Year.of(2014);
         String json = TestUtil.toJson(date);
-        Year result = TestUtil.toObjects(json, null);
+        Year result = TestUtil.toJava(json, null).asClass(null);
         assertEquals(result, date);
     }
 

@@ -41,7 +41,7 @@ public class TypeSubstitutionTest
 
         Map<String, String> types = map1;
         String json = TestUtil.toJson(p, new WriteOptionsBuilder().aliasTypeNames(types).build());
-        Person clone = TestUtil.toObjects(json, new ReadOptionsBuilder().aliasTypeNames(types).build(), null);
+        Person clone = TestUtil.toJava(json, new ReadOptionsBuilder().aliasTypeNames(types).build()).asClass(null);
         assert clone.getName().equals("John");
         assert DeepEquals.deepEquals(clone.getPets(), p.getPets());
     }

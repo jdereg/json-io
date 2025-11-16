@@ -37,7 +37,7 @@ public class ClassTest
         Class<?> c = Double.class;
         String json = TestUtil.toJson(c);
         TestUtil.printLine("json=" + json);
-        Class<?> r = TestUtil.toObjects(json, null);
+        Class<?> r = TestUtil.toJava(json, null).asClass(null);
         assertEquals(c.getName(), r.getName());
     }
 
@@ -49,7 +49,7 @@ public class ClassTest
 
         String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);
-        OneNestedClass actual = TestUtil.toObjects(json, null);
+        OneNestedClass actual = TestUtil.toJava(json, null).asClass(null);
         assert expected.cls.equals(actual.cls);
     }
 
@@ -57,7 +57,7 @@ public class ClassTest
     void testBadClassName()
     {
         String json = "{\"@type\":\"class\",\"value\":\"foo.bar.baz.Qux\"}";
-        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("Cannot convert String 'foo.bar.baz.Qux' to class.  Class not found");
     }
@@ -66,7 +66,7 @@ public class ClassTest
     void testBadClassNameRoot()
     {
         String json = "\"foo.bar.baz.Qux\"";
-        assertThatThrownBy(() -> TestUtil.toObjects(json, Class.class))
+        assertThatThrownBy(() -> TestUtil.toJava(json, null).asClass(Class.class))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("Return type mismatch. Expecting: java.lang.Class, found: java.lang.String");
     }
@@ -75,7 +75,7 @@ public class ClassTest
     void testNoClassNameValue()
     {
         String json = "{\"@type\":\"class\"}";
-        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("Map to 'Class' the map must include: [class], [value], or [_v] as key with associated value");
 
@@ -85,7 +85,7 @@ public class ClassTest
     void testBadClassValueType()
     {
         String json = "{\"@type\":\"class\",\"value\":16.0}";
-        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("Unsupported conversion, source type [Double (16.0)] target type 'Class'");
     }
@@ -94,7 +94,7 @@ public class ClassTest
     void testGoodClassNameRoot()
     {
         String json = "\"java.util.HashMap\"";
-        Object x = TestUtil.toObjects(json, Class.class);
+        Object x = TestUtil.toJava(json, null).asClass(Class.class);
         assert x.equals(HashMap.class);
     }
 
@@ -102,7 +102,7 @@ public class ClassTest
     void testBadClassValueTypeAtRoot()
     {
         String json = "16.0";
-        assertThatThrownBy(() -> TestUtil.toObjects(json, Class.class))
+        assertThatThrownBy(() -> TestUtil.toJava(json, null).asClass(Class.class))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("Return type mismatch. Expecting: java.lang.Class, found: java.lang.Double");
     }
@@ -113,7 +113,7 @@ public class ClassTest
         ManyClasses test = new ManyClasses();
         String json = TestUtil.toJson(test);
         TestUtil.printLine("json = " + json);
-        ManyClasses that = TestUtil.toObjects(json, null);
+        ManyClasses that = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals(that._classes_a.get(0), Character.class);
 

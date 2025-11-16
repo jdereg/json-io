@@ -46,7 +46,7 @@ public class CustomReaderIdentityTest
 
 		Map<Class<CustomDataClass>, CustomDataReader> readerMap = new HashMap<>(1);
 		readerMap.put(CustomDataClass.class, new CustomDataReader());
-        Object obj = TestUtil.toObjects(json, new ReadOptionsBuilder().replaceCustomReaderClasses(readerMap).build(), null);
+        Object obj = TestUtil.toJava(json, new ReadOptionsBuilder().replaceCustomReaderClasses(readerMap).build()).asClass(null);
 		assert obj instanceof List;
 		List list = (List) obj;
 		assert list.get(0) == list.get(1);
@@ -70,7 +70,7 @@ public class CustomReaderIdentityTest
 
 		Map<Class<CustomDataClass>, CustomDataReader> readerMap = new HashMap<>(1);
 		readerMap.put(CustomDataClass.class, new CustomDataReader());
-        Object obj = TestUtil.toObjects(json, new ReadOptionsBuilder().replaceCustomReaderClasses(readerMap).build(), null);
+        Object obj = TestUtil.toJava(json, new ReadOptionsBuilder().replaceCustomReaderClasses(readerMap).build()).asClass(null);
 		assert obj instanceof List;
 		List list = (List) obj;
 		assert list.get(0) == list.get(1);
@@ -97,7 +97,7 @@ public class CustomReaderIdentityTest
 
 		Map<Class<CustomDataClass>, CustomDataReader> readerMap = new HashMap<>(1);
 		readerMap.put(CustomDataClass.class, new CustomDataReader());
-        Object obj = TestUtil.toObjects(json, new ReadOptionsBuilder().replaceCustomReaderClasses(readerMap).build(), null);
+        Object obj = TestUtil.toJava(json, new ReadOptionsBuilder().replaceCustomReaderClasses(readerMap).build()).asClass(null);
 		assert obj instanceof Set;
 		set = (Set) obj;
 		assert set.size() == 2;
@@ -117,7 +117,7 @@ public class CustomReaderIdentityTest
 
 		Map<Class<CustomDataClass>, CustomDataReader> readerMap = new HashMap<>(1);
 		readerMap.put(CustomDataClass.class, new CustomDataReader());
-        Object obj = TestUtil.toObjects(json, new ReadOptionsBuilder().replaceCustomReaderClasses(readerMap).build(), null);
+        Object obj = TestUtil.toJava(json, new ReadOptionsBuilder().replaceCustomReaderClasses(readerMap).build()).asClass(null);
 		assert obj instanceof CustomDataClass[];
 		array = (CustomDataClass[]) obj;
 		assert array.length == 2;

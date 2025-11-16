@@ -34,7 +34,7 @@ class PrimitivesTest
     void testPrimitivesSetWithStrings()
     {
         String json = "{\"@type\":\"" + AllPrimitives.class.getName() + "\",\"b\":\"true\",\"bb\":\"true\",\"by\":\"9\",\"bby\":\"9\",\"c\":\"B\",\"cc\":\"B\",\"d\":\"9.0\",\"dd\":\"9.0\",\"f\":\"9.0\",\"ff\":\"9.0\",\"i\":\"9\",\"ii\":\"9\",\"l\":\"9\",\"ll\":\"9\",\"s\":\"9\",\"ss\":\"9\"}";
-        AllPrimitives ap = TestUtil.toObjects(json, null);
+        AllPrimitives ap = TestUtil.toJava(json, null).asClass(null);
         assertTrue(ap.getB());
         assertTrue(ap.getBb());
         assertEquals(9, ap.getBy());
@@ -57,7 +57,7 @@ class PrimitivesTest
     void testAbilityToNullPrimitivesWithEmptyString()
     {
         String json = "{\"@type\":\"" + AllPrimitives.class.getName() + "\",\"b\":\"\",\"bb\":\"\",\"by\":\"\",\"bby\":\"\",\"c\":\"\",\"cc\":\"\",\"d\":\"\",\"dd\":\"\",\"f\":\"\",\"ff\":\"\",\"i\":\"\",\"ii\":\"\",\"l\":\"\",\"ll\":\"\",\"s\":\"\",\"ss\":\"\"}";
-        AllPrimitives ap = TestUtil.toObjects(json, null);
+        AllPrimitives ap = TestUtil.toJava(json, null).asClass(null);
         assertFalse(ap.getB());
         assertFalse(ap.getBb());
         assertEquals(0, ap.getBy());
@@ -81,48 +81,48 @@ class PrimitivesTest
     {
         final String json = "{\"@type\":\"byte\"}";
 
-        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("To convert from Map to 'Byte' the map must include: [value] or [_v] as key with associated value");
         
         final String json1 = "{\"@type\":\"short\"}";
 
-        assertThatThrownBy(() -> TestUtil.toObjects(json1, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json1, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("convert from Map to 'Short' the map must include: [value] or [_v] as key with associated value");
 
         final String json2 = "{\"@type\":\"int\"}";
-        assertThatThrownBy(() -> TestUtil.toObjects(json2, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json2, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("convert from Map to 'Integer' the map must include: [value] or [_v] as key with associated value");
 
         final String json3 = "{\"@type\":\"long\"}";
-        assertThatThrownBy(() -> TestUtil.toObjects(json3, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json3, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("convert from Map to 'Long' the map must include: [value] or [_v] as key with associated value");
 
         final String json4 = "{\"@type\":\"float\"}";
-        assertThatThrownBy(() -> TestUtil.toObjects(json4, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json4, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("convert from Map to 'Float' the map must include: [value] or [_v] as key with associated value");
 
         final String json5 = "{\"@type\":\"double\"}";
-        assertThatThrownBy(() -> TestUtil.toObjects(json5, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json5, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("convert from Map to 'Double' the map must include: [value] or [_v] as key with associated value");
 
         final String json6 = "{\"@type\":\"char\"}";
-        assertThatThrownBy(() -> TestUtil.toObjects(json6, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json6, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("convert from Map to 'char' the map must include: [value] or [_v] as key with associated value");
 
         final String json7 = "{\"@type\":\"boolean\"}";
-        assertThatThrownBy(() -> TestUtil.toObjects(json7, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json7, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("convert from Map to 'Boolean' the map must include: [value] or [_v] as key with associated value");
 
         final String json8 = "{\"@type\":\"string\"}";
-        assertThatThrownBy(() -> TestUtil.toObjects(json8, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json8, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("convert from Map to 'String' the map must include: [value] or [_v] as key with associated value");
     }
@@ -131,7 +131,7 @@ class PrimitivesTest
     void testAssignPrimitiveToString()
     {
         String json = "{\"@type\":\"" + TestStringField.class.getName() + "\",\"intField\":16,\"booleanField\":true,\"doubleField\":345.12321,\"nullField\":null,\"values\":[10,true,3.14159,null]}";
-        TestStringField tsf = TestUtil.toObjects(json, null);
+        TestStringField tsf = TestUtil.toJava(json, null).asClass(null);
         assertEquals("16", tsf.getIntField());
         assertEquals("true", tsf.getBooleanField());
         assertEquals("345.12321", tsf.getDoubleField());
@@ -145,23 +145,23 @@ class PrimitivesTest
     @Test
     void testValueAtRootNoType()
     {
-        Object x = TestUtil.toObjects("120.1", null);
+        Object x = TestUtil.toJava("120.1", null).asClass(null);
         assert Double.class.isAssignableFrom(x.getClass());
         assertEquals(x, 120.1d);
 
-        x = TestUtil.toObjects("true", null);
+        x = TestUtil.toJava("true", null).asClass(null);
         assert Boolean.class.isAssignableFrom(x.getClass());
         assertEquals(x, true);
 
-        x = TestUtil.toObjects("false", null);
+        x = TestUtil.toJava("false", null).asClass(null);
         assert Boolean.class.isAssignableFrom(x.getClass());
         assertEquals(x, false);
 
-        x = TestUtil.toObjects("\"42\"", null);
+        x = TestUtil.toJava("\"42\"", null).asClass(null);
         assert String.class.isAssignableFrom(x.getClass());
         assertEquals(x, "42");
 
-        x = TestUtil.toObjects("1e2", null);
+        x = TestUtil.toJava("1e2", null).asClass(null);
         assert Double.class.isAssignableFrom(x.getClass());
         assertEquals(x, 100d);
     }
@@ -171,23 +171,23 @@ class PrimitivesTest
     void testByteValueAtRoot(String stringType)
     {
         Class<?> type = ClassUtilities.forName(stringType, ClassUtilities.getClassLoader(PrimitivesTest.class));
-        Object x = TestUtil.toObjects("120.1", type);
+        Object x = TestUtil.toJava("120.1", null).asClass(type);
         assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)120);
 
-        x = TestUtil.toObjects("true", type);
+        x = TestUtil.toJava("true", null).asClass(type);
         assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)1);
 
-        x = TestUtil.toObjects("false", type);
+        x = TestUtil.toJava("false", null).asClass(type);
         assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)0);
 
-        x = TestUtil.toObjects("\"42\"", type);
+        x = TestUtil.toJava("\"42\"", null).asClass(type);
         assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)42);
 
-        x = TestUtil.toObjects("1e2", type);
+        x = TestUtil.toJava("1e2", null).asClass(type);
         assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)100);
     }
@@ -197,23 +197,23 @@ class PrimitivesTest
     void testByteObjectValueAtRoot(String stringType)
     {
         Class<?> type = stringType.equals("null") ? null : ClassUtilities.forName(stringType, ClassUtilities.getClassLoader(PrimitivesTest.class));
-        Object x = TestUtil.toObjects("{\"value\":120.1}", type);
+        Object x = TestUtil.toJava("{\"value\":120.1}", null).asClass(type);
         assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)120);
 
-        x = TestUtil.toObjects("{\"value\":true}", type);
+        x = TestUtil.toJava("{\"value\":true}", null).asClass(type);
         assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)1);
 
-        x = TestUtil.toObjects("{\"value\":false}", type);
+        x = TestUtil.toJava("{\"value\":false}", null).asClass(type);
         assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)0);
 
-        x = TestUtil.toObjects("{\"value\":\"42\"}", type);
+        x = TestUtil.toJava("{\"value\":\"42\"}", null).asClass(type);
         assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)42);
 
-        x = TestUtil.toObjects("{\"value\":1e2}", type);
+        x = TestUtil.toJava("{\"value\":1e2}", null).asClass(type);
         assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)100);
     }
@@ -221,23 +221,23 @@ class PrimitivesTest
     @Test
     void testPrimitiveTypeAtRoot()
     {
-        Object x = TestUtil.toObjects("{\"value\":120.1}", double.class);
+        Object x = TestUtil.toJava("{\"value\":120.1}", null).asClass(double.class);
         assert Double.class.isAssignableFrom(x.getClass());
         assertEquals(x, 120.1d);
 
-        x = TestUtil.toObjects("{\"value\":true}", boolean.class);
+        x = TestUtil.toJava("{\"value\":true}", null).asClass(boolean.class);
         assert Boolean.class.isAssignableFrom(x.getClass());
         assertEquals(x, true);
 
-        x = TestUtil.toObjects("{\"value\":false}", Boolean.class);
+        x = TestUtil.toJava("{\"value\":false}", null).asClass(Boolean.class);
         assert Boolean.class.isAssignableFrom(x.getClass());
         assertEquals(x, false);
 
-        x = TestUtil.toObjects("{\"value\":\"42\"}", String.class);
+        x = TestUtil.toJava("{\"value\":\"42\"}", null).asClass(String.class);
         assert String.class.isAssignableFrom(x.getClass());
         assertEquals(x, "42");
 
-        x = TestUtil.toObjects("{\"value\":1e2}", Double.class);
+        x = TestUtil.toJava("{\"value\":1e2}", null).asClass(Double.class);
         assert Double.class.isAssignableFrom(x.getClass());
         assertEquals(x, 100d);
     }
@@ -247,23 +247,23 @@ class PrimitivesTest
     void testTypedByteObjectValueAtRoot(String stringType)
     {
         Class<?> type = stringType.equals("null") ? null : ClassUtilities.forName(stringType, ClassUtilities.getClassLoader(PrimitivesTest.class));
-        Object x = TestUtil.toObjects("{\"@type\":\"byte\",\"value\":120.1}", type);
+        Object x = TestUtil.toJava("{\"@type\":\"byte\",\"value\":120.1}", null).asClass(type);
         assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)120);
 
-        x = TestUtil.toObjects("{\"@type\":\"byte\",\"value\":true}", type);
+        x = TestUtil.toJava("{\"@type\":\"byte\",\"value\":true}", null).asClass(type);
         assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)1);
 
-        x = TestUtil.toObjects("{\"@type\":\"byte\",\"value\":false}", type);
+        x = TestUtil.toJava("{\"@type\":\"byte\",\"value\":false}", null).asClass(type);
         assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)0);
 
-        x = TestUtil.toObjects("{\"@type\":\"byte\",\"value\":\"42\"}", type);
+        x = TestUtil.toJava("{\"@type\":\"byte\",\"value\":\"42\"}", null).asClass(type);
         assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)42);
 
-        x = TestUtil.toObjects("{\"@type\":\"byte\",\"value\":1e2}", type);
+        x = TestUtil.toJava("{\"@type\":\"byte\",\"value\":1e2}", null).asClass(type);
         assert Byte.class.isAssignableFrom(x.getClass());
         assertEquals(x, (byte)100);
     }

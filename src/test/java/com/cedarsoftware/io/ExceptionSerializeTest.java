@@ -89,7 +89,7 @@ class ExceptionSerializeTest
     {
         Throwable e1 = new Throwable("That argument did not taste well.", null);
         String json = TestUtil.toJson(e1);
-        Throwable e2 = TestUtil.toObjects(json, null);
+        Throwable e2 = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(e1.getCause()).isNull();
         assertThat(e2.getCause()).isNull();
@@ -107,7 +107,7 @@ class ExceptionSerializeTest
         }
 
         String json = TestUtil.toJson(t1);
-        Throwable t2 = TestUtil.toObjects(json, null);
+        Throwable t2 = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(t1).hasCause(null);
 
@@ -130,7 +130,7 @@ class ExceptionSerializeTest
         ExceptionWithStringConstructor t1 = new ExceptionWithStringConstructor("poo");
 
         String json = TestUtil.toJson(t1);
-        Throwable t2 = TestUtil.toObjects(json, null);
+        Throwable t2 = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(json).doesNotContain("stackTrace");
 
@@ -155,7 +155,7 @@ class ExceptionSerializeTest
         ExceptionWithThrowableConstructor t1 = new ExceptionWithThrowableConstructor(new ExceptionWithStringConstructor("doo"));
 
         String json = TestUtil.toJson(t1, new WriteOptionsBuilder().addExcludedFields(Throwable.class, StringUtilities.commaSeparatedStringToSet("backtrace,depth,suppressedExceptions")).build());
-        Throwable t2 = TestUtil.toObjects(json, null);
+        Throwable t2 = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(json).contains("stackTrace");
 
@@ -182,7 +182,7 @@ class ExceptionSerializeTest
                 .addExcludedFields(Throwable.class, StringUtilities.commaSeparatedStringToSet("backtrace,depth,suppressedExceptions"))
                 .build());
 
-        Throwable t2 = TestUtil.toObjects(json, null);
+        Throwable t2 = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(json).doesNotContain("stackTrace");
 
@@ -203,7 +203,7 @@ class ExceptionSerializeTest
         WriteOptions options = new WriteOptionsBuilder().addExcludedField(Throwable.class, "stackTrace").build();
 
         String json = TestUtil.toJson(t1, options);
-        Throwable t2 = TestUtil.toObjects(json, null);
+        Throwable t2 = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(t1).hasCauseInstanceOf(ExceptionWithStringConstructor.class);
 
@@ -230,7 +230,7 @@ class ExceptionSerializeTest
         }
 
         String json = TestUtil.toJson(t1);
-        Throwable t2 = TestUtil.toObjects(json, null);
+        Throwable t2 = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(t2)
                 .isInstanceOf(JsonIoException.class)
@@ -258,7 +258,7 @@ class ExceptionSerializeTest
         ExceptionWithAThousandCuts t1 = new ExceptionWithAThousandCuts(listOf(new StupidEmojis(":)"), new StupidEmojis("(:"), new StupidEmojis("())")));
 
         String json = TestUtil.toJson(t1);
-        ExceptionWithAThousandCuts t2 = TestUtil.toObjects(json, null);
+        ExceptionWithAThousandCuts t2 = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(t2.getEmojis().size()).isEqualTo(3);
         assertThat(t2.getStackTrace()).isNotNull();
@@ -275,7 +275,7 @@ class ExceptionSerializeTest
                 null);
 
         String json = TestUtil.toJson(t1);
-        MultipleParameterConstructor t2 = TestUtil.toObjects(json, null);
+        MultipleParameterConstructor t2 = TestUtil.toJava(json, null).asClass(null);
 
         // Here's the issue to verify - can the code that instantiates a derived exception class, get its
         // detail message up to the detailMessage field on Throwable?
@@ -300,7 +300,7 @@ class ExceptionSerializeTest
                 null);
 
         String json = TestUtil.toJson(t1);
-        MultipleParameterConstructor t2 = TestUtil.toObjects(json, null);
+        MultipleParameterConstructor t2 = TestUtil.toJava(json, null).asClass(null);
 
         // Here's the issue to verify - can the code that instantiates a derived exception class, get its
         // detail message up to the detailMessage field on Throwable?
@@ -320,7 +320,7 @@ class ExceptionSerializeTest
         Throwable npe = new NullPointerException("you accessed a null with '.' fool.");
         Throwable ia = new IllegalArgumentException("That argument did not taste well.", npe);
         String json = TestUtil.toJson(ia);
-        Throwable ia2 = TestUtil.toObjects(json, null);
+        Throwable ia2 = TestUtil.toJava(json, null).asClass(null);
         assert ia2.getCause() instanceof NullPointerException;
         assert ia2.getCause() != npe;
         assert ia.getMessage().equals(ia2.getMessage());
@@ -333,7 +333,7 @@ class ExceptionSerializeTest
         Throwable ia = new IllegalArgumentException("That argument did not taste well.", npe);
         Throwable q = new MyException("Subclassed exception with value field", ia, 16);
         String json = TestUtil.toJson(q);
-        Throwable r = TestUtil.toObjects(json, null);
+        Throwable r = TestUtil.toJava(json, null).asClass(null);
         assert q.getCause() == ia;
         assert r instanceof MyException;
         MyException my = (MyException) r;
@@ -349,16 +349,16 @@ class ExceptionSerializeTest
         Throwable t4 = new Throwable();
 
         String json = TestUtil.toJson(t1);
-        t1 = TestUtil.toObjects(json, null);
+        t1 = TestUtil.toJava(json, null).asClass(null);
 
         json = TestUtil.toJson(t2);
-        t2 = TestUtil.toObjects(json, null);
+        t2 = TestUtil.toJava(json, null).asClass(null);
 
         json = TestUtil.toJson(t3);
-        t3 = TestUtil.toObjects(json, null);
+        t3 = TestUtil.toJava(json, null).asClass(null);
 
         json = TestUtil.toJson(t4);
-        t4 = TestUtil.toObjects(json, null);
+        t4 = TestUtil.toJava(json, null).asClass(null);
 
         assert t2.getMessage().equals("goodbye");
         assert t2.getCause().getMessage().equals("hello");
@@ -434,7 +434,7 @@ class ExceptionSerializeTest
         );
 
         String json = TestUtil.toJson(e1);
-        InvalidCoordinateException e2 = TestUtil.toObjects(json, null);
+        InvalidCoordinateException e2 = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(e2)
                 .isInstanceOf(InvalidCoordinateException.class)
@@ -458,7 +458,7 @@ class ExceptionSerializeTest
         );
 
         String json = TestUtil.toJson(e1);
-        InvalidCoordinateException e2 = TestUtil.toObjects(json, null);
+        InvalidCoordinateException e2 = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(DeepEquals.deepEquals(e1, e2)).isTrue();
     }

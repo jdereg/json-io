@@ -66,23 +66,23 @@ class DatesTest
     {
         String thisClass = TestDateField.class.getName();
         String json = "{\"@type\":\"" + thisClass + "\",\"fromString\":\"\"}";
-        TestDateField tdf = TestUtil.toObjects(json, null);
+        TestDateField tdf = TestUtil.toJava(json, null).asClass(null);
         assertNull(tdf.getFromString());
 
-        Map jObj = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Map jObj = TestUtil.toMaps(json, null).asClass(null);
         assertNull(jObj.get("fromString"));
 
         json = "{\"@type\":\"" + thisClass + "\",\"fromString\":null,\"dates\":[\"\"]}";
-        tdf = TestUtil.toObjects(json, null);
+        tdf = TestUtil.toJava(json, null).asClass(null);
         assertNull(tdf.getDates()[0]);
 
-        jObj = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        jObj = TestUtil.toMaps(json, null).asClass(null);
         json = TestUtil.toJson(jObj);
-        tdf = TestUtil.toObjects(json, null);
+        tdf = TestUtil.toJava(json, null).asClass(null);
         assertNull(tdf.getDates()[0]);
 
         json = "{\"@type\":\"" + thisClass + "\",\"fromString\":1391875635941}";
-        tdf = TestUtil.toObjects(json, null);
+        tdf = TestUtil.toJava(json, null).asClass(null);
         assertEquals(new Date(1391875635941L), tdf.getFromString());
     }
 
@@ -90,7 +90,7 @@ class DatesTest
     public void testDateParse()
     {
         String json = "{\"@type\":\"date\",\"value\":\"2014 July 9\"}";
-        Date date = TestUtil.toObjects(json, null);
+        Date date = TestUtil.toJava(json, null).asClass(null);
         Calendar cal = Calendar.getInstance();
         cal.clear();
         cal.setTimeZone(TimeZone.getTimeZone(ZoneId.of("Z")));
@@ -103,7 +103,7 @@ class DatesTest
 
         try
         {
-            Object x = TestUtil.toObjects(json, null);
+            Object x = TestUtil.toJava(json, null).asClass(null);
             fail();
         }
         catch (Exception ignore)
@@ -116,7 +116,7 @@ class DatesTest
         TestDate test = new TestDate();
         String json = TestUtil.toJson(test);
         TestUtil.printLine("json = " + json);
-        TestDate that = TestUtil.toObjects(json, null);
+        TestDate that = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals(that._arrayElement, new Date(-1));
         assertEquals(that._polyRefTarget, new Date(71));
@@ -178,7 +178,7 @@ class DatesTest
         String json = TestUtil.toJson(dt, new WriteOptionsBuilder().isoDateFormat().build());
 
         // Read it back in
-        DateTest readDt = TestUtil.toObjects(json, null);
+        DateTest readDt = TestUtil.toJava(json, null).asClass(null);
 
         // Compare birthDay as full date+time (java.util.Date)
         Calendar exp = Calendar.getInstance();
@@ -198,7 +198,7 @@ class DatesTest
         // Now, test with a custom writer that outputs date AND time portion in ISO format.
         json = TestUtil.toJson(dt, new WriteOptionsBuilder().isoDateFormat().build());
         
-        readDt = TestUtil.toObjects(json, null);
+        readDt = TestUtil.toJava(json, null).asClass(null);
 
         // For birthDay, compare full date+time.
         exp.setTime(dt.getBirthDay());
@@ -214,7 +214,7 @@ class DatesTest
 
         // Write out dates as long (standard behavior) and verify
         json = TestUtil.toJson(dt);
-        readDt = TestUtil.toObjects(json, null);
+        readDt = TestUtil.toJava(json, null).asClass(null);
 
         exp.setTime(dt.getBirthDay());
         act.setTime(readDt.getBirthDay());
@@ -227,7 +227,7 @@ class DatesTest
 
         // Version with milliseconds (if applicable)
         json = TestUtil.toJson(dt, new WriteOptionsBuilder().isoDateFormat().build());
-        readDt = TestUtil.toObjects(json, null);
+        readDt = TestUtil.toJava(json, null).asClass(null);
 
         exp.setTime(dt.getBirthDay());
         act.setTime(readDt.getBirthDay());
@@ -260,8 +260,8 @@ class DatesTest
         TestUtil.printLine(jsonOut2);
         jsonOut1 = jsonOut1.replace("$Date", "$Long");
         jsonOut2 = jsonOut2.replace("$Long", "$Date");
-        l = TestUtil.toObjects(jsonOut1, null);
-        d = TestUtil.toObjects(jsonOut2, null);
+        l = TestUtil.toJava(jsonOut1, null).asClass(null);
+        d = TestUtil.toJava(jsonOut2, null).asClass(null);
         assert d._userDate.getTime() == l._userDate;
     }
 
@@ -270,7 +270,7 @@ class DatesTest
     {
         try
         {
-            TestUtil.toObjects("[{\"@type\":\"date\"}]", null);
+            TestUtil.toJava("[{\"@type\":\"date\"}]", null).asClass(null);
            fail();
         }
         catch (Exception ignored)
@@ -288,19 +288,19 @@ class DatesTest
 
         String json = TestUtil.toJson(utilDate);
         TestUtil.printLine(json);
-        Date checkDate = TestUtil.toObjects(json, null);
+        Date checkDate = TestUtil.toJava(json, null).asClass(null);
         assertNotNull(checkDate);
         assertEquals(checkDate, utilDate);
 
         json = TestUtil.toJson(sqlDate);
         TestUtil.printLine(json);
-        java.sql.Date checkSqlDate = TestUtil.toObjects(json, null);
+        java.sql.Date checkSqlDate = TestUtil.toJava(json, null).asClass(null);
         assertNotNull(checkSqlDate);
         assertEquals(checkSqlDate.toLocalDate(), sqlDate.toLocalDate());
 
         json = TestUtil.toJson(sqlTimestamp);
         TestUtil.printLine(json);
-        Timestamp checkSqlTimestamp = TestUtil.toObjects(json, null);
+        Timestamp checkSqlTimestamp = TestUtil.toJava(json, null).asClass(null);
         assertNotNull(checkSqlTimestamp);
         assertEquals(checkSqlTimestamp, sqlTimestamp);
 
@@ -308,7 +308,7 @@ class DatesTest
         Object[] dates = new Object[]{utilDate, sqlDate, sqlTimestamp};
         json = TestUtil.toJson(dates);
         TestUtil.printLine(json);
-        Object[] checkDates = TestUtil.toObjects(json, null);
+        Object[] checkDates = TestUtil.toJava(json, null).asClass(null);
         assertEquals(3, checkDates.length);
         assertTrue(checkDates[0] instanceof Date);
         assertTrue(checkDates[1] instanceof java.sql.Date);
@@ -321,7 +321,7 @@ class DatesTest
         Date[] utilDates = new Date[]{utilDate};
         json = TestUtil.toJson(utilDates);
         TestUtil.printLine(json);
-        Date[] checkUtilDates = TestUtil.toObjects(json, null);
+        Date[] checkUtilDates = TestUtil.toJava(json, null).asClass(null);
         assertEquals(1, checkUtilDates.length);
         assertNotNull(checkUtilDates[0]);
         assertEquals(checkUtilDates[0], utilDate);
@@ -329,7 +329,7 @@ class DatesTest
         java.sql.Date[] sqlDates = new java.sql.Date[]{sqlDate};
         json = TestUtil.toJson(sqlDates);
         TestUtil.printLine(json);
-        java.sql.Date[] checkSqlDates = TestUtil.toObjects(json, null);
+        java.sql.Date[] checkSqlDates = TestUtil.toJava(json, null).asClass(null);
         assertEquals(1, checkSqlDates.length);
         assertNotNull(checkSqlDates[0]);
         assertEquals(checkSqlDates[0].toLocalDate(), sqlDate.toLocalDate());
@@ -337,7 +337,7 @@ class DatesTest
         Timestamp[] sqlTimestamps = new Timestamp[]{sqlTimestamp};
         json = TestUtil.toJson(sqlTimestamps);
         TestUtil.printLine(json);
-        Timestamp[] checkTimestamps = TestUtil.toObjects(json, null);
+        Timestamp[] checkTimestamps = TestUtil.toJava(json, null).asClass(null);
         assertEquals(1, checkTimestamps.length);
         assertNotNull(checkTimestamps[0]);
         assertEquals(checkTimestamps[0], sqlTimestamp);
@@ -346,21 +346,21 @@ class DatesTest
         ObjectDateField dateField = new ObjectDateField(utilDate);
         json = TestUtil.toJson(dateField);
         TestUtil.printLine(json);
-        ObjectDateField readDateField = TestUtil.toObjects(json, null);
+        ObjectDateField readDateField = TestUtil.toJava(json, null).asClass(null);
         assertTrue(readDateField.date instanceof Date);
         assertEquals(readDateField.date, utilDate);
 
         dateField = new ObjectDateField(sqlDate);
         json = TestUtil.toJson(dateField);
         TestUtil.printLine(json);
-        readDateField = TestUtil.toObjects(json, null);
+        readDateField = TestUtil.toJava(json, null).asClass(null);
         assertTrue(readDateField.date instanceof java.sql.Date);
         assertEquals(((java.sql.Date) readDateField.date).toLocalDate(), sqlDate.toLocalDate());
 
         dateField = new ObjectDateField(sqlTimestamp);
         json = TestUtil.toJson(dateField);
         TestUtil.printLine(json);
-        readDateField = TestUtil.toObjects(json, null);
+        readDateField = TestUtil.toJava(json, null).asClass(null);
         assertTrue(readDateField.date instanceof Timestamp);
         assertEquals(readDateField.date, sqlTimestamp);
 
@@ -368,21 +368,21 @@ class DatesTest
         DateField typedDateField = new DateField(utilDate);
         json = TestUtil.toJson(typedDateField);
         TestUtil.printLine(json);
-        DateField readTypeDateField = TestUtil.toObjects(json, null);
+        DateField readTypeDateField = TestUtil.toJava(json, null).asClass(null);
         assertNotNull(readTypeDateField.date);
         assertEquals(readTypeDateField.date, utilDate);
 
         SqlDateField sqlDateField = new SqlDateField(sqlDate);
         json = TestUtil.toJson(sqlDateField);
         TestUtil.printLine(json);
-        SqlDateField readSqlDateField = TestUtil.toObjects(json, null);
+        SqlDateField readSqlDateField = TestUtil.toJava(json, null).asClass(null);
         assertNotNull(readSqlDateField.date);
         assertEquals(readSqlDateField.date.toLocalDate(), sqlDate.toLocalDate());
 
         TimestampField timestampField = new TimestampField(sqlTimestamp);
         json = TestUtil.toJson(timestampField);
         TestUtil.printLine(json);
-        TimestampField readTimestampField = TestUtil.toObjects(json, null);
+        TimestampField readTimestampField = TestUtil.toJava(json, null).asClass(null);
         assertNotNull(readTimestampField.date);
         assertEquals(readTimestampField.date, sqlTimestamp);
     }
@@ -394,7 +394,7 @@ class DatesTest
         Date[] dates = new Date[]{new Date(now), new java.sql.Date(now), new Timestamp(now)};
         String json = TestUtil.toJson(dates);
         TestUtil.printLine("json=" + json);
-        Date[] dates2 = TestUtil.toObjects(json, null);
+        Date[] dates2 = TestUtil.toJava(json, null).asClass(null);
         assertEquals(3, dates2.length);
         assertEquals(dates2[0], new Date(now));
         assertEquals(((java.sql.Date)dates2[1]).toLocalDate(), (new java.sql.Date(now)).toLocalDate());
@@ -424,7 +424,7 @@ class DatesTest
         TestUtil.printLine("json=" + json);
 
         // When
-        Date[] dates2 = TestUtil.toObjects(json, null);
+        Date[] dates2 = TestUtil.toJava(json, null).asClass(null);
 
         // Then
         assertEquals(3, dates2.length);
@@ -448,7 +448,7 @@ class DatesTest
     void testTimestampAsValue()
     {
         String json = ClassUtilities.loadResourceAsString("timestamp/timestamp-as-value.json");
-        Timestamp ts = TestUtil.toObjects(json, null);
+        Timestamp ts = TestUtil.toJava(json, null).asClass(null);
         ZonedDateTime zdt = ZonedDateTime.ofInstant(ts.toInstant(), ZoneId.of("Z"));
         assert zdt.getMonthValue() == 12;
         assert zdt.getDayOfMonth() == 24;
@@ -461,7 +461,7 @@ class DatesTest
         DateField dateField = new DateField(new Date());
         dateField.date = null;
         String json = TestUtil.toJson(dateField);
-        DateField df = TestUtil.toObjects(json, null);
+        DateField df = TestUtil.toJava(json, null).asClass(null);
         assert df.date == null;
     }
 

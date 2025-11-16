@@ -71,7 +71,7 @@ class PeriodTests {
     @MethodSource("oldFormats")
     void oldFormatTests(String fileName, int years, int months, int days) {
         String json = loadJsonForTest(fileName);
-        Period d = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        Period d = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(null);
 
         assertThat(d)
                 .hasYears(years)

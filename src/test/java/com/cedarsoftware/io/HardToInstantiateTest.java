@@ -41,7 +41,7 @@ public class HardToInstantiateTest
         ReadOptions readOptions = new ReadOptionsBuilder()
                 .useUnsafe(true)  // Enable unsafe mode for this test
                 .build();
-        Tough tough = TestUtil.toObjects(json, readOptions, Tough.class);
+        Tough tough = TestUtil.toJava(json, readOptions).asClass(Tough.class);
         assert tough != null;
         assert "Joe".equals(tough.name);
         assert tough.number == 9;

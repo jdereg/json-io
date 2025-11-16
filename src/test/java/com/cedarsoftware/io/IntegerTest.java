@@ -35,7 +35,7 @@ public class IntegerTest
         ManyIntegers test = new ManyIntegers();
         String json = TestUtil.toJson(test);
         TestUtil.printLine("json = " + json);
-        ManyIntegers that = (ManyIntegers) TestUtil.toObjects(json, null);
+        ManyIntegers that = (ManyIntegers) TestUtil.toJava(json, null).asClass(null);
 
         assertEquals(-1, (int) that._arrayElement);
         assertEquals(710, that._polyRefTarget);

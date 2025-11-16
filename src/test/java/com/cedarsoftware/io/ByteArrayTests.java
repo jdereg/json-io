@@ -21,7 +21,7 @@ class ByteArrayTests {
     void testByteArray_withJson() {
         String input = "\"" + KEY + "\"";
 
-        byte[] converted = TestUtil.toObjects(input, byte[].class);
+        byte[] converted = TestUtil.toJava(input, null).asClass(byte[].class);
         assertThat(converted).isEqualTo(Converter.convert(KEY, byte[].class));
     }
     */

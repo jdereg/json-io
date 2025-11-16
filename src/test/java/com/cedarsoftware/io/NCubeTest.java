@@ -27,7 +27,7 @@ public class NCubeTest {
     void testNCubeJson()
     {
         String json = ClassUtilities.loadResourceAsString("errors/ncube.json");
-        Map map = TestUtil.toObjects(json, null);
+        Map map = TestUtil.toJava(json, null).asClass(null);
         TestUtil.toJson(map, null);
     }
 }

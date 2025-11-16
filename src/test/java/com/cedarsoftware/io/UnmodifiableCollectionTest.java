@@ -52,7 +52,7 @@ public class UnmodifiableCollectionTest
         col.add("qux");
         col = Collections.unmodifiableCollection(col);
         String json = TestUtil.toJson(col, new WriteOptionsBuilder().build());
-        List<String> root = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        List<String> root = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(null);
         assert root.size() == 4;
         assert DeepEquals.deepEquals(root, listOf("foo", "bar", "baz", "qux"));
 
@@ -63,7 +63,7 @@ public class UnmodifiableCollectionTest
         col.add("qux");
         col = Collections.unmodifiableList((List<String>)col);
         json = TestUtil.toJson(col);
-        root = TestUtil.toObjects(json, null);
+        root = TestUtil.toJava(json, null).asClass(null);
         assert root.size() == 4;
         assert DeepEquals.deepEquals(root, listOf("foo", "bar", "baz", "qux"));
     }
@@ -78,7 +78,7 @@ public class UnmodifiableCollectionTest
         col.add("qux");
         col = Collections.unmodifiableSet(col);
         String json = TestUtil.toJson(col);
-        Set<String> root = TestUtil.toObjects(json, null);
+        Set<String> root = TestUtil.toJava(json, null).asClass(null);
         assert root.size() == 4;
         assert DeepEquals.deepEquals(root, setOf("foo", "bar", "baz", "qux"));
 
@@ -89,7 +89,7 @@ public class UnmodifiableCollectionTest
         col.add("qux");
         col = Collections.unmodifiableSet(col);
         json = TestUtil.toJson(col);
-        root = TestUtil.toObjects(json, null);
+        root = TestUtil.toJava(json, null).asClass(null);
         assert root instanceof Set;
         assert root.size() == 4;
         assert DeepEquals.deepEquals(root, setOf("foo", "bar", "baz", "qux"));
@@ -101,7 +101,7 @@ public class UnmodifiableCollectionTest
         col.add("qux");
         col = Collections.unmodifiableSortedSet((SortedSet<String>) col);
         json = TestUtil.toJson(col);
-        root = TestUtil.toObjects(json, null);
+        root = TestUtil.toJava(json, null).asClass(null);
         assert root instanceof SortedSet;
         assert root.size() == 4;
         assert DeepEquals.deepEquals(root, setOf("bar", "baz", "foo", "qux"));
@@ -119,7 +119,7 @@ public class UnmodifiableCollectionTest
         map.put("qux", "quixotic");
         map = Collections.unmodifiableMap(map);
         String json = TestUtil.toJson(map);
-        Map root = TestUtil.toObjects(json, null);
+        Map root = TestUtil.toJava(json, null).asClass(null);
         assert root instanceof Map;
         assert root.size() == 4;
         assert root.get("foo").equals("foot");
@@ -134,7 +134,7 @@ public class UnmodifiableCollectionTest
         map.put("qux", "quixotic");
         map = Collections.unmodifiableSortedMap((SortedMap<String, String>) map);
         json = TestUtil.toJson(map);
-        root = TestUtil.toObjects(json, null);
+        root = TestUtil.toJava(json, null).asClass(null);
         assert root instanceof SortedMap;
         assert root.size() == 4;
         assert root.get("foo").equals("foot");
@@ -150,7 +150,7 @@ public class UnmodifiableCollectionTest
     {
         UnmodifiableMapHolder holder = new UnmodifiableMapHolder();
         String json = TestUtil.toJson(holder);
-        UnmodifiableMapHolder holder1 = TestUtil.toObjects(json, null);
+        UnmodifiableMapHolder holder1 = TestUtil.toJava(json, null).asClass(null);
         assert holder1.getMap().get("North").equals(0);
         assert holder1.getMap().get("South").equals(1);
         assert holder1.getMap().get("East").equals(2);

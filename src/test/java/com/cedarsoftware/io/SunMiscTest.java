@@ -55,7 +55,7 @@ public class SunMiscTest
                 return jOb;
             }
         });
-        TestUtil.toObjects(workaroundString, new ReadOptionsBuilder().replaceCustomReaderClasses(customReader).build(), null);
+        TestUtil.toJava(workaroundString, new ReadOptionsBuilder().replaceCustomReaderClasses(customReader).build()).asClass(null);
         // shoe can be accessed by
         // checking array type + length
         // and accessing [0]
@@ -65,7 +65,7 @@ public class SunMiscTest
         // It is expected, that this object is instantiated twice:
         // -once for analysis + Stack
         // -deserialization with Stack
-        TestUtil.toObjects(json, new ReadOptionsBuilder().replaceCustomReaderClasses(customReader).build(), null);
+        TestUtil.toJava(json, new ReadOptionsBuilder().replaceCustomReaderClasses(customReader).build()).asClass(null);
     }
 
     @Test
@@ -78,13 +78,13 @@ public class SunMiscTest
         // Dog.OtherShoe has a complex nested structure that requires special handling
         ClassUtilities.setUseUnsafe(true);
         try {
-            Dog.OtherShoe oShoe = TestUtil.toObjects(TestUtil.toJson(shoe), Dog.OtherShoe.class);
+            Dog.OtherShoe oShoe = TestUtil.toJava(TestUtil.toJson(shoe), null).asClass(Dog.OtherShoe.class);
             assertEquals(shoe, oShoe);
-            oShoe = TestUtil.toObjects(TestUtil.toJson(shoe), Dog.OtherShoe.class);
+            oShoe = TestUtil.toJava(TestUtil.toJson(shoe), null).asClass(Dog.OtherShoe.class);
             assertEquals(shoe, oShoe);
             
             // Verify unsafe mode is working by instantiating again
-            oShoe = TestUtil.toObjects(TestUtil.toJson(shoe), Dog.OtherShoe.class);
+            oShoe = TestUtil.toJava(TestUtil.toJson(shoe), null).asClass(Dog.OtherShoe.class);
             assertEquals(shoe, oShoe);
         } finally {
             ClassUtilities.setUseUnsafe(false);
@@ -103,7 +103,7 @@ public class SunMiscTest
         ReadOptions readOptions = new ReadOptionsBuilder()
                 .useUnsafe(true)  // Enable unsafe mode to bypass constructor exception
                 .build();
-        ShouldBeImpossibleToInstantiate s = TestUtil.toObjects(json, readOptions, ShouldBeImpossibleToInstantiate.class);
+        ShouldBeImpossibleToInstantiate s = TestUtil.toJava(json, readOptions).asClass(ShouldBeImpossibleToInstantiate.class);
         assert s.x == 50;
     }
 

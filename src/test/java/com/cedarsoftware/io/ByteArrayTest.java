@@ -33,7 +33,7 @@ class ByteArrayTest extends SerializationDeserializationMinimumTests<byte[]>
         Random r = new Random();
         r.nextBytes(bytes);
         String json = TestUtil.toJson(bytes);
-        byte[] bytes2 = TestUtil.toObjects(json, null);
+        byte[] bytes2 = TestUtil.toJava(json, null).asClass(null);
 
         for (int i = 0; i < bytes.length; i++)
         {
@@ -47,7 +47,7 @@ class ByteArrayTest extends SerializationDeserializationMinimumTests<byte[]>
 
         String json = TestUtil.toJson(expected);
 
-        byte[][][] actual = TestUtil.toObjects(json, null);
+        byte[][][] actual = TestUtil.toJava(json, null).asClass(null);
         assertMultiDimensionalArray(actual, 3, 4, 5);
     }
 

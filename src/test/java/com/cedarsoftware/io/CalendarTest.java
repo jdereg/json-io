@@ -66,7 +66,7 @@ public class CalendarTest
     {
         Calendars cals = new Calendars();
         String json = TestUtil.toJson(cals);
-        Calendars calsEx = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        Calendars calsEx = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(null);
 
         assert calsEx.calendars1.length == 2;
         assert calsEx.calendars2.length == 2;
@@ -106,7 +106,7 @@ public class CalendarTest
         String json = TestUtil.toJson(tc);
         TestUtil.printLine("json=" + json);
 
-        tc = TestUtil.toObjects(json, null);
+        tc = TestUtil.toJava(json, null).asClass(null);
 
         Map<String, Object> options = new LinkedHashMap<>();
         assertTrue(DeepEquals.deepEquals(now, tc._cal, options));
@@ -119,18 +119,18 @@ public class CalendarTest
         GregorianCalendar[] gregs = new GregorianCalendar[]{new GregorianCalendar()};
         String json = TestUtil.toJson(gregs);
         TestUtil.printLine("json=" + json);
-        GregorianCalendar[] gregs2 = (GregorianCalendar[]) TestUtil.toObjects(json, null);
+        GregorianCalendar[] gregs2 = (GregorianCalendar[]) TestUtil.toJava(json, null).asClass(null);
         assertEquals(gregs2[0], gregs[0]);
     }
 
     @Test
     void testCalendarUntypedArray()
     {
-        Calendar estCal = TestUtil.toObjects("{\"@type\":\"java.util.GregorianCalendar\",\"calendar\":\"1965-12-17T09:30:16.623[America/New_York]\"}", null);
-        Calendar utcCal = TestUtil.toObjects("{\"@type\":\"java.util.GregorianCalendar\",\"calendar\":\"1965-12-17T14:30:16.623Z\"}", null);
+        Calendar estCal = TestUtil.toJava("{\"@type\":\"java.util.GregorianCalendar\",\"calendar\":\"1965-12-17T09:30:16.623[America/New_York]\"}", null).asClass(null);
+        Calendar utcCal = TestUtil.toJava("{\"@type\":\"java.util.GregorianCalendar\",\"calendar\":\"1965-12-17T14:30:16.623Z\"}", null).asClass(null);
         String json = TestUtil.toJson(new Object[]{estCal, utcCal});
         TestUtil.printLine("json=" + json);
-        Object[] oa = TestUtil.toObjects(json, null);
+        Object[] oa = TestUtil.toJava(json, null).asClass(null);
         assertEquals(2, oa.length);
         assertEquals((oa[0]), estCal);
         assertEquals((oa[1]), utcCal);
@@ -143,7 +143,7 @@ public class CalendarTest
         gregs.add(new GregorianCalendar());
         String json = TestUtil.toJson(gregs);
         TestUtil.printLine("json=" + json);
-        List<Calendar> gregs2 = TestUtil.toObjects(json, null);
+        List<Calendar> gregs2 = TestUtil.toJava(json, null).asClass(null);
         assertEquals(1, gregs2.size());
         assertEquals(gregs2.get(0), gregs.get(0));
     }
@@ -182,7 +182,7 @@ public class CalendarTest
         String json = TestUtil.toJson(new Object[]{now});
         TestUtil.printLine("json=" + json);
 
-        Object[] items = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object[] items = TestUtil.toMaps(json, null).asClass(null);
         Calendar item = (Calendar) items[0];
         assertEquals(item, now);
     }
@@ -192,7 +192,7 @@ public class CalendarTest
         ReadOptions options = createOldOptionsFormat("America/New_York");
         String json = loadJsonForTest("old-format-nested-in-map.json");
 
-        LinkedHashMap map = TestUtil.toObjects(json, options, LinkedHashMap.class);
+        LinkedHashMap map = TestUtil.toJava(json, options).asClass(LinkedHashMap.class);
 
         Calendar calendar = (Calendar) map.get("c");
         //assertCalendar(calendar, "America/New_York", 2023, 11, 19, 17, 20, 38, 79);
@@ -208,7 +208,7 @@ public class CalendarTest
         ReadOptions options = createOldOptionsFormat("America/New_York");
         String json = loadJsonForTest("old-format-nested-in-object.json");
 
-        TestCalendar object = TestUtil.toObjects(json, options, TestCalendar.class);
+        TestCalendar object = TestUtil.toJava(json, options).asClass(TestCalendar.class);
 
         assertThat(object._greg.getTime().getTime()).isEqualTo(expected1.getTime().getTime());
 
@@ -222,7 +222,7 @@ public class CalendarTest
         ReadOptions options = createOldOptionsFormat("America/New_York");
         String json = loadJsonForTest("old-format-nested-in-array.json");
 
-        Object[] object = TestUtil.toObjects(json, options, null);
+        Object[] object = TestUtil.toJava(json, options).asClass(null);
 
         assertCalendar((Calendar) object[0], "America/New_York", 2023, 11, 19, 18, 19, 15, 476);
     }
@@ -241,7 +241,7 @@ public class CalendarTest
         ReadOptions options = createOldOptionsFormat("America/Los_Angeles");
         String json = loadJsonForTest("old-format-nested-in-untyped-array.json");
 
-        Object[] object = TestUtil.toObjects(json, options, null);
+        Object[] object = TestUtil.toJava(json, options).asClass(null);
 
         assertCalendar((Calendar) object[0], "America/New_York", 1965, 12, 17, 9, 30, 16, 623);
         assertCalendar((Calendar) object[1], "America/New_York", 1965, 12, 17, 9, 30, 16, 623);
@@ -258,7 +258,7 @@ public class CalendarTest
         ReadOptions options = createOldOptionsFormat(zone.getID());
         String json = loadJsonForTest("old-format-different-timezone-than-default.json");
 
-        GregorianCalendar actual = TestUtil.toObjects(json, options, null);
+        GregorianCalendar actual = TestUtil.toJava(json, options).asClass(null);
         assertThat(actual.getTimeZone().toZoneId()).isEqualTo(expected.getTimeZone().toZoneId());
         assertEquals(actual.getTime().getTime(), expected.getTime().getTime());
 
@@ -291,7 +291,7 @@ public class CalendarTest
     @Test
     void testBadCalendar() {
         try {
-            TestUtil.toObjects("{\"@type\":\"java.util.GregorianCalendar\",\"time\":\"2011-12-08X13:29:58.822-0500\",\"zone\":\"bad zone\"}", null);
+            TestUtil.toJava("{\"@type\":\"java.util.GregorianCalendar\",\"time\":\"2011-12-08X13:29:58.822-0500\",\"zone\":\"bad zone\"}", null).asClass(null);
             fail();
         }
         catch (Exception e) {
@@ -308,7 +308,7 @@ public class CalendarTest
         String json = TestUtil.toJson(greg);
         TestUtil.printLine("json = " + json);
 
-        Calendar cal = TestUtil.toObjects(json, null);
+        Calendar cal = TestUtil.toJava(json, null).asClass(null);
         assertEquals(cal.getTime().getTime(), greg.getTime().getTime());
 
         greg = new GregorianCalendar();
@@ -320,7 +320,7 @@ public class CalendarTest
         Calendar[] cals = new Calendar[]{greg};
         json = TestUtil.toJson(cals);
         TestUtil.printLine("json=" + json);
-        cals = TestUtil.toObjects(json, null);
+        cals = TestUtil.toJava(json, null).asClass(null);
         assertEquals(cals[0].getTime().getTime(), greg.getTime().getTime());
         TestUtil.printLine("json=" + json);
 
@@ -330,16 +330,16 @@ public class CalendarTest
         json = TestUtil.toJson(testCal);
         TestUtil.printLine("json=" + json);
 
-        testCal = TestUtil.toObjects(json, null);
+        testCal = TestUtil.toJava(json, null).asClass(null);
         assertEquals(testCal._cal, cal);
         assertEquals(testCal._greg.getTime().getTime(), greg.getTime().getTime());
 
-        Calendar estCal = TestUtil.toObjects("{\"@type\":\"java.util.GregorianCalendar\",\"calendar\":\"1965-12-17T09:30:16.623-0500\"}", null);
-        Calendar utcCal = TestUtil.toObjects("{\"@type\":\"java.util.GregorianCalendar\",\"calendar\":\"1965-12-17T14:30:16.623-0000\"}", null);
+        Calendar estCal = TestUtil.toJava("{\"@type\":\"java.util.GregorianCalendar\",\"calendar\":\"1965-12-17T09:30:16.623-0500\"}", null).asClass(null);
+        Calendar utcCal = TestUtil.toJava("{\"@type\":\"java.util.GregorianCalendar\",\"calendar\":\"1965-12-17T14:30:16.623-0000\"}", null).asClass(null);
         assertEquals(estCal.getTime(), utcCal.getTime());
 
         json = TestUtil.toJson(new Object[]{estCal, utcCal});
-        Object[] oa = TestUtil.toObjects(json, null);
+        Object[] oa = TestUtil.toJava(json, null).asClass(null);
         assertEquals(2, oa.length);
         assertEquals((oa[0]), estCal);
         assertEquals(((Calendar)(oa[1])).getTime(), utcCal.getTime());

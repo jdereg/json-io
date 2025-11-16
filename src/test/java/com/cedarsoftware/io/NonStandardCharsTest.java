@@ -36,7 +36,7 @@ public class NonStandardCharsTest
         TestUtil.printLine(Charset.defaultCharset().toString());
 
         String s1 = "\"Die gelbe Hölle\"";
-        Object o = TestUtil.toObjects(s1, null);
+        Object o = TestUtil.toJava(s1, null).asClass(null);
         String s2 = TestUtil.toJson(o);
         TestUtil.printLine(s1);
         TestUtil.printLine(s2);
@@ -50,7 +50,7 @@ public class NonStandardCharsTest
         String beer = new String(mug, StandardCharsets.UTF_8);
         TestUtil.printLine("beer = " + beer);
         String thirsty = "{\"phrase\":\"I'd like a " + beer + "\"}";
-        Map map = TestUtil.toObjects(thirsty, null);
+        Map map = TestUtil.toJava(thirsty, null).asClass(null);
         assert map.get("phrase").equals("I'd like a " + beer);
     }
 }

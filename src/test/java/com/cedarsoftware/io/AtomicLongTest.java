@@ -43,7 +43,7 @@ class AtomicLongTest
     void testAssignAtomicLong()
     {
         String json = "{\"@type\":\"com.cedarsoftware.io.AtomicLongTest$TestAtomicLongField\",\"value\":16,\"nullValue\":null,\"strValue\":\"50\",\"emptyStrValue\":\"\", \"objValue\":{\"value\":-9},\"values\":[-5,null,5, \"45\"]}";
-        TestAtomicLongField atom2 = TestUtil.toObjects(json, null);
+        TestAtomicLongField atom2 = TestUtil.toJava(json, null).asClass(null);
 
         assert atom2.value.get() == 16;
         assert atom2.nullValue == null;
@@ -57,7 +57,7 @@ class AtomicLongTest
         assert atom2.values[3].get() == 45;
 
         json = TestUtil.toJson(atom2);
-        TestAtomicLongField atom1 = TestUtil.toObjects(json, null);
+        TestAtomicLongField atom1 = TestUtil.toJava(json, null).asClass(null);
         assert atom1.value.get() == 16;
         assert atom1.nullValue == null;
         assert atom1.strValue.get() == 50;
@@ -71,7 +71,7 @@ class AtomicLongTest
 
         json = "{\"@type\":\"com.cedarsoftware.io.AtomicLongTest$TestAtomicLongField\",\"value\":16.5}";
 
-        TestAtomicLongField alf = TestUtil.toObjects(json, null);
+        TestAtomicLongField alf = TestUtil.toJava(json, null).asClass(null);
         assert alf.value.get() == 16L;
     }
 
@@ -79,7 +79,7 @@ class AtomicLongTest
     void testAssignAtomicLongStringToMaps()
     {
         String json = "{\"@type\":\"" + TestAtomicLongField.class.getName() + "\",\"strValue\":\"\"}";
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Map map = TestUtil.toMaps(json, null).asClass(null);
         assertNull(map.get("fromString"));      // allowing "" to null out non-primitive fields in map-of-map mode
     }
 
@@ -92,7 +92,7 @@ class AtomicLongTest
         list.add(atomicInt);
         String json = TestUtil.toJson(list);
         TestUtil.printLine("json=" + json);
-        list = TestUtil.toObjects(json, null);
+        list = TestUtil.toJava(json, null).asClass(null);
         assert list.size() == 2;
         atomicInt = list.get(0);
         assert atomicInt.get() == new AtomicLong(12345).get();

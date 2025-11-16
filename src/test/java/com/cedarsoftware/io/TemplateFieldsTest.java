@@ -42,7 +42,7 @@ public class TemplateFieldsTest
         String json = TestUtil.toJson(container);
 
         // This would throw exception in the past
-        TestUtil.toObjects(json, null);
+        TestUtil.toJava(json, null).asClass(null);
     }
 
     @Test
@@ -51,7 +51,7 @@ public class TemplateFieldsTest
         Test3 container = new Test3();
         String json = TestUtil.toJson(container);
         // This would throw exception in the past
-        Test3 reanimated = TestUtil.toObjects(json, null);
+        Test3 reanimated = TestUtil.toJava(json, null).asClass(null);
         assert reanimated.internalMember.two.getName().equals("Jane");
         assert reanimated.internalMember.two.getAge() == 45;
     }
@@ -61,7 +61,7 @@ public class TemplateFieldsTest
     {
         UseSingle useSingle = new UseSingle(new Single<>("Steel", "Wood"));
         String json = TestUtil.toJson(useSingle);
-        UseSingle other = TestUtil.toObjects(json, null);
+        UseSingle other = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals("Steel", other.single.field1);
         assertEquals("Wood", other.single.field2);
@@ -72,7 +72,7 @@ public class TemplateFieldsTest
     {
         UseTwoParam useTwoParam = new UseTwoParam(new TwoParam("Hello", "Goodbye", new Point(20, 40)));
         String json = TestUtil.toJson(useTwoParam);
-        UseTwoParam other = TestUtil.toObjects(json, null);
+        UseTwoParam other = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals("Hello", other.twoParam.field1);
         assertEquals("Goodbye", other.twoParam.field2);
@@ -80,7 +80,7 @@ public class TemplateFieldsTest
 
         useTwoParam = new UseTwoParam(new TwoParam(new Point(10, 30), new Point(20, 40), "Hello"));
         json = TestUtil.toJson(useTwoParam);
-        other = TestUtil.toObjects(json, null);
+        other = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals(new Point(10, 30), other.twoParam.field1);
         assertEquals(new Point(20, 40), other.twoParam.field2);
@@ -88,7 +88,7 @@ public class TemplateFieldsTest
 
         useTwoParam = new UseTwoParam(new TwoParam(50, 100, "Hello"));
         json = TestUtil.toJson(useTwoParam);
-        other = TestUtil.toObjects(json, null);
+        other = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals(50, other.twoParam.field1);
         assertEquals(100, other.twoParam.field2);
@@ -96,7 +96,7 @@ public class TemplateFieldsTest
 
         useTwoParam = new UseTwoParam(new TwoParam(new Point(10, 30), new Point(20, 40), new TestObject("Hello")));
         json = TestUtil.toJson(useTwoParam);
-        other = TestUtil.toObjects(json, null);
+        other = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals(new Point(10, 30), other.twoParam.field1);
         assertEquals(new Point(20, 40), other.twoParam.field2);
@@ -110,7 +110,7 @@ public class TemplateFieldsTest
 
         String json = TestUtil.toJson(useSingle);
         //this will crash on ArrayIndexOutOfBoundsException
-        StaticUseSingle other = TestUtil.toObjects(json, null);
+        StaticUseSingle other = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals("Boonies", other.single.field1);
     }
@@ -119,13 +119,13 @@ public class TemplateFieldsTest
     public void test3TypeGeneric()
     {
         String json = "{\"@type\":\"" + GenericHolder.class.getName() + "\",\"a\":{\"t\":{\"x\":1,\"y\":2},\"u\":\"Sochi\",\"v\":{\"x\":10,\"y\":20}}}";
-        GenericHolder gen = TestUtil.toObjects(json, null);
+        GenericHolder gen = TestUtil.toJava(json, null).asClass(null);
         assertEquals(new Point(1, 2), gen.a.t);
         assertEquals("Sochi", gen.a.u);
         assertEquals(new Point(10, 20), gen.a.v);
 
         json = "{\"@type\":\"" + GenericHolder.class.getName() + "\",\"a\":{\"t\":null,\"u\":null,\"v\":null}}";
-        gen = TestUtil.toObjects(json, null);
+        gen = TestUtil.toJava(json, null).asClass(null);
         assertNull(gen.a.t);
         assertNull(gen.a.u);
         assertNull(gen.a.v);

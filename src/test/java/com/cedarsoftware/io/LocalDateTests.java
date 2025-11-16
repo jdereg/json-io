@@ -70,14 +70,14 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
     void testTopLevel_serializesAsISODate() {
         LocalDate date = LocalDate.of(2014, 10, 17);
         String json = TestUtil.toJson(date);
-        LocalDate result = TestUtil.toObjects(json, null);
+        LocalDate result = TestUtil.toJava(json, null).asClass(null);
         assertEquals(date, result);
     }
 
     @Test
     void testOldFormat_topLevel_withType() {
         String json = "{ \"@type\" : \"java.time.LocalDate\", \"localDate\" : \"2023-4-5\" }";
-        LocalDate localDate = TestUtil.toObjects(json, null);
+        LocalDate localDate = TestUtil.toJava(json, null).asClass(null);
 
         assert localDate.getYear() == 2023;
         assert localDate.getMonthValue() == 4;
@@ -88,7 +88,7 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
     void testOldFormat_nestedLevel() {
 
         String json = loadJsonForTest("old-format-nested-level.json");
-        NestedLocalDate nested = TestUtil.toObjects(json, null);
+        NestedLocalDate nested = TestUtil.toJava(json, null).asClass(null);
 
         LocalDate d1 = nested.getOne();
         assert d1.getYear() == 2014;
@@ -115,7 +115,7 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
         lda.localDates = new LocalDate[] {now, now};
         lda.otherDates = new Object[] {now, new Date(System.currentTimeMillis()), now};
         String json = TestUtil.toJson(lda);
-        LocalDateArray lda2 = TestUtil.toObjects(json, null);
+        LocalDateArray lda2 = TestUtil.toJava(json, null).asClass(null);
         assert lda.localDates.length == 2;
         assert lda.otherDates.length == 3;
 
@@ -128,7 +128,7 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
         LocalDate now = LocalDate.now();
         LocalDate[] dates = new LocalDate[]{now, now};
         String json = TestUtil.toJson(dates);
-        LocalDate[] dates2 = TestUtil.toObjects(json, null);
+        LocalDate[] dates2 = TestUtil.toJava(json, null).asClass(null);
         assertEquals(2, dates2.length);
         assertEquals(dates2[0], now);
         assertEquals(dates2[0], dates2[1]);
@@ -141,7 +141,7 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
         String json = TestUtil.toJson(ld, new WriteOptionsBuilder()
                 .addCustomWrittenClass(LocalDate.class, new Writers.LocalDateAsLong()).build());
         ReadOptions options = new ReadOptionsBuilder().setZoneId(ZoneId.of("Asia/Saigon")).build();
-        LocalDate ld2 = TestUtil.toObjects(json, options, null);
+        LocalDate ld2 = TestUtil.toJava(json, options).asClass(null);
         assert ld.equals(ld2);
     }
 
@@ -151,7 +151,7 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
         String json = TestUtil.toJson(ld, new WriteOptionsBuilder()
                 .addCustomWrittenClass(LocalDate.class, new Writers.LocalDateAsLong()).build());
         ReadOptions options = new ReadOptionsBuilder().setZoneId(ZoneId.of("America/New_York")).build();
-        LocalDate ld2 = TestUtil.toObjects(json, options, null);
+        LocalDate ld2 = TestUtil.toJava(json, options).asClass(null);
         assert ld.equals(ld2);
     }
 

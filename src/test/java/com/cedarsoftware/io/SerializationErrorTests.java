@@ -39,7 +39,7 @@ class SerializationErrorTests {
     @Test
     void testEnumWithValue_makeSureEnumCanBeParsed() {
         String json = loadJsonForTest("enum-with-value.json");
-        EnumTests.EnumWithValueField actual = TestUtil.toObjects(json, null);
+        EnumTests.EnumWithValueField actual = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(actual).isEqualTo(EnumTests.EnumWithValueField.FOO);
     }
@@ -59,7 +59,7 @@ class SerializationErrorTests {
 
         ReadOptions readOptions = new ReadOptionsBuilder().failOnUnknownType(true).build();
 
-        SecurityGroup actual = TestUtil.toObjects(json, readOptions, null);
+        SecurityGroup actual = TestUtil.toJava(json, readOptions).asClass(null);
 
         assertThat(actual.getId()).isNull();
         assertThat(actual.getType()).isEqualTo("Level 1");
@@ -73,7 +73,7 @@ class SerializationErrorTests {
         model.generate("foo");
 
         String json = TestUtil.toJson(model);
-        MismatchedGetter actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), MismatchedGetter.class);
+        MismatchedGetter actual = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(MismatchedGetter.class);
 
         assertThat(actual.getRawValue()).isEqualTo("foo");
         assertThat(actual.getValues()).containsExactlyElementsOf(Arrays.asList(model.getValues()));
@@ -86,7 +86,7 @@ class SerializationErrorTests {
         model.generate("foo");
 
         String json = TestUtil.toJson(model, new WriteOptionsBuilder().showTypeInfoAlways().build());
-        MismatchedGetter actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), MismatchedGetter.class);
+        MismatchedGetter actual = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(MismatchedGetter.class);
 
         assertThat(actual.getRawValue()).isEqualTo("foo");
         assertThat(actual.getValues()).containsExactlyElementsOf(Arrays.asList(model.getValues()));
@@ -103,7 +103,7 @@ class SerializationErrorTests {
                 .build();
 
         String json = loadJsonForTest("security-group.json");
-        SecurityGroup actual = TestUtil.toObjects(json, options, null);
+        SecurityGroup actual = TestUtil.toJava(json, options).asClass(null);
 
         assertThat(actual.getId()).isNull();
         assertThat(actual.getType()).isEqualTo("LEVEL1");
@@ -128,7 +128,7 @@ class SerializationErrorTests {
     void testWriteOptions() {
         WriteOptions writeOptions = new WriteOptionsBuilder().build();
         String json = TestUtil.toJson(writeOptions);
-        WriteOptions backFromSleep = TestUtil.toObjects(json, null);
+        WriteOptions backFromSleep = TestUtil.toJava(json, null).asClass(null);
         assertTrue(DeepEquals.deepEquals(writeOptions, backFromSleep));
     }
 
@@ -137,7 +137,7 @@ class SerializationErrorTests {
     void testReadOptions() {
         ReadOptions readOptions = new ReadOptionsBuilder().build();
         String json = TestUtil.toJson(readOptions);
-        ReadOptions backFromSleep = TestUtil.toObjects(json, null);
+        ReadOptions backFromSleep = TestUtil.toJava(json, null).asClass(null);
         assertTrue(DeepEquals.deepEquals(readOptions, backFromSleep));
     }
 

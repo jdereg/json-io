@@ -20,7 +20,7 @@ class EnumSetErrorTest {
                 "  \"@items\": [\"A\", \"INVALID_NAME\", \"C\"]\n" +
                 "}";
 
-        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("No enum constant")
                 .hasMessageContaining("INVALID_NAME");
@@ -33,7 +33,7 @@ class EnumSetErrorTest {
                 "  \"@items\": [\"A\", \"B\"]\n" +
                 "}";
 
-        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("Unknown type (class)")
                 .hasMessageContaining("com.invalid.NonExistentEnum")
@@ -47,7 +47,7 @@ class EnumSetErrorTest {
                 "  \"@items\": [\"A\", null, \"C\"]\n" +
                 "}";
 
-        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("null");
     }
@@ -59,7 +59,7 @@ class EnumSetErrorTest {
                 "  \"@type\": \"" + TestEnum.class.getName() + "\"\n" +
                 "}";
 
-        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("Unable to instantiate enum");
 
@@ -69,7 +69,7 @@ class EnumSetErrorTest {
                 "  \"@items\": []\n" +
                 "}";
 
-        EnumSet<?> result = TestUtil.toObjects(correctJson, null);
+        EnumSet<?> result = TestUtil.toJava(correctJson, null).asClass(null);
         assertThat(result)
                 .isNotNull()
                 .isEmpty();
@@ -82,7 +82,7 @@ class EnumSetErrorTest {
                 "  \"@items\": [42, true, \"C\"]\n" +
                 "}";
 
-        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("type");
     }
@@ -94,7 +94,7 @@ class EnumSetErrorTest {
                 "  \"@items\": [\"A\", \"X\", \"C\"]\n" +
                 "}";
 
-        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("No enum constant");
     }
@@ -106,7 +106,7 @@ class EnumSetErrorTest {
                 "  \"@type\": \"" + TestEnum.class.getName() + "\",\n" +
                 "  \"@items\": [\"A\", \"B\"]\n";
 
-        assertThatThrownBy(() -> TestUtil.toObjects(malformed1, null))
+        assertThatThrownBy(() -> TestUtil.toJava(malformed1, null).asClass(null))
                 .isInstanceOf(JsonIoException.class);
 
         // Invalid array syntax
@@ -115,7 +115,7 @@ class EnumSetErrorTest {
                 "  \"@items\": [\"A\" \"B\"]\n" +
                 "}";
 
-        assertThatThrownBy(() -> TestUtil.toObjects(malformed2, null))
+        assertThatThrownBy(() -> TestUtil.toJava(malformed2, null).asClass(null))
                 .isInstanceOf(JsonIoException.class);
 
         // Invalid quotes
@@ -124,7 +124,7 @@ class EnumSetErrorTest {
                 "  \"@items\": [\"A\", \"B\"]\n" +
                 "}";
 
-        assertThatThrownBy(() -> TestUtil.toObjects(malformed3, null))
+        assertThatThrownBy(() -> TestUtil.toJava(malformed3, null).asClass(null))
                 .isInstanceOf(JsonIoException.class);
     }
 
@@ -136,7 +136,7 @@ class EnumSetErrorTest {
                 "}";
 
         // Should not throw exception - EnumSet handles duplicates by ignoring them
-        EnumSet<?> result = TestUtil.toObjects(json, null);
+        EnumSet<?> result = TestUtil.toJava(json, null).asClass(null);
 
         @SuppressWarnings("unchecked")
         EnumSet<TestEnum> typed = (EnumSet<TestEnum>) result;
@@ -153,7 +153,7 @@ class EnumSetErrorTest {
                 "  \"@items\": [\"a\", \"B\", \"c\"]\n" +
                 "}";
 
-        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("No enum constant");
     }
@@ -165,7 +165,7 @@ class EnumSetErrorTest {
                 "  \"@items\": [\"A\", \"\", \"C\"]\n" +
                 "}";
 
-        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json, null).asClass(null))
                 .isInstanceOf(JsonIoException.class);
     }
 }

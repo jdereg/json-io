@@ -34,7 +34,7 @@ class EnumContainerTest {
     void testEnum_inArray() {
         TestEnum[] source = new TestEnum[] { TestEnum.ALPHA, TestEnum.GAMMA, TestEnum.BETA };
         String json = TestUtil.toJson(source);
-        TestEnum[] target = TestUtil.toObjects(json, null);
+        TestEnum[] target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target)
                 .isNotNull()
@@ -46,7 +46,7 @@ class EnumContainerTest {
     void testEnum_inList() {
         List<TestEnum> source = Arrays.asList(TestEnum.ALPHA, TestEnum.BETA);
         String json = TestUtil.toJson(source);
-        List<TestEnum> target = TestUtil.toObjects(json, null);
+        List<TestEnum> target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target)
                 .isNotNull()
@@ -58,7 +58,7 @@ class EnumContainerTest {
     void testEnum_inSet() {
         Set<TestEnum> source = new LinkedHashSet<>(Arrays.asList(TestEnum.GAMMA, TestEnum.ALPHA));
         String json = TestUtil.toJson(source);
-        Set<TestEnum> target = TestUtil.toObjects(json, null);
+        Set<TestEnum> target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target)
                 .isNotNull()
@@ -73,7 +73,7 @@ class EnumContainerTest {
         source.put(TestEnum.BETA, "second");
 
         String json = TestUtil.toJson(source);
-        Map<TestEnum, String> target = TestUtil.toObjects(json, null);
+        Map<TestEnum, String> target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target)
                 .isNotNull()
@@ -89,7 +89,7 @@ class EnumContainerTest {
         source.put("second", TestEnum.ALPHA);
 
         String json = TestUtil.toJson(source);
-        Map<String, TestEnum> target = TestUtil.toObjects(json, null);
+        Map<String, TestEnum> target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target)
                 .isNotNull()
@@ -105,7 +105,7 @@ class EnumContainerTest {
         source.complexEnum = ComplexEnum.TWO;
 
         String json = TestUtil.toJson(source);
-        EnumContainer target = TestUtil.toObjects(json, null);
+        EnumContainer target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target.directEnum).isEqualTo(TestEnum.BETA);
         assertThat(target.complexEnum)
@@ -122,7 +122,7 @@ class EnumContainerTest {
         source.put(TestEnum.BETA, Arrays.asList(ComplexEnum.TWO, ComplexEnum.THREE));
 
         String json = TestUtil.toJson(source);
-        Map<TestEnum, List<ComplexEnum>> target = TestUtil.toObjects(json, null);
+        Map<TestEnum, List<ComplexEnum>> target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target)
                 .isNotNull()
@@ -150,7 +150,7 @@ class EnumContainerTest {
         source.stringsByEnum.put(TestEnum.GAMMA, Arrays.asList("a", "b"));
 
         String json = TestUtil.toJson(source);
-        ComplexContainer target = TestUtil.toObjects(json, null);
+        ComplexContainer target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target.enumList)
                 .containsExactly(TestEnum.ALPHA, TestEnum.BETA);

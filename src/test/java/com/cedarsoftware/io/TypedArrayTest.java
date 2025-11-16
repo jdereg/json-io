@@ -10,9 +10,9 @@ class TypedArrayTest {
     @Test
     void testCreateCustomer() {
         String json = ClassUtilities.loadResourceAsString("customer/customer.json");
-        Customer customer = TestUtil.toObjects(json, Customer.class);
+        Customer customer = TestUtil.toJava(json, null).asClass(Customer.class);
         String json2 = TestUtil.toJson(customer);
-        Customer customer2 = TestUtil.toObjects(json2, Customer.class);
+        Customer customer2 = TestUtil.toJava(json2, null).asClass(Customer.class);
         // Test Java graphs are equivalent
         assert DeepEquals.deepEquals(customer, customer2);
 

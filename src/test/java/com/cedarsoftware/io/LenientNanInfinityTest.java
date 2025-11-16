@@ -83,7 +83,7 @@ class LenientNanInfinityTest
                 .allowNanAndInfinity(true)
                 .useUnsafe(true)  // Enable unsafe mode for package-private outer class
                 .build();
-        A newA = (A) TestUtil.toObjects(json, readOptions, null);
+        A newA = (A) TestUtil.toJava(json, readOptions).asClass(null);
         TestUtil.printLine("newA = " + newA);
         
         Double newDoubleField = newA.getDoubleField();

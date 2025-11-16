@@ -52,7 +52,7 @@ class ReaderTests {
     @MethodSource("stringsThatAreEmptyWhenTrimmed")
     @NullAndEmptySource
     void testJsonToJavaVariant_returnsNullForEmptyOrNullString(String json) {
-        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("EOF reached prematurely");
     }
@@ -61,7 +61,7 @@ class ReaderTests {
     @MethodSource("stringsThatAreEmptyWhenTrimmed")
     @NullAndEmptySource
     void testToObjects_returnsNullForEmptyOrNullString(String json) {
-        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("EOF reached prematurely");
     }
@@ -70,7 +70,7 @@ class ReaderTests {
     @MethodSource("stringsThatAreEmptyWhenTrimmed")
     @NullAndEmptySource
     void testToMaps_returnsNullForEmptyOrNullString(String json) {
-        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+        assertThatThrownBy(() -> TestUtil.toJava(json, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("EOF reached prematurely");
     }

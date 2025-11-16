@@ -25,7 +25,7 @@ class EnumSetContainerTest {
 
         String json = TestUtil.toJson(source);
 
-        EnumSet<TestEnum>[] target = TestUtil.toObjects(json, null);
+        EnumSet<TestEnum>[] target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target).hasSize(3);
         assertThat(target[0]).containsExactly(TestEnum.A, TestEnum.B);
@@ -41,7 +41,7 @@ class EnumSetContainerTest {
 
         String json = TestUtil.toJson(source);
 
-        List<EnumSet<TestEnum>> target = TestUtil.toObjects(json, null);
+        List<EnumSet<TestEnum>> target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target)
                 .hasSize(2)
@@ -59,7 +59,7 @@ class EnumSetContainerTest {
 
         String json = TestUtil.toJson(source);
 
-        Map<EnumSet<TestEnum>, String> target = TestUtil.toObjects(json, null);
+        Map<EnumSet<TestEnum>, String> target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target)
                 .hasSize(2)
@@ -75,7 +75,7 @@ class EnumSetContainerTest {
 
         String json = TestUtil.toJson(source);
 
-        Map<String, EnumSet<TestEnum>> target = TestUtil.toObjects(json, null);
+        Map<String, EnumSet<TestEnum>> target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target)
                 .hasSize(2)
@@ -94,7 +94,7 @@ class EnumSetContainerTest {
 
         String json = TestUtil.toJson(source);
 
-        EnumSetContainer target = TestUtil.toObjects(json, null);
+        EnumSetContainer target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target.set1).containsExactly(TestEnum.A, TestEnum.B);
         assertThat(target.set2).containsExactly(TestEnum.C);
@@ -116,7 +116,7 @@ class EnumSetContainerTest {
                 "  }\n" +
                 "}";
 
-        EnumSetContainer target = TestUtil.toObjects(json, null);
+        EnumSetContainer target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target.set1).isNull();
         assertThat(target.set2).isNull();
@@ -143,7 +143,7 @@ class EnumSetContainerTest {
 
         String json = TestUtil.toJson(source);
 
-        Map<String, List<EnumSet<TestEnum>>> target = TestUtil.toObjects(json, null);
+        Map<String, List<EnumSet<TestEnum>>> target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target)
                 .hasSize(2)

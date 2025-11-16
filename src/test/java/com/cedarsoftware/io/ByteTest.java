@@ -62,7 +62,7 @@ class ByteTest
         String json = TestUtil.toJson(test);
         TestUtil.printLine("json = " + json);
 
-        ManyBytes that = TestUtil.toObjects(json, null);
+        ManyBytes that = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals((byte) that._arrayElement, (byte) -1);
         assertEquals(that._polyRefTarget, (byte) 71);

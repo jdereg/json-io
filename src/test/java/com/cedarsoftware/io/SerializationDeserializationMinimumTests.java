@@ -85,7 +85,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         assertNoReferencesInString(json);
         assertNoTypeInString(json);
 
-        Object actual = TestUtil.toObjects(json, null);
+        Object actual = TestUtil.toJava(json, null).asClass(null);
 
         assertNestedInObject_withNoDuplicates_andFieldTypeMatchesObjectType(expected, actual);
     }
@@ -122,7 +122,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         assertReferentialityInString(json);
         assertNoTypeInString(json);
 
-        Object actual = TestUtil.toObjects(json, null);
+        Object actual = TestUtil.toJava(json, null).asClass(null);
 
         assertNestedInObject_withDuplicates_andFieldTypeMatchesObjectType(expected, actual);
     }
@@ -171,7 +171,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         assertNoReferencesInString(json);
         assertOneOfTheseTypesInString(json);
 
-        NestedWithObjectFields actual = TestUtil.toObjects(json, null);
+        NestedWithObjectFields actual = TestUtil.toJava(json, null).asClass(null);
 
         assertNestedInObject_withNoDuplicates_andFieldTypeDoesNotMatchObjectType(expected, actual);
     }
@@ -251,7 +251,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         assertNoReferencesInString(json);
         assertOneOfTheseTypesInString(json);
 
-        Nested<T> actual = TestUtil.toObjects(json, null);
+        Nested<T> actual = TestUtil.toJava(json, null).asClass(null);
 
         assertNestedInObject_withNoDuplicates_andFieldTypeIsGeneric(expected, actual);
     }
@@ -284,7 +284,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
 
         assertReferentialityInString(json);
 
-        Object[] actual = TestUtil.toObjects(json, null);
+        Object[] actual = TestUtil.toJava(json, null).asClass(null);
 
         // assert
         assertObjectArray_withDuplicates(expected, actual);
@@ -302,7 +302,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         // should be no references
         String json = TestUtil.toJson(expected);
         assertNoReferencesInString(json);
-        T[] actual = TestUtil.toObjects(json, null);
+        T[] actual = TestUtil.toJava(json, null).asClass(null);
         assertClassSpecificArray_withNoDuplicates(expected, actual);
     }
 
@@ -322,7 +322,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         // should be no references
         String json = TestUtil.toJson(expected);
         assertReferentialityInString(json);
-        T[] actual = TestUtil.toObjects(json, null);
+        T[] actual = TestUtil.toJava(json, null).asClass(null);
         assertClassSpecificArray_withDuplicates(expected, actual);
     }
 
@@ -373,7 +373,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
 
         assertReferentialityInString(json);
 
-        List<T> actual = TestUtil.toObjects(json, null);
+        List<T> actual = TestUtil.toJava(json, null).asClass(null);
 
         // assert
         assertCollection_withDuplicates(expected, actual);
@@ -400,7 +400,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
 
         assertNoReferencesInString(json);
 
-        Map<String, T> actual = TestUtil.toObjects(json, null);
+        Map<String, T> actual = TestUtil.toJava(json, null).asClass(null);
 
         // assert
         assertMap_withNoDuplicates(expected, actual);
@@ -424,7 +424,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
 
         assertReferentialityInString(json);
 
-        Map<String, T> actual = TestUtil.toObjects(json, null);
+        Map<String, T> actual = TestUtil.toJava(json, null).asClass(null);
 
         // assert
         assertMap_withDuplicates(expected, actual);

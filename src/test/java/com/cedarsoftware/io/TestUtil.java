@@ -30,15 +30,15 @@ public class TestUtil {
     private static final Logger logger = Logger.getLogger(TestUtil.class.getName());
 
     public static <T> T serializeDeserialize(T initial) {
-        String json = toJson(initial);
+        String json = toJson(initial, null);
         @SuppressWarnings("unchecked")
         Class<T> root = initial == null ? null : (Class<T>) initial.getClass();
-        return toObjects(json, root);
+        return toJava(json, null).asClass(root);
     }
 
     public static <T> Object serializeDeserializeAsMaps(T initial) {
         String json = toJson(initial, new WriteOptionsBuilder().showTypeInfoNever().build());
-        return toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        return toMaps(json, null).asClass(null);
     }
 
     public static boolean isDebug() {
@@ -91,6 +91,9 @@ public class TestUtil {
         return testInfo;
     }
 
+    /**
+     * Write JSON using default options. Creates a new WriteOptionsBuilder to pick up current permanent aliases.
+     */
     public static String toJson(Object obj) {
         return toJson(obj, new WriteOptionsBuilder().build());
     }
@@ -176,57 +179,6 @@ public class TestUtil {
         return testInfo;
     }
 
-    /**
-     * Generally, use this API to read JSON. It will do so using json-io and other serializers, so that
-     * timing statistics can be measured. This version is the simple (no build options version).
-     */
-    public static <T> T toObjects(String json, Class<T> root) {
-        return toObjects(json, new ReadOptionsBuilder().build(), root);
-    }
-
-    /**
-     * Generally, use this API to read JSON. It will do so using json-io and other serializers, so that
-     * timing statistics can be measured. This version is more capable, as it supports build options.
-     */
-    @SuppressWarnings("unchecked")
-    public static <T> T toObjects(final String json, ReadOptions readOptions, Class<T> root) {
-        totalReads++;
-
-        TestInfo jsonIoTestInfo = readJsonIo(json, readOptions, root);
-        TestInfo gsonTestInfo = readGson(json);
-        TestInfo jacksonTestInfo = readJackson(json);
-
-        if (jsonIoTestInfo.t == null && gsonTestInfo.t == null && jacksonTestInfo.t == null) { // only add times when all parsers succeeded
-            totalJsonRead += jsonIoTestInfo.nanos;
-            totalGsonRead += gsonTestInfo.nanos;
-            totalJacksonRead += jacksonTestInfo.nanos;
-        } else {
-            if (jsonIoTestInfo.t != null) {
-                jsonIoReadFails++;
-            }
-            if (gsonTestInfo.t != null) {
-                gsonReadFails++;
-            }
-            if (jacksonTestInfo.t != null) {
-                jacksonReadFails++;
-            }
-        }
-
-        if (jsonIoTestInfo.t != null) {
-            try {
-                throw jsonIoTestInfo.t;
-            } catch (Throwable t) {
-                throw (RuntimeException) t;
-            }
-        }
-
-        return (T) jsonIoTestInfo.obj;
-    }
-
-    public static JsonObject toObjects(InputStream in, ReadOptions readOptions) {
-        // Use toJava() with JsonObject.class to get the JsonObject return type
-        return JsonIo.toJava(in, new ReadOptionsBuilder(readOptions).returnAsJsonObjects().build()).asClass(JsonObject.class);
-    }
 
     public static void printLine(String s) {
         if (debug) {
@@ -251,6 +203,136 @@ public class TestUtil {
         logger.info("  json-io: " + jsonIoReadFails + " / " + totalReads);
         logger.info("  GSON: " + gsonReadFails + " / " + totalReads);
         logger.info("  Jackson: " + jacksonReadFails + " / " + totalReads);
+    }
+
+    /**
+     * Builder for testing JSON deserialization with json-io, GSON, and Jackson.
+     * Matches the API of JsonIo.JavaStringBuilder.
+     */
+    public static class JavaTestBuilder {
+        private final String json;
+        private final ReadOptions readOptions;
+
+        JavaTestBuilder(String json, ReadOptions readOptions) {
+            this.json = json;
+            this.readOptions = readOptions != null ? readOptions : new ReadOptionsBuilder().build();
+        }
+
+        /**
+         * Complete deserialization to a specific class.
+         * Tests json-io, GSON, and Jackson and collects timing statistics.
+         */
+        @SuppressWarnings("unchecked")
+        public <T> T asClass(Class<T> root) {
+            totalReads++;
+
+            TestInfo jsonIoTestInfo = readJsonIo(json, readOptions, root);
+            TestInfo gsonTestInfo = readGson(json);
+            TestInfo jacksonTestInfo = readJackson(json);
+
+            if (jsonIoTestInfo.t == null && gsonTestInfo.t == null && jacksonTestInfo.t == null) {
+                totalJsonRead += jsonIoTestInfo.nanos;
+                totalGsonRead += gsonTestInfo.nanos;
+                totalJacksonRead += jacksonTestInfo.nanos;
+            } else {
+                if (jsonIoTestInfo.t != null) {
+                    jsonIoReadFails++;
+                }
+                if (gsonTestInfo.t != null) {
+                    gsonReadFails++;
+                }
+                if (jacksonTestInfo.t != null) {
+                    jacksonReadFails++;
+                }
+            }
+
+            if (jsonIoTestInfo.t != null) {
+                try {
+                    throw jsonIoTestInfo.t;
+                } catch (Throwable t) {
+                    throw (RuntimeException) t;
+                }
+            }
+
+            return (T) jsonIoTestInfo.obj;
+        }
+
+        /**
+         * Complete deserialization using generic type information.
+         * Tests json-io, GSON, and Jackson and collects timing statistics.
+         */
+        @SuppressWarnings("unchecked")
+        public <T> T asType(TypeHolder<T> typeHolder) {
+            totalReads++;
+
+            TestInfo jsonIoTestInfo = readJsonIoAsType(json, readOptions, typeHolder);
+            TestInfo gsonTestInfo = readGson(json);
+            TestInfo jacksonTestInfo = readJackson(json);
+
+            if (jsonIoTestInfo.t == null && gsonTestInfo.t == null && jacksonTestInfo.t == null) {
+                totalJsonRead += jsonIoTestInfo.nanos;
+                totalGsonRead += gsonTestInfo.nanos;
+                totalJacksonRead += jacksonTestInfo.nanos;
+            } else {
+                if (jsonIoTestInfo.t != null) {
+                    jsonIoReadFails++;
+                }
+                if (gsonTestInfo.t != null) {
+                    gsonReadFails++;
+                }
+                if (jacksonTestInfo.t != null) {
+                    jacksonReadFails++;
+                }
+            }
+
+            if (jsonIoTestInfo.t != null) {
+                try {
+                    throw jsonIoTestInfo.t;
+                } catch (Throwable t) {
+                    throw (RuntimeException) t;
+                }
+            }
+
+            return (T) jsonIoTestInfo.obj;
+        }
+    }
+
+    /**
+     * Read JSON using JsonIo with generic type.
+     */
+    private static <T> TestInfo readJsonIoAsType(String json, ReadOptions options, TypeHolder<T> typeHolder) {
+        TestInfo testInfo = new TestInfo();
+        try {
+            long start = System.nanoTime();
+            testInfo.obj = JsonIo.toJava(json, options).asType(typeHolder);
+            testInfo.nanos = System.nanoTime() - start;
+        } catch (Exception e) {
+            testInfo.t = e;
+        }
+        return testInfo;
+    }
+
+    /**
+     * Parse JSON into typed Java objects. Returns a builder for completing the conversion.
+     * Tests json-io, GSON, and Jackson for performance comparison.
+     *
+     * Use this for Java Object Mode (requires classes on classpath).
+     */
+    public static JavaTestBuilder toJava(String json, ReadOptions readOptions) {
+        return new JavaTestBuilder(json, readOptions);
+    }
+
+    /**
+     * Parse JSON into Map graph without requiring Java classes. Returns a builder for completing the conversion.
+     * Tests json-io, GSON, and Jackson for performance comparison.
+     *
+     * Use this for Map Mode (no classes required).
+     */
+    public static JavaTestBuilder toMaps(String json, ReadOptions readOptions) {
+        ReadOptions mapOptions = new ReadOptionsBuilder(readOptions)
+                .returnAsJsonObjects()
+                .build();
+        return new JavaTestBuilder(json, mapOptions);
     }
 
     public static int count(CharSequence content, CharSequence token) {

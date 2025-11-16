@@ -40,7 +40,7 @@ public class FloatTest
         ManyFloats test = new ManyFloats();
         String json = TestUtil.toJson(test);
         TestUtil.printLine("json = " + json);
-        ManyFloats that = TestUtil.toObjects(json, null);
+        ManyFloats that = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals(-1.0f, that._arrayElement);
         assertEquals(71.0f, that._polyRefTarget);
@@ -88,7 +88,7 @@ public class FloatTest
 
         try
         {
-            TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+            TestUtil.toMaps(json, null).asClass(null);
             fail();
         }
         catch (JsonIoException ignore)

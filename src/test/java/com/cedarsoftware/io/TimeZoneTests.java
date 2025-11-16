@@ -53,7 +53,7 @@ public class TimeZoneTests
         String json = TestUtil.toJson(tz);
         TestUtil.printLine("json=" + json);
 
-        TestTimeZone actual = TestUtil.toObjects(json, null);
+        TestTimeZone actual = TestUtil.toJava(json, null).asClass(null);
         assertThat(actual._zone).isEqualTo(expected);
     }
 
@@ -73,7 +73,7 @@ public class TimeZoneTests
         // act
         String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);
-        TimeZone actual = TestUtil.toObjects(json, null);
+        TimeZone actual = TestUtil.toJava(json, null).asClass(null);
 
         // assert
         assertThat(actual).isEqualTo(expected);
@@ -84,7 +84,7 @@ public class TimeZoneTests
         String noZone = "{\"@type\":\"java.util.TimeZone\"}";
 
         assertThatExceptionOfType(JsonIoException.class)
-                .isThrownBy(() -> TestUtil.toObjects(noZone, null));
+                .isThrownBy(() -> TestUtil.toJava(noZone, null).asClass(null));
     }
 
 
@@ -98,7 +98,7 @@ public class TimeZoneTests
         String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);
 
-        Object[] actual = TestUtil.toObjects(json, null);
+        Object[] actual = TestUtil.toJava(json, null).asClass(null);
 
         // assert
         assertThat(actual).hasSize(2)
@@ -120,7 +120,7 @@ public class TimeZoneTests
 
         TestUtil.printLine("json=" + json);
 
-        Object[] actual = TestUtil.toObjects(json, null);
+        Object[] actual = TestUtil.toJava(json, null).asClass(null);
 
         // assert
         assertThat(json).doesNotContain("@id");
@@ -143,7 +143,7 @@ public class TimeZoneTests
         String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);
 
-       List<TimeZone> actual = TestUtil.toObjects(json, null);
+       List<TimeZone> actual = TestUtil.toJava(json, null).asClass(null);
 
         // assert
         assertThat(actual).hasSize(2)
@@ -159,7 +159,7 @@ public class TimeZoneTests
         String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);
 
-        Map actual = TestUtil.toObjects(json, null);
+        Map actual = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(actual).hasSize(1)
                 .containsAllEntriesOf(expected);
@@ -175,7 +175,7 @@ public class TimeZoneTests
         TestUtil.printLine("json=" + json);
 
 
-        Map actual = TestUtil.toObjects(json, null);
+        Map actual = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(actual).hasSize(1)
                 .containsAllEntriesOf(expected);
@@ -195,7 +195,7 @@ public class TimeZoneTests
         TestUtil.printLine("json=" + json);
 
         ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
-        Object[] items = TestUtil.toObjects(json, options, null);
+        Object[] items = TestUtil.toJava(json, options).asClass(null);
 
         // assert
         TimeZone actual = (TimeZone) items[0];
@@ -213,7 +213,7 @@ public class TimeZoneTests
         String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);
 
-        Object[] actual = TestUtil.toObjects(json, null);
+        Object[] actual = TestUtil.toJava(json, null).asClass(null);
 
         // assert
         assertThat(json)
@@ -240,7 +240,7 @@ public class TimeZoneTests
     void testTimezone_readingJsonWithOldFormat_stillWorks(String fileName, String expectedTimeZone) throws Exception
     {
         String json = ClassUtilities.loadResourceAsString("timezone/" + fileName);
-        TimeZone actual = TestUtil.toObjects(json, null);
+        TimeZone actual = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(actual.getID()).isEqualTo(expectedTimeZone);
     }
@@ -253,7 +253,7 @@ public class TimeZoneTests
         String json = TestUtil.toJson(initial);
 
         TestUtil.printLine("json=" + json);
-        GenericSubObject actual = TestUtil.toObjects(json, null);
+        GenericSubObject actual = TestUtil.toJava(json, null).asClass(null);
         assertThat(actual.getObject()).isEqualTo(initial.getObject());
     }
 
@@ -267,7 +267,7 @@ public class TimeZoneTests
         String json = TestUtil.toJson(expected);
 
         TestUtil.printLine("json=" + json);
-        TimeZoneTests.NestedOnce actual = TestUtil.toObjects(json, null);
+        TimeZoneTests.NestedOnce actual = TestUtil.toJava(json, null).asClass(null);
 
         // assert
         assertThat(actual.getTimeZone()).isEqualTo(expected.getTimeZone());
@@ -283,7 +283,7 @@ public class TimeZoneTests
         // act
         String json = TestUtil.toJson(list);
 
-        List<TimeZone> actual = TestUtil.toObjects(json, null);
+        List<TimeZone> actual = TestUtil.toJava(json, null).asClass(null);
 
         // assert
         assertThat(json).doesNotContain("@id").doesNotContain("@ref");
@@ -306,7 +306,7 @@ public class TimeZoneTests
         // act
         String json = TestUtil.toJson(expected);
 
-        NestedTwice actual = (NestedTwice)TestUtil.toObjects(json, null);
+        NestedTwice actual = (NestedTwice)TestUtil.toJava(json, null).asClass(null);
 
         // assert
         assertThat(expected.getOne()).isEqualTo(actual.getOne());

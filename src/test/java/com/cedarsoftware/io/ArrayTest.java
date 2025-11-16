@@ -59,7 +59,7 @@ class ArrayTest
         String json = TestUtil.toJson(obj);
         TestUtil.printLine(json);
 
-        ManyArrays root = TestUtil.toObjects(json, null);
+        ManyArrays root = TestUtil.toJava(json, null).asClass(null);
         assert deepEquals(obj, root);
         assertArray(root);
     }
@@ -458,11 +458,11 @@ class ArrayTest
         Object[] two = new Object[]{objs, "bella", objs};
         String json0 = TestUtil.toJson(two);
 
-        Object[] array = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object[] array = TestUtil.toMaps(json0, null).asClass(null);
         String json1 = TestUtil.toJson(array);
 
         // Read back into typed Java objects, the Maps of Maps versus what was dumped out
-        Object[] result = TestUtil.toObjects(json1, null);
+        Object[] result = TestUtil.toJava(json1, null).asClass(null);
         assertEquals(3, result.length);
         Object[] arr1 = (Object[]) result[0];
         assertEquals(11, arr1.length);
@@ -491,7 +491,7 @@ class ArrayTest
         json0 = TestUtil.toJson(ta);
         TestUtil.printLine("json0=" + json0);
 
-        Map map = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Map map = TestUtil.toMaps(json0, null).asClass(null);
         json1 = TestUtil.toJson(map);
         TestUtil.printLine("json1=" + json1);
 
@@ -609,7 +609,7 @@ class ArrayTest
         String json0 = TestUtil.toJson(foo);
         TestUtil.printLine("json0=" + json0);
 
-        Object array = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object array = TestUtil.toMaps(json0, null).asClass(null);
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
         assertEquals(json0, json1);
@@ -622,7 +622,7 @@ class ArrayTest
         String json0 = TestUtil.toJson(empty);
         TestUtil.printLine("json0=" + json0);
 
-        empty = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        empty = TestUtil.toMaps(json0, null).asClass(null);
         assertNotNull(empty);
         assertNotNull(empty);
         assertEquals(0, empty.length);
@@ -635,7 +635,7 @@ class ArrayTest
         json0 = TestUtil.toJson(list);
         TestUtil.printLine("json0=" + json0);
 
-        list = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        list = TestUtil.toMaps(json0, null).asClass(null);
         assertNotNull(list);
         assertEquals(2, list.length);
         JsonObject e1 = (JsonObject) list[0];
@@ -655,11 +655,11 @@ class ArrayTest
         Object[] objs = new Object[]{strs, "a", strs};
         String json0 = TestUtil.toJson(objs);
         TestUtil.printLine("json0=" + json0);
-        Object array = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object array = TestUtil.toMaps(json0, null).asClass(null);
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
 
-        Object[] result = TestUtil.toObjects(json1, null);
+        Object[] result = TestUtil.toJava(json1, null).asClass(null);
         assertEquals(3, result.length);
         assertSame(result[0], result[2]);
         assertEquals("a", result[1]);
@@ -681,12 +681,12 @@ class ArrayTest
         testArray.init();
         String json0 = TestUtil.toJson(testArray);
         TestUtil.printLine("json0=" + json0);
-        Map testArray2 = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Map testArray2 = TestUtil.toMaps(json0, null).asClass(null);
 
         String json1 = TestUtil.toJson(testArray2);
         TestUtil.printLine("json1=" + json1);
 
-        ManyArrays testArray3 = TestUtil.toObjects(json1, null);
+        ManyArrays testArray3 = TestUtil.toJava(json1, null).asClass(null);
         assertArray(testArray3);// Re-written from Map of Maps and re-loaded correctly
         assertEquals(json0, json1);
     }
@@ -698,7 +698,7 @@ class ArrayTest
         String json0 = TestUtil.toJson(empty);
         TestUtil.printLine("json0=" + json0);
 
-        Map m = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Map m = TestUtil.toMaps(json0, null).asClass(null);
         assertTrue(m.isEmpty());
 
         String json1 = TestUtil.toJson(m);
@@ -714,7 +714,7 @@ class ArrayTest
         WriteOptions options = new WriteOptionsBuilder().showTypeInfoAlways().build();
 
         String json0 = TestUtil.toJson(ta, options);
-        ManyArrays thatTa = TestUtil.toObjects(json0, null);
+        ManyArrays thatTa = TestUtil.toJava(json0, null).asClass(null);
         assertTrue(deepEquals(ta, thatTa));
         String json1 = TestUtil.toJson(ta);
         TestUtil.printLine("json0 = " + json0);
@@ -727,7 +727,7 @@ class ArrayTest
     {
         List<String> strs = new ArrayList<>(Arrays.asList("alpha", "bravo", "charlie"));
         String json = TestUtil.toJson(strs);
-        List<String> foo = TestUtil.toObjects(json, null);
+        List<String> foo = TestUtil.toJava(json, null).asClass(null);
         assertEquals(3, foo.size());
         assertEquals("alpha", foo.get(0));
         assertEquals("charlie", foo.get(2));
@@ -737,7 +737,7 @@ class ArrayTest
     void testBadArray()
     {
         String json = "[1, 10, 100,]";
-        Object[] array = TestUtil.toObjects(json, null);
+        Object[] array = TestUtil.toJava(json, null).asClass(null);
         assertEquals(3, array.length);
         assertEquals(array[0], 1L);
         assertEquals(array[1], 10L);
@@ -762,7 +762,7 @@ class ArrayTest
     @ParameterizedTest
     @MethodSource("charArrayParams")
     void testJsonString_toCharArray(char[] expected, String test) {
-        char[] chars = TestUtil.toObjects(test, char[].class);
+        char[] chars = TestUtil.toJava(test, null).asClass(char[].class);
         assertThat(chars).isEqualTo(expected);
     }
 
@@ -791,7 +791,7 @@ class ArrayTest
         String json0 = TestUtil.toJson(cat);
         TestUtil.printLine(json0);
 
-        CharArrayTest cat2 = TestUtil.toObjects(json0, null);
+        CharArrayTest cat2 = TestUtil.toJava(json0, null).asClass(null);
         Character[] chars_a = cat2.chars_a;
         assertEquals(chars_a.length, 3);
         assertEquals(chars_a[0], 'a');
@@ -807,7 +807,7 @@ class ArrayTest
         String json1 = TestUtil.toJson(cat);
         TestUtil.printLine(json1);
 
-        cat2 = TestUtil.toObjects(json0, null);
+        cat2 = TestUtil.toJava(json0, null).asClass(null);
         chars_a = cat2.chars_a;
         assertEquals(chars_a.length, 3);
         assertEquals(chars_a[0], 'a');
@@ -825,7 +825,7 @@ class ArrayTest
     void testEmptyArray()
     {
         String json = "{\"@type\":\"[Ljava.lang.String;\"}";
-        String[] s = TestUtil.toObjects(json, null);
+        String[] s = TestUtil.toJava(json, null).asClass(null);
         assertNull(s);
     }
 
@@ -849,7 +849,7 @@ class ArrayTest
         }
 
         String json = TestUtil.toJson(x);
-        int[][][][] y = TestUtil.toObjects(json, null);
+        int[][][][] y = TestUtil.toJava(json, null).asClass(null);
         
         for (int a = 0; a < 2 ; a++)
         {
@@ -882,7 +882,7 @@ class ArrayTest
         }
 
         json = TestUtil.toJson(xx);
-        Integer[][][][] yy = TestUtil.toObjects(json, null);
+        Integer[][][][] yy = TestUtil.toJava(json, null).asClass(null);
 
         for (int a = 0; a < 2 ; a++)
         {
@@ -906,7 +906,7 @@ class ArrayTest
         String s = "dogs";
         String json = TestUtil.toJson(new Object[]{s, s});
         TestUtil.printLine("json = " + json);
-        Object[] o = TestUtil.toObjects(json, null);
+        Object[] o = TestUtil.toJava(json, null).asClass(null);
         assertEquals(2, o.length);
         assertEquals("dogs", o[0]);
         assertSame(o[0], o[1]); // Strings are LRU cached (instance folding).
@@ -918,7 +918,7 @@ class ArrayTest
         String s = "dogs";
         String json = TestUtil.toJson(new String[]{s, s});
         TestUtil.printLine("json = " + json);
-        String[] o = TestUtil.toObjects(json, null);
+        String[] o = TestUtil.toJava(json, null).asClass(null);
         assertEquals(2, o.length);
         assertEquals("dogs", o[0]);
         assertSame(o[0], o[1]); // Strings are LRU Cached (instance folding).
@@ -931,7 +931,7 @@ class ArrayTest
         Object[] refArray = new Object[]{array};
         String json = TestUtil.toJson(refArray);
         TestUtil.printLine("json=" + json);
-        Object[] oa = TestUtil.toObjects(json, null);
+        Object[] oa = TestUtil.toJava(json, null).asClass(null);
         assertEquals(oa[0].getClass(), String[].class);
         assertEquals(0, ((String[]) oa[0]).length);
     }
@@ -939,7 +939,7 @@ class ArrayTest
     @Test
     void testUntypedArray()
     {
-        Object[] args = TestUtil.toObjects("[\"string\",17, null, true, false, [], -1273123,32131, 1e6, 3.14159, -9223372036854775808, 9223372036854775807]", null);
+        Object[] args = TestUtil.toJava("[\"string\",17, null, true, false, [], -1273123,32131, 1e6, 3.14159, -9223372036854775808, 9223372036854775807]", null).asClass(null);
 
         for (int i = 0; i < args.length; i++)
         {
@@ -980,7 +980,7 @@ class ArrayTest
         // This prints: "Numbers ArrayList = [10, 20, 30, 40]. Numbers to json = [10,20,30,40]"
 
         Object[] restoredNumbers;
-        restoredNumbers = TestUtil.toObjects(json, null);
+        restoredNumbers = TestUtil.toJava(json, null).asClass(null);
         assert deepEquals(Arrays.asList(restoredNumbers), numbers);
     }
 
@@ -993,18 +993,18 @@ class ArrayTest
         TestUtil.printLine(testOut);
 
         // The line below blew-up when the @i was being written by JsonWriter instead of @e in shorthand.
-        Object object = TestUtil.toObjects(testOut, null);
+        Object object = TestUtil.toJava(testOut, null).asClass(null);
     }
 
     @Test
     void testEmptyArrayAsObjectArrayAndList()
     {
         String json = "[]";
-        Object[] empty = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), Object[].class);
+        Object[] empty = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(Object[].class);
         assertNotNull(empty);
         assertEquals(0, empty.length);
 
-        List<?> emptyList = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), ArrayList.class);
+        List<?> emptyList = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(ArrayList.class);
         assertNotNull(emptyList);
         assertTrue(emptyList.isEmpty());
     }
@@ -1013,7 +1013,7 @@ class ArrayTest
     void testEmptySubArray()
     {
         String json = "[[], []]";
-        Object[] outer = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), Object[].class);
+        Object[] outer = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(Object[].class);
         assertEquals(2, outer.length);
 
         Object[] empty1 = (Object[])outer[0];
@@ -1037,11 +1037,11 @@ class ArrayTest
         String json0 = TestUtil.toJson(ta, new WriteOptionsBuilder().build());
 
         // First convert to Maps
-        Object objAsMap = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object objAsMap = TestUtil.toMaps(json0, null).asClass(null);
         String json1 = TestUtil.toJson(objAsMap);
 
         // Then convert back to objects
-        Object obj = TestUtil.toObjects(json1, new ReadOptionsBuilder().build(), null);
+        Object obj = TestUtil.toJava(json1, new ReadOptionsBuilder().build()).asClass(null);
         String json2 = TestUtil.toJson(obj);
 
         assertEquals(json0, json1);
@@ -1188,11 +1188,11 @@ class ArrayTest
         String longJson = TestUtil.toJson(longArray, longOptions);
         assertThat(longJson).isEqualTo(variantJson);
 
-        Collection<String> col = TestUtil.toObjects(longJson, ReadOptionsBuilder.getDefaultReadOptions(), Set.class);
+        Collection<String> col = TestUtil.toJava(longJson, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Set.class);
         assert col.size() == 3;
         assert col.containsAll(Arrays.asList("10", "20", "30"));
 
-        String[] values = TestUtil.toObjects(longJson, ReadOptionsBuilder.getDefaultReadOptions(), String[].class);
+        String[] values = TestUtil.toJava(longJson, ReadOptionsBuilder.getDefaultReadOptions()).asClass(String[].class);
         assert values.length == 3;
         assert values[0].equals("10");
         assert values[1].equals("20");

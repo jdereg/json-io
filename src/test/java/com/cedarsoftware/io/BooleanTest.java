@@ -67,7 +67,7 @@ class BooleanTest
         ManyBooleans test = new ManyBooleans();
         String json = TestUtil.toJson(test);
         TestUtil.printLine("json = " + json);
-        ManyBooleans that = TestUtil.toObjects(json, null);
+        ManyBooleans that = TestUtil.toJava(json, null).asClass(null);
 
         assertTrue(that._arrayElement);
         assertEquals(true, that._polyRefTarget);

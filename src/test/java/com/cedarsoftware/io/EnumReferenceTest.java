@@ -25,7 +25,7 @@ class EnumReferenceTest {
         assertThat(json).doesNotContain(ID);
         assertThat(json).doesNotContain(REF);
 
-        TestEnum[] target = TestUtil.toObjects(json, null);
+        TestEnum[] target = TestUtil.toJava(json, null).asClass(null);
         assertThat(target).hasSize(2);
         assertThat(target[0]).isEqualTo(TestEnum.FOO);
         assertThat(target[1]).isEqualTo(TestEnum.FOO);
@@ -51,7 +51,7 @@ class EnumReferenceTest {
         assertThat(json).doesNotContain(ID);
         assertThat(json).doesNotContain(REF);
 
-        EnumContainer target = TestUtil.toObjects(json, null);
+        EnumContainer target = TestUtil.toJava(json, null).asClass(null);
 
         // Verify contents
         assertThat(target.list.get(0)).isEqualTo(TestEnum.BAR);
@@ -79,7 +79,7 @@ class EnumReferenceTest {
         assertThat(json).doesNotContain(ID);
         assertThat(json).doesNotContain(REF);
 
-        ComplexObject target = TestUtil.toObjects(json, null);
+        ComplexObject target = TestUtil.toJava(json, null).asClass(null);
 
         // Verify all enum instances are equal
         assertThat(target.directEnum).isEqualTo(TestEnum.BAZ);

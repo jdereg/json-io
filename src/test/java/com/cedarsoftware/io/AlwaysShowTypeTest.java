@@ -30,7 +30,7 @@ class AlwaysShowTypeTest
         TestObject btc = new TestObject("Bitcoin");
         btc._other = new TestObject("Satoshi");
         String json0 = TestUtil.toJson(btc, new WriteOptionsBuilder().showTypeInfoAlways().build());
-        TestObject thatBtc = TestUtil.toObjects(json0, null);
+        TestObject thatBtc = TestUtil.toJava(json0, null).asClass(null);
         assertTrue(DeepEquals.deepEquals(btc, thatBtc));
         String json1 = TestUtil.toJson(btc);
         assertTrue(json0.length() > json1.length());

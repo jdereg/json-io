@@ -110,7 +110,7 @@ public class InnerCollectionsTest
         map.put("c", "charlie");
         String json = TestUtil.toJson(map.keySet());
 
-        Set set = TestUtil.toObjects(json, null);
+        Set set = TestUtil.toJava(json, null).asClass(null);
         assert set.size() == 3;
         assert set.contains("a");
         assert set.contains("b");
@@ -124,7 +124,7 @@ public class InnerCollectionsTest
         map.put("c", "charlie");
         String json = TestUtil.toJson(map.values());
 
-        List list = TestUtil.toObjects(json, null);
+        List list = TestUtil.toJava(json, null).asClass(null);
         assert list.size() == 3;
         assert list.contains("alpha");
         assert list.contains("beta");

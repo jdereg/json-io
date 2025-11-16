@@ -35,7 +35,7 @@ public class OverflowTest
     @Test
     public void testOverflow()
     {
-        Throwable thrown = assertThrows(JsonIoException.class,() -> { TestUtil.toObjects(TOO_DEEP_DOC, null); });
+        Throwable thrown = assertThrows(JsonIoException.class,() -> { TestUtil.toJava(TOO_DEEP_DOC, null).asClass(null); });
         Assertions.assertTrue(thrown.getMessage().contains("Maximum parsing depth exceeded"));
     }
 

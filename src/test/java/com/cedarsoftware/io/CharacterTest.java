@@ -35,7 +35,7 @@ public class CharacterTest
         ManyCharacters test = new ManyCharacters();
         String json = TestUtil.toJson(test);
         TestUtil.printLine("json = " + json);
-        ManyCharacters that = TestUtil.toObjects(json, null);
+        ManyCharacters that = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals((char) that._arrayElement, (char) 1);
         assertEquals(that._polyRefTarget, (char) 71);
@@ -72,7 +72,7 @@ public class CharacterTest
     void testFunnyChars()
     {
         String json = "{\"@type\":\"[C\",\"@items\":[\"a\\t\\u0004\"]}";
-        char[] chars = TestUtil.toObjects(json, null);
+        char[] chars = TestUtil.toJava(json, null).asClass(null);
         assertEquals(chars.length, 3);
         assertEquals(chars[0], 'a');
         assertEquals(chars[1], '\t');
@@ -83,7 +83,7 @@ public class CharacterTest
     void testQuoteAsCharacterValue()
     {   // { "@type": "char", "value": "\\"" }
         String json = "{\"@type\":\"char\",\"value\": \"\\\"\"}";
-        Character ch = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), char.class);
+        Character ch = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(char.class);
         assert ch == '"';
 
     }

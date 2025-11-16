@@ -16,7 +16,7 @@ class PatternTest {
     void testPatternStandalone() {
         Pattern expected = Pattern.compile("ab.*c");
         String json = TestUtil.toJson(expected);
-        Pattern actual = TestUtil.toObjects(json, null);
+        Pattern actual = TestUtil.toJava(json, null).asClass(null);
         assertEquals(expected.pattern(), actual.pattern());
         assertEquals(expected.flags(), actual.flags());
     }
@@ -26,7 +26,7 @@ class PatternTest {
         Pattern pattern = Pattern.compile("[A-Z]+\\d?");
         Pattern[] array = new Pattern[]{ pattern };
         String json = TestUtil.toJson(array);
-        Pattern[] actual = TestUtil.toObjects(json, null);
+        Pattern[] actual = TestUtil.toJava(json, null).asClass(null);
         assertEquals(1, actual.length);
         assertEquals(pattern.pattern(), actual[0].pattern());
         assertEquals(pattern.flags(), actual[0].flags());
@@ -38,7 +38,7 @@ class PatternTest {
         Pattern pattern = Pattern.compile("foo.*");
         Map<String, Pattern> map = mapOf("p", pattern);
         String json = TestUtil.toJson(map);
-        Map<String, Pattern> actual = TestUtil.toObjects(json, null);
+        Map<String, Pattern> actual = TestUtil.toJava(json, null).asClass(null);
         assertThat(actual).hasSize(1);
         assertEquals(pattern.pattern(), actual.get("p").pattern());
     }
@@ -49,7 +49,7 @@ class PatternTest {
         Pattern pattern = Pattern.compile("foo\\d+");
         Map<Pattern, String> map = mapOf(pattern, "bar");
         String json = TestUtil.toJson(map);
-        Map<Pattern, String> actual = TestUtil.toObjects(json, null);
+        Map<Pattern, String> actual = TestUtil.toJava(json, null).asClass(null);
         assertThat(actual).hasSize(1);
         Pattern key = actual.keySet().iterator().next();
         assertEquals(pattern.pattern(), key.pattern());
@@ -60,7 +60,7 @@ class PatternTest {
         Pattern pattern = Pattern.compile("h.*");
         Object[] array = new Object[]{ pattern, pattern };
         String json = TestUtil.toJson(array);
-        Object[] actual = TestUtil.toObjects(json, null);
+        Object[] actual = TestUtil.toJava(json, null).asClass(null);
         assertSame(actual[0], actual[1]);
         Pattern result = (Pattern) actual[0];
         assertEquals(pattern.pattern(), result.pattern());

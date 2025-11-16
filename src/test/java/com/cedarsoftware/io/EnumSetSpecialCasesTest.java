@@ -39,7 +39,7 @@ class EnumSetSpecialCasesTest {
     void testEnumSet_regularEnumSetWithAllValues() {
         EnumSet<Enum64> source = EnumSet.allOf(Enum64.class);
         String json = TestUtil.toJson(source);
-        EnumSet<?> target = TestUtil.toObjects(json, null);
+        EnumSet<?> target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target)
                 .isNotNull()
@@ -55,7 +55,7 @@ class EnumSetSpecialCasesTest {
     void testEnumSet_jumboEnumSetWithAllValues() {
         EnumSet<Enum65> source = EnumSet.allOf(Enum65.class);
         String json = TestUtil.toJson(source);
-        EnumSet<?> target = TestUtil.toObjects(json, null);
+        EnumSet<?> target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target)
                 .isNotNull()
@@ -77,7 +77,7 @@ class EnumSetSpecialCasesTest {
         assertThat(json).doesNotContain("RegularEnumSet");
         assertThat(json).contains(Enum64.class.getName());
 
-        EnumSet<?> target = TestUtil.toObjects(json, null);
+        EnumSet<?> target = TestUtil.toJava(json, null).asClass(null);
 
         @SuppressWarnings("unchecked")
         EnumSet<Enum64> typed = (EnumSet<Enum64>) target;
@@ -94,7 +94,7 @@ class EnumSetSpecialCasesTest {
         assertThat(json).doesNotContain("JumboEnumSet");
         assertThat(json).contains(Enum65.class.getName());
 
-        EnumSet<?> target = TestUtil.toObjects(json, null);
+        EnumSet<?> target = TestUtil.toJava(json, null).asClass(null);
 
         @SuppressWarnings("unchecked")
         EnumSet<Enum65> typed = (EnumSet<Enum65>) target;
@@ -107,7 +107,7 @@ class EnumSetSpecialCasesTest {
         EnumSet<Enum64> source = EnumSet.of(Enum64.A00);
         String json = TestUtil.toJson(source);
 
-        EnumSet<?> target = TestUtil.toObjects(json, null);
+        EnumSet<?> target = TestUtil.toJava(json, null).asClass(null);
 
         @SuppressWarnings("unchecked")
         EnumSet<Enum64> typed = (EnumSet<Enum64>) target;
@@ -135,8 +135,8 @@ class EnumSetSpecialCasesTest {
         String compactJson = TestUtil.toJson(source, compactOptions);
 
         // Both should deserialize the same
-        EnumSet<?> prettyTarget = TestUtil.toObjects(prettyJson, null);
-        EnumSet<?> compactTarget = TestUtil.toObjects(compactJson, null);
+        EnumSet<?> prettyTarget = TestUtil.toJava(prettyJson, null).asClass(null);
+        EnumSet<?> compactTarget = TestUtil.toJava(compactJson, null).asClass(null);
 
         assertThat(prettyTarget).isEqualTo(compactTarget);
 
@@ -160,8 +160,8 @@ class EnumSetSpecialCasesTest {
         long jumboTime = System.nanoTime() - start;
 
         // Both should deserialize successfully
-        EnumSet<?> regularTarget = TestUtil.toObjects(regularJson, null);
-        EnumSet<?> jumboTarget = TestUtil.toObjects(jumboJson, null);
+        EnumSet<?> regularTarget = TestUtil.toJava(regularJson, null).asClass(null);
+        EnumSet<?> jumboTarget = TestUtil.toJava(jumboJson, null).asClass(null);
 
         assertThat(regularTarget).hasSize(64);
         assertThat(jumboTarget).hasSize(65);

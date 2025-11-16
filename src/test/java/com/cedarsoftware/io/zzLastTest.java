@@ -36,10 +36,10 @@ class zzLastTest
     {
         String json = "[\"Hello\",{\"@type\":\"Integer\",\"value\":16},16,{\"@type\":\"Byte\",\"value\":16},{\"@type\":\"Short\",\"value\":16},{\"@type\":\"ArraysAsList\",\"@items\":[\"foo\",true,{\"@type\":\"Character\",\"value\":\"a\"},{\"@type\":\"BigInteger\",\"value\":\"1\"}]}]";
         ReadOptions readOptions = new ReadOptionsBuilder().build();
-        TestUtil.toObjects(json, readOptions, Object[].class);
+        TestUtil.toJava(json, readOptions).asClass(Object[].class);
 
         ReadOptions readOptions2 = new ReadOptionsBuilder(readOptions).removeAliasTypeNameMatching("*").build();
-        assertThatThrownBy(() -> TestUtil.toObjects(json, readOptions2, Object[].class))
+        assertThatThrownBy(() -> TestUtil.toJava(json, readOptions2).asClass(Object[].class))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("Unknown type (class) 'Integer' not defined");
     }
@@ -81,11 +81,11 @@ class zzLastTest
     {
         String json = "[\"Hello\",{\"@type\":\"Integer\",\"value\":16},16,{\"@type\":\"Byte\",\"value\":16},{\"@type\":\"Short\",\"value\":16},{\"@type\":\"ArraysAsList\",\"@items\":[\"foo\",true,{\"@type\":\"Character\",\"value\":\"a\"},{\"@type\":\"BigInteger\",\"value\":\"1\"}]}]";
         ReadOptions readOptions = new ReadOptionsBuilder().build();
-        TestUtil.toObjects(json, readOptions, Object[].class);
+        TestUtil.toJava(json, readOptions).asClass(Object[].class);
 
         ReadOptionsBuilder.removePermanentAliasTypeNamesMatching("*");
         ReadOptions readOptions2 = new ReadOptionsBuilder().build();
-        assertThatThrownBy(() -> TestUtil.toObjects(json, readOptions2, Object[].class))
+        assertThatThrownBy(() -> TestUtil.toJava(json, readOptions2).asClass(Object[].class))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("Unknown type (class) 'Integer' not defined");
     }

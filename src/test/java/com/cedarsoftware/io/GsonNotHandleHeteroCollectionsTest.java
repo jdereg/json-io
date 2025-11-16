@@ -59,7 +59,7 @@ public class GsonNotHandleHeteroCollectionsTest
 
         // ---------------------------- json-io maintains types ----------------------------
         json = TestUtil.toJson(list);
-        newList = TestUtil.toObjects(json, null);
+        newList = TestUtil.toJava(json, null).asClass(null);
 
         assert newList.get(0) instanceof Integer;
         assert newList.get(1) instanceof Long;

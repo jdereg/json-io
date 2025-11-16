@@ -41,14 +41,14 @@ class EnumSetFormatTest {
         EnumSet<SimpleEnum> simpleSource = EnumSet.of(SimpleEnum.A, SimpleEnum.B);
         String simpleJson = TestUtil.toJson(simpleSource);
 
-        EnumSet<?> simpleTarget = TestUtil.toObjects(simpleJson, null);
+        EnumSet<?> simpleTarget = TestUtil.toJava(simpleJson, null).asClass(null);
         assertThat(simpleTarget).isEqualTo(simpleSource);
 
         // Test complex enum format (>2 fields)
         EnumSet<VerboseEnum> verboseSource = EnumSet.of(VerboseEnum.TEST);
         String verboseJson = TestUtil.toJson(verboseSource);
 
-        EnumSet<?> verboseTarget = TestUtil.toObjects(verboseJson, null);
+        EnumSet<?> verboseTarget = TestUtil.toJava(verboseJson, null).asClass(null);
         assertThat(verboseTarget).isEqualTo(verboseSource);
 
         // Verify the field values are maintained

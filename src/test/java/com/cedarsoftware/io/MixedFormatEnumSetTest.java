@@ -48,7 +48,7 @@ class MixedFormatEnumSetTest {
         // Write it out to see the format
         String json = TestUtil.toJson(source);
 
-        EnumSet<?> target = TestUtil.toObjects(json, null);
+        EnumSet<?> target = TestUtil.toJava(json, null).asClass(null);
 
         @SuppressWarnings("unchecked")
         EnumSet<ComplexEnum> typed = (EnumSet<ComplexEnum>) target;
@@ -86,9 +86,9 @@ class MixedFormatEnumSetTest {
         String enumNameFormat = "{\"" + TYPE + "\":\"" + ComplexEnum.class.getName() + "\", \"Enum.name\":\"TWO\"}";
         String valueFormat = "{\"" + TYPE + "\":\"" + ComplexEnum.class.getName() + "\", \"value\":\"THREE\"}";
 
-        ComplexEnum one = TestUtil.toObjects(nameFormat, null);
-        ComplexEnum two = TestUtil.toObjects(enumNameFormat, null);
-        ComplexEnum three = TestUtil.toObjects(valueFormat, null);
+        ComplexEnum one = TestUtil.toJava(nameFormat, null).asClass(null);
+        ComplexEnum two = TestUtil.toJava(enumNameFormat, null).asClass(null);
+        ComplexEnum three = TestUtil.toJava(valueFormat, null).asClass(null);
 
         assertThat(one).isEqualTo(ComplexEnum.ONE);
         assertThat(two).isEqualTo(ComplexEnum.TWO);
@@ -107,9 +107,9 @@ class MixedFormatEnumSetTest {
 
         // Deserialize and verify
         @SuppressWarnings("unchecked")
-        EnumSet<SimpleEnum> simpleTarget = TestUtil.toObjects(simpleJson, null);
+        EnumSet<SimpleEnum> simpleTarget = TestUtil.toJava(simpleJson, null).asClass(null);
         @SuppressWarnings("unchecked")
-        EnumSet<ComplexEnum> complexTarget = TestUtil.toObjects(complexJson, null);
+        EnumSet<ComplexEnum> complexTarget = TestUtil.toJava(complexJson, null).asClass(null);
 
         assertThat(simpleTarget).containsExactly(SimpleEnum.A, SimpleEnum.B);
         assertThat(complexTarget).containsExactly(ComplexEnum.ONE, ComplexEnum.TWO);
@@ -124,7 +124,7 @@ class MixedFormatEnumSetTest {
         String json = TestUtil.toJson(source);
 
         @SuppressWarnings("unchecked")
-        EnumSet<ComplexEnum> target = TestUtil.toObjects(json, null);
+        EnumSet<ComplexEnum> target = TestUtil.toJava(json, null).asClass(null);
 
         // Verify regular properties
         assertThat(target).containsExactly(ComplexEnum.ONE, ComplexEnum.TWO);
@@ -162,9 +162,9 @@ class MixedFormatEnumSetTest {
         
         // Both formats should deserialize correctly
         @SuppressWarnings("unchecked")
-        EnumSet<ComplexEnum> targetWithOptions = TestUtil.toObjects(jsonWithOptions, null);
+        EnumSet<ComplexEnum> targetWithOptions = TestUtil.toJava(jsonWithOptions, null).asClass(null);
         @SuppressWarnings("unchecked")
-        EnumSet<ComplexEnum> targetDefault = TestUtil.toObjects(jsonDefault, null);
+        EnumSet<ComplexEnum> targetDefault = TestUtil.toJava(jsonDefault, null).asClass(null);
 
         assertThat(targetWithOptions)
                 .containsExactly(ComplexEnum.TWO, ComplexEnum.THREE)
@@ -191,9 +191,9 @@ class MixedFormatEnumSetTest {
 
         // Both should deserialize to equivalent EnumSets
         @SuppressWarnings("unchecked")
-        EnumSet<ComplexEnum> legacyTarget = TestUtil.toObjects(legacyJson, null);
+        EnumSet<ComplexEnum> legacyTarget = TestUtil.toJava(legacyJson, null).asClass(null);
         @SuppressWarnings("unchecked")
-        EnumSet<ComplexEnum> newTarget = TestUtil.toObjects(newJson, null);
+        EnumSet<ComplexEnum> newTarget = TestUtil.toJava(newJson, null).asClass(null);
 
         assertThat(legacyTarget)
                 .isEqualTo(newTarget)

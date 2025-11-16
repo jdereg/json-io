@@ -72,7 +72,7 @@ class URLTest
         String json = TestUtil.toJson(url);
 
         TestUtil.printLine("json=" + json);
-        Object read = TestUtil.toObjects(json, null);
+        Object read = TestUtil.toJava(json, null).asClass(null);
         assertThat(read).isEqualTo(url);
     }
 
@@ -101,7 +101,7 @@ class URLTest
         String json = TestUtil.toJson(initial);
 
         TestUtil.printLine("json=" + json);
-        GenericSubObject actual = TestUtil.toObjects(json, null);
+        GenericSubObject actual = TestUtil.toJava(json, null).asClass(null);
         assertThat(actual.getObject()).isEqualTo(initial.getObject());
     }
 
@@ -113,7 +113,7 @@ class URLTest
         assertThatJsonIsNewStyle(json);
 
         TestUtil.printLine("json=" + json);
-        NestedUrl actual = TestUtil.toObjects(json, null);
+        NestedUrl actual = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(actual.getUrl()).isEqualTo(initial.getUrl());
     }
@@ -124,7 +124,7 @@ class URLTest
         List<URL> list = listOf(url, url, url, url, url);
         String json = TestUtil.toJson(list);
 
-        List<URL> actual = TestUtil.toObjects(json, null);
+        List<URL> actual = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(actual).containsAll(list);
     }
@@ -135,7 +135,7 @@ class URLTest
 
         String json = TestUtil.toJson(expected);
 
-        NestedTwice actual = TestUtil.toObjects(json, null);
+        NestedTwice actual = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(expected.getUrl1()).isEqualTo(actual.getUrl1());
         assertThat(expected.getUrl2()).isEqualTo(actual.getUrl2());

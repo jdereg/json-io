@@ -79,7 +79,7 @@ class TransientTest
         TestUtil.printLine("json = " + json);
         assertFalse(json.contains("fullname"));
 
-        person = (Transient1) TestUtil.toObjects(json, null);
+        person = (Transient1) TestUtil.toJava(json, null).asClass(null);
         assertNull(person.fullname);
     }
 
@@ -94,7 +94,7 @@ class TransientTest
         String json = TestUtil.toJson(person, options);
         assert json.contains("fullname");
 
-        person = TestUtil.toObjects(json, null);
+        person = TestUtil.toJava(json, null).asClass(null);
         assertEquals("John DeRegnaucourt", person.fullname);
     }
 
@@ -115,7 +115,7 @@ class TransientTest
         TestUtil.printLine("json = " + json);
         assertFalse(json.contains("backup"));
 
-        trans = TestUtil.toObjects(json, null);
+        trans = TestUtil.toJava(json, null).asClass(null);
         assertEquals(trans.main._name, "Roswell");
     }
 }

@@ -51,7 +51,7 @@ class JsonReaderHandleObjectRootTest {
     void treeSetSubstitutionWhenJsonMode() {
         String json = "{\"@type\":\"java.util.TreeSet\",\"@items\":[1,2,3]}";
         ReadOptions read = new ReadOptionsBuilder().returnAsJsonObjects().build();
-        Object result = TestUtil.toObjects(json, read, null);
+        Object result = TestUtil.toJava(json, read).asClass(null);
         assertTrue(result instanceof JsonObject);
         JsonObject jo = (JsonObject) result;
         assertTrue(Set.class.isAssignableFrom(TypeUtilities.getRawClass(jo.getType())));
@@ -62,7 +62,7 @@ class JsonReaderHandleObjectRootTest {
     @Test
     void assignableRootTypeReturnsGraph() {
         String json = "{\"@type\":\"java.util.concurrent.atomic.AtomicInteger\",\"value\":7}";
-        Number number = TestUtil.toObjects(json, Number.class);
+        Number number = TestUtil.toJava(json, null).asClass(Number.class);
         assertTrue(number instanceof AtomicInteger);
         assertEquals(7, ((AtomicInteger) number).get());
     }
@@ -70,14 +70,14 @@ class JsonReaderHandleObjectRootTest {
     @Test
     void convertibleRootTypeReturnsConverted() {
         String json = "{\"@type\":\"java.util.concurrent.atomic.AtomicInteger\",\"value\":5}";
-        Integer value = TestUtil.toObjects(json, Integer.class);
+        Integer value = TestUtil.toJava(json, null).asClass(Integer.class);
         assertEquals(Integer.valueOf(5), value);
     }
 
     @Test
     void incompatibleRootTypeThrows() {
         String json = "{\"@type\":\"java.util.concurrent.atomic.AtomicInteger\",\"value\":5}";
-        assertThrows(JsonIoException.class, () -> TestUtil.toObjects(json, List.class));
+        assertThrows(JsonIoException.class, () -> TestUtil.toJava(json, null).asClass(List.class));
     }
 
     @Test

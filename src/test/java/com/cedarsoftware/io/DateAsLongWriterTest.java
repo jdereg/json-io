@@ -27,7 +27,7 @@ class DateAsLongWriterTest
         assertTrue(json.contains("\"util\":" + holder.util.getTime()));
         assertTrue(json.contains("\"sql\":\"" + holder.sql.toLocalDate().toString() + "\""));
 
-        DateHolder result = TestUtil.toObjects(json, DateHolder.class);
+        DateHolder result = TestUtil.toJava(json, null).asClass(DateHolder.class);
         assertEquals(holder.util.getTime(), result.util.getTime());
         assertEquals(holder.sql, result.sql);
     }

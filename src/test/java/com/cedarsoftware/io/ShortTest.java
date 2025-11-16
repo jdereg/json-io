@@ -35,7 +35,7 @@ public class ShortTest
         ManyShorts test = new ManyShorts();
         String json = TestUtil.toJson(test);
         TestUtil.printLine("json = " + json);
-        ManyShorts that = TestUtil.toObjects(json, null);
+        ManyShorts that = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals((short) that._arrayElement, (short) -1);
         assertEquals(that._polyRefTarget, (short) 710);

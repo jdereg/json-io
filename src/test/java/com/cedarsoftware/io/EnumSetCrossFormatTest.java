@@ -34,7 +34,7 @@ class EnumSetCrossFormatTest {
         // Create container with both formats
         String json = TestUtil.toJson(source);
 
-        MultiFormatContainer target = TestUtil.toObjects(json, null);
+        MultiFormatContainer target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target.newFormat).containsExactly(FirstEnum.A1, FirstEnum.B1);
         assertThat(target.legacyFormat).containsExactly(SecondEnum.X2, SecondEnum.Y2);
@@ -51,7 +51,7 @@ class EnumSetCrossFormatTest {
 
         String json = TestUtil.toJson(source);
 
-        List<Object> target = TestUtil.toObjects(json, null);
+        List<Object> target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target)
                 .hasSize(3)
@@ -79,13 +79,13 @@ class EnumSetCrossFormatTest {
         String json1 = TestUtil.toJson(source);
 
         @SuppressWarnings("unchecked")
-        EnumSet<FirstEnum> intermediate = TestUtil.toObjects(json1, null);
+        EnumSet<FirstEnum> intermediate = TestUtil.toJava(json1, null).asClass(null);
 
         // Second round - write and read again
         String json2 = TestUtil.toJson(intermediate);
 
         @SuppressWarnings("unchecked")
-        EnumSet<FirstEnum> target = TestUtil.toObjects(json2, null);
+        EnumSet<FirstEnum> target = TestUtil.toJava(json2, null).asClass(null);
 
         // All three objects should be equal
         assertThat(target)
@@ -116,7 +116,7 @@ class EnumSetCrossFormatTest {
 
         String json = TestUtil.toJson(source);
 
-        Map<EnumSet<FirstEnum>, List<EnumSet<SecondEnum>>> target = TestUtil.toObjects(json, null);
+        Map<EnumSet<FirstEnum>, List<EnumSet<SecondEnum>>> target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target)
                 .hasSize(2)
@@ -142,7 +142,7 @@ class EnumSetCrossFormatTest {
                 "  \"@items\": [\"A1\", \"B1\"]\n" +
                 "}";
 
-        EnumSet<?> result = TestUtil.toObjects(oldJson, null);
+        EnumSet<?> result = TestUtil.toJava(oldJson, null).asClass(null);
 
         @SuppressWarnings("unchecked")
         EnumSet<FirstEnum> typed = (EnumSet<FirstEnum>) result;
@@ -154,7 +154,7 @@ class EnumSetCrossFormatTest {
 
         // Should be able to read it back in new format
         @SuppressWarnings("unchecked")
-        EnumSet<FirstEnum> reconverted = TestUtil.toObjects(newJson, null);
+        EnumSet<FirstEnum> reconverted = TestUtil.toJava(newJson, null).asClass(null);
         assertThat(reconverted).containsExactly(FirstEnum.A1, FirstEnum.B1);
     }
 }

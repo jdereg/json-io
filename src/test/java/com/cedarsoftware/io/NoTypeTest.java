@@ -53,7 +53,7 @@ public class NoTypeTest
     void personTestToPerson()
     {
         String json = ClassUtilities.loadResourceAsString("noTypes/person.json");
-        Person person = TestUtil.toObjects(json, Person.class);
+        Person person = TestUtil.toJava(json, null).asClass(Person.class);
         assert person.name.equals("Joe");
         assert person.age == 50;
         assert person.salary == 225000.0d;
@@ -64,7 +64,7 @@ public class NoTypeTest
     void personTestToPersonWithReadOptionJavaObjects()
     {
         String json = ClassUtilities.loadResourceAsString("noTypes/person.json");
-        String msg = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), Person.class); }).getMessage();
+        String msg = assertThrows(JsonIoException.class, () -> TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(Person.class)).getMessage();
         assert msg.contains("isReturningJsonObjects");
     }
 
@@ -72,7 +72,7 @@ public class NoTypeTest
     void personTestToMap()
     {
         String json = ClassUtilities.loadResourceAsString("noTypes/person.json");
-        Map<String, Object> person = TestUtil.toObjects(json, Map.class);
+        Map<String, Object> person = TestUtil.toJava(json, null).asClass(Map.class);
         assert person.get("name").equals("Joe");
         assert (long)person.get("age") == 50L;  // Comes in as Long because all JSON integer values are long
         assert (double)person.get("salary") == 225000.0d;
@@ -83,7 +83,7 @@ public class NoTypeTest
     void personsTestWithPersonArrayRoot()
     {
         String json = ClassUtilities.loadResourceAsString("noTypes/persons.json");
-        Person[] persons = TestUtil.toObjects(json, Person[].class);
+        Person[] persons = TestUtil.toJava(json, null).asClass(Person[].class);
         
         assert persons[0].name.equals("Joe");
         assert persons[0].age == 50;
@@ -102,7 +102,7 @@ public class NoTypeTest
         String json = ClassUtilities.loadResourceAsString("noTypes/persons.json");
 
         try {
-            Object o = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), Person[].class);
+            Object o = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(Person[].class);
             fail();
         } catch (JsonIoException e) {
             assert e.getMessage().contains("isReturningJsonObjects");
@@ -113,7 +113,7 @@ public class NoTypeTest
     void personsTestWithNullRoot()
     {
         String json = ClassUtilities.loadResourceAsString("noTypes/persons.json");
-        Object[] persons = TestUtil.toObjects(json, null);
+        Object[] persons = TestUtil.toJava(json, null).asClass(null);
         Map<String, Object> joe = (Map<String, Object>)persons[0];
         Map<String, Object> jane = (Map<String, Object>) persons[1];
 
@@ -132,7 +132,7 @@ public class NoTypeTest
     void personsTestWithMapRoot()
     {
         String json = ClassUtilities.loadResourceAsString("noTypes/persons.json");
-        Exception e = assertThrows(JsonIoException.class, () -> { Map x = TestUtil.toObjects(json, Map.class); });
+        Exception e = assertThrows(JsonIoException.class, () -> { Map x = TestUtil.toJava(json, null).asClass(Map.class); });
         assert e.getCause() instanceof IllegalArgumentException;
     }
 
@@ -141,21 +141,21 @@ public class NoTypeTest
         String json = "[\"foo\", null, \"baz\"]";
 
         // String[]
-        String[] strings = TestUtil.toObjects(json, String[].class);
+        String[] strings = TestUtil.toJava(json, null).asClass(String[].class);
         assert strings.length == 3;
         assert strings[0].equals("foo");
         assert strings[1] == null;
         assert strings[2].equals("baz");
 
         // Implied Object[]
-        Object[] array = TestUtil.toObjects(json, null);
+        Object[] array = TestUtil.toJava(json, null).asClass(null);
         assert array.length == 3;
         assert array[0].equals("foo");
         assert array[1] == null;
         assert array[2].equals("baz");
 
         // Explicit Object[]
-        array = TestUtil.toObjects(json, Object[].class);
+        array = TestUtil.toJava(json, null).asClass(Object[].class);
         assert array.length == 3;
         assert array[0].equals("foo");
         assert array[1] == null;
@@ -166,19 +166,19 @@ public class NoTypeTest
     void testSpecificRootsWithReturnAsJsonObjects() {
         // String[]
         String json = "[\"foo\", null, \"baz\"]";
-        String[] strings = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), String[].class);
+        String[] strings = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(String[].class);
         assert strings.length == 3;
         assertEquals("foo", strings[0]);
         assertNull(strings[1]);
         assertEquals("baz", strings[2]);
 
-        Object[] objects = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object[] objects = TestUtil.toMaps(json, null).asClass(null);
         assert objects.length == 3;
         assertEquals("foo", objects[0]);
         assertNull(objects[1]);
         assertEquals("baz", objects[2]);
 
-        objects = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), Object[].class);
+        objects = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(Object[].class);
         assert objects.length == 3;
         assertEquals("foo", objects[0]);
         assertNull(objects[1]);
@@ -186,25 +186,25 @@ public class NoTypeTest
 
         // Number[]
         String json1 = "[16, null, 3.14159]";
-        Number[] numbers = TestUtil.toObjects(json1, new ReadOptionsBuilder().returnAsJsonObjects().build(), Number[].class);
+        Number[] numbers = TestUtil.toJava(json1, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(Number[].class);
         assert numbers.length == 3;
         assertEquals(16L, numbers[0]);
         assertNull(numbers[1]);
         assertEquals(3.14159, numbers[2]);
 
-        objects = TestUtil.toObjects(json1, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        objects = TestUtil.toMaps(json1, null).asClass(null);
         assert objects.length == 3;
         assertEquals(16L, objects[0]);
         assertNull(objects[1]);
         assertEquals(3.14159, objects[2]);
 
-        objects = TestUtil.toObjects(json1, new ReadOptionsBuilder().returnAsJsonObjects().build(), Object[].class);
+        objects = TestUtil.toJava(json1, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(Object[].class);
         assert objects.length == 3;
         assertEquals(16L, objects[0]);
         assertNull(objects[1]);
         assertEquals(3.14159, objects[2]);
 
-        strings = TestUtil.toObjects(json1, new ReadOptionsBuilder().returnAsJsonObjects().build(), String[].class);
+        strings = TestUtil.toJava(json1, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(String[].class);
         assert strings.length == 3;
         assertEquals("16", strings[0]);
         assertNull(strings[1]);
@@ -212,11 +212,11 @@ public class NoTypeTest
 
         // error - cannot stuff Number[] with Strings
         final String json2 = "[\"foo\", null ,\"baz\"]";
-        assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json2, new ReadOptionsBuilder().returnAsJsonObjects().build(), Number[].class); });
+        assertThrows(JsonIoException.class, () -> TestUtil.toJava(json2, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(Number[].class));
 
         // AtomicInteger
         String json3 = "75.1";
-        AtomicInteger x = TestUtil.toObjects(json3, new ReadOptionsBuilder().returnAsJsonObjects().build(), AtomicInteger.class);
+        AtomicInteger x = TestUtil.toJava(json3, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(AtomicInteger.class);
         assert x.get() == 75;   // Expected coercion into 'integer' space
     }
 
@@ -224,19 +224,19 @@ public class NoTypeTest
     void testSpecificRootsWithReturnAsJavaObjects() {
         // String[]
         String json = "[\"foo\", null ,\"baz\"]";
-        String[] strings = TestUtil.toObjects(json, null, String[].class);
+        String[] strings = TestUtil.toJava(json, null).asClass(String[].class);
         assert strings.length == 3;
         assertEquals("foo", strings[0]);
         assertNull(strings[1]);
         assertEquals("baz", strings[2]);
 
-        Object[] objects = TestUtil.toObjects(json, null, null);
+        Object[] objects = TestUtil.toJava(json, null).asClass(null);
         assert objects.length == 3;
         assertEquals("foo", objects[0]);
         assertNull(objects[1]);
         assertEquals("baz", objects[2]);
 
-        objects = TestUtil.toObjects(json, null, Object[].class);
+        objects = TestUtil.toJava(json, null).asClass(Object[].class);
         assert objects.length == 3;
         assertEquals("foo", objects[0]);
         assertNull(objects[1]);
@@ -244,25 +244,25 @@ public class NoTypeTest
 
         // Number[]
         String json1 = "[16, null, 3.14159]";
-        Number[] numbers = TestUtil.toObjects(json1, null, Number[].class);
+        Number[] numbers = TestUtil.toJava(json1, null).asClass(Number[].class);
         assert numbers.length == 3;
         assertEquals(16L, numbers[0]);
         assertNull(numbers[1]);
         assertEquals(3.14159, numbers[2]);
 
-        objects = TestUtil.toObjects(json1, null, null);
+        objects = TestUtil.toJava(json1, null).asClass(null);
         assert objects.length == 3;
         assertEquals(16L, objects[0]);
         assertNull(objects[1]);
         assertEquals(3.14159, objects[2]);
 
-        objects = TestUtil.toObjects(json1, null, Object[].class);
+        objects = TestUtil.toJava(json1, null).asClass(Object[].class);
         assert objects.length == 3;
         assertEquals(16L, objects[0]);
         assertNull(objects[1]);
         assertEquals(3.14159, objects[2]);
 
-        strings = TestUtil.toObjects(json1, null, String[].class);
+        strings = TestUtil.toJava(json1, null).asClass(String[].class);
         assert strings.length == 3;
         assertEquals("16", strings[0]);
         assertNull(strings[1]);
@@ -270,11 +270,11 @@ public class NoTypeTest
 
         // error - cannot stuff Number[] with Strings
         final String json2 = "[\"foo\", null ,\"baz\"]";
-        assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json2, null, Number[].class); });
+        assertThrows(JsonIoException.class, () -> { TestUtil.toJava(json2, null).asClass(Number[].class); });
 
         // AtomicInteger
         String json3 = "75.1";
-        AtomicInteger x = TestUtil.toObjects(json3, null, AtomicInteger.class);
+        AtomicInteger x = TestUtil.toJava(json3, null).asClass(AtomicInteger.class);
         assert x.get() == 75;   // Expected coercion into 'integer' space
     }
 
@@ -283,7 +283,7 @@ public class NoTypeTest
         String json = "[\"foo\", null , 25, true, 3.14159]";
 
         // String[]
-        String[] strings = TestUtil.toObjects(json, String[].class);
+        String[] strings = TestUtil.toJava(json, null).asClass(String[].class);
         assert strings.length == 5;
         assert strings[0].equals("foo");
         assert strings[1] == null;
@@ -292,7 +292,7 @@ public class NoTypeTest
         assert strings[4].equals("3.14159"); // Converted during parsing to component type of array[]
 
         // Implied Object[]
-        Object[] array = TestUtil.toObjects(json, null);
+        Object[] array = TestUtil.toJava(json, null).asClass(null);
         assert array.length == 5;
         assert array[0].equals("foo");
         assert array[1] == null;
@@ -301,7 +301,7 @@ public class NoTypeTest
         assert array[4].equals(3.14159d);    // No conversion when Object[]
 
         // Explicit Object[]
-        array = TestUtil.toObjects(json, Object[].class);
+        array = TestUtil.toJava(json, null).asClass(Object[].class);
         assert array.length == 5;
         assert array[0].equals("foo");
         assert array[1] == null;
@@ -313,12 +313,12 @@ public class NoTypeTest
     @Test
     void testStringArrayHeteroItemsNoChance() {
         // String[] does not allow an array as an element
-        assertThrows(JsonIoException.class, () -> {String[] strings = TestUtil.toObjects("[\"foo\", [null]]", String[].class); });
+        assertThrows(JsonIoException.class, () -> {String[] strings = TestUtil.toJava("[\"foo\", [null]]", null).asClass(String[].class); });
 
         String json = "[\"foo\", null]";
 
         // Explicit String[]
-        String[] strings = TestUtil.toObjects(json, String[].class);
+        String[] strings = TestUtil.toJava(json, null).asClass(String[].class);
         assert strings.length == 2;
         assert strings[0].equals("foo");
         assert strings[1] == null;
@@ -326,13 +326,13 @@ public class NoTypeTest
         json = "[\"foo\", [null]]";
 
         // Implied Object[]
-        Object[] array = TestUtil.toObjects(json, null);
+        Object[] array = TestUtil.toJava(json, null).asClass(null);
         assert array.length == 2;
         assert array[0].equals("foo");
         assert DeepEquals.deepEquals(array[1], new Object[] {null});
 
         // Explicit Object[]
-        array = TestUtil.toObjects(json, Object[].class);
+        array = TestUtil.toJava(json, null).asClass(Object[].class);
         assert array.length == 2;
         assert array[0].equals("foo");
         assert DeepEquals.deepEquals(array[1], new Object[] {null});
@@ -343,16 +343,16 @@ public class NoTypeTest
         String json = "[\"foo\", {}]";
 
         // String[]
-        assertThrows(JsonIoException.class, () -> {String[] strings = TestUtil.toObjects(json, String[].class); });
+        assertThrows(JsonIoException.class, () -> {String[] strings = TestUtil.toJava(json, null).asClass(String[].class); });
 
         // Implied Object[]
-        Object[] array = TestUtil.toObjects(json, null);
+        Object[] array = TestUtil.toJava(json, null).asClass(null);
         assert array.length == 2;
         assert array[0].equals("foo");
         assert array[1] instanceof JsonObject;
 
         // Explicit Object[]
-        array = TestUtil.toObjects(json, Object[].class);
+        array = TestUtil.toJava(json, null).asClass(Object[].class);
         assert array.length == 2;
         assert array[0].equals("foo");
         assert array[1] instanceof JsonObject;
@@ -389,7 +389,7 @@ public class NoTypeTest
     {
         String json = "{\"groups\":[\"one\",\"two\",\"three\"],\"search\":{\"datalist\":[]}}";
 
-        Map map = TestUtil.toObjects(json, null);
+        Map map = TestUtil.toJava(json, null).asClass(null);
         Object[] groups = (Object[]) map.get("groups");
         assert groups.length == 3;
         assert groups[0].equals("one");
@@ -399,7 +399,7 @@ public class NoTypeTest
         Object[] dataList = (Object[]) search.get("datalist");
         assert dataList.length == 0;
 
-        map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        map = TestUtil.toMaps(json, null).asClass(null);
         groups = (Object[]) (map.get("groups"));
         assert groups.length == 3;
         assert groups[0].equals("one");
@@ -418,7 +418,7 @@ public class NoTypeTest
         cols.setBars(new Object[]{1, 3, "5", 7});
 
         String json = TestUtil.toJson(cols, new WriteOptionsBuilder().showTypeInfoNever().build());
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Map map = TestUtil.toMaps(json, null).asClass(null);
         Object[] listFoos = (Object[]) map.get("foos");
         assert listFoos.length == 4;
         assert listFoos[0].equals(1L);
@@ -445,7 +445,7 @@ public class NoTypeTest
     {
         Object[] array = new Object[]{new Object[]{1L, 2L, 3L}, new Object[] {'a', 'b', 'c'}};
         String json = TestUtil.toJson(array);
-        Object[] list = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object[] list = TestUtil.toMaps(json, null).asClass(null);
         assert list.length == 2;
         Object[] list0 = (Object[]) list[0];
         assert list0.length == 3;

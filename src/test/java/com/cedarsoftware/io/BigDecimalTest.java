@@ -52,7 +52,7 @@ class BigDecimalTest
     void testAssignBigDecimal()
     {
         String json = "{\"@type\":\"" + TestBigDecimalField.class.getName() + "\",\"fromString\":\"3.14159\",\"fromLong\":314159,\"fromDouble\":3.14159,\"fromBoolean\":true,\"fromStringObj\":{\"@type\":\"java.math.BigDecimal\",\"value\":\"3.14159\"},\"fromLongObj\":{\"@type\":\"java.math.BigDecimal\",\"value\":314159},\"fromDoubleObj\":{\"@type\":\"java.math.BigDecimal\",\"value\":3.14159},\"fromBooleanObj\":{\"@type\":\"java.math.BigDecimal\",\"value\":false},\"fromBigIntObj\":{\"@type\":\"java.math.BigDecimal\",\"value\":{\"@type\":\"java.math.BigInteger\",\"value\":72}},\"fromBigDecObj\":{\"@type\":\"java.math.BigDecimal\",\"value\":{\"@type\":\"java.math.BigDecimal\",\"value\":72.1}},\"values\":[\"3.14159\",314159,3.14159,true,{\"@type\":\"java.math.BigDecimal\",\"value\":\"3.14159\"},{\"@type\":\"java.math.BigDecimal\",\"value\":314159},{\"@type\":\"java.math.BigDecimal\",\"value\":3.14159},{\"@type\":\"java.math.BigDecimal\",\"value\":true},{\"@type\":\"java.math.BigDecimal\",\"value\":{\"@type\":\"java.math.BigDecimal\",\"value\":72.72}}]}";
-        TestBigDecimalField tbd = TestUtil.toObjects(json, null);
+        TestBigDecimalField tbd = TestUtil.toJava(json, null).asClass(null);
         assertEquals(new BigDecimal("3.14159"), tbd.fromString);
         assertEquals(new BigDecimal(314159), tbd.fromLong);
         assertEquals(new BigDecimal("3.14159"), tbd.fromDouble);
@@ -74,9 +74,9 @@ class BigDecimalTest
         assertEquals(new BigDecimal(1), tbd.values[7]);
         assertEquals(new BigDecimal("72.72"), tbd.values[8]);
 
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Map map = TestUtil.toMaps(json, null).asClass(null);
         json = TestUtil.toJson(map);
-        tbd = TestUtil.toObjects(json, null);
+        tbd = TestUtil.toJava(json, null).asClass(null);
         assertEquals(new BigDecimal("3.14159"), tbd.fromString);
         assertEquals(new BigDecimal(314159), tbd.fromLong);
         assertEquals(new BigDecimal("3.14159"), tbd.fromDouble);
@@ -99,7 +99,7 @@ class BigDecimalTest
         assertEquals(new BigDecimal("72.72"), tbd.values[8]);
 
         json = "{\"@type\":\"" + TestBigDecimalField.class.getName() + "\",\"fromString\":\"\"}";
-        tbd = TestUtil.toObjects(json, null);
+        tbd = TestUtil.toJava(json, null).asClass(null);
         assert tbd.fromString.longValue() == 0;
     }
 
@@ -134,7 +134,7 @@ class BigDecimalTest
         String json = TestUtil.toJson(bigDecs);
         TestUtil.printLine("json=" + json);
 
-        bigDecs = TestUtil.toObjects(json, null);
+        bigDecs = TestUtil.toJava(json, null).asClass(null);
         assertEquals(2, bigDecs.length);
         assertNotSame(bigDecs[0], bigDecs[1]);
         assertEquals(new BigDecimal(s), bigDecs[0]);
@@ -155,7 +155,7 @@ class BigDecimalTest
         list.add(bigDec);
         String json = TestUtil.toJson(list);
         TestUtil.printLine("json=" + json);
-        list = TestUtil.toObjects(json, null);
+        list = TestUtil.toJava(json, null).asClass(null);
         assertEquals(2, list.size());
         assertEquals(list.get(0), new BigDecimal(s));
         // BigDecimal is treated like primitives (immutables), instances are not shared

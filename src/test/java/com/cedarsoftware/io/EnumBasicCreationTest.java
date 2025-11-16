@@ -33,7 +33,7 @@ class EnumBasicCreationTest {
     void testEnum_currentFormat() {
         SimpleTestEnum source = SimpleTestEnum.BETA;
         String json = TestUtil.toJson(source);
-        SimpleTestEnum target = TestUtil.toObjects(json, SimpleTestEnum.class);
+        SimpleTestEnum target = TestUtil.toJava(json, null).asClass(SimpleTestEnum.class);
 
         assertThat(target).isEqualTo(source);
         assertThat(json).doesNotContain(TYPE);
@@ -44,7 +44,7 @@ class EnumBasicCreationTest {
     void testEnum_legacyEnumNameFormat() {
         TestEnumWithField source = TestEnumWithField.TWO;
         String json = "{\"" + TYPE + "\":\"" + TestEnumWithField.class.getName() + "\",\"Enum.name\":\"TWO\"}";
-        TestEnumWithField target = TestUtil.toObjects(json, null);
+        TestEnumWithField target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target).isEqualTo(source);
         assertThat(target.getDescription()).isEqualTo("second");
@@ -54,7 +54,7 @@ class EnumBasicCreationTest {
     void testEnum_legacyValueFormat() {
         SimpleTestEnum source = SimpleTestEnum.GAMMA;
         String json = "{\"" + TYPE + "\":\"" + SimpleTestEnum.class.getName() + "\",\"value\":\"GAMMA\"}";
-        SimpleTestEnum target = TestUtil.toObjects(json, null);
+        SimpleTestEnum target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target).isEqualTo(source);
     }
@@ -63,7 +63,7 @@ class EnumBasicCreationTest {
     void testEnum_withFields() {
         TestEnumWithField source = TestEnumWithField.THREE;
         String json = TestUtil.toJson(source);
-        TestEnumWithField target = TestUtil.toObjects(json, TestEnumWithField.class);
+        TestEnumWithField target = TestUtil.toJava(json, null).asClass(TestEnumWithField.class);
 
         assertThat(target).isEqualTo(source);
         assertThat(target.getDescription()).isEqualTo("third");
@@ -78,7 +78,7 @@ class EnumBasicCreationTest {
                 .build();
 
         String json = TestUtil.toJson(source, options);
-        SimpleTestEnum target = TestUtil.toObjects(json, null);
+        SimpleTestEnum target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target).isEqualTo(source);
         assertThat(json).contains(TYPE);
@@ -91,7 +91,7 @@ class EnumBasicCreationTest {
         TestEnumWithField[] values = TestEnumWithField.values();
         for (TestEnumWithField value : values) {
             String json = TestUtil.toJson(value);
-            TestEnumWithField target = TestUtil.toObjects(json, TestEnumWithField.class);
+            TestEnumWithField target = TestUtil.toJava(json, null).asClass(TestEnumWithField.class);
             assertThat(target).isEqualTo(value);
             assertThat(target.getDescription()).isEqualTo(value.getDescription());
         }

@@ -34,26 +34,26 @@ public class UUIDTest
     public void testAssignUUID()
     {
         String json = "{\"@type\":\"" + TestUUIDFields.class.getName() + "\",\"fromString\":\"6508db3c-52c5-42ad-91f3-621d6e1d6557\", \"internals\": {\"@type\": \"java.util.UUID\", \"mostSigBits\":7280309849777586861,\"leastSigBits\":-7929886640328317609}}";
-        TestUUIDFields tu = TestUtil.toObjects(json, null);
+        TestUUIDFields tu = TestUtil.toJava(json, null).asClass(null);
         assertEquals(UUID.fromString("6508db3c-52c5-42ad-91f3-621d6e1d6557"), tu.getFromString());
         assertEquals(UUID.fromString("6508db3c-52c5-42ad-91f3-621d6e1d6557"), tu.getInternals());
 
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Map map = TestUtil.toMaps(json, null).asClass(null);
         json = TestUtil.toJson(map);
-        tu = TestUtil.toObjects(json, null);
+        tu = TestUtil.toJava(json, null).asClass(null);
         assertEquals(UUID.fromString("6508db3c-52c5-42ad-91f3-621d6e1d6557"), tu.getFromString());
         assertEquals(UUID.fromString("6508db3c-52c5-42ad-91f3-621d6e1d6557"), tu.getInternals());
 
         String json1 = "{\"@type\":\"" + TestUUIDFields.class.getName() + "\",\"fromString\":\"\"}";
-        Throwable thrown = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json1, null); });
+        Throwable thrown = assertThrows(JsonIoException.class, () -> { TestUtil.toJava(json1, null).asClass(null); });
         assertEquals(IllegalArgumentException.class, thrown.getCause().getClass());
 
         String json2 = "{\"@type\":\"" + TestUUIDFields.class.getName() + "\", \"internals\": {\"@type\": \"java.util.UUID\", \"leastSigBits\":-7929886640328317609}}";
-        thrown = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json2, null); });
+        thrown = assertThrows(JsonIoException.class, () -> { TestUtil.toJava(json2, null).asClass(null); });
         assert thrown.getMessage().contains("Map to 'UUID' the map must include: [UUID], [value], [_v], or [mostSigBits, leastSigBits] as key with associated value");
 
         String json3 = "{\"@type\":\"" + TestUUIDFields.class.getName() + "\", \"internals\": {\"@type\": \"java.util.UUID\", \"mostSigBits\":7280309849777586861}}";
-        thrown = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json3, null); });
+        thrown = assertThrows(JsonIoException.class, () -> { TestUtil.toJava(json3, null).asClass(null); });
         assert thrown.getMessage().contains("Map to 'UUID' the map must include: [UUID], [value], [_v], or [mostSigBits, leastSigBits] as key with associated value");
     }
 
@@ -64,7 +64,7 @@ public class UUIDTest
         UUID uuid = UUID.fromString(s);
         String json = TestUtil.toJson(uuid);
         TestUtil.printLine("json=" + json);
-        uuid = TestUtil.toObjects(json, null);
+        uuid = TestUtil.toJava(json, null).asClass(null);
         assertEquals(UUID.fromString(s), uuid);
     }
 
@@ -78,7 +78,7 @@ public class UUIDTest
         String json = TestUtil.toJson(uuids);
         TestUtil.printLine("json=" + json);
 
-        uuids = TestUtil.toObjects(json, null);
+        uuids = TestUtil.toJava(json, null).asClass(null);
         assertEquals(2, uuids.length);
         assertNotSame(uuids[0], uuids[1]);              // Proving it is a non-ref
         assertEquals(UUID.fromString(s), uuids[0]);
@@ -99,7 +99,7 @@ public class UUIDTest
         list.add(uuid);
         String json = TestUtil.toJson(list);
         TestUtil.printLine("json=" + json);
-        list = TestUtil.toObjects(json, null);
+        list = TestUtil.toJava(json, null).asClass(null);
         assertEquals(2, list.size());
         assertEquals(UUID.fromString(s), list.get(0));
         assertNotSame(list.get(0), list.get(1));        // Proving it is a non-ref
@@ -112,7 +112,7 @@ public class UUIDTest
         TestUUIDFields t = new TestUUIDFields();
         t. fromString = uuid;
         String json = TestUtil.toJson(t);
-        TestUUIDFields tut = TestUtil.toObjects(json, null);
+        TestUUIDFields tut = TestUtil.toJava(json, null).asClass(null);
         assert tut.fromString.equals(uuid);
     }
 

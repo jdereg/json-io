@@ -16,7 +16,7 @@ class FinalFieldsTest {
         String jsonOut = TestUtil.toJson(expected);
         TestUtil.printLine(jsonOut);
 
-        FinalFieldsIncluded actual = TestUtil.toObjects(jsonOut, null);
+        FinalFieldsIncluded actual = TestUtil.toJava(jsonOut, null).asClass(null);
 
         Assertions.assertEquals(expected._charFinalA, actual._charFinalA);
         Assertions.assertEquals(expected._stringFinalA, actual._stringFinalA);

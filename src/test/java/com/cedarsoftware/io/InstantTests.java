@@ -84,7 +84,7 @@ class InstantTests {
     void roundTripTests(Instant expected) {
         String json = TestUtil.toJson(expected, new WriteOptionsBuilder().build());
 
-        Instant actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), Instant.class);
+        Instant actual = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(Instant.class);
         assertThat(expected).isEqualTo(actual);
     }
 
@@ -110,7 +110,7 @@ class InstantTests {
         String json = TestUtil.toJson(instant, new WriteOptionsBuilder().build());
         assertThat(json).isEqualTo(expectedFormat);
 
-        Instant actualFromJson = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), Instant.class);
+        Instant actualFromJson = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(Instant.class);
         assertThat(actualFromJson).isEqualTo(actual);
     }
 
@@ -124,13 +124,13 @@ class InstantTests {
     @ParameterizedTest
     @MethodSource("oldFormats")
     void testOldFormats(String fileName, Instant expected) {
-        Instant instant = TestUtil.toObjects(loadJson(fileName), Instant.class);
+        Instant instant = TestUtil.toJava(loadJson(fileName), null).asClass(Instant.class);
         assertThat(instant).isEqualTo(expected);
     }
 
     @Test
     void testOldFormatWithNothing() {
-        assertThatThrownBy(() -> TestUtil.toObjects(loadJson("old-format-missing-fields.json"), Instant.class))
+        assertThatThrownBy(() -> TestUtil.toJava(loadJson("old-format-missing-fields.json"), null).asClass(Instant.class))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("Map to 'Instant' the map must include: [instant], [value], or [_v] as key with associated value");
     }
@@ -175,7 +175,7 @@ class InstantTests {
         assertNoReferencesInString(json);
         assertNoTypeInString(json);
 
-        Object actual = TestUtil.toObjects(json, null);
+        Object actual = TestUtil.toJava(json, null).asClass(null);
 
         assertNestedInObject_withNoDuplicates_andFieldTypeMatchesObjectType(expected, actual);
     }
@@ -206,7 +206,7 @@ class InstantTests {
         assertReferentialityInString(json);
         assertNoTypeInString(json);
 
-        Object actual = TestUtil.toObjects(json, null);
+        Object actual = TestUtil.toJava(json, null).asClass(null);
 
         assertNestedInObject_withDuplicates_andFieldTypeMatchesObjectType(expected, actual);
     }
@@ -265,7 +265,7 @@ class InstantTests {
 
         assertReferentialityInString(json);
 
-        Object[] actual = TestUtil.toObjects(json, null);
+        Object[] actual = TestUtil.toJava(json, null).asClass(null);
 
         // assert
         assertObjectArray_withDuplicates(expected, actual);
@@ -292,7 +292,7 @@ class InstantTests {
 
         assertNoReferencesInString(json);
 
-        Instant[] actual = TestUtil.toObjects(json, null);
+        Instant[] actual = TestUtil.toJava(json, null).asClass(null);
 
         assertClassSpecificArray_withNoDuplicates(expected, actual);
     }
@@ -320,7 +320,7 @@ class InstantTests {
 
         assertReferentialityInString(json);
 
-        Instant[] actual = TestUtil.toObjects(json, null);
+        Instant[] actual = TestUtil.toJava(json, null).asClass(null);
 
         assertClassSpecificArray_withDuplicates(expected, actual);
     }
@@ -372,7 +372,7 @@ class InstantTests {
 
         assertReferentialityInString(json);
 
-        List<Instant> actual = TestUtil.toObjects(json, null);
+        List<Instant> actual = TestUtil.toJava(json, null).asClass(null);
 
         // assert
         assertCollection_withDuplicates(expected, actual);
@@ -399,7 +399,7 @@ class InstantTests {
 
         assertNoReferencesInString(json);
 
-        Map<String, Instant> actual = TestUtil.toObjects(json, null);
+        Map<String, Instant> actual = TestUtil.toJava(json, null).asClass(null);
 
         // assert
         assertMap_withNoDuplicates(expected, actual);
@@ -423,7 +423,7 @@ class InstantTests {
 
         assertReferentialityInString(json);
 
-        Map<String, Instant> actual = TestUtil.toObjects(json, null);
+        Map<String, Instant> actual = TestUtil.toJava(json, null).asClass(null);
 
         // assert
         assertMap_withDuplicates(expected, actual);

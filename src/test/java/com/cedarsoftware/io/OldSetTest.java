@@ -13,7 +13,7 @@ class OldSetTest {
     void testSet() {
         final String oldSerializedValue = loadJson("oldEnumSets.json");
 
-        final ManySets result = TestUtil.toObjects(oldSerializedValue, null);
+        final ManySets result = TestUtil.toJava(oldSerializedValue, null).asClass(null);
         Assertions.assertNotNull(result);
 
         Assertions.assertNotNull(result.enumSet1);

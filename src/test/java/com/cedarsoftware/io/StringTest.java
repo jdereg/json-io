@@ -34,7 +34,7 @@ public class StringTest
         ManyStrings test = new ManyStrings();
         String jsonOut = TestUtil.toJson(test);
         TestUtil.printLine("json=" + jsonOut);
-        ManyStrings that = TestUtil.toObjects(jsonOut, null);
+        ManyStrings that = TestUtil.toJava(jsonOut, null).asClass(null);
 
         for (int i = 0; i < ManyStrings.MAX_UTF8_CHAR; i++)
         {
@@ -73,9 +73,9 @@ public class StringTest
     public void testRootString()
     {
         String s = "\"root string\"";
-        Object o = TestUtil.toObjects(s, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object o = TestUtil.toMaps(s, null).asClass(null);
         assertEquals("root string", o);
-        o = TestUtil.toObjects(s, null);
+        o = TestUtil.toJava(s, null).asClass(null);
         assertEquals("root string", o);
     }
 
@@ -83,7 +83,7 @@ public class StringTest
     public void testStringAsObject()
     {
         String json = "{\"@type\":\"string\",\"value\":\"Sledge Hammer\"}";
-        String x = TestUtil.toObjects(json, null);
+        String x = TestUtil.toJava(json, null).asClass(null);
         assert x.equals("Sledge Hammer");
     }
 
@@ -91,14 +91,14 @@ public class StringTest
     public void testFrenchChar()
     {
         String json = "\"Réunion\"";
-        String x = TestUtil.toObjects(json, null);
+        String x = TestUtil.toJava(json, null).asClass(null);
         assert x.equals("Réunion");
     }
 
     @Test
     public void testEmptyString()
     {
-        assertThatThrownBy(() -> TestUtil.toObjects("", null))
+        assertThatThrownBy(() -> TestUtil.toJava("", null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("EOF reached prematurely");
     }
@@ -106,7 +106,7 @@ public class StringTest
     @Test
     public void testNullInput()
     {
-        assertThatThrownBy(() -> TestUtil.toObjects(null, (Class<?>)null))
+        assertThatThrownBy(() -> TestUtil.toJava(null, null).asClass((Class<?>)null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("EOF reached prematurely");
     }

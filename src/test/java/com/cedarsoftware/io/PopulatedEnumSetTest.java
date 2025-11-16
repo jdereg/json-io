@@ -44,7 +44,7 @@ class PopulatedEnumSetTest {
         assertThat(json).contains("\"" + TYPE + "\"");
         assertThat(json).contains("\"" + ITEMS + "\":[");
 
-        EnumSet<?> target = TestUtil.toObjects(json, null);
+        EnumSet<?> target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target)
                 .isNotNull()
@@ -62,7 +62,7 @@ class PopulatedEnumSetTest {
         String json = "{\"" + ENUM + "\":\"" + SimpleEnum.class.getName()
                 + "\",\"" + ITEMS + "\":[\"A\",\"D\"]}";
 
-        EnumSet<?> target = TestUtil.toObjects(json, null);
+        EnumSet<?> target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target)
                 .isNotNull()
@@ -78,7 +78,7 @@ class PopulatedEnumSetTest {
         EnumSet<ComplexEnum> source = EnumSet.of(ComplexEnum.ONE, ComplexEnum.THREE);
         String json = TestUtil.toJson(source);
 
-        EnumSet<?> target = TestUtil.toObjects(json, null);
+        EnumSet<?> target = TestUtil.toJava(json, null).asClass(null);
         assert DeepEquals.deepEquals(source, target);
         
         @SuppressWarnings("unchecked")
@@ -97,7 +97,7 @@ class PopulatedEnumSetTest {
         EnumSet<SimpleEnum> source = EnumSet.allOf(SimpleEnum.class);
         String json = TestUtil.toJson(source);
 
-        EnumSet<?> target = TestUtil.toObjects(json, null);
+        EnumSet<?> target = TestUtil.toJava(json, null).asClass(null);
         assert DeepEquals.deepEquals(source, target);
 
         assertThat(target)
@@ -116,7 +116,7 @@ class PopulatedEnumSetTest {
         String json = TestUtil.toJson(source);
 
         @SuppressWarnings("unchecked")
-        EnumSet<SimpleEnum> target = TestUtil.toObjects(json, null);
+        EnumSet<SimpleEnum> target = TestUtil.toJava(json, null).asClass(null);
         assert DeepEquals.deepEquals(source, target);
 
         // Test removing elements
@@ -141,7 +141,7 @@ class PopulatedEnumSetTest {
         String json = TestUtil.toJson(source);
 
         @SuppressWarnings("unchecked")
-        EnumSet<SimpleEnum> target = TestUtil.toObjects(json, null);
+        EnumSet<SimpleEnum> target = TestUtil.toJava(json, null).asClass(null);
         assert DeepEquals.deepEquals(source, target);
 
         // Get complement and verify
@@ -162,7 +162,7 @@ class PopulatedEnumSetTest {
         String json1 = TestUtil.toJson(source);
 
         @SuppressWarnings("unchecked")
-        EnumSet<SimpleEnum> intermediate = TestUtil.toObjects(json1, null);
+        EnumSet<SimpleEnum> intermediate = TestUtil.toJava(json1, null).asClass(null);
         assert DeepEquals.deepEquals(source, intermediate);
 
         intermediate.remove(SimpleEnum.A);
@@ -171,7 +171,7 @@ class PopulatedEnumSetTest {
         String json2 = TestUtil.toJson(intermediate);
 
         @SuppressWarnings("unchecked")
-        EnumSet<SimpleEnum> target = TestUtil.toObjects(json2, null);
+        EnumSet<SimpleEnum> target = TestUtil.toJava(json2, null).asClass(null);
 
         assertThat(target).containsExactly(SimpleEnum.B, SimpleEnum.C);
     }

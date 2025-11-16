@@ -51,7 +51,7 @@ public class GsonNotHandleMapWithNonStringKeysButJsonIoCanTest
 
         // ------------------------ json-io ------------------------
         json = TestUtil.toJson(map);
-        newMap = (Map) TestUtil.toObjects(json, null);
+        newMap = (Map) TestUtil.toJava(json, null).asClass(null);
 
         assert newMap.size() == 3;
         assert newMap.containsKey(pt1);                                // success, pt1 not found

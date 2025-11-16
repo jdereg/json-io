@@ -4,7 +4,6 @@ import java.time.MonthDay;
 
 import org.junit.jupiter.api.Test;
 
-import static com.cedarsoftware.io.TestUtil.toObjects;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class MonthDayTests extends SerializationDeserializationMinimumTests<MonthDay> {
@@ -67,7 +66,7 @@ class MonthDayTests extends SerializationDeserializationMinimumTests<MonthDay> {
     @Test
     void testOldFormat_objectType() {
         String json = "{\"@type\":\"java.time.MonthDay\",\"monthDay\":\"6-30\"}";
-        MonthDay date = toObjects(json, null);
+        MonthDay date = TestUtil.toJava(json, null).asClass(null);
         assertThat(date.getDayOfMonth()).isEqualTo(30);
         assertThat(date.getMonthValue()).isEqualTo(6);
     }
@@ -75,7 +74,7 @@ class MonthDayTests extends SerializationDeserializationMinimumTests<MonthDay> {
     @Test
     void testOldFormat_nestedObject() {
         String json = "{\"@type\":\"com.cedarsoftware.io.MonthDayTests$NestedMonthDay\",\"one\":{\"@id\":1,\"monthDay\":\"--06-30\"},\"two\":{\"@ref\":1}}";
-        NestedMonthDay date = toObjects(json, null);
+        NestedMonthDay date = TestUtil.toJava(json, null).asClass(null);
         assertThat(date.one.getDayOfMonth()).isEqualTo(30);
         assertThat(date.one.getMonthValue()).isEqualTo(6);
         assertThat(date.one).isSameAs(date.two);
@@ -85,7 +84,7 @@ class MonthDayTests extends SerializationDeserializationMinimumTests<MonthDay> {
     void testTopLevel_serializesAsISODate() {
         MonthDay date = MonthDay.of(10, 10);
         String json = TestUtil.toJson(date);
-        MonthDay result = toObjects(json, null);
+        MonthDay result = TestUtil.toJava(json, null).asClass(null);
         assertThat(result).isEqualTo(date);
     }
 

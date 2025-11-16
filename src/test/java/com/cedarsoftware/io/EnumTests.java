@@ -58,7 +58,7 @@ class EnumTests {
 
         String json = TestUtil.toJson(expected, writeOptions);
 
-        NestedEnum actual = TestUtil.toObjects(json, null);
+        NestedEnum actual = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(actual.getTestEnum3()).isSameAs(expected.getTestEnum3());
         assertThat(actual.getTestEnum4()).isSameAs(expected.getTestEnum4());
@@ -77,7 +77,7 @@ class EnumTests {
 
         // First, verify that deserialization fails without unsafe mode (package-private outer class)
         try {
-            TestUtil.toObjects(json, null);
+            TestUtil.toJava(json, null).asClass(null);
             fail("Should have thrown JsonIoException when trying to instantiate package-private class without unsafe mode");
         } catch (JsonIoException e) {
             assertThat(e.getMessage()).contains("Unable to instantiate: com.cedarsoftware.io.EnumTests");
@@ -87,7 +87,7 @@ class EnumTests {
         ReadOptions readOptions = new ReadOptionsBuilder()
                 .useUnsafe(true)  // Enable unsafe mode for package-private inner class
                 .build();
-        DuplicateRefEnum actual = TestUtil.toObjects(json, readOptions, DuplicateRefEnum.class);
+        DuplicateRefEnum actual = TestUtil.toJava(json, readOptions).asClass(DuplicateRefEnum.class);
 
         assertThat(actual.getEnum1())
                 .isSameAs(expected.getEnum1())
@@ -113,7 +113,7 @@ class EnumTests {
 
         String json = TestUtil.toJson(input, writeOptions);
 
-        Collection<Object> actual = TestUtil.toObjects(json, null);
+        Collection<Object> actual = TestUtil.toJava(json, null).asClass(null);
         assertThat(actual).containsExactlyInAnyOrderElementsOf(input);
     }
 
@@ -248,7 +248,7 @@ class EnumTests {
 
         // First, verify that deserialization fails without unsafe mode (package-private outer class)
         try {
-            TestUtil.toObjects(json, null);
+            TestUtil.toJava(json, null).asClass(null);
             fail("Should have thrown JsonIoException when trying to instantiate package-private class without unsafe mode");
         } catch (JsonIoException e) {
             assertThat(e.getMessage()).contains("Unable to instantiate: com.cedarsoftware.io.EnumTests");
@@ -258,7 +258,7 @@ class EnumTests {
         ReadOptions readOptions = new ReadOptionsBuilder()
                 .useUnsafe(true)  // Enable unsafe mode for package-private inner class
                 .build();
-        SimpleClass actual = TestUtil.toObjects(json, readOptions, SimpleClass.class);
+        SimpleClass actual = TestUtil.toJava(json, readOptions).asClass(SimpleClass.class);
         assertThat(actual.getName()).isEqualTo("Dude");
         assertThat(actual.getMyEnum()).isEqualTo(SimpleEnum.ONE);
     }
@@ -269,7 +269,7 @@ class EnumTests {
 
         WriteOptions options = new WriteOptionsBuilder().writeEnumAsJsonObject(true).build();
         String json = TestUtil.toJson(mc, options);
-        PrivateEnumWithNameOverride actual = TestUtil.toObjects(json, null);
+        PrivateEnumWithNameOverride actual = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(actual).isEqualTo(PrivateEnumWithNameOverride.Z);
         assertThat(actual.name).isEqualTo("little z");
@@ -285,7 +285,7 @@ class EnumTests {
 
         mc.name = "foo";
 
-        PublicEnumWithNestedName actual = TestUtil.toObjects(json, null);
+        PublicEnumWithNestedName actual = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(actual).isEqualTo(PublicEnumWithNestedName.Z);
         assertThat(actual.name).isEqualTo("blech");
@@ -302,7 +302,7 @@ class EnumTests {
 
         WriteOptions options = new WriteOptionsBuilder().writeEnumAsJsonObject(true).build();
         String json = TestUtil.toJson(mc, options);
-        EnumNestedWithinEnum actual = TestUtil.toObjects(json, null);
+        EnumNestedWithinEnum actual = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(actual).isEqualTo(EnumNestedWithinEnum.THREE);
         assertThat(actual.getSimpleEnum()).isEqualTo(SimpleEnum.TWO);
@@ -315,7 +315,7 @@ class EnumTests {
 
         WriteOptions options = new WriteOptionsBuilder().writeEnumAsJsonObject(true).build();
         String json = TestUtil.toJson(mc, options);
-        EnumNestedWithinEnum actual = TestUtil.toObjects(json, null);
+        EnumNestedWithinEnum actual = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(actual).isEqualTo(EnumNestedWithinEnum.THREE);
         assertThat(actual.getSimpleEnum()).isEqualTo(SimpleEnum.TWO);
@@ -327,7 +327,7 @@ class EnumTests {
     void testEnum_thatHasValueField_parsedAsObject(EnumWithValueField field) {
         WriteOptions options = new WriteOptionsBuilder().writeEnumAsJsonObject(true).build();
         String json = TestUtil.toJson(field, options);
-        EnumWithValueField actual = TestUtil.toObjects(json, null);
+        EnumWithValueField actual = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(actual).isEqualTo(field);
     }
@@ -337,7 +337,7 @@ class EnumTests {
     @EnumSource(EnumWithValueField.class)
     void testEnum_thatHasValueField_parsedAsPrimitive(Enum<EnumWithValueField> item) {
         String json = TestUtil.toJson(item, new WriteOptionsBuilder().build());
-        EnumWithValueField actual = TestUtil.toObjects(json, EnumWithValueField.class);
+        EnumWithValueField actual = TestUtil.toJava(json, null).asClass(EnumWithValueField.class);
 
         assertThat(actual).isEqualTo(item);
     }
@@ -346,7 +346,7 @@ class EnumTests {
     @EnumSource(FoodType.class)
     void testEnum_valueProblems(Enum<FoodType> item) {
         String json = TestUtil.toJson(item, new WriteOptionsBuilder().writeEnumAsJsonObject(true).build());
-        FoodType actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), FoodType.class);
+        FoodType actual = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(FoodType.class);
 
         assertThat(actual).isEqualTo(item);
     }
@@ -626,18 +626,18 @@ class EnumTests {
     }
 
     private <T> T loadObject(String fileName) {
-        return (T) TestUtil.toObjects(loadJson(fileName), null);
+        return (T) TestUtil.toJava(loadJson(fileName), null).asClass(null);
     }
 
     private <T> T loadObject(String fileName, ReadOptions options) {
-        return (T) TestUtil.toObjects(loadJson(fileName), options, null);
+        return (T) TestUtil.toJava(loadJson(fileName), options).asClass(null);
     }
 
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static <T> T readWriteAndCompareEnum(T input, WriteOptions writeOptions) {
         String json = TestUtil.toJson(input, writeOptions);
-        Enum actual = TestUtil.toObjects(json, null);
+        Enum actual = TestUtil.toJava(json, null).asClass(null);
         assertThat(actual).isEqualTo(input);
         return (T) actual;
     }
@@ -645,7 +645,7 @@ class EnumTests {
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static <T> T readWriteAndCompareEnumArray(T[] enumArray, WriteOptions writeOptions) {
         String json = TestUtil.toJson(enumArray, writeOptions);
-        T[] actual = TestUtil.toObjects(json, null);
+        T[] actual = TestUtil.toJava(json, null).asClass(null);
         assertThat(actual).isEqualTo(enumArray);
         return (T) actual;
     }

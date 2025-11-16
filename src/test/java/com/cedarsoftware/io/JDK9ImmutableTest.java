@@ -71,7 +71,7 @@ class JDK9ImmutableTest
         final Object o = new ArrayList<>(listOf());
 
         String json = TestUtil.toJson(o);
-        List<Object> es = TestUtil.toObjects(json, null);
+        List<Object> es = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals(0, es.size());
         assertEquals(o.getClass(), es.getClass());
@@ -83,7 +83,7 @@ class JDK9ImmutableTest
         final Object o = listOf();
 
         String json = TestUtil.toJson(o);
-        List<Object> es = TestUtil.toObjects(json, null);
+        List<Object> es = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals(0, es.size());
         assert deepEquals(o, es);
@@ -95,7 +95,7 @@ class JDK9ImmutableTest
         final Object o = listOf("One");
 
         String json = TestUtil.toJson(o);
-        List<Object> es = TestUtil.toObjects(json, null);
+        List<Object> es = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals(1, es.size());
         assert deepEquals(o, es);
@@ -107,7 +107,7 @@ class JDK9ImmutableTest
         final Object o = listOf("One", "Two");
 
         String json = TestUtil.toJson(o);
-        List<Object> es = TestUtil.toObjects(json, null);
+        List<Object> es = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals(2, es.size());
         assert deepEquals(o, es);
@@ -119,7 +119,7 @@ class JDK9ImmutableTest
         final Object o = listOf("One", "Two", "Three");
 
         String json = TestUtil.toJson(o);
-        List<Object> es = TestUtil.toObjects(json, null);
+        List<Object> es = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals(3, es.size());
         assert deepEquals(o, es);
@@ -132,7 +132,7 @@ class JDK9ImmutableTest
 
         String json = TestUtil.toJson(o);
 
-        Set<Object> es = TestUtil.toObjects(json, null);
+        Set<Object> es = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals(0, es.size());
         assertEquals(o.getClass(), es.getClass());
@@ -144,7 +144,7 @@ class JDK9ImmutableTest
         final Object o = setOf();
 
         String json = TestUtil.toJson(o);
-        Set<Object> es = TestUtil.toObjects(json, null);
+        Set<Object> es = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals(0, es.size());
         assert deepEquals(o, es);
@@ -156,7 +156,7 @@ class JDK9ImmutableTest
         final Object o = setOf("One");
 
         String json = TestUtil.toJson(o);
-        Set<String> es = TestUtil.toObjects(json, null);
+        Set<String> es = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals(1, es.size());
         assert deepEquals(o, es);
@@ -168,7 +168,7 @@ class JDK9ImmutableTest
         final Object o = setOf("One", "Two");
 
         String json = TestUtil.toJson(o);
-        Set<String> es = TestUtil.toObjects(json, null);
+        Set<String> es = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals(2, es.size());
         assert deepEquals(o, es);
@@ -180,7 +180,7 @@ class JDK9ImmutableTest
         final Object o = setOf("One", "Two", "Three");
 
         String json = TestUtil.toJson(o);
-        Set<String> es = TestUtil.toObjects(json, null);
+        Set<String> es = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals(3, es.size());
         assert deepEquals(o, es);
@@ -198,7 +198,7 @@ class JDK9ImmutableTest
         List<Rec> ol = listOf(rec1, rec2, rec1);
 
         String json = TestUtil.toJson(ol);
-        List<Rec> recs = TestUtil.toObjects(json, null);
+        List<Rec> recs = TestUtil.toJava(json, null).asClass(null);
 
         assertEquals(ol.size(), recs.size());
         assert deepEquals(ol, recs);
@@ -219,7 +219,7 @@ class JDK9ImmutableTest
         List<Rec> ol = listOf(rec1, rec2, rec1);
 
         String json = TestUtil.toJson(ol);
-        List<Rec> recs = TestUtil.toObjects(json, null);
+        List<Rec> recs = TestUtil.toJava(json, null).asClass(null);
 
         assert deepEquals(ol, recs);
         assertThrows(UnsupportedOperationException.class, () -> recs.add(rec2));
@@ -240,7 +240,7 @@ class JDK9ImmutableTest
         List<Rec> ol = listOf(rec1, rec2, rec1);
 
         String json = TestUtil.toJson(ol);
-        Object es = TestUtil.toObjects(json, null);
+        Object es = TestUtil.toJava(json, null).asClass(null);
 
         assert deepEquals(es, ol);
         assertThrows(UnsupportedOperationException.class, () -> ol.add(rec1));
@@ -265,10 +265,10 @@ class JDK9ImmutableTest
 
         String json = TestUtil.toJson(ol, new WriteOptionsBuilder().build());
 
-        List<Rec> es = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        List<Rec> es = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(null);
         json = TestUtil.toJson(es, new WriteOptionsBuilder().build());
 
-        List<Rec> again = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        List<Rec> again = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(null);
         json = TestUtil.toJson(again, new WriteOptionsBuilder().build());
 
         assert deepEquals(ol, es);
@@ -325,7 +325,7 @@ class JDK9ImmutableTest
         Object[] lists = new Object[] {l0, l1, l2, l3, l4};
         String json = TestUtil.toJson(lists, new WriteOptionsBuilder().build());
         
-        Object[] newLists = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        Object[] newLists = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(null);
         assert deepEquals(lists, newLists);
         assertThrows(UnsupportedOperationException.class, () -> ((List)newLists[0]).add("foo"));
         assertThrows(UnsupportedOperationException.class, () -> ((List)newLists[1]).add("foo"));
@@ -355,7 +355,7 @@ class JDK9ImmutableTest
         Object[] sets = new Object[] {s0, s1, s2, s3, s4};
         String json = TestUtil.toJson(sets, new WriteOptionsBuilder().build());
 
-        Object[] newSets = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        Object[] newSets = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(null);
         assert deepEquals(sets, newSets);
         assertThrows(UnsupportedOperationException.class, () -> ((Set)newSets[0]).add("foo"));
         assertThrows(UnsupportedOperationException.class, () -> ((Set)newSets[1]).add("foo"));
@@ -380,7 +380,7 @@ class JDK9ImmutableTest
         String json = JsonIo.toJson(nodes, new WriteOptionsBuilder().build());
 
         // Deserialize the list
-        final List<Node> deserializedNodes = JsonIo.toObjects(json, new ReadOptionsBuilder().build(), CollectionsWrappers.getUnmodifiableListClass());
+        final List<Node> deserializedNodes = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(CollectionsWrappers.getUnmodifiableListClass());
 
         // Assertions to check if the forward reference is maintained after deserialization
         assertEquals("Node2", deserializedNodes.get(0).next.name);
@@ -410,7 +410,7 @@ class JDK9ImmutableTest
                 "}";
 
         // Deserialize the list (hand created to force forward reference)
-        final List<Node> deserializedNodes2 = JsonIo.toObjects(json, new ReadOptionsBuilder().build(), CollectionsWrappers.getUnmodifiableListClass());
+        final List<Node> deserializedNodes2 = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(CollectionsWrappers.getUnmodifiableListClass());
         assertThrows(UnsupportedOperationException.class, () -> deserializedNodes.add(node2));
 
         // Assertions to check if the forward reference is maintained after deserialization
@@ -438,7 +438,7 @@ class JDK9ImmutableTest
         String json = JsonIo.toJson(nodes, new WriteOptionsBuilder().build());
         
         // Deserialize the list
-        final Set<Node> deserializedNodes = JsonIo.toObjects(json, new ReadOptionsBuilder().build(), CollectionsWrappers.getUnmodifiableSetClass());
+        final Set<Node> deserializedNodes = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(CollectionsWrappers.getUnmodifiableSetClass());
         assert deepEquals(nodes, deserializedNodes);
         assertThrows(UnsupportedOperationException.class, () -> deserializedNodes.add(node1));
         // Assertions to check if the forward reference is maintained after deserialization
@@ -479,7 +479,7 @@ class JDK9ImmutableTest
                 "}";
 
         // Deserialize the list (hand created to force forward reference)
-        final Set<Node> deserializedNodes2 = JsonIo.toObjects(json, new ReadOptionsBuilder().build(), CollectionsWrappers.getUnmodifiableSetClass());
+        final Set<Node> deserializedNodes2 = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(CollectionsWrappers.getUnmodifiableSetClass());
         // Assertions to check if the forward reference is maintained after deserialization
         i = deserializedNodes2.iterator();
         node1st = i.next();
@@ -541,7 +541,7 @@ class JDK9ImmutableTest
                 "  ]\n" +
                 "}\n";
 
-        Map<Temporal, Object> map2 = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), Map.class);
+        Map<Temporal, Object> map2 = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(Map.class);
         assertSame(map2.keySet().iterator().next(), map2.values().iterator().next());
     }
 
@@ -587,7 +587,7 @@ class JDK9ImmutableTest
                 "  ]\n" +
                 "}\n";
 
-        Map<Temporal, Object> map2 = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), Map.class);
+        Map<Temporal, Object> map2 = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(Map.class);
         assertSame(map2.keySet().iterator().next(), map2.values().iterator().next());
     }
 
@@ -640,7 +640,7 @@ class JDK9ImmutableTest
                 "  }\n" +
                 "]";
 
-        Object[] objs = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), Object[].class);
+        Object[] objs = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(Object[].class);
         Map map2 = (Map) objs[0];
         ZonedDateTime zdt2 = (ZonedDateTime) objs[1];
         assertEquals(zdt2.toEpochSecond(),zdt.toEpochSecond());
@@ -691,7 +691,7 @@ class JDK9ImmutableTest
                 "]\n";
 
         // No forward reference exceptions
-        Object[] objs = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), Object[].class);
+        Object[] objs = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(Object[].class);
         Map<String, Object> dateKeys = (Map<String, Object>) objs[0];
         assert dateKeys.values().toArray()[0] instanceof ZonedDateTime;
         assert dateKeys.values().toArray()[1] instanceof Long;
@@ -726,7 +726,7 @@ class JDK9ImmutableTest
                 "  ]\n" +
                 "}";
 
-        Map<String, Object> map = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), Map.class);
+        Map<String, Object> map = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(Map.class);
         assertEquals("foo", map.keySet().toArray()[0]);
         assertEquals("foo", map.values().toArray()[0]);
         assertEquals("bar", map.keySet().toArray()[1]);

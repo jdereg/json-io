@@ -41,7 +41,7 @@ public class SetTest {
         set.init();
         String json = TestUtil.toJson(set);
 
-        ManySets testSet = TestUtil.toObjects(json, null);
+        ManySets testSet = TestUtil.toJava(json, null).asClass(null);
         TestUtil.printLine("json = " + json);
 
         assertEquals(26, testSet._treeSet.size());
@@ -58,7 +58,7 @@ public class SetTest {
         testSet._enumSet.remove(ManySets.EnumValues.E3);
         json = TestUtil.toJson(testSet);
         TestUtil.printLine(json);
-        testSet = TestUtil.toObjects(json, null);
+        testSet = TestUtil.toJava(json, null).asClass(null);
         testSet._enumSet.add(ManySets.EnumValues.E1);
     }
 
@@ -76,7 +76,7 @@ public class SetTest {
 
         // Step 3: Deserialize the JSON to Set.class in default mode
         ReadOptions readOptions = new ReadOptionsBuilder().build(); // Default options
-        Set<String> deserializedSet = (Set<String>) TestUtil.toObjects(json, readOptions, Set.class);
+        Set<String> deserializedSet = (Set<String>) TestUtil.toJava(json, readOptions).asClass(Set.class);
 
         // Step 4: Assertions
         assertNotNull(deserializedSet, "Deserialized set should not be null");
@@ -100,7 +100,7 @@ public class SetTest {
         ReadOptions readOptions = new ReadOptionsBuilder()
                 .returnAsJsonObjects()
                 .build();
-        Set<?> deserializedSet = (Set<?>) TestUtil.toObjects(json, readOptions, Set.class);
+        Set<?> deserializedSet = (Set<?>) TestUtil.toJava(json, readOptions).asClass(Set.class);
 
         // Step 4: Assertions
         assertNotNull(deserializedSet, "Deserialized set should not be null");
@@ -129,7 +129,7 @@ public class SetTest {
         ReadOptions readOptions = new ReadOptionsBuilder()
                 .returnAsJavaObjects() // Ensuring returnJavaObjects=true
                 .build();
-        Set<String> deserializedSet = (Set<String>) TestUtil.toObjects(json, readOptions, Set.class);
+        Set<String> deserializedSet = (Set<String>) TestUtil.toJava(json, readOptions).asClass(Set.class);
 
         // Step 4: Assertions
         assertNotNull(deserializedSet, "Deserialized set should not be null");
@@ -152,7 +152,7 @@ public class SetTest {
 
         // Step 3: Deserialize the JSON to Object[].class in default mode
         ReadOptions readOptions = new ReadOptionsBuilder().build(); // Default options
-        Object[] deserializedArray = TestUtil.toObjects(json, readOptions, Object[].class);
+        Object[] deserializedArray = TestUtil.toJava(json, readOptions).asClass(Object[].class);
 
         // Step 4: Assertions
         assertNotNull(deserializedArray, "Deserialized array should not be null");
@@ -176,7 +176,7 @@ public class SetTest {
         ReadOptions readOptions = new ReadOptionsBuilder()
                 .returnAsJsonObjects()
                 .build();
-        String[] deserializedArray = TestUtil.toObjects(json, readOptions, String[].class);
+        String[] deserializedArray = TestUtil.toJava(json, readOptions).asClass(String[].class);
 
         // Step 4: Assertions
         assertNotNull(deserializedArray, "Deserialized array should not be null");
@@ -208,7 +208,7 @@ public class SetTest {
         ReadOptions readOptions = new ReadOptionsBuilder()
                 .returnAsJavaObjects() // Ensuring returnJavaObjects=true
                 .build();
-        Object[] deserializedArray = TestUtil.toObjects(json, readOptions, Object[].class);
+        Object[] deserializedArray = TestUtil.toJava(json, readOptions).asClass(Object[].class);
 
         // Step 4: Assertions
         assertNotNull(deserializedArray, "Deserialized array should not be null");

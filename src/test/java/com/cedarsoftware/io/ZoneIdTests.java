@@ -10,7 +10,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static com.cedarsoftware.io.TestUtil.toObjects;
 import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -115,14 +114,14 @@ class ZoneIdTests extends SerializationDeserializationMinimumTests<ZoneId> {
     @ParameterizedTest
     @MethodSource("argumentsForOldFormat")
     void testOldFormat_objectType(String json) {
-        ZoneId zone = toObjects(json, null);
+        ZoneId zone = TestUtil.toJava(json, null).asClass(null);
         assertThat(zone).isEqualTo(ZoneId.of("+9"));
     }
 
     @Test
     void testOldFormat_nestedObject() {
         String json = "{\"@type\":\"com.cedarsoftware.io.ZoneIdTests$NestedZoneId\",\"one\":{\"@id\":1,\"value\":\"+05:30\"},\"two\":{\"@ref\":1}}";
-        NestedZoneId date = toObjects(json, null);
+        NestedZoneId date = TestUtil.toJava(json, null).asClass(null);
         assertThat(date.one)
                 .isEqualTo(ZoneId.of("+05:30"))
                 .isSameAs(date.two);
@@ -138,14 +137,14 @@ class ZoneIdTests extends SerializationDeserializationMinimumTests<ZoneId> {
     @Test
     void testOldFormat_simpleFile() {
         String json = loadJsonForTest("old-format-simple.json");
-        ZoneId zone = toObjects(json, ZoneId.class);
+        ZoneId zone = TestUtil.toJava(json, null).asClass(ZoneId.class);
         assertThat(zone.getId()).isEqualTo("Asia/Aden");
     }
 
     @Test
     void testOldFormat_nestedJson() {
         String json = loadJsonForTest("old-format-nested.json");
-        NestedZoneId zone = toObjects(json, NestedZoneId.class);
+        NestedZoneId zone = TestUtil.toJava(json, null).asClass(NestedZoneId.class);
         assertThat(zone.one.getId()).isEqualTo("Asia/Aden");
         assertThat(zone.two.getId()).isEqualTo("Z");
     }
@@ -153,7 +152,7 @@ class ZoneIdTests extends SerializationDeserializationMinimumTests<ZoneId> {
     @Test
     void testOldForm_list() {
         String json = loadJsonForTest("old-format-list.json");
-        List list = toObjects(json, null);
+        List list = TestUtil.toJava(json, null).asClass(null);
         assertThat(((ZoneId) list.get(0)).getId()).isEqualTo("Asia/Aden");
         assertThat(((ZoneId) list.get(3)).getId()).isEqualTo("Z");
     }
@@ -162,7 +161,7 @@ class ZoneIdTests extends SerializationDeserializationMinimumTests<ZoneId> {
     @Test
     void testOldForm_array() {
         String json = loadJsonForTest("old-format-array.json");
-        Object[] zone = toObjects(json, Object[].class);
+        Object[] zone = TestUtil.toJava(json, null).asClass(Object[].class);
         assertThat(((ZoneId) zone[0]).getId()).isEqualTo("Asia/Aden");
         assertThat(((ZoneId) zone[3]).getId()).isEqualTo("Z");
     }

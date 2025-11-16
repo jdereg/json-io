@@ -77,7 +77,7 @@ public class NotLenientNanInfinityTest
         String json = TestUtil.toJson(a);
         TestUtil.printLine("a = " + a);
         TestUtil.printLine("json = " + json);
-        A newA = (A) TestUtil.toObjects(json, readOptions, null);
+        A newA = (A) TestUtil.toJava(json, readOptions).asClass(null);
         TestUtil.printLine("newA = " + newA);
         
         Double newDoubleField = newA.getDoubleField();

@@ -29,7 +29,7 @@ public class ObjectHolderTest
     {
         ObjectHolder holder = new ObjectHolder("bool", true);
         String json = TestUtil.toJson(holder);
-        ObjectHolder deserialized = TestUtil.toObjects(json, null);
+        ObjectHolder deserialized = TestUtil.toJava(json, null).asClass(null);
         assertEquals(holder, deserialized);
     }
 
@@ -51,7 +51,7 @@ public class ObjectHolderTest
     private void testSerialization(ObjectHolder holder)
     {
         String json = TestUtil.toJson(holder, new WriteOptionsBuilder().showTypeInfoNever().build());
-        ObjectHolder deserialized = TestUtil.toObjects(json, new ReadOptionsBuilder().unknownTypeClass(ObjectHolder.class).build(), null);
+        ObjectHolder deserialized = TestUtil.toJava(json, new ReadOptionsBuilder().unknownTypeClass(ObjectHolder.class).build()).asClass(null);
         assertEquals(holder, deserialized);
     }
 }

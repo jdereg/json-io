@@ -34,7 +34,7 @@ public class SingletonTest
 
         // Serialize foo with a singletonList, then deserialization throws
         String json = TestUtil.toJson(strings, new WriteOptionsBuilder().build());
-        Object o = TestUtil.toObjects(json, null);
+        Object o = TestUtil.toJava(json, null).asClass(null);
     }
 
     @Test
@@ -45,7 +45,7 @@ public class SingletonTest
 
         // Serialize foo with a singletonList, then deserialization throws
         String json = TestUtil.toJson(strings, new WriteOptionsBuilder().build());
-        Object o = TestUtil.toObjects(json, null);
+        Object o = TestUtil.toJava(json, null).asClass(null);
     }
 
     @Test
@@ -56,6 +56,6 @@ public class SingletonTest
 
         // Serialize foo with a singletonList, then deserialization throws
         String json = TestUtil.toJson(strings, new WriteOptionsBuilder().build());
-        Object o = TestUtil.toObjects(json, null);
+        Object o = TestUtil.toJava(json, null).asClass(null);
     }
 }

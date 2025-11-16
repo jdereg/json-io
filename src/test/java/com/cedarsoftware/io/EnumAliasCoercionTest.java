@@ -45,7 +45,7 @@ class EnumAliasCoercionTest {
                 .build();
 
         // Verify it can be read back
-        OldEnum target = TestUtil.toObjects(aliasedJson, readOptions, null);
+        OldEnum target = TestUtil.toJava(aliasedJson, readOptions).asClass(null);
         assertThat(target).isEqualTo(OldEnum.ALPHA);
     }
 
@@ -63,7 +63,7 @@ class EnumAliasCoercionTest {
                 .build();
 
         // Read with coercion
-        Object result = JsonIo.toObjects(json, readOptions, null);
+        Object result = JsonIo.toJava(json, readOptions).asClass(null);
 
         // Verify coercion worked
         assertThat(result)
@@ -92,7 +92,7 @@ class EnumAliasCoercionTest {
                 .build();
 
         // Read with coercion
-        Object result = JsonIo.toObjects(json, readOptions, null);
+        Object result = JsonIo.toJava(json, readOptions).asClass(null);
 
         // Verify both alias and coercion worked
         assertThat(result)

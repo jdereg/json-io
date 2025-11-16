@@ -53,7 +53,7 @@ class MapOfMapsTest
     @Test
     void testToObjects_withUnknownClass_returnsALinkedHashMap() {
         String json = "{\"@type\":\"com.foo.bar.baz.Qux\",\"_name\":\"Hello\",\"_other\":null}";
-        Map stuff = TestUtil.toObjects(json, new ReadOptionsBuilder().failOnUnknownType(false).build(), null);
+        Map stuff = TestUtil.toJava(json, new ReadOptionsBuilder().failOnUnknownType(false).build()).asClass(null);
 
         assertThat(stuff)
                 .isInstanceOf(LinkedHashMap.class)
@@ -67,10 +67,10 @@ class MapOfMapsTest
     void testToObjects_asMaps_returnsALinkedHashMap()
     {
         String json = "{\"@type\":\"com.foo.bar.baz.Qux\",\"_name\":\"Hello\",\"_other\":null}";
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder()
+        Map map = TestUtil.toJava(json, new ReadOptionsBuilder()
                 .returnAsJsonObjects()
                 .failOnUnknownType(false)
-                .build(), null);
+                .build()).asClass(null);
 
         assertThat(map)
                 .isInstanceOf(Map.class)
@@ -81,7 +81,7 @@ class MapOfMapsTest
     @Test
     void testForwardRefNegId()
     {
-        Object doc = TestUtil.toObjects(ClassUtilities.loadResourceAsString("references/forwardRefNegId.json"), new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object doc = TestUtil.toMaps(ClassUtilities.loadResourceAsString("references/forwardRefNegId.json"), null).asClass(null);
         Object[] items = (Object[]) doc;
         assertEquals(2, items.length);
         Map male = (Map) items[0];
@@ -92,7 +92,7 @@ class MapOfMapsTest
         assertSame(female.get("friend"), male);
 
         String json = TestUtil.toJson(doc);// Neat trick json-io does - rewrites proper json from Map of Maps input
-        Object doc2 = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);// Read in this map of maps to JSON string and make sure it's right
+        Object doc2 = TestUtil.toMaps(json, null).asClass(null);// Read in this map of maps to JSON string and make sure it's right
 
         Object[] peeps1 = items;
         Object[] peeps2 = (Object[]) doc2;
@@ -118,14 +118,14 @@ class MapOfMapsTest
     {
         String className = PointMap.class.getName();
         String json = "{\"@type\":\"" + className + "\",\"points\":{\"@type\":\"java.util.HashMap\",\"@keys\":[{\"x\":10,\"y\":20}],\"@items\":[{\"x\":1,\"y\":2}]}}";
-        PointMap pointMap = TestUtil.toObjects(json, null);
+        PointMap pointMap = TestUtil.toJava(json, null).asClass(null);
         assertEquals(1, pointMap.getPoints().size());
         Point p1 = pointMap.getPoints().get(new Point(10, 20));
         assertTrue(p1.getX() == 1 && p1.getY() == 2);
 
         // Comes in as a Map [[x:20, y:20]:[x:1, y:2]] when read as Map of maps.  This is due to a Point (non simple type)
         // being the key of the map.
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Map map = TestUtil.toMaps(json, null).asClass(null);
         Map points = (Map) map.get("points");
         assertEquals(1, map.size());
         Map ten20 = (Map) points.keySet().iterator().next();
@@ -144,7 +144,7 @@ class MapOfMapsTest
     {
         String json = "{\"traits\":{\"ui:attributes\":{\"type\":\"text\",\"label\":\"Risk Type\",\"maxlength\":\"30\"},\"v:max\":\"1\",\"v:min\":\"1\",\"v:regex\":\"[[0-9][a-z][A-Z]]\",\"db:attributes\":{\"selectColumn\":\"QR.RISK_TYPE_REF_ID\",\"table\":\"QUOTE_RISK\",\"tableAlias\":\"QR\",\"column\":\"QUOTE_ID\",\"columnName\":\"QUOTE_ID\",\"columnAlias\":\"c:riskType\",\"joinTable\":\"QUOTE\",\"joinAlias\":\"Q\",\"joinColumn\":\"QUOTE_ID\"},\"r:exists\":true,\"r:value\":\"risk\"}}";
         TestUtil.printLine("json = " + json);
-        Map root = TestUtil.toObjects(json, null);
+        Map root = TestUtil.toJava(json, null).asClass(null);
         Map traits = (Map) root.get("traits");
         Map uiAttributes = (Map) traits.get("ui:attributes");
         String label = (String) uiAttributes.get("label");
@@ -161,7 +161,7 @@ class MapOfMapsTest
     {
         String json = "[{\"traits\":{\"ui:attributes\":{\"type\":\"text\",\"label\":\"Risk Type\",\"maxlength\":\"30\"},\"v:max\":\"1\",\"v:min\":\"1\",\"v:regex\":\"[[0-9][a-z][A-Z]]\",\"db:attributes\":{\"selectColumn\":\"QR.RISK_TYPE_REF_ID\",\"table\":\"QUOTE_RISK\",\"tableAlias\":\"QR\",\"column\":\"QUOTE_ID\",\"columnName\":\"QUOTE_ID\",\"columnAlias\":\"c:riskType\",\"joinTable\":\"QUOTE\",\"joinAlias\":\"Q\",\"joinColumn\":\"QUOTE_ID\"},\"r:exists\":true,\"r:value\":\"risk\"}},{\"key1\":1,\"key2\":2}]";
         TestUtil.printLine("json = " + json);
-        Object[] root = TestUtil.toObjects(json, null);
+        Object[] root = TestUtil.toJava(json, null).asClass(null);
         Map traits = (Map) root[0];
         traits = (Map) traits.get("traits");
         Map uiAttributes = (Map) traits.get("ui:attributes");
@@ -195,7 +195,7 @@ class MapOfMapsTest
         p.setBirthYear(1981);
 
         String json = TestUtil.toJson(p);
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Map map = TestUtil.toMaps(json, null).asClass(null);
 
         Object age = map.get("age");
         assert age instanceof BigDecimal;
@@ -214,7 +214,7 @@ class MapOfMapsTest
     void testMapOfMapsSimpleArray()
     {
         String s = "[{\"@ref\":1},{\"name\":\"Jack\",\"age\":21,\"@id\":1}]";
-        Object[] list = TestUtil.toObjects(s, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object[] list = TestUtil.toMaps(s, null).asClass(null);
         assertTrue(list[0].equals(list[1]));
     }
 
@@ -226,7 +226,7 @@ class MapOfMapsTest
                 ":18,\"@id\":2},{\"witnesses\":[{\"@ref\":1},{\"@ref\":2}]}]";
 
         TestUtil.printLine("json=" + s);
-        Object[] items = TestUtil.toObjects(s, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object[] items = TestUtil.toMaps(s, null).asClass(null);
         assertEquals(8, items.length);
         Map husband = (Map) items[0];
         Map wife = (Map) items[6];
@@ -259,7 +259,7 @@ class MapOfMapsTest
         stuff.put(testObj, 1.0f);
         String json = TestUtil.toJson(stuff);
 
-        Map<Object, Object> map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Map<Object, Object> map = TestUtil.toMaps(json, null).asClass(null);
 
         Object aa = map.get("a");
         Map bb = (Map) map.get("b");
@@ -314,7 +314,7 @@ class MapOfMapsTest
         stuff.add("c");
         String json = TestUtil.toJson(stuff);
 
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Map map = TestUtil.toMaps(json, null).asClass(null);
         Object[] items = ((JsonObject)map).getItems();
         assert items.length == 3;
         assertEquals(((JsonObject)items[0]).get("_name"), "b");
@@ -329,18 +329,18 @@ class MapOfMapsTest
         Object testObj = new TestObject("test object", kid);
         String json = TestUtil.toJson(testObj);
         
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Map map = TestUtil.toMaps(json, null).asClass(null);
         assert map instanceof JsonObject;   // Not TestObject
         assertEquals("test object", map.get("_name"));
         assert map.get("_other") instanceof Map;
 
-        assertThrows(JsonIoException.class, () -> {TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), TestObject.class); });
+        assertThrows(JsonIoException.class, () -> TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(TestObject.class));
 
-        TestObject testObj1 = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        TestObject testObj1 = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(null);
         assert DeepEquals.deepEquals(testObj, testObj1);
         assert testObj1._other instanceof TestObject;
 
-        testObj1 = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), TestObject.class);
+        testObj1 = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(TestObject.class);
         assert DeepEquals.deepEquals(testObj, testObj1);
         assert testObj1._other instanceof TestObject;
     }
@@ -355,7 +355,7 @@ class MapOfMapsTest
         Object[] prims = new Object[]{true, Boolean.TRUE, (byte) 8, (short) 1024, 131072, 16777216, 3.14, 3.14f, "x", "hello", date, cal, strClass};
         String json = TestUtil.toJson(prims);
         TestUtil.printLine("json=" + json);
-        Object[] javaObjs = TestUtil.toObjects(json, null);
+        Object[] javaObjs = TestUtil.toJava(json, null).asClass(null);
         assertEquals(prims.length, javaObjs.length);
 
         for (int i = 0; i < javaObjs.length ; i++)
@@ -370,7 +370,7 @@ class MapOfMapsTest
         Object o = null;
         try
         {
-            o = TestUtil.toObjects("[This is not quoted]", new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+            o = TestUtil.toMaps("[This is not quoted]", null).asClass(null);
             fail();
         }
         catch (Exception e)
@@ -384,7 +384,7 @@ class MapOfMapsTest
     @Test
     void testToMaps()
     {
-        JsonObject map = TestUtil.toObjects("{\"num\":0,\"nullValue\":null,\"string\":\"yo\"}", new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        JsonObject map = (JsonObject) TestUtil.toMaps("{\"num\":0,\"nullValue\":null,\"string\":\"yo\"}", null).asClass(null);
         assertNotNull(map);
         assertEquals(3, map.size());
         assertEquals(0L, map.get("num"));
@@ -399,7 +399,7 @@ class MapOfMapsTest
     void testUntyped()
     {
         String json = "{\"age\":46,\"name\":\"jack\",\"married\":false,\"salary\":125000.07,\"notes\":null,\"address1\":{\"@ref\":77},\"address2\":{\"@id\":77,\"street\":\"1212 Pennsylvania ave\",\"city\":\"Washington\"}}";
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Map map = TestUtil.toMaps(json, null).asClass(null);
         TestUtil.printLine("map=" + map);
         assertEquals(46L, map.get("age"));
         assertEquals("jack", map.get("name"));
@@ -427,7 +427,7 @@ class MapOfMapsTest
         jsonGenerated = jsonGenerated.replaceAll("[\\r]", "");
         assert json.equals(jsonGenerated);
 
-        Map clone = TestUtil.toObjects(jsonGenerated, null);
+        Map clone = TestUtil.toJava(jsonGenerated, null).asClass(null);
         assert map.equals(clone);
         assert DeepEquals.deepEquals(map, clone);
     }
@@ -444,7 +444,7 @@ class MapOfMapsTest
         String jsonGenerated = TestUtil.toJson(map);
         assert json.equals(jsonGenerated);
 
-        Map clone = TestUtil.toObjects(jsonGenerated, null);
+        Map clone = TestUtil.toJava(jsonGenerated, null).asClass(null);
         assert map.equals(clone);
     }
 
@@ -456,7 +456,7 @@ class MapOfMapsTest
         test._other = child;
         String json = TestUtil.toJson(test);
         TestUtil.printLine("json=" + json);
-        JsonObject root = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        JsonObject root = TestUtil.toMaps(json, null).asClass(null);
         TestObject test2 = JsonIo.toJava(root, new ReadOptionsBuilder().build()).asClass(TestObject.class);
         assertEquals(test2, test);
         assertEquals(test2._other, child);
@@ -474,7 +474,7 @@ class MapOfMapsTest
         Map simple = map;
 
         String json = TestUtil.toJson(simple);
-        Map back = TestUtil.toObjects(json, null);
+        Map back = TestUtil.toJava(json, null).asClass(null);
         assert back.get(0L).equals("alpha");
         assert back.get(4L).equals("echo");
     }
@@ -488,7 +488,7 @@ class MapOfMapsTest
         Map simple = map;
 
         String json = TestUtil.toJson(simple);
-        Map back = TestUtil.toObjects(json, null);
+        Map back = TestUtil.toJava(json, null).asClass(null);
         assert back.get((false)).equals("alpha");
         assert back.get((true)).equals("beta");
     }
@@ -503,7 +503,7 @@ class MapOfMapsTest
         Map simple = map;
 
         String json = TestUtil.toJson(simple);
-        Map back = TestUtil.toObjects(json, null);
+        Map back = TestUtil.toJava(json, null).asClass(null);
         assert back.get(0.0d).equals("alpha");
         assert back.get(1.0d).equals("beta");
         assert back.get(2.0d).equals("charlie");
@@ -521,7 +521,7 @@ class MapOfMapsTest
         String json = TestUtil.toJson(simple);
         assert !json.contains(JsonObject.KEYS);
         assert !json.contains("@items");
-        Map back = TestUtil.toObjects(json, null);
+        Map back = TestUtil.toJava(json, null).asClass(null);
         assert back.get("alpha").equals(0L);
         assert back.get("beta").equals(1L);
         assert back.get("charlie").equals(2L);
@@ -536,7 +536,7 @@ class MapOfMapsTest
         b._other = a;
 
         String json = TestUtil.toJson(a);
-        Map aa = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Map aa = TestUtil.toMaps(json, null).asClass(null);
         assert aa.get("_name").equals("a");
         Map bb = (Map) aa.get("_other");
         assert bb.get("_name").equals("b");
@@ -565,7 +565,7 @@ class MapOfMapsTest
         List<Person> list = listOf(p, p, pCopy);
 
         String json = TestUtil.toJson(list, new WriteOptionsBuilder().showTypeInfoNever().build());
-        Object[] array = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object[] array = TestUtil.toMaps(json, null).asClass(null);
 
         assert array[0] == array[1];    // same instance
         assert array[0] != array[2];    // not same instance
@@ -591,7 +591,7 @@ class MapOfMapsTest
         List<List<Person>> holder = listOf(list, list);
 
         String json = TestUtil.toJson(holder, new WriteOptionsBuilder().showTypeInfoNever().build());
-        Object[] array = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        Object[] array = TestUtil.toMaps(json, null).asClass(null);
         
         assert array[0] == array[1];                // Same instance of List
         JsonObject objList1 = (JsonObject) array[0];
@@ -609,10 +609,10 @@ class MapOfMapsTest
     void testSkipNullFieldsMapOfMaps()
     {
         String json = "{\"first\":\"Sam\",\"middle\":null,\"last\":\"Adams\"}";
-        Map person = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsJsonObjects().build(), Map.class);
+        Map person = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(Map.class);
         json = TestUtil.toJson(person);
 
-        Map map = TestUtil.toObjects(json, null);
+        Map map = TestUtil.toJava(json, null).asClass(null);
         assert map.size() == 3;
         assert map.get("first").equals("Sam");
         assert map.get("middle") == null;
@@ -620,7 +620,7 @@ class MapOfMapsTest
 
         json = TestUtil.toJson(person, new WriteOptionsBuilder().skipNullFields(true).build());
 
-        map = TestUtil.toObjects(json, null);
+        map = TestUtil.toJava(json, null).asClass(null);
         assert map.size() == 2;
         assert map.get("first").equals("Sam");
         assert map.get("last").equals("Adams");
@@ -630,12 +630,12 @@ class MapOfMapsTest
     void testSkipNullFieldsMapOfMaps2()
     {
         String json = "{\"first\":\"Sam\",\"middle\":null,\"last\":\"Adams\"}";
-        Map person = TestUtil.toObjects(json, new ReadOptionsBuilder()
+        Map person = TestUtil.toJava(json, new ReadOptionsBuilder()
                 .returnAsJsonObjects()
-                .build(), Map.class);
+                .build()).asClass(Map.class);
         json = TestUtil.toJson(person);
 
-        Map map = TestUtil.toObjects(json, null);
+        Map map = TestUtil.toJava(json, null).asClass(null);
         assert map.size() == 3;
         assert map.get("first").equals("Sam");
         assert map.get("middle") == null;
@@ -652,7 +652,7 @@ class MapOfMapsTest
         p.setBirthYear(1984);
 
         String json = TestUtil.toJson(p);
-        Person p1 = TestUtil.toObjects(json, null);
+        Person p1 = TestUtil.toJava(json, null).asClass(null);
         assert p1.getName().equals("Sam Adams");
         assert p1.getAge() == null;
         assert p1.getIq() == null;
@@ -661,7 +661,7 @@ class MapOfMapsTest
         json = TestUtil.toJson(p, new WriteOptionsBuilder().skipNullFields(true).build());
         assert !json.contains("age");
         assert !json.contains("iq");
-        p1 = TestUtil.toObjects(json, null);
+        p1 = TestUtil.toJava(json, null).asClass(null);
         assert p1.getName().equals("Sam Adams");
         assert p1.getBirthYear() == 1984;
     }

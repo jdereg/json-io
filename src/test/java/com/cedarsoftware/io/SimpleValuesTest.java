@@ -109,7 +109,7 @@ public class SimpleValuesTest
         WriteOptions writeOptions = new WriteOptionsBuilder().allowNanAndInfinity(true).build();
         final String json = TestUtil.toJson(d, writeOptions);
         ReadOptions readOptions = new ReadOptionsBuilder().allowNanAndInfinity(true).build();
-        final Double newObj = TestUtil.toObjects(json, readOptions, Double.class);
+        final Double newObj = TestUtil.toJava(json, readOptions).asClass(Double.class);
 
         assertEquals(d, newObj);
     }
@@ -122,7 +122,7 @@ public class SimpleValuesTest
         TestUtil.printLine("testObj = " + testObj);
         TestUtil.printLine("json = " + json);
         ReadOptions readOptions = new ReadOptionsBuilder().allowNanAndInfinity(allowNanAndInfinity).build();
-        final Object newObj = TestUtil.toObjects(json, readOptions, null);
+        final Object newObj = TestUtil.toJava(json, readOptions).asClass(null);
         TestUtil.printLine("newObj = " + newObj);
 
         assertEquals(testObj, newObj);

@@ -40,13 +40,13 @@ class UnmodifiableTest {
         String json = TestUtil.toJson(set, writeOptionss);
         assert json.contains("\"UnmodifiableSet\"");
 
-        Set set2 = TestUtil.toObjects(json, CollectionsWrappers.getUnmodifiableSetClass());
+        Set set2 = TestUtil.toJava(json, null).asClass(CollectionsWrappers.getUnmodifiableSetClass());
         assert CollectionsWrappers.getUnmodifiableCollectionClass().isAssignableFrom(set2.getClass());
         json = TestUtil.toJson(set2, writeOptionss);
         assert json.contains("\"UnmodifiableSet\"");
 
         // Only asking for a "Set", not an "unmodifiable" Set.
-        Set set3 = TestUtil.toObjects(json, Set.class);
+        Set set3 = TestUtil.toJava(json, null).asClass(Set.class);
 
         // Lock in expectation that LinkedHashSet is fallback
         assert LinkedHashSet.class.isAssignableFrom(set3.getClass());

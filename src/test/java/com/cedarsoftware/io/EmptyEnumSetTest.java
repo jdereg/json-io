@@ -27,7 +27,7 @@ class EmptyEnumSetTest {
         assertThat(json).contains(TYPE);
         assertThat(json).contains("\"" + ITEMS + "\":[]");
 
-        EnumSet<?> target = TestUtil.toObjects(json, null);
+        EnumSet<?> target = TestUtil.toJava(json, null).asClass(null);
         assertThat(target)
                 .isNotNull()
                 .isEmpty();
@@ -43,7 +43,7 @@ class EmptyEnumSetTest {
     void testEmptyEnumSet_legacyFormat() {
         // Test reading legacy format
         String json = "{\"" + ENUM + "\":\"" + TestEnum.class.getName() + "\"}";
-        EnumSet<?> target = TestUtil.toObjects(json, null);
+        EnumSet<?> target = TestUtil.toJava(json, null).asClass(null);
 
         assertThat(target)
                 .isNotNull()
@@ -61,7 +61,7 @@ class EmptyEnumSetTest {
         // Create with explicit type
         EnumSet<TestEnum> source = EnumSet.noneOf(TestEnum.class);
         String json = TestUtil.toJson(source);
-        EnumSet<TestEnum> target = (EnumSet<TestEnum>)(Object)TestUtil.toObjects(json, TestEnum.class);
+        EnumSet<TestEnum> target = (EnumSet<TestEnum>)(Object)TestUtil.toJava(json, null).asClass(TestEnum.class);
 
         assertThat(target)
                 .isNotNull()
@@ -78,7 +78,7 @@ class EmptyEnumSetTest {
     void testEmptyEnumSet_elementTypeVerification() {
         EnumSet<TestEnum> source = EnumSet.noneOf(TestEnum.class);
         String json = TestUtil.toJson(source);
-        EnumSet<?> target = TestUtil.toObjects(json, null);
+        EnumSet<?> target = TestUtil.toJava(json, null).asClass(null);
 
         // Verify we can complement the set (only works if element type is correct)
         @SuppressWarnings("unchecked")
@@ -96,7 +96,7 @@ class EmptyEnumSetTest {
         String json = TestUtil.toJson(source);
 
         @SuppressWarnings("unchecked")
-        EnumSet<TestEnum> target = TestUtil.toObjects(json, null);
+        EnumSet<TestEnum> target = TestUtil.toJava(json, null).asClass(null);
 
         // Verify all mutation operations work
         assertThat(target.add(TestEnum.A)).isTrue();
@@ -122,14 +122,14 @@ class EmptyEnumSetTest {
         String json1 = TestUtil.toJson(source);
 
         @SuppressWarnings("unchecked")
-        EnumSet<TestEnum> intermediate = TestUtil.toObjects(json1, null);
+        EnumSet<TestEnum> intermediate = TestUtil.toJava(json1, null).asClass(null);
 
         // Modify and serialize again
         intermediate.add(TestEnum.A);
         String json2 = TestUtil.toJson(intermediate);
 
         @SuppressWarnings("unchecked")
-        EnumSet<TestEnum> target = TestUtil.toObjects(json2, null);
+        EnumSet<TestEnum> target = TestUtil.toJava(json2, null).asClass(null);
 
         assertThat(target)
                 .isNotNull()

@@ -18,7 +18,7 @@ public class MapsToClassesTest
     {
         String json = "{\n" + "  \"@type\":\"com.cedarsoftware.io.MapsToClassesTest$Person\",\n" + "  \"fname\":\"Clark\",\n" + "  \"lname\":\"Kent\",\n" + "  \"age\":40,\n" + "  \"address\":{\n" + "    \"street\":\"1000 Superhighway\",\n" + "    \"city\":\"Metropolis\",\n" + "    \"state\":\"NY\",\n" + "    \"zip\":\"10001\"\n" + "  },\n" + "  \"pets\":[\n" + "    {\"name\":\"eddie\",\"type\":\"dog\"},\n" + "    {\"name\":\"bella\",\"type\":\"chi hua hua\"}\n" + "  ],\n" + "  \"pets2\":[{\"name\":\"eddie\",\"type\":\"dog\"},{\"name\":\"bella\",\"type\":\"chi hua hua\"}]\n" + "}";
 
-        Person superMan = TestUtil.toObjects(json, null);
+        Person superMan = TestUtil.toJava(json, null).asClass(null);
         assert superMan.getFname().equals("Clark");
         assert superMan.getLname().equals("Kent");
         assert superMan.getAge().equals("40");// int was converted to String
@@ -53,7 +53,7 @@ public class MapsToClassesTest
     {
         String json = "{\n" + "    \"@type\":\"com.cedarsoftware.io.MapsToClassesTest$AllTypes\",\n" + "    \"aBoolean\":\"\",\n" + "    \"aByte\":\"\",\n" + "    \"aShort\":\"\",\n" + "    \"anInt\":\"\",\n" + "    \"aLong\":\"\",\n" + "    \"aFloat\":\"\",\n" + "    \"aDouble\":\"\",\n" + "    \"aString\":\"\",\n" + "    \"aDate\":\"\",\n" + "    \"aByteWrap\":\"\",\n" + "    \"aShortWrap\":\"\",\n" + "    \"anIntWrap\":\"\",\n" + "    \"aLongWrap\":\"\",\n" + "    \"aFloatWrap\":\"\",\n" + "    \"aDoubleWrap\":\"\",\n" + "    \"atomicBoolean\":\"\",\n" + "    \"atomicInteger\":\"\",\n" + "    \"atomicLong\":\"\"\n" + "}";
 
-        AllTypes types = TestUtil.toObjects(json, null);
+        AllTypes types = TestUtil.toJava(json, null).asClass(null);
         assert !types.getaBoolean();
         assert types.getaByte() == (byte) 0;
         assert types.getaShort() == (short) 0;
@@ -78,7 +78,7 @@ public class MapsToClassesTest
     public void testAllTypesNull()
     {
         String json = "{\n" + "    \"@type\":\"com.cedarsoftware.io.MapsToClassesTest$AllTypes\",\n" + "    \"aBoolean\":null,\n" + "    \"aByte\":null,\n" + "    \"aShort\":null,\n" + "    \"anInt\":null,\n" + "    \"aLong\":null,\n" + "    \"aFloat\":null,\n" + "    \"aDouble\":null,\n" + "    \"aString\":null,\n" + "    \"aDate\":null,\n" + "    \"aByteWrap\":null,\n" + "    \"aShortWrap\":null,\n" + "    \"anIntWrap\":null,\n" + "    \"aLongWrap\":null,\n" + "    \"aFloatWrap\":null,\n" + "    \"aDoubleWrap\":null,\n" + "    \"atomicBoolean\":null,\n" + "    \"atomicInteger\":null,\n" + "    \"atomicLong\":null\n" + "}";
-        AllTypes types = TestUtil.toObjects(json, null);
+        AllTypes types = TestUtil.toJava(json, null).asClass(null);
         assert !types.getaBoolean();
         assert types.getaByte() == (byte) 0;
         assert types.getaShort() == (short) 0;

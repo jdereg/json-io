@@ -36,7 +36,7 @@ class AtomicLong2Test
     @Test
     void testAssignAtomicLong() {
         String json = "{\"@type\":\"com.cedarsoftware.io.AtomicLong2Test$TestAtomicLongField\",\"value\":16,\"nullValue\":null,\"strValue\":\"50\",\"emptyStrValue\":\"\", \"objValue\":{\"value\":-9},\"values\":[-5,null,5, \"45\"]}";
-        TestAtomicLongField atom2 = TestUtil.toObjects(json, null);
+        TestAtomicLongField atom2 = TestUtil.toJava(json, null).asClass(null);
 
         assert atom2.value.get() == 16;
         assert atom2.nullValue == null;

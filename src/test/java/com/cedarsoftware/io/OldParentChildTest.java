@@ -9,7 +9,7 @@ class OldParentChildTest {
     void chainedSetterUsedCorrectly() {
         String json = "{\"@type\":\"com.cedarsoftware.io.OldParentChildTest$Child\",\"name\":42,\"com.cedarsoftware.io.OldParentChildTest$Parent.name\":\"Stus\"}";
 
-        Child actual = TestUtil.toObjects(json, null);
+        Child actual = TestUtil.toJava(json, null).asClass(null);
 
         Assertions.assertEquals(42L, actual.name);
         Assertions.assertEquals("Stus", actual.getName());

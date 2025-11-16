@@ -48,7 +48,7 @@ class InnerClassTest
         leg.y = 20;
         String json0 = TestUtil.toJson(dog);
         TestUtil.printLine("json0=" + json0);
-        JsonObject job = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsJsonObjects().build(), null);
+        JsonObject job = TestUtil.toMaps(json0, null).asClass(null);
         job.put("phantom", new TestObject("Eddie"));
         String json1 = TestUtil.toJson(job);
         TestUtil.printLine("json1=" + json1);
@@ -65,14 +65,14 @@ class InnerClassTest
 
         String json = TestUtil.toJson(a);
         TestUtil.printLine("json = " + json);
-        A o1 = (A) TestUtil.toObjects(json, null);
+        A o1 = (A) TestUtil.toJava(json, null).asClass(null);
         assertEquals("aaa", o1.a);
 
         InnerClassTest.A.B b = a.new B();        // Original Java
         b.b = "bbb";
         json = TestUtil.toJson(b);
         TestUtil.printLine("json = " + json);
-        InnerClassTest.A.B o2 = TestUtil.toObjects(json, null);
+        InnerClassTest.A.B o2 = TestUtil.toJava(json, null).asClass(null);
         assertEquals("bbb", o2.b);
     }
 
@@ -88,7 +88,7 @@ class InnerClassTest
 
         String json1 = TestUtil.toJson(leg);
         TestUtil.printLine("json1=" + json1);
-        Dog.Leg go = (Dog.Leg) TestUtil.toObjects(json1, null);
+        Dog.Leg go = (Dog.Leg) TestUtil.toJava(json1, null).asClass(null);
         assertEquals(20, go.y);
         assertEquals(10, go.getParentX());
     }

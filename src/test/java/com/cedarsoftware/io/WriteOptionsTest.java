@@ -426,7 +426,7 @@ class WriteOptionsTest {
         Date now = new Date();
         Date[] dates = new Date[]{now};
         String json = TestUtil.toJson(dates, options);
-        Date[] dates2 = TestUtil.toObjects(json, Date[].class);
+        Date[] dates2 = TestUtil.toJava(json, null).asClass(Date[].class);
         assert DeepEquals.deepEquals(dates, dates2);
         assertEquals(dates[0], now);
         assertEquals(dates2[0].toString(), dates[0].toString());    // differ in millis
@@ -440,7 +440,7 @@ class WriteOptionsTest {
         Date now = new Date();
         Date[] dates = new Date[]{now};
         String json = TestUtil.toJson(dates, options);
-        Date[] dates2 = TestUtil.toObjects(json, Date[].class);
+        Date[] dates2 = TestUtil.toJava(json, null).asClass(Date[].class);
         // ISO DateTime format does not include milliseconds.....whhhhyyyyyy?
         assertEquals(dates2[0].toString(), dates[0].toString());    // differ in millis
         assertEquals(dates2[0].toString(), now.toString());         // differ in millis

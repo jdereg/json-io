@@ -97,14 +97,14 @@ class ZoneOffsetTests extends SerializationDeserializationMinimumTests<ZoneOffse
     @ParameterizedTest
     @MethodSource("argumentsForOldFormat")
     void testOldFormat_objectType(String json) {
-        ZoneOffset zone = TestUtil.toObjects(json, null);
+        ZoneOffset zone = TestUtil.toJava(json, null).asClass(null);
         assertThat(zone).isEqualTo(ZoneOffset.of("+9"));
     }
 
     @Test
     void testOldFormat_nestedObject() {
         String json = "{\"@type\":\"com.cedarsoftware.io.ZoneOffsetTests$NestedZoneOffset\",\"one\":{\"@id\":1,\"value\":\"+05:30\"},\"two\":{\"@ref\":1}}";
-        NestedZoneOffset date = TestUtil.toObjects(json, null);
+        NestedZoneOffset date = TestUtil.toJava(json, null).asClass(null);
         assertThat(date.one)
                 .isEqualTo(ZoneOffset.of("+05:30"))
                 .isSameAs(date.two);

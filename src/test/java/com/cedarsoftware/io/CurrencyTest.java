@@ -16,7 +16,7 @@ class CurrencyTest {
     void testCurrencyStandalone() {
         Currency expected = Currency.getInstance("USD");
         String json = TestUtil.toJson(expected);
-        Currency actual = TestUtil.toObjects(json, null);
+        Currency actual = TestUtil.toJava(json, null).asClass(null);
         assertEquals(expected, actual);
     }
 
@@ -25,7 +25,7 @@ class CurrencyTest {
         Currency currency = Currency.getInstance("EUR");
         Currency[] array = new Currency[]{ currency };
         String json = TestUtil.toJson(array);
-        Currency[] actual = TestUtil.toObjects(json, null);
+        Currency[] actual = TestUtil.toJava(json, null).asClass(null);
         assertEquals(1, actual.length);
         assertEquals(currency, actual[0]);
     }
@@ -36,7 +36,7 @@ class CurrencyTest {
         Currency currency = Currency.getInstance("GBP");
         Map<String, Currency> map = mapOf("c", currency);
         String json = TestUtil.toJson(map);
-        Map<String, Currency> actual = TestUtil.toObjects(json, null);
+        Map<String, Currency> actual = TestUtil.toJava(json, null).asClass(null);
         assertThat(actual).hasSize(1);
         assertEquals(currency, actual.get("c"));
     }
@@ -47,7 +47,7 @@ class CurrencyTest {
         Currency currency = Currency.getInstance("JPY");
         Map<Currency, String> map = mapOf(currency, "yen");
         String json = TestUtil.toJson(map);
-        Map<Currency, String> actual = TestUtil.toObjects(json, null);
+        Map<Currency, String> actual = TestUtil.toJava(json, null).asClass(null);
         assertThat(actual).hasSize(1);
         Currency key = actual.keySet().iterator().next();
         assertEquals(currency, key);
@@ -58,7 +58,7 @@ class CurrencyTest {
         Currency currency = Currency.getInstance("CHF");
         Object[] array = new Object[]{ currency, currency };
         String json = TestUtil.toJson(array);
-        Object[] actual = TestUtil.toObjects(json, null);
+        Object[] actual = TestUtil.toJava(json, null).asClass(null);
         assertSame(actual[0], actual[1]);
         assertEquals(currency, actual[0]);
     }
