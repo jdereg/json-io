@@ -1,6 +1,13 @@
 ### Revision History
 #### 4.64.0 (Unreleased)
 * **DEPENDENCY**: Updated `java-util` to version 4.4.0-SNAPSHOT for new `RegexUtilities` pattern caching and ReDoS protection.
+* **IMPROVED**: `ReadOptionsBuilder.returnAsJsonObjects()` now automatically sets `failOnUnknownType(false)`:
+  * **Semantic Consistency**: Map-of-Maps mode is designed to work without requiring classes on classpath
+  * **Usability**: Enables parsing any JSON structure (including unknown @type entries) without exceptions
+  * **Use Cases**: HTTP middleware, log analysis, cross-JVM data transport - all work without domain classes
+  * **Override**: If strict type validation is needed in Map mode, explicitly call `.failOnUnknownType(true)` after `.returnAsJsonObjects()`
+  * **Backward Compatibility**: Minimal impact - only affects code using `returnAsJsonObjects()` with unknown types (previously failing)
+  * **MapResolver Alignment**: Aligns API behavior with MapResolver's documented purpose of handling JSON without class dependencies
 * **IMPROVED**: `WriteOptionsBuilder` and `ReadOptionsBuilder` alias type name removal methods now use `RegexUtilities` for enhanced performance and security:
   * **Methods updated**: `removeAliasTypeNamesMatching()`, `removePermanentAliasTypeNamesMatching()` in both builders
   * **Pattern Caching**: Wildcard patterns (converted to regex) are now cached, eliminating redundant Pattern.compile() calls when same pattern is used multiple times
@@ -11,6 +18,7 @@
   * **Backward Compatibility**: All 2,124 existing tests pass with identical behavior for valid patterns
   * **Security**: Prevents regex-based DoS attacks when user-provided wildcard patterns are used for alias filtering
   * **Note**: These methods are called during configuration setup, not in JSON serialization/deserialization hot paths, so performance impact is minimal but security benefits are significant
+* **CLEANUP**: Removed unused import `com.sun.tools.javac.util.StringUtils` from `Injector.java` that was preventing compilation on JDK 17+
 
 #### 4.63.0 - 2025-11-07
 * **DEPENDENCY**: Updated `java-util` to version 4.3.0 for new `DataGeneratorInputStream` utility and other enhancements.

@@ -906,10 +906,18 @@ public class ReadOptionsBuilder {
 
     /**
      * Set to return as JSON_OBJECTS's (faster, useful for large, more simple object data sets). This returns as
-     * native json types (Map, Object[], long, double, boolean)
+     * native json types (Map, Object[], long, double, boolean).
+     * <p>
+     * This method automatically sets {@code failOnUnknownType(false)} because the Map-of-Maps representation
+     * is designed to work without requiring classes on the classpath. This allows json-io to parse any JSON
+     * structure (including JSON with unknown @type entries) and return it as a traversable Map graph.
+     * <p>
+     * If you need strict type validation even in Map mode, explicitly call {@code .failOnUnknownType(true)}
+     * after this method.
      */
     public ReadOptionsBuilder returnAsJsonObjects() {
         options.returnType = ReadOptions.ReturnType.JSON_OBJECTS;
+        options.failOnUnknownType = false;  // Auto-enable for Map mode - parse any JSON without class dependencies
         return this;
     }
 

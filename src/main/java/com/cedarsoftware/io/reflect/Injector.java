@@ -167,10 +167,12 @@ public class Injector {
         if (field == null) {
             throw new JsonIoException("Field cannot be null");
         }
-        if (uniqueFieldName == null || uniqueFieldName.trim().isEmpty()) {
+
+        if (StringUtilities.isEmpty(uniqueFieldName)) {
             throw new JsonIoException("Unique field name cannot be null or empty");
+
         }
-        
+
         // Security: Check if field access is allowed in secure environments
         String fieldName = field.getName();
         Class<?> declaringClass = field.getDeclaringClass();
@@ -265,17 +267,13 @@ public class Injector {
         try {
             // Security: Validate field declaring class to prevent unauthorized access
             Class<?> declaringClass = field.getDeclaringClass();
-            if (declaringClass == null) {
-                return null;
-            }
-            
+
             Object privateLookup = PRIVATE_LOOKUP_IN_METHOD.invoke(null, declaringClass, LOOKUP);
             if (privateLookup == null) {
                 return null;
             }
             
-            Object varHandle = FIND_VAR_HANDLE_METHOD.invoke(privateLookup, declaringClass,
-                    field.getName(), field.getType());
+            Object varHandle = FIND_VAR_HANDLE_METHOD.invoke(privateLookup, declaringClass, field.getName(), field.getType());
             if (varHandle == null) {
                 return null;
             }
@@ -292,13 +290,13 @@ public class Injector {
         if (field == null) {
             throw new JsonIoException("Field cannot be null");
         }
-        if (methodName == null || methodName.trim().isEmpty()) {
+        if (StringUtilities.isEmpty(methodName)) {
             throw new JsonIoException("Method name cannot be null or empty");
         }
-        if (uniqueFieldName == null || uniqueFieldName.trim().isEmpty()) {
+        if (StringUtilities.isEmpty(uniqueFieldName)) {
             throw new JsonIoException("Unique field name cannot be null or empty");
         }
-        
+
         // Security: Validate method access permissions
         try {
             SecurityManager sm = System.getSecurityManager();
