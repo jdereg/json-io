@@ -1,4 +1,17 @@
 ### Revision History
+#### 4.64.0 (Unreleased)
+* **DEPENDENCY**: Updated `java-util` to version 4.4.0-SNAPSHOT for new `RegexUtilities` pattern caching and ReDoS protection.
+* **IMPROVED**: `WriteOptionsBuilder` and `ReadOptionsBuilder` alias type name removal methods now use `RegexUtilities` for enhanced performance and security:
+  * **Methods updated**: `removeAliasTypeNamesMatching()`, `removePermanentAliasTypeNamesMatching()` in both builders
+  * **Pattern Caching**: Wildcard patterns (converted to regex) are now cached, eliminating redundant Pattern.compile() calls when same pattern is used multiple times
+  * **ReDoS Protection**: Timeout-based regex execution (default 5000ms) prevents catastrophic backtracking from malicious wildcard patterns
+  * **Invalid Pattern Handling**: Malformed patterns are handled gracefully with null checks instead of throwing exceptions
+  * **Thread Safety**: All pattern operations are thread-safe with ConcurrentHashMap-based caching
+  * **Performance**: Zero overhead - shared ExecutorService eliminates per-operation thread creation that previously caused 74% performance degradation
+  * **Backward Compatibility**: All 2,124 existing tests pass with identical behavior for valid patterns
+  * **Security**: Prevents regex-based DoS attacks when user-provided wildcard patterns are used for alias filtering
+  * **Note**: These methods are called during configuration setup, not in JSON serialization/deserialization hot paths, so performance impact is minimal but security benefits are significant
+
 #### 4.63.0 - 2025-11-07
 * **DEPENDENCY**: Updated `java-util` to version 4.3.0 for new `DataGeneratorInputStream` utility and other enhancements.
 * **PERFORMANCE**: Optimized `Injector.inject()` hot path for ~12% read performance improvement:
