@@ -28,6 +28,7 @@ import com.cedarsoftware.io.reflect.filters.field.StaticFieldFilter;
 import com.cedarsoftware.io.reflect.filters.method.DefaultMethodFilter;
 import com.cedarsoftware.io.reflect.filters.method.NamedMethodFilter;
 import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.RegexUtilities;
 import com.cedarsoftware.util.ClassValueMap;
 import com.cedarsoftware.util.ClassValueSet;
 import com.cedarsoftware.util.ConcurrentSet;
@@ -290,8 +291,10 @@ public class WriteOptionsBuilder {
      */
     public static void removePermanentAliasTypeNamesMatching(String classNamePattern) {
         String regex = StringUtilities.wildcardToRegexString(classNamePattern);
-        Pattern pattern = Pattern.compile(regex);
-        BASE_ALIAS_MAPPINGS.keySet().removeIf(key -> pattern.matcher(key).matches());
+        Pattern pattern = RegexUtilities.getCachedPattern(regex);
+        if (pattern != null) {
+            BASE_ALIAS_MAPPINGS.keySet().removeIf(key -> RegexUtilities.safeMatches(pattern, key));
+        }
     }
 
     /**
@@ -730,8 +733,10 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder removeAliasTypeNamesMatching(String typeNamePattern) {
         String regex = StringUtilities.wildcardToRegexString(typeNamePattern);
-        Pattern pattern = Pattern.compile(regex);
-        options.aliasTypeNames.keySet().removeIf(key -> pattern.matcher(key).matches());
+        Pattern pattern = RegexUtilities.getCachedPattern(regex);
+        if (pattern != null) {
+            options.aliasTypeNames.keySet().removeIf(key -> RegexUtilities.safeMatches(pattern, key));
+        }
         return this;
     }
 
