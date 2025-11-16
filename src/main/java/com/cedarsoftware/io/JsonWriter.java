@@ -88,6 +88,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     private static final Object[] byteStrings = new Object[256];
     private static final String NEW_LINE = System.lineSeparator();
     private static final Long ZERO = 0L;
+    // Lookup table for fast ASCII escape detection (128 entries for chars 0-127)
+    private static final boolean[] NEEDS_ESCAPE = new boolean[128];
     private final WriteOptions writeOptions;
     private final Converter converter;
     private final Map<Object, Long> objVisited = new IdentityHashMap<>(256); // Pre-size for better performance
@@ -118,6 +120,16 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             char[] chars = Integer.toString(i).toCharArray();
             byteStrings[i + 128] = chars;
         }
+
+        // Initialize escape lookup table for fast ASCII escape detection
+        // Mark all control characters (0x00-0x1F) as needing escape
+        for (int i = 0; i < 0x20; i++) {
+            NEEDS_ESCAPE[i] = true;
+        }
+        // Mark specific characters that need escaping
+        NEEDS_ESCAPE['"'] = true;   // Quote
+        NEEDS_ESCAPE['\\'] = true;  // Backslash
+        NEEDS_ESCAPE[0x7F] = true;  // DEL control character
     }
 
     /**
@@ -1884,6 +1896,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      * Writes a JSON string value to the output, properly escaped according to JSON specifications.
      * Handles control characters, quotes, backslashes, and properly processes Unicode code points.
      *
+     * OPTIMIZED VERSION: Uses batch scanning to write runs of safe characters in one operation,
+     * significantly reducing write() calls and improving performance.
+     *
      * @param output The Writer to write to
      * @param s The string to be written as a JSON string value
      * @param maxStringLength Maximum allowed string length to prevent memory issues
@@ -1894,7 +1909,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         if (output == null) {
             throw new JsonIoException("Output writer cannot be null");
         }
-        
+
         if (s == null) {
             output.write("null");
             return;
@@ -1902,17 +1917,34 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         output.write('\"');
         final int len = s.length();
-        
+
         // Add safety check for extremely large strings to prevent memory issues using configurable limit
         if (len > maxStringLength) {
             throw new JsonIoException("String too large for JSON serialization: " + len + " characters. Maximum allowed: " + maxStringLength);
         }
 
+        int start = 0;  // Start of current safe run
+
         for (int i = 0; i < len; ) {
+            char ch = s.charAt(i);
+
+            // Fast path: ASCII characters that don't need escaping
+            if (ch < 128 && !NEEDS_ESCAPE[ch]) {
+                i++;
+                continue;  // Keep scanning for safe characters
+            }
+
+            // Found a character that needs special handling
+            // First, write any accumulated safe characters
+            if (i > start) {
+                output.write(s, start, i - start);
+            }
+
+            // Now handle the special character
             int codePoint = s.codePointAt(i);
 
-            if (codePoint < 0x20 || codePoint == 0x7F) {  // Add DEL (0x7F) control character
-                // Control characters
+            if (codePoint < 0x20 || codePoint == 0x7F) {
+                // Control characters - use efficient switch
                 switch (codePoint) {
                     case '\b': output.write("\\b"); break;
                     case '\f': output.write("\\f"); break;
@@ -1928,34 +1960,22 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             else if (codePoint == '\\') {
                 output.write("\\\\");
             }
-            // Optional: Handle forward slash escaping for </script> prevention
-            else if (codePoint == '/') {
-                // Some JSON encoders escape '/' to prevent issues with </script> in HTML
-                // Uncomment if you want this behavior
-                // output.write("\\/");
-                output.write('/');
-            }
             else if (codePoint >= 0x80 && codePoint <= 0xFFFF) {
-                // Non-ASCII characters below surrogate range
-                // For maximum compatibility, you might want to escape these
-                // However, direct output is also valid with proper UTF-8 encoding
-                // Choosing one approach:
-                // 1. Direct output (works with proper UTF-8, more compact)
+                // Non-ASCII characters - write directly as UTF-8
                 output.write(s, i, Character.charCount(codePoint));
-                // Alternatively, if you want to escape:
-                // 2. Always escape (maximum compatibility, especially for older parsers)
-                // output.write(String.format("\\u%04x", codePoint));
             }
             else if (codePoint > 0xFFFF) {
                 // Supplementary characters (beyond BMP)
                 output.write(s, i, Character.charCount(codePoint));
             }
-            else {
-                // ASCII characters (except control chars, quotes, backslashes)
-                output.write(s, i, Character.charCount(codePoint));
-            }
 
             i += Character.charCount(codePoint);
+            start = i;  // Next safe run starts after this character
+        }
+
+        // Write any remaining safe characters
+        if (start < len) {
+            output.write(s, start, len - start);
         }
 
         output.write('\"');
