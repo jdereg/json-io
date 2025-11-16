@@ -3,6 +3,7 @@ package com.cedarsoftware.io;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import com.cedarsoftware.io.prettyprint.JsonPrettyPrinter;
@@ -14,88 +15,70 @@ import com.cedarsoftware.util.convert.Converter;
 
 /**
  * JsonIo is the main entry point for converting between JSON and Java objects.
- * <p>
- * This API uses a fluent builder pattern that splits JSON conversion into two parts:
- * <ol>
- *   <li>The <b>initial conversion</b>:
- *       <ul>
- *         <li>For writing, you convert a Java object (or an intermediate {@code JsonObject}/{@code Map})
- *             to JSON (either as a {@code String} or directly to an {@code OutputStream}).</li>
- *         <li>For reading, you start by parsing JSON from a source ({@code String}, {@code InputStream}, or an in-memory {@code JsonObject}),
- *             and obtain a builder.</li>
- *       </ul>
- *   </li>
- *   <li>The <b>completion</b>:
- *       <ul>
- *         <li>Call either {@code asClass()} (for a concrete target class) or {@code asType()}
- *             (to support generic types via a {@code TypeHolder}) to complete the conversion.</li>
- *       </ul>
- *   </li>
- * </ol>
- * <p>
- * <i>Note: JsonIo includes extensive type conversion capabilities for both primitive and complex types.
- * To view the complete list of supported conversions, examine the output of
- * {@link #main(String[])} or simply run the class directly from the command line.</i>
- * <p>
- * <b>Usage Examples:</b>
+ *
+ * <h2>Two Modes for Reading JSON</h2>
+ *
+ * <p>JsonIo provides two distinct approaches for reading JSON, each optimized for different use cases:</p>
+ *
+ * <h3>1. Java Object Mode - {@link #toJava toJava()}</h3>
+ * <p>Deserializes JSON to fully-typed Java object graphs. <b>Requires Java classes on classpath.</b></p>
+ * <pre>{@code
+ * // Parse to specific class
+ * Person person = JsonIo.toJava(jsonString, readOptions).asClass(Person.class);
+ *
+ * // Parse to generic type
+ * List<Person> people = JsonIo.toJava(jsonString, readOptions)
+ *                             .asType(new TypeHolder<List<Person>>(){});
+ * }</pre>
+ * <p><b>Use when:</b> You have Java classes available and want type-safe, validated objects.</p>
+ *
+ * <h3>2. Map Mode - {@link #toMaps toMaps()}</h3>
+ * <p>Deserializes JSON to {@code Map<String, Object>} graph. <b>No Java classes required.</b></p>
+ * <pre>{@code
+ * // Parse any JSON, even with unknown @type entries
+ * Map<String, Object> map = JsonIo.toMaps(jsonString);
+ *
+ * // Access nested values
+ * String name = (String) map.get("name");
+ *
+ * // Access preserved @type metadata (advanced)
+ * JsonObject obj = (JsonObject) JsonIo.toMaps(jsonString);
+ * String typeString = obj.getTypeString();  // Original @type preserved
+ * }</pre>
+ * <p><b>Use when:</b> Parsing JSON without classes (HTTP middleware, log analysis, cross-JVM transport).</p>
+ *
+ * <h2>Writing JSON</h2>
+ * <p>Convert any Java object (or Map graph) to JSON:</p>
+ * <pre>{@code
+ * // To String
+ * String json = JsonIo.toJson(myObject, writeOptions);
+ *
+ * // To OutputStream
+ * JsonIo.toJson(outputStream, myObject, writeOptions);
+ * }</pre>
+ *
+ * <h2>Key Features</h2>
  * <ul>
- *   <li>
- *     <b>1. Converting a Java object to JSON:</b>
- *     <pre>
- *     // Convert a Java object to a JSON String:
- *     String json = JsonIo.toJson(myObject, writeOptions);
- *
- *     // Write a Java object as JSON to an OutputStream:
- *     JsonIo.toJson(outputStream, myObject, writeOptions);
- *     </pre>
- *   </li>
- *   <li>
- *     <b>2. Reading JSON into fully resolved Java objects:</b>
- *     <pre>
- *     // From a JSON String into a specific class:
- *     Person person = JsonIo.toJava(jsonString, readOptions).asClass(Person.class);
- *
- *     // From an InputStream into a generic type (using TypeHolder):
- *     List&lt;Person&gt; people = JsonIo.toJava(inputStream, readOptions)
- *                                    .asType(new TypeHolder&lt;List&lt;Person&gt;&gt;(){});
- *     </pre>
- *   </li>
- *   <li>
- *     <b>3. Reading JSON into an intermediate representation (JsonObject/Map):</b>
- *     <pre>
- *     // Configure the ReadOptions to force returning JsonObjects (typically Maps)
- *     ReadOptions read = new ReadOptionsBuilder()
- *                                           .returnAsJsonObjects()
- *                                           .build();
- *
- *     // Parse the JSON into a Map (or nested Map structure)
- *     Map&lt;String, Object&gt; jsonMap = JsonIo.toJava(jsonString, read).asClass(Map.class);
- *     </pre>
- *     In this case, simple Java types may be converted (or left as is for {@code Map} types),
- *     and {@code Collection} types will be converted appropriately.
- *   </li>
- *   <li>
- *     <b>4. Parsing JSON with unknown class references:</b>
- *     <pre>
- *     ReadOptions opts = new ReadOptionsBuilder()
- *                               .returnAsJsonObjects()
- *                               .failOnUnknownType(false)
- *                               .build();
- *     Map&lt;String, Object&gt; graph = JsonIo.toJava(jsonString, opts).asClass(Map.class);
- *     </pre>
- *     This configuration allows any JSON to be read as a graph of maps, even when
- *     the {@code @type} values refer to classes not present on the classpath.
- *   </li>
+ *   <li><b>Type Safety:</b> Java Object mode provides compile-time type checking</li>
+ *   <li><b>Class Independence:</b> Map mode works without any classes on classpath</li>
+ *   <li><b>Metadata Preservation:</b> {@code @type} strings preserved even when classes don't exist</li>
+ *   <li><b>Reference Handling:</b> Circular references and object graphs handled automatically</li>
+ *   <li><b>Deterministic Output:</b> Same JSON input always produces same Map structure (LinkedHashMap ordering)</li>
  * </ul>
- * <p>
- * <b>Note:</b>
- * <ul>
- *   <li>The builder returned by the initial JSON reading call must be completed with a call
- *       to either {@code asClass()} or {@code asType()} to perform the final conversion.</li>
- *   <li>The nature of the resulting object—whether it is a fully resolved Java object or an intermediate
- *       representation (typically a {@code Map})—is determined by the {@code ReadOptionBuilder}
- *       settings ({@code returnAsJavaObjects()} or {@code returnAsJsonObjects()}) passed to the call.</li>
- * </ul>
+ *
+ * <h2>Advanced Usage</h2>
+ * <p><b>Two-Phase Parsing:</b> Parse to Map first, then convert to Java objects:</p>
+ * <pre>{@code
+ * // Phase 1: Parse to Map (inspect/modify)
+ * Map<String, Object> map = JsonIo.toMaps(jsonString);
+ * map.put("newField", "added value");
+ *
+ * // Phase 2: Convert to Java object
+ * Person person = JsonIo.toJava((JsonObject) map, readOptions).asClass(Person.class);
+ * }</pre>
+ *
+ * <p><i>Note: JsonIo includes extensive type conversion capabilities. To view all supported conversions,
+ * run {@link #main(String[])} from the command line.</i>
  * 
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -227,6 +210,125 @@ public class JsonIo {
                 }
             }
         }
+    }
+
+    /**
+     * Parses JSON into a {@code Map<String, Object>} graph without requiring Java classes on classpath.
+     * <p>
+     * This method provides a class-independent way to parse any JSON structure. The returned Map uses
+     * deterministic ordering (LinkedHashMap) and preserves JSON structure including:
+     * <ul>
+     *   <li>Objects → {@code Map<String, Object>}</li>
+     *   <li>Arrays → {@code Object[]}</li>
+     *   <li>Primitives → Long, Double, Boolean, String</li>
+     * </ul>
+     * <p>
+     * <b>Implementation Note:</b> The actual return type is {@link JsonObject} (which extends LinkedHashMap).
+     * This means you can safely cast to JsonObject to access preserved metadata:
+     * <pre>{@code
+     * // Access as Map
+     * Map<String, Object> map = JsonIo.toMaps(jsonString);
+     * String name = (String) map.get("name");
+     *
+     * // Access metadata (advanced usage)
+     * JsonObject obj = (JsonObject) JsonIo.toMaps(jsonString);
+     * String originalType = obj.getTypeString();  // Preserved @type value even if class doesn't exist
+     * }</pre>
+     * <p>
+     * <b>Key Feature:</b> This method automatically sets {@code failOnUnknownType(false)}, allowing
+     * JSON with unknown {@code @type} entries to be parsed successfully. The original type strings
+     * are preserved in the JsonObject for later use.
+     * <p>
+     * <b>Use this when:</b>
+     * <ul>
+     *   <li>Parsing JSON on servers without domain classes (HTTP middleware)</li>
+     *   <li>Analyzing serialized object logs</li>
+     *   <li>Transporting data across JVMs with different classpaths</li>
+     *   <li>Inspecting/mutating JSON before converting to objects</li>
+     *   <li>Building generic JSON tools without class dependencies</li>
+     * </ul>
+     *
+     * @param json the JSON string to parse; if null, an empty string will be used
+     * @return {@code Map<String, Object>} graph with deterministic ordering (actually {@link JsonObject})
+     * @throws JsonIoException if an error occurs during parsing
+     * @see #toJava(String, ReadOptions) for parsing to typed Java objects
+     */
+    public static Map<String, Object> toMaps(String json) {
+        return toMaps(json, null);
+    }
+
+    /**
+     * Parses JSON into a {@code Map<String, Object>} graph with custom read options.
+     * <p>
+     * This method is identical to {@link #toMaps(String)} but allows you to specify additional
+     * read options for controlling the parsing behavior (e.g., custom type aliases, missing field handlers).
+     * <p>
+     * The method automatically configures {@code returnAsJsonObjects()} mode, which sets
+     * {@code failOnUnknownType(false)} by default. If you explicitly set {@code failOnUnknownType(true)}
+     * in your options, that will be honored.
+     *
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * ReadOptions options = new ReadOptionsBuilder()
+     *     .aliasTypeName("com.example.OldClass", "com.example.NewClass")
+     *     .build();
+     * Map<String, Object> map = JsonIo.toMaps(jsonString, options);
+     * }</pre>
+     *
+     * @param json the JSON string to parse; if null, an empty string will be used
+     * @param readOptions configuration options; if null, defaults will be used
+     * @return {@code Map<String, Object>} graph with deterministic ordering (actually {@link JsonObject})
+     * @throws JsonIoException if an error occurs during parsing
+     */
+    public static Map<String, Object> toMaps(String json, ReadOptions readOptions) {
+        ReadOptions mapOptions = new ReadOptionsBuilder(readOptions)
+                .returnAsJsonObjects()
+                .build();
+        return new JavaStringBuilder(json, mapOptions).asClass(Map.class);
+    }
+
+    /**
+     * Parses JSON from an InputStream into a {@code Map<String, Object>} graph without requiring Java classes.
+     * <p>
+     * This is the streaming version of {@link #toMaps(String)}. It reads JSON from an input stream
+     * and returns a Map representation without requiring Java classes on the classpath.
+     * <p>
+     * By default, the input stream is closed after reading. To keep it open, configure
+     * {@code readOptions.closeStream(false)}.
+     *
+     * <h3>Example:</h3>
+     * <pre>{@code
+     * try (FileInputStream fis = new FileInputStream("data.json")) {
+     *     Map<String, Object> map = JsonIo.toMaps(fis);
+     * }
+     * }</pre>
+     *
+     * @param in the input stream containing JSON; must not be null
+     * @return {@code Map<String, Object>} graph with deterministic ordering (actually {@link JsonObject})
+     * @throws JsonIoException if an error occurs during parsing
+     * @throws IllegalArgumentException if the input stream is null
+     */
+    public static Map<String, Object> toMaps(InputStream in) {
+        return toMaps(in, null);
+    }
+
+    /**
+     * Parses JSON from an InputStream into a {@code Map<String, Object>} graph with custom read options.
+     * <p>
+     * This method combines streaming input with configurable parsing options. The method automatically
+     * configures {@code returnAsJsonObjects()} mode for class-independent parsing.
+     *
+     * @param in the input stream containing JSON; must not be null
+     * @param readOptions configuration options; if null, defaults will be used
+     * @return {@code Map<String, Object>} graph with deterministic ordering (actually {@link JsonObject})
+     * @throws JsonIoException if an error occurs during parsing
+     * @throws IllegalArgumentException if the input stream is null
+     */
+    public static Map<String, Object> toMaps(InputStream in, ReadOptions readOptions) {
+        ReadOptions mapOptions = new ReadOptionsBuilder(readOptions)
+                .returnAsJsonObjects()
+                .build();
+        return new JavaStreamBuilder(in, mapOptions).asClass(Map.class);
     }
 
     /**
@@ -433,81 +535,51 @@ public class JsonIo {
 
     /**
      * Converts a JSON string to a Java object of the specified class.
-     * <p>
-     * <i>Note: This method will be deprecated in a future release. Please use the {@link #toJava(String, ReadOptions)}
-     * method with {@code asClass()} or {@code asType()} instead.</i>
-     * <p>
-     * This method parses the provided JSON string and converts it to an instance of the specified class.
-     *
-     * <h3>Example:</h3>
-     * <pre>
-     * // Legacy approach:
-     * Person person = JsonIo.toObjects(jsonString, readOptions, Person.class);
-     *
-     * // Recommended new approach:
-     * Person person = JsonIo.toJava(jsonString, readOptions).asClass(Person.class);
-     * </pre>
      *
      * @param <T> the type of the resulting Java object
      * @param json the JSON string to parse
      * @param readOptions options for controlling the parsing; if null, default options will be used
      * @param rootType the class to convert the JSON to
      * @return an instance of the specified class populated from the JSON
+     * @deprecated Use {@link #toJava(String, ReadOptions)} with {@code .asClass(Class)} instead.
+     *             This method will be removed in version 5.0.0.
+     *             <p>Example: {@code Person p = JsonIo.toJava(json, opts).asClass(Person.class);}
      */
+    @Deprecated
     public static <T> T toObjects(String json, ReadOptions readOptions, Class<T> rootType) {
         return toJava(json, readOptions).asClass(rootType);
     }
 
     /**
      * Converts JSON from an InputStream to a Java object of the specified class.
-     * <p>
-     * <i>Note: This method will be deprecated in a future release. Please use the {@link #toJava(InputStream, ReadOptions)}
-     * method with {@code asClass()} or {@code asType()} instead.</i>
-     * <p>
-     * This method reads JSON from the provided input stream and converts it to an instance of the specified class.
-     *
-     * <h3>Example:</h3>
-     * <pre>
-     * // Legacy approach:
-     * Person person = JsonIo.toObjects(inputStream, readOptions, Person.class);
-     *
-     * // Recommended new approach:
-     * Person person = JsonIo.toJava(inputStream, readOptions).asClass(Person.class);
-     * </pre>
      *
      * @param <T> the type of the resulting Java object
      * @param in the input stream containing JSON
      * @param readOptions options for controlling the parsing; if null, default options will be used
      * @param rootType the class to convert the JSON to
      * @return an instance of the specified class populated from the JSON
+     * @deprecated Use {@link #toJava(InputStream, ReadOptions)} with {@code .asClass(Class)} instead.
+     *             This method will be removed in version 5.0.0.
+     *             <p>Example: {@code Person p = JsonIo.toJava(stream, opts).asClass(Person.class);}
      */
+    @Deprecated
     public static <T> T toObjects(InputStream in, ReadOptions readOptions, Class<T> rootType) {
         return toJava(in, readOptions).asClass(rootType);
     }
 
     /**
      * Converts a JsonObject (Map representation) to a Java object of the specified class.
-     * <p>
-     * <i>Note: This method will be deprecated in a future release. Please use the {@link #toJava(JsonObject, ReadOptions)}
-     * method with {@code asClass()} or {@code asType()} instead.</i>
-     * <p>
-     * This method converts the provided JsonObject to an instance of the specified class.
-     *
-     * <h3>Example:</h3>
-     * <pre>
-     * // Legacy approach:
-     * Person person = JsonIo.toObjects(jsonObject, readOptions, Person.class);
-     *
-     * // Recommended new approach:
-     * Person person = JsonIo.toJava(jsonObject, readOptions).asClass(Person.class);
-     * </pre>
      *
      * @param <T> the type of the resulting Java object
      * @param jsonObject the JsonObject to convert
      * @param readOptions options for controlling the conversion; if null, default options will be used
      * @param rootType the class to convert the JsonObject to
      * @return an instance of the specified class populated from the JsonObject
+     * @deprecated Use {@link #toJava(JsonObject, ReadOptions)} with {@code .asClass(Class)} instead.
+     *             This method will be removed in version 5.0.0.
+     *             <p>Example: {@code Person p = JsonIo.toJava(jsonObj, opts).asClass(Person.class);}
      */
+    @Deprecated
     public static <T> T toObjects(JsonObject jsonObject, ReadOptions readOptions, Class<T> rootType) {
         return toJava(jsonObject, readOptions).asClass(rootType);
     }

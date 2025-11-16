@@ -8,6 +8,26 @@
   * **Override**: If strict type validation is needed in Map mode, explicitly call `.failOnUnknownType(true)` after `.returnAsJsonObjects()`
   * **Backward Compatibility**: Minimal impact - only affects code using `returnAsJsonObjects()` with unknown types (previously failing)
   * **MapResolver Alignment**: Aligns API behavior with MapResolver's documented purpose of handling JSON without class dependencies
+* **NEW API**: Added explicit `toMaps()` methods for class-independent JSON parsing:
+  * **Methods**: `toMaps(String)`, `toMaps(String, ReadOptions)`, `toMaps(InputStream)`, `toMaps(InputStream, ReadOptions)`
+  * **Returns**: `Map<String, Object>` graph (actually JsonObject with deterministic LinkedHashMap ordering)
+  * **Purpose**: Makes Map mode obvious from API - no hidden ReadOptions flags required
+  * **Auto-Configuration**: Automatically sets `returnAsJsonObjects()` mode (which sets `failOnUnknownType(false)`)
+  * **Use Cases**: HTTP middleware, log analysis, cross-JVM transport - all without domain classes on classpath
+  * **Metadata Access**: Can safely cast to JsonObject to access preserved @type strings: `JsonObject obj = (JsonObject) JsonIo.toMaps(json)`
+  * **Zero Duplication**: Delegates to existing `toJava()` infrastructure with pre-configured options
+  * **API Clarity**: `JsonIo.toMaps(json)` vs `JsonIo.toJava(json, opts).asClass(Person.class)` - intent is clear from method name
+* **ENHANCED**: Updated `JsonIo` class-level JavaDoc with prominent "Two Modes for Reading JSON" section:
+  * **Java Object Mode**: `toJava()` - Requires classes, returns typed objects, compile-time safety
+  * **Map Mode**: `toMaps()` - No classes required, returns Map graph, works with any JSON
+  * **Documentation**: Clear examples, use case guidance, and feature comparison
+  * **Improved Discoverability**: Two modes now obvious from API documentation
+* **DEPRECATED**: Marked `toObjects()` methods for removal in version 5.0.0:
+  * `toObjects(String, ReadOptions, Class<T>)` → Use `toJava(String, ReadOptions).asClass(Class)`
+  * `toObjects(InputStream, ReadOptions, Class<T>)` → Use `toJava(InputStream, ReadOptions).asClass(Class)`
+  * `toObjects(JsonObject, ReadOptions, Class<T>)` → Use `toJava(JsonObject, ReadOptions).asClass(Class)`
+  * **Reason**: Fluent builder API (`toJava().asClass()`) is more flexible and supports generic types via `.asType()`
+  * **Migration**: Simple one-to-one replacement with improved API
 * **IMPROVED**: `WriteOptionsBuilder` and `ReadOptionsBuilder` alias type name removal methods now use `RegexUtilities` for enhanced performance and security:
   * **Methods updated**: `removeAliasTypeNamesMatching()`, `removePermanentAliasTypeNamesMatching()` in both builders
   * **Pattern Caching**: Wildcard patterns (converted to regex) are now cached, eliminating redundant Pattern.compile() calls when same pattern is used multiple times
