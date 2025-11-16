@@ -22,7 +22,7 @@ public class Issue425ExactReproTest {
                 .unknownTypeClass(LinkedHashMap.class)
                 .build();
         
-        Object objects = JsonIo.toObjects(json, options, Object.class);
+        Object objects = JsonIo.toJava(json, options).asClass(Object.class);
         System.out.println("Result: " + objects);
         
         String roundTrip = JsonIo.toJson(objects, null);
@@ -65,7 +65,7 @@ public class Issue425ExactReproTest {
                 .build();
         
         // With returnAsJsonObjects, must use Map.class, not Object.class
-        Map objects = JsonIo.toObjects(json, options, Map.class);
+        Map objects = JsonIo.toJava(json, options).asClass(Map.class);
         System.out.println("With returnAsJsonObjects: " + objects);
         System.out.println("Top-level keys with returnAsJsonObjects: " + objects.keySet());
         
@@ -85,7 +85,7 @@ public class Issue425ExactReproTest {
                 .failOnUnknownType(false)
                 .build();
         
-        Object objects = JsonIo.toObjects(json, options, Object.class);
+        Object objects = JsonIo.toJava(json, options).asClass(Object.class);
         System.out.println("With failOnUnknownType(false): " + objects);
         
         if (objects instanceof Map) {

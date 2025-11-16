@@ -2257,7 +2257,7 @@ public class TestGraphComparatorList
                 "  }\n" +
                 "}\n";
 
-        JsonIo.toObjects(json, null, null);
+        JsonIo.toMaps(json);
     }
 
     private ID getIdFetcher()

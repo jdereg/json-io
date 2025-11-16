@@ -410,7 +410,7 @@ class ExceptionSerializeTest
         );
 
         String json = JsonIo.toJson(e1, null);
-        Exception e2 = JsonIo.toObjects(json, new ReadOptionsBuilder().build(), InvalidCoordinateException.class);
+        Exception e2 = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(InvalidCoordinateException.class);
 
         assertThat(e2)
                 .isInstanceOf(InvalidCoordinateException.class)

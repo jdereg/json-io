@@ -224,7 +224,8 @@ public class TestUtil {
     }
 
     public static JsonObject toObjects(InputStream in, ReadOptions readOptions) {
-        return JsonIo.toObjects(in, readOptions, null);
+        // Use toJava() with JsonObject.class to get the JsonObject return type
+        return JsonIo.toJava(in, new ReadOptionsBuilder(readOptions).returnAsJsonObjects().build()).asClass(JsonObject.class);
     }
 
     public static void printLine(String s) {

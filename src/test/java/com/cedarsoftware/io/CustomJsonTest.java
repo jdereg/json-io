@@ -85,7 +85,7 @@ class CustomJsonTest
 
 		Person p1 = createPersonJohn();
 		String json = JsonIo.toJson(p1, writeOptions.build());
-		Person p2 = JsonIo.toObjects(json, readOptions.build(), Person.class);
+		Person p2 = JsonIo.toJava(json, readOptions.build()).asClass(Person.class);
 
 		assert deepEquals(p1, p2);
 	}

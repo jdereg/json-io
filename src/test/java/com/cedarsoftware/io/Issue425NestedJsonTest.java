@@ -28,7 +28,7 @@ public class Issue425NestedJsonTest {
                 .build();
         
         // Use toObjects as reported in the issue
-        Object result = JsonIo.toObjects(json, options, Object.class);
+        Object result = JsonIo.toJava(json, options).asClass(Object.class);
         
         System.out.println("Parsed result: " + result);
         

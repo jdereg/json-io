@@ -177,7 +177,7 @@ public class GenericTypesTest {
         ComplexContainer original = new ComplexContainer(complexMap);
 
         String json = JsonIo.toJson(original, null);
-        Object readObj = JsonIo.toObjects(json, null, null);
+        Object readObj = JsonIo.toJava(json, null).asClass(null);
 
         assertEquals(original, readObj, "Deserialized ComplexContainer should equal the original");
     }
@@ -190,7 +190,7 @@ public class GenericTypesTest {
         GenericWrapper<String> original = new GenericWrapper<>("TestValue");
 
         String json = JsonIo.toJson(original, null);
-        Object readObj = JsonIo.toObjects(json, null, null);
+        Object readObj = JsonIo.toJava(json, null).asClass(null);
 
         assertEquals(original, readObj, "Deserialized GenericWrapper<String> should equal the original");
     }
@@ -204,7 +204,7 @@ public class GenericTypesTest {
         RawContainer original = new RawContainer(intList);
 
         String json = JsonIo.toJson(original, null);
-        Object readObj = JsonIo.toObjects(json, null, null);
+        Object readObj = JsonIo.toJava(json, null).asClass(null);
 
         assertEquals(original, readObj, "Deserialized RawContainer should equal the original");
     }
@@ -221,7 +221,7 @@ public class GenericTypesTest {
         Object readObj = JsonIo.toJava(json, null).asType(new TypeHolder<NestedGeneric<Integer>>() {});
         assertEquals(original, readObj, "Deserialized NestedGeneric<Integer> should equal the original");
 
-        readObj = JsonIo.toObjects(json, null, null);
+        readObj = JsonIo.toJava(json, null).asClass(null);
         assertEquals(original, readObj, "Deserialized NestedGeneric<Integer> should equal the original");
     }
 
@@ -234,10 +234,10 @@ public class GenericTypesTest {
 
         String json = JsonIo.toJson(original, null);
 
-        Object readObj = JsonIo.toObjects(json, null, null);
+        Object readObj = JsonIo.toJava(json, null).asClass(null);
         assertEquals(original, readObj, "Deserialized WildcardContainer should equal the original");
 
-        readObj = JsonIo.toObjects(json, null, WildcardContainer.class);
+        readObj = JsonIo.toJava(json, null).asClass(WildcardContainer.class);
         assertEquals(original, readObj, "Deserialized WildcardContainer should equal the original");
     }
 }

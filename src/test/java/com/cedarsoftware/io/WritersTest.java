@@ -57,13 +57,13 @@ public class WritersTest {
         Duration d3 = Duration.ofSeconds(183840, 1);  // Same duration plus 1 nano
 
         String json = JsonIo.toJson(d1, WriteOptionsBuilder.getDefaultWriteOptions());
-        Duration dd1 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Duration.class);
+        Duration dd1 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Duration.class);
 
         json = JsonIo.toJson(d2, WriteOptionsBuilder.getDefaultWriteOptions());
-        Duration dd2 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Duration.class);
+        Duration dd2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Duration.class);
 
         json = JsonIo.toJson(d3, WriteOptionsBuilder.getDefaultWriteOptions());
-        Duration dd3 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Duration.class);
+        Duration dd3 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Duration.class);
         
         assertEquals(d1, dd1);
         assertEquals(d2, dd2);
@@ -78,7 +78,7 @@ public class WritersTest {
         Duration[] durations = new Duration[] {d1, d2, d3};
 
         String json = JsonIo.toJson(durations, WriteOptionsBuilder.getDefaultWriteOptions());
-        Duration[] durs = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Duration[].class);
+        Duration[] durs = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Duration[].class);
         assertTrue(DeepEquals.deepEquals(durations, durs));
     }
 
@@ -91,13 +91,13 @@ public class WritersTest {
         t3.setNanos(123456789);                                           // Nano precision
 
         String json = JsonIo.toJson(t1, WriteOptionsBuilder.getDefaultWriteOptions());
-        Timestamp tt1 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Timestamp.class);
+        Timestamp tt1 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Timestamp.class);
 
         json = JsonIo.toJson(t2, WriteOptionsBuilder.getDefaultWriteOptions());
-        Timestamp tt2 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Timestamp.class);
+        Timestamp tt2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Timestamp.class);
 
         json = JsonIo.toJson(t3, WriteOptionsBuilder.getDefaultWriteOptions());
-        Timestamp tt3 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Timestamp.class);
+        Timestamp tt3 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Timestamp.class);
 
         assertEquals(t1, tt1);
         assertEquals(t2, tt2);
@@ -114,7 +114,7 @@ public class WritersTest {
         Timestamp[] timestamps = new Timestamp[] {t1, t2, t3};
 
         String json = JsonIo.toJson(timestamps, WriteOptionsBuilder.getDefaultWriteOptions());
-        Timestamp[] times = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Timestamp[].class);
+        Timestamp[] times = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Timestamp[].class);
         assertTrue(DeepEquals.deepEquals(timestamps, times));
     }
 
@@ -126,13 +126,13 @@ public class WritersTest {
         java.sql.Date d3 = java.sql.Date.valueOf("0001-01-01");             // Earliest valid SQL date
 
         String json = JsonIo.toJson(d1, WriteOptionsBuilder.getDefaultWriteOptions());
-        java.sql.Date dd1 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), java.sql.Date.class);
+        java.sql.Date dd1 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(java.sql.Date.class);
 
         json = JsonIo.toJson(d2, WriteOptionsBuilder.getDefaultWriteOptions());
-        java.sql.Date dd2 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), java.sql.Date.class);
+        java.sql.Date dd2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(java.sql.Date.class);
 
         json = JsonIo.toJson(d3, WriteOptionsBuilder.getDefaultWriteOptions());
-        java.sql.Date dd3 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), java.sql.Date.class);
+        java.sql.Date dd3 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(java.sql.Date.class);
 
         assertEquals(d1, dd1);
         assertEquals(d2, dd2);
@@ -148,7 +148,7 @@ public class WritersTest {
         java.sql.Date[] dates = new java.sql.Date[] {d1, d2, d3};
 
         String json = JsonIo.toJson(dates, WriteOptionsBuilder.getDefaultWriteOptions());
-        java.sql.Date[] sqlDates = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), java.sql.Date[].class);
+        java.sql.Date[] sqlDates = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(java.sql.Date[].class);
         assertTrue(DeepEquals.deepEquals(dates, sqlDates));
     }
 
@@ -168,13 +168,13 @@ public class WritersTest {
         c3.set(Calendar.MILLISECOND, 0);
 
         String json = JsonIo.toJson(c1, WriteOptionsBuilder.getDefaultWriteOptions());
-        Calendar cc1 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Calendar.class);
+        Calendar cc1 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Calendar.class);
 
         json = JsonIo.toJson(c2, WriteOptionsBuilder.getDefaultWriteOptions());
-        Calendar cc2 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Calendar.class);
+        Calendar cc2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Calendar.class);
 
         json = JsonIo.toJson(c3, WriteOptionsBuilder.getDefaultWriteOptions());
-        Calendar cc3 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Calendar.class);
+        Calendar cc3 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Calendar.class);
 
         assertEquals(c1.getTimeInMillis(), cc1.getTimeInMillis());
         assertEquals(c1.getTimeZone().getID(), cc1.getTimeZone().getID());
@@ -201,7 +201,7 @@ public class WritersTest {
         Calendar[] calendars = new Calendar[] {c1, c2, c3};
 
         String json = JsonIo.toJson(calendars, WriteOptionsBuilder.getDefaultWriteOptions());
-        Calendar[] cals = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Calendar[].class);
+        Calendar[] cals = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Calendar[].class);
 
         for (int i = 0; i < calendars.length; i++) {
             assertEquals(calendars[i].getTimeInMillis(), cals[i].getTimeInMillis());
@@ -217,13 +217,13 @@ public class WritersTest {
         Date d3 = new Date(1767225599000L);       // 2025-12-31 23:59:59
 
         String json = JsonIo.toJson(d1, WriteOptionsBuilder.getDefaultWriteOptions());
-        Date dd1 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Date.class);
+        Date dd1 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Date.class);
 
         json = JsonIo.toJson(d2, WriteOptionsBuilder.getDefaultWriteOptions());
-        Date dd2 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Date.class);
+        Date dd2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Date.class);
 
         json = JsonIo.toJson(d3, WriteOptionsBuilder.getDefaultWriteOptions());
-        Date dd3 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Date.class);
+        Date dd3 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Date.class);
 
         assertEquals(d1.getTime(), dd1.getTime());
         assertEquals(d2.getTime(), dd2.getTime());
@@ -239,7 +239,7 @@ public class WritersTest {
         Date[] dates = new Date[] {d1, d2, d3};
 
         String json = JsonIo.toJson(dates, WriteOptionsBuilder.getDefaultWriteOptions());
-        Date[] newDates = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Date[].class);
+        Date[] newDates = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Date[].class);
 
         for (int i = 0; i < dates.length; i++) {
             assertEquals(dates[i].getTime(), newDates[i].getTime());
@@ -254,13 +254,13 @@ public class WritersTest {
         ZonedDateTime z3 = ZonedDateTime.of(2024, 2, 2, 12, 0, 0, 123456789, ZoneId.of("Europe/London")); // Nano precision
 
         String json = JsonIo.toJson(z1, WriteOptionsBuilder.getDefaultWriteOptions());
-        ZonedDateTime zz1 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), ZonedDateTime.class);
+        ZonedDateTime zz1 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(ZonedDateTime.class);
 
         json = JsonIo.toJson(z2, WriteOptionsBuilder.getDefaultWriteOptions());
-        ZonedDateTime zz2 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), ZonedDateTime.class);
+        ZonedDateTime zz2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(ZonedDateTime.class);
 
         json = JsonIo.toJson(z3, WriteOptionsBuilder.getDefaultWriteOptions());
-        ZonedDateTime zz3 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), ZonedDateTime.class);
+        ZonedDateTime zz3 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(ZonedDateTime.class);
 
         assertEquals(z1, zz1);
         assertEquals(z2, zz2);
@@ -276,7 +276,7 @@ public class WritersTest {
         ZonedDateTime[] zonedDateTimes = new ZonedDateTime[] {z1, z2, z3};
 
         String json = JsonIo.toJson(zonedDateTimes, WriteOptionsBuilder.getDefaultWriteOptions());
-        ZonedDateTime[] times = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), ZonedDateTime[].class);
+        ZonedDateTime[] times = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(ZonedDateTime[].class);
         assertTrue(DeepEquals.deepEquals(zonedDateTimes, times));
     }
 
@@ -288,13 +288,13 @@ public class WritersTest {
         OffsetDateTime o3 = OffsetDateTime.of(2024, 2, 2, 12, 0, 0, 123456789, ZoneOffset.ofHours(1)); // Nano precision
 
         String json = JsonIo.toJson(o1, WriteOptionsBuilder.getDefaultWriteOptions());
-        OffsetDateTime oo1 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), OffsetDateTime.class);
+        OffsetDateTime oo1 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(OffsetDateTime.class);
 
         json = JsonIo.toJson(o2, WriteOptionsBuilder.getDefaultWriteOptions());
-        OffsetDateTime oo2 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), OffsetDateTime.class);
+        OffsetDateTime oo2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(OffsetDateTime.class);
 
         json = JsonIo.toJson(o3, WriteOptionsBuilder.getDefaultWriteOptions());
-        OffsetDateTime oo3 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), OffsetDateTime.class);
+        OffsetDateTime oo3 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(OffsetDateTime.class);
 
         assertEquals(o1, oo1);
         assertEquals(o2, oo2);
@@ -310,7 +310,7 @@ public class WritersTest {
         OffsetDateTime[] offsetDateTimes = new OffsetDateTime[] {o1, o2, o3};
 
         String json = JsonIo.toJson(offsetDateTimes, WriteOptionsBuilder.getDefaultWriteOptions());
-        OffsetDateTime[] times = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), OffsetDateTime[].class);
+        OffsetDateTime[] times = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(OffsetDateTime[].class);
         assertTrue(DeepEquals.deepEquals(offsetDateTimes, times));
     }
 
@@ -322,13 +322,13 @@ public class WritersTest {
         LocalDateTime l3 = LocalDateTime.of(2024, 2, 2, 12, 0, 0, 123456789); // Nano precision
 
         String json = JsonIo.toJson(l1, WriteOptionsBuilder.getDefaultWriteOptions());
-        LocalDateTime ll1 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), LocalDateTime.class);
+        LocalDateTime ll1 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(LocalDateTime.class);
 
         json = JsonIo.toJson(l2, WriteOptionsBuilder.getDefaultWriteOptions());
-        LocalDateTime ll2 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), LocalDateTime.class);
+        LocalDateTime ll2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(LocalDateTime.class);
 
         json = JsonIo.toJson(l3, WriteOptionsBuilder.getDefaultWriteOptions());
-        LocalDateTime ll3 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), LocalDateTime.class);
+        LocalDateTime ll3 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(LocalDateTime.class);
 
         assertEquals(l1, ll1);
         assertEquals(l2, ll2);
@@ -344,7 +344,7 @@ public class WritersTest {
         LocalDateTime[] localDateTimes = new LocalDateTime[] {l1, l2, l3};
 
         String json = JsonIo.toJson(localDateTimes, WriteOptionsBuilder.getDefaultWriteOptions());
-        LocalDateTime[] times = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), LocalDateTime[].class);
+        LocalDateTime[] times = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(LocalDateTime[].class);
         assertTrue(DeepEquals.deepEquals(localDateTimes, times));
     }
 
@@ -356,13 +356,13 @@ public class WritersTest {
         LocalDate l3 = LocalDate.of(9999, 12, 31);          // Far future date
 
         String json = JsonIo.toJson(l1, WriteOptionsBuilder.getDefaultWriteOptions());
-        LocalDate ll1 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), LocalDate.class);
+        LocalDate ll1 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(LocalDate.class);
 
         json = JsonIo.toJson(l2, WriteOptionsBuilder.getDefaultWriteOptions());
-        LocalDate ll2 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), LocalDate.class);
+        LocalDate ll2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(LocalDate.class);
 
         json = JsonIo.toJson(l3, WriteOptionsBuilder.getDefaultWriteOptions());
-        LocalDate ll3 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), LocalDate.class);
+        LocalDate ll3 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(LocalDate.class);
 
         assertEquals(l1, ll1);
         assertEquals(l2, ll2);
@@ -378,7 +378,7 @@ public class WritersTest {
         LocalDate[] localDates = new LocalDate[] {l1, l2, l3};
 
         String json = JsonIo.toJson(localDates, WriteOptionsBuilder.getDefaultWriteOptions());
-        LocalDate[] dates = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), LocalDate[].class);
+        LocalDate[] dates = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(LocalDate[].class);
         assertTrue(DeepEquals.deepEquals(localDates, dates));
     }
 
@@ -390,13 +390,13 @@ public class WritersTest {
         LocalTime t3 = LocalTime.of(12, 0, 0, 123456789);   // Nano precision
 
         String json = JsonIo.toJson(t1, WriteOptionsBuilder.getDefaultWriteOptions());
-        LocalTime tt1 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), LocalTime.class);
+        LocalTime tt1 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(LocalTime.class);
 
         json = JsonIo.toJson(t2, WriteOptionsBuilder.getDefaultWriteOptions());
-        LocalTime tt2 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), LocalTime.class);
+        LocalTime tt2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(LocalTime.class);
 
         json = JsonIo.toJson(t3, WriteOptionsBuilder.getDefaultWriteOptions());
-        LocalTime tt3 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), LocalTime.class);
+        LocalTime tt3 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(LocalTime.class);
 
         assertEquals(t1, tt1);
         assertEquals(t2, tt2);
@@ -412,7 +412,7 @@ public class WritersTest {
         LocalTime[] localTimes = new LocalTime[] {t1, t2, t3};
 
         String json = JsonIo.toJson(localTimes, WriteOptionsBuilder.getDefaultWriteOptions());
-        LocalTime[] times = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), LocalTime[].class);
+        LocalTime[] times = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(LocalTime[].class);
         assertTrue(DeepEquals.deepEquals(localTimes, times));
     }
 
@@ -424,13 +424,13 @@ public class WritersTest {
         OffsetTime t3 = OffsetTime.of(12, 0, 0, 123456789, ZoneOffset.ofHours(1));  // Nano precision
 
         String json = JsonIo.toJson(t1, WriteOptionsBuilder.getDefaultWriteOptions());
-        OffsetTime tt1 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), OffsetTime.class);
+        OffsetTime tt1 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(OffsetTime.class);
 
         json = JsonIo.toJson(t2, WriteOptionsBuilder.getDefaultWriteOptions());
-        OffsetTime tt2 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), OffsetTime.class);
+        OffsetTime tt2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(OffsetTime.class);
 
         json = JsonIo.toJson(t3, WriteOptionsBuilder.getDefaultWriteOptions());
-        OffsetTime tt3 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), OffsetTime.class);
+        OffsetTime tt3 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(OffsetTime.class);
 
         assertEquals(t1, tt1);
         assertEquals(t2, tt2);
@@ -446,7 +446,7 @@ public class WritersTest {
         OffsetTime[] offsetTimes = new OffsetTime[] {t1, t2, t3};
 
         String json = JsonIo.toJson(offsetTimes, WriteOptionsBuilder.getDefaultWriteOptions());
-        OffsetTime[] times = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), OffsetTime[].class);
+        OffsetTime[] times = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(OffsetTime[].class);
         assertTrue(DeepEquals.deepEquals(offsetTimes, times));
     }
 
@@ -460,19 +460,19 @@ public class WritersTest {
         Instant i5 = Instant.parse("+999999999-12-31T23:59:59.999999999Z");   // Far future
 
         String json = JsonIo.toJson(i1, WriteOptionsBuilder.getDefaultWriteOptions());
-        Instant ii1 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Instant.class);
+        Instant ii1 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Instant.class);
 
         json = JsonIo.toJson(i2, WriteOptionsBuilder.getDefaultWriteOptions());
-        Instant ii2 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Instant.class);
+        Instant ii2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Instant.class);
 
         json = JsonIo.toJson(i3, WriteOptionsBuilder.getDefaultWriteOptions());
-        Instant ii3 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Instant.class);
+        Instant ii3 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Instant.class);
 
         json = JsonIo.toJson(i4, WriteOptionsBuilder.getDefaultWriteOptions());
-        Instant ii4 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Instant.class);
+        Instant ii4 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Instant.class);
 
         json = JsonIo.toJson(i5, WriteOptionsBuilder.getDefaultWriteOptions());
-        Instant ii5 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Instant.class);
+        Instant ii5 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Instant.class);
 
         assertEquals(i1, ii1);
         assertEquals(i2, ii2);
@@ -492,7 +492,7 @@ public class WritersTest {
         Instant[] instants = new Instant[] {i1, i2, i3, i4, i5};
 
         String json = JsonIo.toJson(instants, WriteOptionsBuilder.getDefaultWriteOptions());
-        Instant[] times = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Instant[].class);
+        Instant[] times = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Instant[].class);
         assertTrue(DeepEquals.deepEquals(instants, times));
     }
 
@@ -505,16 +505,16 @@ public class WritersTest {
         MonthDay md4 = MonthDay.of(1, 1);    // New Year's Day (tests leading zeros)
 
         String json = JsonIo.toJson(md1, WriteOptionsBuilder.getDefaultWriteOptions());
-        MonthDay mmd1 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), MonthDay.class);
+        MonthDay mmd1 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(MonthDay.class);
 
         json = JsonIo.toJson(md2, WriteOptionsBuilder.getDefaultWriteOptions());
-        MonthDay mmd2 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), MonthDay.class);
+        MonthDay mmd2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(MonthDay.class);
 
         json = JsonIo.toJson(md3, WriteOptionsBuilder.getDefaultWriteOptions());
-        MonthDay mmd3 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), MonthDay.class);
+        MonthDay mmd3 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(MonthDay.class);
 
         json = JsonIo.toJson(md4, WriteOptionsBuilder.getDefaultWriteOptions());
-        MonthDay mmd4 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), MonthDay.class);
+        MonthDay mmd4 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(MonthDay.class);
 
         assertEquals(md1, mmd1);
         assertEquals(md2, mmd2);
@@ -532,7 +532,7 @@ public class WritersTest {
         MonthDay[] monthDays = new MonthDay[] {md1, md2, md3, md4};
 
         String json = JsonIo.toJson(monthDays, WriteOptionsBuilder.getDefaultWriteOptions());
-        MonthDay[] days = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), MonthDay[].class);
+        MonthDay[] days = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(MonthDay[].class);
         assertTrue(DeepEquals.deepEquals(monthDays, days));
     }
 
@@ -545,16 +545,16 @@ public class WritersTest {
         YearMonth ym4 = YearMonth.of(2024, 1);             // Test leading zero month
 
         String json = JsonIo.toJson(ym1, WriteOptionsBuilder.getDefaultWriteOptions());
-        YearMonth yym1 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), YearMonth.class);
+        YearMonth yym1 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(YearMonth.class);
 
         json = JsonIo.toJson(ym2, WriteOptionsBuilder.getDefaultWriteOptions());
-        YearMonth yym2 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), YearMonth.class);
+        YearMonth yym2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(YearMonth.class);
 
         json = JsonIo.toJson(ym3, WriteOptionsBuilder.getDefaultWriteOptions());
-        YearMonth yym3 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), YearMonth.class);
+        YearMonth yym3 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(YearMonth.class);
 
         json = JsonIo.toJson(ym4, WriteOptionsBuilder.getDefaultWriteOptions());
-        YearMonth yym4 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), YearMonth.class);
+        YearMonth yym4 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(YearMonth.class);
 
         assertEquals(ym1, yym1);
         assertEquals(ym2, yym2);
@@ -572,7 +572,7 @@ public class WritersTest {
         YearMonth[] yearMonths = new YearMonth[] {ym1, ym2, ym3, ym4};
 
         String json = JsonIo.toJson(yearMonths, WriteOptionsBuilder.getDefaultWriteOptions());
-        YearMonth[] months = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), YearMonth[].class);
+        YearMonth[] months = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(YearMonth[].class);
         assertTrue(DeepEquals.deepEquals(yearMonths, months));
     }
 
@@ -587,22 +587,22 @@ public class WritersTest {
         Period p6 = Period.ofMonths(14);            // Months > 12
 
         String json = JsonIo.toJson(p1, WriteOptionsBuilder.getDefaultWriteOptions());
-        Period pp1 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Period.class);
+        Period pp1 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Period.class);
 
         json = JsonIo.toJson(p2, WriteOptionsBuilder.getDefaultWriteOptions());
-        Period pp2 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Period.class);
+        Period pp2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Period.class);
 
         json = JsonIo.toJson(p3, WriteOptionsBuilder.getDefaultWriteOptions());
-        Period pp3 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Period.class);
+        Period pp3 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Period.class);
 
         json = JsonIo.toJson(p4, WriteOptionsBuilder.getDefaultWriteOptions());
-        Period pp4 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Period.class);
+        Period pp4 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Period.class);
 
         json = JsonIo.toJson(p5, WriteOptionsBuilder.getDefaultWriteOptions());
-        Period pp5 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Period.class);
+        Period pp5 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Period.class);
 
         json = JsonIo.toJson(p6, WriteOptionsBuilder.getDefaultWriteOptions());
-        Period pp6 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Period.class);
+        Period pp6 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Period.class);
 
         assertEquals(p1, pp1);
         assertEquals(p2, pp2);
@@ -624,7 +624,7 @@ public class WritersTest {
         Period[] periods = new Period[] {p1, p2, p3, p4, p5, p6};
 
         String json = JsonIo.toJson(periods, WriteOptionsBuilder.getDefaultWriteOptions());
-        Period[] times = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Period[].class);
+        Period[] times = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Period[].class);
         assertTrue(DeepEquals.deepEquals(periods, times));
     }
 
@@ -638,19 +638,19 @@ public class WritersTest {
         Year y5 = Year.of(0);                 // Year zero (proleptic calendar)
 
         String json = JsonIo.toJson(y1, WriteOptionsBuilder.getDefaultWriteOptions());
-        Year yy1 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Year.class);
+        Year yy1 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Year.class);
 
         json = JsonIo.toJson(y2, WriteOptionsBuilder.getDefaultWriteOptions());
-        Year yy2 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Year.class);
+        Year yy2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Year.class);
 
         json = JsonIo.toJson(y3, WriteOptionsBuilder.getDefaultWriteOptions());
-        Year yy3 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Year.class);
+        Year yy3 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Year.class);
 
         json = JsonIo.toJson(y4, WriteOptionsBuilder.getDefaultWriteOptions());
-        Year yy4 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Year.class);
+        Year yy4 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Year.class);
 
         json = JsonIo.toJson(y5, WriteOptionsBuilder.getDefaultWriteOptions());
-        Year yy5 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Year.class);
+        Year yy5 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Year.class);
 
         assertEquals(y1, yy1);
         assertEquals(y2, yy2);
@@ -670,7 +670,7 @@ public class WritersTest {
         Year[] years = new Year[] {y1, y2, y3, y4, y5};
 
         String json = JsonIo.toJson(years, WriteOptionsBuilder.getDefaultWriteOptions());
-        Year[] times = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), Year[].class);
+        Year[] times = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(Year[].class);
         assertTrue(DeepEquals.deepEquals(years, times));
     }
 
@@ -686,25 +686,25 @@ public class WritersTest {
         ZoneOffset z7 = ZoneOffset.ofHoursMinutesSeconds(-5, -30, -15); // Negative hours, minutes, seconds
 
         String json = JsonIo.toJson(z1, WriteOptionsBuilder.getDefaultWriteOptions());
-        ZoneOffset zz1 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), ZoneOffset.class);
+        ZoneOffset zz1 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(ZoneOffset.class);
 
         json = JsonIo.toJson(z2, WriteOptionsBuilder.getDefaultWriteOptions());
-        ZoneOffset zz2 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), ZoneOffset.class);
+        ZoneOffset zz2 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(ZoneOffset.class);
 
         json = JsonIo.toJson(z3, WriteOptionsBuilder.getDefaultWriteOptions());
-        ZoneOffset zz3 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), ZoneOffset.class);
+        ZoneOffset zz3 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(ZoneOffset.class);
 
         json = JsonIo.toJson(z4, WriteOptionsBuilder.getDefaultWriteOptions());
-        ZoneOffset zz4 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), ZoneOffset.class);
+        ZoneOffset zz4 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(ZoneOffset.class);
 
         json = JsonIo.toJson(z5, WriteOptionsBuilder.getDefaultWriteOptions());
-        ZoneOffset zz5 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), ZoneOffset.class);
+        ZoneOffset zz5 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(ZoneOffset.class);
 
         json = JsonIo.toJson(z6, WriteOptionsBuilder.getDefaultWriteOptions());
-        ZoneOffset zz6 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), ZoneOffset.class);
+        ZoneOffset zz6 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(ZoneOffset.class);
 
         json = JsonIo.toJson(z7, WriteOptionsBuilder.getDefaultWriteOptions());
-        ZoneOffset zz7 = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), ZoneOffset.class);
+        ZoneOffset zz7 = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(ZoneOffset.class);
 
         assertEquals(z1, zz1);
         assertEquals(z2, zz2);
@@ -728,7 +728,7 @@ public class WritersTest {
         ZoneOffset[] offsets = new ZoneOffset[] {z1, z2, z3, z4, z5, z6, z7};
 
         String json = JsonIo.toJson(offsets, WriteOptionsBuilder.getDefaultWriteOptions());
-        ZoneOffset[] times = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), ZoneOffset[].class);
+        ZoneOffset[] times = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(ZoneOffset[].class);
         assertTrue(DeepEquals.deepEquals(offsets, times));
     }
 
@@ -737,7 +737,7 @@ public class WritersTest {
         // Test reading GMT and writing as Etc/GMT
         ZonedDateTime gmtInput = ZonedDateTime.parse("2024-02-02T12:00:00Z[GMT]");
         String json = JsonIo.toJson(gmtInput, WriteOptionsBuilder.getDefaultWriteOptions());
-        ZonedDateTime restored = JsonIo.toObjects(json, ReadOptionsBuilder.getDefaultReadOptions(), ZonedDateTime.class);
+        ZonedDateTime restored = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(ZonedDateTime.class);
 
         // Instead of checking the JSON string directly, verify the restored object
         assertEquals("Etc/GMT", restored.getZone().getId());

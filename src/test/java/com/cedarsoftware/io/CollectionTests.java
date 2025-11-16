@@ -633,7 +633,7 @@ class CollectionTests {
         // Third, the ImmutableListFactory will create the List as a SealableList, which allows it to be added to
         // during construction and then sealed (become immutable) before passing back to caller.
         String json = "{\"@type\":\"ListN\",\"@items\":[\"alpha\",\"bravo\",\"charlie\",\"delta\"]}";
-        List<String> x = JsonIo.toObjects(json, null, null);
+        List<String> x = (List<String>) JsonIo.toJava(json, null).asClass(null);
         assert x instanceof SealableList;
     }
 

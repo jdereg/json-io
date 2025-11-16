@@ -93,7 +93,7 @@ public class CharacterTest
     {
         String monkeys = "\uD83D\uDE4A\uD83D\uDE49\uD83D\uDE48";
         String json = JsonIo.toJson(monkeys, null);
-        String rereadJson = JsonIo.toObjects(json, null, String.class);
+        String rereadJson = JsonIo.toJava(json, null).asClass(String.class);
         assertEquals(rereadJson, monkeys);
     }
 

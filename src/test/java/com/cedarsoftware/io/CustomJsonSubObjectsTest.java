@@ -143,7 +143,7 @@ class CustomJsonSubObjectsTest
 
 		Person p1 = createPersonJohn();
 		String json = JsonIo.toJson(p1, writeOptions.build());
-		Person p2 = JsonIo.toObjects(json, readOptions.build(), Person.class);
+		Person p2 = JsonIo.toJava(json, readOptions.build()).asClass(Person.class);
 
 		Map options = new HashMap<>();
 		boolean equals = DeepEquals.deepEquals(p1, p2, options);

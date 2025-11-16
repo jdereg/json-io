@@ -53,7 +53,7 @@ public class NDJSONTest {
         ReadOptions readOptions = new ReadOptionsBuilder().closeStream(false).build();
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new FastByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))));
         String json1 = bufferedReader.readLine();
-        TestObject ta = JsonIo.toObjects(json1, readOptions, TestObject.class);
+        TestObject ta = JsonIo.toJava(json1, readOptions).asClass(TestObject.class);
         
         assertThat(ta.getName()).isEqualTo("one");
         assertThat(ta._other.getName()).isEqualTo("two");
@@ -61,7 +61,7 @@ public class NDJSONTest {
         assertSame(ta._other._other, ta);  // @id/@ref worked
 
         String json2 = bufferedReader.readLine();
-        TestObject tb = JsonIo.toObjects(json2, readOptions, TestObject.class);
+        TestObject tb = JsonIo.toJava(json2, readOptions).asClass(TestObject.class);
 
         assertThat(tb.getName()).isEqualTo("two");
         assertThat(tb._other.getName()).isEqualTo("one");
