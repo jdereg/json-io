@@ -10,13 +10,20 @@
   * **MapResolver Alignment**: Aligns API behavior with MapResolver's documented purpose of handling JSON without class dependencies
 * **NEW API**: Added explicit `toMaps()` methods for class-independent JSON parsing:
   * **Methods**: `toMaps(String)`, `toMaps(String, ReadOptions)`, `toMaps(InputStream)`, `toMaps(InputStream, ReadOptions)`
-  * **Returns**: `Map<String, Object>` graph (actually JsonObject with deterministic LinkedHashMap ordering)
+  * **Returns**: Builder supporting `.asClass()` and `.asType()` for flexible type extraction (same as `toJava()`)
+  * **Maximum Flexibility**: Handles all valid JSON types - objects (`Map`), arrays (`List`), primitives (`String`, `Integer`, etc.), and null
+  * **Consistent API**: Same fluent builder pattern as `toJava()` - identical extraction methods
   * **Purpose**: Makes Map mode obvious from API - no hidden ReadOptions flags required
   * **Auto-Configuration**: Automatically sets `returnAsJsonObjects()` mode (which sets `failOnUnknownType(false)`)
   * **Use Cases**: HTTP middleware, log analysis, cross-JVM transport - all without domain classes on classpath
-  * **Metadata Access**: Can safely cast to JsonObject to access preserved @type strings: `JsonObject obj = (JsonObject) JsonIo.toMaps(json)`
+  * **Examples**:
+    * `Map<String, Object> map = JsonIo.toMaps("{...}").asClass(Map.class)` - Parse JSON object to Map
+    * `List<Object> list = JsonIo.toMaps("[1,2,3]").asClass(List.class)` - Parse JSON array to List
+    * `String str = JsonIo.toMaps("\"hello\"").asClass(String.class)` - Parse JSON string to String
+    * `Object result = JsonIo.toMaps(json).asClass(null)` - Parse any valid JSON type
+    * `JsonObject obj = JsonIo.toMaps(json).asClass(JsonObject.class)` - Access preserved @type metadata
   * **Zero Duplication**: Delegates to existing `toJava()` infrastructure with pre-configured options
-  * **API Clarity**: `JsonIo.toMaps(json)` vs `JsonIo.toJava(json, opts).asClass(Person.class)` - intent is clear from method name
+  * **API Clarity**: `JsonIo.toMaps(json).asClass(Map.class)` vs `JsonIo.toJava(json, opts).asClass(Person.class)` - intent is clear from method name
 * **ENHANCED**: Updated `JsonIo` class-level JavaDoc with prominent "Two Modes for Reading JSON" section:
   * **Java Object Mode**: `toJava()` - Requires classes, returns typed objects, compile-time safety
   * **Map Mode**: `toMaps()` - No classes required, returns Map graph, works with any JSON

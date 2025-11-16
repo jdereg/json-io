@@ -35,14 +35,17 @@ import com.cedarsoftware.util.convert.Converter;
  * <h3>2. Map Mode - {@link #toMaps toMaps()}</h3>
  * <p>Deserializes JSON to {@code Map<String, Object>} graph. <b>No Java classes required.</b></p>
  * <pre>{@code
- * // Parse any JSON, even with unknown @type entries
- * Map<String, Object> map = JsonIo.toMaps(jsonString);
+ * // Parse JSON object to Map
+ * Map<String, Object> map = JsonIo.toMaps(jsonString).asClass(Map.class);
  *
- * // Access nested values
- * String name = (String) map.get("name");
+ * // Parse JSON array to List
+ * List<Object> list = JsonIo.toMaps("[1,2,3]").asClass(List.class);
+ *
+ * // Parse any JSON type
+ * Object result = JsonIo.toMaps(jsonString).asClass(null);
  *
  * // Access preserved @type metadata (advanced)
- * JsonObject obj = (JsonObject) JsonIo.toMaps(jsonString);
+ * JsonObject obj = JsonIo.toMaps(jsonString).asClass(JsonObject.class);
  * String typeString = obj.getTypeString();  // Original @type preserved
  * }</pre>
  * <p><b>Use when:</b> Parsing JSON without classes (HTTP middleware, log analysis, cross-JVM transport).</p>
@@ -70,7 +73,7 @@ import com.cedarsoftware.util.convert.Converter;
  * <p><b>Two-Phase Parsing:</b> Parse to Map first, then convert to Java objects:</p>
  * <pre>{@code
  * // Phase 1: Parse to Map (inspect/modify)
- * Map<String, Object> map = JsonIo.toMaps(jsonString);
+ * Map<String, Object> map = JsonIo.toMaps(jsonString).asClass(Map.class);
  * map.put("newField", "added value");
  *
  * // Phase 2: Convert to Java object
@@ -249,16 +252,16 @@ public class JsonIo {
      * </ul>
      *
      * @param json the JSON string to parse; if null, an empty string will be used
-     * @return {@code Map<String, Object>} graph with deterministic ordering (actually {@link JsonObject})
+     * @return a builder to complete the conversion by specifying the target type
      * @throws JsonIoException if an error occurs during parsing
      * @see #toJava(String, ReadOptions) for parsing to typed Java objects
      */
-    public static Map<String, Object> toMaps(String json) {
+    public static JavaStringBuilder toMaps(String json) {
         return toMaps(json, null);
     }
 
     /**
-     * Parses JSON into a {@code Map<String, Object>} graph with custom read options.
+     * Parses JSON into a Map graph with custom read options, returning a {@link JsonValue} builder.
      * <p>
      * This method is identical to {@link #toMaps(String)} but allows you to specify additional
      * read options for controlling the parsing behavior (e.g., custom type aliases, missing field handlers).
@@ -272,26 +275,26 @@ public class JsonIo {
      * ReadOptions options = new ReadOptionsBuilder()
      *     .aliasTypeName("com.example.OldClass", "com.example.NewClass")
      *     .build();
-     * Map<String, Object> map = JsonIo.toMaps(jsonString, options);
+     * Map<String, Object> map = JsonIo.toMaps(jsonString, options).asClass(Map.class);
      * }</pre>
      *
      * @param json the JSON string to parse; if null, an empty string will be used
      * @param readOptions configuration options; if null, defaults will be used
-     * @return {@code Map<String, Object>} graph with deterministic ordering (actually {@link JsonObject})
+     * @return a builder to complete the conversion by specifying the target type
      * @throws JsonIoException if an error occurs during parsing
      */
-    public static Map<String, Object> toMaps(String json, ReadOptions readOptions) {
+    public static JavaStringBuilder toMaps(String json, ReadOptions readOptions) {
         ReadOptions mapOptions = new ReadOptionsBuilder(readOptions)
                 .returnAsJsonObjects()
                 .build();
-        return new JavaStringBuilder(json, mapOptions).asClass(Map.class);
+        return new JavaStringBuilder(json, mapOptions);
     }
 
     /**
-     * Parses JSON from an InputStream into a {@code Map<String, Object>} graph without requiring Java classes.
+     * Parses JSON from an InputStream into a Map graph without requiring Java classes.
      * <p>
      * This is the streaming version of {@link #toMaps(String)}. It reads JSON from an input stream
-     * and returns a Map representation without requiring Java classes on the classpath.
+     * and returns a {@link JsonValue} builder without requiring Java classes on the classpath.
      * <p>
      * By default, the input stream is closed after reading. To keep it open, configure
      * {@code readOptions.closeStream(false)}.
@@ -299,36 +302,36 @@ public class JsonIo {
      * <h3>Example:</h3>
      * <pre>{@code
      * try (FileInputStream fis = new FileInputStream("data.json")) {
-     *     Map<String, Object> map = JsonIo.toMaps(fis);
+     *     Map<String, Object> map = JsonIo.toMaps(fis).asClass(Map.class);
      * }
      * }</pre>
      *
      * @param in the input stream containing JSON; must not be null
-     * @return {@code Map<String, Object>} graph with deterministic ordering (actually {@link JsonObject})
+     * @return a builder to complete the conversion by specifying the target type
      * @throws JsonIoException if an error occurs during parsing
      * @throws IllegalArgumentException if the input stream is null
      */
-    public static Map<String, Object> toMaps(InputStream in) {
+    public static JavaStreamBuilder toMaps(InputStream in) {
         return toMaps(in, null);
     }
 
     /**
-     * Parses JSON from an InputStream into a {@code Map<String, Object>} graph with custom read options.
+     * Parses JSON from an InputStream into a Map graph with custom read options.
      * <p>
      * This method combines streaming input with configurable parsing options. The method automatically
      * configures {@code returnAsJsonObjects()} mode for class-independent parsing.
      *
      * @param in the input stream containing JSON; must not be null
      * @param readOptions configuration options; if null, defaults will be used
-     * @return {@code Map<String, Object>} graph with deterministic ordering (actually {@link JsonObject})
+     * @return a builder to complete the conversion by specifying the target type
      * @throws JsonIoException if an error occurs during parsing
      * @throws IllegalArgumentException if the input stream is null
      */
-    public static Map<String, Object> toMaps(InputStream in, ReadOptions readOptions) {
+    public static JavaStreamBuilder toMaps(InputStream in, ReadOptions readOptions) {
         ReadOptions mapOptions = new ReadOptionsBuilder(readOptions)
                 .returnAsJsonObjects()
                 .build();
-        return new JavaStreamBuilder(in, mapOptions).asClass(Map.class);
+        return new JavaStreamBuilder(in, mapOptions);
     }
 
     /**

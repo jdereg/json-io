@@ -86,7 +86,7 @@ keys and values. A common choice is `LinkedHashMap` to maintain insertion order.
 _Example: Parse any JSON into a Map graph_
 ```java
 // Recommended: Use toMaps() API (automatically handles unknown types)
-Map<String, Object> graph = JsonIo.toMaps(json);
+Map<String, Object> graph = JsonIo.toMaps(json).asClass(Map.class);
 
 // Alternative: Manual configuration with toJava()
 ReadOptions opts = new ReadOptionsBuilder()
