@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import com.cedarsoftware.io.reflect.Accessor;
@@ -111,6 +112,12 @@ public class WriteOptionsBuilder {
     
     private static final WriteOptions defWriteOptions;
     private final DefaultWriteOptions options;
+
+    // Cached lambda instances to reduce allocations in computeIfAbsent calls
+    private static final Function<Class<?>, Set<String>> LINKED_HASH_SET_FACTORY = k -> new LinkedHashSet<>();
+    private static final Function<Class<?>, Map<String, String>> LINKED_HASH_MAP_FACTORY = cls -> new LinkedHashMap<>();
+    private static final Function<Class<?>, Set<String>> CONCURRENT_SET_FACTORY = cls -> ConcurrentHashMap.newKeySet();
+    private static final Function<Class<?>, Map<String, String>> CONCURRENT_MAP_FACTORY = cls -> new ConcurrentHashMap<>();
 
     static {
         ReadOptionsBuilder.loadBaseAliasMappings(WriteOptionsBuilder::addPermanentAlias);
@@ -305,7 +312,7 @@ public class WriteOptionsBuilder {
      * @param fieldName to be excluded.
      */
     public static void addPermanentExcludedField(Class<?> clazz, String fieldName) {
-        BASE_EXCLUDED_FIELD_NAMES.computeIfAbsent(clazz, cls -> ConcurrentHashMap.newKeySet()).add(fieldName);
+        BASE_EXCLUDED_FIELD_NAMES.computeIfAbsent(clazz, CONCURRENT_SET_FACTORY).add(fieldName);
     }
 
     /**
@@ -356,7 +363,7 @@ public class WriteOptionsBuilder {
      * @param methodName The name of the non-standard method used to get the field value. 'getEpochSecond' in the example above.
      */
     public static void addPermanentNonStandardGetter(Class<?> clazz, String field, String methodName) {
-        BASE_NONSTANDARD_GETTERS.computeIfAbsent(clazz, cls -> new ConcurrentHashMap<>()).put(field, methodName);
+        BASE_NONSTANDARD_GETTERS.computeIfAbsent(clazz, CONCURRENT_MAP_FACTORY).put(field, methodName);
     }
 
     /**
@@ -953,7 +960,7 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder addIncludedField(Class<?> clazz, String includedFieldName) {
         Convention.throwIfNull(includedFieldName, "includedFieldName cannot be null");
-        options.includedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).add(includedFieldName);
+        options.includedFieldNames.computeIfAbsent(clazz, LINKED_HASH_SET_FACTORY).add(includedFieldName);
         return this;
     }
 
@@ -963,7 +970,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder addIncludedFields(Class<?> clazz, Collection<? extends String> includedFieldNames) {
-        options.includedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).addAll(includedFieldNames);
+        options.includedFieldNames.computeIfAbsent(clazz, LINKED_HASH_SET_FACTORY).addAll(includedFieldNames);
         return this;
     }
 
@@ -982,7 +989,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder addExcludedField(Class<?> clazz, String excludedFieldName) {
-        options.excludedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).add(excludedFieldName);
+        options.excludedFieldNames.computeIfAbsent(clazz, LINKED_HASH_SET_FACTORY).add(excludedFieldName);
         return this;
     }
 
@@ -992,7 +999,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder addExcludedFields(Class<?> clazz, Collection<? extends String> excludedFields) {
-        options.excludedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).addAll(excludedFields);
+        options.excludedFieldNames.computeIfAbsent(clazz, LINKED_HASH_SET_FACTORY).addAll(excludedFields);
         return this;
     }
 
@@ -1041,7 +1048,7 @@ public class WriteOptionsBuilder {
         Convention.throwIfNull(c, "class cannot be null");
         Convention.throwIfNull(fieldName, "fieldName cannot be null");
         Convention.throwIfNull(methodName, "methodName cannot be null");
-        options.nonStandardGetters.computeIfAbsent(c, cls -> new LinkedHashMap<>()).put(fieldName, methodName);
+        options.nonStandardGetters.computeIfAbsent(c, LINKED_HASH_MAP_FACTORY).put(fieldName, methodName);
         return this;
     }
 
