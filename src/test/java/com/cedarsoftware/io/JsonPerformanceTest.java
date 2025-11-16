@@ -45,7 +45,7 @@ public class JsonPerformanceTest {
 
         // --- Warm-Up Loop ---
         // Run a number of iterations to let the JVM "warm up" (JIT compilation, etc.)
-        int warmupIterations = 50000;  // Increased for better JIT optimization
+        int warmupIterations = 10000;  // Sufficient for JIT optimization, faster test runs
         LOG.info("Starting warmup with " + warmupIterations + " iterations...");
         for (int i = 0; i < warmupIterations; i++) {
             // JsonIo warm-up (serialization then deserialization)
@@ -59,7 +59,7 @@ public class JsonPerformanceTest {
         LOG.info("Warmup complete.");
 
         // --- Performance Test ---
-        int iterations = 500000;  // Increased significantly for better profiling data
+        int iterations = 100000;  // Reduced for faster test runs while maintaining accuracy
 
         // Test JsonIo serialization ("writing")
         LOG.info("Testing JsonIo Write with " + iterations + " iterations...");

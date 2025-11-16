@@ -186,7 +186,7 @@ public class JsonReader implements Closeable
                 new MapResolver(this.readOptions, references, converter) :
                 new ObjectResolver(this.readOptions, references, converter);
         this.parser = new JsonParser(this.input, this.resolver);
-        localConverter = new Converter(this.readOptions.getConverterOptions());
+        localConverter = converter;  // Reuse the same converter instance instead of creating a duplicate
     }
 
     /**
