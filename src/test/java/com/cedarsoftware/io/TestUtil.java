@@ -296,40 +296,4 @@ public class TestUtil {
     private static long totalWrites;
     private static final boolean debug = false;
 
-    /**
-     * Ensure that the passed in source contains all the Strings passed in the 'contains' parameter AND
-     * that they appear in the order they are passed in. This method asserts the presence and order
-     * of the specified strings, ignoring case.
-     *
-     * @param source   Source string to test.
-     * @param contains Strings that must appear in the source string in the specified order.
-     */
-    public static void assertContainsIgnoreCase(String source, String... contains) {
-        String lowerSource = source.toLowerCase();
-        for (String contain : contains) {
-            int idx = lowerSource.indexOf(contain.toLowerCase());
-            String msg = "'" + contain + "' not found in '" + lowerSource + "'";
-            assert idx >= 0 : msg;
-            lowerSource = lowerSource.substring(idx);
-        }
-    }
-
-    /**
-     * Checks whether the source string contains all specified substrings in the given order, ignoring case.
-     *
-     * @param source   Source string to test.
-     * @param contains Strings that must appear in the source string in the specified order.
-     * @return True if all specified strings are found in order; otherwise, false.
-     */
-    public static boolean checkContainsIgnoreCase(String source, String... contains) {
-        String lowerSource = source.toLowerCase();
-        for (String contain : contains) {
-            int idx = lowerSource.indexOf(contain.toLowerCase());
-            if (idx == -1) {
-                return false;
-            }
-            lowerSource = lowerSource.substring(idx);
-        }
-        return true;
-    }
 }

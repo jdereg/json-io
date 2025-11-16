@@ -8,6 +8,7 @@ import com.cedarsoftware.util.FastByteArrayInputStream;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
 import org.junit.jupiter.api.Test;
 
+import static com.cedarsoftware.util.TestUtil.assertContainsIgnoreCase;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -45,9 +46,9 @@ public class NDJSONTest {
         JsonIo.toJson(fbaos, to2, writeOptions);
         fbaos.close();
         String json = new String(fbaos.toByteArray(), StandardCharsets.UTF_8);
-        TestUtil.assertContainsIgnoreCase(json, "TestObject", "one", "two", "TestObject", "two", "one");
+        assertContainsIgnoreCase(json, "TestObject", "one", "two", "TestObject", "two", "one");
         // Illustrating the capability of assertContainsIgnoreCase below
-        TestUtil.assertContainsIgnoreCase(json, "TestObject", "one", "TestObject", "two");
+        assertContainsIgnoreCase(json, "TestObject", "one", "TestObject", "two");
 
         // Read NDJSON
         ReadOptions readOptions = new ReadOptionsBuilder().closeStream(false).build();
