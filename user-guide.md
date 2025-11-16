@@ -46,18 +46,29 @@ List<Employee> list = JsonIo.toJava(stream, readOptions).asType(new TypeHolder<L
 ```
 In this example, an `InputStream` is supplying the JSON.
 
-### Untyped Usage
-**json-io** provides the choice to use the generic `Map` of `Maps` representation of an object, akin to a Javascript
-associative array.  When reading from a JSON `String` or `InputStream` of JSON, use `JsonIo`:
+### Untyped Usage (Map Mode)
+**json-io** provides two distinct modes for reading JSON. In addition to typed Java objects, you can use the **Map Mode**
+which returns a generic `Map<String, Object>` graph without requiring Java classes on the classpath.
 
-```java 
-String json = // or InputStream to JSON providing source
-ReadOptions readOptions = new ReadOptionsBuilder().returnAsJsonObjects().build();
-Map root = JsonIo.toJava(json, readOptions).asClass(Map.class);    
+**Use `toMaps()` for class-independent JSON parsing:**
+
+```java
+// Simple - parse any JSON to Maps
+Map<String, Object> root = JsonIo.toMaps(json);
+
+// Or from InputStream
+Map<String, Object> root = JsonIo.toMaps(inputStream);
+
+// With custom options
+ReadOptions readOptions = new ReadOptionsBuilder()
+    .aliasTypeName("OldClass", "NewClass")
+    .build();
+Map<String, Object> root = JsonIo.toMaps(json, readOptions);
 ```
-See the `ReadOptions` below for the feature control options. In the provided example, rather than returning the objects
-converted into Java classes, the raw JSON values are parsed and returned as `Maps`. This forms a graph consisting of all
-`Map` instances, arrays, and primitive types.
+
+The `toMaps()` API automatically configures the reader for Map mode and allows unknown `@type` values to be parsed
+successfully. The parsed structure forms a graph consisting of `Map` instances (actually `JsonObject` with deterministic
+LinkedHashMap ordering), arrays, and primitive types.
 
 ### Representation of JSON Structures as Maps
 When `Map` is returned, the root value can represent one of the following:
@@ -73,9 +84,8 @@ followed by rewriting the String or stream, providing a robust solution for dyna
 
 _Example: Manipulate JSON without having the referenced classes_
 ```java
-// Read JSON into Map structure
-ReadOptions readOptions = new ReadOptionsBuilder().returnAsJsonObjects().build();
-Map<String, Object> jsonMap = JsonIo.toJava(jsonString, readOptions).asClass(Map.class);
+// Read JSON into Map structure (no classes required!)
+Map<String, Object> jsonMap = JsonIo.toMaps(jsonString);
 
 // Manipulate values
 jsonMap.put("name", "John Doe");
@@ -85,25 +95,36 @@ jsonMap.put("name", "John Doe");
 String updatedJson = JsonIo.toJson(jsonMap, writeOptions);
 ```
 
-Each `JsonObject` retains the raw `@type` value from the input JSON. Call
-`getTypeString()` to retrieve this value without triggering type resolution.
-
-### Parsing JSON with Unknown Classes
-If the JSON contains class references that are not available on the classpath,
-configure the reader to skip type resolution and return a graph of `Map`
-instances. This allows arbitrary JSON to be loaded, inspected, and
-re-serialized.
-
+Each `JsonObject` retains the raw `@type` value from the input JSON. You can safely cast to `JsonObject`
+to access this metadata:
 ```java
-ReadOptions opts = new ReadOptionsBuilder()
-        .returnAsJsonObjects()
-        .failOnUnknownType(false)
-        .build();
-Map<String, Object> graph = JsonIo.toJava(json, opts).asClass(Map.class);
+JsonObject obj = (JsonObject) JsonIo.toMaps(jsonString);
+String originalType = obj.getTypeString();  // Preserved @type value
 ```
 
-All objects will be represented as Maps (or collections) so the entire structure
-can be traversed or modified without requiring the referenced classes.
+### Parsing JSON with Unknown Classes
+If the JSON contains class references (`@type` entries) that are not available on the classpath,
+use the `toMaps()` API which automatically handles unknown types gracefully:
+
+```java
+// Simple - automatically allows unknown types
+Map<String, Object> graph = JsonIo.toMaps(json);
+```
+
+The `toMaps()` method automatically configures the reader to skip type resolution and return a graph of `Map`
+instances. This allows arbitrary JSON to be loaded, inspected, and re-serialized without requiring the
+referenced classes on the classpath.
+
+All objects will be represented as Maps (or collections) so the entire structure can be traversed or modified.
+The original `@type` strings are preserved in the JsonObject metadata for later use if needed.
+
+**Advanced:** If you need strict type validation even in Map mode, you can override the default:
+```java
+ReadOptions opts = new ReadOptionsBuilder()
+        .failOnUnknownType(true)  // Override default
+        .build();
+Map<String, Object> graph = JsonIo.toMaps(json, opts);  // Will throw if unknown @type found
+```
 
 ### Generic Type Support
 For working with generic types like `List<Employee>` or complex nested generics, use the `TypeHolder` class to preserve full generic type information:

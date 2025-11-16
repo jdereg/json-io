@@ -16,7 +16,8 @@ Key Features:
 - Optional unsafe mode for deserializing package-private classes, inner classes, 
   and classes without accessible constructors (opt-in for security)
 - Extensive configuration options via `ReadOptionsBuilder` and `WriteOptionsBuilder`
-- Optionally parse JSON with unknown class references into a Map-of-Maps representation
+- Two modes: typed Java objects (`toJava()`) or class-independent Maps (`toMaps()`)
+- Parse JSON with unknown class references into a Map-of-Maps representation without requiring classes on classpath
 - Featured on [json.org](http://json.org)
 
 ## Cloud Native & Microservices
@@ -81,7 +82,7 @@ ___
 >- [ ] **Java Package**: com.cedarsoftware.io
 >- [ ] **Java**: JDK1.8+ (Class file 52 format, includes module-info.class - multi-release JAR)
 >- [ ] **API**
- >  - Static methods on [JsonIo](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.63.0/com/cedarsoftware/io/JsonIo.html): [toJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.63.0/com/cedarsoftware/io/JsonIo.html#toJson(java.lang.Object,com.cedarsoftware.io.WriteOptions)), [toJava()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/latest/com/cedarsoftware/io/JsonIo.html#toJava(com.cedarsoftware.io.JsonObject,com.cedarsoftware.io.ReadOptions)), [formatJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.63.0/com/cedarsoftware/io/JsonIo.html#formatJson(java.lang.String)), [deepCopy()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.63.0/com/cedarsoftware/io/JsonIo.html#deepCopy(java.lang.Object,com.cedarsoftware.io.ReadOptions,com.cedarsoftware.io.WriteOptions))
+ >  - Static methods on [JsonIo](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.63.0/com/cedarsoftware/io/JsonIo.html): [toJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.63.0/com/cedarsoftware/io/JsonIo.html#toJson(java.lang.Object,com.cedarsoftware.io.WriteOptions)), [toJava()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/latest/com/cedarsoftware/io/JsonIo.html#toJava(com.cedarsoftware.io.JsonObject,com.cedarsoftware.io.ReadOptions)), [toMaps()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/latest/com/cedarsoftware/io/JsonIo.html#toMaps(java.lang.String)), [formatJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.63.0/com/cedarsoftware/io/JsonIo.html#formatJson(java.lang.String)), [deepCopy()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.63.0/com/cedarsoftware/io/JsonIo.html#deepCopy(java.lang.Object,com.cedarsoftware.io.ReadOptions,com.cedarsoftware.io.WriteOptions))
  >  - Use [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md) to configure `JsonIo`
  >  - Use [JsonReader.ClassFactory](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.63.0/com/cedarsoftware/io/JsonReader.ClassFactory.html) for difficult classes (hard to instantiate & fill)
  >  - Use [JsonWriter.JsonClassWriter](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.63.0/com/cedarsoftware/io/JsonWriter.JsonClassWriter.html) to customize the output JSON for a particular class

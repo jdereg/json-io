@@ -75,19 +75,27 @@ keys and values. A common choice is `LinkedHashMap` to maintain insertion order.
 >- [ ] Set to`true`to indicate that an exception should be thrown if an unknown class type is encountered,`false`otherwise.
    If`fail`is`false,`then the default class used will be`JsonObject` for the particular JSON object encountered. You can
    set this to your own class using the`unknownTypeClass()`feature (e.g., `LinkedHashMap.class`). The default setting is `true.`
+
+>**Note:** When using `JsonIo.toMaps()`, this option is automatically set to `false` since Map mode is designed to work
+   without requiring classes on the classpath. You can override this by explicitly setting `failOnUnknownType(true)` if needed.
+
 >#### `ReadOptionsBuilder` unknownTypeClass(`Class`)
 >- [ ] Set the class to use (defaults to`JsonObject` when `null`) when a JSON object is encountered and there is no
    corresponding Java class to instantiate to receive the values. Common alternatives include `LinkedHashMap.class` or `HashMap.class`.
 
 _Example: Parse any JSON into a Map graph_
 ```java
+// Recommended: Use toMaps() API (automatically handles unknown types)
+Map<String, Object> graph = JsonIo.toMaps(json);
+
+// Alternative: Manual configuration with toJava()
 ReadOptions opts = new ReadOptionsBuilder()
         .returnAsJsonObjects()
         .failOnUnknownType(false)
         .build();
 Map<String, Object> graph = JsonIo.toJava(json, opts).asClass(Map.class);
 ```
-This configuration prevents errors for unrecognized `@type` values and ensures all objects are stored as maps.
+The `toMaps()` API automatically prevents errors for unrecognized `@type` values and ensures all objects are stored as maps.
 
 ### MaxDepth - Security protection
 Set the maximum object nesting level so that no`StackOverflowExceptions`happen.  Instead, you will get a`JsonIoException`letting
