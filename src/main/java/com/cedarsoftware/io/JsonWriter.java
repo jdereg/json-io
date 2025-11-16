@@ -90,8 +90,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     private static final Long ZERO = 0L;
     private final WriteOptions writeOptions;
     private final Converter converter;
-    private final Map<Object, Long> objVisited = new IdentityHashMap<>();
-    private final Map<Object, Long> objsReferenced = new IdentityHashMap<>();
+    private final Map<Object, Long> objVisited = new IdentityHashMap<>(256); // Pre-size for better performance
+    private final Map<Object, Long> objsReferenced = new IdentityHashMap<>(256); // Pre-size for better performance
     private final Writer out;
     private long identity = 1;
     private int depth = 0;

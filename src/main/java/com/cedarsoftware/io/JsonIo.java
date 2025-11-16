@@ -140,7 +140,7 @@ public class JsonIo {
      * @throws JsonIoException if an error occurs during the serialization process
      */
     public static String toJson(Object srcObject, WriteOptions writeOptions) {
-        FastByteArrayOutputStream out = new FastByteArrayOutputStream();
+        FastByteArrayOutputStream out = new FastByteArrayOutputStream(4096); // Pre-size to 4KB to reduce reallocations
         try (JsonWriter writer = new JsonWriter(out, writeOptions)) {
             writer.write(srcObject);
             return out.toString();
