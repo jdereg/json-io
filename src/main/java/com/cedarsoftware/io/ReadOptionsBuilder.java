@@ -99,9 +99,7 @@ public class ReadOptionsBuilder {
     // Base permanent JsonParser-specific security limits - default to backward compatible values
     private static volatile long BASE_MAX_ID_VALUE = 1000000000L;            // ±1B ID range max
     private static volatile int BASE_STRING_BUFFER_SIZE = 256;               // 256 chars initial capacity
-    private static volatile int BASE_THREAD_LOCAL_BUFFER_SIZE = 1024;        // 1024 chars ThreadLocal buffer
-    private static volatile int BASE_LARGE_THREAD_LOCAL_BUFFER_SIZE = 8192;  // 8192 chars large ThreadLocal buffer
-    
+
     // Base permanent MetaUtils-specific security limits - default to backward compatible values
     private static volatile int BASE_MAX_ALLOWED_LENGTH = 65536;             // 64KB max allowed length
     private static volatile int BASE_MAX_FILE_CONTENT_SIZE = 1048576;        // 1MB max file content size
@@ -193,9 +191,7 @@ public class ReadOptionsBuilder {
         // Copy base permanent JsonParser-specific security limits
         options.maxIdValue = BASE_MAX_ID_VALUE;
         options.stringBufferSize = BASE_STRING_BUFFER_SIZE;
-        options.threadLocalBufferSize = BASE_THREAD_LOCAL_BUFFER_SIZE;
-        options.largeThreadLocalBufferSize = BASE_LARGE_THREAD_LOCAL_BUFFER_SIZE;
-        
+
         // Copy base permanent MetaUtils-specific security limits
         options.maxAllowedLength = BASE_MAX_ALLOWED_LENGTH;
         options.maxFileContentSize = BASE_MAX_FILE_CONTENT_SIZE;
@@ -261,9 +257,7 @@ public class ReadOptionsBuilder {
             // Copy JsonParser-specific security limits
             options.maxIdValue = other.maxIdValue;
             options.stringBufferSize = other.stringBufferSize;
-            options.threadLocalBufferSize = other.threadLocalBufferSize;
-            options.largeThreadLocalBufferSize = other.largeThreadLocalBufferSize;
-            
+
             // Copy MetaUtils-specific security limits
             options.maxAllowedLength = other.maxAllowedLength;
             options.maxFileContentSize = other.maxFileContentSize;
@@ -560,36 +554,6 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentStringBufferSize(int stringBufferSize) {
         BASE_STRING_BUFFER_SIZE = stringBufferSize;
-    }
-
-    /**
-     * Set a permanent (JVM lifecycle) size for ThreadLocal string processing buffers during JSON parsing.
-     * All new ReadOptions instances created will automatically start with this setting, preventing the need to
-     * configure it for each ReadOptions instance.
-     * 
-     * @param threadLocalBufferSize int size for ThreadLocal buffers. This affects memory allocation for string
-     *                              processing operations. Use 1024 for backward compatible default.
-     */
-    public static void addPermanentThreadLocalBufferSize(int threadLocalBufferSize) {
-        if (threadLocalBufferSize < 1) {
-            throw new JsonIoException("threadLocalBufferSize must be at least 1, value: " + threadLocalBufferSize);
-        }
-        BASE_THREAD_LOCAL_BUFFER_SIZE = threadLocalBufferSize;
-    }
-
-    /**
-     * Set a permanent (JVM lifecycle) size for ThreadLocal large string processing buffers during JSON parsing.
-     * All new ReadOptions instances created will automatically start with this setting, preventing the need to
-     * configure it for each ReadOptions instance.
-     * 
-     * @param largeThreadLocalBufferSize int size for large ThreadLocal buffers. This affects memory allocation for
-     *                                   large string processing operations. Use 8192 for backward compatible default.
-     */
-    public static void addPermanentLargeThreadLocalBufferSize(int largeThreadLocalBufferSize) {
-        if (largeThreadLocalBufferSize < 1) {
-            throw new JsonIoException("largeThreadLocalBufferSize must be at least 1, value: " + largeThreadLocalBufferSize);
-        }
-        BASE_LARGE_THREAD_LOCAL_BUFFER_SIZE = largeThreadLocalBufferSize;
     }
 
     /**
@@ -1137,34 +1101,6 @@ public class ReadOptionsBuilder {
     }
 
     /**
-     * @param threadLocalBufferSize int size for ThreadLocal string processing buffers during JSON parsing.
-     *                              This affects memory allocation for string processing operations.
-     *                              Default is 1024 for backward compatibility.
-     * @return ReadOptionsBuilder for chained access.
-     */
-    public ReadOptionsBuilder threadLocalBufferSize(int threadLocalBufferSize) {
-        if (threadLocalBufferSize < 1) {
-            throw new JsonIoException("threadLocalBufferSize must be at least 1, value: " + threadLocalBufferSize);
-        }
-        options.threadLocalBufferSize = threadLocalBufferSize;
-        return this;
-    }
-
-    /**
-     * @param largeThreadLocalBufferSize int size for ThreadLocal large string processing buffers during JSON parsing.
-     *                                   This affects memory allocation for large string processing operations.
-     *                                   Default is 8192 for backward compatibility.
-     * @return ReadOptionsBuilder for chained access.
-     */
-    public ReadOptionsBuilder largeThreadLocalBufferSize(int largeThreadLocalBufferSize) {
-        if (largeThreadLocalBufferSize < 1) {
-            throw new JsonIoException("largeThreadLocalBufferSize must be at least 1, value: " + largeThreadLocalBufferSize);
-        }
-        options.largeThreadLocalBufferSize = largeThreadLocalBufferSize;
-        return this;
-    }
-
-    /**
      * @param maxAllowedLength int maximum allowed length for argument character processing in MetaUtils.
      *                         Set this to prevent memory exhaustion when processing large arguments.
      *                         Default is 65536 (64KB) for backward compatibility.
@@ -1638,9 +1574,7 @@ public class ReadOptionsBuilder {
         // JsonParser-specific security limits - default to backward compatible values
         private long maxIdValue = 1000000000L;            // ±1B ID range max (same as JsonParser hardcoded default)
         private int stringBufferSize = 256;               // 256 chars initial capacity (same as JsonParser hardcoded default)
-        private int threadLocalBufferSize = 1024;         // 1024 chars ThreadLocal buffer (same as JsonParser hardcoded default)
-        private int largeThreadLocalBufferSize = 8192;    // 8192 chars large ThreadLocal buffer (same as JsonParser hardcoded default)
-        
+
         // MetaUtils-specific security limits - default to backward compatible values
         private int maxAllowedLength = 65536;             // 64KB max allowed length (same as MetaUtils hardcoded default)
         private int maxFileContentSize = 1048576;         // 1MB max file content size (same as MetaUtils hardcoded default)
@@ -1791,14 +1725,6 @@ public class ReadOptionsBuilder {
 
         public int getStringBufferSize() {
             return stringBufferSize;
-        }
-
-        public int getThreadLocalBufferSize() {
-            return threadLocalBufferSize;
-        }
-
-        public int getLargeThreadLocalBufferSize() {
-            return largeThreadLocalBufferSize;
         }
 
         public int getMaxAllowedLength() {

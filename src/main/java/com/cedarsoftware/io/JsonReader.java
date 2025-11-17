@@ -13,7 +13,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
@@ -23,10 +22,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.cedarsoftware.util.ClassUtilities;
-import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.ExceptionUtilities;
 import com.cedarsoftware.util.FastByteArrayInputStream;
 import com.cedarsoftware.util.FastReader;
+import com.cedarsoftware.util.IOUtilities;
 import com.cedarsoftware.util.TypeUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
@@ -779,18 +778,7 @@ public class JsonReader implements Closeable
     }
     
     public void close() {
-        try {
-            if (input != null) {
-                input.close();
-            }
-        }
-        catch (Exception e) {
-            throw new JsonIoException("Unable to close input", e);
-        }
-        finally {
-            // Clean up ThreadLocal resources to prevent memory leaks
-            JsonParser.clearThreadLocalBuffers();
-        }
+        IOUtilities.close(input);
     }
 
     private String getErrorMessage(String msg)

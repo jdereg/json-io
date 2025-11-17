@@ -181,18 +181,6 @@ public interface ReadOptions {
     int getStringBufferSize();
 
     /**
-     * @return int size for ThreadLocal string processing buffers during JSON parsing.
-     * This affects memory allocation for string processing operations. Default is 1024 for backward compatibility.
-     */
-    int getThreadLocalBufferSize();
-
-    /**
-     * @return int size for ThreadLocal large string processing buffers during JSON parsing.
-     * This affects memory allocation for large string processing operations. Default is 8192 for backward compatibility.
-     */
-    int getLargeThreadLocalBufferSize();
-
-    /**
      * @return int maximum allowed length for argument character processing in MetaUtils.
      * Once this limit is exceeded, content will be truncated to prevent memory exhaustion.
      * Default is 65536 (64KB) for backward compatibility.

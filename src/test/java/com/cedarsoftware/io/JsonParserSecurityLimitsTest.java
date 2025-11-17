@@ -15,12 +15,10 @@ public class JsonParserSecurityLimitsTest {
     @Test
     public void testDefaultJsonParserSecurityLimits_ShouldUseBackwardCompatibleDefaults() {
         ReadOptions readOptions = new ReadOptionsBuilder().build();
-        
+
         // JsonParser security limits should have backward compatible defaults
         assertEquals(1000000000L, readOptions.getMaxIdValue());              // 1B max ID value
         assertEquals(256, readOptions.getStringBufferSize());                // 256 chars initial capacity
-        assertEquals(1024, readOptions.getThreadLocalBufferSize());          // 1024 chars ThreadLocal buffer
-        assertEquals(8192, readOptions.getLargeThreadLocalBufferSize());     // 8192 chars large ThreadLocal buffer
     }
 
     @Test
@@ -28,14 +26,10 @@ public class JsonParserSecurityLimitsTest {
         ReadOptions readOptions = new ReadOptionsBuilder()
                 .maxIdValue(500000000L)              // 500M max ID value
                 .stringBufferSize(128)               // 128 chars initial capacity
-                .threadLocalBufferSize(512)          // 512 chars ThreadLocal buffer
-                .largeThreadLocalBufferSize(4096)    // 4096 chars large ThreadLocal buffer
                 .build();
-        
+
         assertEquals(500000000L, readOptions.getMaxIdValue());
         assertEquals(128, readOptions.getStringBufferSize());
-        assertEquals(512, readOptions.getThreadLocalBufferSize());
-        assertEquals(4096, readOptions.getLargeThreadLocalBufferSize());
     }
 
     @Test
@@ -43,16 +37,12 @@ public class JsonParserSecurityLimitsTest {
         ReadOptions original = new ReadOptionsBuilder()
                 .maxIdValue(750000000L)              // 750M max ID value
                 .stringBufferSize(64)                // 64 chars initial capacity
-                .threadLocalBufferSize(256)          // 256 chars ThreadLocal buffer
-                .largeThreadLocalBufferSize(2048)    // 2048 chars large ThreadLocal buffer
                 .build();
-        
+
         ReadOptions copied = new ReadOptionsBuilder(original).build();
-        
+
         assertEquals(750000000L, copied.getMaxIdValue());
         assertEquals(64, copied.getStringBufferSize());
-        assertEquals(256, copied.getThreadLocalBufferSize());
-        assertEquals(2048, copied.getLargeThreadLocalBufferSize());
     }
 
     @Test
@@ -167,36 +157,26 @@ public class JsonParserSecurityLimitsTest {
         ReadOptions originalDefaults = new ReadOptionsBuilder().build();
         long originalMaxId = originalDefaults.getMaxIdValue();
         int originalStringBuffer = originalDefaults.getStringBufferSize();
-        int originalThreadLocal = originalDefaults.getThreadLocalBufferSize();
-        int originalLargeThreadLocal = originalDefaults.getLargeThreadLocalBufferSize();
-        
+
         try {
             // Set permanent JsonParser security limits
             ReadOptionsBuilder.addPermanentMaxIdValue(2000000000L);
             ReadOptionsBuilder.addPermanentStringBufferSize(128);
-            ReadOptionsBuilder.addPermanentThreadLocalBufferSize(512);
-            ReadOptionsBuilder.addPermanentLargeThreadLocalBufferSize(4096);
-            
+
             // New ReadOptions instances should inherit the permanent limits
             ReadOptions readOptions1 = new ReadOptionsBuilder().build();
             assertEquals(2000000000L, readOptions1.getMaxIdValue());
             assertEquals(128, readOptions1.getStringBufferSize());
-            assertEquals(512, readOptions1.getThreadLocalBufferSize());
-            assertEquals(4096, readOptions1.getLargeThreadLocalBufferSize());
-            
+
             // Another new instance should also inherit them
             ReadOptions readOptions2 = new ReadOptionsBuilder().build();
             assertEquals(2000000000L, readOptions2.getMaxIdValue());
             assertEquals(128, readOptions2.getStringBufferSize());
-            assertEquals(512, readOptions2.getThreadLocalBufferSize());
-            assertEquals(4096, readOptions2.getLargeThreadLocalBufferSize());
-            
+
         } finally {
             // Restore original permanent settings
             ReadOptionsBuilder.addPermanentMaxIdValue(originalMaxId);
             ReadOptionsBuilder.addPermanentStringBufferSize(originalStringBuffer);
-            ReadOptionsBuilder.addPermanentThreadLocalBufferSize(originalThreadLocal);
-            ReadOptionsBuilder.addPermanentLargeThreadLocalBufferSize(originalLargeThreadLocal);
         }
     }
 
@@ -206,35 +186,25 @@ public class JsonParserSecurityLimitsTest {
         ReadOptions originalDefaults = new ReadOptionsBuilder().build();
         long originalMaxId = originalDefaults.getMaxIdValue();
         int originalStringBuffer = originalDefaults.getStringBufferSize();
-        int originalThreadLocal = originalDefaults.getThreadLocalBufferSize();
-        int originalLargeThreadLocal = originalDefaults.getLargeThreadLocalBufferSize();
-        
+
         try {
             // Set permanent JsonParser security limits
             ReadOptionsBuilder.addPermanentMaxIdValue(100000000L);
             ReadOptionsBuilder.addPermanentStringBufferSize(64);
-            ReadOptionsBuilder.addPermanentThreadLocalBufferSize(256);
-            ReadOptionsBuilder.addPermanentLargeThreadLocalBufferSize(2048);
-            
+
             // Local settings should override permanent settings
             ReadOptions readOptions = new ReadOptionsBuilder()
                     .maxIdValue(3000000000L)               // Override permanent
                     .stringBufferSize(1024)                // Override permanent
-                    .threadLocalBufferSize(2048)           // Override permanent
-                    .largeThreadLocalBufferSize(16384)     // Override permanent
                     .build();
-            
+
             assertEquals(3000000000L, readOptions.getMaxIdValue());
             assertEquals(1024, readOptions.getStringBufferSize());
-            assertEquals(2048, readOptions.getThreadLocalBufferSize());
-            assertEquals(16384, readOptions.getLargeThreadLocalBufferSize());
-            
+
         } finally {
             // Restore original permanent settings
             ReadOptionsBuilder.addPermanentMaxIdValue(originalMaxId);
             ReadOptionsBuilder.addPermanentStringBufferSize(originalStringBuffer);
-            ReadOptionsBuilder.addPermanentThreadLocalBufferSize(originalThreadLocal);
-            ReadOptionsBuilder.addPermanentLargeThreadLocalBufferSize(originalLargeThreadLocal);
         }
     }
 }

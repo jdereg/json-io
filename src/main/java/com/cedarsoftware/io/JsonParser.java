@@ -7,7 +7,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -70,6 +69,7 @@ class JsonParser {
     private static final JsonObject EMPTY_ARRAY = new JsonObject();  // compared with ==
     private final FastReader input;
     private final StringBuilder strBuf;
+    private final StringBuilder hexBuf = new StringBuilder();
     private final StringBuilder numBuf = new StringBuilder();
     private int curParseDepth = 0;
     private final boolean allowNanAndInfinity;
@@ -84,81 +84,21 @@ class JsonParser {
     // Performance: Hoisted ReadOptions constants to avoid repeated method calls
     private final long maxIdValue;
     private final Map<String, String> substitutes;
-
-    // Optimized string buffer management with size-based strategy
-    // Fix ThreadLocal resource leak by providing cleanup utilities
-    private static volatile int threadLocalBufferSize = 1024;
-    private static volatile int largeThreadLocalBufferSize = 8192;
-
-    // ThreadLocal buffers that respect the configured sizes
-    private static final ThreadLocal<char[]> STRING_BUFFER = new ThreadLocal<char[]>() {
-        @Override
-        protected char[] initialValue() {
-            return new char[threadLocalBufferSize];
-        }
-    };
-
-    private static final ThreadLocal<char[]> LARGE_STRING_BUFFER = new ThreadLocal<char[]>() {
-        @Override
-        protected char[] initialValue() {
-            return new char[largeThreadLocalBufferSize];
-        }
-    };
-
-    /**
-     * Configure the ThreadLocal buffer sizes. This should be called during application initialization
-     * to set buffer sizes that will be used by all future JsonParser instances.
-     * @param threadLocalBufferSize int size for ThreadLocal string processing buffers
-     * @param largeThreadLocalBufferSize int size for ThreadLocal large string processing buffers
-     */
-    static void configureThreadLocalBufferSizes(int threadLocalBufferSize, int largeThreadLocalBufferSize) {
-        JsonParser.threadLocalBufferSize = threadLocalBufferSize;
-        JsonParser.largeThreadLocalBufferSize = largeThreadLocalBufferSize;
-    }
-
-    /**
-     * Clean up ThreadLocal resources to prevent memory leaks.
-     * Should be called when JsonParser processing is complete for the current thread.
-     */
-    public static void clearThreadLocalBuffers() {
-        STRING_BUFFER.remove();
-        LARGE_STRING_BUFFER.remove();
-    }
-
+    
     // Primary static cache that never changes
     private static final Map<String, String> STATIC_STRING_CACHE = new ConcurrentHashMap<>(64);
     private static final Map<Number, Number> STATIC_NUMBER_CACHE = new ConcurrentHashMap<>(16);
     private static final Map<String, String> SUBSTITUTES = new HashMap<>(5);
 
+    // String parsing state machine constants
+    private static final int STRING_START = 0;
+    private static final int STRING_SLASH = 1;
+    private static final int HEX_DIGITS = 2;
+
     // Static lookup tables for performance
-    private static final char[] ESCAPE_CHAR_MAP = new char[128];
-    private static final int[] HEX_VALUE_MAP = new int[128];
     private static final boolean[] WHITESPACE_MAP = new boolean[128];
 
     static {
-        // Initialize escape character map
-        ESCAPE_CHAR_MAP['\\'] = '\\';
-        ESCAPE_CHAR_MAP['/'] = '/';
-        ESCAPE_CHAR_MAP['"'] = '"';
-        ESCAPE_CHAR_MAP['\''] = '\'';
-        ESCAPE_CHAR_MAP['b'] = '\b';
-        ESCAPE_CHAR_MAP['f'] = '\f';
-        ESCAPE_CHAR_MAP['n'] = '\n';
-        ESCAPE_CHAR_MAP['r'] = '\r';
-        ESCAPE_CHAR_MAP['t'] = '\t';
-
-        // Initialize hex value map
-        Arrays.fill(HEX_VALUE_MAP, -1);
-        for (int i = '0'; i <= '9'; i++) {
-            HEX_VALUE_MAP[i] = i - '0';
-        }
-        for (int i = 'a'; i <= 'f'; i++) {
-            HEX_VALUE_MAP[i] = 10 + (i - 'a');
-        }
-        for (int i = 'A'; i <= 'F'; i++) {
-            HEX_VALUE_MAP[i] = 10 + (i - 'A');
-        }
-
         // Initialize whitespace map
         WHITESPACE_MAP[' '] = true;
         WHITESPACE_MAP['\t'] = true;
@@ -299,9 +239,6 @@ class JsonParser {
         
         // Performance: Hoist maxIdValue to avoid repeated method calls
         this.maxIdValue = readOptions.getMaxIdValue();
-
-        // Configure static ThreadLocal buffer sizes for this parsing session
-        configureThreadLocalBufferSizes(readOptions.getThreadLocalBufferSize(), readOptions.getLargeThreadLocalBufferSize());
     }
 
     /**
@@ -364,7 +301,7 @@ class JsonParser {
      * Read a JSON object { ... }
      *
      * @return JsonObject that represents the { ... } being read in.  If the JSON object type can be inferred,
-     * from an @type field, containing field type, or containing array type, then the javaType will be set on the
+     * from a @type field, containing field type, or containing array type, then the javaType will be set on the
      * JsonObject.
      */
     private JsonObject readJsonObject(Type suggestedType) throws IOException {
@@ -515,7 +452,7 @@ class JsonParser {
      * (char) c is acceptable because the 'tokens' allowed in a
      * JSON input stream (true, false, null) are all ASCII.
      */
-    private void readToken(String token) throws IOException {
+    private void readToken(String token) {
         final int len = token.length();
 
         // Optimized path for common short tokens
@@ -565,7 +502,6 @@ class JsonParser {
      */
     private Number readNumber(int c) throws IOException {
         final FastReader in = input;
-        boolean isFloat = false;
 
         if (allowNanAndInfinity && (c == '-' || c == 'N' || c == 'I')) {
             /*
@@ -718,295 +654,96 @@ class JsonParser {
      * @throws IOException for stream errors or parsing errors.
      */
     private String readString() throws IOException {
+        final StringBuilder str = strBuf;
+        str.setLength(0);
+        final StringBuilder hex = hexBuf;
+        int state = STRING_START;
         final FastReader in = input;
-        final char[] ESCAPE_CHARS = ESCAPE_CHAR_MAP;
-        final int[] HEX_VALUES = HEX_VALUE_MAP;
 
-        // Get thread-local buffer to avoid allocation
-        char[] buffer = STRING_BUFFER.get();
-        int pos = 0;
-
-        // Fast path for simple strings (no escapes)
         while (true) {
             int c = in.read();
             if (c == -1) {
                 error("EOF reached while reading JSON string");
             }
 
-            // String termination
-            if (c == '"') {
-                // Check root level validation
-                if (curParseDepth == 0) {
-                    c = skipWhitespaceRead(false);
-                    if (c != -1) {
-                        throw new JsonIoException("EOF expected, content found after string");
-                    }
-                }
-
-                // For simple strings, create string directly from buffer
-                return cacheString(new String(buffer, 0, pos));
-            }
-
-            // Escape sequence - switch to StringBuilder for complex case
-            if (c == '\\') {
-                // Initialize StringBuilder only when needed
-                StringBuilder sb = strBuf;
-                sb.setLength(0);
-
-                // Copy current buffer contents to StringBuilder
-                sb.append(buffer, 0, pos);
-
-                // Handle the escape sequence
-                c = in.read();
-                if (c == -1) {
-                    error("EOF reached while reading escape sequence");
-                }
-
-                // Process first escape
-                processEscape(sb, c, in, ESCAPE_CHARS, HEX_VALUES);
-
-                // Continue with StringBuilder-based processing for the rest of the string
-                return readStringWithEscapes(sb, in, ESCAPE_CHARS, HEX_VALUES);
-            }
-
-            // Regular character
-            if (pos >= buffer.length) {
-                // Standard buffer full, try large buffer before StringBuilder
-                char[] largeBuffer = LARGE_STRING_BUFFER.get();
-                System.arraycopy(buffer, 0, largeBuffer, 0, pos);
-                largeBuffer[pos++] = (char) c;
-                return readStringInBuffer(largeBuffer, pos);
-            }
-
-            // Add to buffer
-            buffer[pos++] = (char) c;
-        }
-    }
-
-    /**
-     * Continue reading a string with StringBuilder after encountering an escape sequence.
-     */
-    private String readStringWithEscapes(StringBuilder sb, FastReader in,
-                                         char[] ESCAPE_CHARS, int[] HEX_VALUES) throws IOException {
-        while (true) {
-            int c = in.read();
-            if (c == -1) {
-                error("EOF reached while reading JSON string");
-            }
-
-            // Fast path for regular characters
-            if (c != '\\' && c != '"') {
-                sb.append((char) c);
-                continue;
-            }
-
-            // String termination
-            if (c == '"') {
-                // Check root level validation
-                if (curParseDepth == 0) {
-                    c = skipWhitespaceRead(false);
-                    if (c != -1) {
-                        throw new JsonIoException("EOF expected, content found after string");
-                    }
-                }
-                break;
-            }
-
-            // Must be an escape sequence
-            c = in.read();
-            if (c == -1) {
-                error("EOF reached while reading escape sequence");
-            }
-
-            processEscape(sb, c, in, ESCAPE_CHARS, HEX_VALUES);
-        }
-
-        return cacheString(sb.toString());
-    }
-
-    /**
-     * Process a single escape sequence and append to StringBuilder
-     */
-    private void processEscape(StringBuilder sb, int c, FastReader in,
-                               char[] ESCAPE_CHARS, int[] HEX_VALUES) throws IOException {
-        // Fix bounds checking for escape processing - add comprehensive validation
-        if (c < 0 || c > 127) {
-            error("Invalid escape character code: " + c + " - escape characters must be ASCII (0-127)");
-        }
-
-        // Handle common escapes via lookup table with bounds checking
-        if (c < ESCAPE_CHARS.length) {
-            char escaped = ESCAPE_CHARS[c];
-            if (escaped != '\0') {
-                sb.append(escaped);
-                return;
-            }
-        }
-
-        // Unicode escape sequence
-        if (c == 'u') {
-            int value = 0;
-            for (int i = 0; i < 4; i++) {
-                c = in.read();
-                if (c == -1) {
-                    error("EOF reached while reading Unicode escape sequence");
-                }
-
-                // Enhanced bounds checking for hex values
-                if (c < 0 || c >= HEX_VALUES.length) {
-                    error("Invalid character in Unicode escape sequence: " + c + " (out of ASCII range)");
-                }
-
-                int digit = HEX_VALUES[c];
-                if (digit < 0) {
-                    error("Expected hexadecimal digit, got: " + (char)c);
-                }
-                value = (value << 4) | digit;
-            }
-
-            // Handle surrogate pairs
-            if (value >= 0xD800 && value <= 0xDBFF) {
-                // Look for a low surrogate
-                int next = in.read();
-                if (next == '\\') {
-                    next = in.read();
-                    if (next == 'u') {
-                        // Parse the potential low surrogate
-                        int lowSurrogate = 0;
-                        for (int i = 0; i < 4; i++) {
-                            c = in.read();
-                            if (c == -1) {
-                                error("EOF reached while reading Unicode escape sequence");
-                            }
-
-                            // Enhanced bounds checking for surrogate pair hex values
-                            if (c < 0 || c >= HEX_VALUES.length) {
-                                error("Invalid character in Unicode escape sequence: " + c + " (out of ASCII range)");
-                            }
-
-                            int digit = HEX_VALUES[c];
-                            if (digit < 0) {
-                                error("Expected hexadecimal digit, got: " + (char)c);
-                            }
-                            lowSurrogate = (lowSurrogate << 4) | digit;
+            if (state == STRING_START) {
+                if (c == '"') {
+                    if (curParseDepth == 0) {
+                        // Enforce JSON grammar.  At root, a String must be complete, with only whitespace and then EOF after
+                        c = skipWhitespaceRead(false);
+                        if (c != -1) {
+                            throw new JsonIoException("EOF expected, content found after \"" + str + "\" --> " + (char) c);
                         }
+                    }
+                    break;
+                } else if (c == '\\') {
+                    state = STRING_SLASH;
+                } else {
+                    str.append((char) c);
+                }
+            } else if (state == STRING_SLASH) {
+                switch (c) {
+                    case '\\':
+                        str.append('\\');
+                        break;
+                    case '/':
+                        str.append('/');
+                        break;
+                    case '"':
+                        str.append('"');
+                        break;
+                    case '\'':
+                        str.append('\'');
+                        break;
+                    case 'b':
+                        str.append('\b');
+                        break;
+                    case 'f':
+                        str.append('\f');
+                        break;
+                    case 'n':
+                        str.append('\n');
+                        break;
+                    case 'r':
+                        str.append('\r');
+                        break;
+                    case 't':
+                        str.append('\t');
+                        break;
+                    case 'u':
+                        hex.setLength(0);
+                        state = HEX_DIGITS;
+                        break;
+                    default:
+                        error("Invalid character escape sequence specified: " + c);
+                }
 
-                        // Check if valid surrogate pair
-                        if (lowSurrogate >= 0xDC00 && lowSurrogate <= 0xDFFF) {
-                            // Valid pair - append as code point
-                            int codePoint = 0x10000 + ((value - 0xD800) << 10) + (lowSurrogate - 0xDC00);
-                            sb.appendCodePoint(codePoint);
-                            return;
-                        } else {
-                            // Not a valid pair - append separately
-                            sb.append((char)value);
-                            sb.append((char)lowSurrogate);
-                            return;
-                        }
-                    } else {
-                        // Not a \\u sequence - push back and append high surrogate
-                        in.pushback((char)next);
-                        in.pushback('\\');
+                if (c != 'u') {
+                    state = STRING_START;
+                }
+            } else {
+                if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')) {
+                    hex.append((char) c);
+                    if (hex.length() == 4) {
+                        int value = Integer.parseInt(hex.toString(), 16);
+                        str.append((char) value);
+                        state = STRING_START;
                     }
                 } else {
-                    // Not a backslash - push back and append high surrogate
-                    if (next != -1) {
-                        in.pushback((char)next);
-                    }
+                    error("Expected hexadecimal digits");
                 }
             }
+        }
 
-            // Regular Unicode character or high surrogate without low surrogate
-            sb.append((char)value);
+        final String s = str.toString();
+        final String cachedInstance = stringCache.get(s);
+        if (cachedInstance != null) {
+            return cachedInstance;
         } else {
-            error("Invalid character escape sequence specified: " + (char)c);
-        }
-    }
-
-    /**
-     * Optimized string caching that handles both buffer-direct and StringBuilder cases
-     */
-    private String cacheString(String str) {
-        final int length = str.length();
-
-        // Fast path for empty strings
-        if (length == 0) {
-            return "";
-        }
-
-        // Fast path for very small strings - use interning
-        if (length <= 2) {
-            return str.intern();
-        }
-
-        // For small to medium strings, use the cache
-        if (length < 33) {
-            final String cachedInstance = stringCache.get(str);
-            if (cachedInstance != null) {
-                return cachedInstance;
+            if (s.length() < 33) {
+                stringCache.put(s, s);  // cache small strings (LRU has upper limit)
             }
-            stringCache.put(str, str);
-        }
-
-        return str;
-    }
-
-    /**
-     * Get optimized StringBuilder with dynamic capacity management
-     */
-    private StringBuilder getOptimizedStringBuilder(int estimatedSize) {
-        StringBuilder sb = strBuf;
-        sb.setLength(0);
-
-        // Ensure capacity is appropriate for the estimated string size
-        int targetCapacity = Math.max(256, estimatedSize * 2); // Double estimated size for safety
-        if (sb.capacity() < targetCapacity) {
-            sb.ensureCapacity(targetCapacity);
-        }
-
-        return sb;
-    }
-
-    /**
-     * Read string using large buffer for strings that don't fit in the standard buffer
-     */
-    private String readStringInBuffer(char[] largeBuffer, int initialPos) throws IOException {
-        final FastReader in = input;
-        int pos = initialPos;
-
-        while (true) {
-            int c = in.read();
-            if (c == -1) {
-                error("EOF reached while reading JSON string");
-            }
-
-            if (c == '"') {
-                return cacheString(new String(largeBuffer, 0, pos));
-            }
-
-            if (c == '\\') {
-                // Switch to StringBuilder for complex processing
-                StringBuilder sb = getOptimizedStringBuilder(pos + 64);
-                sb.append(largeBuffer, 0, pos);
-
-                // Process the escape and continue with StringBuilder
-                c = in.read();
-                if (c == -1) {
-                    error("EOF reached while reading escape sequence");
-                }
-                processEscape(sb, c, in, ESCAPE_CHAR_MAP, HEX_VALUE_MAP);
-                return readStringWithEscapes(sb, in, ESCAPE_CHAR_MAP, HEX_VALUE_MAP);
-            }
-
-            if (pos >= largeBuffer.length) {
-                // Even large buffer is full, fall back to StringBuilder
-                StringBuilder sb = getOptimizedStringBuilder(pos + 64);
-                sb.append(largeBuffer, 0, pos);
-                sb.append((char) c);
-                return readStringWithEscapes(sb, in, ESCAPE_CHAR_MAP, HEX_VALUE_MAP);
-            }
-
-            largeBuffer[pos++] = (char) c;
+            return s;
         }
     }
 
@@ -1049,7 +786,7 @@ class JsonParser {
             error("Expected a number for " + ID + ", instead got: " + value.getClass().getSimpleName());
         }
 
-        Long id = ((Number) value).longValue();
+        long id = ((Number) value).longValue();
 
         // Performance: Use hoisted maxIdValue constant
         if (id < -maxIdValue || id > maxIdValue) {
@@ -1078,7 +815,7 @@ class JsonParser {
             error("Expected a number for " + REF + ", instead got: " + value.getClass().getSimpleName());
         }
 
-        Long refId = ((Number) value).longValue();
+        long refId = ((Number) value).longValue();
 
         // Performance: Use hoisted maxIdValue constant
         if (refId < -maxIdValue || refId > maxIdValue) {
