@@ -69,7 +69,6 @@ class JsonParser {
     private static final JsonObject EMPTY_ARRAY = new JsonObject();  // compared with ==
     private final FastReader input;
     private final StringBuilder strBuf;
-    private final StringBuilder hexBuf = new StringBuilder();
     private final StringBuilder numBuf = new StringBuilder();
     private int curParseDepth = 0;
     private final boolean allowNanAndInfinity;
@@ -90,13 +89,10 @@ class JsonParser {
     private static final Map<Number, Number> STATIC_NUMBER_CACHE = new ConcurrentHashMap<>(16);
     private static final Map<String, String> SUBSTITUTES = new HashMap<>(5);
 
-    // String parsing state machine constants
-    private static final int STRING_START = 0;
-    private static final int STRING_SLASH = 1;
-    private static final int HEX_DIGITS = 2;
-
     // Static lookup tables for performance
     private static final boolean[] WHITESPACE_MAP = new boolean[128];
+    private static final char[] ESCAPE_CHAR_MAP = new char[128];
+    private static final int[] HEX_VALUE_MAP = new int[128];
 
     static {
         // Initialize whitespace map
@@ -104,6 +100,29 @@ class JsonParser {
         WHITESPACE_MAP['\t'] = true;
         WHITESPACE_MAP['\n'] = true;
         WHITESPACE_MAP['\r'] = true;
+
+        // Initialize escape character map
+        ESCAPE_CHAR_MAP['\\'] = '\\';
+        ESCAPE_CHAR_MAP['/'] = '/';
+        ESCAPE_CHAR_MAP['"'] = '"';
+        ESCAPE_CHAR_MAP['\''] = '\'';
+        ESCAPE_CHAR_MAP['b'] = '\b';
+        ESCAPE_CHAR_MAP['f'] = '\f';
+        ESCAPE_CHAR_MAP['n'] = '\n';
+        ESCAPE_CHAR_MAP['r'] = '\r';
+        ESCAPE_CHAR_MAP['t'] = '\t';
+
+        // Initialize hex value map
+        java.util.Arrays.fill(HEX_VALUE_MAP, -1);
+        for (int i = '0'; i <= '9'; i++) {
+            HEX_VALUE_MAP[i] = i - '0';
+        }
+        for (int i = 'a'; i <= 'f'; i++) {
+            HEX_VALUE_MAP[i] = 10 + (i - 'a');
+        }
+        for (int i = 'A'; i <= 'F'; i++) {
+            HEX_VALUE_MAP[i] = 10 + (i - 'A');
+        }
 
         // Initialize substitutions
         SUBSTITUTES.put(SHORT_ID, ID);
@@ -654,97 +673,157 @@ class JsonParser {
      * @throws IOException for stream errors or parsing errors.
      */
     private String readString() throws IOException {
+        // Reuse StringBuilder for better performance
         final StringBuilder str = strBuf;
         str.setLength(0);
-        final StringBuilder hex = hexBuf;
-        int state = STRING_START;
         final FastReader in = input;
 
+        // Lookup tables for character handling
+        final char[] ESCAPE_CHARS = ESCAPE_CHAR_MAP;
+        final int[] HEX_VALUES = HEX_VALUE_MAP;
+
+        // Main loop with optimized path for non-escape characters
         while (true) {
             int c = in.read();
             if (c == -1) {
                 error("EOF reached while reading JSON string");
             }
 
-            if (state == STRING_START) {
-                if (c == '"') {
-                    if (curParseDepth == 0) {
-                        // Enforce JSON grammar.  At root, a String must be complete, with only whitespace and then EOF after
-                        c = skipWhitespaceRead(false);
-                        if (c != -1) {
-                            throw new JsonIoException("EOF expected, content found after \"" + str + "\" --> " + (char) c);
+            // Fast path for regular characters (most common)
+            if (c != '\\' && c != '"') {
+                str.append((char) c);
+                continue;
+            }
+
+            // Handle string termination
+            if (c == '"') {
+                // Check root level validation
+                if (curParseDepth == 0) {
+                    c = skipWhitespaceRead(false);
+                    if (c != -1) {
+                        throw new JsonIoException("EOF expected, content found after string");
+                    }
+                }
+                break;
+            }
+
+            // Must be an escape sequence
+            c = in.read();
+            if (c == -1) {
+                error("EOF reached while reading escape sequence");
+            }
+
+            // Handle escape using lookup table for common escapes
+            if (c < ESCAPE_CHARS.length) {
+                char escaped = ESCAPE_CHARS[c];
+                if (escaped != '\0') {
+                    str.append(escaped);
+                    continue;
+                }
+            }
+
+            // Special handling for Unicode escape
+            if (c == 'u') {
+                // Optimized hex parsing using lookup table
+                int value = 0;
+                for (int i = 0; i < 4; i++) {
+                    c = in.read();
+                    if (c == -1) {
+                        error("EOF reached while reading Unicode escape sequence");
+                    }
+
+                    int digit = (c < 128) ? HEX_VALUES[c] : -1;
+                    if (digit < 0) {
+                        error("Expected hexadecimal digit, got: " + (char)c);
+                    }
+                    value = (value << 4) | digit;
+                }
+
+                // Handle surrogate pairs
+                if (value >= 0xD800 && value <= 0xDBFF) {
+                    // Look for a low surrogate
+                    int next = in.read();
+                    if (next == '\\') {
+                        next = in.read();
+                        if (next == 'u') {
+                            // Parse the potential low surrogate
+                            int lowSurrogate = 0;
+                            for (int i = 0; i < 4; i++) {
+                                c = in.read();
+                                if (c == -1) {
+                                    error("EOF reached while reading Unicode escape sequence");
+                                }
+
+                                int digit = (c < 128) ? HEX_VALUES[c] : -1;
+                                if (digit < 0) {
+                                    error("Expected hexadecimal digit, got: " + (char)c);
+                                }
+                                lowSurrogate = (lowSurrogate << 4) | digit;
+                            }
+
+                            // Check if valid surrogate pair
+                            if (lowSurrogate >= 0xDC00 && lowSurrogate <= 0xDFFF) {
+                                // Valid pair - append as code point
+                                int codePoint = 0x10000 + ((value - 0xD800) << 10) + (lowSurrogate - 0xDC00);
+                                str.appendCodePoint(codePoint);
+                                continue;
+                            } else {
+                                // Not a valid pair - append separately
+                                str.append((char)value);
+                                str.append((char)lowSurrogate);
+                                continue;
+                            }
+                        } else {
+                            // Not a \\u sequence - push back and append high surrogate
+                            in.pushback((char)next);
+                            in.pushback('\\');
+                        }
+                    } else {
+                        // Not a backslash - push back and append high surrogate
+                        if (next != -1) {
+                            in.pushback((char)next);
                         }
                     }
-                    break;
-                } else if (c == '\\') {
-                    state = STRING_SLASH;
-                } else {
-                    str.append((char) c);
-                }
-            } else if (state == STRING_SLASH) {
-                switch (c) {
-                    case '\\':
-                        str.append('\\');
-                        break;
-                    case '/':
-                        str.append('/');
-                        break;
-                    case '"':
-                        str.append('"');
-                        break;
-                    case '\'':
-                        str.append('\'');
-                        break;
-                    case 'b':
-                        str.append('\b');
-                        break;
-                    case 'f':
-                        str.append('\f');
-                        break;
-                    case 'n':
-                        str.append('\n');
-                        break;
-                    case 'r':
-                        str.append('\r');
-                        break;
-                    case 't':
-                        str.append('\t');
-                        break;
-                    case 'u':
-                        hex.setLength(0);
-                        state = HEX_DIGITS;
-                        break;
-                    default:
-                        error("Invalid character escape sequence specified: " + c);
                 }
 
-                if (c != 'u') {
-                    state = STRING_START;
-                }
+                // Regular Unicode character or high surrogate without low surrogate
+                str.append((char)value);
             } else {
-                if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')) {
-                    hex.append((char) c);
-                    if (hex.length() == 4) {
-                        int value = Integer.parseInt(hex.toString(), 16);
-                        str.append((char) value);
-                        state = STRING_START;
-                    }
-                } else {
-                    error("Expected hexadecimal digits");
-                }
+                error("Invalid character escape sequence specified: " + (char)c);
             }
         }
 
-        final String s = str.toString();
-        final String cachedInstance = stringCache.get(s);
-        if (cachedInstance != null) {
-            return cachedInstance;
-        } else {
-            if (s.length() < 33) {
-                stringCache.put(s, s);  // cache small strings (LRU has upper limit)
-            }
-            return s;
+        // Use optimized string caching for the result
+        return cacheString(str);
+    }
+
+    // Optimized string cache implementation
+    private String cacheString(StringBuilder str) {
+        final int length = str.length();
+
+        // Fast path for empty strings
+        if (length == 0) {
+            return "";
         }
+
+        // Fast path for very small strings - use interning
+        if (length <= 2) {
+            return str.toString().intern();
+        }
+
+        // Create the string once
+        final String s = str.toString();
+
+        // For small to medium strings, use the cache
+        if (length < 33) {
+            final String cachedInstance = stringCache.get(s);
+            if (cachedInstance != null) {
+                return cachedInstance;
+            }
+            stringCache.put(s, s);
+        }
+
+        return s;
     }
 
     /**
