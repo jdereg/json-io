@@ -200,7 +200,7 @@
 * **SECURITY**: Fix unsafe reflection access in `JsonWriter.getValueByReflect()` - adds comprehensive null and security checks with graceful failure
 * **SECURITY**: Fix input validation in `JsonWriter.writeJsonUtf8String()` - adds null safety and string length limits to prevent memory issues  
 * **SECURITY**: Add bounds checking in `JsonWriter` primitive array writers - prevents buffer overflow attacks in byte and int array processing
-* **PERFORMANCE**: Reverted `JsonParser.readString()` to February 2025 simple state machine - removed ThreadLocal buffers and complex dual-path approach, achieving 64% CPU reduction (11.8% → 4.2%) and 5.8% faster overall JSON parsing (329ms → 310ms). Simple code beats complex "optimizations".
+* **PERFORMANCE**: Updated `JsonParser.readString()` to March 3, 2025 version with full Unicode surrogate pair support - removed ThreadLocal buffers from later versions, added lookup tables (ESCAPE_CHAR_MAP, HEX_VALUE_MAP) and fast path optimization for regular characters. Correctly handles Unicode characters beyond Basic Multilingual Plane (emoji, mathematical symbols, ancient scripts) using surrogate pairs. Performance: 0.9% faster than Feb 11 simple state machine while providing superior Unicode correctness.
 * **SECURITY**: Fix null validation in `JsonParser.loadId()` and `loadRef()` - adds comprehensive null checks and ID range validation to prevent attacks
 * **SECURITY**: Add bounds checking for escape processing in `JsonParser.processEscape()` - prevents buffer overflow in Unicode escape sequence handling
 * Fix resource leak in `JsonIo.JavaStreamBuilder.asType()` - ensures proper cleanup of JsonReader and InputStream resources with enhanced error handling
