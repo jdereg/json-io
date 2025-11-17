@@ -54,7 +54,6 @@ JsonIo.toJava(jsonString, readOptions);
 ### Resource Management
 
 **Memory Leak Prevention:**
-- ThreadLocal cleanup to prevent memory leaks
 - Proper stream closure with try-with-resources
 - Cache eviction strategies for bounded memory usage
 - Enhanced error handling with resource cleanup
