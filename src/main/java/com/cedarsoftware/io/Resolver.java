@@ -28,6 +28,7 @@ import java.util.logging.Logger;
 
 import com.cedarsoftware.io.JsonReader.MissingFieldHandler;
 import com.cedarsoftware.io.reflect.Injector;
+import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.ClassValueMap;
 import com.cedarsoftware.util.CompactCIHashMap;
@@ -912,8 +913,10 @@ public abstract class Resolver {
                     ((List) objToFix).set(ref.index, referencedTarget);
                 } else if (objToFix instanceof Collection) {   // Patch up Indexable Collections
                     ((Collection) objToFix).add(referencedTarget);
+                } else if (objToFix instanceof Object[]) {   // Fast path for Object arrays
+                    ((Object[]) objToFix)[ref.index] = referencedTarget;
                 } else {
-                    Array.set(objToFix, ref.index, referencedTarget);        // patch array element here
+                    ArrayUtilities.setPrimitiveElement(objToFix, ref.index, referencedTarget);        // patch primitive array element
                 }
             } else {    // Fix field forward reference
                 // ReadOptions.getDeepInjectorMap() already caches via ClassValueMap - no local cache needed
@@ -968,21 +971,45 @@ public abstract class Resolver {
             }
             int len = jsonItems.length;
             Object javaArray = Array.newInstance(componentType, len);
-            for (int i = 0; i < len; i++) {
-                try {
-                    Class<?> type = componentType;
-                    Object item = jsonItems[i];
-                    if (item instanceof JsonObject) {
-                        JsonObject jObj = (JsonObject) item;
-                        if (jObj.getType() != null) {
-                            type = jObj.getRawType();
+
+            // Fast path for reference type arrays - avoid Array.set() reflection overhead
+            if (!componentType.isPrimitive()) {
+                Object[] typedArray = (Object[]) javaArray;
+                for (int i = 0; i < len; i++) {
+                    try {
+                        Class<?> type = componentType;
+                        Object item = jsonItems[i];
+                        if (item instanceof JsonObject) {
+                            JsonObject jObj = (JsonObject) item;
+                            if (jObj.getType() != null) {
+                                type = jObj.getRawType();
+                            }
                         }
+                        typedArray[i] = converter.convert(item, type);
+                    } catch (Exception e) {
+                        JsonIoException jioe = new JsonIoException(e.getMessage());
+                        jioe.setStackTrace(e.getStackTrace());
+                        throw jioe;
                     }
-                    Array.set(javaArray, i, converter.convert(item, type));
-                } catch (Exception e) {
-                    JsonIoException jioe = new JsonIoException(e.getMessage());
-                    jioe.setStackTrace(e.getStackTrace());
-                    throw jioe;
+                }
+            } else {
+                // Primitive arrays - use optimized ArrayUtilities.setPrimitiveElement()
+                for (int i = 0; i < len; i++) {
+                    try {
+                        Class<?> type = componentType;
+                        Object item = jsonItems[i];
+                        if (item instanceof JsonObject) {
+                            JsonObject jObj = (JsonObject) item;
+                            if (jObj.getType() != null) {
+                                type = jObj.getRawType();
+                            }
+                        }
+                        ArrayUtilities.setPrimitiveElement(javaArray, i, converter.convert(item, type));
+                    } catch (Exception e) {
+                        JsonIoException jioe = new JsonIoException(e.getMessage());
+                        jioe.setStackTrace(e.getStackTrace());
+                        throw jioe;
+                    }
                 }
             }
             jsonObject.setFinishedTarget(javaArray, true);
@@ -1005,68 +1032,21 @@ public abstract class Resolver {
     }
 
     protected void setArrayElement(Object array, int index, Object element) {
-        // Fast path: Most common case is setting to Object[] array
+        // Fast path for Object arrays - direct assignment (5-10x faster than reflection)
         if (array instanceof Object[]) {
             try {
-                ((Object[])array)[index] = element;
-                return;
+                ((Object[]) array)[index] = element;
             } catch (ArrayStoreException e) {
-                // Let it fall through to the error handling below
+                // Convert ArrayStoreException to IllegalArgumentException for consistent error handling
+                String elementType = element == null ? "null" : element.getClass().getName();
+                String arrayType = array.getClass().getComponentType().getName() + "[]";
+                throw new IllegalArgumentException("Cannot set '" + elementType + "' (value: " + element +
+                        ") into '" + arrayType + "' at index " + index);
             }
         } else {
-            // For primitive arrays, use type-specific assignments to avoid boxing/unboxing
-            Class<?> componentType = array.getClass().getComponentType();
-
-            // Use if/else instead of reflection for common primitive types
-            try {
-                if (componentType == int.class) {
-                    ((int[])array)[index] = element == null ? 0 : ((Number)element).intValue();
-                    return;
-                } else if (componentType == long.class) {
-                    ((long[])array)[index] = element == null ? 0L : ((Number)element).longValue();
-                    return;
-                } else if (componentType == double.class) {
-                    ((double[])array)[index] = element == null ? 0.0 : ((Number)element).doubleValue();
-                    return;
-                } else if (componentType == boolean.class) {
-                    ((boolean[])array)[index] = element != null && (element instanceof Boolean) && (Boolean)element;
-                    return;
-                } else if (componentType == byte.class) {
-                    ((byte[])array)[index] = element == null ? 0 : ((Number)element).byteValue();
-                    return;
-                } else if (componentType == char.class) {
-                    if (element == null) {
-                        ((char[])array)[index] = '\0';
-                    } else if (element instanceof Character) {
-                        ((char[])array)[index] = (Character)element;
-                    } else if (element instanceof String && ((String)element).length() > 0) {
-                        ((char[])array)[index] = ((String)element).charAt(0);
-                    } else {
-                        ((char[])array)[index] = '\0';
-                    }
-                    return;
-                } else if (componentType == short.class) {
-                    ((short[])array)[index] = element == null ? 0 : ((Number)element).shortValue();
-                    return;
-                } else if (componentType == float.class) {
-                    ((float[])array)[index] = element == null ? 0.0f : ((Number)element).floatValue();
-                    return;
-                } else {
-                    // For other array types, fall back to reflection
-                    Array.set(array, index, element);
-                    return;
-                }
-            } catch (ClassCastException | NullPointerException e) {
-                // Let it fall through to the error handling below
-            }
+            // Primitive arrays - use optimized setPrimitiveElement()
+            ArrayUtilities.setPrimitiveElement(array, index, element);
         }
-
-        // Error handling
-        String elementType = element == null ? "null" : element.getClass().getName();
-        String arrayType = array.getClass().getComponentType().getName() + "[]";
-
-        throw new IllegalArgumentException("Cannot set '" + elementType + "' (value: " + element +
-                ") into '" + arrayType + "' at index " + index);
     }
 
     protected abstract Object resolveArray(Type suggestedType, List<Object> list);

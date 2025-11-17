@@ -25,11 +25,12 @@ import java.util.Map.Entry;
 import java.util.logging.Logger;
 
 import com.cedarsoftware.io.reflect.Accessor;
+import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.CompactMap;
 import com.cedarsoftware.util.CompactSet;
 import com.cedarsoftware.util.FastWriter;
-import com.cedarsoftware.util.convert.Converter;
+import com.cedarsoftware.util.IOUtilities;
 
 import static com.cedarsoftware.io.JsonValue.ENUM;
 import static com.cedarsoftware.io.JsonValue.ITEMS;
@@ -75,8 +76,7 @@ import static com.cedarsoftware.io.JsonValue.TYPE;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class JsonWriter implements WriterContext, Closeable, Flushable
-{
+public class JsonWriter implements WriterContext, Closeable, Flushable {
     private static final Logger LOG = Logger.getLogger(JsonWriter.class.getName());
     // Add these as class fields
     private static final String ID_SHORT = "\"@i\":";
@@ -91,7 +91,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     // Lookup table for fast ASCII escape detection (128 entries for chars 0-127)
     private static final boolean[] NEEDS_ESCAPE = new boolean[128];
     private final WriteOptions writeOptions;
-    private final Converter converter;
     private final Map<Object, Long> objVisited = new IdentityHashMap<>(256); // Pre-size for better performance
     private final Map<Object, Long> objsReferenced = new IdentityHashMap<>(256); // Pre-size for better performance
     private final Writer out;
@@ -113,10 +112,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         ARRAY_ELEMENT  // Inside array, element(s) written
     }
 
-    static
-    {
-        for (short i = -128; i <= 127; i++)
-        {
+    static {
+        for (short i = -128; i <= 127; i++) {
             char[] chars = Integer.toString(i).toCharArray();
             byteStrings[i + 128] = chars;
         }
@@ -135,8 +132,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     /**
      * Implement this interface to customize the JSON output for a given class.
      */
-    public interface JsonClassWriter<T>
-    {
+    public interface JsonClassWriter<T> {
         /**
          * When write() is called, it is expected that subclasses will write the appropriate JSON
          * to the passed in Writer.
@@ -149,9 +145,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
          */
         default void write(T o, boolean showType, Writer output, WriterContext context) throws IOException {
         }
-        
+
         /**
-         * @param context  WriterContext to get writeOptions and other write access
+         * @param context WriterContext to get writeOptions and other write access
          * @return boolean true if the class being written has a primitive (non-object) form.  Default is false since
          * most custom writers will not have a primitive form.
          */
@@ -162,9 +158,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         /**
          * This default implementation will call the more basic writePrimitiveForm that does not take arguments.  No need
          * to override this method unless you need access to the args.
-         * @param o Object to be written
-         * @param output Writer destination to where the actual JSON is written.
-         * @param context  WriterContext to get access to writeOptions and writing tools
+         *
+         * @param o       Object to be written
+         * @param output  Writer destination to where the actual JSON is written.
+         * @param context WriterContext to get access to writeOptions and writing tools
          * @throws IOException if thrown by the writer.  Will be caught at a higher level and wrapped in JsonIoException.
          */
         default void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
@@ -179,13 +176,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      * @param out OutputStream to which the JSON will be written.  Uses the default WriteOptions.
      * @see WriteOptions
      */
-    public JsonWriter(OutputStream out)
-    {
+    public JsonWriter(OutputStream out) {
         this(out, null);
     }
 
     /**
-     * @param out OutputStream to which the JSON output will be written.
+     * @param out          OutputStream to which the JSON output will be written.
      * @param writeOptions WriteOptions containing many feature options to control the JSON output.  Can be null,
      *                     in which case the default WriteOptions will be used.
      * @see WriteOptions Javadoc.
@@ -193,8 +189,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     public JsonWriter(OutputStream out, WriteOptions writeOptions) {
         this.out = new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
         this.writeOptions = writeOptions == null ? WriteOptionsBuilder.getDefaultWriteOptions() : writeOptions;
-        this.converter = new Converter(this.writeOptions.getConverterOptions());
-        
+
         // Pre-compute based on options
         this.idPrefix = this.writeOptions.isShortMetaKeys() ? ID_SHORT : ID_LONG;
         this.typePrefix = this.writeOptions.isShortMetaKeys() ? TYPE_SHORT : TYPE_LONG;
@@ -212,7 +207,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     }
 
     /**
-     *  Map containing all objects that were referenced within input object graph.
+     * Map containing all objects that were referenced within input object graph.
      */
     public Map<Object, Long> getObjsReferenced() {
         return objsReferenced;
@@ -220,56 +215,55 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
     /**
      * Tab the output left (less indented)
+     *
      * @throws IOException
      */
-    public void tabIn() throws IOException
-    {
+    public void tabIn() throws IOException {
         tab(out, 1);
     }
 
     /**
      * Add newline (\n) to output
+     *
      * @throws IOException
      */
-    public void newLine() throws IOException
-    {
+    public void newLine() throws IOException {
         tab(out, 0);
     }
 
     /**
      * Tab the output right (more indented)
+     *
      * @throws IOException
      */
-    public void tabOut() throws IOException
-    {
+    public void tabOut() throws IOException {
         tab(out, -1);
     }
 
     /**
      * tab the JSON output by the given number of characters specified by delta.
+     *
      * @param output Writer being used for JSON output.
-     * @param delta int number of characters to tab.
+     * @param delta  int number of characters to tab.
      * @throws IOException
      */
-    private void tab(Writer output, int delta) throws IOException
-    {
-        if (!writeOptions.isPrettyPrint())
-        {
+    private void tab(Writer output, int delta) throws IOException {
+        if (!writeOptions.isPrettyPrint()) {
             return;
         }
         output.write(NEW_LINE);
         depth += delta;
-        
+
         // Optimized indentation - build spaces once instead of multiple writes
         if (depth > 0) {
             // Prevent excessive indentation to avoid memory issues using configurable limit
             final int maxDepth = writeOptions.getMaxIndentationDepth();
             final int actualDepth = Math.min(depth, maxDepth);
-            
+
             // Pre-compute indentation string for efficiency using configurable values
             final int indentationThreshold = writeOptions.getIndentationThreshold();
             final int indentationSize = writeOptions.getIndentationSize();
-            
+
             if (actualDepth <= indentationThreshold) {
                 // For small depths, use simple repeated writes (faster for small depths)
                 for (int i = 0; i < actualDepth; i++) {
@@ -283,7 +277,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 Arrays.fill(spaces, ' ');
                 output.write(spaces);
             }
-            
+
             if (depth > maxDepth) {
                 // Warn about excessive depth to help detect issues
                 output.write("... (depth=" + depth + ")");
@@ -294,9 +288,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     /**
      * Write the passed in object (o) to the JSON output stream, if and only if, there is a custom
      * writer associated to the Class of object (o).
-     * @param o Object to be (potentially written)
+     *
+     * @param o        Object to be (potentially written)
      * @param showType boolean indicating whether to show @type.
-     * @param output Writer where the actual JSON is being written to.
+     * @param output   Writer where the actual JSON is being written to.
      * @return boolean true if written, false is there is no custom writer for the passed in object.
      */
     public boolean writeUsingCustomWriter(Object o, boolean showType, Writer output) {
@@ -335,14 +330,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     /**
      * Write the passed in array element to the JSON output, if any only if, there is a custom writer
      * for the class of the instance 'o'.
+     *
      * @param arrayComponentClass Class type of the array
-     * @param o Object instance to write
-     * @param showType boolean indicating whether @type should be output.
-     * @param output Writer to write the JSON to (if there is a custom writer for o's Class).
+     * @param o                   Object instance to write
+     * @param showType            boolean indicating whether @type should be output.
+     * @param output              Writer to write the JSON to (if there is a custom writer for o's Class).
      * @return true if the array element was written, false otherwise.
      */
-    public boolean writeArrayElementIfMatching(Class<?> arrayComponentClass, Object o, boolean showType, Writer output)
-    {
+    public boolean writeArrayElementIfMatching(Class<?> arrayComponentClass, Object o, boolean showType, Writer output) {
         if (!arrayComponentClass.isAssignableFrom(o.getClass())) {
             return false;
         }
@@ -356,10 +351,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
     /**
      * Perform the actual custom writing for an array element that has a custom writer.
-     * @param clazz Class type of the array
-     * @param o Object instance to write
+     *
+     * @param clazz    Class type of the array
+     * @param o        Object instance to write
      * @param showType boolean indicating whether @type should be output.
-     * @param output Writer to write the JSON to (if there is a custom writer for o's Class).
+     * @param output   Writer to write the JSON to (if there is a custom writer for o's Class).
      * @return true if the array element was written, false otherwise.
      */
     protected boolean writeCustom(Class<?> clazz, Object o, boolean showType, Writer output) throws IOException {
@@ -414,10 +410,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
     /**
      * Write the passed in Java object in JSON format.
+     *
      * @param obj Object any Java Object or JsonObject.
      */
-    public void write(Object obj)
-    {
+    public void write(Object obj) {
         traceReferences(obj);
         objVisited.clear();
         try {
@@ -453,8 +449,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      * Walk object graph and visit each instance, following each field, each Collection, Map and so on.
      * Tracks visited to handle cycles and to determine if an item is referenced elsewhere.  If an
      * object is never referenced more than once, no @id field needs to be emitted for it.
+     *
      * @param root Object to be deeply traced.  The objVisited and objsReferenced Maps will be written to
-     * during the trace.
+     *             during the trace.
      */
     protected void traceReferences(Object root) {
         if (root == null) {
@@ -466,7 +463,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         stack.addFirst(new Object[]{root, 0});
         final Map<Object, Long> visited = objVisited;
         final Map<Object, Long> referenced = objsReferenced;
-        
+
         // Fix memory leak - prevent stack overflow and unbounded memory growth using configurable limits
         final int MAX_DEPTH = writeOptions.getMaxObjectGraphDepth();
         final int MAX_OBJECTS = writeOptions.getMaxObjectCount();
@@ -477,7 +474,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             final Object obj = objWithDepth[0];
             final int currentDepth = (Integer) objWithDepth[1];
             processedCount++;
-            
+
             // Check actual depth, not stack size
             if (currentDepth > MAX_DEPTH) {
                 throw new JsonIoException("Object graph too deep (>" + MAX_DEPTH + " levels). This may indicate a circular reference or excessively nested structure.");
@@ -500,8 +497,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             final Class<?> clazz = obj.getClass();
             final int nextDepth = currentDepth + 1;
 
-            if (clazz.isArray()) {
-                processArray(obj, clazz, stack, nextDepth);
+            if (obj instanceof Object[]) {
+                processArray((Object[]) obj, stack, nextDepth);
             } else if (obj instanceof JsonObject) {
                 processJsonObject((JsonObject) obj, stack, nextDepth);
             } else if (Map.class.isAssignableFrom(clazz)) {
@@ -514,31 +511,20 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 }
             }
         }
-        
+
         // Check if we hit the object limit
         if (processedCount >= MAX_OBJECTS) {
             throw new JsonIoException("Object graph too large (>" + MAX_OBJECTS + " objects). This may indicate excessive nesting or a memory leak.");
         }
     }
 
-    private void processArray(Object array, Class<?> arrayClass, Deque<Object[]> stack, int depth) {
-        final Class<?> componentType = arrayClass.getComponentType();
+    private void processArray(Object[] array, Deque<Object[]> stack, int depth) {
+        final Class<?> componentType = array.getClass().getComponentType();
         if (!writeOptions.isNonReferenceableClass(componentType)) {
-            // If Object[], access it using [] for speed, versus Array.get() (reflection)
-            if (componentType == Object.class) {
-                for (final Object element : (Object[]) array) {
-                    if (element != null) {
-                        stack.addFirst(new Object[]{element, depth});
-                    }
-                }
-            }
-            else {
-                final int len = Array.getLength(array);
-                for (int i = 0; i < len; i++) {
-                    final Object element = Array.get(array, i);
-                    if (element != null) {
-                        stack.addFirst(new Object[]{element, depth});
-                    }
+            // Iterate directly over Object[] - primitive arrays are filtered out by isNonReferenceableClass check
+            for (final Object element : array) {
+                if (element != null) {
+                    stack.addFirst(new Object[]{element, depth});
                 }
             }
         }
@@ -547,14 +533,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     private void processJsonObject(JsonObject jsonObj, Deque<Object[]> stack, int depth) {
         // Traverse items (array elements)
         Object[] items = jsonObj.getItems();
-        if (items != null) {
-            processArray(items, items.getClass(), stack, depth);
+        if (!ArrayUtilities.isEmpty(items)) {
+            processArray(items, stack, depth);
         }
 
         // Traverse keys (for JsonObject representing maps)
         Object[] keys = jsonObj.getKeys();
-        if (keys != null) {
-            processArray(keys, keys.getClass(), stack, depth);
+        if (!ArrayUtilities.isEmpty(keys)) {
+            processArray(keys, stack, depth);
         }
 
         // Traverse other entries in jsonStore (allows for Collections to have properties)
@@ -586,13 +572,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      * Reach-ability trace to visit all objects within the graph to be written.
      * This API will handle any object, using either reflection APIs or by
      * consulting a specified includedFields map if provided.
+     *
      * @param stack Deque used to manage descent into graph (rather than using Java stack.) This allows for
-     * much larger graph processing.
-     * @param obj Object root of graph
-     * the JDK reflection operations.  This allows a subset of the actual fields on an object to be serialized.
+     *              much larger graph processing.
+     * @param obj   Object root of graph
+     *              the JDK reflection operations.  This allows a subset of the actual fields on an object to be serialized.
      */
-    protected void processFields(final Deque<Object[]> stack, final Object obj, int depth)
-    {
+    protected void processFields(final Deque<Object[]> stack, final Object obj, int depth) {
         // If caller has special Field specifier for a given class
         // then use it, otherwise use reflection.
         Collection<Accessor> fields = writeOptions.getAccessorsForClass(obj.getClass());
@@ -605,19 +591,15 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
     }
 
-    private boolean writeOptionalReference(Object obj) throws IOException
-    {
-        if (obj == null || writeOptions.isNonReferenceableClass(obj.getClass()))
-        {
+    private boolean writeOptionalReference(Object obj) throws IOException {
+        if (obj == null || writeOptions.isNonReferenceableClass(obj.getClass())) {
             return false;
         }
 
         final Writer output = this.out;
-        if (objVisited.containsKey(obj))
-        {    // Only write (define) an object once in the JSON stream, otherwise emit a @ref
+        if (objVisited.containsKey(obj)) {    // Only write (define) an object once in the JSON stream, otherwise emit a @ref
             String id = getId(obj);
-            if (id == null)
-            {   // Test for null because of Weak/Soft references being gc'd during serialization.
+            if (id == null) {   // Test for null because of Weak/Soft references being gc'd during serialization.
                 return false;
             }
             output.write(writeOptions.isShortMetaKeys() ? "{\"@r\":" : "{\"@ref\":");
@@ -637,8 +619,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      * It will handle null, detecting if a custom writer should be called, array, array of
      * JsonObject, Map, Map of JsonObjects, Collection, Collection of JsonObject, any regular
      * object, or a JsonObject representing a regular object.
-     * @param obj Object to be written
-     * @param showType if set to true, the @type tag will be output. 
+     *
+     * @param obj      Object to be written
+     * @param showType if set to true, the @type tag will be output.
      * @throws IOException if one occurs on the underlying output stream.
      */
     public void writeImpl(Object obj, boolean showType) throws IOException {
@@ -665,7 +648,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         final Class<?> objClass = obj.getClass();
         if (objClass.isArray()) {
-            writeArray(obj, objClass, showType);
+            if (objClass.getComponentType().isPrimitive()) {
+                writePrimitiveArray(obj, objClass, showType);
+            } else {
+                writeObjectArray((Object[]) obj, objClass, showType);
+            }
         } else if (obj instanceof EnumSet) {
             writeEnumSet((EnumSet<?>) obj);
         } else if (obj instanceof Collection) {
@@ -708,8 +695,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         output.write('"');
     }
 
-    private void writePrimitive(final Object obj, boolean showType) throws IOException
-    {
+    private void writePrimitive(final Object obj, boolean showType) throws IOException {
         if (writeOptions.isNeverShowingType()) {
             showType = false;
         }
@@ -735,14 +721,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
     }
 
-    private void writeArray(final Object array, final Class<?> arrayType, boolean showType) throws IOException {
+    private void writeObjectArray(final Object[] array, final Class<?> arrayType, boolean showType) throws IOException {
         if (writeOptions.isNeverShowingType()) {
             showType = false;
         }
-        int len = Array.getLength(array);
+        final int len = array.length;  // Direct access - no reflection needed
         boolean referenced = objsReferenced.containsKey(array);
         boolean typeWritten = showType && !(arrayType.equals(Object[].class));
-        final Writer output = this.out; // performance opt: place in final local for quicker access
+        final Writer output = this.out;
 
         if (typeWritten || referenced) {
             output.write('{');
@@ -772,6 +758,79 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             return;
         }
 
+        if (typeWritten || referenced) {
+            output.write(writeOptions.isShortMetaKeys() ? "\"@e\":[" : "\"@items\":[");
+        } else {
+            output.write('[');
+        }
+        tabIn();
+
+        final int lenMinus1 = len - 1;
+        final Class<?> componentClass = arrayType.getComponentType();
+
+        // Write array elements with direct array access - no reflection
+        for (int i = 0; i < len; i++) {
+            final Object value = array[i];
+
+            if (value == null) {
+                output.write("null");
+            } else {
+                final boolean forceType = isForceType(value.getClass(), componentClass);
+                if (!writeArrayElementIfMatching(componentClass, value, forceType, output)) {
+                    writeImpl(value, forceType);
+                }
+            }
+
+            if (i != lenMinus1) {
+                output.write(',');
+                newLine();
+            }
+        }
+
+        tabOut();
+        output.write(']');
+        if (typeWritten || referenced) {
+            tabOut();
+            output.write('}');
+        }
+    }
+
+    private void writePrimitiveArray(final Object array, final Class<?> arrayType, boolean showType) throws IOException {
+        if (writeOptions.isNeverShowingType()) {
+            showType = false;
+        }
+        final int len = Array.getLength(array);
+        boolean referenced = objsReferenced.containsKey(array);
+        boolean typeWritten = showType && !(arrayType.equals(Object[].class));
+        final Writer output = this.out;
+
+        if (typeWritten || referenced) {
+            output.write('{');
+            tabIn();
+        }
+
+        if (referenced) {
+            writeId(getId(array));
+            output.write(',');
+            newLine();
+        }
+
+        if (typeWritten) {
+            writeType(arrayType.getName(), output);
+            output.write(',');
+            newLine();
+        }
+
+        if (len == 0) {
+            if (typeWritten || referenced) {
+                output.write(writeOptions.isShortMetaKeys() ? "\"@e\":[]" : "\"@items\":[]");
+                tabOut();
+                output.write('}');
+            } else {
+                output.write("[]");
+            }
+            return;
+        }
 
         if (typeWritten || referenced) {
             output.write(writeOptions.isShortMetaKeys() ? "\"@e\":[" : "\"@items\":[");
@@ -782,11 +841,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         final int lenMinus1 = len - 1;
 
-        // Intentionally processing each primitive array type in separate
-        // custom loop for speed. All of them could be handled using
-        // reflective Array.get() but it is slower.  I chose speed over code length.
-
-
+        // Handle each primitive array type with optimized loops
         if (byte[].class == arrayType) {
             writeByteArray((byte[]) array, lenMinus1);
         } else if (char[].class == arrayType) {
@@ -803,25 +858,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             writeDoubleArray((double[]) array, lenMinus1);
         } else if (boolean[].class == arrayType) {
             writeBooleanArray((boolean[]) array, lenMinus1);
-        } else {
-            final Class<?> componentClass = array.getClass().getComponentType();
-            for (int i = 0; i < len; i++) {
-                final Object value = Array.get(array, i);
-
-                if (value == null) {
-                    output.write("null");
-                } else {
-                    final boolean forceType = isForceType(value.getClass(), componentClass);
-                    if (!writeArrayElementIfMatching(componentClass, value, forceType, output)) {
-                        writeImpl(value, forceType);
-                    }
-                }
-
-                if (i != lenMinus1) {   // Make sure no bogus comma at the end of the array
-                    output.write(',');
-                    newLine();
-                }
-            }
         }
 
         tabOut();
@@ -832,34 +868,28 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
     }
 
-    private void writeBooleanArray(boolean[] booleans, int lenMinus1) throws IOException
-    {
+    private void writeBooleanArray(boolean[] booleans, int lenMinus1) throws IOException {
         final Writer output = this.out;
-        for (int i = 0; i < lenMinus1; i++)
-        {
+        for (int i = 0; i < lenMinus1; i++) {
             output.write(booleans[i] ? "true," : "false,");
         }
         output.write(Boolean.toString(booleans[lenMinus1]));
     }
 
-    private void writeDoubleArray(double[] doubles, int lenMinus1) throws IOException
-    {
+    private void writeDoubleArray(double[] doubles, int lenMinus1) throws IOException {
         final Writer output = this.out;
         final JsonClassWriter writer = getWriteOptions().getCustomWriter(Double.class);
-        for (int i = 0; i < lenMinus1; i++)
-        {
+        for (int i = 0; i < lenMinus1; i++) {
             writer.write(doubles[i], false, output, this);
             output.write(',');
         }
         writer.write(doubles[lenMinus1], false, output, this);
     }
 
-    private void writeFloatArray(float[] floats, int lenMinus1) throws IOException
-    {
+    private void writeFloatArray(float[] floats, int lenMinus1) throws IOException {
         final Writer output = this.out;
         final JsonClassWriter writer = getWriteOptions().getCustomWriter(Float.class);
-        for (int i = 0; i < lenMinus1; i++)
-        {
+        for (int i = 0; i < lenMinus1; i++) {
             writer.write(floats[i], false, output, this);
             output.write(',');
         }
@@ -867,8 +897,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         writer.write(floats[lenMinus1], false, output, this);
     }
 
-    private void writeLongArray(long[] longs, int lenMinus1) throws IOException
-    {
+    private void writeLongArray(long[] longs, int lenMinus1) throws IOException {
         final Writer output = this.out;
 
         JsonClassWriter writer = getWriteOptions().getCustomWriter(long.class);
@@ -880,8 +909,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
     }
 
-    private void writeIntArray(int[] ints, int lenMinus1) throws IOException
-    {
+    private void writeIntArray(int[] ints, int lenMinus1) throws IOException {
         // Add bounds checking for safety
         if (ints == null) {
             throw new JsonIoException("Int array cannot be null");
@@ -889,29 +917,25 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         if (lenMinus1 < 0 || lenMinus1 >= ints.length) {
             throw new JsonIoException("Invalid array bounds: lenMinus1=" + lenMinus1 + ", array.length=" + ints.length);
         }
-        
+
         final Writer output = this.out;
-        for (int i = 0; i < lenMinus1; i++)
-        {
+        for (int i = 0; i < lenMinus1; i++) {
             output.write(Integer.toString(ints[i]));
             output.write(',');
         }
         output.write(Integer.toString(ints[lenMinus1]));
     }
 
-    private void writeShortArray(short[] shorts, int lenMinus1) throws IOException
-    {
+    private void writeShortArray(short[] shorts, int lenMinus1) throws IOException {
         final Writer output = this.out;
-        for (int i = 0; i < lenMinus1; i++)
-        {
+        for (int i = 0; i < lenMinus1; i++) {
             output.write(Integer.toString(shorts[i]));
             output.write(',');
         }
         output.write(Integer.toString(shorts[lenMinus1]));
     }
 
-    private void writeByteArray(byte[] bytes, int lenMinus1) throws IOException
-    {
+    private void writeByteArray(byte[] bytes, int lenMinus1) throws IOException {
         // Add bounds checking for safety
         if (bytes == null) {
             throw new JsonIoException("Byte array cannot be null");
@@ -919,11 +943,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         if (lenMinus1 < 0 || lenMinus1 >= bytes.length) {
             throw new JsonIoException("Invalid array bounds: lenMinus1=" + lenMinus1 + ", array.length=" + bytes.length);
         }
-        
+
         final Writer output = this.out;
         final Object[] byteStrs = byteStrings;
-        for (int i = 0; i < lenMinus1; i++)
-        {
+        for (int i = 0; i < lenMinus1; i++) {
             int index = bytes[i] + 128;
             // Bounds check for byteStrings array access
             if (index < 0 || index >= byteStrs.length) {
@@ -939,37 +962,28 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         output.write((char[]) byteStrs[finalIndex]);
     }
 
-    private void writeCollection(Collection<?> col, boolean showType) throws IOException
-    {
-        if (writeOptions.isNeverShowingType())
-        {
+    private void writeCollection(Collection<?> col, boolean showType) throws IOException {
+        if (writeOptions.isNeverShowingType()) {
             showType = false;
         }
         final Writer output = this.out;
         boolean referenced = this.objsReferenced.containsKey(col);
         boolean isEmpty = col.isEmpty();
 
-        if (referenced || showType)
-        {
+        if (referenced || showType) {
             output.write('{');
             tabIn();
-        }
-        else if (isEmpty)
-        {
+        } else if (isEmpty) {
             output.write('[');
         }
 
         writeIdAndTypeIfNeeded(col, showType, referenced);
 
-        if (isEmpty)
-        {
-            if (referenced || showType)
-            {
+        if (isEmpty) {
+            if (referenced || showType) {
                 tabOut();
                 output.write('}');
-            }
-            else
-            {
+            } else {
                 output.write(']');
             }
             return;
@@ -982,42 +996,33 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         tabOut();
         output.write(']');
-        if (showType || referenced)
-        {   // Finished object, as it was output as an object if @id or @type was output
+        if (showType || referenced) {   // Finished object, as it was output as an object if @id or @type was output
             tabOut();
             output.write("}");
         }
     }
 
-    private void writeElements(Writer output, Iterator<?> i) throws IOException
-    {
-        while (i.hasNext())
-        {
+    private void writeElements(Writer output, Iterator<?> i) throws IOException {
+        while (i.hasNext()) {
             writeCollectionElement(i.next());
 
-            if (i.hasNext())
-            {
+            if (i.hasNext()) {
                 output.write(',');
                 newLine();
             }
         }
     }
 
-    private void writeIdAndTypeIfNeeded(Object col, boolean showType, boolean referenced) throws IOException
-    {
-        if (writeOptions.isNeverShowingType())
-        {
+    private void writeIdAndTypeIfNeeded(Object col, boolean showType, boolean referenced) throws IOException {
+        if (writeOptions.isNeverShowingType()) {
             showType = false;
         }
-        if (referenced)
-        {
+        if (referenced) {
             writeId(getId(col));
         }
 
-        if (showType)
-        {
-            if (referenced)
-            {
+        if (showType) {
+            if (referenced) {
                 out.write(',');
                 newLine();
             }
@@ -1025,16 +1030,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
     }
 
-    private void beginCollection(boolean showType, boolean referenced) throws IOException
-    {
-        if (showType || referenced)
-        {
+    private void beginCollection(boolean showType, boolean referenced) throws IOException {
+        if (showType || referenced) {
             out.write(',');
             newLine();
             out.write(writeOptions.isShortMetaKeys() ? "\"@e\":[" : "\"@items\":[");
-        }
-        else
-        {
+        } else {
             out.write('[');
         }
         tabIn();
@@ -1047,7 +1048,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         int len = jObj.size();
         Class<?> arrayClass;
         Class<?> jsonObjectType = jObj.getRawType();
-        
+
         if (jsonObjectType == null || Object[].class.equals(jsonObjectType)) {
             arrayClass = Object[].class;
         } else {
@@ -1188,24 +1189,20 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
     }
 
-    private void writeJsonObjectMap(JsonObject jObj, boolean showType) throws IOException
-    {
-        if (writeOptions.isNeverShowingType())
-        {
+    private void writeJsonObjectMap(JsonObject jObj, boolean showType) throws IOException {
+        if (writeOptions.isNeverShowingType()) {
             showType = false;
         }
         final Writer output = this.out;
         showType = emitIdAndTypeIfNeeded(jObj, showType, output);
 
-        if (jObj.isEmpty())
-        {   // Empty
+        if (jObj.isEmpty()) {   // Empty
             tabOut();
             output.write('}');
             return;
         }
 
-        if (showType)
-        {
+        if (showType) {
             output.write(',');
             newLine();
         }
@@ -1213,30 +1210,25 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         writeMapToEnd(jObj, output);
     }
 
-    private boolean writeJsonObjectMapWithStringKeys(JsonObject jObj, boolean showType) throws IOException
-    {
-        if (writeOptions.isNeverShowingType())
-        {
+    private boolean writeJsonObjectMapWithStringKeys(JsonObject jObj, boolean showType) throws IOException {
+        if (writeOptions.isNeverShowingType()) {
             showType = false;
         }
 
-        if (writeOptions.isForceMapOutputAsTwoArrays() || !ensureJsonPrimitiveKeys(jObj))
-        {
+        if (writeOptions.isForceMapOutputAsTwoArrays() || !ensureJsonPrimitiveKeys(jObj)) {
             return false;
         }
 
         Writer output = this.out;
         emitIdAndTypeIfNeeded(jObj, showType, output);
 
-        if (jObj.isEmpty())
-        { // Empty
+        if (jObj.isEmpty()) { // Empty
             tabOut();
             output.write('}');
             return true;
         }
 
-        if (showType)
-        {
+        if (showType) {
             output.write(',');
             newLine();
         }
@@ -1244,31 +1236,24 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         return writeMapBody(jObj.entrySet().iterator());
     }
 
-    private boolean emitIdAndTypeIfNeeded(JsonObject jObj, boolean showType, Writer output) throws IOException
-    {
+    private boolean emitIdAndTypeIfNeeded(JsonObject jObj, boolean showType, Writer output) throws IOException {
         boolean referenced = adjustIfReferenced(jObj);
         output.write('{');
         tabIn();
 
-        if (referenced)
-        {
+        if (referenced) {
             writeId(String.valueOf(jObj.getId()));
         }
 
-        if (showType)
-        {
-            if (referenced)
-            {
+        if (showType) {
+            if (referenced) {
                 output.write(',');
                 newLine();
             }
             String type = jObj.getRawTypeName();
-            if (type != null)
-            {
+            if (type != null) {
                 writeType(type, output);
-            }
-            else
-            {   // type not displayed
+            } else {   // type not displayed
                 showType = false;
             }
         }
@@ -1278,10 +1263,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     /**
      * Write fields of an Object (JsonObject)
      */
-    private void writeJsonObjectObject(JsonObject jObj, boolean showType) throws IOException
-    {
-        if (writeOptions.isNeverShowingType())
-        {
+    private void writeJsonObjectObject(JsonObject jObj, boolean showType) throws IOException {
+        if (writeOptions.isNeverShowingType()) {
             showType = false;
         }
         final Writer output = this.out;
@@ -1290,16 +1273,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         output.write('{');
         tabIn();
-        if (referenced)
-        {
+        if (referenced) {
             writeId(String.valueOf(jObj.id));
         }
 
         Class<?> type = null;
-        if (showType)
-        {
-            if (referenced)
-            {
+        if (showType) {
+            if (referenced) {
                 output.write(',');
                 newLine();
             }
@@ -1307,15 +1287,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             type = jObj.getRawType();
         }
 
-        if (jObj.isEmpty())
-        {
+        if (jObj.isEmpty()) {
             tabOut();
             output.write('}');
             return;
         }
 
-        if (showType || referenced)
-        {
+        if (showType || referenced) {
             output.write(',');
             newLine();
         }
@@ -1323,16 +1301,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         Iterator<Map.Entry<Object, Object>> i = jObj.entrySet().iterator();
         boolean first = true;
 
-        while (i.hasNext())
-        {
+        while (i.hasNext()) {
             Map.Entry<Object, Object> entry = i.next();
-            if (writeOptions.isSkipNullFields() && entry.getValue() == null)
-            {
+            if (writeOptions.isSkipNullFields() && entry.getValue() == null) {
                 continue;
             }
 
-            if (!first)
-            {
+            if (!first) {
                 output.write(',');
                 newLine();
             }
@@ -1343,12 +1318,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             output.write("\":");
             Object value = entry.getValue();
 
-            if (value == null)
-            {
+            if (value == null) {
                 output.write("null");
-            }
-            else if (value instanceof BigDecimal || value instanceof BigInteger)
-            {
+            } else if (value instanceof BigDecimal || value instanceof BigInteger) {
                 writeImpl(value, !doesValueTypeMatchFieldType(type, fieldName, value));
             } else if (value instanceof Number || value instanceof Boolean) {
                 output.write(value.toString());
@@ -1356,9 +1328,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 writeJsonUtf8String(output, (String) value, writeOptions.getMaxStringLength());
             } else if (value instanceof Character) {
                 writeJsonUtf8String(output, String.valueOf(value), writeOptions.getMaxStringLength());
-            }
-            else
-            {
+            } else {
                 writeImpl(value, !doesValueTypeMatchFieldType(type, fieldName, value));
             }
         }
@@ -1366,11 +1336,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         output.write('}');
     }
 
-    private boolean adjustIfReferenced(JsonObject jObj)
-    {
+    private boolean adjustIfReferenced(JsonObject jObj) {
         Long idx = objsReferenced.get(jObj);
-        if (!jObj.hasId() && idx != null && idx > 0)
-        {   // Referenced object that needs an ID copied to it.
+        if (!jObj.hasId() && idx != null && idx > 0) {   // Referenced object that needs an ID copied to it.
             jObj.id = idx;
         }
         return objsReferenced.containsKey(jObj) && jObj.hasId();
@@ -1380,10 +1348,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     // We're asking for a DeepDeclaredFields to check One Field Type
     // Its cached, but we shouldn't have to do that here.  I would think if its a known converter type
     // that we avoid this section all together.
-    private boolean doesValueTypeMatchFieldType(Class<?> type, String fieldName, Object value)
-    {
-        if (type != null)
-        {
+    private boolean doesValueTypeMatchFieldType(Class<?> type, String fieldName, Object value) {
+        if (type != null) {
             Map<String, Field> fieldMap = writeOptions.getDeepDeclaredFields(type);
             Field field = fieldMap.get(fieldName);
             return field != null && field.getType().equals(value.getClass());
@@ -1391,10 +1357,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         return false;
     }
 
-    private void writeMap(Map map, boolean showType) throws IOException
-    {
-        if (writeOptions.isNeverShowingType())
-        {
+    private void writeMap(Map map, boolean showType) throws IOException {
+        if (writeOptions.isNeverShowingType()) {
             showType = false;
         }
         final Writer output = this.out;
@@ -1402,30 +1366,25 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         output.write('{');
         tabIn();
-        if (referenced)
-        {
+        if (referenced) {
             writeId(getId(map));
         }
 
-        if (showType)
-        {
-            if (referenced)
-            {
+        if (showType) {
+            if (referenced) {
                 output.write(',');
                 newLine();
             }
             writeType(map.getClass().getName(), output);
         }
 
-        if (map.isEmpty())
-        {
+        if (map.isEmpty()) {
             tabOut();
             output.write('}');
             return;
         }
 
-        if (showType || referenced)
-        {
+        if (showType || referenced) {
             output.write(',');
             newLine();
         }
@@ -1433,8 +1392,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         writeMapToEnd(map, output);
     }
 
-    private void writeMapToEnd(Map map, Writer output) throws IOException
-    {
+    private void writeMapToEnd(Map map, Writer output) throws IOException {
         output.write(writeOptions.isShortMetaKeys() ? "\"@k\":[" : "\"@keys\":[");
         tabIn();
         Iterator<?> i = map.keySet().iterator();
@@ -1455,15 +1413,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         tabOut();
         output.write('}');
     }
-    
-    private boolean writeMapWithStringKeys(Map map, boolean showType) throws IOException
-    {
-        if (writeOptions.isNeverShowingType())
-        {
+
+    private boolean writeMapWithStringKeys(Map map, boolean showType) throws IOException {
+        if (writeOptions.isNeverShowingType()) {
             showType = false;
         }
-        if (writeOptions.isForceMapOutputAsTwoArrays() || !ensureJsonPrimitiveKeys(map))
-        {
+        if (writeOptions.isForceMapOutputAsTwoArrays() || !ensureJsonPrimitiveKeys(map)) {
             return false;
         }
 
@@ -1473,15 +1428,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         tabIn();
         writeIdAndTypeIfNeeded(map, showType, referenced);
 
-        if (map.isEmpty())
-        {
+        if (map.isEmpty()) {
             tabOut();
             out.write('}');
             return true;
         }
 
-        if (showType || referenced)
-        {
+        if (showType || referenced) {
             out.write(',');
             newLine();
         }
@@ -1494,11 +1447,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         while (i.hasNext()) {
             Entry att2value = (Entry) i.next();
             Object value = att2value.getValue();
-            
+
             if (writeOptions.isSkipNullFields() && value == null) {
                 continue;
             }
-            
+
             writeJsonUtf8String(output, (String) att2value.getKey(), writeOptions.getMaxStringLength());
             output.write(":");
             writeCollectionElement(value);
@@ -1516,14 +1469,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
     /**
      * Ensure that all keys within the Map are String instances
+     *
      * @param map Map to inspect that all keys are primitive.  This allows the output JSON
      *            to be optimized into {"key1":value1, "key2": value2} format if all the
      *            keys of the Map are Strings.  If not, then a Map is written as two
      *            arrays, a @keys array and an @items array.  This allows support for Maps
      *            with non-String keys.
      */
-    public static boolean ensureJsonPrimitiveKeys(Map map)
-    {
+    public static boolean ensureJsonPrimitiveKeys(Map map) {
         for (Object o : map.keySet()) {
             if (!(o instanceof String)) {
                 return false;
@@ -1534,11 +1487,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
     /**
      * Write an element that is contained in some type of Collection or Map.
+     *
      * @param o Collection element to output in JSON format.
      * @throws IOException if an error occurs writing to the output stream.
      */
-    private void writeCollectionElement(Object o) throws IOException
-    {
+    private void writeCollectionElement(Object o) throws IOException {
         if (o == null) {
             out.write("null");
         } else if (o instanceof Boolean || o instanceof Double) {
@@ -1661,37 +1614,30 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      * @param bodyOnly write only the body of the object
      * @throws IOException if an error occurs writing to the output stream.
      */
-    public void writeObject(final Object obj, boolean showType, boolean bodyOnly) throws IOException
-    {
-        if (writeOptions.isNeverShowingType())
-        {
+    public void writeObject(final Object obj, boolean showType, boolean bodyOnly) throws IOException {
+        if (writeOptions.isNeverShowingType()) {
             showType = false;
         }
         final boolean referenced = this.objsReferenced.containsKey(obj);
-        if (!bodyOnly)
-        {
+        if (!bodyOnly) {
             out.write('{');
             tabIn();
-            if (referenced)
-            {
+            if (referenced) {
                 writeId(getId(obj));
             }
 
-            if (referenced && showType)
-            {
+            if (referenced && showType) {
                 out.write(',');
                 newLine();
             }
 
-            if (showType)
-            {
+            if (showType) {
                 writeType(obj.getClass().getName(), out);
             }
         }
 
         boolean first = !showType;
-        if (referenced && !showType)
-        {
+        if (referenced && !showType) {
             first = false;
         }
 
@@ -1702,8 +1648,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             first = writeField(obj, first, fieldName, accessor);
         }
 
-        if (!bodyOnly)
-        {
+        if (!bodyOnly) {
             tabOut();
             out.write('}');
         }
@@ -1714,24 +1659,24 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         if (field == null) {
             return null;
         }
-        
+
         // Allow static field access even with null object
         if (obj == null && !java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
             return null;
         }
-        
+
         try {
             // Security enhancement - only allow access to public fields or already accessible fields
             if (!field.isAccessible() && !java.lang.reflect.Modifier.isPublic(field.getModifiers())) {
                 // Private/protected fields are not made accessible for security
                 return null;
             }
-            
+
             // Ensure field is accessible before attempting access (Java 8 compatible)
             if (!field.isAccessible()) {
                 field.setAccessible(true);
             }
-            
+
             return field.get(obj);
         } catch (IllegalAccessException e) {
             // Field access denied - return null rather than exposing internal error
@@ -1745,21 +1690,18 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
     }
 
-    private boolean writeField(Object obj, boolean first, String fieldName, Accessor accessor) throws IOException
-    {
+    private boolean writeField(Object obj, boolean first, String fieldName, Accessor accessor) throws IOException {
         final Class<?> fieldDeclaringClass = accessor.getDeclaringClass();
         if (Enum.class.isAssignableFrom(fieldDeclaringClass) && !accessor.isPublic() && writeOptions.isEnumPublicFieldsOnly()) {
             return first;
         }
         Object o = accessor.retrieve(obj);
 
-        if (writeOptions.isSkipNullFields() && o == null)
-        {   // If skip null, skip field and return the same status on first field written indicator
+        if (writeOptions.isSkipNullFields() && o == null) {   // If skip null, skip field and return the same status on first field written indicator
             return first;
         }
 
-        if (!first)
-        {
+        if (!first) {
             out.write(',');
             newLine();
         }
@@ -1768,8 +1710,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         out.write(fieldName);   // Not using slower UTF String writer for field names
         out.write("\":");
 
-        if (o == null)
-        {    // don't quote null
+        if (o == null) {    // don't quote null
             out.write("null");
             return false;
         }
@@ -1814,50 +1755,22 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         return true;
     }
 
-    public void flush()
-    {
-        try
-        {
-            if (out != null)
-            {
-                out.flush();
-            }
-        }
-        catch (IOException e) {
-            // Log I/O errors but don't propagate them in cleanup operations
-            LOG.warning("Failed to flush JsonWriter output stream: " + e.getMessage());
-        }
-        catch (Exception e) {
-            // Log unexpected errors but don't propagate them in cleanup operations
-            LOG.warning("Unexpected error flushing JsonWriter output stream: " + e.getMessage());
+    public void flush() {
+        if (out != null) {
+            IOUtilities.flush(out);
         }
     }
 
-    public void close()
-    {
-        try
-        {
-            if (out != null) {
-                out.close();
-            }
-        }
-        catch (IOException e) {
-            // Log I/O errors but don't propagate them in cleanup operations
-            LOG.warning("Failed to close JsonWriter output stream: " + e.getMessage());
-        }
-        catch (Exception e) {
-            // Log unexpected errors but don't propagate them in cleanup operations
-            LOG.warning("Unexpected error closing JsonWriter output stream: " + e.getMessage());
+    public void close() {
+        if (out != null) {
+            IOUtilities.close(out);
         }
     }
 
-    private String getId(Object o)
-    {
-        if (o instanceof JsonObject)
-        {
+    private String getId(Object o) {
+        if (o instanceof JsonObject) {
             long id = ((JsonObject) o).id;
-            if (id > 0)
-            {
+            if (id > 0) {
                 return String.valueOf(id);
             }
         }
@@ -1885,7 +1798,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      * Uses default string length limit for backward compatibility.
      *
      * @param output The Writer to write to
-     * @param s The string to be written as a JSON string value
+     * @param s      The string to be written as a JSON string value
      * @throws IOException If an I/O error occurs
      */
     public static void writeJsonUtf8String(final Writer output, String s) throws IOException {
@@ -1895,12 +1808,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     /**
      * Writes a JSON string value to the output, properly escaped according to JSON specifications.
      * Handles control characters, quotes, backslashes, and properly processes Unicode code points.
-     *
+     * <p>
      * OPTIMIZED VERSION: Uses batch scanning to write runs of safe characters in one operation,
      * significantly reducing write() calls and improving performance.
      *
-     * @param output The Writer to write to
-     * @param s The string to be written as a JSON string value
+     * @param output          The Writer to write to
+     * @param s               The string to be written as a JSON string value
      * @param maxStringLength Maximum allowed string length to prevent memory issues
      * @throws IOException If an I/O error occurs
      */
@@ -1946,25 +1859,32 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             if (codePoint < 0x20 || codePoint == 0x7F) {
                 // Control characters - use efficient switch
                 switch (codePoint) {
-                    case '\b': output.write("\\b"); break;
-                    case '\f': output.write("\\f"); break;
-                    case '\n': output.write("\\n"); break;
-                    case '\r': output.write("\\r"); break;
-                    case '\t': output.write("\\t"); break;
-                    default: output.write(String.format("\\u%04x", codePoint));
+                    case '\b':
+                        output.write("\\b");
+                        break;
+                    case '\f':
+                        output.write("\\f");
+                        break;
+                    case '\n':
+                        output.write("\\n");
+                        break;
+                    case '\r':
+                        output.write("\\r");
+                        break;
+                    case '\t':
+                        output.write("\\t");
+                        break;
+                    default:
+                        output.write(String.format("\\u%04x", codePoint));
                 }
-            }
-            else if (codePoint == '"') {
+            } else if (codePoint == '"') {
                 output.write("\\\"");
-            }
-            else if (codePoint == '\\') {
+            } else if (codePoint == '\\') {
                 output.write("\\\\");
-            }
-            else if (codePoint >= 0x80 && codePoint <= 0xFFFF) {
+            } else if (codePoint >= 0x80 && codePoint <= 0xFFFF) {
                 // Non-ASCII characters - write directly as UTF-8
                 output.write(s, i, Character.charCount(codePoint));
-            }
-            else if (codePoint > 0xFFFF) {
+            } else if (codePoint > 0xFFFF) {
                 // Supplementary characters (beyond BMP)
                 output.write(s, i, Character.charCount(codePoint));
             }
@@ -1986,6 +1906,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     /**
      * Writes a comma if the current context requires it.
      * This is called before writing array elements or object start/array start in array context.
+     *
      * @throws IOException if an error occurs writing to the output stream
      */
     private void writeCommaIfNeeded() throws IOException {
@@ -2045,7 +1966,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     /**
      * Writes a complete JSON string field with automatic comma handling.
      * Example: writeStringField("name", "John") produces ,"name":"John"
-     *
+     * <p>
      * This method writes a LEADING comma, making it suitable for fields after the first field.
      * For the first field in an object, either omit the comma manually or use writeFieldName()
      * followed by the value.
@@ -2067,7 +1988,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     /**
      * Writes a complete JSON object field with automatic serialization and comma handling.
      * Example: writeObjectField("address", addressObj) produces ,"address":{...}
-     *
+     * <p>
      * This method writes a LEADING comma, making it suitable for fields after the first field.
      * For the first field in an object, either omit the comma manually or use writeFieldName()
      * followed by writeImpl().

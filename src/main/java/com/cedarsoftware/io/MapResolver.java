@@ -170,7 +170,8 @@ public class MapResolver extends Resolver {
                 Object arrayElement = createInstance(jsonObject);
 
                 // Assign the newly created array to the parent array's element
-                setArrayElement(target, index, arrayElement);
+                // Nested arrays are always reference types (Object[]), never primitive arrays
+                ((Object[]) target)[index] = arrayElement;
 
             }
             // Push the JsonObject for further processing
@@ -197,15 +198,23 @@ public class MapResolver extends Resolver {
             }
         }
 
+        // Optimize: check array type ONCE, not on every element assignment
+        final boolean isPrimitive = componentType.isPrimitive();
+        final Object[] refArray = isPrimitive ? null : (Object[]) target;
+
         final int len = items.length;
         for (int i = 0; i < len; i++) {
             Object element = items[i];
 
             if (element == null) {
-                setArrayElement(target, i, null);
+                if (isPrimitive) {
+                    ArrayUtilities.setPrimitiveElement(target, i, null);
+                } else {
+                    refArray[i] = null;
+                }
                 continue;
             }
-            
+
             // Each element can be of different type - cannot cache class outside loop
             if (element.getClass().isArray() || (element instanceof JsonObject && ((JsonObject) element).isArray())) {
                 // Handle nested arrays using the unified helper method
@@ -214,7 +223,11 @@ public class MapResolver extends Resolver {
             else if (converter.isConversionSupportedFor(element.getClass(), componentType)) {
                 // Convert the element to the base component type
                 Object convertedValue = converter.convert(element, componentType);
-                setArrayElement(target, i, convertedValue);
+                if (isPrimitive) {
+                    ArrayUtilities.setPrimitiveElement(target, i, convertedValue);
+                } else {
+                    refArray[i] = convertedValue;
+                }
             }
             else if (element instanceof JsonObject) {
                 JsonObject jsonObject = (JsonObject) element;
@@ -225,7 +238,11 @@ public class MapResolver extends Resolver {
                     Class<?> type = jsonObject.getRawType();
                     if (type != null && converter.isConversionSupportedFor(Map.class, type)) {
                         Object converted = converter.convert(jsonObject, type);
-                        setArrayElement(target, i, converted);
+                        if (isPrimitive) {
+                            ArrayUtilities.setPrimitiveElement(target, i, converted);
+                        } else {
+                            refArray[i] = converted;
+                        }
                         jsonObject.setFinished();
                     } else {
                         push(jsonObject);
@@ -237,13 +254,25 @@ public class MapResolver extends Resolver {
                     if (type != null && converter.isConversionSupportedFor(Map.class, type)) {
                         Object convertedRef = converter.convert(refObject, type);
                         refObject.setFinishedTarget(convertedRef, true);
-                        setArrayElement(target, i, refObject.getTarget());
+                        if (isPrimitive) {
+                            ArrayUtilities.setPrimitiveElement(target, i, refObject.getTarget());
+                        } else {
+                            refArray[i] = refObject.getTarget();
+                        }
                     } else {
-                        setArrayElement(target, i, refObject);
+                        if (isPrimitive) {
+                            ArrayUtilities.setPrimitiveElement(target, i, refObject);
+                        } else {
+                            refArray[i] = refObject;
+                        }
                     }
                 }
             } else {
-                setArrayElement(target, i, element);
+                if (isPrimitive) {
+                    ArrayUtilities.setPrimitiveElement(target, i, element);
+                } else {
+                    refArray[i] = element;
+                }
             }
         }
         jsonObj.setFinished();

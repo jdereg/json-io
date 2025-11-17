@@ -1341,15 +1341,16 @@ public class WriteOptionsBuilder {
         private ClassLoader classLoader = ClassUtilities.getClassLoader(DefaultWriteOptions.class);
         private Map<Class<?>, Set<String>> includedFieldNames = new ClassValueMap<>();
         private Map<Class<?>, Map<String, String>> nonStandardGetters = new ClassValueMap<>();
-        private Map<String, String> aliasTypeNames = new LinkedHashMap<>();
+        // Pre-size builder maps to avoid resize during typical configuration
+        private Map<String, String> aliasTypeNames = new LinkedHashMap<>(32);
         private Set<Class<?>> notCustomWrittenClasses = new ClassValueSet();
         private Set<Class<?>> nonRefClasses = new ClassValueSet();
         private Map<Class<?>, Set<String>> excludedFieldNames = new ClassValueMap<>();
-        private Map<String, FieldFilter> fieldFilters = new LinkedHashMap<>();
-        private Map<String, MethodFilter> methodFilters = new LinkedHashMap<>();
-        private Map<String, AccessorFactory> accessorFactories = new LinkedHashMap<>();
+        private Map<String, FieldFilter> fieldFilters = new LinkedHashMap<>(16);
+        private Map<String, MethodFilter> methodFilters = new LinkedHashMap<>(16);
+        private Map<String, AccessorFactory> accessorFactories = new LinkedHashMap<>(16);
         private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses = new ClassValueMap<>();
-        private Map<String, Object> customOptions = new LinkedHashMap<>();
+        private Map<String, Object> customOptions = new LinkedHashMap<>(16);
         private DefaultConverterOptions converterOptions = new DefaultConverterOptions();
 
         // Security limits with backward-compatible defaults
@@ -1733,7 +1734,8 @@ public class WriteOptionsBuilder {
 
         private Map<String, Field> buildWithIncludedMinusExcluded(Class<?> c) {
             Convention.throwIfNull(c, "class cannot be null");
-            final Map<String, Field> map = new LinkedHashMap<>();
+            // Pre-size to 32 for typical domain objects (10-25 fields per class)
+            final Map<String, Field> map = new LinkedHashMap<>(32);
             final Set<String> excluded = new HashSet<>();
             final Set<String> includedFields = includedFieldNames.get(c);
             final Set<String> included = includedFields == null ? new HashSet<>() : includedFields;

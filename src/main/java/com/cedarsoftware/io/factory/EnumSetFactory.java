@@ -30,23 +30,28 @@ public class EnumSetFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
         // Attempt to get the actual enum class from the provided class 'c'
         Class<?> enumClass = ClassUtilities.getClassIfEnum(jObj.getRawType());
+        Object[] items = jObj.getItems();
 
         // If enumClass is null or not an enum, try to get it from the first item in @items
         if (enumClass == null) {
-            Object[] items = jObj.getItems();
-            if (items != null && items.length > 0) {
-                Object firstItem = items[0];
-                if (firstItem instanceof JsonObject) {
-                    JsonObject jsonItem = (JsonObject) firstItem;
-                    enumClass = ClassUtilities.getClassIfEnum(jsonItem.getRawType());
-                } else if (firstItem instanceof String) {
-                    // If items are simple strings, we need to rely on additional information
-                    // Since we cannot determine the enum class from the string, throw an exception
-                    throw new JsonIoException("Unable to determine enum class from items in EnumSet");
-                }
-            } else {
-                // in case field is serialized without values, but it's mentioned as java.util.RegularEnumSet
+            if (items == null) {
+                // No type information and no items - cannot create EnumSet
                 return null;
+            }
+            if (items.length == 0) {
+                // Empty array but no type information - cannot create EnumSet
+                // This maintains backward compatibility for serialized RegularEnumSet without type info
+                return null;
+            }
+
+            Object firstItem = items[0];
+            if (firstItem instanceof JsonObject) {
+                JsonObject jsonItem = (JsonObject) firstItem;
+                enumClass = ClassUtilities.getClassIfEnum(jsonItem.getRawType());
+            } else if (firstItem instanceof String) {
+                // If items are simple strings, we need to rely on additional information
+                // Since we cannot determine the enum class from the string, throw an exception
+                throw new JsonIoException("Unable to determine enum class from items in EnumSet");
             }
         }
 
@@ -59,9 +64,9 @@ public class EnumSetFactory implements JsonReader.ClassFactory {
         EnumSet enumSet = EnumSet.noneOf((Class<Enum>) enumClass);
         jObj.setTarget(enumSet);  // Set the EnumSet as the target object for further population
 
-        Object[] items = jObj.getItems();
-        if (items == null) {
-            return enumSet;  // Return empty EnumSet
+        // If items is null or empty, return the empty EnumSet
+        if (items == null || items.length == 0) {
+            return enumSet;
         }
 
         // Iterate over the items and populate the EnumSet

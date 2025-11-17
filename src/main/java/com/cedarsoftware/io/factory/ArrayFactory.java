@@ -6,6 +6,7 @@ import java.lang.reflect.Type;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
+import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.TypeUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
@@ -35,47 +36,102 @@ public class ArrayFactory<T> implements JsonReader.ClassFactory {
     }
 
     public T newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        Object items = jObj.getItems();
+        Object[] items = jObj.getItems();
         Converter converter = resolver.getConverter();
         if (items == null) {
             return (T)jObj.setTarget(null);
         }
-        int len = Array.getLength(items);
+        int len = items.length;
         Class<?> arrayType = getType();
         Class<?> componentType = arrayType.getComponentType();
         Object array = Array.newInstance(componentType, len);
 
-        for (int i = 0; i < len; i++) {
-            Object val = Array.get(items, i);
-            if (val == null) {
-            } else if (val instanceof JsonObject) {
-                Type type;
-                do {
-                    // Allow for {@type:long, value:{@type:int, value:3}}  (and so on...)
-                    JsonObject jsonObject = (JsonObject) val;
-                    type = jsonObject.getType();
-                    if (!jsonObject.hasValue()) {
-                        break;
-                    }
-                    val = jsonObject.getValue();
-                } while (val instanceof JsonObject);
-
-                if (type == null) {
-                    type = componentType;
-                }
-                val = resolver.getConverter().convert(val, TypeUtilities.getRawClass(type));
-
-            } else {
-                val = resolver.getConverter().convert(val, componentType);
+        // Check once if any items are JsonObjects - avoid checking every iteration
+        boolean hasJsonObjects = false;
+        for (Object item : items) {
+            if (item instanceof JsonObject) {
+                hasJsonObjects = true;
+                break;
             }
-            try {
-                Array.set(array, i, val);
-            } catch (Exception e) {
-                Array.set(array, i, converter.convert(val, componentType));
+        }
+
+        if (componentType.isPrimitive()) {
+            // Primitive arrays - use optimized ArrayUtilities.setPrimitiveElement()
+            if (hasJsonObjects) {
+                // Complex path: handle JsonObject unwrapping
+                for (int i = 0; i < len; i++) {
+                    Object val = items[i];
+                    if (val != null) {
+                        if (val instanceof JsonObject) {
+                            val = unwrapJsonObject((JsonObject) val, componentType, converter);
+                        } else {
+                            val = converter.convert(val, componentType);
+                        }
+                        ArrayUtilities.setPrimitiveElement(array, i, val);
+                    }
+                }
+            } else {
+                // Fast path: no JsonObjects, just convert and assign
+                for (int i = 0; i < len; i++) {
+                    Object val = items[i];
+                    if (val != null) {
+                        val = converter.convert(val, componentType);
+                        ArrayUtilities.setPrimitiveElement(array, i, val);
+                    }
+                }
+            }
+        } else {
+            // Reference type arrays - direct assignment
+            Object[] typedArray = (Object[]) array;
+            if (hasJsonObjects) {
+                // Complex path: handle JsonObject unwrapping
+                for (int i = 0; i < len; i++) {
+                    Object val = items[i];
+                    if (val != null) {
+                        if (val instanceof JsonObject) {
+                            val = unwrapJsonObject((JsonObject) val, componentType, converter);
+                        } else {
+                            val = converter.convert(val, componentType);
+                        }
+                        typedArray[i] = val;
+                    }
+                }
+            } else {
+                // Fast path: no JsonObjects, just convert and assign
+                for (int i = 0; i < len; i++) {
+                    Object val = items[i];
+                    if (val != null) {
+                        val = converter.convert(val, componentType);
+                        typedArray[i] = val;
+                    }
+                }
             }
         }
 
         return (T) jObj.setTarget(array);
+    }
+
+    /**
+     * Unwraps a JsonObject, handling nested {@type:..., value:...} structures.
+     * Returns the converted value ready for array assignment.
+     */
+    private Object unwrapJsonObject(JsonObject jsonObject, Class<?> componentType, Converter converter) {
+        Object val = jsonObject;
+        Type type = null;
+
+        // Unwrap nested JsonObjects: {@type:long, value:{@type:int, value:3}}
+        do {
+            JsonObject current = (JsonObject) val;
+            type = current.getType();
+            if (!current.hasValue()) {
+                break;
+            }
+            val = current.getValue();
+        } while (val instanceof JsonObject);
+
+        // Use the specified type, or fall back to component type
+        Class<?> targetType = (type == null) ? componentType : TypeUtilities.getRawClass(type);
+        return converter.convert(val, targetType);
     }
 
     public Class<?> getType() {

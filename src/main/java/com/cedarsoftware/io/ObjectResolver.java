@@ -3,8 +3,10 @@ package com.cedarsoftware.io;
 import java.lang.reflect.Array;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.AbstractMap;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.EnumSet;
@@ -14,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.cedarsoftware.io.reflect.Injector;
+import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.TypeUtilities;
 import com.cedarsoftware.util.convert.Converter;
@@ -409,11 +412,10 @@ public class ObjectResolver extends Resolver
         
         // Performance: Get items array once and use its length directly
         final Object[] jsonItems = jsonObj.getItems();
-        if (jsonItems == null || jsonItems.length == 0) {
+        if (ArrayUtilities.isEmpty(jsonItems)) {
             return;
         }
         final int len = jsonItems.length;
-
         final ReadOptions readOptions = getReadOptions();
         final ReferenceTracker refTracker = getReferences();
         final Object array = jsonObj.getTarget();
@@ -430,33 +432,58 @@ public class ObjectResolver extends Resolver
         final Class effectiveRawComponentType = TypeUtilities.getRawClass(effectiveComponentType);
         final boolean isEnumComponentType = effectiveRawComponentType.isEnum();
 
+        // Optimize: check array type ONCE, not on every element assignment
+        final boolean isPrimitive = fallbackCompType.isPrimitive();
+        final Object[] refArray = isPrimitive ? null : (Object[]) array;
+
         for (int i = 0; i < len; i++) {
             final Object element = jsonItems[i];
             Object special;
 
             if (element == null) {
-                setArrayElement(array, i, null);
+                if (isPrimitive) {
+                    ArrayUtilities.setPrimitiveElement(array, i, null);
+                } else {
+                    refArray[i] = null;
+                }
             } else if ((special = readWithFactoryIfExists(element, effectiveRawComponentType)) != null) {
                 if (isEnumComponentType && special instanceof String) {
                     special = Enum.valueOf(effectiveRawComponentType, (String) special);
                 }
-                setArrayElement(array, i, special);
+                if (isPrimitive) {
+                    ArrayUtilities.setPrimitiveElement(array, i, special);
+                } else {
+                    refArray[i] = special;
+                }
             } else if (element.getClass().isArray()) {   // Array of arrays
                 if (char[].class == effectiveRawComponentType) {
                     // Special handling for char[] arrays.
                     Object[] jsonArray = (Object[]) element;
                     if (jsonArray.length == 0) {
-                        setArrayElement(array, i, new char[]{});
+                        if (isPrimitive) {
+                            ArrayUtilities.setPrimitiveElement(array, i, new char[]{});
+                        } else {
+                            refArray[i] = new char[]{};
+                        }
                     } else {
                         final char[] chars = ((String) jsonArray[0]).toCharArray();
-                        setArrayElement(array, i, chars);
+                        if (isPrimitive) {
+                            ArrayUtilities.setPrimitiveElement(array, i, chars);
+                        } else {
+                            refArray[i] = chars;
+                        }
                     }
                 } else {
                     JsonObject jsonArray = new JsonObject();
                     jsonArray.setItems((Object[])element);
                     // Set the full type using the effective component type.
                     jsonArray.setType(effectiveComponentType);
-                    setArrayElement(array, i, createInstance(jsonArray));
+                    Object instance = createInstance(jsonArray);
+                    if (isPrimitive) {
+                        ArrayUtilities.setPrimitiveElement(array, i, instance);
+                    } else {
+                        refArray[i] = instance;
+                    }
                     push(jsonArray);
                 }
             } else if (element instanceof JsonObject) {
@@ -466,7 +493,11 @@ public class ObjectResolver extends Resolver
                 if (ref != null) {
                     JsonObject refObject = refTracker.getOrThrow(ref);
                     if (refObject.getTarget() != null) {
-                        setArrayElement(array, i, refObject.getTarget());
+                        if (isPrimitive) {
+                            ArrayUtilities.setPrimitiveElement(array, i, refObject.getTarget());
+                        } else {
+                            refArray[i] = refObject.getTarget();
+                        }
                     } else {
                         unresolvedRefs.add(new UnresolvedReference(jsonObj, i, ref));
                     }
@@ -474,7 +505,11 @@ public class ObjectResolver extends Resolver
                     // Set the full type on the element.
                     jsonElement.setType(effectiveComponentType);
                     Object arrayElement = createInstance(jsonElement);
-                    setArrayElement(array, i, arrayElement);
+                    if (isPrimitive) {
+                        ArrayUtilities.setPrimitiveElement(array, i, arrayElement);
+                    } else {
+                        refArray[i] = arrayElement;
+                    }
                     boolean isNonRefClass = readOptions.isNonReferenceableClass(arrayElement.getClass());
                     if (!isNonRefClass && !jsonElement.isFinished) {
                         push(jsonElement);
@@ -484,9 +519,17 @@ public class ObjectResolver extends Resolver
                 if (element instanceof String && ((String) element).trim().isEmpty()
                         && effectiveRawComponentType != String.class
                         && effectiveRawComponentType != Object.class) {
-                    setArrayElement(array, i, null);
+                    if (isPrimitive) {
+                        ArrayUtilities.setPrimitiveElement(array, i, null);
+                    } else {
+                        refArray[i] = null;
+                    }
                 } else {
-                    setArrayElement(array, i, element);
+                    if (isPrimitive) {
+                        ArrayUtilities.setPrimitiveElement(array, i, element);
+                    } else {
+                        refArray[i] = element;
+                    }
                 }
             }
         }
@@ -580,126 +623,256 @@ public class ObjectResolver extends Resolver
         return (read != null) ? jsonObj.setFinishedTarget(read, true) : null;
     }
 
+    /**
+     * Traverses untyped JSON objects and stamps them with their inferred Java types.
+     * This enables correct instantiation later during deserialization.
+     * Uses a stack-based traversal to handle arbitrarily deep object graphs.
+     */
     private void markUntypedObjects(final Type type, final JsonObject rhs) {
         if (rhs.isFinished) {
             return;     // Already marked.
         }
-        final Deque<Object[]> stack = new ArrayDeque<>();
+
+        // Use Map.Entry for type-safe pairing of Type and instance (cleaner than Object[])
+        final Deque<Map.Entry<Type, Object>> stack = new ArrayDeque<>();
         Class<?> fieldClass = TypeUtilities.getRawClass(type);
         Map<String, Injector> classFields = getReadOptions().getDeepInjectorMap(fieldClass);
-        stack.addFirst(new Object[]{type, rhs});
+        stack.addFirst(new AbstractMap.SimpleEntry<>(type, rhs));
 
         while (!stack.isEmpty()) {
-            Object[] item = stack.removeFirst();
-            final Type t = (Type) item[0];
-            final Object instance = item[1];
-            
+            Map.Entry<Type, Object> item = stack.removeFirst();
+            final Type t = item.getKey();
+            final Object instance = item.getValue();
+
             if (instance == null) {
                 continue;
             }
-            
+
+            // OPTIMIZATION: Skip already-processed JsonObjects to avoid redundant work
+            // This is critical for object graphs with shared references
+            if (instance instanceof JsonObject && ((JsonObject) instance).isFinished) {
+                continue;  // Already marked - skip to avoid duplicate traversal
+            }
+
             if (t instanceof ParameterizedType) {
-                Class<?> clazz = TypeUtilities.getRawClass(t);
-                ParameterizedType pType = (ParameterizedType) t;
-                Type[] typeArgs = pType.getActualTypeArguments();
-
-                if (typeArgs.length < 1 || clazz == null) {
-                    continue;
-                }
-
-                // Assuming 'type' is the parent's type and 't' is the field type that needs resolution:
-                Type resolvedType = TypeUtilities.resolveType(type, t);
-                stampTypeOnJsonObject(instance, resolvedType);
-
-                if (Map.class.isAssignableFrom(clazz)) {
-                    JsonObject jsonObj = (JsonObject) instance; // Maps are brought in as JsonObjects
-                    Map.Entry<Object[], Object[]> pair = jsonObj.asTwoArrays();
-                    Object[] keys = pair.getKey();
-                    Object[] items = pair.getValue();
-                    getTemplateTraverseWorkItem(stack, keys, typeArgs[0]);
-                    getTemplateTraverseWorkItem(stack, items, typeArgs[1]);
-                } else if (Collection.class.isAssignableFrom(clazz)) {
-                    if (instance.getClass().isArray()) {
-                        int len = Array.getLength(instance);
-                        for (int i = 0; i < len; i++) {
-                            Object vals = Array.get(instance, i);
-                            if (vals == null) {
-                                continue;
-                            }
-
-                            // Check if 'vals' is an array of any type
-                            if (vals.getClass().isArray()) {
-                                // Convert the inner array to a List in a type-agnostic way
-                                int innerLen = Array.getLength(vals);
-                                List<Object> items = new ArrayList<>(innerLen);
-                                for (int j = 0; j < innerLen; j++) {
-                                    items.add(Array.get(vals, j));
-                                }
-
-                                JsonObject coll = new JsonObject();
-                                coll.setType(clazz);
-                                coll.setItems((Object[])vals);
-                                stack.addFirst(new Object[]{t, items});
-                                Array.set(instance, i, coll);
-                            } else {
-                                stack.addFirst(new Object[]{t, vals});
-                            }
-                        }
-                    } else if (instance instanceof Collection) {
-                        final Collection col = (Collection) instance;
-                        for (Object o : col) {
-                            stack.addFirst(new Object[]{typeArgs[0], o});
-                        }
-                    } else if (instance instanceof JsonObject) {
-                        final JsonObject jObj = (JsonObject) instance;
-                        final Object[] array = jObj.getItems();
-                        if (array != null) {
-                            for (Object o : array) {
-                                stack.addFirst(new Object[]{typeArgs[0], o});
-                            }
-                        }
-                    }
-                } else {
-                    if (instance instanceof JsonObject) {
-                        final JsonObject jObj = (JsonObject) instance;
-
-                        for (Map.Entry<Object, Object> entry : jObj.entrySet()) {
-                            final String fieldName = (String) entry.getKey();
-                            if (fieldName.startsWith("this$")) {
-                                continue;
-                            }
-                            Injector injector = classFields.get(fieldName);
-                            if (injector != null) {
-                                Type genericType = injector.getGenericType();
-                                // Resolve the field's type using the parent type 't'
-                                Type resolved = TypeUtilities.resolveType(t, genericType);
-
-                                // If resolution didn't fully resolve the type, use a fallback
-                                if (TypeUtilities.hasUnresolvedType(resolved)) {
-                                    resolved = typeArgs[0];  // fallback: use the first type argument
-                                }
-
-                                stack.addFirst(new Object[]{ resolved, entry.getValue() });
-                            }
-                        }
-                    }
-                }
+                handleParameterizedTypeMarking((ParameterizedType) t, instance, type, classFields, stack);
             } else {
                 stampTypeOnJsonObject(instance, t);
             }
         }
     }
 
-    private static void getTemplateTraverseWorkItem(final Deque<Object[]> stack, final Object[] items, final Type type) {
+    /**
+     * Handles type marking for parameterized types (List<T>, Map<K,V>, etc.)
+     */
+    private void handleParameterizedTypeMarking(
+            final ParameterizedType pType,
+            final Object instance,
+            final Type parentType,
+            final Map<String, Injector> classFields,
+            final Deque<Map.Entry<Type, Object>> stack) {
+
+        Class<?> clazz = TypeUtilities.getRawClass(pType);
+        Type[] typeArgs = pType.getActualTypeArguments();
+
+        if (typeArgs.length < 1 || clazz == null) {
+            return;
+        }
+
+        // Resolve the type in the context of the parent type
+        Type resolvedType = TypeUtilities.resolveType(parentType, pType);
+        stampTypeOnJsonObject(instance, resolvedType);
+
+        if (Map.class.isAssignableFrom(clazz)) {
+            handleMapTypeMarking(instance, typeArgs, stack);
+        } else if (Collection.class.isAssignableFrom(clazz)) {
+            handleCollectionTypeMarking(instance, pType, typeArgs, clazz, stack);
+        } else {
+            handleObjectFieldsMarking(instance, pType, typeArgs, classFields, stack);
+        }
+    }
+
+    /**
+     * Handles Map<K,V> type marking by processing keys and values
+     */
+    private void handleMapTypeMarking(
+            final Object instance,
+            final Type[] typeArgs,
+            final Deque<Map.Entry<Type, Object>> stack) {
+
+        JsonObject jsonObj = (JsonObject) instance; // Maps are brought in as JsonObjects
+        Map.Entry<Object[], Object[]> pair = jsonObj.asTwoArrays();
+        Object[] keys = pair.getKey();
+        Object[] values = pair.getValue();
+        addItemsToStack(stack, keys, typeArgs[0]);
+        addItemsToStack(stack, values, typeArgs[1]);
+    }
+
+    /**
+     * Handles Collection<T> type marking for arrays, Collections, and JsonObjects
+     */
+    private void handleCollectionTypeMarking(
+            final Object instance,
+            final Type containerType,
+            final Type[] typeArgs,
+            final Class<?> collectionClass,
+            final Deque<Map.Entry<Type, Object>> stack) {
+
+        if (instance.getClass().isArray()) {
+            handleArrayInCollection(instance, containerType, collectionClass, stack);
+        } else if (instance instanceof Collection) {
+            // OPTIMIZATION: Skip if collection items don't need field traversal
+            if (shouldSkipTraversal(typeArgs[0])) {
+                return;
+            }
+            final Collection<?> col = (Collection<?>) instance;
+            for (Object o : col) {
+                stack.addFirst(new AbstractMap.SimpleEntry<>(typeArgs[0], o));
+            }
+        } else if (instance instanceof JsonObject) {
+            // OPTIMIZATION: Skip if array items don't need field traversal
+            if (shouldSkipTraversal(typeArgs[0])) {
+                return;
+            }
+            final JsonObject jObj = (JsonObject) instance;
+            final Object[] array = jObj.getItems();
+            if (array != null) {
+                for (Object o : array) {
+                    stack.addFirst(new AbstractMap.SimpleEntry<>(typeArgs[0], o));
+                }
+            }
+        }
+    }
+
+    /**
+     * Handles nested arrays within collections (e.g., int[][], String[][])
+     */
+    private void handleArrayInCollection(
+            final Object arrayInstance,
+            final Type containerType,
+            final Class<?> collectionClass,
+            final Deque<Map.Entry<Type, Object>> stack) {
+
+        int len = Array.getLength(arrayInstance);
+        for (int i = 0; i < len; i++) {
+            Object element = Array.get(arrayInstance, i);
+            if (element == null) {
+                continue;
+            }
+
+            // Handle nested array (e.g., element is int[] within int[][])
+            if (element.getClass().isArray()) {
+                // Convert the inner array to a List for type resolution
+                int innerLen = Array.getLength(element);
+                List<Object> items = new ArrayList<>(innerLen);
+                for (int j = 0; j < innerLen; j++) {
+                    items.add(Array.get(element, j));
+                }
+
+                JsonObject coll = new JsonObject();
+                coll.setType(collectionClass);
+                coll.setItems((Object[]) element);
+                stack.addFirst(new AbstractMap.SimpleEntry<>(containerType, items));
+                Array.set(arrayInstance, i, coll);
+            } else {
+                stack.addFirst(new AbstractMap.SimpleEntry<>(containerType, element));
+            }
+        }
+    }
+
+    /**
+     * Handles regular object field type marking (non-Map, non-Collection)
+     */
+    private void handleObjectFieldsMarking(
+            final Object instance,
+            final Type containerType,
+            final Type[] typeArgs,
+            final Map<String, Injector> classFields,
+            final Deque<Map.Entry<Type, Object>> stack) {
+
+        if (!(instance instanceof JsonObject)) {
+            return;
+        }
+
+        final JsonObject jObj = (JsonObject) instance;
+        for (Map.Entry<Object, Object> entry : jObj.entrySet()) {
+            final String fieldName = (String) entry.getKey();
+
+            // Skip synthetic outer class references
+            if (fieldName.startsWith("this$")) {
+                continue;
+            }
+
+            Injector injector = classFields.get(fieldName);
+            if (injector != null) {
+                Type genericType = injector.getGenericType();
+                // Resolve the field's type using the parent type
+                Type resolved = TypeUtilities.resolveType(containerType, genericType);
+
+                // Fallback if resolution didn't fully resolve the type
+                if (TypeUtilities.hasUnresolvedType(resolved)) {
+                    resolved = typeArgs[0];  // Use first type argument as fallback
+                }
+
+                // OPTIMIZATION: Skip if field type doesn't need traversal
+                if (!shouldSkipTraversal(resolved)) {
+                    stack.addFirst(new AbstractMap.SimpleEntry<>(resolved, entry.getValue()));
+                }
+            }
+        }
+    }
+
+    /**
+     * Determines if a type should skip traversal because it doesn't need field-level type inference.
+     * Types with isObjectFinal() factories are fully created/loaded by the factory and have no
+     * fields needing type marking.
+     */
+    private boolean shouldSkipTraversal(final Type type) {
+        Class<?> rawClass = TypeUtilities.getRawClass(type);
+        if (rawClass == null) {
+            return false;
+        }
+
+        // Skip primitives and their wrappers - they have no fields
+        if (rawClass.isPrimitive() ||
+            rawClass == String.class ||
+            Number.class.isAssignableFrom(rawClass) ||
+            rawClass == Boolean.class ||
+            rawClass == Character.class) {
+            return true;
+        }
+
+        // Skip types with final factories - they're fully created with no field traversal needed
+        JsonReader.ClassFactory factory = getReadOptions().getClassFactory(rawClass);
+        return factory != null && factory.isObjectFinal();
+    }
+
+    /**
+     * Helper method to add array items to the stack with their type
+     */
+    private void addItemsToStack(
+            final Deque<Map.Entry<Type, Object>> stack,
+            final Object[] items,
+            final Type itemType) {
+
         if (items == null || items.length < 1) {
             return;
         }
-        Class<?> rawType = TypeUtilities.getRawClass(type);
+
+        // OPTIMIZATION: Skip if itemType has a final factory or is a primitive type
+        // These types don't need field-level type inference
+        if (shouldSkipTraversal(itemType)) {
+            return;
+        }
+
+        Class<?> rawType = TypeUtilities.getRawClass(itemType);
         if (rawType != null && Collection.class.isAssignableFrom(rawType)) {
-            stack.add(new Object[]{type, items});
+            // Treat the entire array as a collection
+            stack.add(new AbstractMap.SimpleEntry<>(itemType, items));
         } else {
+            // Add each item individually
             for (Object item : items) {
-                stack.add(new Object[]{type, item});
+                stack.add(new AbstractMap.SimpleEntry<>(itemType, item));
             }
         }
     }

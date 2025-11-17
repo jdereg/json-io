@@ -39,7 +39,9 @@ import java.util.Set;
  *         limitations under the License.
  */
 public class JsonObject extends JsonValue implements Map<Object, Object>, Serializable {
-    private final Map<Object, Object> jsonStore = new LinkedHashMap<>();
+    // Pre-size to 32 to avoid resizing for most objects (32 * 0.75 = 24 fields before resize)
+    // Profiling showed HashMap resizing was a bottleneck. Most domain objects have < 20 fields.
+    private final Map<Object, Object> jsonStore = new LinkedHashMap<>(32, 0.75f);
     private Integer hash = null;
     
     // Configurable performance threshold for switching between search algorithms
@@ -83,7 +85,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     private int getItemsLength() {
         if (items == null) return 0;
         if (cache.itemsLength == null) {
-            cache.itemsLength = Array.getLength(items);
+            cache.itemsLength = items.length;
         }
         return cache.itemsLength;
     }
@@ -311,8 +313,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
 
         // If both are arrays, compare lengths and elements with .equals()
         
-        int len1 = Array.getLength(arr1);
-        int len2 = Array.getLength(arr2);
+        int len1 = arr1.length;
+        int len2 = arr2.length;
         if (len1 != len2) {
             return false;
         }
