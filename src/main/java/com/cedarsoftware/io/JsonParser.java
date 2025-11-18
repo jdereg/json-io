@@ -138,7 +138,7 @@ class JsonParser {
                 "on", "On", "ON", "off", "Off", "OFF",
                 "id", "ID", "type", "value", "name",
                 ID, REF, ITEMS, TYPE, KEYS,
-                "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
+                "-1", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
         };
 
         for (String s : commonStrings) {
@@ -270,17 +270,22 @@ class JsonParser {
         }
 
         int c = skipWhitespaceRead(true);
+
+        // Fast path for objects and arrays (most common cases)
+        if (c == '{') {
+            JsonObject jObj = readJsonObject(suggestedType);
+            return jObj;
+        }
+        if (c == '[') {
+            Type elementType = TypeUtilities.extractArrayComponentType(suggestedType);
+            return readArray(elementType);
+        }
+
+        // Handle less common value types
         switch (c) {
             case '"':
                 String str = readString();
                 return str;
-            case '{':
-                input.pushback('{');
-                JsonObject jObj = readJsonObject(suggestedType);
-                return jObj;
-            case '[':
-                Type elementType = TypeUtilities.extractArrayComponentType(suggestedType);
-                return readArray(elementType);
             case ']':   // empty array
                 input.pushback(']');
                 return EMPTY_ARRAY;
@@ -300,18 +305,11 @@ class JsonParser {
                 return true;
             case '-':
             case 'I':
-            case '0':
-            case '1':
-            case '2':
-            case '3':
-            case '4':
-            case '5':
-            case '6':
-            case '7':
-            case '8':
-            case '9':
                 return readNumber(c);
             default:
+                if (c >= '0' && c <= '9') {
+                    return readNumber(c);
+                }
                 return error("Unknown JSON value type");
         }
     }
@@ -332,8 +330,7 @@ class JsonParser {
 
         final FastReader in = input;
 
-        // Start reading the object: skip whitespace and consume '{'
-        skipWhitespaceRead(true);  // Consume the '{'
+        // The '{' has already been consumed by readValue()
         jObj.line = in.getLine();
         jObj.col = in.getCol();
         int c = skipWhitespaceRead(true);
@@ -370,40 +367,45 @@ class JsonParser {
             }
             Object value = readValue(fieldGenericType);
 
-            // Process key-value pairing.
-            switch (field) {
-                case TYPE:
-                    Class<?> type = loadType(value);
-                    jObj.setTypeString((String) value);
-                    jObj.setType(type);
-                    break;
+            // Fast path for regular fields (95%+ of fields don't start with '@')
+            if (field.length() == 0 || field.charAt(0) != '@') {
+                jObj.put(field, value);
+            } else {
+                // Process special meta fields (@type, @id, @ref, etc.)
+                switch (field) {
+                    case TYPE:
+                        Class<?> type = loadType(value);
+                        jObj.setTypeString((String) value);
+                        jObj.setType(type);
+                        break;
 
-                case ENUM:  // Legacy support (@enum was used to indicate EnumSet in prior versions)
-                    loadEnum(value, jObj);
-                    break;
+                    case ENUM:  // Legacy support (@enum was used to indicate EnumSet in prior versions)
+                        loadEnum(value, jObj);
+                        break;
 
-                case REF:
-                    loadRef(value, jObj);
-                    break;
+                    case REF:
+                        loadRef(value, jObj);
+                        break;
 
-                case ID:
-                    loadId(value, jObj);
-                    break;
+                    case ID:
+                        loadId(value, jObj);
+                        break;
 
-                case ITEMS:
-                    if (value != null && !value.getClass().isArray()) {
-                        error("Expected @items to have an array [], but found: " + value.getClass().getName());
-                    }
-                    loadItems((Object[])value, jObj);
-                    break;
+                    case ITEMS:
+                        if (value != null && !value.getClass().isArray()) {
+                            error("Expected @items to have an array [], but found: " + value.getClass().getName());
+                        }
+                        loadItems((Object[])value, jObj);
+                        break;
 
-                case KEYS:
-                    loadKeys(value, jObj);
-                    break;
+                    case KEYS:
+                        loadKeys(value, jObj);
+                        break;
 
-                default:
-                    jObj.put(field, value); // Store the key/value pair.
-                    break;
+                    default:
+                        jObj.put(field, value); // Store unrecognized @-prefixed fields
+                        break;
+                }
             }
 
             c = skipWhitespaceRead(true);
@@ -804,11 +806,6 @@ class JsonParser {
         // Fast path for empty strings
         if (length == 0) {
             return "";
-        }
-
-        // Fast path for very small strings - use interning
-        if (length <= 2) {
-            return str.toString().intern();
         }
 
         // Create the string once

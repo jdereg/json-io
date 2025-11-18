@@ -1,6 +1,14 @@
 ### Revision History
 #### 4.64.0 (Unreleased)
 * **DEPENDENCY**: Updated `java-util` to version 4.4.0-SNAPSHOT for new `RegexUtilities` pattern caching and ReDoS protection.
+* **PERFORMANCE**: Optimized `JsonParser.readValue()` for faster JSON parsing (16% improvement in combined parsing):
+  * **Optimization #1**: Consolidated digit cases ('0'-'9') in switch statement into single range check in default case
+  * **Optimization #2**: Removed redundant `pushback('{')` and `skipWhitespaceRead()` cycle when parsing JSON objects
+  * **Optimization #3**: Added fast-path if statements for '{' and '[' (most common JSON value types) before switch statement
+  * **Optimization #4**: Added fast-path for regular fields (non-@ prefixed) in `readJsonObject()` to bypass switch statement overhead
+  * **Result**: Combined parsing CPU reduced from 13.87% to 11.65% (-2.22% total, 16.0% faster)
+  * **Impact**: `readValue()` 7.91% → 6.55% (-1.36%, 17.2% faster), `readJsonObject()` 5.96% → 5.10% (-0.86%, 14.4% faster)
+  * **Backward Compatibility**: Zero API changes, all 2,112 tests passing
 * **IMPROVED**: `ReadOptionsBuilder.returnAsJsonObjects()` now automatically sets `failOnUnknownType(false)`:
   * **Semantic Consistency**: Map-of-Maps mode is designed to work without requiring classes on classpath
   * **Usability**: Enables parsing any JSON structure (including unknown @type entries) without exceptions
