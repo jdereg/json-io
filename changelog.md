@@ -1,5 +1,5 @@
-### Revision History
-#### 4.70.0 - 2025-01-18
+2### Revision History
+#### 4.70.0 - 2025-11-18
 * **DEPENDENCY**: Updated `java-util` to version 4.70.0 for FastReader performance improvements and coordinated release.
 * **PERFORMANCE**: JsonReader/JsonIo - Eliminated unnecessary String encoding/decoding in String-based parsing:
   * **Added `JsonReader(Reader, ReadOptions)` constructor**: Allows direct character-based input without byte stream conversion
