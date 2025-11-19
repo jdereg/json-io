@@ -277,18 +277,17 @@ offering precise control over the output format.
 Here is a simple example of how you might set up a `JsonClassWriter`:
 
 ```java
-public class MyCustomWriter implements JsonClassWriter {
+public class MyCustomWriter implements JsonClassWriter<MyCustomClass> {
    @Override
-   public void write(Object obj, boolean showType, Writer output, Map args) throws IOException {
-      MyCustomClass myObj = (MyCustomClass) obj;
+   public void write(MyCustomClass obj, boolean showType, Writer output, WriterContext context) throws IOException {
       output.write("{");
-      output.write("\"customField\": \"" + myObj.getCustomField() + "\"");
+      output.write("\"customField\": \"" + obj.getCustomField() + "\"");
       output.write("}");
    }
 }
 
 // Associate the custom writer with the class
-new WriteOptionsBuilder().addWriter(MyCustomClass.class, new MyCustomWriter());
+new WriteOptionsBuilder().addCustomWrittenClass(MyCustomClass.class, new MyCustomWriter());
 ```
 This example shows a custom writer for MyCustomClass that selectively serializes only a specific field.
 This approach can be adapted to any class to meet your specific serialization needs.

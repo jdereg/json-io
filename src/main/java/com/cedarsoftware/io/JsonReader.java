@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.io.Serializable;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Type;
@@ -162,7 +163,16 @@ public class JsonReader implements Closeable
      * @return FastReader wrapped around the passed in inputStream, translating from InputStream to InputStreamReader.
      */
     protected FastReader getReader(InputStream inputStream) {
-        return new FastReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8), 65536, 10);
+        return new FastReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8), 65536, 16);
+    }
+
+    /**
+     * Allow others to try potentially faster Readers.
+     * @param reader Reader that will be offering JSON characters.
+     * @return FastReader wrapped around the passed in reader.
+     */
+    protected FastReader getReader(Reader reader) {
+        return new FastReader(reader, 65536, 16);
     }
 
     /**
@@ -172,7 +182,20 @@ public class JsonReader implements Closeable
      *                    etc. If null, readOptions will use all defaults.
      */
     public JsonReader(InputStream input, ReadOptions readOptions) {
-        this(input, readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions, 
+        this(input, readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions,
+             new DefaultReferenceTracker(readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions));
+    }
+
+    /**
+     * Creates a json reader from a Reader (character-based input) using custom read options.
+     * This constructor is more efficient than the InputStream constructor when starting from a String,
+     * as it avoids unnecessary encoding/decoding.
+     * @param reader Reader providing JSON characters
+     * @param readOptions Read Options to turn on/off various feature options, or supply additional ClassFactory data,
+     *                    etc. If null, readOptions will use all defaults.
+     */
+    public JsonReader(Reader reader, ReadOptions readOptions) {
+        this(reader, readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions,
              new DefaultReferenceTracker(readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions));
     }
 
@@ -188,21 +211,52 @@ public class JsonReader implements Closeable
         localConverter = converter;  // Reuse the same converter instance instead of creating a duplicate
     }
 
+    public JsonReader(Reader reader, ReadOptions readOptions, ReferenceTracker references) {
+        this.isRoot = true;   // When root is true, the resolver has .cleanup() called on it upon JsonReader finalization
+        this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
+        Converter converter = new Converter(this.readOptions.getConverterOptions());
+        this.input = getReader(reader);
+        this.resolver = this.readOptions.isReturningJsonObjects() ?
+                new MapResolver(this.readOptions, references, converter) :
+                new ObjectResolver(this.readOptions, references, converter);
+        this.parser = new JsonParser(this.input, this.resolver);
+        localConverter = converter;  // Reuse the same converter instance instead of creating a duplicate
+    }
+
     /**
      * Use this constructor if you already have a JsonObject graph and want to parse it into
      * Java objects by calling jsonReader.jsonObjectsToJava(rootJsonObject) after constructing
-     * the JsonReader.
+     * the JsonReader. This constructor only sets up the resolver and converter needed for
+     * object resolution, without creating unnecessary stream infrastructure.
      *
      * @param readOptions Read Options to turn on/off various feature options, or supply additional ClassFactory data,
      *                    etc. If null, readOptions will use all defaults.
      */
     public JsonReader(ReadOptions readOptions) {
-        this(new FastByteArrayInputStream(new byte[]{}), readOptions);
+        this(readOptions, new DefaultReferenceTracker(readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions));
+    }
+
+    /**
+     * Internal constructor for creating a JsonReader that only needs resolver/converter (no stream parsing).
+     * Used when converting JsonObject graphs to Java objects without reading from a stream.
+     */
+    JsonReader(ReadOptions readOptions, ReferenceTracker references) {
+        this.isRoot = true;
+        this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
+        Converter converter = new Converter(this.readOptions.getConverterOptions());
+        this.localConverter = converter;
+        this.resolver = this.readOptions.isReturningJsonObjects() ?
+                new MapResolver(this.readOptions, references, converter) :
+                new ObjectResolver(this.readOptions, references, converter);
+        // No stream/parser needed for this use case - only resolving existing JsonObjects
+        this.input = null;
+        this.parser = null;
     }
 
     /**
      * Use this constructor to resolve JsonObjects into Java, for example, in a ClassFactory or custom reader.
      * Then use jsonReader.jsonObjectsToJava(rootJsonObject) to turn JsonObject graph (sub-graph) into Java.
+     * This constructor only sets up the resolver - no stream/parser is created since the graph is already read in.
      *
      * @param resolver Resolver, obtained from ClassFactory.newInstance() or CustomReader.read().
      */
@@ -211,8 +265,9 @@ public class JsonReader implements Closeable
         this.resolver = resolver;
         this.readOptions = resolver.getReadOptions();
         this.localConverter = resolver.getConverter();
-        this.input = getReader(new ByteArrayInputStream(new byte[0]));  // Graph is already read-in when using this API
-        this.parser = new JsonParser(input, resolver);
+        // No stream/parser needed - graph is already read in when using this API
+        this.input = null;
+        this.parser = null;
     }
 
     /**

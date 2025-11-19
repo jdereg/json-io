@@ -1,6 +1,23 @@
 ### Revision History
-#### 4.64.0 (Unreleased)
-* **DEPENDENCY**: Updated `java-util` to version 4.4.0-SNAPSHOT for new `RegexUtilities` pattern caching and ReDoS protection.
+#### 4.70.0 - 2025-01-18
+* **DEPENDENCY**: Updated `java-util` to version 4.70.0 for FastReader performance improvements and coordinated release.
+* **PERFORMANCE**: JsonReader/JsonIo - Eliminated unnecessary String encoding/decoding in String-based parsing:
+  * **Added `JsonReader(Reader, ReadOptions)` constructor**: Allows direct character-based input without byte stream conversion
+  * **Optimized `JavaStringBuilder.parseJson()`**: Now uses `StringReader` instead of `FastByteArrayInputStream`, eliminating String → bytes → chars roundtrip
+  * **Before**: String → bytes (encode UTF-8) → FastByteArrayInputStream → InputStreamReader (decode UTF-8) → FastReader
+  * **After**: String → StringReader → FastReader (direct character access, no encoding/decoding)
+  * **Impact**: Removes ~1-2% overhead and eliminates unnecessary byte[] allocation for all `JsonIo.toJava(String)` and `JsonIo.toMaps(String)` calls
+  * **Backward Compatible**: Zero API changes, all internal optimizations
+* **PERFORMANCE**: JsonReader - Eliminated dummy stream creation in non-parsing constructors:
+  * **Optimized `JsonReader(ReadOptions)` constructor**: No longer creates empty FastByteArrayInputStream/InputStreamReader/FastReader/JsonParser when only resolving JsonObject graphs
+  * **Optimized `JsonReader(Resolver)` constructor**: Removed dummy ByteArrayInputStream allocation when constructor is used for object resolution (not stream parsing)
+  * **Before**: Created full stream infrastructure (FastByteArrayInputStream → InputStreamReader → FastReader → JsonParser) that was never used
+  * **After**: Sets `input` and `parser` to `null` when not needed for the use case
+  * **Impact**: Reduced allocation overhead in `JavaObjectBuilder` path (used when converting existing JsonObject graphs to Java objects)
+* **IMPROVED**: JavaStreamBuilder - Removed redundant InputStream.close():
+  * **Before**: Closed both JsonReader and underlying InputStream separately (double close)
+  * **After**: Only closes JsonReader, which automatically closes the underlying stream
+  * **Impact**: Cleaner code, no functional change (double close was safe but unnecessary)
 * **PERFORMANCE**: Optimized `JsonParser.readValue()` for faster JSON parsing (16% improvement in combined parsing):
   * **Optimization #1**: Consolidated digit cases ('0'-'9') in switch statement into single range check in default case
   * **Optimization #2**: Removed redundant `pushback('{')` and `skipWhitespaceRead()` cycle when parsing JSON objects
