@@ -16,8 +16,11 @@ class TypedArrayTest {
         // Test Java graphs are equivalent
         assert DeepEquals.deepEquals(customer, customer2);
 
-        json = JsonIo.formatJson(json);
-        json2 = JsonIo.formatJson(json2);
+        Object tree1 = JsonIo.toObjects(json, null, Object.class);
+        Object tree2 = JsonIo.toObjects(json2, null, Object.class);
+
+        json = JsonIo.toJson(tree1, null);
+        json2 = JsonIo.toJson(tree2, null);
         // Test JSON strigns are equivalent
         assert json.equals(json2);
 
