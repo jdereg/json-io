@@ -11,6 +11,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class JsonPerformanceTest {
     private static final Logger LOG = Logger.getLogger(JsonPerformanceTest.class.getName());
+    private static final int WARMUP_ITERATIONS = 10000;
+    private static final int TEST_ITERATIONS = 100000;
 
     // A sample POJO with a variety of fields to simulate complex JSON
     public static class TestData {
@@ -22,6 +24,15 @@ public class JsonPerformanceTest {
         public Map<String, String> map;
         public List<NestedData> nestedList;  // More complex nesting
         public Map<String, NestedData> nestedMap;  // Map with object values
+
+        // Additional integer-heavy fields to test readNumber fast-path
+        public int age;
+        public int count;
+        public int score;
+        public long timestamp;
+        public List<Integer> integerList;  // List of integers
+        public int[] largeIntArray;  // Larger array of integers
+        public Map<String, Integer> counterMap;  // Map with integer values
     }
 
     public static class NestedData {
@@ -30,88 +41,180 @@ public class JsonPerformanceTest {
         public String description;
         public String[] tags;  // Additional array field
         public Map<String, Object> metadata;  // Additional map field
+
+        // Additional integer fields
+        public int itemCount;
+        public int priority;
+        public long createdAt;
     }
 
     public static void main(String[] args) throws IOException {
-        // Create a sample object
+        String mode = args.length > 0 ? args[0].toLowerCase() : "both";
+
+        switch (mode) {
+            case "java":
+                testFullJavaResolution();
+                break;
+            case "maps":
+                testMapsOnly();
+                break;
+            case "both":
+            default:
+                testFullJavaResolution();
+                LOG.info("");
+                LOG.info("========================================");
+                LOG.info("");
+                testMapsOnly();
+                break;
+        }
+    }
+
+    /**
+     * Test full Java object resolution (parsing + resolution to POJOs)
+     */
+    public static void testFullJavaResolution() throws IOException {
+        LOG.info("=== TEST: Full Java Resolution (toJava) ===");
+
         TestData testData = createTestData();
-
-        // Set up Jackson ObjectMapper (reuse for every call)
         ObjectMapper jacksonMapper = new ObjectMapper();
-
-        // Create JsonIo options (reuse these for all tests)
         WriteOptions writeOptions = new WriteOptionsBuilder().build();
         ReadOptions readOptions = ReadOptionsBuilder.getDefaultReadOptions();
 
-        // --- Warm-Up Loop ---
-        // Run a number of iterations to let the JVM "warm up" (JIT compilation, etc.)
-        int warmupIterations = 10000;  // Sufficient for JIT optimization, faster test runs
-        LOG.info("Starting warmup with " + warmupIterations + " iterations...");
-        for (int i = 0; i < warmupIterations; i++) {
-            // JsonIo warm-up (serialization then deserialization)
+        // Warm-up
+        LOG.info("Starting warmup with " + WARMUP_ITERATIONS + " iterations...");
+        for (int i = 0; i < WARMUP_ITERATIONS; i++) {
             String json = JsonIo.toJson(testData, writeOptions);
             TestData obj = JsonIo.toJava(json, readOptions).asClass(TestData.class);
-
-            // Jackson warm-up (serialization then deserialization)
             String jJson = jacksonMapper.writeValueAsString(testData);
             TestData jObj = jacksonMapper.readValue(jJson, TestData.class);
         }
         LOG.info("Warmup complete.");
 
-        // --- Performance Test ---
-        int iterations = 100000;  // Reduced for faster test runs while maintaining accuracy
-
-        // Test JsonIo serialization ("writing")
-        LOG.info("Testing JsonIo Write with " + iterations + " iterations...");
+        // Test Write
+        LOG.info("Testing JsonIo Write with " + TEST_ITERATIONS + " iterations...");
         long start = System.nanoTime();
         String dummy = null;
-        for (int i = 0; i < iterations; i++) {
+        for (int i = 0; i < TEST_ITERATIONS; i++) {
             dummy = JsonIo.toJson(testData, writeOptions);
-            // Use dummy to prevent dead-code elimination (but do minimal work)
             if (dummy.length() == 0) { /* no-op */ }
         }
         long jsonIoWriteTime = System.nanoTime() - start;
         LOG.info("JsonIo Write complete.");
 
-        // Test Jackson serialization ("writing")
-        LOG.info("Testing Jackson Write with " + iterations + " iterations...");
+        LOG.info("Testing Jackson Write with " + TEST_ITERATIONS + " iterations...");
         start = System.nanoTime();
-        for (int i = 0; i < iterations; i++) {
+        for (int i = 0; i < TEST_ITERATIONS; i++) {
             dummy = jacksonMapper.writeValueAsString(testData);
             if (dummy.length() == 0) { /* no-op */ }
         }
         long jacksonWriteTime = System.nanoTime() - start;
         LOG.info("Jackson Write complete.");
 
-        // Prepare JSON strings for reading tests (to remove serialization overhead)
+        // Prepare JSON strings for reading tests
         String jsonIoJson = JsonIo.toJson(testData, writeOptions);
         String jacksonJson = jacksonMapper.writeValueAsString(testData);
 
-        // Test JsonIo deserialization ("reading")
-        LOG.info("Testing JsonIo Read with " + iterations + " iterations...");
+        // Test Read (full Java resolution)
+        LOG.info("Testing JsonIo Read (toJava) with " + TEST_ITERATIONS + " iterations...");
         start = System.nanoTime();
         TestData result = null;
-        for (int i = 0; i < iterations; i++) {
+        for (int i = 0; i < TEST_ITERATIONS; i++) {
             result = JsonIo.toJava(jsonIoJson, readOptions).asClass(TestData.class);
         }
         long jsonIoReadTime = System.nanoTime() - start;
         LOG.info("JsonIo Read complete.");
 
-        // Test Jackson deserialization ("reading")
-        LOG.info("Testing Jackson Read with " + iterations + " iterations...");
+        LOG.info("Testing Jackson Read with " + TEST_ITERATIONS + " iterations...");
         start = System.nanoTime();
-        for (int i = 0; i < iterations; i++) {
+        for (int i = 0; i < TEST_ITERATIONS; i++) {
             result = jacksonMapper.readValue(jacksonJson, TestData.class);
         }
         long jacksonReadTime = System.nanoTime() - start;
         LOG.info("Jackson Read complete.");
 
-        // Output results (times in milliseconds)
-        LOG.info("Iterations: " + iterations);
+        // Output results
+        LOG.info("--- Full Java Resolution Results ---");
+        LOG.info("Iterations: " + TEST_ITERATIONS);
         LOG.info("JsonIo Write Time: " + (jsonIoWriteTime / 1_000_000.0) + " ms");
         LOG.info("Jackson Write Time: " + (jacksonWriteTime / 1_000_000.0) + " ms");
+        LOG.info("Write Ratio (JsonIo/Jackson): " + String.format("%.2fx", (double) jsonIoWriteTime / jacksonWriteTime));
         LOG.info("JsonIo Read Time: " + (jsonIoReadTime / 1_000_000.0) + " ms");
         LOG.info("Jackson Read Time: " + (jacksonReadTime / 1_000_000.0) + " ms");
+        LOG.info("Read Ratio (JsonIo/Jackson): " + String.format("%.2fx", (double) jsonIoReadTime / jacksonReadTime));
+    }
+
+    /**
+     * Test Maps-only parsing (parsing to Map/List graph, no Java object resolution)
+     */
+    public static void testMapsOnly() throws IOException {
+        LOG.info("=== TEST: Maps Only (toMaps) ===");
+
+        TestData testData = createTestData();
+        ObjectMapper jacksonMapper = new ObjectMapper();
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        ReadOptions readOptions = ReadOptionsBuilder.getDefaultReadOptions();
+
+        // Warm-up
+        LOG.info("Starting warmup with " + WARMUP_ITERATIONS + " iterations...");
+        for (int i = 0; i < WARMUP_ITERATIONS; i++) {
+            String json = JsonIo.toJson(testData, writeOptions);
+            Map map = JsonIo.toMaps(json, readOptions).asClass(Map.class);
+            String jJson = jacksonMapper.writeValueAsString(testData);
+            Map<String, Object> jMap = jacksonMapper.readValue(jJson, Map.class);
+        }
+        LOG.info("Warmup complete.");
+
+        // Test Write (same as full resolution)
+        LOG.info("Testing JsonIo Write with " + TEST_ITERATIONS + " iterations...");
+        long start = System.nanoTime();
+        String dummy = null;
+        for (int i = 0; i < TEST_ITERATIONS; i++) {
+            dummy = JsonIo.toJson(testData, writeOptions);
+            if (dummy.length() == 0) { /* no-op */ }
+        }
+        long jsonIoWriteTime = System.nanoTime() - start;
+        LOG.info("JsonIo Write complete.");
+
+        LOG.info("Testing Jackson Write with " + TEST_ITERATIONS + " iterations...");
+        start = System.nanoTime();
+        for (int i = 0; i < TEST_ITERATIONS; i++) {
+            dummy = jacksonMapper.writeValueAsString(testData);
+            if (dummy.length() == 0) { /* no-op */ }
+        }
+        long jacksonWriteTime = System.nanoTime() - start;
+        LOG.info("Jackson Write complete.");
+
+        // Prepare JSON strings for reading tests
+        String jsonIoJson = JsonIo.toJson(testData, writeOptions);
+        String jacksonJson = jacksonMapper.writeValueAsString(testData);
+
+        // Test Read (Maps only - no Java resolution)
+        LOG.info("Testing JsonIo Read (toMaps) with " + TEST_ITERATIONS + " iterations...");
+        start = System.nanoTime();
+        Map mapResult = null;
+        for (int i = 0; i < TEST_ITERATIONS; i++) {
+            mapResult = JsonIo.toMaps(jsonIoJson, readOptions).asClass(Map.class);
+        }
+        long jsonIoReadTime = System.nanoTime() - start;
+        LOG.info("JsonIo Read complete.");
+
+        LOG.info("Testing Jackson Read (to Map) with " + TEST_ITERATIONS + " iterations...");
+        start = System.nanoTime();
+        for (int i = 0; i < TEST_ITERATIONS; i++) {
+            mapResult = jacksonMapper.readValue(jacksonJson, Map.class);
+        }
+        long jacksonReadTime = System.nanoTime() - start;
+        LOG.info("Jackson Read complete.");
+
+        // Output results
+        LOG.info("--- Maps Only Results ---");
+        LOG.info("Iterations: " + TEST_ITERATIONS);
+        LOG.info("JsonIo Write Time: " + (jsonIoWriteTime / 1_000_000.0) + " ms");
+        LOG.info("Jackson Write Time: " + (jacksonWriteTime / 1_000_000.0) + " ms");
+        LOG.info("Write Ratio (JsonIo/Jackson): " + String.format("%.2fx", (double) jsonIoWriteTime / jacksonWriteTime));
+        LOG.info("JsonIo Read Time: " + (jsonIoReadTime / 1_000_000.0) + " ms");
+        LOG.info("Jackson Read Time: " + (jacksonReadTime / 1_000_000.0) + " ms");
+        LOG.info("Read Ratio (JsonIo/Jackson): " + String.format("%.2fx", (double) jsonIoReadTime / jacksonReadTime));
     }
 
     private static TestData createTestData() {
@@ -119,6 +222,30 @@ public class JsonPerformanceTest {
         data.id = 1;
         data.name = "Test Object";
         data.values = new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+
+        // Populate new integer-heavy fields
+        data.age = 25;
+        data.count = 12345;
+        data.score = 98765;
+        data.timestamp = 1700000000000L;
+
+        // Large integer array (50 integers)
+        data.largeIntArray = new int[50];
+        for (int i = 0; i < 50; i++) {
+            data.largeIntArray[i] = i * 100;
+        }
+
+        // List of integers (100 integers)
+        data.integerList = new ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            data.integerList.add(i * 10);
+        }
+
+        // Map with integer values (30 entries)
+        data.counterMap = new HashMap<>();
+        for (int i = 0; i < 30; i++) {
+            data.counterMap.put("counter" + i, i * 50);
+        }
 
         NestedData nested = new NestedData();
         nested.metric = 123.456;
@@ -129,6 +256,11 @@ public class JsonPerformanceTest {
         nested.metadata.put("version", "1.0");
         nested.metadata.put("count", 42);
         nested.metadata.put("enabled", true);
+
+        // Populate new integer fields in nested
+        nested.itemCount = 250;
+        nested.priority = 5;
+        nested.createdAt = 1700000000L;
         data.nested = nested;
 
         data.list = new ArrayList<>();
