@@ -457,6 +457,10 @@ public abstract class Resolver {
      * @param jsonObject JsonObject that supplies the source values for the Java peer (target)
      */
     public void push(JsonObject jsonObject) {
+        // Performance: Skip objects that have already been fully processed
+        if (jsonObject.isFinished) {
+            return;
+        }
         // Security: Prevent stack overflow via depth limiting
         int maxStackDepth = readOptions.getMaxStackDepth();
         if (maxStackDepth != Integer.MAX_VALUE && stack.size() >= maxStackDepth) {
