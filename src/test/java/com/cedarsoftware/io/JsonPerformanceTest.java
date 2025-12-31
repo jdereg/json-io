@@ -3,6 +3,7 @@ package com.cedarsoftware.io;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -33,6 +34,12 @@ public class JsonPerformanceTest {
         public List<Integer> integerList;  // List of integers
         public int[] largeIntArray;  // Larger array of integers
         public Map<String, Integer> counterMap;  // Map with integer values
+
+        // Maps declared as CONCRETE types (HashMap, LinkedHashMap) - NO @type emitted in JSON
+        // These exercise tryCreateMapDirectly() without early bail-out on @type
+        // When field type matches instance type exactly, JsonWriter omits @type
+        public HashMap<String, String> concreteHashMap;           // No @type - exercises direct Map creation
+        public LinkedHashMap<String, Integer> concreteLinkedMap;  // No @type - exercises direct Map creation
     }
 
     public static class NestedData {
@@ -299,6 +306,21 @@ public class JsonPerformanceTest {
             nd.metadata.put("mapKey", "key" + i);
             nd.metadata.put("priority", i);
             data.nestedMap.put("nested" + i, nd);
+        }
+
+        // Maps declared as CONCRETE types - these will NOT have @type in JSON output
+        // This exercises the tryCreateMapDirectly() code path that doesn't bail on @type
+
+        // HashMap<String, String> - no @type because field type == instance type
+        data.concreteHashMap = new HashMap<>();
+        for (int i = 0; i < 20; i++) {
+            data.concreteHashMap.put("hashKey" + i, "hashValue" + i);
+        }
+
+        // LinkedHashMap<String, Integer> - no @type because field type == instance type
+        data.concreteLinkedMap = new LinkedHashMap<>();
+        for (int i = 0; i < 20; i++) {
+            data.concreteLinkedMap.put("linkedKey" + i, i * 7);
         }
 
         return data;
