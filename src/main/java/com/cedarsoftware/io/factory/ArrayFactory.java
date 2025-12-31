@@ -90,7 +90,9 @@ public class ArrayFactory<T> implements JsonReader.ClassFactory {
                     if (val != null) {
                         if (val instanceof JsonObject) {
                             val = unwrapJsonObject((JsonObject) val, componentType, converter);
-                        } else {
+                        } else if (!componentType.isAssignableFrom(val.getClass())) {
+                            // Only convert if value is not already assignable to component type
+                            // This preserves subclass types (e.g., java.sql.Date in a Date[] array)
                             val = converter.convert(val, componentType);
                         }
                         typedArray[i] = val;
@@ -101,7 +103,11 @@ public class ArrayFactory<T> implements JsonReader.ClassFactory {
                 for (int i = 0; i < len; i++) {
                     Object val = items[i];
                     if (val != null) {
-                        val = converter.convert(val, componentType);
+                        if (!componentType.isAssignableFrom(val.getClass())) {
+                            // Only convert if value is not already assignable to component type
+                            // This preserves subclass types (e.g., java.sql.Date in a Date[] array)
+                            val = converter.convert(val, componentType);
+                        }
                         typedArray[i] = val;
                     }
                 }
