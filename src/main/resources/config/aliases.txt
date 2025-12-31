@@ -63,6 +63,8 @@ java.util.Locale = Locale
 java.util.TimeZone = TimeZone
 java.util.UUID = UUID
 java.util.ArrayList = ArrayList
+java.util.AbstractMap$SimpleEntry = SimpleEntry
+java.util.AbstractMap$SimpleImmutableEntry = SimpleImmutableEntry
 java.util.Arrays$ArrayList = ArraysAsList
 java.util.LinkedHashMap = LinkedHashMap
 java.util.LinkedHashMap$LinkedKeySet = LinkedKeySet
@@ -89,6 +91,14 @@ java.util.TreeSet = TreeSet
 java.util.concurrent.atomic.AtomicBoolean = AtomicBoolean
 java.util.concurrent.atomic.AtomicInteger = AtomicInteger
 java.util.concurrent.atomic.AtomicLong = AtomicLong
+
+# java.util.concurrent.locks
+java.util.concurrent.locks.ReentrantLock = ReentrantLock
+java.util.concurrent.locks.ReentrantReadWriteLock = ReentrantReadWriteLock
+
+# java.util.concurrent - Synchronizers
+java.util.concurrent.Semaphore = Semaphore
+java.util.concurrent.CountDownLatch = CountDownLatch
 
 # java.io
 java.io.File = File
