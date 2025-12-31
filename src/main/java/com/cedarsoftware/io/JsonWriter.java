@@ -10,6 +10,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -31,6 +32,7 @@ import com.cedarsoftware.util.CompactMap;
 import com.cedarsoftware.util.CompactSet;
 import com.cedarsoftware.util.FastWriter;
 import com.cedarsoftware.util.IOUtilities;
+import com.cedarsoftware.util.TypeUtilities;
 
 import static com.cedarsoftware.io.JsonValue.ENUM;
 import static com.cedarsoftware.io.JsonValue.ITEMS;
@@ -96,6 +98,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private final Writer out;
     private long identity = 1;
     private int depth = 0;
+
+    // Element type context: when writing Collection/Map fields, this tracks the declared element type
+    // from the field's generic type (e.g., List<NestedData> -> NestedData). Used to eliminate
+    // redundant @type output when element instance type == declared element type.
+    // For Maps with non-String keys written as @keys/@items arrays, declaredKeyType tracks the key type.
+    private Class<?> declaredElementType = null;
+    private Class<?> declaredKeyType = null;
 
     // Context tracking for automatic comma management
     private final Deque<WriteContext> contextStack = new ArrayDeque<>();
@@ -799,7 +808,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (writeOptions.isNeverShowingType()) {
             showType = false;
         }
-        final int len = Array.getLength(array);
+        final int len = ArrayUtilities.getLength(array);
         boolean referenced = objsReferenced.containsKey(array);
         boolean typeWritten = showType && !(arrayType.equals(Object[].class));
         final Writer output = this.out;
@@ -1013,6 +1022,36 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
     }
 
+    /**
+     * Determines the type name to write for an object, preferring preserved typeString
+     * over actual class name for middleware safety.
+     *
+     * This handles the case where JSON is parsed on a system without the original class
+     * (e.g., com.example.House), stored as a fallback type (LinkedHashMap), and needs to
+     * be re-serialized preserving the original @type for downstream systems.
+     *
+     * @param obj the object to get the type name for
+     * @return the type name to write in the JSON @type field
+     */
+    private String getTypeNameForOutput(Object obj) {
+        // Check if this is a JsonObject with a preserved typeString (middleware case)
+        if (obj instanceof JsonObject) {
+            JsonObject jsonObj = (JsonObject) obj;
+            String typeString = jsonObj.getTypeString();
+
+            // If typeString exists and differs from actual class, use it
+            // This handles the middleware case where class wasn't available
+            if (typeString != null &&
+                !typeString.isEmpty() &&
+                !typeString.equals(obj.getClass().getName())) {
+                return typeString;  // Use preserved original @type
+            }
+        }
+
+        // Normal case: use actual class name
+        return obj.getClass().getName();
+    }
+
     private void writeIdAndTypeIfNeeded(Object col, boolean showType, boolean referenced) throws IOException {
         if (writeOptions.isNeverShowingType()) {
             showType = false;
@@ -1026,7 +1065,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 out.write(',');
                 newLine();
             }
-            writeType(col.getClass().getName(), out);
+            writeType(getTypeNameForOutput(col), out);
         }
     }
 
@@ -1250,7 +1289,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 output.write(',');
                 newLine();
             }
-            String type = jObj.getRawTypeName();
+            String type = getTypeNameForOutput(jObj);
             if (type != null) {
                 writeType(type, output);
             } else {   // type not displayed
@@ -1283,7 +1322,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 output.write(',');
                 newLine();
             }
-            writeType(jObj.getRawTypeName(), output);
+            writeType(getTypeNameForOutput(jObj), output);
             type = jObj.getRawType();
         }
 
@@ -1375,7 +1414,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 output.write(',');
                 newLine();
             }
-            writeType(map.getClass().getName(), output);
+            writeType(getTypeNameForOutput(map), output);
         }
 
         if (map.isEmpty()) {
@@ -1393,10 +1432,15 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private void writeMapToEnd(Map map, Writer output) throws IOException {
+        // Save current element type (Map value type) and switch to key type for @keys array
+        Class<?> savedValueType = declaredElementType;
+
         output.write(writeOptions.isShortMetaKeys() ? "\"@k\":[" : "\"@keys\":[");
         tabIn();
         Iterator<?> i = map.keySet().iterator();
 
+        // Use key type context for writing @keys array elements
+        declaredElementType = declaredKeyType;
         writeElements(output, i);
 
         tabOut();
@@ -1406,6 +1450,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         tabIn();
         i = map.values().iterator();
 
+        // Restore value type context for writing @items array elements
+        declaredElementType = savedValueType;
         writeElements(output, i);
 
         tabOut();
@@ -1504,8 +1550,37 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             // to be output with toString() - prevents {"value":6} for example
             writePrimitive(o, false);
         } else {
-            writeImpl(o, true);
+            // Use declaredElementType to determine if @type is needed - eliminates redundant @type
+            // when element instance type == declared element type from field generic info
+            boolean showType = shouldShowTypeForElement(o.getClass());
+            writeImpl(o, showType);
         }
+    }
+
+    /**
+     * Determines whether @type should be written for a collection/map element.
+     * If declaredElementType is set (from a field with generic info like List&lt;Foo&gt;),
+     * and the element's class exactly matches (==) the declared type, @type is not needed.
+     *
+     * This optimization works because JsonParser propagates element type context when
+     * parsing @items arrays - see JsonParser.pushArrayFrame() which receives element type,
+     * and pushNestedContainerFrame() which passes it to pushObjectFrame().
+     *
+     * @param elementClass the actual class of the element being written
+     * @return true if @type should be written, false if it can be omitted
+     */
+    private boolean shouldShowTypeForElement(Class<?> elementClass) {
+        // If no declared element type context, default to showing type
+        if (declaredElementType == null) {
+            return true;
+        }
+        // Enums always need @type for proper deserialization (written as String, need type to convert back)
+        if (elementClass.isEnum()) {
+            return true;
+        }
+        // Per user guidance: must be exact match (==), not isAssignableFrom
+        // This ensures JsonReader can instantiate the correct concrete type
+        return elementClass != declaredElementType;
     }
 
     private void writeEnumSet(final EnumSet<?> enumSet) throws IOException {
@@ -1717,7 +1792,34 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         // check to see if type needs to be written.
         Class<?> type = accessor.getFieldType();
-        writeImpl(o, isForceType(o.getClass(), type));
+
+        // For Collection/Map fields, extract the element type from generic type to eliminate redundant @type on elements
+        // Skip this optimization for Throwables - ThrowableFactory uses ClassFactory which needs @type info
+        Class<?> savedElementType = declaredElementType;
+        Class<?> savedKeyType = declaredKeyType;
+        try {
+            if ((o instanceof Collection || o instanceof Map) && !Throwable.class.isAssignableFrom(fieldDeclaringClass)) {
+                Type genericType = accessor.getGenericType();
+                if (genericType != null) {
+                    // For Maps, extract both key type and value type
+                    if (o instanceof Map) {
+                        Type keyType = extractMapKeyType(genericType);
+                        if (keyType instanceof Class) {
+                            declaredKeyType = (Class<?>) keyType;
+                        }
+                    }
+                    // inferElementType returns value type for Maps, element type for Collections
+                    Type elementType = TypeUtilities.inferElementType(genericType, null);
+                    if (elementType instanceof Class) {
+                        declaredElementType = (Class<?>) elementType;
+                    }
+                }
+            }
+            writeImpl(o, isForceType(o.getClass(), type));
+        } finally {
+            declaredElementType = savedElementType;
+            declaredKeyType = savedKeyType;
+        }
         return false;
     }
 
@@ -1753,6 +1855,21 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         return true;
+    }
+
+    /**
+     * Extract the key type from a Map type (e.g., Map<Building, Person> -> Building).
+     * Used to eliminate redundant @type on Map keys when key type is known from field generics.
+     */
+    private Type extractMapKeyType(Type mapType) {
+        if (mapType instanceof java.lang.reflect.ParameterizedType) {
+            java.lang.reflect.ParameterizedType pt = (java.lang.reflect.ParameterizedType) mapType;
+            java.lang.reflect.Type[] typeArgs = pt.getActualTypeArguments();
+            if (typeArgs.length >= 1) {
+                return typeArgs[0];  // Key type is at index 0
+            }
+        }
+        return null;
     }
 
     public void flush() {

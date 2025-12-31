@@ -391,8 +391,10 @@ class MapOfMapsTest
         assertNull(map.get("nullValue"));
         assertEquals("yo", map.get("string"));
 
-        assertTrue(map.getCol() > 0);
-        assertTrue(map.getLine() > 0);
+        // Line/col tracking removed from FastReader for performance - now returns 0
+        // Use getLastSnippet() on JsonParser errors for context
+        assertEquals(0, map.getCol());
+        assertEquals(0, map.getLine());
     }
 
     @Test

@@ -26,6 +26,14 @@
   * Prevents potential DoS attacks via unbounded memory consumption
 * **FIX**: `EnumTests` - Fixed flaky test failures caused by cached constructor accessibility
   * Added `@BeforeEach` with `ClassUtilities.clearCaches()` to ensure test isolation
+* **DEPENDENCY**: Updated `java-util` to version 4.71.0
+  * Required for `ArrayUtilities.getLength()` optimization
+  * FastReader line/column tracking removed for performance (use `getLastSnippet()` for error context)
+* **PERFORMANCE**: `JsonWriter` - Eliminate redundant `@type` for Collection and Map elements
+  * When a field is declared with generic type info (e.g., `List<Person>`), `@type` is now omitted on elements when the element class exactly matches the declared element type
+  * Extends to Map keys/values when using `@keys`/`@items` format (e.g., `Map<Building, Person>`)
+  * Produces shorter JSON output without loss of type information
+  * Parser already handles type inference from context, so this is backward compatible
 
 #### 4.70.0 - 2025-01-18
 * **DEPENDENCY**: Updated `java-util` to version 4.70.0 for FastReader performance improvements and coordinated release.
