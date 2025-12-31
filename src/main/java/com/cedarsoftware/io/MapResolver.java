@@ -128,7 +128,15 @@ public class MapResolver extends Resolver {
                 // improve the final types of values in the maps RHS, to be of the field type that
                 // was optionally specified in @type.
                 final Class<?> fieldType = injector.getType();
-                if (converter.isConversionSupportedFor(rhsClass, fieldType)) {
+                // Performance: Skip conversion if field type is Object or already matches
+                if (fieldType == Object.class || rhsClass == fieldType) {
+                    continue;
+                }
+                // Fast path for common JSON primitive coercions (Long->int, Double->float, etc.)
+                Object fastValue = fastPrimitiveCoercion(rhs, rhsClass, fieldType);
+                if (fastValue != null) {
+                    jsonObj.put(fieldName, fastValue);
+                } else if (converter.isConversionSupportedFor(rhsClass, fieldType)) {
                     Object fieldValue = converter.convert(rhs, fieldType);
                     jsonObj.put(fieldName, fieldValue);
                 } else if (rhs instanceof String) {
@@ -188,6 +196,7 @@ public class MapResolver extends Resolver {
         Object target = jsonObj.getTarget() != null ? jsonObj.getTarget() : items;
         final ReferenceTracker refTracker = getReferences();
         final Converter converter = getConverter();
+        final ReadOptions readOptions = getReadOptions();
 
         // Determine the immediate component type of the current array level
         Class<?> componentType = Object.class;
@@ -216,62 +225,76 @@ public class MapResolver extends Resolver {
             }
 
             // Each element can be of different type - cannot cache class outside loop
-            if (element.getClass().isArray() || (element instanceof JsonObject && ((JsonObject) element).isArray())) {
+            final Class<?> elementClass = element.getClass();
+            if (elementClass.isArray() || (element instanceof JsonObject && ((JsonObject) element).isArray())) {
                 // Handle nested arrays using the unified helper method
                 handleNestedArray(element, componentType, target, i);
-            }
-            else if (converter.isConversionSupportedFor(element.getClass(), componentType)) {
-                // Convert the element to the base component type
-                Object convertedValue = converter.convert(element, componentType);
-                if (isPrimitive) {
-                    ArrayUtilities.setPrimitiveElement(target, i, convertedValue);
-                } else {
-                    refArray[i] = convertedValue;
-                }
-            }
-            else if (element instanceof JsonObject) {
-                JsonObject jsonObject = (JsonObject) element;
-                Long refId = jsonObject.getReferenceId();
-
-                if (refId == null) {
-                    // Convert JsonObject to its destination type if possible
-                    Class<?> type = jsonObject.getRawType();
-                    if (type != null && converter.isConversionSupportedFor(Map.class, type)) {
-                        Object converted = converter.convert(jsonObject, type);
-                        if (isPrimitive) {
-                            ArrayUtilities.setPrimitiveElement(target, i, converted);
-                        } else {
-                            refArray[i] = converted;
-                        }
-                        jsonObject.setFinished();
-                    } else {
-                        push(jsonObject);
-                    }
-                } else {    // Connect reference
-                    JsonObject refObject = refTracker.getOrThrow(refId);
-                    Class<?> type = refObject.getRawType();
-
-                    if (type != null && converter.isConversionSupportedFor(Map.class, type)) {
-                        Object convertedRef = converter.convert(refObject, type);
-                        refObject.setFinishedTarget(convertedRef, true);
-                        if (isPrimitive) {
-                            ArrayUtilities.setPrimitiveElement(target, i, refObject.getTarget());
-                        } else {
-                            refArray[i] = refObject.getTarget();
-                        }
-                    } else {
-                        if (isPrimitive) {
-                            ArrayUtilities.setPrimitiveElement(target, i, refObject);
-                        } else {
-                            refArray[i] = refObject;
-                        }
-                    }
-                }
             } else {
-                if (isPrimitive) {
-                    ArrayUtilities.setPrimitiveElement(target, i, element);
+                // Fast path for common JSON primitive coercions (Long->int, Double->float, etc.)
+                Object fastValue = fastPrimitiveCoercion(element, elementClass, componentType);
+                if (fastValue != null) {
+                    if (isPrimitive) {
+                        ArrayUtilities.setPrimitiveElement(target, i, fastValue);
+                    } else {
+                        refArray[i] = fastValue;
+                    }
+                } else if (converter.isConversionSupportedFor(elementClass, componentType)) {
+                    // Convert the element to the base component type
+                    Object convertedValue = converter.convert(element, componentType);
+                    if (isPrimitive) {
+                        ArrayUtilities.setPrimitiveElement(target, i, convertedValue);
+                    } else {
+                        refArray[i] = convertedValue;
+                    }
+                } else if (element instanceof JsonObject) {
+                    JsonObject jsonObject = (JsonObject) element;
+                    Long refId = jsonObject.getReferenceId();
+
+                    if (refId == null) {
+                        // Convert JsonObject to its destination type if possible
+                        // Performance: Only check Converter for nonRef types (UUID, ZonedDateTime, etc.)
+                        // User types (Dog, Cat, House) are NOT nonRef and Converter can't convert them anyway
+                        Class<?> type = jsonObject.getRawType();
+                        boolean isNonRef = type != null && readOptions.isNonReferenceableClass(type);
+                        if (isNonRef && converter.isConversionSupportedFor(Map.class, type)) {
+                            Object converted = converter.convert(jsonObject, type);
+                            if (isPrimitive) {
+                                ArrayUtilities.setPrimitiveElement(target, i, converted);
+                            } else {
+                                refArray[i] = converted;
+                            }
+                            jsonObject.setFinished();
+                        } else {
+                            push(jsonObject);
+                        }
+                    } else {    // Connect reference
+                        JsonObject refObject = refTracker.getOrThrow(refId);
+                        Class<?> type = refObject.getRawType();
+
+                        // Performance: Only check Converter for nonRef types (UUID, ZonedDateTime, etc.)
+                        boolean isNonRef = type != null && readOptions.isNonReferenceableClass(type);
+                        if (isNonRef && converter.isConversionSupportedFor(Map.class, type)) {
+                            Object convertedRef = converter.convert(refObject, type);
+                            refObject.setFinishedTarget(convertedRef, true);
+                            if (isPrimitive) {
+                                ArrayUtilities.setPrimitiveElement(target, i, refObject.getTarget());
+                            } else {
+                                refArray[i] = refObject.getTarget();
+                            }
+                        } else {
+                            if (isPrimitive) {
+                                ArrayUtilities.setPrimitiveElement(target, i, refObject);
+                            } else {
+                                refArray[i] = refObject;
+                            }
+                        }
+                    }
                 } else {
-                    refArray[i] = element;
+                    if (isPrimitive) {
+                        ArrayUtilities.setPrimitiveElement(target, i, element);
+                    } else {
+                        refArray[i] = element;
+                    }
                 }
             }
         }
@@ -396,5 +419,47 @@ public class MapResolver extends Resolver {
 
         jsonArray.setItems(list.toArray());
         return jsonArray;
+    }
+
+    /**
+     * Fast path for common JSON primitive to Java primitive coercions.
+     * JSON only produces Long, Double, String, Boolean - handle common cases without Converter lookup.
+     * Returns null if no fast conversion is available (fall through to Converter).
+     */
+    private static Object fastPrimitiveCoercion(Object value, Class<?> valueClass, Class<?> targetType) {
+        // Long -> integer types (most common case in JSON)
+        if (valueClass == Long.class) {
+            long longVal = (Long) value;
+            if (targetType == int.class || targetType == Integer.class) {
+                return (int) longVal;
+            }
+            if (targetType == short.class || targetType == Short.class) {
+                return (short) longVal;
+            }
+            if (targetType == byte.class || targetType == Byte.class) {
+                return (byte) longVal;
+            }
+            if (targetType == double.class || targetType == Double.class) {
+                return (double) longVal;
+            }
+            if (targetType == float.class || targetType == Float.class) {
+                return (float) longVal;
+            }
+        }
+        // Double -> float types
+        else if (valueClass == Double.class) {
+            double doubleVal = (Double) value;
+            if (targetType == float.class || targetType == Float.class) {
+                return (float) doubleVal;
+            }
+            if (targetType == long.class || targetType == Long.class) {
+                return (long) doubleVal;
+            }
+            if (targetType == int.class || targetType == Integer.class) {
+                return (int) doubleVal;
+            }
+        }
+        // No fast conversion available
+        return null;
     }
 }

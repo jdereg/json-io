@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringReader;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 import com.cedarsoftware.io.prettyprint.JsonPrettyPrinter;
@@ -102,6 +103,9 @@ public class JsonIo {
 
     private static final Logger LOG = Logger.getLogger(JsonIo.class.getName());
     static { LoggingConfig.init(); }
+
+    // Performance: Cache map-mode ReadOptions to avoid creating ReadOptionsBuilder on every toMaps() call
+    private static final Map<ReadOptions, ReadOptions> MAP_OPTIONS_CACHE = new ConcurrentHashMap<>();
 
     private JsonIo() {}
 
@@ -283,9 +287,13 @@ public class JsonIo {
      * @throws JsonIoException if an error occurs during parsing
      */
     public static JavaStringBuilder toMaps(String json, ReadOptions readOptions) {
-        ReadOptions mapOptions = new ReadOptionsBuilder(readOptions)
-                .returnAsJsonObjects()
-                .build();
+        // Performance: Cache map-mode options to avoid creating ReadOptionsBuilder on every call
+        // Handle null readOptions by using a sentinel key
+        final ReadOptions cacheKey = readOptions != null ? readOptions : ReadOptionsBuilder.getDefaultReadOptions();
+        ReadOptions mapOptions = MAP_OPTIONS_CACHE.computeIfAbsent(cacheKey, opts ->
+                new ReadOptionsBuilder(readOptions)  // Use original readOptions (may be null)
+                        .returnAsJsonObjects()
+                        .build());
         return new JavaStringBuilder(json, mapOptions);
     }
 
@@ -327,9 +335,13 @@ public class JsonIo {
      * @throws IllegalArgumentException if the input stream is null
      */
     public static JavaStreamBuilder toMaps(InputStream in, ReadOptions readOptions) {
-        ReadOptions mapOptions = new ReadOptionsBuilder(readOptions)
-                .returnAsJsonObjects()
-                .build();
+        // Performance: Cache map-mode options to avoid creating ReadOptionsBuilder on every call
+        // Handle null readOptions by using a sentinel key
+        final ReadOptions cacheKey = readOptions != null ? readOptions : ReadOptionsBuilder.getDefaultReadOptions();
+        ReadOptions mapOptions = MAP_OPTIONS_CACHE.computeIfAbsent(cacheKey, opts ->
+                new ReadOptionsBuilder(readOptions)  // Use original readOptions (may be null)
+                        .returnAsJsonObjects()
+                        .build());
         return new JavaStreamBuilder(in, mapOptions);
     }
 
