@@ -6,6 +6,10 @@
 java.lang.StackTraceElement = com.cedarsoftware.io.factory.StackTraceElementFactory
 java.lang.Throwable = com.cedarsoftware.io.factory.ThrowableFactory
 
+# java.util - Map.Entry implementations
+java.util.AbstractMap$SimpleEntry = com.cedarsoftware.io.factory.SimpleEntryFactory
+java.util.AbstractMap$SimpleImmutableEntry = com.cedarsoftware.io.factory.SimpleEntryFactory
+
 # interface instantiates to...
 java.util.Collection = com.cedarsoftware.io.factory.CollectionFactory
 java.util.List = com.cedarsoftware.io.factory.CollectionFactory

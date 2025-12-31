@@ -3,6 +3,7 @@ package com.cedarsoftware.io;
 import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -443,5 +444,25 @@ public class ConstructorTest
         private final String[] _strings;
         private final Integer[] _ints;
         private final BigDecimal _bigD;
+    }
+
+    @Test
+    void testSimpleEntry()
+    {
+        AbstractMap.SimpleEntry<String, String> entry = new AbstractMap.SimpleEntry<>("key1", "value1");
+        String json = JsonIo.toJson(entry, null);
+        AbstractMap.SimpleEntry<String, String> result = JsonIo.toJava(json, null).asClass(null);
+        assert result.getKey().equals("key1");
+        assert result.getValue().equals("value1");
+    }
+
+    @Test
+    void testSimpleImmutableEntry()
+    {
+        AbstractMap.SimpleImmutableEntry<String, Integer> entry = new AbstractMap.SimpleImmutableEntry<>("count", 42);
+        String json = JsonIo.toJson(entry, null);
+        AbstractMap.SimpleImmutableEntry<String, Integer> result = JsonIo.toJava(json, null).asClass(null);
+        assert result.getKey().equals("count");
+        assert result.getValue().equals(42);
     }
 }
