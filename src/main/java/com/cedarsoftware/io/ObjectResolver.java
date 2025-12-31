@@ -756,9 +756,9 @@ public class ObjectResolver extends Resolver
             final Class<?> collectionClass,
             final Deque<Map.Entry<Type, Object>> stack) {
 
-        int len = Array.getLength(arrayInstance);
+        int len = ArrayUtilities.getLength(arrayInstance);
         for (int i = 0; i < len; i++) {
-            Object element = Array.get(arrayInstance, i);
+            Object element = ArrayUtilities.getElement(arrayInstance, i);
             if (element == null) {
                 continue;
             }
@@ -766,17 +766,17 @@ public class ObjectResolver extends Resolver
             // Handle nested array (e.g., element is int[] within int[][])
             if (element.getClass().isArray()) {
                 // Convert the inner array to a List for type resolution
-                int innerLen = Array.getLength(element);
+                int innerLen = ArrayUtilities.getLength(element);
                 List<Object> items = new ArrayList<>(innerLen);
                 for (int j = 0; j < innerLen; j++) {
-                    items.add(Array.get(element, j));
+                    items.add(ArrayUtilities.getElement(element, j));
                 }
 
                 JsonObject coll = new JsonObject();
                 coll.setType(collectionClass);
                 coll.setItems((Object[]) element);
                 stack.addFirst(new AbstractMap.SimpleEntry<>(containerType, items));
-                Array.set(arrayInstance, i, coll);
+                ArrayUtilities.setElement(arrayInstance, i, coll);
             } else {
                 stack.addFirst(new AbstractMap.SimpleEntry<>(containerType, element));
             }
