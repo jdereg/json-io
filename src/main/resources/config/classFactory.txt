@@ -10,6 +10,17 @@ java.lang.Throwable = com.cedarsoftware.io.factory.ThrowableFactory
 java.util.AbstractMap$SimpleEntry = com.cedarsoftware.io.factory.SimpleEntryFactory
 java.util.AbstractMap$SimpleImmutableEntry = com.cedarsoftware.io.factory.SimpleEntryFactory
 
+# java.util.concurrent.locks - Lock implementations
+java.util.concurrent.locks.ReentrantLock = com.cedarsoftware.io.factory.ReentrantLockFactory
+java.util.concurrent.locks.ReentrantReadWriteLock = com.cedarsoftware.io.factory.ReentrantReadWriteLockFactory
+
+# java.util.concurrent - Synchronizers
+java.util.concurrent.Semaphore = com.cedarsoftware.io.factory.SemaphoreFactory
+java.util.concurrent.CountDownLatch = com.cedarsoftware.io.factory.CountDownLatchFactory
+
+# java.util - Optional
+java.util.Optional = com.cedarsoftware.io.factory.OptionalFactory
+
 # interface instantiates to...
 java.util.Collection = com.cedarsoftware.io.factory.CollectionFactory
 java.util.List = com.cedarsoftware.io.factory.CollectionFactory

@@ -11,6 +11,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.cedarsoftware.util.FastByteArrayInputStream;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
@@ -464,5 +471,126 @@ public class ConstructorTest
         AbstractMap.SimpleImmutableEntry<String, Integer> result = JsonIo.toJava(json, null).asClass(null);
         assert result.getKey().equals("count");
         assert result.getValue().equals(42);
+    }
+
+    @Test
+    void testReentrantLock()
+    {
+        // Test non-fair lock (default)
+        ReentrantLock lock = new ReentrantLock();
+        String json = JsonIo.toJson(lock, null);
+        ReentrantLock result = JsonIo.toJava(json, null).asClass(null);
+        assertNotNull(result);
+        assert !result.isFair();
+        assert !result.isLocked();
+
+        // Test fair lock
+        ReentrantLock fairLock = new ReentrantLock(true);
+        json = JsonIo.toJson(fairLock, null);
+        result = JsonIo.toJava(json, null).asClass(null);
+        assertNotNull(result);
+        assert result.isFair();
+        assert !result.isLocked();
+    }
+
+    @Test
+    void testReentrantReadWriteLock()
+    {
+        // Test non-fair lock (default)
+        ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+        String json = JsonIo.toJson(lock, null);
+        ReentrantReadWriteLock result = JsonIo.toJava(json, null).asClass(null);
+        assertNotNull(result);
+        assert !result.isFair();
+
+        // Test fair lock
+        ReentrantReadWriteLock fairLock = new ReentrantReadWriteLock(true);
+        json = JsonIo.toJson(fairLock, null);
+        result = JsonIo.toJava(json, null).asClass(null);
+        assertNotNull(result);
+        assert result.isFair();
+    }
+
+    @Test
+    void testSemaphore()
+    {
+        // Test non-fair semaphore
+        Semaphore sem = new Semaphore(5);
+        String json = JsonIo.toJson(sem, null);
+        Semaphore result = JsonIo.toJava(json, null).asClass(null);
+        assertNotNull(result);
+        assertEquals(5, result.availablePermits());
+        assert !result.isFair();
+
+        // Test fair semaphore with different permits
+        Semaphore fairSem = new Semaphore(10, true);
+        json = JsonIo.toJson(fairSem, null);
+        result = JsonIo.toJava(json, null).asClass(null);
+        assertNotNull(result);
+        assertEquals(10, result.availablePermits());
+        assert result.isFair();
+    }
+
+    @Test
+    void testCountDownLatch()
+    {
+        CountDownLatch latch = new CountDownLatch(3);
+        String json = JsonIo.toJson(latch, null);
+        CountDownLatch result = JsonIo.toJava(json, null).asClass(null);
+        assertNotNull(result);
+        assertEquals(3, result.getCount());
+    }
+
+    @Test
+    void testOptional()
+    {
+        // Test Optional with value
+        Optional<String> opt = Optional.of("hello");
+        String json = JsonIo.toJson(opt, null);
+        Optional<String> result = JsonIo.toJava(json, null).asClass(null);
+        assertNotNull(result);
+        assert result.isPresent();
+        assertEquals("hello", result.get());
+
+        // Test empty Optional
+        Optional<String> empty = Optional.empty();
+        json = JsonIo.toJson(empty, null);
+        result = JsonIo.toJava(json, null).asClass(null);
+        assertNotNull(result);
+        assert !result.isPresent();
+    }
+
+    @Test
+    void testCopyOnWriteArrayList()
+    {
+        CopyOnWriteArrayList<String> list = new CopyOnWriteArrayList<>();
+        list.add("one");
+        list.add("two");
+        list.add("three");
+
+        String json = JsonIo.toJson(list, null);
+        CopyOnWriteArrayList<String> result = JsonIo.toJava(json, null).asClass(null);
+        assertNotNull(result);
+        assertEquals(3, result.size());
+        assertEquals("one", result.get(0));
+        assertEquals("two", result.get(1));
+        assertEquals("three", result.get(2));
+    }
+
+    @Test
+    void testCopyOnWriteArraySet()
+    {
+        CopyOnWriteArraySet<String> set = new CopyOnWriteArraySet<>();
+        set.add("alpha");
+        set.add("beta");
+        set.add("gamma");
+
+        String json = JsonIo.toJson(set, null);
+        CopyOnWriteArraySet<String> result = JsonIo.toJava(json, null).asClass(null);
+        assertNotNull(result);
+        assertEquals(3, result.size());
+        assertTrue(result.contains("alpha"));
+        assertTrue(result.contains("beta"));
+        assertTrue(result.contains("gamma"));
     }
 }
