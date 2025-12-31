@@ -11,6 +11,7 @@ import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
 import com.google.gson.JsonParser;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -41,6 +42,12 @@ import static org.junit.jupiter.api.Assertions.fail;
 class EnumTests {
     private static final WriteOptions basicWriteOptions = new WriteOptionsBuilder().writeEnumAsJsonObject(true).build();
     private static final WriteOptions enumAsPrimitiveOptions = new WriteOptionsBuilder().writeEnumAsJsonObject(false).build();
+
+    @BeforeEach
+    void setUp() {
+        // Clear caches to ensure test isolation - prevents flaky behavior from cached constructor accessibility
+        ClassUtilities.clearCaches();
+    }
 
     private static Stream<Arguments> testDifferentWriteOptions() {
         return Stream.of(

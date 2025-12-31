@@ -172,7 +172,7 @@ public class ObjectResolver extends Resolver
                 if (refObject.getTarget() != null) {
                     injector.inject(target, refObject.getTarget());
                 } else {
-                    unresolvedRefs.add(new UnresolvedReference(jsonObj, injector.getName(), ref));
+                    addUnresolvedReference(new UnresolvedReference(jsonObj, injector.getName(), ref));
                 }
             } else {    // Direct assignment for nested objects.
                 Object fieldObject = jsRhs.getTarget();
@@ -258,7 +258,7 @@ public class ObjectResolver extends Resolver
      * reference may need to be resolved later.
      */
     private void storeMissingField(Object target, String missingField, Object value) {
-        missingFields.add(new Missingfields(target, missingField, value));
+        addMissingField(new Missingfields(target, missingField, value));
     }
     
     /**
@@ -349,7 +349,7 @@ public class ObjectResolver extends Resolver
                     if (refObject.getTarget() != null) {
                         col.add(refObject.getTarget());
                     } else {
-                        unresolvedRefs.add(new UnresolvedReference(jsonObj, idx, ref));
+                        addUnresolvedReference(new UnresolvedReference(jsonObj, idx, ref));
                         if (isList) {
                             col.add(null);
                         }
@@ -499,7 +499,7 @@ public class ObjectResolver extends Resolver
                             refArray[i] = refObject.getTarget();
                         }
                     } else {
-                        unresolvedRefs.add(new UnresolvedReference(jsonObj, i, ref));
+                        addUnresolvedReference(new UnresolvedReference(jsonObj, i, ref));
                     }
                 } else {
                     // Set the full type on the element.
@@ -510,9 +510,12 @@ public class ObjectResolver extends Resolver
                     } else {
                         refArray[i] = arrayElement;
                     }
-                    boolean isNonRefClass = readOptions.isNonReferenceableClass(arrayElement.getClass());
-                    if (!isNonRefClass && !jsonElement.isFinished) {
-                        push(jsonElement);
+                    // Check for null before calling getClass() - can happen with arrays containing null values
+                    if (arrayElement != null) {
+                        boolean isNonRefClass = readOptions.isNonReferenceableClass(arrayElement.getClass());
+                        if (!isNonRefClass && !jsonElement.isFinished) {
+                            push(jsonElement);
+                        }
                     }
                 }
             } else {

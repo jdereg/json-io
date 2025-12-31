@@ -1,4 +1,32 @@
 ### Revision History
+#### 4.71.0 - 2025-12-31
+* **FIX**: Added factories and writers for JDK classes with inaccessible `private final` fields on Java 9+:
+  * Java 9+ module system blocks reflection access to `private final` fields in `java.base` module
+  * JDK classes are not compiled with `-parameters` flag, so constructor parameter names are synthetic (`arg0`, `arg1`), preventing named parameter matching
+  * **New Factories** (extract state from JsonObject, invoke constructors directly):
+    * `SimpleEntryFactory` - Handles `AbstractMap.SimpleEntry` and `AbstractMap.SimpleImmutableEntry`
+    * `ReentrantLockFactory` - Creates `ReentrantLock` with correct fairness setting
+    * `ReentrantReadWriteLockFactory` - Creates `ReentrantReadWriteLock` with correct fairness setting
+    * `SemaphoreFactory` - Creates `Semaphore` with permits and fairness
+    * `CountDownLatchFactory` - Creates `CountDownLatch` with initial count
+    * `OptionalFactory` - Creates `Optional.empty()` or `Optional.of(value)`
+  * **New Writers** (serialize meaningful state instead of internal `Sync` fields):
+    * `ReentrantLockWriter` - Writes fairness setting
+    * `ReentrantReadWriteLockWriter` - Writes fairness setting
+    * `SemaphoreWriter` - Writes available permits and fairness
+    * `CountDownLatchWriter` - Writes current count
+    * `OptionalWriter` - Writes value or empty marker
+  * **Impact**: These JDK types now round-trip correctly through JSON serialization on all Java versions
+  * **Backward Compatible**: No API changes, automatic factory/writer registration via config files
+* **FIX**: `ObjectResolver` - Fixed potential `NullPointerException` in `traverseArray()` when array elements are null
+  * Added null check before calling `getClass()` on array elements created by `createInstance()`
+* **SECURITY**: `ObjectResolver` - Fixed bypass of security limits for unresolved references and missing fields
+  * Changed 4 locations from direct collection access (`unresolvedRefs.add()`, `missingFields.add()`) to security-aware methods (`addUnresolvedReference()`, `addMissingField()`)
+  * These methods enforce `maxUnresolvedReferences` and `maxMissingFields` limits configured in `ReadOptions`
+  * Prevents potential DoS attacks via unbounded memory consumption
+* **FIX**: `EnumTests` - Fixed flaky test failures caused by cached constructor accessibility
+  * Added `@BeforeEach` with `ClassUtilities.clearCaches()` to ensure test isolation
+
 #### 4.70.0 - 2025-01-18
 * **DEPENDENCY**: Updated `java-util` to version 4.70.0 for FastReader performance improvements and coordinated release.
 * **PERFORMANCE**: JsonReader/JsonIo - Eliminated unnecessary String encoding/decoding in String-based parsing:
