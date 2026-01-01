@@ -6,8 +6,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
 
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
@@ -55,6 +60,44 @@ public class MapResolver extends Resolver {
         super(readOptions, references, converter);
     }
 
+    /**
+     * In Maps mode, substitute SortedSet/SortedMap with LinkedHashSet/LinkedHashMap.
+     * This avoids Comparator issues since TreeSet/TreeMap require Comparators that aren't serialized.
+     * LinkedHashSet/LinkedHashMap preserve insertion order, which is better than HashSet/HashMap.
+     *
+     * @param jsonObj the JsonObject whose type may be substituted
+     */
+    private void substituteSortedCollectionType(JsonObject jsonObj) {
+        Class<?> javaType = jsonObj.getRawType();
+        if (javaType == null) {
+            return;
+        }
+        // Substitute sorted collections with order-preserving equivalents
+        if (SortedSet.class.isAssignableFrom(javaType)) {
+            jsonObj.setType(LinkedHashSet.class);
+        } else if (SortedMap.class.isAssignableFrom(javaType)) {
+            jsonObj.setType(LinkedHashMap.class);
+        }
+    }
+
+    /**
+     * In Maps mode, substitute sorted collections from JSON's @type with LinkedHashSet/LinkedHashMap.
+     * This is necessary because TreeSet/TreeMap require Comparators that aren't serialized.
+     *
+     * Only substitute if the type came from JSON's @type (indicated by typeString being set).
+     * If the type was set via asClass(TreeMap.class), the user's request should be honored.
+     */
+    @Override
+    protected void adjustTypeBeforeResolve(JsonObject rootObj, Type rootType) {
+        // Only substitute if the type came from JSON's @type (indicated by typeString being set),
+        // not from the user's request via asClass(TreeMap.class).
+        // When @type is in the JSON, the Parser sets both typeString and type.
+        // When only suggestedType is used, typeString remains null.
+        if (rootObj.getTypeString() != null) {
+            substituteSortedCollectionType(rootObj);
+        }
+    }
+
     protected Object readWithFactoryIfExists(Object o, Type compType) {
         // No custom reader support for maps
         return null;
@@ -66,6 +109,10 @@ public class MapResolver extends Resolver {
      * an '@id' of an object which can have more than one @ref to it, this code will make sure that each
      * '@ref' (value side of the Map associated to a given field name) will be pointer to the appropriate Map
      * instance.
+     * <p>
+     * Note: We intentionally do NOT call setFinished() here because in Maps mode, the JsonObject itself
+     * is the final result, and the same JsonObject may later be converted to Java objects via toJava().
+     * Marking it finished here would cause the ObjectResolver to skip it.
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
      */
     public void traverseFields(final JsonObject jsonObj) {
@@ -312,6 +359,9 @@ public class MapResolver extends Resolver {
             return;
         }
 
+        // Apply sorted collection substitution before instance creation
+        substituteSortedCollectionType(jsonObj);
+
         Object[] items = jsonObj.getItems();
         Collection<Object> col = (Collection<Object>) jsonObj.getTarget();
         if (col == null) {
@@ -391,7 +441,6 @@ public class MapResolver extends Resolver {
                 idx++;
             }
         }
-
         jsonObj.setFinished();
     }
 
@@ -408,7 +457,10 @@ public class MapResolver extends Resolver {
 
         // Store the full, refined type (which may include generics) in the JsonObject.
         jsonArray.setType(suggestedType);
-        
+
+        // Apply sorted collection substitution for Maps mode
+        substituteSortedCollectionType(jsonArray);
+
         // If the Collection is assignable from raw type, create a Collection instance accordingly.
         if (Collection.class.isAssignableFrom(rawType)) {
             jsonArray.setTarget(createInstance(jsonArray));

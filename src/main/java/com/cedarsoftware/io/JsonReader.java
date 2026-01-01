@@ -13,11 +13,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -539,19 +536,11 @@ public class JsonReader implements Closeable
     private Object handleObjectRoot(Type rootType, JsonObject jsonObj) {
         boolean returnJson = readOptions.isReturningJsonObjects();
 
-        // 1) Fallback type check: If a fallback condition applies, update the @type in the JsonObject.
-
-        // Convert the provided rootType (a full Type) to its raw Class form
-        Class<?> rawRootType = (rootType == null ? null : TypeUtilities.getRawClass(rootType));
-        Class<?> rawJObjClass = jsonObj.getRawType();
-
-        if (isSubstituteSortedCollectionNeeded(returnJson, rawRootType, rawJObjClass)) {
-            Class<?> fallbackType = getSubstituteCollection(rawJObjClass);
-            jsonObj.setType(fallbackType);
-        }
-
-        // 2) Resolve internal references/build the object graph.
+        // Resolve internal references/build the object graph.
+        // Note: Sorted collection substitution (TreeSet->Set, TreeMap->Map) now happens in MapResolver.
         Object graph = resolveObjects(jsonObj, rootType);
+
+        Class<?> rawRootType = (rootType == null ? null : TypeUtilities.getRawClass(rootType));
 
         // If resolution produced null, return the original JsonObject.
         if (graph == null) {
@@ -611,51 +600,6 @@ public class JsonReader implements Closeable
 
         // 5) In JavaObjects mode with no specified rootType, return the resolved graph.
         return graph;
-    }
-
-    /**
-     * Determines whether a fallback substitution should be applied for a sorted collection
-     * when deserializing in JSON mode.  When in Map of Maps mode, we always want to return
-     * without throwing an exception. If root was a TreeSet or TreeMap, we want to return a
-     * LinkedHashSet or LinkedHashMap because the Comparator is not available.
-     * <p>This method returns {@code true} if all the following conditions hold:
-     * <ul>
-     * <li>The deserialization is in "return JSON objects" mode (i.e. {@code returnJson} is true).</li>
-     * <li>No explicit root type was provided (i.e. {@code rootType} is null).</li>
-     * <li>The legacy Java type is not null and represents a sorted collection (either a {@link SortedSet}
-     * or a {@link SortedMap}), as determined by {@link #getSubstituteCollection(Class)}.</li>
-     * </ul>
-     * In such cases, the deserialization process should substitute the sorted collection with a default
-     * Collection type (such as {@link LinkedHashSet} or {@link LinkedHashMap}) to avoid issues related
-     * to missing comparators.</p>
-     *
-     * @param returnJson a flag indicating if the deserialization is in native JSON mode
-     * @param rootType   the explicit root type provided for deserialization; may be {@code null}
-     * @param javaType   the Java type extracted from the JsonObject; must not be {@code null} for a fallback to be applicable
-     * @return {@code true} if a fallback substitution for a sorted collection is needed; {@code false} otherwise
-     */
-    private boolean isSubstituteSortedCollectionNeeded(boolean returnJson, Class<?> rootType, Class<?> javaType) {
-        return returnJson && rootType == null && javaType != null && getSubstituteCollection(javaType) != null;
-    }
-
-    /**
-     * Checks if the given Java type represents a sorted collection.
-     * <p>This method determines whether the specified {@code javaType} is a subtype of {@link SortedSet}
-     * or {@link SortedMap}. If {@code javaType} is a SortedSet, the method returns {@link Set} (as a marker
-     * for set-like behavior). If it is a SortedMap, it returns {@link Map#entrySet()}'s type marker (here simply {@link Map}).
-     * Otherwise, if {@code javaType} is neither a SortedSet nor a SortedMap, the method returns {@code null}.</p>
-     *
-     * @param javaType the Java type to check
-     * @return {@code Set.class} if {@code javaType} is a SortedSet, {@code Map.class} if {@code javaType} is a SortedMap,
-     * or {@code null} if it is not a recognized sorted collection type
-     */
-    private Class<?> getSubstituteCollection(Class<?> javaType) {
-        if (SortedSet.class.isAssignableFrom(javaType)) {
-            return Set.class;
-        } else if (SortedMap.class.isAssignableFrom(javaType)) {
-            return Map.class;
-        }
-        return null;
     }
 
     /**

@@ -386,17 +386,49 @@ public abstract class Resolver {
         // If already converted, return its target.
         if (rootObj.isFinished) {
             return (T) rootObj.getTarget();
-        } else {
-            if (rootObj.getType() == null) {
-                rootObj.setType(rootType);
-            }
-            Object instance = (rootObj.getTarget() == null ? createInstance(rootObj) : rootObj.getTarget());
-            if (rootObj.isFinished) {
-                return (T) instance;
-            } else {
-                return traverseJsonObject(rootObj);
-            }
         }
+
+        // Hook: Allow subclasses to adjust type before resolution (e.g., sorted collection substitution)
+        adjustTypeBeforeResolve(rootObj, rootType);
+
+        if (rootObj.getType() == null) {
+            rootObj.setType(rootType);
+        }
+        Object instance = (rootObj.getTarget() == null ? createInstance(rootObj) : rootObj.getTarget());
+
+        Object result;
+        if (rootObj.isFinished) {
+            result = instance;
+        } else {
+            result = traverseJsonObject(rootObj);
+        }
+
+        // Hook: Allow subclasses to reconcile result type (e.g., type conversion, Maps mode handling)
+        return (T) reconcileResult(result, rootObj, rootType);
+    }
+
+    /**
+     * Hook for subclasses to adjust the JsonObject's type before resolution begins.
+     * Called before instance creation. Default implementation does nothing.
+     *
+     * @param rootObj the JsonObject about to be resolved
+     * @param rootType the expected root type (may be null)
+     */
+    protected void adjustTypeBeforeResolve(JsonObject rootObj, Type rootType) {
+        // Default: no adjustment
+    }
+
+    /**
+     * Hook for subclasses to reconcile the resolved result with the expected type.
+     * Called after resolution completes. Default implementation returns result as-is.
+     *
+     * @param result the resolved Java object
+     * @param rootObj the original JsonObject
+     * @param rootType the expected root type (may be null)
+     * @return the reconciled result (may be converted or wrapped)
+     */
+    protected Object reconcileResult(Object result, JsonObject rootObj, Type rootType) {
+        return result;  // Default: return as-is
     }
 
     /**
