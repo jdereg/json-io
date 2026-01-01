@@ -322,30 +322,31 @@ public class JsonReader implements Closeable
             return null;
         }
 
-        boolean isJava = resolver.getReadOptions().isReturningJavaObjects();
-
-        // 1) Handle a root-level array
+        // Handle arrays (Java arrays or JsonObjects flagged as arrays)
         if (isRootArray(root)) {
-            Object o = handleArrayRoot(rootType, root);
-            // Fetch root (dig for it) if we have JsonObject and return type is Java
-            if (isJava && o instanceof JsonObject && ((JsonObject) o).target != null) {
-                o = ((JsonObject) o).target;
-            }
-            return o;
+            return extractTargetIfNeeded(handleArrayRoot(rootType, root));
         }
 
-        // 2) Handle a root-level JsonObject
+        // Handle JsonObjects (non-array)
         if (root instanceof JsonObject) {
-            Object o = handleObjectRoot(rootType, (JsonObject)root);
-            // Fetch root (dig for it) if we have JsonObject and return type is Java
-            if (isJava && o instanceof JsonObject && ((JsonObject) o).target != null) {
-                o = ((JsonObject) o).target;
-            }
-            return o;
+            return extractTargetIfNeeded(handleObjectRoot(rootType, (JsonObject) root));
         }
 
-        // 3) Otherwise, it’s a primitive (String, Boolean, Number, etc.) or convertible
+        // Primitives (String, Boolean, Number, etc.)
         return convertIfNeeded(rootType, root);
+    }
+
+    /**
+     * In Java mode, if the result is a JsonObject with a target, return the target.
+     * In Maps mode, return the value as-is.
+     */
+    private Object extractTargetIfNeeded(Object value) {
+        if (readOptions.isReturningJavaObjects()
+                && value instanceof JsonObject
+                && ((JsonObject) value).target != null) {
+            return ((JsonObject) value).target;
+        }
+        return value;
     }
 
     /**
