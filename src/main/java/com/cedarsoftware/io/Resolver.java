@@ -503,10 +503,9 @@ public abstract class Resolver {
     }
 
     protected void cleanup() {
-        patchUnresolvedReferences();
+        patchUnresolvedReferences();  // Note: clears unresolvedRefs internally
         rehashMaps();
         references.clear();
-        unresolvedRefs.clear();
         mapsToRehash.clear();
         handleMissingFields();
         missingFields.clear();
