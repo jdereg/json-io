@@ -1,4 +1,30 @@
 ### Revision History
+#### 4.72.0 - 2025-12-31
+* **PERFORMANCE**: `JsonWriter` - Eliminate redundant `@type` for Collection and Map elements
+  * When a field is declared with generic type info (e.g., `List<Person>`), `@type` is now omitted on elements when the element class exactly matches the declared element type
+  * Extends to Map keys/values when using `@keys`/`@items` format (e.g., `Map<Building, Person>`)
+  * Produces shorter JSON output without loss of type information
+  * Parser already handles type inference from context, so this is backward compatible
+* **PERFORMANCE**: `MapResolver` - Optimized Maps mode from 9x slower to 4x slower than Jackson
+  * Added `MAP_OPTIONS_CACHE` to avoid creating `ReadOptionsBuilder` on every `toMaps()` call
+  * Added `fastPrimitiveCoercion()` for common JSON primitive to Java primitive conversions without Converter lookup
+  * Added `isNonReferenceableClass` check before Converter lookup in `traverseArray` - user types are not nonRef and Converter cannot convert them
+  * Added early exit for `Object.class` or matching types in `traverseFields`
+  * Cache `readOptions` local variable in `traverseArray` hot loop
+* **PERFORMANCE**: `Resolver` - Added early `isFinished` check in `push()` method
+  * Skips pushing objects that are already fully resolved, reducing unnecessary work
+* **PERFORMANCE**: Replaced `Array` reflection calls with faster `ArrayUtilities` methods
+  * Uses optimized array operations from java-util for better performance
+* **FIX**: `ArrayFactory` - Fixed converting subclass types unnecessarily
+  * Added `isAssignableFrom` check before calling Converter
+  * Only convert if value is NOT already assignable to the component type
+  * Preserves subclass types in polymorphic arrays (e.g., `java.sql.Date` in `Date[]` arrays)
+* **ADDED**: Aliases for new JDK factory types
+  * `AbstractMap.SimpleEntry`, `AbstractMap.SimpleImmutableEntry`
+  * `ReentrantLock`, `ReentrantReadWriteLock`
+  * `Semaphore`, `CountDownLatch`
+* **DEPENDENCY**: Updated `java-util` to version 4.72.0
+
 #### 4.71.0 - 2025-12-31
 * **FIX**: Added factories and writers for JDK classes with inaccessible `private final` fields on Java 9+:
   * Java 9+ module system blocks reflection access to `private final` fields in `java.base` module
@@ -29,11 +55,6 @@
 * **DEPENDENCY**: Updated `java-util` to version 4.71.0
   * Required for `ArrayUtilities.getLength()` optimization
   * FastReader line/column tracking removed for performance (use `getLastSnippet()` for error context)
-* **PERFORMANCE**: `JsonWriter` - Eliminate redundant `@type` for Collection and Map elements
-  * When a field is declared with generic type info (e.g., `List<Person>`), `@type` is now omitted on elements when the element class exactly matches the declared element type
-  * Extends to Map keys/values when using `@keys`/`@items` format (e.g., `Map<Building, Person>`)
-  * Produces shorter JSON output without loss of type information
-  * Parser already handles type inference from context, so this is backward compatible
 
 #### 4.70.0 - 2025-01-18
 * **DEPENDENCY**: Updated `java-util` to version 4.70.0 for FastReader performance improvements and coordinated release.
