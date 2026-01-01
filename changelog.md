@@ -1,5 +1,8 @@
 ### Revision History
 #### 4.72.0 - 2025-12-31
+* **DEPENDENCY**: Updated `java-util` to version 4.72.0
+  * Includes fix for `ThreadedLRUCacheStrategy` scheduled task accumulation
+  * Includes fix for Jackson dependencies incorrectly declared without `<scope>test</scope>`
 * **PERFORMANCE**: `JsonWriter` - Eliminate redundant `@type` for Collection and Map elements
   * When a field is declared with generic type info (e.g., `List<Person>`), `@type` is now omitted on elements when the element class exactly matches the declared element type
   * Extends to Map keys/values when using `@keys`/`@items` format (e.g., `Map<Building, Person>`)
@@ -23,7 +26,6 @@
   * `AbstractMap.SimpleEntry`, `AbstractMap.SimpleImmutableEntry`
   * `ReentrantLock`, `ReentrantReadWriteLock`
   * `Semaphore`, `CountDownLatch`
-* **DEPENDENCY**: Updated `java-util` to version 4.72.0
 
 #### 4.71.0 - 2025-12-31
 * **FIX**: Added factories and writers for JDK classes with inaccessible `private final` fields on Java 9+:
@@ -56,7 +58,7 @@
   * Required for `ArrayUtilities.getLength()` optimization
   * FastReader line/column tracking removed for performance (use `getLastSnippet()` for error context)
 
-#### 4.70.0 - 2025-01-18
+#### 4.70.0 - 2025-11-18
 * **DEPENDENCY**: Updated `java-util` to version 4.70.0 for FastReader performance improvements and coordinated release.
 * **PERFORMANCE**: JsonReader/JsonIo - Eliminated unnecessary String encoding/decoding in String-based parsing:
   * **Added `JsonReader(Reader, ReadOptions)` constructor**: Allows direct character-based input without byte stream conversion
