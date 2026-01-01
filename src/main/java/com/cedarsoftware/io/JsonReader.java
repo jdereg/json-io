@@ -15,9 +15,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.ExceptionUtilities;
@@ -534,8 +531,6 @@ public class JsonReader implements Closeable
      *         and convertibility.
      */
     private Object handleObjectRoot(Type rootType, JsonObject jsonObj) {
-        boolean returnJson = readOptions.isReturningJsonObjects();
-
         // Resolve internal references/build the object graph.
         // Note: Sorted collection substitution (TreeSet->Set, TreeMap->Map) now happens in MapResolver.
         Object graph = resolveObjects(jsonObj, rootType);
@@ -573,78 +568,10 @@ public class JsonReader implements Closeable
             return graph;
         }
 
-        // 4) If no rootType was specified, decide based on the "JSON mode" setting.
-        if (returnJson) {
-            // --- JSON Mode ---
-            Type javaType = jsonObj.getType();
-            if (javaType != null) {
-                // If there's an @type and it's a simple type (or Number), convert to its basic type.
-                Class<?> javaClass = TypeUtilities.getRawClass(javaType);
-                if (localConverter.isSimpleTypeConversionSupported(javaClass) ||
-                        Number.class.isAssignableFrom(javaClass)) {
-                    Class<?> basicType = getJsonSynonymType(javaClass);
-                    return localConverter.convert(jsonObj, basicType);
-                }
-                // If it's not a built-in primitive or convertible, return the raw JsonObject.
-                if (!isBuiltInPrimitive(graph)) {
-                    return jsonObj;
-                }
-            }
-            // If no @type or it isn't convertible, check if the resolved graph can remain a "simple" type.
-            if (localConverter.isSimpleTypeConversionSupported(graph.getClass())) {
-                return graph;
-            }
-            // Otherwise, return the raw JsonObject.
-            return jsonObj;
-        }
-
-        // 5) In JavaObjects mode with no specified rootType, return the resolved graph.
+        // 4) No specific rootType was requested - return the resolved graph.
+        // For Maps mode, MapResolver.reconcileResult() handles type reconciliation.
+        // For Java mode, ObjectResolver returns fully resolved Java objects.
         return graph;
-    }
-
-    /**
-     * Determines if the provided Java type has a JSON synonym type.
-     *
-     * <p>This method maps complex or extended types to their simpler, JSON-friendly equivalents.
-     * For example, {@code StringBuilder} and {@code StringBuffer} are mapped to {@code String},
-     * while atomic types like {@code AtomicInteger} are mapped to {@code Integer}.
-     *
-     * @param javaType The Java class type to evaluate.
-     * @return The corresponding JSON synonym type if a mapping exists; otherwise, returns the original {@code javaType}.
-     */
-    private Class<?> getJsonSynonymType(Class<?> javaType) {
-        // Define mapping from @type to basic types
-        if (javaType == StringBuilder.class || javaType == StringBuffer.class) {
-            return String.class;
-        }
-        if (javaType == AtomicInteger.class) {
-            return Integer.class;
-        }
-        if (javaType == AtomicLong.class) {
-            return Long.class;
-        }
-        if (javaType == AtomicBoolean.class) {
-            return Boolean.class;
-        }
-        return javaType;
-    }
-
-    /**
-     * Determines whether the provided object is considered a built-in primitive type.
-     *
-     * <p>This method checks if the object is a primitive, a wrapper of a primitive, or a type
-     * that is natively supported and can be directly represented in JSON without requiring complex
-     * conversions.
-     *
-     * @param obj The object to evaluate.
-     * @return {@code true} if the object is a built-in primitive type; {@code false} otherwise.
-     */
-    private boolean isBuiltInPrimitive(Object obj) {
-        if (obj == null) {
-            return false;
-        }
-        Class<?> cls = obj.getClass();
-        return localConverter.isSimpleTypeConversionSupported(cls);
     }
 
     /**
@@ -700,12 +627,9 @@ public class JsonReader implements Closeable
         }
         
         try {
-            // Determine the root type if not explicitly provided
-            if (rootType == null) {
-                rootType = rootObj.getType() == null ? Object.class : rootObj.getType();
-            }
-
-            // Delegate the conversion to the resolver using the converter
+            // Pass the original rootType to toJavaObjects without modification.
+            // The Resolver will handle null rootType appropriately and can use it
+            // in reconcileResult to determine if user specified a type or not.
             T value = resolver.toJavaObjects(rootObj, rootType);
             return value;
         } catch (Exception e) {

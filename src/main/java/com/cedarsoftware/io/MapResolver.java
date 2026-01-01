@@ -13,6 +13,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
@@ -96,6 +99,86 @@ public class MapResolver extends Resolver {
         if (rootObj.getTypeString() != null) {
             substituteSortedCollectionType(rootObj);
         }
+    }
+
+    /**
+     * In Maps mode, handle type reconciliation for the root result when no explicit
+     * rootType was specified by the user.
+     *
+     * This logic determines the appropriate return type:
+     * - Arrays are always returned as actual arrays (not JsonObject)
+     * - If @type is a simple type (String, Number, etc.), convert to that type
+     * - If the result is a complex type, return the raw JsonObject
+     * - If the result is already a simple type, return it as-is
+     */
+    @Override
+    protected Object reconcileResult(Object result, JsonObject rootObj, Type rootType) {
+        // If user specified a rootType, don't apply Maps mode handling here
+        // The type compatibility checking happens in JsonReader.handleObjectRoot
+        if (rootType != null) {
+            return result;
+        }
+
+        // User did not specify rootType - apply Maps mode logic
+
+        // Arrays should always be returned as actual arrays, not JsonObject
+        if (result != null && result.getClass().isArray()) {
+            return result;
+        }
+
+        Converter converter = getConverter();
+        Type javaType = rootObj.getType();
+
+        if (javaType != null) {
+            Class<?> javaClass = TypeUtilities.getRawClass(javaType);
+            // If @type is a simple type or Number, convert jsonObj to its basic type
+            if (converter.isSimpleTypeConversionSupported(javaClass) ||
+                    Number.class.isAssignableFrom(javaClass)) {
+                Class<?> basicType = getJsonSynonymType(javaClass);
+                return converter.convert(rootObj, basicType);
+            }
+            // If it's not a built-in primitive, return the raw JsonObject
+            if (!isBuiltInPrimitive(result, converter)) {
+                return rootObj;
+            }
+        }
+
+        // If the resolved result is a simple type, return it
+        if (result != null && converter.isSimpleTypeConversionSupported(result.getClass())) {
+            return result;
+        }
+
+        // Otherwise, return the raw JsonObject
+        return rootObj;
+    }
+
+    /**
+     * Maps complex types to their simpler JSON-friendly equivalents.
+     */
+    private Class<?> getJsonSynonymType(Class<?> javaType) {
+        if (javaType == StringBuilder.class || javaType == StringBuffer.class) {
+            return String.class;
+        }
+        if (javaType == AtomicInteger.class) {
+            return Integer.class;
+        }
+        if (javaType == AtomicLong.class) {
+            return Long.class;
+        }
+        if (javaType == AtomicBoolean.class) {
+            return Boolean.class;
+        }
+        return javaType;
+    }
+
+    /**
+     * Checks if the object is a built-in primitive type supported by the Converter.
+     */
+    private boolean isBuiltInPrimitive(Object obj, Converter converter) {
+        if (obj == null) {
+            return false;
+        }
+        return converter.isSimpleTypeConversionSupported(obj.getClass());
     }
 
     protected Object readWithFactoryIfExists(Object o, Type compType) {

@@ -391,8 +391,16 @@ public abstract class Resolver {
         // Hook: Allow subclasses to adjust type before resolution (e.g., sorted collection substitution)
         adjustTypeBeforeResolve(rootObj, rootType);
 
+        // Determine effective type for instance creation:
+        // 1. If rootObj already has a type (from @type or Parser's suggestedType), use it
+        // 2. If rootType is specified by user, use that
+        // 3. Fall back to Object.class
         if (rootObj.getType() == null) {
-            rootObj.setType(rootType);
+            if (rootType != null) {
+                rootObj.setType(rootType);
+            } else {
+                rootObj.setType(Object.class);
+            }
         }
         Object instance = (rootObj.getTarget() == null ? createInstance(rootObj) : rootObj.getTarget());
 

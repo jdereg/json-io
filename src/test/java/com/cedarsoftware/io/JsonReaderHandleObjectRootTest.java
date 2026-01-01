@@ -102,14 +102,17 @@ class JsonReaderHandleObjectRootTest {
     }
 
     @Test
-    void untypedNonPrimitiveReturnsJsonObject() throws Exception {
+    void untypedNonPrimitiveReturnsJsonObject() {
+        // In Maps mode, when there's no @type and the content is a complex object (not a simple type),
+        // the result should be a JsonObject, not a fully resolved Java object.
+        // This tests the behavior through the normal flow where MapResolver.reconcileResult handles this.
+        String json = "{\"name\":\"test\",\"value\":42}";
         ReadOptions opts = new ReadOptionsBuilder().returnAsJsonObjects().build();
-        IdentityReader reader = new IdentityReader(opts);
-        JsonObject obj = new JsonObject();
-        obj.setTarget(new Object());
-        obj.clear();
-        Object result = reader.invokeHandle(null, obj);
-        assertSame(obj, result);
+        Object result = TestUtil.toMaps(json, opts).asClass(null);
+        assertTrue(result instanceof JsonObject, "Complex objects without @type should be returned as JsonObject in Maps mode, but got: " + result.getClass().getName());
+        JsonObject jo = (JsonObject) result;
+        assertEquals("test", jo.get("name"));
+        assertEquals(42L, jo.get("value"));
     }
 }
 
