@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 import com.cedarsoftware.io.prettyprint.JsonPrettyPrinter;
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
 import com.cedarsoftware.util.LoggingConfig;
@@ -879,14 +880,39 @@ public class JsonIo {
          *                   do it's best to infer type's/classes, though we recommend passing a Type.
          * @return an object of the specified type populated from the JsonObject
          */
+        @SuppressWarnings("unchecked")
         public <T> T asType(TypeHolder<T> typeHolder) {
             ReadOptions effectiveOptions = readOptions;
             if (!effectiveOptions.isReturningJavaObjects()) {
                 effectiveOptions = new ReadOptionsBuilder(effectiveOptions).returnAsJavaObjects().build();
             }
 
-            JsonReader reader = new JsonReader(effectiveOptions);
-            return (T) reader.toJava(typeHolder.getType(), jsonObject);
+            // Create resolver directly (inlined from JsonReader constructor)
+            ReferenceTracker references = new Resolver.DefaultReferenceTracker(effectiveOptions);
+            Converter converter = new Converter(effectiveOptions.getConverterOptions());
+            Resolver resolver = effectiveOptions.isReturningJsonObjects() ?
+                    new MapResolver(effectiveOptions, references, converter) :
+                    new ObjectResolver(effectiveOptions, references, converter);
+
+            // Handle unsafe mode and resolve (inlined from JsonReader.toJava())
+            boolean shouldManageUnsafe = effectiveOptions.isUseUnsafe();
+            if (shouldManageUnsafe) {
+                ClassUtilities.setUseUnsafe(true);
+            }
+
+            try {
+                return (T) resolver.resolveRoot(jsonObject, typeHolder.getType());
+            } catch (Exception e) {
+                if (e instanceof JsonIoException) {
+                    throw (JsonIoException) e;
+                }
+                throw new JsonIoException(e.getMessage(), e);
+            } finally {
+                if (shouldManageUnsafe) {
+                    ClassUtilities.setUseUnsafe(false);
+                }
+                resolver.cleanup();
+            }
         }
     }
 
