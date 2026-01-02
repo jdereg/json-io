@@ -1,8 +1,10 @@
 package com.cedarsoftware.io;
 
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
@@ -12,6 +14,7 @@ import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
 import com.cedarsoftware.util.FastReader;
+import com.cedarsoftware.util.IOUtilities;
 import com.cedarsoftware.util.LoggingConfig;
 import com.cedarsoftware.util.convert.Converter;
 
@@ -804,25 +807,47 @@ public class JsonIo {
          * @return an object of the specified type populated from the JSON
          * @throws JsonIoException if an error occurs during parsing or conversion
          */
+        @SuppressWarnings("unchecked")
         public <T> T asType(TypeHolder<T> typeHolder) {
-            JsonReader jr = null;
+            // Create components directly (inlined from JsonReader constructor)
+            ReferenceTracker references = new Resolver.DefaultReferenceTracker(readOptions);
+            Converter converter = new Converter(readOptions.getConverterOptions());
+            FastReader input = new FastReader(new InputStreamReader(in, StandardCharsets.UTF_8), 65536, 16);
+            Resolver resolver = readOptions.isReturningJsonObjects() ?
+                    new MapResolver(readOptions, references, converter) :
+                    new ObjectResolver(readOptions, references, converter);
+            JsonParser parser = new JsonParser(input, resolver);
+
+            // Parse phase (from JsonReader.readObject)
+            Object parsed;
             try {
-                jr = new JsonReader(in, readOptions);
-                return jr.readObject(typeHolder.getType());
-            } catch (JsonIoException je) {
-                throw je;
+                parsed = parser.readValue(typeHolder.getType());
+            } catch (JsonIoException e) {
+                throw e;
             } catch (Exception e) {
-                throw new JsonIoException(e);
+                throw new JsonIoException("Error parsing JSON value", e);
+            }
+
+            // Resolve phase (from JsonReader.toJava)
+            boolean shouldManageUnsafe = readOptions.isUseUnsafe();
+            if (shouldManageUnsafe) {
+                ClassUtilities.setUseUnsafe(true);
+            }
+
+            try {
+                return (T) resolver.resolveRoot(parsed, typeHolder.getType());
+            } catch (Exception e) {
+                if (e instanceof JsonIoException) {
+                    throw (JsonIoException) e;
+                }
+                throw new JsonIoException(e.getMessage(), e);
             } finally {
-                // Close JsonReader if needed - it will close the underlying stream
-                if (jr != null && readOptions.isCloseStream()) {
-                    try {
-                        jr.close();
-                    } catch (Exception closeException) {
-                        // Log the close exception but don't mask the original exception
-                        Logger.getLogger(JsonIo.class.getName()).warning(
-                            "Failed to close JsonReader: " + closeException.getMessage());
-                    }
+                if (shouldManageUnsafe) {
+                    ClassUtilities.setUseUnsafe(false);
+                }
+                resolver.cleanup();
+                if (readOptions.isCloseStream()) {
+                    IOUtilities.close(input);
                 }
             }
         }
