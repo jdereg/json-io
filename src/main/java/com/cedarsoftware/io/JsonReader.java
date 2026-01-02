@@ -6,7 +6,6 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.ExceptionUtilities;
@@ -292,91 +291,20 @@ public class JsonReader implements Closeable
 
     /**
      * Deserializes a JSON object graph into a strongly-typed Java object instance.
-     *
-     * <p>This method processes a root {@link JsonObject} that represents the serialized form of a Java
-     * object graph, which may include nested {@link Map} instances and other complex structures. It
-     * converts this JSON-based representation back into a typed Java object, optionally guided by the
-     * specified {@code rootType}.</p>
-     *
-     * <p>If the {@code rootType} parameter is {@code null}, the method attempts to infer the appropriate
-     * Java class from the {@code @type} annotation within the {@code rootObj}. In the absence of such
-     * type information, it defaults to {@link Object}.</p>
-     *
-     * <p>After the deserialization process, the method ensures that the resolver's state is cleaned up,
-     * maintaining the integrity of subsequent operations.</p>
+     * <p>
+     * This method converts a {@link JsonObject} (Map-of-Maps representation) into a fully
+     * resolved Java object. It delegates to {@link #toJava(Type, Object)} which handles
+     * lifecycle management including unsafe mode, forward reference patching, and cleanup.
      *
      * @param <T>      the expected type of the Java object to be returned
      * @param rootObj  the root {@link JsonObject} representing the serialized JSON object graph
-     *                 to be deserialized
-     * @param rootType the desired Java type for the root object. If {@code null}, the method will
-     *                 attempt to determine the type from the {@code @type} annotation in {@code rootObj}
-     * @return a Java object instance corresponding to the provided JSON graph, of type {@code T}
-     * @throws JsonIoException if an error occurs during deserialization, such as type conversion issues
-     *                         or I/O errors
-     *
-     * <p><strong>Implementation Notes:</strong></p>
-     * <ul>
-     *     <li>When {@code rootType} is {@code null}, the method prioritizes type inference from the
-     *         {@code @type} annotation within {@code rootObj}. If no type information is available,
-     *         it defaults to {@link Object}.</li>
-     *     <li>If {@link ReadOptions#isCloseStream()} is {@code true}, the method ensures that the
-     *         associated stream is closed upon encountering an exception to prevent resource leaks.</li>
-     *     <li>Post-deserialization, the resolver's state is cleaned up to maintain consistency and prevent
-     *         interference with subsequent deserialization operations.</li>
-     * </ul>
-     *
-     * Implementation Note:
-     * <p>This method is designed to handle both scenarios where type information is provided and where it
-     * is absent. It ensures robust deserialization by falling back to generic types when necessary and by
-     * leveraging type conversion mappings defined within the converter.</p>
+     * @param rootType the desired Java type for the root object (may be null for type inference)
+     * @return a Java object instance corresponding to the provided JSON graph
+     * @throws JsonIoException if an error occurs during deserialization
      */
     @SuppressWarnings("unchecked")
     protected <T> T resolveObjects(JsonObject rootObj, Type rootType) {
-        // Enable unsafe mode for the entire deserialization if requested
-        // For root readers, we manage the lifecycle. For nested readers, we just ensure it's on.
-        boolean shouldManageUnsafe = false;
-        
-        if (readOptions.isUseUnsafe()) {
-            ClassUtilities.setUseUnsafe(true);
-            // Only the root JsonReader should manage (disable) unsafe mode at the end
-            shouldManageUnsafe = isRoot;
-        }
-        
-        try {
-            // Pass the original rootType to toJavaObjects without modification.
-            // The Resolver will handle null rootType appropriately and can use it
-            // in reconcileResult to determine if user specified a type or not.
-            T value = resolver.toJavaObjects(rootObj, rootType);
-            return value;
-        } catch (Exception e) {
-            // Safely close the stream if the read options specify to do so
-            if (readOptions.isCloseStream()) {
-                ExceptionUtilities.safelyIgnoreException(this::close);
-            }
-
-            // Rethrow known JsonIoExceptions directly
-            if (e instanceof JsonIoException) {
-                throw (JsonIoException) e;
-            }
-
-            // Wrap other exceptions in a JsonIoException for consistency
-            throw new JsonIoException(getErrorMessage(e.getMessage()), e);
-        } finally {
-            // Restore unsafe mode to its original state
-            // Only disable if we were the ones who enabled it
-            if (shouldManageUnsafe) {
-                ClassUtilities.setUseUnsafe(false);
-            }
-            
-            /*
-             * Cleanup the resolver's state post-deserialization.
-             * This ensures that any internal caches or temporary data structures
-             * used during the conversion process are properly cleared.
-             */
-            if (isRoot) {
-                resolver.cleanup();
-            }
-        }
+        return (T) toJava(rootType, rootObj);
     }
 
     /**
