@@ -182,7 +182,11 @@ public class JsonReader implements Closeable
              new Resolver.DefaultReferenceTracker(readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions));
     }
 
-    public JsonReader(InputStream inputStream, ReadOptions readOptions, ReferenceTracker references) {
+    /**
+     * Internal constructor for InputStream with custom ReferenceTracker.
+     * Package-private as ReferenceTracker management is an internal concern.
+     */
+    JsonReader(InputStream inputStream, ReadOptions readOptions, ReferenceTracker references) {
         this.isRoot = true;   // When root is true, the resolver has .cleanup() called on it upon JsonReader finalization
         this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
         Converter converter = new Converter(this.readOptions.getConverterOptions());
@@ -193,7 +197,11 @@ public class JsonReader implements Closeable
         this.parser = new JsonParser(this.input, this.resolver);
     }
 
-    public JsonReader(Reader reader, ReadOptions readOptions, ReferenceTracker references) {
+    /**
+     * Internal constructor for Reader with custom ReferenceTracker.
+     * Package-private as ReferenceTracker management is an internal concern.
+     */
+    JsonReader(Reader reader, ReadOptions readOptions, ReferenceTracker references) {
         this.isRoot = true;   // When root is true, the resolver has .cleanup() called on it upon JsonReader finalization
         this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
         Converter converter = new Converter(this.readOptions.getConverterOptions());
