@@ -49,7 +49,7 @@ public class SerializedExceptionTest
         }
     }
 
-    public static class MyExceptionCreator implements JsonReader.ClassFactory
+    public static class MyExceptionCreator implements ClassFactory
     {
         public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver)
         {

@@ -618,7 +618,7 @@ public class ObjectResolver extends Resolver
         }
 
         // Finally, try a custom reader.
-        JsonReader.JsonClassReader reader = readOptions.getCustomReader(targetClass);
+        JsonClassReader reader = readOptions.getCustomReader(targetClass);
         if (reader == null) {
             return null;
         }

@@ -1,8 +1,8 @@
 package com.cedarsoftware.io.factory;
 
+import com.cedarsoftware.io.ClassFactory;
 import com.cedarsoftware.io.CustomWriterTest;
 import com.cedarsoftware.io.JsonObject;
-import com.cedarsoftware.io.JsonReader.ClassFactory;
 import com.cedarsoftware.io.Resolver;
 
 public class PersonFactory implements ClassFactory {

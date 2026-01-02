@@ -75,7 +75,7 @@ public class ReadOptionsBuilder {
     static { LoggingConfig.init(); }
 
     // The BASE_* Maps are regular ConcurrentHashMap's because they are not constantly searched, otherwise they would be ClassValueMaps.
-    private static final Map<Class<?>, JsonReader.JsonClassReader> BASE_READERS = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, JsonClassReader> BASE_READERS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, ClassFactory> BASE_CLASS_FACTORIES = new ConcurrentHashMap<>();
     // BASE_ALIAS_MAPPINGS uses LinkedHashMap to maintain insertion order so later aliases override earlier ones
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = Collections.synchronizedMap(new LinkedHashMap<>());
@@ -390,7 +390,7 @@ public class ReadOptionsBuilder {
      * @param c      Class to assign a custom JSON reader to
      * @param reader The JsonClassReader which will read the custom JSON format of 'c'
      */
-    public static void addPermanentReader(Class<?> c, JsonReader.JsonClassReader reader) {
+    public static void addPermanentReader(Class<?> c, JsonClassReader reader) {
         BASE_READERS.put(c, reader);
     }
 
@@ -736,7 +736,7 @@ public class ReadOptionsBuilder {
         options.aliasTypeNames = Collections.unmodifiableMap(options.aliasTypeNames);
         options.coercedTypes = ((ClassValueMap<Class<?>>)options.coercedTypes).unmodifiableView();
         options.notCustomReadClasses = ((ClassValueSet)options.notCustomReadClasses).unmodifiableView();
-        options.customReaderClasses = ((ClassValueMap<JsonReader.JsonClassReader>)options.customReaderClasses).unmodifiableView();
+        options.customReaderClasses = ((ClassValueMap<JsonClassReader>)options.customReaderClasses).unmodifiableView();
         options.classFactoryMap = ((ClassValueMap<ClassFactory>)options.classFactoryMap).unmodifiableView();
         options.nonRefClasses = ((ClassValueSet)options.nonRefClasses).unmodifiableView();
         options.converterOptions.converterOverrides = Collections.unmodifiableMap(options.converterOptions.converterOverrides);
@@ -808,13 +808,13 @@ public class ReadOptionsBuilder {
     }
 
     /**
-     * @param customReaderClasses Map of Class to JsonReader.JsonClassReader.  Establish the passed in Map as the
+     * @param customReaderClasses Map of Class to JsonClassReader.  Establish the passed in Map as the
      *                            established Map of custom readers to be used when reading JSON. Using this method
      *                            more than once, will set the custom readers to only the values from the Set in
      *                            the last call made.
      * @return ReadOptionsBuilder for chained access.
      */
-    public ReadOptionsBuilder replaceCustomReaderClasses(Map<? extends Class<?>, ? extends JsonReader.JsonClassReader> customReaderClasses) {
+    public ReadOptionsBuilder replaceCustomReaderClasses(Map<? extends Class<?>, ? extends JsonClassReader> customReaderClasses) {
         options.customReaderClasses.clear();
         options.customReaderClasses.putAll(customReaderClasses);
         return this;
@@ -827,7 +827,7 @@ public class ReadOptionsBuilder {
      *                     and load the class in one step.
      * @return ReadOptionsBuilder for chained access.
      */
-    public <T> ReadOptionsBuilder addCustomReaderClass(Class<T> clazz, JsonReader.JsonClassReader<? super T> customReader) {
+    public <T> ReadOptionsBuilder addCustomReaderClass(Class<T> clazz, JsonClassReader<? super T> customReader) {
         options.customReaderClasses.put(clazz, customReader);
         return this;
     }
@@ -1595,7 +1595,7 @@ public class ReadOptionsBuilder {
         private Map<String, String> aliasTypeNames = new LinkedHashMap<>();
         private Map<Class<?>, Class<?>> coercedTypes = new ClassValueMap<>();
         private Set<Class<?>> notCustomReadClasses = new ClassValueSet();
-        private Map<Class<?>, JsonReader.JsonClassReader> customReaderClasses = new ClassValueMap<>();
+        private Map<Class<?>, JsonClassReader> customReaderClasses = new ClassValueMap<>();
         private Map<Class<?>, ClassFactory> classFactoryMap = new ClassValueMap<>();
         private Set<Class<?>> nonRefClasses = new ClassValueSet();
         private Map<Class<?>, Set<String>> excludedFieldNames = new ClassValueMap<>();
@@ -1605,7 +1605,7 @@ public class ReadOptionsBuilder {
         private Map<String, Object> customOptions = new LinkedHashMap<>();
 
         // Runtime cache (not feature options)
-        private final Map<Class<?>, JsonReader.JsonClassReader> readerCache = new ClassValueMap<>();
+        private final Map<Class<?>, JsonClassReader> readerCache = new ClassValueMap<>();
         private final ClassFactory throwableFactory = new ThrowableFactory();
         private final ClassFactory enumFactory = new EnumClassFactory();
         private static final ClassFactory recordFactory = new RecordFactory();
@@ -1902,7 +1902,7 @@ public class ReadOptionsBuilder {
          * null value.  Instead, singleton instance of this class is placed where null values
          * are needed.
          */
-        private static final class NullClass implements JsonReader.JsonClassReader {
+        private static final class NullClass implements JsonClassReader {
         }
 
         private static final NullClass nullReader = new NullClass();
@@ -1915,8 +1915,8 @@ public class ReadOptionsBuilder {
          * @param c Class of object for which fetch a custom reader
          * @return JsonClassReader for the custom class (if one exists), null otherwise.
          */
-        public JsonReader.JsonClassReader getCustomReader(Class<?> c) {
-            JsonReader.JsonClassReader reader = readerCache.computeIfAbsent(c, cls -> ClassUtilities.findClosest(c, customReaderClasses, nullReader));
+        public JsonClassReader getCustomReader(Class<?> c) {
+            JsonClassReader reader = readerCache.computeIfAbsent(c, cls -> ClassUtilities.findClosest(c, customReaderClasses, nullReader));
             return reader == nullReader ? null : reader;
         }
 

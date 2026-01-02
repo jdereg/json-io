@@ -51,7 +51,7 @@ class CustomJsonSubObjectsTest
 	/**
 	 * Custom Reader for the Person object's local fields.
 	 */
-    static class PersonFactory implements JsonReader.ClassFactory {
+    static class PersonFactory implements ClassFactory {
 		@SuppressWarnings("unchecked")
 		public Object newInstance(Class<?> c, JsonObject jsonObj, Resolver resolver) {
 			Person person = new Person();		// Factory - create Java peer instance - root class only.

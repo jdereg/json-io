@@ -19,14 +19,14 @@ class ReadOptionsBuilderTest {
     static class PermanentReadClass {}
     static class NonRefClass {}
 
-    static class DummyReader implements JsonReader.JsonClassReader {
+    static class DummyReader implements JsonClassReader {
         @Override
         public Object read(Object jsonObj, Resolver resolver) {
             return new PermanentReadClass();
         }
     }
 
-    static class DummyFactory implements JsonReader.ClassFactory {
+    static class DummyFactory implements ClassFactory {
         @Override
         public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
             return new PermanentReadClass();
@@ -38,7 +38,7 @@ class ReadOptionsBuilderTest {
         ReadOptions optionsBefore = new ReadOptionsBuilder().build();
         assertFalse(optionsBefore.isCustomReaderClass(PermanentReadClass.class));
 
-        JsonReader.JsonClassReader reader = new DummyReader();
+        JsonClassReader reader = new DummyReader();
         ReadOptionsBuilder.addPermanentReader(PermanentReadClass.class, reader);
         ReadOptions optionsAfter = new ReadOptionsBuilder().build();
 
@@ -56,8 +56,8 @@ class ReadOptionsBuilderTest {
 
     @Test
     void testReplaceClassFactories() {
-        JsonReader.ClassFactory factory = new DummyFactory();
-        Map<Class<?>, JsonReader.ClassFactory> map = new HashMap<>();
+        ClassFactory factory = new DummyFactory();
+        Map<Class<?>, ClassFactory> map = new HashMap<>();
         map.put(PermanentReadClass.class, factory);
         ReadOptions options = new ReadOptionsBuilder()
                 .replaceClassFactories(map)

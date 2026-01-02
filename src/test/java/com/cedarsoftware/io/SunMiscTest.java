@@ -40,15 +40,15 @@ public class SunMiscTest
         array[0] = shoe;
         String workaroundString = TestUtil.toJson(array);
 
-        ReadOptionsBuilder.addPermanentClassFactory(Dog.Shoe.class, new JsonReader.ClassFactory() {
+        ReadOptionsBuilder.addPermanentClassFactory(Dog.Shoe.class, new ClassFactory() {
             public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver)
             {
                 return Dog.Shoe.construct();
             }
         });
 
-        Map<Class<Dog.Shoe>, JsonReader.JsonClassReader> customReader = new HashMap<>();
-        customReader.put(Dog.Shoe.class, new JsonReader.JsonClassReader() {
+        Map<Class<Dog.Shoe>, JsonClassReader> customReader = new HashMap<>();
+        customReader.put(Dog.Shoe.class, new JsonClassReader() {
             public Object read(Object jOb, Resolver resolver)
             {
                 // no need to do anything special

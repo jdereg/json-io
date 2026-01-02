@@ -58,7 +58,7 @@ public class CustomReaderMapTest
         List<CustomPoint> list = new ArrayList<>();
         list.add(pt);
 
-        Map<Class<CustomPoint>, JsonReader.JsonClassReader> customReaders = new HashMap<>();
+        Map<Class<CustomPoint>, JsonClassReader> customReaders = new HashMap<>();
         customReaders.put(CustomPoint.class, new CustomPointReader());
         String json = TestUtil.toJson(list);
         List<CustomPoint> clone = TestUtil.toJava(json, new ReadOptionsBuilder().replaceCustomReaderClasses(customReaders).build()).asClass(null);
@@ -78,7 +78,7 @@ public class CustomReaderMapTest
         Object[] list = new Object[1];
         list[0] = pt;
 
-        Map<Class<CustomPoint>, JsonReader.JsonClassReader> customReaders = new HashMap<>();
+        Map<Class<CustomPoint>, JsonClassReader> customReaders = new HashMap<>();
         customReaders.put(CustomPoint.class, new CustomPointReader());
 
         String json = TestUtil.toJson(list);
@@ -95,7 +95,7 @@ public class CustomReaderMapTest
         public long y;
     }
 
-    private static class CustomPointReader implements JsonReader.JsonClassReader
+    private static class CustomPointReader implements JsonClassReader
     {
         public Object read(Object obj, Resolver resolver)
         {

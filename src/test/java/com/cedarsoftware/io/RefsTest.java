@@ -174,12 +174,12 @@ class RefsTest
         a._other = b;
         b._other = a;
         String json = TestUtil.toJson(a);
-        Map<Class<?>, JsonReader.JsonClassReader> readers = new HashMap<>();
+        Map<Class<?>, JsonClassReader> readers = new HashMap<>();
         readers.put(TestObject.class, new TestObjectReader());
         TestObject aa = TestUtil.toJava(json, new ReadOptionsBuilder().replaceCustomReaderClasses(readers).build()).asClass(null);
     }
 
-    private static class TestObjectReader implements JsonReader.JsonClassReader {
+    private static class TestObjectReader implements JsonClassReader {
 
         @Override
         public Object read(Object jsonObj, Resolver resolver) {

@@ -57,7 +57,7 @@ public class CustomWriterTest
     {
         Person p = createTestPerson();
 
-        Map<Class<?>, JsonReader.JsonClassReader> customReaders = new HashMap<>();
+        Map<Class<?>, JsonClassReader> customReaders = new HashMap<>();
         customReaders.put(Person.class, new CustomPersonReader());
 
         WriteOptions writeOptions0 = new WriteOptionsBuilder().addCustomWrittenClass(Person.class, new CustomPersonWriter()).lruSize(100).build();
@@ -142,7 +142,7 @@ public class CustomWriterTest
     {
         Person p = createTestPerson();
 
-        Map<Class<?>, JsonReader.JsonClassReader> customReaders = new HashMap<>();
+        Map<Class<?>, JsonClassReader> customReaders = new HashMap<>();
         customReaders.put(Person.class, new CustomPersonReader());
 
         WriteOptions writeOptions = new WriteOptionsBuilder().build();
@@ -193,7 +193,7 @@ public class CustomWriterTest
     {
         Person p = createTestPerson();
 
-        Map<Class<?>, JsonReader.JsonClassReader> customReaders = new HashMap<>();
+        Map<Class<?>, JsonClassReader> customReaders = new HashMap<>();
         customReaders.put(Person.class, new CustomPersonReader());
 
         WriteOptions writeOptions = new WriteOptionsBuilder().addCustomWrittenClass(Person.class, new CustomPersonWriter()).build();
@@ -438,7 +438,7 @@ public class CustomWriterTest
         }
     }
 
-    public static class CustomPersonReader implements JsonReader.JsonClassReader
+    public static class CustomPersonReader implements JsonClassReader
     {
         public Object read(Object jsonObj, Resolver resolver)
         {

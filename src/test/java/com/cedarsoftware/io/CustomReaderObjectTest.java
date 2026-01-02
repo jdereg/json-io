@@ -40,7 +40,7 @@ public class CustomReaderObjectTest
 		assert madeItHere;
 	}
 
-	public class CustomReader implements JsonReader.JsonClassReader
+	public class CustomReader implements JsonClassReader
 	{
         public Object read(Object jsonObj, Resolver resolver)
 		{

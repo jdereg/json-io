@@ -278,7 +278,7 @@ public interface ReadOptions {
      * @param c Class of object for which fetch a custom reader
      * @return JsonClassReader for the custom class (if one exists), null otherwise.
      */
-    JsonReader.JsonClassReader getCustomReader(Class<?> c);
+    JsonClassReader getCustomReader(Class<?> c);
 
     /**
      * @return true if returning items in basic JSON object format

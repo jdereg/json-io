@@ -36,7 +36,7 @@ class CustomJsonSubObjectTest
 		private TestObjectKid kid;
 	}
 
-	static class PersonFactory implements JsonReader.ClassFactory {
+	static class PersonFactory implements ClassFactory {
 		public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
 			Person person = new Person();		// Factory - create Java peer instance - root class only.
 

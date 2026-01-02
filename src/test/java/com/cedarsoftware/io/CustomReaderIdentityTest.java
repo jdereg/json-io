@@ -124,7 +124,7 @@ public class CustomReaderIdentityTest
 		assert array[0] == array[1];
 	}
 
-	public static class CustomDataReader implements JsonReader.JsonClassReader
+	public static class CustomDataReader implements JsonClassReader
 	{
         public Object read(Object jOb, Resolver resolver)
 		{

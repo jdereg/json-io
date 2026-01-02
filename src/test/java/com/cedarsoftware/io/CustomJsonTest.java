@@ -36,7 +36,7 @@ class CustomJsonTest
 		private OffsetDateTime dob;
 	}
 
-    static class PersonFactory implements JsonReader.ClassFactory {
+    static class PersonFactory implements ClassFactory {
 		public Object newInstance(Class<?> c, JsonObject jsonObject, Resolver resolver) {
 			Person person = new Person();		// Factory - create Java peer instance - root class only.
 

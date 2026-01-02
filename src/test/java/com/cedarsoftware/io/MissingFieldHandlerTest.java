@@ -1,5 +1,6 @@
 package com.cedarsoftware.io;
 
+import com.cedarsoftware.io.JsonReader.MissingFieldHandler;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,7 +32,7 @@ public class MissingFieldHandlerTest
         pt.x = 5;
         final Boolean[] madeItHere = new Boolean[]{false};
 
-        JsonReader.MissingFieldHandler missingHandler = (object, fieldName, value) -> {
+        MissingFieldHandler missingHandler = (object, fieldName, value) -> {
             ((CustomPoint) object).newY = (long) value;
             madeItHere[0] = true;
         };
@@ -73,7 +74,7 @@ public class MissingFieldHandlerTest
         boolean isStringArrayOk[] = new boolean[] {false};
         boolean isInner2WithNoSerializedTypeOk[] = new boolean[]{false};
 
-        JsonReader.MissingFieldHandler missingHandler = (object, fieldName, value) -> {
+        MissingFieldHandler missingHandler = (object, fieldName, value) -> {
             switch (fieldName)
             {
                 case "inner2":
