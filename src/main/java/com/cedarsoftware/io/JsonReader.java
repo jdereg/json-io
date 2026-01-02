@@ -129,20 +129,6 @@ public class JsonReader implements Closeable
     }
 
     /**
-     * Creates a JsonReader for nested resolution within ClassFactory or custom reader implementations.
-     * Call {@link #toJava(Type, Object)} to resolve JsonObject sub-graphs into Java objects.
-     *
-     * @param resolver Resolver from the parent context (via ClassFactory or JsonClassReader)
-     */
-    public JsonReader(Resolver resolver) {
-        this.isRoot = false;  // Nested reader - cleanup handled by root
-        this.resolver = resolver;
-        this.readOptions = resolver.getReadOptions();
-        this.input = null;
-        this.parser = null;
-    }
-
-    /**
      * Parses JSON from the input stream and returns a Java object of the specified type.
      *
      * @param <T>      the expected return type
