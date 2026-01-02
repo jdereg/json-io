@@ -139,46 +139,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     /**
-     * Implement this interface to customize the JSON output for a given class.
+     * @deprecated Use top-level {@link com.cedarsoftware.io.JsonClassWriter} instead.
+     *             This nested interface is kept for backward compatibility.
      */
-    public interface JsonClassWriter<T> {
-        /**
-         * When write() is called, it is expected that subclasses will write the appropriate JSON
-         * to the passed in Writer.
-         *
-         * @param o        Object to be written in JSON format.
-         * @param showType boolean indicating whether to show @type.
-         * @param output   Writer destination to where the actual JSON is written.
-         * @param context  WriterContext to get writeOptions and other write access
-         * @throws IOException if thrown by the writer.  Will be caught at a higher level and wrapped in JsonIoException.
-         */
-        default void write(T o, boolean showType, Writer output, WriterContext context) throws IOException {
-        }
-
-        /**
-         * @param context WriterContext to get writeOptions and other write access
-         * @return boolean true if the class being written has a primitive (non-object) form.  Default is false since
-         * most custom writers will not have a primitive form.
-         */
-        default boolean hasPrimitiveForm(WriterContext context) {
-            return false;
-        }
-
-        /**
-         * This default implementation will call the more basic writePrimitiveForm that does not take arguments.  No need
-         * to override this method unless you need access to the args.
-         *
-         * @param o       Object to be written
-         * @param output  Writer destination to where the actual JSON is written.
-         * @param context WriterContext to get access to writeOptions and writing tools
-         * @throws IOException if thrown by the writer.  Will be caught at a higher level and wrapped in JsonIoException.
-         */
-        default void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-        }
-
-        default String getTypeName(Object o) {
-            return o.getClass().getName();
-        }
+    @Deprecated
+    public interface JsonClassWriter<T> extends com.cedarsoftware.io.JsonClassWriter<T> {
     }
 
     /**

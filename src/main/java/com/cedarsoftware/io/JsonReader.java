@@ -65,79 +65,27 @@ public class JsonReader implements Closeable
     private final boolean isRoot;
 
     /**
-     * Subclass this interface and create a class that will return a new instance of the
-     * passed in Class (c).  Your factory subclass will be called when json-io encounters an
-     * instance of (c) which you register with JsonReader.assignInstantiator().
-     * Use the passed in JsonObject o which is a JsonObject to source values for the construction
-     * of your class.
+     * @deprecated Use top-level {@link com.cedarsoftware.io.ClassFactory} instead.
+     *             This nested interface is kept for backward compatibility.
      */
-    public interface ClassFactory
-    {
-        /**
-         * Implement this method to return a new instance of the passed in Class.  Use the passed
-         * in JsonObject to supply values to the construction of the object.
-         *
-         * @param c        Class of the object that needs to be created
-         * @param jObj     JsonObject (if primitive type do jObj.getPrimitiveValue();
-         * @param resolver Resolve instance that has references to ID Map, Converter, ReadOptions
-         * @return a new instance of C.  If you fill the new instance using the value(s)
-         * from object, and no further work is needed for construction, then
-         * override the isObjectFinal() method below and return true.
-         */
-        default Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-            return ClassUtilities.newInstance(resolver.getConverter(), c, jObj);
-        }
-        
-        /**
-         * @return true if this object is instantiated and completely filled using the contents
-         * from the Object [a JsonObject or value].  In this case, no further processing
-         * will be performed on the instance.  If the object has sub-objects (complex fields),
-         * then return false so that the JsonReader will continue on filling out the remaining
-         * portion of the object.
-         */
-        default boolean isObjectFinal() {
-            return false;
-        }
+    @Deprecated
+    public interface ClassFactory extends com.cedarsoftware.io.ClassFactory {
     }
 
     /**
-     * Used to react to fields missing when reading an object. This method will be called after all deserialization has
-     * occurred to allow all ref to be resolved.
-     * <p>
-     * Used in conjunction with {@link ReadOptions#getMissingFieldHandler()}.
+     * @deprecated Use top-level {@link com.cedarsoftware.io.MissingFieldHandler} instead.
+     *             This nested interface is kept for backward compatibility.
      */
-    public interface MissingFieldHandler
-    {
-        /**
-         * Notify that a field is missing. <br>
-         * Warning : not every type can be deserialized upon missing fields. Arrays and Object type that do not have
-         * serialized @type definition will be ignored.
-         *
-         * @param object the object that contains the missing field
-         * @param fieldName name of the field to be replaced
-         * @param value current value of the field
-         */
-        void fieldMissing(Object object, String fieldName, Object value);
+    @Deprecated
+    public interface MissingFieldHandler extends com.cedarsoftware.io.MissingFieldHandler {
     }
 
     /**
-     * Implement this interface to add a custom JSON reader.
-     * Recommended: Use ClassFactory instead - that allows you to instantiate and read the JSON object in one operation.
+     * @deprecated Use top-level {@link com.cedarsoftware.io.JsonClassReader} instead.
+     *             This nested interface is kept for backward compatibility.
      */
-    public interface JsonClassReader<T>
-    {
-        /**
-         * Read a custom object. Only process the non-structural values for any given reader, and push the structural
-         * elements (non-primitive fields) onto the resolver's stack, to be processed.
-         * @param jsonObj  Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
-         * @param resolver Provides access to push non-primitive items onto the stack for further processing. This will
-         *                allow it to be processed by a standard processor (array, Map, Collection) or another custom
-         *                factory or reader that handles the "next level."  You can handle sub-objects here if you wanted.
-         * @return Java Object that you filled out with values from the passed in jsonObj.
-         */
-        default T read(Object jsonObj, Resolver resolver) {
-            throw new UnsupportedOperationException("You must implement this method and read the JSON content from jsonObj and copy the values from jsonObj to the target class, jsonObj.getTarget()");
-        }
+    @Deprecated
+    public interface JsonClassReader<T> extends com.cedarsoftware.io.JsonClassReader<T> {
     }
 
     /**
