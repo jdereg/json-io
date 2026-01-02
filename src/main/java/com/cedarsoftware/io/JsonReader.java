@@ -108,12 +108,9 @@ public class JsonReader implements Closeable
              new Resolver.DefaultReferenceTracker(readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions));
     }
 
-    /**
-     * Internal constructor for InputStream with custom ReferenceTracker.
-     * Package-private as ReferenceTracker management is an internal concern.
-     */
+    // Package-private: creates parser with custom ReferenceTracker
     JsonReader(InputStream inputStream, ReadOptions readOptions, ReferenceTracker references) {
-        this.isRoot = true;   // When root is true, the resolver has .cleanup() called on it upon JsonReader finalization
+        this.isRoot = true;
         this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
         Converter converter = new Converter(this.readOptions.getConverterOptions());
         this.input = getReader(inputStream);
@@ -123,12 +120,9 @@ public class JsonReader implements Closeable
         this.parser = new JsonParser(this.input, this.resolver);
     }
 
-    /**
-     * Internal constructor for Reader with custom ReferenceTracker.
-     * Package-private as ReferenceTracker management is an internal concern.
-     */
+    // Package-private: creates parser with custom ReferenceTracker
     JsonReader(Reader reader, ReadOptions readOptions, ReferenceTracker references) {
-        this.isRoot = true;   // When root is true, the resolver has .cleanup() called on it upon JsonReader finalization
+        this.isRoot = true;
         this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
         Converter converter = new Converter(this.readOptions.getConverterOptions());
         this.input = getReader(reader);
@@ -139,22 +133,16 @@ public class JsonReader implements Closeable
     }
 
     /**
-     * Use this constructor if you already have a JsonObject graph and want to parse it into
-     * Java objects by calling jsonReader.jsonObjectsToJava(rootJsonObject) after constructing
-     * the JsonReader. This constructor only sets up the resolver and converter needed for
-     * object resolution, without creating unnecessary stream infrastructure.
+     * Creates a JsonReader for resolving existing JsonObject graphs (no stream parsing).
+     * After construction, call {@link #toJava(Type, Object)} to convert JsonObjects to Java.
      *
-     * @param readOptions Read Options to turn on/off various feature options, or supply additional ClassFactory data,
-     *                    etc. If null, readOptions will use all defaults.
+     * @param readOptions ReadOptions for configuration (null uses defaults)
      */
     public JsonReader(ReadOptions readOptions) {
         this(readOptions, new Resolver.DefaultReferenceTracker(readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions));
     }
 
-    /**
-     * Internal constructor for creating a JsonReader that only needs resolver/converter (no stream parsing).
-     * Used when converting JsonObject graphs to Java objects without reading from a stream.
-     */
+    // Package-private: resolver-only (no stream parsing)
     JsonReader(ReadOptions readOptions, ReferenceTracker references) {
         this.isRoot = true;
         this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
@@ -162,106 +150,68 @@ public class JsonReader implements Closeable
         this.resolver = this.readOptions.isReturningJsonObjects() ?
                 new MapResolver(this.readOptions, references, converter) :
                 new ObjectResolver(this.readOptions, references, converter);
-        // No stream/parser needed for this use case - only resolving existing JsonObjects
         this.input = null;
         this.parser = null;
     }
 
     /**
-     * Use this constructor to resolve JsonObjects into Java, for example, in a ClassFactory or custom reader.
-     * Then use jsonReader.jsonObjectsToJava(rootJsonObject) to turn JsonObject graph (sub-graph) into Java.
-     * This constructor only sets up the resolver - no stream/parser is created since the graph is already read in.
+     * Creates a JsonReader for nested resolution within ClassFactory or custom reader implementations.
+     * Call {@link #toJava(Type, Object)} to resolve JsonObject sub-graphs into Java objects.
      *
-     * @param resolver Resolver, obtained from ClassFactory.newInstance() or CustomReader.read().
+     * @param resolver Resolver from the parent context (via ClassFactory or JsonClassReader)
      */
     public JsonReader(Resolver resolver) {
-        this.isRoot = false;    // If not root, .cleanup() is not called when the JsonReader is finalized
+        this.isRoot = false;  // Nested reader - cleanup handled by root
         this.resolver = resolver;
         this.readOptions = resolver.getReadOptions();
-        // No stream/parser needed - graph is already read in when using this API
         this.input = null;
         this.parser = null;
     }
 
     /**
-     * Reads and parses a JSON structure from the underlying {@code parser}, then returns
-     * an object of type {@code T}. The parsing and return type resolution follow these steps:
+     * Parses JSON from the input stream and returns a Java object of the specified type.
      *
-     * <ul>
-     *   <li>Attempts to parse the top-level JSON element (e.g. object, array, or primitive) and
-     *   produce an initial {@code returnValue} of type {@code T} (as inferred or declared).</li>
-     *   <li>If the parsed value is {@code null}, simply returns {@code null}.</li>
-     *   <li>If the value is recognized as an “array-like” structure (either an actual Java array or
-     *   a {@link JsonObject} flagged as an array), it delegates to {@code handleArrayRoot()} to build
-     *   the final result object.</li>
-     *   <li>If the value is a {@link JsonObject} at the root, it delegates to
-     *   {@code determineReturnValueWhenJsonObjectRoot()} for further resolution.</li>
-     *   <li>Otherwise (if it’s a primitive or other type), it may convert the result
-     *   to {@code rootType} if needed/possible.</li>
-     * </ul>
-     *
-     * @param <T>       The expected return type.
-     * @param rootType  The class token representing the desired return type. May be {@code null},
-     *                  in which case the type is inferred from the JSON content or defaults to
-     *                  the parser’s best guess.
-     * @return          The fully resolved and (if applicable) type-converted object.
-     *                  Could be {@code null} if the JSON explicitly represents a null value.
-     * @throws JsonIoException if there is any error parsing or resolving the JSON content,
-     *         or if type conversion fails (e.g., when the actual type does not match
-     *         the requested {@code rootType} and no valid conversion is available).
+     * @param <T>      the expected return type
+     * @param rootType the target type (null to infer from JSON @type or use Object)
+     * @return the deserialized Java object, or null if JSON is null
+     * @throws JsonIoException if parsing fails or type conversion is not possible
      */
     public <T> T readObject(Type rootType) {
         final T returnValue;
         try {
-            // Attempt to parse the JSON into an object
             returnValue = (T) parser.readValue(rootType);
         } catch (JsonIoException e) {
             throw e;
         } catch (Exception e) {
-            // Wrap any other exception
             throw new JsonIoException(getErrorMessage("error parsing JSON value"), e);
         }
-
         return (T) toJava(rootType, returnValue);
     }
 
     /**
-     * Only use from ClassFactory or CustomReader.
-     * Delegates to the Resolver's resolveRoot method which handles routing
-     * based on the type of parsed value (array, object, or primitive).
-     * Includes lifecycle management (unsafe mode, cleanup) for proper resolution.
+     * Resolves a parsed JSON value to a Java object. Handles lifecycle management.
+     * Used by ClassFactory and JsonClassReader implementations for nested resolution.
      */
     public Object toJava(Type rootType, Object root) {
-        // Enable unsafe mode for the entire resolution if requested
-        boolean shouldManageUnsafe = false;
+        boolean shouldManageUnsafe = readOptions.isUseUnsafe() && isRoot;
         if (readOptions.isUseUnsafe()) {
             ClassUtilities.setUseUnsafe(true);
-            // Only the root JsonReader should manage (disable) unsafe mode at the end
-            shouldManageUnsafe = isRoot;
         }
 
         try {
             return resolver.resolveRoot(root, rootType);
         } catch (Exception e) {
-            // Safely close the stream if the read options specify to do so
             if (readOptions.isCloseStream()) {
                 ExceptionUtilities.safelyIgnoreException(this::close);
             }
-
-            // Rethrow known JsonIoExceptions directly
             if (e instanceof JsonIoException) {
                 throw (JsonIoException) e;
             }
-
-            // Wrap other exceptions in a JsonIoException for consistency
             throw new JsonIoException(getErrorMessage(e.getMessage()), e);
         } finally {
-            // Restore unsafe mode to its original state
             if (shouldManageUnsafe) {
                 ClassUtilities.setUseUnsafe(false);
             }
-
-            // Cleanup the resolver's state post-resolution (only if root)
             if (isRoot) {
                 resolver.cleanup();
             }
