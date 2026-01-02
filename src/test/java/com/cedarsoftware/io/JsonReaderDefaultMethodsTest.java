@@ -1,5 +1,6 @@
 package com.cedarsoftware.io;
 
+import com.cedarsoftware.util.convert.Converter;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -14,10 +15,13 @@ public class JsonReaderDefaultMethodsTest {
 
     @Test
     void classFactoryDefaultNewInstanceReturnsObject() {
-        JsonReader.ClassFactory factory = new JsonReader.ClassFactory() {};
-        JsonReader reader = new JsonReader(ReadOptionsBuilder.getDefaultReadOptions());
+        ClassFactory factory = new ClassFactory() {};
+        ReadOptions options = ReadOptionsBuilder.getDefaultReadOptions();
+        ReferenceTracker references = new Resolver.DefaultReferenceTracker(options);
+        Converter converter = new Converter(options.getConverterOptions());
+        Resolver resolver = new ObjectResolver(options, references, converter);
 
-        Object instance = factory.newInstance(Sample.class, null, reader.getResolver());
+        Object instance = factory.newInstance(Sample.class, null, resolver);
 
         assertTrue(instance instanceof Sample);
     }
