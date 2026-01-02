@@ -28,10 +28,13 @@ public class JsonReaderDefaultMethodsTest {
 
     @Test
     void jsonClassReaderReadThrowsByDefault() {
-        JsonReader.JsonClassReader classReader = new JsonReader.JsonClassReader() {};
-        JsonReader reader = new JsonReader(ReadOptionsBuilder.getDefaultReadOptions());
+        JsonClassReader classReader = new JsonClassReader() {};
+        ReadOptions options = ReadOptionsBuilder.getDefaultReadOptions();
+        ReferenceTracker references = new Resolver.DefaultReferenceTracker(options);
+        Converter converter = new Converter(options.getConverterOptions());
+        Resolver resolver = new ObjectResolver(options, references, converter);
 
         assertThrows(UnsupportedOperationException.class,
-                () -> classReader.read(new JsonObject(), reader.getResolver()));
+                () -> classReader.read(new JsonObject(), resolver));
     }
 }
