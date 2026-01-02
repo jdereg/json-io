@@ -26,7 +26,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
-import com.cedarsoftware.io.JsonReader.MissingFieldHandler;
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.ClassUtilities;
@@ -254,8 +253,7 @@ public abstract class Resolver {
         if (value == null) {
             return null;
         }
-        JsonReader reader = new JsonReader(this);
-        return (T) reader.toJava(type, value);
+        return (T) toJava(type, value);
     }
 
     /**
@@ -273,8 +271,7 @@ public abstract class Resolver {
         if (value == null) {
             return null;
         }
-        JsonReader reader = new JsonReader(this);
-        return (T[]) reader.toJava(arrayType, value);
+        return (T[]) toJava(arrayType, value);
     }
 
     /**
@@ -292,8 +289,7 @@ public abstract class Resolver {
         if (value == null) {
             return null;
         }
-        JsonReader reader = new JsonReader(this);
-        return (List<T>) reader.toJava(List.class, value);
+        return (List<T>) toJava(List.class, value);
     }
 
     /**
@@ -312,8 +308,19 @@ public abstract class Resolver {
         if (value == null) {
             return null;
         }
-        JsonReader reader = new JsonReader(this);
-        return (Map<K, V>) reader.toJava(Map.class, value);
+        return (Map<K, V>) toJava(Map.class, value);
+    }
+
+    /**
+     * Resolves a parsed JSON value to a Java object.
+     * Used by ClassFactory implementations for nested resolution.
+     *
+     * @param type the target type (may be null to infer from JSON)
+     * @param value the parsed JSON value (JsonObject, array, or primitive)
+     * @return the resolved Java object
+     */
+    public Object toJava(Type type, Object value) {
+        return resolveRoot(value, type);
     }
 
     /**
