@@ -14,30 +14,19 @@ import com.cedarsoftware.util.IOUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
 /**
- * Read an object graph in JSON format and make it available in Java objects, or
- * in a "Map of Maps." (untyped representation).  This code handles cyclic references
- * and can deserialize any Object graph without requiring a class to be 'Serializable'
- * or have any specific methods on it.  It will handle classes with non-public constructors.
- * <br><br>
- * Usages:
- * <ul><li>
- * Call the static method: {@code JsonReader.jsonToJava(String json)}.  This will
- * return a typed Java object graph.</li>
- * <li>
- * Call the static method: {@code JsonReader.jsonToMaps(String json)}.  This will
- * return an untyped object representation of the JSON String as a Map of Maps, where
- * the fields are the Map keys, and the field values are the associated Map's values.  You can
- * call the JsonWriter.objectToJson() method with the returned Map, and it will serialize
- * the Graph into the equivalent JSON stream from which it was read.
- * <li>
- * Instantiate the JsonReader with an InputStream: {@code JsonReader(InputStream in)} and then call
- * {@code readObject()}.  Cast the return value of readObject() to the Java class that was the root of
- * the graph.
- * </li>
- * <li>
- * Instantiate the JsonReader with an InputStream: {@code JsonReader(InputStream in, true)} and then call
- * {@code readObject()}.  The return value will be a Map of Maps.
- * </li></ul><br>
+ * Internal class that orchestrates JSON parsing and object resolution.
+ * <p>
+ * For most use cases, prefer using {@link JsonIo} which provides a cleaner API:
+ * <pre>
+ * // Parse JSON to Java objects
+ * Person person = JsonIo.toJava(jsonString, readOptions).asClass(Person.class);
+ *
+ * // Parse JSON to Map-of-Maps
+ * Map map = JsonIo.toMaps(jsonString, readOptions).asClass(Map.class);
+ * </pre>
+ * <p>
+ * JsonReader is used internally and by {@link ClassFactory} implementations that need
+ * to resolve nested JsonObjects during custom object construction.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -87,21 +76,11 @@ public class JsonReader implements Closeable
     public interface JsonClassReader<T> extends com.cedarsoftware.io.JsonClassReader<T> {
     }
 
-    /**
-     * Allow others to try potentially faster Readers.
-     * @param inputStream InputStream that will be offering JSON.
-     * @return FastReader wrapped around the passed in inputStream, translating from InputStream to InputStreamReader.
-     */
-    protected FastReader getReader(InputStream inputStream) {
+    private FastReader getReader(InputStream inputStream) {
         return new FastReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8), 65536, 16);
     }
 
-    /**
-     * Allow others to try potentially faster Readers.
-     * @param reader Reader that will be offering JSON characters.
-     * @return FastReader wrapped around the passed in reader.
-     */
-    protected FastReader getReader(Reader reader) {
+    private FastReader getReader(Reader reader) {
         return new FastReader(reader, 65536, 16);
     }
 
@@ -308,38 +287,10 @@ public class JsonReader implements Closeable
     }
 
     /**
-     * Returns the current {@link Resolver} instance used for JSON deserialization.
+     * Returns the Resolver instance used for JSON deserialization.
+     * Used by {@link ClassFactory} implementations to resolve nested JsonObjects.
      *
-     * <p>The {@code Resolver} serves as the superclass for both {@link ObjectResolver} and {@link MapResolver},
-     * each handling specific aspects of converting JSON structures into Java objects.</p>
-     *
-     * <ul>
-     *     <li><strong>ObjectResolver:</strong>
-     *         <p>
-     *             Responsible for converting JSON maps (represented by {@link JsonObject}) into their corresponding
-     *             Java object instances. It handles the instantiation of Java classes and populates their fields based on
-     *             the JSON data.
-     *         </p>
-     *     </li>
-     *     <li><strong>MapResolver:</strong>
-     *         <p>
-     *             Focuses on refining the value side within a map. It utilizes the class information associated with
-     *             a {@link JsonObject} to coerce primitive fields in the map's values to their correct data types.
-     *             For example, if a {@code Long} is serialized as a {@code String} in the JSON, the {@code MapResolver}
-     *             will convert it back to a {@code Long} within the map by matching the JSON key to the corresponding
-     *             field in the Java class and transforming the raw JSON primitive value to the field's type (e.g., {@code long}/{@code Long}).
-     *         </p>
-     *     </li>
-     * </ul>
-     *
-     * <p>
-     * This method is essential for scenarios where JSON data needs to be deserialized into Java objects,
-     * ensuring that both object instantiation and type coercion are handled appropriately.
-     * </p>
-     *
-     * @return the {@code Resolver} currently in use. This {@code Resolver} is the superclass for
-     *         {@code ObjectResolver} and {@code MapResolver}, facilitating the conversion of JSON structures
-     *         into Java objects and the coercion of map values to their correct data types.
+     * @return the Resolver (either ObjectResolver or MapResolver depending on ReadOptions)
      */
     public Resolver getResolver() {
         return resolver;
@@ -349,17 +300,11 @@ public class JsonReader implements Closeable
         IOUtilities.close(input);
     }
 
-    private String getErrorMessage(String msg)
-    {
+    private String getErrorMessage(String msg) {
         if (input == null) {
             return msg;
         }
-
-        StringBuilder sb = new StringBuilder(msg.length() + 100); // Pre-size for efficiency
-        sb.append(msg)
-          .append("\nLast read: ").append(input.getLastSnippet())
-          .append("\nline: ").append(input.getLine())
-          .append(", col: ").append(input.getCol());
-        return sb.toString();
+        return msg + "\nLast read: " + input.getLastSnippet() +
+               "\nline: " + input.getLine() + ", col: " + input.getCol();
     }
 }
