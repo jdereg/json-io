@@ -5,7 +5,6 @@ import java.io.Closeable;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -19,7 +18,6 @@ import com.cedarsoftware.util.ExceptionUtilities;
 import com.cedarsoftware.util.FastByteArrayInputStream;
 import com.cedarsoftware.util.FastReader;
 import com.cedarsoftware.util.IOUtilities;
-import com.cedarsoftware.util.TypeUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
 /**
@@ -70,7 +68,6 @@ public class JsonReader implements Closeable
     private final Resolver resolver;
     private final ReadOptions readOptions;
     private final JsonParser parser;
-    private final Converter localConverter;
     private final boolean isRoot;
 
     /**
@@ -200,7 +197,6 @@ public class JsonReader implements Closeable
                 new MapResolver(this.readOptions, references, converter) :
                 new ObjectResolver(this.readOptions, references, converter);
         this.parser = new JsonParser(this.input, this.resolver);
-        localConverter = converter;  // Reuse the same converter instance instead of creating a duplicate
     }
 
     public JsonReader(Reader reader, ReadOptions readOptions, ReferenceTracker references) {
@@ -212,7 +208,6 @@ public class JsonReader implements Closeable
                 new MapResolver(this.readOptions, references, converter) :
                 new ObjectResolver(this.readOptions, references, converter);
         this.parser = new JsonParser(this.input, this.resolver);
-        localConverter = converter;  // Reuse the same converter instance instead of creating a duplicate
     }
 
     /**
@@ -236,7 +231,6 @@ public class JsonReader implements Closeable
         this.isRoot = true;
         this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
         Converter converter = new Converter(this.readOptions.getConverterOptions());
-        this.localConverter = converter;
         this.resolver = this.readOptions.isReturningJsonObjects() ?
                 new MapResolver(this.readOptions, references, converter) :
                 new ObjectResolver(this.readOptions, references, converter);
@@ -256,7 +250,6 @@ public class JsonReader implements Closeable
         this.isRoot = false;    // If not root, .cleanup() is not called when the JsonReader is finalized
         this.resolver = resolver;
         this.readOptions = resolver.getReadOptions();
-        this.localConverter = resolver.getConverter();
         // No stream/parser needed - graph is already read in when using this API
         this.input = null;
         this.parser = null;
@@ -305,203 +298,46 @@ public class JsonReader implements Closeable
     }
 
     /**
-     * Only use from ClassFactory or CustomReader
+     * Only use from ClassFactory or CustomReader.
+     * Delegates to the Resolver's resolveRoot method which handles routing
+     * based on the type of parsed value (array, object, or primitive).
+     * Includes lifecycle management (unsafe mode, cleanup) for proper resolution.
      */
     public Object toJava(Type rootType, Object root) {
-        if (root == null) {
-            return null;
-        }
-
-        // Handle arrays (Java arrays or JsonObjects flagged as arrays)
-        if (isRootArray(root)) {
-            return extractTargetIfNeeded(handleArrayRoot(rootType, root));
-        }
-
-        // Handle JsonObjects (non-array)
-        if (root instanceof JsonObject) {
-            return extractTargetIfNeeded(handleObjectRoot(rootType, (JsonObject) root));
-        }
-
-        // Primitives (String, Boolean, Number, etc.)
-        return convertIfNeeded(rootType, root);
-    }
-
-    /**
-     * In Java mode, if the result is a JsonObject with a target, return the target.
-     * In Maps mode, return the value as-is.
-     */
-    private Object extractTargetIfNeeded(Object value) {
-        if (readOptions.isReturningJavaObjects()
-                && value instanceof JsonObject
-                && ((JsonObject) value).target != null) {
-            return ((JsonObject) value).target;
-        }
-        return value;
-    }
-
-    /**
-     * Returns true if the parsed object represents a root-level “array,”
-     * meaning either an actual Java array, or a JsonObject marked as an array.
-     */
-    private boolean isRootArray(Object value) {
-        if (value == null) {
-            return false;
-        }
-        if (value.getClass().isArray()) {
-            return true;
-        }
-        return (value instanceof JsonObject) && ((JsonObject) value).isArray();
-    }
-
-    /**
-     * Handles the case where the top-level element is an array (either a real Java array,
-     * or a JsonObject that’s flagged as an array).
-     */
-    private Object handleArrayRoot(Type rootType, Object returnValue) {
-        JsonObject rootObj;
-
-        // If it’s actually a Java array
-        if (returnValue.getClass().isArray()) {
-            rootObj = new JsonObject();
-            rootObj.setType(rootType);
-            rootObj.setTarget(returnValue);
-            rootObj.setItems((Object[])returnValue);
-        } else {
-            // Otherwise, it’s a JsonObject that has isArray() == true
-            rootObj = (JsonObject) returnValue;
-        }
-
-        // Attempt to build the final graph object
-        Object graph = resolveObjects(rootObj, rootType);
-        if (graph == null) {
-            // If resolveObjects returned null, fall back on the items as the final object
-            graph = rootObj.getItems();
-        }
-
-        // Perform any needed type conversion before returning
-        return convertIfNeeded(rootType, graph);
-    }
-
-    /**
-     * Converts returnValue to the desired rootType if necessary and possible.
-     */
-    @SuppressWarnings("unchecked")
-    private Object convertIfNeeded(Type rootType, Object returnValue) {
-        if (rootType == null) {
-            // If no specific type was requested, return as-is
-            return returnValue;
-        }
-        Class<?> rootClass = TypeUtilities.getRawClass(rootType);
-
-        // If the value is already the desired type (or a subtype), just return
-        if (rootClass.isAssignableFrom(returnValue.getClass())) {
-            return returnValue;
-        }
-
-        // Allow simple String to Enum conversion when needed with validation
-        if (rootClass.isEnum() && returnValue instanceof String) {
-            String enumValue = (String) returnValue;
-            // Security: Validate enum string to prevent malicious input
-            if (enumValue == null || enumValue.trim().isEmpty()) {
-                throw new JsonIoException("Invalid enum value: null or empty string for enum type " + rootClass.getName());
-            }
-            int maxEnumLength = readOptions.getMaxEnumNameLength();
-            if (enumValue.length() > maxEnumLength) {
-                throw new JsonIoException("Security limit exceeded: Enum name too long (" + enumValue.length() + " chars, max " + maxEnumLength + ") for enum type " + rootClass.getName());
-            }
-            try {
-                return Enum.valueOf((Class<Enum>) rootClass, enumValue.trim());
-            } catch (IllegalArgumentException e) {
-                throw new JsonIoException("Invalid enum value '" + enumValue + "' for enum type " + rootClass.getName(), e);
-            }
+        // Enable unsafe mode for the entire resolution if requested
+        boolean shouldManageUnsafe = false;
+        if (readOptions.isUseUnsafe()) {
+            ClassUtilities.setUseUnsafe(true);
+            // Only the root JsonReader should manage (disable) unsafe mode at the end
+            shouldManageUnsafe = isRoot;
         }
 
         try {
-            return localConverter.convert(returnValue, rootClass);
+            return resolver.resolveRoot(root, rootType);
         } catch (Exception e) {
-            throw new JsonIoException("Return type mismatch. Expecting: " +
-                    rootClass.getName() + ", found: " + returnValue.getClass().getName(), e);
-        }
-    }
-
-    /**
-     * Handles the top-level case where the parsed JSON is represented as a non-array
-     * {@link JsonObject}. This method applies fallback type logic if needed, resolves
-     * internal references to build the final object graph, and then performs any necessary
-     * conversions based on the following conditions:
-     * <ul>
-     *   <li>Whether <code>returnJsonObjects</code> (i.e. "JSON mode") is enabled, or</li>
-     *   <li>A specific <code>rootType</code> is requested by the caller.</li>
-     * </ul>
-     *
-     * <p>The high-level steps are:</p>
-     * <ol>
-     *   <li><strong>Fallback type check:</strong> If a special case applies, update the
-     *       <code>@type</code> in the {@link JsonObject} before resolution.</li>
-     *   <li><strong>Resolution:</strong> Call <code>resolveObjects()</code> to hydrate the
-     *       parsed structure into a Java object graph (which may be a Collection, Map, bean, or even <code>null</code>).</li>
-     *   <li><strong>Null handling:</strong> If the resolved <code>graph</code> is <code>null</code>,
-     *       this method returns the original {@code JsonObject} (i.e. <code>returnValue</code>).</li>
-     *   <li><strong>rootType handling (Java mode or JSON mode):</strong>
-     *     <ul>
-     *       <li>If a non-null <code>rootType</code> is specified, check whether the resolved <code>graph</code>
-     *           is already assignable to it. Otherwise, attempt a conversion (if supported) or return the unconverted
-     *           object.</li>
-     *       <li>If no <code>rootType</code> is provided, fall back to returning either the fully resolved Java object
-     *           (when <code>returnJsonObjects == false</code>) or the raw {@code JsonObject} (when <code>returnJsonObjects == true</code>),
-     *           except in cases where a simple type conversion can be applied.</li>
-     *     </ul>
-     *   </li>
-     * </ol>
-     *
-     * @param rootType the expected return type (as a {@link java.lang.reflect.Type}), including any generic type information;
-     *                 may be {@code null} for type inference.
-     * @param jsonObj the initial parsed representation
-     * @return the resolved and, if necessary, converted object graph, or the raw {@code JsonObject}, depending on the mode
-     *         and convertibility.
-     */
-    private Object handleObjectRoot(Type rootType, JsonObject jsonObj) {
-        // Resolve internal references/build the object graph.
-        // Note: Sorted collection substitution (TreeSet->Set, TreeMap->Map) now happens in MapResolver.
-        Object graph = resolveObjects(jsonObj, rootType);
-
-        Class<?> rawRootType = (rootType == null ? null : TypeUtilities.getRawClass(rootType));
-
-        // If resolution produced null, return the original JsonObject.
-        if (graph == null) {
-            return jsonObj;
-        }
-
-        // 3) If a specific rootType was provided...
-        if (rootType != null) {
-            // If the resolved graph is already assignable to the requested type, return it.
-            if (rawRootType != null && rawRootType.isAssignableFrom(graph.getClass())) {
-                return graph;
-            }
-            // Otherwise, if conversion is supported, perform the conversion.
-            if (rawRootType != null && localConverter.isConversionSupportedFor(graph.getClass(), rawRootType)) {
-                return localConverter.convert(graph, rawRootType);
+            // Safely close the stream if the read options specify to do so
+            if (readOptions.isCloseStream()) {
+                ExceptionUtilities.safelyIgnoreException(this::close);
             }
 
-            // Otherwise, try to find common ancestors (excluding Object, Serializable, Cloneable).
-            Set<Class<?>> skipRoots = new HashSet<>();
-            skipRoots.add(Object.class);
-            skipRoots.add(Serializable.class);
-            skipRoots.add(Cloneable.class);
-
-            Set<Class<?>> commonAncestors = ClassUtilities.findLowestCommonSupertypesExcluding(graph.getClass(), rawRootType, skipRoots);
-            if (commonAncestors.isEmpty()) {
-                throw new ClassCastException("Return type mismatch, expected: " +
-                        (rawRootType != null ? rawRootType.getName() : rootType.toString()) +
-                        ", actual: " + graph.getClass().getName());
+            // Rethrow known JsonIoExceptions directly
+            if (e instanceof JsonIoException) {
+                throw (JsonIoException) e;
             }
-            return graph;
-        }
 
-        // 4) No specific rootType was requested - return the resolved graph.
-        // For Maps mode, MapResolver.reconcileResult() handles type reconciliation.
-        // For Java mode, ObjectResolver returns fully resolved Java objects.
-        return graph;
+            // Wrap other exceptions in a JsonIoException for consistency
+            throw new JsonIoException(getErrorMessage(e.getMessage()), e);
+        } finally {
+            // Restore unsafe mode to its original state
+            if (shouldManageUnsafe) {
+                ClassUtilities.setUseUnsafe(false);
+            }
+
+            // Cleanup the resolver's state post-resolution (only if root)
+            if (isRoot) {
+                resolver.cleanup();
+            }
+        }
     }
 
     /**

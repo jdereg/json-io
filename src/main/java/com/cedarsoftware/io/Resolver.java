@@ -1,5 +1,6 @@
 package com.cedarsoftware.io;
 
+import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
@@ -16,6 +17,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.Vector;
@@ -43,6 +45,7 @@ import com.cedarsoftware.util.ConcurrentList;
 import com.cedarsoftware.util.ConcurrentNavigableSetNullSafe;
 import com.cedarsoftware.util.ConcurrentSet;
 import com.cedarsoftware.util.StringUtilities;
+import com.cedarsoftware.util.TypeUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
 /**
@@ -437,6 +440,196 @@ public abstract class Resolver {
      */
     protected Object reconcileResult(Object result, JsonObject rootObj, Type rootType) {
         return result;  // Default: return as-is
+    }
+
+    // ========== Root Resolution Methods ==========
+    // These methods handle the routing and resolution of parsed values at the root level.
+    // They were moved from JsonReader to consolidate resolution logic in the Resolver.
+
+    /**
+     * Resolves a parsed value to a Java object.
+     * This handles routing based on the type of parsed value (array, object, or primitive)
+     * and delegates to the appropriate resolution logic.
+     *
+     * @param parsed the parsed value (can be null, array, JsonObject, or primitive)
+     * @param rootType the expected return type (may be null for type inference)
+     * @return the resolved Java object
+     */
+    public Object resolveRoot(Object parsed, Type rootType) {
+        if (parsed == null) {
+            return null;
+        }
+
+        // Handle arrays (Java arrays or JsonObjects flagged as arrays)
+        if (isRootArray(parsed)) {
+            return extractTargetIfNeeded(handleArrayRoot(rootType, parsed));
+        }
+
+        // Handle JsonObjects (non-array)
+        if (parsed instanceof JsonObject) {
+            return extractTargetIfNeeded(handleObjectRoot(rootType, (JsonObject) parsed));
+        }
+
+        // Primitives (String, Boolean, Number, etc.)
+        return convertIfNeeded(rootType, parsed);
+    }
+
+    /**
+     * Returns true if the parsed object represents a root-level "array,"
+     * meaning either an actual Java array, or a JsonObject marked as an array.
+     */
+    private boolean isRootArray(Object value) {
+        if (value == null) {
+            return false;
+        }
+        if (value.getClass().isArray()) {
+            return true;
+        }
+        return (value instanceof JsonObject) && ((JsonObject) value).isArray();
+    }
+
+    /**
+     * In Java mode, if the result is a JsonObject with a target, return the target.
+     * In Maps mode, return the value as-is.
+     */
+    private Object extractTargetIfNeeded(Object value) {
+        if (readOptions.isReturningJavaObjects()
+                && value instanceof JsonObject
+                && ((JsonObject) value).target != null) {
+            return ((JsonObject) value).target;
+        }
+        return value;
+    }
+
+    /**
+     * Handles the case where the top-level element is an array (either a real Java array,
+     * or a JsonObject that's flagged as an array).
+     */
+    private Object handleArrayRoot(Type rootType, Object returnValue) {
+        JsonObject rootObj;
+
+        // If it's actually a Java array
+        if (returnValue.getClass().isArray()) {
+            rootObj = new JsonObject();
+            rootObj.setType(rootType);
+            rootObj.setTarget(returnValue);
+            rootObj.setItems((Object[]) returnValue);
+        } else {
+            // Otherwise, it's a JsonObject that has isArray() == true
+            rootObj = (JsonObject) returnValue;
+        }
+
+        // Resolve the array through toJavaObjects
+        Object graph = toJavaObjects(rootObj, rootType);
+        if (graph == null) {
+            // If resolution returned null, fall back on the items as the final object
+            graph = rootObj.getItems();
+        }
+
+        // Patch forward references and rehash maps BEFORE conversion.
+        // This is critical because conversion may create immutable collections
+        // that can't be modified after creation.
+        patchUnresolvedReferences();
+        rehashMaps();
+
+        // Perform any needed type conversion before returning
+        return convertIfNeeded(rootType, graph);
+    }
+
+    /**
+     * Handles the top-level case where the parsed JSON is represented as a non-array
+     * JsonObject. This method resolves internal references to build the final object graph,
+     * and then performs any necessary type checking or conversion.
+     */
+    private Object handleObjectRoot(Type rootType, JsonObject jsonObj) {
+        // Resolve internal references/build the object graph.
+        Object graph = toJavaObjects(jsonObj, rootType);
+
+        // Patch forward references and rehash maps BEFORE any conversion.
+        // This is critical because conversion may create immutable objects
+        // that can't be modified after creation.
+        patchUnresolvedReferences();
+        rehashMaps();
+
+        Class<?> rawRootType = (rootType == null ? null : TypeUtilities.getRawClass(rootType));
+
+        // If resolution produced null, return the original JsonObject.
+        if (graph == null) {
+            return jsonObj;
+        }
+
+        // If a specific rootType was provided...
+        if (rootType != null) {
+            // If the resolved graph is already assignable to the requested type, return it.
+            if (rawRootType != null && rawRootType.isAssignableFrom(graph.getClass())) {
+                return graph;
+            }
+            // Otherwise, if conversion is supported, perform the conversion.
+            Converter converter = getConverter();
+            if (rawRootType != null && converter.isConversionSupportedFor(graph.getClass(), rawRootType)) {
+                return converter.convert(graph, rawRootType);
+            }
+
+            // Otherwise, try to find common ancestors (excluding Object, Serializable, Cloneable).
+            Set<Class<?>> skipRoots = new HashSet<>();
+            skipRoots.add(Object.class);
+            skipRoots.add(Serializable.class);
+            skipRoots.add(Cloneable.class);
+
+            Set<Class<?>> commonAncestors = ClassUtilities.findLowestCommonSupertypesExcluding(graph.getClass(), rawRootType, skipRoots);
+            if (commonAncestors.isEmpty()) {
+                throw new ClassCastException("Return type mismatch, expected: " +
+                        (rawRootType != null ? rawRootType.getName() : rootType.toString()) +
+                        ", actual: " + graph.getClass().getName());
+            }
+            return graph;
+        }
+
+        // No specific rootType was requested - return the resolved graph.
+        return graph;
+    }
+
+    /**
+     * Converts returnValue to the desired rootType if necessary and possible.
+     */
+    @SuppressWarnings("unchecked")
+    private Object convertIfNeeded(Type rootType, Object returnValue) {
+        if (rootType == null) {
+            // If no specific type was requested, return as-is
+            return returnValue;
+        }
+        Class<?> rootClass = TypeUtilities.getRawClass(rootType);
+
+        // If the value is already the desired type (or a subtype), just return
+        if (rootClass.isAssignableFrom(returnValue.getClass())) {
+            return returnValue;
+        }
+
+        // Allow simple String to Enum conversion when needed with validation
+        if (rootClass.isEnum() && returnValue instanceof String) {
+            String enumValue = (String) returnValue;
+            // Security: Validate enum string to prevent malicious input
+            if (enumValue == null || enumValue.trim().isEmpty()) {
+                throw new JsonIoException("Invalid enum value: null or empty string for enum type " + rootClass.getName());
+            }
+            int maxEnumLength = readOptions.getMaxEnumNameLength();
+            if (enumValue.length() > maxEnumLength) {
+                throw new JsonIoException("Security limit exceeded: Enum name too long (" + enumValue.length() + " chars, max " + maxEnumLength + ") for enum type " + rootClass.getName());
+            }
+            try {
+                return Enum.valueOf((Class<Enum>) rootClass, enumValue.trim());
+            } catch (IllegalArgumentException e) {
+                throw new JsonIoException("Invalid enum value '" + enumValue + "' for enum type " + rootClass.getName(), e);
+            }
+        }
+
+        Converter converter = getConverter();
+        try {
+            return converter.convert(returnValue, rootClass);
+        } catch (Exception e) {
+            throw new JsonIoException("Return type mismatch. Expecting: " +
+                    rootClass.getName() + ", found: " + returnValue.getClass().getName(), e);
+        }
     }
 
     /**

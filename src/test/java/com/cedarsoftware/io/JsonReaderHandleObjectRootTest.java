@@ -1,51 +1,17 @@
 package com.cedarsoftware.io;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-
-import com.cedarsoftware.util.TypeUtilities;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.cedarsoftware.util.TypeUtilities;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.cedarsoftware.io.JsonIoException;
-
 class JsonReaderHandleObjectRootTest {
-
-    static class NullReader extends JsonReader {
-        NullReader(ReadOptions opts) {
-            super(opts);
-        }
-        @Override
-        protected <T> T resolveObjects(JsonObject rootObj, Type rootType) {
-            return null;
-        }
-        Object invokeHandle(Type type, JsonObject obj) throws Exception {
-            Method m = JsonReader.class.getDeclaredMethod("handleObjectRoot", Type.class, JsonObject.class);
-            m.setAccessible(true);
-            return m.invoke(this, type, obj);
-        }
-    }
-
-    static class IdentityReader extends JsonReader {
-        IdentityReader(ReadOptions opts) { super(opts); }
-        @SuppressWarnings("unchecked")
-        @Override
-        protected <T> T resolveObjects(JsonObject rootObj, Type rootType) {
-            return (T) rootObj.getTarget();
-        }
-        Object invokeHandle(Type type, JsonObject obj) throws Exception {
-            Method m = JsonReader.class.getDeclaredMethod("handleObjectRoot", Type.class, JsonObject.class);
-            m.setAccessible(true);
-            return m.invoke(this, type, obj);
-        }
-    }
 
     @Test
     void treeSetSubstitutionWhenJsonMode() {
@@ -80,25 +46,30 @@ class JsonReaderHandleObjectRootTest {
         assertThrows(JsonIoException.class, () -> TestUtil.toJava(json, null).asClass(List.class));
     }
 
+    /**
+     * Test that when resolution of an empty JsonObject in Maps mode returns the JsonObject
+     * (equivalent behavior to old nullGraphReturnsOriginalJsonObject test).
+     * In Maps mode, untyped objects should return as JsonObject.
+     */
     @Test
-    void nullGraphReturnsOriginalJsonObject() throws Exception {
+    void emptyObjectInMapsModeReturnsJsonObject() {
+        String json = "{}";
         ReadOptions opts = new ReadOptionsBuilder().returnAsJsonObjects().build();
-        NullReader reader = new NullReader(opts);
-        JsonObject obj = new JsonObject();
-        obj.setType(String.class);
-        Object result = reader.invokeHandle(null, obj);
-        assertSame(obj, result);
+        Object result = TestUtil.toMaps(json, opts).asClass(null);
+        assertTrue(result instanceof JsonObject, "Empty object in Maps mode should return JsonObject");
     }
 
+    /**
+     * Test that complex types with @type are properly resolved (equivalent behavior to old
+     * simpleGraphReturnedWhenTypeNotSimple test).
+     */
     @Test
-    void simpleGraphReturnedWhenTypeNotSimple() throws Exception {
-        ReadOptions opts = new ReadOptionsBuilder().returnAsJsonObjects().build();
-        IdentityReader reader = new IdentityReader(opts);
-        JsonObject obj = new JsonObject();
-        obj.setTarget("hello");
-        obj.setType(Thread.class); // use a non-simple type
-        Object result = reader.invokeHandle(null, obj);
-        assertEquals("hello", result);
+    void complexTypeWithTargetResolvesCorrectly() {
+        // StringBuilder is a complex type that json-io knows how to handle
+        String json = "{\"@type\":\"java.lang.StringBuilder\",\"value\":\"hello\"}";
+        Object result = TestUtil.toJava(json, null).asClass(null);
+        assertTrue(result instanceof StringBuilder);
+        assertEquals("hello", result.toString());
     }
 
     @Test
