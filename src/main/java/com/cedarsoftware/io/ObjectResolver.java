@@ -69,7 +69,7 @@ public class ObjectResolver extends Resolver
      * Constructor
      * @param readOptions Options to use while reading.
      */
-    protected ObjectResolver(ReadOptions readOptions, ReferenceTracker references, Converter converter) {
+    public ObjectResolver(ReadOptions readOptions, ReferenceTracker references, Converter converter) {
         super(readOptions, references, converter);
     }
 

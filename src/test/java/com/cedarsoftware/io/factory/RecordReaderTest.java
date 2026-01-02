@@ -1,9 +1,12 @@
 package com.cedarsoftware.io.factory;
 
 import com.cedarsoftware.io.JsonObject;
-import com.cedarsoftware.io.JsonReader;
+import com.cedarsoftware.io.ObjectResolver;
 import com.cedarsoftware.io.ReadOptions;
 import com.cedarsoftware.io.ReadOptionsBuilder;
+import com.cedarsoftware.io.ReferenceTracker;
+import com.cedarsoftware.io.Resolver;
+import com.cedarsoftware.util.convert.Converter;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
@@ -53,9 +56,12 @@ class RecordReaderTest {
         jObj.put("age", 25);
 
         ReadOptions options = new ReadOptionsBuilder().classLoader(loader).build();
-        JsonReader reader = new JsonReader(options);
+        ReferenceTracker references = new Resolver.DefaultReferenceTracker(options);
+        Converter converter = new Converter(options.getConverterOptions());
+        Resolver resolver = new ObjectResolver(options, references, converter);
+
         RecordFactory.RecordReader recordReader = new RecordFactory.RecordReader();
-        Object record = recordReader.read(jObj, reader.getResolver());
+        Object record = recordReader.read(jObj, resolver);
 
         Method name = recordClass.getMethod("name");
         Method age = recordClass.getMethod("age");

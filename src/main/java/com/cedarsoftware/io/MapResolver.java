@@ -60,7 +60,7 @@ import com.cedarsoftware.util.convert.Converter;
  *         limitations under the License.
  */
 public class MapResolver extends Resolver {
-    protected MapResolver(ReadOptions readOptions, ReferenceTracker references, Converter converter) {
+    public MapResolver(ReadOptions readOptions, ReferenceTracker references, Converter converter) {
         super(readOptions, references, converter);
     }
 
