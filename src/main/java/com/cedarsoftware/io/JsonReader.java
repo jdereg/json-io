@@ -1,6 +1,5 @@
 package com.cedarsoftware.io;
 
-import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -9,13 +8,11 @@ import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.ExceptionUtilities;
-import com.cedarsoftware.util.FastByteArrayInputStream;
 import com.cedarsoftware.util.FastReader;
 import com.cedarsoftware.util.IOUtilities;
 import com.cedarsoftware.util.convert.Converter;

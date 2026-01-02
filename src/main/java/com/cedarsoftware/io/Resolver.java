@@ -2,7 +2,6 @@ package com.cedarsoftware.io;
 
 import java.io.Serializable;
 import java.lang.reflect.Array;
-import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -11,7 +10,6 @@ import java.util.Deque;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
