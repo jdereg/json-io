@@ -85,21 +85,10 @@ public class JsonReader implements Closeable
     }
 
     /** Creates a JsonReader for parsing JSON from an InputStream. */
-    public JsonReader(InputStream input, ReadOptions readOptions) {
-        this(input, readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions,
-             new Resolver.DefaultReferenceTracker(readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions));
-    }
-
-    /** Creates a JsonReader for parsing JSON from a Reader (more efficient for String input). */
-    public JsonReader(Reader reader, ReadOptions readOptions) {
-        this(reader, readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions,
-             new Resolver.DefaultReferenceTracker(readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions));
-    }
-
-    // Package-private: creates parser with custom ReferenceTracker
-    JsonReader(InputStream inputStream, ReadOptions readOptions, ReferenceTracker references) {
+    public JsonReader(InputStream inputStream, ReadOptions readOptions) {
         this.isRoot = true;
         this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
+        ReferenceTracker references = new Resolver.DefaultReferenceTracker(this.readOptions);
         Converter converter = new Converter(this.readOptions.getConverterOptions());
         this.input = getReader(inputStream);
         this.resolver = this.readOptions.isReturningJsonObjects() ?
@@ -108,10 +97,11 @@ public class JsonReader implements Closeable
         this.parser = new JsonParser(this.input, this.resolver);
     }
 
-    // Package-private: creates parser with custom ReferenceTracker
-    JsonReader(Reader reader, ReadOptions readOptions, ReferenceTracker references) {
+    /** Creates a JsonReader for parsing JSON from a Reader (more efficient for String input). */
+    public JsonReader(Reader reader, ReadOptions readOptions) {
         this.isRoot = true;
         this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
+        ReferenceTracker references = new Resolver.DefaultReferenceTracker(this.readOptions);
         Converter converter = new Converter(this.readOptions.getConverterOptions());
         this.input = getReader(reader);
         this.resolver = this.readOptions.isReturningJsonObjects() ?
@@ -127,13 +117,9 @@ public class JsonReader implements Closeable
      * @param readOptions ReadOptions for configuration (null uses defaults)
      */
     public JsonReader(ReadOptions readOptions) {
-        this(readOptions, new Resolver.DefaultReferenceTracker(readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions));
-    }
-
-    // Package-private: resolver-only (no stream parsing)
-    JsonReader(ReadOptions readOptions, ReferenceTracker references) {
         this.isRoot = true;
         this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
+        ReferenceTracker references = new Resolver.DefaultReferenceTracker(this.readOptions);
         Converter converter = new Converter(this.readOptions.getConverterOptions());
         this.resolver = this.readOptions.isReturningJsonObjects() ?
                 new MapResolver(this.readOptions, references, converter) :

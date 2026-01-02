@@ -267,9 +267,9 @@ public interface ReadOptions {
     /**
      * Get the ClassFactory associated to the passed in class.
      * @param c Class for which to fetch the ClassFactory.
-     * @return JsonReader.ClassFactory instance associated to the passed in class.
+     * @return ClassFactory instance associated to the passed in class.
      */
-    JsonReader.ClassFactory getClassFactory(Class<?> c);
+    ClassFactory getClassFactory(Class<?> c);
 
     /**
      * Fetch the custom reader for the passed in Class.  If it is cached (already associated to the

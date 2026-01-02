@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.cedarsoftware.io.ClassFactory;
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
@@ -29,7 +30,7 @@ import com.cedarsoftware.io.util.SingletonSet;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class SingletonFactory implements JsonReader.ClassFactory {
+public class SingletonFactory implements ClassFactory {
     @Override
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
         if (List.class.isAssignableFrom(c)) {

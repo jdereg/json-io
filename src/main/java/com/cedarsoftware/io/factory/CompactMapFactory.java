@@ -2,6 +2,7 @@ package com.cedarsoftware.io.factory;
 
 import java.util.Map;
 
+import com.cedarsoftware.io.ClassFactory;
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
@@ -28,7 +29,7 @@ import com.cedarsoftware.util.CompactMap;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class CompactMapFactory implements JsonReader.ClassFactory {
+public class CompactMapFactory implements ClassFactory {
     @Override
     @SuppressWarnings("unchecked")
     public Map newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
@@ -114,19 +115,18 @@ public class CompactMapFactory implements JsonReader.ClassFactory {
 
         CompactMap<Object, Object> cmap = builder.build();
         Map<Object, Object> data = (Map<Object, Object>) dataObj;
-        JsonReader reader = new JsonReader(resolver);
 
         // Process all entries in the data section
         for (Map.Entry<Object, Object> entry : data.entrySet()) {
             Object key = entry.getKey();
             Object value = entry.getValue();
-            
-            // Resolve JsonObjects
+
+            // Resolve JsonObjects using Resolver directly
             if (key instanceof JsonObject) {
-                key = reader.toJava(((JsonObject) key).getType(), key);
+                key = resolver.toJava(((JsonObject) key).getType(), key);
             }
             if (value instanceof JsonObject) {
-                value = reader.toJava(((JsonObject) value).getType(), value);
+                value = resolver.toJava(((JsonObject) value).getType(), value);
             }
 
             // Add to the CompactMap

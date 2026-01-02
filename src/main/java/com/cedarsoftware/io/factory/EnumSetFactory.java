@@ -2,6 +2,7 @@ package com.cedarsoftware.io.factory;
 
 import java.util.EnumSet;
 
+import com.cedarsoftware.io.ClassFactory;
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
@@ -25,7 +26,7 @@ import com.cedarsoftware.util.ClassUtilities;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class EnumSetFactory implements JsonReader.ClassFactory {
+public class EnumSetFactory implements ClassFactory {
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
         // Attempt to get the actual enum class from the provided class 'c'
@@ -65,7 +66,7 @@ public class EnumSetFactory implements JsonReader.ClassFactory {
         jObj.setTarget(enumSet);  // Set the EnumSet as the target object for further population
 
         // If items is null or empty, return the empty EnumSet
-        if (items == null || items.length == 0) {
+        if (items == null) {
             return enumSet;
         }
 

@@ -2,6 +2,7 @@ package com.cedarsoftware.io.factory;
 
 import java.util.Map;
 
+import com.cedarsoftware.io.ClassFactory;
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
@@ -28,7 +29,7 @@ import com.cedarsoftware.util.MultiKeyMap;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class MultiKeyMapFactory implements JsonReader.ClassFactory {
+public class MultiKeyMapFactory implements ClassFactory {
     @Override
     @SuppressWarnings("unchecked")
     public Map newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
@@ -87,9 +88,6 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
         if (entriesObj != null) {
             Object[] entries = extractEntriesArray(entriesObj);
             if (entries != null) {
-                // Create JsonReader for resolving each entry's key and value
-                JsonReader reader = new JsonReader(resolver);
-
                 // Process entries one-by-one, fully resolving each before put()
                 for (Object entryObj : entries) {
                     if (!(entryObj instanceof JsonObject)) {
@@ -100,16 +98,15 @@ public class MultiKeyMapFactory implements JsonReader.ClassFactory {
                     Object key = entryJsonObj.get("keys");
                     Object value = entryJsonObj.get("value");
 
-                    // Fully resolve the key
+                    // Fully resolve the key using Resolver directly
                     if (key instanceof JsonObject) {
                         JsonObject keyJsonObj = (JsonObject) key;
-                        // Let json-io resolve the key object using standard machinery
-                        key = reader.toJava(keyJsonObj.getType(), keyJsonObj);
+                        key = resolver.toJava(keyJsonObj.getType(), keyJsonObj);
                     }
 
-                    // Fully resolve the value
+                    // Fully resolve the value using Resolver directly
                     if (value instanceof JsonObject) {
-                        value = reader.toJava(((JsonObject) value).getType(), value);
+                        value = resolver.toJava(((JsonObject) value).getType(), value);
                     }
 
                     // Now key has stable hashCode - safe to put()

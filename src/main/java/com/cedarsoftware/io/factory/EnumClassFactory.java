@@ -1,5 +1,6 @@
 package com.cedarsoftware.io.factory;
 
+import com.cedarsoftware.io.ClassFactory;
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
@@ -23,7 +24,7 @@ import com.cedarsoftware.util.ClassUtilities;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class EnumClassFactory implements JsonReader.ClassFactory {
+public class EnumClassFactory implements ClassFactory {
     @Override
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
 

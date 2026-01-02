@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 
+import com.cedarsoftware.io.ClassFactory;
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
@@ -37,7 +38,7 @@ import com.cedarsoftware.io.util.SealableSet;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class UnmodifiableFactory implements JsonReader.ClassFactory {
+public class UnmodifiableFactory implements ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
         SealedSupplier supplier = resolver.getSealedSupplier();
         if (NavigableSet.class.isAssignableFrom(c) || SortedSet.class.isAssignableFrom(c)) {

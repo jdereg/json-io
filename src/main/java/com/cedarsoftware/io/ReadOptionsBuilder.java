@@ -76,7 +76,7 @@ public class ReadOptionsBuilder {
 
     // The BASE_* Maps are regular ConcurrentHashMap's because they are not constantly searched, otherwise they would be ClassValueMaps.
     private static final Map<Class<?>, JsonReader.JsonClassReader> BASE_READERS = new ConcurrentHashMap<>();
-    private static final Map<Class<?>, JsonReader.ClassFactory> BASE_CLASS_FACTORIES = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, ClassFactory> BASE_CLASS_FACTORIES = new ConcurrentHashMap<>();
     // BASE_ALIAS_MAPPINGS uses LinkedHashMap to maintain insertion order so later aliases override earlier ones
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = Collections.synchronizedMap(new LinkedHashMap<>());
     private static final Map<Class<?>, Class<?>> BASE_COERCED_TYPES = new ConcurrentHashMap<>();
@@ -311,26 +311,26 @@ public class ReadOptionsBuilder {
     /**
      * Call this method to add a factory class that will be used to create instances of another class.  This is useful
      * when you have a class that `json-io` cannot instantiate due to private or other constructor issues.  Add
-     * a JsonReader.ClassFactory class (that you implement) and associate it to the passed in 'classToCreate'.  Your
-     * JsonReader.ClassFactory class will be called with the Map (JsonObject) that contains the { ... } that should
+     * a ClassFactory class (that you implement) and associate it to the passed in 'classToCreate'.  Your
+     * ClassFactory class will be called with the Map (JsonObject) that contains the { ... } that should
      * be loaded into your class. It is your ClassFactory implementations job to create the instance of the associated
      * class, and then copy the values from the passed in Map to the Java instance you created.
      * @param sourceClass String class name (fully qualified name) to associate to your ClassFactory implementation.
-     * @param factory     JsonReader.ClassFactory your ClassFactory implementation that creates/loads the associated
+     * @param factory     ClassFactory your ClassFactory implementation that creates/loads the associated
      *                    class using the Map (JsonObject) of data passed to it.
      */
-    public static void addPermanentClassFactory(Class<?> sourceClass, JsonReader.ClassFactory factory) {
+    public static void addPermanentClassFactory(Class<?> sourceClass, ClassFactory factory) {
         BASE_CLASS_FACTORIES.put(sourceClass, factory);
     }
 
     /**
-     * @param classToCreate Class that will need to use a JsonReader.ClassFactory for instantiation and loading.
-     * @param factory       JsonReader.ClassFactory instance that has been created to instantiate a difficult
+     * @param classToCreate Class that will need to use a ClassFactory for instantiation and loading.
+     * @param factory       ClassFactory instance that has been created to instantiate a difficult
      *                      to create and load class (class c).
      * @deprecated use {@link ReadOptionsBuilder#addPermanentClassFactory} instead.
      */
     @Deprecated
-    public static void assignInstantiator(Class<?> classToCreate, JsonReader.ClassFactory factory) {
+    public static void assignInstantiator(Class<?> classToCreate, ClassFactory factory) {
         BASE_CLASS_FACTORIES.put(classToCreate, factory);
     }
 
@@ -737,7 +737,7 @@ public class ReadOptionsBuilder {
         options.coercedTypes = ((ClassValueMap<Class<?>>)options.coercedTypes).unmodifiableView();
         options.notCustomReadClasses = ((ClassValueSet)options.notCustomReadClasses).unmodifiableView();
         options.customReaderClasses = ((ClassValueMap<JsonReader.JsonClassReader>)options.customReaderClasses).unmodifiableView();
-        options.classFactoryMap = ((ClassValueMap<JsonReader.ClassFactory>)options.classFactoryMap).unmodifiableView();
+        options.classFactoryMap = ((ClassValueMap<ClassFactory>)options.classFactoryMap).unmodifiableView();
         options.nonRefClasses = ((ClassValueSet)options.nonRefClasses).unmodifiableView();
         options.converterOptions.converterOverrides = Collections.unmodifiableMap(options.converterOptions.converterOverrides);
         options.converterOptions.customOptions = Collections.unmodifiableMap(options.converterOptions.customOptions);
@@ -839,7 +839,7 @@ public class ReadOptionsBuilder {
      *                  and load the class associated to it.
      * @return ReadOptionsBuilder for chained access.
      */
-    public ReadOptionsBuilder replaceClassFactories(Map<? extends Class<?>, ? extends JsonReader.ClassFactory> factories) {
+    public ReadOptionsBuilder replaceClassFactories(Map<? extends Class<?>, ? extends ClassFactory> factories) {
         options.classFactoryMap.clear();
         options.classFactoryMap.putAll(factories);
         return this;
@@ -852,7 +852,7 @@ public class ReadOptionsBuilder {
      * @param factory Class written to instantiate the 'clazz' and load it's values.
      * @return ReadOptionsBuilder for chained access.
      */
-    public ReadOptionsBuilder addClassFactory(Class<?> clazz, JsonReader.ClassFactory factory) {
+    public ReadOptionsBuilder addClassFactory(Class<?> clazz, ClassFactory factory) {
         options.classFactoryMap.put(clazz, factory);
         return this;
     }
@@ -1414,7 +1414,7 @@ public class ReadOptionsBuilder {
     }
 
     /**
-     * Load JsonReader.ClassFactory classes based on contents of resources/classFactory.txt.
+     * Load ClassFactory classes based on contents of resources/classFactory.txt.
      * Verify that classes listed are indeed valid classes loaded in the JVM.
      */
     private static void loadBaseClassFactory() {
@@ -1435,16 +1435,16 @@ public class ReadOptionsBuilder {
                 addPermanentClassFactory(clazz, new ArrayFactory<>(clazz));
             } else {
                 try {
-                    Class<? extends JsonReader.ClassFactory> factoryClass = (Class<? extends JsonReader.ClassFactory>) ClassUtilities.forName(factoryClassName, classLoader);
+                    Class<? extends ClassFactory> factoryClass = (Class<? extends ClassFactory>) ClassUtilities.forName(factoryClassName, classLoader);
                     if (factoryClass == null) {
                         LOG.fine("Skipping class: " + factoryClassName + " not defined in JVM, but listed in resources/classFactories.txt, as factory for: " + className);
                         continue;
                     }
                     // Add this if javac issues an unchecked cast warning for this line
-                    Constructor<? extends JsonReader.ClassFactory> ctor = (Constructor<? extends JsonReader.ClassFactory>) ReflectionUtils.getConstructor(factoryClass);
+                    Constructor<? extends ClassFactory> ctor = (Constructor<? extends ClassFactory>) ReflectionUtils.getConstructor(factoryClass);
                     addPermanentClassFactory(clazz, ctor.newInstance());
                 } catch (Exception e) {
-                    LOG.log(Level.FINE, "Unable to create JsonReader.ClassFactory class: " + factoryClassName + ", a factory class for: " + className + ", listed in resources/classFactories.txt", e);
+                    LOG.log(Level.FINE, "Unable to create ClassFactory class: " + factoryClassName + ", a factory class for: " + className + ", listed in resources/classFactories.txt", e);
                 }
             }
         }
@@ -1596,7 +1596,7 @@ public class ReadOptionsBuilder {
         private Map<Class<?>, Class<?>> coercedTypes = new ClassValueMap<>();
         private Set<Class<?>> notCustomReadClasses = new ClassValueSet();
         private Map<Class<?>, JsonReader.JsonClassReader> customReaderClasses = new ClassValueMap<>();
-        private Map<Class<?>, JsonReader.ClassFactory> classFactoryMap = new ClassValueMap<>();
+        private Map<Class<?>, ClassFactory> classFactoryMap = new ClassValueMap<>();
         private Set<Class<?>> nonRefClasses = new ClassValueSet();
         private Map<Class<?>, Set<String>> excludedFieldNames = new ClassValueMap<>();
         private Map<Class<?>, Set<String>> fieldsNotImported = new ClassValueMap<>();
@@ -1606,9 +1606,9 @@ public class ReadOptionsBuilder {
 
         // Runtime cache (not feature options)
         private final Map<Class<?>, JsonReader.JsonClassReader> readerCache = new ClassValueMap<>();
-        private final JsonReader.ClassFactory throwableFactory = new ThrowableFactory();
-        private final JsonReader.ClassFactory enumFactory = new EnumClassFactory();
-        private static final JsonReader.ClassFactory recordFactory = new RecordFactory();
+        private final ClassFactory throwableFactory = new ThrowableFactory();
+        private final ClassFactory enumFactory = new EnumClassFactory();
+        private static final ClassFactory recordFactory = new RecordFactory();
         private static final Method isRecordMethod;
 
         static {
@@ -1854,14 +1854,14 @@ public class ReadOptionsBuilder {
          * Get the ClassFactory associated to the passed in class.
          *
          * @param c Class for which to fetch the ClassFactory.
-         * @return JsonReader.ClassFactory instance associated to the passed in class.
+         * @return ClassFactory instance associated to the passed in class.
          */
-        public JsonReader.ClassFactory getClassFactory(Class<?> c) {
+        public ClassFactory getClassFactory(Class<?> c) {
             if (c == null) {
                 return null;
             }
 
-            JsonReader.ClassFactory factory = this.classFactoryMap.get(c);
+            ClassFactory factory = this.classFactoryMap.get(c);
 
             if (factory != null) {
                 return factory;

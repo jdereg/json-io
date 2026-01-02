@@ -2,6 +2,7 @@ package com.cedarsoftware.io.factory;
 
 import java.lang.reflect.Constructor;
 
+import com.cedarsoftware.io.ClassFactory;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
@@ -29,7 +30,7 @@ import com.cedarsoftware.util.ReflectionUtils;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class StackTraceElementFactory implements JsonReader.ClassFactory {
+public class StackTraceElementFactory implements ClassFactory {
 
     public static final String DECLARING_CLASS   = "declaringClass";
     public static final String METHOD_NAME       = "methodName";

@@ -609,7 +609,7 @@ public class ObjectResolver extends Resolver
         }
 
         // Try custom class factory.
-        JsonReader.ClassFactory classFactory = readOptions.getClassFactory(targetClass);
+        ClassFactory classFactory = readOptions.getClassFactory(targetClass);
         if (classFactory != null && jsonObj.getTarget() == null) {
             Object target = createInstanceUsingClassFactory(targetClass, jsonObj);
             if (jsonObj.isFinished()) {
@@ -846,7 +846,7 @@ public class ObjectResolver extends Resolver
         }
 
         // Skip types with final factories - they're fully created with no field traversal needed
-        JsonReader.ClassFactory factory = getReadOptions().getClassFactory(rawClass);
+        ClassFactory factory = getReadOptions().getClassFactory(rawClass);
         return factory != null && factory.isObjectFinal();
     }
 

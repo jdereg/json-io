@@ -614,7 +614,7 @@ public abstract class Resolver {
         if (rootClass.isEnum() && returnValue instanceof String) {
             String enumValue = (String) returnValue;
             // Security: Validate enum string to prevent malicious input
-            if (enumValue == null || enumValue.trim().isEmpty()) {
+            if (enumValue.trim().isEmpty()) {
                 throw new JsonIoException("Invalid enum value: null or empty string for enum type " + rootClass.getName());
             }
             int maxEnumLength = readOptions.getMaxEnumNameLength();
@@ -1120,7 +1120,7 @@ public abstract class Resolver {
         // may optionally load the newly created instance, in which case, the JsonObject is marked finished, and
         // return.
 
-        JsonReader.ClassFactory classFactory = readOptions.getClassFactory(c);
+        ClassFactory classFactory = readOptions.getClassFactory(c);
 
         if (classFactory == null) {
             return NO_FACTORY;

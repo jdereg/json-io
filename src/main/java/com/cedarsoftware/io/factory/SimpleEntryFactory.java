@@ -2,6 +2,7 @@ package com.cedarsoftware.io.factory;
 
 import java.util.AbstractMap;
 
+import com.cedarsoftware.io.ClassFactory;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
@@ -34,7 +35,7 @@ import com.cedarsoftware.io.Resolver;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class SimpleEntryFactory implements JsonReader.ClassFactory {
+public class SimpleEntryFactory implements ClassFactory {
 
     /**
      * Creates a new SimpleEntry or SimpleImmutableEntry instance using values from the JsonObject.

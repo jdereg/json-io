@@ -15,6 +15,7 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import com.cedarsoftware.io.ClassFactory;
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
@@ -37,7 +38,7 @@ import com.cedarsoftware.io.Resolver;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class SynchronizedFactory implements JsonReader.ClassFactory {
+public class SynchronizedFactory implements ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
         if (NavigableSet.class.isAssignableFrom(c)) {
             return Collections.synchronizedNavigableSet(new TreeSet<>());

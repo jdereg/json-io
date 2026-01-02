@@ -2,6 +2,7 @@ package com.cedarsoftware.io.factory;
 
 import java.util.Collection;
 
+import com.cedarsoftware.io.ClassFactory;
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
@@ -28,7 +29,7 @@ import com.cedarsoftware.util.CompactSet;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class CompactSetFactory implements JsonReader.ClassFactory {
+public class CompactSetFactory implements ClassFactory {
     @Override
     @SuppressWarnings("unchecked")
     public Collection newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
@@ -106,9 +107,8 @@ public class CompactSetFactory implements JsonReader.ClassFactory {
         // Set the target early to establish identity
         jObj.setTarget(cset);
 
-        // Create a JsonReader with this resolver
-        JsonReader reader = new JsonReader(resolver);
-        reader.toJava(null, jObj);
+        // Resolve the collection elements using Resolver directly
+        resolver.toJava(null, jObj);
         return cset;
     }
 }

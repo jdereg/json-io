@@ -3,6 +3,7 @@ package com.cedarsoftware.io.factory;
 import java.lang.reflect.Array;
 import java.lang.reflect.Type;
 
+import com.cedarsoftware.io.ClassFactory;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
@@ -27,7 +28,7 @@ import com.cedarsoftware.util.convert.Converter;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class ArrayFactory<T> implements JsonReader.ClassFactory {
+public class ArrayFactory<T> implements ClassFactory {
 
     private final Class<T> type;
 

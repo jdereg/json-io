@@ -4,6 +4,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 
+import com.cedarsoftware.io.ClassFactory;
+import com.cedarsoftware.io.JsonClassReader;
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
@@ -28,7 +30,7 @@ import com.cedarsoftware.util.SystemUtilities;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class RecordFactory implements JsonReader.ClassFactory {
+public class RecordFactory implements ClassFactory {
     private static final boolean JAVA_16_OR_ABOVE = SystemUtilities.isJavaVersionAtLeast(16, 0);
 
     public RecordFactory() {}
@@ -80,7 +82,7 @@ public class RecordFactory implements JsonReader.ClassFactory {
         }
     }
 
-    public static class RecordReader implements JsonReader.JsonClassReader
+    public static class RecordReader implements JsonClassReader
     {
         public Object read(Object o, Resolver resolver)
         {
