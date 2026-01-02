@@ -22,7 +22,7 @@ class MapResolverTraverseCollectionTest {
     void testEarlyExitWhenFinished() {
         ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
         ReadOptions readOptions = new ReadOptionsBuilder().build();
-        ReferenceTracker refs = new JsonReader.DefaultReferenceTracker(readOptions);
+        ReferenceTracker refs = new Resolver.DefaultReferenceTracker(readOptions);
         MapResolver resolver = newResolver(options, refs);
 
         JsonObject json = new JsonObject();
@@ -45,7 +45,7 @@ class MapResolverTraverseCollectionTest {
     void testTraverseCollectionAllBranches() {
         ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
         ReadOptions readOptions2 = new ReadOptionsBuilder().build();
-        JsonReader.DefaultReferenceTracker refs = new JsonReader.DefaultReferenceTracker(readOptions2);
+        Resolver.DefaultReferenceTracker refs = new Resolver.DefaultReferenceTracker(readOptions2);
         MapResolver resolver = newResolver(options, refs);
 
         JsonObject json = new JsonObject();
@@ -108,7 +108,7 @@ class MapResolverTraverseCollectionTest {
     void testEnumSetBranch() {
         ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
         ReadOptions readOptions = new ReadOptionsBuilder().build();
-        ReferenceTracker refs = new JsonReader.DefaultReferenceTracker(readOptions);
+        ReferenceTracker refs = new Resolver.DefaultReferenceTracker(readOptions);
         MapResolver resolver = newResolver(options, refs);
 
         JsonObject json = new JsonObject();
@@ -127,7 +127,7 @@ class MapResolverTraverseCollectionTest {
     void testCreateInstanceWhenCollectionNull() {
         ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
         ReadOptions readOptions = new ReadOptionsBuilder().build();
-        ReferenceTracker refs = new JsonReader.DefaultReferenceTracker(readOptions);
+        ReferenceTracker refs = new Resolver.DefaultReferenceTracker(readOptions);
         MapResolver resolver = newResolver(options, refs);
 
         JsonObject json = new JsonObject();

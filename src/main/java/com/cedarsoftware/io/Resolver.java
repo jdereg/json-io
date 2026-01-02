@@ -1284,4 +1284,82 @@ public abstract class Resolver {
     }
 
     protected abstract Object resolveArray(Type suggestedType, List<Object> list);
+
+    /**
+     * Default implementation of ReferenceTracker.
+     * Reference tracking is logically part of the resolution process,
+     * as it tracks @id/@ref relationships during JSON parsing and resolution.
+     */
+    public static class DefaultReferenceTracker implements ReferenceTracker {
+
+        final Map<Long, JsonObject> references = new HashMap<>();
+        private final ReadOptions readOptions;
+
+        public DefaultReferenceTracker(ReadOptions readOptions) {
+            this.readOptions = readOptions;
+        }
+
+        public JsonObject put(Long l, JsonObject o) {
+            // Security: Prevent unbounded memory growth via reference tracking
+            int maxReferences = readOptions.getMaxObjectReferences();
+            if (references.size() >= maxReferences) {
+                throw new JsonIoException("Security limit exceeded: Maximum number of object references (" + maxReferences + ") reached. Possible DoS attack.");
+            }
+            return this.references.put(l, o);
+        }
+
+        public void clear() {
+            this.references.clear();
+        }
+
+        public int size() {
+            return this.references.size();
+        }
+
+        public JsonObject getOrThrow(Long id) {
+            JsonObject target = get(id);
+            if (target == null) {
+                throw new JsonIoException("Forward reference @ref: " + id + ", but no object defined (@id) with that value");
+            }
+            return target;
+        }
+
+        public JsonObject get(Long id) {
+            JsonObject target = references.get(id);
+            if (target == null) {
+                return null;
+            }
+
+            // Security: Improve circular reference detection with persistent tracking
+            Set<Long> visited = new HashSet<>();
+            int chainDepth = 0;
+
+            while (target.isReference()) {
+                // Security: Prevent infinite loops via chain depth limit
+                int maxChainDepth = readOptions.getMaxReferenceChainDepth();
+                if (++chainDepth > maxChainDepth) {
+                    throw new JsonIoException("Security limit exceeded: Reference chain depth (" + chainDepth + ") exceeds maximum (" + maxChainDepth + "). Possible circular reference attack.");
+                }
+
+                // Security: Enhanced circular reference detection
+                if (visited.contains(id)) {
+                    throw new JsonIoException("Circular reference detected in reference chain starting with id: " + id + " at depth: " + chainDepth);
+                }
+                visited.add(id);
+
+                Long nextId = target.getReferenceId();
+                if (nextId == null) {
+                    throw new JsonIoException("Reference id is null for object with id: " + id);
+                }
+
+                id = nextId;
+                target = references.get(id);
+                if (target == null) {
+                    return null;
+                }
+            }
+
+            return target;
+        }
+    }
 }

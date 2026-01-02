@@ -6,10 +6,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.ExceptionUtilities;
@@ -169,7 +166,7 @@ public class JsonReader implements Closeable
      */
     public JsonReader(InputStream input, ReadOptions readOptions) {
         this(input, readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions,
-             new DefaultReferenceTracker(readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions));
+             new Resolver.DefaultReferenceTracker(readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions));
     }
 
     /**
@@ -182,7 +179,7 @@ public class JsonReader implements Closeable
      */
     public JsonReader(Reader reader, ReadOptions readOptions) {
         this(reader, readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions,
-             new DefaultReferenceTracker(readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions));
+             new Resolver.DefaultReferenceTracker(readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions));
     }
 
     public JsonReader(InputStream inputStream, ReadOptions readOptions, ReferenceTracker references) {
@@ -217,7 +214,7 @@ public class JsonReader implements Closeable
      *                    etc. If null, readOptions will use all defaults.
      */
     public JsonReader(ReadOptions readOptions) {
-        this(readOptions, new DefaultReferenceTracker(readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions));
+        this(readOptions, new Resolver.DefaultReferenceTracker(readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions));
     }
 
     /**
@@ -473,88 +470,12 @@ public class JsonReader implements Closeable
         if (input == null) {
             return msg;
         }
-        
+
         StringBuilder sb = new StringBuilder(msg.length() + 100); // Pre-size for efficiency
         sb.append(msg)
           .append("\nLast read: ").append(input.getLastSnippet())
           .append("\nline: ").append(input.getLine())
           .append(", col: ").append(input.getCol());
         return sb.toString();
-    }
-
-    /**
-     * Implementation of ReferenceTracker
-     */
-    static class DefaultReferenceTracker implements ReferenceTracker {
-        
-        final Map<Long, JsonObject> references = new HashMap<>();
-        private final ReadOptions readOptions;
-
-        public DefaultReferenceTracker(ReadOptions readOptions) {
-            this.readOptions = readOptions;
-        }
-
-        public JsonObject put(Long l, JsonObject o) {
-            // Security: Prevent unbounded memory growth via reference tracking
-            int maxReferences = readOptions.getMaxObjectReferences();
-            if (references.size() >= maxReferences) {
-                throw new JsonIoException("Security limit exceeded: Maximum number of object references (" + maxReferences + ") reached. Possible DoS attack.");
-            }
-            return this.references.put(l, o);
-        }
-
-        public void clear() {
-            this.references.clear();
-        }
-
-        public int size() {
-            return this.references.size();
-        }
-
-        public JsonObject getOrThrow(Long id) {
-            JsonObject target = get(id);
-            if (target == null) {
-                throw new JsonIoException("Forward reference @ref: " + id + ", but no object defined (@id) with that value");
-            }
-            return target;
-        }
-
-        public JsonObject get(Long id) {
-            JsonObject target = references.get(id);
-            if (target == null) {
-                return null;
-            }
-
-            // Security: Improve circular reference detection with persistent tracking
-            Set<Long> visited = new HashSet<>();
-            int chainDepth = 0;
-            
-            while (target.isReference()) {
-                // Security: Prevent infinite loops via chain depth limit
-                int maxChainDepth = readOptions.getMaxReferenceChainDepth();
-                if (++chainDepth > maxChainDepth) {
-                    throw new JsonIoException("Security limit exceeded: Reference chain depth (" + chainDepth + ") exceeds maximum (" + maxChainDepth + "). Possible circular reference attack.");
-                }
-                
-                // Security: Enhanced circular reference detection
-                if (visited.contains(id)) {
-                    throw new JsonIoException("Circular reference detected in reference chain starting with id: " + id + " at depth: " + chainDepth);
-                }
-                visited.add(id);
-                
-                Long nextId = target.getReferenceId();
-                if (nextId == null) {
-                    throw new JsonIoException("Reference id is null for object with id: " + id);
-                }
-                
-                id = nextId;
-                target = references.get(id);
-                if (target == null) {
-                    return null;
-                }
-            }
-
-            return target;
-        }
     }
 }

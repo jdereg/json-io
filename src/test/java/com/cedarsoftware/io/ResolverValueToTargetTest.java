@@ -1,6 +1,6 @@
 package com.cedarsoftware.io;
 
-import com.cedarsoftware.io.JsonReader.DefaultReferenceTracker;
+import com.cedarsoftware.io.Resolver.DefaultReferenceTracker;
 import com.cedarsoftware.util.convert.Converter;
 import org.junit.jupiter.api.Test;
 

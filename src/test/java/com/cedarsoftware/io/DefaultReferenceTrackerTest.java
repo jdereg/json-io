@@ -5,14 +5,14 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Tests for JsonReader.DefaultReferenceTracker.
+ * Tests for Resolver.DefaultReferenceTracker.
  */
 class DefaultReferenceTrackerTest {
 
     @Test
     void sizeReturnsNumberOfTrackedReferences() {
         ReadOptions readOptions = new ReadOptionsBuilder().build();
-        JsonReader.DefaultReferenceTracker tracker = new JsonReader.DefaultReferenceTracker(readOptions);
+        Resolver.DefaultReferenceTracker tracker = new Resolver.DefaultReferenceTracker(readOptions);
 
         assertEquals(0, tracker.size());
 
