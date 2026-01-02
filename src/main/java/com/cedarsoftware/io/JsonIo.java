@@ -114,6 +114,32 @@ public class JsonIo {
 
     private JsonIo() {}
 
+    // ========== Internal Helper Methods ==========
+
+    /**
+     * Creates a Resolver with the appropriate type (MapResolver or ObjectResolver) based on ReadOptions.
+     */
+    private static Resolver createResolver(ReadOptions readOptions) {
+        ReferenceTracker references = new Resolver.DefaultReferenceTracker(readOptions);
+        Converter converter = new Converter(readOptions.getConverterOptions());
+        return readOptions.isReturningJsonObjects() ?
+                new MapResolver(readOptions, references, converter) :
+                new ObjectResolver(readOptions, references, converter);
+    }
+
+    /**
+     * Gets or creates cached ReadOptions configured for Map mode (returnAsJsonObjects).
+     */
+    private static ReadOptions getMapOptions(ReadOptions readOptions) {
+        final ReadOptions cacheKey = readOptions != null ? readOptions : ReadOptionsBuilder.getDefaultReadOptions();
+        return MAP_OPTIONS_CACHE.computeIfAbsent(cacheKey, opts ->
+                new ReadOptionsBuilder(readOptions)
+                        .returnAsJsonObjects()
+                        .build());
+    }
+
+    // ========== Public API ==========
+
     /**
      * Converts a Java object to a JSON string representation.
      * <p>
@@ -292,14 +318,7 @@ public class JsonIo {
      * @throws JsonIoException if an error occurs during parsing
      */
     public static JavaStringBuilder toMaps(String json, ReadOptions readOptions) {
-        // Performance: Cache map-mode options to avoid creating ReadOptionsBuilder on every call
-        // Handle null readOptions by using a sentinel key
-        final ReadOptions cacheKey = readOptions != null ? readOptions : ReadOptionsBuilder.getDefaultReadOptions();
-        ReadOptions mapOptions = MAP_OPTIONS_CACHE.computeIfAbsent(cacheKey, opts ->
-                new ReadOptionsBuilder(readOptions)  // Use original readOptions (may be null)
-                        .returnAsJsonObjects()
-                        .build());
-        return new JavaStringBuilder(json, mapOptions);
+        return new JavaStringBuilder(json, getMapOptions(readOptions));
     }
 
     /**
@@ -340,14 +359,7 @@ public class JsonIo {
      * @throws IllegalArgumentException if the input stream is null
      */
     public static JavaStreamBuilder toMaps(InputStream in, ReadOptions readOptions) {
-        // Performance: Cache map-mode options to avoid creating ReadOptionsBuilder on every call
-        // Handle null readOptions by using a sentinel key
-        final ReadOptions cacheKey = readOptions != null ? readOptions : ReadOptionsBuilder.getDefaultReadOptions();
-        ReadOptions mapOptions = MAP_OPTIONS_CACHE.computeIfAbsent(cacheKey, opts ->
-                new ReadOptionsBuilder(readOptions)  // Use original readOptions (may be null)
-                        .returnAsJsonObjects()
-                        .build());
-        return new JavaStreamBuilder(in, mapOptions);
+        return new JavaStreamBuilder(in, getMapOptions(readOptions));
     }
 
     /**
@@ -698,13 +710,8 @@ public class JsonIo {
 
         @SuppressWarnings("unchecked")
         private <T> T parseJson(TypeHolder<T> typeHolder) {
-            // Create components directly (inlined from JsonReader constructor)
-            ReferenceTracker references = new Resolver.DefaultReferenceTracker(readOptions);
-            Converter converter = new Converter(readOptions.getConverterOptions());
             FastReader input = new FastReader(new StringReader(json), 65536, 16);
-            Resolver resolver = readOptions.isReturningJsonObjects() ?
-                    new MapResolver(readOptions, references, converter) :
-                    new ObjectResolver(readOptions, references, converter);
+            Resolver resolver = createResolver(readOptions);
             JsonParser parser = new JsonParser(input, resolver);
 
             // Parse phase (from JsonReader.readObject)
@@ -809,16 +816,11 @@ public class JsonIo {
          */
         @SuppressWarnings("unchecked")
         public <T> T asType(TypeHolder<T> typeHolder) {
-            // Create components directly (inlined from JsonReader constructor)
-            ReferenceTracker references = new Resolver.DefaultReferenceTracker(readOptions);
-            Converter converter = new Converter(readOptions.getConverterOptions());
             FastReader input = new FastReader(new InputStreamReader(in, StandardCharsets.UTF_8), 65536, 16);
-            Resolver resolver = readOptions.isReturningJsonObjects() ?
-                    new MapResolver(readOptions, references, converter) :
-                    new ObjectResolver(readOptions, references, converter);
+            Resolver resolver = createResolver(readOptions);
             JsonParser parser = new JsonParser(input, resolver);
 
-            // Parse phase (from JsonReader.readObject)
+            // Parse phase
             Object parsed;
             try {
                 parsed = parser.readValue(typeHolder.getType());
@@ -945,14 +947,9 @@ public class JsonIo {
                 effectiveOptions = new ReadOptionsBuilder(effectiveOptions).returnAsJavaObjects().build();
             }
 
-            // Create resolver directly (inlined from JsonReader constructor)
-            ReferenceTracker references = new Resolver.DefaultReferenceTracker(effectiveOptions);
-            Converter converter = new Converter(effectiveOptions.getConverterOptions());
-            Resolver resolver = effectiveOptions.isReturningJsonObjects() ?
-                    new MapResolver(effectiveOptions, references, converter) :
-                    new ObjectResolver(effectiveOptions, references, converter);
+            Resolver resolver = createResolver(effectiveOptions);
 
-            // Handle unsafe mode and resolve (inlined from JsonReader.toJava())
+            // Handle unsafe mode and resolve
             boolean shouldManageUnsafe = effectiveOptions.isUseUnsafe();
             if (shouldManageUnsafe) {
                 ClassUtilities.setUseUnsafe(true);
