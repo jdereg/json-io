@@ -1,6 +1,7 @@
 package com.cedarsoftware.io;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -61,6 +62,84 @@ import com.cedarsoftware.util.convert.Converter;
 public class MapResolver extends Resolver {
     protected MapResolver(ReadOptions readOptions, ReferenceTracker references, Converter converter) {
         super(readOptions, references, converter);
+    }
+
+    /**
+     * Override toJavaObjects to validate rootType before resolution.
+     * In Maps mode, only certain types are supported as rootType.
+     */
+    @Override
+    public <T> T toJavaObjects(JsonObject rootObj, Type rootType) {
+        verifyRootType(rootType);
+        return super.toJavaObjects(rootObj, rootType);
+    }
+
+    /**
+     * Validates that the rootType is supported in Maps mode.
+     * Maps mode supports: null, primitives/wrappers, simple types, Map, Collection, and arrays of these.
+     *
+     * @param rootType the requested return type
+     * @throws JsonIoException if rootType is not supported in Maps mode
+     */
+    private void verifyRootType(Type rootType) {
+        if (rootType == null) {
+            return;
+        }
+
+        Converter converter = getConverter();
+        Class<?> rawRootType = TypeUtilities.getRawClass(rootType);
+        Type typeToCheck = rootType;
+
+        // If the raw type represents an array, drill down to the ultimate component type.
+        if (rawRootType != null && rawRootType.isArray()) {
+            while (true) {
+                if (typeToCheck instanceof Class<?>) {
+                    Class<?> cls = (Class<?>) typeToCheck;
+                    if (cls.isArray()) {
+                        typeToCheck = cls.getComponentType();
+                        continue;
+                    }
+                } else if (typeToCheck instanceof GenericArrayType) {
+                    typeToCheck = ((GenericArrayType) typeToCheck).getGenericComponentType();
+                    continue;
+                }
+                break;
+            }
+            // After drilling down, get the raw class of the ultimate component.
+            Class<?> ultimateRawType = TypeUtilities.getRawClass(typeToCheck);
+            if (converter.isSimpleTypeConversionSupported(ultimateRawType)
+                    || (ultimateRawType != null && ultimateRawType.equals(Object.class))) {
+                return;
+            }
+        } else {
+            // For non-array types, check if the type is supported by simple conversion.
+            if (converter.isSimpleTypeConversionSupported(rawRootType)) {
+                return;
+            }
+        }
+
+        // Check for Collection or Map types
+        Class<?> rawTypeToCheck = TypeUtilities.getRawClass(typeToCheck);
+        if (rawTypeToCheck != null) {
+            if (Collection.class.isAssignableFrom(rawTypeToCheck)) {
+                return;
+            }
+            if (Map.class.isAssignableFrom(rawTypeToCheck)) {
+                return;
+            }
+        }
+
+        // Type not supported in Maps mode
+        String typeName = (rawRootType != null ? rawRootType.getName() : rootType.toString());
+        throw new JsonIoException("In readOptions.isReturningJsonObjects() mode, the rootType '" + typeName +
+                "' is not supported. Allowed types are:\n" +
+                "- null\n" +
+                "- primitive types (e.g., int, boolean) and their wrapper classes (e.g., Integer, Boolean)\n" +
+                "- types supported by Converter.convert()\n" +
+                "- Map or any of its subclasses\n" +
+                "- Collection or any of its subclasses\n" +
+                "- Arrays (of any depth) of the above types\n" +
+                "Please use one of these types as the rootType, or enable readOptions.isReturningJavaObjects().");
     }
 
     /**

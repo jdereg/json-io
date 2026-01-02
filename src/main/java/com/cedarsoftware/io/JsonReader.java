@@ -6,10 +6,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.Serializable;
-import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -292,8 +290,6 @@ public class JsonReader implements Closeable
      *         the requested {@code rootType} and no valid conversion is available).
      */
     public <T> T readObject(Type rootType) {
-        verifyRootType(rootType);
-
         final T returnValue;
         try {
             // Attempt to parse the JSON into an object
@@ -426,72 +422,6 @@ public class JsonReader implements Closeable
             throw new JsonIoException("Return type mismatch. Expecting: " +
                     rootClass.getName() + ", found: " + returnValue.getClass().getName(), e);
         }
-    }
-
-    /**
-     * When return JsonObjects, verify return type (bound to mostly built-in convertable types
-     * @param rootType Class passed as rootType to return type
-     */
-    private <T> void verifyRootType(Type rootType) {
-        if (rootType == null || readOptions.isReturningJavaObjects()) {
-            return;
-        }
-
-        // Obtain the raw Class for the rootType.
-        Class<?> rawRootType = TypeUtilities.getRawClass(rootType);
-        // We'll use typeToCheck to drill down in case of arrays.
-        Type typeToCheck = rootType;
-
-        // If the raw type represents an array, drill down to the ultimate component type.
-        if (rawRootType != null && rawRootType.isArray()) {
-            while (true) {
-                if (typeToCheck instanceof Class<?>) {
-                    Class<?> cls = (Class<?>) typeToCheck;
-                    if (cls.isArray()) {
-                        typeToCheck = cls.getComponentType();
-                        continue;
-                    }
-                } else if (typeToCheck instanceof GenericArrayType) {
-                    typeToCheck = ((GenericArrayType) typeToCheck).getGenericComponentType();
-                    continue;
-                }
-                break;
-            }
-            // After drilling down, get the raw class of the ultimate component.
-            Class<?> ultimateRawType = TypeUtilities.getRawClass(typeToCheck);
-            if (localConverter.isSimpleTypeConversionSupported(ultimateRawType)
-                    || (ultimateRawType != null && ultimateRawType.equals(Object.class))) {
-                return;
-            }
-        } else {
-            // For non-array types, check if the type is supported by simple conversion.
-            if (localConverter.isSimpleTypeConversionSupported(rawRootType)) {
-                return;
-            }
-        }
-
-        // For further checks, extract the raw class from the (possibly drilled-down) type.
-        Class<?> rawTypeToCheck = TypeUtilities.getRawClass(typeToCheck);
-        if (rawTypeToCheck != null) {
-            if (Collection.class.isAssignableFrom(rawTypeToCheck)) {
-                return;
-            }
-            if (Map.class.isAssignableFrom(rawTypeToCheck)) {
-                return;
-            }
-        }
-
-        // Prepare an error message using the raw root type's name (if available).
-        String typeName = (rawRootType != null ? rawRootType.getName() : rootType.toString());
-        throw new JsonIoException("In readOptions.isReturningJsonObjects() mode, the rootType '" + typeName +
-                "' is not supported. Allowed types are:\n" +
-                "- null\n" +
-                "- primitive types (e.g., int, boolean) and their wrapper classes (e.g., Integer, Boolean)\n" +
-                "- types supported by Converter.convert()\n" +
-                "- Map or any of its subclasses\n" +
-                "- Collection or any of its subclasses\n" +
-                "- Arrays (of any depth) of the above types\n" +
-                "Please use one of these types as the rootType, or enable readOptions.isReturningJavaObjects().");
     }
 
     /**
