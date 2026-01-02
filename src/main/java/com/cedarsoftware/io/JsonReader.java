@@ -84,25 +84,13 @@ public class JsonReader implements Closeable
         return new FastReader(reader, 65536, 16);
     }
 
-    /**
-     * Creates a json reader using custom read options
-     * @param input         InputStream of utf-encoded json
-     * @param readOptions Read Options to turn on/off various feature options, or supply additional ClassFactory data,
-     *                    etc. If null, readOptions will use all defaults.
-     */
+    /** Creates a JsonReader for parsing JSON from an InputStream. */
     public JsonReader(InputStream input, ReadOptions readOptions) {
         this(input, readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions,
              new Resolver.DefaultReferenceTracker(readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions));
     }
 
-    /**
-     * Creates a json reader from a Reader (character-based input) using custom read options.
-     * This constructor is more efficient than the InputStream constructor when starting from a String,
-     * as it avoids unnecessary encoding/decoding.
-     * @param reader Reader providing JSON characters
-     * @param readOptions Read Options to turn on/off various feature options, or supply additional ClassFactory data,
-     *                    etc. If null, readOptions will use all defaults.
-     */
+    /** Creates a JsonReader for parsing JSON from a Reader (more efficient for String input). */
     public JsonReader(Reader reader, ReadOptions readOptions) {
         this(reader, readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions,
              new Resolver.DefaultReferenceTracker(readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions));
@@ -218,19 +206,7 @@ public class JsonReader implements Closeable
         }
     }
 
-    /**
-     * Deserializes a JSON object graph into a strongly-typed Java object instance.
-     * <p>
-     * This method converts a {@link JsonObject} (Map-of-Maps representation) into a fully
-     * resolved Java object. It delegates to {@link #toJava(Type, Object)} which handles
-     * lifecycle management including unsafe mode, forward reference patching, and cleanup.
-     *
-     * @param <T>      the expected type of the Java object to be returned
-     * @param rootObj  the root {@link JsonObject} representing the serialized JSON object graph
-     * @param rootType the desired Java type for the root object (may be null for type inference)
-     * @return a Java object instance corresponding to the provided JSON graph
-     * @throws JsonIoException if an error occurs during deserialization
-     */
+    /** Delegates to {@link #toJava(Type, Object)} for JsonObject resolution. */
     @SuppressWarnings("unchecked")
     protected <T> T resolveObjects(JsonObject rootObj, Type rootType) {
         return (T) toJava(rootType, rootObj);
