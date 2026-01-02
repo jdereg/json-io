@@ -11,6 +11,7 @@ import com.cedarsoftware.io.prettyprint.JsonPrettyPrinter;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
+import com.cedarsoftware.util.FastReader;
 import com.cedarsoftware.util.LoggingConfig;
 import com.cedarsoftware.util.convert.Converter;
 
@@ -692,14 +693,46 @@ public class JsonIo {
             }
         }
 
+        @SuppressWarnings("unchecked")
         private <T> T parseJson(TypeHolder<T> typeHolder) {
-            StringReader reader = new StringReader(json);
-            JsonReader jr = new JsonReader(reader, readOptions);
-            T root = jr.readObject(typeHolder.getType());
-            if (readOptions.isCloseStream()) {
-                jr.close();
+            // Create components directly (inlined from JsonReader constructor)
+            ReferenceTracker references = new Resolver.DefaultReferenceTracker(readOptions);
+            Converter converter = new Converter(readOptions.getConverterOptions());
+            FastReader input = new FastReader(new StringReader(json), 65536, 16);
+            Resolver resolver = readOptions.isReturningJsonObjects() ?
+                    new MapResolver(readOptions, references, converter) :
+                    new ObjectResolver(readOptions, references, converter);
+            JsonParser parser = new JsonParser(input, resolver);
+
+            // Parse phase (from JsonReader.readObject)
+            Object parsed;
+            try {
+                parsed = parser.readValue(typeHolder.getType());
+            } catch (JsonIoException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new JsonIoException("Error parsing JSON value", e);
             }
-            return root;
+
+            // Resolve phase (from JsonReader.toJava)
+            boolean shouldManageUnsafe = readOptions.isUseUnsafe();
+            if (shouldManageUnsafe) {
+                ClassUtilities.setUseUnsafe(true);
+            }
+
+            try {
+                return (T) resolver.resolveRoot(parsed, typeHolder.getType());
+            } catch (Exception e) {
+                if (e instanceof JsonIoException) {
+                    throw (JsonIoException) e;
+                }
+                throw new JsonIoException(e.getMessage(), e);
+            } finally {
+                if (shouldManageUnsafe) {
+                    ClassUtilities.setUseUnsafe(false);
+                }
+                resolver.cleanup();
+            }
         }
     }
 
