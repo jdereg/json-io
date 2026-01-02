@@ -192,12 +192,6 @@ public class JsonReader implements Closeable
         }
     }
 
-    /** Delegates to {@link #toJava(Type, Object)} for JsonObject resolution. */
-    @SuppressWarnings("unchecked")
-    protected <T> T resolveObjects(JsonObject rootObj, Type rootType) {
-        return (T) toJava(rootType, rootObj);
-    }
-
     /**
      * Returns the Resolver instance used for JSON deserialization.
      * Used by {@link ClassFactory} implementations to resolve nested JsonObjects.

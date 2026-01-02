@@ -886,7 +886,7 @@ public class JsonIo {
             }
 
             JsonReader reader = new JsonReader(effectiveOptions);
-            return reader.resolveObjects(jsonObject, typeHolder.getType());
+            return (T) reader.toJava(typeHolder.getType(), jsonObject);
         }
     }
 
