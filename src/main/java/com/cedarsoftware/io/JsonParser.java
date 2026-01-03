@@ -407,6 +407,16 @@ class JsonParser {
             } else if (c != ',') {
                 error("Object not ended with '}', instead found '" + (char) c + "'");
             }
+            // Check for trailing comma (JSON5 feature)
+            c = skipWhitespaceRead(true);
+            if (c == '}') {
+                // Trailing comma before closing brace
+                if (readOptions.isStrictJson()) {
+                    error("Trailing commas not allowed in strict JSON mode");
+                }
+                break;
+            }
+            input.pushback((char) c);
         }
 
         --curParseDepth;
@@ -429,13 +439,23 @@ class JsonParser {
                 list.add(value);
             }
 
-            final int c = skipWhitespaceRead(true);
+            int c = skipWhitespaceRead(true);
 
             if (c == ']') {
                 break;
             } else if (c != ',') {
                 error("Expected ',' or ']' inside array");
             }
+            // Check for trailing comma (JSON5 feature)
+            c = skipWhitespaceRead(true);
+            if (c == ']') {
+                // Trailing comma before closing bracket
+                if (readOptions.isStrictJson()) {
+                    error("Trailing commas not allowed in strict JSON mode");
+                }
+                break;
+            }
+            input.pushback((char) c);
         }
 
         --curParseDepth;
