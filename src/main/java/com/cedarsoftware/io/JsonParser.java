@@ -867,14 +867,91 @@ class JsonParser {
         int c;
         // Performance: Direct character comparison is faster than array bounds check + lookup.
         // JSON whitespace is defined as: space (0x20), tab (0x09), newline (0x0A), carriage return (0x0D)
-        do {
+        while (true) {
             c = in.read();
-        } while (c == ' ' || c == '\t' || c == '\n' || c == '\r');
+
+            // Skip standard whitespace
+            if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+                continue;
+            }
+
+            // Check for comments (JSON5 feature)
+            if (c == '/') {
+                int next = in.read();
+                if (next == '/') {
+                    // Single-line comment: skip until end of line
+                    if (readOptions.isStrictJson()) {
+                        error("Comments not allowed in strict JSON mode");
+                    }
+                    skipSingleLineComment();
+                    continue;
+                } else if (next == '*') {
+                    // Block comment: skip until */
+                    if (readOptions.isStrictJson()) {
+                        error("Comments not allowed in strict JSON mode");
+                    }
+                    skipBlockComment();
+                    continue;
+                } else {
+                    // Not a comment, push back and return '/'
+                    if (next != -1) {
+                        input.pushback((char) next);
+                    }
+                    return c;
+                }
+            }
+
+            break;
+        }
 
         if (c == -1 && throwOnEof) {
             error("EOF reached prematurely");
         }
         return c;
+    }
+
+    /**
+     * Skip a single-line comment (// until end of line).
+     * The leading // has already been consumed.
+     */
+    private void skipSingleLineComment() throws IOException {
+        int c;
+        while ((c = input.read()) != -1) {
+            if (c == '\n' || c == '\r') {
+                // End of line reached, comment is done
+                // Handle \r\n as a single line ending
+                if (c == '\r') {
+                    int next = input.read();
+                    if (next != '\n' && next != -1) {
+                        input.pushback((char) next);
+                    }
+                }
+                return;
+            }
+        }
+        // EOF reached - that's OK for single-line comment at end of file
+    }
+
+    /**
+     * Skip a block comment (slash-star until star-slash).
+     * The leading slash-star has already been consumed.
+     */
+    private void skipBlockComment() throws IOException {
+        int c;
+        while ((c = input.read()) != -1) {
+            if (c == '*') {
+                int next = input.read();
+                if (next == '/') {
+                    // End of block comment
+                    return;
+                } else if (next != -1) {
+                    // Not end of comment, push back and continue
+                    input.pushback((char) next);
+                }
+            }
+        }
+        // EOF reached without closing comment
+        error("Unterminated block comment");
     }
 
     /**

@@ -8,7 +8,11 @@
     * Keys must start with a-z, A-Z, underscore (_), or dollar sign ($)
     * Subsequent characters can include digits (0-9)
     * Examples: `{name:"John"}`, `{_private:1}`, `{$jquery:"lib"}`
-  * JSON5 features remaining: comments, trailing commas, single-quoted strings, hex numbers, etc.
+  * **Comments**: Both single-line and block comments are now supported
+    * Single-line comments: `// comment until end of line`
+    * Block comments: `/* comment */` (can span multiple lines)
+    * Comments can appear anywhere whitespace is allowed
+  * JSON5 features remaining: trailing commas, single-quoted strings, hex numbers, etc.
 * **PERFORMANCE**: `JsonWriter` - Optimized `traceReferences()` to reduce object allocation
   * Replaced single `Deque<Object[]>` with `Deque<Object>` plus primitive `int[]` for depths
   * Eliminates `new Object[]{element, depth}` allocation for every object pushed during reference tracing
