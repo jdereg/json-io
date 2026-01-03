@@ -13,13 +13,18 @@ package com.cedarsoftware.io;
  * </ul>
  * <p>
  * For JSON parsing, use {@link JsonIo}:
- * <pre>
+ * <pre>{@code
  * // Parse JSON to Java objects
  * Person person = JsonIo.toJava(jsonString, readOptions).asClass(Person.class);
  *
  * // Parse JSON to Map-of-Maps
  * Map map = JsonIo.toMaps(jsonString, readOptions).asClass(Map.class);
- * </pre>
+ *
+ * // Parse JSON to a generic type (e.g., List<Person>)
+ * // Use asType() with TypeHolder to preserve generic type information
+ * List<Person> people = JsonIo.toJava(jsonString, readOptions)
+ *                              .asType(new TypeHolder<List<Person>>(){});
+ * }</pre>
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
