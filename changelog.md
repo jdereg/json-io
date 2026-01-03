@@ -1,8 +1,9 @@
 ### Revision History
 #### 4.73.0 (Unreleased)
 * **PERFORMANCE**: `JsonWriter` - Optimized `traceReferences()` to reduce object allocation
-  * Replaced single `Deque<Object[]>` with two parallel stacks (`Deque<Object>` and `Deque<Integer>`)
+  * Replaced single `Deque<Object[]>` with `Deque<Object>` plus primitive `int[]` for depths
   * Eliminates `new Object[]{element, depth}` allocation for every object pushed during reference tracing
+  * Eliminates `Integer` autoboxing by using primitive `int[]` with automatic growth
   * Reduces GC pressure when serializing large object graphs
 * **CLEANUP**: `JsonReader` - Removed all implementation code, retaining only deprecated inner interfaces for backward compatibility
   * `JsonReader` class is now marked `@Deprecated` - use `JsonIo` for all JSON parsing
