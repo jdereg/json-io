@@ -90,17 +90,10 @@ class JsonParser {
     private static final Map<String, String> SUBSTITUTES = new HashMap<>(5);
 
     // Static lookup tables for performance
-    private static final boolean[] WHITESPACE_MAP = new boolean[128];
     private static final char[] ESCAPE_CHAR_MAP = new char[128];
     private static final int[] HEX_VALUE_MAP = new int[128];
 
     static {
-        // Initialize whitespace map
-        WHITESPACE_MAP[' '] = true;
-        WHITESPACE_MAP['\t'] = true;
-        WHITESPACE_MAP['\n'] = true;
-        WHITESPACE_MAP['\r'] = true;
-
         // Initialize escape character map
         ESCAPE_CHAR_MAP['\\'] = '\\';
         ESCAPE_CHAR_MAP['/'] = '/';
@@ -832,11 +825,12 @@ class JsonParser {
      */
     private int skipWhitespaceRead(boolean throwOnEof) throws IOException {
         final Reader in = input;
-        final boolean[] WHITESPACE = WHITESPACE_MAP;
         int c;
+        // Performance: Direct character comparison is faster than array bounds check + lookup.
+        // JSON whitespace is defined as: space (0x20), tab (0x09), newline (0x0A), carriage return (0x0D)
         do {
             c = in.read();
-        } while (c >= 0 && c < 128 && WHITESPACE[c]);
+        } while (c == ' ' || c == '\t' || c == '\n' || c == '\r');
 
         if (c == -1 && throwOnEof) {
             error("EOF reached prematurely");

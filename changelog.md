@@ -17,6 +17,11 @@
   * Changed `writeId()` to take `long` instead of `String`, eliminating `Long.toString()` calls
   * Added `writeLongDirect()` method using digit-pair lookup tables for fast long-to-chars conversion
   * Uses reusable scratch buffer instead of creating String objects for each ID
+* **PERFORMANCE**: `JsonParser` - Optimized `skipWhitespaceRead()` with direct character comparison
+  * Replaced array bounds check + lookup (`c >= 0 && c < 128 && WHITESPACE[c]`) with direct comparison
+  * Now uses `c == ' ' || c == '\t' || c == '\n' || c == '\r'` which is faster
+  * Removed unused `WHITESPACE_MAP` array
+  * ~4% read improvement in Maps mode, ~1.5% in Java mode
 * **CLEANUP**: `JsonReader` - Removed all implementation code, retaining only deprecated inner interfaces for backward compatibility
   * `JsonReader` class is now marked `@Deprecated` - use `JsonIo` for all JSON parsing
   * Private constructor prevents instantiation with clear error message
