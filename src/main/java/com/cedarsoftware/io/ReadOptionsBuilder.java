@@ -1237,6 +1237,27 @@ public class ReadOptionsBuilder {
     }
 
     /**
+     * Enable strict JSON parsing mode (RFC 8259 compliance only).
+     * When enabled, JSON5 extensions will cause parse errors:
+     * <ul>
+     *   <li>Unquoted object keys</li>
+     *   <li>Single-quoted strings</li>
+     *   <li>Comments (single-line and block)</li>
+     *   <li>Trailing commas</li>
+     *   <li>Hexadecimal numbers</li>
+     *   <li>Leading/trailing decimal points</li>
+     *   <li>Positive sign on numbers</li>
+     *   <li>Multi-line strings</li>
+     * </ul>
+     * Default is permissive mode (JSON5 features accepted).
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder strictJson() {
+        options.strictJson = true;
+        return this;
+    }
+
+    /**
      * @param aliasTypeNames Map containing String class names to alias names.  The passed in Map will
      *                       be copied, and be the new baseline settings.
      * @return ReadOptionsBuilder for chained access.
@@ -1558,6 +1579,7 @@ public class ReadOptionsBuilder {
         private ReadOptions.Decimals decimalType = Decimals.DOUBLE;
         private ReadOptions.Integers integerType = Integers.LONG;
         private boolean allowNanAndInfinity = false;
+        private boolean strictJson = false;  // Default to false (permissive JSON5 mode)
         private boolean useUnsafe = false;  // Default to false for security
         
         // Security limits - default to unlimited for backward compatibility
@@ -1632,6 +1654,10 @@ public class ReadOptionsBuilder {
          */
         public boolean isAllowNanAndInfinity() {
             return allowNanAndInfinity;
+        }
+
+        public boolean isStrictJson() {
+            return strictJson;
         }
 
         /**

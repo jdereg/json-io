@@ -92,6 +92,14 @@ public interface ReadOptions {
     boolean isAllowNanAndInfinity();
 
     /**
+     * @return true if strict JSON parsing is enabled (RFC 8259 compliance only).
+     * When true, JSON5 extensions like unquoted keys, comments, trailing commas,
+     * single-quoted strings, etc. will cause parse errors.
+     * Default is false (permissive mode accepts JSON5 features).
+     */
+    boolean isStrictJson();
+
+    /**
      * @return ClassLoader to be used when reading JSON to resolve String named classes.
      */
     ClassLoader getClassLoader();
