@@ -125,6 +125,37 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         ARRAY_ELEMENT  // Inside array, element(s) written
     }
 
+    /**
+     * Cached write type for type-indexed dispatch in writeImpl().
+     * Avoids repeated instanceof checks for the same class.
+     */
+    private enum WriteType {
+        PRIMITIVE_ARRAY,
+        OBJECT_ARRAY,
+        ENUM_SET,
+        COLLECTION,
+        JSON_OBJECT,
+        MAP,
+        POJO
+    }
+
+    // Cache for writeImpl() type dispatch - avoids repeated instanceof checks
+    private static final ClassValue<WriteType> writeTypeCache = new ClassValue<WriteType>() {
+        @Override
+        protected WriteType computeValue(Class<?> type) {
+            if (type.isArray()) {
+                return type.getComponentType().isPrimitive() ?
+                        WriteType.PRIMITIVE_ARRAY : WriteType.OBJECT_ARRAY;
+            }
+            // Must check JsonObject BEFORE Collection/Map (JsonObject implements Map)
+            if (JsonObject.class.isAssignableFrom(type)) return WriteType.JSON_OBJECT;
+            if (EnumSet.class.isAssignableFrom(type)) return WriteType.ENUM_SET;
+            if (Collection.class.isAssignableFrom(type)) return WriteType.COLLECTION;
+            if (Map.class.isAssignableFrom(type)) return WriteType.MAP;
+            return WriteType.POJO;
+        }
+    };
+
     static {
         for (short i = -128; i <= 127; i++) {
             char[] chars = Integer.toString(i).toCharArray();
@@ -644,35 +675,44 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         final Class<?> objClass = obj.getClass();
-        if (objClass.isArray()) {
-            if (objClass.getComponentType().isPrimitive()) {
+
+        // Type-indexed dispatch using cached WriteType (avoids repeated instanceof checks)
+        switch (writeTypeCache.get(objClass)) {
+            case PRIMITIVE_ARRAY:
                 writePrimitiveArray(obj, objClass, showType);
-            } else {
+                break;
+            case OBJECT_ARRAY:
                 writeObjectArray((Object[]) obj, objClass, showType);
-            }
-        } else if (obj instanceof EnumSet) {
-            writeEnumSet((EnumSet<?>) obj);
-        } else if (obj instanceof Collection) {
-            writeCollection((Collection<?>) obj, showType);
-        } else if (obj instanceof JsonObject) {   // symmetric support for writing Map of Maps representation back as equivalent JSON format.
-            JsonObject jObj = (JsonObject) obj;
-            if (jObj.isArray()) {
-                writeJsonObjectArray(jObj, showType);
-            } else if (jObj.isCollection()) {
-                writeJsonObjectCollection(jObj, showType);
-            } else if (jObj.isMap()) {
-                if (!writeJsonObjectMapWithStringKeys(jObj, showType)) {
-                    writeJsonObjectMap(jObj, showType);
+                break;
+            case ENUM_SET:
+                writeEnumSet((EnumSet<?>) obj);
+                break;
+            case COLLECTION:
+                writeCollection((Collection<?>) obj, showType);
+                break;
+            case JSON_OBJECT:
+                // JsonObject requires instance-level sub-dispatch (isArray, isCollection, isMap)
+                JsonObject jObj = (JsonObject) obj;
+                if (jObj.isArray()) {
+                    writeJsonObjectArray(jObj, showType);
+                } else if (jObj.isCollection()) {
+                    writeJsonObjectCollection(jObj, showType);
+                } else if (jObj.isMap()) {
+                    if (!writeJsonObjectMapWithStringKeys(jObj, showType)) {
+                        writeJsonObjectMap(jObj, showType);
+                    }
+                } else {
+                    writeJsonObjectObject(jObj, showType);
                 }
-            } else {
-                writeJsonObjectObject(jObj, showType);
-            }
-        } else if (obj instanceof Map) {   // Map instanceof check must be after JsonObject check above (JsonObject is a subclass of Map)
-            if (!writeMapWithStringKeys((Map) obj, showType)) {
-                writeMap((Map) obj, showType);
-            }
-        } else {
-            writeObject(obj, showType, false);
+                break;
+            case MAP:
+                if (!writeMapWithStringKeys((Map) obj, showType)) {
+                    writeMap((Map) obj, showType);
+                }
+                break;
+            case POJO:
+                writeObject(obj, showType, false);
+                break;
         }
     }
 

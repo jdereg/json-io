@@ -9,6 +9,10 @@
   * For POJOs (not in nonRefClasses), previously performed 4 hierarchy/type checks on every call
   * Now caches the boolean result per-class using JVM-optimized `ClassValue`
   * Particularly beneficial since this method is called twice per object (trace + write phases)
+* **PERFORMANCE**: `JsonWriter` - Type-indexed dispatch in `writeImpl()` using `ClassValue`
+  * Replaced cascade of 6 `instanceof` checks with cached `WriteType` enum lookup
+  * For POJOs (the common case), avoids all `instanceof` checks after first encounter
+  * Uses `switch` on cached enum for efficient dispatch to write methods
 * **CLEANUP**: `JsonReader` - Removed all implementation code, retaining only deprecated inner interfaces for backward compatibility
   * `JsonReader` class is now marked `@Deprecated` - use `JsonIo` for all JSON parsing
   * Private constructor prevents instantiation with clear error message
