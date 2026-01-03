@@ -393,7 +393,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         output.write('{');
         tabIn();
         if (referenced) {
-            writeId(getId(o));
+            writeId(getIdLong(o));
             if (showType) {
                 output.write(',');
                 newLine();
@@ -626,12 +626,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         final Writer output = this.out;
         if (objVisited.containsKey(obj)) {    // Only write (define) an object once in the JSON stream, otherwise emit a @ref
-            String id = getId(obj);
-            if (id == null) {   // Test for null because of Weak/Soft references being gc'd during serialization.
+            long id = getIdLong(obj);
+            if (id == 0) {   // Test for 0 because of Weak/Soft references being gc'd during serialization.
                 return false;
             }
             output.write(writeOptions.isShortMetaKeys() ? "{\"@r\":" : "{\"@ref\":");
-            output.write(id);
+            writeLongDirect(id);
             output.write('}');
             return true;
         }
@@ -716,9 +716,77 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
     }
 
-    private void writeId(final String id) throws IOException {
+    private void writeId(final long id) throws IOException {
         out.write(idPrefix);
-        out.write(id == null ? "0" : id);
+        writeLongDirect(id);
+    }
+
+    // Pre-computed digit pairs for fast long-to-chars conversion (00-99)
+    private static final char[] DIGIT_TENS = {
+        '0', '0', '0', '0', '0', '0', '0', '0', '0', '0',
+        '1', '1', '1', '1', '1', '1', '1', '1', '1', '1',
+        '2', '2', '2', '2', '2', '2', '2', '2', '2', '2',
+        '3', '3', '3', '3', '3', '3', '3', '3', '3', '3',
+        '4', '4', '4', '4', '4', '4', '4', '4', '4', '4',
+        '5', '5', '5', '5', '5', '5', '5', '5', '5', '5',
+        '6', '6', '6', '6', '6', '6', '6', '6', '6', '6',
+        '7', '7', '7', '7', '7', '7', '7', '7', '7', '7',
+        '8', '8', '8', '8', '8', '8', '8', '8', '8', '8',
+        '9', '9', '9', '9', '9', '9', '9', '9', '9', '9'
+    };
+    private static final char[] DIGIT_ONES = {
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
+    };
+
+    // Scratch buffer for long-to-chars conversion (max 20 digits for Long.MIN_VALUE)
+    private final char[] longBuffer = new char[20];
+
+    /**
+     * Write a long value directly to output without creating a String object.
+     * Uses digit pair lookup tables for efficient conversion.
+     */
+    private void writeLongDirect(long value) throws IOException {
+        if (value == 0) {
+            out.write('0');
+            return;
+        }
+
+        int idx = longBuffer.length;
+        boolean negative = value < 0;
+        if (!negative) {
+            value = -value;  // Work with negative to handle Long.MIN_VALUE
+        }
+
+        // Extract digits two at a time using lookup tables
+        while (value <= -100) {
+            int q = (int) (value / 100);
+            int r = (int) ((q * 100) - value);  // remainder 0-99
+            value = q;
+            longBuffer[--idx] = DIGIT_ONES[r];
+            longBuffer[--idx] = DIGIT_TENS[r];
+        }
+
+        // Handle remaining 1-2 digits
+        int r = (int) -value;
+        longBuffer[--idx] = DIGIT_ONES[r];
+        if (r >= 10) {
+            longBuffer[--idx] = DIGIT_TENS[r];
+        }
+
+        if (negative) {
+            longBuffer[--idx] = '-';
+        }
+
+        out.write(longBuffer, idx, longBuffer.length - idx);
     }
 
     // Optimized writeType method
@@ -773,7 +841,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         if (referenced) {
-            writeId(getId(array));
+            writeId(getIdLong(array));
             output.write(',');
             newLine();
         }
@@ -847,7 +915,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         if (referenced) {
-            writeId(getId(array));
+            writeId(getIdLong(array));
             output.write(',');
             newLine();
         }
@@ -1085,7 +1153,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             showType = false;
         }
         if (referenced) {
-            writeId(getId(col));
+            writeId(getIdLong(col));
         }
 
         if (showType) {
@@ -1134,7 +1202,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         if (referenced) {
-            writeId(Long.toString(jObj.id));
+            writeId(jObj.id);
             output.write(',');
             newLine();
         }
@@ -1215,7 +1283,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         if (referenced) {
-            writeId(String.valueOf(jObj.id));
+            writeId(jObj.id);
         }
 
         if (showType) {
@@ -1309,7 +1377,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         tabIn();
 
         if (referenced) {
-            writeId(String.valueOf(jObj.getId()));
+            writeId(jObj.getId());
         }
 
         if (showType) {
@@ -1341,7 +1409,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         output.write('{');
         tabIn();
         if (referenced) {
-            writeId(String.valueOf(jObj.id));
+            writeId(jObj.id);
         }
 
         Class<?> type = null;
@@ -1434,7 +1502,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         output.write('{');
         tabIn();
         if (referenced) {
-            writeId(getId(map));
+            writeId(getIdLong(map));
         }
 
         if (showType) {
@@ -1617,7 +1685,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         boolean referenced = this.objsReferenced.containsKey(enumSet);
         if (referenced) {
-            writeId(getId(enumSet));
+            writeId(getIdLong(enumSet));
             out.write(',');
             newLine();
         }
@@ -1726,7 +1794,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             out.write('{');
             tabIn();
             if (referenced) {
-                writeId(getId(obj));
+                writeId(getIdLong(obj));
             }
 
             if (referenced && showType) {
@@ -1912,15 +1980,20 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
     }
 
-    private String getId(Object o) {
+    /**
+     * Get the ID for an object. Returns the ID as a long (0 if not referenced).
+     * For JsonObject instances, uses the stored id field.
+     * For other objects, looks up in objsReferenced map.
+     */
+    private long getIdLong(Object o) {
         if (o instanceof JsonObject) {
             long id = ((JsonObject) o).id;
             if (id > 0) {
-                return String.valueOf(id);
+                return id;
             }
         }
         Long id = this.objsReferenced.get(o);
-        return id == null ? null : Long.toString(id);
+        return id == null ? 0 : id;
     }
 
     /**

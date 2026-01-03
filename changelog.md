@@ -13,6 +13,10 @@
   * Replaced cascade of 6 `instanceof` checks with cached `WriteType` enum lookup
   * For POJOs (the common case), avoids all `instanceof` checks after first encounter
   * Uses `switch` on cached enum for efficient dispatch to write methods
+* **PERFORMANCE**: `JsonWriter` - Write `@id` and `@ref` values directly without String allocation
+  * Changed `writeId()` to take `long` instead of `String`, eliminating `Long.toString()` calls
+  * Added `writeLongDirect()` method using digit-pair lookup tables for fast long-to-chars conversion
+  * Uses reusable scratch buffer instead of creating String objects for each ID
 * **CLEANUP**: `JsonReader` - Removed all implementation code, retaining only deprecated inner interfaces for backward compatibility
   * `JsonReader` class is now marked `@Deprecated` - use `JsonIo` for all JSON parsing
   * Private constructor prevents instantiation with clear error message
