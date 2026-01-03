@@ -185,10 +185,22 @@ class ErrorsTest
     @Test
     void testNullFieldName()
     {
+        // In strict JSON mode, unquoted "null" as field name should throw error
         String json = "{null:17}";
-        assertThatThrownBy(() -> TestUtil.toJava(json, null).asClass(LinkedHashMap.class))
+        ReadOptions strictOptions = new ReadOptionsBuilder().strictJson().build();
+        assertThatThrownBy(() -> JsonIo.toJava(json, strictOptions).asClass(LinkedHashMap.class))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Expected quote before field name");
+                .hasMessageContaining("Unquoted field names not allowed in strict JSON mode");
+    }
+
+    @Test
+    void testNullFieldNameJson5Permissive()
+    {
+        // In permissive JSON5 mode, unquoted "null" is a valid identifier for field name
+        String json = "{null:17}";
+        Map<?, ?> result = TestUtil.toJava(json, null).asClass(LinkedHashMap.class);
+        assert result.size() == 1;
+        assertEquals(17L, result.get("null"));
     }
 
     @Test
@@ -199,10 +211,16 @@ class ErrorsTest
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("Expected ':' between field and value");
 
+        // In strict JSON mode, unquoted field names should throw error
         final String json1 = "{field:0}";  // not quoted field name
-        assertThatThrownBy(() -> TestUtil.toMaps(json1, null).asClass(null))
+        ReadOptions strictOptions = new ReadOptionsBuilder().strictJson().build();
+        assertThatThrownBy(() -> JsonIo.toMaps(json1, strictOptions).asClass(null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Expected quote");
+                .hasMessageContaining("Unquoted field names not allowed in strict JSON mode");
+
+        // In permissive JSON5 mode, unquoted field names should work
+        Map<?, ?> result = TestUtil.toMaps(json1, null).asClass(null);
+        assertEquals(0L, result.get("field"));
 
         final String json2 = "{\"field\":0";  // object not terminated correctly (ending in number)
         assertThatThrownBy(() -> TestUtil.toMaps(json2, null).asClass(null))

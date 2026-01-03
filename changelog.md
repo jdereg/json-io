@@ -4,7 +4,11 @@
   * Added `ReadOptionsBuilder.strictJson()` for RFC 8259 compliance mode
   * Default is permissive mode (accepts JSON5 features)
   * When `strictJson()` is enabled, JSON5 extensions cause parse errors
-  * JSON5 features to be implemented: unquoted keys, comments, trailing commas, single-quoted strings, hex numbers, etc.
+  * **Unquoted object keys**: Object keys can now be valid ECMAScript identifiers without quotes
+    * Keys must start with a-z, A-Z, underscore (_), or dollar sign ($)
+    * Subsequent characters can include digits (0-9)
+    * Examples: `{name:"John"}`, `{_private:1}`, `{$jquery:"lib"}`
+  * JSON5 features remaining: comments, trailing commas, single-quoted strings, hex numbers, etc.
 * **PERFORMANCE**: `JsonWriter` - Optimized `traceReferences()` to reduce object allocation
   * Replaced single `Deque<Object[]>` with `Deque<Object>` plus primitive `int[]` for depths
   * Eliminates `new Object[]{element, depth}` allocation for every object pushed during reference tracing

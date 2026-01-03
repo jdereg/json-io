@@ -444,20 +444,74 @@ class JsonParser {
 
     /**
      * Read the field name of a JSON object.
+     * Supports both quoted strings (standard JSON) and unquoted identifiers (JSON5).
      *
      * @return String field name.
      */
     private String readFieldName() throws IOException {
         int c = skipWhitespaceRead(true);
-        if (c != '"') {
+        String field;
+
+        if (c == '"') {
+            // Standard quoted field name
+            field = readString();
+        } else if (isIdentifierStart(c)) {
+            // JSON5 unquoted field name
+            if (readOptions.isStrictJson()) {
+                error("Unquoted field names not allowed in strict JSON mode");
+            }
+            field = readUnquotedIdentifier(c);
+        } else {
             error("Expected quote before field name");
+            return null; // Unreachable, but satisfies compiler
         }
-        String field = readString();
+
         c = skipWhitespaceRead(true);
         if (c != ':') {
             error("Expected ':' between field and value, instead found '" + (char) c + "'");
         }
         return field;
+    }
+
+    /**
+     * Check if character is a valid ECMAScript identifier start character.
+     * Per JSON5 spec, identifiers follow ECMAScript 5.1 IdentifierName production.
+     */
+    private boolean isIdentifierStart(int c) {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '$';
+    }
+
+    /**
+     * Check if character is a valid ECMAScript identifier part character.
+     */
+    private boolean isIdentifierPart(int c) {
+        return isIdentifierStart(c) || (c >= '0' && c <= '9');
+    }
+
+    /**
+     * Read an unquoted identifier (JSON5 feature).
+     * The first character has already been read and validated as identifier start.
+     *
+     * @param firstChar the first character of the identifier (already read)
+     * @return the complete identifier string
+     */
+    private String readUnquotedIdentifier(int firstChar) throws IOException {
+        strBuf.setLength(0);
+        strBuf.append((char) firstChar);
+
+        while (true) {
+            int c = input.read();
+            if (c == -1 || !isIdentifierPart(c)) {
+                // Put back the non-identifier character
+                if (c != -1) {
+                    input.pushback((char) c);
+                }
+                break;
+            }
+            strBuf.append((char) c);
+        }
+
+        return strBuf.toString();
     }
 
     /**

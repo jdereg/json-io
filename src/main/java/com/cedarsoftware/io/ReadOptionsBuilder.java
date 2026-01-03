@@ -241,8 +241,9 @@ public class ReadOptionsBuilder {
             options.missingFieldHandler = other.missingFieldHandler;
             options.decimalType = other.decimalType;
             options.integerType = other.integerType;
-             options.useUnsafe = other.useUnsafe;
-            
+            options.useUnsafe = other.useUnsafe;
+            options.strictJson = other.strictJson;
+
             // Copy security limits
             options.maxUnresolvedReferences = other.maxUnresolvedReferences;
             options.maxStackDepth = other.maxStackDepth;
