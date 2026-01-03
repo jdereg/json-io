@@ -16,7 +16,12 @@
     * Objects: `{"a": 1, "b": 2,}` is valid
     * Arrays: `[1, 2, 3,]` is valid
     * Nested structures with trailing commas: `{"arr": [1, 2,], "name": "test",}`
-  * JSON5 features remaining: single-quoted strings, hex numbers, special numbers, etc.
+  * **Single-quoted strings**: Strings can use single quotes instead of double quotes
+    * Values: `{"name": 'John'}` is valid
+    * Keys: `{'name': "John"}` is valid
+    * Single quotes can contain unescaped double quotes: `{'text': 'He said "Hello"'}`
+    * Escape single quotes with backslash: `{'text': 'It\'s working'}`
+  * JSON5 features remaining: hex numbers, special numbers, multi-line strings, etc.
 * **PERFORMANCE**: `JsonWriter` - Optimized `traceReferences()` to reduce object allocation
   * Replaced single `Deque<Object[]>` with `Deque<Object>` plus primitive `int[]` for depths
   * Eliminates `new Object[]{element, depth}` allocation for every object pushed during reference tracing

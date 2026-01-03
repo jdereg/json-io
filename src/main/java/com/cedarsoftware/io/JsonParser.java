@@ -277,8 +277,13 @@ class JsonParser {
         // Handle less common value types
         switch (c) {
             case '"':
-                String str = readString();
-                return str;
+                return readString('"');
+            case '\'':
+                // JSON5 single-quoted strings
+                if (readOptions.isStrictJson()) {
+                    error("Single-quoted strings not allowed in strict JSON mode");
+                }
+                return readString('\'');
             case ']':   // empty array
                 input.pushback(']');
                 return EMPTY_ARRAY;
@@ -473,8 +478,14 @@ class JsonParser {
         String field;
 
         if (c == '"') {
-            // Standard quoted field name
-            field = readString();
+            // Standard double-quoted field name
+            field = readString('"');
+        } else if (c == '\'') {
+            // JSON5 single-quoted field name
+            if (readOptions.isStrictJson()) {
+                error("Single-quoted strings not allowed in strict JSON mode");
+            }
+            field = readString('\'');
         } else if (isIdentifierStart(c)) {
             // JSON5 unquoted field name
             if (readOptions.isStrictJson()) {
@@ -722,11 +733,13 @@ class JsonParser {
     /**
      * Read a JSON string
      * This method assumes the initial quote has already been read.
+     * Supports both double-quoted (standard JSON) and single-quoted (JSON5) strings.
      *
+     * @param quoteChar the quote character that started the string ('"' or '\'')
      * @return String read from JSON input stream.
      * @throws IOException for stream errors or parsing errors.
      */
-    private String readString() throws IOException {
+    private String readString(char quoteChar) throws IOException {
         // Reuse StringBuilder for better performance
         final StringBuilder str = strBuf;
         str.setLength(0);
@@ -744,13 +757,13 @@ class JsonParser {
             }
 
             // Fast path for regular characters (most common)
-            if (c != '\\' && c != '"') {
+            if (c != '\\' && c != quoteChar) {
                 str.append((char) c);
                 continue;
             }
 
             // Handle string termination
-            if (c == '"') {
+            if (c == quoteChar) {
                 // Check root level validation
                 if (curParseDepth == 0) {
                     c = skipWhitespaceRead(false);

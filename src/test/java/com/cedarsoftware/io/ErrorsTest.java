@@ -104,10 +104,13 @@ class ErrorsTest
     @Test
     void testParseBadValueInArray()
     {
+        // In permissive mode (default), single-quoted strings are allowed (JSON5)
+        // In strict mode, single-quoted strings cause an error
         String json = "[true, \"bunch of ints\", 1,2, 3 , 4, 5 , 6,7,8,9,\'a\']";
-        assertThatThrownBy(() -> TestUtil.toJava(json, null).asClass(null))
+        ReadOptions strictOptions = new ReadOptionsBuilder().strictJson().build();
+        assertThatThrownBy(() -> JsonIo.toJava(json, strictOptions).asClass(null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Unknown JSON value type");
+                .hasMessageContaining("Single-quoted strings not allowed in strict JSON mode");
     }
 
     @Test

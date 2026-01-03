@@ -118,14 +118,15 @@ class EnumSetErrorTest {
         assertThatThrownBy(() -> TestUtil.toJava(malformed2, null).asClass(null))
                 .isInstanceOf(JsonIoException.class);
 
-        // Invalid quotes
+        // Single-quoted strings are valid in permissive mode (JSON5), but invalid in strict mode
         String malformed3 = "{\n" +
                 "  \"@type\": '" + TestEnum.class.getName() + "',\n" +
                 "  \"@items\": [\"A\", \"B\"]\n" +
                 "}";
-
-        assertThatThrownBy(() -> TestUtil.toJava(malformed3, null).asClass(null))
-                .isInstanceOf(JsonIoException.class);
+        ReadOptions strictOptions = new ReadOptionsBuilder().strictJson().build();
+        assertThatThrownBy(() -> JsonIo.toJava(malformed3, strictOptions).asClass(null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Single-quoted strings not allowed in strict JSON mode");
     }
 
     @Test
