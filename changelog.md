@@ -31,6 +31,12 @@
   * Added `getJsonType()` method that caches result of `isArray()/isCollection()/isMap()` checks
   * `Resolver.traverseSpecificType()` and `JsonWriter.writeImpl()` now use cached type dispatch
   * Avoids repeated type classification checks during object graph traversal
+* **PERFORMANCE**: `JsonParser` - Simplified number parsing with direct StringBuilder-to-long conversion
+  * Parse integers directly from `StringBuilder.charAt()` without String allocation
+  * Optimization from the original heap-based parser avoids both `String.toString()` and `Long.parseLong()` overhead
+  * Removed 80+ lines of complex 1-2 digit special-case branching code
+  * Single general path now handles all integer sizes (up to 18 digits parsed directly, 19+ fall back to String)
+  * ~2-3% read improvement in Maps mode
 * **CLEANUP**: `JsonReader` - Removed all implementation code, retaining only deprecated inner interfaces for backward compatibility
   * `JsonReader` class is now marked `@Deprecated` - use `JsonIo` for all JSON parsing
   * Private constructor prevents instantiation with clear error message
