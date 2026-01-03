@@ -565,7 +565,7 @@ public abstract class Resolver {
         // If a specific rootType was provided...
         if (rootType != null) {
             // If the resolved graph is already assignable to the requested type, return it.
-            if (rawRootType != null && rawRootType.isAssignableFrom(graph.getClass())) {
+            if (rawRootType != null && rawRootType.isInstance(graph)) {
                 return graph;
             }
             // Otherwise, if conversion is supported, perform the conversion.
@@ -605,7 +605,7 @@ public abstract class Resolver {
         Class<?> rootClass = TypeUtilities.getRawClass(rootType);
 
         // If the value is already the desired type (or a subtype), just return
-        if (rootClass.isAssignableFrom(returnValue.getClass())) {
+        if (rootClass.isInstance(returnValue)) {
             return returnValue;
         }
 

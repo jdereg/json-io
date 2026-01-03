@@ -90,7 +90,7 @@ public class ArrayFactory<T> implements ClassFactory {
                     if (val != null) {
                         if (val instanceof JsonObject) {
                             val = unwrapJsonObject((JsonObject) val, componentType, converter);
-                        } else if (!componentType.isAssignableFrom(val.getClass())) {
+                        } else if (!componentType.isInstance(val)) {
                             // Only convert if value is not already assignable to component type
                             // This preserves subclass types (e.g., java.sql.Date in a Date[] array)
                             val = converter.convert(val, componentType);
@@ -103,7 +103,7 @@ public class ArrayFactory<T> implements ClassFactory {
                 for (int i = 0; i < len; i++) {
                     Object val = items[i];
                     if (val != null) {
-                        if (!componentType.isAssignableFrom(val.getClass())) {
+                        if (!componentType.isInstance(val)) {
                             // Only convert if value is not already assignable to component type
                             // This preserves subclass types (e.g., java.sql.Date in a Date[] array)
                             val = converter.convert(val, componentType);

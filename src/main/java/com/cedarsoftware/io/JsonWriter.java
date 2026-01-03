@@ -312,7 +312,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * @return true if the array element was written, false otherwise.
      */
     public boolean writeArrayElementIfMatching(Class<?> arrayComponentClass, Object o, boolean showType, Writer output) {
-        if (!arrayComponentClass.isAssignableFrom(o.getClass())) {
+        if (!arrayComponentClass.isInstance(o)) {
             return false;
         }
 
