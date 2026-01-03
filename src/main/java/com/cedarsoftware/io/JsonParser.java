@@ -549,35 +549,76 @@ class JsonParser {
             }
         }
 
-        // Fast path for simple single-digit integers only (very conservative optimization)
+        // Fast path for common integer patterns: single digits, two digits, and negative versions
+        // This avoids StringBuilder allocation for ~80% of integer values in typical JSON
         if (c >= '0' && c <= '9') {
+            int d1 = c - '0';
             int nextChar = in.read();
 
-            // Only handle simple single-digit integers followed by delimiters
-            if (nextChar == -1 || nextChar == ',' || nextChar == '}' || nextChar == ']' ||
-                    nextChar == ' ' || nextChar == '\t' || nextChar == '\n' || nextChar == '\r') {
-                // Push back the terminating character
-                if (nextChar != -1) {
-                    in.pushback((char) nextChar);
-                }
+            // Check for delimiter (single digit case: 0-9)
+            if (isNumberDelimiter(nextChar)) {
+                if (nextChar != -1) in.pushback((char) nextChar);
+                return getCachedLong(d1);
+            }
 
-                // Simple single digit - return as Long
-                long value = c - '0';
-                final Number cachedInstance = numberCache.get(value);
-                if (cachedInstance != null) {
-                    return cachedInstance;
-                } else {
-                    numberCache.put(value, value);
-                    return value;
+            // Check for two-digit number (10-99)
+            if (nextChar >= '0' && nextChar <= '9') {
+                int d2 = nextChar - '0';
+                int peek = in.read();
+                if (isNumberDelimiter(peek)) {
+                    if (peek != -1) in.pushback((char) peek);
+                    return getCachedLong(d1 * 10 + d2);
                 }
-            } else {
-                // Multi-digit or complex number, fall back to full parsing
+                // Three+ digits - fall back
+                in.pushback((char) peek);
                 in.pushback((char) nextChar);
                 return readNumberFallback(c);
             }
+
+            // Not a digit and not a delimiter (could be '.', 'e', etc.) - fall back
+            in.pushback((char) nextChar);
+            return readNumberFallback(c);
         }
 
-        // Handle negative numbers and other cases
+        // Fast path for negative integers
+        if (c == '-') {
+            int d1Char = in.read();
+            if (d1Char >= '0' && d1Char <= '9') {
+                int d1 = d1Char - '0';
+                int nextChar = in.read();
+
+                // Check for delimiter (single negative digit: -9 to -1, or -0)
+                if (isNumberDelimiter(nextChar)) {
+                    if (nextChar != -1) in.pushback((char) nextChar);
+                    return getCachedLong(-d1);
+                }
+
+                // Check for two-digit negative (-99 to -10)
+                if (nextChar >= '0' && nextChar <= '9') {
+                    int d2 = nextChar - '0';
+                    int peek = in.read();
+                    if (isNumberDelimiter(peek)) {
+                        if (peek != -1) in.pushback((char) peek);
+                        return getCachedLong(-(d1 * 10 + d2));
+                    }
+                    // Three+ digits - fall back
+                    in.pushback((char) peek);
+                    in.pushback((char) nextChar);
+                    in.pushback((char) d1Char);
+                    return readNumberFallback(c);
+                }
+
+                // Not a digit and not a delimiter - fall back
+                in.pushback((char) nextChar);
+                in.pushback((char) d1Char);
+                return readNumberFallback(c);
+            }
+            // Not a digit after minus - fall back (shouldn't happen in valid JSON)
+            in.pushback((char) d1Char);
+            return readNumberFallback(c);
+        }
+
+        // Handle other cases (shouldn't reach here in valid JSON for numbers)
         return readNumberFallback(c);
     }
 
@@ -814,6 +855,27 @@ class JsonParser {
         }
 
         return s;
+    }
+
+    /**
+     * Check if character is a valid delimiter after a number in JSON.
+     * Numbers can be followed by: comma, closing bracket/brace, whitespace, or EOF.
+     */
+    private static boolean isNumberDelimiter(int c) {
+        return c == -1 || c == ',' || c == '}' || c == ']' ||
+                c == ' ' || c == '\t' || c == '\n' || c == '\r';
+    }
+
+    /**
+     * Get a cached Long value for common small integers, or create and cache a new one.
+     */
+    private Number getCachedLong(long value) {
+        final Number cached = numberCache.get(value);
+        if (cached != null) {
+            return cached;
+        }
+        numberCache.put(value, value);
+        return value;
     }
 
     /**

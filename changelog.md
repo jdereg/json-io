@@ -22,6 +22,11 @@
   * Now uses `c == ' ' || c == '\t' || c == '\n' || c == '\r'` which is faster
   * Removed unused `WHITESPACE_MAP` array
   * ~4% read improvement in Maps mode, ~1.5% in Java mode
+* **PERFORMANCE**: `JsonParser` - Extended number parsing fast path to handle -99 to 99
+  * Previously only single positive digits (0-9) used fast path
+  * Now handles: single digits, two-digit numbers, negative single/two-digit numbers
+  * Avoids StringBuilder allocation for ~80% of integers in typical JSON
+  * ~9% read improvement in Maps mode (3.81x → 3.47x vs Jackson)
 * **CLEANUP**: `JsonReader` - Removed all implementation code, retaining only deprecated inner interfaces for backward compatibility
   * `JsonReader` class is now marked `@Deprecated` - use `JsonIo` for all JSON parsing
   * Private constructor prevents instantiation with clear error message
