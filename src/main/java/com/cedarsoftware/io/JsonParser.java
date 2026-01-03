@@ -515,117 +515,36 @@ class JsonParser {
      * @throws IOException for stream errors or parsing errors.
      */
     private Number readNumber(int c) throws IOException {
-        final FastReader in = input;
-
+        // Handle NaN and Infinity (non-standard JSON extension)
         if (allowNanAndInfinity && (c == '-' || c == 'N' || c == 'I')) {
-            /*
-             * In this branch, we must have either one of these scenarios: (a) -NaN or NaN (b) Inf or -Inf (c) -123 but
-             * NOT 123 (replace 123 by any number)
-             *
-             * In case of (c), we do nothing and revert input and c for normal processing.
-             */
-
-            // Handle negativity.
             final boolean isNeg = (c == '-');
             if (isNeg) {
-                // Advance to next character.
                 c = input.read();
             }
 
-            // Case "-Infinity", "Infinity" or "NaN".
             if (c == 'I') {
                 readToken("infinity");
-                // [Out of RFC 4627] accept NaN/Infinity values
                 return isNeg ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY;
-            } else if ('N' == c) {
-                // [Out of RFC 4627] accept NaN/Infinity values
+            } else if (c == 'N') {
                 readToken("nan");
                 return Double.NaN;
             } else {
-                // This is (c) case, meaning there was c = '-' at the beginning.
-                // This is a number like "-2", but not "-Infinity". We let the normal code process.
+                // Number like "-2", not "-Infinity" - continue to normal processing
                 input.pushback((char) c);
                 c = '-';
             }
         }
 
-        // Fast path for common integer patterns: single digits, two digits, and negative versions
-        // This avoids StringBuilder allocation for ~80% of integer values in typical JSON
-        if (c >= '0' && c <= '9') {
-            int d1 = c - '0';
-            int nextChar = in.read();
-
-            // Check for delimiter (single digit case: 0-9)
-            if (isNumberDelimiter(nextChar)) {
-                if (nextChar != -1) in.pushback((char) nextChar);
-                return getCachedLong(d1);
-            }
-
-            // Check for two-digit number (10-99)
-            if (nextChar >= '0' && nextChar <= '9') {
-                int d2 = nextChar - '0';
-                int peek = in.read();
-                if (isNumberDelimiter(peek)) {
-                    if (peek != -1) in.pushback((char) peek);
-                    return getCachedLong(d1 * 10 + d2);
-                }
-                // Three+ digits - fall back
-                in.pushback((char) peek);
-                in.pushback((char) nextChar);
-                return readNumberFallback(c);
-            }
-
-            // Not a digit and not a delimiter (could be '.', 'e', etc.) - fall back
-            in.pushback((char) nextChar);
-            return readNumberFallback(c);
-        }
-
-        // Fast path for negative integers
-        if (c == '-') {
-            int d1Char = in.read();
-            if (d1Char >= '0' && d1Char <= '9') {
-                int d1 = d1Char - '0';
-                int nextChar = in.read();
-
-                // Check for delimiter (single negative digit: -9 to -1, or -0)
-                if (isNumberDelimiter(nextChar)) {
-                    if (nextChar != -1) in.pushback((char) nextChar);
-                    return getCachedLong(-d1);
-                }
-
-                // Check for two-digit negative (-99 to -10)
-                if (nextChar >= '0' && nextChar <= '9') {
-                    int d2 = nextChar - '0';
-                    int peek = in.read();
-                    if (isNumberDelimiter(peek)) {
-                        if (peek != -1) in.pushback((char) peek);
-                        return getCachedLong(-(d1 * 10 + d2));
-                    }
-                    // Three+ digits - fall back
-                    in.pushback((char) peek);
-                    in.pushback((char) nextChar);
-                    in.pushback((char) d1Char);
-                    return readNumberFallback(c);
-                }
-
-                // Not a digit and not a delimiter - fall back
-                in.pushback((char) nextChar);
-                in.pushback((char) d1Char);
-                return readNumberFallback(c);
-            }
-            // Not a digit after minus - fall back (shouldn't happen in valid JSON)
-            in.pushback((char) d1Char);
-            return readNumberFallback(c);
-        }
-
-        // Handle other cases (shouldn't reach here in valid JSON for numbers)
-        return readNumberFallback(c);
+        // All numbers go through the general path with direct StringBuilder parsing
+        return readNumberGeneral(c);
     }
 
     /**
-     * Fallback number parsing using StringBuilder for complex cases.
+     * Parse a JSON number using direct StringBuilder parsing.
+     * Integers are parsed directly from StringBuilder without String allocation.
+     * This optimization comes from the original heap-based parser.
      */
-    private Number readNumberFallback(int firstChar) throws IOException {
+    private Number readNumberGeneral(int firstChar) throws IOException {
         final FastReader in = input;
         boolean isFloat = false;
 
@@ -650,11 +569,10 @@ class JsonParser {
 
         try {
             Number val;
-            String numStr = number.toString();
             if (isFloat) {
-                val = readFloatingPoint(numStr);
+                val = readFloatingPoint(number.toString());
             } else {
-                val = readInteger(numStr);
+                val = readInteger(number);
             }
             final Number cachedInstance = numberCache.get(val);
             if (cachedInstance != null) {
@@ -669,11 +587,37 @@ class JsonParser {
         }
     }
 
-    private Number readInteger(String numStr) {
+    /**
+     * Parse integer directly from StringBuilder without String allocation.
+     * This optimization comes from the original heap-based parser and avoids
+     * creating a String object for most integer values.
+     */
+    private Number readInteger(StringBuilder number) {
+        int len = number.length();
+
+        // BigInteger mode - must use String
         if (readOptions.isIntegerTypeBigInteger()) {
-            return new BigInteger(numStr);
+            return new BigInteger(number.toString());
         }
 
+        // Direct parsing for integers that fit in a long (up to 18 digits, or 19 if positive)
+        // Long.MAX_VALUE = 9223372036854775807 (19 digits)
+        // Long.MIN_VALUE = -9223372036854775808 (19 digits + sign)
+        boolean isNeg = number.charAt(0) == '-';
+        int digitCount = isNeg ? len - 1 : len;
+
+        if (digitCount <= 18) {
+            // Safe to parse directly - won't overflow
+            long n = 0;
+            int start = isNeg ? 1 : 0;
+            for (int i = start; i < len; i++) {
+                n = n * 10 + (number.charAt(i) - '0');
+            }
+            return isNeg ? -n : n;
+        }
+
+        // For 19+ digit numbers, use String parsing with overflow handling
+        String numStr = number.toString();
         try {
             return Long.parseLong(numStr);
         } catch (Exception e) {
@@ -855,27 +799,6 @@ class JsonParser {
         }
 
         return s;
-    }
-
-    /**
-     * Check if character is a valid delimiter after a number in JSON.
-     * Numbers can be followed by: comma, closing bracket/brace, whitespace, or EOF.
-     */
-    private static boolean isNumberDelimiter(int c) {
-        return c == -1 || c == ',' || c == '}' || c == ']' ||
-                c == ' ' || c == '\t' || c == '\n' || c == '\r';
-    }
-
-    /**
-     * Get a cached Long value for common small integers, or create and cache a new one.
-     */
-    private Number getCachedLong(long value) {
-        final Number cached = numberCache.get(value);
-        if (cached != null) {
-            return cached;
-        }
-        numberCache.put(value, value);
-        return value;
     }
 
     /**
