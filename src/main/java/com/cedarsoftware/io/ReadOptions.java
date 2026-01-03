@@ -8,7 +8,7 @@ import com.cedarsoftware.util.convert.ConverterOptions;
 
 /**
  * This class contains all the "feature" control (options) for controlling json-io's
- * flexibility in reading JSON. An instance of this class is passed to the JsonReader.toJson() APIs
+ * flexibility in reading JSON. An instance of this class is passed to the JsonIo.toJava() APIs
  * to set the desired features.
  * <br/><br/>
  * You can make this class immutable and then store the class for re-use.
@@ -233,7 +233,7 @@ public interface ReadOptions {
     Class<?> getCoercedClass(Class<?> c);
 
     /**
-     * @return JsonReader.MissingFieldHandler to be called when a field in the JSON is read in, yet there is no
+     * @return MissingFieldHandler to be called when a field in the JSON is read in, yet there is no
      * corresponding field on the destination object to receive the field value.
      */
     MissingFieldHandler getMissingFieldHandler();

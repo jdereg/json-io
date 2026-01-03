@@ -449,7 +449,6 @@ public abstract class Resolver {
 
     // ========== Root Resolution Methods ==========
     // These methods handle the routing and resolution of parsed values at the root level.
-    // They were moved from JsonReader to consolidate resolution logic in the Resolver.
 
     /**
      * Resolves a parsed value to a Java object.

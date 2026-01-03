@@ -86,7 +86,7 @@ public final class JsonIoCleanup {
         // Add additional cleanup here if other JsonIo components use ThreadLocal in the future
         // For example:
         // JsonWriter.clearThreadLocalBuffers();
-        // JsonReader.clearThreadLocalBuffers();
+        // Resolver.clearThreadLocalBuffers();
     }
     
     /**

@@ -1,4 +1,4 @@
 #
-# Map of class to JsonReader.JsonClassReader
+# Map of class to JsonClassReader
 #
 

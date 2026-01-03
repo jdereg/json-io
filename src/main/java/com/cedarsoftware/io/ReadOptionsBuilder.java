@@ -91,7 +91,7 @@ public class ReadOptionsBuilder {
     private static volatile int BASE_MAX_MAPS_TO_REHASH = Integer.MAX_VALUE;
     private static volatile int BASE_MAX_MISSING_FIELDS = Integer.MAX_VALUE;
     
-    // Base permanent JsonReader-specific security limits - default to generous but finite values for backward compatibility
+    // Base permanent JSON parsing security limits - default to generous but finite values for backward compatibility
     private static volatile int BASE_MAX_OBJECT_REFERENCES = 10000000;       // 10M objects max
     private static volatile int BASE_MAX_REFERENCE_CHAIN_DEPTH = 10000;      // 10K chain depth max
     private static volatile int BASE_MAX_ENUM_NAME_LENGTH = 256;             // 256 chars max
@@ -183,7 +183,7 @@ public class ReadOptionsBuilder {
         options.maxMapsToRehash = BASE_MAX_MAPS_TO_REHASH;
         options.maxMissingFields = BASE_MAX_MISSING_FIELDS;
         
-        // Copy base permanent JsonReader-specific security limits
+        // Copy base permanent JSON parsing security limits
         options.maxObjectReferences = BASE_MAX_OBJECT_REFERENCES;
         options.maxReferenceChainDepth = BASE_MAX_REFERENCE_CHAIN_DEPTH;
         options.maxEnumNameLength = BASE_MAX_ENUM_NAME_LENGTH;
@@ -249,7 +249,7 @@ public class ReadOptionsBuilder {
             options.maxMapsToRehash = other.maxMapsToRehash;
             options.maxMissingFields = other.maxMissingFields;
             
-            // Copy JsonReader-specific security limits
+            // Copy JSON parsing security limits
             options.maxObjectReferences = other.maxObjectReferences;
             options.maxReferenceChainDepth = other.maxReferenceChainDepth;
             options.maxEnumNameLength = other.maxEnumNameLength;
@@ -886,7 +886,7 @@ public class ReadOptionsBuilder {
     }
 
     /**
-     * Return as JAVA_OBJECT's the returned value will be of the class type passed into JsonReader.toJava(json, rootClass).
+     * Return as JAVA_OBJECT's the returned value will be of the class type passed into JsonIo.toJava(json, rootClass).
      * This mode is good for cloning exact objects.
      */
     public ReadOptionsBuilder returnAsJavaObjects() {
@@ -1566,10 +1566,10 @@ public class ReadOptionsBuilder {
         private int maxMapsToRehash = Integer.MAX_VALUE;
         private int maxMissingFields = Integer.MAX_VALUE;
         
-        // JsonReader-specific security limits - default to generous but finite values for backward compatibility
-        private int maxObjectReferences = 10000000;       // 10M objects max (same as JsonReader hardcoded default)
-        private int maxReferenceChainDepth = 10000;       // 10K chain depth max (same as JsonReader hardcoded default)
-        private int maxEnumNameLength = 256;              // 256 chars max (same as JsonReader hardcoded default)
+        // Resolver security limits - default to generous but finite values for backward compatibility
+        private int maxObjectReferences = 10000000;       // 10M objects max (same as Resolver hardcoded default)
+        private int maxReferenceChainDepth = 10000;       // 10K chain depth max (same as Resolver hardcoded default)
+        private int maxEnumNameLength = 256;              // 256 chars max (same as Resolver hardcoded default)
         
         // JsonParser-specific security limits - default to backward compatible values
         private long maxIdValue = 1000000000L;            // ±1B ID range max (same as JsonParser hardcoded default)
@@ -1807,7 +1807,7 @@ public class ReadOptionsBuilder {
         }
 
         /**
-         * @return JsonReader.MissingFieldHandler to be called when a field in the JSON is read in, yet there is no
+         * @return MissingFieldHandler to be called when a field in the JSON is read in, yet there is no
          * corresponding field on the destination object to receive the field value.
          */
         public MissingFieldHandler getMissingFieldHandler() {

@@ -714,7 +714,7 @@ public class JsonIo {
             Resolver resolver = createResolver(readOptions);
             JsonParser parser = new JsonParser(input, resolver);
 
-            // Parse phase (from JsonReader.readObject)
+            // Parse phase
             Object parsed;
             try {
                 parsed = parser.readValue(typeHolder.getType());
@@ -724,7 +724,7 @@ public class JsonIo {
                 throw new JsonIoException("Error parsing JSON value", e);
             }
 
-            // Resolve phase (from JsonReader.toJava)
+            // Resolve phase
             boolean shouldManageUnsafe = readOptions.isUseUnsafe();
             if (shouldManageUnsafe) {
                 ClassUtilities.setUseUnsafe(true);
@@ -830,7 +830,7 @@ public class JsonIo {
                 throw new JsonIoException("Error parsing JSON value", e);
             }
 
-            // Resolve phase (from JsonReader.toJava)
+            // Resolve phase
             boolean shouldManageUnsafe = readOptions.isUseUnsafe();
             if (shouldManageUnsafe) {
                 ClassUtilities.setUseUnsafe(true);

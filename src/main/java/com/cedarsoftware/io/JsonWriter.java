@@ -1544,7 +1544,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             return true;
         }
         // Per user guidance: must be exact match (==), not isAssignableFrom
-        // This ensures JsonReader can instantiate the correct concrete type
+        // This ensures the Resolver can instantiate the correct concrete type
         return elementClass != declaredElementType;
     }
 

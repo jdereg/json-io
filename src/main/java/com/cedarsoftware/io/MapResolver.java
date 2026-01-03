@@ -193,7 +193,7 @@ public class MapResolver extends Resolver {
     @Override
     protected Object reconcileResult(Object result, JsonObject rootObj, Type rootType) {
         // If user specified a rootType, don't apply Maps mode handling here
-        // The type compatibility checking happens in JsonReader.handleObjectRoot
+        // The type compatibility checking happens in Resolver.handleObjectRoot
         if (rootType != null) {
             return result;
         }
