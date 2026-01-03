@@ -90,7 +90,7 @@ public class ObjectResolver extends Resolver
         final Class<?> cls = javaMate.getClass();
         final ReadOptions readOptions = getReadOptions();
         final Map<String, Injector> injectorMap = readOptions.getDeepInjectorMap(cls);
-        final JsonReader.MissingFieldHandler missingFieldHandler = readOptions.getMissingFieldHandler();
+        final MissingFieldHandler missingFieldHandler = readOptions.getMissingFieldHandler();
 
         // Enhanced for-loop is more efficient than iterator for EntrySet
         for (Map.Entry<Object, Object> entry : jsonObj.entrySet()) {

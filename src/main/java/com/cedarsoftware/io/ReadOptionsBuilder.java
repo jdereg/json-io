@@ -1380,12 +1380,12 @@ public class ReadOptionsBuilder {
     }
 
     /**
-     * @param missingFieldHandler JsonReader.MissingFieldHandler implementation to call.  This method will be
+     * @param missingFieldHandler MissingFieldHandler implementation to call.  This method will be
      *                            called when a field in the JSON is read in, yet there is no corresponding field on the destination object to
      *                            receive the value.
      * @return ReadOptionsBuilder for chained access.
      */
-    public ReadOptionsBuilder missingFieldHandler(JsonReader.MissingFieldHandler missingFieldHandler) {
+    public ReadOptionsBuilder missingFieldHandler(MissingFieldHandler missingFieldHandler) {
         options.missingFieldHandler = missingFieldHandler;
         return this;
     }
@@ -1463,11 +1463,11 @@ public class ReadOptionsBuilder {
             String readerClassName = entry.getValue();
             Class<?> clazz = ClassUtilities.forName(className, classLoader);
             if (clazz != null) {
-                Class<? extends JsonReader.JsonClassReader> customReaderClass = (Class<JsonReader.JsonClassReader>) ClassUtilities.forName(readerClassName, classLoader);
+                Class<? extends JsonClassReader> customReaderClass = (Class<JsonClassReader>) ClassUtilities.forName(readerClassName, classLoader);
 
                 try {
                     // Add this if javac issues an unchecked cast warning for this line
-                    Constructor<? extends JsonReader.JsonClassReader> ctor = (Constructor<? extends JsonReader.JsonClassReader>) ReflectionUtils.getConstructor(customReaderClass);
+                    Constructor<? extends JsonClassReader> ctor = ReflectionUtils.getConstructor(customReaderClass);
                     addPermanentReader(clazz, ctor.newInstance());
                 } catch (Exception e) {
                     LOG.log(Level.FINE, "Note: could not instantiate (custom JsonClassReader class): " + readerClassName + " from resources/customReaders.txt", e);
@@ -1552,7 +1552,7 @@ public class ReadOptionsBuilder {
         private boolean closeStream = true;
         private int maxDepth = 1000;
         private int lruSize = 1000;
-        private JsonReader.MissingFieldHandler missingFieldHandler = null;
+        private MissingFieldHandler missingFieldHandler = null;
         private DefaultConverterOptions converterOptions = new DefaultConverterOptions();
         private ReadOptions.ReturnType returnType = ReadOptions.ReturnType.JAVA_OBJECTS;
         private ReadOptions.Decimals decimalType = Decimals.DOUBLE;
@@ -1810,7 +1810,7 @@ public class ReadOptionsBuilder {
          * @return JsonReader.MissingFieldHandler to be called when a field in the JSON is read in, yet there is no
          * corresponding field on the destination object to receive the field value.
          */
-        public JsonReader.MissingFieldHandler getMissingFieldHandler() {
+        public MissingFieldHandler getMissingFieldHandler() {
             return missingFieldHandler;
         }
 

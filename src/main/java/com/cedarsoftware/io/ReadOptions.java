@@ -236,7 +236,7 @@ public interface ReadOptions {
      * @return JsonReader.MissingFieldHandler to be called when a field in the JSON is read in, yet there is no
      * corresponding field on the destination object to receive the field value.
      */
-    JsonReader.MissingFieldHandler getMissingFieldHandler();
+    MissingFieldHandler getMissingFieldHandler();
 
     /**
      * @param clazz Class to check to see if it is non-referenceable.  Non-referenceable classes will always create

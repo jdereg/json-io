@@ -4,7 +4,6 @@ import java.util.concurrent.CountDownLatch;
 
 import com.cedarsoftware.io.ClassFactory;
 import com.cedarsoftware.io.JsonObject;
-import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
 
 /**
