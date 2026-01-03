@@ -1,5 +1,5 @@
 ### Revision History
-#### 4.73.0 (Unreleased)
+#### 4.80.0 (Unreleased)
 * **PERFORMANCE**: `JsonWriter` - Optimized `traceReferences()` to reduce object allocation
   * Replaced single `Deque<Object[]>` with `Deque<Object>` plus primitive `int[]` for depths
   * Eliminates `new Object[]{element, depth}` allocation for every object pushed during reference tracing
