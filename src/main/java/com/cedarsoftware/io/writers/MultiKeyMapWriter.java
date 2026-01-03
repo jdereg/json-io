@@ -3,10 +3,9 @@ package com.cedarsoftware.io.writers;
 import java.io.IOException;
 import java.io.Writer;
 
+import com.cedarsoftware.io.JsonClassWriter;
 import com.cedarsoftware.io.WriterContext;
 import com.cedarsoftware.util.MultiKeyMap;
-
-import static com.cedarsoftware.io.JsonWriter.JsonClassWriter;
 
 /**
  * Writer for MultiKeyMap instances that produces a shortened configuration format.

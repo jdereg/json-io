@@ -340,7 +340,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             showType = false;
         }
 
-        JsonClassWriter closestWriter = writeOptions.getCustomWriter(o.getClass());
+        com.cedarsoftware.io.JsonClassWriter closestWriter = writeOptions.getCustomWriter(o.getClass());
 
         if (writeOptionalReference(o)) {
             return true;
@@ -396,7 +396,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 if (writeOptions.isNeverShowingType()) {
                     showType = false;
                 } else if (!writeOptions.isAlwaysShowingType()) {
-                    JsonClassWriter writer = writeOptions.getCustomWriter(obj.getClass());
+                    com.cedarsoftware.io.JsonClassWriter writer = writeOptions.getCustomWriter(obj.getClass());
                     if (writer instanceof Writers.EnumsAsStringWriter) {
                         int fieldCount = writeOptions.getAccessorsForClass(obj.getClass()).size();
                         if (fieldCount <= 2) {
@@ -454,7 +454,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 throw new JsonIoException("Object graph too deep (>" + MAX_DEPTH + " levels). This may indicate a circular reference or excessively nested structure.");
             }
 
-            if (!writeOptions.isNonReferenceableClass(obj.getClass())) {
+            // Cache class once - avoid duplicate getClass() calls (performance optimization)
+            final Class<?> clazz = obj.getClass();
+            final boolean isNonReferenceable = writeOptions.isNonReferenceableClass(clazz);
+
+            if (!isNonReferenceable) {
                 Long id = visited.get(obj);
                 if (id != null) {   // Object has been seen before
                     if (id.equals(ZERO)) {
@@ -468,21 +472,20 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 }
             }
 
-            final Class<?> clazz = obj.getClass();
             final int nextDepth = currentDepth + 1;
 
+            // Use instanceof instead of isAssignableFrom (30x faster)
             if (obj instanceof Object[]) {
                 processArray((Object[]) obj, stack, nextDepth);
             } else if (obj instanceof JsonObject) {
                 processJsonObject((JsonObject) obj, stack, nextDepth);
-            } else if (Map.class.isAssignableFrom(clazz)) {
+            } else if (obj instanceof Map) {
                 processMap((Map<?, ?>) obj, stack, nextDepth);
-            } else if (Collection.class.isAssignableFrom(clazz)) {
+            } else if (obj instanceof Collection) {
                 processCollection((Collection<?>) obj, stack, nextDepth);
-            } else {
-                if (!writeOptions.isNonReferenceableClass(clazz)) {
-                    processFields(stack, obj, nextDepth);
-                }
+            } else if (!isNonReferenceable) {
+                // Reuse cached isNonReferenceable result
+                processFields(stack, obj, nextDepth);
             }
         }
 
@@ -680,7 +683,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 out.write(',');
             }
 
-            JsonClassWriter writer = getWriteOptions().getCustomWriter(Long.class);
+            com.cedarsoftware.io.JsonClassWriter writer = getWriteOptions().getCustomWriter(Long.class);
             writer.write(obj, showType, out, this);
 
             if (showType) {
@@ -852,7 +855,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     private void writeDoubleArray(double[] doubles, int lenMinus1) throws IOException {
         final Writer output = this.out;
-        final JsonClassWriter writer = getWriteOptions().getCustomWriter(Double.class);
+        final com.cedarsoftware.io.JsonClassWriter writer = getWriteOptions().getCustomWriter(Double.class);
         for (int i = 0; i < lenMinus1; i++) {
             writer.write(doubles[i], false, output, this);
             output.write(',');
@@ -862,7 +865,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     private void writeFloatArray(float[] floats, int lenMinus1) throws IOException {
         final Writer output = this.out;
-        final JsonClassWriter writer = getWriteOptions().getCustomWriter(Float.class);
+        final com.cedarsoftware.io.JsonClassWriter writer = getWriteOptions().getCustomWriter(Float.class);
         for (int i = 0; i < lenMinus1; i++) {
             writer.write(floats[i], false, output, this);
             output.write(',');
@@ -874,7 +877,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private void writeLongArray(long[] longs, int lenMinus1) throws IOException {
         final Writer output = this.out;
 
-        JsonClassWriter writer = getWriteOptions().getCustomWriter(long.class);
+        com.cedarsoftware.io.JsonClassWriter writer = getWriteOptions().getCustomWriter(long.class);
         for (int i = 0; i < lenMinus1; i++) {
             writer.write(longs[i], false, output, this);
             output.write(',');

@@ -5,11 +5,10 @@ import java.io.Writer;
 import java.util.Map;
 import java.util.Set;
 
+import com.cedarsoftware.io.JsonClassWriter;
 import com.cedarsoftware.io.JsonWriter;
 import com.cedarsoftware.io.WriterContext;
 import com.cedarsoftware.util.CompactMap;
-
-import static com.cedarsoftware.io.JsonWriter.JsonClassWriter;
 
 /**
  * Writer for CompactMap instances that produces a shortened configuration format.

@@ -4,11 +4,10 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.Map;
 
+import com.cedarsoftware.io.JsonClassWriter;
 import com.cedarsoftware.io.WriterContext;
 import com.cedarsoftware.util.CompactMap;
 import com.cedarsoftware.util.CompactSet;
-
-import static com.cedarsoftware.io.JsonWriter.JsonClassWriter;
 
 /**
  * Writer for CompactSet instances that produces a shortened configuration format.

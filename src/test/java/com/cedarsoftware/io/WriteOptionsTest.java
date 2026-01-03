@@ -347,7 +347,7 @@ class WriteOptionsTest {
 
     @Test
     void testCustomWrittenClasses_asAsMap() {
-        Map<Class<?>, JsonWriter.JsonClassWriter> map = mapOf(CustomWriterTest.Person.class, new CustomWriterTest.CustomPersonWriter());
+        Map<Class<?>, JsonClassWriter> map = mapOf(CustomWriterTest.Person.class, new CustomWriterTest.CustomPersonWriter());
 
         WriteOptions options = new WriteOptionsBuilder()
                 .addCustomWrittenClasses(map)

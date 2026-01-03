@@ -192,7 +192,7 @@ public interface WriteOptions {
      * @param c Class of object for which fetch a custom writer
      * @return JsonClassWriter for the custom class (if one exists), null otherwise.
      */
-    JsonWriter.JsonClassWriter getCustomWriter(Class<?> c);
+    JsonClassWriter getCustomWriter(Class<?> c);
     
     void clearCaches();
 

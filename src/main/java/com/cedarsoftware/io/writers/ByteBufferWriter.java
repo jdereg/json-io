@@ -5,9 +5,8 @@ import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.util.Base64;
 
+import com.cedarsoftware.io.JsonClassWriter;
 import com.cedarsoftware.io.WriterContext;
-
-import static com.cedarsoftware.io.JsonWriter.JsonClassWriter;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

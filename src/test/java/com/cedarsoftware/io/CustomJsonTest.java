@@ -49,7 +49,7 @@ class CustomJsonTest
 		}
 	}
 
-	class PersonWriter implements JsonWriter.JsonClassWriter {
+	class PersonWriter implements JsonClassWriter {
 		public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException {
 			Person p = (Person) o;
 			// Using new WriterContext semantic API - automatic quote escaping and comma management

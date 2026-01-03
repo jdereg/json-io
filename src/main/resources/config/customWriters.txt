@@ -1,5 +1,5 @@
 #
-# Map of class to JsonWriter.JsonClassWriter
+# Map of class to JsonClassWriter
 #
 boolean = com.cedarsoftware.io.Writers$PrimitiveValueWriter
 char = com.cedarsoftware.io.Writers$CharacterWriter

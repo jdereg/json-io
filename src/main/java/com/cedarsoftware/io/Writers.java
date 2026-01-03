@@ -62,7 +62,7 @@ public class Writers {
      * Used as a template to write out types that will have a primitive form.
      * Uses the default key of "value" unless overridden
      */
-    public static class PrimitiveTypeWriter implements JsonWriter.JsonClassWriter {
+    public static class PrimitiveTypeWriter implements JsonClassWriter {
         protected String getKey() {
             return VALUE;
         }
@@ -190,7 +190,7 @@ public class Writers {
         }
     }
 
-    public static class CalendarWriter implements JsonWriter.JsonClassWriter {
+    public static class CalendarWriter implements JsonClassWriter {
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
             String formatted = Converter.convert(o, String.class);
             JsonWriter.writeBasicString(output, formatted);
@@ -210,7 +210,7 @@ public class Writers {
         }
     }
 
-    public static class DateWriter implements JsonWriter.JsonClassWriter {
+    public static class DateWriter implements JsonClassWriter {
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
             if (o instanceof java.sql.Date) {
                 // Write just the date portion - no time, no timezone

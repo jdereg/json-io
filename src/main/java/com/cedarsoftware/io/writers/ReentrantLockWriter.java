@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.cedarsoftware.io.JsonClassWriter;
 import com.cedarsoftware.io.JsonWriter;
 import com.cedarsoftware.io.WriterContext;
 
@@ -32,7 +33,7 @@ import com.cedarsoftware.io.WriterContext;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class ReentrantLockWriter implements JsonWriter.JsonClassWriter {
+public class ReentrantLockWriter implements JsonClassWriter {
 
     @Override
     public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {

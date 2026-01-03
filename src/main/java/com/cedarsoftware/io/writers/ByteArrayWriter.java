@@ -4,9 +4,9 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.Base64;
 
+import com.cedarsoftware.io.JsonClassWriter;
 import com.cedarsoftware.io.WriterContext;
 
-import static com.cedarsoftware.io.JsonWriter.JsonClassWriter;
 import static com.cedarsoftware.io.JsonWriter.writeBasicString;
 
 /**

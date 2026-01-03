@@ -4,9 +4,8 @@ import java.io.IOException;
 import java.io.Writer;
 import java.nio.CharBuffer;
 
+import com.cedarsoftware.io.JsonClassWriter;
 import com.cedarsoftware.io.WriterContext;
-
-import static com.cedarsoftware.io.JsonWriter.JsonClassWriter;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

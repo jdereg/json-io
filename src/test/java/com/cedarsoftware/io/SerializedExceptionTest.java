@@ -36,7 +36,7 @@ public class SerializedExceptionTest
         }
     }
 
-    public static class MyExceptionWriter implements JsonWriter.JsonClassWriter
+    public static class MyExceptionWriter implements JsonClassWriter
     {
         public void write(Object obj, boolean showType, Writer output, WriterContext writerContext) throws IOException
         {

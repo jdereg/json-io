@@ -76,7 +76,7 @@ public class WriteOptionsBuilder {
 
     // The BASE_* Maps are regular ConcurrentHashMap's because they are not constantly searched, otherwise they would be ClassValueMaps.
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
-    private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
     private static final Set<Class<?>> BASE_NON_REFS = new ConcurrentSet<>();
     private static final Set<Class<?>> BASE_NOT_CUSTOM_WRITTEN = new ConcurrentSet<>();
     static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ConcurrentHashMap<>();
@@ -349,7 +349,7 @@ public class WriteOptionsBuilder {
      * @param clazz  Class to assign a custom JSON writer to
      * @param writer The JsonClassWriter which will write the custom JSON format of class.
      */
-    public static void addPermanentWriter(Class<?> clazz, JsonWriter.JsonClassWriter writer) {
+    public static void addPermanentWriter(Class<?> clazz, JsonClassWriter writer) {
         BASE_WRITERS.put(clazz, writer);
     }
 
@@ -898,24 +898,24 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * @param customWrittenClasses Map of Class to JsonWriter.JsonClassWriter.  Establish the passed in Map as the
+     * @param customWrittenClasses Map of Class to JsonClassWriter.  Establish the passed in Map as the
      *                             established Map of custom writers to be used when writing JSON. Using this method
      *                             more than once, will set the custom writers to only the values from the Set in
      *                             the last call made.
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder setCustomWrittenClasses(Map<? extends Class<?>, ? extends JsonWriter.JsonClassWriter> customWrittenClasses) {
+    public WriteOptionsBuilder setCustomWrittenClasses(Map<? extends Class<?>, ? extends JsonClassWriter> customWrittenClasses) {
         options.customWrittenClasses.clear();
         addCustomWrittenClasses(customWrittenClasses);
         return this;
     }
 
     /**
-     * @param customWrittenClasses Map of Class to JsonWriter.JsonClassWriter.  Adds all custom writers into the custom
+     * @param customWrittenClasses Map of Class to JsonClassWriter.  Adds all custom writers into the custom
      *                             writers map.
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder addCustomWrittenClasses(Map<? extends Class<?>, ? extends JsonWriter.JsonClassWriter> customWrittenClasses) {
+    public WriteOptionsBuilder addCustomWrittenClasses(Map<? extends Class<?>, ? extends JsonClassWriter> customWrittenClasses) {
         options.customWrittenClasses.putAll(customWrittenClasses);
         return this;
     }
@@ -925,7 +925,7 @@ public class WriteOptionsBuilder {
      * @param customWriter JsonClassWriter to use when the passed in Class is encountered during serialization.
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder addCustomWrittenClass(Class<?> clazz, JsonWriter.JsonClassWriter customWriter) {
+    public WriteOptionsBuilder addCustomWrittenClass(Class<?> clazz, JsonClassWriter customWriter) {
         options.customWrittenClasses.put(clazz, customWriter);
         return this;
     }
@@ -1277,7 +1277,7 @@ public class WriteOptionsBuilder {
         options.fieldFilters = Collections.unmodifiableMap(options.fieldFilters);
         options.methodFilters = Collections.unmodifiableMap(options.methodFilters);
         options.accessorFactories = Collections.unmodifiableMap(options.accessorFactories);
-        options.customWrittenClasses = ((ClassValueMap<JsonWriter.JsonClassWriter>)options.customWrittenClasses).unmodifiableView();
+        options.customWrittenClasses = ((ClassValueMap<JsonClassWriter>)options.customWrittenClasses).unmodifiableView();
         options.customOptions = Collections.unmodifiableMap(options.customOptions);
         return options;
     }
@@ -1337,7 +1337,7 @@ public class WriteOptionsBuilder {
         private boolean enumPublicFieldsOnly = false;
         private boolean enumSetWrittenOldWay = true;
         private boolean closeStream = true;
-        private JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
+        private JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
         private ClassLoader classLoader = ClassUtilities.getClassLoader(DefaultWriteOptions.class);
         private Map<Class<?>, Set<String>> includedFieldNames = new ClassValueMap<>();
         private Map<Class<?>, Map<String, String>> nonStandardGetters = new ClassValueMap<>();
@@ -1349,7 +1349,7 @@ public class WriteOptionsBuilder {
         private Map<String, FieldFilter> fieldFilters = new LinkedHashMap<>(16);
         private Map<String, MethodFilter> methodFilters = new LinkedHashMap<>(16);
         private Map<String, AccessorFactory> accessorFactories = new LinkedHashMap<>(16);
-        private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses = new ClassValueMap<>();
+        private Map<Class<?>, JsonClassWriter> customWrittenClasses = new ClassValueMap<>();
         private Map<String, Object> customOptions = new LinkedHashMap<>(16);
         private DefaultConverterOptions converterOptions = new DefaultConverterOptions();
 
@@ -1366,7 +1366,7 @@ public class WriteOptionsBuilder {
 
         // Runtime caches (not feature options), since looking up writers can be expensive
         // when one does not exist, we cache the writer or a nullWriter if one does not exist.
-        private final Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ClassValueMap<>();
+        private final Map<Class<?>, JsonClassWriter> writerCache = new ClassValueMap<>();
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
         private Map<Class<?>, List<Accessor>> accessorsCache = new ClassValueMap<>();
@@ -1569,7 +1569,7 @@ public class WriteOptionsBuilder {
          * null value.  Instead, singleton instance of this class is placed where null values
          * are needed.
          */
-        private static final class NullClass implements JsonWriter.JsonClassWriter {
+        private static final class NullClass implements JsonClassWriter {
         }
 
         static final NullClass nullWriter = new NullClass();
@@ -1582,13 +1582,13 @@ public class WriteOptionsBuilder {
          * @param c Class of object for which fetch a custom writer
          * @return JsonClassWriter for the custom class (if one exists), null otherwise.
          */
-        public JsonWriter.JsonClassWriter getCustomWriter(Class<?> c) {
-            JsonWriter.JsonClassWriter writer = writerCache.computeIfAbsent(c, this::findCustomWriter);
+        public JsonClassWriter getCustomWriter(Class<?> c) {
+            JsonClassWriter writer = writerCache.computeIfAbsent(c, this::findCustomWriter);
             return writer == nullWriter ? null : writer;
         }
 
-        JsonWriter.JsonClassWriter findCustomWriter(Class<?> c) {
-            JsonWriter.JsonClassWriter writer = ClassUtilities.findClosest(c, customWrittenClasses, nullWriter);
+        JsonClassWriter findCustomWriter(Class<?> c) {
+            JsonClassWriter writer = ClassUtilities.findClosest(c, customWrittenClasses, nullWriter);
             if (writer != nullWriter) {
                 return writer;
             } else {
@@ -1798,7 +1798,7 @@ public class WriteOptionsBuilder {
      * Load custom writer classes based on contents of resources/customWriters.txt.
      * Verify that classes listed are indeed valid classes loaded in the JVM.
      *
-     * @return Map<Class < ?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
+     * @return Map<Class < ?>, JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
      */
     private static void loadBaseWriters() {
         Map<String, String> map = MetaUtils.loadMapDefinition("config/customWriters.txt");
@@ -1812,12 +1812,12 @@ public class WriteOptionsBuilder {
                 LOG.warning("Class: " + className + " not defined in the JVM, so custom writer: " + writerClassName + ", will not be used.");
                 continue;
             }
-            Class<JsonWriter.JsonClassWriter> customWriter = (Class<JsonWriter.JsonClassWriter>) ClassUtilities.forName(writerClassName, classLoader);
+            Class<JsonClassWriter> customWriter = (Class<JsonClassWriter>) ClassUtilities.forName(writerClassName, classLoader);
             if (customWriter == null) {
                 LOG.warning("Note: class not found (custom JsonClassWriter class): " + writerClassName + ", listed in config/customWriters.txt as a custom writer for: " + className);
             } else {
                 try {
-                    JsonWriter.JsonClassWriter writer = customWriter.newInstance();
+                    JsonClassWriter writer = customWriter.newInstance();
                     addPermanentWriter(clazz, writer);
                 } catch (Exception e) {
                     LOG.log(Level.WARNING, "Note: class failed to instantiate (a custom JsonClassWriter class): " + writerClassName + ", listed in config/customWriters.txt as a custom writer for: " + className, e);

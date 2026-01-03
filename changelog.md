@@ -1,4 +1,15 @@
 ### Revision History
+#### 4.73.0 (Unreleased)
+* **CLEANUP**: `JsonReader` - Removed all implementation code, retaining only deprecated inner interfaces for backward compatibility
+  * `JsonReader` class is now marked `@Deprecated` - use `JsonIo` for all JSON parsing
+  * Private constructor prevents instantiation with clear error message
+  * Deprecated inner interfaces retained for source compatibility:
+    * `JsonReader.ClassFactory` → use top-level `ClassFactory`
+    * `JsonReader.MissingFieldHandler` → use top-level `MissingFieldHandler`
+    * `JsonReader.JsonClassReader` → use top-level `JsonClassReader`
+  * Reduces class from 873 lines to 74 lines
+  * All functionality now handled by `JsonIo`, `JsonParser`, and `Resolver`
+
 #### 4.72.0 - 2025-12-31
 * **DEPENDENCY**: Updated `java-util` to version 4.72.0
   * Includes fix for `ThreadedLRUCacheStrategy` scheduled task accumulation

@@ -155,7 +155,7 @@ resorts to a lot of "tricks" to make that happen.  As of version 4.56.0 the libr
 instantiate. See [examples](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectsTest.java) for how to do this.
 ```java
 JsonReader.ClassFactory    // Create a class that implements this interface
-JsonWriter.JsonClassWriter // Create a class that implements this interface
+JsonClassWriter // Create a class that implements this interface
 ```
 
 Your `JsonReader.ClassFactory` class is called after the JSON is parsed and `json-io` is converting all the Maps to
@@ -182,7 +182,7 @@ When creating custom writers, use the **WriterContext semantic API** for cleaner
 
 **Basic Pattern:**
 ```java
-class MyWriter implements JsonWriter.JsonClassWriter {
+class MyWriter implements JsonClassWriter {
     public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
         MyClass instance = (MyClass) obj;
 
@@ -224,7 +224,7 @@ Custom writers are called *inside* the object that JsonWriter has already opened
 **Complete Example:**
 ```java
 // From CustomJsonSubObjectsTest.java
-static class PersonWriter implements JsonWriter.JsonClassWriter {
+static class PersonWriter implements JsonClassWriter {
     public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException {
         Person p = (Person) o;
 

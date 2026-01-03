@@ -71,7 +71,7 @@ class CustomJsonSubObjectsTest
 		}
 	}
 
-	static class PersonWriter implements JsonWriter.JsonClassWriter {
+	static class PersonWriter implements JsonClassWriter {
 		public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException {
 			Person p = (Person) o;
 			// Using new WriterContext semantic API - cleaner, safer, automatic formatting

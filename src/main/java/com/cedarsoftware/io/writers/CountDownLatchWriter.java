@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.concurrent.CountDownLatch;
 
+import com.cedarsoftware.io.JsonClassWriter;
 import com.cedarsoftware.io.JsonWriter;
 import com.cedarsoftware.io.WriterContext;
 
@@ -26,7 +27,7 @@ import com.cedarsoftware.io.WriterContext;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class CountDownLatchWriter implements JsonWriter.JsonClassWriter {
+public class CountDownLatchWriter implements JsonClassWriter {
 
     @Override
     public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {

@@ -292,14 +292,14 @@ new WriteOptionsBuilder().addCustomWrittenClass(MyCustomClass.class, new MyCusto
 This example shows a custom writer for MyCustomClass that selectively serializes only a specific field.
 This approach can be adapted to any class to meet your specific serialization needs.
 
->#### `JsonWriter.JsonClassWriter` getCustomWrittenClass( `Class` )
+>#### `JsonClassWriter` getCustomWrittenClass( `Class` )
 >- [ ] Returns a `Map` of Class to custom JsonClassWriter's use to write JSON when the class is encountered during serialization.
 >#### `boolean` isCustomWrittenClass( `Class` )
 >- [ ] Checks to see if there is a custom writer associated with a given class. Returns `true` if there is, `false` otherwise.
 
->#### `WriteOptionsBuilder` setCustomWrittenClasses(`Map<Class, JsonWriter.JsonClassWriter> customWrittenClasses`)
+>#### `WriteOptionsBuilder` setCustomWrittenClasses(`Map<Class, JsonClassWriter> customWrittenClasses`)
 >- [ ] Establishes the passed in `Map` as the complete list of custom writers to be used when writing JSON.
->#### `WriteOptionsBuilder` addCustomWrittenClass(`Class, JsonWriter.JsonClassWriter customWriter`)
+>#### `WriteOptionsBuilder` addCustomWrittenClass(`Class, JsonClassWriter customWriter`)
 >- [ ] Adds a custom writer for a specific Class.
 
 ### "Not" Customized Class Writers
@@ -796,7 +796,7 @@ Call this method to add a permanent (JVM lifetime) custom JSON writer to `json-i
 many classes to be associated to the custom writer, you can indicate that `json-io` should not use a custom write for a
 particular class, by calling the `addNotCustomWrittenClass()` method.
 
->#### WriteOptionsBuilder.addPermanentWriter(`Class<?> clazz, JsonWriter.JsonClassWriter writer`)
+>#### WriteOptionsBuilder.addPermanentWriter(`Class<?> clazz, JsonClassWriter writer`)
 
 ### Add Permanent Non-Standard Getter
 

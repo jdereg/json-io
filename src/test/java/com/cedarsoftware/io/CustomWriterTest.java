@@ -396,7 +396,7 @@ public class CustomWriterTest
         }
     }
 
-    public static class CustomPersonWriter implements JsonWriter.JsonClassWriter
+    public static class CustomPersonWriter implements JsonClassWriter
     {
         @Override
         public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException
@@ -429,7 +429,7 @@ public class CustomWriterTest
         }
     }
 
-    public static class CustomPersonWriterAddField implements JsonWriter.JsonClassWriter
+    public static class CustomPersonWriterAddField implements JsonClassWriter
     {
         public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException
         {
@@ -463,7 +463,7 @@ public class CustomWriterTest
         }
     }
 
-    public static class BadCustomPWriter implements JsonWriter.JsonClassWriter
+    public static class BadCustomPWriter implements JsonClassWriter
     {
         public void write(Object o, boolean showType, Writer output, WriterContext writerContext) throws IOException
         {

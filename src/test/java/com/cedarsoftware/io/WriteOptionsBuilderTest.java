@@ -28,7 +28,7 @@ public class WriteOptionsBuilderTest {
         public int getValue() { return value; }
     }
 
-    static class DummyWriter implements JsonWriter.JsonClassWriter {
+    static class DummyWriter implements JsonClassWriter {
         @Override
         public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException {
             output.write("\"dummy\"");
@@ -89,7 +89,7 @@ public class WriteOptionsBuilderTest {
 
     @Test
     void testSetCustomWrittenClasses() {
-        Map<Class<?>, JsonWriter.JsonClassWriter> map = mapOf(Integer.class, new DummyWriter());
+        Map<Class<?>, JsonClassWriter> map = mapOf(Integer.class, new DummyWriter());
         WriteOptions opts = new WriteOptionsBuilder().setCustomWrittenClasses(map).build();
         assertTrue(opts.isCustomWrittenClass(Integer.class));
         assertFalse(opts.isCustomWrittenClass(String.class));
