@@ -21,7 +21,12 @@
     * Keys: `{'name': "John"}` is valid
     * Single quotes can contain unescaped double quotes: `{'text': 'He said "Hello"'}`
     * Escape single quotes with backslash: `{'text': 'It\'s working'}`
-  * JSON5 features remaining: hex numbers, special numbers, multi-line strings, etc.
+  * **Hexadecimal numbers**: Integer literals can be specified in hexadecimal
+    * Lowercase: `{"value": 0xff}` equals 255
+    * Uppercase: `{"value": 0xFF}` equals 255
+    * Negative hex: `{"value": -0xFF}` equals -255
+    * Up to 16 hex digits supported (full 64-bit range)
+  * JSON5 features remaining: special numbers, leading/trailing decimals, multi-line strings, etc.
 * **PERFORMANCE**: `JsonWriter` - Optimized `traceReferences()` to reduce object allocation
   * Replaced single `Deque<Object[]>` with `Deque<Object>` plus primitive `int[]` for depths
   * Eliminates `new Object[]{element, depth}` allocation for every object pushed during reference tracing

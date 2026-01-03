@@ -628,10 +628,36 @@ class JsonParser {
      * Parse a JSON number using direct StringBuilder parsing.
      * Integers are parsed directly from StringBuilder without String allocation.
      * This optimization comes from the original heap-based parser.
+     * Supports JSON5 hexadecimal numbers (0xFF) in permissive mode.
      */
     private Number readNumberGeneral(int firstChar) throws IOException {
         final FastReader in = input;
         boolean isFloat = false;
+        boolean isNegative = (firstChar == '-');
+
+        // Check for hex number (JSON5 feature): 0x or 0X
+        int startChar = firstChar;
+        if (isNegative) {
+            startChar = in.read();
+        }
+
+        if (startChar == '0') {
+            int next = in.read();
+            if (next == 'x' || next == 'X') {
+                // JSON5 hexadecimal number
+                if (readOptions.isStrictJson()) {
+                    error("Hexadecimal numbers not allowed in strict JSON mode");
+                }
+                return readHexNumber(isNegative);
+            } else if (next != -1) {
+                in.pushback((char) next);
+            }
+        }
+
+        // If we read ahead for hex check, we need to reconstruct
+        if (isNegative && startChar != firstChar) {
+            in.pushback((char) startChar);
+        }
 
         // We are sure we have a positive or negative number, so we read char by char.
         StringBuilder number = numBuf;
@@ -728,6 +754,52 @@ class JsonParser {
         } else {
             return number.doubleValue();
         }
+    }
+
+    /**
+     * Read a JSON5 hexadecimal number.
+     * Called after "0x" or "0X" has been consumed.
+     * Supports optional negative sign before the 0x prefix.
+     *
+     * @param isNegative true if the number was preceded by a minus sign
+     * @return the parsed number as a Long
+     * @throws IOException for stream errors or parsing errors
+     */
+    private Number readHexNumber(boolean isNegative) throws IOException {
+        final FastReader in = input;
+        long value = 0;
+        int digitCount = 0;
+
+        while (true) {
+            int c = in.read();
+            int digit;
+
+            if (c >= '0' && c <= '9') {
+                digit = c - '0';
+            } else if (c >= 'a' && c <= 'f') {
+                digit = c - 'a' + 10;
+            } else if (c >= 'A' && c <= 'F') {
+                digit = c - 'A' + 10;
+            } else {
+                // End of hex digits
+                if (c != -1) {
+                    in.pushback((char) c);
+                }
+                break;
+            }
+
+            digitCount++;
+            if (digitCount > 16) {
+                error("Hexadecimal number too large");
+            }
+            value = (value << 4) | digit;
+        }
+
+        if (digitCount == 0) {
+            error("Expected hexadecimal digit after 0x");
+        }
+
+        return isNegative ? -value : value;
     }
 
     /**
