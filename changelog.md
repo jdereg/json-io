@@ -1,5 +1,10 @@
 ### Revision History
 #### 4.80.0 (Unreleased)
+* **FEATURE**: JSON5 Support - Parser now accepts JSON5 extensions by default
+  * Added `ReadOptionsBuilder.strictJson()` for RFC 8259 compliance mode
+  * Default is permissive mode (accepts JSON5 features)
+  * When `strictJson()` is enabled, JSON5 extensions cause parse errors
+  * JSON5 features to be implemented: unquoted keys, comments, trailing commas, single-quoted strings, hex numbers, etc.
 * **PERFORMANCE**: `JsonWriter` - Optimized `traceReferences()` to reduce object allocation
   * Replaced single `Deque<Object[]>` with `Deque<Object>` plus primitive `int[]` for depths
   * Eliminates `new Object[]{element, depth}` allocation for every object pushed during reference tracing
