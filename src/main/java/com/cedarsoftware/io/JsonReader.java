@@ -1,22 +1,18 @@
 package com.cedarsoftware.io;
 
-import java.io.Closeable;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.lang.reflect.Type;
-import java.nio.charset.StandardCharsets;
-
-import com.cedarsoftware.util.ClassUtilities;
-import com.cedarsoftware.util.ExceptionUtilities;
-import com.cedarsoftware.util.FastReader;
-import com.cedarsoftware.util.IOUtilities;
-import com.cedarsoftware.util.convert.Converter;
-
 /**
- * Internal class that orchestrates JSON parsing and object resolution.
+ * Legacy class retained only for backward compatibility.
  * <p>
- * For most use cases, prefer using {@link JsonIo} which provides a cleaner API:
+ * The nested interfaces ({@link ClassFactory}, {@link MissingFieldHandler}, {@link JsonClassReader})
+ * are deprecated and kept only so that existing code referencing {@code JsonReader.ClassFactory} etc.
+ * continues to compile. New code should use the top-level interfaces directly:
+ * <ul>
+ *   <li>{@code JsonReader.ClassFactory} → use {@link ClassFactory}</li>
+ *   <li>{@code JsonReader.MissingFieldHandler} → use {@link MissingFieldHandler}</li>
+ *   <li>{@code JsonReader.JsonClassReader} → use {@link JsonClassReader}</li>
+ * </ul>
+ * <p>
+ * For JSON parsing, use {@link JsonIo}:
  * <pre>
  * // Parse JSON to Java objects
  * Person person = JsonIo.toJava(jsonString, readOptions).asClass(Person.class);
@@ -24,9 +20,6 @@ import com.cedarsoftware.util.convert.Converter;
  * // Parse JSON to Map-of-Maps
  * Map map = JsonIo.toMaps(jsonString, readOptions).asClass(Map.class);
  * </pre>
- * <p>
- * JsonReader is used internally and by {@link ClassFactory} implementations that need
- * to resolve nested JsonObjects during custom object construction.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -43,14 +36,18 @@ import com.cedarsoftware.util.convert.Converter;
  *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
+ *
+ * @deprecated This class is no longer used. Use {@link JsonIo} for JSON parsing.
  */
-public class JsonReader implements Closeable
-{
-    private final FastReader input;
-    private final Resolver resolver;
-    private final ReadOptions readOptions;
-    private final JsonParser parser;
-    private final boolean isRoot;
+@Deprecated
+public class JsonReader {
+
+    /**
+     * Private constructor to prevent instantiation.
+     */
+    private JsonReader() {
+        throw new UnsupportedOperationException("JsonReader is deprecated. Use JsonIo instead.");
+    }
 
     /**
      * @deprecated Use top-level {@link com.cedarsoftware.io.ClassFactory} instead.
@@ -74,129 +71,5 @@ public class JsonReader implements Closeable
      */
     @Deprecated
     public interface JsonClassReader<T> extends com.cedarsoftware.io.JsonClassReader<T> {
-    }
-
-    private FastReader getReader(InputStream inputStream) {
-        return new FastReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8), 65536, 16);
-    }
-
-    private FastReader getReader(Reader reader) {
-        return new FastReader(reader, 65536, 16);
-    }
-
-    /** Creates a JsonReader for parsing JSON from an InputStream. */
-    public JsonReader(InputStream inputStream, ReadOptions readOptions) {
-        this.isRoot = true;
-        this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
-        ReferenceTracker references = new Resolver.DefaultReferenceTracker(this.readOptions);
-        Converter converter = new Converter(this.readOptions.getConverterOptions());
-        this.input = getReader(inputStream);
-        this.resolver = this.readOptions.isReturningJsonObjects() ?
-                new MapResolver(this.readOptions, references, converter) :
-                new ObjectResolver(this.readOptions, references, converter);
-        this.parser = new JsonParser(this.input, this.resolver);
-    }
-
-    /** Creates a JsonReader for parsing JSON from a Reader (more efficient for String input). */
-    public JsonReader(Reader reader, ReadOptions readOptions) {
-        this.isRoot = true;
-        this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
-        ReferenceTracker references = new Resolver.DefaultReferenceTracker(this.readOptions);
-        Converter converter = new Converter(this.readOptions.getConverterOptions());
-        this.input = getReader(reader);
-        this.resolver = this.readOptions.isReturningJsonObjects() ?
-                new MapResolver(this.readOptions, references, converter) :
-                new ObjectResolver(this.readOptions, references, converter);
-        this.parser = new JsonParser(this.input, this.resolver);
-    }
-
-    /**
-     * Creates a JsonReader for resolving existing JsonObject graphs (no stream parsing).
-     * After construction, call {@link #toJava(Type, Object)} to convert JsonObjects to Java.
-     *
-     * @param readOptions ReadOptions for configuration (null uses defaults)
-     */
-    public JsonReader(ReadOptions readOptions) {
-        this.isRoot = true;
-        this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
-        ReferenceTracker references = new Resolver.DefaultReferenceTracker(this.readOptions);
-        Converter converter = new Converter(this.readOptions.getConverterOptions());
-        this.resolver = this.readOptions.isReturningJsonObjects() ?
-                new MapResolver(this.readOptions, references, converter) :
-                new ObjectResolver(this.readOptions, references, converter);
-        this.input = null;
-        this.parser = null;
-    }
-
-    /**
-     * Parses JSON from the input stream and returns a Java object of the specified type.
-     *
-     * @param <T>      the expected return type
-     * @param rootType the target type (null to infer from JSON @type or use Object)
-     * @return the deserialized Java object, or null if JSON is null
-     * @throws JsonIoException if parsing fails or type conversion is not possible
-     */
-    public <T> T readObject(Type rootType) {
-        final T returnValue;
-        try {
-            returnValue = (T) parser.readValue(rootType);
-        } catch (JsonIoException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new JsonIoException(getErrorMessage("error parsing JSON value"), e);
-        }
-        return (T) toJava(rootType, returnValue);
-    }
-
-    /**
-     * Resolves a parsed JSON value to a Java object. Handles lifecycle management.
-     * Used by ClassFactory and JsonClassReader implementations for nested resolution.
-     */
-    public Object toJava(Type rootType, Object root) {
-        boolean shouldManageUnsafe = readOptions.isUseUnsafe() && isRoot;
-        if (readOptions.isUseUnsafe()) {
-            ClassUtilities.setUseUnsafe(true);
-        }
-
-        try {
-            return resolver.resolveRoot(root, rootType);
-        } catch (Exception e) {
-            if (readOptions.isCloseStream()) {
-                ExceptionUtilities.safelyIgnoreException(this::close);
-            }
-            if (e instanceof JsonIoException) {
-                throw (JsonIoException) e;
-            }
-            throw new JsonIoException(getErrorMessage(e.getMessage()), e);
-        } finally {
-            if (shouldManageUnsafe) {
-                ClassUtilities.setUseUnsafe(false);
-            }
-            if (isRoot) {
-                resolver.cleanup();
-            }
-        }
-    }
-
-    /**
-     * Returns the Resolver instance used for JSON deserialization.
-     * Used by {@link ClassFactory} implementations to resolve nested JsonObjects.
-     *
-     * @return the Resolver (either ObjectResolver or MapResolver depending on ReadOptions)
-     */
-    public Resolver getResolver() {
-        return resolver;
-    }
-    
-    public void close() {
-        IOUtilities.close(input);
-    }
-
-    private String getErrorMessage(String msg) {
-        if (input == null) {
-            return msg;
-        }
-        return msg + "\nLast read: " + input.getLastSnippet() +
-               "\nline: " + input.getLine() + ", col: " + input.getCol();
     }
 }
