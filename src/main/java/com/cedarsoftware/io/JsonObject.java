@@ -43,7 +43,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     // Profiling showed HashMap resizing was a bottleneck. Most domain objects have < 20 fields.
     private final Map<Object, Object> jsonStore = new LinkedHashMap<>(32, 0.75f);
     private Integer hash = null;
-    
+
     // Configurable performance threshold for switching between search algorithms
     private static volatile int linearSearchThreshold = 8; // Default, can be configured
 
@@ -51,6 +51,42 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     private Object[] items;
     private Object[] keys;
     private String typeString;
+
+    // Cached type classification for Resolver dispatch optimization
+    // 0 = not computed, 1 = ARRAY, 2 = COLLECTION, 3 = MAP, 4 = OBJECT
+    private byte jsonTypeCache = 0;
+
+    /**
+     * Type classification for optimized dispatch in Resolver.
+     * Avoids repeated isArray()/isCollection()/isMap() checks.
+     */
+    public enum JsonType { ARRAY, COLLECTION, MAP, OBJECT }
+
+    /**
+     * Get the cached type classification for this JsonObject.
+     * Computed lazily on first access. Used by Resolver for fast dispatch.
+     */
+    public JsonType getJsonType() {
+        if (jsonTypeCache == 0) {
+            // Compute and cache - same order as traverseSpecificType checks
+            if (isArray()) {
+                jsonTypeCache = 1;
+            } else if (isCollection()) {
+                jsonTypeCache = 2;
+            } else if (isMap()) {
+                jsonTypeCache = 3;
+            } else {
+                jsonTypeCache = 4;
+            }
+        }
+        // Fast switch on cached byte value
+        switch (jsonTypeCache) {
+            case 1: return JsonType.ARRAY;
+            case 2: return JsonType.COLLECTION;
+            case 3: return JsonType.MAP;
+            default: return JsonType.OBJECT;
+        }
+    }
     
     // Simplified cache management - consolidated into a single cache state class
     private static class CacheState implements Serializable {

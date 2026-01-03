@@ -691,18 +691,23 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 writeCollection((Collection<?>) obj, showType);
                 break;
             case JSON_OBJECT:
-                // JsonObject requires instance-level sub-dispatch (isArray, isCollection, isMap)
+                // Performance: Use cached type classification instead of repeated isArray/isCollection/isMap checks
                 JsonObject jObj = (JsonObject) obj;
-                if (jObj.isArray()) {
-                    writeJsonObjectArray(jObj, showType);
-                } else if (jObj.isCollection()) {
-                    writeJsonObjectCollection(jObj, showType);
-                } else if (jObj.isMap()) {
-                    if (!writeJsonObjectMapWithStringKeys(jObj, showType)) {
-                        writeJsonObjectMap(jObj, showType);
-                    }
-                } else {
-                    writeJsonObjectObject(jObj, showType);
+                switch (jObj.getJsonType()) {
+                    case ARRAY:
+                        writeJsonObjectArray(jObj, showType);
+                        break;
+                    case COLLECTION:
+                        writeJsonObjectCollection(jObj, showType);
+                        break;
+                    case MAP:
+                        if (!writeJsonObjectMapWithStringKeys(jObj, showType)) {
+                            writeJsonObjectMap(jObj, showType);
+                        }
+                        break;
+                    default:
+                        writeJsonObjectObject(jObj, showType);
+                        break;
                 }
                 break;
             case MAP:

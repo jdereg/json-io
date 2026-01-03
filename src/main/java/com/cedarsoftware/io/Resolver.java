@@ -662,14 +662,20 @@ public abstract class Resolver {
     }
 
     protected void traverseSpecificType(JsonObject jsonObj) {
-        if (jsonObj.isArray()) {
-            traverseArray(jsonObj);
-        } else if (jsonObj.isCollection()) {
-            traverseCollection(jsonObj);
-        } else if (jsonObj.isMap()) {
-            traverseMap(jsonObj);
-        } else {
-            traverseObject(jsonObj);
+        // Performance: Use cached type classification instead of repeated isArray/isCollection/isMap checks
+        switch (jsonObj.getJsonType()) {
+            case ARRAY:
+                traverseArray(jsonObj);
+                break;
+            case COLLECTION:
+                traverseCollection(jsonObj);
+                break;
+            case MAP:
+                traverseMap(jsonObj);
+                break;
+            default:
+                traverseObject(jsonObj);
+                break;
         }
     }
 

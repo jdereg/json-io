@@ -27,6 +27,10 @@
   * Now handles: single digits, two-digit numbers, negative single/two-digit numbers
   * Avoids StringBuilder allocation for ~80% of integers in typical JSON
   * ~9% read improvement in Maps mode (3.81x → 3.47x vs Jackson)
+* **PERFORMANCE**: `JsonObject` - Added cached `JsonType` enum for type dispatch optimization
+  * Added `getJsonType()` method that caches result of `isArray()/isCollection()/isMap()` checks
+  * `Resolver.traverseSpecificType()` and `JsonWriter.writeImpl()` now use cached type dispatch
+  * Avoids repeated type classification checks during object graph traversal
 * **CLEANUP**: `JsonReader` - Removed all implementation code, retaining only deprecated inner interfaces for backward compatibility
   * `JsonReader` class is now marked `@Deprecated` - use `JsonIo` for all JSON parsing
   * Private constructor prevents instantiation with clear error message
