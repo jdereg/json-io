@@ -5,6 +5,10 @@
   * Eliminates `new Object[]{element, depth}` allocation for every object pushed during reference tracing
   * Eliminates `Integer` autoboxing by using primitive `int[]` with automatic growth
   * Reduces GC pressure when serializing large object graphs
+* **PERFORMANCE**: `WriteOptionsBuilder` - Cache `isNonReferenceableClass()` result using `ClassValue`
+  * For POJOs (not in nonRefClasses), previously performed 4 hierarchy/type checks on every call
+  * Now caches the boolean result per-class using JVM-optimized `ClassValue`
+  * Particularly beneficial since this method is called twice per object (trace + write phases)
 * **CLEANUP**: `JsonReader` - Removed all implementation code, retaining only deprecated inner interfaces for backward compatibility
   * `JsonReader` class is now marked `@Deprecated` - use `JsonIo` for all JSON parsing
   * Private constructor prevents instantiation with clear error message

@@ -1372,6 +1372,18 @@ public class WriteOptionsBuilder {
         private Map<Class<?>, List<Accessor>> accessorsCache = new ClassValueMap<>();
         private Map<Class<?>, Map<String, Field>> classMetaCache = new ClassValueMap<>();
 
+        // Cache for isNonReferenceableClass() result - avoids repeated hierarchy checks for POJOs
+        private final ClassValue<Boolean> nonRefCache = new ClassValue<Boolean>() {
+            @Override
+            protected Boolean computeValue(Class<?> type) {
+                return nonRefClasses.contains(type) ||
+                        Number.class.isAssignableFrom(type) ||
+                        Date.class.isAssignableFrom(type) ||
+                        String.class.isAssignableFrom(type) ||
+                        type.isEnum();
+            }
+        };
+
         /**
          * Default Constructor.  Prevent instantiation outside of package.
          */
@@ -1458,11 +1470,7 @@ public class WriteOptionsBuilder {
          * @return boolean true if the passed in class is considered a non-referenceable class.
          */
         public boolean isNonReferenceableClass(Class<?> clazz) {
-            return nonRefClasses.contains(clazz) ||     // Covers primitives, primitive wrappers, Atomic*, Big*, String
-                    Number.class.isAssignableFrom(clazz) ||
-                    Date.class.isAssignableFrom(clazz) ||
-                    String.class.isAssignableFrom(clazz) ||
-                    clazz.isEnum();
+            return nonRefCache.get(clazz);
         }
 
         /**
