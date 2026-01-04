@@ -62,8 +62,8 @@ public abstract class JsonValue {
     Type type = null;
     protected Object target = null;
     protected boolean isFinished = false;
-    protected long id = -1L;
-    protected Long refId = null;
+    protected int id = -1;
+    protected int refId = -1;  // -1 means "not a reference"
 
     // Cache for storing whether a Type is fully resolved.
     // Uses bounded LRU cache to prevent memory leaks in long-running applications
@@ -81,15 +81,15 @@ public abstract class JsonValue {
     };
 
     public boolean isReference() {
-        return refId != null;
+        return refId != -1;
     }
 
     public Long getReferenceId() {
-        return refId;
+        return refId == -1 ? null : (long) refId;
     }
 
     public void setReferenceId(Long id) {
-        refId = id;
+        refId = id == null ? -1 : id.intValue();
         isFinished = true;
     }
 
@@ -169,11 +169,11 @@ public abstract class JsonValue {
     }
 
     public long getId() {
-        return id;
+        return id;  // auto-widened to long for backward compatibility
     }
 
     public void setId(long id) {
-        this.id = id;
+        this.id = (int) id;  // narrowed to int internally
     }
 
     /**
@@ -187,7 +187,7 @@ public abstract class JsonValue {
     void clear() {
         id = -1;
         type = null;
-        refId = null;
+        refId = -1;
     }
 
     /**

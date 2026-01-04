@@ -100,6 +100,12 @@
   * Removed 80+ lines of complex 1-2 digit special-case branching code
   * Single general path now handles all integer sizes (up to 18 digits parsed directly, 19+ fall back to String)
   * ~2-3% read improvement in Maps mode
+* **MEMORY**: `JsonValue` - Reduced memory footprint by 16 bytes per object
+  * Removed `line` and `col` fields (8 bytes) - FastReader already removed tracking, these were always 0
+  * Changed `id` from `long` to `int` (4 bytes) - 2.1 billion unique IDs is sufficient
+  * Changed `refId` from `Long` to `int` with -1 sentinel (4+ bytes) - avoids object allocation
+  * Public API unchanged for backward compatibility (`getId()` returns `long`, `getReferenceId()` returns `Long`)
+  * Error messages now use snippet context instead of useless "line 0, col 0"
 * **CLEANUP**: `JsonReader` - Removed all implementation code, retaining only deprecated inner interfaces for backward compatibility
   * `JsonReader` class is now marked `@Deprecated` - use `JsonIo` for all JSON parsing
   * Private constructor prevents instantiation with clear error message

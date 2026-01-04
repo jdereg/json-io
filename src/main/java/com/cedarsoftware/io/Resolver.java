@@ -385,7 +385,7 @@ public abstract class Resolver {
 
         // If the JsonObject is a reference, resolve it.
         if (rootObj.isReference()) {
-            rootObj = getReferences().get(rootObj.refId);
+            rootObj = getReferences().get((long) rootObj.refId);
             if (rootObj != null) {
                 return (T) rootObj;
             }

@@ -124,7 +124,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private final Map<Object, Long> objVisited = new IdentityHashMap<>(256); // Pre-size for better performance
     private final Map<Object, Long> objsReferenced = new IdentityHashMap<>(256); // Pre-size for better performance
     private final Writer out;
-    private long identity = 1;
+    private int identity = 1;  // int is sufficient - max 2.1 billion unique objects
     private int depth = 0;
 
     // Primitive depth tracking for traceReferences (avoids Integer autoboxing)
@@ -569,7 +569,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 Long id = visited.get(obj);
                 if (id != null) {   // Object has been seen before
                     if (id.equals(ZERO)) {
-                        id = identity++;
+                        id = (long) identity++;
                         visited.put(obj, id);
                         referenced.put(obj, id);
                     }
@@ -1577,7 +1577,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private boolean adjustIfReferenced(JsonObject jObj) {
         Long idx = objsReferenced.get(jObj);
         if (!jObj.hasId() && idx != null && idx > 0) {   // Referenced object that needs an ID copied to it.
-            jObj.id = idx;
+            jObj.id = idx.intValue();
         }
         return objsReferenced.containsKey(jObj) && jObj.hasId();
     }
