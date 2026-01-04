@@ -84,12 +84,21 @@ public abstract class JsonValue {
         return refId != -1;
     }
 
-    public Long getReferenceId() {
-        return refId == -1 ? null : (long) refId;
+    /**
+     * Returns the reference ID, or -1 if this is not a reference.
+     * Use {@link #isReference()} to check if this is a reference before calling.
+     * @return the reference ID, or -1 if not a reference
+     */
+    public long getReferenceId() {
+        return refId;
     }
 
-    public void setReferenceId(Long id) {
-        refId = id == null ? -1 : id.intValue();
+    /**
+     * Sets the reference ID. Use -1 to indicate this is not a reference.
+     * @param id the reference ID, or -1 for no reference
+     */
+    public void setReferenceId(long id) {
+        refId = (int) id;
         isFinished = true;
     }
 

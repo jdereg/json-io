@@ -165,9 +165,9 @@ public class ObjectResolver extends Resolver
             push(jsonArray);
         } else if (rhs instanceof JsonObject) {
             final JsonObject jsRhs = (JsonObject) rhs;
-            final Long ref = jsRhs.getReferenceId();
 
-            if (ref != null) {    // Handle field references.
+            if (jsRhs.isReference()) {    // Handle field references.
+                final long ref = jsRhs.getReferenceId();
                 final JsonObject refObject = getReferences().getOrThrow(ref);
                 if (refObject.getTarget() != null) {
                     injector.inject(target, refObject.getTarget());
@@ -222,9 +222,9 @@ public class ObjectResolver extends Resolver
                 storeMissingField(target, missingField, null);
             } else if (rhs instanceof JsonObject) {
                 final JsonObject jObj = (JsonObject) rhs;
-                final Long ref = jObj.getReferenceId();
 
-                if (ref != null) { // Correct field references
+                if (jObj.isReference()) { // Correct field references
+                    final long ref = jObj.getReferenceId();
                     final JsonObject refObject = getReferences().getOrThrow(ref);
                     storeMissingField(target, missingField, refObject.getTarget());
                 } else {   // Assign ObjectMap's to Object (or derived) fields
@@ -343,8 +343,8 @@ public class ObjectResolver extends Resolver
             if (element instanceof JsonObject) {
                 // Most common case after primitives - handle JsonObject
                 JsonObject jObj = (JsonObject) element;
-                final Long ref = jObj.getReferenceId();
-                if (ref != null) {
+                if (jObj.isReference()) {
+                    final long ref = jObj.getReferenceId();
                     JsonObject refObject = getReferences().getOrThrow(ref);
                     if (refObject.getTarget() != null) {
                         col.add(refObject.getTarget());
@@ -488,9 +488,9 @@ public class ObjectResolver extends Resolver
                 }
             } else if (element instanceof JsonObject) {
                 JsonObject jsonElement = (JsonObject) element;
-                Long ref = jsonElement.getReferenceId();
 
-                if (ref != null) {
+                if (jsonElement.isReference()) {
+                    long ref = jsonElement.getReferenceId();
                     JsonObject refObject = refTracker.getOrThrow(ref);
                     if (refObject.getTarget() != null) {
                         if (isPrimitive) {

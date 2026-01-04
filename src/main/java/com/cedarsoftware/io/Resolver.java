@@ -1359,11 +1359,7 @@ public abstract class Resolver {
                 }
                 visited.add(id);
 
-                Long nextId = target.getReferenceId();
-                if (nextId == null) {
-                    throw new JsonIoException("Reference id is null for object with id: " + id);
-                }
-
+                long nextId = target.getReferenceId();
                 id = nextId;
                 target = references.get(id);
                 if (target == null) {

@@ -63,6 +63,15 @@
     * `$type`, `$id`, `$ref`, `$items`, `$keys` in JSON5 mode
     * When combined with `shortMetaKeys(true)`: `$t`, `$i`, `$r`, `$e`, `$k`
     * All variants are accepted when reading: `@type`, `@t`, `$type`, `$t`
+* **API**: `JsonValue.getReferenceId()` now returns primitive `long` instead of `Long`
+  * Previously returned `Long` (null if not a reference)
+  * Now returns `long` (-1 if not a reference)
+  * Use `isReference()` to check before calling `getReferenceId()`
+  * **Migration**: Change `Long ref = obj.getReferenceId(); if (ref != null)` to `if (obj.isReference()) { long ref = obj.getReferenceId(); ... }`
+* **API**: `JsonValue.setReferenceId()` now takes primitive `long` instead of `Long`
+  * Previously accepted `Long` (null to clear)
+  * Now accepts `long` (use -1 to indicate not a reference)
+  * **Migration**: Change `setReferenceId(null)` to `setReferenceId(-1)`
 * **PERFORMANCE**: `JsonWriter` - Optimized `traceReferences()` to reduce object allocation
   * Replaced single `Deque<Object[]>` with `Deque<Object>` plus primitive `int[]` for depths
   * Eliminates `new Object[]{element, depth}` allocation for every object pushed during reference tracing

@@ -321,9 +321,8 @@ public class MapResolver extends Resolver {
                         continue;
                     }
                 }
-                Long refId = jObj.getReferenceId();
-
-                if (refId != null) {    // Correct field references
+                if (jObj.isReference()) {    // Correct field references
+                    long refId = jObj.getReferenceId();
                     JsonObject refObject = refTracker.getOrThrow(refId);
                     jsonObj.put(fieldName, refObject);    // Update Map-of-Maps reference
                 } else {
@@ -457,9 +456,8 @@ public class MapResolver extends Resolver {
                     }
                 } else if (element instanceof JsonObject) {
                     JsonObject jsonObject = (JsonObject) element;
-                    Long refId = jsonObject.getReferenceId();
 
-                    if (refId == null) {
+                    if (!jsonObject.isReference()) {
                         // Convert JsonObject to its destination type if possible
                         // Performance: Only check Converter for nonRef types (UUID, ZonedDateTime, etc.)
                         // User types (Dog, Cat, House) are NOT nonRef and Converter can't convert them anyway
@@ -477,6 +475,7 @@ public class MapResolver extends Resolver {
                             push(jsonObject);
                         }
                     } else {    // Connect reference
+                        long refId = jsonObject.getReferenceId();
                         JsonObject refObject = refTracker.getOrThrow(refId);
                         Class<?> type = refObject.getRawType();
 
@@ -563,9 +562,9 @@ public class MapResolver extends Resolver {
                     push(jObj);
                 } else { // if (element instanceof JsonObject)
                     final JsonObject jObj = (JsonObject) element;
-                    final Long ref = jObj.getReferenceId();
 
-                    if (ref != null) {
+                    if (jObj.isReference()) {
+                        final long ref = jObj.getReferenceId();
                         JsonObject refObject = refTracker.getOrThrow(ref);
 
                         if (refObject.getTarget() != null) {
