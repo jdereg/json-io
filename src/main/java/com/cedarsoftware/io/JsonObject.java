@@ -1,16 +1,12 @@
 package com.cedarsoftware.io;
 
 import java.io.Serializable;
-import java.lang.reflect.Array;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -88,43 +84,9 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         }
     }
     
-    // Simplified cache management - consolidated into a single cache state class
-    private static class CacheState implements Serializable {
-        Set<Object> keySet;
-        Collection<Object> values;
-        Boolean sorted;
-        Integer keysLength;
-        Integer itemsLength;
-        
-        void clear() {
-            keySet = null;
-            values = null;
-            sorted = null;
-            keysLength = null;
-            itemsLength = null;
-        }
-    }
-    
-    private final CacheState cache = new CacheState();
-    
-    /**
-     * Helper method to get cached array length, avoiding expensive Array.getLength() calls
-     */
-    private int getKeysLength() {
-        if (keys == null) return 0;
-        if (cache.keysLength == null) {
-            cache.keysLength = keys.length;
-        }
-        return cache.keysLength;
-    }
-    
-    private int getItemsLength() {
-        if (items == null) return 0;
-        if (cache.itemsLength == null) {
-            cache.itemsLength = items.length;
-        }
-        return cache.itemsLength;
-    }
+    // Cached sorted state - worthwhile since checking sortedness is O(n)
+    // 0 = not computed, 1 = sorted, 2 = not sorted
+    private byte sortedCache = 0;
 
     public String toString() {
         String jType = typeString != null ? typeString : (type == null ? "not set" : type.getTypeName());
@@ -175,8 +137,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         }
         this.items = array;
         hash = null;
-        // Simplified cache invalidation
-        cache.clear();
+        sortedCache = 0;
     }
 
     // New getters/setters for keys
@@ -190,8 +151,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         }
         this.keys = keys;
         hash = null;
-        // Simplified cache invalidation
-        cache.clear();
+        sortedCache = 0;
     }
 
     /**
@@ -209,7 +169,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
 
     public int size() {
         if (items != null) {
-            return getItemsLength();
+            return items.length;
         }
         return jsonStore.size();
     }
@@ -367,7 +327,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     public boolean isEmpty() {
         // Fast path: directly check emptiness without calculating size
         if (items != null) {
-            return getItemsLength() == 0;
+            return items.length == 0;
         }
         return jsonStore.isEmpty();
     }
@@ -424,8 +384,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         items = null;
         keys = null;
         hash = null;
-        // Clear consolidated cache
-        cache.clear();
+        sortedCache = 0;
     }
 
     @Override
@@ -443,7 +402,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
             }
             
             // For non-null keys, use optimized search  
-            int keyLen = getKeysLength();
+            int keyLen = keys.length;
             if (keyLen <= linearSearchThreshold) {
                 // Linear search for small arrays
                 for (Object k : keys) {
@@ -483,7 +442,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
             }
             
             // For non-null values, optimize based on type
-            int itemLen = getItemsLength();
+            int itemLen = items.length;
             if (itemLen <= linearSearchThreshold) {
                 // Linear search for small arrays
                 for (Object v : items) {
@@ -511,7 +470,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         // Check keys/items arrays if present
         if (keys != null && items != null) {
             // For small arrays, linear search is faster due to cache locality
-            int keyLen = getKeysLength();
+            int keyLen = keys.length;
             if (keyLen <= linearSearchThreshold) {
                 for (int i = 0; i < keyLen; i++) {
                     if (Objects.equals(key, keys[i])) {
@@ -547,22 +506,23 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
      */
     private boolean isSorted() {
         if (keys == null) return false;
-        
-        // Return cached result if available
-        if (cache.sorted != null) {
-            return cache.sorted;
+
+        // Return cached result if available (1 = sorted, 2 = not sorted)
+        if (sortedCache != 0) {
+            return sortedCache == 1;
         }
-        
+
         // Calculate and cache the result
-        cache.sorted = calculateSorted();
-        return cache.sorted;
+        boolean result = calculateSorted();
+        sortedCache = result ? (byte) 1 : (byte) 2;
+        return result;
     }
     
     /**
      * Calculate if the keys array is sorted (called only once per keys array).
      */
     private boolean calculateSorted() {
-        int keyLen = getKeysLength();
+        int keyLen = keys.length;
         if (keyLen < 2) return true;
         
         // Quick check - if not all strings, assume not sorted
@@ -591,7 +551,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         
         String searchKey = (String) key;
         int left = 0;
-        int right = getKeysLength() - 1;
+        int right = keys.length - 1;
         
         while (left <= right) {
             int mid = left + (right - left) / 2;
@@ -610,30 +570,98 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
 
     @Override
     public Set<Object> keySet() {
-        // If we have keys array, convert to a Set
+        // If we have keys array, return a lightweight view
         if (keys != null) {
-            if (cache.keySet == null) {
-                cache.keySet = new LinkedHashSet<>(Arrays.asList(keys));
-            }
-            return cache.keySet;
+            return new ArrayKeySet();
         }
         // Otherwise use jsonStore's keySet
         return jsonStore.keySet();
     }
 
+    /**
+     * Lightweight Set view over keys array - no copying.
+     */
+    private class ArrayKeySet extends AbstractSet<Object> {
+        @Override
+        public int size() {
+            return keys != null ? keys.length : 0;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return keys == null || keys.length == 0;
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            return containsKey(o);
+        }
+
+        @Override
+        public Iterator<Object> iterator() {
+            return new Iterator<Object>() {
+                private int idx = 0;
+
+                @Override
+                public boolean hasNext() {
+                    return keys != null && idx < keys.length;
+                }
+
+                @Override
+                public Object next() {
+                    if (!hasNext()) throw new java.util.NoSuchElementException();
+                    return keys[idx++];
+                }
+            };
+        }
+    }
+
     @Override
     public Collection<Object> values() {
-        // If we have items array, convert to a Collection
+        // If we have items array, return a lightweight view
         if (items != null) {
-            if (cache.values == null) {
-                Collection<Object> valueList = new LinkedHashSet<>();
-                Collections.addAll(valueList, items);
-                cache.values = valueList;
-            }
-            return cache.values;
+            return new ArrayValueCollection();
         }
         // Otherwise use jsonStore's values
         return jsonStore.values();
+    }
+
+    /**
+     * Lightweight Collection view over items array - no copying.
+     */
+    private class ArrayValueCollection extends AbstractSet<Object> {
+        @Override
+        public int size() {
+            return items != null ? items.length : 0;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return items == null || items.length == 0;
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            return containsValue(o);
+        }
+
+        @Override
+        public Iterator<Object> iterator() {
+            return new Iterator<Object>() {
+                private int idx = 0;
+
+                @Override
+                public boolean hasNext() {
+                    return items != null && idx < items.length;
+                }
+
+                @Override
+                public Object next() {
+                    if (!hasNext()) throw new java.util.NoSuchElementException();
+                    return items[idx++];
+                }
+            };
+        }
     }
 
     @Override
@@ -652,12 +680,12 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     private class ArrayEntrySet extends AbstractSet<Entry<Object, Object>> {
         @Override
         public int size() {
-            return keys != null ? getKeysLength() : 0;
+            return keys != null ? keys.length : 0;
         }
 
         @Override
         public boolean isEmpty() {
-            return keys == null || getKeysLength() == 0;
+            return keys == null || keys.length == 0;
         }
 
         @Override
@@ -676,7 +704,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
             
             // Find key in keys array and check if corresponding value matches
             if (keys != null && items != null) {
-                int keyLen = getKeysLength();
+                int keyLen = keys.length;
                 for (int i = 0; i < keyLen; i++) {
                     if (Objects.equals(keys[i], key)) {
                         return Objects.equals(items[i], value);
@@ -696,7 +724,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
 
         @Override
         public boolean hasNext() {
-            return keys != null && index < getKeysLength();
+            return keys != null && index < keys.length;
         }
 
         @Override
@@ -734,8 +762,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
             Object oldValue = items[index];
             items[index] = value;
             hash = null;
-            // Invalidate cached values since content changed
-            cache.values = null;
             return oldValue;
         }
 
@@ -792,8 +818,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         }
 
         if (keys != null && items != null) {
-            int keyLen = getKeysLength();
-            int itemLen = getItemsLength();
+            int keyLen = keys.length;
+            int itemLen = items.length;
             if (keyLen != itemLen) {
                 throw new JsonIoException("@keys and @items must be same length");
             }
@@ -818,7 +844,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         }
 
         // Transfer all entries from keys/items arrays to jsonStore and target
-        final int len = getKeysLength();
+        final int len = keys.length;
         for (int i = 0; i < len; i++) {
             Object key = keys[i];
             Object value = items[i];
@@ -835,9 +861,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         // Clear arrays to free memory
         keys = null;
         items = null;
-        
-        // Clear consolidated cache since we moved to jsonStore
-        cache.clear();
+        sortedCache = 0;
     }
 
     /**
