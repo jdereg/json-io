@@ -6,10 +6,7 @@ import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.lang.reflect.ReflectPermission;
 import java.lang.reflect.Type;
-import java.util.Arrays;
-
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.ReflectionUtils;
@@ -116,7 +113,6 @@ public class Injector {
     // Cached values for performance - computed once at construction
     private final Class<?> fieldType;
     private final String fieldName;
-    private final boolean isSystemClass;
 
     // Constructor for MethodHandle injection
     public Injector(Field field, MethodHandle handle, String uniqueFieldName, String displayName) {
@@ -129,8 +125,6 @@ public class Injector {
         // Cache values for performance
         this.fieldType = field.getType();
         this.fieldName = field.getName();
-        String className = field.getDeclaringClass().getName();
-        this.isSystemClass = className.startsWith("java.lang.") || className.startsWith("java.security.");
     }
 
     // Constructor for Field.set() fallback injection
@@ -143,8 +137,6 @@ public class Injector {
         // Cache values for performance
         this.fieldType = field.getType();
         this.fieldName = field.getName();
-        String className = field.getDeclaringClass().getName();
-        this.isSystemClass = className.startsWith("java.lang.") || className.startsWith("java.security.");
     }
 
     // Constructor for VarHandle-based injection (JDK 17+)
@@ -158,8 +150,6 @@ public class Injector {
         // Cache values for performance
         this.fieldType = field.getType();
         this.fieldName = field.getName();
-        String className = field.getDeclaringClass().getName();
-        this.isSystemClass = className.startsWith("java.lang.") || className.startsWith("java.security.");
     }
 
     public static Injector create(Field field, String uniqueFieldName) {
@@ -173,20 +163,6 @@ public class Injector {
 
         }
 
-        // Security: Check if field access is allowed in secure environments
-        String fieldName = field.getName();
-        Class<?> declaringClass = field.getDeclaringClass();
-        
-        // Security: Validate field access permissions
-        try {
-            SecurityManager sm = System.getSecurityManager();
-            if (sm != null) {
-                sm.checkPermission(new ReflectPermission("suppressAccessChecks"));
-            }
-        } catch (SecurityException e) {
-            throw new JsonIoException("Security policy denies field access to: " + fieldName + " in class: " + declaringClass.getName(), e);
-        }
-        
         // Always try to make the field accessible, regardless of whether it is static.
         if (!field.isAccessible()) {
             try {
@@ -208,26 +184,15 @@ public class Injector {
         // For JDK 8-16, if the field is final, use Field.set() (and try to remove the final modifier)
         boolean isFinal = Modifier.isFinal(field.getModifiers());
         if (isFinal && !IS_JDK17_OR_HIGHER) {
-            // Security: Validate that final modifier removal is allowed
             try {
-                SecurityManager sm = System.getSecurityManager();
-                if (sm != null) {
-                    sm.checkPermission(new ReflectPermission("suppressAccessChecks"));
-                }
-            } catch (SecurityException e) {
-                throw new JsonIoException("Security policy denies final field modification for: " + fieldName + " in class: " + declaringClass.getName(), e);
-            }
-            
-            try {
-                // Security: Be cautious when modifying final fields
                 Field modifiersField = ReflectionUtils.getField(Field.class, "modifiers");
                 if (modifiersField == null) {
                     throw new JsonIoException("Unable to access modifiers field - possible security restriction");
                 }
                 modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
             } catch (Exception ex) {
-                // Security: Provide descriptive error message for audit trail
-                throw new JsonIoException("Failed to remove final modifier from field: " + fieldName + " in class: " + declaringClass.getName() + ". This may be due to security restrictions.", ex);
+                throw new JsonIoException("Failed to remove final modifier from field: " + field.getName() +
+                        " in class: " + field.getDeclaringClass().getName(), ex);
             }
             return new Injector(field, uniqueFieldName, field.getName(), true);
         }
@@ -248,24 +213,12 @@ public class Injector {
     }
 
     private static Injector createWithVarHandle(Field field, String uniqueFieldName) {
-        // Security: Validate VarHandle infrastructure is available
         if (PRIVATE_LOOKUP_IN_METHOD == null || FIND_VAR_HANDLE_METHOD == null ||
                 VAR_HANDLE_SET_METHOD == null || LOOKUP == null) {
             return null; // Return null to allow fallback to Field.set()
         }
 
-        // Security: Validate access permissions for VarHandle creation (only when SecurityManager is present)
-        SecurityManager sm = System.getSecurityManager();
-        if (sm != null) {
-            try {
-                sm.checkPermission(new ReflectPermission("suppressAccessChecks"));
-            } catch (SecurityException e) {
-                return null; // Return null to allow fallback to Field.set()
-            }
-        }
-
         try {
-            // Security: Validate field declaring class to prevent unauthorized access
             Class<?> declaringClass = field.getDeclaringClass();
 
             Object privateLookup = PRIVATE_LOOKUP_IN_METHOD.invoke(null, declaringClass, LOOKUP);
@@ -280,7 +233,7 @@ public class Injector {
 
             return new Injector(field, varHandle, uniqueFieldName, field.getName());
         } catch (Exception e) {
-            // Security: Log but don't fail hard - allow fallback to Field.set()
+            // VarHandle creation failed - allow fallback to Field.set()
             return null;
         }
     }
@@ -297,16 +250,6 @@ public class Injector {
             throw new JsonIoException("Unique field name cannot be null or empty");
         }
 
-        // Security: Validate method access permissions
-        try {
-            SecurityManager sm = System.getSecurityManager();
-            if (sm != null) {
-                sm.checkPermission(new ReflectPermission("suppressAccessChecks"));
-            }
-        } catch (SecurityException e) {
-            throw new JsonIoException("Security policy denies method access for: " + methodName + " in class: " + field.getDeclaringClass().getName(), e);
-        }
-        
         try {
             MethodType methodType = MethodType.methodType(void.class, field.getType());
             MethodHandle handle = MethodHandles.lookup().findVirtual(field.getDeclaringClass(), methodName, methodType);
@@ -319,21 +262,8 @@ public class Injector {
     }
 
     public void inject(Object object, Object value) {
-        // Security: Validate input parameters
         if (object == null) {
             throw new JsonIoException("Attempting to set field: " + fieldName + " on null object.");
-        }
-
-        // Security: Additional validation for system classes (cached check)
-        if (isSystemClass) {
-            SecurityManager sm = System.getSecurityManager();
-            if (sm != null) {
-                try {
-                    sm.checkPermission(new ReflectPermission("suppressAccessChecks"));
-                } catch (SecurityException e) {
-                    throw new JsonIoException("Security policy denies injection into system class field: " + fieldName, e);
-                }
-            }
         }
 
         try {

@@ -117,6 +117,24 @@
   * Hoisted `strictJson`, `integerTypeBigInteger`, `integerTypeBoth`, `floatingPointBigDecimal`, `floatingPointBoth`
   * Previously called `readOptions.isXxx()` methods repeatedly in hot parsing loops
   * Now cached as `final` fields at parser construction time
+* **PERFORMANCE**: `Accessor` - VarHandle fallback for JDK 17+ module system compatibility
+  * When MethodHandle fails due to module restrictions, falls back to VarHandle on JDK 17+
+  * VarHandle can access fields even when `setAccessible()` is blocked by the module system
+  * Maintains `getMethodHandle()` API compatibility by trying MethodHandle first
+* **PERFORMANCE**: `Accessor.retrieve()` - Remove redundant type check from hot path
+  * Removed `field.getDeclaringClass()` + `isInstance()` check on every field retrieval
+  * The underlying MethodHandle/VarHandle/Field.get() will throw appropriate exceptions if given wrong type
+  * Moved `getDeclaringClass()` call to exception handling path only (rarely executed)
+* **PERFORMANCE**: `Injector` - Remove deprecated SecurityManager checks
+  * SecurityManager was deprecated in JDK 17 and removed in JDK 24
+  * Removed all `System.getSecurityManager()` checks that added overhead on every injection
+  * Removed unused `isSystemClass` field and `ReflectPermission` import
+* **PERFORMANCE**: `IsMethodAccessorFactory` - Optimized `createIsName()` string creation
+  * Replaced String concatenation with direct char[] construction
+  * Eliminates intermediate String allocations for boolean accessor method names
+* **PERFORMANCE**: `MethodInjectorFactory` - Optimized `createSetterName()` string creation
+  * Replaced String concatenation with direct char[] construction
+  * Eliminates intermediate String allocations for setter method names
   * Eliminates method call overhead for options checked during every parse operation
 * **PERFORMANCE**: `Resolver` - Early exit for empty post-parse collections
   * `patchUnresolvedReferences()` now returns immediately if no forward references to patch

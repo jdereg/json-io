@@ -4,29 +4,27 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.lang.reflect.ReflectPermission;
 import java.lang.reflect.Type;
 
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.util.ExceptionUtilities;
+import com.cedarsoftware.util.ReflectionUtils;
+import com.cedarsoftware.util.SystemUtilities;
 
 /**
- * High-performance field accessor utility that provides secure access to object fields
- * using MethodHandle when possible, with fallback to Field.get() for compatibility.
- * 
- * <p>This class provides secure field access with proper permission validation and
- * comprehensive error handling. All reflection operations are protected by security
- * manager checks when a SecurityManager is present.</p>
- * 
- * <h3>Security Features:</h3>
+ * High-performance field accessor utility that automatically adapts to different JDK versions
+ * for optimal performance and compatibility.
+ *
+ * <p>This class uses the {@code java.version} system property to automatically detect the
+ * JDK version and select the most appropriate field access strategy:</p>
+ *
  * <ul>
- * <li>Security manager validation for setAccessible() operations</li>
- * <li>Input parameter validation with null safety checks</li>
- * <li>Secure MethodHandle creation with graceful fallback</li>
- * <li>Object type validation during field retrieval</li>
+ * <li><strong>JDK 8-16:</strong> Uses {@code MethodHandle} for field access with {@code Field.get()} fallback</li>
+ * <li><strong>JDK 17+:</strong> Uses {@code VarHandle} for improved performance and module system compatibility</li>
  * </ul>
- * 
+ *
  * @author Kenny Partlow (kpartlow@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
@@ -44,34 +42,132 @@ import com.cedarsoftware.util.ExceptionUtilities;
  *         limitations under the License.
  */
 public class Accessor {
+    // JDK version detection and VarHandle infrastructure (JDK 9+)
+    private static final boolean IS_JDK17_OR_HIGHER;
+    private static final Object LOOKUP;
+    private static final Method PRIVATE_LOOKUP_IN_METHOD;
+    private static final Method FIND_VAR_HANDLE_METHOD;
+    private static final MethodHandle VAR_HANDLE_GET_METHOD;
+
+    static {
+        int javaVersion = SystemUtilities.currentJdkMajorVersion();
+        IS_JDK17_OR_HIGHER = javaVersion >= 17;
+
+        Object lookup = null;
+        Method privateLookupInMethod = null;
+        Method findVarHandleMethod = null;
+        MethodHandle varHandleGetMethod = null;
+
+        if (javaVersion >= 9) {
+            try {
+                Class<?> methodHandlesClass = Class.forName("java.lang.invoke.MethodHandles");
+                Class<?> lookupClass = Class.forName("java.lang.invoke.MethodHandles$Lookup");
+
+                Method lookupMethod = ReflectionUtils.getMethod(methodHandlesClass, "lookup");
+                lookup = lookupMethod.invoke(null);
+
+                privateLookupInMethod = ReflectionUtils.getMethod(methodHandlesClass,
+                        "privateLookupIn", Class.class, lookupClass);
+
+                Class<?> varHandleClass = Class.forName("java.lang.invoke.VarHandle");
+                findVarHandleMethod = ReflectionUtils.getMethod(lookupClass,
+                        "findVarHandle", Class.class, String.class, Class.class);
+
+                // VarHandle.get(Object) returns Object
+                MethodType getType = MethodType.methodType(Object.class, Object.class);
+                varHandleGetMethod = MethodHandles.publicLookup().findVirtual(varHandleClass, "get", getType);
+            } catch (Exception e) {
+                // VarHandle reflection setup failed - will use MethodHandle/Field.get() fallback
+                lookup = null;
+                privateLookupInMethod = null;
+                findVarHandleMethod = null;
+                varHandleGetMethod = null;
+            }
+        }
+
+        LOOKUP = lookup;
+        PRIVATE_LOOKUP_IN_METHOD = privateLookupInMethod;
+        FIND_VAR_HANDLE_METHOD = findVarHandleMethod;
+        VAR_HANDLE_GET_METHOD = varHandleGetMethod;
+    }
+
     private final String uniqueFieldName;
     private final Field field;
     private final boolean isMethod;
     private final String fieldOrMethodName;
     private final MethodHandle methodHandle;
+    private final Object varHandle;  // For JDK 17+ VarHandle-based access
     private final boolean isPublic;
 
+    // Private constructor for MethodHandle-based access
     private Accessor(Field field, MethodHandle methodHandle, String uniqueFieldName, String fieldOrMethodName, boolean isPublic, boolean isMethod) {
         this.field = field;
         this.methodHandle = methodHandle;
+        this.varHandle = null;
         this.uniqueFieldName = uniqueFieldName;
         this.fieldOrMethodName = fieldOrMethodName;
         this.isPublic = isPublic;
         this.isMethod = isMethod;
     }
 
+    // Private constructor for VarHandle-based access (JDK 17+)
+    private Accessor(Field field, Object varHandle, String uniqueFieldName, String fieldOrMethodName, boolean isPublic) {
+        this.field = field;
+        this.methodHandle = null;
+        this.varHandle = varHandle;
+        this.uniqueFieldName = uniqueFieldName;
+        this.fieldOrMethodName = fieldOrMethodName;
+        this.isPublic = isPublic;
+        this.isMethod = false;
+    }
+
     public static Accessor createFieldAccessor(Field field, String uniqueFieldName) {
-        // Ensure field is accessible if needed.
-        if (!(Modifier.isPublic(field.getModifiers()) && Modifier.isPublic(field.getDeclaringClass().getModifiers()))) {
+        boolean isPublicField = Modifier.isPublic(field.getModifiers()) && Modifier.isPublic(field.getDeclaringClass().getModifiers());
+
+        // Ensure field is accessible if needed
+        if (!isPublicField) {
             ExceptionUtilities.safelyIgnoreException(() -> field.setAccessible(true));
         }
+
+        // Try MethodHandle first (maintains getMethodHandle() API compatibility)
         try {
-            // Try creating a MethodHandle-based accessor.
             MethodHandle handle = MethodHandles.lookup().unreflectGetter(field);
             return new Accessor(field, handle, uniqueFieldName, field.getName(), Modifier.isPublic(field.getModifiers()), false);
         } catch (IllegalAccessException ex) {
-            // Fallback: create an accessor that uses field.get() directly.
-            return new Accessor(field, null, uniqueFieldName, field.getName(), Modifier.isPublic(field.getModifiers()), false);
+            // MethodHandle failed - try VarHandle on JDK 17+ for module system compatibility
+            if (IS_JDK17_OR_HIGHER) {
+                Accessor varHandleAccessor = createWithVarHandle(field, uniqueFieldName);
+                if (varHandleAccessor != null) {
+                    return varHandleAccessor;
+                }
+            }
+            // Final fallback: create an accessor that uses field.get() directly
+            return new Accessor(field, (MethodHandle) null, uniqueFieldName, field.getName(), Modifier.isPublic(field.getModifiers()), false);
+        }
+    }
+
+    private static Accessor createWithVarHandle(Field field, String uniqueFieldName) {
+        if (PRIVATE_LOOKUP_IN_METHOD == null || FIND_VAR_HANDLE_METHOD == null ||
+                VAR_HANDLE_GET_METHOD == null || LOOKUP == null) {
+            return null;
+        }
+
+        try {
+            Class<?> declaringClass = field.getDeclaringClass();
+            Object privateLookup = PRIVATE_LOOKUP_IN_METHOD.invoke(null, declaringClass, LOOKUP);
+            if (privateLookup == null) {
+                return null;
+            }
+
+            Object varHandle = FIND_VAR_HANDLE_METHOD.invoke(privateLookup, declaringClass, field.getName(), field.getType());
+            if (varHandle == null) {
+                return null;
+            }
+
+            return new Accessor(field, varHandle, uniqueFieldName, field.getName(), Modifier.isPublic(field.getModifiers()));
+        } catch (Exception e) {
+            // VarHandle creation failed - allow fallback to MethodHandle/Field.get()
+            return null;
         }
     }
 
@@ -86,39 +182,41 @@ public class Accessor {
     }
 
     public Object retrieve(Object o) {
-        // Security: Validate input object
         if (o == null) {
             throw new JsonIoException("Cannot retrieve field value from null object for field: " + getActualFieldName());
         }
-        
-        // Security: Validate that the object is an instance of the field's declaring class
-        Class<?> declaringClass = field.getDeclaringClass();
-        if (!declaringClass.isInstance(o)) {
-            throw new JsonIoException("Object is not an instance of the field's declaring class. Expected: " + 
-                declaringClass.getName() + ", Actual: " + o.getClass().getName() + 
-                " for field: " + getActualFieldName());
-        }
 
         try {
+            // Try VarHandle first (JDK 17+)
+            if (varHandle != null) {
+                try {
+                    return VAR_HANDLE_GET_METHOD.invoke(varHandle, o);
+                } catch (Throwable t) {
+                    // Fallback to field.get() if VarHandle fails
+                    return field.get(o);
+                }
+            }
+
+            // Try MethodHandle (JDK 8-16 or method accessor)
             if (methodHandle != null) {
                 try {
                     return methodHandle.invoke(o);
                 } catch (Throwable t) {
-                    // Fallback: if the method handle invocation fails, try using field.get()
+                    // Fallback to field.get() if MethodHandle fails
                     return field.get(o);
                 }
-            } else {
-                return field.get(o);
             }
+
+            // Final fallback: direct field access
+            return field.get(o);
         } catch (IllegalAccessException e) {
-            // Handle Java module system restrictions gracefully
-            if (isJdkInternalClass(declaringClass)) {
-                // For JDK internal classes, return a safe default or skip the field
-                return handleInaccessibleJdkField(declaringClass, getActualFieldName());
+            Class<?> dc = field.getDeclaringClass();
+            if (isJdkInternalClass(dc)) {
+                return handleInaccessibleJdkField(dc, getActualFieldName());
             }
-            throw new JsonIoException("Failed to retrieve field value: " + getActualFieldName() + " in class: " + declaringClass.getName(), e);
+            throw new JsonIoException("Failed to retrieve field value: " + getActualFieldName() + " in class: " + dc.getName(), e);
         } catch (Throwable t) {
-            throw new JsonIoException("Failed to retrieve field value: " + getActualFieldName() + " in class: " + declaringClass.getName(), t);
+            throw new JsonIoException("Failed to retrieve field value: " + getActualFieldName() + " in class: " + field.getDeclaringClass().getName(), t);
         }
     }
 
@@ -165,45 +263,27 @@ public class Accessor {
     public boolean isPublic() {
         return isPublic;
     }
-    
+
     /**
      * Check if a class is a JDK internal class that may have module access restrictions
      */
     private static boolean isJdkInternalClass(Class<?> clazz) {
         String className = clazz.getName();
         return className.startsWith("java.") ||
-               className.startsWith("javax.") ||
-               className.startsWith("jdk.") ||
-               className.startsWith("sun.") ||
-               className.startsWith("com.sun.") ||
-               className.contains(".internal.");
+                className.startsWith("javax.") ||
+                className.startsWith("jdk.") ||
+                className.startsWith("sun.") ||
+                className.startsWith("com.sun.") ||
+                className.contains(".internal.");
     }
-    
+
     /**
-     * Handle inaccessible JDK fields gracefully by returning safe defaults
+     * Handle inaccessible JDK fields gracefully by returning safe defaults.
      * This prevents JsonIoException for JDK internal fields that can't be accessed
      * due to Java module system restrictions.
      */
     private static Object handleInaccessibleJdkField(Class<?> declaringClass, String fieldName) {
-        String className = declaringClass.getName();
-        
-        // Special handling for common JDK classes with known inaccessible fields
-        if ("java.util.regex.Pattern".equals(className) && "pattern".equals(fieldName)) {
-            // Pattern string is inaccessible in newer Java versions
-            return null; // Skip this field safely
-        }
-        
-        if ("java.lang.ProcessImpl".equals(className) && "pid".equals(fieldName)) {
-            // Process ID is inaccessible due to security restrictions
-            return null; // Skip this field safely
-        }
-        
-        if (className.contains("ClassLoader") && "parent".equals(fieldName)) {
-            // ClassLoader parent field is often restricted
-            return null; // Skip this field safely
-        }
-        
-        // For other JDK internal fields, return null to skip them safely
+        // For JDK internal fields, return null to skip them safely
         // This allows serialization to continue without the restricted field
         return null;
     }

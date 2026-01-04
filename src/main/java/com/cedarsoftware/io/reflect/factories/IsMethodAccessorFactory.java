@@ -40,6 +40,15 @@ public class IsMethodAccessorFactory implements AccessorFactory {
      * @return String - returns the appropriate method name to access this fieldName.
      */
     public static String createIsName(String fieldName) {
-        return "is" + Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
+        // Performance: Use char array to eliminate intermediate string allocations
+        if (fieldName.isEmpty()) {
+            return "is";
+        }
+        char[] chars = new char[fieldName.length() + 2];
+        chars[0] = 'i';
+        chars[1] = 's';
+        chars[2] = Character.toUpperCase(fieldName.charAt(0));
+        fieldName.getChars(1, fieldName.length(), chars, 3);
+        return new String(chars);
     }
 }

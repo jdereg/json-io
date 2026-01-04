@@ -48,12 +48,22 @@ public class MethodInjectorFactory implements InjectorFactory {
     }
 
     /**
-     * Creates the common name for a get Method
+     * Creates the common name for a setter Method
      *
      * @param fieldName - String representing the field name
      * @return String - returns the appropriate method name to access this fieldName.
      */
     private static String createSetterName(String fieldName) {
-        return "set" + Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
+        // Performance: Use char array to eliminate intermediate string allocations
+        if (fieldName.isEmpty()) {
+            return "set";
+        }
+        char[] chars = new char[fieldName.length() + 3];
+        chars[0] = 's';
+        chars[1] = 'e';
+        chars[2] = 't';
+        chars[3] = Character.toUpperCase(fieldName.charAt(0));
+        fieldName.getChars(1, fieldName.length(), chars, 4);
+        return new String(chars);
     }
 }
