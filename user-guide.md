@@ -146,6 +146,192 @@ Map<String, List<Department<Employee>>> orgMap = JsonIo.toJava(json, readOptions
                                 .asType(new TypeHolder<Map<String, List<Department<Employee>>>>(){});
 ```
 
+## JSON5 Support
+
+[JSON5](https://json5.org/) is an extension to JSON that makes it more human-friendly by adding features
+inspired by ECMAScript 5. json-io provides **complete JSON5 support** for both reading and writing —
+the only major Java JSON library to do so natively.
+
+### Reading JSON5
+
+By default, json-io accepts all JSON5 extensions. This means you can parse JSON5 files without any
+configuration:
+
+```java
+// JSON5 is accepted by default - no configuration needed
+String json5 = """
+    {
+        // This is a comment
+        name: 'John',          // unquoted key, single-quoted string
+        age: 30,               // trailing comma allowed
+        salary: 0xFFFF,        // hexadecimal number
+        rating: .95,           // leading decimal point
+    }
+    """;
+
+Person person = JsonIo.toObjects(json5, null, Person.class);
+```
+
+#### JSON5 Read Features
+
+| Feature | Example | Supported |
+|---------|---------|:---------:|
+| **Single-line comments** | `// comment` | ✅ |
+| **Block comments** | `/* comment */` | ✅ |
+| **Unquoted object keys** | `{name: "John"}` | ✅ |
+| **Single-quoted strings** | `{'name': 'John'}` | ✅ |
+| **Trailing commas** | `[1, 2, 3,]` | ✅ |
+| **Hexadecimal numbers** | `0xFF` or `0xff` | ✅ |
+| **Leading decimal point** | `.5` (equals 0.5) | ✅ |
+| **Trailing decimal point** | `5.` (equals 5.0) | ✅ |
+| **Explicit positive sign** | `+5` | ✅ |
+| **Infinity literal** | `Infinity`, `-Infinity` | ✅ |
+| **NaN literal** | `NaN` | ✅ |
+| **Multi-line strings** | `"line1\↵line2"` (backslash continuation) | ✅ |
+
+#### Strict JSON Mode
+
+If you need to enforce strict RFC 8259 JSON compliance (rejecting JSON5 extensions), use `strictJson()`:
+
+```java
+ReadOptions strictOptions = new ReadOptionsBuilder()
+        .strictJson()
+        .build();
+
+// This will throw JsonIoException because of the comment
+String json5 = "{ // comment\n\"name\": \"John\"}";
+JsonIo.toObjects(json5, strictOptions, Map.class);  // Throws!
+```
+
+When `strictJson()` is enabled, the following will cause parse errors:
+- Comments (single-line or block)
+- Unquoted object keys
+- Single-quoted strings
+- Trailing commas
+- Hexadecimal numbers
+- Non-standard number formats (.5, 5., +5)
+- Infinity and NaN literals
+
+### Writing JSON5
+
+json-io can also **write** JSON5 format, which no other major Java JSON library supports natively.
+JSON5 write features are disabled by default to ensure maximum compatibility, but can be enabled
+individually or via an umbrella option.
+
+#### The `json5()` Umbrella Option
+
+The simplest way to enable JSON5 writing is the `json5()` umbrella method, which enables the most
+commonly useful features:
+
+```java
+WriteOptions json5Options = new WriteOptionsBuilder()
+        .json5()    // Enables: unquoted keys, smart quotes, Infinity/NaN
+        .build();
+
+String json5 = JsonIo.toJson(myObject, json5Options);
+```
+
+The `json5()` umbrella enables:
+- **Unquoted keys** — object keys that are valid identifiers are written without quotes
+- **Smart quotes** — strings containing `"` (but not `'`) use single quotes for cleaner output
+- **Infinity/NaN literals** — special float/double values written as literals instead of `null`
+
+> **Note:** Trailing commas are **not** enabled by `json5()` — they require explicit opt-in since they
+> provide no semantic benefit and some tools still don't accept them.
+
+#### Individual JSON5 Write Options
+
+For fine-grained control, enable features individually:
+
+```java
+WriteOptions options = new WriteOptionsBuilder()
+        .json5UnquotedKeys(true)      // Write unquoted keys when valid identifiers
+        .json5SmartQuotes(true)       // Use single quotes for strings with embedded "
+        .json5InfinityNaN(true)       // Write Infinity/NaN as literals
+        .json5TrailingCommas(true)    // Add trailing commas (explicit opt-in)
+        .build();
+```
+
+#### JSON5 Write Features
+
+| Option | Effect | Example Output |
+|--------|--------|----------------|
+| `json5UnquotedKeys(true)` | Keys that are valid ECMAScript identifiers are unquoted | `{name:"John"}` instead of `{"name":"John"}` |
+| `json5SmartQuotes(true)` | Strings with `"` but no `'` use single quotes | `'He said "Hi"'` instead of `"He said \"Hi\""` |
+| `json5InfinityNaN(true)` | Special values written as literals | `Infinity` instead of `null` |
+| `json5TrailingCommas(true)` | Trailing comma after last element | `[1,2,3,]` and `{a:1,}` |
+
+#### Unquoted Keys Details
+
+Keys are only unquoted if they are valid ECMAScript identifiers:
+- Must start with: letter (a-z, A-Z), underscore (`_`), or dollar sign (`$`)
+- May contain: letters, digits (0-9), underscores, or dollar signs
+- Keys that don't meet these criteria remain quoted
+
+```java
+Map<String, Object> map = new LinkedHashMap<>();
+map.put("validKey", 1);       // Will be unquoted: validKey:1
+map.put("_private", 2);       // Will be unquoted: _private:2
+map.put("$ref", 3);           // Will be unquoted: $ref:3
+map.put("key-with-dash", 4);  // Will be quoted: "key-with-dash":4
+map.put("123numeric", 5);     // Will be quoted: "123numeric":5
+```
+
+#### Smart Quotes Details
+
+Smart quotes only affect string **values**, not keys. Keys are handled separately by `json5UnquotedKeys()`.
+
+**Key behavior** (controlled by `json5UnquotedKeys`):
+- Valid identifier → unquoted: `name:`
+- Invalid identifier → double-quoted: `"key-with-dash":`
+- Keys **never** use single quotes, even if they contain `"`
+
+**Value behavior** (controlled by `json5SmartQuotes`):
+- If string contains `"` but no `'` → single quotes (avoids escaping)
+- Otherwise → double quotes (standard behavior)
+
+```java
+// With json5UnquotedKeys(true) and json5SmartQuotes(true):
+map.put("name", "He said \"Hello\"");     // Output: name:'He said "Hello"'
+map.put("key-dash", "He said \"Hi\"");    // Output: "key-dash":'He said "Hi"'
+map.put("msg", "It's fine");              // Output: msg:"It's fine"
+```
+
+Note how `"key-dash"` uses double quotes (invalid identifier) while its value uses single quotes (contains `"`).
+
+#### Complete Example
+
+```java
+// Create test data
+Map<String, Object> data = new LinkedHashMap<>();
+data.put("name", "John");
+data.put("message", "He said \"Hello\"");
+data.put("score", Double.POSITIVE_INFINITY);
+data.put("rating", Double.NaN);
+
+// Write with full JSON5 features
+WriteOptions options = new WriteOptionsBuilder()
+        .json5()                      // Enable umbrella features
+        .json5TrailingCommas(true)    // Also enable trailing commas
+        .prettyPrint(true)
+        .showTypeInfoNever()
+        .build();
+
+String json5 = JsonIo.toJson(data, options);
+```
+
+Output:
+```json5
+{
+  name: "John",
+  message: 'He said "Hello"',
+  score: Infinity,
+  rating: NaN,
+}
+```
+
+This JSON5 output can be read back by json-io (or any JSON5-compliant parser) without any issues.
+
 ## Advanced Usage
 Sometimes you will run into a class that does not want to serialize.  On the read-side, this can be a class that does
 not want to be instantiated easily.  A class that has private constructors, constructor with many difficult to supply

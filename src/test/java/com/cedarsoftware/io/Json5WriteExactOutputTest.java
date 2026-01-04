@@ -272,6 +272,44 @@ class Json5WriteExactOutputTest {
         assertEquals("{key:\"value\"}", json);
     }
 
+    @Test
+    void testSmartQuotesOnlyAffectsValues_NotKeys() {
+        // This test explicitly verifies that:
+        // 1. Smart quotes only affect STRING VALUES, not keys
+        // 2. Keys with invalid identifiers use double quotes (never single quotes)
+        // 3. Values with " but no ' use single quotes
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("key-with-dash", "He said \"Hello\"");  // Invalid identifier key, value with "
+
+        WriteOptions options = new WriteOptionsBuilder()
+                .json5UnquotedKeys(true)   // Would unquote if valid identifier
+                .json5SmartQuotes(true)    // Affects values only
+                .showTypeInfoNever()
+                .build();
+        String json = JsonIo.toJson(map, options);
+
+        // Key: "key-with-dash" - DOUBLE QUOTED (invalid identifier, smart quotes don't apply to keys)
+        // Value: 'He said "Hello"' - SINGLE QUOTED (has " but no ')
+        assertEquals("{\"key-with-dash\":'He said \"Hello\"'}", json);
+    }
+
+    @Test
+    void testKeysNeverUseSingleQuotes() {
+        // Verify that keys NEVER use single quotes, even if they contain "
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("key\"with\"quotes", "normal value");
+
+        WriteOptions options = new WriteOptionsBuilder()
+                .json5SmartQuotes(true)    // Only affects values
+                .showTypeInfoNever()
+                .build();
+        String json = JsonIo.toJson(map, options);
+
+        // Key uses double quotes with escaping (NEVER single quotes)
+        // Value uses double quotes (no " in value)
+        assertEquals("{\"key\\\"with\\\"quotes\":\"normal value\"}", json);
+    }
+
     // ========== JSON5 Validity - Round Trip Verification ==========
 
     @Test

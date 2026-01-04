@@ -12,6 +12,9 @@
       <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License" height="20" />
     </a>
     <img src="https://img.shields.io/badge/JDK-8%20to%2024-orange" alt="JDK 8–24" height="20" />
+    <a href="https://json5.org/">
+      <img src="https://img.shields.io/badge/JSON5-Full%20Support-brightgreen" alt="JSON5" height="20" />
+    </a>
   </p>
 
   <p>
@@ -24,10 +27,10 @@
   </p>
 </div>
 
-json-io is a powerful and lightweight Java library that simplifies JSON5 and JSON serialization and deserialization while handling complex object graphs with ease. Unlike basic JSON parsers, json-io preserves object references, handles polymorphic types, and maintains cyclic relationships in your data structures. Whether you're working with sophisticated domain models, dealing with legacy Java objects, or need high-performance JSON processing, json-io provides a robust solution with minimal configuration.
+json-io is a powerful and lightweight Java library that simplifies **JSON5** and JSON serialization and deserialization while handling complex object graphs with ease. Unlike basic JSON parsers, json-io preserves object references, handles polymorphic types, and maintains cyclic relationships in your data structures. Whether you're working with sophisticated domain models, dealing with legacy Java objects, or need high-performance JSON processing, json-io provides a robust solution with minimal configuration.
 
 Key Features:
-- Full JSON5 support including single-line and multi-line comments, single-quoted strings, unquoted object keys, trailing commas, and more — while remaining fully backward compatible with standard JSON (RFC 8259)
+- Full **JSON5** support including single-line and multi-line comments, single-quoted strings, unquoted object keys, trailing commas, and more — while remaining fully backward compatible with standard JSON (RFC 8259)
 - Preserves object references and handles cyclic relationships
 - Supports polymorphic types and complex object graphs
 - Zero external dependencies (other than java-util)
@@ -41,6 +44,22 @@ Key Features:
 - Two modes: typed Java objects (`toJava()`) or class-independent Maps (`toMaps()`)
 - Parse JSON with unknown class references into a Map-of-Maps representation without requiring classes on classpath
 - Featured on [json.org](http://json.org)
+
+## JSON5 Support — Complete Spec, Read & Write
+
+json-io provides **full [JSON5](https://json5.org/) specification support** for both reading and writing,
+enabled by default with zero configuration.
+
+| Feature | json-io | Jackson | Gson |
+|---------|:-------:|:-------:|:----:|
+| JSON5 Read | ✅ Full | ⚠️ Partial | ⚠️ Partial |
+| JSON5 Write | ✅ Full | ❌ | ❌ |
+| Hex Numbers (0xFF) | ✅ | ❌ | ❌ |
+| Multi-line Strings | ✅ | ❌ | ❌ |
+| Zero Config | ✅ | ❌ | ❌ |
+
+*Jackson and Gson offer lenient/permissive modes that accept some JSON5 read
+syntax, but lack hex literals, multi-line strings, and any JSON5 write capability.*
 
 ## Cloud Native & Microservices
 
