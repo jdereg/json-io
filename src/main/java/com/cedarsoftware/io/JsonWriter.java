@@ -834,9 +834,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             if (showType) {
                 out.write('}');
             }
-        } else if (!writeOptions.isAllowNanAndInfinity() && obj instanceof Double && (Double.isNaN((Double) obj) || Double.isInfinite((Double) obj))) {
+        } else if (!isNanInfinityAllowed() && obj instanceof Double && (Double.isNaN((Double) obj) || Double.isInfinite((Double) obj))) {
             out.write("null");
-        } else if (!writeOptions.isAllowNanAndInfinity() && obj instanceof Float && (Float.isNaN((Float) obj) || Float.isInfinite((Float) obj))) {
+        } else if (!isNanInfinityAllowed() && obj instanceof Float && (Float.isNaN((Float) obj) || Float.isInfinite((Float) obj))) {
             out.write("null");
         } else {
             out.write(obj.toString());
@@ -2580,5 +2580,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      */
     private static boolean isIdentifierPart(char c) {
         return isIdentifierStart(c) || (c >= '0' && c <= '9');
+    }
+
+    /**
+     * Check if NaN and Infinity values should be written as literals.
+     * Returns true if either the legacy allowNanAndInfinity option or
+     * the JSON5 json5InfinityNaN option is enabled.
+     */
+    private boolean isNanInfinityAllowed() {
+        return writeOptions.isAllowNanAndInfinity() || writeOptions.isJson5InfinityNaN();
     }
 }

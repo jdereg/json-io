@@ -48,6 +48,12 @@
     * Uses single quotes if string contains `"` but no `'` (cleaner output for strings with embedded quotes)
     * Uses double quotes otherwise (standard behavior)
     * Example: `{message:'He said "Hello"'}` instead of `{message:"He said \"Hello\""}`
+  * Added `json5InfinityNaN(true)` to write Infinity/NaN as literals instead of null
+    * `Double.POSITIVE_INFINITY` writes as `Infinity`
+    * `Double.NEGATIVE_INFINITY` writes as `-Infinity`
+    * `Double.NaN` writes as `NaN`
+    * Same for Float values
+    * Works with legacy `allowNanAndInfinity(true)` option
 * **PERFORMANCE**: `JsonWriter` - Optimized `traceReferences()` to reduce object allocation
   * Replaced single `Deque<Object[]>` with `Deque<Object>` plus primitive `int[]` for depths
   * Eliminates `new Object[]{element, depth}` allocation for every object pushed during reference tracing
