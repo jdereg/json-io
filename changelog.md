@@ -32,7 +32,12 @@
     * Explicit positive sign: `{"value": +5}` equals 5
     * Combinations supported: `+.5` (0.5), `-.5` (-0.5), `+5.` (5.0)
     * Works with exponents: `.5e2` (50.0), `5.e2` (500.0), `+1e5` (100000.0)
-  * JSON5 features remaining: multi-line strings with backslash continuation
+  * **Multi-line strings**: Strings can span multiple lines using backslash continuation
+    * Backslash followed by LF (`\↵`) removes both characters
+    * Backslash followed by CR (`\␍`) removes both characters
+    * Backslash followed by CRLF (`\␍↵`) removes all three characters
+    * Leading whitespace on continuation lines is preserved
+    * Example: `"hello \↵world"` becomes `"hello world"`
 * **PERFORMANCE**: `JsonWriter` - Optimized `traceReferences()` to reduce object allocation
   * Replaced single `Deque<Object[]>` with `Deque<Object>` plus primitive `int[]` for depths
   * Eliminates `new Object[]{element, depth}` allocation for every object pushed during reference tracing

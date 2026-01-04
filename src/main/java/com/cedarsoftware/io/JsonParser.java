@@ -960,6 +960,24 @@ class JsonParser {
 
                 // Regular Unicode character or high surrogate without low surrogate
                 str.append((char)value);
+            } else if (c == '\n') {
+                // JSON5 multi-line string: backslash followed by newline
+                // The backslash and newline are removed, string continues on next line
+                if (readOptions.isStrictJson()) {
+                    error("Multi-line strings not allowed in strict JSON mode");
+                }
+                // Just skip the newline, string continues
+            } else if (c == '\r') {
+                // JSON5 multi-line string: backslash followed by carriage return
+                if (readOptions.isStrictJson()) {
+                    error("Multi-line strings not allowed in strict JSON mode");
+                }
+                // Check for \r\n (Windows line ending)
+                int next = in.read();
+                if (next != '\n' && next != -1) {
+                    in.pushback((char) next);
+                }
+                // Skip the line terminator(s), string continues
             } else {
                 error("Invalid character escape sequence specified: " + (char)c);
             }
