@@ -304,6 +304,18 @@ class JsonParser {
             case '-':
             case 'I':
                 return readNumber(c);
+            case '.':
+                // JSON5 leading decimal point (e.g., .5 equals 0.5)
+                if (readOptions.isStrictJson()) {
+                    error("Leading decimal point not allowed in strict JSON mode");
+                }
+                return readNumber(c);
+            case '+':
+                // JSON5 explicit positive sign (e.g., +5)
+                if (readOptions.isStrictJson()) {
+                    error("Explicit positive sign not allowed in strict JSON mode");
+                }
+                return readNumber(c);
             default:
                 if (c >= '0' && c <= '9') {
                     return readNumber(c);
@@ -634,10 +646,11 @@ class JsonParser {
         final FastReader in = input;
         boolean isFloat = false;
         boolean isNegative = (firstChar == '-');
+        boolean isPositive = (firstChar == '+');  // JSON5 explicit positive sign
 
         // Check for hex number (JSON5 feature): 0x or 0X
         int startChar = firstChar;
-        if (isNegative) {
+        if (isNegative || isPositive) {
             startChar = in.read();
         }
 
@@ -655,14 +668,34 @@ class JsonParser {
         }
 
         // If we read ahead for hex check, we need to reconstruct
-        if (isNegative && startChar != firstChar) {
+        if ((isNegative || isPositive) && startChar != firstChar) {
             in.pushback((char) startChar);
         }
 
         // We are sure we have a positive or negative number, so we read char by char.
         StringBuilder number = numBuf;
         number.setLength(0);
-        number.append((char) firstChar);
+        // For '+', skip the sign character (don't include in number string)
+        if (isPositive) {
+            // Read the first digit after the '+' sign
+            int c = in.read();
+            if (c == -1) {
+                return (Number) error("Unexpected end of input after '+'");
+            }
+            number.append((char) c);
+            // Check for leading decimal (e.g., +.5)
+            if (c == '.') {
+                isFloat = true;
+            }
+        } else {
+            number.append((char) firstChar);
+        }
+
+        // JSON5: Leading decimal point (e.g., .5) - mark as float immediately
+        if (firstChar == '.') {
+            isFloat = true;
+        }
+
         while (true) {
             int c = in.read();
             if ((c >= '0' && c <= '9') || c == '-' || c == '+') {

@@ -26,7 +26,13 @@
     * Uppercase: `{"value": 0xFF}` equals 255
     * Negative hex: `{"value": -0xFF}` equals -255
     * Up to 16 hex digits supported (full 64-bit range)
-  * JSON5 features remaining: special numbers, leading/trailing decimals, multi-line strings, etc.
+  * **Special number formats**: JSON5 number format extensions
+    * Leading decimal point: `{"value": .5}` equals 0.5
+    * Trailing decimal point: `{"value": 5.}` equals 5.0
+    * Explicit positive sign: `{"value": +5}` equals 5
+    * Combinations supported: `+.5` (0.5), `-.5` (-0.5), `+5.` (5.0)
+    * Works with exponents: `.5e2` (50.0), `5.e2` (500.0), `+1e5` (100000.0)
+  * JSON5 features remaining: multi-line strings with backslash continuation
 * **PERFORMANCE**: `JsonWriter` - Optimized `traceReferences()` to reduce object allocation
   * Replaced single `Deque<Object[]>` with `Deque<Object>` plus primitive `int[]` for depths
   * Eliminates `new Object[]{element, depth}` allocation for every object pushed during reference tracing
