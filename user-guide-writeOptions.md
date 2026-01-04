@@ -86,11 +86,11 @@ Aliasing is a feature in `json-io` that simplifies JSON output by converting ful
 
 ### @type
 
-The `@type` field in `json-io` is used to provide hints to `JsonReader` about which classes to instantiate. Typically, `json-io` is able to automatically determine the Java type (class) of an object based on the field type of an object, the component type of an array, or if a root class is explicitly specified. However, there are scenarios where the type cannot be directly inferred.
+The `@type` field in `json-io` is used to provide hints to `json-io` about which classes to instantiate. Typically, `json-io` is able to automatically determine the Java type (class) of an object based on the field type of object, the component type of array, or if a root class is explicitly specified. However, there are scenarios where the type cannot be directly inferred.
 
 For example, consider a field in a class declared as an `Object`. If more complex, derived instances are assigned to
 this `Object` field, `json-io` needs additional information to correctly handle serialization and deserialization.
-In such cases, `json-io` includes an `@type=typename` entry in the JSON object to specify the exact class type that should be instantiated. This ensures that the JsonReader knows to instantiate and populate the specific class with the data from the input JSON.
+In such cases, `json-io` includes an `@type=typename` entry in the JSON object to specify the exact class type that should be instantiated. This ensures that `json-io` knows to instantiate and populate the specific class with the data from the input JSON.
 
 This mechanism is crucial for maintaining the fidelity of the object graph when the field types are not concrete or are too generic to determine directly, enabling accurate and efficient JSON processing.
 

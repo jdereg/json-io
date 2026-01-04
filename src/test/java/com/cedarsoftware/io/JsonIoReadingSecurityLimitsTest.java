@@ -1,29 +1,28 @@
 package com.cedarsoftware.io;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Disabled;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Test that JsonReader security limits can be configured via ReadOptions and work correctly.
+ * Test that JsonIo read security limits can be configured via ReadOptions and work correctly.
  * 
  * @author Claude4.0s
  */
-public class JsonReaderSecurityLimitsTest {
+public class JsonIoReadingSecurityLimitsTest {
 
     @Test
-    public void testDefaultJsonReaderSecurityLimits_ShouldUseBackwardCompatibleDefaults() {
+    public void testDefaultJsonIoReadingSecurityLimits_ShouldUseBackwardCompatibleDefaults() {
         ReadOptions readOptions = new ReadOptionsBuilder().build();
         
-        // JsonReader security limits should have backward compatible defaults
+        // JsonIo read security limits should have backward compatible defaults
         assertEquals(10000000, readOptions.getMaxObjectReferences());       // 10M objects
         assertEquals(10000, readOptions.getMaxReferenceChainDepth());       // 10K chain depth
         assertEquals(256, readOptions.getMaxEnumNameLength());              // 256 chars
     }
 
     @Test
-    public void testConfigurableJsonReaderSecurityLimits_ShouldSetCorrectValues() {
+    public void testConfigurableJsonIoReadingSecurityLimits_ShouldSetCorrectValues() {
         ReadOptions readOptions = new ReadOptionsBuilder()
                 .maxObjectReferences(5000000)      // 5M max object references
                 .maxReferenceChainDepth(5000)      // 5K max reference chain depth
@@ -57,12 +56,12 @@ public class JsonReaderSecurityLimitsTest {
                 .build();
 
         // Create a string that will be converted to enum with a name longer than the limit
-        // This should trigger the enum validation in JsonReader.convertIfNeeded()
+        // This should trigger the enum validation in Resolver.convertIfNeeded()
         String longEnumName = "THIS_IS_A_VERY_LONG_ENUM_NAME_THAT_EXCEEDS_LIMIT";
         
         // Should throw JsonIoException due to enum name length limit
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            // Use JsonReader directly with a specific enum type to trigger convertIfNeeded
+            // Use JsonIo directly with a specific enum type to trigger convertIfNeeded
             Object result = JsonIo.toJava("\"" + longEnumName + "\"", readOptions).asClass(java.util.concurrent.TimeUnit.class);
         });
         
@@ -170,7 +169,7 @@ public class JsonReaderSecurityLimitsTest {
         int originalMaxEnum = originalDefaults.getMaxEnumNameLength();
         
         try {
-            // Set permanent JsonReader security limits
+            // Set permanent JsonIo security limits
             ReadOptionsBuilder.addPermanentMaxObjectReferences(2000000);
             ReadOptionsBuilder.addPermanentMaxReferenceChainDepth(2000);
             ReadOptionsBuilder.addPermanentMaxEnumNameLength(64);
@@ -204,7 +203,7 @@ public class JsonReaderSecurityLimitsTest {
         int originalMaxEnum = originalDefaults.getMaxEnumNameLength();
         
         try {
-            // Set permanent JsonReader security limits
+            // Set permanent JsonIo security limits
             ReadOptionsBuilder.addPermanentMaxObjectReferences(1000000);
             ReadOptionsBuilder.addPermanentMaxReferenceChainDepth(1000);
             ReadOptionsBuilder.addPermanentMaxEnumNameLength(32);

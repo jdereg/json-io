@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 /**
- * Test cases for JsonReader / JsonWriter
+ * Test cases for JsonIo
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>

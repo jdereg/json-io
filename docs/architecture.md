@@ -11,14 +11,14 @@ json-io is a Java JSON serialization library that uses a **2-pass process** to r
 
 ### Reading JSON
 
-| Class | Purpose |
-|-------|---------|
-| `JsonIo` | Public API entry point |
-| `JsonReader` | Stream preparation (may be removed in future) |
-| `JsonParser` | Parses JSON text into `JsonObject` (Map) instances |
-| `Resolver` | Base class for the resolution process |
+| Class | Purpose                                             |
+|-------|-----------------------------------------------------|
+| `JsonIo` | Public API entry point                              |
+| `JsonReader` | Deprecated                                          |
+| `JsonParser` | Parses JSON text into `JsonObject` (Map) instances  |
+| `Resolver` | Base class for the resolution process               |
 | `ObjectResolver` | Resolves `JsonObject` into Java objects (Java mode) |
-| `MapResolver` | Resolves `JsonObject` into Maps (Maps mode) |
+| `MapResolver` | Resolves `JsonObject` into Maps (Maps mode)         |
 
 ### Writing JSON
 

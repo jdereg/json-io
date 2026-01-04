@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
- * Test cases for JsonReader / JsonWriter
+ * Test cases for JsonIo
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  * <br>

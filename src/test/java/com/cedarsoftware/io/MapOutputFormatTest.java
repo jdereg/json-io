@@ -7,7 +7,7 @@ import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
 /**
- * Test cases for JsonReader / JsonWriter
+ * Test cases for JsonIo
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  * <br>

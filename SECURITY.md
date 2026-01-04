@@ -251,7 +251,7 @@ ReadOptions restrictiveOptions = new ReadOptionsBuilder()
     .build();
 
 // Custom class factory with security validation
-public class SecureClassFactory implements JsonReader.ClassFactory {
+public class SecureClassFactory implements ClassFactory {
     private static final Set<String> ALLOWED_PACKAGES = Set.of(
         "com.yourcompany.dto",
         "com.yourcompany.model"

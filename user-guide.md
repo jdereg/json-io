@@ -336,15 +336,17 @@ This JSON5 output can be read back by json-io (or any JSON5-compliant parser) wi
 Sometimes you will run into a class that does not want to serialize.  On the read-side, this can be a class that does
 not want to be instantiated easily.  A class that has private constructors, constructor with many difficult to supply
 arguments, etc. There are unlimited Java classes 'out-there' that `json-io` has never seen.  It can instantiate many classes, and
-resorts to a lot of "tricks" to make that happen.  As of version 4.56.0 the library itself is compiled with the `-parameters` flag, allowing `json-io` to match JSON fields directly to constructor parameter names when your classes are also compiled with this flag.  This greatly reduces the need for custom factories when classes have accessible constructors with named arguments.  However, if a particular class is not instantiating, add a
-`JsonReader.ClassFactory` (one that you write, which subclasses this interface) and associate it to the class you want to
-instantiate. See [examples](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectsTest.java) for how to do this.
+resorts to a lot of "tricks" to make that happen.  As of version 4.56.0 the library itself is compiled with the `-parameters` flag, 
+allowing `json-io` to match JSON fields directly to constructor parameter names when your classes are also compiled with this flag.
+This greatly reduces the need for custom factories when classes have accessible constructors with named arguments.  However, if a 
+particular class is not instantiating, add a `ClassFactory` (one that you write, which subclasses this interface) and associate 
+it to the class you want to instantiate. See [examples](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectsTest.java) for how to do this.
 ```java
-JsonReader.ClassFactory    // Create a class that implements this interface
+ClassFactory    // Create a class that implements this interface
 JsonClassWriter // Create a class that implements this interface
 ```
 
-Your `JsonReader.ClassFactory` class is called after the JSON is parsed and `json-io` is converting all the Maps to
+Your `ClassFactory` class is called after the JSON is parsed and `json-io` is converting all the Maps to
 Java instances.  Your factory class is passed the `JsonObject` (a `Map`) with the fields and values from the JSON so that
 you can **create** your class and **populate** it at the same time.  Use the `Resolver` to load complex fields
 of your class (Non-primitives, Object[]'s, typed arrays, Lists, Maps), making things easy - you only have to worry about
@@ -444,7 +446,7 @@ When creating custom readers, use the **Resolver convenience API** for cleaner, 
 
 **Basic Pattern:**
 ```java
-class MyFactory implements JsonReader.ClassFactory {
+class MyFactory implements ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jsonObj, Resolver resolver) {
         MyClass instance = new MyClass();
 
@@ -483,7 +485,7 @@ class MyFactory implements JsonReader.ClassFactory {
 **Complete Example:**
 ```java
 // From CustomJsonSubObjectsTest.java
-static class PersonFactory implements JsonReader.ClassFactory {
+static class PersonFactory implements ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jsonObj, Resolver resolver) {
         Person person = new Person();
 
@@ -508,29 +510,12 @@ static class PersonFactory implements JsonReader.ClassFactory {
 - ✅ No manual Map casting or instanceof checks
 - ✅ Automatic type conversion via Converter
 - ✅ Full support for complex types (cycles, references, @id/@ref)
-- ✅ No need to create JsonReader manually for sub-objects
 - ✅ Cleaner, more maintainable code
-
-### CompactMap Usage
-
-Support for [CompactMap](https://github.com/jdereg/java-util/blob/master/userguide.md#compactmap) is built in.
-
-- Use `CompactMap` directly when the defaults work for you.
-- Choose a provided subclass from **java-util** for common configurations.
-- Derive your own subclass to bake in specific settings.
-- The `builder()` API allows per-instance configuration. It generates helper
-  classes at run time so the application must run with a full JDK, not just the
-  JRE.
-
-json-io includes:
-
-  - [CompactMap reader](src/main/java/com/cedarsoftware/io/factory/CompactMapFactory.java) (`ClassFactory`)
-  - [CompactMap writer](src/main/java/com/cedarsoftware/io/writers/CompactMapWriter.java) (`JsonClassWriter`)
 
 ### Order of Type Resolution and Substitution
 
 #### Aliases (aliases.txt) - First
-- Used during writing (`JsonWriter`) and reading (`JsonReader`)
+- Used during writing and reading
 - Primarily for shortening class names in JSON output
 - Example: `java.math.BigInteger = BigInteger`
 - Lightweight, just changes the string representation

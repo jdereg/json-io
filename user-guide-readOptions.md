@@ -421,20 +421,20 @@ target Java object. This feature helps manage how such discrepancies are handled
 - **Functionality**: If a field in the JSON data does not correspond to any field on the Java object, rather than
   ignoring it or causing an error, `json-io` allows you to set up a handler that is specifically invoked for these missing fields.
 
-- **Notification**: The designated handler, configured through the `JsonReader.MissingFieldHandler` interface, is
+- **Notification**: The designated handler, configured through the `MissingFieldHandler` interface, is
   notified of all missing fields once deserialization completes. This allows for custom logic to be executed in response,
   such as logging missing information or taking corrective measures.
 
-- **Further Details**: For more comprehensive information on implementing and utilizing the `JsonReader.MissingFieldHandler`,
+- **Further Details**: For more comprehensive information on implementing and utilizing the `MissingFieldHandler`,
   refer to its Javadoc documentation.
 
 This feature is particularly useful in maintaining robustness and flexibility in your application's data handling strategy, ensuring that unexpected data does not lead to unhandled exceptions or data integrity issues.
 
->#### `JsonReader.MissingFieldHandler` getMissingFieldHandler()
+>#### `MissingFieldHandler` getMissingFieldHandler()
 >- [ ]  Fetch the method that will be called when a field in the JSON is read in, yet there is no corresponding
    field on the destination object to receive the value.
 
->#### `ReadOptionsBuilder` missingFieldHandler(`JsonReader.MissingFieldHandler missingFieldHandler`)
+>#### `ReadOptionsBuilder` missingFieldHandler(`MissingFieldHandler missingFieldHandler`)
 >- [ ] Pass the`missing field handler`to be called when a field in the JSON is read in, yet there is no corresponding field on the
    destination object to receive the value.
 
@@ -457,16 +457,16 @@ processes, you can utilize the `ClassFactory` feature for a tailored solution.
 
 This feature allows for high customization and flexibility in how classes are instantiated from JSON data, enabling `json-io` to be effectively used with a wider range of Java classes, including those with complex construction requirements.
 
->#### `Map<Class, JsonReader.ClassFactory>` getClassFactories()
->- [ ] Fetch`Map`of all Class's associated to`JsonReader.ClassFactory's.`
->#### `JsonReader.ClassFactory` getClassFactory(`Class`)
+>#### `Map<Class, ClassFactory>` getClassFactories()
+>- [ ] Fetch`Map`of all Class's associated to`ClassFactory's.`
+>#### `ClassFactory` getClassFactory(`Class`)
 >- [ ] Get the`ClassFactory`associated to the passed in class.
 
->#### `ReadOptionsBuilder` setClassFactories(`Map<Class, ? extends JsonReader.ClassFactory> factories`)
+>#### `ReadOptionsBuilder` setClassFactories(`Map<Class, ? extends ClassFactory> factories`)
 >- [ ] Associate multiple ClassFactory instances to Classes that needs help being constructed and read in. The
    `Map`of entries associate`Class`to`ClassFactory.` The`ClassFactory`class knows how to instantiate and load
    the class associated to it.
->#### `ReadOptionsBuilder` addClassFactory(`Class clazz, JsonReader.ClassFactory factory`)
+>#### `ReadOptionsBuilder` addClassFactory(`Class clazz, ClassFactory factory`)
 >- [ ] Associate a`ClassFactory`to a`Class`that needs help being constructed and read in. If you use this method
    more than once for the same class, the last`ClassFactory`associated to the class will overwrite any prior associations.
 
@@ -490,17 +490,17 @@ will likely be deprecated in a future release as using a `ClassFactory` is a sup
 
 Custom Readers provide a powerful tool for extending and customizing the behavior of `json-io`, making it possible to tailor the deserialization process to fit exact requirements, particularly for complex or non-standard class structures.
 
->#### `Map<Class, JsonReader.JsonClassReader>` getCustomReaderClasses()
+>#### `Map<Class, JsonClassReader>` getCustomReaderClasses()
 >- [ ] Fetch`Map`of`Class`to custom`JsonClassReader's` used to read JSON when the class is encountered during
    serialization to JSON.  This is the entire`Map`of Custom Readers.
 >#### `boolean` isCustomReaderClass(`Class`)
 >- [ ] Return`true`if there is a custom reader class associated to the passed in class, `false` otherwise.
 
->#### `ReadOptionsBuilder` setCustomReaderClasses(`Map<? extends Class>, ? extends JsonReader.JsonClassReader> customReaderClasses`)
->- [ ]  Set all custom readers at once.  Pass in a`Map`of`Class`to`JsonReader.JsonClassReader.` Set the passed
+>#### `ReadOptionsBuilder` setCustomReaderClasses(`Map<? extends Class>, ? extends JsonClassReader> customReaderClasses`)
+>- [ ]  Set all custom readers at once.  Pass in a`Map`of`Class`to`JsonClassReader.` Set the passed
    in`Map`as the established`Map`of custom readers to be used when reading JSON. Using this method  more than once, will
    set the custom readers to only the values from the`Map`in the last call made.
->#### `ReadOptionsBuilder` addCustomReaderClass(`Class, JsonReader.JsonClassReader customReader`)
+>#### `ReadOptionsBuilder` addCustomReaderClass(`Class, JsonClassReader customReader`)
 > - [ ] Add a single association of a class to a custom reader.  If you add another associated reader to the same class, the last one added will overwrite the prior association.
 
 ### Not Custom Reader
@@ -588,9 +588,9 @@ This feature is particularly useful for large applications or services where mai
 
 The `addPermanentClassFactory` method in `json-io` allows you to establish a permanent solution for class instantiation that is reused across the application. This is particularly beneficial for classes that cannot be instantiated through standard constructors due to access restrictions or specialized construction requirements.
 
-- **Purpose**: Use this method to associate a `JsonReader.ClassFactory` that you implement with a specific class. This factory will handle the instantiation of instances of the designated class throughout the application's lifecycle.
+- **Purpose**: Use this method to associate a `ClassFactory` that you implement with a specific class. This factory will handle the instantiation of instances of the designated class throughout the application's lifecycle.
 
-- **Implementation**: Implement the `JsonReader.ClassFactory` interface and define how instances of the target class should be created from the JSON object (represented as a `Map` or `JsonObject`). The factory is responsible for creating the class instance and populating it with values from the JSON data.
+- **Implementation**: Implement the `ClassFactory` interface and define how instances of the target class should be created from the JSON object (represented as a `Map` or `JsonObject`). The factory is responsible for creating the class instance and populating it with values from the JSON data.
 
 - **Usage Scenario**: This method is invaluable when dealing with classes that have private constructors or require complex setup that the default deserialization process cannot handle. By setting up a `ClassFactory`, you ensure that `json-io` can effectively manage these classes whenever they are encountered in JSON data.
 
@@ -598,7 +598,7 @@ The `addPermanentClassFactory` method in `json-io` allows you to establish a per
 
 This approach not only facilitates customization of the deserialization process for complex class structures but also enhances the robustness and flexibility of your application by ensuring that all components handle specific class constructions consistently.
 
->#### ReadOptionsBuilder.addPermanentClassFactory(`Class<?> sourceClass, JsonReader.ClassFactory factory`)
+>#### ReadOptionsBuilder.addPermanentClassFactory(`Class<?> sourceClass, ClassFactory factory`)
 
 ### Add Permanent Coerced Type
 
@@ -665,7 +665,7 @@ The `addPermanentReader` method in `json-io` allows you to permanently associate
 - **Usage Considerations**: This method is particularly useful in complex applications where certain classes require specialized deserialization that the default mechanisms cannot provide. It offers a powerful tool for developers to precisely control how data is interpreted and integrated into the application.
 
 By employing `addPermanentReader`, developers can ensure that their specific deserialization requirements are met, enhancing the flexibility and robustness of data handling within their applications.
->#### ReadOptionsBuilder.addPermanentReader(`Class<?> c, JsonReader.JsonClassReader reader`)
+>#### ReadOptionsBuilder.addPermanentReader(`Class<?> c, JsonClassReader reader`)
 
 ### Add Permanent Non-Referenceable Class
 

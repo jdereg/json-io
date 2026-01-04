@@ -74,7 +74,8 @@ This is **json-io**, a powerful JSON serialization library for Java that handles
 
 ### Core API Classes
 - **`JsonIo`**: Main entry point with static methods (`toJson()`, `toJava()`, `formatJson()`, `deepCopy()`)
-- **`JsonReader`**: Handles JSON parsing and deserialization
+- **`JsonParser`**: Handles JSON parsing
+- **`Resolver`**: Handles Java object (and Map) resolution
 - **`JsonWriter`**: Handles Java object serialization to JSON
 
 ### Configuration System

@@ -22,7 +22,7 @@ import static com.cedarsoftware.util.CollectionUtilities.setOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Test cases for JsonReader / JsonWriter
+ * Test cases for JsonIo
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  * <br>
