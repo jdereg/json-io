@@ -274,4 +274,34 @@ public interface WriteOptions {
      * This enables JsonWriter to leverage Converter for simple type transformations instead of reflection.
      */
     ConverterOptions getConverterOptions();
+
+    // ========== JSON5 Write Options ==========
+
+    /**
+     * @return boolean true if JSON5 unquoted keys are enabled. When true, object keys that are valid
+     * ECMAScript identifiers will be written without quotes. Keys that contain special characters
+     * or are reserved words will still be quoted. Default is false.
+     */
+    boolean isJson5UnquotedKeys();
+
+    /**
+     * @return boolean true if JSON5 smart quotes are enabled. When true, strings will use single quotes
+     * if they contain double quotes but no single quotes, and double quotes otherwise. This produces
+     * cleaner output when strings contain embedded quotes. Default is false.
+     */
+    boolean isJson5SmartQuotes();
+
+    /**
+     * @return boolean true if JSON5 Infinity and NaN literals are enabled. When true, Double.POSITIVE_INFINITY,
+     * Double.NEGATIVE_INFINITY, and Double.NaN will be written as Infinity, -Infinity, and NaN literals
+     * instead of null. Default is false.
+     */
+    boolean isJson5InfinityNaN();
+
+    /**
+     * @return boolean true if JSON5 trailing commas are enabled. When true, a trailing comma will be
+     * written after the last element in objects and arrays. This can make diffs cleaner when adding
+     * elements. Default is false. Note: This is NOT enabled by the json5() umbrella method.
+     */
+    boolean isJson5TrailingCommas();
 }

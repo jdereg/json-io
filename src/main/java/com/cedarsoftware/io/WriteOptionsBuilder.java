@@ -897,6 +897,77 @@ public class WriteOptionsBuilder {
         return this;
     }
 
+    // ========== JSON5 Write Options ==========
+
+    /**
+     * Enable JSON5 output mode. This turns on a set of JSON5 features that produce cleaner,
+     * more readable output while remaining valid JSON5:
+     * <ul>
+     *   <li>Unquoted keys - Object keys that are valid identifiers are written without quotes</li>
+     *   <li>Smart quotes - Strings use single quotes when they contain double quotes but no single quotes</li>
+     *   <li>Infinity/NaN literals - Writes Infinity, -Infinity, NaN instead of null</li>
+     * </ul>
+     * Note: Trailing commas are NOT enabled by this method. Use json5TrailingCommas(true) separately if needed.
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder json5() {
+        options.json5UnquotedKeys = true;
+        options.json5SmartQuotes = true;
+        options.json5InfinityNaN = true;
+        return this;
+    }
+
+    /**
+     * Enable or disable JSON5 unquoted keys. When enabled, object keys that are valid ECMAScript
+     * identifiers (start with letter, _, or $; contain only letters, digits, _, or $) will be
+     * written without quotes. Keys containing special characters will still be quoted.
+     * @param enable true to enable unquoted keys, false to always quote keys (standard JSON)
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder json5UnquotedKeys(boolean enable) {
+        options.json5UnquotedKeys = enable;
+        return this;
+    }
+
+    /**
+     * Enable or disable JSON5 smart quote selection for strings. When enabled:
+     * <ul>
+     *   <li>If string contains " but no ' → use single quotes (no escaping needed)</li>
+     *   <li>If string contains ' but no " → use double quotes (no escaping needed)</li>
+     *   <li>If string contains both or neither → use double quotes (standard JSON)</li>
+     * </ul>
+     * @param enable true to enable smart quote selection, false to always use double quotes
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder json5SmartQuotes(boolean enable) {
+        options.json5SmartQuotes = enable;
+        return this;
+    }
+
+    /**
+     * Enable or disable JSON5 Infinity and NaN literals. When enabled, Double.POSITIVE_INFINITY,
+     * Double.NEGATIVE_INFINITY, and Double.NaN will be written as the literals Infinity, -Infinity,
+     * and NaN instead of null.
+     * @param enable true to write Infinity/NaN as literals, false to write null (standard JSON)
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder json5InfinityNaN(boolean enable) {
+        options.json5InfinityNaN = enable;
+        return this;
+    }
+
+    /**
+     * Enable or disable JSON5 trailing commas. When enabled, a trailing comma will be written
+     * after the last element in objects and arrays. This can make version control diffs cleaner
+     * when adding elements. Note: This is NOT enabled by the json5() umbrella method.
+     * @param enable true to write trailing commas, false for standard JSON (no trailing commas)
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder json5TrailingCommas(boolean enable) {
+        options.json5TrailingCommas = enable;
+        return this;
+    }
+
     /**
      * @param customWrittenClasses Map of Class to JsonClassWriter.  Establish the passed in Map as the
      *                             established Map of custom writers to be used when writing JSON. Using this method
@@ -1337,6 +1408,13 @@ public class WriteOptionsBuilder {
         private boolean enumPublicFieldsOnly = false;
         private boolean enumSetWrittenOldWay = true;
         private boolean closeStream = true;
+
+        // JSON5 write options
+        private boolean json5UnquotedKeys = false;
+        private boolean json5SmartQuotes = false;
+        private boolean json5InfinityNaN = false;
+        private boolean json5TrailingCommas = false;
+
         private JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
         private ClassLoader classLoader = ClassUtilities.getClassLoader(DefaultWriteOptions.class);
         private Map<Class<?>, Set<String>> includedFieldNames = new ClassValueMap<>();
@@ -1570,6 +1648,36 @@ public class WriteOptionsBuilder {
          */
         public ClassLoader getClassLoader() {
             return classLoader;
+        }
+
+        // ========== JSON5 Write Options Getters ==========
+
+        /**
+         * @return boolean true if JSON5 unquoted keys are enabled.
+         */
+        public boolean isJson5UnquotedKeys() {
+            return json5UnquotedKeys;
+        }
+
+        /**
+         * @return boolean true if JSON5 smart quotes are enabled.
+         */
+        public boolean isJson5SmartQuotes() {
+            return json5SmartQuotes;
+        }
+
+        /**
+         * @return boolean true if JSON5 Infinity and NaN literals are enabled.
+         */
+        public boolean isJson5InfinityNaN() {
+            return json5InfinityNaN;
+        }
+
+        /**
+         * @return boolean true if JSON5 trailing commas are enabled.
+         */
+        public boolean isJson5TrailingCommas() {
+            return json5TrailingCommas;
         }
 
         /**
