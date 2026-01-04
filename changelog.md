@@ -59,6 +59,10 @@
     * Objects: `{name:"John", age:30,}` - trailing comma after last field
     * **Not enabled by `json5()` umbrella** - requires explicit opt-in
     * Useful for cleaner diffs and easier editing when format allows
+  * JSON5 meta key prefixes use `$` instead of `@` for unquoted keys
+    * `$type`, `$id`, `$ref`, `$items`, `$keys` in JSON5 mode
+    * When combined with `shortMetaKeys(true)`: `$t`, `$i`, `$r`, `$e`, `$k`
+    * All variants are accepted when reading: `@type`, `@t`, `$type`, `$t`
 * **PERFORMANCE**: `JsonWriter` - Optimized `traceReferences()` to reduce object allocation
   * Replaced single `Deque<Object[]>` with `Deque<Object>` plus primitive `int[]` for depths
   * Eliminates `new Object[]{element, depth}` allocation for every object pushed during reference tracing

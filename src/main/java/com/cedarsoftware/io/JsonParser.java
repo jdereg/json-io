@@ -32,6 +32,16 @@ import static com.cedarsoftware.io.JsonObject.SHORT_KEYS;
 import static com.cedarsoftware.io.JsonObject.SHORT_REF;
 import static com.cedarsoftware.io.JsonObject.SHORT_TYPE;
 import static com.cedarsoftware.io.JsonObject.TYPE;
+import static com.cedarsoftware.io.JsonValue.JSON5_ID;
+import static com.cedarsoftware.io.JsonValue.JSON5_ITEMS;
+import static com.cedarsoftware.io.JsonValue.JSON5_KEYS;
+import static com.cedarsoftware.io.JsonValue.JSON5_REF;
+import static com.cedarsoftware.io.JsonValue.JSON5_TYPE;
+import static com.cedarsoftware.io.JsonValue.JSON5_SHORT_ID;
+import static com.cedarsoftware.io.JsonValue.JSON5_SHORT_ITEMS;
+import static com.cedarsoftware.io.JsonValue.JSON5_SHORT_KEYS;
+import static com.cedarsoftware.io.JsonValue.JSON5_SHORT_REF;
+import static com.cedarsoftware.io.JsonValue.JSON5_SHORT_TYPE;
 import static com.cedarsoftware.util.MathUtilities.parseToMinimalNumericType;
 
 /**
@@ -87,7 +97,7 @@ class JsonParser {
     // Primary static cache that never changes
     private static final Map<String, String> STATIC_STRING_CACHE = new ConcurrentHashMap<>(64);
     private static final Map<Number, Number> STATIC_NUMBER_CACHE = new ConcurrentHashMap<>(16);
-    private static final Map<String, String> SUBSTITUTES = new HashMap<>(5);
+    private static final Map<String, String> SUBSTITUTES = new HashMap<>(16);
 
     // Static lookup tables for performance
     private static final char[] ESCAPE_CHAR_MAP = new char[128];
@@ -117,12 +127,26 @@ class JsonParser {
             HEX_VALUE_MAP[i] = 10 + (i - 'A');
         }
 
-        // Initialize substitutions
+        // Initialize substitutions for short meta keys (@t, @i, @r, @e, @k)
         SUBSTITUTES.put(SHORT_ID, ID);
         SUBSTITUTES.put(SHORT_REF, REF);
         SUBSTITUTES.put(SHORT_ITEMS, ITEMS);
         SUBSTITUTES.put(SHORT_TYPE, TYPE);
         SUBSTITUTES.put(SHORT_KEYS, KEYS);
+
+        // Initialize substitutions for JSON5 meta keys ($type, $id, $ref, $items, $keys)
+        SUBSTITUTES.put(JSON5_ID, ID);
+        SUBSTITUTES.put(JSON5_REF, REF);
+        SUBSTITUTES.put(JSON5_ITEMS, ITEMS);
+        SUBSTITUTES.put(JSON5_TYPE, TYPE);
+        SUBSTITUTES.put(JSON5_KEYS, KEYS);
+
+        // Initialize substitutions for JSON5 short meta keys ($t, $i, $r, $e, $k)
+        SUBSTITUTES.put(JSON5_SHORT_ID, ID);
+        SUBSTITUTES.put(JSON5_SHORT_REF, REF);
+        SUBSTITUTES.put(JSON5_SHORT_ITEMS, ITEMS);
+        SUBSTITUTES.put(JSON5_SHORT_TYPE, TYPE);
+        SUBSTITUTES.put(JSON5_SHORT_KEYS, KEYS);
 
         // Common strings
         String[] commonStrings = {
@@ -341,8 +365,6 @@ class JsonParser {
         final FastReader in = input;
 
         // The '{' has already been consumed by readValue()
-        jObj.line = in.getLine();
-        jObj.col = in.getCol();
         int c = skipWhitespaceRead(true);
         if (c == '}') {    // empty object
             // Return a new, empty JsonObject (prevents @id/@ref from interfering)
@@ -1259,6 +1281,6 @@ class JsonParser {
     }
 
     private String getMessage(String msg) {
-        return msg + "\nline: " + input.getLine() + ", col: " + input.getCol() + "\n" + input.getLastSnippet();
+        return msg + "\n" + input.getLastSnippet();
     }
 }

@@ -149,7 +149,7 @@ public class JsonIo {
      * that was obtained from a previous read operation.
      *
      * <h3>Examples:</h3>
-     * <pre>
+     * <pre>{@code
      * // Basic usage with default options
      * String json = JsonIo.toJson(myObject, null);
      *
@@ -161,10 +161,10 @@ public class JsonIo {
      * String json = JsonIo.toJson(myObject, options);
      *
      * // Converting a Map/JsonObject to JSON
-     * Map&lt;String, Object&gt; map = JsonIo.toJava(jsonString, readOptions).asClass(Map.class);
+     * Map<String, Object> map = JsonIo.toJava(jsonString, readOptions).asClass(Map.class);
      * // ... modify the map ...
      * String updatedJson = JsonIo.toJson(map, writeOptions);
-     * </pre>
+     * }</pre>
      *
      * @param srcObject the Java object to convert to JSON; can be any object including primitives,
      *                  collections, custom classes, or a JsonObject/Map
@@ -174,7 +174,7 @@ public class JsonIo {
      * @throws JsonIoException if an error occurs during the serialization process
      */
     public static String toJson(Object srcObject, WriteOptions writeOptions) {
-        FastByteArrayOutputStream out = new FastByteArrayOutputStream(4096); // Pre-size to 4KB to reduce reallocations
+        FastByteArrayOutputStream out = new FastByteArrayOutputStream(8192); // Pre-size to 8KB to reduce reallocations
         try (JsonWriter writer = new JsonWriter(out, writeOptions)) {
             writer.write(srcObject);
             return out.toString();
@@ -196,7 +196,7 @@ public class JsonIo {
      * objects), configure the write options with {@code writeOptions.closeStream(false)}.
      *
      * <h3>Examples:</h3>
-     * <pre>
+     * <pre>{@code
      * // Write JSON to a file
      * try (FileOutputStream fos = new FileOutputStream("data.json")) {
      *     JsonIo.toJson(fos, myObject, writeOptions);
@@ -212,7 +212,7 @@ public class JsonIo {
      *     // The stream remains open for the next object
      * }
      * outputStream.close(); // Close manually when done
-     * </pre>
+     * }</pre>
      *
      * @param out the output stream where the JSON will be written; must not be null
      * @param source the Java object to convert to JSON
@@ -374,20 +374,20 @@ public class JsonIo {
      * </ul>
      *
      * <h3>Examples:</h3>
-     * <pre>
+     * <pre>{@code
      * // Parse JSON to a specific class
      * Person person = JsonIo.toJava(jsonString, options).asClass(Person.class);
      *
      * // Parse to a generic collection type
-     * List&lt;Person&gt; people = JsonIo.toJava(jsonString, options)
-     *                               .asType(new TypeHolder&lt;List&lt;Person&gt;&gt;(){});
+     * List<Person> people = JsonIo.toJava(jsonString, options)
+     *                               .asType(new TypeHolder<List<Person>>(){});
      *
      * // Parse to an intermediate Map representation
      * ReadOptions mapOptions = new ReadOptionsBuilder()
      *                              .returnAsJsonObjects()
      *                              .build();
-     * Map&lt;String, Object&gt; dataMap = JsonIo.toJava(jsonString, mapOptions).asClass(Map.class);
-     * </pre>
+     * Map<String, Object> dataMap = JsonIo.toJava(jsonString, mapOptions).asClass(Map.class);
+     * }</pre>
      *
      * <p>The behavior of this method is controlled by the {@code ReadOptions}. In particular:
      * <ul>
@@ -421,16 +421,16 @@ public class JsonIo {
      * JSON objects), configure the read options with {@code readOptions.closeStream(false)}.
      *
      * <h3>Examples:</h3>
-     * <pre>
+     * <pre>{@code
      * // Parse JSON from a file
      * try (FileInputStream fis = new FileInputStream("data.json")) {
      *     Person person = JsonIo.toJava(fis, options).asClass(Person.class);
      * }
      *
      * // Parse JSON from a stream to a generic type
-     * List&lt;Person&gt; people = JsonIo.toJava(inputStream, options)
-     *                               .asType(new TypeHolder&lt;List&lt;Person&gt;&gt;(){});
-     * </pre>
+     * List<Person> people = JsonIo.toJava(inputStream, options)
+     *                               .asType(new TypeHolder<List<Person>>(){});
+     * }</pre>
      *
      * @param in the input stream containing JSON; must not be null
      * @param readOptions configuration options for controlling how the JSON is parsed;
@@ -457,19 +457,19 @@ public class JsonIo {
      * </ul>
      *
      * <h3>Examples:</h3>
-     * <pre>
+     * <pre>{@code
      * // First parse JSON to a Map representation
      * ReadOptions mapOptions = new ReadOptionsBuilder()
      *                              .returnAsJsonObjects()
      *                              .build();
-     * Map&lt;String, Object&gt; jsonMap = JsonIo.toJava(jsonString, mapOptions).asClass(Map.class);
+     * Map<String, Object> jsonMap = JsonIo.toJava(jsonString, mapOptions).asClass(Map.class);
      *
      * // Modify the map structure if needed
      * jsonMap.put("extraProperty", "new value");
      *
      * // Then convert the modified structure to Java objects
      * Person person = JsonIo.toJava(jsonMap, readOptions).asClass(Person.class);
-     * </pre>
+     * }</pre>
      *
      * @param jsonObject the JsonObject (typically a Map) to convert; must not be null
      * @param readOptions configuration options for controlling the conversion;
@@ -492,7 +492,7 @@ public class JsonIo {
      * of the JSON content.
      *
      * <h3>Example:</h3>
-     * <pre>
+     * <pre>{@code
      * String minifiedJson = "{\"name\":\"John\",\"age\":30,\"address\":{\"city\":\"New York\",\"zip\":\"10001\"}}";
      * String prettyJson = JsonIo.formatJson(minifiedJson);
      * System.out.println(prettyJson);
@@ -505,7 +505,7 @@ public class JsonIo {
      * //     "zip": "10001"
      * //   }
      * // }
-     * </pre>
+     * }</pre>
      *
      * @param json the JSON string to format; if invalid JSON is provided, the method may throw an exception
      * @return a formatted, indented JSON string for improved readability
@@ -529,7 +529,7 @@ public class JsonIo {
      * </ul>
      *
      * <h3>Example:</h3>
-     * <pre>
+     * <pre>{@code
      * // Create a deep copy of an object
      * Person original = new Person("John", 30);
      * Person copy = JsonIo.deepCopy(original, null, null);
@@ -537,7 +537,7 @@ public class JsonIo {
      * // Verify the copy is independent
      * original.setName("Jane");
      * System.out.println(copy.getName()); // Still "John"
-     * </pre>
+     * }</pre>
      *
      * <p>The method sets special write options to ensure proper copying, but you can provide
      * custom read and write options to further control the process if needed.
@@ -553,7 +553,7 @@ public class JsonIo {
             return null;
         }
 
-        writeOptions = new WriteOptionsBuilder(writeOptions).showTypeInfoMinimal().shortMetaKeys(true).build();
+        writeOptions = new WriteOptionsBuilder(writeOptions).showTypeInfoMinimal().shortMetaKeys(true).json5().build();
         if (readOptions == null) {
             readOptions = ReadOptionsBuilder.getDefaultReadOptions();
         }
@@ -644,16 +644,16 @@ public class JsonIo {
          * For generic types like {@code List<Person>}, use the {@link #asType(TypeHolder)} method instead.
          *
          * <h3>Examples:</h3>
-         * <pre>
+         * <pre>{@code
          * // Convert to a specific class
          * Person person = JsonIo.toJava(jsonString, readOptions).asClass(Person.class);
          *
          * // Convert to a Map
-         * Map&lt;String, Object&gt; map = JsonIo.toJava(jsonString, readOptions).asClass(Map.class);
+         * Map<String, Object> map = JsonIo.toJava(jsonString, readOptions).asClass(Map.class);
          *
          * // Convert to a List (note: without generic type information)
          * List list = JsonIo.toJava(jsonString, readOptions).asClass(List.class);
-         * </pre>
+         * }</pre>
          *
          * <p>The behavior is affected by the ReadOptions:
          * <ul>
@@ -683,15 +683,15 @@ public class JsonIo {
          * allowing JsonIo to properly handle the generics during deserialization.
          *
          * <h3>Examples:</h3>
-         * <pre>
+         * <pre>{@code
          * // Convert to a List of Person objects
-         * List&lt;Person&gt; people = JsonIo.toJava(jsonString, readOptions)
-         *                              .asType(new TypeHolder&lt;List&lt;Person&gt;&gt;(){});
+         * List<Person> people = JsonIo.toJava(jsonString, readOptions)
+         *                              .asType(new TypeHolder<List<Person>>(){});
          *
          * // Convert to a Map with generic parameters
-         * Map&lt;String, List&lt;Integer&gt;&gt; map = JsonIo.toJava(jsonString, readOptions)
-         *                                          .asType(new TypeHolder&lt;Map&lt;String, List&lt;Integer&gt;&gt;&gt;(){});
-         * </pre>
+         * Map<String, List<Integer>> map = JsonIo.toJava(jsonString, readOptions)
+         *                                          .asType(new TypeHolder<Map<String, List<Integer>>>(){});
+         * }</pre>
          *
          * @param <T> the type to convert the JSON to
          * @param typeHolder a TypeHolder instance capturing the full generic type
@@ -776,12 +776,12 @@ public class JsonIo {
          * For generic types like {@code List<Person>}, use the {@link #asType(TypeHolder)} method instead.
          *
          * <h3>Examples:</h3>
-         * <pre>
+         * <pre>{@code
          * // Read from a file
          * try (FileInputStream fis = new FileInputStream("data.json")) {
          *     Person person = JsonIo.toJava(fis, readOptions).asClass(Person.class);
          * }
-         * </pre>
+         * }</pre>
          *
          * @param <T> the type to convert the JSON to
          * @param clazz the target class; if null, the type will be inferred from the JSON
@@ -803,11 +803,11 @@ public class JsonIo {
          * allowing JsonIo to properly handle the generics during deserialization.
          *
          * <h3>Examples:</h3>
-         * <pre>
+         * <pre>{@code
          * // Read from a network stream
-         * List&lt;Person&gt; people = JsonIo.toJava(inputStream, readOptions)
-         *                              .asType(new TypeHolder&lt;List&lt;Person&gt;&gt;(){});
-         * </pre>
+         * List<Person> people = JsonIo.toJava(inputStream, readOptions)
+         *                              .asType(new TypeHolder<List<Person>>(){});
+         * }</pre>
          *
          * @param <T> the type to convert the JSON to
          * @param typeHolder a TypeHolder instance capturing the full generic type
@@ -890,19 +890,19 @@ public class JsonIo {
          * For generic types like {@code List<Person>}, use the {@link #asType(TypeHolder)} method instead.
          *
          * <h3>Example:</h3>
-         * <pre>
+         * <pre>{@code
          * // First parse JSON to a Map representation
          * ReadOptions mapOptions = new ReadOptionsBuilder()
          *                              .returnAsJsonObjects()
          *                              .build();
-         * Map&lt;String, Object&gt; jsonMap = JsonIo.toJava(jsonString, mapOptions).asClass(Map.class);
+         * Map<String, Object> jsonMap = JsonIo.toJava(jsonString, mapOptions).asClass(Map.class);
          *
          * // Modify the map
          * jsonMap.put("age", 31);
          *
          * // Then convert to a Java object
          * Person person = JsonIo.toJava(jsonMap, readOptions).asClass(Person.class);
-         * </pre>
+         * }</pre>
          *
          * @param <T> the type to convert the JsonObject to
          * @param clazz the target class; if null, the type will be inferred from the JsonObject
@@ -923,17 +923,17 @@ public class JsonIo {
          * allowing JsonIo to properly handle the generics during conversion.
          *
          * <h3>Example:</h3>
-         * <pre>
+         * <pre>{@code
          * // First parse JSON to a Map representation
          * ReadOptions mapOptions = new ReadOptionsBuilder()
          *                              .returnAsJsonObjects()
          *                              .build();
-         * Map&lt;String, Object&gt; jsonMap = JsonIo.toJava(jsonString, mapOptions).asClass(Map.class);
+         * Map<String, Object> jsonMap = JsonIo.toJava(jsonString, mapOptions).asClass(Map.class);
          *
          * // Then convert to a generic collection
-         * List&lt;Person&gt; people = JsonIo.toJava(jsonMap, readOptions)
-         *                             .asType(new TypeHolder&lt;List&lt;Person&gt;&gt;(){});
-         * </pre>
+         * List<Person> people = JsonIo.toJava(jsonMap, readOptions)
+         *                             .asType(new TypeHolder<List<Person>>(){});
+         * }</pre>
          *
          * @param <T> the type to convert the JsonObject to
          * @param typeHolder a TypeHolder instance capturing the full generic type. It can be null, and JsonIo will
@@ -986,9 +986,9 @@ public class JsonIo {
      * <b>Pro Tip:</b> Run this method to see the full range of automatic type conversions
      * available in JsonIo. This can be helpful when working with heterogeneous data or when
      * you need to convert between different Java types during deserialization.
-     * <pre>
+     * <pre>{@code
      * java -cp your-classpath com.cedarsoftware.io.JsonIo
-     * </pre>
+     * }</pre>
      *
      * @param args command line arguments (not used)
      */

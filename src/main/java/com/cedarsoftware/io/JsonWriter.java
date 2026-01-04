@@ -80,13 +80,39 @@ import static com.cedarsoftware.io.JsonValue.TYPE;
  */
 public class JsonWriter implements WriterContext, Closeable, Flushable {
     private static final Logger LOG = Logger.getLogger(JsonWriter.class.getName());
-    // Add these as class fields
+
+    // Standard meta key prefixes (@ prefix - quoted)
     private static final String ID_SHORT = "\"@i\":";
     private static final String ID_LONG = "\"@id\":";
     private static final String TYPE_SHORT = "\"@t\":\"";
     private static final String TYPE_LONG = "\"@type\":\"";
+    private static final String REF_SHORT = "\"@r\":";
+    private static final String REF_LONG = "\"@ref\":";
+    private static final String ITEMS_SHORT = "\"@e\":";
+    private static final String ITEMS_LONG = "\"@items\":";
+    private static final String KEYS_SHORT = "\"@k\":";
+    private static final String KEYS_LONG = "\"@keys\":";
+
+    // JSON5 meta key prefixes ($ prefix - unquoted, valid identifier)
+    private static final String ID_JSON5 = "$id:";
+    private static final String TYPE_JSON5 = "$type:\"";
+    private static final String REF_JSON5 = "$ref:";
+    private static final String ITEMS_JSON5 = "$items:";
+    private static final String KEYS_JSON5 = "$keys:";
+
+    // JSON5 short meta key prefixes ($ prefix, single character - unquoted)
+    private static final String ID_JSON5_SHORT = "$i:";
+    private static final String TYPE_JSON5_SHORT = "$t:\"";
+    private static final String REF_JSON5_SHORT = "$r:";
+    private static final String ITEMS_JSON5_SHORT = "$e:";
+    private static final String KEYS_JSON5_SHORT = "$k:";
+
+    // Selected prefixes based on options
     private final String idPrefix;
     private final String typePrefix;
+    private final String refPrefix;
+    private final String itemsPrefix;
+    private final String keysPrefix;
     private static final Object[] byteStrings = new Object[256];
     private static final String NEW_LINE = System.lineSeparator();
     private static final Long ZERO = 0L;
@@ -211,9 +237,41 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         this.out = new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
         this.writeOptions = writeOptions == null ? WriteOptionsBuilder.getDefaultWriteOptions() : writeOptions;
 
-        // Pre-compute based on options
-        this.idPrefix = this.writeOptions.isShortMetaKeys() ? ID_SHORT : ID_LONG;
-        this.typePrefix = this.writeOptions.isShortMetaKeys() ? TYPE_SHORT : TYPE_LONG;
+        // Pre-compute meta key prefixes based on options
+        // JSON5 mode uses $ prefix (valid unquoted identifier), standard mode uses @ prefix (requires quotes)
+        // Short meta keys use single-character keys (@t/$t, @i/$i, etc.)
+        boolean isJson5 = this.writeOptions.isJson5UnquotedKeys();
+        boolean isShort = this.writeOptions.isShortMetaKeys();
+
+        if (isJson5 && isShort) {
+            // JSON5 + short: $t, $i, $r, $e, $k
+            this.idPrefix = ID_JSON5_SHORT;
+            this.typePrefix = TYPE_JSON5_SHORT;
+            this.refPrefix = REF_JSON5_SHORT;
+            this.itemsPrefix = ITEMS_JSON5_SHORT;
+            this.keysPrefix = KEYS_JSON5_SHORT;
+        } else if (isJson5) {
+            // JSON5 long: $type, $id, $ref, $items, $keys
+            this.idPrefix = ID_JSON5;
+            this.typePrefix = TYPE_JSON5;
+            this.refPrefix = REF_JSON5;
+            this.itemsPrefix = ITEMS_JSON5;
+            this.keysPrefix = KEYS_JSON5;
+        } else if (isShort) {
+            // Standard short: "@t", "@i", "@r", "@e", "@k"
+            this.idPrefix = ID_SHORT;
+            this.typePrefix = TYPE_SHORT;
+            this.refPrefix = REF_SHORT;
+            this.itemsPrefix = ITEMS_SHORT;
+            this.keysPrefix = KEYS_SHORT;
+        } else {
+            // Standard long: "@type", "@id", "@ref", "@items", "@keys"
+            this.idPrefix = ID_LONG;
+            this.typePrefix = TYPE_LONG;
+            this.refPrefix = REF_LONG;
+            this.itemsPrefix = ITEMS_LONG;
+            this.keysPrefix = KEYS_LONG;
+        }
     }
 
     public WriteOptions getWriteOptions() {
@@ -642,7 +700,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             if (id == 0) {   // Test for 0 because of Weak/Soft references being gc'd during serialization.
                 return false;
             }
-            output.write(writeOptions.isShortMetaKeys() ? "{\"@r\":" : "{\"@ref\":");
+            output.write('{');
+            output.write(refPrefix);
             writeLongDirect(id);
             output.write('}');
             return true;
@@ -871,7 +930,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         if (len == 0) {
             if (typeWritten || referenced) {
-                output.write(writeOptions.isShortMetaKeys() ? "\"@e\":[]" : "\"@items\":[]");
+                output.write(itemsPrefix);
+                output.write("[]");
                 tabOut();
                 output.write('}');
             } else {
@@ -881,7 +941,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         if (typeWritten || referenced) {
-            output.write(writeOptions.isShortMetaKeys() ? "\"@e\":[" : "\"@items\":[");
+            output.write(itemsPrefix);
+            output.write('[');
         } else {
             output.write('[');
         }
@@ -949,7 +1010,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         if (len == 0) {
             if (typeWritten || referenced) {
-                output.write(writeOptions.isShortMetaKeys() ? "\"@e\":[]" : "\"@items\":[]");
+                output.write(itemsPrefix);
+                output.write("[]");
                 tabOut();
                 output.write('}');
             } else {
@@ -959,7 +1021,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         if (typeWritten || referenced) {
-            output.write(writeOptions.isShortMetaKeys() ? "\"@e\":[" : "\"@items\":[");
+            output.write(itemsPrefix);
+            output.write('[');
         } else {
             output.write('[');
         }
@@ -1198,7 +1261,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (showType || referenced) {
             out.write(',');
             newLine();
-            out.write(writeOptions.isShortMetaKeys() ? "\"@e\":[" : "\"@items\":[");
+            out.write(itemsPrefix);
+            out.write('[');
         } else {
             out.write('[');
         }
@@ -1244,7 +1308,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         if (len == 0) {
             if (typeWritten || referenced) {
-                output.write(writeOptions.isShortMetaKeys() ? "\"@e\":[]" : "\"@items\":[]");
+                output.write(itemsPrefix);
+                output.write("[]");
                 tabOut();
                 output.write("}");
             } else {
@@ -1254,7 +1319,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         if (typeWritten || referenced) {
-            output.write(writeOptions.isShortMetaKeys() ? "\"@e\":[" : "\"@items\":[");
+            output.write(itemsPrefix);
+            output.write('[');
         } else {
             output.write('[');
         }
@@ -1568,7 +1634,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // Save current element type (Map value type) and switch to key type for @keys array
         Class<?> savedValueType = declaredElementType;
 
-        output.write(writeOptions.isShortMetaKeys() ? "\"@k\":[" : "\"@keys\":[");
+        output.write(keysPrefix);
+        output.write('[');
         tabIn();
         Iterator<?> i = map.keySet().iterator();
 
@@ -1583,7 +1650,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         tabOut();
         output.write("],");
         newLine();
-        output.write(writeOptions.isShortMetaKeys() ? "\"@e\":[" : "\"@items\":[");
+        output.write(itemsPrefix);
+        output.write('[');
         tabIn();
         i = map.values().iterator();
 

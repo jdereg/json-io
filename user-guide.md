@@ -261,6 +261,57 @@ WriteOptions options = new WriteOptionsBuilder()
 | `json5InfinityNaN(true)` | Special values written as literals | `Infinity` instead of `null` |
 | `json5TrailingCommas(true)` | Trailing comma after last element | `[1,2,3,]` and `{a:1,}` |
 
+#### JSON5 Meta Key Prefixes
+
+When JSON5 mode is enabled with unquoted keys, json-io uses `$` instead of `@` for meta keys. Combined with the short meta keys option, there are four possible meta key formats:
+
+| Mode | Type | ID | Ref | Items | Keys |
+|------|------|----|-----|-------|------|
+| Standard | `"@type":` | `"@id":` | `"@ref":` | `"@items":` | `"@keys":` |
+| Short | `"@t":` | `"@i":` | `"@r":` | `"@e":` | `"@k":` |
+| JSON5 | `$type:` | `$id:` | `$ref:` | `$items:` | `$keys:` |
+| JSON5 + Short | `$t:` | `$i:` | `$r:` | `$e:` | `$k:` |
+
+**Why `$` instead of `@`?**
+- `@` is not a valid ECMAScript identifier character, so it must be quoted in standard JSON
+- `$` is a valid identifier start character, allowing meta keys to be unquoted in JSON5
+- `$` has precedent in JSON Schema (`$schema`, `$id`, `$ref`)
+
+**Reading compatibility:** json-io accepts all meta key variants when reading (`@type`, `@t`, `$type`, `$t`), ensuring backward compatibility regardless of which format was used to write the JSON.
+
+```java
+// JSON5 output with unquoted meta keys
+WriteOptions json5Options = new WriteOptionsBuilder().json5().build();
+String json5 = JsonIo.toJson(myObject, json5Options);
+// Output: {$type:"com.example.MyClass",$id:1,...}
+
+// JSON5 + short meta keys (most compact)
+WriteOptions json5ShortOptions = new WriteOptionsBuilder()
+        .json5()
+        .shortMetaKeys(true)
+        .build();
+String json5Short = JsonIo.toJson(myObject, json5ShortOptions);
+// Output: {$t:"com.example.MyClass",$i:1,...}
+
+// Standard output with quoted meta keys
+WriteOptions stdOptions = new WriteOptionsBuilder().build();
+String stdJson = JsonIo.toJson(myObject, stdOptions);
+// Output: {"@type":"com.example.MyClass","@id":1,...}
+
+// Short meta keys (standard mode)
+WriteOptions shortOptions = new WriteOptionsBuilder()
+        .shortMetaKeys(true)
+        .build();
+String shortJson = JsonIo.toJson(myObject, shortOptions);
+// Output: {"@t":"com.example.MyClass","@i":1,...}
+
+// Reading works with any prefix
+Object obj1 = JsonIo.toJava("{$type:\"java.util.HashMap\"}", null).asClass(Object.class);
+Object obj2 = JsonIo.toJava("{$t:\"java.util.HashMap\"}", null).asClass(Object.class);
+Object obj3 = JsonIo.toJava("{\"@type\":\"java.util.HashMap\"}", null).asClass(Object.class);
+Object obj4 = JsonIo.toJava("{\"@t\":\"java.util.HashMap\"}", null).asClass(Object.class);
+```
+
 #### Unquoted Keys Details
 
 Keys are only unquoted if they are valid ECMAScript identifiers:

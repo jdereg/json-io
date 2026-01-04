@@ -41,7 +41,7 @@ public class CharacterPrimArrayFactory extends ArrayFactory<char[]> {
                 String s = (String) items[0];
                 value = s.toCharArray();
             } else {
-                throw new JsonIoException("char[] should only have one String in the [], found " + len + ", line " + jObj.getLine() + ", col " + jObj.getCol());
+                throw new JsonIoException("char[] should only have one String in the [], found " + len);
             }
         }
         return (char[]) jObj.setTarget(value);

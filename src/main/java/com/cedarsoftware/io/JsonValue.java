@@ -29,25 +29,41 @@ import static com.cedarsoftware.util.TypeUtilities.hasUnresolvedType;
  *         limitations under the License.
  */
 public abstract class JsonValue {
+    // Standard meta keys (@ prefix - requires quotes in JSON)
     public static final String KEYS = "@keys";
     public static final String ITEMS = "@items";
     public static final String ID = "@id";
     public static final String REF = "@ref";
     public static final String TYPE = "@type";
     public static final String ENUM = "@enum";
+
+    // Short meta keys (@ prefix - requires quotes in JSON)
     public static final String SHORT_TYPE = "@t";
     public static final String SHORT_ITEMS = "@e";
     public static final String SHORT_KEYS = "@k";
     public static final String SHORT_ID = "@i";
     public static final String SHORT_REF = "@r";
+
+    // JSON5 meta keys ($ prefix - valid unquoted identifier)
+    public static final String JSON5_KEYS = "$keys";
+    public static final String JSON5_ITEMS = "$items";
+    public static final String JSON5_ID = "$id";
+    public static final String JSON5_REF = "$ref";
+    public static final String JSON5_TYPE = "$type";
+
+    // JSON5 short meta keys ($ prefix, single character - valid unquoted identifier)
+    public static final String JSON5_SHORT_TYPE = "$t";
+    public static final String JSON5_SHORT_ITEMS = "$e";
+    public static final String JSON5_SHORT_KEYS = "$k";
+    public static final String JSON5_SHORT_ID = "$i";
+    public static final String JSON5_SHORT_REF = "$r";
+
     public static final String VALUE = "value";
     Type type = null;
     protected Object target = null;
     protected boolean isFinished = false;
     protected long id = -1L;
     protected Long refId = null;
-    protected int line;
-    protected int col;
 
     // Cache for storing whether a Type is fully resolved.
     // Uses bounded LRU cache to prevent memory leaks in long-running applications
@@ -63,14 +79,6 @@ public abstract class JsonValue {
             return super.put(key, value);
         }
     };
-
-    public int getLine() {
-        return line;
-    }
-
-    public int getCol() {
-        return col;
-    }
 
     public boolean isReference() {
         return refId != null;

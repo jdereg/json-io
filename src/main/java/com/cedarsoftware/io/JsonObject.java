@@ -129,7 +129,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     public String toString() {
         String jType = typeString != null ? typeString : (type == null ? "not set" : type.getTypeName());
         String targetInfo = target == null ? "null" : jType;
-        return "JsonObject(id:" + id + ", type:" + jType + ", target:" + targetInfo + ", line:" + line + ", col:" + col + ", size:" + size() + ")";
+        return "JsonObject(id:" + id + ", type:" + jType + ", target:" + targetInfo + ", size:" + size() + ")";
     }
 
     // Map APIs
