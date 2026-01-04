@@ -54,6 +54,11 @@
     * `Double.NaN` writes as `NaN`
     * Same for Float values
     * Works with legacy `allowNanAndInfinity(true)` option
+  * Added `json5TrailingCommas(true)` to write trailing commas after last element
+    * Arrays: `[1, 2, 3,]` - trailing comma after last element
+    * Objects: `{name:"John", age:30,}` - trailing comma after last field
+    * **Not enabled by `json5()` umbrella** - requires explicit opt-in
+    * Useful for cleaner diffs and easier editing when format allows
 * **PERFORMANCE**: `JsonWriter` - Optimized `traceReferences()` to reduce object allocation
   * Replaced single `Deque<Object[]>` with `Deque<Object>` plus primitive `int[]` for depths
   * Eliminates `new Object[]{element, depth}` allocation for every object pushed during reference tracing

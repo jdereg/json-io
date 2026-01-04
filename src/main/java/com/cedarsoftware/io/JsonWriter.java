@@ -909,6 +909,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
 
+        // Trailing comma for JSON5
+        if (len > 0 && writeOptions.isJson5TrailingCommas()) {
+            output.write(',');
+        }
         tabOut();
         output.write(']');
         if (typeWritten || referenced) {
@@ -982,6 +986,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             writeBooleanArray((boolean[]) array, lenMinus1);
         }
 
+        // Trailing comma for JSON5
+        if (len > 0 && writeOptions.isJson5TrailingCommas()) {
+            output.write(',');
+        }
         tabOut();
         output.write(']');
         if (typeWritten || referenced) {
@@ -1116,6 +1124,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         writeElements(output, i);
 
+        // Trailing comma for JSON5 (collection is non-empty at this point)
+        if (writeOptions.isJson5TrailingCommas()) {
+            output.write(',');
+        }
         tabOut();
         output.write(']');
         if (showType || referenced) {   // Finished object, as it was output as an object if @id or @type was output
@@ -1277,6 +1289,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
 
+        // Trailing comma for JSON5
+        if (len > 0 && writeOptions.isJson5TrailingCommas()) {
+            output.write(',');
+        }
         tabOut();
         output.write(']');
         if (typeWritten || referenced) {
@@ -1484,6 +1500,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 writeImpl(value, !doesValueTypeMatchFieldType(type, fieldName, value));
             }
         }
+        // Trailing comma for JSON5 (check if object has entries)
+        if (!jObj.isEmpty() && writeOptions.isJson5TrailingCommas()) {
+            output.write(',');
+        }
         tabOut();
         output.write('}');
     }
@@ -1556,6 +1576,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         declaredElementType = declaredKeyType;
         writeElements(output, i);
 
+        // Trailing comma for @keys array
+        if (!map.isEmpty() && writeOptions.isJson5TrailingCommas()) {
+            output.write(',');
+        }
         tabOut();
         output.write("],");
         newLine();
@@ -1567,8 +1591,16 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         declaredElementType = savedValueType;
         writeElements(output, i);
 
+        // Trailing comma for @items array
+        if (!map.isEmpty() && writeOptions.isJson5TrailingCommas()) {
+            output.write(',');
+        }
         tabOut();
         output.write(']');
+        // Trailing comma for outer object
+        if (writeOptions.isJson5TrailingCommas()) {
+            output.write(',');
+        }
         tabOut();
         output.write('}');
     }
@@ -1603,6 +1635,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     private boolean writeMapBody(final Iterator i) throws IOException {
         final Writer output = out;
+        boolean wroteEntry = false;
         while (i.hasNext()) {
             Entry att2value = (Entry) i.next();
             Object value = att2value.getValue();
@@ -1614,6 +1647,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             String key = (String) att2value.getKey();
             writeKey(key);
             writeCollectionElement(value);
+            wroteEntry = true;
 
             if (i.hasNext()) {
                 output.write(',');
@@ -1621,6 +1655,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
 
+        // Trailing comma for JSON5
+        if (wroteEntry && writeOptions.isJson5TrailingCommas()) {
+            output.write(',');
+        }
         tabOut();
         output.write('}');
         return true;
