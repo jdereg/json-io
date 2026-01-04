@@ -118,6 +118,10 @@
   * Previously called `readOptions.isXxx()` methods repeatedly in hot parsing loops
   * Now cached as `final` fields at parser construction time
   * Eliminates method call overhead for options checked during every parse operation
+* **PERFORMANCE**: `Resolver` - Early exit for empty post-parse collections
+  * `patchUnresolvedReferences()` now returns immediately if no forward references to patch
+  * `rehashMaps()` now returns immediately if no maps need rehashing
+  * Avoids iteration overhead when Parser resolved everything during parsing
 * **MEMORY**: `JsonValue` - Reduced memory footprint by 16 bytes per object
   * Removed `line` and `col` fields (8 bytes) - FastReader already removed tracking, these were always 0
   * Changed `id` from `long` to `int` (4 bytes) - 2.1 billion unique IDs is sufficient

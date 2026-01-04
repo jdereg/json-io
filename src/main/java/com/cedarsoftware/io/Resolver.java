@@ -1149,6 +1149,9 @@ public abstract class Resolver {
      * that had not yet been encountered in the stream, make the final substitution.
      */
     private void patchUnresolvedReferences() {
+        if (unresolvedRefs.isEmpty()) {
+            return;
+        }
         for (UnresolvedReference ref : unresolvedRefs) {
             Object objToFix = ref.referencingObj.getTarget();
             JsonObject objReferenced = this.references.getOrThrow(ref.refId);
@@ -1194,6 +1197,9 @@ public abstract class Resolver {
      * and you would need to provide a custom reader for that set.
      */
     private void rehashMaps() {
+        if (mapsToRehash.isEmpty()) {
+            return;
+        }
         for (JsonObject jsonObj : mapsToRehash) {
             jsonObj.rehashMaps();
         }
