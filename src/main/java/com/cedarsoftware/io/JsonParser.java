@@ -92,6 +92,11 @@ class JsonParser {
     private final Map<Number, Number> numberCache;
     // Performance: Hoisted ReadOptions constants to avoid repeated method calls
     private final long maxIdValue;
+    private final boolean strictJson;
+    private final boolean integerTypeBigInteger;
+    private final boolean integerTypeBoth;
+    private final boolean floatingPointBigDecimal;
+    private final boolean floatingPointBoth;
     private final Map<String, String> substitutes;
     
     // Primary static cache that never changes
@@ -272,9 +277,14 @@ class JsonParser {
 
         // Initialize string buffer management using ReadOptions configuration
         this.strBuf = new StringBuilder(readOptions.getStringBufferSize());
-        
-        // Performance: Hoist maxIdValue to avoid repeated method calls
+
+        // Performance: Hoist ReadOptions constants to avoid repeated method calls
         this.maxIdValue = readOptions.getMaxIdValue();
+        this.strictJson = readOptions.isStrictJson();
+        this.integerTypeBigInteger = readOptions.isIntegerTypeBigInteger();
+        this.integerTypeBoth = readOptions.isIntegerTypeBoth();
+        this.floatingPointBigDecimal = readOptions.isFloatingPointBigDecimal();
+        this.floatingPointBoth = readOptions.isFloatingPointBoth();
     }
 
     /**
@@ -304,7 +314,7 @@ class JsonParser {
                 return readString('"');
             case '\'':
                 // JSON5 single-quoted strings
-                if (readOptions.isStrictJson()) {
+                if (strictJson) {
                     error("Single-quoted strings not allowed in strict JSON mode");
                 }
                 return readString('\'');
@@ -330,13 +340,13 @@ class JsonParser {
                 return readNumber(c);
             case '.':
                 // JSON5 leading decimal point (e.g., .5 equals 0.5)
-                if (readOptions.isStrictJson()) {
+                if (strictJson) {
                     error("Leading decimal point not allowed in strict JSON mode");
                 }
                 return readNumber(c);
             case '+':
                 // JSON5 explicit positive sign (e.g., +5)
-                if (readOptions.isStrictJson()) {
+                if (strictJson) {
                     error("Explicit positive sign not allowed in strict JSON mode");
                 }
                 return readNumber(c);
@@ -450,7 +460,7 @@ class JsonParser {
             c = skipWhitespaceRead(true);
             if (c == '}') {
                 // Trailing comma before closing brace
-                if (readOptions.isStrictJson()) {
+                if (strictJson) {
                     error("Trailing commas not allowed in strict JSON mode");
                 }
                 break;
@@ -489,7 +499,7 @@ class JsonParser {
             c = skipWhitespaceRead(true);
             if (c == ']') {
                 // Trailing comma before closing bracket
-                if (readOptions.isStrictJson()) {
+                if (strictJson) {
                     error("Trailing commas not allowed in strict JSON mode");
                 }
                 break;
@@ -516,13 +526,13 @@ class JsonParser {
             field = readString('"');
         } else if (c == '\'') {
             // JSON5 single-quoted field name
-            if (readOptions.isStrictJson()) {
+            if (strictJson) {
                 error("Single-quoted strings not allowed in strict JSON mode");
             }
             field = readString('\'');
         } else if (isIdentifierStart(c)) {
             // JSON5 unquoted field name
-            if (readOptions.isStrictJson()) {
+            if (strictJson) {
                 error("Unquoted field names not allowed in strict JSON mode");
             }
             field = readUnquotedIdentifier(c);
@@ -680,7 +690,7 @@ class JsonParser {
             int next = in.read();
             if (next == 'x' || next == 'X') {
                 // JSON5 hexadecimal number
-                if (readOptions.isStrictJson()) {
+                if (strictJson) {
                     error("Hexadecimal numbers not allowed in strict JSON mode");
                 }
                 return readHexNumber(isNegative);
@@ -762,7 +772,7 @@ class JsonParser {
         int len = number.length();
 
         // BigInteger mode - must use String
-        if (readOptions.isIntegerTypeBigInteger()) {
+        if (integerTypeBigInteger) {
             return new BigInteger(number.toString());
         }
 
@@ -788,7 +798,7 @@ class JsonParser {
             return Long.parseLong(numStr);
         } catch (Exception e) {
             BigInteger bigInt = new BigInteger(numStr);
-            if (readOptions.isIntegerTypeBoth()) {
+            if (integerTypeBoth) {
                 return bigInt;
             } else {
                 // Super-big integers (more than 19 digits) will "wrap around" as expected, similar to casting a long
@@ -799,12 +809,12 @@ class JsonParser {
     }
 
     private Number readFloatingPoint(String numStr) {
-        if (readOptions.isFloatingPointBigDecimal()) {
+        if (floatingPointBigDecimal) {
             return new BigDecimal(numStr);
         }
 
         Number number = parseToMinimalNumericType(numStr);
-        if (readOptions.isFloatingPointBoth()) {
+        if (floatingPointBoth) {
             return number;
         } else {
             return number.doubleValue();
@@ -933,8 +943,15 @@ class JsonParser {
                     value = (value << 4) | digit;
                 }
 
-                // Handle surrogate pairs
-                if (value >= 0xD800 && value <= 0xDBFF) {
+                // Fast path for BMP characters (most common case)
+                // Surrogates are in range 0xD800-0xDFFF, so anything outside is a simple BMP char
+                if (value < 0xD800 || value > 0xDFFF) {
+                    str.append((char) value);
+                    continue;
+                }
+
+                // Handle surrogate pairs (high surrogate: 0xD800-0xDBFF)
+                if (value <= 0xDBFF) {
                     // Look for a low surrogate
                     int next = in.read();
                     if (next == '\\') {
@@ -980,18 +997,18 @@ class JsonParser {
                     }
                 }
 
-                // Regular Unicode character or high surrogate without low surrogate
+                // Orphan surrogate (high without valid low, or lone low surrogate)
                 str.append((char)value);
             } else if (c == '\n') {
                 // JSON5 multi-line string: backslash followed by newline
                 // The backslash and newline are removed, string continues on next line
-                if (readOptions.isStrictJson()) {
+                if (strictJson) {
                     error("Multi-line strings not allowed in strict JSON mode");
                 }
                 // Just skip the newline, string continues
             } else if (c == '\r') {
                 // JSON5 multi-line string: backslash followed by carriage return
-                if (readOptions.isStrictJson()) {
+                if (strictJson) {
                     error("Multi-line strings not allowed in strict JSON mode");
                 }
                 // Check for \r\n (Windows line ending)
@@ -1058,14 +1075,14 @@ class JsonParser {
                 int next = in.read();
                 if (next == '/') {
                     // Single-line comment: skip until end of line
-                    if (readOptions.isStrictJson()) {
+                    if (strictJson) {
                         error("Comments not allowed in strict JSON mode");
                     }
                     skipSingleLineComment();
                     continue;
                 } else if (next == '*') {
                     // Block comment: skip until */
-                    if (readOptions.isStrictJson()) {
+                    if (strictJson) {
                         error("Comments not allowed in strict JSON mode");
                     }
                     skipBlockComment();

@@ -109,6 +109,15 @@
   * Removed 80+ lines of complex 1-2 digit special-case branching code
   * Single general path now handles all integer sizes (up to 18 digits parsed directly, 19+ fall back to String)
   * ~2-3% read improvement in Maps mode
+* **PERFORMANCE**: `JsonParser` - BMP fast-path for Unicode escape sequences
+  * Most Unicode escapes are BMP characters (Basic Multilingual Plane, U+0000 to U+FFFF excluding surrogates)
+  * Added early check for non-surrogate values before surrogate pair handling logic
+  * Skips surrogate detection branches for ~99% of Unicode escapes in typical JSON
+* **PERFORMANCE**: `JsonParser` - Hoist ReadOptions constants to class fields
+  * Hoisted `strictJson`, `integerTypeBigInteger`, `integerTypeBoth`, `floatingPointBigDecimal`, `floatingPointBoth`
+  * Previously called `readOptions.isXxx()` methods repeatedly in hot parsing loops
+  * Now cached as `final` fields at parser construction time
+  * Eliminates method call overhead for options checked during every parse operation
 * **MEMORY**: `JsonValue` - Reduced memory footprint by 16 bytes per object
   * Removed `line` and `col` fields (8 bytes) - FastReader already removed tracking, these were always 0
   * Changed `id` from `long` to `int` (4 bytes) - 2.1 billion unique IDs is sufficient
