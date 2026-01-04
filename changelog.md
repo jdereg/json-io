@@ -135,7 +135,12 @@
 * **PERFORMANCE**: `MethodInjectorFactory` - Optimized `createSetterName()` string creation
   * Replaced String concatenation with direct char[] construction
   * Eliminates intermediate String allocations for setter method names
-  * Eliminates method call overhead for options checked during every parse operation
+* **PERFORMANCE**: `JsonObject` - Eliminate redundant data storage and object allocations
+  * Removed `CacheState` inner class - eliminated 1 object allocation per JsonObject
+  * Replaced cached `keySet()` copy with lightweight `ArrayKeySet` view class (no data copying)
+  * Replaced cached `values()` copy with lightweight `ArrayValueCollection` view class (no data copying)
+  * Removed unnecessary caching of `keys.length` and `items.length` (already O(1) array access)
+  * Use primitive `byte sortedCache` instead of boxed `Boolean` for sorted state
 * **PERFORMANCE**: `Resolver` - Early exit for empty post-parse collections
   * `patchUnresolvedReferences()` now returns immediately if no forward references to patch
   * `rehashMaps()` now returns immediately if no maps need rehashing
