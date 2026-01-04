@@ -38,6 +38,12 @@
     * Backslash followed by CRLF (`\␍↵`) removes all three characters
     * Leading whitespace on continuation lines is preserved
     * Example: `"hello \↵world"` becomes `"hello world"`
+* **FEATURE**: JSON5 Write Support - `WriteOptionsBuilder` now supports JSON5 output options
+  * Added `json5()` umbrella method to enable recommended JSON5 writing features
+  * Added `json5UnquotedKeys(true)` to write object keys without quotes when valid identifiers
+    * Keys must be valid ECMAScript identifiers (start with letter/_/$, contain letters/digits/_/$)
+    * Keys with special characters, spaces, or starting with digits are still quoted
+    * Example: `{name:"John", "key-with-dash":"value"}`
 * **PERFORMANCE**: `JsonWriter` - Optimized `traceReferences()` to reduce object allocation
   * Replaced single `Deque<Object[]>` with `Deque<Object>` plus primitive `int[]` for depths
   * Eliminates `new Object[]{element, depth}` allocation for every object pushed during reference tracing

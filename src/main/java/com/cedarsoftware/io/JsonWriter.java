@@ -1599,8 +1599,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 continue;
             }
 
-            writeJsonUtf8String(output, (String) att2value.getKey(), writeOptions.getMaxStringLength());
-            output.write(":");
+            String key = (String) att2value.getKey();
+            writeKey(key);
             writeCollectionElement(value);
 
             if (i.hasNext()) {
@@ -1882,9 +1882,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             newLine();
         }
 
-        out.write("\"");
-        out.write(fieldName);   // Not using slower UTF String writer for field names
-        out.write("\":");
+        writeKey(fieldName);
 
         if (o == null) {    // don't quote null
             out.write("null");
@@ -2180,9 +2178,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (ctx == WriteContext.OBJECT_FIELD) {
             out.write(',');
         }
-        out.write('\"');
-        out.write(name);
-        out.write("\":");
+        writeKey(name);
         markObjectFieldWritten();
     }
 
@@ -2197,9 +2193,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     @Override
     public void writeStringField(String name, String value) throws IOException {
         out.write(',');
-        out.write('\"');
-        out.write(name);
-        out.write("\":");
+        writeKey(name);
         if (value == null) {
             out.write("null");
         } else {
@@ -2219,9 +2213,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     @Override
     public void writeObjectField(String name, Object value) throws IOException {
         out.write(',');
-        out.write('\"');
-        out.write(name);
-        out.write("\":");
+        writeKey(name);
         writeImpl(value, true);
         markObjectFieldWritten();
     }
@@ -2310,9 +2302,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     @Override
     public void writeArrayFieldStart(String name) throws IOException {
         out.write(',');
-        out.write('\"');
-        out.write(name);
-        out.write("\":[");
+        writeKey(name);
+        out.write('[');
         markObjectFieldWritten();
         contextStack.push(WriteContext.ARRAY_EMPTY);
     }
@@ -2325,9 +2316,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     @Override
     public void writeObjectFieldStart(String name) throws IOException {
         out.write(',');
-        out.write('\"');
-        out.write(name);
-        out.write("\":{");
+        writeKey(name);
+        out.write('{');
         markObjectFieldWritten();
         contextStack.push(WriteContext.OBJECT_EMPTY);
     }
@@ -2339,9 +2329,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     @Override
     public void writeNumberField(String name, Number value) throws IOException {
         out.write(',');
-        out.write('\"');
-        out.write(name);
-        out.write("\":");
+        writeKey(name);
         if (value == null) {
             out.write("null");
         } else {
@@ -2357,10 +2345,66 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     @Override
     public void writeBooleanField(String name, boolean value) throws IOException {
         out.write(',');
-        out.write('\"');
-        out.write(name);
-        out.write("\":");
+        writeKey(name);
         out.write(value ? "true" : "false");
         markObjectFieldWritten();
+    }
+
+    // ======================== JSON5 Support Methods ========================
+
+    /**
+     * Writes a JSON object key, optionally without quotes if JSON5 unquoted keys are enabled
+     * and the key is a valid ECMAScript identifier.
+     * @param name the key name to write
+     */
+    private void writeKey(String name) throws IOException {
+        if (writeOptions.isJson5UnquotedKeys() && isValidJson5Identifier(name)) {
+            out.write(name);
+            out.write(':');
+        } else {
+            writeJsonUtf8String(out, name, writeOptions.getMaxStringLength());
+            out.write(':');
+        }
+    }
+
+    /**
+     * Check if a string is a valid ECMAScript identifier that can be used as an unquoted key in JSON5.
+     * Per JSON5 spec, identifiers follow ECMAScript 5.1 IdentifierName production:
+     * - Must start with a letter (a-z, A-Z), underscore (_), or dollar sign ($)
+     * - Subsequent characters can also include digits (0-9)
+     * - Must not be empty
+     * @param name the string to check
+     * @return true if the string is a valid JSON5 unquoted identifier
+     */
+    private static boolean isValidJson5Identifier(String name) {
+        if (name == null || name.isEmpty()) {
+            return false;
+        }
+
+        char first = name.charAt(0);
+        if (!isIdentifierStart(first)) {
+            return false;
+        }
+
+        for (int i = 1; i < name.length(); i++) {
+            if (!isIdentifierPart(name.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Check if character is a valid ECMAScript identifier start character.
+     */
+    private static boolean isIdentifierStart(char c) {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '$';
+    }
+
+    /**
+     * Check if character is a valid ECMAScript identifier part character.
+     */
+    private static boolean isIdentifierPart(char c) {
+        return isIdentifierStart(c) || (c >= '0' && c <= '9');
     }
 }
