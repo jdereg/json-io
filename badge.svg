@@ -1,0 +1,30 @@
+<svg width="300" height="200" viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">
+    <!-- IDE-style window -->
+    <rect x="75" y="20" width="150" height="100" fill="#2c2c2c" rx="8" ry="8"/>
+    <rect x="75" y="20" width="150" height="25" fill="#FF8C00" rx="8" ry="8"/>
+    <rect x="75" y="35" width="150" height="10" fill="#FF8C00"/>
+
+    <!-- Window controls -->
+    <circle cx="90" cy="32.5" r="3" fill="#2c2c2c"/>
+    <circle cx="100" cy="32.5" r="3" fill="#2c2c2c"/>
+    <circle cx="110" cy="32.5" r="3" fill="#2c2c2c"/>
+
+    <!-- JSON content -->
+    <text x="85" y="60" font-family="Courier New, monospace" font-size="9" fill="#FF8C00">{</text>
+    <text x="92" y="72" font-family="Courier New, monospace" font-size="9" fill="#64B5F6">"name"</text>
+    <text x="128" y="72" font-family="Courier New, monospace" font-size="9" fill="#FFFFFF">:</text>
+    <text x="135" y="72" font-family="Courier New, monospace" font-size="9" fill="#66BB6A">"json-io"</text>
+    <text x="188" y="72" font-family="Courier New, monospace" font-size="9" fill="#FFFFFF">,</text>
+    <text x="92" y="84" font-family="Courier New, monospace" font-size="9" fill="#64B5F6">"cycles"</text>
+    <text x="141" y="84" font-family="Courier New, monospace" font-size="9" fill="#FFFFFF">:</text>
+    <text x="148" y="84" font-family="Courier New, monospace" font-size="9" fill="#FF8C00">true</text>
+    <text x="172" y="84" font-family="Courier New, monospace" font-size="9" fill="#FFFFFF">,</text>
+    <text x="92" y="96" font-family="Courier New, monospace" font-size="9" fill="#64B5F6">"refs"</text>
+    <text x="125" y="96" font-family="Courier New, monospace" font-size="9" fill="#FFFFFF">:</text>
+    <text x="132" y="96" font-family="Courier New, monospace" font-size="9" fill="#66BB6A">"@ref"</text>
+    <text x="85" y="108" font-family="Courier New, monospace" font-size="9" fill="#FF8C00">}</text>
+
+    <!-- Logo text -->
+    <text x="150" y="155" text-anchor="middle" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="#FF8C00">json-io</text>
+    <text x="150" y="178" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#666666">Full Fidelity JSON for Java</text>
+</svg>

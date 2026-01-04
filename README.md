@@ -1,11 +1,33 @@
-json-io
-=======
-[![Maven Central](https://badgen.net/maven/v/maven-central/com.cedarsoftware/json-io)](https://central.sonatype.com/search?q=json-io&namespace=com.cedarsoftware)
-[![Javadoc](https://javadoc.io/badge/com.cedarsoftware/json-io.svg)](http://www.javadoc.io/doc/com.cedarsoftware/json-io)
+<div align="center">
+  <img src="badge.svg" alt="json-io logo" width="320" height="200" />
 
-json-io is a powerful and lightweight Java library that simplifies JSON serialization and deserialization while handling complex object graphs with ease. Unlike basic JSON parsers, json-io preserves object references, handles polymorphic types, and maintains cyclic relationships in your data structures. Whether you're working with sophisticated domain models, dealing with legacy Java objects, or need high-performance JSON processing, json-io provides a robust solution with minimal configuration.
+  <p>
+    <a href="https://central.sonatype.com/search?q=json-io&namespace=com.cedarsoftware">
+      <img src="https://badgen.net/maven/v/maven-central/com.cedarsoftware/json-io" alt="Maven Central" height="20" />
+    </a>
+    <a href="http://www.javadoc.io/doc/com.cedarsoftware/json-io">
+      <img src="https://javadoc.io/badge/com.cedarsoftware/json-io.svg" alt="Javadoc" height="20" />
+    </a>
+    <a href="https://github.com/jdereg/json-io/blob/master/LICENSE">
+      <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License" height="20" />
+    </a>
+    <img src="https://img.shields.io/badge/JDK-8%20to%2024-orange" alt="JDK 8–24" height="20" />
+  </p>
+
+  <p>
+    <a href="https://github.com/jdereg/json-io">
+      <img src="https://img.shields.io/github/stars/jdereg/json-io?style=social" alt="GitHub stars" />
+    </a>
+    <a href="https://github.com/jdereg/json-io/fork">
+      <img src="https://img.shields.io/github/forks/jdereg/json-io?style=social" alt="GitHub forks" />
+    </a>
+  </p>
+</div>
+
+json-io is a powerful and lightweight Java library that simplifies JSON5 and JSON serialization and deserialization while handling complex object graphs with ease. Unlike basic JSON parsers, json-io preserves object references, handles polymorphic types, and maintains cyclic relationships in your data structures. Whether you're working with sophisticated domain models, dealing with legacy Java objects, or need high-performance JSON processing, json-io provides a robust solution with minimal configuration.
 
 Key Features:
+- Full JSON5 support including single-line and multi-line comments, single-quoted strings, unquoted object keys, trailing commas, and more — while remaining fully backward compatible with standard JSON (RFC 8259)
 - Preserves object references and handles cyclic relationships
 - Supports polymorphic types and complex object graphs
 - Zero external dependencies (other than java-util)
@@ -54,7 +76,7 @@ ___
 To include in your project:
 ##### Gradle
 ```groovy
-implementation 'com.cedarsoftware:json-io:4.70.0'
+implementation 'com.cedarsoftware:json-io:4.80.0'
 ```
 
 ##### Maven
@@ -62,7 +84,7 @@ implementation 'com.cedarsoftware:json-io:4.70.0'
  <dependency>
    <groupId>com.cedarsoftware</groupId>
    <artifactId>json-io</artifactId>
-   <version>4.70.0</version>
+   <version>4.80.0</version>
  </dependency>
 ```
 
@@ -75,32 +97,17 @@ ___
 >#### [Revision History](/changelog.md)
 
 ## Releases
->### 4.70.0 (current)
->- [ ] **Version**: [4.70.0](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.70.0/index.html)
+>### 4.80.0
+>- [ ] **Version**: [4.80.0](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.80.0/index.html)
 >- [ ] **Bundling**: Both JPMS (Java Platform Module System) and OSGi (Open Service Gateway initiative)
 >- [ ] **Maintained**: Fully
 >- [ ] **Java Package**: com.cedarsoftware.io
 >- [ ] **Java**: JDK1.8+ (Class file 52 format, includes module-info.class - multi-release JAR)
 >- [ ] **API**
- >  - Static methods on [JsonIo](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.70.0/com/cedarsoftware/io/JsonIo.html): [toJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.70.0/com/cedarsoftware/io/JsonIo.html#toJson(java.lang.Object,com.cedarsoftware.io.WriteOptions)), [toJava()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/latest/com/cedarsoftware/io/JsonIo.html#toJava(com.cedarsoftware.io.JsonObject,com.cedarsoftware.io.ReadOptions)), [toMaps()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/latest/com/cedarsoftware/io/JsonIo.html#toMaps(java.lang.String)), [formatJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.70.0/com/cedarsoftware/io/JsonIo.html#formatJson(java.lang.String)), [deepCopy()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.70.0/com/cedarsoftware/io/JsonIo.html#deepCopy(java.lang.Object,com.cedarsoftware.io.ReadOptions,com.cedarsoftware.io.WriteOptions))
+ >  - Static methods on [JsonIo](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.80.0/com/cedarsoftware/io/JsonIo.html): [toJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.80.0/com/cedarsoftware/io/JsonIo.html#toJson(java.lang.Object,com.cedarsoftware.io.WriteOptions)), [toJava()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/latest/com/cedarsoftware/io/JsonIo.html#toJava(com.cedarsoftware.io.JsonObject,com.cedarsoftware.io.ReadOptions)), [toMaps()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/latest/com/cedarsoftware/io/JsonIo.html#toMaps(java.lang.String)), [formatJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.80.0/com/cedarsoftware/io/JsonIo.html#formatJson(java.lang.String)), [deepCopy()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.80.0/com/cedarsoftware/io/JsonIo.html#deepCopy(java.lang.Object,com.cedarsoftware.io.ReadOptions,com.cedarsoftware.io.WriteOptions))
  >  - Use [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md) to configure `JsonIo`
- >  - Use [JsonReader.ClassFactory](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.70.0/com/cedarsoftware/io/JsonReader.ClassFactory.html) for difficult classes (hard to instantiate & fill)
- >  - Use [JsonClassWriter](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.70.0/com/cedarsoftware/io/JsonClassWriter.html) to customize the output JSON for a particular class
->- [ ] Updates will be 4.71.0, 4.72.0, ...
->### 4.14.x (supported)
->- [ ] **Version**: [4.14.3](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/index.html)
->- [ ] **Bundling**: Both JPMS (Java Platform Module System) and OSGi (Open Service Gateway initiative)
->- [ ] **Maintained**: Bug fixes, CVE's
->- [ ] **Java Package**: com.cedarsoftware.util.io
->- [ ] **Java**: JDK1.8+ (Class file 52 format, includes module-info.class - multi-release JAR)
->- [ ] **API**
->  - Static methods on [JsonReader](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.html): [jsonToJava()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.html#jsonToJava-java.lang.String-java.util.Map-), [jsonToMaps()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.html#jsonToMaps-java.lang.String-java.util.Map-), special: [jsonObjectsToJava()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.html#jsonObjectsToJava-com.cedarsoftware.util.io.JsonObject-)
->  - Static methods on [JsonWriter](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonWriter.html): [objectToJson()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonWriter.html#objectToJson-java.lang.Object-java.util.Map-)), [formatJson()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonWriter.html#formatJson-java.lang.String-java.util.Map-java.util.Map-)
->  - Configuration via `Map` with constants defined in [JsonReader](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.14.3/constant-values.html#com.cedarsoftware.util.io.JsonReader.CLASSLOADER)/[JsonWriter](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.14.3/constant-values.html#com.cedarsoftware.util.io.JsonWriter.CLASSLOADER).
->  - Use [JsonReader.JsonClassReader](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.JsonClassReader.html) or [JsonReader.JsonClassReaderEx](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.JsonClassReaderEx.html) for customer reader
->  - Use [JsonReader.assignInstantiator()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.html#assignInstantiator-java.lang.Class-com.cedarsoftware.util.io.JsonReader.Factory-) when `json-io` cannot construct a particular class
->  - Use [JsonClassWriter](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonClassWriter.html) or [JsonWriter.JsonClassWriterEx](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonWriter.JsonClassWriterEx.html) to customize particular class output JSON
->- [ ] Updates will be 4.14.4, 4.14.5, ...
+ >  - Use [ClassFactory](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.80.0/com/cedarsoftware/io/JsonReader.ClassFactory.html) for difficult classes (hard to instantiate & fill)
+ >  - Use [JsonClassWriter](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.80.0/com/cedarsoftware/io/JsonClassWriter.html) to customize the output JSON for a particular class
 
 ### Logging
 
