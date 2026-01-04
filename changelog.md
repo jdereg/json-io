@@ -44,6 +44,10 @@
     * Keys must be valid ECMAScript identifiers (start with letter/_/$, contain letters/digits/_/$)
     * Keys with special characters, spaces, or starting with digits are still quoted
     * Example: `{name:"John", "key-with-dash":"value"}`
+  * Added `json5SmartQuotes(true)` for adaptive quote selection on string values
+    * Uses single quotes if string contains `"` but no `'` (cleaner output for strings with embedded quotes)
+    * Uses double quotes otherwise (standard behavior)
+    * Example: `{message:'He said "Hello"'}` instead of `{message:"He said \"Hello\""}`
 * **PERFORMANCE**: `JsonWriter` - Optimized `traceReferences()` to reduce object allocation
   * Replaced single `Deque<Object[]>` with `Deque<Object>` plus primitive `int[]` for depths
   * Eliminates `new Object[]{element, depth}` allocation for every object pushed during reference tracing

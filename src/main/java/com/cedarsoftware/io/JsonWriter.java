@@ -92,6 +92,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private static final Long ZERO = 0L;
     // Lookup table for fast ASCII escape detection (128 entries for chars 0-127)
     private static final boolean[] NEEDS_ESCAPE = new boolean[128];
+    // Lookup table for single-quoted strings (JSON5) - escapes ' instead of "
+    private static final boolean[] NEEDS_ESCAPE_SINGLE_QUOTE = new boolean[128];
     private final WriteOptions writeOptions;
     private final Map<Object, Long> objVisited = new IdentityHashMap<>(256); // Pre-size for better performance
     private final Map<Object, Long> objsReferenced = new IdentityHashMap<>(256); // Pre-size for better performance
@@ -171,6 +173,16 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         NEEDS_ESCAPE['"'] = true;   // Quote
         NEEDS_ESCAPE['\\'] = true;  // Backslash
         NEEDS_ESCAPE[0x7F] = true;  // DEL control character
+
+        // Initialize escape lookup table for single-quoted strings (JSON5)
+        // Mark all control characters (0x00-0x1F) as needing escape
+        for (int i = 0; i < 0x20; i++) {
+            NEEDS_ESCAPE_SINGLE_QUOTE[i] = true;
+        }
+        // Mark specific characters that need escaping for single-quoted strings
+        NEEDS_ESCAPE_SINGLE_QUOTE['\''] = true;  // Single quote
+        NEEDS_ESCAPE_SINGLE_QUOTE['\\'] = true;  // Backslash
+        NEEDS_ESCAPE_SINGLE_QUOTE[0x7F] = true;  // DEL control character
     }
 
     /**
@@ -955,7 +967,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (byte[].class == arrayType) {
             writeByteArray((byte[]) array, lenMinus1);
         } else if (char[].class == arrayType) {
-            writeJsonUtf8String(output, new String((char[]) array), writeOptions.getMaxStringLength());
+            writeStringValue(new String((char[]) array));
         } else if (short[].class == arrayType) {
             writeShortArray((short[]) array, lenMinus1);
         } else if (int[].class == arrayType) {
@@ -1248,9 +1260,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 final boolean forceType = isForceType(value.getClass(), componentClass);
                 if (writeArrayElementIfMatching(componentClass, value, forceType, output)) {
                 } else if (Character.class == componentClass || char.class == componentClass) {
-                    writeJsonUtf8String(output, (String) value, writeOptions.getMaxStringLength());
+                    writeStringValue((String) value);
                 } else if (value instanceof String) {
-                    writeJsonUtf8String(output, (String) value, writeOptions.getMaxStringLength());
+                    writeStringValue((String) value);
                 } else if (value instanceof Boolean || value instanceof Long || value instanceof Double) {
                     writePrimitive(value, forceType);
                 } else {   // Specific Class-type arrays - only force type when
@@ -1465,9 +1477,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             } else if (value instanceof Number || value instanceof Boolean) {
                 output.write(value.toString());
             } else if (value instanceof String) {
-                writeJsonUtf8String(output, (String) value, writeOptions.getMaxStringLength());
+                writeStringValue((String) value);
             } else if (value instanceof Character) {
-                writeJsonUtf8String(output, String.valueOf(value), writeOptions.getMaxStringLength());
+                writeStringValue(String.valueOf(value));
             } else {
                 writeImpl(value, !doesValueTypeMatchFieldType(type, fieldName, value));
             }
@@ -1646,7 +1658,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         } else if (o instanceof Long) {
             writePrimitive(o, getWriteOptions().isWriteLongsAsStrings());
         } else if (o instanceof String) {   // Never do an @ref to a String (they are treated as logical primitives and intern'ed on read)
-            writeJsonUtf8String(out, (String) o, writeOptions.getMaxStringLength());
+            writeStringValue((String) o);
         } else if (getWriteOptions().isNeverShowingType() && ClassUtilities.isPrimitive(o.getClass())) {   // If neverShowType, then force primitives (and primitive wrappers)
             // to be output with toString() - prevents {"value":6} for example
             writePrimitive(o, false);
@@ -1760,7 +1772,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
                 if (enumFieldsCount <= 2) {
                     // Write the enum name as a string
-                    writeJsonUtf8String(out, e.name(), writeOptions.getMaxStringLength());
+                    writeStringValue(e.name());
                 } else {
                     // Write the enum as a JSON object with its fields
                     out.write('{');
@@ -2027,6 +2039,45 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     /**
+     * Writes a string value with JSON5 smart quote selection if enabled in WriteOptions.
+     * This static method is for use by custom writers that need to respect smart quote settings.
+     *
+     * @param output The Writer to write to
+     * @param s The string value to write
+     * @param writeOptions WriteOptions to check for smart quote settings
+     * @throws IOException If an I/O error occurs
+     */
+    public static void writeJson5String(final Writer output, String s, WriteOptions writeOptions) throws IOException {
+        if (writeOptions == null || !writeOptions.isJson5SmartQuotes()) {
+            writeJsonUtf8String(output, s, writeOptions != null ? writeOptions.getMaxStringLength() : 1000000);
+            return;
+        }
+
+        int maxLen = writeOptions.getMaxStringLength();
+
+        // Scan string to determine quote strategy
+        boolean hasDoubleQuote = false;
+        boolean hasSingleQuote = false;
+        int len = s != null ? s.length() : 0;
+
+        for (int i = 0; i < len && !(hasDoubleQuote && hasSingleQuote); i++) {
+            char c = s.charAt(i);
+            if (c == '"') {
+                hasDoubleQuote = true;
+            } else if (c == '\'') {
+                hasSingleQuote = true;
+            }
+        }
+
+        // Use single quotes only if string has " but no '
+        if (hasDoubleQuote && !hasSingleQuote) {
+            writeSingleQuotedString(output, s, maxLen);
+        } else {
+            writeJsonUtf8String(output, s, maxLen);
+        }
+    }
+
+    /**
      * Writes a JSON string value to the output, properly escaped according to JSON specifications.
      * Handles control characters, quotes, backslashes, and properly processes Unicode code points.
      * <p>
@@ -2122,6 +2173,129 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         output.write('\"');
     }
 
+    /**
+     * Writes a string value with JSON5 smart quote selection if enabled.
+     * When json5SmartQuotes is enabled:
+     * - Uses single quotes if the string contains " but no '
+     * - Uses double quotes otherwise (standard behavior)
+     *
+     * @param s The string value to write
+     * @throws IOException If an I/O error occurs
+     */
+    private void writeStringValue(String s) throws IOException {
+        if (!writeOptions.isJson5SmartQuotes()) {
+            writeJsonUtf8String(out, s, writeOptions.getMaxStringLength());
+            return;
+        }
+
+        // Scan string to determine quote strategy
+        boolean hasDoubleQuote = false;
+        boolean hasSingleQuote = false;
+        int len = s != null ? s.length() : 0;
+
+        for (int i = 0; i < len && !(hasDoubleQuote && hasSingleQuote); i++) {
+            char c = s.charAt(i);
+            if (c == '"') {
+                hasDoubleQuote = true;
+            } else if (c == '\'') {
+                hasSingleQuote = true;
+            }
+        }
+
+        // Use single quotes only if string has " but no '
+        if (hasDoubleQuote && !hasSingleQuote) {
+            writeSingleQuotedString(out, s, writeOptions.getMaxStringLength());
+        } else {
+            writeJsonUtf8String(out, s, writeOptions.getMaxStringLength());
+        }
+    }
+
+    /**
+     * Writes a JSON5 single-quoted string value to the output, properly escaped.
+     * In single-quoted strings, single quotes are escaped and double quotes are not.
+     *
+     * @param output          The Writer to write to
+     * @param s               The string to be written
+     * @param maxStringLength Maximum allowed string length
+     * @throws IOException If an I/O error occurs
+     */
+    public static void writeSingleQuotedString(final Writer output, String s, int maxStringLength) throws IOException {
+        if (output == null) {
+            throw new JsonIoException("Output writer cannot be null");
+        }
+
+        if (s == null) {
+            output.write("null");
+            return;
+        }
+
+        output.write('\'');
+        final int len = s.length();
+
+        if (len > maxStringLength) {
+            throw new JsonIoException("String too large for JSON serialization: " + len + " characters. Maximum allowed: " + maxStringLength);
+        }
+
+        int start = 0;
+
+        for (int i = 0; i < len; ) {
+            char ch = s.charAt(i);
+
+            // Fast path: ASCII characters that don't need escaping (for single-quoted strings)
+            if (ch < 128 && !NEEDS_ESCAPE_SINGLE_QUOTE[ch]) {
+                i++;
+                continue;
+            }
+
+            // Write any accumulated safe characters
+            if (i > start) {
+                output.write(s, start, i - start);
+            }
+
+            int codePoint = s.codePointAt(i);
+
+            if (codePoint < 0x20 || codePoint == 0x7F) {
+                // Control characters
+                switch (codePoint) {
+                    case '\b':
+                        output.write("\\b");
+                        break;
+                    case '\f':
+                        output.write("\\f");
+                        break;
+                    case '\n':
+                        output.write("\\n");
+                        break;
+                    case '\r':
+                        output.write("\\r");
+                        break;
+                    case '\t':
+                        output.write("\\t");
+                        break;
+                    default:
+                        output.write(String.format("\\u%04x", codePoint));
+                }
+            } else if (codePoint == '\'') {
+                output.write("\\'");
+            } else if (codePoint == '\\') {
+                output.write("\\\\");
+            } else if (codePoint >= 0x80 && codePoint <= 0xFFFF) {
+                output.write(s, i, Character.charCount(codePoint));
+            } else if (codePoint > 0xFFFF) {
+                output.write(s, i, Character.charCount(codePoint));
+            }
+
+            i += Character.charCount(codePoint);
+            start = i;
+        }
+
+        if (start < len) {
+            output.write(s, start, len - start);
+        }
+
+        output.write('\'');
+    }
+
     // ======================== Context Stack Management ========================
 
     /**
@@ -2197,7 +2371,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (value == null) {
             out.write("null");
         } else {
-            writeJsonUtf8String(out, value, writeOptions.getMaxStringLength());
+            writeStringValue(value);
         }
         markObjectFieldWritten();
     }
@@ -2277,7 +2451,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (value == null) {
             out.write("null");
         } else {
-            writeJsonUtf8String(out, value, writeOptions.getMaxStringLength());
+            writeStringValue(value);
         }
         markArrayElementWritten();
     }

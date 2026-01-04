@@ -61,11 +61,8 @@ public class JsonWriterSecurityLimitsTest {
 
     @Test
     public void testMaxStringLength_ShouldRejectLargeStrings() {
-        // Note: This test documents the current behavior - string length limit in writeJsonUtf8String
-        // only applies when the string goes through certain code paths.
-        // For simple string serialization, the limit may not be enforced.
-        // This is expected behavior for backward compatibility.
-        
+        // String length limit is now consistently enforced across all string serialization paths
+
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .maxStringLength(100)  // Very small limit for testing
                 .build();
@@ -76,15 +73,13 @@ public class JsonWriterSecurityLimitsTest {
             sb.append("x");
         }
         String largeString = sb.toString();
-        
-        // Debug: Let's first test if the configuration is correct
+
+        // Verify the configuration is correct
         assertEquals(100, writeOptions.getMaxStringLength());
-        
-        // For now, just test that the configuration is stored correctly
-        // The actual enforcement depends on the code path taken
-        assertDoesNotThrow(() -> {
-            String json = JsonIo.toJson(largeString, writeOptions);
-            assertNotNull(json);
+
+        // Strings exceeding the limit should now throw JsonIoException
+        assertThrows(JsonIoException.class, () -> {
+            JsonIo.toJson(largeString, writeOptions);
         });
     }
 

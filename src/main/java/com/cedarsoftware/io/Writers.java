@@ -154,7 +154,8 @@ public class Writers {
         }
 
         public void writePrimitiveForm(Object o, Writer output, WriterContext writerContext) throws IOException {
-            JsonWriter.writeJsonUtf8String(output, extractString(o));
+            WriteOptions options = writerContext != null ? writerContext.getWriteOptions() : null;
+            JsonWriter.writeJson5String(output, extractString(o), options);
         }
     }
 
