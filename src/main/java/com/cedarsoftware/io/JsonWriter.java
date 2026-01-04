@@ -638,8 +638,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             processArray(keys, objectStack, depth);
         }
 
-        // Traverse other entries in jsonStore (allows for Collections to have properties)
-        processMap(jsonObj, objectStack, depth);
+        // Traverse other entries in internal storage (allows for Collections to have properties).
+        // Skip if using @keys/@items format since those entries were already processed above.
+        // The Map interface for @keys/@items format returns keysArray/itemsArray entries,
+        // which would cause double-visiting and incorrect @id assignment.
+        if (!jsonObj.usesKeysItemsFormat()) {
+            processMap(jsonObj, objectStack, depth);
+        }
     }
 
     private void processMap(Map<?, ?> map, Deque<Object> objectStack, int depth) {
@@ -1273,7 +1278,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (writeOptions.isNeverShowingType()) {
             showType = false;
         }
-        int len = jObj.size();
+        Object[] items = jObj.getItems();
+        int len = items != null ? items.length : 0;
         Class<?> arrayClass;
         Class<?> jsonObjectType = jObj.getRawType();
 
@@ -1326,7 +1332,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
         tabIn();
 
-        Object[] items = jObj.getItems();
+        // items array already fetched at method start
         final int lenMinus1 = len - 1;
 
         for (int i = 0; i < len; i++) {
@@ -1374,7 +1380,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         Class<?> colClass = jObj.getRawType();
         boolean referenced = adjustIfReferenced(jObj);
         final Writer output = this.out;
-        int len = jObj.size();
+        Object[] items = jObj.getItems();
+        int len = items != null ? items.length : 0;
 
         if (referenced || showType || len == 0) {
             output.write('{');
@@ -1402,7 +1409,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         beginCollection(showType, referenced);
 
-        Object[] items = jObj.getItems();
+        // items already fetched at method start
         final int itemsLen = items.length;
         final int itemsLenMinus1 = itemsLen - 1;
 

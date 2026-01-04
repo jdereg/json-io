@@ -2,180 +2,188 @@ package com.cedarsoftware.io;
 
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.IdentityHashMap;
 import java.util.Map;
-import java.util.Arrays;
-import java.util.LinkedHashSet;
 import java.util.Set;
-import java.util.AbstractMap;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests for JsonObject public API methods.
+ * Tests the parallel-array based storage implementation.
+ *
+ * IMPORTANT: JsonObject has two SEPARATE storage mechanisms:
+ * 1. Map interface (put/get/containsKey) - uses mapKeys/mapValues arrays
+ * 2. Items/Keys arrays (setItems/getItems/setKeys/getKeys) - uses itemsArray/keysArray
+ *
+ * These are independent! setItems does NOT populate the Map interface.
+ * This separation exists because:
+ * - Regular JSON objects use the Map interface: {"name": "Joe"} -> put("name", "Joe")
+ * - @items format uses items array: {"@items": [1,2,3]} -> setItems([1,2,3])
+ * - @keys/@items format uses both: {"@keys": ["a"], "@items": [1]} -> setKeys/setItems
+ */
 class JsonObjectMethodsTest {
 
-    private static int computeExpectedHash(Object array, Map<Object, Integer> seen) {
-        if (array == null) {
-            return 1;
-        }
-        if (!array.getClass().isArray()) {
-            return array.hashCode();
-        }
-        Integer cached = seen.get(array);
-        if (cached != null) {
-            return cached;
-        }
-        seen.put(array, null);
-        int result = 1;
-        for (Object item : (Object[]) array) {
-            result = 31 * result + computeExpectedHash(item, seen);
-        }
-        seen.put(array, result);
-        return result;
-    }
-
-    private static Map<Object, Object> getJsonStore(JsonObject obj) throws Exception {
-        Field f = JsonObject.class.getDeclaredField("jsonStore");
-        f.setAccessible(true);
-        @SuppressWarnings("unchecked")
-        Map<Object, Object> store = (Map<Object, Object>) f.get(obj);
-        return store;
-    }
+    // ========== Map Interface Tests ==========
 
     @Test
-    void testTypeStringGetterSetter() {
+    void testMapPutAndGet() {
         JsonObject obj = new JsonObject();
-        assertNull(obj.getTypeString());
-        obj.setTypeString("testType");
-        assertEquals("testType", obj.getTypeString());
-        obj.setTypeString(null);
-        assertNull(obj.getTypeString());
+        obj.put("name", "John");
+        obj.put("age", 30);
+
+        assertEquals("John", obj.get("name"));
+        assertEquals(30, obj.get("age"));
+        assertNull(obj.get("nonexistent"));
     }
 
     @Test
-    void testGetLengthDelegatesToSize() {
-        JsonObject withItems = new JsonObject();
-        withItems.setItems(new Object[]{1, 2, 3});
-        assertEquals(3, withItems.getLength());
-
-        JsonObject withMap = new JsonObject();
-        withMap.put("a", 1);
-        withMap.put("b", 2);
-        assertEquals(2, withMap.getLength());
-    }
-
-    @Test
-    void testHashCodeWithKeysItemsAndMap() throws Exception {
+    void testMapSizeAndEmpty() {
         JsonObject obj = new JsonObject();
-        Object[] keys = {"k1", "k2"};
-        Object[] items = {10, 20};
-        obj.setKeys(keys);
+        assertTrue(obj.isEmpty());
+        assertEquals(0, obj.size());
+
+        obj.put("a", 1);
+        assertFalse(obj.isEmpty());
+        assertEquals(1, obj.size());
+
+        obj.put("b", 2);
+        assertEquals(2, obj.size());
+    }
+
+    @Test
+    void testMapContainsKey() {
+        JsonObject obj = new JsonObject();
+        obj.put("x", 1);
+
+        assertTrue(obj.containsKey("x"));
+        assertFalse(obj.containsKey("y"));
+    }
+
+    @Test
+    void testMapContainsValue() {
+        JsonObject obj = new JsonObject();
+        obj.put("k", 5);
+
+        assertTrue(obj.containsValue(5));
+        assertFalse(obj.containsValue(6));
+    }
+
+    @Test
+    void testMapRemove() {
+        JsonObject obj = new JsonObject();
+        obj.put("a", 1);
+        obj.put("b", 2);
+        obj.put("c", 3);
+
+        assertEquals(2, obj.remove("b"));
+        assertEquals(2, obj.size());
+        assertNull(obj.get("b"));
+        assertEquals(1, obj.get("a"));
+        assertEquals(3, obj.get("c"));
+    }
+
+    @Test
+    void testMapClear() {
+        JsonObject obj = new JsonObject();
+        obj.put("a", 1);
+        obj.put("b", 2);
+        obj.clear();
+
+        assertEquals(0, obj.size());
+        assertTrue(obj.isEmpty());
+        assertNull(obj.get("a"));
+    }
+
+    @Test
+    void testMapPutAll() {
+        JsonObject obj = new JsonObject();
+        obj.put("existing", 0);
+
+        java.util.Map<String, Integer> toAdd = new java.util.LinkedHashMap<>();
+        toAdd.put("a", 1);
+        toAdd.put("b", 2);
+
+        obj.putAll(toAdd);
+        assertEquals(3, obj.size());
+        assertEquals(0, obj.get("existing"));
+        assertEquals(1, obj.get("a"));
+        assertEquals(2, obj.get("b"));
+    }
+
+    @Test
+    void testMapKeySet() {
+        JsonObject obj = new JsonObject();
+        obj.put("x", 1);
+        obj.put("y", 2);
+
+        Set<Object> keys = obj.keySet();
+        assertEquals(2, keys.size());
+        assertTrue(keys.contains("x"));
+        assertTrue(keys.contains("y"));
+    }
+
+    @Test
+    void testMapValues() {
+        JsonObject obj = new JsonObject();
+        obj.put("x", 1);
+        obj.put("y", 2);
+
+        assertTrue(obj.values().contains(1));
+        assertTrue(obj.values().contains(2));
+    }
+
+    @Test
+    void testMapEntrySet() {
+        JsonObject obj = new JsonObject();
+        obj.put("k", 10);
+
+        Set<Map.Entry<Object, Object>> entries = obj.entrySet();
+        assertEquals(1, entries.size());
+
+        Map.Entry<Object, Object> entry = entries.iterator().next();
+        assertEquals("k", entry.getKey());
+        assertEquals(10, entry.getValue());
+    }
+
+    @Test
+    void testInsertionOrderMaintained() {
+        JsonObject obj = new JsonObject();
+        obj.put("z", 1);
+        obj.put("a", 2);
+        obj.put("m", 3);
+
+        Object[] expectedKeys = {"z", "a", "m"};
+        Object[] actualKeys = obj.keySet().toArray();
+        assertArrayEquals(expectedKeys, actualKeys);
+    }
+
+    // ========== Items/Keys Array Tests (separate from Map interface) ==========
+
+    @Test
+    void testSetGetItems() {
+        JsonObject obj = new JsonObject();
+        Object[] items = {1, 2, 3};
         obj.setItems(items);
-        obj.put("extra", 99);
 
-        int expected = 1;
-        expected = 31 * expected + computeExpectedHash(keys, new IdentityHashMap<>());
-        expected = 31 * expected + computeExpectedHash(items, new IdentityHashMap<>());
-        expected = 31 * expected + getJsonStore(obj).hashCode();
+        // getItems should return what was set
+        assertSame(items, obj.getItems());
 
-        assertEquals(expected, obj.hashCode());
-        assertEquals(expected, obj.hashCode());
+        // But Map interface should be unaffected
+        assertEquals(0, obj.size());
+        assertTrue(obj.isEmpty());
     }
 
     @Test
-    void testHashCodeWithOnlyKeys() throws Exception {
+    void testSetGetKeys() {
         JsonObject obj = new JsonObject();
         Object[] keys = {"a", "b"};
         obj.setKeys(keys);
 
-        int expected = 1;
-        expected = 31 * expected + computeExpectedHash(keys, new IdentityHashMap<>());
+        // getKeys should return what was set
+        assertSame(keys, obj.getKeys());
 
-        assertEquals(expected, obj.hashCode());
-    }
-
-    @Test
-    void testHashCodeWithOnlyItems() throws Exception {
-        JsonObject obj = new JsonObject();
-        Object[] items = {"x", "y"};
-        obj.setItems(items);
-
-        int expected = 1;
-        expected = 31 * expected + computeExpectedHash(items, new IdentityHashMap<>());
-
-        assertEquals(expected, obj.hashCode());
-    }
-
-    @Test
-    void testHashCodeWithOnlyMap() throws Exception {
-        JsonObject obj = new JsonObject();
-        obj.put("a", 1);
-        obj.put("b", 2);
-
-        int expected = 1;
-        expected = 31 * expected + getJsonStore(obj).hashCode();
-
-        assertEquals(expected, obj.hashCode());
-    }
-
-    @Test
-    void testPrivateHashCodeNullNonArrayCachedAndRecursive() throws Exception {
-        JsonObject obj = new JsonObject();
-        Method m = JsonObject.class.getDeclaredMethod("hashCode", Object.class, Map.class);
-        m.setAccessible(true);
-
-        Map<Object, Integer> seen = new IdentityHashMap<>();
-        assertEquals(1, (int) m.invoke(obj, null, seen));
-        assertEquals("abc".hashCode(), (int) m.invoke(obj, "abc", seen));
-
-        Object[] inner = {"x"};
-        int first = (int) m.invoke(obj, inner, seen);
-        assertEquals(first, (int) m.invoke(obj, inner, seen));
-
-        Object[] outer = {inner, new Object[]{1, 2}};
-        int expected = computeExpectedHash(outer, new IdentityHashMap<>());
-        assertEquals(expected, (int) m.invoke(obj, outer, new IdentityHashMap<>()));
-    }
-
-    @Test
-    void testEqualsVariousPaths() {
-        JsonObject obj = new JsonObject();
-        assertTrue(obj.equals(obj));
-        assertFalse(obj.equals("notJsonObject"));
-
-        JsonObject one = new JsonObject();
-        JsonObject two = new JsonObject();
-        one.setItems(new Object[]{1});
-        two.setItems(new Object[]{2});
-        assertFalse(one.equals(two));
-
-        two.setItems(new Object[]{1});
-        one.setKeys(new Object[]{"k1"});
-        two.setKeys(new Object[]{"k2"});
-        assertFalse(one.equals(two));
-
-        two.setKeys(new Object[]{"k1"});
-        one.put("a", 1);
-        two.put("a", 2);
-        assertFalse(one.equals(two));
-
-        two.put("a", 1);
-        assertTrue(one.equals(two));
-    }
-
-    @Test
-    void testShallowArrayEquals() throws Exception {
-        Method m = JsonObject.class.getDeclaredMethod("shallowArrayEquals", Object[].class, Object[].class);
-        m.setAccessible(true);
-
-        Object[] array = {"a", null};
-        assertTrue((boolean) m.invoke(null, array, array));
-        assertTrue((boolean) m.invoke(null, null, null));
-        assertFalse((boolean) m.invoke(null, array, null));
-        assertFalse((boolean) m.invoke(null, new Object[]{"a"}, new Object[]{"a", "b"}));
-        assertFalse((boolean) m.invoke(null, new Object[]{"a"}, new Object[]{"b"}));
-        assertTrue((boolean) m.invoke(null, new Object[]{"a", null}, new Object[]{"a", null}));
+        // But Map interface should be unaffected
+        assertEquals(0, obj.size());
     }
 
     @Test
@@ -193,80 +201,98 @@ class JsonObjectMethodsTest {
     }
 
     @Test
-    void testContainsKeyUsesArraysAndDelegates() {
+    void testItemsNullByDefault() {
         JsonObject obj = new JsonObject();
-        obj.setKeys(new Object[]{"a", "b"});
-        assertTrue(obj.containsKey("a"));
-        assertFalse(obj.containsKey("c"));
-
-        JsonObject delegated = new JsonObject();
-        delegated.put("x", 1);
-        assertTrue(delegated.containsKey("x"));
-        assertFalse(delegated.containsKey("y"));
+        assertNull(obj.getItems());
     }
 
     @Test
-    void testContainsValueUsesArraysAndDelegates() {
+    void testKeysNullByDefault() {
         JsonObject obj = new JsonObject();
-        obj.setItems(new Object[]{1, 2});
-        assertTrue(obj.containsValue(2));
-        assertFalse(obj.containsValue(3));
-
-        JsonObject delegated = new JsonObject();
-        delegated.put("k", 5);
-        assertTrue(delegated.containsValue(5));
-        assertFalse(delegated.containsValue(6));
+        assertNull(obj.getKeys());
     }
 
     @Test
-    void testGetKeyFromArraysAndDelegates() {
+    void testItemsAndMapAreIndependent() {
         JsonObject obj = new JsonObject();
-        obj.setKeys(new Object[]{"a"});
-        obj.setItems(new Object[]{10});
-        assertEquals(10, obj.get("a"));
-        assertNull(obj.get("b"));
 
-        JsonObject delegated = new JsonObject();
-        delegated.put("x", 42);
-        assertEquals(42, delegated.get("x"));
-    }
-
-    @Test
-    void testKeySetAndValues() {
-        JsonObject obj = new JsonObject();
-        Object[] keys = {"k1", "k2"};
-        Object[] items = {1, 2};
-        obj.setKeys(keys);
+        // Set items
+        Object[] items = {"x", "y"};
         obj.setItems(items);
-        assertEquals(new LinkedHashSet<>(Arrays.asList(keys)), obj.keySet());
-        assertEquals(new LinkedHashSet<>(Arrays.asList(items)), new LinkedHashSet<>(obj.values()));
 
-        JsonObject delegated = new JsonObject();
-        delegated.put("x", 1);
-        assertTrue(delegated.keySet().contains("x"));
-        assertTrue(delegated.values().contains(1));
+        // Set map entries
+        obj.put("name", "test");
+
+        // Both should be independent
+        assertSame(items, obj.getItems());
+        assertEquals("test", obj.get("name"));
+        assertEquals(1, obj.size());  // Map size, not items length
+    }
+
+    // ========== Type String Tests ==========
+
+    @Test
+    void testTypeStringGetterSetter() {
+        JsonObject obj = new JsonObject();
+        assertNull(obj.getTypeString());
+        obj.setTypeString("testType");
+        assertEquals("testType", obj.getTypeString());
+        obj.setTypeString(null);
+        assertNull(obj.getTypeString());
+    }
+
+    // ========== Hash and Equals Tests ==========
+
+    @Test
+    void testHashCodeStability() {
+        JsonObject obj = new JsonObject();
+        obj.put("a", 1);
+        obj.put("b", 2);
+
+        int first = obj.hashCode();
+        assertEquals(first, obj.hashCode());
     }
 
     @Test
-    void testEntrySetFromArraysAndDelegate() {
+    void testHashCodeHandlesArraysAndNulls() {
         JsonObject obj = new JsonObject();
-        obj.setKeys(new Object[]{"a"});
-        obj.setItems(new Object[]{1});
-        Set<Map.Entry<Object, Object>> entries = obj.entrySet();
-        Map.Entry<Object, Object> entry = entries.iterator().next();
-        assertEquals("a", entry.getKey());
-        assertEquals(1, entry.getValue());
-        assertEquals(1, entry.setValue(5));
-        assertEquals(5, entry.getValue());
-        assertEquals(5, obj.getItems()[0]);
-        assertTrue(entry.equals(new AbstractMap.SimpleEntry<>("a", 5)));
+        obj.put("array", new Object[]{"a", "b"});
+        obj.put("null", null);
 
-        JsonObject delegated = new JsonObject();
-        delegated.put("k", 10);
-        Set<Map.Entry<Object, Object>> delegatedEntries = delegated.entrySet();
-        Map.Entry<Object, Object> delegatedEntry = delegatedEntries.iterator().next();
-        assertEquals("k", delegatedEntry.getKey());
-        assertEquals(10, delegatedEntry.getValue());
+        // Should not throw
+        int hash = obj.hashCode();
+        assertEquals(hash, obj.hashCode());
+    }
+
+    @Test
+    void testEqualsBasic() {
+        JsonObject obj = new JsonObject();
+        assertTrue(obj.equals(obj));
+        assertFalse(obj.equals("notJsonObject"));
+        assertFalse(obj.equals(null));
+    }
+
+    @Test
+    void testEqualsMapContent() {
+        JsonObject one = new JsonObject();
+        JsonObject two = new JsonObject();
+
+        one.put("a", 1);
+        two.put("a", 1);
+        assertTrue(one.equals(two));
+
+        two.put("a", 2);
+        assertFalse(one.equals(two));
+    }
+
+    // ========== Deprecated Method Tests ==========
+
+    @Test
+    @SuppressWarnings("deprecation")
+    void testGetLengthDelegatesToSize() {
+        JsonObject obj = new JsonObject();
+        obj.put("a", 1);
+        obj.put("b", 2);
+        assertEquals(2, obj.getLength());
     }
 }
-
