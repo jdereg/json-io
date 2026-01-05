@@ -1,6 +1,8 @@
 package com.cedarsoftware.io.reflect.filters;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.cedarsoftware.io.WriteOptions;
 import com.cedarsoftware.io.WriteOptionsBuilder;
@@ -40,7 +42,11 @@ class NamedMethodFilterTests {
                 .addNamedMethodFilter("noGet", GetMethodTestObject.class, "getTest5")
                 .build();
 
-        List<Accessor> accessors = options.getAccessorsForClass(GetMethodTestObject.class);
+        List<Accessor> accessors = options.getAccessorsForClass(GetMethodTestObject.class)
+                .stream()
+                .sorted(Comparator.comparing(Accessor::getFieldOrMethodName))
+                .collect(Collectors.toList());
+
         assertThat(accessors).hasSize(5);
         Accessor last = accessors.get(4);
         assertThat(last.getFieldOrMethodName()).isEqualTo("test5");

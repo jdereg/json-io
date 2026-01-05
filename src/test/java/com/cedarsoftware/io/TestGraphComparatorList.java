@@ -18,6 +18,9 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.GraphComparator.Delta;
+import com.cedarsoftware.util.GraphComparator.DeltaError;
+import com.cedarsoftware.util.GraphComparator.ID;
 import com.cedarsoftware.util.UniqueIdGenerator;
 import org.junit.jupiter.api.Test;
 
@@ -904,6 +907,7 @@ public class TestGraphComparatorList
     public void testSetRemoveNonPrimitive() throws Exception
     {
         Employee[] employees = createTwoEmployees(SET_TYPE_LINKED);
+        employees[1].addresses = new LinkedHashSet<>(employees[1].addresses);
         long id = employees[0].id;
         Iterator i = employees[1].addresses.iterator();
         employees[1].addresses.remove(i.next());
