@@ -2,6 +2,7 @@ package com.cedarsoftware.io;
 
 import java.io.Serializable;
 import java.lang.reflect.Array;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -513,12 +514,6 @@ public abstract class Resolver {
             graph = jsonObj.getItems();
         }
 
-        // Patch forward references and rehash maps BEFORE conversion.
-        // This is critical because conversion may create immutable collections
-        // that can't be modified after creation.
-        patchUnresolvedReferences();
-        rehashMaps();
-
         // Perform any needed type conversion before returning
         return convertIfNeeded(type, graph);
     }
@@ -531,12 +526,6 @@ public abstract class Resolver {
     private Object handleObject(Type type, JsonObject jsonObj) {
         // Resolve internal references/build the object graph.
         Object graph = toJavaObjects(jsonObj, type);
-
-        // Patch forward references and rehash maps BEFORE any conversion.
-        // This is critical because conversion may create immutable objects
-        // that can't be modified after creation.
-        patchUnresolvedReferences();
-        rehashMaps();
 
         Class<?> rawType = (type == null ? null : TypeUtilities.getRawClass(type));
 
@@ -551,6 +540,15 @@ public abstract class Resolver {
             if (rawType != null && rawType.isInstance(graph)) {
                 return graph;
             }
+
+            // For collection types, if graph implements the same primary interface as rawType,
+            // return it without conversion. This handles Sealable types which substitute for
+            // JDK unmodifiable collections and will be sealed in cleanup(). Converting would
+            // create new instances that don't have forward references patched.
+            if (isCompatibleCollectionType(graph, rawType)) {
+                return graph;
+            }
+
             // Otherwise, if conversion is supported, perform the conversion.
             Converter converter = getConverter();
             if (rawType != null && converter.isConversionSupportedFor(graph.getClass(), rawType)) {
@@ -574,6 +572,40 @@ public abstract class Resolver {
 
         // No specific type was requested - return the resolved graph.
         return graph;
+    }
+
+    /**
+     * Check if the graph object is compatible with the requested type based on shared
+     * collection interfaces. This prevents unnecessary conversion for cases like:
+     * - SealableList (graph) when UnmodifiableList (rawType) was requested
+     * - Both implement List, so no conversion is needed
+     *
+     * This is important because:
+     * 1. Sealable types are json-io's substitutes for JDK unmodifiable collections
+     * 2. Converting would create new instances that don't have forward refs patched
+     * 3. The Sealable collections will be sealed in cleanup() anyway
+     */
+    private boolean isCompatibleCollectionType(Object graph, Class<?> rawType) {
+        // If both implement List, they're compatible
+        if (graph instanceof List && List.class.isAssignableFrom(rawType)) {
+            return true;
+        }
+        // If both implement Set, they're compatible
+        if (graph instanceof Set && Set.class.isAssignableFrom(rawType)) {
+            return true;
+        }
+        // If both implement Map, they're compatible
+        if (graph instanceof Map && Map.class.isAssignableFrom(rawType)) {
+            return true;
+        }
+        // For other Collection types (Queue, Deque, etc.)
+        if (graph instanceof Collection && Collection.class.isAssignableFrom(rawType)) {
+            // But only if rawType is a Collection interface, not a specific impl
+            if (rawType.isInterface() || Modifier.isAbstract(rawType.getModifiers())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
