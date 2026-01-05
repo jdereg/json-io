@@ -313,14 +313,30 @@ public abstract class Resolver {
 
     /**
      * Resolves a parsed JSON value to a Java object.
-     * Used by ClassFactory implementations for nested resolution.
+     * This is the primary resolution entry point used by ClassFactory implementations
+     * and JsonIo for converting parsed JSON into Java objects.
      *
      * @param type the target type (may be null to infer from JSON)
      * @param value the parsed JSON value (JsonObject, array, or primitive)
      * @return the resolved Java object
      */
     public Object toJava(Type type, Object value) {
-        return resolveRoot(value, type);
+        if (value == null) {
+            return null;
+        }
+
+        // Handle arrays (Java arrays or JsonObjects flagged as arrays)
+        if (isRootArray(value)) {
+            return extractTargetIfNeeded(handleArrayRoot(type, value));
+        }
+
+        // Handle JsonObjects (non-array)
+        if (value instanceof JsonObject) {
+            return extractTargetIfNeeded(handleObjectRoot(type, (JsonObject) value));
+        }
+
+        // Primitives (String, Boolean, Number, etc.)
+        return convertIfNeeded(type, value);
     }
 
     /**
@@ -451,31 +467,11 @@ public abstract class Resolver {
     // These methods handle the routing and resolution of parsed values at the root level.
 
     /**
-     * Resolves a parsed value to a Java object.
-     * This handles routing based on the type of parsed value (array, object, or primitive)
-     * and delegates to the appropriate resolution logic.
-     *
-     * @param parsed the parsed value (can be null, array, JsonObject, or primitive)
-     * @param rootType the expected return type (may be null for type inference)
-     * @return the resolved Java object
+     * @deprecated Use {@link #toJava(Type, Object)} instead.
      */
+    @Deprecated
     public Object resolveRoot(Object parsed, Type rootType) {
-        if (parsed == null) {
-            return null;
-        }
-
-        // Handle arrays (Java arrays or JsonObjects flagged as arrays)
-        if (isRootArray(parsed)) {
-            return extractTargetIfNeeded(handleArrayRoot(rootType, parsed));
-        }
-
-        // Handle JsonObjects (non-array)
-        if (parsed instanceof JsonObject) {
-            return extractTargetIfNeeded(handleObjectRoot(rootType, (JsonObject) parsed));
-        }
-
-        // Primitives (String, Boolean, Number, etc.)
-        return convertIfNeeded(rootType, parsed);
+        return toJava(rootType, parsed);
     }
 
     /**
