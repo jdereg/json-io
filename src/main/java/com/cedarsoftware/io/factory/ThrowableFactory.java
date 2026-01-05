@@ -41,7 +41,7 @@ public class ThrowableFactory implements ClassFactory {
                 JsonObject jsonValue = (JsonObject) value;
                 Class<?> targetType = jsonValue.getRawType();
                 if (targetType != null) {
-                    value = resolver.toJavaObjects(jsonValue, targetType);
+                    value = resolver.toJava(targetType, jsonValue);
                 }
             }
             map.put(entry.getKey(), value);
@@ -59,11 +59,11 @@ public class ThrowableFactory implements ClassFactory {
                 // This preserves all the type information that JsonObject contains
                 Class<?> causeType = jsonCause.getRawType();
                 if (causeType != null) {
-                    Object convertedCause = resolver.toJavaObjects(jsonCause, causeType);
+                    Object convertedCause = resolver.toJava(causeType, jsonCause);
                     map.put(CAUSE, convertedCause);
                 } else {
                     // If no specific type is available, default to Throwable
-                    Object convertedCause = resolver.toJavaObjects(jsonCause, Throwable.class);
+                    Object convertedCause = resolver.toJava(Throwable.class, jsonCause);
                     map.put(CAUSE, convertedCause);
                 }
             }
@@ -79,7 +79,7 @@ public class ThrowableFactory implements ClassFactory {
             for (int i = 0; i < stackTrace.length; i++) {
                 JsonObject stackTraceMap = (JsonObject) stackTrace[i];
                 elements[i] = stackTraceMap == null ? null :
-                        resolver.toJavaObjects(stackTraceMap, StackTraceElement.class);
+                        (StackTraceElement) resolver.toJava(StackTraceElement.class, stackTraceMap);
             }
             t.setStackTrace(elements);
         }

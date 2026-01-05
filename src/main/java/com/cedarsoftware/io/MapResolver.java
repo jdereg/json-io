@@ -69,7 +69,7 @@ public class MapResolver extends Resolver {
      * In Maps mode, only certain types are supported as rootType.
      */
     @Override
-    public <T> T toJavaObjects(JsonObject rootObj, Type rootType) {
+    <T> T toJavaObjects(JsonObject rootObj, Type rootType) {
         verifyRootType(rootType);
         return super.toJavaObjects(rootObj, rootType);
     }

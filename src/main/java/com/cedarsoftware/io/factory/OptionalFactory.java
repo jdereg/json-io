@@ -47,7 +47,7 @@ public class OptionalFactory implements ClassFactory {
         // Resolve nested JsonObjects
         if (value instanceof JsonObject) {
             JsonObject jsonObj = (JsonObject) value;
-            value = resolver.toJavaObjects(jsonObj, jsonObj.getType());
+            value = resolver.toJava(jsonObj.getType(), jsonObj);
         }
 
         return Optional.of(value);

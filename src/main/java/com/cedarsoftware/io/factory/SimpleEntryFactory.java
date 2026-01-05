@@ -68,7 +68,7 @@ public class SimpleEntryFactory implements ClassFactory {
     private Object resolveValue(Object value, Resolver resolver) {
         if (value instanceof JsonObject) {
             JsonObject jsonObj = (JsonObject) value;
-            return resolver.toJavaObjects(jsonObj, jsonObj.getType());
+            return resolver.toJava(jsonObj.getType(), jsonObj);
         }
         return value;
     }

@@ -394,7 +394,7 @@ public abstract class Resolver {
      * @return a fully resolved Java object representing the JSON data.
      */
     @SuppressWarnings("unchecked")
-    public <T> T toJavaObjects(JsonObject rootObj, Type rootType) {
+    <T> T toJavaObjects(JsonObject rootObj, Type rootType) {
         if (rootObj == null) {
             return null;
         }
@@ -465,14 +465,6 @@ public abstract class Resolver {
 
     // ========== Root Resolution Methods ==========
     // These methods handle the routing and resolution of parsed values at the root level.
-
-    /**
-     * @deprecated Use {@link #toJava(Type, Object)} instead.
-     */
-    @Deprecated
-    public Object resolveRoot(Object parsed, Type rootType) {
-        return toJava(rootType, parsed);
-    }
 
     /**
      * Returns true if the parsed object represents a root-level "array,"
@@ -715,7 +707,6 @@ public abstract class Resolver {
     protected abstract void traverseCollection(JsonObject jsonObj);
 
     protected abstract void traverseArray(JsonObject jsonObj);
-
     
     /**
      * Security-aware method to add unresolved references with size limits
