@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.cedarsoftware.io.reflect.Accessor;
@@ -456,33 +457,40 @@ class WriteOptionsTest {
 
         assertThat(accessors).hasSize(4);
 
-        assertThat(accessors.get(0).isPublic()).isFalse();
-        assertThat(accessors.get(0).getFieldOrMethodName()).isEqualTo("x");
-        assertThat(accessors.get(0).getActualFieldName()).isEqualTo("x");
-        assertThat(accessors.get(0).getUniqueFieldName()).isEqualTo("x");
-        assertThat(accessors.get(0).getFieldType()).isEqualTo(int.class);
-        assertThat(accessors.get(0).getDeclaringClass()).isEqualTo(PrivateFinalObject.class);
+        Map<String, Accessor> map = accessors.stream().collect(Collectors.toMap(Accessor::getFieldOrMethodName, a -> a));
 
-        assertThat(accessors.get(1).isPublic()).isFalse();
-        assertThat(accessors.get(1).getFieldOrMethodName()).isEqualTo("y");
-        assertThat(accessors.get(1).getActualFieldName()).isEqualTo("y");
-        assertThat(accessors.get(1).getUniqueFieldName()).isEqualTo("y");
-        assertThat(accessors.get(1).getFieldType()).isEqualTo(int.class);
-        assertThat(accessors.get(1).getDeclaringClass()).isEqualTo(PrivateFinalObject.class);
+        Accessor x = map.get("x");
+        Accessor y = map.get("y");
+        Accessor getKey = map.get("getKey");
+        Accessor isFlatuated = map.get("isFlatuated");
 
-        assertThat(accessors.get(2).isPublic()).isTrue();
-        assertThat(accessors.get(2).getFieldOrMethodName()).isEqualTo("getKey");
-        assertThat(accessors.get(2).getActualFieldName()).isEqualTo("key");
-        assertThat(accessors.get(2).getUniqueFieldName()).isEqualTo("key");
-        assertThat(accessors.get(2).getFieldType()).isEqualTo(String.class);
-        assertThat(accessors.get(2).getDeclaringClass()).isEqualTo(PrivateFinalObject.class);
+        assertThat(x.isPublic()).isFalse();
+        assertThat(x.getFieldOrMethodName()).isEqualTo("x");
+        assertThat(x.getActualFieldName()).isEqualTo("x");
+        assertThat(x.getUniqueFieldName()).isEqualTo("x");
+        assertThat(x.getFieldType()).isEqualTo(int.class);
+        assertThat(x.getDeclaringClass()).isEqualTo(PrivateFinalObject.class);
 
-        assertThat(accessors.get(3).isPublic()).isTrue();
-        assertThat(accessors.get(3).getFieldOrMethodName()).isEqualTo("isFlatuated");
-        assertThat(accessors.get(3).getActualFieldName()).isEqualTo("flatuated");
-        assertThat(accessors.get(3).getUniqueFieldName()).isEqualTo("flatuated");
-        assertThat(accessors.get(3).getFieldType()).isEqualTo(boolean.class);
-        assertThat(accessors.get(3).getDeclaringClass()).isEqualTo(PrivateFinalObject.class);
+        assertThat(y.isPublic()).isFalse();
+        assertThat(y.getFieldOrMethodName()).isEqualTo("y");
+        assertThat(y.getActualFieldName()).isEqualTo("y");
+        assertThat(y.getUniqueFieldName()).isEqualTo("y");
+        assertThat(y.getFieldType()).isEqualTo(int.class);
+        assertThat(y.getDeclaringClass()).isEqualTo(PrivateFinalObject.class);
+
+        assertThat(getKey.isPublic()).isTrue();
+        assertThat(getKey.getFieldOrMethodName()).isEqualTo("getKey");
+        assertThat(getKey.getActualFieldName()).isEqualTo("key");
+        assertThat(getKey.getUniqueFieldName()).isEqualTo("key");
+        assertThat(getKey.getFieldType()).isEqualTo(String.class);
+        assertThat(getKey.getDeclaringClass()).isEqualTo(PrivateFinalObject.class);
+
+        assertThat(isFlatuated.isPublic()).isTrue();
+        assertThat(isFlatuated.getFieldOrMethodName()).isEqualTo("isFlatuated");
+        assertThat(isFlatuated.getActualFieldName()).isEqualTo("flatuated");
+        assertThat(isFlatuated.getUniqueFieldName()).isEqualTo("flatuated");
+        assertThat(isFlatuated.getFieldType()).isEqualTo(boolean.class);
+        assertThat(isFlatuated.getDeclaringClass()).isEqualTo(PrivateFinalObject.class);
     }
 
     @Test
@@ -530,10 +538,17 @@ class WriteOptionsTest {
         assertThat(list)
                 .hasSize(4);
 
-        assertThat(list.get(0).getFieldOrMethodName()).isEqualTo("getTotal");
-        assertThat(list.get(1).getFieldOrMethodName()).isEqualTo("y");
-        assertThat(list.get(2).getFieldOrMethodName()).isEqualTo("getKey");
-        assertThat(list.get(3).getFieldOrMethodName()).isEqualTo("isFlatuated");
+        Map<String, Accessor> map = list.stream().collect(Collectors.toMap(Accessor::getFieldOrMethodName, a -> a));
+
+        Accessor getTotal = map.get("getTotal");
+        Accessor y = map.get("y");
+        Accessor getKey = map.get("getKey");
+        Accessor isFlatuated = map.get("isFlatuated");
+
+        assertThat(getTotal.getFieldOrMethodName()).isEqualTo("getTotal");
+        assertThat(y.getFieldOrMethodName()).isEqualTo("y");
+        assertThat(getKey.getFieldOrMethodName()).isEqualTo("getKey");
+        assertThat(isFlatuated.getFieldOrMethodName()).isEqualTo("isFlatuated");
     }
 
     @Test
@@ -553,13 +568,21 @@ class WriteOptionsTest {
         //  will not include
         assertEquals(list.size(), 5);
 
-        assertEquals(list.get(0).getFieldOrMethodName(), "test1");
-        assertEquals(list.get(1).getFieldOrMethodName(), "test2");
-        assertEquals(list.get(2).getFieldOrMethodName(), "test3");
-        assertEquals(list.get(3).getFieldOrMethodName(), "test4");
+        Map<String, Accessor> map = list.stream().collect(Collectors.toMap(Accessor::getFieldOrMethodName, a -> a));
+
+        Accessor test1 = map.get("test1");
+        Accessor test2 = map.get("test2");
+        Accessor test3 = map.get("test3");
+        Accessor test4 = map.get("test4");
+        Accessor getTest5 = map.get("getTest5");
+
+        assertEquals(test1.getFieldOrMethodName(), "test1");
+        assertEquals(test2.getFieldOrMethodName(), "test2");
+        assertEquals(test3.getFieldOrMethodName(), "test3");
+        assertEquals(test4.getFieldOrMethodName(), "test4");
 
         //  public method for accessing test5 so we use that.
-        assertEquals(list.get(4).getFieldOrMethodName(), "getTest5");
+        assertEquals(getTest5.getFieldOrMethodName(), "getTest5");
     }
 
     @Test
@@ -568,13 +591,21 @@ class WriteOptionsTest {
 
         assertEquals(list.size(), 5);
 
-        assertEquals(list.get(0).getFieldOrMethodName(), "test1");
-        assertEquals(list.get(1).getFieldOrMethodName(), "test2");
-        assertEquals(list.get(2).getFieldOrMethodName(), "test3");
-        assertEquals(list.get(3).getFieldOrMethodName(), "test4");
+        Map<String, Accessor> map = list.stream().collect(Collectors.toMap(Accessor::getFieldOrMethodName, a -> a));
+
+        Accessor test1 = map.get("test1");
+        Accessor test2 = map.get("test2");
+        Accessor test3 = map.get("test3");
+        Accessor test4 = map.get("test4");
+        Accessor isTest5 = map.get("isTest5");
+
+        assertEquals(test1.getFieldOrMethodName(), "test1");
+        assertEquals(test2.getFieldOrMethodName(), "test2");
+        assertEquals(test3.getFieldOrMethodName(), "test3");
+        assertEquals(test4.getFieldOrMethodName(), "test4");
 
         //  public method for accessing test5 so we use that.
-        assertEquals(list.get(4).getFieldOrMethodName(), "isTest5");
+        assertEquals(isTest5.getFieldOrMethodName(), "isTest5");
     }
 
     @Test
@@ -582,13 +613,21 @@ class WriteOptionsTest {
         List<Accessor> list = new WriteOptionsBuilder().writeEnumAsJsonObject(false).build().getAccessorsForClass(CarEnumWithCustomFields.class);
 
         assertEquals(list.size(), 5);
+
+        Map<String, Accessor> map = list.stream().collect(Collectors.toMap(Accessor::getFieldOrMethodName, a -> a));
+
+        Accessor speed = map.get("speed");
+        Accessor getRating = map.get("getRating");
+        Accessor tire = map.get("tire");
+        Accessor isStick = map.get("isStick");
+        Accessor name = map.get("name");
         
-        assertEquals(list.get(0).getFieldOrMethodName(), "speed");
-        assertEquals(list.get(1).getFieldOrMethodName(), "getRating");
-        assertEquals(list.get(2).getFieldOrMethodName(), "tire");
-        assertEquals(list.get(3).getFieldOrMethodName(), "isStick");
+        assertEquals(speed.getFieldOrMethodName(), "speed");
+        assertEquals(getRating.getFieldOrMethodName(), "getRating");
+        assertEquals(tire.getFieldOrMethodName(), "tire");
+        assertEquals(isStick.getFieldOrMethodName(), "isStick");
 
         //  public method for accessing test5 so we use that.
-        assertEquals(list.get(4).getFieldOrMethodName(), "name");
+        assertEquals(name.getFieldOrMethodName(), "name");
     }
 }
