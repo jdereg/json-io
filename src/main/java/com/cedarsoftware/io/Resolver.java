@@ -332,7 +332,7 @@ public abstract class Resolver {
         }
 
         // Primitives (String, Boolean, Number, etc.)
-        return convertIfNeeded(type, value);
+        return convertToType(value, type);
     }
 
     /**
@@ -515,7 +515,7 @@ public abstract class Resolver {
         }
 
         // Perform any needed type conversion before returning
-        return convertIfNeeded(type, graph);
+        return convertToType(graph, type);
     }
 
     /**
@@ -527,51 +527,14 @@ public abstract class Resolver {
         // Resolve internal references/build the object graph.
         Object graph = toJavaObjects(jsonObj, type);
 
-        Class<?> rawType = (type == null ? null : TypeUtilities.getRawClass(type));
-
         // If resolution produced null, return the original JsonObject.
+        // (extractTargetIfNeeded in toJava will handle extracting target if present)
         if (graph == null) {
             return jsonObj;
         }
 
-        // If a specific type was provided...
-        if (type != null) {
-            // If the resolved graph is already assignable to the requested type, return it.
-            if (rawType != null && rawType.isInstance(graph)) {
-                return graph;
-            }
-
-            // For collection types, if graph implements the same primary interface as rawType,
-            // return it without conversion. This handles Sealable types which substitute for
-            // JDK unmodifiable collections and will be sealed in cleanup(). Converting would
-            // create new instances that don't have forward references patched.
-            if (isCompatibleCollectionType(graph, rawType)) {
-                return graph;
-            }
-
-            // Otherwise, if conversion is supported, perform the conversion.
-            Converter converter = getConverter();
-            if (rawType != null && converter.isConversionSupportedFor(graph.getClass(), rawType)) {
-                return converter.convert(graph, rawType);
-            }
-
-            // Otherwise, try to find common ancestors (excluding Object, Serializable, Cloneable).
-            Set<Class<?>> skipRoots = new HashSet<>();
-            skipRoots.add(Object.class);
-            skipRoots.add(Serializable.class);
-            skipRoots.add(Cloneable.class);
-
-            Set<Class<?>> commonAncestors = ClassUtilities.findLowestCommonSupertypesExcluding(graph.getClass(), rawType, skipRoots);
-            if (commonAncestors.isEmpty()) {
-                throw new ClassCastException("Return type mismatch, expected: " +
-                        (rawType != null ? rawType.getName() : type.toString()) +
-                        ", actual: " + graph.getClass().getName());
-            }
-            return graph;
-        }
-
-        // No specific type was requested - return the resolved graph.
-        return graph;
+        // Perform unified type conversion
+        return convertToType(graph, type);
     }
 
     /**
@@ -609,45 +572,92 @@ public abstract class Resolver {
     }
 
     /**
-     * Converts returnValue to the desired rootType if necessary and possible.
+     * Unified type conversion for all cases (arrays, objects, primitives).
+     * Checks type compatibility and converts if necessary.
      */
     @SuppressWarnings("unchecked")
-    private Object convertIfNeeded(Type rootType, Object returnValue) {
-        if (rootType == null) {
-            // If no specific type was requested, return as-is
-            return returnValue;
-        }
-        Class<?> rootClass = TypeUtilities.getRawClass(rootType);
-
-        // If the value is already the desired type (or a subtype), just return
-        if (rootClass.isInstance(returnValue)) {
-            return returnValue;
+    private Object convertToType(Object value, Type targetType) {
+        if (targetType == null || value == null) {
+            return value;
         }
 
-        // Allow simple String to Enum conversion when needed with validation
-        if (rootClass.isEnum() && returnValue instanceof String) {
-            String enumValue = (String) returnValue;
-            // Security: Validate enum string to prevent malicious input
+        Class<?> targetClass = TypeUtilities.getRawClass(targetType);
+
+        // 1. Already the right type (exact or subtype match)
+        if (targetClass.isInstance(value)) {
+            return value;
+        }
+
+        // 2. Collection interface compatibility (for Sealable types)
+        //    SealableList implements List, so accept it when List is requested
+        if (isCompatibleCollectionType(value, targetClass)) {
+            return value;
+        }
+
+        // 3. Enum conversion from String
+        if (targetClass.isEnum() && value instanceof String) {
+            String enumValue = (String) value;
             if (enumValue.trim().isEmpty()) {
-                throw new JsonIoException("Invalid enum value: null or empty string for enum type " + rootClass.getName());
+                throw new JsonIoException("Invalid enum value: null or empty string for enum type " + targetClass.getName());
             }
             int maxEnumLength = readOptions.getMaxEnumNameLength();
             if (enumValue.length() > maxEnumLength) {
-                throw new JsonIoException("Security limit exceeded: Enum name too long (" + enumValue.length() + " chars, max " + maxEnumLength + ") for enum type " + rootClass.getName());
+                throw new JsonIoException("Security limit exceeded: Enum name too long (" + enumValue.length() + " chars, max " + maxEnumLength + ") for enum type " + targetClass.getName());
             }
             try {
-                return Enum.valueOf((Class<Enum>) rootClass, enumValue.trim());
+                return Enum.valueOf((Class<Enum>) targetClass, enumValue.trim());
             } catch (IllegalArgumentException e) {
-                throw new JsonIoException("Invalid enum value '" + enumValue + "' for enum type " + rootClass.getName(), e);
+                throw new JsonIoException("Invalid enum value '" + enumValue + "' for enum type " + targetClass.getName(), e);
             }
         }
-        
-        try {
-            return converter.convert(returnValue, rootClass);
-        } catch (Exception e) {
-            throw new JsonIoException("Return type mismatch. Expecting: " +
-                    rootClass.getName() + ", found: " + returnValue.getClass().getName(), e);
+
+        // 4. Try Converter
+        if (converter.isConversionSupportedFor(value.getClass(), targetClass)) {
+            try {
+                return converter.convert(value, targetClass);
+            } catch (Exception e) {
+                // For String→Class conversion from plain JSON strings, if the class is not found,
+                // treat it as a type mismatch rather than exposing "class not found".
+                // This distinguishes plain string JSON (type mismatch) from JSON with @type:class
+                // (where class-not-found is the expected error from ClassFactory).
+                boolean isStringToClassFailure = targetClass == Class.class && value instanceof String;
+                if (!isStringToClassFailure) {
+                    throw e;
+                }
+                // Fall through to throw type mismatch error below for String→Class failures
+            }
         }
+
+        // 5. Lenient mode for complex objects: accept if they share meaningful common ancestors
+        //    This is for POJOs/complex objects, NOT for primitives or simple types.
+        //    Only apply this when value is a "complex" object (not a primitive wrapper, String, etc.)
+        if (!isSimpleType(value.getClass())) {
+            Set<Class<?>> skipRoots = new HashSet<>();
+            skipRoots.add(Object.class);
+            skipRoots.add(Serializable.class);
+            skipRoots.add(Cloneable.class);
+            Set<Class<?>> commonAncestors = ClassUtilities.findLowestCommonSupertypesExcluding(value.getClass(), targetClass, skipRoots);
+            if (!commonAncestors.isEmpty()) {
+                return value;
+            }
+        }
+
+        IllegalArgumentException cause = new IllegalArgumentException("Cannot convert " + value.getClass().getName() + " to " + targetClass.getName());
+        throw new JsonIoException("Return type mismatch. Expecting: " + targetClass.getName() + ", found: " + value.getClass().getName(), cause);
+    }
+
+    /**
+     * Check if a class is a "simple" type (primitive, wrapper, String, etc.)
+     * that should NOT get the lenient common-ancestors check.
+     */
+    private boolean isSimpleType(Class<?> clazz) {
+        return clazz.isPrimitive() ||
+                Number.class.isAssignableFrom(clazz) ||
+                Boolean.class == clazz ||
+                Character.class == clazz ||
+                String.class == clazz ||
+                Class.class == clazz ||
+                clazz.isEnum();
     }
 
     /**
