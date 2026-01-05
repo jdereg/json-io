@@ -462,7 +462,7 @@ class WriteOptionsTest {
         Accessor x = map.get("x");
         Accessor y = map.get("y");
         Accessor getKey = map.get("getKey");
-        Accessor isFlatuated = map.get("isFlatuated");
+        Accessor isFluctuated = map.get("isFluctuated");
 
         assertThat(x.isPublic()).isFalse();
         assertThat(x.getFieldOrMethodName()).isEqualTo("x");
@@ -485,12 +485,12 @@ class WriteOptionsTest {
         assertThat(getKey.getFieldType()).isEqualTo(String.class);
         assertThat(getKey.getDeclaringClass()).isEqualTo(PrivateFinalObject.class);
 
-        assertThat(isFlatuated.isPublic()).isTrue();
-        assertThat(isFlatuated.getFieldOrMethodName()).isEqualTo("isFlatuated");
-        assertThat(isFlatuated.getActualFieldName()).isEqualTo("flatuated");
-        assertThat(isFlatuated.getUniqueFieldName()).isEqualTo("flatuated");
-        assertThat(isFlatuated.getFieldType()).isEqualTo(boolean.class);
-        assertThat(isFlatuated.getDeclaringClass()).isEqualTo(PrivateFinalObject.class);
+        assertThat(isFluctuated.isPublic()).isTrue();
+        assertThat(isFluctuated.getFieldOrMethodName()).isEqualTo("isFluctuated");
+        assertThat(isFluctuated.getActualFieldName()).isEqualTo("fluctuated");
+        assertThat(isFluctuated.getUniqueFieldName()).isEqualTo("fluctuated");
+        assertThat(isFluctuated.getFieldType()).isEqualTo(boolean.class);
+        assertThat(isFluctuated.getDeclaringClass()).isEqualTo(PrivateFinalObject.class);
     }
 
     @Test
@@ -543,12 +543,12 @@ class WriteOptionsTest {
         Accessor getTotal = map.get("getTotal");
         Accessor y = map.get("y");
         Accessor getKey = map.get("getKey");
-        Accessor isFlatuated = map.get("isFlatuated");
+        Accessor isFluctuated = map.get("isFluctuated");
 
         assertThat(getTotal.getFieldOrMethodName()).isEqualTo("getTotal");
         assertThat(y.getFieldOrMethodName()).isEqualTo("y");
         assertThat(getKey.getFieldOrMethodName()).isEqualTo("getKey");
-        assertThat(isFlatuated.getFieldOrMethodName()).isEqualTo("isFlatuated");
+        assertThat(isFluctuated.getFieldOrMethodName()).isEqualTo("isFluctuated");
     }
 
     @Test

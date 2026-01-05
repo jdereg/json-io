@@ -5,11 +5,11 @@ public class PrivateFinalObject {
     private final int x;
     private final int y;
 
-    public PrivateFinalObject(int x, int y, String key, boolean flatuated) {
+    public PrivateFinalObject(int x, int y, String key, boolean fluctuated) {
         this.x = x;
         this.y = y;
         this.key = key;
-        this.flatuated = flatuated;
+        this.fluctuated = fluctuated;
     }
 
     public int getTotal() {
@@ -18,13 +18,13 @@ public class PrivateFinalObject {
 
     private final String key;
 
-    private final boolean flatuated;
+    private final boolean fluctuated;
 
     public String getKey() {
         return this.key;
     }
 
-    public boolean isFlatuated() {
-        return this.flatuated;
+    public boolean isFluctuated() {
+        return this.fluctuated;
     }
 }

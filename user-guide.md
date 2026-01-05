@@ -169,7 +169,7 @@ String json5 = """
     }
     """;
 
-Person person = JsonIo.toObjects(json5, null, Person.class);
+Person person = JsonIo.toJava(json5, null).asClass(Person.class);
 ```
 
 #### JSON5 Read Features
@@ -200,7 +200,7 @@ ReadOptions strictOptions = new ReadOptionsBuilder()
 
 // This will throw JsonIoException because of the comment
 String json5 = "{ // comment\n\"name\": \"John\"}";
-JsonIo.toObjects(json5, strictOptions, Map.class);  // Throws!
+JsonIo.toJava(json5, strictOptions).asClass(Map.class);  // Throws!
 ```
 
 When `strictJson()` is enabled, the following will cause parse errors:
