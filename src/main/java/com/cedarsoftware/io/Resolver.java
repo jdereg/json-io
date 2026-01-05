@@ -321,18 +321,35 @@ public abstract class Resolver {
             return null;
         }
 
-        // Handle arrays (Java arrays or JsonObjects flagged as arrays)
-        if (isArray(value)) {
-            return extractTargetIfNeeded(handleArray(type, value));
+        // Primitives (String, Boolean, Number, etc.) - not JsonObjects or arrays
+        if (!(value instanceof JsonObject) && !value.getClass().isArray()) {
+            return convertToType(value, type);
         }
 
-        // Handle JsonObjects (non-array)
-        if (value instanceof JsonObject) {
-            return extractTargetIfNeeded(handleObject(type, (JsonObject) value));
+        // Wrap raw Java arrays in a JsonObject for uniform processing
+        JsonObject jsonObj;
+        if (value.getClass().isArray()) {
+            jsonObj = new JsonObject();
+            jsonObj.setType(type);
+            jsonObj.setTarget(value);
+            jsonObj.setItems((Object[]) value);
+        } else {
+            jsonObj = (JsonObject) value;
         }
 
-        // Primitives (String, Boolean, Number, etc.)
-        return convertToType(value, type);
+        // Resolve the JsonObject (handles both arrays and objects)
+        Object result = toJavaObjects(jsonObj, type);
+
+        // If resolution returned null, fall back appropriately
+        if (result == null) {
+            result = jsonObj.isArray() ? jsonObj.getItems() : jsonObj;
+        }
+
+        // Extract target if needed (for Java mode, unwrap JsonObject to its target)
+        result = extractTargetIfNeeded(result);
+
+        // Final type conversion
+        return convertToType(result, type);
     }
 
     /**
@@ -460,21 +477,6 @@ public abstract class Resolver {
     }
 
     // ========== Resolution Helper Methods ==========
-    // These methods handle the routing and resolution of parsed values.
-
-    /**
-     * Returns true if the value represents an array,
-     * meaning either an actual Java array, or a JsonObject marked as an array.
-     */
-    private boolean isArray(Object value) {
-        if (value == null) {
-            return false;
-        }
-        if (value.getClass().isArray()) {
-            return true;
-        }
-        return (value instanceof JsonObject) && ((JsonObject) value).isArray();
-    }
 
     /**
      * In Java mode, if the result is a JsonObject with a target, return the target.
@@ -487,54 +489,6 @@ public abstract class Resolver {
             return ((JsonObject) value).target;
         }
         return value;
-    }
-
-    /**
-     * Handles the case where the element is an array (either a real Java array,
-     * or a JsonObject that's flagged as an array).
-     */
-    private Object handleArray(Type type, Object returnValue) {
-        JsonObject jsonObj;
-
-        // If it's actually a Java array
-        if (returnValue.getClass().isArray()) {
-            jsonObj = new JsonObject();
-            jsonObj.setType(type);
-            jsonObj.setTarget(returnValue);
-            jsonObj.setItems((Object[]) returnValue);
-        } else {
-            // Otherwise, it's a JsonObject that has isArray() == true
-            jsonObj = (JsonObject) returnValue;
-        }
-
-        // Resolve the array through toJavaObjects
-        Object graph = toJavaObjects(jsonObj, type);
-        if (graph == null) {
-            // If resolution returned null, fall back on the items as the final object
-            graph = jsonObj.getItems();
-        }
-
-        // Perform any needed type conversion before returning
-        return convertToType(graph, type);
-    }
-
-    /**
-     * Handles the case where the parsed JSON is represented as a non-array
-     * JsonObject. This method resolves internal references to build the final object graph,
-     * and then performs any necessary type checking or conversion.
-     */
-    private Object handleObject(Type type, JsonObject jsonObj) {
-        // Resolve internal references/build the object graph.
-        Object graph = toJavaObjects(jsonObj, type);
-
-        // If resolution produced null, return the original JsonObject.
-        // (extractTargetIfNeeded in toJava will handle extracting target if present)
-        if (graph == null) {
-            return jsonObj;
-        }
-
-        // Perform unified type conversion
-        return convertToType(graph, type);
     }
 
     /**
