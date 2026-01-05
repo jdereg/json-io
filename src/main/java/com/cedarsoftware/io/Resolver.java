@@ -320,13 +320,13 @@ public abstract class Resolver {
         }
 
         // Handle arrays (Java arrays or JsonObjects flagged as arrays)
-        if (isRootArray(value)) {
-            return extractTargetIfNeeded(handleArrayRoot(type, value));
+        if (isArray(value)) {
+            return extractTargetIfNeeded(handleArray(type, value));
         }
 
         // Handle JsonObjects (non-array)
         if (value instanceof JsonObject) {
-            return extractTargetIfNeeded(handleObjectRoot(type, (JsonObject) value));
+            return extractTargetIfNeeded(handleObject(type, (JsonObject) value));
         }
 
         // Primitives (String, Boolean, Number, etc.)
@@ -457,14 +457,14 @@ public abstract class Resolver {
         return result;  // Default: return as-is
     }
 
-    // ========== Root Resolution Methods ==========
-    // These methods handle the routing and resolution of parsed values at the root level.
+    // ========== Resolution Helper Methods ==========
+    // These methods handle the routing and resolution of parsed values.
 
     /**
-     * Returns true if the parsed object represents a root-level "array,"
+     * Returns true if the value represents an array,
      * meaning either an actual Java array, or a JsonObject marked as an array.
      */
-    private boolean isRootArray(Object value) {
+    private boolean isArray(Object value) {
         if (value == null) {
             return false;
         }
@@ -488,28 +488,28 @@ public abstract class Resolver {
     }
 
     /**
-     * Handles the case where the top-level element is an array (either a real Java array,
+     * Handles the case where the element is an array (either a real Java array,
      * or a JsonObject that's flagged as an array).
      */
-    private Object handleArrayRoot(Type rootType, Object returnValue) {
-        JsonObject rootObj;
+    private Object handleArray(Type type, Object returnValue) {
+        JsonObject jsonObj;
 
         // If it's actually a Java array
         if (returnValue.getClass().isArray()) {
-            rootObj = new JsonObject();
-            rootObj.setType(rootType);
-            rootObj.setTarget(returnValue);
-            rootObj.setItems((Object[]) returnValue);
+            jsonObj = new JsonObject();
+            jsonObj.setType(type);
+            jsonObj.setTarget(returnValue);
+            jsonObj.setItems((Object[]) returnValue);
         } else {
             // Otherwise, it's a JsonObject that has isArray() == true
-            rootObj = (JsonObject) returnValue;
+            jsonObj = (JsonObject) returnValue;
         }
 
         // Resolve the array through toJavaObjects
-        Object graph = toJavaObjects(rootObj, rootType);
+        Object graph = toJavaObjects(jsonObj, type);
         if (graph == null) {
             // If resolution returned null, fall back on the items as the final object
-            graph = rootObj.getItems();
+            graph = jsonObj.getItems();
         }
 
         // Patch forward references and rehash maps BEFORE conversion.
@@ -519,17 +519,17 @@ public abstract class Resolver {
         rehashMaps();
 
         // Perform any needed type conversion before returning
-        return convertIfNeeded(rootType, graph);
+        return convertIfNeeded(type, graph);
     }
 
     /**
-     * Handles the top-level case where the parsed JSON is represented as a non-array
+     * Handles the case where the parsed JSON is represented as a non-array
      * JsonObject. This method resolves internal references to build the final object graph,
      * and then performs any necessary type checking or conversion.
      */
-    private Object handleObjectRoot(Type rootType, JsonObject jsonObj) {
+    private Object handleObject(Type type, JsonObject jsonObj) {
         // Resolve internal references/build the object graph.
-        Object graph = toJavaObjects(jsonObj, rootType);
+        Object graph = toJavaObjects(jsonObj, type);
 
         // Patch forward references and rehash maps BEFORE any conversion.
         // This is critical because conversion may create immutable objects
@@ -537,23 +537,23 @@ public abstract class Resolver {
         patchUnresolvedReferences();
         rehashMaps();
 
-        Class<?> rawRootType = (rootType == null ? null : TypeUtilities.getRawClass(rootType));
+        Class<?> rawType = (type == null ? null : TypeUtilities.getRawClass(type));
 
         // If resolution produced null, return the original JsonObject.
         if (graph == null) {
             return jsonObj;
         }
 
-        // If a specific rootType was provided...
-        if (rootType != null) {
+        // If a specific type was provided...
+        if (type != null) {
             // If the resolved graph is already assignable to the requested type, return it.
-            if (rawRootType != null && rawRootType.isInstance(graph)) {
+            if (rawType != null && rawType.isInstance(graph)) {
                 return graph;
             }
             // Otherwise, if conversion is supported, perform the conversion.
             Converter converter = getConverter();
-            if (rawRootType != null && converter.isConversionSupportedFor(graph.getClass(), rawRootType)) {
-                return converter.convert(graph, rawRootType);
+            if (rawType != null && converter.isConversionSupportedFor(graph.getClass(), rawType)) {
+                return converter.convert(graph, rawType);
             }
 
             // Otherwise, try to find common ancestors (excluding Object, Serializable, Cloneable).
@@ -562,16 +562,16 @@ public abstract class Resolver {
             skipRoots.add(Serializable.class);
             skipRoots.add(Cloneable.class);
 
-            Set<Class<?>> commonAncestors = ClassUtilities.findLowestCommonSupertypesExcluding(graph.getClass(), rawRootType, skipRoots);
+            Set<Class<?>> commonAncestors = ClassUtilities.findLowestCommonSupertypesExcluding(graph.getClass(), rawType, skipRoots);
             if (commonAncestors.isEmpty()) {
                 throw new ClassCastException("Return type mismatch, expected: " +
-                        (rawRootType != null ? rawRootType.getName() : rootType.toString()) +
+                        (rawType != null ? rawType.getName() : type.toString()) +
                         ", actual: " + graph.getClass().getName());
             }
             return graph;
         }
 
-        // No specific rootType was requested - return the resolved graph.
+        // No specific type was requested - return the resolved graph.
         return graph;
     }
 
