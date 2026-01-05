@@ -12,6 +12,8 @@ import java.util.Set;
 
 import com.cedarsoftware.io.reflect.Accessor;
 import com.cedarsoftware.io.reflect.AccessorFactory;
+import com.cedarsoftware.io.reflect.factories.GetMethodAccessorFactory;
+import com.cedarsoftware.io.reflect.factories.IsMethodAccessorFactory;
 import com.cedarsoftware.io.reflect.filters.FieldFilter;
 import com.cedarsoftware.io.reflect.filters.MethodFilter;
 import org.junit.jupiter.api.Test;
@@ -177,6 +179,9 @@ public class WriteOptionsBuilderTest {
 
     @Test
     void testRemovePermanentAccessorFactory() {
+        WriteOptionsBuilder.removePermanentAccessorFactory("get");
+        WriteOptionsBuilder.removePermanentAccessorFactory("is");
+
         TestAccessorFactory factory = new TestAccessorFactory();
         WriteOptionsBuilder.addPermanentAccessorFactory("temp", factory);
 
@@ -190,6 +195,9 @@ public class WriteOptionsBuilderTest {
         WriteOptions opts2 = new WriteOptionsBuilder().build();
         opts2.getAccessorsForClass(Example.class);
         assertFalse(factory.called);
+
+        WriteOptionsBuilder.addPermanentAccessorFactory("get", new GetMethodAccessorFactory());
+        WriteOptionsBuilder.addPermanentAccessorFactory("is", new IsMethodAccessorFactory());
     }
 }
 
