@@ -92,6 +92,7 @@ public abstract class Resolver {
     private final int maxUnresolvedRefs;
     private final int maxMissingFields;
 
+
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
      * could not yet be loaded, as the @ref appears ahead of the referenced object's
@@ -608,8 +609,7 @@ public abstract class Resolver {
                 throw new JsonIoException("Invalid enum value '" + enumValue + "' for enum type " + rootClass.getName(), e);
             }
         }
-
-        Converter converter = getConverter();
+        
         try {
             return converter.convert(returnValue, rootClass);
         } catch (Exception e) {

@@ -956,7 +956,7 @@ public class JsonIo {
             }
 
             try {
-                return (T) resolver.resolveRoot(jsonObject, typeHolder.getType());
+                return (T) resolver.toJava(typeHolder.getType(), jsonObject);
             } catch (Exception e) {
                 if (e instanceof JsonIoException) {
                     throw (JsonIoException) e;
