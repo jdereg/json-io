@@ -802,6 +802,19 @@ public abstract class Resolver {
         mapsToRehash.add(jsonObj);
     }
 
+    /**
+     * Add a JsonObject to the list of maps that need rehashing after resolution.
+     * This is called by subclasses that override traverseMap() to ensure proper
+     * map population via rehashMaps().
+     */
+    protected void addMapToRehash(JsonObject jsonObj) {
+        int maxMapsToRehash = readOptions.getMaxMapsToRehash();
+        if (maxMapsToRehash != Integer.MAX_VALUE && mapsToRehash.size() >= maxMapsToRehash) {
+            throw new JsonIoException("Security limit exceeded: Maximum maps to rehash (" + maxMapsToRehash + ") reached. Possible DoS attack.");
+        }
+        mapsToRehash.add(jsonObj);
+    }
+
     private void buildCollection(Object[] arrayContent) {
         final JsonObject collection = new JsonObject();
         collection.setItems(arrayContent);

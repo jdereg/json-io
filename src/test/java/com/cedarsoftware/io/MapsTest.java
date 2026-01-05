@@ -667,8 +667,8 @@ class MapsTest
         
         final String json1 = "{\"@type\":\"HashMap\",\"@keys\":null,\"@items\":[]}";
         Exception e = assertThrows(Exception.class, () -> { TestUtil.toJava(json1, null).asClass(null);});
-        assert e.getMessage().toLowerCase().contains("@keys or @items");
-        assert e.getMessage().toLowerCase().contains("empty");
+        assert e.getMessage().toLowerCase().contains("@items");
+        assert e.getMessage().toLowerCase().contains("@keys");
 
         final String json2 = "{\"@type\":\"HashMap\",\"@keys\":[1,2],\"@items\":[true]}";
         e = assertThrows(Exception.class, () -> { TestUtil.toJava(json2, null).asClass(null); });

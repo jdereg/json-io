@@ -626,23 +626,19 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private void processJsonObject(JsonObject jsonObj, Deque<Object> objectStack, int depth) {
-        // Traverse items (array elements)
         Object[] items = jsonObj.getItems();
-        if (!ArrayUtilities.isEmpty(items)) {
-            processArray(items, objectStack, depth);
-        }
-
-        // Traverse keys (for JsonObject representing maps)
         Object[] keys = jsonObj.getKeys();
-        if (!ArrayUtilities.isEmpty(keys)) {
-            processArray(keys, objectStack, depth);
-        }
 
-        // Traverse other entries in internal storage (allows for Collections to have properties).
-        // Skip if using @keys/@items format since those entries were already processed above.
-        // The Map interface for @keys/@items format returns keysArray/itemsArray entries,
-        // which would cause double-visiting and incorrect @id assignment.
-        if (!jsonObj.usesKeysItemsFormat()) {
+        if (items != null || keys != null) {
+            // Explicit @items/@keys format - process those arrays directly
+            if (items != null) {
+                processArray(items, objectStack, depth);
+            }
+            if (keys != null) {
+                processArray(keys, objectStack, depth);
+            }
+        } else {
+            // Regular POJO - process via Map interface
             processMap(jsonObj, objectStack, depth);
         }
     }

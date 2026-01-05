@@ -181,6 +181,57 @@ public class MapResolver extends Resolver {
     }
 
     /**
+     * In Maps mode, Maps (like HashMap) need to have their entries traversed to patch @ref references.
+     * The parent class's traverseMap() doesn't do this - it just processes keys/values arrays.
+     * We override to handle both @keys/@items format and regular String-key Maps.
+     */
+    @Override
+    protected void traverseMap(JsonObject jsonObj) {
+        // Apply sorted collection substitution ONLY for types from JSON's @type (typeString set),
+        // not for types from user's asClass() request
+        if (jsonObj.getTypeString() != null) {
+            substituteSortedCollectionType(jsonObj);
+        }
+
+        // Check if this is @keys/@items format (complex keys) or regular String-key format
+        Object[] complexKeys = jsonObj.getKeys();  // Returns null for regular POJOs
+        if (complexKeys != null) {
+            // @keys/@items format - traverse keys and items arrays for @ref patching
+            Object[] items = jsonObj.getItems();
+            if (items != null) {
+                traverseArrayForRefs(complexKeys);
+                traverseArrayForRefs(items);
+            }
+        } else {
+            // Regular String-key Map - use traverseFields to patch @refs in values
+            traverseFields(jsonObj);
+        }
+
+        // Add to rehash list so entries are copied to target Map (for asClass(TreeMap.class) etc.)
+        addMapToRehash(jsonObj);
+    }
+
+    /**
+     * Traverse an array looking for @ref JsonObjects to patch.
+     */
+    private void traverseArrayForRefs(Object[] array) {
+        final ReferenceTracker refTracker = getReferences();
+        for (int i = 0; i < array.length; i++) {
+            Object element = array[i];
+            if (element instanceof JsonObject) {
+                JsonObject jObj = (JsonObject) element;
+                if (jObj.isReference()) {
+                    long refId = jObj.getReferenceId();
+                    JsonObject refObject = refTracker.getOrThrow(refId);
+                    array[i] = refObject;  // Patch the @ref
+                } else {
+                    push(jObj);  // Traverse nested object
+                }
+            }
+        }
+    }
+
+    /**
      * In Maps mode, handle type reconciliation for the root result when no explicit
      * rootType was specified by the user.
      *
@@ -261,7 +312,21 @@ public class MapResolver extends Resolver {
     }
 
     protected Object readWithFactoryIfExists(Object o, Type compType) {
-        // No custom reader support for maps
+        // In Maps mode, convert JsonObjects with simple types (Byte, Short, etc.) to their Java equivalents
+        if (o instanceof JsonObject) {
+            JsonObject jsonObj = (JsonObject) o;
+            Class<?> type = jsonObj.getRawType();
+            if (type != null) {
+                ReadOptions readOptions = getReadOptions();
+                Converter converter = getConverter();
+                // Check if it's a non-referenceable simple type that Converter can handle
+                if (readOptions.isNonReferenceableClass(type) && converter.isConversionSupportedFor(Map.class, type)) {
+                    Object converted = converter.convert(jsonObj, type);
+                    jsonObj.setFinishedTarget(converted, true);
+                    return converted;
+                }
+            }
+        }
         return null;
     }
 
@@ -326,7 +391,17 @@ public class MapResolver extends Resolver {
                     JsonObject refObject = refTracker.getOrThrow(refId);
                     jsonObj.put(fieldName, refObject);    // Update Map-of-Maps reference
                 } else {
-                    push(jObj);
+                    // In Maps mode, convert JsonObjects with simple types (Byte, Short, etc.)
+                    // to their Java equivalents and update the Map entry
+                    Class<?> type = jObj.getRawType();
+                    if (type != null && readOptions.isNonReferenceableClass(type) &&
+                            converter.isConversionSupportedFor(Map.class, type)) {
+                        Object converted = converter.convert(jObj, type);
+                        jObj.setFinishedTarget(converted, true);
+                        jsonObj.put(fieldName, converted);  // Update Map entry with converted value
+                    } else {
+                        push(jObj);
+                    }
                 }
             } else if (injector != null) {
                 // The code below is 'upgrading' the RHS values in the JsonObject Map
@@ -356,7 +431,12 @@ public class MapResolver extends Resolver {
                 }
             }
         }
-        jsonObj.setTarget(null);  // don't waste space (used for typed return, not for Map return)
+        // Clear target for non-Map types to save memory (Maps mode returns JsonObjects for POJOs).
+        // For Map types (HashMap, TreeMap, etc.), keep the target - rehashMaps() will populate it.
+        Object currentTarget = jsonObj.getTarget();
+        if (currentTarget != null && !(currentTarget instanceof Map)) {
+            jsonObj.setTarget(null);
+        }
     }
 
     /**

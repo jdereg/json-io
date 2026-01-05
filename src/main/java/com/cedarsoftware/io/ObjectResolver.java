@@ -175,6 +175,8 @@ public class ObjectResolver extends Resolver
                     addUnresolvedReference(new UnresolvedReference(jsonObj, injector.getName(), ref));
                 }
             } else {    // Direct assignment for nested objects.
+                // Create instance first so @ref references to this object can resolve
+                createInstance(jsRhs);
                 Object fieldObject = jsRhs.getTarget();
                 injector.inject(target, fieldObject);
                 boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jsRhs.getRawType());
