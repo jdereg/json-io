@@ -509,8 +509,8 @@ class MyFactory implements ClassFactory {
 
         // Read complex types (automatic deserialization with cycles/references)
         instance.data = resolver.readObject(jsonObj, "data", DataClass.class);
-        instance.items = resolver.readList(jsonObj, "items", ItemClass.class);
-        instance.config = resolver.readMap(jsonObj, "config", String.class, Object.class);
+        instance.items = resolver.readList(jsonObj, "items");
+        instance.config = resolver.readMap(jsonObj, "config");
 
         return instance;
     }
@@ -530,8 +530,8 @@ class MyFactory implements ClassFactory {
 **Complex Types:**
 - **`readObject(jsonObj, fieldName, type)`** - Read and fully deserialize an object
 - **`readArray(jsonObj, fieldName, arrayType)`** - Read and deserialize a typed array (e.g., `String[].class`)
-- **`readList(jsonObj, fieldName, elementType)`** - Read and deserialize a List
-- **`readMap(jsonObj, fieldName, keyType, valueType)`** - Read and deserialize a Map
+- **`readList(jsonObj, fieldName)`** - Read and deserialize a List
+- **`readMap(jsonObj, fieldName)`** - Read and deserialize a Map
 
 **Complete Example:**
 ```java
@@ -549,8 +549,8 @@ static class PersonFactory implements ClassFactory {
         // Read complex types with full deserialization
         person.kids = resolver.readArray(jsonObj, "kids", TestObjectKid[].class);
         person.friends = resolver.readArray(jsonObj, "friends", Object[].class);
-        person.pets = resolver.readList(jsonObj, "pets", TestObjectKid.class);
-        person.items = resolver.readMap(jsonObj, "items", String.class, Object.class);
+        person.pets = resolver.readList(jsonObj, "pets");
+        person.items = resolver.readMap(jsonObj, "items");
 
         return person;
     }

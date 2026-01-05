@@ -82,16 +82,15 @@ public abstract class Resolver {
     protected final Deque<JsonObject> stack = new ArrayDeque<>();
     private final Collection<JsonObject> mapsToRehash = new ArrayList<>();
     // store the missing field found during deserialization to notify any client after the complete resolution is done
-    final Collection<Missingfields> missingFields = new ArrayList<>();
+    private final Collection<Missingfields> missingFields = new ArrayList<>();
     private ReadOptions readOptions;
     private ReferenceTracker references;
     private final Converter converter;
     private SealedSupplier sealedSupplier = new SealedSupplier();
     
     // Performance: Hoisted ReadOptions constants to avoid repeated method calls
-    private int maxUnresolvedRefs;
-    private int maxMapsToRehash;
-    private int maxMissingFields;
+    private final int maxUnresolvedRefs;
+    private final int maxMissingFields;
 
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
@@ -140,12 +139,10 @@ public abstract class Resolver {
         // Performance: Hoist ReadOptions constants (handle null for test cases)
         if (readOptions != null) {
             this.maxUnresolvedRefs = readOptions.getMaxUnresolvedReferences();
-            this.maxMapsToRehash = readOptions.getMaxMapsToRehash();
             this.maxMissingFields = readOptions.getMaxMissingFields();
         } else {
             // Default values for test cases
             this.maxUnresolvedRefs = Integer.MAX_VALUE;
-            this.maxMapsToRehash = Integer.MAX_VALUE;
             this.maxMissingFields = Integer.MAX_VALUE;
         }
     }
@@ -280,11 +277,10 @@ public abstract class Resolver {
      *
      * @param jsonObj the JsonObject (typically passed to ClassFactory.newInstance)
      * @param fieldName the field name to read
-     * @param elementType the element type (e.g., String.class, MyObject.class)
      * @return the fully deserialized List, or null if not present
      */
     @SuppressWarnings("unchecked")
-    public <T> List<T> readList(JsonObject jsonObj, String fieldName, Class<T> elementType) {
+    public <T> List<T> readList(JsonObject jsonObj, String fieldName) {
         Object value = jsonObj.get(fieldName);
         if (value == null) {
             return null;
@@ -298,12 +294,10 @@ public abstract class Resolver {
      *
      * @param jsonObj the JsonObject (typically passed to ClassFactory.newInstance)
      * @param fieldName the field name to read
-     * @param keyType the key type (e.g., String.class)
-     * @param valueType the value type (e.g., Object.class, MyObject.class)
      * @return the fully deserialized Map, or null if not present
      */
     @SuppressWarnings("unchecked")
-    public <K, V> Map<K, V> readMap(JsonObject jsonObj, String fieldName, Class<K> keyType, Class<V> valueType) {
+    public <K, V> Map<K, V> readMap(JsonObject jsonObj, String fieldName) {
         Object value = jsonObj.get(fieldName);
         if (value == null) {
             return null;

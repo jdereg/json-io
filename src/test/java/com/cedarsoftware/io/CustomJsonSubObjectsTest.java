@@ -65,8 +65,8 @@ class CustomJsonSubObjectsTest
 			// Handle complex field types using Resolver convenience methods
 			person.kids = resolver.readArray(jsonObj, "kids", TestObjectKid[].class);
 			person.friends = resolver.readArray(jsonObj, "friends", Object[].class);
-			person.pets = resolver.readList(jsonObj, "pets", TestObjectKid.class);
-			person.items = resolver.readMap(jsonObj, "items", String.class, Object.class);
+			person.pets = resolver.readList(jsonObj, "pets");
+			person.items = resolver.readMap(jsonObj, "items");
 			return person;
 		}
 	}
