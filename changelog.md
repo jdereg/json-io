@@ -1,5 +1,5 @@
 ### Revision History
-#### 4.80.0 (Unreleased)
+#### 4.80.0
 * **FEATURE**: JSON5 Support - Parser now accepts JSON5 extensions by default
   * Added `ReadOptionsBuilder.strictJson()` for RFC 8259 compliance mode
   * Default is permissive mode (accepts JSON5 features)

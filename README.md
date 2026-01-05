@@ -35,7 +35,7 @@ Key Features:
 - Supports polymorphic types and complex object graphs
 - Zero external dependencies (other than java-util)
 - Fully compatible with both JPMS and OSGi environments
-- Lightweight (`json-io.jar` is ~300K, `java-util` is ~600K)
+- Lightweight (`json-io.jar` is ~330K, `java-util` is ~700K)
 - Compatible with JDK 1.8 through JDK 24
 - The library is built with the `-parameters` compiler flag. Parameter names are now retained for tasks such as constructor discovery.
 - Optional unsafe mode for deserializing package-private classes, inner classes, 
