@@ -153,6 +153,13 @@ public interface WriteOptions {
     boolean isMinimalShowingType();
 
     /**
+     * @return boolean true if the root type (@type on the root object) should be shown, false to omit it.
+     * The default is true (show root type). This default will likely change to false (omit root type) in a
+     * future release, since the reader can now be told the root type via .asClass() or .asType().
+     */
+    boolean isShowingRootTypeInfo();
+
+    /**
      * @param clazz Class to check to see if there is a custom writer associated to it.
      * @return boolean true if there is an associated custom writer class associated to the passed in class,
      * false otherwise.

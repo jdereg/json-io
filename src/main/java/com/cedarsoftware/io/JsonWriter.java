@@ -496,7 +496,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         traceReferences(obj);
         objVisited.clear();
         try {
-            boolean showType = true;
+            boolean showType = writeOptions.isShowingRootTypeInfo();
             if (obj != null) {
                 if (writeOptions.isNeverShowingType()) {
                     showType = false;

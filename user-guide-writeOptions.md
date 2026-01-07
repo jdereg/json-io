@@ -108,6 +108,27 @@ This mechanism is crucial for maintaining the fidelity of the object graph when 
 >#### `WriteOptionsBuilder` showTypeInfoMinimal()
 >- [ ] Sets to show minimal type. This means that when the type of object can be inferred, a type field will not be output.  This is the default.
 
+### Root @type
+
+The `@type` field on the root object can be controlled when using `showTypeInfoMinimal()` (the default). Since `json-io` now supports `.asClass()` and `.asType()` on the read side to specify the expected root type, the `@type` on the root object may be redundant when the receiver knows what type to expect.
+
+>#### `boolean` isShowingRootTypeInfo()
+>- [ ] Returns `true` if the root type (@type on the root object) should be shown, `false` to omit it.
+
+>#### `WriteOptionsBuilder` showRootTypeInfo()
+>- [ ] Show the `@type` on the root object. This is the current default behavior. Use this method to explicitly enable root type output, especially after the default changes to omit root type in a future release.
+>- [ ] **Only valid with `showTypeInfoMinimal()`** (the default). Throws `IllegalStateException` if used with `showTypeInfoAlways()` or `showTypeInfoNever()`.
+>#### `WriteOptionsBuilder` omitRootTypeInfo()
+>- [ ] Omit the `@type` on the root object in the JSON output. This is useful when the receiving system will specify the expected type via `.asClass()` or `.asType()`, making the root `@type` redundant. Omitting the root type reduces JSON payload size.
+>- [ ] **Only valid with `showTypeInfoMinimal()`** (the default). Throws `IllegalStateException` if used with `showTypeInfoAlways()` or `showTypeInfoNever()`.
+
+**Note:** The current default is to show the root type (for backward compatibility), but this default will likely change to omit root type in a future release.
+
+**Validation Rules:**
+- `showTypeInfoAlways()` — *always* show `@type` on all objects, root type control not allowed
+- `showTypeInfoNever()` — *never* show `@type` on any object, root type control not allowed
+- `showTypeInfoMinimal()` (default) — allows `showRootTypeInfo()` / `omitRootTypeInfo()` for fine-grained control
+
 ### Pretty Print
 
 To generate more readable JSON output with multiple lines and indentations, enable the pretty-print feature in

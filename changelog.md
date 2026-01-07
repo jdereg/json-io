@@ -1,4 +1,14 @@
 ### Revision History
+#### 4.81.0 (unreleased)
+* **FEATURE**: Added `omitRootTypeInfo()` and `showRootTypeInfo()` to `WriteOptionsBuilder`
+  * Control whether `@type` is written on the root object when using `showTypeInfoMinimal()` (the default)
+  * `omitRootTypeInfo()` - Omit the `@type` on the root object, useful when the reader uses `.asClass()` or `.asType()`
+  * `showRootTypeInfo()` - Explicitly show the `@type` on the root object (current default)
+  * Added `isShowingRootTypeInfo()` getter to `WriteOptions`
+  * **Validation**: These methods are only valid with `showTypeInfoMinimal()`. Using them with `showTypeInfoAlways()` or `showTypeInfoNever()` throws `IllegalStateException` — those modes have absolute behavior that cannot be overridden
+  * Current default is to show root type (backward compatible), but this will likely change to omit in a future release
+  * This allows reducing JSON payload size when the receiving system knows the expected type
+
 #### 4.80.0 - 2025-01-05
 * **FEATURE**: JSON5 Support - Parser now accepts JSON5 extensions by default
   * Added `ReadOptionsBuilder.strictJson()` for RFC 8259 compliance mode

@@ -214,6 +214,7 @@ public class WriteOptionsBuilder {
             // Copy simple settings
             options.allowNanAndInfinity = other.allowNanAndInfinity;
             options.closeStream = other.closeStream;
+            options.showRootTypeInfo = other.showRootTypeInfo;
             options.classLoader = other.classLoader;
             options.enumPublicFieldsOnly = other.enumPublicFieldsOnly;
             options.enumSetWrittenOldWay = other.enumSetWrittenOldWay;
@@ -897,6 +898,63 @@ public class WriteOptionsBuilder {
         return this;
     }
 
+    /**
+     * Show the @type on the root object in the JSON output. This is the default behavior
+     * when using showTypeInfoMinimal().
+     * <p>
+     * The root type is useful when the receiving system does not know the type of the incoming
+     * object. However, if the receiver uses .asClass() or .asType() to specify the expected type,
+     * the root @type becomes redundant.
+     * </p>
+     * <p>
+     * <b>Note:</b> This method is only valid when using showTypeInfoMinimal(). When using
+     * showTypeInfoAlways() or showTypeInfoNever(), the root type behavior is determined by
+     * the global setting and cannot be overridden.
+     * </p>
+     * @return WriteOptionsBuilder for chained access.
+     * @throws IllegalStateException if not in showTypeInfoMinimal() mode.
+     */
+    public WriteOptionsBuilder showRootTypeInfo() {
+        if (options.showTypeInfo != WriteOptions.ShowType.MINIMAL) {
+            throw new IllegalStateException(
+                "showRootTypeInfo() is only valid when using showTypeInfoMinimal(). " +
+                "With showTypeInfoAlways() or showTypeInfoNever(), root type behavior " +
+                "is determined by the global setting.");
+        }
+        options.showRootTypeInfo = true;
+        return this;
+    }
+
+    /**
+     * Omit the @type on the root object in the JSON output.
+     * <p>
+     * This option is useful when the receiving system will specify the expected type via
+     * .asClass() or .asType() on the read side, making the root @type redundant.
+     * Omitting the root type reduces JSON payload size.
+     * </p>
+     * <p>
+     * <b>Note:</b> This method is only valid when using showTypeInfoMinimal(). When using
+     * showTypeInfoAlways() or showTypeInfoNever(), the root type behavior is determined by
+     * the global setting and cannot be overridden.
+     * </p>
+     * <p>
+     * The current default is to show the root type (for backward compatibility),
+     * but this default will likely change to omit root type in a future release.
+     * </p>
+     * @return WriteOptionsBuilder for chained access.
+     * @throws IllegalStateException if not in showTypeInfoMinimal() mode.
+     */
+    public WriteOptionsBuilder omitRootTypeInfo() {
+        if (options.showTypeInfo != WriteOptions.ShowType.MINIMAL) {
+            throw new IllegalStateException(
+                "omitRootTypeInfo() is only valid when using showTypeInfoMinimal(). " +
+                "With showTypeInfoAlways() or showTypeInfoNever(), root type behavior " +
+                "is determined by the global setting.");
+        }
+        options.showRootTypeInfo = false;
+        return this;
+    }
+
     // ========== JSON5 Write Options ==========
 
     /**
@@ -1408,6 +1466,7 @@ public class WriteOptionsBuilder {
         private boolean enumPublicFieldsOnly = false;
         private boolean enumSetWrittenOldWay = true;
         private boolean closeStream = true;
+        private boolean showRootTypeInfo = true;    // Default true, will change to false in future release
 
         // JSON5 write options
         private boolean json5UnquotedKeys = false;
@@ -1505,6 +1564,15 @@ public class WriteOptionsBuilder {
          */
         public boolean isMinimalShowingType() {
             return showTypeInfo == ShowType.MINIMAL;
+        }
+
+        /**
+         * @return boolean true if the root type (@type on the root object) should be shown, false to omit it.
+         * The default is true (show root type). This default will likely change to false (omit root type) in a
+         * future release, since the reader can now be told the root type via .asClass() or .asType().
+         */
+        public boolean isShowingRootTypeInfo() {
+            return showRootTypeInfo;
         }
 
         /**
