@@ -145,19 +145,19 @@ to drop from the cache - they will be dynamically added back if not in the cache
 >- [ ] Set the maximum number of missing fields that can be tracked. Prevents memory exhaustion from DoS attacks via excessive missing field tracking. Recommended production value: `100000`.
 
 > #### `int` getMaxObjectReferences()
->- [ ] Return the maximum number of object references that can be tracked during JSON processing. Default is `10,000,000`.
+>- [ ] Return the maximum number of object references that can be tracked during JSON processing. Default is `100,000,000`.
 
 > #### `ReadOptionsBuilder` maxObjectReferences(`int limit`)
 >- [ ] Set the maximum number of object references that can be tracked. Prevents memory exhaustion from DoS attacks via unbounded object reference growth. Recommended production value: `5000000`.
 
 > #### `int` getMaxReferenceChainDepth()
->- [ ] Return the maximum depth of reference chains that can be traversed during JSON processing. Default is `10,000`.
+>- [ ] Return the maximum depth of reference chains that can be traversed during JSON processing. Default is `100,000`.
 
 > #### `ReadOptionsBuilder` maxReferenceChainDepth(`int limit`)
 >- [ ] Set the maximum depth of reference chains that can be traversed. Prevents infinite loops from circular reference attacks. Recommended production value: `5000`.
 
 > #### `int` getMaxEnumNameLength()
->- [ ] Return the maximum length of enum name strings during JSON processing. Default is `256`.
+>- [ ] Return the maximum length of enum name strings during JSON processing. Default is `1,024`.
 
 > #### `ReadOptionsBuilder` maxEnumNameLength(`int limit`)
 >- [ ] Set the maximum length of enum name strings. Prevents memory exhaustion from DoS attacks via excessively long enum names. Recommended production value: `128`.

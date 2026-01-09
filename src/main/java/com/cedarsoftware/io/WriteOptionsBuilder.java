@@ -87,9 +87,9 @@ public class WriteOptionsBuilder {
     
     // Permanent security limits (JVM lifetime defaults)
     private static volatile int permanentMaxIndentationDepth = 100;        // Maximum indentation depth to prevent memory exhaustion
-    private static volatile int permanentMaxObjectGraphDepth = 10000;      // Maximum object graph depth to prevent stack overflow  
-    private static volatile int permanentMaxObjectCount = 100000;          // Maximum object count to prevent memory exhaustion
-    private static volatile int permanentMaxStringLength = 1000000;        // Maximum string length (1MB) to prevent memory issues
+    private static volatile int permanentMaxObjectGraphDepth = 100000;     // Maximum object graph depth to prevent stack overflow
+    private static volatile int permanentMaxObjectCount = 1000000000;      // Maximum object count to prevent memory exhaustion (1B)
+    private static volatile int permanentMaxStringLength = 1000000000;     // Maximum string length (1GB) to prevent memory issues
     
     // Permanent formatting limits (JVM lifetime defaults)
     private static volatile int permanentIndentationSize = 2;              // Number of spaces per indentation level
@@ -1492,9 +1492,9 @@ public class WriteOptionsBuilder {
 
         // Security limits with backward-compatible defaults
         private int maxIndentationDepth = 100;         // Maximum indentation depth to prevent memory exhaustion
-        private int maxObjectGraphDepth = 10000;       // Maximum object graph depth to prevent stack overflow  
-        private int maxObjectCount = 100000;           // Maximum object count to prevent memory exhaustion
-        private int maxStringLength = 1000000;         // Maximum string length (1MB) to prevent memory issues
+        private int maxObjectGraphDepth = 100000;      // Maximum object graph depth to prevent stack overflow
+        private int maxObjectCount = 1000000000;       // Maximum object count to prevent memory exhaustion (1B)
+        private int maxStringLength = 1000000000;      // Maximum string length (1GB) to prevent memory issues
         
         // Formatting limits with backward-compatible defaults
         private int indentationSize = 2;               // Number of spaces per indentation level for pretty-printing

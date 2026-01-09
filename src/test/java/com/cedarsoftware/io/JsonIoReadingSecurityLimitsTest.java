@@ -14,11 +14,11 @@ public class JsonIoReadingSecurityLimitsTest {
     @Test
     public void testDefaultJsonIoReadingSecurityLimits_ShouldUseBackwardCompatibleDefaults() {
         ReadOptions readOptions = new ReadOptionsBuilder().build();
-        
+
         // JsonIo read security limits should have backward compatible defaults
-        assertEquals(10000000, readOptions.getMaxObjectReferences());       // 10M objects
-        assertEquals(10000, readOptions.getMaxReferenceChainDepth());       // 10K chain depth
-        assertEquals(256, readOptions.getMaxEnumNameLength());              // 256 chars
+        assertEquals(100000000, readOptions.getMaxObjectReferences());       // 100M objects
+        assertEquals(100000, readOptions.getMaxReferenceChainDepth());       // 100K chain depth
+        assertEquals(1024, readOptions.getMaxEnumNameLength());              // 1024 chars
     }
 
     @Test

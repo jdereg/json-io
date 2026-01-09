@@ -92,9 +92,9 @@ public class ReadOptionsBuilder {
     private static volatile int BASE_MAX_MISSING_FIELDS = Integer.MAX_VALUE;
     
     // Base permanent JSON parsing security limits - default to generous but finite values for backward compatibility
-    private static volatile int BASE_MAX_OBJECT_REFERENCES = 10000000;       // 10M objects max
-    private static volatile int BASE_MAX_REFERENCE_CHAIN_DEPTH = 10000;      // 10K chain depth max
-    private static volatile int BASE_MAX_ENUM_NAME_LENGTH = 256;             // 256 chars max
+    private static volatile int BASE_MAX_OBJECT_REFERENCES = 100000000;      // 100M objects max
+    private static volatile int BASE_MAX_REFERENCE_CHAIN_DEPTH = 100000;     // 100K chain depth max
+    private static volatile int BASE_MAX_ENUM_NAME_LENGTH = 1024;            // 1024 chars max
     
     // Base permanent JsonParser-specific security limits - default to backward compatible values
     private static volatile long BASE_MAX_ID_VALUE = 1000000000L;            // ±1B ID range max
@@ -1590,9 +1590,9 @@ public class ReadOptionsBuilder {
         private int maxMissingFields = Integer.MAX_VALUE;
         
         // Resolver security limits - default to generous but finite values for backward compatibility
-        private int maxObjectReferences = 10000000;       // 10M objects max (same as Resolver hardcoded default)
-        private int maxReferenceChainDepth = 10000;       // 10K chain depth max (same as Resolver hardcoded default)
-        private int maxEnumNameLength = 256;              // 256 chars max (same as Resolver hardcoded default)
+        private int maxObjectReferences = 100000000;      // 100M objects max (same as Resolver hardcoded default)
+        private int maxReferenceChainDepth = 100000;      // 100K chain depth max (same as Resolver hardcoded default)
+        private int maxEnumNameLength = 1024;             // 1024 chars max (same as Resolver hardcoded default)
         
         // JsonParser-specific security limits - default to backward compatible values
         private long maxIdValue = 1000000000L;            // ±1B ID range max (same as JsonParser hardcoded default)

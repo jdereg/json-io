@@ -19,12 +19,12 @@ public class JsonWriterSecurityLimitsTest {
     @Test
     public void testDefaultJsonWriterSecurityLimits_ShouldUseBackwardCompatibleDefaults() {
         WriteOptions writeOptions = new WriteOptionsBuilder().build();
-        
+
         // JsonWriter security limits should have backward compatible defaults
-        assertEquals(100, writeOptions.getMaxIndentationDepth());         // 100 max indentation depth
-        assertEquals(10000, writeOptions.getMaxObjectGraphDepth());       // 10K max object graph depth
-        assertEquals(100000, writeOptions.getMaxObjectCount());           // 100K max object count
-        assertEquals(1000000, writeOptions.getMaxStringLength());         // 1MB max string length
+        assertEquals(100, writeOptions.getMaxIndentationDepth());              // 100 max indentation depth
+        assertEquals(100000, writeOptions.getMaxObjectGraphDepth());           // 100K max object graph depth
+        assertEquals(1000000000, writeOptions.getMaxObjectCount());            // 1B max object count
+        assertEquals(1000000000, writeOptions.getMaxStringLength());           // 1GB max string length
     }
 
     @Test
