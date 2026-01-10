@@ -272,7 +272,7 @@ public interface WriteOptions {
 
     /**
      * @return int threshold for switching between indentation strategies during pretty-printing.
-     * Default is 10. For depths &lt;= threshold, uses simple repeated writes; for larger depths, builds character array.
+     * Default is 10. For {@code depths <= threshold}, uses simple repeated writes; for larger depths, builds character array.
      */
     int getIndentationThreshold();
 

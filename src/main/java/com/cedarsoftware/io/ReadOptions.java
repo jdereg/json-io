@@ -351,7 +351,7 @@ public interface ReadOptions {
 
     /**
      * @return int threshold for switching between linear and binary search in JsonObject operations.
-     * For arrays with size &lt;= this threshold, linear search is used for better cache locality.
+     * For arrays with {@code size <= this threshold}, linear search is used for better cache locality.
      * For larger arrays, more sophisticated search algorithms may be used if applicable.
      * Default is 8 for backward compatibility based on performance testing.
      */

@@ -56,7 +56,7 @@ import static com.cedarsoftware.io.JsonValue.TYPE;
  * format the JSON to be human-readable.
  * <br>
  * <p>This will output any object graph deeply (or null).  Object references are
- * properly handled.  For example, if you had A-&gt;B, B-&gt;C, and C-&gt;A, then
+ * properly handled.  For example, if you had {@code A->B, B->C, and C->A}, then
  * A will be serialized with a B object in it, B will be serialized with a C
  * object in it, and then C will be serialized with a reference to A (ref), not a
  * redefinition of A.</p>
@@ -1781,7 +1781,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     /**
      * Determines whether @type should be written for a collection/map element.
-     * If declaredElementType is set (from a field with generic info like List&lt;Foo&gt;),
+     * If declaredElementType is set (from a field with generic info like {@code List<Foo>}),
      * and the element's class exactly matches (==) the declared type, @type is not needed.
      *
      * This optimization works because JsonParser propagates element type context when

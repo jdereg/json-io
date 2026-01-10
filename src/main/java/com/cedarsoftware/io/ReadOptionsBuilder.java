@@ -1203,7 +1203,7 @@ public class ReadOptionsBuilder {
 
     /**
      * @param linearSearchThreshold int threshold for switching between linear and binary search in JsonObject operations.
-     *                               For arrays with size &lt;= this threshold, linear search is used for better cache locality.
+     *                               For arrays with {@code size <= this threshold}, linear search is used for better cache locality.
      *                               Default is 8 for backward compatibility.
      * @return ReadOptionsBuilder for chained access.
      */

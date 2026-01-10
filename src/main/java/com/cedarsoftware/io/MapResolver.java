@@ -88,45 +88,25 @@ public class MapResolver extends Resolver {
 
         // If the raw type represents an array, drill down to the ultimate component type.
         if (rawRootType != null && rawRootType.isArray()) {
-            while (true) {
-                if (typeToCheck instanceof Class<?>) {
-                    Class<?> cls = (Class<?>) typeToCheck;
-                    if (cls.isArray()) {
-                        typeToCheck = cls.getComponentType();
-                        continue;
-                    }
-                } else if (typeToCheck instanceof GenericArrayType) {
-                    typeToCheck = ((GenericArrayType) typeToCheck).getGenericComponentType();
-                    continue;
-                }
-                break;
-            }
-            // After drilling down, get the raw class of the ultimate component.
+            typeToCheck = getUltimateComponentType(rootType);
             Class<?> ultimateRawType = TypeUtilities.getRawClass(typeToCheck);
-            if (converter.isSimpleTypeConversionSupported(ultimateRawType)
-                    || (ultimateRawType != null && ultimateRawType.equals(Object.class))) {
+            if (converter.isSimpleTypeConversionSupported(ultimateRawType) ||
+                    (ultimateRawType != null && ultimateRawType.equals(Object.class))) {
                 return;
             }
-        } else {
-            // For non-array types, check if the type is supported by simple conversion.
-            if (converter.isSimpleTypeConversionSupported(rawRootType)) {
-                return;
-            }
+        } else if (converter.isSimpleTypeConversionSupported(rawRootType)) {
+            return;
         }
 
         // Check for Collection or Map types
         Class<?> rawTypeToCheck = TypeUtilities.getRawClass(typeToCheck);
-        if (rawTypeToCheck != null) {
-            if (Collection.class.isAssignableFrom(rawTypeToCheck)) {
-                return;
-            }
-            if (Map.class.isAssignableFrom(rawTypeToCheck)) {
-                return;
-            }
+        if (rawTypeToCheck != null &&
+                (Collection.class.isAssignableFrom(rawTypeToCheck) || Map.class.isAssignableFrom(rawTypeToCheck))) {
+            return;
         }
 
         // Type not supported in Maps mode
-        String typeName = (rawRootType != null ? rawRootType.getName() : rootType.toString());
+        String typeName = rawRootType != null ? rawRootType.getName() : rootType.toString();
         throw new JsonIoException("In readOptions.isReturningJsonObjects() mode, the rootType '" + typeName +
                 "' is not supported. Allowed types are:\n" +
                 "- null\n" +
@@ -136,6 +116,25 @@ public class MapResolver extends Resolver {
                 "- Collection or any of its subclasses\n" +
                 "- Arrays (of any depth) of the above types\n" +
                 "Please use one of these types as the rootType, or enable readOptions.isReturningJavaObjects().");
+    }
+
+    /**
+     * Drills down through array types to find the ultimate component type.
+     */
+    private Type getUltimateComponentType(Type type) {
+        while (true) {
+            if (type instanceof Class<?>) {
+                Class<?> cls = (Class<?>) type;
+                if (cls.isArray()) {
+                    type = cls.getComponentType();
+                    continue;
+                }
+            } else if (type instanceof GenericArrayType) {
+                type = ((GenericArrayType) type).getGenericComponentType();
+                continue;
+            }
+            return type;
+        }
     }
 
     /**
@@ -283,14 +282,11 @@ public class MapResolver extends Resolver {
     private Class<?> getJsonSynonymType(Class<?> javaType) {
         if (javaType == StringBuilder.class || javaType == StringBuffer.class) {
             return String.class;
-        }
-        if (javaType == AtomicInteger.class) {
+        } else if (javaType == AtomicInteger.class) {
             return Integer.class;
-        }
-        if (javaType == AtomicLong.class) {
+        } else if (javaType == AtomicLong.class) {
             return Long.class;
-        }
-        if (javaType == AtomicBoolean.class) {
+        } else if (javaType == AtomicBoolean.class) {
             return Boolean.class;
         }
         return javaType;
@@ -467,15 +463,7 @@ public class MapResolver extends Resolver {
         }
 
         Object target = jsonObj.getTarget() != null ? jsonObj.getTarget() : items;
-
-        // Determine the immediate component type of the current array level
-        Class<?> componentType = Object.class;
-        if (jsonObj.getTarget() != null) {
-            final Class<?> targetClass = jsonObj.getTarget().getClass();
-            if (targetClass.isArray()) {
-                componentType = targetClass.getComponentType();
-            }
-        }
+        Class<?> componentType = getArrayComponentType(jsonObj);
 
         // Optimize: check array type ONCE, not on every element assignment
         final boolean isPrimitive = componentType.isPrimitive();
@@ -490,53 +478,96 @@ public class MapResolver extends Resolver {
                 continue;
             }
 
-            // Each element can be of different type - cannot cache class outside loop
             final Class<?> elementClass = element.getClass();
             if (elementClass.isArray() || (element instanceof JsonObject && ((JsonObject) element).isArray())) {
-                // Handle nested arrays using the unified helper method
                 handleNestedArray(element, componentType, target, i);
             } else {
-                // Fast path for common JSON primitive coercions (Long->int, Double->float, etc.)
-                Object fastValue = fastPrimitiveCoercion(element, elementClass, componentType);
-                if (fastValue != null) {
-                    setArrayElement(target, refArray, i, fastValue, isPrimitive);
-                } else if (converter.isConversionSupportedFor(elementClass, componentType)) {
-                    // Convert the element to the base component type
-                    Object convertedValue = converter.convert(element, componentType);
-                    setArrayElement(target, refArray, i, convertedValue, isPrimitive);
-                } else if (element instanceof JsonObject) {
-                    JsonObject jsonObject = (JsonObject) element;
-
-                    if (!jsonObject.isReference()) {
-                        // Convert JsonObject to its destination type if possible
-                        // Performance: Only check Converter for nonRef types (UUID, ZonedDateTime, etc.)
-                        // User types (Dog, Cat, House) are NOT nonRef and Converter can't convert them anyway
-                        Object converted = convertIfNonRefType(jsonObject, jsonObject.getRawType());
-                        if (converted != null) {
-                            setArrayElement(target, refArray, i, converted, isPrimitive);
-                            jsonObject.setFinished();
-                        } else {
-                            push(jsonObject);
-                        }
-                    } else {    // Connect reference
-                        long refId = jsonObject.getReferenceId();
-                        JsonObject refObject = references.getOrThrow(refId);
-
-                        // Performance: Only check Converter for nonRef types (UUID, ZonedDateTime, etc.)
-                        Object convertedRef = convertIfNonRefType(refObject, refObject.getRawType());
-                        if (convertedRef != null) {
-                            refObject.setFinishedTarget(convertedRef, true);
-                            setArrayElement(target, refArray, i, refObject.getTarget(), isPrimitive);
-                        } else {
-                            setArrayElement(target, refArray, i, refObject, isPrimitive);
-                        }
-                    }
-                } else {
-                    setArrayElement(target, refArray, i, element, isPrimitive);
-                }
+                processArrayElement(element, elementClass, componentType, target, refArray, i, isPrimitive);
             }
         }
         jsonObj.setFinished();
+    }
+
+    /**
+     * Determine the component type of the array target.
+     */
+    private Class<?> getArrayComponentType(JsonObject jsonObj) {
+        if (jsonObj.getTarget() != null) {
+            Class<?> targetClass = jsonObj.getTarget().getClass();
+            if (targetClass.isArray()) {
+                return targetClass.getComponentType();
+            }
+        }
+        return Object.class;
+    }
+
+    /**
+     * Process a single array element that is not a nested array.
+     */
+    private void processArrayElement(Object element, Class<?> elementClass, Class<?> componentType,
+                                     Object target, Object[] refArray, int index, boolean isPrimitive) {
+        // Fast path for common JSON primitive coercions
+        Object fastValue = fastPrimitiveCoercion(element, elementClass, componentType);
+        if (fastValue != null) {
+            setArrayElement(target, refArray, index, fastValue, isPrimitive);
+            return;
+        }
+
+        if (converter.isConversionSupportedFor(elementClass, componentType)) {
+            Object convertedValue = converter.convert(element, componentType);
+            setArrayElement(target, refArray, index, convertedValue, isPrimitive);
+            return;
+        }
+
+        if (element instanceof JsonObject) {
+            processJsonObjectArrayElement((JsonObject) element, target, refArray, index, isPrimitive);
+            return;
+        }
+
+        setArrayElement(target, refArray, index, element, isPrimitive);
+    }
+
+    /**
+     * Process a JsonObject element within an array.
+     */
+    private void processJsonObjectArrayElement(JsonObject jsonObject, Object target, Object[] refArray,
+                                               int index, boolean isPrimitive) {
+        if (jsonObject.isReference()) {
+            processArrayReference(jsonObject, target, refArray, index, isPrimitive);
+        } else {
+            processArrayJsonObject(jsonObject, target, refArray, index, isPrimitive);
+        }
+    }
+
+    /**
+     * Process an @ref reference within an array.
+     */
+    private void processArrayReference(JsonObject jsonObject, Object target, Object[] refArray,
+                                       int index, boolean isPrimitive) {
+        long refId = jsonObject.getReferenceId();
+        JsonObject refObject = references.getOrThrow(refId);
+
+        Object convertedRef = convertIfNonRefType(refObject, refObject.getRawType());
+        if (convertedRef != null) {
+            refObject.setFinishedTarget(convertedRef, true);
+            setArrayElement(target, refArray, index, refObject.getTarget(), isPrimitive);
+        } else {
+            setArrayElement(target, refArray, index, refObject, isPrimitive);
+        }
+    }
+
+    /**
+     * Process a non-reference JsonObject within an array.
+     */
+    private void processArrayJsonObject(JsonObject jsonObject, Object target, Object[] refArray,
+                                        int index, boolean isPrimitive) {
+        Object converted = convertIfNonRefType(jsonObject, jsonObject.getRawType());
+        if (converted != null) {
+            setArrayElement(target, refArray, index, converted, isPrimitive);
+            jsonObject.setFinished();
+        } else {
+            push(jsonObject);
+        }
     }
 
     /**
@@ -556,56 +587,58 @@ public class MapResolver extends Resolver {
         Object[] items = jsonObj.getItems();
         Collection<Object> col = (Collection<Object>) jsonObj.getTarget();
         if (col == null) {
-            col = (Collection<Object>)createInstance(jsonObj);
+            col = (Collection<Object>) createInstance(jsonObj);
         }
-        
+
         // Performance: Pre-size ArrayList to avoid repeated resizing
         if (items != null) {
             ensureCollectionCapacity(col, items.length);
         }
 
         final boolean isList = col instanceof List;
+        final boolean isEnumSet = col instanceof EnumSet;
         int idx = 0;
 
         if (items != null) {
             for (Object element : items) {
                 if (element == null) {
                     col.add(null);
-                    idx++;
-                    continue;
-                }
-
-                // Check native JSON types first for fast path (includes BigInteger/BigDecimal
-                // which JsonParser produces for large numbers)
-                if (isDirectlyAddableJsonValue(element)) {
+                } else if (isDirectlyAddableJsonValue(element)) {
                     col.add(element);
                 } else if (element.getClass().isArray()) {
                     wrapArrayAndAddToCollection((Object[]) element, Object[].class, col);
-                } else { // if (element instanceof JsonObject)
-                    final JsonObject jObj = (JsonObject) element;
-
-                    if (jObj.isReference()) {
-                        resolveReferenceInCollection(jObj, jsonObj, col, idx, isList);
-                    } else {
-                        if (col instanceof EnumSet) {
-                            Class<?> rawType = jObj.getRawType();
-                            boolean noEnumName = !jObj.containsKey("name") && !jObj.containsKey("Enum.name") && !jObj.hasValue();
-                            if (rawType != null && rawType.isEnum() && noEnumName) {
-                                jObj.setFinished();
-                                idx++;
-                                continue;
-                            }
-                        }
-
-                        jObj.setType(Object.class);
-                        createInstance(jObj);
-                        addResolvedObjectToCollection(jObj, col);
-                    }
+                } else {
+                    processJsonObjectElement((JsonObject) element, jsonObj, col, idx, isList, isEnumSet);
                 }
                 idx++;
             }
         }
         jsonObj.setFinished();
+    }
+
+    /**
+     * Process a JsonObject element within a collection traversal.
+     */
+    private void processJsonObjectElement(JsonObject jObj, JsonObject parent, Collection<Object> col,
+                                          int idx, boolean isList, boolean isEnumSet) {
+        if (jObj.isReference()) {
+            resolveReferenceInCollection(jObj, parent, col, idx, isList);
+            return;
+        }
+
+        // Handle EnumSet special case: skip enum elements without name
+        if (isEnumSet) {
+            Class<?> rawType = jObj.getRawType();
+            boolean noEnumName = !jObj.containsKey("name") && !jObj.containsKey("Enum.name") && !jObj.hasValue();
+            if (rawType != null && rawType.isEnum() && noEnumName) {
+                jObj.setFinished();
+                return;
+            }
+        }
+
+        jObj.setType(Object.class);
+        createInstance(jObj);
+        addResolvedObjectToCollection(jObj, col);
     }
 
     protected Object resolveArray(Type suggestedType, List<Object> list) {
@@ -643,39 +676,43 @@ public class MapResolver extends Resolver {
      * Returns null if no fast conversion is available (fall through to Converter).
      */
     private static Object fastPrimitiveCoercion(Object value, Class<?> valueClass, Class<?> targetType) {
-        // Long -> integer types (most common case in JSON)
         if (valueClass == Long.class) {
-            long longVal = (Long) value;
-            if (targetType == int.class || targetType == Integer.class) {
-                return (int) longVal;
-            }
-            if (targetType == short.class || targetType == Short.class) {
-                return (short) longVal;
-            }
-            if (targetType == byte.class || targetType == Byte.class) {
-                return (byte) longVal;
-            }
-            if (targetType == double.class || targetType == Double.class) {
-                return (double) longVal;
-            }
-            if (targetType == float.class || targetType == Float.class) {
-                return (float) longVal;
-            }
+            return coerceLong((Long) value, targetType);
+        } else if (valueClass == Double.class) {
+            return coerceDouble((Double) value, targetType);
         }
-        // Double -> float types
-        else if (valueClass == Double.class) {
-            double doubleVal = (Double) value;
-            if (targetType == float.class || targetType == Float.class) {
-                return (float) doubleVal;
-            }
-            if (targetType == long.class || targetType == Long.class) {
-                return (long) doubleVal;
-            }
-            if (targetType == int.class || targetType == Integer.class) {
-                return (int) doubleVal;
-            }
+        return null;
+    }
+
+    /**
+     * Coerce a Long value to the target numeric type.
+     */
+    private static Object coerceLong(long longVal, Class<?> targetType) {
+        if (targetType == int.class || targetType == Integer.class) {
+            return (int) longVal;
+        } else if (targetType == short.class || targetType == Short.class) {
+            return (short) longVal;
+        } else if (targetType == byte.class || targetType == Byte.class) {
+            return (byte) longVal;
+        } else if (targetType == double.class || targetType == Double.class) {
+            return (double) longVal;
+        } else if (targetType == float.class || targetType == Float.class) {
+            return (float) longVal;
         }
-        // No fast conversion available
+        return null;
+    }
+
+    /**
+     * Coerce a Double value to the target numeric type.
+     */
+    private static Object coerceDouble(double doubleVal, Class<?> targetType) {
+        if (targetType == float.class || targetType == Float.class) {
+            return (float) doubleVal;
+        } else if (targetType == long.class || targetType == Long.class) {
+            return (long) doubleVal;
+        } else if (targetType == int.class || targetType == Integer.class) {
+            return (int) doubleVal;
+        }
         return null;
     }
 }

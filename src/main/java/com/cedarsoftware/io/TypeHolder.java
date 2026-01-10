@@ -10,20 +10,20 @@ import java.lang.reflect.Type;
  * use the static {@code forType()} and {@code forClass()} methods to create a TypeHolder instance.
  *
  * <p>Example usage via anonymous subclassing:</p>
- * <pre>
- *     TypeHolder&lt;List&lt;Point&gt;&gt; holder = new TypeHolder&lt;List&lt;Point&gt;&gt;() {};
+ * <pre>{@code
+ *     TypeHolder<List<Point>> holder = new TypeHolder<List<Point>>() {};
  *     Type captured = holder.getType();
- * </pre>
+ * }</pre>
  *
  * <p>Example usage using the {@code of()} methods:</p>
- * <pre>
+ * <pre>{@code
  *     // With a raw class:
- *     TypeHolder&lt;Point&gt; holder1 = TypeHolder.forClass(Point.class);
+ *     TypeHolder<Point> holder1 = TypeHolder.forClass(Point.class);
  *
  *     // With a parameterized type (if you already have one):
- *     Type type = new TypeReference&lt;List&lt;Point&gt;&gt;() {}.getType();
- *     TypeHolder&lt;List&lt;Point&gt;&gt; holder2 = TypeHolder.forType(type);
- * </pre>
+ *     Type type = new TypeReference<List<Point>>() {}.getType();
+ *     TypeHolder<List<Point>> holder2 = TypeHolder.forType(type);
+ * }</pre>
  *
  * @param <T> the type that is being captured
  *
@@ -92,11 +92,11 @@ public class TypeHolder<T> {
      * without anonymous subclassing.
      *
      * <p>Example usage:</p>
-     * <pre>
+     * <pre>{@code
      *     // For a parameterized type:
-     *     Type type = new TypeReference&lt;List&lt;Point&gt;&gt;() {}.getType();
-     *     TypeHolder&lt;List&lt;Point&gt;&gt; holder = TypeHolder.forType(type);
-     * </pre>
+     *     Type type = new TypeReference<List<Point>>() {}.getType();
+     *     TypeHolder<List<Point>> holder = TypeHolder.forType(type);
+     * }</pre>
      *
      * @param type the Type to wrap in a TypeHolder
      * @param <T> the type parameter
@@ -111,9 +111,9 @@ public class TypeHolder<T> {
      * This overload is provided for convenience when you have a Class instance.
      *
      * <p>Example usage:</p>
-     * <pre>
-     *     TypeHolder&lt;Point&gt; holder = TypeHolder.forClass(Point.class);
-     * </pre>
+     * <pre>{@code
+     *     TypeHolder<Point> holder = TypeHolder.forClass(Point.class);
+     * }</pre>
      *
      * @param clazz the Class to wrap in a TypeHolder
      * @param <T> the type parameter
