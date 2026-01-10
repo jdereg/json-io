@@ -811,11 +811,11 @@ public class ObjectResolver extends Resolver
         Class<?> rawType = TypeUtilities.getRawClass(itemType);
         if (rawType != null && Collection.class.isAssignableFrom(rawType)) {
             // Treat the entire array as a collection
-            stack.add(new AbstractMap.SimpleEntry<>(itemType, items));
+            stack.addFirst(new AbstractMap.SimpleEntry<>(itemType, items));
         } else {
-            // Add each item individually
-            for (Object item : items) {
-                stack.add(new AbstractMap.SimpleEntry<>(itemType, item));
+            // Add each item individually - iterate in reverse to preserve order after addFirst
+            for (int i = items.length - 1; i >= 0; i--) {
+                stack.addFirst(new AbstractMap.SimpleEntry<>(itemType, items[i]));
             }
         }
     }
