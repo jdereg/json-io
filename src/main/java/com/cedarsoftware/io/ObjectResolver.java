@@ -7,9 +7,12 @@ import java.util.AbstractMap;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Deque;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
@@ -562,10 +565,12 @@ public class ObjectResolver extends Resolver
             return;     // Already marked.
         }
 
-        // Use Map.Entry for type-safe pairing of Type and instance (cleaner than Object[])
+        // Use Map.Entry for type-safe pairing of Type and instance
         final Deque<Map.Entry<Type, Object>> stack = new ArrayDeque<>();
-        Class<?> fieldClass = TypeUtilities.getRawClass(type);
-        Map<String, Injector> classFields = readOptions.getDeepInjectorMap(fieldClass);
+        // Track visited JsonObjects within this call to prevent duplicate traversal
+        // when the same object is reachable via multiple paths (e.g., shared references).
+        // Uses IdentityHashMap for O(1) reference equality checks.
+        final Set<JsonObject> visited = Collections.newSetFromMap(new IdentityHashMap<>());
         stack.addFirst(new AbstractMap.SimpleEntry<>(type, rhs));
 
         while (!stack.isEmpty()) {
@@ -577,14 +582,17 @@ public class ObjectResolver extends Resolver
                 continue;
             }
 
-            // OPTIMIZATION: Skip already-processed JsonObjects to avoid redundant work
-            // This is critical for object graphs with shared references
-            if (instance instanceof JsonObject && ((JsonObject) instance).isFinished) {
-                continue;  // Already marked - skip to avoid duplicate traversal
+            // Skip already-processed JsonObjects to avoid redundant work.
+            // Check both: (1) visited in THIS call, (2) finished by main traversal.
+            if (instance instanceof JsonObject) {
+                JsonObject jObj = (JsonObject) instance;
+                if (jObj.isFinished || !visited.add(jObj)) {
+                    continue;  // Already processed - skip to avoid duplicate traversal
+                }
             }
 
             if (t instanceof ParameterizedType) {
-                handleParameterizedTypeMarking((ParameterizedType) t, instance, type, classFields, stack);
+                handleParameterizedTypeMarking((ParameterizedType) t, instance, type, stack);
             } else {
                 stampTypeOnJsonObject(instance, t);
             }
@@ -598,7 +606,6 @@ public class ObjectResolver extends Resolver
             final ParameterizedType pType,
             final Object instance,
             final Type parentType,
-            final Map<String, Injector> classFields,
             final Deque<Map.Entry<Type, Object>> stack) {
 
         Class<?> clazz = TypeUtilities.getRawClass(pType);
@@ -617,7 +624,7 @@ public class ObjectResolver extends Resolver
         } else if (Collection.class.isAssignableFrom(clazz)) {
             handleCollectionTypeMarking(instance, pType, typeArgs, clazz, stack);
         } else {
-            handleObjectFieldsMarking(instance, pType, typeArgs, classFields, stack);
+            handleObjectFieldsMarking(instance, pType, typeArgs, stack);
         }
     }
 
@@ -716,12 +723,19 @@ public class ObjectResolver extends Resolver
             final Object instance,
             final Type containerType,
             final Type[] typeArgs,
-            final Map<String, Injector> classFields,
             final Deque<Map.Entry<Type, Object>> stack) {
 
         if (!(instance instanceof JsonObject)) {
             return;
         }
+
+        // Compute field map for THIS type, not the initial root type.
+        // This is critical for correctness when traversing nested objects of different types.
+        Class<?> rawClass = TypeUtilities.getRawClass(containerType);
+        if (rawClass == null) {
+            return;
+        }
+        Map<String, Injector> classFields = readOptions.getDeepInjectorMap(rawClass);
 
         final JsonObject jObj = (JsonObject) instance;
         for (Map.Entry<Object, Object> entry : jObj.entrySet()) {
