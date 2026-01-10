@@ -435,20 +435,10 @@ public abstract class Resolver {
         // 2. If rootType is specified by user, use that
         // 3. Fall back to Object.class
         if (rootObj.getType() == null) {
-            if (rootType != null) {
-                rootObj.setType(rootType);
-            } else {
-                rootObj.setType(Object.class);
-            }
+            rootObj.setType(rootType != null ? rootType : Object.class);
         }
-        Object instance = (rootObj.getTarget() == null ? createInstance(rootObj) : rootObj.getTarget());
-
-        Object result;
-        if (rootObj.isFinished) {
-            result = instance;
-        } else {
-            result = traverseJsonObject(rootObj);
-        }
+        Object instance = rootObj.getTarget() != null ? rootObj.getTarget() : createInstance(rootObj);
+        Object result = rootObj.isFinished ? instance : traverseJsonObject(rootObj);
 
         // Hook: Allow subclasses to reconcile result type (e.g., type conversion, Maps mode handling)
         return (T) reconcileResult(result, rootObj, rootType);
@@ -505,26 +495,20 @@ public abstract class Resolver {
      * 3. The Sealable collections will be sealed in cleanup() anyway
      */
     private boolean isCompatibleCollectionType(Object graph, Class<?> rawType) {
-        // If both implement List, they're compatible
+        // Check specific collection interfaces first (List, Set, Map)
         if (graph instanceof List && List.class.isAssignableFrom(rawType)) {
             return true;
         }
-        // If both implement Set, they're compatible
         if (graph instanceof Set && Set.class.isAssignableFrom(rawType)) {
             return true;
         }
-        // If both implement Map, they're compatible
         if (graph instanceof Map && Map.class.isAssignableFrom(rawType)) {
             return true;
         }
-        // For other Collection types (Queue, Deque, etc.)
-        if (graph instanceof Collection && Collection.class.isAssignableFrom(rawType)) {
-            // But only if rawType is a Collection interface, not a specific impl
-            if (rawType.isInterface() || Modifier.isAbstract(rawType.getModifiers())) {
-                return true;
-            }
-        }
-        return false;
+        // For other Collection types (Queue, Deque, etc.), only if rawType is abstract/interface
+        return graph instanceof Collection &&
+               Collection.class.isAssignableFrom(rawType) &&
+               (rawType.isInterface() || Modifier.isAbstract(rawType.getModifiers()));
     }
 
     /**
@@ -1007,16 +991,13 @@ public abstract class Resolver {
     }
 
     private Class<?> coerceClassIfNeeded(Class<?> type) {
-        Class clazz = readOptions.getCoercedClass(type);
-        return clazz == null ? type : clazz;
+        Class<?> coerced = readOptions.getCoercedClass(type);
+        return coerced != null ? coerced : type;
     }
 
     private Class<?> getCoercedEnumClass(Class<?> enumClass) {
         Class<?> coercedClass = readOptions.getCoercedClass(enumClass);
-        if (coercedClass != null) {
-            return ClassUtilities.getClassIfEnum(coercedClass);
-        }
-        return null;
+        return coercedClass != null ? ClassUtilities.getClassIfEnum(coercedClass) : null;
     }
 
     /**
@@ -1028,12 +1009,7 @@ public abstract class Resolver {
         if (sourceValue != null && sourceValue != jsonObj) {
             return sourceValue.getClass();
         }
-        
-        if (!jsonObj.isEmpty()) {
-            return Map.class; // Default for non-empty JsonObjects
-        }
-        
-        return null;
+        return !jsonObj.isEmpty() ? Map.class : null;
     }
 
     // Determine the factory type, considering enums and collections
@@ -1057,24 +1033,11 @@ public abstract class Resolver {
      * Currently only includes: Cedar DTO types (Color, Dimension, Point, Rectangle, Insets).
      */
     private boolean isConverterSimpleType(Class<?> clazz) {
-        // Cedar DTO types from java-util
-        if (clazz == com.cedarsoftware.util.geom.Color.class) {
-            return true;
-        }
-        if (clazz == com.cedarsoftware.util.geom.Dimension.class) {
-            return true;
-        }
-        if (clazz == com.cedarsoftware.util.geom.Point.class) {
-            return true;
-        }
-        if (clazz == com.cedarsoftware.util.geom.Rectangle.class) {
-            return true;
-        }
-        if (clazz == com.cedarsoftware.util.geom.Insets.class) {
-            return true;
-        }
-
-        return false;
+        return clazz == com.cedarsoftware.util.geom.Color.class ||
+               clazz == com.cedarsoftware.util.geom.Dimension.class ||
+               clazz == com.cedarsoftware.util.geom.Point.class ||
+               clazz == com.cedarsoftware.util.geom.Rectangle.class ||
+               clazz == com.cedarsoftware.util.geom.Insets.class;
     }
 
     private Object createArrayInstance(JsonObject jsonObj, Class<?> targetType) {
@@ -1215,45 +1178,21 @@ public abstract class Resolver {
             }
             int len = jsonItems.length;
             Object javaArray = Array.newInstance(componentType, len);
+            boolean isPrimitive = componentType.isPrimitive();
+            Object[] typedArray = isPrimitive ? null : (Object[]) javaArray;
 
-            // Fast path for reference type arrays - avoid Array.set() reflection overhead
-            if (!componentType.isPrimitive()) {
-                Object[] typedArray = (Object[]) javaArray;
-                for (int i = 0; i < len; i++) {
-                    try {
-                        Class<?> type = componentType;
-                        Object item = jsonItems[i];
-                        if (item instanceof JsonObject) {
-                            JsonObject jObj = (JsonObject) item;
-                            if (jObj.getType() != null) {
-                                type = jObj.getRawType();
-                            }
-                        }
-                        typedArray[i] = converter.convert(item, type);
-                    } catch (Exception e) {
-                        JsonIoException jioe = new JsonIoException(e.getMessage());
-                        jioe.setStackTrace(e.getStackTrace());
-                        throw jioe;
+            for (int i = 0; i < len; i++) {
+                try {
+                    Object item = jsonItems[i];
+                    Class<?> type = getItemType(item, componentType);
+                    Object converted = converter.convert(item, type);
+                    if (isPrimitive) {
+                        ArrayUtilities.setPrimitiveElement(javaArray, i, converted);
+                    } else {
+                        typedArray[i] = converted;
                     }
-                }
-            } else {
-                // Primitive arrays - use optimized ArrayUtilities.setPrimitiveElement()
-                for (int i = 0; i < len; i++) {
-                    try {
-                        Class<?> type = componentType;
-                        Object item = jsonItems[i];
-                        if (item instanceof JsonObject) {
-                            JsonObject jObj = (JsonObject) item;
-                            if (jObj.getType() != null) {
-                                type = jObj.getRawType();
-                            }
-                        }
-                        ArrayUtilities.setPrimitiveElement(javaArray, i, converter.convert(item, type));
-                    } catch (Exception e) {
-                        JsonIoException jioe = new JsonIoException(e.getMessage());
-                        jioe.setStackTrace(e.getStackTrace());
-                        throw jioe;
-                    }
+                } catch (Exception e) {
+                    throw wrapException(e);
                 }
             }
             jsonObject.setFinishedTarget(javaArray, true);
@@ -1269,10 +1208,30 @@ public abstract class Resolver {
             jsonObject.setFinishedTarget(value, true);
             return true;
         } catch (Exception e) {
-            JsonIoException jioe = new JsonIoException(e.getMessage());
-            jioe.setStackTrace(e.getStackTrace());
-            throw jioe;
+            throw wrapException(e);
         }
+    }
+
+    /**
+     * Determines the effective type for an array item, checking for JsonObject type hints.
+     */
+    private Class<?> getItemType(Object item, Class<?> defaultType) {
+        if (item instanceof JsonObject) {
+            JsonObject jObj = (JsonObject) item;
+            if (jObj.getType() != null) {
+                return jObj.getRawType();
+            }
+        }
+        return defaultType;
+    }
+
+    /**
+     * Wraps an exception in a JsonIoException, preserving the original stack trace.
+     */
+    private JsonIoException wrapException(Exception e) {
+        JsonIoException jioe = new JsonIoException(e.getMessage());
+        jioe.setStackTrace(e.getStackTrace());
+        return jioe;
     }
 
     protected void setArrayElement(Object array, int index, Object element) {
