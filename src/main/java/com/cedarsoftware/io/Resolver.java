@@ -339,6 +339,75 @@ public abstract class Resolver {
             jsonObj = (JsonObject) value;
         }
 
+        // Special case: Map→non-Map conversion BEFORE toJavaObjects modifies structure.
+        // If the JsonObject is Map-like and target type is a non-Map type that the Converter
+        // can handle, convert directly. This is critical because toJavaObjects() replaces
+        // nested JsonObjects in values arrays with their targets (empty HashMaps), losing
+        // the data needed for conversion (like _v keys used by MapConversions).
+        // SKIP this when:
+        // - JsonObject has @type metadata for a non-Map type (json-io should resolve it)
+        // - Target is an Enum (json-io has special factory handling for enums)
+        if (!jsonObj.isArray() && type != null) {
+            Class<?> targetClass = TypeUtilities.getRawClass(type);
+            // Check if @type is a Map type - if so, we may need early conversion
+            Type jsonType = jsonObj.getType();
+            boolean jsonTypeIsMap = jsonType == null ||
+                    Map.class.isAssignableFrom(TypeUtilities.getRawClass(jsonType));
+
+            if (jsonTypeIsMap
+                    && !Map.class.isAssignableFrom(targetClass)
+                    && targetClass != Object.class
+                    && !Enum.class.isAssignableFrom(targetClass)
+                    && converter.isConversionSupportedFor(Map.class, targetClass)) {
+                // Convert directly using the unmodified JsonObject (which has Map data)
+                return convertToType(jsonObj, type);
+            }
+        }
+
+        // Special case: Array→different-Array or Array→Collection conversion.
+        // If the JsonObject has an array @type but target is a different array type or Collection,
+        // first resolve to the @type array, then convert using Converter.
+        // This handles cases like char[] (serialized specially with a single String in @items)
+        // being read as byte[], where the factory system can't handle the format mismatch.
+        if (jsonObj.isArray() && type != null) {
+            Class<?> targetClass = TypeUtilities.getRawClass(type);
+            Type jsonType = jsonObj.getType();
+
+            if (jsonType != null) {
+                Class<?> sourceClass = TypeUtilities.getRawClass(jsonType);
+
+                // Check if we need array/collection cross-conversion
+                boolean needsConversion = false;
+                if (sourceClass.isArray() && targetClass.isArray() && sourceClass != targetClass) {
+                    needsConversion = true;  // Different array types (e.g., char[] → byte[])
+                } else if (sourceClass.isArray() && Collection.class.isAssignableFrom(targetClass)) {
+                    needsConversion = true;  // Array to Collection
+                } else if (Collection.class.isAssignableFrom(sourceClass) && targetClass.isArray()) {
+                    needsConversion = true;  // Collection to Array
+                }
+
+                // Note: We intentionally DON'T call isConversionSupportedFor() here because
+                // java-util's Converter has placeholder entries (VoidConversions::toNull) for
+                // array cross-conversions that get incorrectly cached when isConversionSupportedFor
+                // is called. Instead, we let convert() handle the conversion directly.
+                // The actual conversion happens in ArrayConversions.arrayToArray via attemptContainerConversion.
+                if (needsConversion) {
+                    // Resolve to the source type first (using the @type from JSON)
+                    Object result = toJavaObjects(jsonObj, jsonType);
+                    result = extractTargetIfNeeded(result);
+
+                    // Then convert to target type using Converter
+                    if (result != null) {
+                        try {
+                            return converter.convert(result, targetClass);
+                        } catch (IllegalArgumentException e) {
+                            // Conversion not supported - fall through to normal resolution
+                        }
+                    }
+                }
+            }
+        }
+
         // Resolve the JsonObject (handles both arrays and objects)
         Object result = toJavaObjects(jsonObj, type);
 

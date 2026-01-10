@@ -603,7 +603,7 @@ public class ObjectResolver extends Resolver
     }
 
     /**
-     * Handles {@code Collection<T>} type marking for arrays, Collections, and JsonObjects.
+     * Handles {@code Collection<T>}to type marking for arrays, Collections, and JsonObjects.
      */
     private void handleCollectionTypeMarking(final Object instance,
                                               final Type containerType,

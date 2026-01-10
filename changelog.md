@@ -1,5 +1,11 @@
 ### Revision History
 #### 4.81.0 (unreleased)
+* **BUG FIX**: `Resolver` - Fixed array/collection cross-conversion returning null
+  * When JSON contained `@type=char[]` but caller requested `byte[].class`, json-io returned null instead of converting
+  * Same issue affected other array cross-conversions (e.g., `byte[]` → `char[]`, `int[]` → `long[]`) and array ↔ collection conversions
+  * Added early conversion logic in `toJava()` that detects type mismatches and uses the Converter to transform between array/collection types
+  * Now properly handles: array → different array, array → Collection, Collection → array
+  * Related fix in java-util's Converter (see java-util 4.81.0 changelog)
 * **FEATURE**: Added `omitRootTypeInfo()` and `showRootTypeInfo()` to `WriteOptionsBuilder`
   * Control whether `@type` is written on the root object when using `showTypeInfoMinimal()` (the default)
   * `omitRootTypeInfo()` - Omit the `@type` on the root object, useful when the reader uses `.asClass()` or `.asType()`
