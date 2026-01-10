@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Tests for the showRootTypeInfo() and omitRootTypeInfo() WriteOptions settings.
  * These control whether @type is written on the root object.
- *
+ * <p></p>
  * Note: showRootTypeInfo() and omitRootTypeInfo() are only valid when using
  * showTypeInfoMinimal() (the default). Using them with showTypeInfoAlways()
  * or showTypeInfoNever() throws IllegalStateException.
@@ -207,48 +207,40 @@ class RootTypeInfoTest {
 
     @Test
     void testOmitRootTypeInfoWithAlwaysThrowsException() {
-        IllegalStateException e = assertThrows(IllegalStateException.class, () -> {
-            new WriteOptionsBuilder()
-                    .showTypeInfoAlways()
-                    .omitRootTypeInfo()
-                    .build();
-        });
+        IllegalStateException e = assertThrows(IllegalStateException.class, () -> new WriteOptionsBuilder()
+                .showTypeInfoAlways()
+                .omitRootTypeInfo()
+                .build());
         assertTrue(e.getMessage().contains("showTypeInfoMinimal()"),
                 "Exception message should mention showTypeInfoMinimal()");
     }
 
     @Test
     void testShowRootTypeInfoWithAlwaysThrowsException() {
-        IllegalStateException e = assertThrows(IllegalStateException.class, () -> {
-            new WriteOptionsBuilder()
-                    .showTypeInfoAlways()
-                    .showRootTypeInfo()
-                    .build();
-        });
+        IllegalStateException e = assertThrows(IllegalStateException.class, () -> new WriteOptionsBuilder()
+                .showTypeInfoAlways()
+                .showRootTypeInfo()
+                .build());
         assertTrue(e.getMessage().contains("showTypeInfoMinimal()"),
                 "Exception message should mention showTypeInfoMinimal()");
     }
 
     @Test
     void testShowRootTypeInfoWithNeverThrowsException() {
-        IllegalStateException e = assertThrows(IllegalStateException.class, () -> {
-            new WriteOptionsBuilder()
-                    .showTypeInfoNever()
-                    .showRootTypeInfo()
-                    .build();
-        });
+        IllegalStateException e = assertThrows(IllegalStateException.class, () -> new WriteOptionsBuilder()
+                .showTypeInfoNever()
+                .showRootTypeInfo()
+                .build());
         assertTrue(e.getMessage().contains("showTypeInfoMinimal()"),
                 "Exception message should mention showTypeInfoMinimal()");
     }
 
     @Test
     void testOmitRootTypeInfoWithNeverThrowsException() {
-        IllegalStateException e = assertThrows(IllegalStateException.class, () -> {
-            new WriteOptionsBuilder()
-                    .showTypeInfoNever()
-                    .omitRootTypeInfo()
-                    .build();
-        });
+        IllegalStateException e = assertThrows(IllegalStateException.class, () -> new WriteOptionsBuilder()
+                .showTypeInfoNever()
+                .omitRootTypeInfo()
+                .build());
         assertTrue(e.getMessage().contains("showTypeInfoMinimal()"),
                 "Exception message should mention showTypeInfoMinimal()");
     }
