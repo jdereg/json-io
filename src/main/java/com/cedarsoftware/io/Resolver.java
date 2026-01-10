@@ -1335,6 +1335,25 @@ public abstract class Resolver {
         push(jObj);
     }
 
+    /**
+     * Sets an array element, handling both primitive and reference arrays.
+     * This consolidates the repeated pattern of conditionally using
+     * ArrayUtilities.setPrimitiveElement() vs direct array assignment.
+     *
+     * @param array the primitive array (used when isPrimitive is true)
+     * @param refArray the reference array (used when isPrimitive is false)
+     * @param index the array index to set
+     * @param value the value to assign
+     * @param isPrimitive true if dealing with a primitive array
+     */
+    protected static void setArrayElement(Object array, Object[] refArray, int index, Object value, boolean isPrimitive) {
+        if (isPrimitive) {
+            ArrayUtilities.setPrimitiveElement(array, index, value);
+        } else {
+            refArray[index] = value;
+        }
+    }
+
     protected abstract Object resolveArray(Type suggestedType, List<Object> list);
 
     /**

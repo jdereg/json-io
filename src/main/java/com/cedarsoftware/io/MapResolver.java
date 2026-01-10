@@ -504,11 +504,7 @@ public class MapResolver extends Resolver {
             Object element = items[i];
 
             if (element == null) {
-                if (isPrimitive) {
-                    ArrayUtilities.setPrimitiveElement(target, i, null);
-                } else {
-                    refArray[i] = null;
-                }
+                setArrayElement(target, refArray, i, null, isPrimitive);
                 continue;
             }
 
@@ -521,19 +517,11 @@ public class MapResolver extends Resolver {
                 // Fast path for common JSON primitive coercions (Long->int, Double->float, etc.)
                 Object fastValue = fastPrimitiveCoercion(element, elementClass, componentType);
                 if (fastValue != null) {
-                    if (isPrimitive) {
-                        ArrayUtilities.setPrimitiveElement(target, i, fastValue);
-                    } else {
-                        refArray[i] = fastValue;
-                    }
+                    setArrayElement(target, refArray, i, fastValue, isPrimitive);
                 } else if (converter.isConversionSupportedFor(elementClass, componentType)) {
                     // Convert the element to the base component type
                     Object convertedValue = converter.convert(element, componentType);
-                    if (isPrimitive) {
-                        ArrayUtilities.setPrimitiveElement(target, i, convertedValue);
-                    } else {
-                        refArray[i] = convertedValue;
-                    }
+                    setArrayElement(target, refArray, i, convertedValue, isPrimitive);
                 } else if (element instanceof JsonObject) {
                     JsonObject jsonObject = (JsonObject) element;
 
@@ -545,11 +533,7 @@ public class MapResolver extends Resolver {
                         boolean isNonRef = type != null && readOptions.isNonReferenceableClass(type);
                         if (isNonRef && converter.isConversionSupportedFor(Map.class, type)) {
                             Object converted = converter.convert(jsonObject, type);
-                            if (isPrimitive) {
-                                ArrayUtilities.setPrimitiveElement(target, i, converted);
-                            } else {
-                                refArray[i] = converted;
-                            }
+                            setArrayElement(target, refArray, i, converted, isPrimitive);
                             jsonObject.setFinished();
                         } else {
                             push(jsonObject);
@@ -564,25 +548,13 @@ public class MapResolver extends Resolver {
                         if (isNonRef && converter.isConversionSupportedFor(Map.class, type)) {
                             Object convertedRef = converter.convert(refObject, type);
                             refObject.setFinishedTarget(convertedRef, true);
-                            if (isPrimitive) {
-                                ArrayUtilities.setPrimitiveElement(target, i, refObject.getTarget());
-                            } else {
-                                refArray[i] = refObject.getTarget();
-                            }
+                            setArrayElement(target, refArray, i, refObject.getTarget(), isPrimitive);
                         } else {
-                            if (isPrimitive) {
-                                ArrayUtilities.setPrimitiveElement(target, i, refObject);
-                            } else {
-                                refArray[i] = refObject;
-                            }
+                            setArrayElement(target, refArray, i, refObject, isPrimitive);
                         }
                     }
                 } else {
-                    if (isPrimitive) {
-                        ArrayUtilities.setPrimitiveElement(target, i, element);
-                    } else {
-                        refArray[i] = element;
-                    }
+                    setArrayElement(target, refArray, i, element, isPrimitive);
                 }
             }
         }

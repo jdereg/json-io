@@ -438,37 +438,21 @@ public class ObjectResolver extends Resolver
             Object special;
 
             if (element == null) {
-                if (isPrimitive) {
-                    ArrayUtilities.setPrimitiveElement(array, i, null);
-                } else {
-                    refArray[i] = null;
-                }
+                setArrayElement(array, refArray, i, null, isPrimitive);
             } else if ((special = readWithFactoryIfExists(element, effectiveRawComponentType)) != null) {
                 if (isEnumComponentType && special instanceof String) {
                     special = Enum.valueOf(effectiveRawComponentType, (String) special);
                 }
-                if (isPrimitive) {
-                    ArrayUtilities.setPrimitiveElement(array, i, special);
-                } else {
-                    refArray[i] = special;
-                }
+                setArrayElement(array, refArray, i, special, isPrimitive);
             } else if (element.getClass().isArray()) {   // Array of arrays
                 if (char[].class == effectiveRawComponentType) {
                     // Special handling for char[] arrays.
                     Object[] jsonArray = (Object[]) element;
                     if (jsonArray.length == 0) {
-                        if (isPrimitive) {
-                            ArrayUtilities.setPrimitiveElement(array, i, new char[]{});
-                        } else {
-                            refArray[i] = new char[]{};
-                        }
+                        setArrayElement(array, refArray, i, new char[]{}, isPrimitive);
                     } else {
                         final char[] chars = ((String) jsonArray[0]).toCharArray();
-                        if (isPrimitive) {
-                            ArrayUtilities.setPrimitiveElement(array, i, chars);
-                        } else {
-                            refArray[i] = chars;
-                        }
+                        setArrayElement(array, refArray, i, chars, isPrimitive);
                     }
                 } else {
                     JsonObject jsonArray = new JsonObject();
@@ -476,11 +460,7 @@ public class ObjectResolver extends Resolver
                     // Set the full type using the effective component type.
                     jsonArray.setType(effectiveComponentType);
                     Object instance = createInstance(jsonArray);
-                    if (isPrimitive) {
-                        ArrayUtilities.setPrimitiveElement(array, i, instance);
-                    } else {
-                        refArray[i] = instance;
-                    }
+                    setArrayElement(array, refArray, i, instance, isPrimitive);
                     push(jsonArray);
                 }
             } else if (element instanceof JsonObject) {
@@ -490,11 +470,7 @@ public class ObjectResolver extends Resolver
                     long ref = jsonElement.getReferenceId();
                     JsonObject refObject = refTracker.getOrThrow(ref);
                     if (refObject.getTarget() != null) {
-                        if (isPrimitive) {
-                            ArrayUtilities.setPrimitiveElement(array, i, refObject.getTarget());
-                        } else {
-                            refArray[i] = refObject.getTarget();
-                        }
+                        setArrayElement(array, refArray, i, refObject.getTarget(), isPrimitive);
                     } else {
                         addUnresolvedReference(new UnresolvedReference(jsonObj, i, ref));
                     }
@@ -502,11 +478,7 @@ public class ObjectResolver extends Resolver
                     // Set the full type on the element.
                     jsonElement.setType(effectiveComponentType);
                     Object arrayElement = createInstance(jsonElement);
-                    if (isPrimitive) {
-                        ArrayUtilities.setPrimitiveElement(array, i, arrayElement);
-                    } else {
-                        refArray[i] = arrayElement;
-                    }
+                    setArrayElement(array, refArray, i, arrayElement, isPrimitive);
                     // Check for null before calling getClass() - can happen with arrays containing null values
                     if (arrayElement != null) {
                         boolean isNonRefClass = readOptions.isNonReferenceableClass(arrayElement.getClass());
@@ -519,17 +491,9 @@ public class ObjectResolver extends Resolver
                 if (element instanceof String && ((String) element).trim().isEmpty()
                         && effectiveRawComponentType != String.class
                         && effectiveRawComponentType != Object.class) {
-                    if (isPrimitive) {
-                        ArrayUtilities.setPrimitiveElement(array, i, null);
-                    } else {
-                        refArray[i] = null;
-                    }
+                    setArrayElement(array, refArray, i, null, isPrimitive);
                 } else {
-                    if (isPrimitive) {
-                        ArrayUtilities.setPrimitiveElement(array, i, element);
-                    } else {
-                        refArray[i] = element;
-                    }
+                    setArrayElement(array, refArray, i, element, isPrimitive);
                 }
             }
         }
