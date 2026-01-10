@@ -331,9 +331,9 @@ public class ObjectResolver extends Resolver
                 continue;
             }
 
-            // Performance: Check common primitive/simple types first for fast path
-            if (element instanceof String || element instanceof Boolean ||
-                element instanceof Long || element instanceof Double) {
+            // Performance: Check native JSON types first for fast path (includes BigInteger/BigDecimal
+            // which JsonParser produces for large numbers)
+            if (isDirectlyAddableJsonValue(element)) {
                 col.add(element);
                 idx++;
                 continue;
@@ -372,16 +372,11 @@ public class ObjectResolver extends Resolver
                 }
             } else if (elementClass.isArray()) {
                 // For array elements inside the collection, use the helper to extract the array component type.
-                JsonObject jObj = new JsonObject();
                 Type arrayComponentType = TypeUtilities.extractArrayComponentType(elementType);
                 if (arrayComponentType == null) {
                     arrayComponentType = Object.class;
                 }
-                jObj.setType(arrayComponentType);
-                jObj.setItems((Object[]) element);
-                createInstance(jObj);
-                col.add(jObj.getTarget());
-                push(jObj);
+                wrapArrayAndAddToCollection((Object[]) element, arrayComponentType, col);
             } else {
                 // Check for custom factory or converter support
                 Object special = readWithFactoryIfExists(element, rawElementType);

@@ -4,6 +4,8 @@ import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -1289,6 +1291,48 @@ public abstract class Resolver {
             // Primitive arrays - use optimized setPrimitiveElement()
             ArrayUtilities.setPrimitiveElement(array, index, element);
         }
+    }
+
+    /**
+     * Checks if the given element is a native JSON value that can be added directly to a collection
+     * without further processing. These are the types that JsonParser produces directly from raw JSON:
+     * <ul>
+     *   <li>String - from JSON strings</li>
+     *   <li>Boolean - from JSON true/false</li>
+     *   <li>Long - from JSON integers</li>
+     *   <li>Double - from JSON decimals</li>
+     *   <li>BigInteger - from JSON integers too large for Long</li>
+     *   <li>BigDecimal - from JSON decimals when configured for high precision</li>
+     * </ul>
+     * Note: Arrays are NOT included because they require traversal of their elements.
+     * Note: AtomicLong/AtomicInteger/AtomicBoolean are NOT included because JsonParser
+     * never produces them directly - they require @type information.
+     *
+     * @param element the element to check
+     * @return true if the element can be added directly to a collection without processing
+     */
+    protected static boolean isDirectlyAddableJsonValue(Object element) {
+        return element instanceof String || element instanceof Boolean ||
+               element instanceof Long || element instanceof Double ||
+               element instanceof BigInteger || element instanceof BigDecimal;
+    }
+
+    /**
+     * Wraps a raw Object[] array element in a JsonObject, creates its instance, adds it to the collection,
+     * and pushes it onto the stack for further processing. This pattern is used when encountering
+     * array elements within collections that need to be converted to typed arrays.
+     *
+     * @param arrayElement the raw Object[] to wrap
+     * @param componentType the type for the array elements
+     * @param col the collection to add the created array instance to
+     */
+    protected void wrapArrayAndAddToCollection(Object[] arrayElement, Type componentType, Collection<Object> col) {
+        JsonObject jObj = new JsonObject();
+        jObj.setType(componentType);
+        jObj.setItems(arrayElement);
+        createInstance(jObj);
+        col.add(jObj.getTarget());
+        push(jObj);
     }
 
     protected abstract Object resolveArray(Type suggestedType, List<Object> list);

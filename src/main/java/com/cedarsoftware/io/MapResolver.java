@@ -629,17 +629,12 @@ public class MapResolver extends Resolver {
                     continue;
                 }
 
-                // Each element can be of different type - cannot cache class outside loop
-                if (element instanceof String || element instanceof Boolean || element instanceof Double || element instanceof Long) {
-                    // Allow Strings, Booleans, Longs, and Doubles to be "inline" without Java object decoration (@id, @type, etc.)
+                // Check native JSON types first for fast path (includes BigInteger/BigDecimal
+                // which JsonParser produces for large numbers)
+                if (isDirectlyAddableJsonValue(element)) {
                     col.add(element);
                 } else if (element.getClass().isArray()) {
-                    final JsonObject jObj = new JsonObject();
-                    jObj.setType(Object[].class);
-                    jObj.setItems((Object[]) element);
-                    createInstance(jObj);
-                    col.add(jObj.getTarget());
-                    push(jObj);
+                    wrapArrayAndAddToCollection((Object[]) element, Object[].class, col);
                 } else { // if (element instanceof JsonObject)
                     final JsonObject jObj = (JsonObject) element;
 
