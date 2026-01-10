@@ -3,15 +3,12 @@ package com.cedarsoftware.io;
 import java.lang.reflect.Array;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Type;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -86,7 +83,6 @@ public class MapResolver extends Resolver {
             return;
         }
 
-        Converter converter = getConverter();
         Class<?> rawRootType = TypeUtilities.getRawClass(rootType);
         Type typeToCheck = rootType;
 
@@ -215,7 +211,7 @@ public class MapResolver extends Resolver {
      * Traverse an array looking for @ref JsonObjects to patch.
      */
     private void traverseArrayForRefs(Object[] array) {
-        final ReferenceTracker refTracker = getReferences();
+        final ReferenceTracker refTracker = references;
         for (int i = 0; i < array.length; i++) {
             Object element = array[i];
             if (element instanceof JsonObject) {
@@ -256,7 +252,6 @@ public class MapResolver extends Resolver {
             return result;
         }
 
-        Converter converter = getConverter();
         Type javaType = rootObj.getType();
 
         if (javaType != null) {
@@ -315,16 +310,10 @@ public class MapResolver extends Resolver {
         // In Maps mode, convert JsonObjects with simple types (Byte, Short, etc.) to their Java equivalents
         if (o instanceof JsonObject) {
             JsonObject jsonObj = (JsonObject) o;
-            Class<?> type = jsonObj.getRawType();
-            if (type != null) {
-                ReadOptions readOptions = getReadOptions();
-                Converter converter = getConverter();
-                // Check if it's a non-referenceable simple type that Converter can handle
-                if (readOptions.isNonReferenceableClass(type) && converter.isConversionSupportedFor(Map.class, type)) {
-                    Object converted = converter.convert(jsonObj, type);
-                    jsonObj.setFinishedTarget(converted, true);
-                    return converted;
-                }
+            Object converted = convertIfNonRefType(jsonObj, jsonObj.getRawType());
+            if (converted != null) {
+                jsonObj.setFinishedTarget(converted, true);
+                return converted;
             }
         }
         return null;
@@ -351,8 +340,6 @@ public class MapResolver extends Resolver {
             injectorMap = getReadOptions().getDeepInjectorMap(target.getClass());
         }
 
-        final ReferenceTracker refTracker = getReferences();
-        final Converter converter = getConverter();
         final ReadOptions readOptions = getReadOptions();
 
         for (Map.Entry<Object, Object> e : jsonObj.entrySet()) {
@@ -388,15 +375,13 @@ public class MapResolver extends Resolver {
                 }
                 if (jObj.isReference()) {    // Correct field references
                     long refId = jObj.getReferenceId();
-                    JsonObject refObject = refTracker.getOrThrow(refId);
+                    JsonObject refObject = references.getOrThrow(refId);
                     jsonObj.put(fieldName, refObject);    // Update Map-of-Maps reference
                 } else {
                     // In Maps mode, convert JsonObjects with simple types (Byte, Short, etc.)
                     // to their Java equivalents and update the Map entry
-                    Class<?> type = jObj.getRawType();
-                    if (type != null && readOptions.isNonReferenceableClass(type) &&
-                            converter.isConversionSupportedFor(Map.class, type)) {
-                        Object converted = converter.convert(jObj, type);
+                    Object converted = convertIfNonRefType(jObj, jObj.getRawType());
+                    if (converted != null) {
                         jObj.setFinishedTarget(converted, true);
                         jsonObj.put(fieldName, converted);  // Update Map entry with converted value
                     } else {
@@ -482,9 +467,6 @@ public class MapResolver extends Resolver {
         }
 
         Object target = jsonObj.getTarget() != null ? jsonObj.getTarget() : items;
-        final ReferenceTracker refTracker = getReferences();
-        final Converter converter = getConverter();
-        final ReadOptions readOptions = getReadOptions();
 
         // Determine the immediate component type of the current array level
         Class<?> componentType = Object.class;
@@ -529,10 +511,8 @@ public class MapResolver extends Resolver {
                         // Convert JsonObject to its destination type if possible
                         // Performance: Only check Converter for nonRef types (UUID, ZonedDateTime, etc.)
                         // User types (Dog, Cat, House) are NOT nonRef and Converter can't convert them anyway
-                        Class<?> type = jsonObject.getRawType();
-                        boolean isNonRef = type != null && readOptions.isNonReferenceableClass(type);
-                        if (isNonRef && converter.isConversionSupportedFor(Map.class, type)) {
-                            Object converted = converter.convert(jsonObject, type);
+                        Object converted = convertIfNonRefType(jsonObject, jsonObject.getRawType());
+                        if (converted != null) {
                             setArrayElement(target, refArray, i, converted, isPrimitive);
                             jsonObject.setFinished();
                         } else {
@@ -540,13 +520,11 @@ public class MapResolver extends Resolver {
                         }
                     } else {    // Connect reference
                         long refId = jsonObject.getReferenceId();
-                        JsonObject refObject = refTracker.getOrThrow(refId);
-                        Class<?> type = refObject.getRawType();
+                        JsonObject refObject = references.getOrThrow(refId);
 
                         // Performance: Only check Converter for nonRef types (UUID, ZonedDateTime, etc.)
-                        boolean isNonRef = type != null && readOptions.isNonReferenceableClass(type);
-                        if (isNonRef && converter.isConversionSupportedFor(Map.class, type)) {
-                            Object convertedRef = converter.convert(refObject, type);
+                        Object convertedRef = convertIfNonRefType(refObject, refObject.getRawType());
+                        if (convertedRef != null) {
                             refObject.setFinishedTarget(convertedRef, true);
                             setArrayElement(target, refArray, i, refObject.getTarget(), isPrimitive);
                         } else {
@@ -582,18 +560,14 @@ public class MapResolver extends Resolver {
         }
         
         // Performance: Pre-size ArrayList to avoid repeated resizing
-        if (items != null && col instanceof ArrayList) {
-            ((ArrayList<?>) col).ensureCapacity(items.length);
+        if (items != null) {
+            ensureCollectionCapacity(col, items.length);
         }
-        
+
         final boolean isList = col instanceof List;
         int idx = 0;
 
         if (items != null) {
-            // Cache to avoid repeated getter calls
-            final ReadOptions readOptions = getReadOptions();
-            final ReferenceTracker refTracker = getReferences();
-
             for (Object element : items) {
                 if (element == null) {
                     col.add(null);
@@ -611,18 +585,7 @@ public class MapResolver extends Resolver {
                     final JsonObject jObj = (JsonObject) element;
 
                     if (jObj.isReference()) {
-                        final long ref = jObj.getReferenceId();
-                        JsonObject refObject = refTracker.getOrThrow(ref);
-
-                        if (refObject.getTarget() != null) {
-                            col.add(refObject.getTarget());
-                        } else {
-                            // Security: Use secure method to add unresolved references
-                            addUnresolvedReference(new UnresolvedReference(jsonObj, idx, ref));
-                            if (isList) {   // Index-able collection, so set 'null' as element for now - will be patched in later.
-                                col.add(null);
-                            }
-                        }
+                        resolveReferenceInCollection(jObj, jsonObj, col, idx, isList);
                     } else {
                         if (col instanceof EnumSet) {
                             Class<?> rawType = jObj.getRawType();
@@ -636,14 +599,7 @@ public class MapResolver extends Resolver {
 
                         jObj.setType(Object.class);
                         createInstance(jObj);
-                        boolean isNonRefClass = readOptions.isNonReferenceableClass(jObj.getRawType());
-                        if (!isNonRefClass) {
-                            traverseSpecificType(jObj);
-                        }
-
-                        if (!(col instanceof EnumSet)) {   // EnumSet has already had it's items added to it.
-                            col.add(jObj.getTarget());
-                        }
+                        addResolvedObjectToCollection(jObj, col);
                     }
                 }
                 idx++;

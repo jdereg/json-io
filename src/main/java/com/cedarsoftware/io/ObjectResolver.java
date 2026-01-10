@@ -6,12 +6,8 @@ import java.lang.reflect.Type;
 import java.util.AbstractMap;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Deque;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -81,14 +77,12 @@ public class ObjectResolver extends Resolver
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
      */
     public void traverseFields(final JsonObject jsonObj) {
-        if (jsonObj.isFinished) {
+        if (markFinishedIfNot(jsonObj)) {
             return;
         }
-        jsonObj.setFinished();
 
         final Object javaMate = jsonObj.getTarget();
         final Class<?> cls = javaMate.getClass();
-        final ReadOptions readOptions = getReadOptions();
         final Map<String, Injector> injectorMap = readOptions.getDeepInjectorMap(cls);
         final MissingFieldHandler missingFieldHandler = readOptions.getMissingFieldHandler();
 
@@ -122,7 +116,7 @@ public class ObjectResolver extends Resolver
 
         if (rhs == null) {   // Logically clear field
             if (rawFieldType.isPrimitive()) {
-                injector.inject(target, getConverter().convert(null, rawFieldType));
+                injector.inject(target, converter.convert(null, rawFieldType));
             } else {
                 injector.inject(target, null);
             }
@@ -168,7 +162,7 @@ public class ObjectResolver extends Resolver
 
             if (jsRhs.isReference()) {    // Handle field references.
                 final long ref = jsRhs.getReferenceId();
-                final JsonObject refObject = getReferences().getOrThrow(ref);
+                final JsonObject refObject = references.getOrThrow(ref);
                 if (refObject.getTarget() != null) {
                     injector.inject(target, refObject.getTarget());
                 } else {
@@ -179,7 +173,7 @@ public class ObjectResolver extends Resolver
                 createInstance(jsRhs);
                 Object fieldObject = jsRhs.getTarget();
                 injector.inject(target, fieldObject);
-                boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jsRhs.getRawType());
+                boolean isNonRefClass = readOptions.isNonReferenceableClass(jsRhs.getRawType());
                 if (!isNonRefClass) {
                     // If the object is reference-able, process it further.
                     push(jsRhs);
@@ -227,13 +221,13 @@ public class ObjectResolver extends Resolver
 
                 if (jObj.isReference()) { // Correct field references
                     final long ref = jObj.getReferenceId();
-                    final JsonObject refObject = getReferences().getOrThrow(ref);
+                    final JsonObject refObject = references.getOrThrow(ref);
                     storeMissingField(target, missingField, refObject.getTarget());
                 } else {   // Assign ObjectMap's to Object (or derived) fields
                     // check that jObj as a type
                     if (jObj.getType() != null) {
                         Object javaInstance = createInstance(jObj);
-                        boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getRawType());
+                        boolean isNonRefClass = readOptions.isNonReferenceableClass(jObj.getRawType());
                         if (!isNonRefClass && !jObj.isFinished) {
                             push((JsonObject) rhs);
                         }
@@ -288,24 +282,18 @@ public class ObjectResolver extends Resolver
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      */
     protected void traverseCollection(final JsonObject jsonObj) {
-        if (jsonObj.isFinished) {
+        if (markFinishedIfNot(jsonObj)) {
             return;
         }
-        jsonObj.setFinished();
 
-        final Converter converter = getConverter();
         Object[] items = jsonObj.getItems();
         if (items == null) {
             return;
         }
 
         final Collection col = (Collection) jsonObj.getTarget();
-        
-        // Performance: Pre-size ArrayList to avoid repeated resizing
-        if (col instanceof ArrayList) {
-            ((ArrayList<?>) col).ensureCapacity(items.length);
-        }
-        
+        ensureCollectionCapacity(col, items.length);
+
         final boolean isList = col instanceof List;
         int idx = 0;
 
@@ -322,7 +310,6 @@ public class ObjectResolver extends Resolver
 
         // Pre-compute raw element type to avoid repeated calls in loop
         final Class<?> rawElementType = TypeUtilities.getRawClass(elementType);
-        final ReadOptions readOptions = getReadOptions();
 
         for (Object element : items) {
             if (element == null) {
@@ -338,37 +325,20 @@ public class ObjectResolver extends Resolver
                 idx++;
                 continue;
             }
-            
+
             // Pre-cache element class to avoid repeated getClass() calls
             final Class<?> elementClass = element.getClass();
-            
+
             if (element instanceof JsonObject) {
                 // Most common case after primitives - handle JsonObject
                 JsonObject jObj = (JsonObject) element;
                 if (jObj.isReference()) {
-                    final long ref = jObj.getReferenceId();
-                    JsonObject refObject = getReferences().getOrThrow(ref);
-                    if (refObject.getTarget() != null) {
-                        col.add(refObject.getTarget());
-                    } else {
-                        addUnresolvedReference(new UnresolvedReference(jsonObj, idx, ref));
-                        if (isList) {
-                            col.add(null);
-                        }
-                    }
+                    resolveReferenceInCollection(jObj, jsonObj, col, idx, isList);
                 } else {
                     // Set the element's full type to the extracted element type.
                     jObj.setType(elementType);
                     createInstance(jObj);
-
-                    boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getRawType());
-                    if (!isNonRefClass) {
-                        traverseSpecificType(jObj);
-                    }
-
-                    if (!(col instanceof EnumSet)) {
-                        col.add(jObj.getTarget());
-                    }
+                    addResolvedObjectToCollection(jObj, col);
                 }
             } else if (elementClass.isArray()) {
                 // For array elements inside the collection, use the helper to extract the array component type.
@@ -402,19 +372,16 @@ public class ObjectResolver extends Resolver
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      */
     protected void traverseArray(final JsonObject jsonObj) {
-        if (jsonObj.isFinished) {
+        if (markFinishedIfNot(jsonObj)) {
             return;
         }
-        jsonObj.setFinished();
-        
+
         // Performance: Get items array once and use its length directly
         final Object[] jsonItems = jsonObj.getItems();
         if (ArrayUtilities.isEmpty(jsonItems)) {
             return;
         }
         final int len = jsonItems.length;
-        final ReadOptions readOptions = getReadOptions();
-        final ReferenceTracker refTracker = getReferences();
         final Object array = jsonObj.getTarget();
 
         // Get the raw component type from the array as a fallback.
@@ -468,7 +435,7 @@ public class ObjectResolver extends Resolver
 
                 if (jsonElement.isReference()) {
                     long ref = jsonElement.getReferenceId();
-                    JsonObject refObject = refTracker.getOrThrow(ref);
+                    JsonObject refObject = references.getOrThrow(ref);
                     if (refObject.getTarget() != null) {
                         setArrayElement(array, refArray, i, refObject.getTarget(), isPrimitive);
                     } else {
@@ -511,8 +478,6 @@ public class ObjectResolver extends Resolver
      */
     protected Object readWithFactoryIfExists(final Object o, final Type inferredType) {
         Convention.throwIfNull(o, "Bug in json-io, null must be checked before calling this method.");
-        final ReadOptions readOptions = getReadOptions();
-        final Converter converter = getConverter();
 
         // Extract the raw type from the suggested inferred type.
         Class<?> rawInferred = (inferredType != null) ? TypeUtilities.getRawClass(inferredType) : null;
@@ -600,7 +565,7 @@ public class ObjectResolver extends Resolver
         // Use Map.Entry for type-safe pairing of Type and instance (cleaner than Object[])
         final Deque<Map.Entry<Type, Object>> stack = new ArrayDeque<>();
         Class<?> fieldClass = TypeUtilities.getRawClass(type);
-        Map<String, Injector> classFields = getReadOptions().getDeepInjectorMap(fieldClass);
+        Map<String, Injector> classFields = readOptions.getDeepInjectorMap(fieldClass);
         stack.addFirst(new AbstractMap.SimpleEntry<>(type, rhs));
 
         while (!stack.isEmpty()) {
@@ -807,7 +772,7 @@ public class ObjectResolver extends Resolver
         }
 
         // Skip types with final factories - they're fully created with no field traversal needed
-        ClassFactory factory = getReadOptions().getClassFactory(rawClass);
+        ClassFactory factory = readOptions.getClassFactory(rawClass);
         return factory != null && factory.isObjectFinal();
     }
 

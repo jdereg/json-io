@@ -86,9 +86,9 @@ public abstract class Resolver {
     private final Collection<JsonObject> mapsToRehash = new ArrayList<>();
     // store the missing field found during deserialization to notify any client after the complete resolution is done
     private final Collection<Missingfields> missingFields = new ArrayList<>();
-    private ReadOptions readOptions;
-    private ReferenceTracker references;
-    private final Converter converter;
+    protected ReadOptions readOptions;
+    protected ReferenceTracker references;
+    protected final Converter converter;
     private SealedSupplier sealedSupplier = new SealedSupplier();
     
     // Performance: Hoisted ReadOptions constants to avoid repeated method calls
@@ -416,7 +416,7 @@ public abstract class Resolver {
 
         // If the JsonObject is a reference, resolve it.
         if (rootObj.isReference()) {
-            rootObj = getReferences().get((long) rootObj.refId);
+            rootObj = references.get((long) rootObj.refId);
             if (rootObj != null) {
                 return (T) rootObj;
             }
@@ -1161,7 +1161,7 @@ public abstract class Resolver {
                 }
             } else {    // Fix field forward reference
                 // ReadOptions.getDeepInjectorMap() already caches via ClassValueMap - no local cache needed
-                Map<String, Injector> injectors = getReadOptions().getDeepInjectorMap(objToFix.getClass());
+                Map<String, Injector> injectors = readOptions.getDeepInjectorMap(objToFix.getClass());
 
                 Injector injector = injectors.get(ref.field);
                 if (injector != null) {
@@ -1352,6 +1352,93 @@ public abstract class Resolver {
         } else {
             refArray[index] = value;
         }
+    }
+
+    /**
+     * Checks if the JsonObject is already finished. If not, marks it as finished.
+     * This consolidates the common guard pattern used at the start of traverse methods.
+     *
+     * @param jsonObj the JsonObject to check and mark
+     * @return true if the object was already finished (caller should return early), false otherwise
+     */
+    protected static boolean markFinishedIfNot(JsonObject jsonObj) {
+        if (jsonObj.isFinished) {
+            return true;
+        }
+        jsonObj.setFinished();
+        return false;
+    }
+
+    /**
+     * Ensures the collection has sufficient capacity if it's an ArrayList.
+     * This avoids repeated array resizing during bulk additions.
+     *
+     * @param col the collection to potentially resize
+     * @param size the expected number of elements
+     */
+    protected static void ensureCollectionCapacity(Collection<?> col, int size) {
+        if (col instanceof ArrayList) {
+            ((ArrayList<?>) col).ensureCapacity(size);
+        }
+    }
+
+    /**
+     * Resolves a reference within a collection context. If the referenced object's target
+     * is already available, adds it to the collection. Otherwise, registers an unresolved
+     * reference to be patched later.
+     *
+     * @param refHolder the JsonObject containing the reference
+     * @param parent the parent JsonObject (for unresolved reference tracking)
+     * @param col the collection to add the resolved target to
+     * @param idx the index in the collection (for unresolved reference tracking)
+     * @param isList true if the collection is index-addressable (List)
+     */
+    protected void resolveReferenceInCollection(JsonObject refHolder, JsonObject parent,
+            Collection<Object> col, int idx, boolean isList) {
+        long ref = refHolder.getReferenceId();
+        JsonObject refObject = references.getOrThrow(ref);
+        if (refObject.getTarget() != null) {
+            col.add(refObject.getTarget());
+        } else {
+            addUnresolvedReference(new UnresolvedReference(parent, idx, ref));
+            if (isList) {
+                col.add(null);
+            }
+        }
+    }
+
+    /**
+     * Processes a resolved JsonObject and adds it to a collection. Handles traversal
+     * for referenceable types and special EnumSet handling.
+     *
+     * @param jObj the resolved JsonObject to add
+     * @param col the collection to add to
+     */
+    protected void addResolvedObjectToCollection(JsonObject jObj, Collection<Object> col) {
+        boolean isNonRefClass = readOptions.isNonReferenceableClass(jObj.getRawType());
+        if (!isNonRefClass) {
+            traverseSpecificType(jObj);
+        }
+        if (!(col instanceof EnumSet)) {
+            col.add(jObj.getTarget());
+        }
+    }
+
+    /**
+     * Converts a JsonObject to its target type if the type is a non-referenceable class
+     * and the Converter supports the conversion from Map. This is used in Maps mode to
+     * convert JsonObjects with simple types (UUID, ZonedDateTime, etc.) to their Java equivalents.
+     *
+     * @param jsonObj the JsonObject to potentially convert
+     * @param type the target type (typically from jsonObj.getRawType())
+     * @return the converted object if conversion was performed, null otherwise
+     */
+    protected Object convertIfNonRefType(JsonObject jsonObj, Class<?> type) {
+        if (type != null && readOptions.isNonReferenceableClass(type) &&
+                converter.isConversionSupportedFor(Map.class, type)) {
+            return converter.convert(jsonObj, type);
+        }
+        return null;
     }
 
     protected abstract Object resolveArray(Type suggestedType, List<Object> list);
