@@ -5,15 +5,11 @@ import java.io.Reader;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
@@ -90,7 +86,8 @@ class JsonParser {
     private final ReferenceTracker references;
 
     // Instance-level cache for parser-specific strings
-    private final Map<CharSequence, CharSequence> stringCache;
+    // Reference to static string cache (no instance-level caching)
+    private final Map<String, String> stringCache;
     private final Map<Number, Number> numberCache;
     // Performance: Hoisted ReadOptions constants to avoid repeated method calls
     private final long maxIdValue;
@@ -101,11 +98,9 @@ class JsonParser {
     private final boolean floatingPointBoth;
     private final Map<CharSequence, CharSequence> substitutes;
     
-    // Primary static cache that never changes
-    private static final Map<CharSequence, CharSequence> STATIC_STRING_CACHE = new ConcurrentHashMap<>(64);
-    // Hash index for content-based lookup in static cache (avoids toString on cache hits)
-    private static final Map<Integer, List<String>> STATIC_CACHE_BY_HASH = new HashMap<>(64);
-    private static final Map<Number, Number> STATIC_NUMBER_CACHE = new ConcurrentHashMap<>(16);
+    // LRU cache size limits for string/number deduplication
+    private static final int STRING_CACHE_SIZE = 1024;
+    private static final int NUMBER_CACHE_SIZE = 1024;
     private static final Map<CharSequence, CharSequence> SUBSTITUTES = new HashMap<>(16);
 
     // Static lookup tables for performance
@@ -156,177 +151,26 @@ class JsonParser {
         SUBSTITUTES.put(JSON5_SHORT_ITEMS, ITEMS);
         SUBSTITUTES.put(JSON5_SHORT_TYPE, TYPE);
         SUBSTITUTES.put(JSON5_SHORT_KEYS, KEYS);
-
-        // Common strings
-        CharSequence[] commonStrings = {
-                "", "true", "True", "TRUE", "false", "False", "FALSE",
-                "null", "yes", "Yes", "YES", "no", "No", "NO",
-                "on", "On", "ON", "off", "Off", "OFF",
-                "id", "ID", "type", "value", "name",
-                ID, REF, ITEMS, TYPE, KEYS,
-                "-1", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
-        };
-
-        for (CharSequence s : commonStrings) {
-            STATIC_STRING_CACHE.put(s, s);
-            // Build hash index for content-based lookup
-            String str = (String) s;
-            int hash = str.hashCode();
-            STATIC_CACHE_BY_HASH.computeIfAbsent(hash, k -> new ArrayList<>(2)).add(str);
-        }
-
-        // Common numbers
-        STATIC_NUMBER_CACHE.put(-1L, -1L);
-        STATIC_NUMBER_CACHE.put(0L, 0L);
-        STATIC_NUMBER_CACHE.put(1L, 1L);
-        STATIC_NUMBER_CACHE.put(-1.0d, -1.0d);
-        STATIC_NUMBER_CACHE.put(0.0d, 0.0d);
-        STATIC_NUMBER_CACHE.put(1.0d, 1.0d);
-        STATIC_NUMBER_CACHE.put(Double.MIN_VALUE, Double.MIN_VALUE);
-        STATIC_NUMBER_CACHE.put(Double.MAX_VALUE, Double.MAX_VALUE);
-        STATIC_NUMBER_CACHE.put(Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY);
-        STATIC_NUMBER_CACHE.put(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
-        STATIC_NUMBER_CACHE.put(Double.NaN, Double.NaN);
-    }
-
-    // Wrapper class for efficient two-tier string caching with content-based lookup
-    private static class ParserStringCache extends AbstractMap<CharSequence, CharSequence> {
-        private final Map<CharSequence, CharSequence> staticCache;
-        private final Map<CharSequence, CharSequence> instanceCache;
-        // Secondary index for content-based lookup without toString()
-        private final Map<Integer, List<String>> instanceCacheByHash;
-
-        public ParserStringCache(Map<CharSequence, CharSequence> staticCache) {
-            this.staticCache = staticCache;
-            this.instanceCache = new HashMap<>(64);
-            this.instanceCacheByHash = new HashMap<>(64);
-        }
-
-        @Override
-        public CharSequence get(Object key) {
-            // Fast path for String keys
-            if (key instanceof String) {
-                CharSequence result = staticCache.get(key);
-                if (result != null) {
-                    return result;
-                }
-                return instanceCache.get(key);
-            }
-            // For non-String CharSequence, use content-based lookup
-            return getByContent((CharSequence) key);
-        }
-
-        /**
-         * Content-based lookup that avoids toString() on cache hits.
-         * Computes String-compatible hashCode and compares by content.
-         */
-        CharSequence getByContent(CharSequence cs) {
-            int hash = stringHashCode(cs);
-
-            // Check static cache by hash + content
-            List<String> staticCandidates = STATIC_CACHE_BY_HASH.get(hash);
-            if (staticCandidates != null) {
-                for (String cached : staticCandidates) {
-                    if (StringUtilities.equals(cs, cached)) {
-                        return cached;
-                    }
-                }
-            }
-
-            // Check instance cache by hash + content
-            List<String> candidates = instanceCacheByHash.get(hash);
-            if (candidates != null) {
-                for (String cached : candidates) {
-                    if (StringUtilities.equals(cs, cached)) {
-                        return cached;
-                    }
-                }
-            }
-            return null;
-        }
-
-        @Override
-        public CharSequence put(CharSequence key, CharSequence value) {
-            // Only accept String keys for the instance cache
-            if (key instanceof String) {
-                String strKey = (String) key;
-                // Add to hash index for content-based lookup
-                int hash = strKey.hashCode();
-                instanceCacheByHash.computeIfAbsent(hash, k -> new ArrayList<>(2)).add(strKey);
-            }
-            return instanceCache.put(key, value);
-        }
-
-        @Override
-        public Set<Entry<CharSequence, CharSequence>> entrySet() {
-            Set<Entry<CharSequence, CharSequence>> entries = new HashSet<>();
-            entries.addAll(staticCache.entrySet());
-            entries.addAll(instanceCache.entrySet());
-            return entries;
-        }
-
-        /**
-         * Compute String-compatible hashCode for any CharSequence.
-         * Uses same algorithm as String.hashCode().
-         */
-        private static int stringHashCode(CharSequence cs) {
-            int hash = 0;
-            int len = cs.length();
-            for (int i = 0; i < len; i++) {
-                hash = 31 * hash + cs.charAt(i);
-            }
-            return hash;
-        }
-
-    }
-
-    // Wrapper class for efficient two-tier string caching
-    private static class ParserNumberCache extends AbstractMap<Number, Number> {
-        private final Map<Number, Number> staticCache;
-        private final Map<Number, Number> instanceCache;
-
-        public ParserNumberCache(Map<Number, Number> staticCache) {
-            this.staticCache = staticCache;
-            this.instanceCache = new HashMap<>(64); // Instance-specific cache
-        }
-
-        @Override
-        public Number get(Object key) {
-            // First check static cache (no synchronization needed)
-            Number result = staticCache.get(key);
-            if (result != null) {
-                return result;
-            }
-
-            // Then check instance-specific cache
-            return instanceCache.get(key);
-        }
-
-        @Override
-        public Number put(Number key, Number value) {
-            // Don't modify static cache
-            return instanceCache.put(key, value);
-        }
-
-        // Implementation of other required methods...
-        @Override
-        public Set<Entry<Number, Number>> entrySet() {
-            // Merge both caches for entrySet view
-            Set<Entry<Number, Number>> entries = new HashSet<>();
-            entries.addAll(staticCache.entrySet());
-            entries.addAll(instanceCache.entrySet());
-            return entries;
-        }
     }
 
     JsonParser(FastReader reader, Resolver resolver) {
-        // Reference the static caches
         // For substitutes, use the static map directly (read-only)
         this.substitutes = SUBSTITUTES;
 
-        // For caches that may grow during parsing, create a wrapper
-        this.stringCache = new ParserStringCache(STATIC_STRING_CACHE);
-        this.numberCache = new ParserNumberCache(STATIC_NUMBER_CACHE);
+        // Create instance-level LRU caches for string/number deduplication
+        // LinkedHashMap with accessOrder=true provides LRU eviction
+        this.stringCache = new LinkedHashMap<String, String>(STRING_CACHE_SIZE, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<String, String> eldest) {
+                return size() > STRING_CACHE_SIZE;
+            }
+        };
+        this.numberCache = new LinkedHashMap<Number, Number>(NUMBER_CACHE_SIZE, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<Number, Number> eldest) {
+                return size() > NUMBER_CACHE_SIZE;
+            }
+        };
 
         input = reader;
         this.resolver = resolver;
@@ -1076,33 +920,23 @@ class JsonParser {
     }
 
     /**
-     * Optimized string cache implementation.
-     * Checks cache BEFORE calling toString() to avoid allocation on cache hits.
+     * Convert CharSequence to String, using LRU cache for string deduplication.
+     * Frequently used strings (field names, common values) are deduplicated.
+     * Cache is bounded to STRING_CACHE_SIZE entries with LRU eviction.
      */
     private CharSequence cacheString(CharSequence str) {
-        final int length = str.length();
+        // Convert to String first
+        final String s = str.toString();
 
-        // Fast path for empty strings
-        if (length == 0) {
-            return "";
+        // Check LRU cache - also updates access order for LRU tracking
+        final String cached = stringCache.get(s);
+        if (cached != null) {
+            return cached;  // Cache hit - return deduplicated instance
         }
 
-        // For small to medium strings, check cache FIRST (before toString)
-        if (length < 33) {
-            // Content-based lookup avoids toString() on cache hits
-            final CharSequence cachedInstance = stringCache.get(str);
-            if (cachedInstance != null) {
-                return cachedInstance;  // Cache hit - no allocation!
-            }
-
-            // Cache miss - must create String and cache it
-            final String s = str.toString();
-            stringCache.put(s, s);
-            return s;
-        }
-
-        // Large strings: no caching, just convert
-        return str.toString();
+        // Cache miss - store in LRU cache (may evict oldest entry)
+        stringCache.put(s, s);
+        return s;
     }
 
     /**

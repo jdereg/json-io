@@ -909,7 +909,7 @@ class ArrayTest
         Object[] o = TestUtil.toJava(json, null).asClass(null);
         assertEquals(2, o.length);
         assertEquals("dogs", o[0]);
-        assertSame(o[0], o[1]); // Strings are LRU cached (instance folding).
+        assertEquals(o[0], o[1]); // Strings have equal content (no instance folding for performance)
     }
 
     @Test
@@ -921,7 +921,7 @@ class ArrayTest
         String[] o = TestUtil.toJava(json, null).asClass(null);
         assertEquals(2, o.length);
         assertEquals("dogs", o[0]);
-        assertSame(o[0], o[1]); // Strings are LRU Cached (instance folding).
+        assertEquals(o[0], o[1]); // Strings have equal content (no instance folding for performance)
     }
 
     @Test

@@ -1,5 +1,10 @@
 ### Revision History
 #### 4.81.0 (unreleased)
+* **PERFORMANCE**: `JsonParser` - Simplified string and number caching with bounded LRU caches
+  * Replaced complex two-tier caching (static + instance HashMap) with simple LRU LinkedHashMap
+  * Both caches bounded to 1024 entries with automatic LRU eviction
+  * Removed pre-seeding overhead - caches self-populate with frequently-used values during parsing
+  * Reduces per-parser initialization cost and memory churn
 * **BUG FIX**: `Resolver` - Fixed array/collection cross-conversion returning null
   * When JSON contained `@type=char[]` but caller requested `byte[].class`, json-io returned null instead of converting
   * Same issue affected other array cross-conversions (e.g., `byte[]` → `char[]`, `int[]` → `long[]`) and array ↔ collection conversions
