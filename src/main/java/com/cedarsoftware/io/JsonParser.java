@@ -19,6 +19,7 @@ import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.FastReader;
+import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.TypeUtilities;
 
 import static com.cedarsoftware.io.JsonObject.ENUM;
@@ -36,15 +37,16 @@ import static com.cedarsoftware.io.JsonValue.JSON5_ID;
 import static com.cedarsoftware.io.JsonValue.JSON5_ITEMS;
 import static com.cedarsoftware.io.JsonValue.JSON5_KEYS;
 import static com.cedarsoftware.io.JsonValue.JSON5_REF;
-import static com.cedarsoftware.io.JsonValue.JSON5_TYPE;
 import static com.cedarsoftware.io.JsonValue.JSON5_SHORT_ID;
 import static com.cedarsoftware.io.JsonValue.JSON5_SHORT_ITEMS;
 import static com.cedarsoftware.io.JsonValue.JSON5_SHORT_KEYS;
 import static com.cedarsoftware.io.JsonValue.JSON5_SHORT_REF;
 import static com.cedarsoftware.io.JsonValue.JSON5_SHORT_TYPE;
+import static com.cedarsoftware.io.JsonValue.JSON5_TYPE;
 import static com.cedarsoftware.util.MathUtilities.parseToMinimalNumericType;
 
 /**
+ * Parse the JSON input stream supplied by the FastPushbackReader to the constructor.
  * Parse the JSON input stream supplied by the FastPushbackReader to the constructor.
  * The entire JSON input stream will be read until it is emptied: an EOF (-1) is read.
  * <p>
@@ -88,7 +90,7 @@ class JsonParser {
     private final ReferenceTracker references;
 
     // Instance-level cache for parser-specific strings
-    private final Map<String, String> stringCache;
+    private final Map<CharSequence, CharSequence> stringCache;
     private final Map<Number, Number> numberCache;
     // Performance: Hoisted ReadOptions constants to avoid repeated method calls
     private final long maxIdValue;
@@ -97,12 +99,14 @@ class JsonParser {
     private final boolean integerTypeBoth;
     private final boolean floatingPointBigDecimal;
     private final boolean floatingPointBoth;
-    private final Map<String, String> substitutes;
+    private final Map<CharSequence, CharSequence> substitutes;
     
     // Primary static cache that never changes
-    private static final Map<String, String> STATIC_STRING_CACHE = new ConcurrentHashMap<>(64);
+    private static final Map<CharSequence, CharSequence> STATIC_STRING_CACHE = new ConcurrentHashMap<>(64);
+    // Hash index for content-based lookup in static cache (avoids toString on cache hits)
+    private static final Map<Integer, List<String>> STATIC_CACHE_BY_HASH = new HashMap<>(64);
     private static final Map<Number, Number> STATIC_NUMBER_CACHE = new ConcurrentHashMap<>(16);
-    private static final Map<String, String> SUBSTITUTES = new HashMap<>(16);
+    private static final Map<CharSequence, CharSequence> SUBSTITUTES = new HashMap<>(16);
 
     // Static lookup tables for performance
     private static final char[] ESCAPE_CHAR_MAP = new char[128];
@@ -154,7 +158,7 @@ class JsonParser {
         SUBSTITUTES.put(JSON5_SHORT_KEYS, KEYS);
 
         // Common strings
-        String[] commonStrings = {
+        CharSequence[] commonStrings = {
                 "", "true", "True", "TRUE", "false", "False", "FALSE",
                 "null", "yes", "Yes", "YES", "no", "No", "NO",
                 "on", "On", "ON", "off", "Off", "OFF",
@@ -163,8 +167,12 @@ class JsonParser {
                 "-1", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
         };
 
-        for (String s : commonStrings) {
+        for (CharSequence s : commonStrings) {
             STATIC_STRING_CACHE.put(s, s);
+            // Build hash index for content-based lookup
+            String str = (String) s;
+            int hash = str.hashCode();
+            STATIC_CACHE_BY_HASH.computeIfAbsent(hash, k -> new ArrayList<>(2)).add(str);
         }
 
         // Common numbers
@@ -181,43 +189,95 @@ class JsonParser {
         STATIC_NUMBER_CACHE.put(Double.NaN, Double.NaN);
     }
 
-    // Wrapper class for efficient two-tier string caching
-    private static class ParserStringCache extends AbstractMap<String, String> {
-        private final Map<String, String> staticCache;
-        private final Map<String, String> instanceCache;
+    // Wrapper class for efficient two-tier string caching with content-based lookup
+    private static class ParserStringCache extends AbstractMap<CharSequence, CharSequence> {
+        private final Map<CharSequence, CharSequence> staticCache;
+        private final Map<CharSequence, CharSequence> instanceCache;
+        // Secondary index for content-based lookup without toString()
+        private final Map<Integer, List<String>> instanceCacheByHash;
 
-        public ParserStringCache(Map<String, String> staticCache) {
+        public ParserStringCache(Map<CharSequence, CharSequence> staticCache) {
             this.staticCache = staticCache;
-            this.instanceCache = new HashMap<>(64); // Instance-specific cache
+            this.instanceCache = new HashMap<>(64);
+            this.instanceCacheByHash = new HashMap<>(64);
         }
 
         @Override
-        public String get(Object key) {
-            // First check static cache (no synchronization needed)
-            String result = staticCache.get(key);
-            if (result != null) {
-                return result;
+        public CharSequence get(Object key) {
+            // Fast path for String keys
+            if (key instanceof String) {
+                CharSequence result = staticCache.get(key);
+                if (result != null) {
+                    return result;
+                }
+                return instanceCache.get(key);
+            }
+            // For non-String CharSequence, use content-based lookup
+            return getByContent((CharSequence) key);
+        }
+
+        /**
+         * Content-based lookup that avoids toString() on cache hits.
+         * Computes String-compatible hashCode and compares by content.
+         */
+        CharSequence getByContent(CharSequence cs) {
+            int hash = stringHashCode(cs);
+
+            // Check static cache by hash + content
+            List<String> staticCandidates = STATIC_CACHE_BY_HASH.get(hash);
+            if (staticCandidates != null) {
+                for (String cached : staticCandidates) {
+                    if (StringUtilities.equals(cs, cached)) {
+                        return cached;
+                    }
+                }
             }
 
-            // Then check instance-specific cache
-            return instanceCache.get(key);
+            // Check instance cache by hash + content
+            List<String> candidates = instanceCacheByHash.get(hash);
+            if (candidates != null) {
+                for (String cached : candidates) {
+                    if (StringUtilities.equals(cs, cached)) {
+                        return cached;
+                    }
+                }
+            }
+            return null;
         }
 
         @Override
-        public String put(String key, String value) {
-            // Don't modify static cache
+        public CharSequence put(CharSequence key, CharSequence value) {
+            // Only accept String keys for the instance cache
+            if (key instanceof String) {
+                String strKey = (String) key;
+                // Add to hash index for content-based lookup
+                int hash = strKey.hashCode();
+                instanceCacheByHash.computeIfAbsent(hash, k -> new ArrayList<>(2)).add(strKey);
+            }
             return instanceCache.put(key, value);
         }
 
-        // Implementation of other required methods...
         @Override
-        public Set<Entry<String, String>> entrySet() {
-            // Merge both caches for entrySet view
-            Set<Entry<String, String>> entries = new HashSet<>();
+        public Set<Entry<CharSequence, CharSequence>> entrySet() {
+            Set<Entry<CharSequence, CharSequence>> entries = new HashSet<>();
             entries.addAll(staticCache.entrySet());
             entries.addAll(instanceCache.entrySet());
             return entries;
         }
+
+        /**
+         * Compute String-compatible hashCode for any CharSequence.
+         * Uses same algorithm as String.hashCode().
+         */
+        private static int stringHashCode(CharSequence cs) {
+            int hash = 0;
+            int len = cs.length();
+            for (int i = 0; i < len; i++) {
+                hash = 31 * hash + cs.charAt(i);
+            }
+            return hash;
+        }
+
     }
 
     // Wrapper class for efficient two-tier string caching
@@ -394,7 +454,7 @@ class JsonParser {
         }
 
         while (true) {
-            String field = readFieldName();
+            CharSequence field = readFieldName();
             // Performance: Use getOrDefault to avoid double lookup
             field = substitutes.getOrDefault(field, field);
 
@@ -410,43 +470,32 @@ class JsonParser {
             Object value = readValue(fieldGenericType);
 
             // Fast path for regular fields (95%+ of fields don't start with '@')
+            // Note: length check MUST come first for short-circuit evaluation (empty field names are valid JSON)
             if (field.length() == 0 || field.charAt(0) != '@') {
                 jObj.put(field, value);
             } else {
                 // Process special meta fields (@type, @id, @ref, etc.)
-                switch (field) {
-                    case TYPE:
-                        Class<?> type = loadType(value);
-                        jObj.setTypeString((String) value);
-                        jObj.setType(type);
-                        break;
-
-                    case ENUM:  // Legacy support (@enum was used to indicate EnumSet in prior versions)
-                        loadEnum(value, jObj);
-                        break;
-
-                    case REF:
-                        loadRef(value, jObj);
-                        break;
-
-                    case ID:
-                        loadId(value, jObj);
-                        break;
-
-                    case ITEMS:
-                        if (value != null && !value.getClass().isArray()) {
-                            error("Expected @items to have an array [], but found: " + value.getClass().getName());
-                        }
-                        loadItems((Object[])value, jObj);
-                        break;
-
-                    case KEYS:
-                        loadKeys(value, jObj);
-                        break;
-
-                    default:
-                        jObj.put(field, value); // Store unrecognized @-prefixed fields
-                        break;
+                // Use StringUtilities.equals() for CharSequence comparison with String constants
+                if (StringUtilities.equals(field, TYPE)) {
+                    Class<?> type = loadType(value);
+                    jObj.setTypeString((String) value);
+                    jObj.setType(type);
+                } else if (StringUtilities.equals(field, ENUM)) {
+                    // Legacy support (@enum was used to indicate EnumSet in prior versions)
+                    loadEnum(value, jObj);
+                } else if (StringUtilities.equals(field, REF)) {
+                    loadRef(value, jObj);
+                } else if (StringUtilities.equals(field, ID)) {
+                    loadId(value, jObj);
+                } else if (StringUtilities.equals(field, ITEMS)) {
+                    if (value != null && !value.getClass().isArray()) {
+                        error("Expected @items to have an array [], but found: " + value.getClass().getName());
+                    }
+                    loadItems((Object[])value, jObj);
+                } else if (StringUtilities.equals(field, KEYS)) {
+                    loadKeys(value, jObj);
+                } else {
+                    jObj.put(field, value); // Store unrecognized @-prefixed fields
                 }
             }
 
@@ -515,11 +564,11 @@ class JsonParser {
      * Read the field name of a JSON object.
      * Supports both quoted strings (standard JSON) and unquoted identifiers (JSON5).
      *
-     * @return String field name.
+     * @return CharSequence field name.
      */
-    private String readFieldName() throws IOException {
+    private CharSequence readFieldName() throws IOException {
         int c = skipWhitespaceRead(true);
-        String field;
+        CharSequence field;
 
         if (c == '"') {
             // Standard double-quoted field name
@@ -595,7 +644,7 @@ class JsonParser {
      * (char) c is acceptable because the 'tokens' allowed in a
      * JSON input stream (true, false, null) are all ASCII.
      */
-    private void readToken(String token) {
+    private void readToken(CharSequence token) {
         final int len = token.length();
 
         // Optimized path for common short tokens
@@ -768,13 +817,13 @@ class JsonParser {
      * This optimization comes from the original heap-based parser and avoids
      * creating a String object for most integer values.
      */
-    private Number readInteger(StringBuilder number) {
-        int len = number.length();
-
+    private Number readInteger(CharSequence number) {
         // BigInteger mode - must use String
         if (integerTypeBigInteger) {
             return new BigInteger(number.toString());
         }
+
+        int len = number.length();
 
         // Direct parsing for integers that fit in a long (up to 18 digits, or 19 if positive)
         // Long.MAX_VALUE = 9223372036854775807 (19 digits)
@@ -873,10 +922,10 @@ class JsonParser {
      * Supports both double-quoted (standard JSON) and single-quoted (JSON5) strings.
      *
      * @param quoteChar the quote character that started the string ('"' or '\'')
-     * @return String read from JSON input stream.
+     * @return CharSequence read from JSON input stream.
      * @throws IOException for stream errors or parsing errors.
      */
-    private String readString(char quoteChar) throws IOException {
+    private CharSequence readString(char quoteChar) throws IOException {
         // Reuse StringBuilder for better performance
         final StringBuilder str = strBuf;
         str.setLength(0);
@@ -1026,8 +1075,11 @@ class JsonParser {
         return cacheString(str);
     }
 
-    // Optimized string cache implementation
-    private String cacheString(StringBuilder str) {
+    /**
+     * Optimized string cache implementation.
+     * Checks cache BEFORE calling toString() to avoid allocation on cache hits.
+     */
+    private CharSequence cacheString(CharSequence str) {
         final int length = str.length();
 
         // Fast path for empty strings
@@ -1035,19 +1087,22 @@ class JsonParser {
             return "";
         }
 
-        // Create the string once
-        final String s = str.toString();
-
-        // For small to medium strings, use the cache
+        // For small to medium strings, check cache FIRST (before toString)
         if (length < 33) {
-            final String cachedInstance = stringCache.get(s);
+            // Content-based lookup avoids toString() on cache hits
+            final CharSequence cachedInstance = stringCache.get(str);
             if (cachedInstance != null) {
-                return cachedInstance;
+                return cachedInstance;  // Cache hit - no allocation!
             }
+
+            // Cache miss - must create String and cache it
+            final String s = str.toString();
             stringCache.put(s, s);
+            return s;
         }
 
-        return s;
+        // Large strings: no caching, just convert
+        return str.toString();
     }
 
     /**
