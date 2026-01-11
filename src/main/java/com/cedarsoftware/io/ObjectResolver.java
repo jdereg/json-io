@@ -791,11 +791,10 @@ public class ObjectResolver extends Resolver
 
         if (Collection.class.isAssignableFrom(rawType)) {
             return createAndPopulateCollection(suggestedType, list);
-        } else if (rawType.isArray()) {
-            return createAndPopulateArray(suggestedType, rawType.getComponentType(), list);
         } else {
-            // Not a collection or array type - return Object[]
-            return list.toArray();
+            // suggestedType is the element type (e.g., String for String[])
+            // Create array of that element type and populate directly
+            return createAndPopulateArray(suggestedType, rawType, list);
         }
     }
 
@@ -803,10 +802,14 @@ public class ObjectResolver extends Resolver
      * Create a typed array and populate it with elements from the list.
      * This avoids the double allocation of creating both a target array and items array.
      * Returns the finished array directly, or a JsonObject wrapper if forward references exist.
+     *
+     * @param elementType The Type of each element in the array (e.g., String for String[])
+     * @param componentClass The raw Class of each element (e.g., String.class for String[])
+     * @param list The list of elements to populate the array with
      */
-    private Object createAndPopulateArray(Type arrayType, Class<?> componentType, List<Object> list) {
+    private Object createAndPopulateArray(Type elementType, Class<?> componentClass, List<Object> list) {
         // Special handling for char[] - stored as a single String in JSON
-        if (componentType == char.class) {
+        if (componentClass == char.class) {
             if (list.isEmpty()) {
                 return new char[0];
             }
@@ -817,7 +820,7 @@ public class ObjectResolver extends Resolver
         }
 
         int size = list.size();
-        Object array = Array.newInstance(componentType, size);
+        Object array = Array.newInstance(componentClass, size);
         boolean hasUnresolvedRefs = false;
         List<UnresolvedArrayElement> unresolvedElements = null;
 
@@ -830,16 +833,16 @@ public class ObjectResolver extends Resolver
             }
 
             // Handle nested arrays: Object[] -> String[][] etc.
-            if (element instanceof Object[] && componentType.isArray()) {
-                Type nestedComponentType = TypeUtilities.extractArrayComponentType(arrayType);
-                element = createAndPopulateArray(nestedComponentType, componentType.getComponentType(),
+            if (element instanceof Object[] && componentClass.isArray()) {
+                Type nestedComponentType = TypeUtilities.extractArrayComponentType(elementType);
+                element = createAndPopulateArray(nestedComponentType, componentClass.getComponentType(),
                         java.util.Arrays.asList((Object[]) element));
                 Array.set(array, i, element);
                 continue;
             }
 
             // Try to extract value from JsonObject
-            Object resolved = extractArrayElementValue(element, componentType);
+            Object resolved = extractArrayElementValue(element, componentClass);
 
             if (resolved == UNRESOLVED_REFERENCE) {
                 // Forward reference - need to defer resolution (element must be JsonObject per extractArrayElementValue logic)
@@ -856,8 +859,8 @@ public class ObjectResolver extends Resolver
 
             if (resolved instanceof JsonObject) {
                 JsonObject jObj = (JsonObject) resolved;
-                // Complex object that needs further resolution
-                jObj.setType(TypeUtilities.extractArrayComponentType(arrayType));
+                // Complex object that needs further resolution - elementType is already the element type
+                jObj.setType(elementType);
                 createInstance(jObj);
                 Object target = jObj.getTarget();
                 Array.set(array, i, target);
@@ -868,11 +871,11 @@ public class ObjectResolver extends Resolver
             }
 
             // Convert if needed
-            if (resolved != null && !componentType.isAssignableFrom(resolved.getClass())) {
-                if (componentType.isEnum() && resolved instanceof String) {
-                    resolved = Enum.valueOf((Class<Enum>) componentType, (String) resolved);
-                } else if (converter.isConversionSupportedFor(resolved.getClass(), componentType)) {
-                    resolved = converter.convert(resolved, componentType);
+            if (resolved != null && !componentClass.isAssignableFrom(resolved.getClass())) {
+                if (componentClass.isEnum() && resolved instanceof String) {
+                    resolved = Enum.valueOf((Class<Enum>) componentClass, (String) resolved);
+                } else if (converter.isConversionSupportedFor(resolved.getClass(), componentClass)) {
+                    resolved = converter.convert(resolved, componentClass);
                 }
             }
 
@@ -883,7 +886,7 @@ public class ObjectResolver extends Resolver
         if (hasUnresolvedRefs && unresolvedElements != null) {
             // Create a JsonObject wrapper just to track the array for reference patching
             JsonObject jsonArray = new JsonObject();
-            jsonArray.setType(arrayType);
+            jsonArray.setType(elementType);
             jsonArray.setTarget(array);
             jsonArray.isFinished = true;  // Mark as finished since array is populated
 
@@ -921,7 +924,7 @@ public class ObjectResolver extends Resolver
      * Returns the JsonObject unchanged if it needs further processing.
      * Otherwise returns the resolved value.
      */
-    private Object extractArrayElementValue(Object element, Class<?> componentType) {
+    private Object extractArrayElementValue(Object element, Class<?> componentClass) {
         if (!(element instanceof JsonObject)) {
             return element;
         }
@@ -950,11 +953,11 @@ public class ObjectResolver extends Resolver
         // Check if this is a simple value that can be extracted directly
         if (jObj.hasValue()) {
             Object value = jObj.getValue();
-            if (componentType.isAssignableFrom(value.getClass())) {
+            if (componentClass.isAssignableFrom(value.getClass())) {
                 return value;
             }
-            if (converter.isConversionSupportedFor(value.getClass(), componentType)) {
-                return converter.convert(value, componentType);
+            if (converter.isConversionSupportedFor(value.getClass(), componentClass)) {
+                return converter.convert(value, componentClass);
             }
         }
 

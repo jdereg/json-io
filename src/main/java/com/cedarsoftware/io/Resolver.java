@@ -331,6 +331,19 @@ public abstract class Resolver {
         // Wrap raw Java arrays in a JsonObject for uniform processing
         JsonObject jsonObj;
         if (value.getClass().isArray()) {
+            Class<?> valueClass = value.getClass();
+            // Primitive arrays (int[], char[], etc.) that are already fully resolved - return directly
+            // They cannot be cast to Object[] and need no further processing
+            if (valueClass.getComponentType().isPrimitive()) {
+                // Check if conversion is needed to a different type
+                if (type != null) {
+                    Class<?> targetClass = TypeUtilities.getRawClass(type);
+                    if (targetClass != valueClass && converter.isConversionSupportedFor(valueClass, targetClass)) {
+                        return converter.convert(value, targetClass);
+                    }
+                }
+                return value;
+            }
             jsonObj = new JsonObject();
             jsonObj.setType(type);
             jsonObj.setTarget(value);
