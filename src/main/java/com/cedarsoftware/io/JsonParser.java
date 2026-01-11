@@ -1038,9 +1038,6 @@ class JsonParser {
         if (value == null) {
             error("Null value provided for " + ID + " field - expected a number");
         }
-        if (jObj == null) {
-            error("Null JsonObject provided to loadId method");
-        }
         if (!(value instanceof Number)) {
             error("Expected a number for " + ID + ", instead got: " + value.getClass().getSimpleName());
         }
@@ -1066,9 +1063,6 @@ class JsonParser {
         // Fix null validation - add comprehensive null and type checks
         if (value == null) {
             error("Null value provided for " + REF + " field - expected a number");
-        }
-        if (jObj == null) {
-            error("Null JsonValue provided to loadRef method");
         }
         if (!(value instanceof Number)) {
             error("Expected a number for " + REF + ", instead got: " + value.getClass().getSimpleName());
