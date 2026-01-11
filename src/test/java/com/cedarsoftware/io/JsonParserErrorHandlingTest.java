@@ -524,6 +524,22 @@ public class JsonParserErrorHandlingTest {
     }
 
     /**
+     * Test that EOF immediately after backslash throws JsonIoException.
+     * This tests line 799 of JsonParser.readString().
+     */
+    @Test
+    public void testEofAfterBackslash_ShouldThrowJsonIoException() {
+        // String with backslash followed by EOF (no escape character)
+        String json = "\"hello\\";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("EOF reached while reading escape sequence"));
+    }
+
+    /**
      * Test that EOF during Unicode escape sequence throws JsonIoException.
      * This tests line 818 of JsonParser.readString().
      */
