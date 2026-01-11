@@ -2156,4 +2156,36 @@ class ArrayTest
         // The result should be the target of the referenced object
         assertEquals(targetObject, result);
     }
+
+    /**
+     * Test coverage for ObjectResolver.extractArrayElementValue() lines 959-964.
+     * When a JsonObject element has a target set (but is not a reference),
+     * push it if not finished and return the target.
+     */
+    @Test
+    void testExtractArrayElementValue_jsonObjectWithTarget_returnsTarget() throws Exception {
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        ReferenceTracker references = new Resolver.DefaultReferenceTracker(readOptions);
+        com.cedarsoftware.util.convert.Converter converter =
+                new com.cedarsoftware.util.convert.Converter(readOptions.getConverterOptions());
+        ObjectResolver resolver = new ObjectResolver(readOptions, references, converter);
+
+        // Create a JsonObject element that has a target but is NOT a reference
+        JsonObject jObj = new JsonObject();
+        String targetObject = "TargetString";
+        jObj.setTarget(targetObject);  // Set target but don't make it a reference
+        // Note: isFinished defaults to false, so it will be pushed
+
+        // Get the extractArrayElementValue method via reflection
+        java.lang.reflect.Method method = ObjectResolver.class.getDeclaredMethod(
+                "extractArrayElementValue", Object.class, Class.class);
+        method.setAccessible(true);
+
+        // Call extractArrayElementValue with the JsonObject that has a target
+        // This should hit lines 959-964: return jObj.getTarget()
+        Object result = method.invoke(resolver, jObj, String.class);
+
+        // The result should be the target
+        assertEquals(targetObject, result);
+    }
 }
