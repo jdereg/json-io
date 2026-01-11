@@ -795,6 +795,39 @@ public class JsonParserErrorHandlingTest {
         assertTrue(exception.getMessage().contains("Unexpected end of input after '+'"));
     }
 
+    // ========== Tests for loadKeys() error handling ==========
+
+    /**
+     * Test that @keys with a non-array value throws JsonIoException.
+     * This tests loadKeys() validation in JsonParser.
+     */
+    @Test
+    public void testKeysWithNonArrayValue_ShouldThrowJsonIoException() {
+        // @keys should be an array, but we provide a string
+        String json = "{\"@type\":\"java.util.LinkedHashMap\",\"@keys\":\"notanarray\",\"@items\":[1,2,3]}";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Expected @keys to have an array []"));
+    }
+
+    /**
+     * Test that @keys with a number value throws JsonIoException.
+     */
+    @Test
+    public void testKeysWithNumberValue_ShouldThrowJsonIoException() {
+        // @keys should be an array, but we provide a number
+        String json = "{\"@type\":\"java.util.HashMap\",\"@keys\":12345,\"@items\":[1,2,3]}";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Expected @keys to have an array []"));
+    }
+
     // ========== Tests for loadType() error handling ==========
 
     /**
