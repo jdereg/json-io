@@ -2072,4 +2072,47 @@ class ArrayTest
         assertArrayEquals(new String[]{"d", "e"}, resultArray[1]);
         assertArrayEquals(new String[]{"f"}, resultArray[2]);
     }
+
+    /**
+     * Test coverage for ObjectResolver.createAndPopulateArray() line 884.
+     * When componentClass is an enum and element is a String, the code converts
+     * the String to the enum value using Enum.valueOf().
+     */
+    @Test
+    void testEnumArrayWithStringElements_convertsToEnum() throws Exception {
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        ReferenceTracker references = new Resolver.DefaultReferenceTracker(readOptions);
+        com.cedarsoftware.util.convert.Converter converter =
+                new com.cedarsoftware.util.convert.Converter(readOptions.getConverterOptions());
+        ObjectResolver resolver = new ObjectResolver(readOptions, references, converter);
+
+        // Get the createAndPopulateArray method via reflection
+        java.lang.reflect.Method method = ObjectResolver.class.getDeclaredMethod(
+                "createAndPopulateArray", java.lang.reflect.Type.class, Class.class, List.class);
+        method.setAccessible(true);
+
+        // Create a list containing String elements (enum names)
+        // These should be converted to Thread.State enum values
+        List<Object> list = new ArrayList<>();
+        list.add("NEW");
+        list.add("RUNNABLE");
+        list.add("BLOCKED");
+
+        // Call createAndPopulateArray with:
+        // - elementType = Thread.State.class (an enum type)
+        // - componentClass = Thread.State.class (an enum, triggers line 884)
+        // - list = Strings that are enum names
+        // This should hit line 884: resolved = Enum.valueOf(...)
+        Object result = method.invoke(resolver, Thread.State.class, Thread.State.class, list);
+
+        assertNotNull(result);
+        assertTrue(result instanceof Thread.State[]);
+        Thread.State[] resultArray = (Thread.State[]) result;
+        assertEquals(3, resultArray.length);
+
+        // Verify String-to-Enum conversion worked
+        assertEquals(Thread.State.NEW, resultArray[0]);
+        assertEquals(Thread.State.RUNNABLE, resultArray[1]);
+        assertEquals(Thread.State.BLOCKED, resultArray[2]);
+    }
 }
