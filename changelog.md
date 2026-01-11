@@ -5,6 +5,11 @@
   * Number cache: Removed entirely - was boxing primitives before cache lookup, negating any benefit
   * Small integers (-128 to 127) use JVM's built-in `Long.valueOf()` cache
   * Eliminates autoboxing overhead from cache lookups on every number parsed
+* **PERFORMANCE**: `ObjectResolver` - Direct array resolution to avoid double allocation
+  * Previously `resolveArray()` created both a temporary items array and the target array
+  * New `createAndPopulateArray()` method creates and populates the typed array directly
+  * Handles primitive arrays, Object arrays, nested arrays, and forward references
+  * Collection resolution also optimized with direct population
 
 #### 4.81.0 - 2025-01-10 
 **BUG FIX**: `Resolver` - Fixed array/collection cross-conversion returning null

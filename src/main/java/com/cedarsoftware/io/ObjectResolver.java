@@ -782,25 +782,256 @@ public class ObjectResolver extends Resolver
     }
 
     protected Object resolveArray(Type suggestedType, List<Object> list) {
+        // No type info - return Object[]
         if (suggestedType == null || TypeUtilities.getRawClass(suggestedType) == Object.class) {
             return list.toArray();
         }
 
-        JsonObject jsonArray = new JsonObject();
-        // Store the full refined type in the JsonObject.
-        jsonArray.setType(suggestedType);
-
-        // Extract the underlying raw class to use for reflection operations.
         Class<?> rawType = TypeUtilities.getRawClass(suggestedType);
 
-        // If the raw type is a Collection, create an instance accordingly.
         if (Collection.class.isAssignableFrom(rawType)) {
-            jsonArray.setTarget(createInstance(jsonArray));
+            return createAndPopulateCollection(suggestedType, list);
+        } else if (rawType.isArray()) {
+            return createAndPopulateArray(suggestedType, rawType.getComponentType(), list);
         } else {
-            // Otherwise assume an array type and create a new array with the appropriate length.
-            jsonArray.setTarget(Array.newInstance(rawType, list.size()));
+            // Not a collection or array type - return Object[]
+            return list.toArray();
         }
-        jsonArray.setItems(list.toArray());
-        return jsonArray;
+    }
+
+    /**
+     * Create a typed array and populate it with elements from the list.
+     * This avoids the double allocation of creating both a target array and items array.
+     * Returns the finished array directly, or a JsonObject wrapper if forward references exist.
+     */
+    private Object createAndPopulateArray(Type arrayType, Class<?> componentType, List<Object> list) {
+        // Special handling for char[] - stored as a single String in JSON
+        if (componentType == char.class) {
+            if (list.isEmpty()) {
+                return new char[0];
+            }
+            Object first = list.get(0);
+            if (first instanceof String) {
+                return ((String) first).toCharArray();
+            }
+        }
+
+        int size = list.size();
+        Object array = Array.newInstance(componentType, size);
+        boolean hasUnresolvedRefs = false;
+        List<UnresolvedArrayElement> unresolvedElements = null;
+
+        for (int i = 0; i < size; i++) {
+            Object element = list.get(i);
+
+            if (element == null) {
+                Array.set(array, i, null);
+                continue;
+            }
+
+            // Handle nested arrays: Object[] -> String[][] etc.
+            if (element instanceof Object[] && componentType.isArray()) {
+                Type nestedComponentType = TypeUtilities.extractArrayComponentType(arrayType);
+                element = createAndPopulateArray(nestedComponentType, componentType.getComponentType(),
+                        java.util.Arrays.asList((Object[]) element));
+                Array.set(array, i, element);
+                continue;
+            }
+
+            // Try to extract value from JsonObject
+            Object resolved = extractArrayElementValue(element, componentType);
+
+            if (resolved == UNRESOLVED_REFERENCE) {
+                // Forward reference - need to defer resolution (element must be JsonObject per extractArrayElementValue logic)
+                hasUnresolvedRefs = true;
+                if (unresolvedElements == null) {
+                    unresolvedElements = new ArrayList<>();
+                }
+                JsonObject refHolder = (element instanceof JsonObject) ? (JsonObject) element : null;
+                if (refHolder != null) {
+                    unresolvedElements.add(new UnresolvedArrayElement(i, refHolder));
+                }
+                continue;
+            }
+
+            if (resolved instanceof JsonObject) {
+                JsonObject jObj = (JsonObject) resolved;
+                // Complex object that needs further resolution
+                jObj.setType(TypeUtilities.extractArrayComponentType(arrayType));
+                createInstance(jObj);
+                Object target = jObj.getTarget();
+                Array.set(array, i, target);
+                if (!jObj.isFinished) {
+                    push(jObj);
+                }
+                continue;
+            }
+
+            // Convert if needed
+            if (resolved != null && !componentType.isAssignableFrom(resolved.getClass())) {
+                if (componentType.isEnum() && resolved instanceof String) {
+                    resolved = Enum.valueOf((Class<Enum>) componentType, (String) resolved);
+                } else if (converter.isConversionSupportedFor(resolved.getClass(), componentType)) {
+                    resolved = converter.convert(resolved, componentType);
+                }
+            }
+
+            Array.set(array, i, resolved);
+        }
+
+        // If we have forward references, add unresolved references to be patched later
+        if (hasUnresolvedRefs && unresolvedElements != null) {
+            // Create a JsonObject wrapper just to track the array for reference patching
+            JsonObject jsonArray = new JsonObject();
+            jsonArray.setType(arrayType);
+            jsonArray.setTarget(array);
+            jsonArray.isFinished = true;  // Mark as finished since array is populated
+
+            for (UnresolvedArrayElement unresolved : unresolvedElements) {
+                addUnresolvedReference(new UnresolvedReference(jsonArray, unresolved.index,
+                        unresolved.refHolder.getReferenceId()));
+            }
+            return jsonArray;
+        }
+
+        return array;
+    }
+
+    /**
+     * Sentinel value indicating an unresolved forward reference.
+     */
+    private static final Object UNRESOLVED_REFERENCE = new Object();
+
+    /**
+     * Helper class to track unresolved array elements.
+     */
+    private static class UnresolvedArrayElement {
+        final int index;
+        final JsonObject refHolder;
+
+        UnresolvedArrayElement(int index, JsonObject refHolder) {
+            this.index = index;
+            this.refHolder = refHolder;
+        }
+    }
+
+    /**
+     * Extract the actual value from an array element.
+     * Returns UNRESOLVED_REFERENCE if this is a forward reference that can't be resolved yet.
+     * Returns the JsonObject unchanged if it needs further processing.
+     * Otherwise returns the resolved value.
+     */
+    private Object extractArrayElementValue(Object element, Class<?> componentType) {
+        if (!(element instanceof JsonObject)) {
+            return element;
+        }
+
+        JsonObject jObj = (JsonObject) element;
+
+        // Handle references
+        if (jObj.isReference()) {
+            long refId = jObj.getReferenceId();
+            JsonObject refObj = references.get(refId);
+            if (refObj != null && refObj.getTarget() != null) {
+                return refObj.getTarget();
+            }
+            // Forward reference - can't resolve yet
+            return UNRESOLVED_REFERENCE;
+        }
+
+        // If we have a resolved target, use it
+        if (jObj.getTarget() != null) {
+            if (!jObj.isFinished) {
+                push(jObj);
+            }
+            return jObj.getTarget();
+        }
+
+        // Check if this is a simple value that can be extracted directly
+        if (jObj.hasValue()) {
+            Object value = jObj.getValue();
+            if (componentType.isAssignableFrom(value.getClass())) {
+                return value;
+            }
+            if (converter.isConversionSupportedFor(value.getClass(), componentType)) {
+                return converter.convert(value, componentType);
+            }
+        }
+
+        // Return the JsonObject for further processing
+        return jObj;
+    }
+
+    /**
+     * Create a collection and populate it with elements from the list.
+     */
+    @SuppressWarnings("unchecked")
+    private Object createAndPopulateCollection(Type suggestedType, List<Object> list) {
+        // Create the collection instance
+        JsonObject jsonArray = new JsonObject();
+        jsonArray.setType(suggestedType);
+        Collection<Object> collection = (Collection<Object>) createInstance(jsonArray);
+
+        // Get the element type for conversion
+        Type elementType = Object.class;
+        if (suggestedType instanceof java.lang.reflect.ParameterizedType) {
+            java.lang.reflect.ParameterizedType pt = (java.lang.reflect.ParameterizedType) suggestedType;
+            Type[] typeArgs = pt.getActualTypeArguments();
+            if (typeArgs.length > 0) {
+                elementType = typeArgs[0];
+            }
+        }
+        Class<?> rawElementType = TypeUtilities.getRawClass(elementType);
+
+        // Track if we need to defer to traverseCollection
+        boolean needsTraversal = false;
+
+        for (Object item : list) {
+            if (item == null) {
+                collection.add(null);
+                continue;
+            }
+
+            if (item instanceof JsonObject) {
+                JsonObject jObj = (JsonObject) item;
+                if (jObj.isReference()) {
+                    // Has references - needs traversal
+                    needsTraversal = true;
+                    break;
+                }
+                if (jObj.getTarget() == null && jObj.getType() == null) {
+                    jObj.setType(elementType);
+                }
+                if (jObj.getTarget() == null) {
+                    createInstance(jObj);
+                }
+                if (!jObj.isFinished) {
+                    needsTraversal = true;
+                    break;
+                }
+                collection.add(jObj.getTarget());
+            } else if (item.getClass().isArray()) {
+                needsTraversal = true;
+                break;
+            } else {
+                // Direct value
+                if (rawElementType != Object.class && !rawElementType.isAssignableFrom(item.getClass())) {
+                    if (converter.isConversionSupportedFor(item.getClass(), rawElementType)) {
+                        item = converter.convert(item, rawElementType);
+                    }
+                }
+                collection.add(item);
+            }
+        }
+
+        if (needsTraversal) {
+            // Fall back to JsonObject wrapper for complex cases
+            collection.clear();
+            jsonArray.setTarget(collection);
+            jsonArray.setItems(list.toArray());
+            return jsonArray;
+        }
+
+        return collection;
     }
 }
