@@ -5,6 +5,8 @@ import com.cedarsoftware.util.convert.Converter;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -127,5 +129,38 @@ class ResolverValueToTargetTest {
 
         assertThat(result).isSameAs(intArray);
         assertThat((int[]) result).containsExactly(7, 8, 9);
+    }
+
+    /**
+     * Tests that Resolver.toJava() converts a Collection (List) to an array type.
+     * This conversion is handled by convertToType() via Converter.
+     */
+    @Test
+    void toJava_convertsCollectionToArray() {
+        List<Integer> list = new ArrayList<>(Arrays.asList(10, 20, 30));
+
+        // Request conversion to int[] - should use Converter
+        Object result = resolver.callToJava(int[].class, list);
+
+        assertThat(result).isInstanceOf(int[].class);
+        assertThat((int[]) result).containsExactly(10, 20, 30);
+    }
+
+    /**
+     * Tests that Resolver.toJava() converts an array to a Collection type.
+     */
+    @Test
+    void toJava_convertsArrayToCollection() {
+        int[] intArray = new int[]{100, 200, 300};
+
+        // Request conversion to List - should use Converter
+        Object result = resolver.callToJava(List.class, intArray);
+
+        assertThat(result).isInstanceOf(List.class);
+        List<?> resultList = (List<?>) result;
+        assertThat(resultList).hasSize(3);
+        assertThat(resultList.get(0)).isEqualTo(100);
+        assertThat(resultList.get(1)).isEqualTo(200);
+        assertThat(resultList.get(2)).isEqualTo(300);
     }
 }

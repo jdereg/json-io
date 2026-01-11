@@ -712,7 +712,7 @@ public class ObjectResolver extends Resolver
     private boolean shouldSkipTraversal(final Type type) {
         Class<?> rawClass = TypeUtilities.getRawClass(type);
         if (rawClass == null) {
-            return false;
+            return false;        // defensive code, can't execute until behavior of getRawClass() changes
         }
 
         // Skip primitives and their wrappers - they have no fields

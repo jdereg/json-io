@@ -2000,4 +2000,63 @@ class ArrayTest
     public enum TestEnum {
         VALUE_A, VALUE_B, VALUE_C
     }
+
+    /**
+     * Test coverage for ObjectResolver.createAndPopulateArray() line 802.
+     * When componentClass is char.class and list is empty, should return new char[0].
+     * Uses reflection to call the private method directly with an empty list.
+     */
+    @Test
+    void testEmptyCharArray_returnsEmptyCharArray() throws Exception {
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        ReferenceTracker references = new Resolver.DefaultReferenceTracker(readOptions);
+        com.cedarsoftware.util.convert.Converter converter =
+                new com.cedarsoftware.util.convert.Converter(readOptions.getConverterOptions());
+        ObjectResolver resolver = new ObjectResolver(readOptions, references, converter);
+
+        // Get the createAndPopulateArray method via reflection
+        java.lang.reflect.Method method = ObjectResolver.class.getDeclaredMethod(
+                "createAndPopulateArray", java.lang.reflect.Type.class, Class.class, List.class);
+        method.setAccessible(true);
+
+        // Call with char.class as componentClass and an empty list
+        // This should hit line 802: return new char[0]
+        Object result = method.invoke(resolver, char.class, char.class, new ArrayList<>());
+
+        assertNotNull(result);
+        assertTrue(result instanceof char[]);
+        assertEquals(0, ((char[]) result).length);
+    }
+
+    /**
+     * Test coverage for ObjectResolver.createAndPopulateArray() lines 828-832.
+     * When element is Object[] and componentClass is an array type (nested arrays),
+     * the code recursively calls createAndPopulateArray to handle 2D arrays.
+     */
+    @Test
+    void testNestedArrayInCreateAndPopulateArray() {
+        // Create a JsonObject representing a String[][] (2D array)
+        // The outer array contains Object[] elements that represent the inner String[] arrays
+        JsonObject jsonObj = new JsonObject();
+        jsonObj.setType(String[][].class);
+
+        // Inner arrays are Object[] containing Strings
+        Object[] innerArray1 = new Object[]{"a", "b", "c"};
+        Object[] innerArray2 = new Object[]{"d", "e"};
+        Object[] innerArray3 = new Object[]{"f"};
+
+        // Set items as array of Object[] - this triggers the nested array handling
+        jsonObj.setItems(new Object[]{innerArray1, innerArray2, innerArray3});
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        String[][] result = JsonIo.toJava(jsonObj, readOptions).asClass(null);
+
+        assertNotNull(result);
+        assertEquals(3, result.length);
+
+        // Verify inner arrays
+        assertArrayEquals(new String[]{"a", "b", "c"}, result[0]);
+        assertArrayEquals(new String[]{"d", "e"}, result[1]);
+        assertArrayEquals(new String[]{"f"}, result[2]);
+    }
 }
