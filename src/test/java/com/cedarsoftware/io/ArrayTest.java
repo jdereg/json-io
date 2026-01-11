@@ -2188,4 +2188,63 @@ class ArrayTest
         // The result should be the target
         assertEquals(targetObject, result);
     }
+
+    /**
+     * Test coverage for ObjectResolver.extractArrayElementValue() lines 968-970.
+     * When a JsonObject has a value that is directly assignable to componentClass,
+     * return the value directly.
+     */
+    @Test
+    void testExtractArrayElementValue_hasValue_directlyAssignable() throws Exception {
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        ReferenceTracker references = new Resolver.DefaultReferenceTracker(readOptions);
+        com.cedarsoftware.util.convert.Converter converter =
+                new com.cedarsoftware.util.convert.Converter(readOptions.getConverterOptions());
+        ObjectResolver resolver = new ObjectResolver(readOptions, references, converter);
+
+        // Create a JsonObject with a value (not a target, not a reference)
+        JsonObject jObj = new JsonObject();
+        String theValue = "DirectValue";
+        jObj.setValue(theValue);  // Set value, not target
+
+        // Get the extractArrayElementValue method via reflection
+        java.lang.reflect.Method method = ObjectResolver.class.getDeclaredMethod(
+                "extractArrayElementValue", Object.class, Class.class);
+        method.setAccessible(true);
+
+        // Call with componentClass = String.class, which is assignable from String
+        // This should hit lines 968-970: return value directly
+        Object result = method.invoke(resolver, jObj, String.class);
+
+        assertEquals(theValue, result);
+    }
+
+    /**
+     * Test coverage for ObjectResolver.extractArrayElementValue() lines 971-973.
+     * When a JsonObject has a value that needs conversion to componentClass,
+     * use the converter.
+     */
+    @Test
+    void testExtractArrayElementValue_hasValue_needsConversion() throws Exception {
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        ReferenceTracker references = new Resolver.DefaultReferenceTracker(readOptions);
+        com.cedarsoftware.util.convert.Converter converter =
+                new com.cedarsoftware.util.convert.Converter(readOptions.getConverterOptions());
+        ObjectResolver resolver = new ObjectResolver(readOptions, references, converter);
+
+        // Create a JsonObject with a String value that needs conversion to Integer
+        JsonObject jObj = new JsonObject();
+        jObj.setValue("42");  // String value
+
+        // Get the extractArrayElementValue method via reflection
+        java.lang.reflect.Method method = ObjectResolver.class.getDeclaredMethod(
+                "extractArrayElementValue", Object.class, Class.class);
+        method.setAccessible(true);
+
+        // Call with componentClass = Integer.class, which requires conversion from String
+        // This should hit lines 971-973: converter.convert(value, componentClass)
+        Object result = method.invoke(resolver, jObj, Integer.class);
+
+        assertEquals(42, result);
+    }
 }
