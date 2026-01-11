@@ -1,5 +1,9 @@
 ### Revision History
 #### 4.82.0 (unreleased)
+* **BUG FIX**: `JsonParser.readNumberGeneral()` - Fixed EOF handling after '+' sign in JSON5 positive numbers
+  * When parsing `[+` (plus sign followed by EOF), the parser would push back EOF (-1) as character `\uFFFF`
+  * This corrupted the stream state and prevented the proper "Unexpected end of input after '+'" error
+  * Added check to only push back valid characters, not EOF
 * **PERFORMANCE**: `JsonParser.readJsonObject()` - Skip type resolution for simple Class types
   * When `suggestedType` is `null` or already a `Class`, skip the redundant `TypeUtilities.resolveType()` call
   * Only `ParameterizedType` and other complex types need resolution against themselves

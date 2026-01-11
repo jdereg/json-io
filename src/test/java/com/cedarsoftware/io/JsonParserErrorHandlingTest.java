@@ -190,4 +190,316 @@ public class JsonParserErrorHandlingTest {
 
         assertTrue(exception.getMessage().contains("Expected quote before field name"));
     }
+
+    // ========== Tests for readToken() error handling (lines 496, 505, 513, 519) ==========
+
+    /**
+     * Test that EOF during short token read throws JsonIoException.
+     * This tests line 496 of JsonParser.readToken().
+     * Short tokens are ≤5 characters: true, false, null
+     */
+    @Test
+    public void testEofDuringTrueToken_ShouldThrowJsonIoException() {
+        // Truncated "true" - EOF before token completes
+        String json = "{\"field\": tru";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("EOF reached while reading token"));
+    }
+
+    /**
+     * Test that EOF during "false" token read throws JsonIoException.
+     * This tests line 496 of JsonParser.readToken().
+     */
+    @Test
+    public void testEofDuringFalseToken_ShouldThrowJsonIoException() {
+        // Truncated "false" - EOF before token completes
+        String json = "{\"field\": fals";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("EOF reached while reading token"));
+    }
+
+    /**
+     * Test that EOF during "null" token read throws JsonIoException.
+     * This tests line 496 of JsonParser.readToken().
+     */
+    @Test
+    public void testEofDuringNullToken_ShouldThrowJsonIoException() {
+        // Truncated "null" - EOF before token completes
+        String json = "{\"field\": nul";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("EOF reached while reading token"));
+    }
+
+    /**
+     * Test that mismatched short token throws JsonIoException.
+     * This tests line 505 of JsonParser.readToken().
+     * Token starts with 't' but doesn't spell "true"
+     */
+    @Test
+    public void testMismatchedTrueToken_ShouldThrowJsonIoException() {
+        // "trux" instead of "true" - character mismatch
+        String json = "{\"field\": trux}";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Expected token:"));
+    }
+
+    /**
+     * Test that mismatched "false" token throws JsonIoException.
+     * This tests line 505 of JsonParser.readToken().
+     */
+    @Test
+    public void testMismatchedFalseToken_ShouldThrowJsonIoException() {
+        // "falsx" instead of "false" - character mismatch
+        String json = "{\"field\": falsx}";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Expected token:"));
+    }
+
+    /**
+     * Test that mismatched "null" token throws JsonIoException.
+     * This tests line 505 of JsonParser.readToken().
+     */
+    @Test
+    public void testMismatchedNullToken_ShouldThrowJsonIoException() {
+        // "nulx" instead of "null" - character mismatch
+        String json = "{\"field\": nulx}";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Expected token:"));
+    }
+
+    /**
+     * Test that EOF during long token (Infinity) read throws JsonIoException.
+     * This tests line 513 of JsonParser.readToken().
+     * Long tokens are >5 characters: Infinity (8 chars)
+     * Note: Must use allowNanAndInfinity(true) and array context to trigger readToken for Infinity.
+     */
+    @Test
+    public void testEofDuringInfinityToken_ShouldThrowJsonIoException() {
+        // Truncated "Infinity" in array context - EOF before token completes
+        // Using array context to avoid JSON5 unquoted identifier parsing
+        String json = "[Infini";
+        ReadOptions opts = new ReadOptionsBuilder().allowNanAndInfinity(true).build();
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, opts, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("EOF reached while reading token"));
+    }
+
+    /**
+     * Test that mismatched long token (Infinity) throws JsonIoException.
+     * This tests line 519 of JsonParser.readToken().
+     */
+    @Test
+    public void testMismatchedInfinityToken_ShouldThrowJsonIoException() {
+        // "Infinitx" instead of "Infinity" - character mismatch in long token
+        // Using array context to avoid JSON5 unquoted identifier parsing
+        String json = "[Infinitx]";
+        ReadOptions opts = new ReadOptionsBuilder().allowNanAndInfinity(true).build();
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, opts, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Expected token:"));
+    }
+
+    /**
+     * Test that EOF during negative Infinity read throws JsonIoException.
+     * Tests the long token path (line 513) with negative infinity.
+     */
+    @Test
+    public void testEofDuringNegativeInfinityToken_ShouldThrowJsonIoException() {
+        // Truncated "-Infinity" - EOF before token completes
+        String json = "[-Infini";
+        ReadOptions opts = new ReadOptionsBuilder().allowNanAndInfinity(true).build();
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, opts, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("EOF reached while reading token"));
+    }
+
+    /**
+     * Test that mismatched negative Infinity throws JsonIoException.
+     * Tests the long token path (line 519) with negative infinity.
+     */
+    @Test
+    public void testMismatchedNegativeInfinityToken_ShouldThrowJsonIoException() {
+        // "-Infinitx" instead of "-Infinity"
+        String json = "[-Infinitx]";
+        ReadOptions opts = new ReadOptionsBuilder().allowNanAndInfinity(true).build();
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, opts, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Expected token:"));
+    }
+
+    // ========== Tests for JSON5 positive numbers ==========
+
+    /**
+     * Test that valid JSON5 positive numbers work correctly.
+     */
+    @Test
+    public void testValidPositiveNumber_ShouldWork() {
+        // JSON5 allows explicit positive sign
+        String json = "[+42, +3.14]";
+
+        Object result = JsonIo.toObjects(json, null, Object.class);
+        assertNotNull(result);
+        assertTrue(result instanceof Object[]);
+        Object[] arr = (Object[]) result;
+        assertEquals(2, arr.length);
+        assertEquals(42L, arr[0]);
+        assertEquals(3.14, arr[1]);
+    }
+
+    // ========== Tests for readInteger() BigInteger overflow handling (lines 680-689) ==========
+
+    /**
+     * Test that integers larger than Long.MAX_VALUE return BigInteger when integerTypeBoth is enabled.
+     * This tests lines 680-684 of JsonParser.readInteger().
+     * Long.MAX_VALUE is 9223372036854775807 (19 digits).
+     */
+    @Test
+    public void testIntegerOverflow_WithIntegerTypeBoth_ReturnsBigInteger() {
+        // Number larger than Long.MAX_VALUE
+        String json = "[9223372036854775808]";  // Long.MAX_VALUE + 1
+        ReadOptions opts = new ReadOptionsBuilder().integerTypeBoth().build();
+
+        Object result = JsonIo.toObjects(json, opts, Object.class);
+        assertNotNull(result);
+        assertTrue(result instanceof Object[]);
+        Object[] arr = (Object[]) result;
+        assertEquals(1, arr.length);
+        assertTrue(arr[0] instanceof java.math.BigInteger, "Expected BigInteger but got: " + arr[0].getClass().getName());
+        assertEquals(new java.math.BigInteger("9223372036854775808"), arr[0]);
+    }
+
+    /**
+     * Test that very large integers return BigInteger when integerTypeBoth is enabled.
+     * This tests lines 680-684 of JsonParser.readInteger().
+     */
+    @Test
+    public void testVeryLargeInteger_WithIntegerTypeBoth_ReturnsBigInteger() {
+        // 25-digit number - way beyond Long range
+        String json = "[1234567890123456789012345]";
+        ReadOptions opts = new ReadOptionsBuilder().integerTypeBoth().build();
+
+        Object result = JsonIo.toObjects(json, opts, Object.class);
+        assertNotNull(result);
+        assertTrue(result instanceof Object[]);
+        Object[] arr = (Object[]) result;
+        assertEquals(1, arr.length);
+        assertTrue(arr[0] instanceof java.math.BigInteger);
+        assertEquals(new java.math.BigInteger("1234567890123456789012345"), arr[0]);
+    }
+
+    /**
+     * Test that integers larger than Long.MAX_VALUE wrap around when integerTypeBoth is NOT enabled.
+     * This tests lines 685-687 of JsonParser.readInteger().
+     * The BigInteger.longValue() wraps around similar to casting.
+     */
+    @Test
+    public void testIntegerOverflow_WithoutIntegerTypeBoth_ReturnsWrappedLong() {
+        // Number larger than Long.MAX_VALUE - should wrap around
+        String json = "[9223372036854775808]";  // Long.MAX_VALUE + 1
+        // Default options - integerTypeBoth is false
+
+        Object result = JsonIo.toObjects(json, null, Object.class);
+        assertNotNull(result);
+        assertTrue(result instanceof Object[]);
+        Object[] arr = (Object[]) result;
+        assertEquals(1, arr.length);
+        assertTrue(arr[0] instanceof Long, "Expected Long but got: " + arr[0].getClass().getName());
+        // Long.MAX_VALUE + 1 wraps to Long.MIN_VALUE
+        assertEquals(Long.MIN_VALUE, arr[0]);
+    }
+
+    /**
+     * Test negative integers smaller than Long.MIN_VALUE return BigInteger when integerTypeBoth is enabled.
+     * This tests lines 680-684 of JsonParser.readInteger().
+     * Long.MIN_VALUE is -9223372036854775808 (19 digits + sign).
+     */
+    @Test
+    public void testNegativeIntegerOverflow_WithIntegerTypeBoth_ReturnsBigInteger() {
+        // Number smaller than Long.MIN_VALUE
+        String json = "[-9223372036854775809]";  // Long.MIN_VALUE - 1
+        ReadOptions opts = new ReadOptionsBuilder().integerTypeBoth().build();
+
+        Object result = JsonIo.toObjects(json, opts, Object.class);
+        assertNotNull(result);
+        assertTrue(result instanceof Object[]);
+        Object[] arr = (Object[]) result;
+        assertEquals(1, arr.length);
+        assertTrue(arr[0] instanceof java.math.BigInteger);
+        assertEquals(new java.math.BigInteger("-9223372036854775809"), arr[0]);
+    }
+
+    // ========== Tests for readNumberGeneral() error handling (line 604) ==========
+
+    /**
+     * Test that EOF immediately after '+' sign throws JsonIoException.
+     * This tests line 604 of JsonParser.readNumberGeneral().
+     * The pushback bug at line 593 was fixed to properly handle EOF.
+     */
+    @Test
+    public void testEofAfterPlusSign_ShouldThrowJsonIoException() {
+        // '+' followed by EOF - no digit after positive sign
+        String json = "[+";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Unexpected end of input after '+'"));
+    }
+
+    // ========== Baseline tests ==========
+
+    /**
+     * Test that valid tokens work correctly - baseline for error tests.
+     */
+    @Test
+    public void testValidTokens_ShouldWork() {
+        // Valid true
+        Object result = JsonIo.toObjects("{\"a\": true}", null, Object.class);
+        assertNotNull(result);
+
+        // Valid false
+        result = JsonIo.toObjects("{\"b\": false}", null, Object.class);
+        assertNotNull(result);
+
+        // Valid null
+        result = JsonIo.toObjects("{\"c\": null}", null, Object.class);
+        assertNotNull(result);
+    }
 }

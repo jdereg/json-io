@@ -589,7 +589,8 @@ class JsonParser {
         }
 
         // If we read ahead for hex check, we need to reconstruct
-        if ((isNegative || isPositive) && startChar != firstChar) {
+        // Don't pushback EOF (-1) as (char)-1 becomes \uFFFF which corrupts the stream
+        if ((isNegative || isPositive) && startChar != firstChar && startChar != -1) {
             in.pushback((char) startChar);
         }
 
