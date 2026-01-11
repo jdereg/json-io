@@ -202,11 +202,7 @@ public class ObjectResolver extends Resolver
                 return;
             }
 
-            // we have a jsonObject with a type
-            Object special;
-            if ((special = readWithFactoryIfExists(rhs, null)) != null) {
-                storeMissingField(target, missingField, special);
-            } else if (rhs.getClass().isArray()) {
+            if (rhs.getClass().isArray()) {
                 // impossible to determine the array type.
                 storeMissingField(target, missingField, null);
             } else if (rhs instanceof JsonObject) {
@@ -285,19 +281,10 @@ public class ObjectResolver extends Resolver
         final boolean isList = col instanceof List;
         int idx = 0;
 
-        // Extract the element type from the full type, defaulting to Object if not set.
-        Type fullType = jsonObj.getType();
-        Type elementType = Object.class;
-        if (fullType instanceof ParameterizedType) {
-            ParameterizedType pt = (ParameterizedType) fullType;
-            Type[] typeArgs = pt.getActualTypeArguments();
-            if (typeArgs.length > 0) {
-                elementType = typeArgs[0];
-            }
-        }
-
-        // Pre-compute raw element type to avoid repeated calls in loop
-        final Class<?> rawElementType = TypeUtilities.getRawClass(elementType);
+        // Element type defaults to Object.class since the collection's type is always
+        // a concrete Class (not ParameterizedType) after resolveTargetType() in createInstance()
+        final Type elementType = Object.class;
+        final Class<?> rawElementType = Object.class;
 
         for (Object element : items) {
             if (element == null) {

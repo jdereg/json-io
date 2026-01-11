@@ -3,6 +3,7 @@ package com.cedarsoftware.io;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -165,6 +166,311 @@ public class MissingFieldHandlerTest
         assertEquals(9, (short) clonePoint.getSsMissing());
         assertTrue(isStringArrayOk[0]);
         assertTrue(isInner2WithNoSerializedTypeOk[0]);
+    }
+
+    // ========== Tests for handleMissingField coverage in ObjectResolver ==========
+
+    /**
+     * Test missing field with null value.
+     * This tests lines 200-202 of ObjectResolver.handleMissingField().
+     */
+    @Test
+    public void testMissingFieldWithNullValue() {
+        final Object[] capturedValue = new Object[1];
+        final boolean[] handlerCalled = new boolean[]{false};
+
+        MissingFieldHandler missingHandler = (object, fieldName, value) -> {
+            if ("nullField".equals(fieldName)) {
+                capturedValue[0] = value;
+                handlerCalled[0] = true;
+            }
+        };
+
+        String json = "{\"@type\":\"com.cedarsoftware.io.MissingFieldHandlerTest$CustomPoint\",\"x\":5,\"nullField\":null}";
+        CustomPoint result = TestUtil.toJava(json, new ReadOptionsBuilder().missingFieldHandler(missingHandler).build()).asClass(null);
+
+        assertTrue(handlerCalled[0], "Missing field handler should have been called");
+        assertEquals(null, capturedValue[0], "Value should be null");
+        assertEquals(5, result.x);
+    }
+
+    /**
+     * Test missing field with array value.
+     * This tests lines 209-211 of ObjectResolver.handleMissingField().
+     */
+    @Test
+    public void testMissingFieldWithArrayValue() {
+        final Object[] capturedValue = new Object[1];
+        final boolean[] handlerCalled = new boolean[]{false};
+
+        MissingFieldHandler missingHandler = (object, fieldName, value) -> {
+            if ("arrayField".equals(fieldName)) {
+                capturedValue[0] = value;
+                handlerCalled[0] = true;
+            }
+        };
+
+        String json = "{\"@type\":\"com.cedarsoftware.io.MissingFieldHandlerTest$CustomPoint\",\"x\":5,\"arrayField\":[1,2,3]}";
+        CustomPoint result = TestUtil.toJava(json, new ReadOptionsBuilder().missingFieldHandler(missingHandler).build()).asClass(null);
+
+        assertTrue(handlerCalled[0], "Missing field handler should have been called");
+        // The value should be passed (either as array or null depending on type resolution)
+        assertEquals(5, result.x);
+    }
+
+    /**
+     * Test missing field with JsonObject reference.
+     * This tests lines 215-218 of ObjectResolver.handleMissingField().
+     */
+    @Test
+    public void testMissingFieldWithReference() {
+        final Object[] capturedValue = new Object[1];
+        final boolean[] handlerCalled = new boolean[]{false};
+
+        MissingFieldHandler missingHandler = (object, fieldName, value) -> {
+            if ("refField".equals(fieldName)) {
+                capturedValue[0] = value;
+                handlerCalled[0] = true;
+            }
+        };
+
+        // JSON with a reference to an existing object
+        String json = "{\"@type\":\"com.cedarsoftware.io.MissingFieldHandlerTest$RefTestClass\",\"point\":{\"@id\":1,\"@type\":\"com.cedarsoftware.io.MissingFieldHandlerTest$CustomPoint\",\"x\":42},\"refField\":{\"@ref\":1}}";
+        RefTestClass result = TestUtil.toJava(json, new ReadOptionsBuilder().missingFieldHandler(missingHandler).build()).asClass(null);
+
+        assertTrue(handlerCalled[0], "Missing field handler should have been called for reference");
+        assertNotNull(capturedValue[0], "Reference should have been resolved");
+        assertTrue(capturedValue[0] instanceof CustomPoint, "Value should be resolved CustomPoint");
+        assertEquals(42, ((CustomPoint) capturedValue[0]).x);
+    }
+
+    /**
+     * Test missing field with JsonObject that has a type.
+     * This tests lines 219-224 of ObjectResolver.handleMissingField().
+     */
+    @Test
+    public void testMissingFieldWithTypedJsonObject() {
+        final Object[] capturedValue = new Object[1];
+        final boolean[] handlerCalled = new boolean[]{false};
+
+        MissingFieldHandler missingHandler = (object, fieldName, value) -> {
+            if ("typedField".equals(fieldName)) {
+                capturedValue[0] = value;
+                handlerCalled[0] = true;
+            }
+        };
+
+        String json = "{\"@type\":\"com.cedarsoftware.io.MissingFieldHandlerTest$CustomPoint\",\"x\":5,\"typedField\":{\"@type\":\"com.cedarsoftware.io.MissingFieldHandlerTest$CustomPoint\",\"x\":99}}";
+        CustomPoint result = TestUtil.toJava(json, new ReadOptionsBuilder().missingFieldHandler(missingHandler).build()).asClass(null);
+
+        assertTrue(handlerCalled[0], "Missing field handler should have been called");
+        assertNotNull(capturedValue[0], "Value should not be null");
+        assertTrue(capturedValue[0] instanceof CustomPoint, "Value should be CustomPoint");
+        assertEquals(99, ((CustomPoint) capturedValue[0]).x);
+    }
+
+    /**
+     * Test missing field with JsonObject that has no type (anonymous object).
+     * This tests lines 225-226 of ObjectResolver.handleMissingField().
+     */
+    @Test
+    public void testMissingFieldWithUntypedJsonObject() {
+        final Object[] capturedValue = new Object[1];
+        final boolean[] handlerCalled = new boolean[]{false};
+
+        MissingFieldHandler missingHandler = (object, fieldName, value) -> {
+            if ("untypedField".equals(fieldName)) {
+                capturedValue[0] = value;
+                handlerCalled[0] = true;
+            }
+        };
+
+        // JSON with an untyped nested object
+        String json = "{\"@type\":\"com.cedarsoftware.io.MissingFieldHandlerTest$CustomPoint\",\"x\":5,\"untypedField\":{\"a\":1,\"b\":2}}";
+        CustomPoint result = TestUtil.toJava(json, new ReadOptionsBuilder().missingFieldHandler(missingHandler).build()).asClass(null);
+
+        assertTrue(handlerCalled[0], "Missing field handler should have been called");
+        // Value should be null since there's no type info to create instance
+        assertEquals(5, result.x);
+    }
+
+    /**
+     * Test missing field with primitive value (String).
+     * This tests lines 228-229 of ObjectResolver.handleMissingField().
+     */
+    @Test
+    public void testMissingFieldWithStringValue() {
+        final Object[] capturedValue = new Object[1];
+        final boolean[] handlerCalled = new boolean[]{false};
+
+        MissingFieldHandler missingHandler = (object, fieldName, value) -> {
+            if ("stringField".equals(fieldName)) {
+                capturedValue[0] = value;
+                handlerCalled[0] = true;
+            }
+        };
+
+        String json = "{\"@type\":\"com.cedarsoftware.io.MissingFieldHandlerTest$CustomPoint\",\"x\":5,\"stringField\":\"hello\"}";
+        CustomPoint result = TestUtil.toJava(json, new ReadOptionsBuilder().missingFieldHandler(missingHandler).build()).asClass(null);
+
+        assertTrue(handlerCalled[0], "Missing field handler should have been called");
+        assertEquals("hello", capturedValue[0], "Value should be the string");
+        assertEquals(5, result.x);
+    }
+
+    /**
+     * Test missing field with numeric value.
+     * This tests lines 228-229 of ObjectResolver.handleMissingField().
+     */
+    @Test
+    public void testMissingFieldWithNumberValue() {
+        final Object[] capturedValue = new Object[1];
+        final boolean[] handlerCalled = new boolean[]{false};
+
+        MissingFieldHandler missingHandler = (object, fieldName, value) -> {
+            if ("numberField".equals(fieldName)) {
+                capturedValue[0] = value;
+                handlerCalled[0] = true;
+            }
+        };
+
+        String json = "{\"@type\":\"com.cedarsoftware.io.MissingFieldHandlerTest$CustomPoint\",\"x\":5,\"numberField\":123}";
+        CustomPoint result = TestUtil.toJava(json, new ReadOptionsBuilder().missingFieldHandler(missingHandler).build()).asClass(null);
+
+        assertTrue(handlerCalled[0], "Missing field handler should have been called");
+        assertEquals(123L, capturedValue[0], "Value should be the number");
+        assertEquals(5, result.x);
+    }
+
+    /**
+     * Test missing field with boolean value.
+     * This tests lines 228-229 of ObjectResolver.handleMissingField().
+     */
+    @Test
+    public void testMissingFieldWithBooleanValue() {
+        final Object[] capturedValue = new Object[1];
+        final boolean[] handlerCalled = new boolean[]{false};
+
+        MissingFieldHandler missingHandler = (object, fieldName, value) -> {
+            if ("boolField".equals(fieldName)) {
+                capturedValue[0] = value;
+                handlerCalled[0] = true;
+            }
+        };
+
+        String json = "{\"@type\":\"com.cedarsoftware.io.MissingFieldHandlerTest$CustomPoint\",\"x\":5,\"boolField\":true}";
+        CustomPoint result = TestUtil.toJava(json, new ReadOptionsBuilder().missingFieldHandler(missingHandler).build()).asClass(null);
+
+        assertTrue(handlerCalled[0], "Missing field handler should have been called");
+        assertEquals(true, capturedValue[0], "Value should be true");
+        assertEquals(5, result.x);
+    }
+
+    /**
+     * Test exception handling in handleMissingField when processing an invalid @ref.
+     * This tests lines 231-237 of ObjectResolver.handleMissingField().
+     * When a @ref points to a non-existent @id, the exception is caught and wrapped.
+     */
+    @Test
+    public void testMissingFieldWithInvalidReference() {
+        MissingFieldHandler missingHandler = (object, fieldName, value) -> {
+            // Just capture - we're testing the exception from bad @ref, not handler exception
+        };
+
+        // JSON with a reference to a non-existent @id (999 doesn't exist)
+        String json = "{\"@type\":\"com.cedarsoftware.io.MissingFieldHandlerTest$CustomPoint\",\"x\":5,\"badRef\":{\"@ref\":999}}";
+
+        try {
+            TestUtil.toJava(json, new ReadOptionsBuilder().missingFieldHandler(missingHandler).build()).asClass(null);
+            assertTrue(false, "Should have thrown JsonIoException for invalid reference");
+        } catch (JsonIoException e) {
+            // Expected - invalid reference should throw
+            assertTrue(e.getMessage().contains("999") || e.getMessage().contains("reference") || e.getMessage().contains("missing field"),
+                    "Message should mention the invalid reference or missing field: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Test exception handling when MissingFieldHandler itself throws RuntimeException.
+     * The handler is called from notifyMissingFields(), so this exception propagates directly.
+     */
+    @Test
+    public void testMissingFieldHandlerThrowsRuntimeException() {
+        MissingFieldHandler throwingHandler = (object, fieldName, value) -> {
+            if ("badField".equals(fieldName)) {
+                throw new RuntimeException("Handler exploded!");
+            }
+        };
+
+        String json = "{\"@type\":\"com.cedarsoftware.io.MissingFieldHandlerTest$CustomPoint\",\"x\":5,\"badField\":\"test\"}";
+
+        try {
+            TestUtil.toJava(json, new ReadOptionsBuilder().missingFieldHandler(throwingHandler).build()).asClass(null);
+            assertTrue(false, "Should have thrown RuntimeException");
+        } catch (RuntimeException e) {
+            // Handler exceptions propagate - message may include exception class name
+            assertTrue(e.getMessage().contains("Handler exploded!"), "Message should contain original message");
+        }
+    }
+
+    /**
+     * Test that JsonIoException thrown by handler is re-thrown directly.
+     */
+    @Test
+    public void testMissingFieldHandlerThrowsJsonIoException() {
+        MissingFieldHandler throwingHandler = (object, fieldName, value) -> {
+            if ("jsonIoField".equals(fieldName)) {
+                throw new JsonIoException("Direct JsonIoException from handler");
+            }
+        };
+
+        String json = "{\"@type\":\"com.cedarsoftware.io.MissingFieldHandlerTest$CustomPoint\",\"x\":5,\"jsonIoField\":\"data\"}";
+
+        try {
+            TestUtil.toJava(json, new ReadOptionsBuilder().missingFieldHandler(throwingHandler).build()).asClass(null);
+            assertTrue(false, "Should have thrown JsonIoException");
+        } catch (JsonIoException e) {
+            assertEquals("Direct JsonIoException from handler", e.getMessage());
+        }
+    }
+
+    /**
+     * Test exception wrapping in handleMissingField when createInstance throws a non-JsonIoException.
+     * This tests lines 231-233 of ObjectResolver.handleMissingField().
+     * When a typed JsonObject's class cannot be instantiated, the exception is caught and wrapped.
+     */
+    @Test
+    public void testMissingFieldExceptionWrapping() {
+        MissingFieldHandler missingHandler = (object, fieldName, value) -> {
+            // Handler will be called if we get that far
+        };
+
+        // JSON with a missing field whose value is a typed object that will fail to instantiate
+        // Using a class with a constructor that throws an exception
+        String json = "{\"@type\":\"com.cedarsoftware.io.MissingFieldHandlerTest$CustomPoint\",\"x\":5,\"failField\":{\"@type\":\"com.cedarsoftware.io.MissingFieldHandlerTest$FailingConstructorClass\",\"data\":1}}";
+
+        try {
+            TestUtil.toJava(json, new ReadOptionsBuilder().missingFieldHandler(missingHandler).build()).asClass(null);
+            assertTrue(false, "Should have thrown JsonIoException wrapping the constructor exception");
+        } catch (JsonIoException e) {
+            // Lines 231-233: The exception should be wrapped with field info in the message
+            assertTrue(e.getMessage().contains("missing field") || e.getMessage().contains("failField") || e.getCause() != null,
+                    "Message should contain field info or have a cause: " + e.getMessage());
+        }
+    }
+
+    // Helper class that throws exception in constructor - used to test exception wrapping
+    public static class FailingConstructorClass {
+        public int data;
+
+        public FailingConstructorClass() {
+            throw new IllegalStateException("Constructor intentionally failed for testing");
+        }
+    }
+
+    // Helper class for reference tests
+    public static class RefTestClass {
+        public CustomPoint point;
     }
 
     private static final String OLD_CUSTOM_POINT = "{\"@type\":\"com.cedarsoftware.io.MissingFieldHandlerTest$CustomPoint\",\"x\":5,\"y\":7}";

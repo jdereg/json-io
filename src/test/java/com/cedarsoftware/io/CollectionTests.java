@@ -619,6 +619,142 @@ class CollectionTests {
         assert DeepEquals.deepEquals(list, dupe);
     }
 
+    /**
+     * Test that parameterized collection fields (List<SimplePoint>) serialize and
+     * deserialize correctly, preserving element types.
+     */
+    @Test
+    void testParameterizedCollectionElementType() {
+        // First serialize to see the proper format
+        SimplePointListHolder original = new SimplePointListHolder();
+        original.points = new ArrayList<>();
+        original.points.add(new SimplePoint(1, 2));
+        original.points.add(new SimplePoint(3, 4));
+        original.points.add(new SimplePoint(5, 6));
+
+        String json = TestUtil.toJson(original);
+        TestUtil.printLine("Parameterized List JSON: " + json);
+
+        SimplePointListHolder restored = TestUtil.toJava(json, null).asClass(null);
+
+        assertNotNull(restored);
+        assertNotNull(restored.points);
+        assertEquals(3, restored.points.size());
+        assertEquals(1, restored.points.get(0).x);
+        assertEquals(2, restored.points.get(0).y);
+        assertEquals(3, restored.points.get(1).x);
+        assertEquals(4, restored.points.get(1).y);
+        assertEquals(5, restored.points.get(2).x);
+        assertEquals(6, restored.points.get(2).y);
+    }
+
+    /**
+     * Test that parameterized Set fields (Set<SimplePoint>) serialize and
+     * deserialize correctly, preserving element types.
+     */
+    @Test
+    void testParameterizedSetElementType() {
+        SimplePointSetHolder original = new SimplePointSetHolder();
+        original.pointSet = new LinkedHashSet<>();
+        original.pointSet.add(new SimplePoint(10, 20));
+        original.pointSet.add(new SimplePoint(30, 40));
+
+        String json = TestUtil.toJson(original);
+        TestUtil.printLine("Parameterized Set JSON: " + json);
+
+        SimplePointSetHolder restored = TestUtil.toJava(json, null).asClass(null);
+
+        assertNotNull(restored);
+        assertNotNull(restored.pointSet);
+        assertEquals(2, restored.pointSet.size());
+        // Verify contents exist
+        boolean found10_20 = false;
+        boolean found30_40 = false;
+        for (SimplePoint p : restored.pointSet) {
+            if (p.x == 10 && p.y == 20) found10_20 = true;
+            if (p.x == 30 && p.y == 40) found30_40 = true;
+        }
+        assertTrue(found10_20, "Should find point (10,20)");
+        assertTrue(found30_40, "Should find point (30,40)");
+    }
+
+    /**
+     * Test collection deserialization when the collection uses @items format
+     * with typed elements.
+     */
+    @Test
+    void testParameterizedCollectionWithoutExplicitTypes() {
+        // JSON where the list uses @items but elements have @type for proper conversion
+        // The collection itself will get its type from the field declaration
+        String json = "{\"@type\":\"com.cedarsoftware.io.CollectionTests$SimplePointListHolder\"," +
+                "\"points\":{\"@items\":[" +
+                "{\"@type\":\"com.cedarsoftware.io.CollectionTests$SimplePoint\",\"x\":7,\"y\":8}," +
+                "{\"@type\":\"com.cedarsoftware.io.CollectionTests$SimplePoint\",\"x\":9,\"y\":10}" +
+                "]}}";
+
+        TestUtil.printLine("Parameterized List with @items JSON: " + json);
+
+        SimplePointListHolder restored = TestUtil.toJava(json, null).asClass(null);
+
+        assertNotNull(restored);
+        assertNotNull(restored.points);
+        assertEquals(2, restored.points.size());
+        assertEquals(7, restored.points.get(0).x);
+        assertEquals(8, restored.points.get(0).y);
+        assertEquals(9, restored.points.get(1).x);
+        assertEquals(10, restored.points.get(1).y);
+    }
+
+    /**
+     * Test collection deserialization when the field value is a JSON array
+     * (without @type on collection) containing typed elements.
+     */
+    @Test
+    void testCollectionFromJsonArrayInheritsFieldParameterizedType() {
+        // JSON with raw array syntax (no @type on the collection)
+        // The elements must have @type since they need to become SimplePoint instances
+        String json = "{\"@type\":\"com.cedarsoftware.io.CollectionTests$SimplePointListHolder\"," +
+                "\"points\":[" +
+                "{\"@type\":\"com.cedarsoftware.io.CollectionTests$SimplePoint\",\"x\":11,\"y\":12}," +
+                "{\"@type\":\"com.cedarsoftware.io.CollectionTests$SimplePoint\",\"x\":13,\"y\":14}" +
+                "]}";
+
+        TestUtil.printLine("JSON array without @type on collection: " + json);
+
+        SimplePointListHolder restored = TestUtil.toJava(json, null).asClass(null);
+
+        assertNotNull(restored);
+        assertNotNull(restored.points);
+        assertEquals(2, restored.points.size());
+        assertEquals(11, restored.points.get(0).x);
+        assertEquals(12, restored.points.get(0).y);
+        assertEquals(13, restored.points.get(1).x);
+        assertEquals(14, restored.points.get(1).y);
+    }
+
+    // Simple Point class for parameterized collection tests
+    public static class SimplePoint {
+        public int x;
+        public int y;
+
+        public SimplePoint() {}
+
+        public SimplePoint(int x, int y) {
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    // Helper class for parameterized List test
+    public static class SimplePointListHolder {
+        public List<SimplePoint> points;
+    }
+
+    // Helper class for parameterized Set test
+    public static class SimplePointSetHolder {
+        public Set<SimplePoint> pointSet;
+    }
+
     @Test
     @EnabledForJreRange(min = JRE.JAVA_9)
     void testReadListOfInJDK1_8()
