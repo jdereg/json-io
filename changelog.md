@@ -1,11 +1,13 @@
 ### Revision History
-#### 4.81.0 (unreleased)
+#### 4.82.0 (unreleased)
 * **PERFORMANCE**: `JsonParser` - Optimized string caching and removed number caching
   * String cache: Simplified to bounded LRU LinkedHashMap (1024 entries) with automatic eviction
   * Number cache: Removed entirely - was boxing primitives before cache lookup, negating any benefit
   * Small integers (-128 to 127) use JVM's built-in `Long.valueOf()` cache
   * Eliminates autoboxing overhead from cache lookups on every number parsed
-* **BUG FIX**: `Resolver` - Fixed array/collection cross-conversion returning null
+
+#### 4.81.0 - 2025-01-10 
+**BUG FIX**: `Resolver` - Fixed array/collection cross-conversion returning null
   * When JSON contained `@type=char[]` but caller requested `byte[].class`, json-io returned null instead of converting
   * Same issue affected other array cross-conversions (e.g., `byte[]` → `char[]`, `int[]` → `long[]`) and array ↔ collection conversions
   * Added early conversion logic in `toJava()` that detects type mismatches and uses the Converter to transform between array/collection types
