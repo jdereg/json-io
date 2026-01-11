@@ -2032,31 +2032,44 @@ class ArrayTest
      * Test coverage for ObjectResolver.createAndPopulateArray() lines 828-832.
      * When element is Object[] and componentClass is an array type (nested arrays),
      * the code recursively calls createAndPopulateArray to handle 2D arrays.
+     * Uses reflection to call the private method directly.
      */
     @Test
-    void testNestedArrayInCreateAndPopulateArray() {
-        // Create a JsonObject representing a String[][] (2D array)
-        // The outer array contains Object[] elements that represent the inner String[] arrays
-        JsonObject jsonObj = new JsonObject();
-        jsonObj.setType(String[][].class);
-
-        // Inner arrays are Object[] containing Strings
-        Object[] innerArray1 = new Object[]{"a", "b", "c"};
-        Object[] innerArray2 = new Object[]{"d", "e"};
-        Object[] innerArray3 = new Object[]{"f"};
-
-        // Set items as array of Object[] - this triggers the nested array handling
-        jsonObj.setItems(new Object[]{innerArray1, innerArray2, innerArray3});
-
+    void testNestedArrayInCreateAndPopulateArray() throws Exception {
         ReadOptions readOptions = new ReadOptionsBuilder().build();
-        String[][] result = JsonIo.toJava(jsonObj, readOptions).asClass(null);
+        ReferenceTracker references = new Resolver.DefaultReferenceTracker(readOptions);
+        com.cedarsoftware.util.convert.Converter converter =
+                new com.cedarsoftware.util.convert.Converter(readOptions.getConverterOptions());
+        ObjectResolver resolver = new ObjectResolver(readOptions, references, converter);
+
+        // Get the createAndPopulateArray method via reflection
+        java.lang.reflect.Method method = ObjectResolver.class.getDeclaredMethod(
+                "createAndPopulateArray", java.lang.reflect.Type.class, Class.class, List.class);
+        method.setAccessible(true);
+
+        // Create a list containing Object[] elements (representing inner arrays of a 2D array)
+        // For String[][], the componentClass is String[].class (an array type)
+        // Each element in the list is an Object[] that should be converted to String[]
+        List<Object> outerList = new ArrayList<>();
+        outerList.add(new Object[]{"a", "b", "c"});  // First inner array
+        outerList.add(new Object[]{"d", "e"});       // Second inner array
+        outerList.add(new Object[]{"f"});            // Third inner array
+
+        // Call createAndPopulateArray with:
+        // - elementType = String[].class (the type of each element in String[][])
+        // - componentClass = String[].class (array type, triggers nested array handling)
+        // - list = outerList containing Object[] elements
+        // This should hit lines 828-832 because element instanceof Object[] && componentClass.isArray()
+        Object result = method.invoke(resolver, String[].class, String[].class, outerList);
 
         assertNotNull(result);
-        assertEquals(3, result.length);
+        assertTrue(result instanceof String[][]);
+        String[][] resultArray = (String[][]) result;
+        assertEquals(3, resultArray.length);
 
-        // Verify inner arrays
-        assertArrayEquals(new String[]{"a", "b", "c"}, result[0]);
-        assertArrayEquals(new String[]{"d", "e"}, result[1]);
-        assertArrayEquals(new String[]{"f"}, result[2]);
+        // Verify inner arrays were properly converted
+        assertArrayEquals(new String[]{"a", "b", "c"}, resultArray[0]);
+        assertArrayEquals(new String[]{"d", "e"}, resultArray[1]);
+        assertArrayEquals(new String[]{"f"}, resultArray[2]);
     }
 }
