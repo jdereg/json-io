@@ -2115,4 +2115,45 @@ class ArrayTest
         assertEquals(Thread.State.RUNNABLE, resultArray[1]);
         assertEquals(Thread.State.BLOCKED, resultArray[2]);
     }
+
+    /**
+     * Test coverage for ObjectResolver.extractArrayElementValue() line 952.
+     * When an array element is a reference (@ref) and the referenced object
+     * has already been resolved (has a target), return that target directly.
+     */
+    @Test
+    void testExtractArrayElementValue_resolvedReference_returnsTarget() throws Exception {
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        ReferenceTracker references = new Resolver.DefaultReferenceTracker(readOptions);
+        com.cedarsoftware.util.convert.Converter converter =
+                new com.cedarsoftware.util.convert.Converter(readOptions.getConverterOptions());
+        ObjectResolver resolver = new ObjectResolver(readOptions, references, converter);
+
+        // Create a target object that will be referenced
+        String targetObject = "ReferencedString";
+
+        // Create a JsonObject that represents the referenced object (with @id)
+        JsonObject referencedObj = new JsonObject();
+        referencedObj.setId(42L);
+        referencedObj.setTarget(targetObject);  // Set the resolved target
+
+        // Register the referenced object in the references tracker
+        references.put(42L, referencedObj);
+
+        // Create a JsonObject that is a reference to the above object (@ref)
+        JsonObject refElement = new JsonObject();
+        refElement.setReferenceId(42L);  // This makes it a reference
+
+        // Get the extractArrayElementValue method via reflection
+        java.lang.reflect.Method method = ObjectResolver.class.getDeclaredMethod(
+                "extractArrayElementValue", Object.class, Class.class);
+        method.setAccessible(true);
+
+        // Call extractArrayElementValue with the reference element
+        // This should hit line 952: return refObj.getTarget()
+        Object result = method.invoke(resolver, refElement, String.class);
+
+        // The result should be the target of the referenced object
+        assertEquals(targetObject, result);
+    }
 }
