@@ -94,6 +94,7 @@ class JsonParser {
     private final boolean integerTypeBoth;
     private final boolean floatingPointBigDecimal;
     private final boolean floatingPointBoth;
+    private final ClassLoader classLoader;
     private final Map<CharSequence, CharSequence> substitutes;
     
     // LRU cache size limit for string deduplication
@@ -180,6 +181,7 @@ class JsonParser {
         this.integerTypeBoth = readOptions.isIntegerTypeBoth();
         this.floatingPointBigDecimal = readOptions.isFloatingPointBigDecimal();
         this.floatingPointBoth = readOptions.isFloatingPointBoth();
+        this.classLoader = readOptions.getClassLoader();
     }
 
     /**
@@ -459,7 +461,7 @@ class JsonParser {
      * @param firstChar the first character of the identifier (already read)
      * @return the complete identifier string
      */
-    private String readUnquotedIdentifier(int firstChar) throws IOException {
+    private String readUnquotedIdentifier(int firstChar) {
         strBuf.setLength(0);
         strBuf.append((char) firstChar);
 
@@ -530,9 +532,8 @@ class JsonParser {
      * @return a Number (a Long or a Double) depending on whether the number is
      * a decimal number or integer.  This choice allows all smaller types (Float, int, short, byte)
      * to be represented as well.
-     * @throws IOException for stream errors or parsing errors.
      */
-    private Number readNumber(int c) throws IOException {
+    private Number readNumber(int c) {
         // Handle NaN and Infinity (non-standard JSON extension)
         if (allowNanAndInfinity && (c == '-' || c == 'N' || c == 'I')) {
             final boolean isNeg = (c == '-');
@@ -563,7 +564,7 @@ class JsonParser {
      * This optimization comes from the original heap-based parser.
      * Supports JSON5 hexadecimal numbers (0xFF) in permissive mode.
      */
-    private Number readNumberGeneral(int firstChar) throws IOException {
+    private Number readNumberGeneral(int firstChar) {
         final FastReader in = input;
         boolean isFloat = false;
         boolean isNegative = (firstChar == '-');
@@ -710,9 +711,8 @@ class JsonParser {
      *
      * @param isNegative true if the number was preceded by a minus sign
      * @return the parsed number as a Long
-     * @throws IOException for stream errors or parsing errors
      */
-    private Number readHexNumber(boolean isNegative) throws IOException {
+    private Number readHexNumber(boolean isNegative) {
         final FastReader in = input;
         long value = 0;
         int digitCount = 0;
@@ -987,7 +987,7 @@ class JsonParser {
      * Skip a single-line comment (// until end of line).
      * The leading // has already been consumed.
      */
-    private void skipSingleLineComment() throws IOException {
+    private void skipSingleLineComment() {
         int c;
         while ((c = input.read()) != -1) {
             if (c == '\n' || c == '\r') {
@@ -1009,7 +1009,7 @@ class JsonParser {
      * Skip a block comment (slash-star until star-slash).
      * The leading slash-star has already been consumed.
      */
-    private void skipBlockComment() throws IOException {
+    private void skipBlockComment() {
         int c;
         while ((c = input.read()) != -1) {
             if (c == '*') {
@@ -1148,7 +1148,7 @@ class JsonParser {
 
     private Class<?> stringToClass(String className) {
         String resolvedName = readOptions.getTypeNameAlias(className);
-        Class<?> clazz = ClassUtilities.forName(resolvedName, readOptions.getClassLoader());
+        Class<?> clazz = ClassUtilities.forName(resolvedName, classLoader);
         if (clazz == null) {
             if (readOptions.isFailOnUnknownType()) {
                 error("Unknown type (class) '" + className + "' not defined.");
