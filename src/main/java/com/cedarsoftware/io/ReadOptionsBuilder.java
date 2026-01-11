@@ -929,10 +929,10 @@ public class ReadOptionsBuilder {
     }
 
     /**
-     * Set Integer Types to be returned as BigIntegers.
+     * Set Integer Types to always be returned as BigIntegers, regardless of size.
      */
     public ReadOptionsBuilder integerTypeBigInteger() {
-        options.integerType = ReadOptions.Integers.BOTH;
+        options.integerType = ReadOptions.Integers.BIG_INTEGER;
         return this;
     }
 

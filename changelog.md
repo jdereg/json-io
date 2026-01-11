@@ -1,6 +1,9 @@
 ### Revision History
 #### 4.82.0 (unreleased)
-* **TESTING**: Added comprehensive `JsonParserErrorHandlingTest` with 34 tests for parser edge cases
+* **BUG FIX**: `ReadOptionsBuilder.integerTypeBigInteger()` - Fixed to actually set BigInteger-only mode
+  * Method was incorrectly setting `Integers.BOTH` instead of `Integers.BIG_INTEGER`
+  * Now correctly forces all integers to return as BigInteger regardless of size
+* **TESTING**: Added comprehensive `JsonParserErrorHandlingTest` with 36 tests for parser edge cases
   * `@items` validation errors, invalid field name starts, token EOF/mismatch errors
   * BigInteger overflow handling, hex number overflow, Unicode escape errors
   * Root-level string trailing content validation

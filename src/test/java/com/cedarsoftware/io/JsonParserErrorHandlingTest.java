@@ -382,6 +382,46 @@ public class JsonParserErrorHandlingTest {
         assertEquals(3.14, arr[1]);
     }
 
+    // ========== Tests for readInteger() BigInteger mode (line 656) ==========
+
+    /**
+     * Test that integers return BigInteger when integerTypeBigInteger mode is enabled.
+     * This tests line 656 of JsonParser.readInteger().
+     * All integers should return as BigInteger regardless of size.
+     */
+    @Test
+    public void testSmallInteger_WithIntegerTypeBigInteger_ReturnsBigInteger() {
+        // Small integer that would normally be a Long
+        String json = "[42]";
+        ReadOptions opts = new ReadOptionsBuilder().integerTypeBigInteger().build();
+
+        Object result = JsonIo.toObjects(json, opts, Object.class);
+        assertNotNull(result);
+        assertTrue(result instanceof Object[]);
+        Object[] arr = (Object[]) result;
+        assertEquals(1, arr.length);
+        assertTrue(arr[0] instanceof java.math.BigInteger, "Expected BigInteger but got: " + arr[0].getClass().getName());
+        assertEquals(new java.math.BigInteger("42"), arr[0]);
+    }
+
+    /**
+     * Test that negative integers return BigInteger when integerTypeBigInteger mode is enabled.
+     * This tests line 656 of JsonParser.readInteger().
+     */
+    @Test
+    public void testNegativeInteger_WithIntegerTypeBigInteger_ReturnsBigInteger() {
+        String json = "[-12345]";
+        ReadOptions opts = new ReadOptionsBuilder().integerTypeBigInteger().build();
+
+        Object result = JsonIo.toObjects(json, opts, Object.class);
+        assertNotNull(result);
+        assertTrue(result instanceof Object[]);
+        Object[] arr = (Object[]) result;
+        assertEquals(1, arr.length);
+        assertTrue(arr[0] instanceof java.math.BigInteger);
+        assertEquals(new java.math.BigInteger("-12345"), arr[0]);
+    }
+
     // ========== Tests for readInteger() BigInteger overflow handling (lines 680-689) ==========
 
     /**
