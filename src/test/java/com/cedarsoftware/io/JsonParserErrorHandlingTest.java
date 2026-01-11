@@ -798,8 +798,24 @@ public class JsonParserErrorHandlingTest {
     // ========== Tests for loadId() error handling (lines 1045, 1052) ==========
 
     /**
+     * Test that @id with null value throws JsonIoException.
+     * This tests line 1038-1039 of JsonParser.loadId().
+     */
+    @Test
+    public void testIdWithNullValue_ShouldThrowJsonIoException() {
+        // @id with null value
+        String json = "{\"@id\":null,\"value\":42}";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Null value provided for @id"));
+    }
+
+    /**
      * Test that @id with a non-Number value throws JsonIoException.
-     * This tests line 1045 of JsonParser.loadId().
+     * This tests line 1041 of JsonParser.loadId().
      */
     @Test
     public void testIdWithNonNumberValue_ShouldThrowJsonIoException() {
