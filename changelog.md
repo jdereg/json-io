@@ -1,5 +1,9 @@
 ### Revision History
 #### 4.82.0 (unreleased)
+* **TESTING**: Added comprehensive `JsonParserErrorHandlingTest` with 34 tests for parser edge cases
+  * `@items` validation errors, invalid field name starts, token EOF/mismatch errors
+  * BigInteger overflow handling, hex number overflow, Unicode escape errors
+  * Root-level string trailing content validation
 * **BUG FIX**: `JsonParser.readNumberGeneral()` - Fixed EOF handling after '+' sign in JSON5 positive numbers
   * When parsing `[+` (plus sign followed by EOF), the parser would push back EOF (-1) as character `\uFFFF`
   * This corrupted the stream state and prevented the proper "Unexpected end of input after '+'" error

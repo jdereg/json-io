@@ -464,6 +464,106 @@ public class JsonParserErrorHandlingTest {
         assertEquals(new java.math.BigInteger("-9223372036854775809"), arr[0]);
     }
 
+    // ========== Tests for readString() error handling (lines 790, 818, 823) ==========
+
+    /**
+     * Test that content after a root-level string throws JsonIoException.
+     * This tests line 790 of JsonParser.readString().
+     * When curParseDepth == 0 (root level), nothing should follow the string.
+     */
+    @Test
+    public void testContentAfterRootString_ShouldThrowJsonIoException() {
+        // Root-level string followed by extra content
+        String json = "\"hello\" extra";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("EOF expected, content found after string"));
+    }
+
+    /**
+     * Test that EOF during Unicode escape sequence throws JsonIoException.
+     * This tests line 818 of JsonParser.readString().
+     */
+    @Test
+    public void testEofDuringUnicodeEscape_ShouldThrowJsonIoException() {
+        // Truncated Unicode escape - only 2 hex digits before EOF
+        String json = "\"hello\\u00";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("EOF reached while reading Unicode escape sequence"));
+    }
+
+    /**
+     * Test that invalid hex digit in Unicode escape throws JsonIoException.
+     * This tests line 823 of JsonParser.readString().
+     */
+    @Test
+    public void testInvalidHexInUnicodeEscape_ShouldThrowJsonIoException() {
+        // Invalid hex digit 'G' in Unicode escape
+        String json = "\"hello\\u00GG\"";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Expected hexadecimal digit, got:"));
+    }
+
+    /**
+     * Test that valid Unicode escape sequences work correctly.
+     */
+    @Test
+    public void testValidUnicodeEscape_ShouldWork() {
+        // Valid Unicode escape for 'A' (U+0041)
+        String json = "\"\\u0041\"";
+
+        Object result = JsonIo.toObjects(json, null, Object.class);
+        assertEquals("A", result);
+    }
+
+    // ========== Tests for readHexNumber() error handling (line 740) ==========
+
+    /**
+     * Test that hexadecimal numbers with more than 16 digits throw JsonIoException.
+     * This tests line 740 of JsonParser.readHexNumber().
+     * 16 hex digits = 64 bits = max Long value.
+     */
+    @Test
+    public void testHexNumberTooLarge_ShouldThrowJsonIoException() {
+        // 17 hex digits - exceeds 64-bit Long capacity
+        String json = "[0x12345678901234567]";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Hexadecimal number too large"));
+    }
+
+    /**
+     * Test that 16-digit hexadecimal numbers work correctly (max valid size).
+     * This is the boundary test - 16 digits should work.
+     */
+    @Test
+    public void testHexNumber16Digits_ShouldWork() {
+        // 16 hex digits = exactly 64 bits - should work
+        String json = "[0xFFFFFFFFFFFFFFFF]";
+
+        Object result = JsonIo.toObjects(json, null, Object.class);
+        assertNotNull(result);
+        assertTrue(result instanceof Object[]);
+        Object[] arr = (Object[]) result;
+        assertEquals(1, arr.length);
+        // 0xFFFFFFFFFFFFFFFF = -1 as signed long
+        assertEquals(-1L, arr[0]);
+    }
+
     // ========== Tests for readNumberGeneral() error handling (line 604) ==========
 
     /**
