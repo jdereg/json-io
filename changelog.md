@@ -1,5 +1,11 @@
 ### Revision History
 #### 4.82.0 (unreleased)
+* **BUG FIX**: `ObjectResolver` - Fixed deserialization of arrays containing Collections
+  * Fields declared as `List<String>[]`, `ArrayList<Integer>[]`, etc. now deserialize correctly
+  * Previously, `resolveArray()` incorrectly called `createAndPopulateCollection()` for Collection element types, creating a single Collection instead of an array of Collections
+  * Added handling in `createAndPopulateArray()` to convert inner `Object[]` to Collection instances when the component type is a Collection
+  * Also fixed `assignField()` to use `instanceof Object[]` check instead of `isArray()` to avoid ClassCastException with primitive arrays
+  * Removed unused `createAndPopulateCollection()` method
 * **PERFORMANCE**: `JsonParser` - Optimized string caching and removed number caching
   * String cache: Simplified to bounded LRU LinkedHashMap (1024 entries) with automatic eviction
   * Number cache: Removed entirely - was boxing primitives before cache lookup, negating any benefit

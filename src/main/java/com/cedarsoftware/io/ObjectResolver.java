@@ -143,8 +143,11 @@ public class ObjectResolver extends Resolver
         // Use the raw type (extracted from the full generic type) when checking for custom conversion.
         if ((special = readWithFactoryIfExists(rhs, rawFieldType)) != null) {
             injector.inject(target, special);
-        } else if (rhs.getClass().isArray()) {
-            // If the RHS is an array, wrap it in a JsonObject and stamp it with the full field type.
+        } else if (rhs instanceof Object[]) {
+            // If the RHS is an Object[], wrap it in a JsonObject for processing.
+            // This handles both array fields (String[]) and collection fields (List<String>).
+            // Note: Primitive arrays (int[], etc.) are already handled by createAndPopulateArray
+            // and returned as the correct primitive array type, so they bypass this branch.
             final Object[] elements = (Object[]) rhs;
             JsonObject jsonArray = new JsonObject();
             jsonArray.setType(fieldType);
@@ -789,13 +792,11 @@ public class ObjectResolver extends Resolver
 
         Class<?> rawType = TypeUtilities.getRawClass(suggestedType);
 
-        if (Collection.class.isAssignableFrom(rawType)) {
-            return createAndPopulateCollection(suggestedType, list);
-        } else {
-            // suggestedType is the element type (e.g., String for String[])
-            // Create array of that element type and populate directly
-            return createAndPopulateArray(suggestedType, rawType, list);
-        }
+        // suggestedType is the element type (e.g., String for String[], List<String> for List<String>[])
+        // Create array of that element type and populate directly.
+        // Note: Collection element types (e.g., List<String> for List<String>[]) are handled by
+        // createAndPopulateArray, which will convert inner arrays to Collection instances.
+        return createAndPopulateArray(suggestedType, rawType, list);
     }
 
     /**
@@ -842,6 +843,23 @@ public class ObjectResolver extends Resolver
                 element = createAndPopulateArray(nestedComponentType, componentClass.getComponentType(),
                         java.util.Arrays.asList((Object[]) element));
                 objectArray[i] = element;  // Nested arrays are always object arrays
+                continue;
+            }
+
+            // Handle array elements that should be Collections: Object[] -> List<String> etc.
+            // This handles cases like List<String>[] where each element is a Collection
+            if (element instanceof Object[] && Collection.class.isAssignableFrom(componentClass)) {
+                Object[] arrayElement = (Object[]) element;
+                // Create a JsonObject wrapper to hold the collection with proper type info
+                JsonObject collectionHolder = new JsonObject();
+                collectionHolder.setType(elementType);
+                collectionHolder.setItems(arrayElement);
+                createInstance(collectionHolder);
+                Object collection = collectionHolder.getTarget();
+                objectArray[i] = collection;
+                if (!collectionHolder.isFinished) {
+                    push(collectionHolder);
+                }
                 continue;
             }
 
@@ -972,78 +990,5 @@ public class ObjectResolver extends Resolver
 
         // Return the JsonObject for further processing
         return jObj;
-    }
-
-    /**
-     * Create a collection and populate it with elements from the list.
-     */
-    @SuppressWarnings("unchecked")
-    private Object createAndPopulateCollection(Type suggestedType, List<Object> list) {
-        // Create the collection instance
-        JsonObject jsonArray = new JsonObject();
-        jsonArray.setType(suggestedType);
-        Collection<Object> collection = (Collection<Object>) createInstance(jsonArray);
-
-        // Get the element type for conversion
-        Type elementType = Object.class;
-        if (suggestedType instanceof java.lang.reflect.ParameterizedType) {
-            java.lang.reflect.ParameterizedType pt = (java.lang.reflect.ParameterizedType) suggestedType;
-            Type[] typeArgs = pt.getActualTypeArguments();
-            if (typeArgs.length > 0) {
-                elementType = typeArgs[0];
-            }
-        }
-        Class<?> rawElementType = TypeUtilities.getRawClass(elementType);
-
-        // Track if we need to defer to traverseCollection
-        boolean needsTraversal = false;
-
-        for (Object item : list) {
-            if (item == null) {
-                collection.add(null);
-                continue;
-            }
-
-            if (item instanceof JsonObject) {
-                JsonObject jObj = (JsonObject) item;
-                if (jObj.isReference()) {
-                    // Has references - needs traversal
-                    needsTraversal = true;
-                    break;
-                }
-                if (jObj.getTarget() == null && jObj.getType() == null) {
-                    jObj.setType(elementType);
-                }
-                if (jObj.getTarget() == null) {
-                    createInstance(jObj);
-                }
-                if (!jObj.isFinished) {
-                    needsTraversal = true;
-                    break;
-                }
-                collection.add(jObj.getTarget());
-            } else if (item.getClass().isArray()) {
-                needsTraversal = true;
-                break;
-            } else {
-                // Direct value
-                if (rawElementType != Object.class && !rawElementType.isAssignableFrom(item.getClass())) {
-                    if (converter.isConversionSupportedFor(item.getClass(), rawElementType)) {
-                        item = converter.convert(item, rawElementType);
-                    }
-                }
-                collection.add(item);
-            }
-        }
-
-        if (needsTraversal) {
-            // Fall back to JsonObject wrapper for complex cases
-            collection.clear();
-            jsonArray.setTarget(collection);
-            jsonArray.setItems(list.toArray());
-            return jsonArray;
-        }
-
-        return collection;
     }
 }

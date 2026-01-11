@@ -24,6 +24,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import static com.cedarsoftware.util.DeepEquals.deepEquals;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -1507,5 +1508,229 @@ class ArrayTest
             _test_a[0] = _test_b;
             _test_b[0] = _test_a;
         }
+    }
+
+    // =========================================================================
+    // Tests for array of collections (exercises array-to-Collection conversion)
+    // =========================================================================
+
+    /**
+     * Holder class for array of List fields - used to test array-to-Collection conversion.
+     * When JSON without @type info contains nested arrays and the field type is List<String>[],
+     * the resolver needs to create List instances from the bare arrays in createAndPopulateArray.
+     */
+    public static class ArrayOfListsHolder {
+        public List<String>[] lists;
+        public ArrayList<Integer>[] arrayLists;
+        public Collection<String>[] collections;
+    }
+
+    @Test
+    void testArrayOfLists_withoutTypeInfo() {
+        // JSON without @type - simulates external JSON (e.g., from JavaScript JSON.stringify)
+        String json = "{\"@type\":\"" + ArrayOfListsHolder.class.getName() + "\",\"lists\":[[\"a\",\"b\"],[\"c\",\"d\",\"e\"]]}";
+
+        ArrayOfListsHolder holder = TestUtil.toJava(json, null).asClass(ArrayOfListsHolder.class);
+
+        assertNotNull(holder.lists);
+        assertEquals(2, holder.lists.length);
+        assertNotNull(holder.lists[0]);
+        assertNotNull(holder.lists[1]);
+        assertEquals(2, holder.lists[0].size());
+        assertEquals(3, holder.lists[1].size());
+        assertEquals("a", holder.lists[0].get(0));
+        assertEquals("b", holder.lists[0].get(1));
+        assertEquals("c", holder.lists[1].get(0));
+        assertEquals("d", holder.lists[1].get(1));
+        assertEquals("e", holder.lists[1].get(2));
+    }
+
+    @Test
+    void testArrayOfArrayLists_withoutTypeInfo() {
+        // Test with ArrayList<Integer>[] - note: JSON integers are parsed as Long by default
+        String json = "{\"@type\":\"" + ArrayOfListsHolder.class.getName() + "\",\"arrayLists\":[[1,2,3],[4,5]]}";
+
+        ArrayOfListsHolder holder = TestUtil.toJava(json, null).asClass(ArrayOfListsHolder.class);
+
+        assertNotNull(holder.arrayLists);
+        assertEquals(2, holder.arrayLists.length);
+        assertEquals(3, holder.arrayLists[0].size());
+        assertEquals(2, holder.arrayLists[1].size());
+        // JSON integers are parsed as Long, not Integer
+        assertEquals(1L, ((Number) holder.arrayLists[0].get(0)).longValue());
+        assertEquals(5L, ((Number) holder.arrayLists[1].get(1)).longValue());
+    }
+
+    @Test
+    void testArrayOfCollections_withoutTypeInfo() {
+        // Test with Collection<String>[]
+        String json = "{\"@type\":\"" + ArrayOfListsHolder.class.getName() + "\",\"collections\":[[\"x\",\"y\"],[\"z\"]]}";
+
+        ArrayOfListsHolder holder = TestUtil.toJava(json, null).asClass(ArrayOfListsHolder.class);
+
+        assertNotNull(holder.collections);
+        assertEquals(2, holder.collections.length);
+        assertEquals(2, holder.collections[0].size());
+        assertEquals(1, holder.collections[1].size());
+        assertTrue(holder.collections[0].contains("x"));
+        assertTrue(holder.collections[0].contains("y"));
+        assertTrue(holder.collections[1].contains("z"));
+    }
+
+    @Test
+    void testArrayOfLists_withNullElements() {
+        // Test with null elements in the outer array
+        String json = "{\"@type\":\"" + ArrayOfListsHolder.class.getName() + "\",\"lists\":[[\"a\"],null,[\"b\",\"c\"]]}";
+
+        ArrayOfListsHolder holder = TestUtil.toJava(json, null).asClass(ArrayOfListsHolder.class);
+
+        assertNotNull(holder.lists);
+        assertEquals(3, holder.lists.length);
+        assertNotNull(holder.lists[0]);
+        assertNull(holder.lists[1]);
+        assertNotNull(holder.lists[2]);
+        assertEquals(1, holder.lists[0].size());
+        assertEquals(2, holder.lists[2].size());
+    }
+
+    @Test
+    void testArrayOfLists_emptyArrays() {
+        // Test with empty inner and outer arrays
+        String json = "{\"@type\":\"" + ArrayOfListsHolder.class.getName() + "\",\"lists\":[[],[]]}";
+
+        ArrayOfListsHolder holder = TestUtil.toJava(json, null).asClass(ArrayOfListsHolder.class);
+
+        assertNotNull(holder.lists);
+        assertEquals(2, holder.lists.length);
+        assertNotNull(holder.lists[0]);
+        assertNotNull(holder.lists[1]);
+        assertEquals(0, holder.lists[0].size());
+        assertEquals(0, holder.lists[1].size());
+    }
+
+    @Test
+    void testArrayOfLists_roundTrip() {
+        // Create an instance, serialize and deserialize to verify round-trip
+        ArrayOfListsHolder original = new ArrayOfListsHolder();
+        original.lists = new List[2];
+        original.lists[0] = new ArrayList<>(Arrays.asList("one", "two"));
+        original.lists[1] = new ArrayList<>(Arrays.asList("three"));
+
+        String json = TestUtil.toJson(original);
+        ArrayOfListsHolder restored = TestUtil.toJava(json, null).asClass(ArrayOfListsHolder.class);
+
+        assertNotNull(restored.lists);
+        assertEquals(2, restored.lists.length);
+        assertEquals(2, restored.lists[0].size());
+        assertEquals(1, restored.lists[1].size());
+        assertEquals("one", restored.lists[0].get(0));
+        assertEquals("two", restored.lists[0].get(1));
+        assertEquals("three", restored.lists[1].get(0));
+    }
+
+    // =========================================================================
+    // Tests for primitive arrays in POJOs (ensures no ClassCastException)
+    // =========================================================================
+
+    /**
+     * Holder class for primitive array fields.
+     * Tests that primitive arrays (int[], long[], etc.) are correctly deserialized
+     * without causing ClassCastException when assignField checks for Object[].
+     */
+    public static class PrimitiveArrayHolder {
+        public int[] intArray;
+        public long[] longArray;
+        public double[] doubleArray;
+        public boolean[] booleanArray;
+        public byte[] byteArray;
+        public short[] shortArray;
+        public float[] floatArray;
+        public char[] charArray;
+    }
+
+    @Test
+    void testPrimitiveArraysInPojo_roundTrip() {
+        // This test ensures primitive arrays don't cause ClassCastException
+        // when ObjectResolver.assignField processes them
+        PrimitiveArrayHolder original = new PrimitiveArrayHolder();
+        original.intArray = new int[]{1, 2, 3, 4, 5};
+        original.longArray = new long[]{100L, 200L, 300L};
+        original.doubleArray = new double[]{1.1, 2.2, 3.3};
+        original.booleanArray = new boolean[]{true, false, true};
+        original.byteArray = new byte[]{1, 2, 3};
+        original.shortArray = new short[]{10, 20, 30};
+        original.floatArray = new float[]{1.5f, 2.5f};
+        original.charArray = new char[]{'a', 'b', 'c'};
+
+        String json = TestUtil.toJson(original);
+        PrimitiveArrayHolder restored = TestUtil.toJava(json, null).asClass(PrimitiveArrayHolder.class);
+
+        assertNotNull(restored);
+        assertArrayEquals(original.intArray, restored.intArray);
+        assertArrayEquals(original.longArray, restored.longArray);
+        assertArrayEquals(original.doubleArray, restored.doubleArray, 0.001);
+        assertArrayEquals(original.booleanArray, restored.booleanArray);
+        assertArrayEquals(original.byteArray, restored.byteArray);
+        assertArrayEquals(original.shortArray, restored.shortArray);
+        assertArrayEquals(original.floatArray, restored.floatArray, 0.001f);
+        assertArrayEquals(original.charArray, restored.charArray);
+    }
+
+    @Test
+    void testPrimitiveArraysInPojo_fromJson() {
+        // Test parsing primitive arrays from JSON string (simulates external JSON)
+        String json = "{\"@type\":\"" + PrimitiveArrayHolder.class.getName() + "\"," +
+                "\"intArray\":[10,20,30]," +
+                "\"longArray\":[1000,2000]," +
+                "\"doubleArray\":[1.5,2.5]," +
+                "\"booleanArray\":[true,false]," +
+                "\"byteArray\":[1,2]," +
+                "\"shortArray\":[5,10]," +
+                "\"floatArray\":[0.5,1.5]," +
+                "\"charArray\":\"xy\"}";  // char[] is stored as String
+
+        PrimitiveArrayHolder holder = TestUtil.toJava(json, null).asClass(PrimitiveArrayHolder.class);
+
+        assertNotNull(holder);
+        assertArrayEquals(new int[]{10, 20, 30}, holder.intArray);
+        assertArrayEquals(new long[]{1000L, 2000L}, holder.longArray);
+        assertArrayEquals(new double[]{1.5, 2.5}, holder.doubleArray, 0.001);
+        assertArrayEquals(new boolean[]{true, false}, holder.booleanArray);
+        assertArrayEquals(new byte[]{1, 2}, holder.byteArray);
+        assertArrayEquals(new short[]{5, 10}, holder.shortArray);
+        assertArrayEquals(new float[]{0.5f, 1.5f}, holder.floatArray, 0.001f);
+        assertArrayEquals(new char[]{'x', 'y'}, holder.charArray);
+    }
+
+    /**
+     * Holder class with mixed array types - both primitive and object arrays.
+     * Tests that the resolver correctly handles both types in the same POJO.
+     */
+    public static class MixedArrayHolder {
+        public int[] primitiveInts;
+        public Integer[] boxedInts;
+        public String[] strings;
+        public double[] primitiveDoubles;
+        public Double[] boxedDoubles;
+    }
+
+    @Test
+    void testMixedArraysInPojo_roundTrip() {
+        MixedArrayHolder original = new MixedArrayHolder();
+        original.primitiveInts = new int[]{1, 2, 3};
+        original.boxedInts = new Integer[]{4, 5, 6};
+        original.strings = new String[]{"a", "b", "c"};
+        original.primitiveDoubles = new double[]{1.1, 2.2};
+        original.boxedDoubles = new Double[]{3.3, 4.4};
+
+        String json = TestUtil.toJson(original);
+        MixedArrayHolder restored = TestUtil.toJava(json, null).asClass(MixedArrayHolder.class);
+
+        assertNotNull(restored);
+        assertArrayEquals(original.primitiveInts, restored.primitiveInts);
+        assertArrayEquals(original.boxedInts, restored.boxedInts);
+        assertArrayEquals(original.strings, restored.strings);
+        assertArrayEquals(original.primitiveDoubles, restored.primitiveDoubles, 0.001);
+        assertArrayEquals(original.boxedDoubles, restored.boxedDoubles);
     }
 }
