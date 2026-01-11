@@ -795,6 +795,39 @@ public class JsonParserErrorHandlingTest {
         assertTrue(exception.getMessage().contains("Unexpected end of input after '+'"));
     }
 
+    // ========== Tests for loadType() error handling ==========
+
+    /**
+     * Test that @type with a non-String value throws JsonIoException.
+     * This tests loadType() validation in JsonParser.
+     */
+    @Test
+    public void testTypeWithNonStringValue_ShouldThrowJsonIoException() {
+        // @type should be a String (class name), but we provide a number
+        String json = "{\"@type\":12345}";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Expected a String for @type"));
+    }
+
+    /**
+     * Test that @type with array value throws JsonIoException.
+     */
+    @Test
+    public void testTypeWithArrayValue_ShouldThrowJsonIoException() {
+        // @type should be a String, but we provide an array
+        String json = "{\"@type\":[1,2,3]}";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Expected a String for @type"));
+    }
+
     // ========== Tests for loadId() error handling (lines 1045, 1052) ==========
 
     /**
