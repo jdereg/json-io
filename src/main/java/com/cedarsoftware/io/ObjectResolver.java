@@ -824,11 +824,15 @@ public class ObjectResolver extends Resolver
         boolean hasUnresolvedRefs = false;
         List<UnresolvedArrayElement> unresolvedElements = null;
 
+        // Use optimized array access based on component type
+        boolean isPrimitive = componentClass.isPrimitive();
+        Object[] objectArray = isPrimitive ? null : (Object[]) array;
+
         for (int i = 0; i < size; i++) {
             Object element = list.get(i);
 
             if (element == null) {
-                Array.set(array, i, null);
+                // For object arrays, null is already the default; for primitives, skip (can't set null)
                 continue;
             }
 
@@ -837,7 +841,7 @@ public class ObjectResolver extends Resolver
                 Type nestedComponentType = TypeUtilities.extractArrayComponentType(elementType);
                 element = createAndPopulateArray(nestedComponentType, componentClass.getComponentType(),
                         java.util.Arrays.asList((Object[]) element));
-                Array.set(array, i, element);
+                objectArray[i] = element;  // Nested arrays are always object arrays
                 continue;
             }
 
@@ -863,7 +867,7 @@ public class ObjectResolver extends Resolver
                 jObj.setType(elementType);
                 createInstance(jObj);
                 Object target = jObj.getTarget();
-                Array.set(array, i, target);
+                objectArray[i] = target;  // JsonObject targets are always objects, not primitives
                 if (!jObj.isFinished) {
                     push(jObj);
                 }
@@ -879,7 +883,12 @@ public class ObjectResolver extends Resolver
                 }
             }
 
-            Array.set(array, i, resolved);
+            // Set the element using optimized access
+            if (isPrimitive) {
+                ArrayUtilities.setPrimitiveElement(array, i, resolved);
+            } else {
+                objectArray[i] = resolved;
+            }
         }
 
         // If we have forward references, add unresolved references to be patched later
