@@ -85,10 +85,8 @@ class JsonParser {
     private final ReadOptions readOptions;
     private final ReferenceTracker references;
 
-    // Instance-level cache for parser-specific strings
-    // Reference to static string cache (no instance-level caching)
+    // Instance-level LRU cache for string deduplication
     private final Map<String, String> stringCache;
-    private final Map<Number, Number> numberCache;
     // Performance: Hoisted ReadOptions constants to avoid repeated method calls
     private final long maxIdValue;
     private final boolean strictJson;
@@ -98,9 +96,8 @@ class JsonParser {
     private final boolean floatingPointBoth;
     private final Map<CharSequence, CharSequence> substitutes;
     
-    // LRU cache size limits for string/number deduplication
+    // LRU cache size limit for string deduplication
     private static final int STRING_CACHE_SIZE = 1024;
-    private static final int NUMBER_CACHE_SIZE = 1024;
     private static final Map<CharSequence, CharSequence> SUBSTITUTES = new HashMap<>(16);
 
     // Static lookup tables for performance
@@ -157,18 +154,12 @@ class JsonParser {
         // For substitutes, use the static map directly (read-only)
         this.substitutes = SUBSTITUTES;
 
-        // Create instance-level LRU caches for string/number deduplication
+        // Create instance-level LRU cache for string deduplication
         // LinkedHashMap with accessOrder=true provides LRU eviction
         this.stringCache = new LinkedHashMap<String, String>(STRING_CACHE_SIZE, 0.75f, true) {
             @Override
             protected boolean removeEldestEntry(Map.Entry<String, String> eldest) {
                 return size() > STRING_CACHE_SIZE;
-            }
-        };
-        this.numberCache = new LinkedHashMap<Number, Number>(NUMBER_CACHE_SIZE, 0.75f, true) {
-            @Override
-            protected boolean removeEldestEntry(Map.Entry<Number, Number> eldest) {
-                return size() > NUMBER_CACHE_SIZE;
             }
         };
 
@@ -637,18 +628,10 @@ class JsonParser {
         }
 
         try {
-            Number val;
             if (isFloat) {
-                val = readFloatingPoint(number.toString());
+                return readFloatingPoint(number.toString());
             } else {
-                val = readInteger(number);
-            }
-            final Number cachedInstance = numberCache.get(val);
-            if (cachedInstance != null) {
-                return cachedInstance;
-            } else {
-                numberCache.put(val, val);  // caching all numbers (LRU has upper limit)
-                return val;
+                return readInteger(number);
             }
         }
         catch (Exception e) {

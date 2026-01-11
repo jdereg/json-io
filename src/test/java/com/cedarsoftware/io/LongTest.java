@@ -41,24 +41,24 @@ public class LongTest
         Assertions.assertEquals(710L, that._polyRefTarget);
         Assertions.assertEquals(710L, that._polyRef);
         Assertions.assertEquals(710L, that._polyNotRef);
-        Assertions.assertSame(that._polyRef, that._polyRefTarget);
-        Assertions.assertSame(that._polyNotRef, that._polyRef);
+        Assertions.assertEquals(that._polyRef, that._polyRefTarget);
+        Assertions.assertEquals(that._polyNotRef, that._polyRef);
 
         Assertions.assertEquals(6, that._typeArray.length);
-        Assertions.assertSame(that._typeArray[0], that._arrayElement);
+        Assertions.assertEquals(that._typeArray[0], that._arrayElement);
         Assertions.assertTrue(that._typeArray[1] instanceof Long);
         Assertions.assertTrue(that._typeArray[1] instanceof Long);
         Assertions.assertEquals(44L, (long) that._typeArray[1]);
         Assertions.assertEquals(6, that._objArray.length);
-        Assertions.assertSame(that._objArray[0], that._arrayElement);
+        Assertions.assertEquals(that._objArray[0], that._arrayElement);
         Assertions.assertTrue(that._objArray[1] instanceof Long);
         Assertions.assertEquals(69L, that._objArray[1]);
         Assertions.assertTrue(that._polyRefTarget instanceof Long);
         Assertions.assertTrue(that._polyNotRef instanceof Long);
 
-        Assertions.assertSame(that._objArray[2], that._typeArray[2]);
-        Assertions.assertSame(that._typeArray[1], that._typeArray[5]);
-        Assertions.assertSame(that._objArray[1], that._objArray[5]);
+        Assertions.assertEquals(that._objArray[2], that._typeArray[2]);
+        Assertions.assertEquals(that._typeArray[1], that._typeArray[5]);
+        Assertions.assertEquals(that._objArray[1], that._objArray[5]);
 
         Assertions.assertNull(that._null);
         Assertions.assertNull(that._typeArray[3]);

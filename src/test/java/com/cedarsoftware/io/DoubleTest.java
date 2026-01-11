@@ -45,8 +45,8 @@ public class DoubleTest
         assertEquals(71.0d, that._polyRefTarget);
         assertEquals(71.0d, that._polyRef);
         assertEquals(71.0d, that._polyNotRef);
-        assertSame(that._polyRef, that._polyRefTarget);
-        assertSame(that._polyNotRef, that._polyRef);
+        assertEquals(that._polyRef, that._polyRefTarget);
+        assertEquals(that._polyNotRef, that._polyRef);
 
         assertEquals(6, that._typeArray.length);
         assertNotNull(that._typeArray[1]);
