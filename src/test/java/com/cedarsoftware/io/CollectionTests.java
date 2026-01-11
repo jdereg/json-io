@@ -732,6 +732,102 @@ class CollectionTests {
         assertEquals(14, restored.points.get(1).y);
     }
 
+    /**
+     * Test coverage for ObjectResolver.traverseCollection() lines 327-328.
+     * When collection @items contains pre-resolved objects that are NOT directly addable
+     * JSON values (not String/Boolean/Long/Double/BigInteger/BigDecimal) but CAN be
+     * converted by the Converter (same-type identity conversion), readWithFactoryIfExists
+     * returns non-null and the converted value is added to the collection.
+     */
+    @Test
+    void testCollectionWithPreResolvedIntegerElements() {
+        // Create a JsonObject representing a collection with Integer elements
+        // Integer is NOT a directly addable JSON value (Long is, but not Integer)
+        // but the Converter supports identity conversion
+        JsonObject jsonObj = new JsonObject();
+        jsonObj.setType(ArrayList.class);
+        jsonObj.setItems(new Object[]{Integer.valueOf(1), Integer.valueOf(2), Integer.valueOf(3)});
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        List<?> result = JsonIo.toJava(jsonObj, readOptions).asClass(null);
+
+        assertNotNull(result);
+        assertEquals(3, result.size());
+        assertEquals(1, result.get(0));
+        assertEquals(2, result.get(1));
+        assertEquals(3, result.get(2));
+    }
+
+    /**
+     * Test coverage for ObjectResolver.traverseCollection() line 330.
+     * When collection @items contains pre-resolved objects that are NOT directly addable
+     * JSON values, NOT JsonObject, NOT arrays, and readWithFactoryIfExists returns null
+     * (no converter/factory/reader for the type), the element is added as-is to the collection.
+     */
+    @Test
+    void testCollectionWithPreResolvedCustomObjectElements() {
+        // Create pre-resolved SimplePoint objects
+        SimplePoint p1 = new SimplePoint(10, 20);
+        SimplePoint p2 = new SimplePoint(30, 40);
+
+        // Create a JsonObject representing a collection with these pre-resolved objects
+        // SimplePoint has no custom reader/factory, so readWithFactoryIfExists returns null
+        JsonObject jsonObj = new JsonObject();
+        jsonObj.setType(ArrayList.class);
+        jsonObj.setItems(new Object[]{p1, p2});
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        List<?> result = JsonIo.toJava(jsonObj, readOptions).asClass(null);
+
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        // The objects should be added as-is (same instance since no conversion happened)
+        assertThat(result.get(0)).isSameAs(p1);
+        assertThat(result.get(1)).isSameAs(p2);
+    }
+
+    /**
+     * Test coverage for ObjectResolver.traverseCollection() lines 327-328.
+     * Tests with Short elements (another type that is NOT directly addable but convertible).
+     */
+    @Test
+    void testCollectionWithPreResolvedShortElements() {
+        JsonObject jsonObj = new JsonObject();
+        jsonObj.setType(ArrayList.class);
+        jsonObj.setItems(new Object[]{Short.valueOf((short) 100), Short.valueOf((short) 200)});
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        List<?> result = JsonIo.toJava(jsonObj, readOptions).asClass(null);
+
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertEquals((short) 100, result.get(0));
+        assertEquals((short) 200, result.get(1));
+    }
+
+    /**
+     * Test coverage for ObjectResolver.traverseCollection() lines 326-330.
+     * Tests with a mix of different pre-resolved element types in the same collection.
+     */
+    @Test
+    void testCollectionWithMixedPreResolvedElements() {
+        SimplePoint point = new SimplePoint(5, 10);
+
+        JsonObject jsonObj = new JsonObject();
+        jsonObj.setType(ArrayList.class);
+        // Mix of: Integer (convertible), Float (convertible), SimplePoint (not convertible)
+        jsonObj.setItems(new Object[]{Integer.valueOf(42), Float.valueOf(3.14f), point});
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        List<?> result = JsonIo.toJava(jsonObj, readOptions).asClass(null);
+
+        assertNotNull(result);
+        assertEquals(3, result.size());
+        assertEquals(42, result.get(0));
+        assertEquals(3.14f, result.get(1));
+        assertThat(result.get(2)).isSameAs(point);
+    }
+
     // Simple Point class for parameterized collection tests
     public static class SimplePoint {
         public int x;

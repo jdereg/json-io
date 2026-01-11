@@ -1733,4 +1733,271 @@ class ArrayTest
         assertArrayEquals(original.primitiveDoubles, restored.primitiveDoubles, 0.001);
         assertArrayEquals(original.boxedDoubles, restored.boxedDoubles);
     }
+
+    // ============================================================================
+    // Tests for ObjectResolver.traverseArray() uncovered lines
+    // ============================================================================
+
+    /**
+     * Test coverage for ObjectResolver.traverseArray() lines 384-388.
+     * Tests char[][] where inner char[] elements come as Object[] arrays (array format)
+     * instead of the normal String format. This tests the special char[] array handling.
+     *
+     * The code at lines 384-388 handles the case where char[] is represented as an array
+     * in JSON (e.g., ["h","e","l","l","o"]) instead of a String ("hello").
+     *
+     * We construct the JsonObject manually with Object[] items to ensure the elements
+     * are actual arrays (not JsonObjects), and add char[].class to notCustomReaderClasses
+     * to force readWithFactoryIfExists to return null.
+     */
+    @Test
+    void testCharArrayOfArrays_withArrayFormatElements() {
+        // Create the char[][] target array first
+        char[][] targetArray = new char[3][];
+
+        // Create a JsonObject manually with Object[] items containing actual Object[] arrays
+        // This ensures elements are real arrays, not JsonObjects
+        JsonObject jsonObj = new JsonObject();
+        jsonObj.setType(char[][].class);
+        jsonObj.setTarget(targetArray);
+
+        // Items are Object[] arrays (array format for char[])
+        // Line 387: char[] chars = jsonArray.length == 0 ? new char[]{} : ((String) jsonArray[0]).toCharArray();
+        Object[] item1 = new Object[]{"hello"};  // Single String element -> toCharArray()
+        Object[] item2 = new Object[]{"world"};
+        Object[] item3 = new Object[]{};         // Empty array -> empty char[]
+
+        jsonObj.setItems(new Object[]{item1, item2, item3});
+
+        // Add char[].class to notCustomReaderClasses to bypass factory and hit lines 384-388
+        ReadOptions readOptions = new ReadOptionsBuilder()
+                .addNotCustomReaderClass(char[].class)
+                .build();
+        char[][] result = JsonIo.toJava(jsonObj, readOptions).asClass(null);
+
+        assertNotNull(result);
+        assertEquals(3, result.length);
+        assertArrayEquals(new char[]{'h', 'e', 'l', 'l', 'o'}, result[0]);
+        assertArrayEquals(new char[]{'w', 'o', 'r', 'l', 'd'}, result[1]);
+        assertArrayEquals(new char[]{}, result[2]);
+    }
+
+    /**
+     * Test coverage for ObjectResolver.traverseArray() lines 419-423.
+     * Tests that empty strings in array elements are converted to null
+     * for types where the converter doesn't support String conversion.
+     *
+     * Using a custom class array where readWithFactoryIfExists returns null
+     * (no converter support for String -> CustomClass).
+     * We construct the JsonObject manually to ensure raw String elements.
+     */
+    @Test
+    void testCustomClassArrayWithEmptyStringElement_convertsToNull() {
+        // Create the target array first
+        SimpleHolder[] targetArray = new SimpleHolder[3];
+
+        // Create SimpleHolder objects for non-empty elements
+        SimpleHolder holder1 = new SimpleHolder();
+        holder1.value = 1;
+        SimpleHolder holder3 = new SimpleHolder();
+        holder3.value = 3;
+
+        // Create a JsonObject manually with items containing raw Strings
+        JsonObject jsonObj = new JsonObject();
+        jsonObj.setType(SimpleHolder[].class);
+        jsonObj.setTarget(targetArray);
+
+        // Items: [holder1, "  ", holder3]
+        // The "  " (whitespace-only) String should hit lines 420-423
+        jsonObj.setItems(new Object[]{holder1, "  ", holder3});
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        SimpleHolder[] result = JsonIo.toJava(jsonObj, readOptions).asClass(null);
+
+        assertNotNull(result);
+        assertEquals(3, result.length);
+        assertNotNull(result[0]);
+        assertEquals(1, result[0].value);
+        assertNull(result[1]);  // Empty string converted to null (lines 420-423)
+        assertNotNull(result[2]);
+        assertEquals(3, result[2].value);
+    }
+
+    /**
+     * Simple holder class for testing empty string to null conversion.
+     * This class has no special converter support.
+     */
+    public static class SimpleHolder {
+        public int value;
+        public SimpleHolder() {}
+    }
+
+    /**
+     * Test coverage for ObjectResolver.traverseArray() lines 419-423.
+     * Additional test with whitespace-only string using manually constructed JsonObject.
+     */
+    @Test
+    void testCustomClassArrayWithWhitespaceOnlyElement_convertsToNull() {
+        // Create the target array first
+        SimpleHolder[] targetArray = new SimpleHolder[3];
+
+        SimpleHolder holder1 = new SimpleHolder();
+        holder1.value = 10;
+
+        // Create a JsonObject manually with items containing raw Strings
+        JsonObject jsonObj = new JsonObject();
+        jsonObj.setType(SimpleHolder[].class);
+        jsonObj.setTarget(targetArray);
+
+        // Items: [holder1, "   ", "\t\n"]
+        // Both whitespace-only Strings should hit lines 420-423
+        jsonObj.setItems(new Object[]{holder1, "   ", "\t\n"});
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        SimpleHolder[] result = JsonIo.toJava(jsonObj, readOptions).asClass(null);
+
+        assertNotNull(result);
+        assertEquals(3, result.length);
+        assertNotNull(result[0]);
+        assertEquals(10, result[0].value);
+        assertNull(result[1]);  // Whitespace-only converted to null
+        assertNull(result[2]);  // Tab+newline also whitespace-only, converted to null
+    }
+
+    /**
+     * Test coverage for ObjectResolver.traverseArray() lines 378-379.
+     * Tests enum array where elements are processed by readWithFactoryIfExists
+     * and need String-to-Enum conversion.
+     */
+    @Test
+    void testEnumArrayWithStringElements() {
+        // Standard enum array serialization and deserialization
+        TestEnum[] original = new TestEnum[]{TestEnum.VALUE_A, TestEnum.VALUE_B, TestEnum.VALUE_C};
+
+        String json = TestUtil.toJson(original);
+        TestEnum[] result = TestUtil.toJava(json, null).asClass(null);
+
+        assertNotNull(result);
+        assertEquals(3, result.length);
+        assertEquals(TestEnum.VALUE_A, result[0]);
+        assertEquals(TestEnum.VALUE_B, result[1]);
+        assertEquals(TestEnum.VALUE_C, result[2]);
+    }
+
+    /**
+     * Test coverage for ObjectResolver.traverseArray() lines 378-379.
+     * Tests enum array where a custom reader returns String instead of enum value.
+     *
+     * Lines 378-379 handle the edge case where readWithFactoryIfExists returns
+     * a String (from a custom reader) that needs Enum.valueOf() conversion.
+     */
+    @Test
+    void testEnumArrayWithCustomReaderReturningString() {
+        // Create a custom reader that returns the String value as-is
+        // instead of converting to enum. Lines 378-379 will then convert it.
+        // The custom reader receives the JsonObject element (not a plain String)
+        // and extracts the enum name from the "name" field, returning it as a String.
+        JsonClassReader<Object> stringReturningReader = new JsonClassReader<Object>() {
+            @Override
+            public Object read(Object o, Resolver resolver) {
+                // If o is a JsonObject, extract the "name" field and return as String
+                if (o instanceof JsonObject) {
+                    JsonObject jObj = (JsonObject) o;
+                    Object name = jObj.get("name");
+                    if (name instanceof String) {
+                        return name;  // Return the String, triggering lines 378-379
+                    }
+                }
+                return null;
+            }
+        };
+
+        // Create JsonObject elements with enum names in "name" field (not "value")
+        // This bypasses the converter check (line 489) since hasValue() returns false
+        JsonObject elem1 = new JsonObject();
+        elem1.setType(TestEnum.class);
+        elem1.put("name", "VALUE_A");
+
+        JsonObject elem2 = new JsonObject();
+        elem2.setType(TestEnum.class);
+        elem2.put("name", "VALUE_B");
+
+        // Create the array JsonObject
+        JsonObject arrayObj = new JsonObject();
+        arrayObj.setType(TestEnum[].class);
+        arrayObj.setItems(new Object[]{elem1, elem2});
+
+        ReadOptions readOptions = new ReadOptionsBuilder()
+                .addCustomReaderClass(TestEnum.class, stringReturningReader)
+                .build();
+        TestEnum[] result = JsonIo.toJava(arrayObj, readOptions).asClass(null);
+
+        assertNotNull(result);
+        assertEquals(2, result.length);
+        assertEquals(TestEnum.VALUE_A, result[0]);
+        assertEquals(TestEnum.VALUE_B, result[1]);
+    }
+
+    /**
+     * Test coverage for ObjectResolver.traverseArray() lines 378-379.
+     * Tests enum array where String elements need to be converted to enum values.
+     */
+    @Test
+    void testEnumArrayFromJsonObject_withStringElements() {
+        // Create a JsonObject representing an enum array with String items
+        JsonObject jsonObj = new JsonObject();
+        jsonObj.setType(Thread.State[].class);
+        jsonObj.setItems(new Object[]{"NEW", "RUNNABLE", "WAITING"});
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        Thread.State[] result = JsonIo.toJava(jsonObj, readOptions).asClass(null);
+
+        assertNotNull(result);
+        assertEquals(3, result.length);
+        assertEquals(Thread.State.NEW, result[0]);
+        assertEquals(Thread.State.RUNNABLE, result[1]);
+        assertEquals(Thread.State.WAITING, result[2]);
+    }
+
+    /**
+     * Test coverage for ObjectResolver.traverseArray() line 361.
+     * When extractArrayComponentType returns null (because type is not set),
+     * the fallbackCompType from the target array should be used.
+     */
+    @Test
+    void testArrayWithNoTypeSet_usesFallbackComponentType() {
+        // Create target array first
+        String[] targetArray = new String[3];
+
+        // Create JsonObject with target set but NO type
+        JsonObject jsonObj = new JsonObject();
+        jsonObj.setTarget(targetArray);  // This sets target but we'll clear type
+        // Note: setTarget sets type automatically, so we need to work around this
+
+        // Create items that will be copied to the array
+        jsonObj.setItems(new Object[]{"hello", "world", "test"});
+
+        // Use reflection to clear the type field to null
+        try {
+            java.lang.reflect.Field typeField = com.cedarsoftware.io.JsonValue.class.getDeclaredField("type");
+            typeField.setAccessible(true);
+            typeField.set(jsonObj, null);
+        } catch (Exception e) {
+            throw new RuntimeException("Could not clear type field: " + e.getMessage(), e);
+        }
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        String[] result = JsonIo.toJava(jsonObj, readOptions).asClass(null);
+
+        assertNotNull(result);
+        assertEquals(3, result.length);
+        assertEquals("hello", result[0]);
+        assertEquals("world", result[1]);
+        assertEquals("test", result[2]);
+    }
+
+    // Test enum for enum array tests
+    public enum TestEnum {
+        VALUE_A, VALUE_B, VALUE_C
+    }
 }

@@ -390,13 +390,13 @@ public abstract class Resolver {
                 Class<?> sourceClass = TypeUtilities.getRawClass(jsonType);
 
                 // Check if we need array/collection cross-conversion
+                // Note: Collection→Array conversion is handled later by convertToType() via Converter,
+                // not here, because Collections have isArray()=false and don't enter this block.
                 boolean needsConversion = false;
                 if (sourceClass.isArray() && targetClass.isArray() && sourceClass != targetClass) {
                     needsConversion = true;  // Different array types (e.g., char[] → byte[])
                 } else if (sourceClass.isArray() && Collection.class.isAssignableFrom(targetClass)) {
                     needsConversion = true;  // Array to Collection
-                } else if (Collection.class.isAssignableFrom(sourceClass) && targetClass.isArray()) {
-                    needsConversion = true;  // Collection to Array
                 }
 
                 // Note: We intentionally DON'T call isConversionSupportedFor() here because

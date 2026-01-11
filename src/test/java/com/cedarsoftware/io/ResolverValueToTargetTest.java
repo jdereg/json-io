@@ -21,6 +21,10 @@ class ResolverValueToTargetTest {
             return valueToTarget(obj);
         }
 
+        Object callToJava(Type type, Object value) {
+            return toJava(type, value);
+        }
+
         @Override
         public void traverseFields(JsonObject jsonObj) {
         }
@@ -75,5 +79,53 @@ class ResolverValueToTargetTest {
 
         assertThatThrownBy(() -> resolver.callValueToTarget(arrayObj))
                 .isInstanceOf(JsonIoException.class);
+    }
+
+    /**
+     * Tests that Resolver.toJava() converts a primitive array (int[]) to a different
+     * target primitive array type (long[]) when the Converter supports the conversion.
+     * This exercises line 342 in Resolver.java: return converter.convert(value, targetClass);
+     */
+    @Test
+    void toJava_convertsPrimitiveArrayToDifferentPrimitiveArrayType() {
+        int[] intArray = new int[]{1, 2, 3};
+
+        // Request conversion to long[] - should use Converter to convert int[] to long[]
+        Object result = resolver.callToJava(long[].class, intArray);
+
+        assertThat(result).isInstanceOf(long[].class);
+        assertThat((long[]) result).containsExactly(1L, 2L, 3L);
+    }
+
+    /**
+     * Tests that Resolver.toJava() returns the original primitive array when
+     * no type conversion is needed (target type matches source type).
+     * This exercises line 345 in Resolver.java: return value;
+     */
+    @Test
+    void toJava_returnsPrimitiveArrayUnchangedWhenTypesMatch() {
+        int[] intArray = new int[]{4, 5, 6};
+
+        // Request same type - should return original array unchanged
+        Object result = resolver.callToJava(int[].class, intArray);
+
+        assertThat(result).isSameAs(intArray);
+        assertThat((int[]) result).containsExactly(4, 5, 6);
+    }
+
+    /**
+     * Tests that Resolver.toJava() returns the original primitive array when
+     * no target type is specified (type is null).
+     * This exercises line 345 in Resolver.java: return value;
+     */
+    @Test
+    void toJava_returnsPrimitiveArrayWhenTypeIsNull() {
+        int[] intArray = new int[]{7, 8, 9};
+
+        // No type specified - should return original array
+        Object result = resolver.callToJava(null, intArray);
+
+        assertThat(result).isSameAs(intArray);
+        assertThat((int[]) result).containsExactly(7, 8, 9);
     }
 }
