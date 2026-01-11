@@ -1,5 +1,9 @@
 ### Revision History
 #### 4.82.0 (unreleased)
+* **PERFORMANCE**: `JsonParser.readJsonObject()` - Skip type resolution for simple Class types
+  * When `suggestedType` is `null` or already a `Class`, skip the redundant `TypeUtilities.resolveType()` call
+  * Only `ParameterizedType` and other complex types need resolution against themselves
+  * This is the most common case in parsing, reducing overhead in the hot path
 * **BUG FIX**: `ObjectResolver` - Fixed deserialization of arrays containing Collections
   * Fields declared as `List<String>[]`, `ArrayList<Integer>[]`, etc. now deserialize correctly
   * Previously, `resolveArray()` incorrectly called `createAndPopulateCollection()` for Collection element types, creating a single Collection instead of an array of Collections

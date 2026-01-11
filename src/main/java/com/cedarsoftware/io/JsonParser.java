@@ -264,8 +264,13 @@ class JsonParser {
         JsonObject jObj = new JsonObject();
 
         // Set the refined type on the JsonObject.
-        Type resolvedSuggestedType = TypeUtilities.resolveType(suggestedType, suggestedType);
-        jObj.setType(resolvedSuggestedType);
+        // Performance: Skip type resolution for null or simple Class types (most common case).
+        // Only ParameterizedType and other complex types need resolution against themselves.
+        if (suggestedType == null || suggestedType instanceof Class) {
+            jObj.setType(suggestedType);
+        } else {
+            jObj.setType(TypeUtilities.resolveType(suggestedType, suggestedType));
+        }
 
         final FastReader in = input;
 
@@ -315,13 +320,10 @@ class JsonParser {
                     Class<?> type = loadType(value);
                     jObj.setTypeString((String) value);
                     jObj.setType(type);
-                } else if (StringUtilities.equals(field, ENUM)) {
-                    // Legacy support (@enum was used to indicate EnumSet in prior versions)
-                    loadEnum(value, jObj);
-                } else if (StringUtilities.equals(field, REF)) {
-                    loadRef(value, jObj);
                 } else if (StringUtilities.equals(field, ID)) {
                     loadId(value, jObj);
+                } else if (StringUtilities.equals(field, REF)) {
+                    loadRef(value, jObj);
                 } else if (StringUtilities.equals(field, ITEMS)) {
                     if (value != null && !value.getClass().isArray()) {
                         error("Expected @items to have an array [], but found: " + value.getClass().getName());
@@ -329,6 +331,9 @@ class JsonParser {
                     loadItems((Object[])value, jObj);
                 } else if (StringUtilities.equals(field, KEYS)) {
                     loadKeys(value, jObj);
+                } else if (StringUtilities.equals(field, ENUM)) {
+                    // Legacy support (@enum was used to indicate EnumSet in prior versions)
+                    loadEnum(value, jObj);
                 } else {
                     jObj.put(field, value); // Store unrecognized @-prefixed fields
                 }
