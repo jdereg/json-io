@@ -3,9 +3,11 @@
 * **BUG FIX**: `ReadOptionsBuilder.integerTypeBigInteger()` - Fixed to actually set BigInteger-only mode
   * Method was incorrectly setting `Integers.BOTH` instead of `Integers.BIG_INTEGER`
   * Now correctly forces all integers to return as BigInteger regardless of size
-* **TESTING**: Added comprehensive `JsonParserErrorHandlingTest` with 36 tests for parser edge cases
+* **TESTING**: Added comprehensive `JsonParserErrorHandlingTest` with 45 tests for parser edge cases
   * `@items` validation errors, invalid field name starts, token EOF/mismatch errors
-  * BigInteger overflow handling, hex number overflow, Unicode escape errors
+  * BigInteger mode and overflow handling, hex number overflow
+  * Unicode escape errors, surrogate pair handling (valid, invalid, orphan)
+  * Multi-line string validation in strict JSON mode
   * Root-level string trailing content validation
 * **BUG FIX**: `JsonParser.readNumberGeneral()` - Fixed EOF handling after '+' sign in JSON5 positive numbers
   * When parsing `[+` (plus sign followed by EOF), the parser would push back EOF (-1) as character `\uFFFF`

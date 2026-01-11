@@ -567,6 +567,162 @@ public class JsonParserErrorHandlingTest {
         assertEquals("A", result);
     }
 
+    // ========== Tests for surrogate pair handling (lines 847-877) ==========
+
+    /**
+     * Test that EOF during low surrogate Unicode escape throws JsonIoException.
+     * This tests lines 847-848 of JsonParser.readString().
+     * High surrogate (D800-DBFF) followed by backslash-u with truncated hex.
+     */
+    @Test
+    public void testEofDuringLowSurrogateEscape_ShouldThrowJsonIoException() {
+        // High surrogate followed by backslash-u with only 2 hex digits before EOF
+        String json = "\"" + "\\u" + "D800" + "\\u" + "00";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("EOF reached while reading Unicode escape sequence"));
+    }
+
+    /**
+     * Test that invalid hex in low surrogate escape throws JsonIoException.
+     * This tests lines 852-853 of JsonParser.readString().
+     */
+    @Test
+    public void testInvalidHexInLowSurrogateEscape_ShouldThrowJsonIoException() {
+        // High surrogate followed by backslash-u with invalid hex 'GG'
+        String json = "\"" + "\\u" + "D800" + "\\u" + "DCGG\"";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Expected hexadecimal digit, got:"));
+    }
+
+    /**
+     * Test that invalid surrogate pair (low surrogate out of range) appends both chars.
+     * This tests lines 864-866 of JsonParser.readString().
+     * When high surrogate is followed by backslash-uXXXX where XXXX is not a valid low surrogate.
+     */
+    @Test
+    public void testInvalidSurrogatePair_AppendsCharsSeparately() {
+        // High surrogate followed by backslash-u0041 (not a low surrogate, just 'A')
+        String json = "\"" + "\\u" + "D800" + "\\u" + "0041\"";
+
+        Object result = JsonIo.toObjects(json, null, Object.class);
+        assertNotNull(result);
+        // Should contain both characters: the orphan high surrogate and 'A'
+        String str = (String) result;
+        assertEquals(2, str.length());
+        assertEquals(0xD800, str.charAt(0));  // Orphan high surrogate
+        assertEquals('A', str.charAt(1));     // The 'A' from backslash-u0041
+    }
+
+    /**
+     * Test that high surrogate followed by backslash-not-u pushes back correctly.
+     * This tests lines 871-872 of JsonParser.readString().
+     * High surrogate followed by backslash-n (not backslash-u).
+     */
+    @Test
+    public void testHighSurrogateFollowedByBackslashNotU_AppendsOrphanSurrogate() {
+        // High surrogate followed by backslash-n (newline escape)
+        String json = "\"" + "\\u" + "D800" + "\\n\"";
+
+        Object result = JsonIo.toObjects(json, null, Object.class);
+        assertNotNull(result);
+        String str = (String) result;
+        assertEquals(2, str.length());
+        assertEquals(0xD800, str.charAt(0));  // Orphan high surrogate
+        assertEquals('\n', str.charAt(1));    // Newline character
+    }
+
+    /**
+     * Test that high surrogate followed by non-backslash pushes back correctly.
+     * This tests lines 876-877 of JsonParser.readString().
+     */
+    @Test
+    public void testHighSurrogateFollowedByRegularChar_AppendsOrphanSurrogate() {
+        // High surrogate followed by regular character 'X'
+        String json = "\"" + "\\u" + "D800X\"";
+
+        Object result = JsonIo.toObjects(json, null, Object.class);
+        assertNotNull(result);
+        String str = (String) result;
+        assertEquals(2, str.length());
+        assertEquals(0xD800, str.charAt(0));  // Orphan high surrogate
+        assertEquals('X', str.charAt(1));     // Regular character
+    }
+
+    /**
+     * Test that valid surrogate pairs work correctly.
+     * This is the baseline test - a valid surrogate pair for emoji.
+     */
+    @Test
+    public void testValidSurrogatePair_ShouldWork() {
+        // Valid surrogate pair for U+1F600 (grinning face emoji)
+        // High surrogate: D83D, Low surrogate: DE00
+        String json = "\"" + "\\u" + "D83D" + "\\u" + "DE00\"";
+
+        Object result = JsonIo.toObjects(json, null, Object.class);
+        assertNotNull(result);
+        String str = (String) result;
+        // Should be a single code point (2 UTF-16 chars)
+        assertEquals(2, str.length());
+        assertEquals(0x1F600, str.codePointAt(0));  // The emoji code point
+    }
+
+    // ========== Tests for multi-line strings in strict JSON mode (lines 888, 894) ==========
+
+    /**
+     * Test that backslash-newline in strict JSON mode throws JsonIoException.
+     * This tests line 888 of JsonParser.readString().
+     */
+    @Test
+    public void testMultiLineStringWithNewline_StrictMode_ShouldThrowJsonIoException() {
+        // Backslash followed by actual newline character (JSON5 multi-line string)
+        String json = "\"hello\\\nworld\"";
+        ReadOptions opts = new ReadOptionsBuilder().strictJson().build();
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, opts, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Multi-line strings not allowed in strict JSON mode"));
+    }
+
+    /**
+     * Test that backslash-carriage-return in strict JSON mode throws JsonIoException.
+     * This tests line 894 of JsonParser.readString().
+     */
+    @Test
+    public void testMultiLineStringWithCarriageReturn_StrictMode_ShouldThrowJsonIoException() {
+        // Backslash followed by carriage return (JSON5 multi-line string)
+        String json = "\"hello\\\rworld\"";
+        ReadOptions opts = new ReadOptionsBuilder().strictJson().build();
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, opts, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Multi-line strings not allowed in strict JSON mode"));
+    }
+
+    /**
+     * Test that multi-line strings work in permissive (JSON5) mode.
+     * This is the baseline test.
+     */
+    @Test
+    public void testMultiLineString_PermissiveMode_ShouldWork() {
+        // Backslash followed by newline - allowed in JSON5
+        String json = "\"hello\\\nworld\"";
+
+        Object result = JsonIo.toObjects(json, null, Object.class);
+        assertEquals("helloworld", result);  // Backslash-newline is removed
+    }
+
     // ========== Tests for readHexNumber() error handling (line 740) ==========
 
     /**
