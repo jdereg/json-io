@@ -3,12 +3,13 @@
 * **BUG FIX**: `ReadOptionsBuilder.integerTypeBigInteger()` - Fixed to actually set BigInteger-only mode
   * Method was incorrectly setting `Integers.BOTH` instead of `Integers.BIG_INTEGER`
   * Now correctly forces all integers to return as BigInteger regardless of size
-* **TESTING**: Added comprehensive `JsonParserErrorHandlingTest` with 45 tests for parser edge cases
+* **TESTING**: Added comprehensive `JsonParserErrorHandlingTest` with 52 tests for parser edge cases
   * `@items` validation errors, invalid field name starts, token EOF/mismatch errors
   * BigInteger mode and overflow handling, hex number overflow
   * Unicode escape errors, surrogate pair handling (valid, invalid, orphan)
   * Multi-line string validation in strict JSON mode
   * Root-level string trailing content validation
+  * `@id`, `@ref`, `@enum` validation (invalid types, out-of-range values)
 * **BUG FIX**: `JsonParser.readNumberGeneral()` - Fixed EOF handling after '+' sign in JSON5 positive numbers
   * When parsing `[+` (plus sign followed by EOF), the parser would push back EOF (-1) as character `\uFFFF`
   * This corrupted the stream state and prevented the proper "Unexpected end of input after '+'" error

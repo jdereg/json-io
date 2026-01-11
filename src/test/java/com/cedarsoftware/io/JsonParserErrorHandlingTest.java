@@ -795,6 +795,111 @@ public class JsonParserErrorHandlingTest {
         assertTrue(exception.getMessage().contains("Unexpected end of input after '+'"));
     }
 
+    // ========== Tests for loadId() error handling (lines 1045, 1052) ==========
+
+    /**
+     * Test that @id with a non-Number value throws JsonIoException.
+     * This tests line 1045 of JsonParser.loadId().
+     */
+    @Test
+    public void testIdWithNonNumberValue_ShouldThrowJsonIoException() {
+        // @id should be a number, but we provide a string
+        String json = "{\"@id\":\"notanumber\",\"value\":42}";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Expected a number for @id"));
+    }
+
+    /**
+     * Test that @id with value out of safe range throws JsonIoException.
+     * This tests line 1052 of JsonParser.loadId().
+     * Default maxIdValue is Long.MAX_VALUE, so we need a custom lower limit.
+     */
+    @Test
+    public void testIdOutOfRange_ShouldThrowJsonIoException() {
+        // Use a custom maxIdValue that's smaller
+        String json = "{\"@id\":1000,\"value\":42}";
+        ReadOptions opts = new ReadOptionsBuilder().maxIdValue(100).build();
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, opts, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("ID value out of safe range"));
+    }
+
+    // ========== Tests for loadRef() error handling (lines 1068, 1074, 1081) ==========
+
+    /**
+     * Test that @ref with null value throws JsonIoException.
+     * This tests line 1068 of JsonParser.loadRef().
+     */
+    @Test
+    public void testRefWithNullValue_ShouldThrowJsonIoException() {
+        // @ref with null value
+        String json = "{\"@ref\":null}";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Null value provided for @ref"));
+    }
+
+    /**
+     * Test that @ref with a non-Number value throws JsonIoException.
+     * This tests line 1074 of JsonParser.loadRef().
+     */
+    @Test
+    public void testRefWithNonNumberValue_ShouldThrowJsonIoException() {
+        // @ref should be a number, but we provide a string
+        String json = "{\"@ref\":\"notanumber\"}";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Expected a number for @ref"));
+    }
+
+    /**
+     * Test that @ref with value out of safe range throws JsonIoException.
+     * This tests line 1081 of JsonParser.loadRef().
+     */
+    @Test
+    public void testRefOutOfRange_ShouldThrowJsonIoException() {
+        // Use a custom maxIdValue that's smaller
+        String json = "{\"@ref\":1000}";
+        ReadOptions opts = new ReadOptionsBuilder().maxIdValue(100).build();
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, opts, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Reference ID value out of safe range"));
+    }
+
+    // ========== Tests for loadEnum() error handling (line 1094) ==========
+
+    /**
+     * Test that @enum with a non-String value throws JsonIoException.
+     * This tests line 1094 of JsonParser.loadEnum().
+     */
+    @Test
+    public void testEnumWithNonStringValue_ShouldThrowJsonIoException() {
+        // @enum should be a String (class name), but we provide a number
+        String json = "{\"@enum\":12345}";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toObjects(json, null, Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Expected a String for @enum"));
+    }
+
     // ========== Baseline tests ==========
 
     /**
