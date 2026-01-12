@@ -2247,4 +2247,151 @@ class ArrayTest
 
         assertEquals(42, result);
     }
+
+    // ============================================================================
+    // Tests to verify gaps between createAndPopulateArray() and traverseArray()
+    // ============================================================================
+
+    /**
+     * Test that a top-level array of objects with a custom reader invokes the custom reader.
+     * This tests whether createAndPopulateArray() properly handles custom readers.
+     *
+     * Path: JsonParser.readArray() -> resolveArray() -> createAndPopulateArray()
+     */
+    @Test
+    void testTopLevelArray_withCustomReader_shouldInvokeCustomReader() {
+        // Track if custom reader was invoked
+        final boolean[] customReaderInvoked = {false};
+
+        // Create a simple test class
+        String json = "[{\"@type\":\"com.cedarsoftware.io.ArrayTest$SimpleValue\",\"value\":\"test1\"},{\"@type\":\"com.cedarsoftware.io.ArrayTest$SimpleValue\",\"value\":\"test2\"}]";
+
+        // Custom reader that marks invocation
+        JsonClassReader<SimpleValue> customReader = new JsonClassReader<SimpleValue>() {
+            @Override
+            public SimpleValue read(Object jsonObj, Resolver resolver) {
+                customReaderInvoked[0] = true;
+                if (jsonObj instanceof JsonObject) {
+                    JsonObject jObj = (JsonObject) jsonObj;
+                    SimpleValue sv = new SimpleValue();
+                    sv.value = (String) jObj.get("value");
+                    return sv;
+                }
+                // If already converted, return it
+                return (SimpleValue) jsonObj;
+            }
+        };
+
+        ReadOptions options = new ReadOptionsBuilder()
+                .addCustomReaderClass(SimpleValue.class, customReader)
+                .build();
+
+        SimpleValue[] result = JsonIo.toJava(json, options).asClass(SimpleValue[].class);
+
+        // This test documents the current behavior - custom reader IS invoked
+        // because top-level arrays go through traverseArray for element processing
+        assertNotNull(result);
+        assertEquals(2, result.length);
+        // If custom reader was properly invoked, our flag would be set
+        // Current behavior: custom reader IS called for array elements
+        assertTrue(customReaderInvoked[0], "Custom reader should be invoked for array elements");
+    }
+
+    /**
+     * GAP DETECTION TEST: This test documents a behavioral gap between
+     * createAndPopulateArray() and traverseArray().
+     *
+     * traverseArray() (lines 418-424) converts empty/whitespace strings to null
+     * for non-String array elements. createAndPopulateArray() does NOT have this logic.
+     *
+     * Path: JsonParser.readArray() -> resolveArray() -> createAndPopulateArray()
+     *
+     * CURRENT BEHAVIOR: Empty strings get converted to 0 by Converter
+     * EXPECTED BEHAVIOR (for consistency): Empty strings should become null
+     *
+     * This test documents the CURRENT behavior. If createAndPopulateArray() is fixed
+     * to match traverseArray(), change the assertions to expect null.
+     */
+    @Test
+    void testTopLevelIntegerArray_withEmptyStrings_currentBehavior() {
+        // JSON with empty strings in an Integer array
+        String json = "[1, \"\", 3, \"  \", 5]";
+
+        ReadOptions options = new ReadOptionsBuilder().build();
+
+        // Try to read as Integer[]
+        Integer[] result = JsonIo.toJava(json, options).asClass(Integer[].class);
+
+        assertNotNull(result);
+        assertEquals(5, result.length);
+        assertEquals(1, result[0]);
+        // CURRENT BEHAVIOR: Converter converts "" to 0 (not null like traverseArray would)
+        // If fixed to match traverseArray, this should be assertNull(result[1])
+        assertEquals(0, result[1], "Current: empty string converts to 0 via Converter (gap with traverseArray)");
+        assertEquals(3, result[2]);
+        // CURRENT BEHAVIOR: Converter converts "  " to 0 (not null like traverseArray would)
+        assertEquals(0, result[3], "Current: whitespace converts to 0 via Converter (gap with traverseArray)");
+        assertEquals(5, result[4]);
+    }
+
+    /**
+     * ANALYSIS: The empty string → null code at traverseArray() lines 418-424 is unreachable
+     * for types where Converter supports String conversion.
+     *
+     * Flow: traverseArray() calls readWithFactoryIfExists() FIRST (line 377).
+     * For Integer.class, the Converter converts "" to 0 before the else branch (line 418) is reached.
+     *
+     * The empty string → null code is only reachable when:
+     * 1. isNotCustomReaderClass(type) returns true, OR
+     * 2. Converter doesn't support the conversion
+     *
+     * This test confirms BOTH paths (top-level and embedded) behave the same way
+     * for types with Converter support: empty strings become 0, not null.
+     */
+    @Test
+    void testEmbeddedIntegerArray_withEmptyStrings_sameAstopLevel() {
+        // JSON with Integer array embedded in an object
+        String json = "{\"@type\":\"com.cedarsoftware.io.ArrayTest$IntArrayHolder\",\"values\":[1, \"\", 3, \"  \", 5]}";
+
+        ReadOptions options = new ReadOptionsBuilder().build();
+
+        IntArrayHolder result = JsonIo.toJava(json, options).asClass(IntArrayHolder.class);
+
+        assertNotNull(result);
+        assertNotNull(result.values);
+        assertEquals(5, result.values.length);
+        assertEquals(1, result.values[0]);
+        // ACTUAL: Converter converts "" to 0 BEFORE the empty string→null code in traverseArray
+        assertEquals(0, result.values[1], "Converter converts '' to 0 before empty string→null check");
+        assertEquals(3, result.values[2]);
+        assertEquals(0, result.values[3], "Converter converts whitespace to 0 before empty string→null check");
+        assertEquals(5, result.values[4]);
+    }
+
+    /**
+     * Test class to hold Integer[] for traverseArray path testing
+     */
+    public static class IntArrayHolder {
+        public Integer[] values;
+    }
+
+    /**
+     * Test class for custom reader testing
+     */
+    public static class SimpleValue {
+        public String value;
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            SimpleValue that = (SimpleValue) o;
+            return java.util.Objects.equals(value, that.value);
+        }
+
+        @Override
+        public int hashCode() {
+            return java.util.Objects.hash(value);
+        }
+    }
 }
