@@ -489,10 +489,6 @@ public abstract class Resolver {
      */
     @SuppressWarnings("unchecked")
     <T> T toJavaObjects(JsonObject rootObj, Type rootType) {
-        if (rootObj == null) {
-            return null;
-        }
-
         // If the JsonObject is a reference, resolve it.
         if (rootObj.isReference()) {
             rootObj = references.get((long) rootObj.refId);

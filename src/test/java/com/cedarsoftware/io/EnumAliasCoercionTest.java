@@ -102,4 +102,54 @@ class EnumAliasCoercionTest {
         // Verify the JSON used the alias
         assertThat(json).contains("\"@type\":\"OldEnum\"");
     }
+
+    // Enum with constant that has a body (creates anonymous subclass)
+    private enum EnumWithBody {
+        PLAIN,
+        WITH_BODY {
+            @Override
+            public String toString() {
+                return "custom";
+            }
+        }
+    }
+
+    // Target enum for coercion
+    private enum TargetEnum {
+        PLAIN, WITH_BODY
+    }
+
+    /**
+     * Tests enum coercion when the JSON @type is an anonymous enum subclass.
+     * This exercises lines 1025-1026 in Resolver.resolveTargetType() where
+     * the coercion is registered for the base enum class, not the anonymous subclass.
+     */
+    @Test
+    void testEnum_coercion_anonymousSubclass() {
+        // Get the anonymous subclass type (EnumWithBody$1)
+        Class<?> anonymousSubclass = EnumWithBody.WITH_BODY.getClass();
+
+        // Verify it's actually an anonymous subclass
+        assertThat(anonymousSubclass).isNotEqualTo(EnumWithBody.class);
+        assertThat(anonymousSubclass.isAnonymousClass()).isTrue();
+
+        // Create JSON with the anonymous subclass type
+        String json = "{\n" +
+                "  \"@type\": \"" + anonymousSubclass.getName() + "\",\n" +
+                "  \"name\": \"WITH_BODY\"\n" +
+                "}";
+
+        // Add coercion for the BASE enum class (not the anonymous subclass)
+        ReadOptions readOptions = new ReadOptionsBuilder()
+                .coerceClass(EnumWithBody.class.getName(), TargetEnum.class)
+                .build();
+
+        // Read with coercion - this exercises lines 1025-1026
+        Object result = JsonIo.toJava(json, readOptions).asClass(null);
+
+        // Verify coercion worked
+        assertThat(result)
+                .isInstanceOf(TargetEnum.class)
+                .isEqualTo(TargetEnum.WITH_BODY);
+    }
 }
