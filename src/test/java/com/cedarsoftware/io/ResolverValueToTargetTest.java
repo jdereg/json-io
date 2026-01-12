@@ -163,4 +163,33 @@ class ResolverValueToTargetTest {
         assertThat(resultList.get(1)).isEqualTo(200);
         assertThat(resultList.get(2)).isEqualTo(300);
     }
+
+    /**
+     * Tests that valueToTarget handles empty arrays (null items).
+     * This exercises lines 1255-1257 in Resolver.java where jsonItems == null.
+     */
+    @Test
+    void valueToTarget_handlesEmptyArray() {
+        JsonObject arrayObj = new JsonObject();
+        arrayObj.setType(int[].class);
+        // Don't set items - they will be null (empty array case)
+
+        assertThat(resolver.callValueToTarget(arrayObj)).isTrue();
+        assertThat(arrayObj.getTarget()).isNull();
+        assertThat(arrayObj.isFinished()).isTrue();
+    }
+
+    /**
+     * Tests that valueToTarget returns false for non-simple types.
+     * This exercises lines 1282-1283 in Resolver.java where
+     * !converter.isSimpleTypeConversionSupported(javaType) is true.
+     */
+    @Test
+    void valueToTarget_returnsFalseForNonSimpleType() {
+        // Use a custom class that Converter doesn't support for simple conversion
+        JsonObject obj = new JsonObject();
+        obj.setType(Thread.class);  // Thread is not a simple type
+
+        assertThat(resolver.callValueToTarget(obj)).isFalse();
+    }
 }

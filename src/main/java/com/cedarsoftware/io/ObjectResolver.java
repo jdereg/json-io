@@ -6,6 +6,7 @@ import java.lang.reflect.Type;
 import java.util.AbstractMap;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
@@ -814,7 +815,7 @@ public class ObjectResolver extends Resolver
             if (element instanceof Object[] && componentClass.isArray()) {
                 Type nestedComponentType = TypeUtilities.extractArrayComponentType(elementType);
                 element = createAndPopulateArray(nestedComponentType, componentClass.getComponentType(),
-                        java.util.Arrays.asList((Object[]) element));
+                        Arrays.asList((Object[]) element));
                 objectArray[i] = element;  // Nested arrays are always object arrays
                 continue;
             }

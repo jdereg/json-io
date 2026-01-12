@@ -2,7 +2,6 @@ package com.cedarsoftware.io;
 
 import java.io.Serializable;
 import java.lang.reflect.Array;
-import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -18,6 +17,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -570,27 +570,25 @@ public abstract class Resolver {
      * collection interfaces. This prevents unnecessary conversion for cases like:
      * - SealableList (graph) when UnmodifiableList (rawType) was requested
      * - Both implement List, so no conversion is needed
-     *
+     * <p>
      * This is important because:
      * 1. Sealable types are json-io's substitutes for JDK unmodifiable collections
      * 2. Converting would create new instances that don't have forward refs patched
      * 3. The Sealable collections will be sealed in cleanup() anyway
      */
     private boolean isCompatibleCollectionType(Object graph, Class<?> rawType) {
-        // Check specific collection interfaces first (List, Set, Map)
+        // Check specific collection interfaces (List, Set, Queue)
+        // Note: Map is NOT a Collection, so not checked here - Map compatibility
+        // is handled by targetClass.isInstance(value) in convertToType()
         if (graph instanceof List && List.class.isAssignableFrom(rawType)) {
             return true;
         }
         if (graph instanceof Set && Set.class.isAssignableFrom(rawType)) {
             return true;
         }
-        if (graph instanceof Map && Map.class.isAssignableFrom(rawType)) {
-            return true;
-        }
-        // For other Collection types (Queue, Deque, etc.), only if rawType is abstract/interface
-        return graph instanceof Collection &&
-               Collection.class.isAssignableFrom(rawType) &&
-               (rawType.isInterface() || Modifier.isAbstract(rawType.getModifiers()));
+//        // Future proof - if we add SealableQueue - then make sure this code is added:
+//        return graph instanceof Queue && Queue.class.isAssignableFrom(rawType);
+        return false;
     }
 
     /**
