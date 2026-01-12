@@ -17,7 +17,6 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -27,7 +26,6 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
-import java.util.logging.Logger;
 
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
@@ -75,7 +73,6 @@ import com.cedarsoftware.util.convert.Converter;
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class Resolver {
-    private static final Logger LOG = Logger.getLogger(Resolver.class.getName());
     private static final String NO_FACTORY = "_︿_ψ_☼";
     
     // Security limits to prevent DoS attacks via unbounded memory consumption
@@ -1003,26 +1000,6 @@ public abstract class Resolver {
         Object mate = createInstanceUsingClassFactory(factoryType, jsonObj);
         if (mate != NO_FACTORY) {
             return mate;
-        }
-
-        // Legacy converter attempt (kept for backward compatibility)
-        // Note: This is now redundant with enhanced converter above, but kept for safety
-        if (!Throwable.class.isAssignableFrom(targetType)) {
-            Object legacySourceValue = jsonObj.hasValue() ? jsonObj.getValue() : null;
-            Class<?> legacySourceType = legacySourceValue != null ? legacySourceValue.getClass() : (!jsonObj.isEmpty() ? Map.class : null);
-            
-            if (legacySourceType != null && converter.isConversionSupportedFor(legacySourceType, targetType)) {
-                try {
-                    Object value = converter.convert(legacySourceValue != null ? legacySourceValue : jsonObj, targetType);
-                    return jsonObj.setFinishedTarget(value, true);
-                } catch (Exception e) {
-                    // Conversion failed - continue with other resolution strategies
-                    // Only log in debug mode to avoid noise in normal operations
-                    if (Boolean.parseBoolean(System.getProperty("json-io.debug", "false"))) {
-                        LOG.fine("Legacy conversion failed for " + legacySourceType + " to " + targetType + ": " + e.getMessage());
-                    }
-                }
-            }
         }
 
         // Handle array creation.
