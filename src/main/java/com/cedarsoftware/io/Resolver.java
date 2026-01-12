@@ -996,24 +996,6 @@ public abstract class Resolver {
             return jsonObj.setFinishedTarget(result, true);
         }
 
-        // Enhanced Converter Integration - only for specific DTO types
-        // This is intentionally restrictive to avoid breaking existing serialization patterns
-        // Note: Skip Throwables as they require special factory handling for type preservation
-        if (!Throwable.class.isAssignableFrom(targetType) && isConverterSimpleType(targetType)) {
-            Object sourceValue = jsonObj.hasValue() ? jsonObj.getValue() : jsonObj;
-            Class<?> sourceType = determineSourceType(jsonObj, sourceValue);
-
-            if (sourceType != null && converter.isConversionSupportedFor(sourceType, targetType)) {
-                try {
-                    Object value = converter.convert(sourceValue, targetType);
-                    return jsonObj.setFinishedTarget(value, true);
-                } catch (Exception e) {
-                    // Log conversion failure and continue to factory system
-                    // This allows fallback to reflection-based approach
-                }
-            }
-        }
-
         // Determine the factory type, considering enums and collections.
         Class<?> factoryType = determineFactoryType(jsonObj, targetType);
 
@@ -1080,18 +1062,6 @@ public abstract class Resolver {
         return coercedClass != null ? ClassUtilities.getClassIfEnum(coercedClass) : null;
     }
 
-    /**
-     * Enhanced source type detection for DTO conversion.
-     * This method analyzes the JsonObject structure to determine the most appropriate
-     * source type for Converter-based transformation.
-     */
-    private Class<?> determineSourceType(JsonObject jsonObj, Object sourceValue) {
-        if (sourceValue != null && sourceValue != jsonObj) {
-            return sourceValue.getClass();
-        }
-        return !jsonObj.isEmpty() ? Map.class : null;
-    }
-
     // Determine the factory type, considering enums and collections
     private Class<?> determineFactoryType(JsonObject jsonObj, Class<?> targetType) {
         Class<?> enumClass = ClassUtilities.getClassIfEnum(targetType);
@@ -1105,19 +1075,6 @@ public abstract class Resolver {
     private boolean shouldCreateArray(JsonObject jsonObj, Class<?> targetType) {
         Object[] items = jsonObj.getItems();
         return targetType.isArray() || (items != null && targetType == Object.class && jsonObj.getKeys() == null);
-    }
-
-    /**
-     * Check if a type should be handled by Converter as a simple type.
-     * This is intentionally restrictive to avoid breaking existing serialization patterns.
-     * Currently only includes: Cedar DTO types (Color, Dimension, Point, Rectangle, Insets).
-     */
-    private boolean isConverterSimpleType(Class<?> clazz) {
-        return clazz == com.cedarsoftware.util.geom.Color.class ||
-               clazz == com.cedarsoftware.util.geom.Dimension.class ||
-               clazz == com.cedarsoftware.util.geom.Point.class ||
-               clazz == com.cedarsoftware.util.geom.Rectangle.class ||
-               clazz == com.cedarsoftware.util.geom.Insets.class;
     }
 
     private Object createArrayInstance(JsonObject jsonObj, Class<?> targetType) {
