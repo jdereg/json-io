@@ -1197,10 +1197,8 @@ public abstract class Resolver {
                     ((List) objToFix).set(ref.index, referencedTarget);
                 } else if (objToFix instanceof Collection) {   // Patch up Indexable Collections
                     ((Collection) objToFix).add(referencedTarget);
-                } else if (objToFix instanceof Object[]) {   // Fast path for Object arrays
+                } else {   // Object arrays - primitive arrays cannot have forward references
                     ((Object[]) objToFix)[ref.index] = referencedTarget;
-                } else {
-                    ArrayUtilities.setPrimitiveElement(objToFix, ref.index, referencedTarget);        // patch primitive array element
                 }
             } else {    // Fix field forward reference
                 // ReadOptions.getDeepInjectorMap() already caches via ClassValueMap - no local cache needed
