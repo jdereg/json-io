@@ -192,4 +192,19 @@ class ResolverValueToTargetTest {
 
         assertThat(resolver.callValueToTarget(obj)).isFalse();
     }
+
+    /**
+     * Tests that valueToTarget handles non-primitive arrays (like String[]).
+     * This exercises the else branch at line 1272: typedArray[i] = converted
+     */
+    @Test
+    void valueToTarget_convertsNonPrimitiveArray() {
+        JsonObject arrayObj = new JsonObject();
+        arrayObj.setType(String[].class);
+        arrayObj.setItems(new Object[]{"hello", "world", "test"});
+
+        assertThat(resolver.callValueToTarget(arrayObj)).isTrue();
+        assertThat(arrayObj.getTarget()).isInstanceOf(String[].class);
+        assertThat((String[]) arrayObj.getTarget()).containsExactly("hello", "world", "test");
+    }
 }
