@@ -34,6 +34,11 @@
   * New `createAndPopulateArray()` method creates and populates the typed array directly
   * Handles primitive arrays, Object arrays, nested arrays, and forward references
   * Collection resolution also optimized with direct population
+* **REFACTOR**: `ObjectResolver` - Extracted shared array element processing helpers
+  * Eliminated code duplication between `traverseArray()` and `createAndPopulateArray()`
+  * Created 6 shared helper methods: `resolveReferenceElement()`, `processJsonObjectElement()`, `convertToComponentType()`, `handleNestedArrayElement()`, `handleCharArrayElement()`, `handleCollectionElement()`
+  * Both methods now use the same logic for reference resolution, type conversion, and nested structure handling
+  * No behavioral changes - purely internal refactoring for maintainability
 
 #### 4.81.0 - 2025-01-10 
 **BUG FIX**: `Resolver` - Fixed array/collection cross-conversion returning null
