@@ -207,4 +207,45 @@ class ResolverValueToTargetTest {
         assertThat(arrayObj.getTarget()).isInstanceOf(String[].class);
         assertThat((String[]) arrayObj.getTarget()).containsExactly("hello", "world", "test");
     }
+
+    // Common interface for testing lenient mode
+    interface Vehicle {
+        String getName();
+    }
+
+    // Custom class implementing Vehicle
+    static class Car implements Vehicle {
+        private final String name;
+        Car(String name) { this.name = name; }
+        @Override
+        public String getName() { return name; }
+    }
+
+    // Different class implementing same interface
+    static class Motorcycle implements Vehicle {
+        private final String name;
+        Motorcycle(String name) { this.name = name; }
+        @Override
+        public String getName() { return name; }
+    }
+
+    /**
+     * Tests that Resolver.toJava() allows lenient type conversion when
+     * complex objects share a meaningful common ancestor (interface).
+     * This exercises lines 647-655 in Resolver.convertToType() where
+     * findLowestCommonSupertypesExcluding finds a shared interface.
+     */
+    @Test
+    void toJava_lenientModeAcceptsCommonAncestor() {
+        // Create a Car instance
+        Car car = new Car("Tesla");
+
+        // Request conversion to Motorcycle.class - they share Vehicle interface
+        // The converter won't support Car→Motorcycle, but they share Vehicle
+        Object result = resolver.callToJava(Motorcycle.class, car);
+
+        // Lenient mode should accept the Car since it shares Vehicle with Motorcycle
+        assertThat(result).isSameAs(car);
+        assertThat(result).isInstanceOf(Vehicle.class);
+    }
 }

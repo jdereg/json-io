@@ -20,6 +20,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -669,5 +670,83 @@ class EnumTests {
         public String getValue() {
             return this.value;
         }
+    }
+
+    /**
+     * Tests that an empty string value for an enum throws JsonIoException.
+     * This exercises line 614 in Resolver.convertToType() where enumValue.trim().isEmpty() is true.
+     * The test uses a plain JSON string parsed as an enum type.
+     */
+    @Test
+    void testEnum_emptyStringValue_throwsException() {
+        // Plain JSON string - empty
+        String json = "\"\"";
+
+        assertThatThrownBy(() -> JsonIo.toJava(json, null).asClass(SimpleEnum.class))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Invalid enum value")
+                .hasMessageContaining("null or empty string")
+                .hasMessageContaining(SimpleEnum.class.getName());
+    }
+
+    /**
+     * Tests that a whitespace-only string value for an enum throws JsonIoException.
+     * This exercises line 614 in Resolver.convertToType() where enumValue.trim().isEmpty() is true.
+     */
+    @Test
+    void testEnum_whitespaceOnlyValue_throwsException() {
+        // Plain JSON string - whitespace only
+        String json = "\"   \"";
+
+        assertThatThrownBy(() -> JsonIo.toJava(json, null).asClass(SimpleEnum.class))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Invalid enum value")
+                .hasMessageContaining("null or empty string")
+                .hasMessageContaining(SimpleEnum.class.getName());
+    }
+
+    /**
+     * Tests that an invalid enum constant name throws JsonIoException.
+     * This exercises line 623 in Resolver.convertToType() where Enum.valueOf() fails.
+     */
+    @Test
+    void testEnum_invalidConstantName_throwsException() {
+        // Plain JSON string with invalid enum constant name
+        String json = "\"INVALID_CONSTANT\"";
+
+        assertThatThrownBy(() -> JsonIo.toJava(json, null).asClass(SimpleEnum.class))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Invalid enum value")
+                .hasMessageContaining("INVALID_CONSTANT")
+                .hasMessageContaining(SimpleEnum.class.getName());
+    }
+
+    /**
+     * Tests that a valid enum constant name with wrong case throws JsonIoException.
+     * Enum.valueOf() is case-sensitive.
+     */
+    @Test
+    void testEnum_wrongCaseConstantName_throwsException() {
+        // Plain JSON string with wrong case (should be "ONE" not "one")
+        String json = "\"one\"";
+
+        assertThatThrownBy(() -> JsonIo.toJava(json, null).asClass(SimpleEnum.class))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Invalid enum value")
+                .hasMessageContaining("one")
+                .hasMessageContaining(SimpleEnum.class.getName());
+    }
+
+    /**
+     * Tests that a valid string enum value works correctly.
+     * This verifies the happy path for enum conversion from String in convertToType().
+     */
+    @Test
+    void testEnum_validStringValue_succeeds() {
+        // Plain JSON string with valid enum constant name
+        String json = "\"ONE\"";
+
+        SimpleEnum result = JsonIo.toJava(json, null).asClass(SimpleEnum.class);
+        assertThat(result).isEqualTo(SimpleEnum.ONE);
     }
 }
