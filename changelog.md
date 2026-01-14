@@ -39,6 +39,10 @@
   * Created 6 shared helper methods: `resolveReferenceElement()`, `processJsonObjectElement()`, `convertToComponentType()`, `handleNestedArrayElement()`, `handleCharArrayElement()`, `handleCollectionElement()`
   * Both methods now use the same logic for reference resolution, type conversion, and nested structure handling
   * No behavioral changes - purely internal refactoring for maintainability
+* **TESTING**: Added `MapResolverGenericArrayTest` with 13 tests for MapResolver coverage
+  * `GenericArrayType` handling in `getUltimateComponentType()` - Tests parsing of generic array types like `List<String>[]` in Maps mode
+  * `reconcileResult()` method coverage - Tests for returning simple types (String, Long, Double, Boolean) directly and returning JsonObject for complex types
+  * Edge cases: empty generic arrays, generic arrays with null elements, JSON null handling
 
 #### 4.81.0 - 2025-01-10 
 **BUG FIX**: `Resolver` - Fixed array/collection cross-conversion returning null
