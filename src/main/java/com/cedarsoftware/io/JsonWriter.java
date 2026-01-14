@@ -107,6 +107,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private static final String ITEMS_JSON5_SHORT = "$e:";
     private static final String KEYS_JSON5_SHORT = "$k:";
 
+    private static final char[] HEX = "0123456789abcdef".toCharArray();
+
     // Selected prefixes based on options
     private final String idPrefix;
     private final String typePrefix;
@@ -2199,87 +2201,68 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * @throws IOException If an I/O error occurs
      */
     public static void writeJsonUtf8String(final Writer output, String s, int maxStringLength) throws IOException {
-        // Enhanced input validation for null safety
         if (output == null) {
             throw new JsonIoException("Output writer cannot be null");
         }
-
         if (s == null) {
             output.write("null");
             return;
         }
 
-        output.write('\"');
         final int len = s.length();
-
-        // Add safety check for extremely large strings to prevent memory issues using configurable limit
         if (len > maxStringLength) {
-            throw new JsonIoException("String too large for JSON serialization: " + len + " characters. Maximum allowed: " + maxStringLength);
+            throw new JsonIoException("String too large: " + len + " chars (max: " + maxStringLength + ")");
         }
 
-        int start = 0;  // Start of current safe run
+        output.write('"');
+        int start = 0;
 
         for (int i = 0; i < len; ) {
             char ch = s.charAt(i);
 
-            // Fast path: ASCII characters that don't need escaping
-            if (ch < 128 && !NEEDS_ESCAPE[ch]) {
+            // Fast path: printable ASCII that doesn't need escaping
+            if (ch >= 0x20 && ch < 0x7F && ch != '"' && ch != '\\') {
                 i++;
-                continue;  // Keep scanning for safe characters
+                continue;
             }
 
-            // Found a character that needs special handling
-            // First, write any accumulated safe characters
+            // Write accumulated safe characters
             if (i > start) {
                 output.write(s, start, i - start);
             }
 
-            // Now handle the special character
-            int codePoint = s.codePointAt(i);
-
-            if (codePoint < 0x20 || codePoint == 0x7F) {
-                // Control characters - use efficient switch
-                switch (codePoint) {
-                    case '\b':
-                        output.write("\\b");
-                        break;
-                    case '\f':
-                        output.write("\\f");
-                        break;
-                    case '\n':
-                        output.write("\\n");
-                        break;
-                    case '\r':
-                        output.write("\\r");
-                        break;
-                    case '\t':
-                        output.write("\\t");
-                        break;
+            // Handle special character
+            if (ch < 0x80) {
+                // ASCII requiring escape
+                switch (ch) {
+                    case '"':  output.write("\\\""); break;
+                    case '\\': output.write("\\\\"); break;
+                    case '\b': output.write("\\b"); break;
+                    case '\f': output.write("\\f"); break;
+                    case '\n': output.write("\\n"); break;
+                    case '\r': output.write("\\r"); break;
+                    case '\t': output.write("\\t"); break;
                     default:
-                        output.write(String.format("\\u%04x", codePoint));
+                        // Control characters:
+                        output.write("\\u00");
+                        output.write(HEX[(ch >> 4) & 0xF]);
+                        output.write(HEX[ch & 0xF]);
                 }
-            } else if (codePoint == '"') {
-                output.write("\\\"");
-            } else if (codePoint == '\\') {
-                output.write("\\\\");
-            } else if (codePoint >= 0x80 && codePoint <= 0xFFFF) {
-                // Non-ASCII characters - write directly as UTF-8
-                output.write(s, i, Character.charCount(codePoint));
-            } else if (codePoint > 0xFFFF) {
-                // Supplementary characters (beyond BMP)
-                output.write(s, i, Character.charCount(codePoint));
+                i++;
+            } else {
+                // Non-ASCII: write directly (UTF-8 encoding handled by Writer)
+                int charCount = Character.charCount(s.codePointAt(i));
+                output.write(s, i, charCount);
+                i += charCount;
             }
-
-            i += Character.charCount(codePoint);
-            start = i;  // Next safe run starts after this character
+            start = i;
         }
 
-        // Write any remaining safe characters
+        // Write remaining safe characters
         if (start < len) {
             output.write(s, start, len - start);
         }
-
-        output.write('\"');
+        output.write('"');
     }
 
     /**
