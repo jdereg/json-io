@@ -1,7 +1,6 @@
 package com.cedarsoftware.io;
 
 import java.io.OutputStream;
-import java.util.Map;
 
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
@@ -41,8 +40,8 @@ class InternalAPIsTest
     {
         FastByteArrayOutputStream fbao = new FastByteArrayOutputStream();
         DerivedWriter writer = new DerivedWriter(fbao);
-        Map<Object, Long> ref = writer.getObjsReferenced();
-        Map<Object, Long> vis = writer.getObjVisited();
+        IdentityIntMap ref = writer.getObjsReferenced();
+        IdentityIntMap vis = writer.getObjVisited();
         assertNotNull(ref);
         assertNotNull(vis);
     }

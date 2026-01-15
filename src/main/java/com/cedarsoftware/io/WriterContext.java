@@ -1,7 +1,6 @@
 package com.cedarsoftware.io;
 
 import java.io.IOException;
-import java.util.Map;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -39,9 +38,10 @@ public interface WriterContext {
     void writeImpl(Object obj, boolean showType) throws IOException;
 
     /**
-     * Provide access to all objects that are referenced
+     * Provide access to all objects that are referenced.
+     * Uses identity comparison (==) for keys.
      */
-    Map<Object, Long> getObjsReferenced();
+    IdentityIntMap getObjsReferenced();
 
     // ======================== Semantic Write API ========================
     // These methods provide a high-level, type-safe API for writing JSON structures.

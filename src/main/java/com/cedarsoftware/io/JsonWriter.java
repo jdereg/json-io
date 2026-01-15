@@ -19,7 +19,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.EnumSet;
-import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -117,14 +116,15 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private final String keysPrefix;
     private static final Object[] byteStrings = new Object[256];
     private static final String NEW_LINE = System.lineSeparator();
-    private static final Long ZERO = 0L;
     // Lookup table for fast ASCII escape detection (128 entries for chars 0-127)
     private static final boolean[] NEEDS_ESCAPE = new boolean[128];
     // Lookup table for single-quoted strings (JSON5) - escapes ' instead of "
     private static final boolean[] NEEDS_ESCAPE_SINGLE_QUOTE = new boolean[128];
     private final WriteOptions writeOptions;
-    private final Map<Object, Long> objVisited = new IdentityHashMap<>(256); // Pre-size for better performance
-    private final Map<Object, Long> objsReferenced = new IdentityHashMap<>(256); // Pre-size for better performance
+    // Lightweight identity-based maps for reference tracking (faster than IdentityHashMap<Object, Long>)
+    // Uses primitive int values and open addressing - no boxing, no Entry objects
+    private final IdentityIntMap objVisited = new IdentityIntMap(256);
+    private final IdentityIntMap objsReferenced = new IdentityIntMap(256);
     private final Writer out;
     private int identity = 1;  // int is sufficient - max 2.1 billion unique objects
     private int depth = 0;
@@ -281,16 +281,18 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     /**
-     * Map containing all objects that were visited within input object graph
+     * Map containing all objects that were visited within input object graph.
+     * Uses identity comparison (==) for keys.
      */
-    protected Map<Object, Long> getObjVisited() {
+    protected IdentityIntMap getObjVisited() {
         return objVisited;
     }
 
     /**
      * Map containing all objects that were referenced within input object graph.
+     * Uses identity comparison (==) for keys.
      */
-    public Map<Object, Long> getObjsReferenced() {
+    public IdentityIntMap getObjsReferenced() {
         return objsReferenced;
     }
 
@@ -465,7 +467,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         output.write('{');
         tabIn();
         if (referenced) {
-            writeId(getIdLong(o));
+            writeId(getIdInt(o));
             if (showType) {
                 output.write(',');
                 newLine();
@@ -545,8 +547,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         objectStack.addFirst(root);
         pushDepth(0);
 
-        final Map<Object, Long> visited = objVisited;
-        final Map<Object, Long> referenced = objsReferenced;
+        final IdentityIntMap visited = objVisited;
+        final IdentityIntMap referenced = objsReferenced;
+
+        // Marker value: -1 means "seen but no ID assigned yet", 0 means "not in map", >0 is the assigned ID
+        final int FIRST_SEEN = -1;
 
         // Fix memory leak - prevent stack overflow and unbounded memory growth using configurable limits
         final int MAX_DEPTH = writeOptions.getMaxObjectGraphDepth();
@@ -568,16 +573,16 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             final boolean isNonReferenceable = writeOptions.isNonReferenceableClass(clazz);
 
             if (!isNonReferenceable) {
-                Long id = visited.get(obj);
-                if (id != null) {   // Object has been seen before
-                    if (id.equals(ZERO)) {
-                        id = (long) identity++;
+                int id = visited.get(obj);
+                if (id != 0) {   // Object has been seen before (0 = NOT_FOUND)
+                    if (id == FIRST_SEEN) {
+                        id = identity++;
                         visited.put(obj, id);
                         referenced.put(obj, id);
                     }
                     continue;
                 } else {
-                    visited.put(obj, ZERO);
+                    visited.put(obj, FIRST_SEEN);
                 }
             }
 
@@ -699,7 +704,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         final Writer output = this.out;
         if (objVisited.containsKey(obj)) {    // Only write (define) an object once in the JSON stream, otherwise emit a @ref
-            long id = getIdLong(obj);
+            int id = getIdInt(obj);
             if (id == 0) {   // Test for 0 because of Weak/Soft references being gc'd during serialization.
                 return false;
             }
@@ -711,7 +716,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         // Mark the object as visited by putting it in the Map (this map is re-used / clear()'d after walk()).
-        objVisited.put(obj, null);
+        objVisited.put(obj, -1);  // -1 = marker value (visited, value doesn't matter for this use case)
         return false;
     }
 
@@ -795,9 +800,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
     }
 
-    private void writeId(final long id) throws IOException {
+    private void writeId(final int id) throws IOException {
         out.write(idPrefix);
-        writeLongDirect(id);
+        writeLongDirect(id);  // int widened to long
     }
 
     // Pre-computed digit pairs for fast long-to-chars conversion (00-99)
@@ -920,7 +925,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         if (referenced) {
-            writeId(getIdLong(array));
+            writeId(getIdInt(array));
             output.write(',');
             newLine();
         }
@@ -1000,7 +1005,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         if (referenced) {
-            writeId(getIdLong(array));
+            writeId(getIdInt(array));
             output.write(',');
             newLine();
         }
@@ -1248,7 +1253,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             showType = false;
         }
         if (referenced) {
-            writeId(getIdLong(col));
+            writeId(getIdInt(col));
         }
 
         if (showType) {
@@ -1481,7 +1486,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         tabIn();
 
         if (referenced) {
-            writeId(jObj.getId());
+            writeId((int) jObj.getId());  // Safe cast - internal storage is int
         }
 
         if (showType) {
@@ -1580,11 +1585,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private boolean adjustIfReferenced(JsonObject jObj) {
-        Long idx = objsReferenced.get(jObj);
-        if (!jObj.hasId() && idx != null && idx > 0) {   // Referenced object that needs an ID copied to it.
-            jObj.id = idx.intValue();
+        int idx = objsReferenced.get(jObj);  // Returns 0 if not found
+        if (!jObj.hasId() && idx > 0) {   // Referenced object that needs an ID copied to it.
+            jObj.id = idx;
         }
-        return objsReferenced.containsKey(jObj) && jObj.hasId();
+        return idx > 0 && jObj.hasId();
     }
 
     // Hopefully this method goes away when the converters are done.
@@ -1610,7 +1615,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         output.write('{');
         tabIn();
         if (referenced) {
-            writeId(getIdLong(map));
+            writeId(getIdInt(map));
         }
 
         if (showType) {
@@ -1813,7 +1818,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         boolean referenced = this.objsReferenced.containsKey(enumSet);
         if (referenced) {
-            writeId(getIdLong(enumSet));
+            writeId(getIdInt(enumSet));
             out.write(',');
             newLine();
         }
@@ -1922,7 +1927,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             out.write('{');
             tabIn();
             if (referenced) {
-                writeId(getIdLong(obj));
+                writeId(getIdInt(obj));
             }
 
             if (referenced && showType) {
@@ -2107,19 +2112,18 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     /**
-     * Get the ID for an object. Returns the ID as a long (0 if not referenced).
+     * Get the ID for an object. Returns the ID as an int (0 if not referenced).
      * For JsonObject instances, uses the stored id field.
      * For other objects, looks up in objsReferenced map.
      */
-    private long getIdLong(Object o) {
+    private int getIdInt(Object o) {
         if (o instanceof JsonObject) {
-            long id = ((JsonObject) o).id;
+            int id = ((JsonObject) o).id;
             if (id > 0) {
                 return id;
             }
         }
-        Long id = this.objsReferenced.get(o);
-        return id == null ? 0 : id;
+        return this.objsReferenced.get(o);  // Returns 0 if not found
     }
 
     /**

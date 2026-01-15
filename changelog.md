@@ -1,5 +1,26 @@
 ### Revision History
 #### 4.82.0 (unreleased)
+* **PERFORMANCE**: `JsonParser` - Zero-allocation string cache on cache hits
+  * Replaced LinkedHashMap-based cache with array-based open addressing (2048 slots)
+  * Computes hashCode directly from CharSequence without creating String
+  * Uses `contentEquals()` to verify matches - only allocates String on cache miss
+  * ~9% improvement in read performance
+* **PERFORMANCE**: `JsonObject.indexOf()` - Reduced linear search overhead
+  * Lowered INDEX_THRESHOLD from 16 to 4 for earlier HashMap index creation
+  * Added proactive index building when crossing threshold during `put()`
+  * Reduces O(n²) cost when building objects with many fields
+* **PERFORMANCE**: `WriteOptionsBuilder` / `ReadOptionsBuilder` - Eliminated lambda allocations
+  * Replaced `computeIfAbsent(key, this::method)` with manual get-then-put pattern
+  * Method references create new lambda instances on every call, even on cache hits
+  * Fixed in 5 locations: `getAccessorsForClass`, `getCustomWriter`, `getDeepDeclaredFields`, `getDeepInjectorMap`
+* **PERFORMANCE**: `JsonWriter` - New `IdentityIntMap` for reference tracking
+  * Replaced `IdentityHashMap<Object, Long>` with lightweight `IdentityIntMap`
+  * Uses open addressing with primitive int values (no Entry objects, no boxing)
+  * Single `System.identityHashCode()` call per operation
+  * ~10% improvement in write performance
+* **PERFORMANCE**: `ObjectResolver.markUntypedObjects()` - Optimized visited set
+  * Replaced `Collections.newSetFromMap(new IdentityHashMap<>())` with `IdentityIntMap`
+  * 66% reduction in samples for this method, eliminated IdentityHashMap allocations
 * **BUG FIX**: `ReadOptionsBuilder.integerTypeBigInteger()` - Fixed to actually set BigInteger-only mode
   * Method was incorrectly setting `Integers.BOTH` instead of `Integers.BIG_INTEGER`
   * Now correctly forces all integers to return as BigInteger regardless of size

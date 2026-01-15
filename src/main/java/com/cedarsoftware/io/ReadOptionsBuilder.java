@@ -2010,7 +2010,13 @@ public class ReadOptionsBuilder {
             if (classToTraverse == null) {
                 return Collections.emptyMap();
             }
-            return injectorsCache.computeIfAbsent(classToTraverse, this::buildInjectors);
+            // Avoid computeIfAbsent with method reference - creates lambda on every call
+            Map<String, Injector> injectors = injectorsCache.get(classToTraverse);
+            if (injectors == null) {
+                injectors = buildInjectors(classToTraverse);
+                injectorsCache.put(classToTraverse, injectors);
+            }
+            return injectors;
         }
 
         public void clearCaches() {
@@ -2070,7 +2076,13 @@ public class ReadOptionsBuilder {
          * deep list of fields for a given class.
          */
         public Map<String, Field> getDeepDeclaredFields(final Class<?> c) {
-            return classMetaCache.computeIfAbsent(c, this::buildDeepFieldMap);
+            // Avoid computeIfAbsent with method reference - creates lambda on every call
+            Map<String, Field> fields = classMetaCache.get(c);
+            if (fields == null) {
+                fields = buildDeepFieldMap(c);
+                classMetaCache.put(c, fields);
+            }
+            return fields;
         }
 
         /**

@@ -8,9 +8,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Deque;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -510,7 +508,8 @@ public class ObjectResolver extends Resolver
         // Use Map.Entry for type-safe pairing of Type and instance
         final Deque<Map.Entry<Type, Object>> stack = new ArrayDeque<>();
         // Track visited JsonObjects to prevent duplicate traversal when reachable via multiple paths
-        final Set<JsonObject> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+        // Uses lightweight IdentityIntMap instead of IdentityHashMap for better performance
+        final IdentityIntMap visited = new IdentityIntMap();
         stack.addFirst(new AbstractMap.SimpleEntry<>(type, rhs));
 
         while (!stack.isEmpty()) {
@@ -525,7 +524,8 @@ public class ObjectResolver extends Resolver
             // Skip already-processed JsonObjects (visited in this call or finished by main traversal)
             if (instance instanceof JsonObject) {
                 JsonObject jObj = (JsonObject) instance;
-                if (jObj.isFinished || !visited.add(jObj)) {
+                // put() returns 0 if newly added, 1 if already present
+                if (jObj.isFinished || visited.put(jObj, 1) != 0) {
                     continue;
                 }
             }

@@ -1595,7 +1595,13 @@ public class WriteOptionsBuilder {
         }
 
         public List<Accessor> getAccessorsForClass(final Class<?> c) {
-            return accessorsCache.computeIfAbsent(c, this::buildDeepAccessors);
+            // Avoid computeIfAbsent with method reference - creates lambda on every call
+            List<Accessor> accessors = accessorsCache.get(c);
+            if (accessors == null) {
+                accessors = buildDeepAccessors(c);
+                accessorsCache.put(c, accessors);
+            }
+            return accessors;
         }
 
         /**
@@ -1767,7 +1773,12 @@ public class WriteOptionsBuilder {
          * @return JsonClassWriter for the custom class (if one exists), null otherwise.
          */
         public JsonClassWriter getCustomWriter(Class<?> c) {
-            JsonClassWriter writer = writerCache.computeIfAbsent(c, this::findCustomWriter);
+            // Avoid computeIfAbsent with method reference - creates lambda on every call
+            JsonClassWriter writer = writerCache.get(c);
+            if (writer == null) {
+                writer = findCustomWriter(c);
+                writerCache.put(c, writer);
+            }
             return writer == nullWriter ? null : writer;
         }
 
@@ -1913,7 +1924,13 @@ public class WriteOptionsBuilder {
          * deep list of fields for a given class.
          */
         public Map<String, Field> getDeepDeclaredFields(final Class<?> c) {
-            return classMetaCache.computeIfAbsent(c, this::buildWithIncludedMinusExcluded);
+            // Avoid computeIfAbsent with method reference - creates lambda on every call
+            Map<String, Field> fields = classMetaCache.get(c);
+            if (fields == null) {
+                fields = buildWithIncludedMinusExcluded(c);
+                classMetaCache.put(c, fields);
+            }
+            return fields;
         }
 
         private Map<String, Field> buildWithIncludedMinusExcluded(Class<?> c) {
