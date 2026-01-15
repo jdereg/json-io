@@ -44,7 +44,9 @@ import java.util.Set;
  */
 public class JsonObject extends JsonValue implements Map<Object, Object>, Serializable {
     private static final int INITIAL_CAPACITY = 16;
-    private static volatile int INDEX_THRESHOLD = 16;
+    // Threshold for switching from linear search to HashMap index.
+    // Lower values reduce O(n²) cost of building objects with many fields.
+    private static volatile int INDEX_THRESHOLD = 4;
 
     // Map storage: parallel arrays for map entries (POJOs, maps with String keys)
     private Object[] keys;
@@ -239,6 +241,12 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         values[size] = value;
 
         if (index != null) {
+            // Index exists, add new key to it
+            index.put(key, size);
+        } else if (size == INDEX_THRESHOLD) {
+            // Just crossed threshold - build index proactively so next put() uses it
+            // This includes the key we just added (at position 'size')
+            buildIndex();
             index.put(key, size);
         }
 

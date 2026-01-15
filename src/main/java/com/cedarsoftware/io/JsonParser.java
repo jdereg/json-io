@@ -85,8 +85,10 @@ class JsonParser {
     private final ReadOptions readOptions;
     private final ReferenceTracker references;
 
-    // Instance-level LRU cache for string deduplication
-    private final Map<String, String> stringCache;
+    // Instance-level cache for string deduplication (array-based for zero-allocation hits)
+    // Uses simple hash-indexed slots with last-write-wins collision handling
+    private static final int STRING_CACHE_MASK = 2047;  // 2048 slots (power of 2 - 1)
+    private final String[] stringCacheArray = new String[STRING_CACHE_MASK + 1];
     // Performance: Hoisted ReadOptions constants to avoid repeated method calls
     private final long maxIdValue;
     private final boolean strictJson;
@@ -97,8 +99,6 @@ class JsonParser {
     private final ClassLoader classLoader;
     private final Map<CharSequence, CharSequence> substitutes;
     
-    // LRU cache size limit for string deduplication
-    private static final int STRING_CACHE_SIZE = 1024;
     private static final Map<CharSequence, CharSequence> SUBSTITUTES = new HashMap<>(16);
 
     // Static lookup tables for performance
@@ -154,15 +154,6 @@ class JsonParser {
     JsonParser(FastReader reader, Resolver resolver) {
         // For substitutes, use the static map directly (read-only)
         this.substitutes = SUBSTITUTES;
-
-        // Create instance-level LRU cache for string deduplication
-        // LinkedHashMap with accessOrder=true provides LRU eviction
-        this.stringCache = new LinkedHashMap<String, String>(STRING_CACHE_SIZE, 0.75f, true) {
-            @Override
-            protected boolean removeEldestEntry(Map.Entry<String, String> eldest) {
-                return size() > STRING_CACHE_SIZE;
-            }
-        };
 
         input = reader;
         this.resolver = resolver;
@@ -909,22 +900,33 @@ class JsonParser {
     }
 
     /**
-     * Convert CharSequence to String, using LRU cache for string deduplication.
-     * Frequently used strings (field names, common values) are deduplicated.
-     * Cache is bounded to STRING_CACHE_SIZE entries with LRU eviction.
+     * Convert CharSequence to String, using array-based cache for string deduplication.
+     * This implementation computes hashCode directly from the CharSequence, avoiding
+     * String allocation on cache hits. Only creates a new String on cache misses.
+     * Uses simple hash-indexed slots with last-write-wins collision handling.
      */
     private CharSequence cacheString(CharSequence str) {
-        // Convert to String first
-        final String s = str.toString();
-
-        // Check LRU cache - also updates access order for LRU tracking
-        final String cached = stringCache.get(s);
-        if (cached != null) {
-            return cached;  // Cache hit - return deduplicated instance
+        // Compute hashCode directly from CharSequence (same algorithm as String.hashCode())
+        // This avoids String allocation just to compute the hash
+        int hash = 0;
+        final int len = str.length();
+        for (int i = 0; i < len; i++) {
+            hash = 31 * hash + str.charAt(i);
         }
 
-        // Cache miss - store in LRU cache (may evict oldest entry)
-        stringCache.put(s, s);
+        // Look up in array-based cache using computed hash
+        final int slot = hash & STRING_CACHE_MASK;
+        final String cached = stringCacheArray[slot];
+
+        // Check if cached String matches our CharSequence (by hash first, then content)
+        // String.hashCode() is cached, so this is a fast check
+        if (cached != null && cached.hashCode() == hash && cached.contentEquals(str)) {
+            return cached;  // Cache hit - no String allocation!
+        }
+
+        // Cache miss - create String and cache it
+        final String s = str.toString();
+        stringCacheArray[slot] = s;
         return s;
     }
 
