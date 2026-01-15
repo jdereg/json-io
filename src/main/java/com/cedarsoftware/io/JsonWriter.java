@@ -1582,9 +1582,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
             first = false;
             final String fieldName = (String) entry.getKey();
-            output.write('"');
-            output.write(fieldName);
-            output.write("\":");
+            // Support JSON5 unquoted keys and proper string escaping (consistent with writeMapBody)
+            if (json5UnquotedKeys && isValidJson5Identifier(fieldName)) {
+                output.write(fieldName);
+                output.write(':');
+            } else {
+                writeJsonUtf8String(output, fieldName, maxStringLength);
+                output.write(':');
+            }
             Object value = entry.getValue();
 
             if (value == null) {

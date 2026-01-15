@@ -244,4 +244,62 @@ class Json5WriteUnquotedKeysTest {
         assertEquals("value1", result.get("validKey"));
         assertEquals("value2", result.get("key-with-dash"));
     }
+
+    // ========== JsonObject Direct Serialization Tests ==========
+    // These tests verify that writeJsonObjectObject() supports JSON5 unquoted keys
+
+    @Test
+    void testJsonObjectUnquotedKeys() {
+        // Create a JsonObject directly - this triggers writeJsonObjectObject() code path
+        JsonObject jsonObj = new JsonObject();
+        jsonObj.put("name", "John");
+        jsonObj.put("age", 30);
+        jsonObj.put("_active", true);
+
+        WriteOptions options = new WriteOptionsBuilder().json5UnquotedKeys(true).build();
+        String json = JsonIo.toJson(jsonObj, options);
+
+        // Verify keys are unquoted (valid ECMAScript identifiers)
+        assertTrue(json.contains("name:"), "Key 'name' should be unquoted in JsonObject serialization");
+        assertTrue(json.contains("age:"), "Key 'age' should be unquoted in JsonObject serialization");
+        assertTrue(json.contains("_active:"), "Key '_active' should be unquoted in JsonObject serialization");
+        assertFalse(json.contains("\"name\":"), "Key 'name' should not have quotes");
+    }
+
+    @Test
+    void testJsonObjectMixedKeys() {
+        // Create a JsonObject with both valid and invalid identifier keys
+        JsonObject jsonObj = new JsonObject();
+        jsonObj.put("validKey", "value1");
+        jsonObj.put("key-with-dash", "value2");  // Invalid identifier - must be quoted
+        jsonObj.put("123startsWithDigit", "value3");  // Invalid identifier - must be quoted
+
+        WriteOptions options = new WriteOptionsBuilder().json5UnquotedKeys(true).build();
+        String json = JsonIo.toJson(jsonObj, options);
+
+        // Valid identifier should be unquoted
+        assertTrue(json.contains("validKey:"), "validKey should be unquoted");
+        // Invalid identifiers should remain quoted
+        assertTrue(json.contains("\"key-with-dash\":"), "key-with-dash should be quoted");
+        assertTrue(json.contains("\"123startsWithDigit\":"), "123startsWithDigit should be quoted");
+    }
+
+    @Test
+    void testJsonObjectNestedUnquotedKeys() {
+        // Create nested JsonObjects
+        JsonObject inner = new JsonObject();
+        inner.put("innerField", "innerValue");
+
+        JsonObject outer = new JsonObject();
+        outer.put("outerField", "outerValue");
+        outer.put("nested", inner);
+
+        WriteOptions options = new WriteOptionsBuilder().json5UnquotedKeys(true).build();
+        String json = JsonIo.toJson(outer, options);
+
+        // Both outer and inner keys should be unquoted
+        assertTrue(json.contains("outerField:"), "outerField should be unquoted");
+        assertTrue(json.contains("nested:"), "nested should be unquoted");
+        assertTrue(json.contains("innerField:"), "innerField should be unquoted");
+    }
 }

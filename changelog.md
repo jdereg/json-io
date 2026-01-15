@@ -1,5 +1,10 @@
 ### Revision History
 #### 4.82.0 (unreleased)
+* **BUG FIX**: `JsonWriter.writeJsonObjectObject()` - Fixed JSON5 unquoted keys not being applied
+  * When serializing `JsonObject` instances directly, the `json5UnquotedKeys` option was ignored
+  * Field names were always written with quotes regardless of JSON5 settings
+  * Now uses consistent key writing logic with `writeMapBody()` - unquoted for valid ECMAScript identifiers
+  * Also fixes potential escaping issues for field names containing special characters
 * **PERFORMANCE**: `JsonWriter` - Comprehensive hot path optimization
   * Hoisted 12 `WriteOptions` values to final member variables initialized at construction time
   * Pre-fetched: `skipNullFields`, `json5TrailingCommas`, `json5UnquotedKeys`, `maxStringLength`, `prettyPrint`, `neverShowingType`, `alwaysShowingType`, `writeLongsAsStrings`, `json5SmartQuotes`, `maxIndentationDepth`, `indentationThreshold`, `indentationSize`
