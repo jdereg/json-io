@@ -324,4 +324,107 @@ class MapResolverGenericArrayTest {
         assertEquals(Boolean.class, result.getClass(), "AtomicBoolean should be converted to Boolean");
         assertEquals(false, result);
     }
+
+    // ========================================================================
+    // Tests for traverseFields() coverage in MapResolver
+    // ========================================================================
+
+    /**
+     * Test null field value handling in Maps mode with @type.
+     * This exercises lines 340-341 in MapResolver.traverseFields().
+     * When a field has null value, it should be preserved in the Map.
+     */
+    @Test
+    void testNullFieldValueInMapsMode() {
+        // JSON with @type and a null field value
+        String json = "{\"@type\":\"com.cedarsoftware.io.models.Race\",\"name\":null,\"age\":25}";
+
+        Object result = JsonIo.toMaps(json, null).asClass(null);
+
+        assertNotNull(result);
+        assertTrue(result instanceof Map, "Result should be a Map");
+
+        Map<?, ?> map = (Map<?, ?>) result;
+        assertTrue(map.containsKey("name"), "Map should contain 'name' key");
+        assertNull(map.get("name"), "name field should be null");
+        // With @type, int field is coerced to Integer
+        assertEquals(25, map.get("age"), "age field should be 25");
+    }
+
+    /**
+     * Test multiple null field values in Maps mode.
+     * This exercises lines 340-341 in MapResolver.traverseFields().
+     */
+    @Test
+    void testMultipleNullFieldsInMapsMode() {
+        String json = "{\"@type\":\"com.cedarsoftware.io.models.Race\",\"name\":null,\"age\":30,\"strength\":null,\"wisdom\":100}";
+
+        Object result = JsonIo.toMaps(json, null).asClass(null);
+
+        assertNotNull(result);
+        Map<?, ?> map = (Map<?, ?>) result;
+
+        assertNull(map.get("name"), "name should be null");
+        assertEquals(30, map.get("age"));
+        assertNull(map.get("strength"), "strength should be null");
+        assertEquals(100, map.get("wisdom"));
+    }
+
+    /**
+     * Test empty string is preserved for String field (not converted to null).
+     * Verifies that String fields keep empty strings.
+     */
+    @Test
+    void testEmptyStringPreservedForStringFieldInMapsMode() {
+        String json = "{\"@type\":\"com.cedarsoftware.io.models.Race\",\"name\":\"\",\"age\":25}";
+
+        Object result = JsonIo.toMaps(json, null).asClass(null);
+
+        assertNotNull(result);
+        Map<?, ?> map = (Map<?, ?>) result;
+
+        // Empty string for String field should be preserved, not converted to null
+        assertEquals("", map.get("name"), "Empty string for String field should be preserved");
+        assertEquals(25, map.get("age"));
+    }
+
+    /**
+     * Test JsonObject value for non-referenceable type field in Maps mode.
+     * This exercises lines 362-363 in MapResolver.traverseFields().
+     * When a field has a JsonObject value and the injector type is non-referenceable,
+     * the value is converted directly.
+     */
+    @Test
+    void testJsonObjectValueForIntFieldInMapsMode() {
+        // JSON with nested @type for int field - this creates a JsonObject for the value
+        String json = "{\"@type\":\"com.cedarsoftware.io.models.Race\",\"name\":\"Hero\",\"age\":{\"@type\":\"int\",\"value\":30}}";
+
+        Object result = JsonIo.toMaps(json, null).asClass(null);
+
+        assertNotNull(result);
+        Map<?, ?> map = (Map<?, ?>) result;
+
+        assertEquals("Hero", map.get("name"));
+        // The nested JsonObject should be converted to the appropriate value
+        assertNotNull(map.get("age"));
+    }
+
+    /**
+     * Test JsonObject value for String field (non-referenceable) in Maps mode.
+     * This exercises lines 362-363 in MapResolver.traverseFields().
+     */
+    @Test
+    void testJsonObjectValueForStringFieldInMapsMode() {
+        // JSON with nested @type for String field
+        String json = "{\"@type\":\"com.cedarsoftware.io.models.Race\",\"name\":{\"@type\":\"java.lang.String\",\"value\":\"TestName\"},\"age\":25}";
+
+        Object result = JsonIo.toMaps(json, null).asClass(null);
+
+        assertNotNull(result);
+        Map<?, ?> map = (Map<?, ?>) result;
+
+        assertEquals(25, map.get("age"));
+        // The nested JsonObject for String should be converted
+        assertNotNull(map.get("name"));
+    }
 }
