@@ -159,13 +159,12 @@ public class ObjectResolver extends Resolver
         } else if (rhs instanceof JsonObject) {
             final JsonObject jsRhs = (JsonObject) rhs;
 
-            if (jsRhs.isReference()) {    // Handle field references.
-                final long ref = jsRhs.getReferenceId();
-                final JsonObject refObject = references.getOrThrow(ref);
+            final JsonObject refObject = resolveReference(jsRhs);
+            if (refObject != null) {    // Handle field references.
                 if (refObject.getTarget() != null) {
                     injector.inject(target, refObject.getTarget());
                 } else {
-                    addUnresolvedReference(new UnresolvedReference(jsonObj, injector.getName(), ref));
+                    addUnresolvedReference(new UnresolvedReference(jsonObj, injector.getName(), jsRhs.getReferenceId()));
                 }
             } else {    // Direct assignment for nested objects.
                 // Create instance first so @ref references to this object can resolve
@@ -209,9 +208,8 @@ public class ObjectResolver extends Resolver
             } else if (rhs instanceof JsonObject) {
                 final JsonObject jObj = (JsonObject) rhs;
 
-                if (jObj.isReference()) {
-                    final long ref = jObj.getReferenceId();
-                    final JsonObject refObject = references.getOrThrow(ref);
+                final JsonObject refObject = resolveReference(jObj);
+                if (refObject != null) {
                     storeMissingField(target, missingField, refObject.getTarget());
                 } else if (jObj.getType() != null) {
                     Object javaInstance = createInstance(jObj);
@@ -239,7 +237,7 @@ public class ObjectResolver extends Resolver
      * Stores missing field info for later handler callback (some references may need resolution first).
      */
     private void storeMissingField(Object target, String missingField, Object value) {
-        addMissingField(new Missingfields(target, missingField, value));
+        addMissingField(new MissingField(target, missingField, value));
     }
 
     /**

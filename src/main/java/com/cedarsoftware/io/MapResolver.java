@@ -221,9 +221,8 @@ public class MapResolver extends Resolver {
             }
             if (element instanceof JsonObject) {
                 JsonObject jObj = (JsonObject) element;
-                if (jObj.isReference()) {
-                    long refId = jObj.getReferenceId();
-                    JsonObject refObject = refTracker.getOrThrow(refId);
+                JsonObject refObject = resolveReference(jObj);
+                if (refObject != null) {
                     array[i] = refObject;  // Patch the @ref
                 } else {
                     push(jObj);  // Traverse nested object
@@ -238,7 +237,7 @@ public class MapResolver extends Resolver {
     /**
      * In Maps mode, handle type reconciliation for the root result when no explicit
      * rootType was specified by the user.
-     *
+     * <p>
      * This logic determines the appropriate return type:
      * - Arrays are always returned as actual arrays (not JsonObject)
      * - If @type is a simple type (String, Number, etc.), convert to that type
@@ -363,9 +362,8 @@ public class MapResolver extends Resolver {
                         continue;
                     }
                 }
-                if (jObj.isReference()) {    // Correct field references
-                    long refId = jObj.getReferenceId();
-                    JsonObject refObject = references.getOrThrow(refId);
+                JsonObject refObject = resolveReference(jObj);
+                if (refObject != null) {    // Correct field references
                     jsonObj.put(fieldName, refObject);    // Update Map-of-Maps reference
                 } else {
                     // In Maps mode, convert JsonObjects with simple types (Byte, Short, etc.)

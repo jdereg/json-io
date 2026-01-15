@@ -82,7 +82,7 @@ public abstract class Resolver {
     protected final Deque<JsonObject> stack = new ArrayDeque<>();
     private final Collection<JsonObject> mapsToRehash = new ArrayList<>();
     // store the missing field found during deserialization to notify any client after the complete resolution is done
-    private final Collection<Missingfields> missingFields = new ArrayList<>();
+    private final Collection<MissingField> missingFields = new ArrayList<>();
     protected ReadOptions readOptions;
     protected ReferenceTracker references;
     protected final Converter converter;
@@ -120,12 +120,12 @@ public abstract class Resolver {
     /**
      * stores missing fields information to notify client after the complete deserialization resolution
      */
-    protected static class Missingfields {
+    protected static class MissingField {
         private final Object target;
         private final String fieldName;
         private final Object value;
 
-        public Missingfields(Object target, String fieldName, Object value) {
+        public MissingField(Object target, String fieldName, Object value) {
             this.target = target;
             this.fieldName = fieldName;
             this.value = value;
@@ -772,7 +772,7 @@ public abstract class Resolver {
     /**
      * Security-aware method to add missing fields with size limits
      */
-    protected void addMissingField(Missingfields field) {
+    protected void addMissingField(MissingField field) {
         // Security: Prevent unbounded memory growth via missing fields
         // Performance: Use hoisted constant
         if (maxMissingFields != Integer.MAX_VALUE && missingFields.size() >= maxMissingFields) {
@@ -799,7 +799,7 @@ public abstract class Resolver {
     private void handleMissingFields() {
         MissingFieldHandler missingFieldHandler = readOptions.getMissingFieldHandler();
         if (missingFieldHandler != null) {
-            for (Missingfields mf : missingFields) {
+            for (MissingField mf : missingFields) {
                 missingFieldHandler.fieldMissing(mf.target, mf.fieldName, mf.value);
             }
         }//else no handler so ignore.
@@ -1350,6 +1350,20 @@ public abstract class Resolver {
     }
 
     /**
+     * Resolves a reference JsonObject to the actual referenced JsonObject.
+     * Returns null if the jsonObj is not a reference.
+     *
+     * @param jsonObj the JsonObject that may be a reference (@ref)
+     * @return the referenced JsonObject, or null if jsonObj is not a reference
+     */
+    protected JsonObject resolveReference(JsonObject jsonObj) {
+        if (!jsonObj.isReference()) {
+            return null;
+        }
+        return references.getOrThrow(jsonObj.getReferenceId());
+    }
+
+    /**
      * Resolves a reference within a collection context. If the referenced object's target
      * is already available, adds it to the collection. Otherwise, registers an unresolved
      * reference to be patched later.
@@ -1362,12 +1376,11 @@ public abstract class Resolver {
      */
     protected void resolveReferenceInCollection(JsonObject refHolder, JsonObject parent,
             Collection<Object> col, int idx, boolean isList) {
-        long ref = refHolder.getReferenceId();
-        JsonObject refObject = references.getOrThrow(ref);
+        JsonObject refObject = resolveReference(refHolder);
         if (refObject.getTarget() != null) {
             col.add(refObject.getTarget());
         } else {
-            addUnresolvedReference(new UnresolvedReference(parent, idx, ref));
+            addUnresolvedReference(new UnresolvedReference(parent, idx, refHolder.getReferenceId()));
             if (isList) {
                 col.add(null);
             }
