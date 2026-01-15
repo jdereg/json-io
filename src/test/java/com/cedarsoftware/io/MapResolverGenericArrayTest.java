@@ -154,19 +154,16 @@ class MapResolverGenericArrayTest {
     }
 
     // ========================================================================
-    // Tests for reconcileResult() method coverage (lines 271-272, 276)
+    // Tests for Maps mode parsing of simple JSON values
     // ========================================================================
 
     /**
-     * Test reconcileResult returns simple String type directly.
-     * This exercises lines 271-272 in MapResolver.reconcileResult().
-     * When rootType is null and result is a simple type (String), it should return result directly.
+     * Test parsing simple String JSON value in Maps mode.
      */
     @Test
-    void testReconcileResultReturnsSimpleString() {
+    void testMapsModeParsesSimpleString() {
         String json = "\"hello world\"";
 
-        // Parse without specifying rootType - asClass(null)
         Object result = JsonIo.toMaps(json, null).asClass(null);
 
         assertNotNull(result);
@@ -175,11 +172,10 @@ class MapResolverGenericArrayTest {
     }
 
     /**
-     * Test reconcileResult returns simple Long type directly.
-     * This exercises lines 271-272 in MapResolver.reconcileResult().
+     * Test parsing simple Long JSON value in Maps mode.
      */
     @Test
-    void testReconcileResultReturnsSimpleLong() {
+    void testMapsModeParsesSimpleLong() {
         String json = "12345";
 
         Object result = JsonIo.toMaps(json, null).asClass(null);
@@ -190,11 +186,10 @@ class MapResolverGenericArrayTest {
     }
 
     /**
-     * Test reconcileResult returns simple Double type directly.
-     * This exercises lines 271-272 in MapResolver.reconcileResult().
+     * Test parsing simple Double JSON value in Maps mode.
      */
     @Test
-    void testReconcileResultReturnsSimpleDouble() {
+    void testMapsModeParsesSimpleDouble() {
         String json = "3.14159";
 
         Object result = JsonIo.toMaps(json, null).asClass(null);
@@ -205,11 +200,10 @@ class MapResolverGenericArrayTest {
     }
 
     /**
-     * Test reconcileResult returns simple Boolean type directly.
-     * This exercises lines 271-272 in MapResolver.reconcileResult().
+     * Test parsing simple Boolean JSON value in Maps mode.
      */
     @Test
-    void testReconcileResultReturnsSimpleBoolean() {
+    void testMapsModeParsesSimpleBoolean() {
         String json = "true";
 
         Object result = JsonIo.toMaps(json, null).asClass(null);
@@ -220,13 +214,10 @@ class MapResolverGenericArrayTest {
     }
 
     /**
-     * Test reconcileResult returns JsonObject for complex types.
-     * This exercises line 276 in MapResolver.reconcileResult().
-     * When rootType is null and result is not a simple type, it returns the JsonObject.
+     * Test parsing JSON object returns Map in Maps mode.
      */
     @Test
-    void testReconcileResultReturnsJsonObjectForComplexType() {
-        // JSON object without @type - should return as JsonObject (which is a Map)
+    void testMapsModeReturnsMapForJsonObject() {
         String json = "{\"name\": \"John\", \"age\": 30}";
 
         Object result = JsonIo.toMaps(json, null).asClass(null);
@@ -240,11 +231,10 @@ class MapResolverGenericArrayTest {
     }
 
     /**
-     * Test reconcileResult returns JsonObject for empty object.
-     * This exercises line 276 in MapResolver.reconcileResult().
+     * Test parsing empty JSON object returns empty Map in Maps mode.
      */
     @Test
-    void testReconcileResultReturnsJsonObjectForEmptyObject() {
+    void testMapsModeReturnsEmptyMapForEmptyObject() {
         String json = "{}";
 
         Object result = JsonIo.toMaps(json, null).asClass(null);
@@ -255,11 +245,10 @@ class MapResolverGenericArrayTest {
     }
 
     /**
-     * Test reconcileResult returns null for JSON null.
-     * Edge case test for reconcileResult behavior.
+     * Test parsing JSON null returns null in Maps mode.
      */
     @Test
-    void testReconcileResultReturnsNullForJsonNull() {
+    void testMapsModeReturnsNullForJsonNull() {
         String json = "null";
 
         Object result = JsonIo.toMaps(json, null).asClass(null);

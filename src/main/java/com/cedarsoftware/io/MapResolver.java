@@ -261,18 +261,12 @@ public class MapResolver extends Resolver {
                 Class<?> basicType = getJsonSynonymType(javaClass);
                 return converter.convert(rootObj, basicType);
             }
-            // If it's not a built-in primitive, return the raw JsonObject
-            if (!isBuiltInPrimitive(result, converter)) {
-                return rootObj;
-            }
+            // Return primitive results directly, otherwise return the raw JsonObject
+            return isBuiltInPrimitive(result, converter) ? result : rootObj;
         }
 
-        // If the resolved result is a simple type, return it
-        if (result != null && converter.isSimpleTypeConversionSupported(result.getClass())) {
-            return result;
-        }
-
-        // Otherwise, return the raw JsonObject
+        // javaType is always set by Resolver.toJavaObjects() before calling reconcileResult,
+        // so this line should never be reached. Return rootObj as a defensive fallback.
         return rootObj;
     }
 
