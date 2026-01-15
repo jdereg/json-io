@@ -1,11 +1,12 @@
 ### Revision History
 #### 4.82.0 (unreleased)
-* **PERFORMANCE**: `JsonWriter.writeMapBody()` - Optimized map entry iteration
-  * Hoisted `WriteOptions` method calls to final member variables initialized at construction time
-  * Pre-fetched: `skipNullFields`, `json5TrailingCommas`, `json5UnquotedKeys`, `maxStringLength`
-  * Restructured loop to write comma BEFORE entries (except first), eliminating double `hasNext()` check per iteration
-  * Inlined key writing logic with pre-fetched options, avoiding method call overhead
-  * Applied same optimization to `writeKey()`, `writeField()`, `writeStringValue()`, and all `isJson5TrailingCommas` calls
+* **PERFORMANCE**: `JsonWriter` - Comprehensive hot path optimization
+  * Hoisted 12 `WriteOptions` values to final member variables initialized at construction time
+  * Pre-fetched: `skipNullFields`, `json5TrailingCommas`, `json5UnquotedKeys`, `maxStringLength`, `prettyPrint`, `neverShowingType`, `alwaysShowingType`, `writeLongsAsStrings`, `json5SmartQuotes`, `maxIndentationDepth`, `indentationThreshold`, `indentationSize`
+  * Eliminated ~37 method calls per serialization cycle across all write paths
+  * Restructured `writeMapBody()` and `writeElements()` loops to write comma BEFORE entries (except first), eliminating double `hasNext()` check per iteration
+  * Replaced all internal `getWriteOptions()` calls with direct field access
+  * Optimized `tab()` method to use pre-fetched indentation settings
 * **PERFORMANCE**: `JsonParser` - Zero-allocation string cache on cache hits
   * Replaced LinkedHashMap-based cache with array-based open addressing (2048 slots)
   * Computes hashCode directly from CharSequence without creating String
