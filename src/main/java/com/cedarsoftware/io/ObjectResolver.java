@@ -16,6 +16,7 @@ import java.util.Set;
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.Convention;
+import com.cedarsoftware.util.IdentitySet;
 import com.cedarsoftware.util.TypeUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
@@ -508,8 +509,8 @@ public class ObjectResolver extends Resolver
         // Use Map.Entry for type-safe pairing of Type and instance
         final Deque<Map.Entry<Type, Object>> stack = new ArrayDeque<>();
         // Track visited JsonObjects to prevent duplicate traversal when reachable via multiple paths
-        // Uses lightweight IdentityIntMap instead of IdentityHashMap for better performance
-        final IdentityIntMap visited = new IdentityIntMap();
+        // Uses lightweight IdentitySet instead of IdentityHashMap for better performance
+        final Set<JsonObject> visited = new IdentitySet<>();
         stack.addFirst(new AbstractMap.SimpleEntry<>(type, rhs));
 
         while (!stack.isEmpty()) {
@@ -524,8 +525,8 @@ public class ObjectResolver extends Resolver
             // Skip already-processed JsonObjects (visited in this call or finished by main traversal)
             if (instance instanceof JsonObject) {
                 JsonObject jObj = (JsonObject) instance;
-                // put() returns 0 if newly added, 1 if already present
-                if (jObj.isFinished || visited.put(jObj, 1) != 0) {
+                // add() returns false if already present
+                if (jObj.isFinished || !visited.add(jObj)) {
                     continue;
                 }
             }

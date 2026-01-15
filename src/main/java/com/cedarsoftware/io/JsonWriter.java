@@ -140,6 +140,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private Class<?> declaredElementType = null;
     private Class<?> declaredKeyType = null;
 
+    // Pre-fetched WriteOptions values for hot path performance (immutable after construction)
+    private final boolean skipNullFields;
+    private final boolean json5TrailingCommas;
+    private final boolean json5UnquotedKeys;
+    private final int maxStringLength;
+
     // Context tracking for automatic comma management
     private final Deque<WriteContext> contextStack = new ArrayDeque<>();
 
@@ -274,6 +280,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             this.itemsPrefix = ITEMS_LONG;
             this.keysPrefix = KEYS_LONG;
         }
+
+        // Pre-fetch frequently accessed WriteOptions for hot path performance
+        this.skipNullFields = this.writeOptions.isSkipNullFields();
+        this.json5TrailingCommas = this.writeOptions.isJson5TrailingCommas();
+        this.json5UnquotedKeys = isJson5;  // Already computed above
+        this.maxStringLength = this.writeOptions.getMaxStringLength();
     }
 
     public WriteOptions getWriteOptions() {
@@ -979,7 +991,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         // Trailing comma for JSON5
-        if (len > 0 && writeOptions.isJson5TrailingCommas()) {
+        if (len > 0 && json5TrailingCommas) {
             output.write(',');
         }
         tabOut();
@@ -1058,7 +1070,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         // Trailing comma for JSON5
-        if (len > 0 && writeOptions.isJson5TrailingCommas()) {
+        if (len > 0 && json5TrailingCommas) {
             output.write(',');
         }
         tabOut();
@@ -1196,7 +1208,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         writeElements(output, i);
 
         // Trailing comma for JSON5 (collection is non-empty at this point)
-        if (writeOptions.isJson5TrailingCommas()) {
+        if (json5TrailingCommas) {
             output.write(',');
         }
         tabOut();
@@ -1365,7 +1377,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         // Trailing comma for JSON5
-        if (len > 0 && writeOptions.isJson5TrailingCommas()) {
+        if (len > 0 && json5TrailingCommas) {
             output.write(',');
         }
         tabOut();
@@ -1547,7 +1559,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         while (i.hasNext()) {
             Map.Entry<Object, Object> entry = i.next();
-            if (writeOptions.isSkipNullFields() && entry.getValue() == null) {
+            if (skipNullFields && entry.getValue() == null) {
                 continue;
             }
 
@@ -1577,7 +1589,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
         // Trailing comma for JSON5 (check if object has entries)
-        if (!jObj.isEmpty() && writeOptions.isJson5TrailingCommas()) {
+        if (!jObj.isEmpty() && json5TrailingCommas) {
             output.write(',');
         }
         tabOut();
@@ -1654,7 +1666,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         writeElements(output, i);
 
         // Trailing comma for @keys array
-        if (!map.isEmpty() && writeOptions.isJson5TrailingCommas()) {
+        if (!map.isEmpty() && json5TrailingCommas) {
             output.write(',');
         }
         tabOut();
@@ -1670,13 +1682,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         writeElements(output, i);
 
         // Trailing comma for @items array
-        if (!map.isEmpty() && writeOptions.isJson5TrailingCommas()) {
+        if (!map.isEmpty() && json5TrailingCommas) {
             output.write(',');
         }
         tabOut();
         output.write(']');
         // Trailing comma for outer object
-        if (writeOptions.isJson5TrailingCommas()) {
+        if (json5TrailingCommas) {
             output.write(',');
         }
         tabOut();
@@ -1714,27 +1726,37 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private boolean writeMapBody(final Iterator i) throws IOException {
         final Writer output = out;
         boolean wroteEntry = false;
+
         while (i.hasNext()) {
             Entry att2value = (Entry) i.next();
             Object value = att2value.getValue();
 
-            if (writeOptions.isSkipNullFields() && value == null) {
+            if (skipNullFields && value == null) {
                 continue;
             }
 
-            String key = (String) att2value.getKey();
-            writeKey(key);
-            writeCollectionElement(value);
-            wroteEntry = true;
-
-            if (i.hasNext()) {
+            // Write comma and newline BEFORE entry (except first) - avoids double hasNext() call
+            if (wroteEntry) {
                 output.write(',');
                 newLine();
             }
+
+            // Inline key writing with pre-fetched member variables
+            String key = (String) att2value.getKey();
+            if (json5UnquotedKeys && isValidJson5Identifier(key)) {
+                output.write(key);
+                output.write(':');
+            } else {
+                writeJsonUtf8String(output, key, maxStringLength);
+                output.write(':');
+            }
+
+            writeCollectionElement(value);
+            wroteEntry = true;
         }
 
         // Trailing comma for JSON5
-        if (wroteEntry && writeOptions.isJson5TrailingCommas()) {
+        if (wroteEntry && json5TrailingCommas) {
             output.write(',');
         }
         tabOut();
@@ -2001,7 +2023,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
         Object o = accessor.retrieve(obj);
 
-        if (writeOptions.isSkipNullFields() && o == null) {   // If skip null, skip field and return the same status on first field written indicator
+        if (skipNullFields && o == null) {   // If skip null, skip field and return the same status on first field written indicator
             return first;
         }
 
@@ -2280,7 +2302,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      */
     private void writeStringValue(String s) throws IOException {
         if (!writeOptions.isJson5SmartQuotes()) {
-            writeJsonUtf8String(out, s, writeOptions.getMaxStringLength());
+            writeJsonUtf8String(out, s, maxStringLength);
             return;
         }
 
@@ -2300,9 +2322,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         // Use single quotes only if string has " but no '
         if (hasDoubleQuote && !hasSingleQuote) {
-            writeSingleQuotedString(out, s, writeOptions.getMaxStringLength());
+            writeSingleQuotedString(out, s, maxStringLength);
         } else {
-            writeJsonUtf8String(out, s, writeOptions.getMaxStringLength());
+            writeJsonUtf8String(out, s, maxStringLength);
         }
     }
 
@@ -2628,11 +2650,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * @param name the key name to write
      */
     private void writeKey(String name) throws IOException {
-        if (writeOptions.isJson5UnquotedKeys() && isValidJson5Identifier(name)) {
+        if (json5UnquotedKeys && isValidJson5Identifier(name)) {
             out.write(name);
             out.write(':');
         } else {
-            writeJsonUtf8String(out, name, writeOptions.getMaxStringLength());
+            writeJsonUtf8String(out, name, maxStringLength);
             out.write(':');
         }
     }
