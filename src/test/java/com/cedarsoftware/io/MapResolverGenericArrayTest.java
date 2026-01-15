@@ -466,4 +466,92 @@ class MapResolverGenericArrayTest {
         // Whitespace string for custom type field should be converted to null
         assertNull(map.get("custom"), "Whitespace string for non-convertible type should become null");
     }
+
+    // ========================================================================
+    // Tests for coerceLong and coerceDouble coverage in MapResolver
+    // ========================================================================
+
+    /**
+     * Test coerceLong converting Long (JSON integer) to double field.
+     * This exercises line 691 in MapResolver.coerceLong().
+     */
+    @Test
+    void testCoerceLongToDoubleInMapsMode() {
+        // JSON with integer value for a double field - triggers Long -> double coercion
+        String json = "{\"@type\":\"com.cedarsoftware.io.models.NumericCoercionHolder\",\"doubleField\":42}";
+
+        Object result = JsonIo.toMaps(json, null).asClass(null);
+
+        assertNotNull(result);
+        Map<?, ?> map = (Map<?, ?>) result;
+
+        // Integer 42 should be coerced to double 42.0
+        Object value = map.get("doubleField");
+        assertNotNull(value, "doubleField should not be null");
+        assertEquals(Double.class, value.getClass(), "Should be coerced to Double");
+        assertEquals(42.0, value, "Value should be 42.0");
+    }
+
+    /**
+     * Test coerceLong converting Long (JSON integer) to float field.
+     * This exercises line 693 in MapResolver.coerceLong().
+     */
+    @Test
+    void testCoerceLongToFloatInMapsMode() {
+        // JSON with integer value for a float field - triggers Long -> float coercion
+        String json = "{\"@type\":\"com.cedarsoftware.io.models.NumericCoercionHolder\",\"floatField\":123}";
+
+        Object result = JsonIo.toMaps(json, null).asClass(null);
+
+        assertNotNull(result);
+        Map<?, ?> map = (Map<?, ?>) result;
+
+        // Integer 123 should be coerced to float 123.0f
+        Object value = map.get("floatField");
+        assertNotNull(value, "floatField should not be null");
+        assertEquals(Float.class, value.getClass(), "Should be coerced to Float");
+        assertEquals(123.0f, value, "Value should be 123.0f");
+    }
+
+    /**
+     * Test coerceDouble converting Double (JSON decimal) to long field.
+     * This exercises line 705 in MapResolver.coerceDouble().
+     */
+    @Test
+    void testCoerceDoubleToLongInMapsMode() {
+        // JSON with decimal value for a long field - triggers Double -> long coercion
+        String json = "{\"@type\":\"com.cedarsoftware.io.models.NumericCoercionHolder\",\"longField\":99.7}";
+
+        Object result = JsonIo.toMaps(json, null).asClass(null);
+
+        assertNotNull(result);
+        Map<?, ?> map = (Map<?, ?>) result;
+
+        // Decimal 99.7 should be coerced to long 99 (truncated)
+        Object value = map.get("longField");
+        assertNotNull(value, "longField should not be null");
+        assertEquals(Long.class, value.getClass(), "Should be coerced to Long");
+        assertEquals(99L, value, "Value should be 99 (truncated from 99.7)");
+    }
+
+    /**
+     * Test coerceDouble converting Double (JSON decimal) to int field.
+     * This exercises line 707 in MapResolver.coerceDouble().
+     */
+    @Test
+    void testCoerceDoubleToIntInMapsMode() {
+        // JSON with decimal value for an int field - triggers Double -> int coercion
+        String json = "{\"@type\":\"com.cedarsoftware.io.models.NumericCoercionHolder\",\"intField\":55.9}";
+
+        Object result = JsonIo.toMaps(json, null).asClass(null);
+
+        assertNotNull(result);
+        Map<?, ?> map = (Map<?, ?>) result;
+
+        // Decimal 55.9 should be coerced to int 55 (truncated)
+        Object value = map.get("intField");
+        assertNotNull(value, "intField should not be null");
+        assertEquals(Integer.class, value.getClass(), "Should be coerced to Integer");
+        assertEquals(55, value, "Value should be 55 (truncated from 55.9)");
+    }
 }

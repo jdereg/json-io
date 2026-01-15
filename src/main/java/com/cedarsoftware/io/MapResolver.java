@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
+import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.TypeUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
@@ -251,23 +252,19 @@ public class MapResolver extends Resolver {
             return result;
         }
 
+        // javaType is guaranteed non-null: Resolver.toJavaObjects() sets it to at least Object.class
         Type javaType = rootObj.getType();
+        Class<?> javaClass = TypeUtilities.getRawClass(javaType);
 
-        if (javaType != null) {
-            Class<?> javaClass = TypeUtilities.getRawClass(javaType);
-            // If @type is a simple type or Number, convert jsonObj to its basic type
-            if (converter.isSimpleTypeConversionSupported(javaClass) ||
-                    Number.class.isAssignableFrom(javaClass)) {
-                Class<?> basicType = getJsonSynonymType(javaClass);
-                return converter.convert(rootObj, basicType);
-            }
-            // Return primitive results directly, otherwise return the raw JsonObject
-            return isBuiltInPrimitive(result, converter) ? result : rootObj;
+        // If @type is a simple type or Number, convert jsonObj to its basic type
+        if (converter.isSimpleTypeConversionSupported(javaClass) ||
+                Number.class.isAssignableFrom(javaClass)) {
+            Class<?> basicType = getJsonSynonymType(javaClass);
+            return converter.convert(rootObj, basicType);
         }
 
-        // javaType is always set by Resolver.toJavaObjects() before calling reconcileResult,
-        // so this line should never be reached. Return rootObj as a defensive fallback.
-        return rootObj;
+        // Return primitive results directly, otherwise return the raw JsonObject
+        return isBuiltInPrimitive(result, converter) ? result : rootObj;
     }
 
     /**
@@ -397,7 +394,7 @@ public class MapResolver extends Resolver {
                 } else if (converter.isConversionSupportedFor(rhsClass, fieldType)) {
                     Object fieldValue = converter.convert(rhs, fieldType);
                     jsonObj.put(fieldName, fieldValue);
-                } else if (rhs instanceof String && "".equals(((String) rhs).trim())) {
+                } else if (rhs instanceof String && StringUtilities.isEmpty((String)rhs)) {
                     // Fallback: Allow "" to null out a field when converter doesn't support String conversion.
                     // Note: fieldType cannot be String.class here (line 390 checks rhsClass == fieldType).
                     // StringBuilder/StringBuffer have converter support, so they're handled above.
