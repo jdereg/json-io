@@ -1455,11 +1455,17 @@ public abstract class Resolver {
                 return null;
             }
 
-            // Security: Improve circular reference detection with persistent tracking
+            // Fast path: most lookups don't involve reference chains
+            if (!target.isReference()) {
+                return target;
+            }
+
+            // Slow path: follow reference chain with security checks
+            // Performance: HashSet created lazily only when we have a reference chain
             Set<Long> visited = new HashSet<>();
             int chainDepth = 0;
 
-            while (target.isReference()) {
+            do {
                 // Security: Prevent infinite loops via chain depth limit
                 int maxChainDepth = readOptions.getMaxReferenceChainDepth();
                 if (++chainDepth > maxChainDepth) {
@@ -1467,10 +1473,9 @@ public abstract class Resolver {
                 }
 
                 // Security: Enhanced circular reference detection
-                if (visited.contains(id)) {
+                if (!visited.add(id)) {
                     throw new JsonIoException("Circular reference detected in reference chain starting with id: " + id + " at depth: " + chainDepth);
                 }
-                visited.add(id);
 
                 long nextId = target.getReferenceId();
                 id = nextId;
@@ -1478,7 +1483,7 @@ public abstract class Resolver {
                 if (target == null) {
                     return null;
                 }
-            }
+            } while (target.isReference());
 
             return target;
         }
