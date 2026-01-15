@@ -427,4 +427,43 @@ class MapResolverGenericArrayTest {
         // The nested JsonObject for String should be converted
         assertNotNull(map.get("name"));
     }
+
+    /**
+     * Test empty string to null fallback for custom type field without String converter.
+     * This exercises the fallback path in MapResolver.traverseFields() where
+     * converter.isConversionSupportedFor(String.class, fieldType) returns false.
+     */
+    @Test
+    void testEmptyStringToNullForCustomTypeField() {
+        // JSON with @type and empty string for a custom type field
+        // The CustomType class doesn't have String conversion support in the Converter
+        String json = "{\"@type\":\"com.cedarsoftware.io.models.CustomTypeHolder\",\"name\":\"Test\",\"custom\":\"\"}";
+
+        Object result = JsonIo.toMaps(json, null).asClass(null);
+
+        assertNotNull(result);
+        Map<?, ?> map = (Map<?, ?>) result;
+
+        assertEquals("Test", map.get("name"));
+        // Empty string for custom type field should be converted to null
+        // because the converter doesn't support String->CustomType conversion
+        assertNull(map.get("custom"), "Empty string for non-convertible type should become null");
+    }
+
+    /**
+     * Test whitespace string to null fallback for custom type field.
+     */
+    @Test
+    void testWhitespaceStringToNullForCustomTypeField() {
+        String json = "{\"@type\":\"com.cedarsoftware.io.models.CustomTypeHolder\",\"name\":\"Test\",\"custom\":\"   \"}";
+
+        Object result = JsonIo.toMaps(json, null).asClass(null);
+
+        assertNotNull(result);
+        Map<?, ?> map = (Map<?, ?>) result;
+
+        assertEquals("Test", map.get("name"));
+        // Whitespace string for custom type field should be converted to null
+        assertNull(map.get("custom"), "Whitespace string for non-convertible type should become null");
+    }
 }

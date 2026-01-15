@@ -397,12 +397,11 @@ public class MapResolver extends Resolver {
                 } else if (converter.isConversionSupportedFor(rhsClass, fieldType)) {
                     Object fieldValue = converter.convert(rhs, fieldType);
                     jsonObj.put(fieldName, fieldValue);
-                } else if (rhs instanceof String) {
-                    if (fieldType != String.class && fieldType != StringBuilder.class && fieldType != StringBuffer.class) {
-                        if ("".equals(((String) rhs).trim())) {   // Allow "" to null out a non-String field on the inbound JSON
-                            jsonObj.put(fieldName, null);
-                        }
-                    }
+                } else if (rhs instanceof String && "".equals(((String) rhs).trim())) {
+                    // Fallback: Allow "" to null out a field when converter doesn't support String conversion.
+                    // Note: fieldType cannot be String.class here (line 390 checks rhsClass == fieldType).
+                    // StringBuilder/StringBuffer have converter support, so they're handled above.
+                    jsonObj.put(fieldName, null);
                 }
             }
         }
