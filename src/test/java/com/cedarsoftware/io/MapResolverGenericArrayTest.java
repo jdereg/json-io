@@ -255,4 +255,73 @@ class MapResolverGenericArrayTest {
 
         assertNull(result, "Result should be null");
     }
+
+    // ========================================================================
+    // Tests for getJsonSynonymType() - Atomic type mappings (lines 280, 282, 284)
+    // ========================================================================
+
+    /**
+     * Test AtomicInteger @type is converted to Integer in Maps mode.
+     * This exercises line 280 in MapResolver.getJsonSynonymType().
+     */
+    @Test
+    void testAtomicIntegerTypeConvertedToIntegerInMapsMode() {
+        // JSON with @type = AtomicInteger
+        String json = "{\"@type\":\"java.util.concurrent.atomic.AtomicInteger\",\"value\":42}";
+
+        Object result = JsonIo.toMaps(json, null).asClass(null);
+
+        assertNotNull(result);
+        // In Maps mode with AtomicInteger @type, getJsonSynonymType maps it to Integer
+        assertEquals(Integer.class, result.getClass(), "AtomicInteger should be converted to Integer");
+        assertEquals(42, result);
+    }
+
+    /**
+     * Test AtomicLong @type is converted to Long in Maps mode.
+     * This exercises line 282 in MapResolver.getJsonSynonymType().
+     */
+    @Test
+    void testAtomicLongTypeConvertedToLongInMapsMode() {
+        // JSON with @type = AtomicLong
+        String json = "{\"@type\":\"java.util.concurrent.atomic.AtomicLong\",\"value\":123456789}";
+
+        Object result = JsonIo.toMaps(json, null).asClass(null);
+
+        assertNotNull(result);
+        // In Maps mode with AtomicLong @type, getJsonSynonymType maps it to Long
+        assertEquals(Long.class, result.getClass(), "AtomicLong should be converted to Long");
+        assertEquals(123456789L, result);
+    }
+
+    /**
+     * Test AtomicBoolean @type is converted to Boolean in Maps mode.
+     * This exercises line 284 in MapResolver.getJsonSynonymType().
+     */
+    @Test
+    void testAtomicBooleanTypeConvertedToBooleanInMapsMode() {
+        // JSON with @type = AtomicBoolean
+        String json = "{\"@type\":\"java.util.concurrent.atomic.AtomicBoolean\",\"value\":true}";
+
+        Object result = JsonIo.toMaps(json, null).asClass(null);
+
+        assertNotNull(result);
+        // In Maps mode with AtomicBoolean @type, getJsonSynonymType maps it to Boolean
+        assertEquals(Boolean.class, result.getClass(), "AtomicBoolean should be converted to Boolean");
+        assertEquals(true, result);
+    }
+
+    /**
+     * Test AtomicBoolean with false value in Maps mode.
+     */
+    @Test
+    void testAtomicBooleanFalseInMapsMode() {
+        String json = "{\"@type\":\"java.util.concurrent.atomic.AtomicBoolean\",\"value\":false}";
+
+        Object result = JsonIo.toMaps(json, null).asClass(null);
+
+        assertNotNull(result);
+        assertEquals(Boolean.class, result.getClass(), "AtomicBoolean should be converted to Boolean");
+        assertEquals(false, result);
+    }
 }
