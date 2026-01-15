@@ -209,11 +209,16 @@ public class MapResolver extends Resolver {
 
     /**
      * Traverse an array looking for @ref JsonObjects to patch.
+     * Also handles nested arrays recursively to avoid JsonObject wrapper allocations.
      */
     private void traverseArrayForRefs(Object[] array) {
         final ReferenceTracker refTracker = references;
-        for (int i = 0; i < array.length; i++) {
+        final int len = array.length;
+        for (int i = 0; i < len; i++) {
             Object element = array[i];
+            if (element == null) {
+                continue;
+            }
             if (element instanceof JsonObject) {
                 JsonObject jObj = (JsonObject) element;
                 if (jObj.isReference()) {
@@ -223,6 +228,9 @@ public class MapResolver extends Resolver {
                 } else {
                     push(jObj);  // Traverse nested object
                 }
+            } else if (element.getClass().isArray()) {
+                // Recursively traverse nested arrays inline to avoid JsonObject allocation
+                traverseArrayForRefs((Object[]) element);
             }
         }
     }
@@ -320,21 +328,20 @@ public class MapResolver extends Resolver {
      */
     public void traverseFields(final JsonObject jsonObj) {
         final Object target = jsonObj.getTarget();
+        final ReadOptions readOptions = getReadOptions();
 
         // Get injector map directly - ReadOptions.getDeepInjectorMap() already caches via ClassValueMap
         Map<String, Injector> injectorMap = null;
         if (target != null) {
-            injectorMap = getReadOptions().getDeepInjectorMap(target.getClass());
+            injectorMap = readOptions.getDeepInjectorMap(target.getClass());
         }
-
-        final ReadOptions readOptions = getReadOptions();
 
         for (Map.Entry<Object, Object> e : jsonObj.entrySet()) {
             final String fieldName = (String) e.getKey();
             final Object rhs = e.getValue();
             
             if (rhs == null) {
-                jsonObj.put(fieldName, null);
+                // No action needed - null is already the value in the map entry
                 continue;
             }
             
@@ -343,13 +350,9 @@ public class MapResolver extends Resolver {
             final Injector injector = (injectorMap == null) ? null : injectorMap.get(fieldName);
             
             if (rhsClass.isArray()) {   // RHS is an array
-                // Trace the contents of the array (so references inside the array and into the array work)
-                JsonObject jsonArray = new JsonObject();
-                jsonArray.setItems((Object[])rhs);
-                push(jsonArray);
-
-                // Assign the array directly to the Map key (field name)
-                jsonObj.put(fieldName, rhs);
+                // Traverse array inline to patch @refs - avoids JsonObject wrapper allocation
+                // No put needed - rhs is already the value in the map entry
+                traverseArrayForRefs((Object[]) rhs);
             } else if (rhs instanceof JsonObject) {
                 JsonObject jObj = (JsonObject) rhs;
                 if (injector != null) {
