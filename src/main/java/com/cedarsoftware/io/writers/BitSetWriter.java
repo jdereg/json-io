@@ -8,9 +8,10 @@ import com.cedarsoftware.io.Writers;
 import com.cedarsoftware.io.WriterContext;
 
 /**
- * Writer for BitSet that serializes as an array of set bit indices.
- * This produces human-readable JSON like: {"@type":"BitSet","value":[1,5,10]}
- * where the array contains the indices of all set bits.
+ * Writer for BitSet that serializes as a binary string.
+ * This produces compact JSON like: {"@type":"BitSet","value":"101010"}
+ * where each character represents a bit (rightmost = bit 0).
+ * Empty BitSets serialize as empty string "".
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -33,16 +34,13 @@ public class BitSetWriter extends Writers.PrimitiveTypeWriter {
     @Override
     public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
         BitSet bitSet = (BitSet) o;
-        int[] setBits = bitSet.stream().toArray();
+        int length = bitSet.length(); // length() returns highest set bit + 1, or 0 if empty
 
-        output.write('[');
-        int len = setBits.length;
-        for (int i = 0; i < len; i++) {
-            if (i > 0) {
-                output.write(',');
-            }
-            output.write(Integer.toString(setBits[i]));
+        output.write('"');
+        // Write bits from highest to lowest (MSB first, like normal binary notation)
+        for (int i = length - 1; i >= 0; i--) {
+            output.write(bitSet.get(i) ? '1' : '0');
         }
-        output.write(']');
+        output.write('"');
     }
 }

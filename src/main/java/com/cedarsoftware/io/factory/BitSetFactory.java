@@ -8,8 +8,12 @@ import com.cedarsoftware.io.Resolver;
 
 /**
  * Factory to create BitSet instances during deserialization.
- * Expects JSON format: {"@type":"BitSet","value":[1,5,10]}
- * where the array contains indices of set bits.
+ * Supports two JSON formats:
+ * <ul>
+ *   <li>Binary string (preferred): {"@type":"BitSet","value":"101010"}</li>
+ *   <li>Array of indices (legacy): {"@type":"BitSet","value":[1,3,5]}</li>
+ * </ul>
+ * In binary string format, rightmost character is bit 0 (standard binary notation).
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -39,8 +43,19 @@ public class BitSetFactory implements ClassFactory {
             return bitSet;
         }
 
-        if (value instanceof Object[]) {
-            // Array of bit indices
+        if (value instanceof String) {
+            // Binary string format: "101010" where rightmost is bit 0
+            String binaryStr = (String) value;
+            int len = binaryStr.length();
+            for (int i = 0; i < len; i++) {
+                char ch = binaryStr.charAt(i);
+                if (ch == '1') {
+                    // Character at position i represents bit (len - 1 - i)
+                    bitSet.set(len - 1 - i);
+                }
+            }
+        } else if (value instanceof Object[]) {
+            // Legacy array format: [1, 3, 5] - array of bit indices
             Object[] indices = (Object[]) value;
             for (Object index : indices) {
                 if (index instanceof Number) {
