@@ -25,11 +25,14 @@ java.lang.StringBuilder = com.cedarsoftware.io.Writers$PrimitiveUtf8StringWriter
 java.math.BigDecimal = com.cedarsoftware.io.Writers$BigDecimalWriter
 java.math.BigInteger = com.cedarsoftware.io.Writers$BigIntegerWriter
 
+java.io.File = com.cedarsoftware.io.Writers$PrimitiveUtf8StringWriter
+
 java.net.URL = com.cedarsoftware.io.Writers$PrimitiveUtf8StringWriter
 java.net.URI = com.cedarsoftware.io.Writers$PrimitiveUtf8StringWriter
 
 java.nio.ByteBuffer = com.cedarsoftware.io.writers.ByteBufferWriter
 java.nio.CharBuffer = com.cedarsoftware.io.writers.CharBufferWriter
+java.nio.file.Path = com.cedarsoftware.io.Writers$PrimitiveUtf8StringWriter
 
 java.sql.Date = com.cedarsoftware.io.Writers$DateWriter
 java.sql.Timestamp = com.cedarsoftware.io.Writers$TimestampWriter
@@ -52,7 +55,9 @@ java.time.ZoneOffset = com.cedarsoftware.io.Writers$ZoneOffsetWriter
 java.util.Calendar = com.cedarsoftware.io.Writers$CalendarWriter
 java.util.concurrent.atomic.AtomicBoolean = com.cedarsoftware.io.Writers$PrimitiveValueWriter
 java.util.concurrent.atomic.AtomicInteger = com.cedarsoftware.io.Writers$PrimitiveValueWriter
+java.util.concurrent.atomic.AtomicIntegerArray = com.cedarsoftware.io.writers.AtomicIntegerArrayWriter
 java.util.concurrent.atomic.AtomicLong = com.cedarsoftware.io.Writers$PrimitiveValueWriter
+java.util.concurrent.atomic.AtomicLongArray = com.cedarsoftware.io.writers.AtomicLongArrayWriter
 java.util.concurrent.locks.ReentrantLock = com.cedarsoftware.io.writers.ReentrantLockWriter
 java.util.concurrent.locks.ReentrantReadWriteLock = com.cedarsoftware.io.writers.ReentrantReadWriteLockWriter
 java.util.concurrent.Semaphore = com.cedarsoftware.io.writers.SemaphoreWriter
@@ -65,6 +70,7 @@ java.util.Locale = com.cedarsoftware.io.Writers$LocaleWriter
 java.util.TimeZone = com.cedarsoftware.io.Writers$TimeZoneWriter
 java.util.UUID = com.cedarsoftware.io.Writers$UUIDWriter
 
+java.util.BitSet = com.cedarsoftware.io.writers.BitSetWriter
 java.util.regex.Pattern = com.cedarsoftware.io.Writers$PatternWriter
 
 sun.util.calendar.ZoneInfo = com.cedarsoftware.io.Writers$TimeZoneWriter

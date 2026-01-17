@@ -21,6 +21,13 @@ java.util.concurrent.CountDownLatch = com.cedarsoftware.io.factory.CountDownLatc
 # java.util - Optional
 java.util.Optional = com.cedarsoftware.io.factory.OptionalFactory
 
+# java.util - BitSet
+java.util.BitSet = com.cedarsoftware.io.factory.BitSetFactory
+
+# java.util.concurrent.atomic
+java.util.concurrent.atomic.AtomicIntegerArray = com.cedarsoftware.io.factory.AtomicIntegerArrayFactory
+java.util.concurrent.atomic.AtomicLongArray = com.cedarsoftware.io.factory.AtomicLongArrayFactory
+
 # interface instantiates to...
 java.util.Collection = com.cedarsoftware.io.factory.CollectionFactory
 java.util.List = com.cedarsoftware.io.factory.CollectionFactory

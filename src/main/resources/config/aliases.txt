@@ -120,6 +120,8 @@ com.cedarsoftware.util.geom.Insets = Insets
 
 # java.nio
 java.nio.file.Path = Path
+sun.nio.fs.UnixPath = Path
+sun.nio.fs.WindowsPath = Path
 
 # Alias all ByteBuffer types to ByteBuffer, as only the "remaining" bytes are serialized (position to limit)
 java.nio.DirectByteBuffer = ByteBuffer
