@@ -6,7 +6,6 @@ import java.lang.reflect.Type;
 import java.util.AbstractMap;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.List;
@@ -765,25 +764,8 @@ public class ObjectResolver extends Resolver
 
         Class<?> rawType = TypeUtilities.getRawClass(suggestedType);
 
-        // suggestedType is the element type (e.g., String for String[], List<String> for List<String>[])
-        // Create array of that element type and populate directly.
-        // Note: Collection element types (e.g., List<String> for List<String>[]) are handled by
-        // createAndPopulateArray, which will convert inner arrays to Collection instances.
-        return createAndPopulateArray(suggestedType, rawType, list);
-    }
-
-    /**
-     * Create a typed array and populate it with elements from the list.
-     * This avoids the double allocation of creating both a target array and items array.
-     * Returns the finished array directly, or a JsonObject wrapper if forward references exist.
-     *
-     * @param elementType The Type of each element in the array (e.g., String for String[])
-     * @param componentClass The raw Class of each element (e.g., String.class for String[])
-     * @param list The list of elements to populate the array with
-     */
-    private Object createAndPopulateArray(Type elementType, Class<?> componentClass, List<Object> list) {
         // Special handling for char[] - stored as a single String in JSON
-        if (componentClass == char.class) {
+        if (rawType == char.class) {
             if (list.isEmpty()) {
                 return new char[0];
             }
@@ -793,154 +775,20 @@ public class ObjectResolver extends Resolver
             }
         }
 
-        int size = list.size();
-        Object array = Array.newInstance(componentClass, size);
-        boolean hasUnresolvedRefs = false;
-        List<UnresolvedArrayElement> unresolvedElements = null;
-
-        // Use optimized array access based on component type
-        boolean isPrimitive = componentClass.isPrimitive();
-        Object[] objectArray = isPrimitive ? null : (Object[]) array;
-
-        for (int i = 0; i < size; i++) {
-            Object element = list.get(i);
-
-            if (element == null) {
-                // For object arrays, null is already the default; for primitives, skip (can't set null)
-                continue;
-            }
-
-            // Handle nested arrays: Object[] -> String[][] etc.
-            if (element instanceof Object[] && componentClass.isArray()) {
-                Type nestedComponentType = TypeUtilities.extractArrayComponentType(elementType);
-                element = createAndPopulateArray(nestedComponentType, componentClass.getComponentType(),
-                        Arrays.asList((Object[]) element));
-                objectArray[i] = element;  // Nested arrays are always object arrays
-                continue;
-            }
-
-            // Handle array elements that should be Collections: Object[] -> List<String> etc.
-            // This handles cases like List<String>[] where each element is a Collection
-            if (element instanceof Object[] && Collection.class.isAssignableFrom(componentClass)) {
-                objectArray[i] = handleCollectionElement((Object[]) element, elementType);
-                continue;
-            }
-
-            // Try to extract value from JsonObject
-            Object resolved = extractArrayElementValue(element, componentClass);
-
-            if (resolved == UNRESOLVED_REFERENCE) {
-                // Forward reference - need to defer resolution (element must be JsonObject per extractArrayElementValue logic)
-                hasUnresolvedRefs = true;
-                if (unresolvedElements == null) {
-                    unresolvedElements = new ArrayList<>();
-                }
-                JsonObject refHolder = (element instanceof JsonObject) ? (JsonObject) element : null;
-                if (refHolder != null) {
-                    unresolvedElements.add(new UnresolvedArrayElement(i, refHolder));
-                }
-                continue;
-            }
-
-            if (resolved instanceof JsonObject) {
-                // Use shared JsonObject processing helper
-                objectArray[i] = processJsonObjectElement((JsonObject) resolved, elementType);
-                continue;
-            }
-
-            // Convert if needed - use shared conversion helper
-            resolved = convertToComponentType(resolved, componentClass);
-
-            // Set the element using optimized access
-            if (isPrimitive) {
-                ArrayUtilities.setPrimitiveElement(array, i, resolved);
-            } else {
-                objectArray[i] = resolved;
-            }
-        }
-
-        // If we have forward references, add unresolved references to be patched later
-        if (hasUnresolvedRefs && unresolvedElements != null) {
-            // Create a JsonObject wrapper just to track the array for reference patching
-            JsonObject jsonArray = new JsonObject();
-            jsonArray.setType(elementType);
-            jsonArray.setTarget(array);
-            jsonArray.isFinished = true;  // Mark as finished since array is populated
-
-            for (UnresolvedArrayElement unresolved : unresolvedElements) {
-                addUnresolvedReference(new UnresolvedReference(jsonArray, unresolved.index,
-                        unresolved.refHolder.getReferenceId()));
-            }
-            return jsonArray;
-        }
-
-        return array;
+        // Create JsonObject wrapper and let traverseArray() handle element resolution.
+        // This defers all the complex element processing (nested arrays, Collections,
+        // forward references, type conversion) to the standard traversal path.
+        JsonObject jsonArray = new JsonObject();
+        jsonArray.setType(suggestedType);
+        jsonArray.setTarget(Array.newInstance(rawType, list.size()));
+        jsonArray.setItems(list.toArray());
+        return jsonArray;
     }
 
     /**
      * Sentinel value indicating an unresolved forward reference.
      */
     private static final Object UNRESOLVED_REFERENCE = new Object();
-
-    /**
-     * Helper class to track unresolved array elements.
-     */
-    private static class UnresolvedArrayElement {
-        final int index;
-        final JsonObject refHolder;
-
-        UnresolvedArrayElement(int index, JsonObject refHolder) {
-            this.index = index;
-            this.refHolder = refHolder;
-        }
-    }
-
-    /**
-     * Extract the actual value from an array element.
-     * Returns UNRESOLVED_REFERENCE if this is a forward reference that can't be resolved yet.
-     * Returns the JsonObject unchanged if it needs further processing.
-     * Otherwise returns the resolved value.
-     */
-    private Object extractArrayElementValue(Object element, Class<?> componentClass) {
-        if (!(element instanceof JsonObject)) {
-            return element;
-        }
-
-        JsonObject jObj = (JsonObject) element;
-
-        // Handle references
-        if (jObj.isReference()) {
-            long refId = jObj.getReferenceId();
-            JsonObject refObj = references.get(refId);
-            if (refObj != null && refObj.getTarget() != null) {
-                return refObj.getTarget();
-            }
-            // Forward reference - can't resolve yet
-            return UNRESOLVED_REFERENCE;
-        }
-
-        // If we have a resolved target, use it
-        if (jObj.getTarget() != null) {
-            if (!jObj.isFinished) {
-                push(jObj);
-            }
-            return jObj.getTarget();
-        }
-
-        // Check if this is a simple value that can be extracted directly
-        if (jObj.hasValue()) {
-            Object value = jObj.getValue();
-            if (componentClass.isAssignableFrom(value.getClass())) {
-                return value;
-            }
-            if (converter.isConversionSupportedFor(value.getClass(), componentClass)) {
-                return converter.convert(value, componentClass);
-            }
-        }
-
-        // Return the JsonObject for further processing
-        return jObj;
-    }
 
     // ============================================================================
     // Shared array element processing helpers
@@ -987,27 +835,6 @@ public class ObjectResolver extends Resolver
     }
 
     /**
-     * Convert a value to the target component type if needed.
-     * Handles enum conversion and Converter-based conversion.
-     *
-     * @param value          The value to convert
-     * @param componentClass The target component class
-     * @return The converted value, or original if no conversion needed/possible
-     */
-    private Object convertToComponentType(Object value, Class<?> componentClass) {
-        if (value == null || componentClass.isAssignableFrom(value.getClass())) {
-            return value;
-        }
-        if (componentClass.isEnum() && value instanceof String) {
-            return Enum.valueOf((Class<Enum>) componentClass, (String) value);
-        }
-        if (converter.isConversionSupportedFor(value.getClass(), componentClass)) {
-            return converter.convert(value, componentClass);
-        }
-        return value;
-    }
-
-    /**
      * Handle a nested array element (Object[] that should become a typed array).
      * Creates a JsonObject wrapper, creates instance, and pushes for traversal.
      *
@@ -1034,23 +861,4 @@ public class ObjectResolver extends Resolver
         return arrayElement.length == 0 ? new char[]{} : ((String) arrayElement[0]).toCharArray();
     }
 
-    /**
-     * Handle a Collection element stored as Object[] in JSON.
-     * Creates a JsonObject wrapper with collection type, creates instance, and pushes for traversal.
-     *
-     * @param arrayElement  The Object[] containing collection items
-     * @param componentType The full generic type for the collection
-     * @return The created collection instance
-     */
-    private Object handleCollectionElement(Object[] arrayElement, Type componentType) {
-        JsonObject collectionHolder = new JsonObject();
-        collectionHolder.setType(componentType);
-        collectionHolder.setItems(arrayElement);
-        createInstance(collectionHolder);
-        Object collection = collectionHolder.getTarget();
-        if (!collectionHolder.isFinished) {
-            push(collectionHolder);
-        }
-        return collection;
-    }
 }
