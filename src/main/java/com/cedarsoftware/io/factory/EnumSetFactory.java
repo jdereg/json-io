@@ -84,12 +84,14 @@ public class EnumSetFactory implements ClassFactory {
                 if (enumName == null) {
                     throw new JsonIoException("Enum constant missing 'name' field");
                 }
-                Enum<?> enumConstant = Enum.valueOf((Class<Enum>) itemEnumClass, enumName);
+                // Use Converter for String→Enum conversion
+                Enum<?> enumConstant = (Enum<?>) resolver.getConverter().convert(enumName, itemEnumClass);
                 enumSet.add(enumConstant);
             } else if (item instanceof String) {
                 // Just enum names
                 String enumName = (String) item;
-                Enum<?> enumConstant = Enum.valueOf((Class<Enum>) enumClass, enumName);
+                // Use Converter for String→Enum conversion
+                Enum<?> enumConstant = (Enum<?>) resolver.getConverter().convert(enumName, enumClass);
                 enumSet.add(enumConstant);
             } else {
                 throw new JsonIoException("Unexpected item type in EnumSet: " + item.getClass());

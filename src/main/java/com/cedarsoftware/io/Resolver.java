@@ -1,5 +1,6 @@
 package com.cedarsoftware.io;
 
+import java.io.Externalizable;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.Type;
@@ -75,6 +76,17 @@ import com.cedarsoftware.util.convert.Converter;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class Resolver {
     private static final String NO_FACTORY = "_︿_ψ_☼";
+
+    // Common ancestor roots to skip when checking type compatibility (using IdentitySet for Class comparison)
+    private static final Set<Class<?>> SKIP_COMMON_ROOTS;
+    static {
+        Set<Class<?>> roots = new IdentitySet<>();
+        roots.add(Object.class);
+        roots.add(Serializable.class);
+        roots.add(Externalizable.class);
+        roots.add(Cloneable.class);
+        SKIP_COMMON_ROOTS = roots;
+    }
     
     // Security limits to prevent DoS attacks via unbounded memory consumption
     // These are now configurable via ReadOptions for backward compatibility
@@ -608,24 +620,7 @@ public abstract class Resolver {
             return value;
         }
 
-        // 3. Enum conversion from String
-        if (targetClass.isEnum() && value instanceof String) {
-            String enumValue = (String) value;
-            if (enumValue.trim().isEmpty()) {
-                throw new JsonIoException("Invalid enum value: null or empty string for enum type " + targetClass.getName());
-            }
-            int maxEnumLength = readOptions.getMaxEnumNameLength();
-            if (enumValue.length() > maxEnumLength) {
-                throw new JsonIoException("Security limit exceeded: Enum name too long (" + enumValue.length() + " chars, max " + maxEnumLength + ") for enum type " + targetClass.getName());
-            }
-            try {
-                return Enum.valueOf((Class<Enum>) targetClass, enumValue.trim());
-            } catch (IllegalArgumentException e) {
-                throw new JsonIoException("Invalid enum value '" + enumValue + "' for enum type " + targetClass.getName(), e);
-            }
-        }
-
-        // 4. Try Converter
+        // 3. Try Converter (handles String→Enum, Number→Enum, and many other conversions)
         if (converter.isConversionSupportedFor(value.getClass(), targetClass)) {
             try {
                 return converter.convert(value, targetClass);
@@ -642,15 +637,11 @@ public abstract class Resolver {
             }
         }
 
-        // 5. Lenient mode for complex objects: accept if they share meaningful common ancestors
+        // 4. Lenient mode for complex objects: accept if they share meaningful common ancestors
         //    This is for POJOs/complex objects, NOT for primitives or simple types.
         //    Only apply this when value is a "complex" object (not a primitive wrapper, String, etc.)
         if (!isSimpleType(value.getClass())) {
-            Set<Class<?>> skipRoots = new HashSet<>();
-            skipRoots.add(Object.class);
-            skipRoots.add(Serializable.class);
-            skipRoots.add(Cloneable.class);
-            Set<Class<?>> commonAncestors = ClassUtilities.findLowestCommonSupertypesExcluding(value.getClass(), targetClass, skipRoots);
+            Set<Class<?>> commonAncestors = ClassUtilities.findLowestCommonSupertypesExcluding(value.getClass(), targetClass, SKIP_COMMON_ROOTS);
             if (!commonAncestors.isEmpty()) {
                 return value;
             }

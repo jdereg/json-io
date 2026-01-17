@@ -674,8 +674,7 @@ class EnumTests {
 
     /**
      * Tests that an empty string value for an enum throws JsonIoException.
-     * This exercises line 614 in Resolver.convertToType() where enumValue.trim().isEmpty() is true.
-     * The test uses a plain JSON string parsed as an enum type.
+     * The Converter's EnumConversions.stringToEnum validates empty strings.
      */
     @Test
     void testEnum_emptyStringValue_throwsException() {
@@ -684,14 +683,13 @@ class EnumTests {
 
         assertThatThrownBy(() -> JsonIo.toJava(json, null).asClass(SimpleEnum.class))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Invalid enum value")
-                .hasMessageContaining("null or empty string")
+                .hasMessageContaining("empty String")
                 .hasMessageContaining(SimpleEnum.class.getName());
     }
 
     /**
      * Tests that a whitespace-only string value for an enum throws JsonIoException.
-     * This exercises line 614 in Resolver.convertToType() where enumValue.trim().isEmpty() is true.
+     * The Converter's EnumConversions.stringToEnum trims and validates empty strings.
      */
     @Test
     void testEnum_whitespaceOnlyValue_throwsException() {
@@ -700,14 +698,13 @@ class EnumTests {
 
         assertThatThrownBy(() -> JsonIo.toJava(json, null).asClass(SimpleEnum.class))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Invalid enum value")
-                .hasMessageContaining("null or empty string")
+                .hasMessageContaining("empty String")
                 .hasMessageContaining(SimpleEnum.class.getName());
     }
 
     /**
      * Tests that an invalid enum constant name throws JsonIoException.
-     * This exercises line 623 in Resolver.convertToType() where Enum.valueOf() fails.
+     * The Converter's EnumConversions.stringToEnum delegates to Enum.valueOf() which fails.
      */
     @Test
     void testEnum_invalidConstantName_throwsException() {
@@ -716,9 +713,8 @@ class EnumTests {
 
         assertThatThrownBy(() -> JsonIo.toJava(json, null).asClass(SimpleEnum.class))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Invalid enum value")
-                .hasMessageContaining("INVALID_CONSTANT")
-                .hasMessageContaining(SimpleEnum.class.getName());
+                .hasMessageContaining("No enum constant")
+                .hasMessageContaining("INVALID_CONSTANT");
     }
 
     /**
@@ -732,9 +728,8 @@ class EnumTests {
 
         assertThatThrownBy(() -> JsonIo.toJava(json, null).asClass(SimpleEnum.class))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Invalid enum value")
-                .hasMessageContaining("one")
-                .hasMessageContaining(SimpleEnum.class.getName());
+                .hasMessageContaining("No enum constant")
+                .hasMessageContaining("one");
     }
 
     /**

@@ -35,18 +35,27 @@ public class EnumClassFactory implements ClassFactory {
         }
 
         if (name != null) {
-            return jObj.setFinishedTarget(this.fromString(clazz, name), false);
+            // Use Converter for String→Enum conversion
+            Enum<?> enumValue = (Enum<?>) resolver.getConverter().convert(name, clazz);
+            return jObj.setFinishedTarget(enumValue, false);
         }
 
         Object value = jObj.getValue();
 
         if (value instanceof String) {
-            return jObj.setFinishedTarget(this.fromString(c, (String) value), true);
+            // Use Converter for String→Enum conversion
+            Enum<?> enumValue = (Enum<?>) resolver.getConverter().convert(value, c);
+            return jObj.setFinishedTarget(enumValue, true);
         }
 
         throw new JsonIoException("Unable to instantiate enum: " + c + ", class not found or is not an Enum.");
     }
 
+    /**
+     * @deprecated Use Converter.convert() instead. This method is retained for backward compatibility
+     * with any subclasses that may override it.
+     */
+    @Deprecated
     @SuppressWarnings({"unchecked", "rawtypes"})
     protected Enum fromString(Class<?> c, String s) {
         return Enum.valueOf((Class<Enum>) c, s);

@@ -1885,35 +1885,29 @@ class ArrayTest
     }
 
     /**
-     * Test coverage for ObjectResolver.traverseArray() lines 378-379.
-     * Tests enum array where a custom reader returns String instead of enum value.
-     *
-     * Lines 378-379 handle the edge case where readWithFactoryIfExists returns
-     * a String (from a custom reader) that needs Enum.valueOf() conversion.
+     * Test enum array with a custom reader that properly converts String to Enum.
+     * Custom readers should use the Converter for type conversions.
      */
     @Test
-    void testEnumArrayWithCustomReaderReturningString() {
-        // Create a custom reader that returns the String value as-is
-        // instead of converting to enum. Lines 378-379 will then convert it.
-        // The custom reader receives the JsonObject element (not a plain String)
-        // and extracts the enum name from the "name" field, returning it as a String.
-        JsonClassReader<Object> stringReturningReader = new JsonClassReader<Object>() {
+    void testEnumArrayWithCustomReaderUsingConverter() {
+        // Create a custom reader that extracts the enum name and uses Converter to convert to enum
+        JsonClassReader<Object> enumConvertingReader = new JsonClassReader<Object>() {
             @Override
             public Object read(Object o, Resolver resolver) {
-                // If o is a JsonObject, extract the "name" field and return as String
+                // If o is a JsonObject, extract the "name" field and convert to enum
                 if (o instanceof JsonObject) {
                     JsonObject jObj = (JsonObject) o;
                     Object name = jObj.get("name");
                     if (name instanceof String) {
-                        return name;  // Return the String, triggering lines 378-379
+                        // Use Converter to convert String to Enum
+                        return resolver.getConverter().convert(name, TestEnum.class);
                     }
                 }
                 return null;
             }
         };
 
-        // Create JsonObject elements with enum names in "name" field (not "value")
-        // This bypasses the converter check (line 489) since hasValue() returns false
+        // Create JsonObject elements with enum names in "name" field
         JsonObject elem1 = new JsonObject();
         elem1.setType(TestEnum.class);
         elem1.put("name", "VALUE_A");
@@ -1928,7 +1922,7 @@ class ArrayTest
         arrayObj.setItems(new Object[]{elem1, elem2});
 
         ReadOptions readOptions = new ReadOptionsBuilder()
-                .addCustomReaderClass(TestEnum.class, stringReturningReader)
+                .addCustomReaderClass(TestEnum.class, enumConvertingReader)
                 .build();
         TestEnum[] result = JsonIo.toJava(arrayObj, readOptions).asClass(null);
 
@@ -1939,8 +1933,8 @@ class ArrayTest
     }
 
     /**
-     * Test coverage for ObjectResolver.traverseArray() lines 378-379.
-     * Tests enum array where String elements need to be converted to enum values.
+     * Test enum array where String elements need to be converted to enum values.
+     * The Converter handles String→Enum conversion via readWithFactoryIfExists().
      */
     @Test
     void testEnumArrayFromJsonObject_withStringElements() {

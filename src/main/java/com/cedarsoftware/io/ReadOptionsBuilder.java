@@ -187,6 +187,7 @@ public class ReadOptionsBuilder {
         options.maxObjectReferences = BASE_MAX_OBJECT_REFERENCES;
         options.maxReferenceChainDepth = BASE_MAX_REFERENCE_CHAIN_DEPTH;
         options.maxEnumNameLength = BASE_MAX_ENUM_NAME_LENGTH;
+        options.converterOptions.maxEnumNameLength = BASE_MAX_ENUM_NAME_LENGTH;
         
         // Copy base permanent JsonParser-specific security limits
         options.maxIdValue = BASE_MAX_ID_VALUE;
@@ -254,6 +255,7 @@ public class ReadOptionsBuilder {
             options.maxObjectReferences = other.maxObjectReferences;
             options.maxReferenceChainDepth = other.maxReferenceChainDepth;
             options.maxEnumNameLength = other.maxEnumNameLength;
+            options.converterOptions.maxEnumNameLength = other.maxEnumNameLength;
             
             // Copy JsonParser-specific security limits
             options.maxIdValue = other.maxIdValue;
@@ -1076,6 +1078,7 @@ public class ReadOptionsBuilder {
      */
     public ReadOptionsBuilder maxEnumNameLength(int maxEnumNameLength) {
         options.maxEnumNameLength = maxEnumNameLength;
+        options.converterOptions.maxEnumNameLength = maxEnumNameLength;
         return this;
     }
 
@@ -1534,6 +1537,7 @@ public class ReadOptionsBuilder {
         private Character falseChar = CommonValues.CHARACTER_ZERO;
         private Map<String, Object> customOptions = new ConcurrentHashMap<>();
         private Map<Converter.ConversionPair, Convert<?>> converterOverrides = new ConcurrentHashMap<>(100, .8f);
+        private int maxEnumNameLength = 1000;  // Default from ConverterOptions
 
         public ZoneId getZoneId() {
             return zoneId;
@@ -1565,6 +1569,10 @@ public class ReadOptionsBuilder {
 
         public <T> T getCustomOption(String name) {
             return (T) customOptions.get(name);
+        }
+
+        public int getMaxEnumNameLength() {
+            return maxEnumNameLength;
         }
     }
 

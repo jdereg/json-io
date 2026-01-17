@@ -16,6 +16,7 @@ import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.IdentitySet;
+import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.TypeUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
@@ -175,7 +176,7 @@ public class ObjectResolver extends Resolver
             }
         } else {
             // Allow empty strings to null out non-String fields
-            if (rhs instanceof String && ((String) rhs).trim().isEmpty() && rawFieldType != String.class) {
+            if (rhs instanceof String && StringUtilities.isEmpty((String)rhs) && rawFieldType != String.class) {
                 injector.inject(target, null);
             } else {
                 injector.inject(target, rhs);
@@ -359,7 +360,6 @@ public class ObjectResolver extends Resolver
         }
         // For operations that require a Class, extract the raw type.
         final Class effectiveRawComponentType = TypeUtilities.getRawClass(effectiveComponentType);
-        final boolean isEnumComponentType = effectiveRawComponentType.isEnum();
 
         // Optimize: check array type ONCE, not on every element assignment
         final boolean isPrimitive = fallbackCompType.isPrimitive();
@@ -372,10 +372,7 @@ public class ObjectResolver extends Resolver
             if (element == null) {
                 setArrayElement(array, refArray, i, null, isPrimitive);
             } else if ((resolved = readWithFactoryIfExists(element, effectiveRawComponentType)) != null) {
-                // Custom reader/factory handled it - just need enum conversion if applicable
-                if (isEnumComponentType && resolved instanceof String) {
-                    resolved = Enum.valueOf(effectiveRawComponentType, (String) resolved);
-                }
+                // Custom reader/factory or Converter handled it (including String→Enum, Number→Enum)
                 setArrayElement(array, refArray, i, resolved, isPrimitive);
             } else if (element.getClass().isArray()) {
                 // Array of arrays - use shared helpers

@@ -65,7 +65,6 @@ public class JsonIoReadingSecurityLimitsTest {
             Object result = JsonIo.toJava("\"" + longEnumName + "\"", readOptions).asClass(java.util.concurrent.TimeUnit.class);
         });
         
-        assertTrue(exception.getMessage().contains("Security limit exceeded"));
         assertTrue(exception.getMessage().contains("Enum name too long"));
     }
 
