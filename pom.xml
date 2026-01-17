@@ -28,12 +28,12 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <version.java-util>4.82.0</version.java-util>
         <!-- testing only -->
-        <version.junit-jupiter-api>5.13.4</version.junit-jupiter-api>
-        <version.junit-jupiter-params>5.13.4</version.junit-jupiter-params>
+        <version.junit-jupiter-api>5.14.2</version.junit-jupiter-api>
+        <version.junit-jupiter-params>5.14.2</version.junit-jupiter-params>
         <version.mockito-junit-jupiter>4.11.0</version.mockito-junit-jupiter>
-        <version.assertj-core>3.27.4</version.assertj-core>
+        <version.assertj-core>3.27.6</version.assertj-core>
         <version.gson>2.13.2</version.gson>
-        <version.jackson-core>2.19.2</version.jackson-core>
+        <version.jackson-core>2.19.4</version.jackson-core>
 
         <!-- Build maven-***-plugins-->
         <version.maven-jar-plugin>3.4.2</version.maven-jar-plugin>
@@ -52,7 +52,7 @@
         <version.maven-deploy-plugin>3.1.4</version.maven-deploy-plugin>
 
         <!-- release to Maven Central via Sonatype Nexus -->
-        <version.central-publishing-maven-plugin>0.9.0</version.central-publishing-maven-plugin>
+        <version.central-publishing-maven-plugin>0.10.0</version.central-publishing-maven-plugin>
 
     </properties>
 

@@ -42,6 +42,7 @@ import com.cedarsoftware.util.CompactSet;
 import com.cedarsoftware.util.ConcurrentList;
 import com.cedarsoftware.util.ConcurrentNavigableSetNullSafe;
 import com.cedarsoftware.util.ConcurrentSet;
+import com.cedarsoftware.util.IdentitySet;
 import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.TypeUtilities;
 import com.cedarsoftware.util.convert.Converter;
@@ -693,27 +694,23 @@ public abstract class Resolver {
                 continue;
             }
 
-            traverseSpecificType(jsonObj);
+            // Performance: Use cached type classification instead of repeated isArray/isCollection/isMap checks
+            switch (jsonObj.getJsonType()) {
+                case ARRAY:
+                    traverseArray(jsonObj);
+                    break;
+                case COLLECTION:
+                    traverseCollection(jsonObj);
+                    break;
+                case MAP:
+                    traverseMap(jsonObj);
+                    break;
+                default:
+                    traverseObject(jsonObj);
+                    break;
+            }
         }
         return (T) root.getTarget();
-    }
-
-    protected void traverseSpecificType(JsonObject jsonObj) {
-        // Performance: Use cached type classification instead of repeated isArray/isCollection/isMap checks
-        switch (jsonObj.getJsonType()) {
-            case ARRAY:
-                traverseArray(jsonObj);
-                break;
-            case COLLECTION:
-                traverseCollection(jsonObj);
-                break;
-            case MAP:
-                traverseMap(jsonObj);
-                break;
-            default:
-                traverseObject(jsonObj);
-                break;
-        }
     }
 
     protected void traverseObject(JsonObject jsonObj) {
@@ -1397,7 +1394,21 @@ public abstract class Resolver {
     protected void addResolvedObjectToCollection(JsonObject jObj, Collection<Object> col) {
         boolean isNonRefClass = readOptions.isNonReferenceableClass(jObj.getRawType());
         if (!isNonRefClass) {
-            traverseSpecificType(jObj);
+            // Performance: Use cached type classification instead of repeated isArray/isCollection/isMap checks
+            switch (jObj.getJsonType()) {
+                case ARRAY:
+                    traverseArray(jObj);
+                    break;
+                case COLLECTION:
+                    traverseCollection(jObj);
+                    break;
+                case MAP:
+                    traverseMap(jObj);
+                    break;
+                default:
+                    traverseObject(jObj);
+                    break;
+            }
         }
         if (!(col instanceof EnumSet)) {
             col.add(jObj.getTarget());
@@ -1490,8 +1501,7 @@ public abstract class Resolver {
                     throw new JsonIoException("Circular reference detected in reference chain starting with id: " + id + " at depth: " + chainDepth);
                 }
 
-                long nextId = target.getReferenceId();
-                id = nextId;
+                id = target.getReferenceId();
                 target = references.get(id);
                 if (target == null) {
                     return null;
