@@ -30,7 +30,7 @@ import com.cedarsoftware.util.convert.Converter;
  * subclass of Person), then the resolver cannot create an instance of the field type
  * (Person) because this is not the proper type.  (It had an Employee record with more
  * fields in this example). In this case, the writer recognizes that the instance type
- * and field type are not the same and therefore it writes the @type.
+ * and field type are not the same, and therefore it writes the @type.
  * </p><p>
  * A similar case as above occurs with specific array types.  If there is a Person[]
  * containing Person and Employee instances, then the Person instances will not have
@@ -425,11 +425,6 @@ public class ObjectResolver extends Resolver
         // Extract the raw type from the suggested inferred type.
         Class<?> rawInferred = (inferredType != null) ? TypeUtilities.getRawClass(inferredType) : null;
 
-        // Early exit if no raw type available
-        if (rawInferred == null && !(o instanceof JsonObject)) {
-            return null;
-        }
-
         // Check if we should skip due to not using custom reader for this type
         if (rawInferred != null && readOptions.isNotCustomReaderClass(rawInferred)) {
             return null;
@@ -457,8 +452,8 @@ public class ObjectResolver extends Resolver
                 targetClass = jsonObj.getRawType();
             }
         } else {
-            // o is not a JsonObject; use the inferred type (or o.getClass() if rawInferred is Object).
-            targetClass = rawInferred.equals(Object.class) ? o.getClass() : rawInferred;
+            // o is not a JsonObject; use the inferred type (or o.getClass() if rawInferred is Object or null).
+            targetClass = (rawInferred == null || rawInferred == Object.class) ? o.getClass() : rawInferred;
             jsonObj = new JsonObject();
             jsonObj.setValue(o);
             jsonObj.setType(targetClass);
