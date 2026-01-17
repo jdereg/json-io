@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -1847,7 +1846,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (elementClass.isEnum()) {
             return true;
         }
-        // Per user guidance: must be exact match (==), not isAssignableFrom
+        // Must be exact match (==), not isAssignableFrom
         // This ensures the Resolver can instantiate the correct concrete type
         return elementClass != declaredElementType;
     }
