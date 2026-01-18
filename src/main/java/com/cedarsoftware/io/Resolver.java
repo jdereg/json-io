@@ -107,6 +107,10 @@ public abstract class Resolver {
     private final int maxStackDepth;
     private final int maxMapsToRehash;
     protected final boolean returningJavaObjects;
+    protected final MissingFieldHandler missingFieldHandler;
+    protected final Class<?> unknownTypeClass;
+    protected final int maxObjectReferences;
+    protected final int maxReferenceChainDepth;
 
 
     /**
@@ -160,6 +164,10 @@ public abstract class Resolver {
             this.maxStackDepth = readOptions.getMaxStackDepth();
             this.maxMapsToRehash = readOptions.getMaxMapsToRehash();
             this.returningJavaObjects = readOptions.isReturningJavaObjects();
+            this.missingFieldHandler = readOptions.getMissingFieldHandler();
+            this.unknownTypeClass = readOptions.getUnknownTypeClass();
+            this.maxObjectReferences = readOptions.getMaxObjectReferences();
+            this.maxReferenceChainDepth = readOptions.getMaxReferenceChainDepth();
         } else {
             // Default values for test cases
             this.maxUnresolvedRefs = Integer.MAX_VALUE;
@@ -167,6 +175,10 @@ public abstract class Resolver {
             this.maxStackDepth = Integer.MAX_VALUE;
             this.maxMapsToRehash = Integer.MAX_VALUE;
             this.returningJavaObjects = true;
+            this.missingFieldHandler = null;
+            this.unknownTypeClass = null;
+            this.maxObjectReferences = Integer.MAX_VALUE;
+            this.maxReferenceChainDepth = Integer.MAX_VALUE;
         }
     }
 
@@ -793,7 +805,7 @@ public abstract class Resolver {
 
     // calls the missing field handler if any for each recorded missing field.
     private void handleMissingFields() {
-        MissingFieldHandler missingFieldHandler = readOptions.getMissingFieldHandler();
+        // Performance: Uses cached missingFieldHandler
         if (missingFieldHandler != null) {
             for (MissingField mf : missingFields) {
                 missingFieldHandler.fieldMissing(mf.target, mf.fieldName, mf.value);
@@ -1060,12 +1072,13 @@ public abstract class Resolver {
         boolean isUnknownObject = c == Object.class && returningJavaObjects;
 
         Object instance;
-        if (isUnknownObject && readOptions.getUnknownTypeClass() == null) {
+        // Performance: Uses cached unknownTypeClass
+        if (isUnknownObject && unknownTypeClass == null) {
             JsonObject jsonObject = new JsonObject();
             jsonObject.setType(Map.class);
             instance = jsonObject;
         } else {
-            Class<?> targetClass = isUnknownObject ? readOptions.getUnknownTypeClass() : c;
+            Class<?> targetClass = isUnknownObject ? unknownTypeClass : c;
             instance = ClassUtilities.newInstance(converter, targetClass, jsonObj);
         }
 
@@ -1440,17 +1453,19 @@ public abstract class Resolver {
     public static class DefaultReferenceTracker implements ReferenceTracker {
 
         final Map<Long, JsonObject> references = new HashMap<>();
-        private final ReadOptions readOptions;
+        // Performance: Hoisted ReadOptions constants to avoid repeated method calls
+        private final int maxObjectReferences;
+        private final int maxReferenceChainDepth;
 
         public DefaultReferenceTracker(ReadOptions readOptions) {
-            this.readOptions = readOptions;
+            this.maxObjectReferences = readOptions.getMaxObjectReferences();
+            this.maxReferenceChainDepth = readOptions.getMaxReferenceChainDepth();
         }
 
         public JsonObject put(Long l, JsonObject o) {
             // Security: Prevent unbounded memory growth via reference tracking
-            int maxReferences = readOptions.getMaxObjectReferences();
-            if (references.size() >= maxReferences) {
-                throw new JsonIoException("Security limit exceeded: Maximum number of object references (" + maxReferences + ") reached. Possible DoS attack.");
+            if (references.size() >= maxObjectReferences) {
+                throw new JsonIoException("Security limit exceeded: Maximum number of object references (" + maxObjectReferences + ") reached. Possible DoS attack.");
             }
             return this.references.put(l, o);
         }
@@ -1489,9 +1504,8 @@ public abstract class Resolver {
 
             do {
                 // Security: Prevent infinite loops via chain depth limit
-                int maxChainDepth = readOptions.getMaxReferenceChainDepth();
-                if (++chainDepth > maxChainDepth) {
-                    throw new JsonIoException("Security limit exceeded: Reference chain depth (" + chainDepth + ") exceeds maximum (" + maxChainDepth + "). Possible circular reference attack.");
+                if (++chainDepth > maxReferenceChainDepth) {
+                    throw new JsonIoException("Security limit exceeded: Reference chain depth (" + chainDepth + ") exceeds maximum (" + maxReferenceChainDepth + "). Possible circular reference attack.");
                 }
 
                 // Security: Enhanced circular reference detection
