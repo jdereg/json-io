@@ -104,6 +104,9 @@ public abstract class Resolver {
     // Performance: Hoisted ReadOptions constants to avoid repeated method calls
     private final int maxUnresolvedRefs;
     private final int maxMissingFields;
+    private final int maxStackDepth;
+    private final int maxMapsToRehash;
+    protected final boolean returningJavaObjects;
 
 
     /**
@@ -149,15 +152,21 @@ public abstract class Resolver {
         this.readOptions = readOptions;
         this.references = references;
         this.converter = converter;
-        
+
         // Performance: Hoist ReadOptions constants (handle null for test cases)
         if (readOptions != null) {
             this.maxUnresolvedRefs = readOptions.getMaxUnresolvedReferences();
             this.maxMissingFields = readOptions.getMaxMissingFields();
+            this.maxStackDepth = readOptions.getMaxStackDepth();
+            this.maxMapsToRehash = readOptions.getMaxMapsToRehash();
+            this.returningJavaObjects = readOptions.isReturningJavaObjects();
         } else {
             // Default values for test cases
             this.maxUnresolvedRefs = Integer.MAX_VALUE;
             this.maxMissingFields = Integer.MAX_VALUE;
+            this.maxStackDepth = Integer.MAX_VALUE;
+            this.maxMapsToRehash = Integer.MAX_VALUE;
+            this.returningJavaObjects = true;
         }
     }
 
@@ -563,7 +572,7 @@ public abstract class Resolver {
      * In Maps mode, return the value as-is.
      */
     private Object extractTargetIfNeeded(Object value) {
-        if (readOptions.isReturningJavaObjects()
+        if (returningJavaObjects
                 && value instanceof JsonObject
                 && ((JsonObject) value).target != null) {
             return ((JsonObject) value).target;
@@ -729,8 +738,7 @@ public abstract class Resolver {
         if (jsonObject.isFinished) {
             return;
         }
-        // Security: Prevent stack overflow via depth limiting
-        int maxStackDepth = readOptions.getMaxStackDepth();
+        // Security: Prevent stack overflow via depth limiting (uses hoisted constant)
         if (maxStackDepth != Integer.MAX_VALUE && stack.size() >= maxStackDepth) {
             throw new JsonIoException("Security limit exceeded: Maximum traversal stack depth (" + maxStackDepth + ") reached. Possible deeply nested attack.");
         }
@@ -818,8 +826,7 @@ public abstract class Resolver {
 
         // Save these for later so that unresolved references inside keys or values
         // get patched first, and then build the Maps.
-        // Security: Prevent unbounded memory growth via excessive map creation
-        int maxMapsToRehash = readOptions.getMaxMapsToRehash();
+        // Security: Prevent unbounded memory growth via excessive map creation (uses hoisted constant)
         if (maxMapsToRehash != Integer.MAX_VALUE && mapsToRehash.size() >= maxMapsToRehash) {
             throw new JsonIoException("Security limit exceeded: Maximum maps to rehash (" + maxMapsToRehash + ") reached. Possible DoS attack.");
         }
@@ -832,7 +839,7 @@ public abstract class Resolver {
      * map population via rehashMaps().
      */
     protected void addMapToRehash(JsonObject jsonObj) {
-        int maxMapsToRehash = readOptions.getMaxMapsToRehash();
+        // Security: Uses hoisted constant for performance
         if (maxMapsToRehash != Integer.MAX_VALUE && mapsToRehash.size() >= maxMapsToRehash) {
             throw new JsonIoException("Security limit exceeded: Maximum maps to rehash (" + maxMapsToRehash + ") reached. Possible DoS attack.");
         }
@@ -1050,7 +1057,7 @@ public abstract class Resolver {
      */
     private Object createInstanceUsingType(JsonObject jsonObj) {
         Class<?> c = jsonObj.getRawType();
-        boolean isUnknownObject = c == Object.class && !readOptions.isReturningJsonObjects();
+        boolean isUnknownObject = c == Object.class && returningJavaObjects;
 
         Object instance;
         if (isUnknownObject && readOptions.getUnknownTypeClass() == null) {

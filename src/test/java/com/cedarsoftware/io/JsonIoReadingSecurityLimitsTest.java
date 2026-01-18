@@ -18,7 +18,6 @@ public class JsonIoReadingSecurityLimitsTest {
         // JsonIo read security limits should have backward compatible defaults
         assertEquals(100000000, readOptions.getMaxObjectReferences());       // 100M objects
         assertEquals(100000, readOptions.getMaxReferenceChainDepth());       // 100K chain depth
-        assertEquals(1024, readOptions.getMaxEnumNameLength());              // 1024 chars
     }
 
     @Test
@@ -26,12 +25,10 @@ public class JsonIoReadingSecurityLimitsTest {
         ReadOptions readOptions = new ReadOptionsBuilder()
                 .maxObjectReferences(5000000)      // 5M max object references
                 .maxReferenceChainDepth(5000)      // 5K max reference chain depth
-                .maxEnumNameLength(128)            // 128 chars max enum names
                 .build();
-        
+
         assertEquals(5000000, readOptions.getMaxObjectReferences());
         assertEquals(5000, readOptions.getMaxReferenceChainDepth());
-        assertEquals(128, readOptions.getMaxEnumNameLength());
     }
 
     @Test
@@ -39,49 +36,12 @@ public class JsonIoReadingSecurityLimitsTest {
         ReadOptions original = new ReadOptionsBuilder()
                 .maxObjectReferences(3000000)      // 3M max object references
                 .maxReferenceChainDepth(3000)      // 3K max reference chain depth
-                .maxEnumNameLength(64)             // 64 chars max enum names
                 .build();
-        
+
         ReadOptions copied = new ReadOptionsBuilder(original).build();
-        
+
         assertEquals(3000000, copied.getMaxObjectReferences());
         assertEquals(3000, copied.getMaxReferenceChainDepth());
-        assertEquals(64, copied.getMaxEnumNameLength());
-    }
-
-    @Test
-    public void testEnumNameLengthLimit_ShouldRejectLongEnumNames() {
-        ReadOptions readOptions = new ReadOptionsBuilder()
-                .maxEnumNameLength(10)  // Very short limit for testing
-                .build();
-
-        // Create a string that will be converted to enum with a name longer than the limit
-        // This should trigger the enum validation in Resolver.convertIfNeeded()
-        String longEnumName = "THIS_IS_A_VERY_LONG_ENUM_NAME_THAT_EXCEEDS_LIMIT";
-        
-        // Should throw JsonIoException due to enum name length limit
-        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            // Use JsonIo directly with a specific enum type to trigger convertIfNeeded
-            Object result = JsonIo.toJava("\"" + longEnumName + "\"", readOptions).asClass(java.util.concurrent.TimeUnit.class);
-        });
-        
-        assertTrue(exception.getMessage().contains("Enum name too long"));
-    }
-
-    @Test
-    public void testEnumNameLengthLimit_ShouldAllowShortEnumNames() {
-        ReadOptions readOptions = new ReadOptionsBuilder()
-                .maxEnumNameLength(50)  // Allow reasonable length
-                .build();
-
-        // Create enum JSON with a name within the limit
-        String shortEnumJson = "{\"@type\":\"com.cedarsoftware.io.models.TestEnum\",\"name\":\"SHORT_NAME\"}";
-        
-        // Should not throw exception
-        assertDoesNotThrow(() -> {
-            Object result = JsonIo.toJava(shortEnumJson, readOptions);
-            assertNotNull(result);
-        });
     }
 
     @Test
@@ -165,31 +125,26 @@ public class JsonIoReadingSecurityLimitsTest {
         ReadOptions originalDefaults = new ReadOptionsBuilder().build();
         int originalMaxRefs = originalDefaults.getMaxObjectReferences();
         int originalMaxChain = originalDefaults.getMaxReferenceChainDepth();
-        int originalMaxEnum = originalDefaults.getMaxEnumNameLength();
-        
+
         try {
             // Set permanent JsonIo security limits
             ReadOptionsBuilder.addPermanentMaxObjectReferences(2000000);
             ReadOptionsBuilder.addPermanentMaxReferenceChainDepth(2000);
-            ReadOptionsBuilder.addPermanentMaxEnumNameLength(64);
-            
+
             // New ReadOptions instances should inherit the permanent limits
             ReadOptions readOptions1 = new ReadOptionsBuilder().build();
             assertEquals(2000000, readOptions1.getMaxObjectReferences());
             assertEquals(2000, readOptions1.getMaxReferenceChainDepth());
-            assertEquals(64, readOptions1.getMaxEnumNameLength());
-            
+
             // Another new instance should also inherit them
             ReadOptions readOptions2 = new ReadOptionsBuilder().build();
             assertEquals(2000000, readOptions2.getMaxObjectReferences());
             assertEquals(2000, readOptions2.getMaxReferenceChainDepth());
-            assertEquals(64, readOptions2.getMaxEnumNameLength());
-            
+
         } finally {
             // Restore original permanent settings
             ReadOptionsBuilder.addPermanentMaxObjectReferences(originalMaxRefs);
             ReadOptionsBuilder.addPermanentMaxReferenceChainDepth(originalMaxChain);
-            ReadOptionsBuilder.addPermanentMaxEnumNameLength(originalMaxEnum);
         }
     }
 
@@ -199,30 +154,25 @@ public class JsonIoReadingSecurityLimitsTest {
         ReadOptions originalDefaults = new ReadOptionsBuilder().build();
         int originalMaxRefs = originalDefaults.getMaxObjectReferences();
         int originalMaxChain = originalDefaults.getMaxReferenceChainDepth();
-        int originalMaxEnum = originalDefaults.getMaxEnumNameLength();
-        
+
         try {
             // Set permanent JsonIo security limits
             ReadOptionsBuilder.addPermanentMaxObjectReferences(1000000);
             ReadOptionsBuilder.addPermanentMaxReferenceChainDepth(1000);
-            ReadOptionsBuilder.addPermanentMaxEnumNameLength(32);
-            
+
             // Local settings should override permanent settings
             ReadOptions readOptions = new ReadOptionsBuilder()
                     .maxObjectReferences(8000000)      // Override permanent
                     .maxReferenceChainDepth(8000)      // Override permanent
-                    .maxEnumNameLength(512)            // Override permanent
                     .build();
-            
+
             assertEquals(8000000, readOptions.getMaxObjectReferences());
             assertEquals(8000, readOptions.getMaxReferenceChainDepth());
-            assertEquals(512, readOptions.getMaxEnumNameLength());
-            
+
         } finally {
             // Restore original permanent settings
             ReadOptionsBuilder.addPermanentMaxObjectReferences(originalMaxRefs);
             ReadOptionsBuilder.addPermanentMaxReferenceChainDepth(originalMaxChain);
-            ReadOptionsBuilder.addPermanentMaxEnumNameLength(originalMaxEnum);
         }
     }
 }

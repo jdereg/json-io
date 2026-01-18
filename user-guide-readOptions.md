@@ -156,12 +156,6 @@ to drop from the cache - they will be dynamically added back if not in the cache
 > #### `ReadOptionsBuilder` maxReferenceChainDepth(`int limit`)
 >- [ ] Set the maximum depth of reference chains that can be traversed. Prevents infinite loops from circular reference attacks. Recommended production value: `5000`.
 
-> #### `int` getMaxEnumNameLength()
->- [ ] Return the maximum length of enum name strings during JSON processing. Default is `1,024`.
-
-> #### `ReadOptionsBuilder` maxEnumNameLength(`int limit`)
->- [ ] Set the maximum length of enum name strings. Prevents memory exhaustion from DoS attacks via excessively long enum names. Recommended production value: `128`.
-
 **Example - Enabling Security Limits:**
 ```java
 ReadOptions readOptions = new ReadOptionsBuilder()
@@ -171,7 +165,6 @@ ReadOptions readOptions = new ReadOptionsBuilder()
     .maxMissingFields(100000)          // 100K max missing fields
     .maxObjectReferences(5000000)      // 5M max object references
     .maxReferenceChainDepth(5000)      // 5K max reference chain depth
-    .maxEnumNameLength(128)            // 128 chars max enum names
     .build();
 
 // These limits protect against malicious JSON while allowing normal usage
@@ -185,12 +178,11 @@ For production applications, you can set security limits permanently at JVM star
 ```java
 // Set at application initialization (typically in main() or static initializer)
 ReadOptionsBuilder.addPermanentMaxUnresolvedReferences(1000000);  // 1M max unresolved references
-ReadOptionsBuilder.addPermanentMaxStackDepth(10000);             // 10K max nesting depth  
+ReadOptionsBuilder.addPermanentMaxStackDepth(10000);             // 10K max nesting depth
 ReadOptionsBuilder.addPermanentMaxMapsToRehash(1000000);         // 1M max maps to rehash
 ReadOptionsBuilder.addPermanentMaxMissingFields(100000);         // 100K max missing fields
 ReadOptionsBuilder.addPermanentMaxObjectReferences(5000000);     // 5M max object references
 ReadOptionsBuilder.addPermanentMaxReferenceChainDepth(5000);     // 5K max reference chain depth
-ReadOptionsBuilder.addPermanentMaxEnumNameLength(128);           // 128 chars max enum names
 
 // All subsequent ReadOptions instances will automatically inherit these limits
 ReadOptions readOptions1 = new ReadOptionsBuilder().build();     // Has permanent limits

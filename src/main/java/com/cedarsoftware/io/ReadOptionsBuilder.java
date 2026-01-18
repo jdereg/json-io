@@ -94,7 +94,6 @@ public class ReadOptionsBuilder {
     // Base permanent JSON parsing security limits - default to generous but finite values for backward compatibility
     private static volatile int BASE_MAX_OBJECT_REFERENCES = 100000000;      // 100M objects max
     private static volatile int BASE_MAX_REFERENCE_CHAIN_DEPTH = 100000;     // 100K chain depth max
-    private static volatile int BASE_MAX_ENUM_NAME_LENGTH = 1024;            // 1024 chars max
     
     // Base permanent JsonParser-specific security limits - default to backward compatible values
     private static volatile long BASE_MAX_ID_VALUE = 1000000000L;            // ±1B ID range max
@@ -186,8 +185,6 @@ public class ReadOptionsBuilder {
         // Copy base permanent JSON parsing security limits
         options.maxObjectReferences = BASE_MAX_OBJECT_REFERENCES;
         options.maxReferenceChainDepth = BASE_MAX_REFERENCE_CHAIN_DEPTH;
-        options.maxEnumNameLength = BASE_MAX_ENUM_NAME_LENGTH;
-        options.converterOptions.maxEnumNameLength = BASE_MAX_ENUM_NAME_LENGTH;
         
         // Copy base permanent JsonParser-specific security limits
         options.maxIdValue = BASE_MAX_ID_VALUE;
@@ -254,8 +251,6 @@ public class ReadOptionsBuilder {
             // Copy JSON parsing security limits
             options.maxObjectReferences = other.maxObjectReferences;
             options.maxReferenceChainDepth = other.maxReferenceChainDepth;
-            options.maxEnumNameLength = other.maxEnumNameLength;
-            options.converterOptions.maxEnumNameLength = other.maxEnumNameLength;
             
             // Copy JsonParser-specific security limits
             options.maxIdValue = other.maxIdValue;
@@ -522,19 +517,6 @@ public class ReadOptionsBuilder {
         BASE_MAX_REFERENCE_CHAIN_DEPTH = maxReferenceChainDepth;
     }
     
-    /**
-     * Set a permanent (JVM lifecycle) maximum length of enum name strings during JSON processing.
-     * All new ReadOptions instances created will automatically start with this setting, preventing the need to
-     * configure it for each ReadOptions instance.
-     * 
-     * @param maxEnumNameLength int maximum length of enum name strings. Set this to prevent memory exhaustion
-     *                          from DoS attacks via excessively long enum names. Use 256 for backward 
-     *                          compatible default.
-     */
-    public static void addPermanentMaxEnumNameLength(int maxEnumNameLength) {
-        BASE_MAX_ENUM_NAME_LENGTH = maxEnumNameLength;
-    }
-
     /**
      * Set a permanent (JVM lifecycle) maximum absolute value for @id and @ref values during JSON processing.
      * All new ReadOptions instances created will automatically start with this setting, preventing the need to
@@ -1071,18 +1053,6 @@ public class ReadOptionsBuilder {
     }
 
     /**
-     * @param maxEnumNameLength int maximum length of enum name strings during JSON processing.
-     *                          Set this to prevent memory exhaustion from DoS attacks via excessively long 
-     *                          enum names. Default is 256 for backward compatibility.
-     * @return ReadOptionsBuilder for chained access.
-     */
-    public ReadOptionsBuilder maxEnumNameLength(int maxEnumNameLength) {
-        options.maxEnumNameLength = maxEnumNameLength;
-        options.converterOptions.maxEnumNameLength = maxEnumNameLength;
-        return this;
-    }
-
-    /**
      * @param maxIdValue long maximum absolute value for @id and @ref values during JSON processing.
      *                   Set this to prevent issues with extreme ID values that could cause problems.
      *                   Default is 1,000,000,000 for backward compatibility.
@@ -1537,7 +1507,6 @@ public class ReadOptionsBuilder {
         private Character falseChar = CommonValues.CHARACTER_ZERO;
         private Map<String, Object> customOptions = new ConcurrentHashMap<>();
         private Map<Converter.ConversionPair, Convert<?>> converterOverrides = new ConcurrentHashMap<>(100, .8f);
-        private int maxEnumNameLength = 1000;  // Default from ConverterOptions
 
         public ZoneId getZoneId() {
             return zoneId;
@@ -1570,10 +1539,6 @@ public class ReadOptionsBuilder {
         public <T> T getCustomOption(String name) {
             return (T) customOptions.get(name);
         }
-
-        public int getMaxEnumNameLength() {
-            return maxEnumNameLength;
-        }
     }
 
     static class DefaultReadOptions implements ReadOptions {
@@ -1600,7 +1565,6 @@ public class ReadOptionsBuilder {
         // Resolver security limits - default to generous but finite values for backward compatibility
         private int maxObjectReferences = 100000000;      // 100M objects max (same as Resolver hardcoded default)
         private int maxReferenceChainDepth = 100000;      // 100K chain depth max (same as Resolver hardcoded default)
-        private int maxEnumNameLength = 1024;             // 1024 chars max (same as Resolver hardcoded default)
         
         // JsonParser-specific security limits - default to backward compatible values
         private long maxIdValue = 1000000000L;            // ±1B ID range max (same as JsonParser hardcoded default)
@@ -1748,10 +1712,6 @@ public class ReadOptionsBuilder {
 
         public int getMaxReferenceChainDepth() {
             return maxReferenceChainDepth;
-        }
-
-        public int getMaxEnumNameLength() {
-            return maxEnumNameLength;
         }
 
         public long getMaxIdValue() {

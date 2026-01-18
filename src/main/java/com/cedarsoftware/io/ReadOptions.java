@@ -169,13 +169,6 @@ public interface ReadOptions {
     int getMaxReferenceChainDepth();
 
     /**
-     * @return int maximum length of enum name strings during JSON processing.
-     * Once this limit is reached, a JsonIoException will be thrown to prevent memory exhaustion
-     * from DoS attacks via excessively long enum names. Default is 256 for backward compatibility.
-     */
-    int getMaxEnumNameLength();
-
-    /**
      * @return long maximum absolute value for @id and @ref values during JSON processing.
      * Once this limit is exceeded, a JsonIoException will be thrown to prevent issues with
      * extreme ID values. Default is 1,000,000,000 for backward compatibility.

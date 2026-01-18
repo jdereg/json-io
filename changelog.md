@@ -1,5 +1,5 @@
 ### Revision History
-#### 4.82.0 (unreleased)
+#### 4.83.0 - 2025-01-18 
 * **BUG FIX**: `JsonWriter.writeJsonObjectObject()` - Fixed JSON5 unquoted keys not being applied
   * When serializing `JsonObject` instances directly, the `json5UnquotedKeys` option was ignored
   * Field names were always written with quotes regardless of JSON5 settings
@@ -77,6 +77,15 @@
   * `GenericArrayType` handling in `getUltimateComponentType()` - Tests parsing of generic array types like `List<String>[]` in Maps mode
   * `reconcileResult()` method coverage - Tests for returning simple types (String, Long, Double, Boolean) directly and returning JsonObject for complex types
   * Edge cases: empty generic arrays, generic arrays with null elements, JSON null handling
+
+#### 4.82.0 (unreleased)
+* **REMOVED**: `ReadOptions.getMaxEnumNameLength()` and related builder methods
+  * Removed `maxEnumNameLength` security limit option - enum name length is already bounded by Java class loading
+  * Removed `ReadOptionsBuilder.maxEnumNameLength()` and `addPermanentMaxEnumNameLength()` methods
+  * Simplifies the API by removing unnecessary security option
+* **PERFORMANCE**: `Resolver` - Hoisted additional ReadOptions constants
+  * Pre-fetched `maxStackDepth`, `maxMapsToRehash`, and `returningJavaObjects` to final fields
+  * Eliminates repeated method calls in hot paths during JSON parsing
 
 #### 4.81.0 - 2025-01-10 
 **BUG FIX**: `Resolver` - Fixed array/collection cross-conversion returning null
