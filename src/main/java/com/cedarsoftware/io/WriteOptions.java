@@ -126,6 +126,12 @@ public interface WriteOptions {
     boolean isShortMetaKeys();
 
     /**
+     * @return Character the meta key prefix override, or null if using default behavior.
+     * '@' forces @ prefix, '$' forces $ prefix, null uses default (@ for standard JSON, $ for JSON5).
+     */
+    Character getMetaPrefixOverride();
+
+    /**
      * Alias Type Names, e.g. "ArrayList" instead of "java.util.ArrayList".
      * @param typeName String name of type to fetch alias for.  There are no default aliases.
      * @return String alias name or null if type name is not aliased.

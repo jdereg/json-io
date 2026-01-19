@@ -1,4 +1,13 @@
 ### Revision History
+#### 4.83.0 - 2025-01-19 
+* **FEATURE**: `WriteOptionsBuilder` - Added meta key prefix override methods
+  * `useMetaPrefixAt()` - Forces `@` prefix for all meta keys (`@type`, `@id`, `@ref`, etc.) even in JSON5 mode
+  * `useMetaPrefixDollar()` - Forces `$` prefix for all meta keys (`$type`, `$id`, `$ref`, etc.) even in standard JSON mode
+  * `getMetaPrefixOverride()` - Returns the override character (`@`, `$`, or `null` for default behavior)
+  * Default behavior: Standard JSON uses `@` prefix (quoted), JSON5 uses `$` prefix (unquoted)
+  * In JSON5, `@` cannot be used unquoted since it's not a valid ECMAScript identifier start character
+  * Reading accepts all meta key variants (`@type`, `@t`, `$type`, `$t`) regardless of format used to write
+
 #### 4.83.0 - 2025-01-18 
 * **BUG FIX**: `JsonWriter.writeJsonObjectObject()` - Fixed JSON5 unquoted keys not being applied
   * When serializing `JsonObject` instances directly, the `json5UnquotedKeys` option was ignored

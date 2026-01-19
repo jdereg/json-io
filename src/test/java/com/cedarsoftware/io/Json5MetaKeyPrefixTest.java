@@ -516,6 +516,391 @@ class Json5MetaKeyPrefixTest {
     }
 
     // ========================================
+    // Reading quoted $ prefixes tests
+    // ($ prefixes should work even when quoted)
+    // ========================================
+
+    @Test
+    void testReadQuotedDollarTypePrefix() {
+        // Standard JSON with quoted "$type" (instead of unquoted $type)
+        String json = "{\"$type\":\"com.cedarsoftware.io.Json5MetaKeyPrefixTest$TestObject\",\"name\":\"quoted\",\"value\":99}";
+
+        Object result = JsonIo.toJava(json, null).asClass(Object.class);
+
+        assertTrue(result instanceof TestObject, "Expected TestObject but got " + result.getClass().getName());
+        TestObject obj = (TestObject) result;
+        assertEquals("quoted", obj.name);
+        assertEquals(99, obj.value);
+    }
+
+    @Test
+    void testReadQuotedDollarShortTypePrefix() {
+        // Standard JSON with quoted "$t"
+        String json = "{\"$t\":\"com.cedarsoftware.io.Json5MetaKeyPrefixTest$TestObject\",\"name\":\"quoted-short\",\"value\":88}";
+
+        Object result = JsonIo.toJava(json, null).asClass(Object.class);
+
+        assertTrue(result instanceof TestObject, "Expected TestObject but got " + result.getClass().getName());
+        TestObject obj = (TestObject) result;
+        assertEquals("quoted-short", obj.name);
+        assertEquals(88, obj.value);
+    }
+
+    @Test
+    void testReadQuotedDollarIdAndRefPrefix() {
+        // Standard JSON with quoted "$id" and "$ref"
+        String json = "{\"$type\":\"com.cedarsoftware.io.Json5MetaKeyPrefixTest$SelfRefObject\",\"$id\":1,\"self\":{\"$ref\":1}}";
+
+        Object result = JsonIo.toJava(json, null).asClass(Object.class);
+
+        assertTrue(result instanceof SelfRefObject, "Expected SelfRefObject but got " + result.getClass().getName());
+        SelfRefObject obj = (SelfRefObject) result;
+        assertSame(obj, obj.self, "self reference should point to same object");
+    }
+
+    @Test
+    void testReadQuotedDollarShortIdAndRefPrefix() {
+        // Standard JSON with quoted "$i" and "$r"
+        String json = "{\"$t\":\"com.cedarsoftware.io.Json5MetaKeyPrefixTest$SelfRefObject\",\"$i\":1,\"self\":{\"$r\":1}}";
+
+        Object result = JsonIo.toJava(json, null).asClass(Object.class);
+
+        assertTrue(result instanceof SelfRefObject, "Expected SelfRefObject but got " + result.getClass().getName());
+        SelfRefObject obj = (SelfRefObject) result;
+        assertSame(obj, obj.self, "self reference should point to same object");
+    }
+
+    @Test
+    void testReadQuotedDollarKeysAndItemsPrefix() {
+        // Standard JSON with quoted "$keys" and "$items"
+        String json = "{\"$type\":\"java.util.LinkedHashMap\",\"$keys\":[1,2],\"$items\":[\"one\",\"two\"]}";
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        Object result = JsonIo.toJava(json, readOptions).asClass(Object.class);
+
+        assertTrue(result instanceof LinkedHashMap, "Expected LinkedHashMap but got " + result.getClass().getName());
+        @SuppressWarnings("unchecked")
+        Map<Object, String> map = (Map<Object, String>) result;
+        assertEquals(2, map.size());
+        assertEquals("one", map.get(1L));
+        assertEquals("two", map.get(2L));
+    }
+
+    @Test
+    void testReadQuotedDollarShortKeysAndItemsPrefix() {
+        // Standard JSON with quoted "$k" and "$e"
+        String json = "{\"$t\":\"java.util.LinkedHashMap\",\"$k\":[1,2],\"$e\":[\"one\",\"two\"]}";
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        Object result = JsonIo.toJava(json, readOptions).asClass(Object.class);
+
+        assertTrue(result instanceof LinkedHashMap, "Expected LinkedHashMap but got " + result.getClass().getName());
+        @SuppressWarnings("unchecked")
+        Map<Object, String> map = (Map<Object, String>) result;
+        assertEquals(2, map.size());
+        assertEquals("one", map.get(1L));
+        assertEquals("two", map.get(2L));
+    }
+
+    // ========================================
+    // Mixed prefix tests
+    // (mixing @ and $ prefixes in same document)
+    // ========================================
+
+    @Test
+    void testReadMixedPrefixesAtTypeWithDollarIdRef() {
+        // Mix: @type with $id and $ref
+        String json = "{\"@type\":\"com.cedarsoftware.io.Json5MetaKeyPrefixTest$SelfRefObject\",\"$id\":1,\"self\":{\"$ref\":1}}";
+
+        Object result = JsonIo.toJava(json, null).asClass(Object.class);
+
+        assertTrue(result instanceof SelfRefObject, "Expected SelfRefObject but got " + result.getClass().getName());
+        SelfRefObject obj = (SelfRefObject) result;
+        assertSame(obj, obj.self, "self reference should point to same object");
+    }
+
+    @Test
+    void testReadMixedPrefixesDollarTypeWithAtIdRef() {
+        // Mix: $type with @id and @ref
+        String json = "{\"$type\":\"com.cedarsoftware.io.Json5MetaKeyPrefixTest$SelfRefObject\",\"@id\":1,\"self\":{\"@ref\":1}}";
+
+        Object result = JsonIo.toJava(json, null).asClass(Object.class);
+
+        assertTrue(result instanceof SelfRefObject, "Expected SelfRefObject but got " + result.getClass().getName());
+        SelfRefObject obj = (SelfRefObject) result;
+        assertSame(obj, obj.self, "self reference should point to same object");
+    }
+
+    @Test
+    void testReadMixedPrefixesShortAtWithLongDollar() {
+        // Mix: @t (short) with $id (long)
+        String json = "{\"@t\":\"com.cedarsoftware.io.Json5MetaKeyPrefixTest$SelfRefObject\",\"$id\":1,\"self\":{\"$ref\":1}}";
+
+        Object result = JsonIo.toJava(json, null).asClass(Object.class);
+
+        assertTrue(result instanceof SelfRefObject, "Expected SelfRefObject but got " + result.getClass().getName());
+        SelfRefObject obj = (SelfRefObject) result;
+        assertSame(obj, obj.self, "self reference should point to same object");
+    }
+
+    @Test
+    void testReadMixedPrefixesLongDollarWithShortAt() {
+        // Mix: $type (long) with @i and @r (short)
+        String json = "{\"$type\":\"com.cedarsoftware.io.Json5MetaKeyPrefixTest$SelfRefObject\",\"@i\":1,\"self\":{\"@r\":1}}";
+
+        Object result = JsonIo.toJava(json, null).asClass(Object.class);
+
+        assertTrue(result instanceof SelfRefObject, "Expected SelfRefObject but got " + result.getClass().getName());
+        SelfRefObject obj = (SelfRefObject) result;
+        assertSame(obj, obj.self, "self reference should point to same object");
+    }
+
+    @Test
+    void testReadMixedPrefixesMapWithAtKeysAndDollarItems() {
+        // Mix: @keys with $items
+        String json = "{\"$type\":\"java.util.LinkedHashMap\",\"@keys\":[1,2],\"$items\":[\"one\",\"two\"]}";
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        Object result = JsonIo.toJava(json, readOptions).asClass(Object.class);
+
+        assertTrue(result instanceof LinkedHashMap, "Expected LinkedHashMap but got " + result.getClass().getName());
+        @SuppressWarnings("unchecked")
+        Map<Object, String> map = (Map<Object, String>) result;
+        assertEquals(2, map.size());
+    }
+
+    @Test
+    void testReadMixedPrefixesMapWithDollarKeysAndAtItems() {
+        // Mix: $keys with @items
+        String json = "{\"@type\":\"java.util.LinkedHashMap\",\"$keys\":[1,2],\"@items\":[\"one\",\"two\"]}";
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        Object result = JsonIo.toJava(json, readOptions).asClass(Object.class);
+
+        assertTrue(result instanceof LinkedHashMap, "Expected LinkedHashMap but got " + result.getClass().getName());
+        @SuppressWarnings("unchecked")
+        Map<Object, String> map = (Map<Object, String>) result;
+        assertEquals(2, map.size());
+    }
+
+    @Test
+    void testReadMixedShortPrefixes() {
+        // Mix all short prefixes: @t with $i and $r
+        String json = "{\"@t\":\"com.cedarsoftware.io.Json5MetaKeyPrefixTest$SelfRefObject\",\"$i\":1,\"self\":{\"$r\":1}}";
+
+        Object result = JsonIo.toJava(json, null).asClass(Object.class);
+
+        assertTrue(result instanceof SelfRefObject, "Expected SelfRefObject but got " + result.getClass().getName());
+        SelfRefObject obj = (SelfRefObject) result;
+        assertSame(obj, obj.self, "self reference should point to same object");
+    }
+
+    // ========================================
+    // Prefix override tests
+    // (force @ or $ prefix regardless of JSON5 mode)
+    // These tests will FAIL until useMetaPrefixAt() and
+    // useMetaPrefixDollar() are implemented
+    // ========================================
+
+    @Test
+    void testForceAtPrefixInJson5Mode() {
+        // JSON5 mode but force @ prefix
+        WriteOptions writeOptions = new WriteOptionsBuilder()
+                .json5()
+                .useMetaPrefixAt()  // Force @ prefix even in JSON5 mode
+                .build();
+
+        TestObject obj = new TestObject("force-at", 42);
+        String json = JsonIo.toJson(obj, writeOptions);
+
+        // Should use "@type" (quoted, since @ requires quotes) not $type
+        assertTrue(json.contains("\"@type\":"), "Forced @ prefix in JSON5 should use \"@type\":");
+        assertFalse(json.contains("$type:"), "Forced @ prefix should not use $type:");
+    }
+
+    @Test
+    void testForceAtPrefixInJson5ModeWithShortKeys() {
+        // JSON5 mode + short keys but force @ prefix
+        WriteOptions writeOptions = new WriteOptionsBuilder()
+                .json5()
+                .shortMetaKeys(true)
+                .useMetaPrefixAt()  // Force @ prefix
+                .build();
+
+        TestObject obj = new TestObject("force-at-short", 42);
+        String json = JsonIo.toJson(obj, writeOptions);
+
+        // Should use "@t" (quoted) not $t
+        assertTrue(json.contains("\"@t\":"), "Forced @ prefix with short keys should use \"@t\":");
+        assertFalse(json.contains("$t:"), "Forced @ prefix should not use $t:");
+    }
+
+    @Test
+    void testForceAtPrefixInJson5ModeWithIdAndRef() {
+        // JSON5 mode but force @ prefix for id/ref
+        WriteOptions writeOptions = new WriteOptionsBuilder()
+                .json5()
+                .useMetaPrefixAt()
+                .build();
+
+        SelfRefObject obj = new SelfRefObject();
+        obj.self = obj;
+
+        String json = JsonIo.toJson(obj, writeOptions);
+
+        // Should use "@id" and "@ref" (quoted) not $id/$ref
+        assertTrue(json.contains("\"@id\":"), "Forced @ prefix should use \"@id\":");
+        assertTrue(json.contains("\"@ref\":"), "Forced @ prefix should use \"@ref\":");
+        assertFalse(json.contains("$id:"), "Forced @ prefix should not use $id:");
+        assertFalse(json.contains("$ref:"), "Forced @ prefix should not use $ref:");
+    }
+
+    @Test
+    void testForceDollarPrefixInStandardMode() {
+        // Standard mode but force $ prefix
+        WriteOptions writeOptions = new WriteOptionsBuilder()
+                .useMetaPrefixDollar()  // Force $ prefix even in standard mode
+                .build();
+
+        TestObject obj = new TestObject("force-dollar", 42);
+        String json = JsonIo.toJson(obj, writeOptions);
+
+        // Should use "$type" (quoted in standard mode since not JSON5)
+        assertTrue(json.contains("\"$type\":"), "Forced $ prefix in standard mode should use \"$type\":");
+        assertFalse(json.contains("\"@type\":"), "Forced $ prefix should not use @type:");
+    }
+
+    @Test
+    void testForceDollarPrefixInStandardModeWithShortKeys() {
+        // Standard mode + short keys but force $ prefix
+        WriteOptions writeOptions = new WriteOptionsBuilder()
+                .shortMetaKeys(true)
+                .useMetaPrefixDollar()  // Force $ prefix
+                .build();
+
+        TestObject obj = new TestObject("force-dollar-short", 42);
+        String json = JsonIo.toJson(obj, writeOptions);
+
+        // Should use "$t" (quoted in standard mode)
+        assertTrue(json.contains("\"$t\":"), "Forced $ prefix with short keys should use \"$t\":");
+        assertFalse(json.contains("\"@t\":"), "Forced $ prefix should not use @t:");
+    }
+
+    @Test
+    void testForceDollarPrefixInStandardModeWithIdAndRef() {
+        // Standard mode but force $ prefix for id/ref
+        WriteOptions writeOptions = new WriteOptionsBuilder()
+                .useMetaPrefixDollar()
+                .build();
+
+        SelfRefObject obj = new SelfRefObject();
+        obj.self = obj;
+
+        String json = JsonIo.toJson(obj, writeOptions);
+
+        // Should use "$id" and "$ref" (quoted in standard mode)
+        assertTrue(json.contains("\"$id\":"), "Forced $ prefix should use \"$id\":");
+        assertTrue(json.contains("\"$ref\":"), "Forced $ prefix should use \"$ref\":");
+        assertFalse(json.contains("\"@id\":"), "Forced $ prefix should not use @id:");
+        assertFalse(json.contains("\"@ref\":"), "Forced $ prefix should not use @ref:");
+    }
+
+    @Test
+    void testForceDollarPrefixWithKeysAndItems() {
+        // Standard mode but force $ prefix for keys/items
+        WriteOptions writeOptions = new WriteOptionsBuilder()
+                .useMetaPrefixDollar()
+                .build();
+
+        Map<Integer, String> map = new LinkedHashMap<>();
+        map.put(1, "one");
+        map.put(2, "two");
+
+        String json = JsonIo.toJson(map, writeOptions);
+
+        // Should use "$keys" and "$items" (quoted in standard mode)
+        assertTrue(json.contains("\"$keys\":"), "Forced $ prefix should use \"$keys\":");
+        assertTrue(json.contains("\"$items\":"), "Forced $ prefix should use \"$items\":");
+        assertFalse(json.contains("\"@keys\":"), "Forced $ prefix should not use @keys:");
+        assertFalse(json.contains("\"@items\":"), "Forced $ prefix should not use @items:");
+    }
+
+    @Test
+    void testForceAtPrefixWithKeysAndItems() {
+        // JSON5 mode but force @ prefix for keys/items
+        WriteOptions writeOptions = new WriteOptionsBuilder()
+                .json5()
+                .useMetaPrefixAt()
+                .build();
+
+        Map<Integer, String> map = new LinkedHashMap<>();
+        map.put(1, "one");
+        map.put(2, "two");
+
+        String json = JsonIo.toJson(map, writeOptions);
+
+        // Should use "@keys" and "@items" (quoted since @ requires quotes)
+        assertTrue(json.contains("\"@keys\":"), "Forced @ prefix should use \"@keys\":");
+        assertTrue(json.contains("\"@items\":"), "Forced @ prefix should use \"@items\":");
+        assertFalse(json.contains("$keys:"), "Forced @ prefix should not use $keys:");
+        assertFalse(json.contains("$items:"), "Forced @ prefix should not use $items:");
+    }
+
+    @Test
+    void testLastPrefixOverrideWins() {
+        // If both are called, last one wins
+        WriteOptions writeOptions = new WriteOptionsBuilder()
+                .useMetaPrefixAt()
+                .useMetaPrefixDollar()  // This should win
+                .build();
+
+        TestObject obj = new TestObject("last-wins", 42);
+        String json = JsonIo.toJson(obj, writeOptions);
+
+        assertTrue(json.contains("\"$type\":"), "Last prefix override should win");
+        assertFalse(json.contains("\"@type\":"), "Earlier override should be overridden");
+    }
+
+    @Test
+    void testRoundTripWithForcedAtPrefixInJson5() {
+        // Round-trip: write with forced @ in JSON5, read back
+        WriteOptions writeOptions = new WriteOptionsBuilder()
+                .json5()
+                .useMetaPrefixAt()
+                .build();
+
+        TestObject original = new TestObject("roundtrip-forced-at", 777);
+        String json = JsonIo.toJson(original, writeOptions);
+
+        // Verify it used @ prefix
+        assertTrue(json.contains("\"@type\":"), "Should write with @type");
+
+        // Read back should work
+        TestObject restored = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(TestObject.class);
+        assertEquals(original.name, restored.name);
+        assertEquals(original.value, restored.value);
+    }
+
+    @Test
+    void testRoundTripWithForcedDollarPrefixInStandard() {
+        // Round-trip: write with forced $ in standard mode, read back
+        WriteOptions writeOptions = new WriteOptionsBuilder()
+                .useMetaPrefixDollar()
+                .build();
+
+        TestObject original = new TestObject("roundtrip-forced-dollar", 888);
+        String json = JsonIo.toJson(original, writeOptions);
+
+        // Verify it used $ prefix
+        assertTrue(json.contains("\"$type\":"), "Should write with $type");
+
+        // Read back should work
+        TestObject restored = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(TestObject.class);
+        assertEquals(original.name, restored.name);
+        assertEquals(original.value, restored.value);
+    }
+
+    // ========================================
     // Test classes
     // ========================================
 

@@ -57,6 +57,44 @@ These meta-keys enhance the efficiency of the JSON format by supporting circular
 >#### `WriteOptionsBuilder` shortMetaKeys(`boolean shortMetaKeys`)
 >- [ ] Sets to boolean `true` to turn on short meta-keys, `false` for long.
 
+### Meta Key Prefix Override
+
+By default, json-io uses `@` prefix for meta keys in standard JSON mode (e.g., `"@type"`, `"@id"`) and `$` prefix in JSON5 mode (e.g., `$type:`, `$id:`). The `$` prefix is preferred in JSON5 because it's a valid ECMAScript identifier character, allowing keys to be unquoted.
+
+You can override this default behavior to force a specific prefix regardless of the JSON mode:
+
+>#### `Character` getMetaPrefixOverride()
+>- [ ] Returns the meta key prefix override character, or `null` if using default behavior. `'@'` forces @ prefix, `'$'` forces $ prefix.
+
+>#### `WriteOptionsBuilder` useMetaPrefixAt()
+>- [ ] Forces the use of `@` prefix for all meta keys (e.g., `"@type"`, `"@id"`, `"@ref"`), even in JSON5 mode. The `@` prefix always requires quotes since `@` is not a valid identifier start character.
+
+>#### `WriteOptionsBuilder` useMetaPrefixDollar()
+>- [ ] Forces the use of `$` prefix for all meta keys (e.g., `"$type"`, `"$id"`, `"$ref"`), even in standard JSON mode. When used in standard JSON mode, the keys will still be quoted (`"$type":`) since unquoted keys require JSON5 mode to be enabled.
+
+#### Use Cases
+
+- **Interoperability**: When communicating with systems that expect a specific meta key prefix, use these methods to ensure compatibility.
+- **JSON Schema alignment**: The `$` prefix has precedent in JSON Schema (`$schema`, `$id`, `$ref`), so you may prefer it for consistency.
+- **Migration**: When transitioning between JSON and JSON5 formats, you can maintain prefix consistency across both modes.
+
+#### Example Usage
+
+```java
+// Force @ prefix even in JSON5 mode (keys will be quoted)
+WriteOptions options = new WriteOptionsBuilder()
+        .json5()
+        .useMetaPrefixAt()  // Output: {"@type":"...", ...} instead of {$type:"...", ...}
+        .build();
+
+// Force $ prefix in standard JSON mode (keys will be quoted)
+WriteOptions options = new WriteOptionsBuilder()
+        .useMetaPrefixDollar()  // Output: {"$type":"...", ...} instead of {"@type":"...", ...}
+        .build();
+```
+
+**Note:** When reading JSON, json-io accepts all meta key variants (`@type`, `@t`, `$type`, `$t`, quoted or unquoted) regardless of which format was used to write the JSON. This ensures full backward and forward compatibility.
+
 ### Aliasing - Shorten Class Names in @type
 
 Aliasing is a feature in `json-io` that simplifies JSON output by converting fully qualified Java class names into shorter, simpler class names. For example, `java.util.ArrayList` is aliased to just `ArrayList`, making the JSON more compact and readable.

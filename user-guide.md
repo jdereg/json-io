@@ -263,7 +263,9 @@ WriteOptions options = new WriteOptionsBuilder()
 
 #### JSON5 Meta Key Prefixes
 
-When JSON5 mode is enabled with unquoted keys, json-io uses `$` instead of `@` for meta keys. Combined with the short meta keys option, there are four possible meta key formats:
+**Default behavior:** Standard JSON mode uses `@` prefix (quoted keys like `"@type":`), while JSON5 mode uses `$` prefix (unquoted keys like `$type:`). These defaults can be overridden using `useMetaPrefixAt()` or `useMetaPrefixDollar()`.
+
+Combined with the short meta keys option, there are four possible meta key formats:
 
 | Mode | Type | ID | Ref | Items | Keys |
 |------|------|----|-----|-------|------|
@@ -273,9 +275,10 @@ When JSON5 mode is enabled with unquoted keys, json-io uses `$` instead of `@` f
 | JSON5 + Short | `$t:` | `$i:` | `$r:` | `$e:` | `$k:` |
 
 **Why `$` instead of `@`?**
-- `@` is not a valid ECMAScript identifier character, so it must be quoted in standard JSON
-- `$` is a valid identifier start character, allowing meta keys to be unquoted in JSON5
-- `$` has precedent in JSON Schema (`$schema`, `$id`, `$ref`)
+- In JSON5, object keys can be unquoted if they are valid ECMAScript identifiers
+- `@` is **not** a valid identifier start character, so `@type` cannot be written unquoted
+- `$` **is** a valid identifier start character, so `$type` can be written unquoted in JSON5
+- `$` also has precedent in JSON Schema (`$schema`, `$id`, `$ref`)
 
 **Reading compatibility:** json-io accepts all meta key variants when reading (`@type`, `@t`, `$type`, `$t`), ensuring backward compatibility regardless of which format was used to write the JSON.
 
@@ -311,6 +314,34 @@ Object obj2 = JsonIo.toJava("{$t:\"java.util.HashMap\"}", null).asClass(Object.c
 Object obj3 = JsonIo.toJava("{\"@type\":\"java.util.HashMap\"}", null).asClass(Object.class);
 Object obj4 = JsonIo.toJava("{\"@t\":\"java.util.HashMap\"}", null).asClass(Object.class);
 ```
+
+#### Overriding the Meta Key Prefix
+
+You can force a specific prefix regardless of the JSON mode using `useMetaPrefixAt()` or `useMetaPrefixDollar()`:
+
+```java
+// Force @ prefix even in JSON5 mode (keys will be quoted since @ requires quotes)
+WriteOptions options = new WriteOptionsBuilder()
+        .json5()
+        .useMetaPrefixAt()
+        .build();
+String json = JsonIo.toJson(myObject, options);
+// Output: {"@type":"com.example.MyClass", name:"John", ...}
+
+// Force $ prefix in standard JSON mode (keys will be quoted)
+WriteOptions options = new WriteOptionsBuilder()
+        .useMetaPrefixDollar()
+        .build();
+String json = JsonIo.toJson(myObject, options);
+// Output: {"$type":"com.example.MyClass", "name":"John", ...}
+```
+
+This is useful for:
+- **Interoperability**: When communicating with systems that expect a specific prefix
+- **JSON Schema alignment**: The `$` prefix is used in JSON Schema (`$schema`, `$id`, `$ref`)
+- **Migration**: Maintaining prefix consistency when transitioning between formats
+
+See [WriteOptions Meta Key Prefix Override](/user-guide-writeOptions.md#meta-key-prefix-override) for detailed documentation.
 
 #### Unquoted Keys Details
 

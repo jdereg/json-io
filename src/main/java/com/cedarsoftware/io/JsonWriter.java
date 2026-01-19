@@ -105,6 +105,20 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private static final String ITEMS_JSON5_SHORT = "$e:";
     private static final String KEYS_JSON5_SHORT = "$k:";
 
+    // $ prefix with quoted keys (for standard JSON mode with $ prefix override)
+    private static final String ID_DOLLAR_QUOTED = "\"$id\":";
+    private static final String TYPE_DOLLAR_QUOTED = "\"$type\":\"";
+    private static final String REF_DOLLAR_QUOTED = "\"$ref\":";
+    private static final String ITEMS_DOLLAR_QUOTED = "\"$items\":";
+    private static final String KEYS_DOLLAR_QUOTED = "\"$keys\":";
+
+    // $ prefix short with quoted keys (for standard JSON mode with $ prefix override)
+    private static final String ID_DOLLAR_SHORT_QUOTED = "\"$i\":";
+    private static final String TYPE_DOLLAR_SHORT_QUOTED = "\"$t\":\"";
+    private static final String REF_DOLLAR_SHORT_QUOTED = "\"$r\":";
+    private static final String ITEMS_DOLLAR_SHORT_QUOTED = "\"$e\":";
+    private static final String KEYS_DOLLAR_SHORT_QUOTED = "\"$k\":";
+
     private static final char[] HEX = "0123456789abcdef".toCharArray();
 
     // Selected prefixes based on options
@@ -255,32 +269,58 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // Pre-compute meta key prefixes based on options
         // JSON5 mode uses $ prefix (valid unquoted identifier), standard mode uses @ prefix (requires quotes)
         // Short meta keys use single-character keys (@t/$t, @i/$i, etc.)
-        boolean isJson5 = this.writeOptions.isJson5UnquotedKeys();
+        // Users can override the default prefix with useMetaPrefixAt() or useMetaPrefixDollar()
+        boolean isJson5UnquotedKeys = this.writeOptions.isJson5UnquotedKeys();
         boolean isShort = this.writeOptions.isShortMetaKeys();
+        Character metaPrefixOverride = this.writeOptions.getMetaPrefixOverride();
 
-        if (isJson5 && isShort) {
-            // JSON5 + short: $t, $i, $r, $e, $k
+        // Determine which prefix to use: $ or @
+        // Override takes precedence, otherwise use $ for JSON5, @ for standard
+        boolean useDollarPrefix = (metaPrefixOverride != null)
+                ? (metaPrefixOverride == '$')
+                : isJson5UnquotedKeys;
+
+        // Can only use unquoted keys if JSON5 mode is enabled AND using $ prefix
+        // (@ prefix always requires quotes since @ is not a valid identifier start)
+        boolean canUseUnquotedKeys = isJson5UnquotedKeys && useDollarPrefix;
+
+        if (useDollarPrefix && canUseUnquotedKeys && isShort) {
+            // JSON5 + $ prefix + short: $t, $i, $r, $e, $k (unquoted)
             this.idPrefix = ID_JSON5_SHORT;
             this.typePrefix = TYPE_JSON5_SHORT;
             this.refPrefix = REF_JSON5_SHORT;
             this.itemsPrefix = ITEMS_JSON5_SHORT;
             this.keysPrefix = KEYS_JSON5_SHORT;
-        } else if (isJson5) {
-            // JSON5 long: $type, $id, $ref, $items, $keys
+        } else if (useDollarPrefix && canUseUnquotedKeys) {
+            // JSON5 + $ prefix + long: $type, $id, $ref, $items, $keys (unquoted)
             this.idPrefix = ID_JSON5;
             this.typePrefix = TYPE_JSON5;
             this.refPrefix = REF_JSON5;
             this.itemsPrefix = ITEMS_JSON5;
             this.keysPrefix = KEYS_JSON5;
+        } else if (useDollarPrefix && isShort) {
+            // $ prefix + short + quoted: "$t", "$i", "$r", "$e", "$k"
+            this.idPrefix = ID_DOLLAR_SHORT_QUOTED;
+            this.typePrefix = TYPE_DOLLAR_SHORT_QUOTED;
+            this.refPrefix = REF_DOLLAR_SHORT_QUOTED;
+            this.itemsPrefix = ITEMS_DOLLAR_SHORT_QUOTED;
+            this.keysPrefix = KEYS_DOLLAR_SHORT_QUOTED;
+        } else if (useDollarPrefix) {
+            // $ prefix + long + quoted: "$type", "$id", "$ref", "$items", "$keys"
+            this.idPrefix = ID_DOLLAR_QUOTED;
+            this.typePrefix = TYPE_DOLLAR_QUOTED;
+            this.refPrefix = REF_DOLLAR_QUOTED;
+            this.itemsPrefix = ITEMS_DOLLAR_QUOTED;
+            this.keysPrefix = KEYS_DOLLAR_QUOTED;
         } else if (isShort) {
-            // Standard short: "@t", "@i", "@r", "@e", "@k"
+            // @ prefix + short + quoted: "@t", "@i", "@r", "@e", "@k"
             this.idPrefix = ID_SHORT;
             this.typePrefix = TYPE_SHORT;
             this.refPrefix = REF_SHORT;
             this.itemsPrefix = ITEMS_SHORT;
             this.keysPrefix = KEYS_SHORT;
         } else {
-            // Standard long: "@type", "@id", "@ref", "@items", "@keys"
+            // @ prefix + long + quoted: "@type", "@id", "@ref", "@items", "@keys"
             this.idPrefix = ID_LONG;
             this.typePrefix = TYPE_LONG;
             this.refPrefix = REF_LONG;
@@ -291,7 +331,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // Pre-fetch frequently accessed WriteOptions for hot path performance
         this.skipNullFields = this.writeOptions.isSkipNullFields();
         this.json5TrailingCommas = this.writeOptions.isJson5TrailingCommas();
-        this.json5UnquotedKeys = isJson5;  // Already computed above
+        this.json5UnquotedKeys = isJson5UnquotedKeys;  // Already computed above
         this.maxStringLength = this.writeOptions.getMaxStringLength();
         this.prettyPrint = this.writeOptions.isPrettyPrint();
         this.neverShowingType = this.writeOptions.isNeverShowingType();

@@ -222,6 +222,7 @@ public class WriteOptionsBuilder {
             options.prettyPrint = other.prettyPrint;
             options.lruSize = other.lruSize;
             options.shortMetaKeys = other.shortMetaKeys;
+            options.metaPrefixOverride = other.getMetaPrefixOverride();
             options.showTypeInfo = other.showTypeInfo;
             options.skipNullFields = other.skipNullFields;
             options.writeLongsAsStrings = other.writeLongsAsStrings;
@@ -688,6 +689,31 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder shortMetaKeys(boolean shortMetaKeys) {
         options.shortMetaKeys = shortMetaKeys;
+        return this;
+    }
+
+    /**
+     * Force the use of @ prefix for meta keys (@type, @id, @ref, @keys, @items).
+     * By default, standard JSON mode uses @ prefix and JSON5 mode uses $ prefix.
+     * This method allows overriding that default to force @ prefix regardless of mode.
+     * When @ prefix is used, meta keys will be quoted in the output (e.g., "@type":).
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder useMetaPrefixAt() {
+        options.metaPrefixOverride = '@';
+        return this;
+    }
+
+    /**
+     * Force the use of $ prefix for meta keys ($type, $id, $ref, $keys, $items).
+     * By default, standard JSON mode uses @ prefix and JSON5 mode uses $ prefix.
+     * This method allows overriding that default to force $ prefix regardless of mode.
+     * In JSON5 mode with $ prefix, meta keys can be unquoted (e.g., $type:).
+     * In standard mode with $ prefix, meta keys will be quoted (e.g., "$type":).
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder useMetaPrefixDollar() {
+        options.metaPrefixOverride = '$';
         return this;
     }
 
@@ -1474,6 +1500,9 @@ public class WriteOptionsBuilder {
         private boolean json5InfinityNaN = false;
         private boolean json5TrailingCommas = false;
 
+        // Meta key prefix override (null = use default based on JSON5 mode, '@' = force @, '$' = force $)
+        private Character metaPrefixOverride = null;
+
         private JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
         private ClassLoader classLoader = ClassUtilities.getClassLoader(DefaultWriteOptions.class);
         private Map<Class<?>, Set<String>> includedFieldNames = new ClassValueMap<>();
@@ -1631,6 +1660,14 @@ public class WriteOptionsBuilder {
          */
         public boolean isShortMetaKeys() {
             return shortMetaKeys;
+        }
+
+        /**
+         * @return Character the meta key prefix override, or null if using default behavior.
+         * '@' forces @ prefix, '$' forces $ prefix, null uses default (@ for standard JSON, $ for JSON5).
+         */
+        public Character getMetaPrefixOverride() {
+            return metaPrefixOverride;
         }
 
         /**
