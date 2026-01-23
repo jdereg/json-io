@@ -513,7 +513,6 @@ class ToonReaderTest {
     }
 
     @Test
-    @Disabled("Requires @type hint support in ToonWriter/ToonReader for generic collection element conversion")
     void testListOfPerson() {
         List<TestPerson> people = Arrays.asList(
                 new TestPerson("John", 30),
@@ -538,6 +537,34 @@ class ToonReaderTest {
         assertEquals(2, restored.size());
         assertNotNull(restored.get("emp1"));
         assertNotNull(restored.get("emp2"));
+    }
+
+    @Test
+    void testListOfPersonAsObjectArray() {
+        // When reading TOON as Object[].class (without generic type info),
+        // elements should be Maps since there's no type hint in the data.
+        List<TestPerson> people = Arrays.asList(
+                new TestPerson("John", 30),
+                new TestPerson("Jane", 25)
+        );
+        String toon = JsonIo.toToon(people, null);
+
+        // Read as Object[] - elements should be Maps (no type info to convert them)
+        Object[] result = JsonIo.fromToon(toon, null).asClass(Object[].class);
+
+        assertEquals(2, result.length);
+
+        // Each element should be a Map (JsonObject) since no type hint is available
+        assertTrue(result[0] instanceof Map, "Element should be a Map");
+        assertTrue(result[1] instanceof Map, "Element should be a Map");
+
+        Map<?, ?> map0 = (Map<?, ?>) result[0];
+        Map<?, ?> map1 = (Map<?, ?>) result[1];
+
+        assertEquals("John", map0.get("name"));
+        assertEquals(30L, map0.get("age"));  // Numbers come back as Long
+        assertEquals("Jane", map1.get("name"));
+        assertEquals(25L, map1.get("age"));
     }
 
     // ========== 14. String Edge Cases ==========

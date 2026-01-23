@@ -3,6 +3,7 @@ package com.cedarsoftware.io;
 import java.io.Externalizable;
 import java.io.Serializable;
 import java.lang.reflect.Array;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -356,6 +357,17 @@ public abstract class Resolver {
 
         // Primitives (String, Boolean, Number, etc.) - not JsonObjects or arrays
         if (!(value instanceof JsonObject) && !value.getClass().isArray()) {
+            // Special case: Collection with JsonObject elements (e.g., from ToonReader)
+            // When the target type is a ParameterizedType like List<Person>, we need to
+            // convert each JsonObject element to the target element type.
+            if (value instanceof Collection && type instanceof ParameterizedType) {
+                Collection<?> col = (Collection<?>) value;
+                Type[] typeArgs = ((ParameterizedType) type).getActualTypeArguments();
+                if (typeArgs.length > 0 && containsJsonObjects(col)) {
+                    Type elementType = typeArgs[0];
+                    return convertCollectionElements(col, elementType);
+                }
+            }
             return convertToType(value, type);
         }
 
@@ -684,6 +696,53 @@ public abstract class Resolver {
                 String.class == clazz ||
                 Class.class == clazz ||
                 clazz.isEnum();
+    }
+
+    /**
+     * Check if a Collection contains any JsonObject elements that need conversion.
+     * This is used to detect when a Collection from ToonReader has elements
+     * that haven't been converted to their target types yet.
+     */
+    private boolean containsJsonObjects(Collection<?> col) {
+        for (Object element : col) {
+            if (element instanceof JsonObject) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Convert a Collection's elements from JsonObjects to their target type.
+     * Returns a new Collection with the same type containing converted elements.
+     * Used when parsing TOON format where collections contain raw JsonObjects.
+     */
+    private Collection<Object> convertCollectionElements(Collection<?> col, Type elementType) {
+        Collection<Object> result = createSameTypeCollection(col, col.size());
+        for (Object element : col) {
+            result.add(toJava(elementType, element));
+        }
+        return result;
+    }
+
+    /**
+     * Create a new Collection of the same type as the source, with the given capacity.
+     */
+    private Collection<Object> createSameTypeCollection(Collection<?> source, int size) {
+        // Try to create the same collection type
+        if (source instanceof ArrayList) {
+            return new ArrayList<>(size);
+        } else if (source instanceof LinkedList) {
+            return new LinkedList<>();
+        } else if (source instanceof HashSet) {
+            return new HashSet<>(size);
+        } else if (source instanceof LinkedHashSet) {
+            return new LinkedHashSet<>(size);
+        } else if (source instanceof TreeSet) {
+            return new TreeSet<>();
+        }
+        // Default to ArrayList for unknown types
+        return new ArrayList<>(size);
     }
 
     /**
