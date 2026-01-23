@@ -85,6 +85,8 @@ public class JsonPerformanceTest {
         TestData testData = createTestData();
         ObjectMapper jacksonMapper = new ObjectMapper();
         WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        // cycleSupport(false) skips traceReferences() pass - faster for acyclic data
+        WriteOptions writeOptionsNoCycles = new WriteOptionsBuilder().cycleSupport(false).build();
         ReadOptions readOptions = ReadOptionsBuilder.getDefaultReadOptions();
 
         // Warm-up
@@ -92,13 +94,15 @@ public class JsonPerformanceTest {
         for (int i = 0; i < WARMUP_ITERATIONS; i++) {
             String json = JsonIo.toJson(testData, writeOptions);
             TestData obj = JsonIo.toJava(json, readOptions).asClass(TestData.class);
+            String json2 = JsonIo.toJson(testData, writeOptionsNoCycles);
+            TestData obj2 = JsonIo.toJava(json2, readOptions).asClass(TestData.class);
             String jJson = jacksonMapper.writeValueAsString(testData);
             TestData jObj = jacksonMapper.readValue(jJson, TestData.class);
         }
         LOG.info("Warmup complete.");
 
-        // Test Write
-        LOG.info("Testing JsonIo Write with " + TEST_ITERATIONS + " iterations...");
+        // Test Write with cycle support (default)
+        LOG.info("Testing JsonIo Write (cycleSupport=true) with " + TEST_ITERATIONS + " iterations...");
         long start = System.nanoTime();
         String dummy = null;
         for (int i = 0; i < TEST_ITERATIONS; i++) {
@@ -106,7 +110,17 @@ public class JsonPerformanceTest {
             if (dummy.length() == 0) { /* no-op */ }
         }
         long jsonIoWriteTime = System.nanoTime() - start;
-        LOG.info("JsonIo Write complete.");
+        LOG.info("JsonIo Write (cycleSupport=true) complete.");
+
+        // Test Write without cycle support (faster for acyclic data)
+        LOG.info("Testing JsonIo Write (cycleSupport=false) with " + TEST_ITERATIONS + " iterations...");
+        start = System.nanoTime();
+        for (int i = 0; i < TEST_ITERATIONS; i++) {
+            dummy = JsonIo.toJson(testData, writeOptionsNoCycles);
+            if (dummy.length() == 0) { /* no-op */ }
+        }
+        long jsonIoWriteTimeNoCycles = System.nanoTime() - start;
+        LOG.info("JsonIo Write (cycleSupport=false) complete.");
 
         LOG.info("Testing Jackson Write with " + TEST_ITERATIONS + " iterations...");
         start = System.nanoTime();
@@ -142,9 +156,12 @@ public class JsonPerformanceTest {
         // Output results
         LOG.info("--- Full Java Resolution Results ---");
         LOG.info("Iterations: " + TEST_ITERATIONS);
-        LOG.info("JsonIo Write Time: " + (jsonIoWriteTime / 1_000_000.0) + " ms");
+        LOG.info("JsonIo Write Time (cycleSupport=true):  " + (jsonIoWriteTime / 1_000_000.0) + " ms");
+        LOG.info("JsonIo Write Time (cycleSupport=false): " + (jsonIoWriteTimeNoCycles / 1_000_000.0) + " ms");
         LOG.info("Jackson Write Time: " + (jacksonWriteTime / 1_000_000.0) + " ms");
-        LOG.info("Write Ratio (JsonIo/Jackson): " + String.format("%.2fx", (double) jsonIoWriteTime / jacksonWriteTime));
+        LOG.info("Write Speedup (cycleSupport=false vs true): " + String.format("%.2fx", (double) jsonIoWriteTime / jsonIoWriteTimeNoCycles));
+        LOG.info("Write Ratio (JsonIo cycleSupport=true / Jackson): " + String.format("%.2fx", (double) jsonIoWriteTime / jacksonWriteTime));
+        LOG.info("Write Ratio (JsonIo cycleSupport=false / Jackson): " + String.format("%.2fx", (double) jsonIoWriteTimeNoCycles / jacksonWriteTime));
         LOG.info("JsonIo Read Time: " + (jsonIoReadTime / 1_000_000.0) + " ms");
         LOG.info("Jackson Read Time: " + (jacksonReadTime / 1_000_000.0) + " ms");
         LOG.info("Read Ratio (JsonIo/Jackson): " + String.format("%.2fx", (double) jsonIoReadTime / jacksonReadTime));
@@ -159,6 +176,8 @@ public class JsonPerformanceTest {
         TestData testData = createTestData();
         ObjectMapper jacksonMapper = new ObjectMapper();
         WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        // cycleSupport(false) skips traceReferences() pass - faster for acyclic data
+        WriteOptions writeOptionsNoCycles = new WriteOptionsBuilder().cycleSupport(false).build();
         ReadOptions readOptions = ReadOptionsBuilder.getDefaultReadOptions();
 
         // Warm-up
@@ -166,13 +185,15 @@ public class JsonPerformanceTest {
         for (int i = 0; i < WARMUP_ITERATIONS; i++) {
             String json = JsonIo.toJson(testData, writeOptions);
             Map map = JsonIo.toMaps(json, readOptions).asClass(Map.class);
+            String json2 = JsonIo.toJson(testData, writeOptionsNoCycles);
+            Map map2 = JsonIo.toMaps(json2, readOptions).asClass(Map.class);
             String jJson = jacksonMapper.writeValueAsString(testData);
             Map<String, Object> jMap = jacksonMapper.readValue(jJson, Map.class);
         }
         LOG.info("Warmup complete.");
 
-        // Test Write (same as full resolution)
-        LOG.info("Testing JsonIo Write with " + TEST_ITERATIONS + " iterations...");
+        // Test Write with cycle support (default)
+        LOG.info("Testing JsonIo Write (cycleSupport=true) with " + TEST_ITERATIONS + " iterations...");
         long start = System.nanoTime();
         String dummy = null;
         for (int i = 0; i < TEST_ITERATIONS; i++) {
@@ -180,7 +201,17 @@ public class JsonPerformanceTest {
             if (dummy.length() == 0) { /* no-op */ }
         }
         long jsonIoWriteTime = System.nanoTime() - start;
-        LOG.info("JsonIo Write complete.");
+        LOG.info("JsonIo Write (cycleSupport=true) complete.");
+
+        // Test Write without cycle support (faster for acyclic data)
+        LOG.info("Testing JsonIo Write (cycleSupport=false) with " + TEST_ITERATIONS + " iterations...");
+        start = System.nanoTime();
+        for (int i = 0; i < TEST_ITERATIONS; i++) {
+            dummy = JsonIo.toJson(testData, writeOptionsNoCycles);
+            if (dummy.length() == 0) { /* no-op */ }
+        }
+        long jsonIoWriteTimeNoCycles = System.nanoTime() - start;
+        LOG.info("JsonIo Write (cycleSupport=false) complete.");
 
         LOG.info("Testing Jackson Write with " + TEST_ITERATIONS + " iterations...");
         start = System.nanoTime();
@@ -216,9 +247,12 @@ public class JsonPerformanceTest {
         // Output results
         LOG.info("--- Maps Only Results ---");
         LOG.info("Iterations: " + TEST_ITERATIONS);
-        LOG.info("JsonIo Write Time: " + (jsonIoWriteTime / 1_000_000.0) + " ms");
+        LOG.info("JsonIo Write Time (cycleSupport=true):  " + (jsonIoWriteTime / 1_000_000.0) + " ms");
+        LOG.info("JsonIo Write Time (cycleSupport=false): " + (jsonIoWriteTimeNoCycles / 1_000_000.0) + " ms");
         LOG.info("Jackson Write Time: " + (jacksonWriteTime / 1_000_000.0) + " ms");
-        LOG.info("Write Ratio (JsonIo/Jackson): " + String.format("%.2fx", (double) jsonIoWriteTime / jacksonWriteTime));
+        LOG.info("Write Speedup (cycleSupport=false vs true): " + String.format("%.2fx", (double) jsonIoWriteTime / jsonIoWriteTimeNoCycles));
+        LOG.info("Write Ratio (JsonIo cycleSupport=true / Jackson): " + String.format("%.2fx", (double) jsonIoWriteTime / jacksonWriteTime));
+        LOG.info("Write Ratio (JsonIo cycleSupport=false / Jackson): " + String.format("%.2fx", (double) jsonIoWriteTimeNoCycles / jacksonWriteTime));
         LOG.info("JsonIo Read Time: " + (jsonIoReadTime / 1_000_000.0) + " ms");
         LOG.info("Jackson Read Time: " + (jacksonReadTime / 1_000_000.0) + " ms");
         LOG.info("Read Ratio (JsonIo/Jackson): " + String.format("%.2fx", (double) jsonIoReadTime / jacksonReadTime));

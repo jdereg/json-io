@@ -166,6 +166,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private final int maxIndentationDepth;
     private final int indentationThreshold;
     private final int indentationSize;
+    private final boolean cycleSupport;
 
     // Context tracking for automatic comma management
     private final Deque<WriteContext> contextStack = new ArrayDeque<>();
@@ -341,6 +342,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         this.maxIndentationDepth = this.writeOptions.getMaxIndentationDepth();
         this.indentationThreshold = this.writeOptions.getIndentationThreshold();
         this.indentationSize = this.writeOptions.getIndentationSize();
+        this.cycleSupport = this.writeOptions.isCycleSupport();
     }
 
     public WriteOptions getWriteOptions() {
@@ -559,8 +561,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * @param obj Object any Java Object or JsonObject.
      */
     public void write(Object obj) {
-        traceReferences(obj);
-        objVisited.clear();
+        if (cycleSupport) {
+            traceReferences(obj);
+            objVisited.clear();
+        }
+        // When cycleSupport=false, objVisited will be used during write to detect cycles
         try {
             boolean showType = writeOptions.isShowingRootTypeInfo();
             if (obj != null) {
@@ -768,7 +773,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (objVisited.containsKey(obj)) {    // Only write (define) an object once in the JSON stream, otherwise emit a @ref
             int id = getIdInt(obj);
             if (id == 0) {   // Test for 0 because of Weak/Soft references being gc'd during serialization.
-                return false;
+                // When cycleSupport=false, objects won't have IDs, but we still need to skip
+                // duplicates to prevent infinite recursion. Return true to skip silently.
+                return !cycleSupport;
             }
             output.write('{');
             output.write(refPrefix);

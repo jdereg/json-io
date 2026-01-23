@@ -288,6 +288,18 @@ public interface WriteOptions {
      */
     ConverterOptions getConverterOptions();
 
+    // ========== Cycle Support Options ==========
+
+    /**
+     * @return boolean true if cycle support is enabled (default). When true, the writer will trace
+     * references before writing to detect objects that appear multiple times, emitting @id on first
+     * occurrence and @ref on subsequent occurrences. When false, the traceReferences pass is skipped
+     * for performance, and cycles are detected during writing - duplicate references are silently
+     * skipped (not written). This is useful for performance-sensitive scenarios where the object
+     * graph is known to be acyclic or where cycle information is not needed.
+     */
+    boolean isCycleSupport();
+
     // ========== JSON5 Write Options ==========
 
     /**

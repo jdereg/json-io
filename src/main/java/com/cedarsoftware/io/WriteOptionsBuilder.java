@@ -226,6 +226,7 @@ public class WriteOptionsBuilder {
             options.showTypeInfo = other.showTypeInfo;
             options.skipNullFields = other.skipNullFields;
             options.writeLongsAsStrings = other.writeLongsAsStrings;
+            options.cycleSupport = other.cycleSupport;
 
             // Copy security limits
             options.maxIndentationDepth = other.maxIndentationDepth;
@@ -981,6 +982,32 @@ public class WriteOptionsBuilder {
         return this;
     }
 
+    // ========== Cycle Support Options ==========
+
+    /**
+     * Enable or disable cycle support. When enabled (default), the writer performs a preliminary
+     * pass to trace references and identify objects that appear multiple times in the graph.
+     * These objects are assigned @id values, and subsequent references use @ref.
+     * <p>
+     * When disabled, the traceReferences pass is skipped for better performance. Cycles are
+     * still detected during writing to prevent infinite loops - duplicate references are
+     * silently skipped (not written to the output). This is useful when:
+     * <ul>
+     *   <li>The object graph is known to be acyclic</li>
+     *   <li>Performance is critical and the traceReferences overhead is unacceptable</li>
+     *   <li>Cycle information (@id/@ref) is not needed in the output</li>
+     * </ul>
+     * <b>Warning:</b> When disabled, if the graph contains cycles, the output will be
+     * incomplete (cyclic references will be omitted).
+     * @param enable true to enable full cycle support with @id/@ref (default),
+     *               false to skip traceReferences and silently skip duplicate references
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder cycleSupport(boolean enable) {
+        options.cycleSupport = enable;
+        return this;
+    }
+
     // ========== JSON5 Write Options ==========
 
     /**
@@ -1494,6 +1521,9 @@ public class WriteOptionsBuilder {
         private boolean closeStream = true;
         private boolean showRootTypeInfo = true;    // Default true, will change to false in future release
 
+        // Cycle support option
+        private boolean cycleSupport = true;        // Default true for backward compatibility
+
         // JSON5 write options
         private boolean json5UnquotedKeys = false;
         private boolean json5SmartQuotes = false;
@@ -1759,6 +1789,17 @@ public class WriteOptionsBuilder {
          */
         public ClassLoader getClassLoader() {
             return classLoader;
+        }
+
+        // ========== Cycle Support Option Getter ==========
+
+        /**
+         * @return boolean true if cycle support is enabled (default). When true, the writer will trace
+         * references before writing. When false, traceReferences is skipped and cycles are detected
+         * during writing - duplicate references are silently skipped.
+         */
+        public boolean isCycleSupport() {
+            return cycleSupport;
         }
 
         // ========== JSON5 Write Options Getters ==========
