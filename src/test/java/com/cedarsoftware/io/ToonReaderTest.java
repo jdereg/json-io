@@ -567,6 +567,85 @@ class ToonReaderTest {
         assertEquals(25L, map1.get("age"));
     }
 
+    @Test
+    void testMapOfPersonWithTypeHolder() {
+        // With full generic type info via TypeHolder, values should be converted to TestPerson
+        Map<String, TestPerson> original = new LinkedHashMap<>();
+        original.put("emp1", new TestPerson("John", 30));
+        original.put("emp2", new TestPerson("Jane", 25));
+
+        String toon = JsonIo.toToon(original, null);
+
+        // Read with TypeHolder - values should be TestPerson instances
+        Map<String, TestPerson> restored = JsonIo.fromToon(toon, null)
+                .asType(new TypeHolder<Map<String, TestPerson>>() {});
+
+        assertEquals(2, restored.size());
+        assertTrue(restored.get("emp1") instanceof TestPerson, "Value should be TestPerson");
+        assertTrue(restored.get("emp2") instanceof TestPerson, "Value should be TestPerson");
+        assertEquals("John", restored.get("emp1").getName());
+        assertEquals(30, restored.get("emp1").getAge());
+        assertEquals("Jane", restored.get("emp2").getName());
+        assertEquals(25, restored.get("emp2").getAge());
+    }
+
+    @Test
+    void testMapOfPersonAsMapClass() {
+        // With just Map.class (no generic info), values should remain as Maps
+        Map<String, TestPerson> original = new LinkedHashMap<>();
+        original.put("emp1", new TestPerson("John", 30));
+        original.put("emp2", new TestPerson("Jane", 25));
+
+        String toon = JsonIo.toToon(original, null);
+
+        // Read as Map.class - values should be Maps (no type info to convert them)
+        Map<?, ?> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+
+        assertEquals(2, restored.size());
+
+        // Values should be Maps (JsonObjects) since no type hint is available
+        Object val1 = restored.get("emp1");
+        Object val2 = restored.get("emp2");
+        assertTrue(val1 instanceof Map, "Value should be a Map, got: " + val1.getClass().getName());
+        assertTrue(val2 instanceof Map, "Value should be a Map, got: " + val2.getClass().getName());
+
+        Map<?, ?> map1 = (Map<?, ?>) val1;
+        Map<?, ?> map2 = (Map<?, ?>) val2;
+        assertEquals("John", map1.get("name"));
+        assertEquals(30L, map1.get("age"));
+        assertEquals("Jane", map2.get("name"));
+        assertEquals(25L, map2.get("age"));
+    }
+
+    @Test
+    void testMapOfPersonAsLinkedHashMapClass() {
+        // With LinkedHashMap.class (specific type, no generic info), values should remain as Maps
+        Map<String, TestPerson> original = new LinkedHashMap<>();
+        original.put("emp1", new TestPerson("John", 30));
+        original.put("emp2", new TestPerson("Jane", 25));
+
+        String toon = JsonIo.toToon(original, null);
+
+        // Read as LinkedHashMap.class - values should be Maps (no type info to convert them)
+        LinkedHashMap<?, ?> restored = JsonIo.fromToon(toon, null).asClass(LinkedHashMap.class);
+
+        assertEquals(2, restored.size());
+        assertTrue(restored instanceof LinkedHashMap, "Should be LinkedHashMap");
+
+        // Values should be Maps (JsonObjects) since no type hint is available
+        Object val1 = restored.get("emp1");
+        Object val2 = restored.get("emp2");
+        assertTrue(val1 instanceof Map, "Value should be a Map, got: " + val1.getClass().getName());
+        assertTrue(val2 instanceof Map, "Value should be a Map, got: " + val2.getClass().getName());
+
+        Map<?, ?> map1 = (Map<?, ?>) val1;
+        Map<?, ?> map2 = (Map<?, ?>) val2;
+        assertEquals("John", map1.get("name"));
+        assertEquals(30L, map1.get("age"));
+        assertEquals("Jane", map2.get("name"));
+        assertEquals(25L, map2.get("age"));
+    }
+
     // ========== 14. String Edge Cases ==========
 
     @Test

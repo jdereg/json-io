@@ -418,6 +418,33 @@ public abstract class Resolver {
                 // Convert directly using the unmodified JsonObject (which has Map data)
                 return convertToType(jsonObj, type);
             }
+
+            // Special case: Map with JsonObject values (e.g., from ToonReader)
+            // When the target type is a ParameterizedType like Map<String, Person>, we need to
+            // convert each JsonObject value to the target value type.
+            // Only do this when:
+            // - The value type is a concrete POJO class (not Object, not Map, not interface, not simple type)
+            // - The JsonObject doesn't use @keys/@items format (which indicates special map serialization)
+            if (jsonTypeIsMap
+                    && Map.class.isAssignableFrom(targetClass)
+                    && type instanceof ParameterizedType
+                    && jsonObj.getKeys() == null) {  // Skip if uses @keys/@items format
+                Type[] typeArgs = ((ParameterizedType) type).getActualTypeArguments();
+                if (typeArgs.length >= 2 && mapValuesContainJsonObjects(jsonObj)) {
+                    Type valueType = typeArgs[1];
+                    Class<?> valueClass = TypeUtilities.getRawClass(valueType);
+                    // Only convert if value type is a concrete POJO class that needs conversion
+                    // Skip if value type is Object, Map, Collection, interface, or simple type
+                    if (valueClass != null
+                            && valueClass != Object.class
+                            && !valueClass.isInterface()
+                            && !isSimpleType(valueClass)
+                            && !Map.class.isAssignableFrom(valueClass)
+                            && !Collection.class.isAssignableFrom(valueClass)) {
+                        return convertMapValues(jsonObj, targetClass, valueType);
+                    }
+                }
+            }
         }
 
         // Special case: Array→different-Array or Array→Collection conversion.
@@ -743,6 +770,51 @@ public abstract class Resolver {
         }
         // Default to ArrayList for unknown types
         return new ArrayList<>(size);
+    }
+
+    /**
+     * Check if a Map (JsonObject) contains any JsonObject values that need conversion.
+     * This is used to detect when a Map from ToonReader has values
+     * that haven't been converted to their target types yet.
+     */
+    private boolean mapValuesContainJsonObjects(JsonObject map) {
+        for (Object value : map.values()) {
+            if (value instanceof JsonObject) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Convert a Map's values from JsonObjects to their target type.
+     * Returns a new Map with the same type containing converted values.
+     * Used when parsing TOON format where maps contain raw JsonObject values.
+     */
+    private Map<Object, Object> convertMapValues(JsonObject source, Class<?> targetMapClass, Type valueType) {
+        Map<Object, Object> result = createSameTypeMap(source, targetMapClass, source.size());
+        for (Map.Entry<Object, Object> entry : source.entrySet()) {
+            Object key = entry.getKey();
+            Object value = toJava(valueType, entry.getValue());
+            result.put(key, value);
+        }
+        return result;
+    }
+
+    /**
+     * Create a new Map of the appropriate type, with the given capacity.
+     */
+    private Map<Object, Object> createSameTypeMap(Map<?, ?> source, Class<?> targetClass, int size) {
+        // Try to create the target type if specified
+        if (targetClass == LinkedHashMap.class || targetClass == Map.class) {
+            return new LinkedHashMap<>(size);
+        } else if (targetClass == HashMap.class) {
+            return new HashMap<>(size);
+        } else if (targetClass == TreeMap.class) {
+            return new TreeMap<>();
+        }
+        // Default to LinkedHashMap to preserve insertion order
+        return new LinkedHashMap<>(size);
     }
 
     /**
