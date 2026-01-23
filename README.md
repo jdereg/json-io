@@ -76,13 +76,14 @@ String toon = JsonIo.toToon(myObject, writeOptions);
 
 **Example output comparison:**
 
-| Format | Output | Tokens |
-|--------|--------|--------|
-| JSON | `{"name":"John","age":30,"tags":["java","json"]}` | ~15 |
-| TOON | `name: John`<br>`age: 30`<br>`tags[2]: java,json` | ~9 |
+| Format | Output | Tokens | Size |
+|--------|--------|--------|------|
+| JSON | `{"name":"John","age":30,"tags":["java","json"]}` | ~15 | 48 chars |
+| JSON5 | `{name:"John",age:30,tags:["java","json"]}` | ~14 | 42 chars |
+| TOON | `name: John`<br>`age: 30`<br>`tags[2]: java,json` | ~9 | 38 chars |
 
 TOON uses indentation-based structure, minimal quoting, and inline arrays to reduce token count
-while remaining human-readable. See the [TOON section in the User Guide](/user-guide.md#toon-output-support) for details.
+while remaining human-readable. JSON5 saves ~12% over JSON; TOON saves ~40% over JSON. See the [TOON section in the User Guide](/user-guide.md#toon-output-support) for details.
 
 ## Cloud Native & Microservices
 

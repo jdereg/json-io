@@ -468,12 +468,17 @@ address.put("zip", 10001);
 data.put("address", address);
 ```
 
-**JSON output (134 characters):**
+**JSON output (91 characters):**
 ```json
 {"name":"John","age":30,"tags":["java","json","toon"],"address":{"city":"NYC","zip":10001}}
 ```
 
-**TOON output (77 characters, ~42% smaller):**
+**JSON5 output (79 characters, ~13% smaller):**
+```json5
+{name:"John",age:30,tags:["java","json","toon"],address:{city:"NYC",zip:10001}}
+```
+
+**TOON output (54 characters, ~41% smaller):**
 ```
 name: John
 age: 30
@@ -482,6 +487,12 @@ address:
   city: NYC
   zip: 10001
 ```
+
+| Format | Size | Savings vs JSON |
+|--------|------|-----------------|
+| JSON | 91 chars | — |
+| JSON5 | 79 chars | ~13% smaller |
+| TOON | 54 chars | ~41% smaller |
 
 ### TOON String Quoting Rules
 
