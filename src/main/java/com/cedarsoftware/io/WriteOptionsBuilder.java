@@ -108,6 +108,7 @@ public class WriteOptionsBuilder {
     private static volatile boolean BASE_ENUM_PUBLIC_FIELDS_ONLY = false;
     private static volatile boolean BASE_ENUM_SET_WRITTEN_OLD_WAY = true;
     private static volatile boolean BASE_CLOSE_STREAM = true;
+    private static volatile boolean BASE_CYCLE_SUPPORT = true;
     private static volatile ClassLoader BASE_CLASS_LOADER = ClassUtilities.getClassLoader(WriteOptionsBuilder.class);
     
     private static final WriteOptions defWriteOptions;
@@ -673,6 +674,22 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentCloseStream(boolean closeStream) {
         BASE_CLOSE_STREAM = closeStream;
+    }
+
+    /**
+     * Call this method to set a permanent (JVM lifetime) cycle support setting.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     * <p>
+     * When cycle support is enabled (true, default), the writer performs a traceReferences() pre-pass
+     * to identify multi-referenced objects, emitting @id on first occurrence and @ref on subsequent.
+     * When disabled (false), the pre-pass is skipped for ~35-40% faster serialization of acyclic data.
+     * If a cycle is detected during write with cycleSupport=false, duplicates are silently skipped.
+     *
+     * @param cycleSupport boolean true to enable full cycle support with @id/@ref (default),
+     *                     false to skip traceReferences for performance with acyclic data.
+     */
+    public static void addPermanentCycleSupport(boolean cycleSupport) {
+        BASE_CYCLE_SUPPORT = cycleSupport;
     }
 
     /**
@@ -1522,7 +1539,7 @@ public class WriteOptionsBuilder {
         private boolean showRootTypeInfo = true;    // Default true, will change to false in future release
 
         // Cycle support option
-        private boolean cycleSupport = true;        // Default true for backward compatibility
+        private boolean cycleSupport = BASE_CYCLE_SUPPORT;  // Default true for backward compatibility
 
         // JSON5 write options
         private boolean json5UnquotedKeys = false;

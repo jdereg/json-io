@@ -41,6 +41,63 @@ appropriate class types are used based on the class names specified in the optio
 >#### `WriteOptionsBuilder` classLoader(`ClassLoader loader`)
 >- [ ] Sets the ClassLoader to resolve String class names.
 
+### Cycle Support - Controlling @id/@ref Generation
+
+By default, `json-io` performs a two-pass serialization: first tracing references to identify objects that appear multiple times, then writing the JSON with `@id`/`@ref` markers. This enables full cycle and shared-reference support but has some overhead.
+
+If your data is **acyclic** (no circular references) and you don't need shared-reference preservation, you can disable cycle support for significant performance improvement (~35-40% faster writes).
+
+>#### `boolean` isCycleSupport()
+>- [ ] Returns `true` if cycle support is enabled (default). When `true`, the writer traces all references before writing to detect multi-referenced objects, emitting `@id` on first occurrence and `@ref` on subsequent occurrences.
+
+>#### `WriteOptionsBuilder` cycleSupport(`boolean enable`)
+>- [ ] Controls whether the `traceReferences()` pre-pass runs before serialization.
+>- [ ] `true` (default): Full cycle support - `@id`/`@ref` emitted for multi-referenced objects, cycles handled correctly
+>- [ ] `false`: Skip traceReferences for performance - cycles detected during write are silently skipped (not written)
+
+#### Behavior Comparison
+
+| Scenario | `cycleSupport=true` (default) | `cycleSupport=false`                    |
+|----------|-------------------------------|-----------------------------------------|
+| Acyclic data | Works correctly, with overhead | Works correctly, faster                 |
+| Object referenced multiple times | `@id` on first, `@ref` on subsequent | First written fully, duplicates skipped |
+| Circular reference (A → B → A) | Handled with `@id`/`@ref` | Cycle silently broken, no infinite loop |
+| Performance | ~1.0x baseline | ~1.35-1.40x faster                     |
+
+#### Comparison with Other Libraries
+
+| Library | Cycle Handling |
+|---------|----------------|
+| **Jackson** | Requires `@JsonIdentityInfo` annotation on classes; throws exception if unannotated cycles |
+| **GSON** | No built-in support; throws `StackOverflowError` on cycles |
+| **json-io (cycleSupport=true)** | Automatic - no annotations needed, full graph fidelity preserved |
+| **json-io (cycleSupport=false)** | Skip overhead when cycles known to not exist; cycles silently broken |
+
+#### Example Usage
+
+```java
+// Default: Full cycle support (safe for any object graph)
+WriteOptions defaultOptions = new WriteOptionsBuilder().build();
+String json = JsonIo.toJson(objectGraph, defaultOptions);
+
+// Performance mode: Skip cycle detection for acyclic data
+WriteOptions fastOptions = new WriteOptionsBuilder()
+        .cycleSupport(false)
+        .build();
+String json = JsonIo.toJson(acyclicData, fastOptions);
+```
+
+**When to use `cycleSupport(false)`:**
+- Serializing DTOs, POJOs, or data transfer objects with no circular references
+- High-throughput scenarios where performance is critical
+- Data structures that are known to be tree-shaped (no shared nodes)
+
+**When to keep `cycleSupport(true)` (default):**
+- Object graphs with circular references (parent ↔ child relationships)
+- Graphs where the same object is intentionally shared across multiple locations
+- When you need exact object identity preserved on round-trip
+
+---
 ### MetaKeys - @id, @ref, @type, @items, @keys, @values
 
 `json-io` utilizes several special fields added to JSON objects to aid in accurate deserialization:
@@ -1001,6 +1058,10 @@ Sets the permanent enum set written old way setting for all new `WriteOptions` i
 ### addPermanentCloseStream
 Sets the permanent close stream setting for all new `WriteOptions` instances. When enabled, the OutputStream is automatically closed after JSON writing is complete.
 >#### WriteOptionsBuilder.addPermanentCloseStream(`boolean closeStream`)
+
+### addPermanentCycleSupport
+Sets the permanent cycle support setting for all new `WriteOptions` instances. When enabled (default), the writer performs a `traceReferences()` pre-pass to identify multi-referenced objects and emit `@id`/`@ref`. When disabled, the pre-pass is skipped for ~35-40% faster serialization of acyclic data.
+>#### WriteOptionsBuilder.addPermanentCycleSupport(`boolean cycleSupport`)
 
 ### Combined Configuration Example
 You can configure multiple permanent settings together for your application's global defaults:

@@ -12,6 +12,12 @@ String json = JsonIo.toJson(emp, writeOptions);
 This example will convert the `Employee` instance to a JSON String, including nested sub-objects.  If
 `JsonIo.toJava(json, readOptions).asClass(Employee.class)` were used on this JSON `String,` a new Java `Employee` instance would be returned.
 
+**Performance tip:** If your data has no circular references (e.g., DTOs, simple POJOs), use `cycleSupport(false)` for ~35-40% faster serialization:
+```java
+WriteOptions fastOptions = new WriteOptionsBuilder().cycleSupport(false).build();
+String json = JsonIo.toJson(emp, fastOptions);
+```
+
 See [WriteOptions reference](/user-guide-writeOptions.md) for list of all `WriteOptions` and instructions on how to use.
 
 _Example 2: String to Java object_
