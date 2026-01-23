@@ -336,6 +336,110 @@ public class JsonIo {
         }
     }
 
+    // =============================================
+    // TOON (Token-Oriented Object Notation) Input
+    // =============================================
+
+    /**
+     * Begins the process of converting a TOON string to Java objects.
+     * <p>
+     * This method parses TOON (Token-Oriented Object Notation) format, which is a compact,
+     * human-readable format optimized for LLM token efficiency. The returned builder can
+     * complete the conversion to the desired Java type.
+     *
+     * <h3>Examples:</h3>
+     * <pre>{@code
+     * // Parse TOON to a specific class
+     * Person person = JsonIo.fromToon(toonString, options).asClass(Person.class);
+     *
+     * // Parse to a generic collection type
+     * List<Person> people = JsonIo.fromToon(toonString, options)
+     *                               .asType(new TypeHolder<List<Person>>(){});
+     * }</pre>
+     *
+     * @param toon the TOON string to parse; if null, an empty string will be used
+     * @param readOptions configuration options for controlling how the TOON is parsed;
+     *                    if null, default options will be used
+     * @return a builder to complete the conversion by specifying the target type
+     * @see <a href="https://toonformat.dev/">TOON Format Specification</a>
+     */
+    public static ToonStringBuilder fromToon(String toon, ReadOptions readOptions) {
+        return new ToonStringBuilder(toon, readOptions);
+    }
+
+    /**
+     * Begins the process of converting TOON from an InputStream to Java objects.
+     * <p>
+     * This method parses TOON (Token-Oriented Object Notation) from an input stream.
+     * By default, the input stream is closed after reading. To keep it open,
+     * configure the read options with {@code readOptions.closeStream(false)}.
+     *
+     * <h3>Examples:</h3>
+     * <pre>{@code
+     * // Parse TOON from a file
+     * try (FileInputStream fis = new FileInputStream("data.toon")) {
+     *     Person person = JsonIo.fromToon(fis, options).asClass(Person.class);
+     * }
+     * }</pre>
+     *
+     * @param in the input stream containing TOON; must not be null
+     * @param readOptions configuration options for controlling how the TOON is parsed;
+     *                    if null, default options will be used
+     * @return a builder to complete the conversion by specifying the target type
+     * @throws IllegalArgumentException if the input stream is null
+     * @see <a href="https://toonformat.dev/">TOON Format Specification</a>
+     */
+    public static ToonStreamBuilder fromToon(InputStream in, ReadOptions readOptions) {
+        return new ToonStreamBuilder(in, readOptions);
+    }
+
+    /**
+     * Parses TOON into a {@code Map<String, Object>} graph without requiring Java classes.
+     * <p>
+     * This method provides a class-independent way to parse any TOON structure.
+     *
+     * @param toon the TOON string to parse; if null, an empty string will be used
+     * @return a builder to complete the conversion by specifying the target type
+     * @see <a href="https://toonformat.dev/">TOON Format Specification</a>
+     */
+    public static ToonStringBuilder fromToonToMaps(String toon) {
+        return fromToonToMaps(toon, null);
+    }
+
+    /**
+     * Parses TOON into a Map graph with custom read options.
+     *
+     * @param toon the TOON string to parse; if null, an empty string will be used
+     * @param readOptions configuration options; if null, defaults will be used
+     * @return a builder to complete the conversion by specifying the target type
+     */
+    public static ToonStringBuilder fromToonToMaps(String toon, ReadOptions readOptions) {
+        return new ToonStringBuilder(toon, getMapOptions(readOptions));
+    }
+
+    /**
+     * Parses TOON from an InputStream into a Map graph without requiring Java classes.
+     *
+     * @param in the input stream containing TOON; must not be null
+     * @return a builder to complete the conversion by specifying the target type
+     * @throws IllegalArgumentException if the input stream is null
+     */
+    public static ToonStreamBuilder fromToonToMaps(InputStream in) {
+        return fromToonToMaps(in, null);
+    }
+
+    /**
+     * Parses TOON from an InputStream into a Map graph with custom read options.
+     *
+     * @param in the input stream containing TOON; must not be null
+     * @param readOptions configuration options; if null, defaults will be used
+     * @return a builder to complete the conversion by specifying the target type
+     * @throws IllegalArgumentException if the input stream is null
+     */
+    public static ToonStreamBuilder fromToonToMaps(InputStream in, ReadOptions readOptions) {
+        return new ToonStreamBuilder(in, getMapOptions(readOptions));
+    }
+
     /**
      * Parses JSON into a {@code Map<String, Object>} graph without requiring Java classes on classpath.
      * <p>
@@ -1054,6 +1158,167 @@ public class JsonIo {
                     ClassUtilities.setUseUnsafe(false);
                 }
                 resolver.cleanup();
+            }
+        }
+    }
+
+    /**
+     * Builder for converting a TOON string to Java objects.
+     * <p>
+     * This builder completes the TOON parsing process started by {@link #fromToon(String, ReadOptions)}.
+     * It provides methods to specify the target type for the deserialization.
+     */
+    public static final class ToonStringBuilder {
+        private final String toon;
+        private final ReadOptions readOptions;
+
+        ToonStringBuilder(String toon, ReadOptions readOptions) {
+            this.toon = toon != null ? toon : "";
+            this.readOptions = readOptions != null ? readOptions : ReadOptionsBuilder.getDefaultReadOptions();
+        }
+
+        /**
+         * Completes the TOON parsing by specifying a target class.
+         *
+         * @param <T> the type to convert the TOON to
+         * @param clazz the target class; if null, the type will be inferred from the TOON
+         * @return an instance of the specified class populated from the TOON
+         * @throws JsonIoException if an error occurs during parsing or conversion
+         */
+        public <T> T asClass(Class<T> clazz) {
+            return asType(TypeHolder.forClass(clazz));
+        }
+
+        /**
+         * Completes the TOON parsing by specifying a generic type.
+         *
+         * @param <T> the type to convert the TOON to
+         * @param typeHolder a TypeHolder instance capturing the full generic type
+         * @return an object of the specified type populated from the TOON
+         * @throws JsonIoException if an error occurs during parsing or conversion
+         */
+        @SuppressWarnings("unchecked")
+        public <T> T asType(TypeHolder<T> typeHolder) {
+            try {
+                return parseToon(typeHolder);
+            } catch (JsonIoException je) {
+                throw je;
+            } catch (Exception e) {
+                throw new JsonIoException(e);
+            }
+        }
+
+        @SuppressWarnings("unchecked")
+        private <T> T parseToon(TypeHolder<T> typeHolder) {
+            StringReader stringReader = new StringReader(toon);
+            ToonReader parser = new ToonReader(stringReader, readOptions);
+
+            // Parse phase - produces JsonObject/Object[]/primitive structure
+            Object parsed;
+            try {
+                parsed = parser.readValue(typeHolder.getType());
+            } catch (JsonIoException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new JsonIoException("Error parsing TOON value", e);
+            }
+
+            // Resolve phase - converts to Java objects using existing Resolver
+            Resolver resolver = createResolver(readOptions);
+            boolean shouldManageUnsafe = readOptions.isUseUnsafe();
+            if (shouldManageUnsafe) {
+                ClassUtilities.setUseUnsafe(true);
+            }
+
+            try {
+                return (T) resolver.toJava(typeHolder.getType(), parsed);
+            } catch (Exception e) {
+                if (e instanceof JsonIoException) {
+                    throw (JsonIoException) e;
+                }
+                throw new JsonIoException(e.getMessage(), e);
+            } finally {
+                if (shouldManageUnsafe) {
+                    ClassUtilities.setUseUnsafe(false);
+                }
+                resolver.cleanup();
+            }
+        }
+    }
+
+    /**
+     * Builder for converting TOON from an InputStream to Java objects.
+     * <p>
+     * This builder completes the TOON parsing process started by {@link #fromToon(InputStream, ReadOptions)}.
+     * It provides methods to specify the target type for the deserialization.
+     */
+    public static final class ToonStreamBuilder {
+        private final InputStream in;
+        private final ReadOptions readOptions;
+
+        ToonStreamBuilder(InputStream in, ReadOptions readOptions) {
+            Convention.throwIfNull(in, "InputStream cannot be null");
+            this.in = in;
+            this.readOptions = readOptions != null ? readOptions : ReadOptionsBuilder.getDefaultReadOptions();
+        }
+
+        /**
+         * Completes the TOON parsing by specifying a target class.
+         *
+         * @param <T> the type to convert the TOON to
+         * @param clazz the target class; if null, the type will be inferred from the TOON
+         * @return an instance of the specified class populated from the TOON
+         * @throws JsonIoException if an error occurs during parsing or conversion
+         */
+        public <T> T asClass(Class<T> clazz) {
+            return asType(TypeHolder.forClass(clazz));
+        }
+
+        /**
+         * Completes the TOON parsing by specifying a generic type.
+         *
+         * @param <T> the type to convert the TOON to
+         * @param typeHolder a TypeHolder instance capturing the full generic type
+         * @return an object of the specified type populated from the TOON
+         * @throws JsonIoException if an error occurs during parsing or conversion
+         */
+        @SuppressWarnings("unchecked")
+        public <T> T asType(TypeHolder<T> typeHolder) {
+            InputStreamReader streamReader = new InputStreamReader(in, StandardCharsets.UTF_8);
+            ToonReader parser = new ToonReader(streamReader, readOptions);
+
+            // Parse phase
+            Object parsed;
+            try {
+                parsed = parser.readValue(typeHolder.getType());
+            } catch (JsonIoException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new JsonIoException("Error parsing TOON value", e);
+            }
+
+            // Resolve phase
+            Resolver resolver = createResolver(readOptions);
+            boolean shouldManageUnsafe = readOptions.isUseUnsafe();
+            if (shouldManageUnsafe) {
+                ClassUtilities.setUseUnsafe(true);
+            }
+
+            try {
+                return (T) resolver.toJava(typeHolder.getType(), parsed);
+            } catch (Exception e) {
+                if (e instanceof JsonIoException) {
+                    throw (JsonIoException) e;
+                }
+                throw new JsonIoException(e.getMessage(), e);
+            } finally {
+                if (shouldManageUnsafe) {
+                    ClassUtilities.setUseUnsafe(false);
+                }
+                resolver.cleanup();
+                if (readOptions.isCloseStream()) {
+                    IOUtilities.close(streamReader);
+                }
             }
         }
     }

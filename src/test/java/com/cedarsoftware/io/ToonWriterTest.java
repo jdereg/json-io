@@ -178,8 +178,8 @@ class ToonWriterTest {
     void testEmptyMap() {
         Map<String, Object> empty = new HashMap<>();
         String toon = JsonIo.toToon(empty, null);
-        // Empty objects produce no output in TOON
-        assertEquals("", toon);
+        // Empty maps use {} syntax for round-trip support
+        assertEquals("{}", toon);
     }
 
     @Test

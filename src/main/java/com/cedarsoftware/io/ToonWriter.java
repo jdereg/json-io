@@ -6,18 +6,17 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
-import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.cedarsoftware.util.ArrayUtilities;
+import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.FastWriter;
 import com.cedarsoftware.util.IOUtilities;
 
@@ -112,23 +111,36 @@ public class ToonWriter implements Closeable, Flushable {
 
         Class<?> clazz = value.getClass();
 
-        // Primitives and primitive wrappers
-        if (value instanceof String) {
-            writeString((String) value);
-        } else if (value instanceof Number) {
-            writeNumber((Number) value);
-        } else if (value instanceof Boolean) {
-            out.write(((Boolean) value) ? "true" : "false");
-        } else if (value instanceof Character) {
-            writeString(String.valueOf(value));
-        } else if (clazz.isArray()) {
+        // Structural types - handle with nested output
+        if (clazz.isArray()) {
             writeArray(value);
         } else if (value instanceof Collection) {
             writeCollection((Collection<?>) value);
         } else if (value instanceof Map) {
             writeMap((Map<?, ?>) value);
-        } else {
-            // Complex object - write as key: value pairs
+        }
+        // String - write directly (most common case after structures)
+        else if (value instanceof String) {
+            writeString((String) value);
+        }
+        // Number - special handling for NaN/Infinity per TOON spec
+        else if (value instanceof Number) {
+            writeNumber((Number) value);
+        }
+        // Boolean - write unquoted true/false (Converter returns string which would get quoted)
+        else if (value instanceof Boolean) {
+            out.write(((Boolean) value) ? "true" : "false");
+        }
+        // Character - convert to string
+        else if (value instanceof Character) {
+            writeString(String.valueOf(value));
+        }
+        // All other types - use Converter if supported (AtomicBoolean, Enum, BitSet, Date, Time, UUID, etc.)
+        else if (Converter.isConversionSupportedFor(clazz, String.class)) {
+            writeString(Converter.convert(value, String.class));
+        }
+        // Fallback - complex object as key: value pairs
+        else {
             writeObject(value);
         }
     }
@@ -177,7 +189,7 @@ public class ToonWriter implements Closeable, Flushable {
             return true;
         }
 
-        // Check if looks like a number
+        // Check if it looks like a number
         if (looksLikeNumber(str)) {
             return true;
         }
@@ -188,7 +200,8 @@ public class ToonWriter implements Closeable, Flushable {
         }
 
         // Check for special characters
-        for (int i = 0; i < str.length(); i++) {
+        int len = str.length();
+        for (int i = 0; i < len; i++) {
             char c = str.charAt(i);
             if (c == ':' || c == '"' || c == '\\' || c == '[' || c == ']' ||
                 c == '{' || c == '}' || c == '\n' || c == '\r' || c == '\t' ||
@@ -210,10 +223,11 @@ public class ToonWriter implements Closeable, Flushable {
 
         int start = 0;
         char first = str.charAt(0);
+        int len = str.length();
 
         // Allow leading +/-
         if (first == '+' || first == '-') {
-            if (str.length() == 1) {
+            if (len == 1) {
                 return false;
             }
             start = 1;
@@ -223,7 +237,7 @@ public class ToonWriter implements Closeable, Flushable {
         boolean hasDot = false;
         boolean hasE = false;
 
-        for (int i = start; i < str.length(); i++) {
+        for (int i = start; i < len; i++) {
             char c = str.charAt(i);
             if (c >= '0' && c <= '9') {
                 hasDigit = true;
@@ -232,7 +246,7 @@ public class ToonWriter implements Closeable, Flushable {
             } else if ((c == 'e' || c == 'E') && hasDigit && !hasE) {
                 hasE = true;
                 // Allow +/- after e
-                if (i + 1 < str.length()) {
+                if (i + 1 < len) {
                     char next = str.charAt(i + 1);
                     if (next == '+' || next == '-') {
                         i++;
@@ -251,7 +265,8 @@ public class ToonWriter implements Closeable, Flushable {
      * Only valid escapes: \\, \", \n, \r, \t
      */
     private void writeEscapedString(String str) throws IOException {
-        for (int i = 0; i < str.length(); i++) {
+        int len = str.length();
+        for (int i = 0; i < len; i++) {
             char c = str.charAt(i);
             switch (c) {
                 case '\\':
@@ -339,13 +354,17 @@ public class ToonWriter implements Closeable, Flushable {
                 writeIndent();
                 out.write("- ");
                 Object element = ArrayUtilities.getElement(array, i);
-                if (element != null && !isPrimitive(element)) {
+                if (element == null || isPrimitive(element)) {
+                    writeValue(element);
+                } else if (element.getClass().isArray()) {
+                    // Nested array - recurse
+                    writeArray(element);
+                } else {
+                    // Complex object
                     out.write(NEW_LINE);
                     depth++;
                     writeNestedObject(element);
                     depth--;
-                } else {
-                    writeValue(element);
                 }
             }
             depth--;
@@ -390,13 +409,20 @@ public class ToonWriter implements Closeable, Flushable {
                 out.write(NEW_LINE);
                 writeIndent();
                 out.write("- ");
-                if (element != null && !isPrimitive(element)) {
+                if (element == null || isPrimitive(element)) {
+                    writeValue(element);
+                } else if (element instanceof Collection) {
+                    // Nested collection - recurse
+                    writeCollection((Collection<?>) element);
+                } else if (element.getClass().isArray()) {
+                    // Nested array - recurse
+                    writeArray(element);
+                } else {
+                    // Complex object
                     out.write(NEW_LINE);
                     depth++;
                     writeNestedObject(element);
                     depth--;
-                } else {
-                    writeValue(element);
                 }
             }
             depth--;
@@ -408,7 +434,7 @@ public class ToonWriter implements Closeable, Flushable {
      */
     private void writeMap(Map<?, ?> map) throws IOException {
         if (map.isEmpty()) {
-            // Empty object produces no output in TOON
+            out.write("{}");
             return;
         }
 
@@ -504,7 +530,7 @@ public class ToonWriter implements Closeable, Flushable {
      * Uses getDeepDeclaredFields() which caches field discovery via ReflectionUtils.
      */
     private Map<String, Object> getObjectFields(Object obj) {
-        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        Map<String, Object> result = new LinkedHashMap<>();
 
         // Use WriteOptions' cached field retrieval (respects excluded/included fields, filters, etc.)
         Map<String, java.lang.reflect.Field> fieldMap = writeOptions.getDeepDeclaredFields(obj.getClass());
@@ -536,23 +562,38 @@ public class ToonWriter implements Closeable, Flushable {
         } else if (value instanceof Number) {
             writeNumber((Number) value);
         } else if (value instanceof Boolean) {
+            // Write unquoted true/false
             out.write(((Boolean) value) ? "true" : "false");
         } else if (value instanceof Character) {
             writeString(String.valueOf(value));
+        } else if (Converter.isConversionSupportedFor(value.getClass(), String.class)) {
+            // AtomicBoolean, Enum, BitSet, Date, Time, UUID, etc.
+            writeString(Converter.convert(value, String.class));
         } else {
-            // Fallback for unexpected types
+            // Fallback for unsupported types
             writeString(value.toString());
         }
     }
 
     /**
-     * Check if a value is a primitive (for TOON inline formatting purposes).
+     * Check if a value is a "primitive" for TOON formatting purposes.
+     * A primitive is a value that can be written inline (not as nested structure).
+     * This includes basic types and any type that Converter can convert to String,
+     * but excludes structural types (Map, Collection, Array).
      */
     private boolean isPrimitive(Object value) {
+        if (value == null) {
+            return true;
+        }
+        // Structural types are not primitives even if Converter supports them
+        if (value instanceof Map || value instanceof Collection || value.getClass().isArray()) {
+            return false;
+        }
         return value instanceof String ||
                value instanceof Number ||
                value instanceof Boolean ||
-               value instanceof Character;
+               value instanceof Character ||
+               Converter.isConversionSupportedFor(value.getClass(), String.class);
     }
 
     /**

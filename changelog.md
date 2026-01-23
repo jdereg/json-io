@@ -14,6 +14,33 @@
     * NaN/Infinity → null, -0 → 0 normalization per spec
   * Cycle detection included (silently skips cyclic references)
   * See [TOON Format Specification](https://toonformat.dev/) for details
+  * Comprehensive type support for serialization:
+    * Primitives and wrappers: `Boolean`, `Byte`, `Short`, `Integer`, `Long`, `Float`, `Double`, `Character`
+    * Big numbers: `BigInteger`, `BigDecimal`
+    * Atomic types: `AtomicBoolean`, `AtomicInteger`, `AtomicLong`
+    * String types: `String`, `StringBuilder`, `StringBuffer`
+    * Date/Time: `Date`, `Timestamp`, `Calendar`, `Instant`, `LocalDate`, `LocalTime`, `LocalDateTime`, `ZonedDateTime`, `OffsetDateTime`, `OffsetTime`, `Year`, `YearMonth`, `MonthDay`, `Duration`, `Period`
+    * Zones: `ZoneId`, `ZoneOffset`, `TimeZone`
+    * IDs: `UUID`, `URI`, `URL`
+    * Files: `File`, `Path`
+    * Other: `Locale`, `Currency`, `Class`, `Pattern`, `BitSet` (as binary string), `Enum`
+    * Collections: `Collection`, `List`, `Set`, `Map`, arrays
+* **FEATURE**: TOON (Token-Oriented Object Notation) input support
+  * Added `JsonIo.fromToon(String, ReadOptions)` - Parse TOON format string to Java objects
+  * Added `JsonIo.fromToon(InputStream, ReadOptions)` - Stream TOON input directly
+  * Added `JsonIo.fromToonToMaps(String, ReadOptions)` - Parse TOON to Maps (class-independent)
+  * Added `JsonIo.fromToonToMaps(InputStream, ReadOptions)` - Stream TOON to Maps
+  * Fluent builder API:
+    * `.asClass(Class<T>)` - Parse and convert to specific class
+    * `.asType(TypeHolder<T>)` - Parse and convert with generic type information
+  * Produces same JsonObject structures as JsonParser, reusing existing Resolver infrastructure
+  * Full TOON format support including:
+    * Indentation-based structure (2 spaces per level)
+    * `key: value` object syntax with nested structure detection
+    * Inline arrays: `[N]: elem1,elem2,elem3`
+    * List format arrays: `[N]:` followed by `- elem` lines
+    * Scalar parsing: null, true, false, numbers (Long/Double), strings
+    * Quoted strings with 5 escape sequences: `\\`, `\"`, `\n`, `\r`, `\t`
 * **FEATURE**: `WriteOptionsBuilder` - Added `cycleSupport(boolean)` option for performance optimization
   * `cycleSupport(true)` (default) - Full cycle support with `@id`/`@ref` for multi-referenced objects
   * `cycleSupport(false)` - Skips the `traceReferences()` pre-pass for faster serialization of acyclic data
