@@ -420,6 +420,146 @@ Output:
 
 This JSON5 output can be read back by json-io (or any JSON5-compliant parser) without any issues.
 
+## TOON Output Support
+
+[TOON (Token-Oriented Object Notation)](https://toonformat.dev/) is a compact, human-readable format
+optimized for LLM token efficiency, using approximately **40-50% fewer tokens** than equivalent JSON.
+json-io can serialize Java objects directly to TOON format.
+
+### Basic TOON Usage
+
+```java
+// Convert any Java object to TOON
+Person person = new Person("John", 30);
+String toon = JsonIo.toToon(person, null);
+
+// Or stream to an OutputStream
+JsonIo.toToon(outputStream, person, writeOptions);
+```
+
+### TOON Format Characteristics
+
+TOON uses a line-oriented, indentation-based structure:
+
+| Feature | JSON | TOON |
+|---------|------|------|
+| Object delimiters | `{ }` | Indentation (2 spaces) |
+| Array delimiters | `[ ]` | Count prefix: `[N]:` |
+| Key-value separator | `"key": value` | `key: value` |
+| String quoting | Always quoted | Only when necessary |
+| Line endings | Any | LF only |
+
+### Example Output
+
+**Java object:**
+```java
+Map<String, Object> data = new LinkedHashMap<>();
+data.put("name", "John");
+data.put("age", 30);
+data.put("tags", Arrays.asList("java", "json", "toon"));
+
+Map<String, Object> address = new LinkedHashMap<>();
+address.put("city", "NYC");
+address.put("zip", 10001);
+data.put("address", address);
+```
+
+**JSON output (134 characters):**
+```json
+{"name":"John","age":30,"tags":["java","json","toon"],"address":{"city":"NYC","zip":10001}}
+```
+
+**TOON output (77 characters, ~42% smaller):**
+```
+name: John
+age: 30
+tags[3]: java,json,toon
+address:
+  city: NYC
+  zip: 10001
+```
+
+### TOON String Quoting Rules
+
+TOON only quotes strings when necessary. Strings are quoted when they:
+
+- Are empty
+- Have leading/trailing whitespace
+- Equal `true`, `false`, or `null`
+- Look like numbers (e.g., `"42"`, `"3.14"`)
+- Contain special characters: `:`, `"`, `\`, `[`, `]`, `{`, `}`, newlines, tabs
+- Contain the delimiter character (comma by default)
+- Start with hyphen
+
+```java
+// These strings will NOT be quoted:
+"hello"     →  hello
+"NYC"       →  NYC
+
+// These strings WILL be quoted:
+""          →  ""
+"true"      →  "true"
+"42"        →  "42"
+"hello:world" → "hello:world"
+" spaced "  →  " spaced "
+```
+
+### TOON Array Formats
+
+**Primitive arrays** (inline format):
+```
+tags[3]: foo,bar,baz
+numbers[5]: 1,2,3,4,5
+```
+
+**Complex arrays** (list format with hyphens):
+```
+employees[2]:
+  -
+    name: Alice
+    age: 25
+  -
+    name: Bob
+    age: 30
+```
+
+### TOON Special Value Handling
+
+Per the TOON specification:
+- `NaN` → `null`
+- `Infinity` / `-Infinity` → `null`
+- `-0` → `0`
+
+### TOON Escape Sequences
+
+TOON only supports 5 escape sequences (fewer than JSON):
+- `\\` — backslash
+- `\"` — double quote
+- `\n` — newline
+- `\r` — carriage return
+- `\t` — tab
+
+### When to Use TOON
+
+**Use TOON when:**
+- Sending data to LLMs (significant token savings)
+- Human readability is important
+- You don't need to read the data back (TOON is write-only in json-io currently)
+- Data is primarily acyclic
+
+**Use JSON when:**
+- Interoperability with other systems is required
+- You need round-trip serialization (JSON → Java → JSON)
+- Data contains cyclic references that must be preserved
+- Standard JSON tooling is needed
+
+### Cycle Handling in TOON
+
+TOON output silently skips cyclic references to prevent infinite loops. If an object
+is encountered twice during serialization, the second occurrence is written as `null`.
+This is consistent with TOON's design goal of compact, LLM-friendly output where
+cyclic references are typically not needed.
+
 ## Advanced Usage
 Sometimes you will run into a class that does not want to serialize.  On the read-side, this can be a class that does
 not want to be instantiated easily.  A class that has private constructors, constructor with many difficult to supply

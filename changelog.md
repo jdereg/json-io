@@ -1,5 +1,19 @@
 ### Revision History
 #### 4.85.0 (unreleased)
+* **FEATURE**: TOON (Token-Oriented Object Notation) output support
+  * Added `JsonIo.toToon(Object, WriteOptions)` - Convert Java objects to TOON format string
+  * Added `JsonIo.toToon(OutputStream, Object, WriteOptions)` - Stream TOON output directly
+  * TOON is a compact, human-readable format optimized for LLM token efficiency (~40-50% fewer tokens than JSON)
+  * Key TOON characteristics:
+    * Indentation-based structure (2 spaces, LF line endings) - no braces/brackets
+    * Primitive arrays inline: `tags[3]: foo,bar,baz`
+    * Mixed arrays with hyphen list format
+    * Key: value object syntax
+    * Minimal quoting (only when necessary per TOON spec)
+    * Only 5 escape sequences: `\\`, `\"`, `\n`, `\r`, `\t`
+    * NaN/Infinity → null, -0 → 0 normalization per spec
+  * Cycle detection included (silently skips cyclic references)
+  * See [TOON Format Specification](https://toonformat.dev/) for details
 * **FEATURE**: `WriteOptionsBuilder` - Added `cycleSupport(boolean)` option for performance optimization
   * `cycleSupport(true)` (default) - Full cycle support with `@id`/`@ref` for multi-referenced objects
   * `cycleSupport(false)` - Skips the `traceReferences()` pre-pass for faster serialization of acyclic data
