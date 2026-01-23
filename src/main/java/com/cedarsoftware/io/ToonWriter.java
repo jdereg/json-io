@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.FastWriter;
 import com.cedarsoftware.util.IOUtilities;
 
@@ -313,7 +314,7 @@ public class ToonWriter implements Closeable, Flushable {
      * Write an array value.
      */
     private void writeArray(Object array) throws IOException {
-        int length = Array.getLength(array);
+        int length = ArrayUtilities.getLength(array);
 
         if (length == 0) {
             out.write("[0]:");
@@ -327,7 +328,7 @@ public class ToonWriter implements Closeable, Flushable {
                 if (i > 0) {
                     out.write(delimiter);
                 }
-                writeInlineValue(Array.get(array, i));
+                writeInlineValue(ArrayUtilities.getElement(array, i));
             }
         } else {
             // Mixed/complex array - use list format with hyphens
@@ -337,7 +338,7 @@ public class ToonWriter implements Closeable, Flushable {
                 out.write(NEW_LINE);
                 writeIndent();
                 out.write("- ");
-                Object element = Array.get(array, i);
+                Object element = ArrayUtilities.getElement(array, i);
                 if (element != null && !isPrimitive(element)) {
                     out.write(NEW_LINE);
                     depth++;
@@ -499,36 +500,29 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
-     * Get object fields as a map using reflection.
+     * Get object fields as a map using WriteOptions' cached reflection.
+     * Uses getDeepDeclaredFields() which caches field discovery via ReflectionUtils.
      */
     private Map<String, Object> getObjectFields(Object obj) {
-        Map<String, Object> fields = new java.util.LinkedHashMap<>();
-        Class<?> clazz = obj.getClass();
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
 
-        // Get all declared fields including from superclasses
-        while (clazz != null && clazz != Object.class) {
-            for (java.lang.reflect.Field field : clazz.getDeclaredFields()) {
-                // Skip static and transient fields
-                int modifiers = field.getModifiers();
-                if (java.lang.reflect.Modifier.isStatic(modifiers) ||
-                    java.lang.reflect.Modifier.isTransient(modifiers)) {
-                    continue;
-                }
+        // Use WriteOptions' cached field retrieval (respects excluded/included fields, filters, etc.)
+        Map<String, java.lang.reflect.Field> fieldMap = writeOptions.getDeepDeclaredFields(obj.getClass());
 
-                try {
-                    field.setAccessible(true);
-                    Object value = field.get(obj);
-                    if (value != null || !writeOptions.isSkipNullFields()) {
-                        fields.put(field.getName(), value);
-                    }
-                } catch (IllegalAccessException e) {
-                    // Skip inaccessible fields
+        for (Map.Entry<String, java.lang.reflect.Field> entry : fieldMap.entrySet()) {
+            java.lang.reflect.Field field = entry.getValue();
+            try {
+                field.setAccessible(true);
+                Object value = field.get(obj);
+                if (value != null || !writeOptions.isSkipNullFields()) {
+                    result.put(entry.getKey(), value);
                 }
+            } catch (IllegalAccessException e) {
+                // Skip inaccessible fields
             }
-            clazz = clazz.getSuperclass();
         }
 
-        return fields;
+        return result;
     }
 
     /**
@@ -571,7 +565,7 @@ public class ToonWriter implements Closeable, Flushable {
         }
 
         for (int i = 0; i < length; i++) {
-            Object element = Array.get(array, i);
+            Object element = ArrayUtilities.getElement(array, i);
             if (element != null && !isPrimitive(element)) {
                 return false;
             }
