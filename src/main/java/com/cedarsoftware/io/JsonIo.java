@@ -249,6 +249,93 @@ public class JsonIo {
         }
     }
 
+    // =============================================
+    // TOON (Token-Oriented Object Notation) Output
+    // =============================================
+
+    /**
+     * Converts a Java object to TOON (Token-Oriented Object Notation) format.
+     * <p>
+     * TOON is a compact, human-readable format optimized for LLM token efficiency,
+     * using approximately 40-50% fewer tokens than equivalent JSON. It uses:
+     * <ul>
+     *   <li>Indentation-based structure (no braces/brackets)</li>
+     *   <li>Tabular arrays with CSV-like rows</li>
+     *   <li>Minimal quoting (only when necessary)</li>
+     *   <li>Key: value syntax for objects</li>
+     * </ul>
+     * <p>
+     * Example TOON output:
+     * <pre>
+     * name: John
+     * age: 30
+     * address:
+     *   city: NYC
+     *   zip: 10001
+     * tags[3]: java,json,toon
+     * </pre>
+     *
+     * @param srcObject the Java object to convert to TOON; can be any object including primitives,
+     *                  collections, custom classes, or a Map
+     * @param writeOptions configuration options for controlling the output format;
+     *                     if null, default options will be used
+     * @return a TOON string representation of the source object
+     * @throws JsonIoException if an error occurs during the serialization process
+     * @see <a href="https://toonformat.dev/">TOON Format Specification</a>
+     */
+    public static String toToon(Object srcObject, WriteOptions writeOptions) {
+        FastByteArrayOutputStream out = new FastByteArrayOutputStream(8192);
+        try (ToonWriter writer = new ToonWriter(out, writeOptions)) {
+            writer.write(srcObject);
+            return out.toString();
+        } catch (JsonIoException je) {
+            throw je;
+        } catch (Exception e) {
+            throw new JsonIoException("Unable to convert object to TOON", e);
+        }
+    }
+
+    /**
+     * Writes a Java object as TOON directly to an OutputStream.
+     * <p>
+     * This method serializes the provided source object into TOON format and writes the result
+     * to the specified output stream. By default, the output stream is closed after writing.
+     * To keep it open, configure the write options with {@code writeOptions.closeStream(false)}.
+     *
+     * @param out the output stream where the TOON will be written; must not be null
+     * @param source the Java object to convert to TOON
+     * @param writeOptions configuration options controlling the TOON output format;
+     *                     if null, default options will be used
+     * @throws JsonIoException if an error occurs during serialization
+     * @throws IllegalArgumentException if the output stream is null
+     * @see <a href="https://toonformat.dev/">TOON Format Specification</a>
+     */
+    public static void toToon(OutputStream out, Object source, WriteOptions writeOptions) {
+        Convention.throwIfNull(out, "OutputStream cannot be null");
+        if (writeOptions == null) {
+            writeOptions = WriteOptionsBuilder.getDefaultWriteOptions();
+        }
+        ToonWriter writer = null;
+        try {
+            writer = new ToonWriter(out, writeOptions);
+            writer.write(source);
+        } catch (Exception e) {
+            if (e instanceof JsonIoException) {
+                throw (JsonIoException) e;
+            }
+            throw new JsonIoException("Unable to convert object and send in TOON format to OutputStream.", e);
+        } finally {
+            if (writeOptions.isCloseStream() && writer != null) {
+                try {
+                    writer.close();
+                } catch (Exception closeException) {
+                    Logger.getLogger(JsonIo.class.getName()).warning(
+                        "Failed to close ToonWriter: " + closeException.getMessage());
+                }
+            }
+        }
+    }
+
     /**
      * Parses JSON into a {@code Map<String, Object>} graph without requiring Java classes on classpath.
      * <p>
