@@ -15,6 +15,9 @@
     <a href="https://json5.org/">
       <img src="https://img.shields.io/badge/JSON5-Full%20Support-brightgreen" alt="JSON5" height="20" />
     </a>
+    <a href="https://toonformat.dev/">
+      <img src="https://img.shields.io/badge/TOON-Write%20Support-blueviolet" alt="TOON" height="20" />
+    </a>
   </p>
 
   <p>
@@ -27,10 +30,11 @@
   </p>
 </div>
 
-json-io is a powerful and lightweight Java library that simplifies **JSON5** and JSON serialization and deserialization while handling complex object graphs with ease. Unlike basic JSON parsers, json-io preserves object references, handles polymorphic types, and maintains cyclic relationships in your data structures. Whether you're working with sophisticated domain models, dealing with legacy Java objects, or need high-performance JSON processing, json-io provides a robust solution with minimal configuration.
+json-io is a powerful and lightweight Java library that simplifies **JSON5**, JSON, and **TOON** serialization and deserialization while handling complex object graphs with ease. Unlike basic JSON parsers, json-io preserves object references, handles polymorphic types, and maintains cyclic relationships in your data structures. Whether you're working with sophisticated domain models, dealing with legacy Java objects, or need high-performance JSON processing, json-io provides a robust solution with minimal configuration.
 
 Key Features:
 - Full **JSON5** support including single-line and multi-line comments, single-quoted strings, unquoted object keys, trailing commas, and more — while remaining fully backward compatible with standard JSON (RFC 8259)
+- **TOON output** — [Token-Oriented Object Notation](https://toonformat.dev/) for LLM-optimized serialization (~40-50% fewer tokens than JSON)
 - Preserves object references and handles cyclic relationships
 - Supports polymorphic types and complex object graphs
 - Zero external dependencies (other than java-util)
@@ -60,6 +64,25 @@ enabled by default with zero configuration.
 
 *Jackson and Gson offer lenient/permissive modes that accept some JSON5 read
 syntax, but lack hex literals, multi-line strings, and any JSON5 write capability.*
+
+## TOON Output — LLM-Optimized Format
+
+json-io can serialize Java objects to [TOON (Token-Oriented Object Notation)](https://toonformat.dev/),
+a compact format designed for **40-50% fewer tokens** than JSON — ideal for LLM prompts and responses.
+
+```java
+String toon = JsonIo.toToon(myObject, writeOptions);
+```
+
+**Example output comparison:**
+
+| Format | Output | Tokens |
+|--------|--------|--------|
+| JSON | `{"name":"John","age":30,"tags":["java","json"]}` | ~15 |
+| TOON | `name: John`<br>`age: 30`<br>`tags[2]: java,json` | ~9 |
+
+TOON uses indentation-based structure, minimal quoting, and inline arrays to reduce token count
+while remaining human-readable. See the [TOON section in the User Guide](/user-guide.md#toon-output-support) for details.
 
 ## Cloud Native & Microservices
 

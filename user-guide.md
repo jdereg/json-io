@@ -1,5 +1,9 @@
 ## Usage
-**json-io** can be used directly on JSON Strings or with Java's Streams.
+**json-io** supports two output formats:
+- **JSON** — Standard JSON and JSON5 for universal interoperability
+- **TOON** — [Token-Oriented Object Notation](https://toonformat.dev/) for LLM-optimized output (~40-50% fewer tokens)
+
+Both formats can be used directly with Strings or Java's Streams.
 
 ### Typed Usage
 
