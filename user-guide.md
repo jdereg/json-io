@@ -1,7 +1,7 @@
 ## Usage
-**json-io** supports two output formats:
+**json-io** supports two formats for both reading and writing:
 - **JSON** — Standard JSON and JSON5 for universal interoperability
-- **TOON** — [Token-Oriented Object Notation](https://toonformat.dev/) for LLM-optimized output (~40-50% fewer tokens)
+- **TOON** — [Token-Oriented Object Notation](https://toonformat.dev/) for LLM-optimized serialization (~40-50% fewer tokens)
 
 Both formats can be used directly with Strings or Java's Streams.
 
@@ -424,13 +424,13 @@ Output:
 
 This JSON5 output can be read back by json-io (or any JSON5-compliant parser) without any issues.
 
-## TOON Output Support
+## TOON Support
 
 [TOON (Token-Oriented Object Notation)](https://toonformat.dev/) is a compact, human-readable format
 optimized for LLM token efficiency, using approximately **40-50% fewer tokens** than equivalent JSON.
-json-io can serialize Java objects directly to TOON format.
+json-io fully supports both reading and writing TOON format.
 
-### Basic TOON Usage
+### Writing TOON
 
 ```java
 // Convert any Java object to TOON
@@ -440,6 +440,27 @@ String toon = JsonIo.toToon(person, null);
 // Or stream to an OutputStream
 JsonIo.toToon(outputStream, person, writeOptions);
 ```
+
+### Reading TOON
+
+```java
+// Parse TOON to typed Java object
+Person person = JsonIo.fromToon(toon, readOptions).asClass(Person.class);
+
+// Parse TOON with generic types using TypeHolder
+List<Person> people = JsonIo.fromToon(toon, readOptions)
+        .asType(new TypeHolder<List<Person>>() {});
+
+// Parse TOON to Map structure (class-independent)
+Map<String, Object> map = JsonIo.fromToonToMaps(toon, readOptions).asClass(Map.class);
+
+// Stream from InputStream
+Person person = JsonIo.fromToon(inputStream, readOptions).asClass(Person.class);
+```
+
+The `fromToon()` API returns a fluent builder allowing:
+- `.asClass(Class<T>)` — Parse and convert to specific class
+- `.asType(TypeHolder<T>)` — Parse with full generic type information (e.g., `List<Person>`, `Map<String, Person>`)
 
 ### TOON Format Characteristics
 
@@ -557,15 +578,13 @@ TOON only supports 5 escape sequences (fewer than JSON):
 ### When to Use TOON
 
 **Use TOON when:**
-- Sending data to LLMs (significant token savings)
+- Communicating with LLMs (significant token savings in both prompts and responses)
 - Human readability is important
-- You don't need to read the data back (TOON is write-only in json-io currently)
-- Data is primarily acyclic
+- Data is primarily acyclic (TOON doesn't support `@id`/`@ref` for cycles)
 
 **Use JSON when:**
 - Interoperability with other systems is required
-- You need round-trip serialization (JSON → Java → JSON)
-- Data contains cyclic references that must be preserved
+- Data contains cyclic references that must be preserved (`@id`/`@ref`)
 - Standard JSON tooling is needed
 
 ### Cycle Handling in TOON
