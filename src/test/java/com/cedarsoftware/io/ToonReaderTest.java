@@ -6,8 +6,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URI;
 import java.net.URL;
-import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -40,6 +38,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
+import java.util.BitSet;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -141,6 +140,60 @@ class ToonReaderTest {
     @Test
     void testChar() {
         roundTrip('X');
+    }
+
+    @Test
+    void testLongMaxValue() {
+        roundTrip(Long.MAX_VALUE);
+    }
+
+    @Test
+    void testLongMinValue() {
+        roundTrip(Long.MIN_VALUE);
+    }
+
+    @Test
+    void testDoubleMaxValue() {
+        roundTrip(Double.MAX_VALUE);
+    }
+
+    @Test
+    void testDoubleMinValue() {
+        roundTrip(Double.MIN_VALUE);
+    }
+
+    @Test
+    void testNaN_becomesNull() {
+        // Per TOON spec, NaN becomes null
+        String toon = JsonIo.toToon(Double.NaN, null);
+        Object restored = JsonIo.fromToon(toon, null).asClass(Object.class);
+        assertNull(restored, "NaN should become null in TOON");
+    }
+
+    @Test
+    void testPositiveInfinity_becomesNull() {
+        // Per TOON spec, Infinity becomes null
+        String toon = JsonIo.toToon(Double.POSITIVE_INFINITY, null);
+        Object restored = JsonIo.fromToon(toon, null).asClass(Object.class);
+        assertNull(restored, "Positive Infinity should become null in TOON");
+    }
+
+    @Test
+    void testNegativeInfinity_becomesNull() {
+        // Per TOON spec, -Infinity becomes null
+        String toon = JsonIo.toToon(Double.NEGATIVE_INFINITY, null);
+        Object restored = JsonIo.fromToon(toon, null).asClass(Object.class);
+        assertNull(restored, "-Infinity should become null in TOON");
+    }
+
+    @Test
+    void testNegativeZero_becomesZero() {
+        // Per TOON spec, -0 normalizes to 0
+        String toon = JsonIo.toToon(-0.0, null);
+        Double restored = JsonIo.fromToon(toon, null).asClass(Double.class);
+        assertEquals(0.0, restored, "Negative zero should become 0 in TOON");
+        // Verify it's not negative zero
+        assertFalse(Double.toString(restored).startsWith("-"), "Should not be negative zero");
     }
 
     // ========== 2. Primitive Arrays (1D) ==========
@@ -474,6 +527,26 @@ class ToonReaderTest {
         String toon = JsonIo.toToon(original, null);
         StringBuilder restored = JsonIo.fromToon(toon, null).asClass(StringBuilder.class);
         assertEquals(original.toString(), restored.toString());
+    }
+
+    @Test
+    void testPattern() {
+        Pattern original = Pattern.compile("\\d+\\.\\d+");
+        String toon = JsonIo.toToon(original, null);
+        Pattern restored = JsonIo.fromToon(toon, null).asClass(Pattern.class);
+        assertEquals(original.pattern(), restored.pattern());
+    }
+
+    @Test
+    void testBitSet() {
+        BitSet original = new BitSet();
+        original.set(0);
+        original.set(3);
+        original.set(7);
+        original.set(15);
+        String toon = JsonIo.toToon(original, null);
+        BitSet restored = JsonIo.fromToon(toon, null).asClass(BitSet.class);
+        assertEquals(original, restored);
     }
 
     // ========== 12. Enum Types ==========
@@ -949,6 +1022,75 @@ class ToonReaderTest {
     @Test
     void testStringWithTrailingSpace() {
         roundTrip("hello ");
+    }
+
+    @Test
+    void testUnicodeCharacters() {
+        // Test various unicode characters
+        roundTrip("café résumé");  // Latin extended
+    }
+
+    @Test
+    void testChineseCharacters() {
+        roundTrip("中文测试");  // Chinese
+    }
+
+    @Test
+    void testJapaneseCharacters() {
+        roundTrip("日本語テスト");  // Japanese
+    }
+
+    @Test
+    void testEmoji() {
+        roundTrip("Hello 👋 World 🌍");  // Emoji (surrogate pairs)
+    }
+
+    @Test
+    void testMixedUnicode() {
+        // Mix of ASCII, Latin extended, CJK, and emoji
+        Map<String, String> original = new LinkedHashMap<>();
+        original.put("greeting", "Hello 你好 こんにちは 👋");
+        original.put("currency", "€100 £50 ¥1000");
+        original.put("math", "α + β = γ");
+
+        String toon = JsonIo.toToon(original, null);
+        Map<String, String> restored = JsonIo.fromToon(toon, null)
+                .asType(new TypeHolder<Map<String, String>>() {});
+
+        assertEquals(original.get("greeting"), restored.get("greeting"));
+        assertEquals(original.get("currency"), restored.get("currency"));
+        assertEquals(original.get("math"), restored.get("math"));
+    }
+
+    @Test
+    void testDeeplyNestedStructure() {
+        // Stress test with deep nesting
+        Map<String, Object> current = new LinkedHashMap<>();
+        current.put("value", "leaf");
+
+        // Create 20 levels of nesting
+        for (int i = 0; i < 20; i++) {
+            Map<String, Object> parent = new LinkedHashMap<>();
+            parent.put("level", i);
+            parent.put("child", current);
+            current = parent;
+        }
+
+        String toon = JsonIo.toToon(current, null);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+
+        // Navigate to the deepest level
+        Map<String, Object> node = restored;
+        for (int i = 19; i >= 0; i--) {
+            assertEquals((long) i, node.get("level"));
+            if (i > 0) {
+                node = (Map<String, Object>) node.get("child");
+            }
+        }
+        // Check the leaf
+        Map<String, Object> leaf = (Map<String, Object>) node.get("child");
+        assertEquals("leaf", leaf.get("value"));
     }
 
     // ========== 15. fromToonToMaps Tests ==========
