@@ -438,6 +438,39 @@ public class ToonWriter implements Closeable, Flushable {
             return;
         }
 
+        // Check if any key is a complex object that needs special handling
+        boolean hasComplexKeys = false;
+        for (Object key : map.keySet()) {
+            if (key != null && !isSimpleKeyType(key)) {
+                hasComplexKeys = true;
+                break;
+            }
+        }
+
+        if (hasComplexKeys) {
+            writeMapWithComplexKeys(map);
+        } else {
+            writeMapWithSimpleKeys(map);
+        }
+    }
+
+    /**
+     * Check if an object can be used as a simple map key (written as a string).
+     * Simple keys are: null, String, Number, Boolean, Character, Enum, Class.
+     */
+    private boolean isSimpleKeyType(Object key) {
+        return key instanceof String
+                || key instanceof Number
+                || key instanceof Boolean
+                || key instanceof Character
+                || key instanceof Enum
+                || key instanceof Class;
+    }
+
+    /**
+     * Write a map with simple keys (String, Number, etc.) using the standard key: value format.
+     */
+    private void writeMapWithSimpleKeys(Map<?, ?> map) throws IOException {
         boolean first = true;
         for (Map.Entry<?, ?> entry : map.entrySet()) {
             if (!first) {
@@ -477,6 +510,68 @@ public class ToonWriter implements Closeable, Flushable {
             } else {
                 writeValue(value);
             }
+        }
+    }
+
+    /**
+     * Write a map with complex object keys using array-of-entries format:
+     * [N]:
+     *   -
+     *     key:
+     *       ...object fields...
+     *     value: ...
+     */
+    private void writeMapWithComplexKeys(Map<?, ?> map) throws IOException {
+        // Write as array of entries
+        out.write("[" + map.size() + "]:");
+
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            out.write(NEW_LINE);
+            writeIndent();
+            out.write("- ");
+            out.write(NEW_LINE);
+            depth++;
+
+            // Write key (using $key to avoid collision with objects that have a "key" field)
+            writeIndent();
+            out.write("$key:");
+            Object key = entry.getKey();
+            if (key == null || isPrimitive(key)) {
+                out.write(" ");
+                writeValue(key);
+            } else {
+                out.write(NEW_LINE);
+                depth++;
+                writeNestedObject(key);
+                depth--;
+            }
+
+            // Write value (using $value to avoid collision with objects that have a "value" field)
+            out.write(NEW_LINE);
+            writeIndent();
+            out.write("$value:");
+            Object value = entry.getValue();
+            if (value == null || isPrimitive(value)) {
+                out.write(" ");
+                writeValue(value);
+            } else {
+                out.write(NEW_LINE);
+                depth++;
+                if (value instanceof Map) {
+                    writeMap((Map<?, ?>) value);
+                } else if (value instanceof Collection) {
+                    writeIndent();
+                    writeCollection((Collection<?>) value);
+                } else if (value.getClass().isArray()) {
+                    writeIndent();
+                    writeArray(value);
+                } else {
+                    writeNestedObject(value);
+                }
+                depth--;
+            }
+
+            depth--;
         }
     }
 

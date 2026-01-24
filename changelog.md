@@ -41,6 +41,10 @@
     * List format arrays: `[N]:` followed by `- elem` lines
     * Scalar parsing: null, true, false, numbers (Long/Double), strings
     * Quoted strings with 5 escape sequences: `\\`, `\"`, `\n`, `\r`, `\t`
+  * Generic type support via `TypeHolder`:
+    * `List<Person>` - Collection elements converted to target type
+    * `Map<String, Person>` - Map values converted to target type
+    * `Map<Person, String>` - Maps with complex object keys (uses `$key`/`$value` array-of-entries format)
 * **FEATURE**: `WriteOptionsBuilder` - Added `cycleSupport(boolean)` option for performance optimization
   * `cycleSupport(true)` (default) - Full cycle support with `@id`/`@ref` for multi-referenced objects
   * `cycleSupport(false)` - Skips the `traceReferences()` pre-pass for faster serialization of acyclic data

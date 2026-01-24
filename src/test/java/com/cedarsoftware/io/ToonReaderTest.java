@@ -48,7 +48,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
 import com.cedarsoftware.util.DeepEquals;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -644,6 +643,240 @@ class ToonReaderTest {
         assertEquals(30L, map1.get("age"));
         assertEquals("Jane", map2.get("name"));
         assertEquals(25L, map2.get("age"));
+    }
+
+    @Test
+    void testMapWithPersonKeyAndStringValue() {
+        // Test Map<Person, String> where Person is the KEY type (not value)
+        // ToonWriter serializes maps with complex keys using array-of-entries format:
+        //   [2]:
+        //   -
+        //     $key:
+        //       name: John
+        //       age: 30
+        //     $value: employee1
+        // The $ prefix avoids collision with objects that have "key"/"value" fields.
+        // Resolver detects this pattern and converts back to a proper Map.
+        Map<TestPerson, String> original = new LinkedHashMap<>();
+        original.put(new TestPerson("John", 30), "employee1");
+        original.put(new TestPerson("Jane", 25), "employee2");
+
+        String toon = JsonIo.toToon(original, null);
+
+        // Read with TypeHolder - keys should be TestPerson instances
+        Map<TestPerson, String> restored = JsonIo.fromToon(toon, null)
+                .asType(new TypeHolder<Map<TestPerson, String>>() {});
+
+        assertEquals(2, restored.size());
+
+        // Verify keys are TestPerson instances
+        boolean foundJohn = false;
+        boolean foundJane = false;
+        for (Map.Entry<TestPerson, String> entry : restored.entrySet()) {
+            assertTrue(entry.getKey() instanceof TestPerson,
+                    "Key should be TestPerson, got: " + entry.getKey().getClass().getName());
+            assertTrue(entry.getValue() instanceof String,
+                    "Value should be String, got: " + entry.getValue().getClass().getName());
+
+            if ("John".equals(entry.getKey().getName())) {
+                assertEquals(30, entry.getKey().getAge());
+                assertEquals("employee1", entry.getValue());
+                foundJohn = true;
+            } else if ("Jane".equals(entry.getKey().getName())) {
+                assertEquals(25, entry.getKey().getAge());
+                assertEquals("employee2", entry.getValue());
+                foundJane = true;
+            }
+        }
+        assertTrue(foundJohn, "Should find John as key");
+        assertTrue(foundJane, "Should find Jane as key");
+    }
+
+    @Test
+    void testMapWithComplexKeyAndComplexValue() {
+        // Both key AND value are complex objects requiring conversion
+        Map<TestPerson, TestPerson> original = new LinkedHashMap<>();
+        original.put(new TestPerson("Manager", 40), new TestPerson("Employee1", 25));
+        original.put(new TestPerson("Director", 50), new TestPerson("Employee2", 30));
+
+        String toon = JsonIo.toToon(original, null);
+
+        Map<TestPerson, TestPerson> restored = JsonIo.fromToon(toon, null)
+                .asType(new TypeHolder<Map<TestPerson, TestPerson>>() {});
+
+        assertEquals(2, restored.size());
+
+        // Verify both keys and values are properly converted
+        for (Map.Entry<TestPerson, TestPerson> entry : restored.entrySet()) {
+            assertTrue(entry.getKey() instanceof TestPerson, "Key should be TestPerson");
+            assertTrue(entry.getValue() instanceof TestPerson, "Value should be TestPerson");
+
+            if ("Manager".equals(entry.getKey().getName())) {
+                assertEquals(40, entry.getKey().getAge());
+                assertEquals("Employee1", entry.getValue().getName());
+                assertEquals(25, entry.getValue().getAge());
+            } else if ("Director".equals(entry.getKey().getName())) {
+                assertEquals(50, entry.getKey().getAge());
+                assertEquals("Employee2", entry.getValue().getName());
+                assertEquals(30, entry.getValue().getAge());
+            }
+        }
+    }
+
+    @Test
+    void testMapWithComplexKeyNullValue() {
+        // Complex key with null value
+        Map<TestPerson, String> original = new LinkedHashMap<>();
+        original.put(new TestPerson("John", 30), null);
+        original.put(new TestPerson("Jane", 25), "hasValue");
+
+        String toon = JsonIo.toToon(original, null);
+
+        Map<TestPerson, String> restored = JsonIo.fromToon(toon, null)
+                .asType(new TypeHolder<Map<TestPerson, String>>() {});
+
+        assertEquals(2, restored.size());
+
+        boolean foundJohnWithNull = false;
+        boolean foundJaneWithValue = false;
+        for (Map.Entry<TestPerson, String> entry : restored.entrySet()) {
+            if ("John".equals(entry.getKey().getName())) {
+                assertNull(entry.getValue(), "John's value should be null");
+                foundJohnWithNull = true;
+            } else if ("Jane".equals(entry.getKey().getName())) {
+                assertEquals("hasValue", entry.getValue());
+                foundJaneWithValue = true;
+            }
+        }
+        assertTrue(foundJohnWithNull, "Should find John with null value");
+        assertTrue(foundJaneWithValue, "Should find Jane with value");
+    }
+
+    @Test
+    void testEmptyMapWithComplexKeyType() {
+        // Empty map should still work
+        Map<TestPerson, String> original = new LinkedHashMap<>();
+
+        String toon = JsonIo.toToon(original, null);
+
+        Map<TestPerson, String> restored = JsonIo.fromToon(toon, null)
+                .asType(new TypeHolder<Map<TestPerson, String>>() {});
+
+        assertTrue(restored.isEmpty(), "Restored map should be empty");
+    }
+
+    /**
+     * Test class with fields named $key and $value to verify our collision avoidance works.
+     * If ToonWriter/ToonReader didn't use $key/$value prefixes, this object's fields
+     * would collide with the map entry markers.
+     */
+    static class ObjectWithDollarFields {
+        public String $key;
+        public String $value;
+        public String normalField;
+
+        public ObjectWithDollarFields() {}
+
+        public ObjectWithDollarFields(String key, String value, String normal) {
+            this.$key = key;
+            this.$value = value;
+            this.normalField = normal;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            ObjectWithDollarFields that = (ObjectWithDollarFields) o;
+            return java.util.Objects.equals($key, that.$key) &&
+                   java.util.Objects.equals($value, that.$value) &&
+                   java.util.Objects.equals(normalField, that.normalField);
+        }
+
+        @Override
+        public int hashCode() {
+            return java.util.Objects.hash($key, $value, normalField);
+        }
+    }
+
+    @Test
+    void testMapWithKeyHavingDollarFields() {
+        // Key object has fields named $key and $value - tests collision avoidance
+        // The map entry markers ($key/$value) should not collide with the object's fields
+        Map<ObjectWithDollarFields, String> original = new LinkedHashMap<>();
+        original.put(new ObjectWithDollarFields("keyField1", "valueField1", "normal1"), "mapValue1");
+        original.put(new ObjectWithDollarFields("keyField2", "valueField2", "normal2"), "mapValue2");
+
+        String toon = JsonIo.toToon(original, null);
+
+        // The TOON should have nested $key fields - the outer ones are entry markers,
+        // the inner ones are the object's actual fields
+        assertTrue(toon.contains("$key:"), "Should contain $key entry marker");
+        assertTrue(toon.contains("$value:"), "Should contain $value entry marker");
+
+        Map<ObjectWithDollarFields, String> restored = JsonIo.fromToon(toon, null)
+                .asType(new TypeHolder<Map<ObjectWithDollarFields, String>>() {});
+
+        assertEquals(2, restored.size());
+
+        // Verify the keys were properly restored with their $key and $value fields
+        for (Map.Entry<ObjectWithDollarFields, String> entry : restored.entrySet()) {
+            ObjectWithDollarFields key = entry.getKey();
+            assertNotNull(key.$key, "Object's $key field should not be null");
+            assertNotNull(key.$value, "Object's $value field should not be null");
+
+            if ("keyField1".equals(key.$key)) {
+                assertEquals("valueField1", key.$value);
+                assertEquals("normal1", key.normalField);
+                assertEquals("mapValue1", entry.getValue());
+            } else if ("keyField2".equals(key.$key)) {
+                assertEquals("valueField2", key.$value);
+                assertEquals("normal2", key.normalField);
+                assertEquals("mapValue2", entry.getValue());
+            }
+        }
+    }
+
+    @Test
+    void testSimpleKeyMapStillUsesSimpleFormat() {
+        // Verify that maps with simple keys (String, Integer, etc.) still use
+        // the simple key: value format, not the array-of-entries format
+        Map<String, TestPerson> original = new LinkedHashMap<>();
+        original.put("emp1", new TestPerson("John", 30));
+        original.put("emp2", new TestPerson("Jane", 25));
+
+        String toon = JsonIo.toToon(original, null);
+
+        // Simple format should NOT have $key/$value markers
+        assertFalse(toon.contains("$key:"), "Simple key map should not use $key marker");
+        assertFalse(toon.contains("$value:"), "Simple key map should not use $value marker");
+
+        // Should have the simple format: emp1: followed by nested object
+        assertTrue(toon.contains("emp1:"), "Should use simple key format");
+        assertTrue(toon.contains("emp2:"), "Should use simple key format");
+    }
+
+    @Test
+    void testSingleEntryMapWithComplexKey() {
+        // Single entry to verify array-of-entries format works for size 1
+        Map<TestPerson, String> original = new LinkedHashMap<>();
+        original.put(new TestPerson("Solo", 35), "only-entry");
+
+        String toon = JsonIo.toToon(original, null);
+
+        // Should use array format even for single entry
+        assertTrue(toon.contains("[1]:"), "Should have [1]: for single entry");
+        assertTrue(toon.contains("$key:"), "Should use $key marker");
+        assertTrue(toon.contains("$value:"), "Should use $value marker");
+
+        Map<TestPerson, String> restored = JsonIo.fromToon(toon, null)
+                .asType(new TypeHolder<Map<TestPerson, String>>() {});
+
+        assertEquals(1, restored.size());
+        Map.Entry<TestPerson, String> entry = restored.entrySet().iterator().next();
+        assertEquals("Solo", entry.getKey().getName());
+        assertEquals(35, entry.getKey().getAge());
+        assertEquals("only-entry", entry.getValue());
     }
 
     // ========== 14. String Edge Cases ==========

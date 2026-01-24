@@ -363,6 +363,23 @@ public abstract class Resolver {
             if (value instanceof Collection && type instanceof ParameterizedType) {
                 Collection<?> col = (Collection<?>) value;
                 Type[] typeArgs = ((ParameterizedType) type).getActualTypeArguments();
+
+                // Special case: List of key/value entries being converted to Map (from ToonReader)
+                // When ToonWriter serializes Map<ComplexKey, Value>, it outputs an array of entries:
+                //   [2]:
+                //   -
+                //     key: ...
+                //     value: ...
+                // ToonReader parses this as a List of JsonObjects with "key" and "value" fields.
+                // When target is Map, convert by extracting and converting key/value pairs.
+                Class<?> rawClass = TypeUtilities.getRawClass(type);
+                if (Map.class.isAssignableFrom(rawClass) && typeArgs.length >= 2
+                        && isKeyValueEntryList(col)) {
+                    Type keyType = typeArgs[0];
+                    Type valueType = typeArgs[1];
+                    return convertKeyValueEntriesToMap(col, rawClass, keyType, valueType);
+                }
+
                 if (typeArgs.length > 0 && containsJsonObjects(col)) {
                     Type elementType = typeArgs[0];
                     return convertCollectionElements(col, elementType);
@@ -815,6 +832,51 @@ public abstract class Resolver {
         }
         // Default to LinkedHashMap to preserve insertion order
         return new LinkedHashMap<>(size);
+    }
+
+    /**
+     * Check if a Collection contains JsonObjects with "$key" and "$value" fields.
+     * This pattern is used by ToonWriter when serializing Maps with complex object keys.
+     * Format: [N]: followed by entries with $key: and $value: fields.
+     * The $ prefix avoids collision with objects that have "key" or "value" fields.
+     */
+    private boolean isKeyValueEntryList(Collection<?> col) {
+        if (col.isEmpty()) {
+            return false;
+        }
+        for (Object element : col) {
+            if (!(element instanceof JsonObject)) {
+                return false;
+            }
+            JsonObject entry = (JsonObject) element;
+            if (!entry.containsKey("$key") || !entry.containsKey("$value")) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Convert a List of $key/$value entry JsonObjects to a Map.
+     * Each entry must have "$key" and "$value" fields.
+     * Used when parsing ToonWriter output for Maps with complex object keys.
+     */
+    private Map<Object, Object> convertKeyValueEntriesToMap(Collection<?> entries,
+                                                             Class<?> targetMapClass,
+                                                             Type keyType, Type valueType) {
+        Map<Object, Object> result = createSameTypeMap(null, targetMapClass, entries.size());
+        for (Object element : entries) {
+            JsonObject entry = (JsonObject) element;
+            Object rawKey = entry.get("$key");
+            Object rawValue = entry.get("$value");
+
+            // Convert key and value to their target types
+            Object convertedKey = toJava(keyType, rawKey);
+            Object convertedValue = toJava(valueType, rawValue);
+
+            result.put(convertedKey, convertedValue);
+        }
+        return result;
     }
 
     /**
