@@ -1,5 +1,5 @@
 ### Revision History
-#### 4.85.0 (unreleased)
+#### 4.85.0 - 2025-01-24
 * **FEATURE**: TOON (Token-Oriented Object Notation) output support
   * Added `JsonIo.toToon(Object, WriteOptions)` - Convert Java objects to TOON format string
   * Added `JsonIo.toToon(OutputStream, Object, WriteOptions)` - Stream TOON output directly
@@ -13,6 +13,8 @@
     * Only 5 escape sequences: `\\`, `\"`, `\n`, `\r`, `\t`
     * NaN/Infinity → null, -0 → 0 normalization per spec
   * Cycle detection included (silently skips cyclic references)
+  * Uses cached reflection via `WriteOptions.getDeepDeclaredFields()` for efficient field discovery
+  * Respects `WriteOptions` excluded/included field settings
   * See [TOON Format Specification](https://toonformat.dev/) for details
   * Comprehensive type support for serialization:
     * Primitives and wrappers: `Boolean`, `Byte`, `Short`, `Integer`, `Long`, `Float`, `Double`, `Character`
@@ -57,6 +59,7 @@
     * json-io with `cycleSupport=false`: Skip overhead when cycles are known to not exist
   * Added `isCycleSupport()` getter to `WriteOptions`
   * Added `addPermanentCycleSupport(boolean)` for application-scoped configuration
+* **BUILD**: Updated java-util dependency from 4.84.0 to 4.85.0
 
 #### 4.84.0 - 2025-01-19
 * **FEATURE**: `WriteOptionsBuilder` - Added meta key prefix override methods
