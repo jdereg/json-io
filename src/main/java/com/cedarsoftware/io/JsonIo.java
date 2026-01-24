@@ -19,43 +19,57 @@ import com.cedarsoftware.util.LoggingConfig;
 import com.cedarsoftware.util.convert.Converter;
 
 /**
- * JsonIo is the main entry point for converting between JSON and Java objects.
+ * JsonIo is the main entry point for converting between JSON/TOON and Java objects.
  *
- * <h2>Two Modes for Reading JSON</h2>
+ * <h2>Supported Formats</h2>
+ * <ul>
+ *   <li><b>JSON</b> - Standard JSON and JSON5 for universal interoperability</li>
+ *   <li><b>TOON</b> - <a href="https://toonformat.dev/">Token-Oriented Object Notation</a> for LLM-optimized
+ *       serialization (~40-50% fewer tokens than JSON)</li>
+ * </ul>
  *
- * <p>JsonIo provides two distinct approaches for reading JSON, each optimized for different use cases:</p>
+ * <h2>Two Modes for Reading</h2>
+ * <p>Both JSON and TOON support two distinct approaches for reading, each optimized for different use cases:</p>
  *
- * <h3>1. Java Object Mode - {@link #toJava toJava()}</h3>
- * <p>Deserializes JSON to fully-typed Java object graphs. <b>Requires Java classes on classpath.</b></p>
+ * <h3>1. Java Object Mode</h3>
+ * <p>Deserializes to fully-typed Java object graphs. <b>Requires Java classes on classpath.</b></p>
  * <pre>{@code
- * // Parse to specific class
+ * // JSON - Parse to specific class
  * Person person = JsonIo.toJava(jsonString, readOptions).asClass(Person.class);
  *
- * // Parse to generic type
+ * // JSON - Parse to generic type
  * List<Person> people = JsonIo.toJava(jsonString, readOptions)
+ *                             .asType(new TypeHolder<List<Person>>(){});
+ *
+ * // TOON - Parse to specific class
+ * Person person = JsonIo.fromToon(toonString, readOptions).asClass(Person.class);
+ *
+ * // TOON - Parse to generic type
+ * List<Person> people = JsonIo.fromToon(toonString, readOptions)
  *                             .asType(new TypeHolder<List<Person>>(){});
  * }</pre>
  * <p><b>Use when:</b> You have Java classes available and want type-safe, validated objects.</p>
  *
- * <h3>2. Map Mode - {@link #toMaps toMaps()}</h3>
- * <p>Deserializes JSON to {@code Map<String, Object>} graph. <b>No Java classes required.</b></p>
+ * <h3>2. Map Mode</h3>
+ * <p>Deserializes to {@code Map<String, Object>} graph. <b>No Java classes required.</b></p>
  * <pre>{@code
- * // Parse JSON object to Map
+ * // JSON - Parse to Map
  * Map<String, Object> map = JsonIo.toMaps(jsonString).asClass(Map.class);
  *
- * // Parse JSON array to List
- * List<Object> list = JsonIo.toMaps("[1,2,3]").asClass(List.class);
+ * // JSON - Parse array to Object[]
+ * Object[] array = JsonIo.toMaps("[1,2,3]").asClass(Object[].class);
  *
- * // Parse any JSON type
- * Object result = JsonIo.toMaps(jsonString).asClass(null);
+ * // TOON - Parse to Map
+ * Map<String, Object> map = JsonIo.fromToonToMaps(toonString).asClass(Map.class);
  *
- * // Access preserved @type metadata (advanced)
- * JsonObject obj = JsonIo.toMaps(jsonString).asClass(JsonObject.class);
- * String typeString = obj.getTypeString();  // Original @type preserved
+ * // TOON - Parse array to Object[]
+ * Object[] array = JsonIo.fromToonToMaps(toonString).asClass(Object[].class);
  * }</pre>
- * <p><b>Use when:</b> Parsing JSON without classes (HTTP middleware, log analysis, cross-JVM transport).</p>
+ * <p><b>Use when:</b> Parsing without classes (HTTP middleware, log analysis, cross-JVM transport).</p>
  *
- * <h2>Writing JSON</h2>
+ * <h2>Writing</h2>
+ *
+ * <h3>JSON Output</h3>
  * <p>Convert any Java object (or Map graph) to JSON:</p>
  * <pre>{@code
  * // To String
@@ -65,13 +79,30 @@ import com.cedarsoftware.util.convert.Converter;
  * JsonIo.toJson(outputStream, myObject, writeOptions);
  * }</pre>
  *
+ * <h3>TOON Output</h3>
+ * <p>Convert any Java object (or Map graph) to TOON for LLM-optimized token efficiency:</p>
+ * <pre>{@code
+ * // To String
+ * String toon = JsonIo.toToon(myObject, writeOptions);
+ *
+ * // To OutputStream
+ * JsonIo.toToon(outputStream, myObject, writeOptions);
+ * }</pre>
+ *
  * <h2>Key Features</h2>
  * <ul>
  *   <li><b>Type Safety:</b> Java Object mode provides compile-time type checking</li>
  *   <li><b>Class Independence:</b> Map mode works without any classes on classpath</li>
  *   <li><b>Metadata Preservation:</b> {@code @type} strings preserved even when classes don't exist</li>
- *   <li><b>Reference Handling:</b> Circular references and object graphs handled automatically</li>
- *   <li><b>Deterministic Output:</b> Same JSON input always produces same Map structure (LinkedHashMap ordering)</li>
+ *   <li><b>Reference Handling:</b> Circular references and object graphs handled automatically (JSON)</li>
+ *   <li><b>Deterministic Output:</b> Same input always produces same Map structure (LinkedHashMap ordering)</li>
+ *   <li><b>LLM Optimization:</b> TOON format reduces token count by 40-50% vs JSON</li>
+ * </ul>
+ *
+ * <h2>Performance Tips</h2>
+ * <ul>
+ *   <li>Use {@code cycleSupport(false)} for ~35-40% faster writes on acyclic data</li>
+ *   <li>Use TOON format when communicating with LLMs to reduce token costs</li>
  * </ul>
  *
  * <h2>Advanced Usage</h2>
@@ -86,8 +117,8 @@ import com.cedarsoftware.util.convert.Converter;
  * }</pre>
  *
  * <p><i>Note: JsonIo includes extensive type conversion capabilities. To view all supported conversions,
- * run {@link #main(String[])} from the command line.</i>
- * 
+ * run {@link #main(String[])} from the command line.</i></p>
+ *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
