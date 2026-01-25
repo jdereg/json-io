@@ -30,9 +30,15 @@
   </p>
 </div>
 
-json-io is a powerful and lightweight Java library that simplifies **JSON5**, **JSON**, and **TOON** serialization and deserialization while handling complex object graphs with ease. Unlike basic JSON parsers, json-io preserves object references, handles polymorphic types, and maintains cyclic relationships in your data structures. Whether you're working with sophisticated domain models, dealing with legacy Java objects, or need high-performance JSON processing, json-io provides a robust solution with minimal configuration.
+<p align="center">
+  <img src="infographic.jpeg" alt="json-io infographic - JSON5, TOON, and Core Capabilities" width="100%" />
+</p>
+<p align="right"><sub>Infographic by <a href="https://github.com/glaforge">Guillaume Laforge</a></sub></p>
 
-Key Features:
+json-io is a powerful and lightweight Java library that simplifies **JSON5**, **JSON**, and **TOON** serialization and deserialization while handling complex object graphs with ease. Unlike basic JSON parsers, json-io preserves object references, handles polymorphic types, and maintains cyclic relationships in your data structures.
+
+## Key Features
+
 - Full **JSON5** support including single-line and multi-line comments, single-quoted strings, unquoted object keys, trailing commas, and more — while remaining fully backward compatible with standard JSON (RFC 8259)
 - **TOON read/write** — [Token-Oriented Object Notation](https://toonformat.dev/) for LLM-optimized serialization (~40-50% fewer tokens than JSON)
 - Preserves object references and handles cyclic relationships (use `cycleSupport(false)` for ~35-40% faster writes on acyclic data)
@@ -42,139 +48,113 @@ Key Features:
 - Lightweight (`json-io.jar` is ~330K, `java-util` is ~700K)
 - Compatible with JDK 1.8 through JDK 24
 - The library is built with the `-parameters` compiler flag. Parameter names are now retained for tasks such as constructor discovery.
-- Optional unsafe mode for deserializing package-private classes, inner classes, 
-  and classes without accessible constructors (opt-in for security)
+- Optional unsafe mode for deserializing package-private classes, inner classes, and classes without accessible constructors (opt-in for security)
 - Extensive configuration options via `ReadOptionsBuilder` and `WriteOptionsBuilder`
 - Two modes: typed Java objects (`toJava()`) or class-independent Maps (`toMaps()`)
 - Parse JSON with unknown class references into a Map-of-Maps representation without requiring classes on classpath
 - Featured on [json.org](http://json.org)
 
-## JSON5 Support — Complete Spec, Read & Write
+## Why json-io?
 
-json-io provides **full [JSON5](https://json5.org/) specification support** for both reading and writing,
-enabled by default with zero configuration.
+### vs Jackson/Gson (JSON)
 
-| Feature | json-io | Jackson | Gson |
-|---------|:-------:|:-------:|:----:|
-| JSON5 Read | ✅ Full | ⚠️ Partial | ⚠️ Partial |
-| JSON5 Write | ✅ Full | ❌ | ❌ |
-| Hex Numbers (0xFF) | ✅ | ❌ | ❌ |
-| Multi-line Strings | ✅ | ❌ | ❌ |
-| Zero Config | ✅ | ❌ | ❌ |
+| Capability | json-io | Jackson/Gson |
+|------------|---------|--------------|
+| Object graph cycles | Full support (`@id`/`@ref`) | None |
+| Polymorphic types | Automatic (`@type` when needed) | Requires annotations |
+| Configuration | Zero-config default | Annotation-heavy |
+| Dependencies | java-util (~1MB total) | Multiple JARs (~2.5MB+) |
 
-*Jackson and Gson offer lenient/permissive modes that accept some JSON5 read
-syntax, but lack hex literals, multi-line strings, and any JSON5 write capability.*
+**Trade-off**: json-io prioritizes **correctness over speed**. It preserves graph shape and Java type semantics—handling cycles, references, and polymorphism that break other serializers. Jackson/Gson are faster for simple DTOs, but json-io handles what they cannot.
 
-## TOON — LLM-Optimized Format
+**Performance tip**: Use `cycleSupport(false)` for ~35-40% faster writes when you know your object graph is acyclic.
 
-json-io fully supports [TOON (Token-Oriented Object Notation)](https://toonformat.dev/) for both **reading and writing** —
-a compact format designed for **40-50% fewer tokens** than JSON, ideal for LLM prompts and responses.
+### vs JToon (TOON)
+
+| Capability | json-io                  | JToon |
+|------------|--------------------------|-------|
+| Built-in types | 60+                      | ~15 |
+| Map key types | Any serializable type    | Strings only |
+| EnumSet support | Yes                      | No |
+| Dependencies | java-util only           | Jackson |
+| Status | Stable, production-ready | Beta (v1.x.x) |
+
+json-io's TOON implementation offers comprehensive Java type coverage while JToon focuses on basic types with Jackson integration.
+
+### What's Coming Next
+
+- **Annotations** — Custom serialization control via annotations
+- **Improved Spring support** — Better integration with Spring Framework
+
+## Installation
+
+**Gradle**
+```groovy
+implementation 'com.cedarsoftware:json-io:4.85.0'
+```
+
+**Maven**
+```xml
+<dependency>
+  <groupId>com.cedarsoftware</groupId>
+  <artifactId>json-io</artifactId>
+  <version>4.85.0</version>
+</dependency>
+```
+
+## Quick Start
 
 ```java
-// Write to TOON
-String toon = JsonIo.toToon(myObject, writeOptions);
+// JSON
+String json = JsonIo.toJson(myObject);
+MyClass obj = JsonIo.toJava(json).asClass(MyClass.class);
 
-// Read from TOON
+// TOON (~40% fewer tokens than JSON)
+String toon = JsonIo.toToon(myObject, writeOptions);
 MyClass obj = JsonIo.fromToon(toon, readOptions).asClass(MyClass.class);
 ```
 
-**Example output comparison:**
+## Supported Types (60+ built-in)
 
-| Format | Output | Tokens | Size |
-|--------|--------|--------|------|
-| JSON | `{"name":"John","age":30,"tags":["java","json"]}` | ~15 | 48 chars |
-| JSON5 | `{name:"John",age:30,tags:["java","json"]}` | ~14 | 42 chars |
-| TOON | `name: John`<br>`age: 30`<br>`tags[2]: java,json` | ~9 | 38 chars |
-
-TOON uses indentation-based structure, minimal quoting, and inline arrays to reduce token count
-while remaining human-readable. JSON5 saves ~12% over JSON; TOON saves ~40% over JSON. See the [TOON section in the User Guide](/user-guide.md#toon-support) for details.
-
-**Supported types** (55+ built-in):
+json-io handles your **business objects, DTOs, and Records** automatically—no annotations required. It also provides optimized handling for these built-in types:
 
 | Category | Types |
 |----------|-------|
 | Primitives | `byte`, `short`, `int`, `long`, `float`, `double`, `boolean`, `char` + wrappers |
 | Numbers | `BigInteger`, `BigDecimal`, `AtomicInteger`, `AtomicLong`, `AtomicBoolean` |
-| Date/Time | `Date`, `Calendar`, `Instant`, `LocalDate`, `LocalTime`, `LocalDateTime`, `ZonedDateTime`, `OffsetDateTime`, `Duration`, `Period`, + 8 more |
+| Date/Time | `Date`, `Calendar`, `Instant`, `LocalDate`, `LocalTime`, `LocalDateTime`, `ZonedDateTime`, `OffsetDateTime`, `OffsetTime`, `Duration`, `Period`, `Year`, `YearMonth`, `MonthDay`, `TimeZone`, `ZoneId`, `ZoneOffset`, `java.sql.Date`, `Timestamp` |
 | Strings | `String`, `StringBuffer`, `StringBuilder`, `char[]`, `CharBuffer` |
 | Binary | `byte[]`, `ByteBuffer`, `BitSet` |
 | IDs | `UUID`, `URI`, `URL`, `Class`, `Locale`, `Currency`, `Pattern`, `File`, `Path` |
 | Geometric | `Color`, `Dimension`, `Point`, `Rectangle`, `Insets` |
-| Collections | All `Collection`, `Map`, `EnumSet`, and array types |
+| Other | `Enum` (any), `Throwable`, all `Collection`, `Map`, `EnumSet`, and array types |
 
 See the [complete type comparison](/user-guide.md#toon-supported-types) showing json-io's comprehensive support vs other TOON implementations.
 
-## Cloud Native & Microservices
+## Documentation
 
-Optimized for modern cloud deployments and container environments:
+- [User Guide](/user-guide.md)
+- [WriteOptions Reference](/user-guide-writeOptions.md)
+- [ReadOptions Reference](/user-guide-readOptions.md)
+- [Revision History](/changelog.md)
 
-- **Zero Transitive Dependencies**: Only depends on java-util, eliminating dependency conflicts in microservices architectures
-- **Object Graph Preservation**: Essential for complex domain models in distributed systems - handles cycles and references that break other libraries
-- **Container-Ready**: JPMS and OSGi support enables efficient packaging with jlink for minimal container images
+## Release [4.85.0](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.85.0/index.html)
 
-## Compatibility
+| | |
+|---|---|
+| **Bundling** | JPMS & OSGi |
+| **Java** | JDK 1.8+ (multi-release JAR with module-info.class) |
+| **Package** | com.cedarsoftware.io |
 
-### JPMS (Java Platform Module System)
+**API** — Static methods on [JsonIo](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.85.0/com/cedarsoftware/io/JsonIo.html): `toJson()`, `toJava()`, `toMaps()`, `toToon()`, `fromToon()`, `formatJson()`, `deepCopy()`
 
-This library is fully compatible with JPMS, commonly known as Java Modules. It includes a `module-info.class` file that specifies module dependencies and exports.
-
-**JPMS Benefits:**
-- Explicit module boundaries for better isolation
-- Works with `jlink` for custom JRE builds (<50MB runtime)
-- Multi-release JAR with JDK 8 bytecode (class file format 52)
-
-### OSGi
-
-This library also supports OSGi environments. It comes with pre-configured OSGi metadata in the `MANIFEST.MF` file, ensuring easy integration into any OSGi-based application.
-
-**OSGi Compatibility:**
-- Compatible with OSGi frameworks (Apache Karaf, Apache Felix, Eclipse Equinox)
-- Standard OSGi bundle with proper Import-Package and Export-Package declarations
-- Dynamic service loading support
-
-Both of these features ensure that our library can be seamlessly integrated into modular Java applications, providing robust dependency management and encapsulation.
-
-___
-To include in your project:
-##### Gradle
-```groovy
-implementation 'com.cedarsoftware:json-io:4.85.0'
-```
-
-##### Maven
-```xml
- <dependency>
-   <groupId>com.cedarsoftware</groupId>
-   <artifactId>json-io</artifactId>
-   <version>4.85.0</version>
- </dependency>
-```
-
-___
-
-## User Guide
->#### [Usage](/user-guide.md)
->#### [WriteOptions reference](/user-guide-writeOptions.md)
->#### [ReadOptions reference](/user-guide-readOptions.md)
->#### [Revision History](/changelog.md)
-
-## Release
->### [4.85.0](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.85.0/index.html)
->- [ ] **Bundling**: Both JPMS (Java Platform Module System) and OSGi (Open Service Gateway initiative)
->- [ ] **Maintained**: Fully
->- [ ] **Java Package**: com.cedarsoftware.io
->- [ ] **Java**: JDK1.8+ (Class file 52 format, includes module-info.class - multi-release JAR)
->- [ ] **API**
- >  - Static methods on [JsonIo](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.85.0/com/cedarsoftware/io/JsonIo.html): [toJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.85.0/com/cedarsoftware/io/JsonIo.html#toJson(java.lang.Object,com.cedarsoftware.io.WriteOptions)), [toJava()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/latest/com/cedarsoftware/io/JsonIo.html#toJava(com.cedarsoftware.io.JsonObject,com.cedarsoftware.io.ReadOptions)), [toMaps()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/latest/com/cedarsoftware/io/JsonIo.html#toMaps(java.lang.String)), [formatJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.85.0/com/cedarsoftware/io/JsonIo.html#formatJson(java.lang.String)), [deepCopy()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.85.0/com/cedarsoftware/io/JsonIo.html#deepCopy(java.lang.Object,com.cedarsoftware.io.ReadOptions,com.cedarsoftware.io.WriteOptions))
- >  - Use [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md) to configure `JsonIo`
- >  - Use [ClassFactory](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.85.0/com/cedarsoftware/io/ClassFactory.html) for difficult classes (hard to instantiate & fill)
- >  - Use [JsonClassWriter](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.85.0/com/cedarsoftware/io/JsonClassWriter.html) to customize the output JSON for a particular class
+Configure via [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md). Use [ClassFactory](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.85.0/com/cedarsoftware/io/ClassFactory.html) for difficult-to-instantiate classes.
 
 ### Logging
 
-By design, `json-io` limits its dependences to `java-util` and no other libraries, keeping it small and easy to work with.  `json-io` uses the Java built-in `java.util.logging` for all output. See the
-[user guide](/user-guide.md#redirecting-javautillogging) for ways to route
-these logs to SLF4J or Log4j&nbsp;2.
+json-io uses `java.util.logging` to minimize dependencies. See the [user guide](/user-guide.md#redirecting-javautillogging) to route logs to SLF4J or Log4j 2.
+
+---
 
 Featured on [json.org](http://json.org).
 
