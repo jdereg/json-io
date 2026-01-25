@@ -1,6 +1,9 @@
-<div align="center">
-  <img src="badge.svg" alt="json-io logo" width="320" height="200" />
+<p align="center">
+  <img src="infographic.jpeg" alt="json-io infographic - JSON5, TOON, and Core Capabilities" width="100%" />
+</p>
+<p align="right"><sub>Infographic by <a href="https://github.com/glaforge">Guillaume Laforge</a></sub></p>
 
+<div align="center">
   <p>
     <a href="https://central.sonatype.com/search?q=json-io&namespace=com.cedarsoftware">
       <img src="https://badgen.net/maven/v/maven-central/com.cedarsoftware/json-io" alt="Maven Central" height="20" />
@@ -29,11 +32,6 @@
     </a>
   </p>
 </div>
-
-<p align="center">
-  <img src="infographic.jpeg" alt="json-io infographic - JSON5, TOON, and Core Capabilities" width="100%" />
-</p>
-<p align="right"><sub>Infographic by <a href="https://github.com/glaforge">Guillaume Laforge</a></sub></p>
 
 json-io is a powerful and lightweight Java library that simplifies **JSON5**, **JSON**, and **TOON** serialization and deserialization while handling complex object graphs with ease. Unlike basic JSON parsers, json-io preserves object references, handles polymorphic types, and maintains cyclic relationships in your data structures.
 
