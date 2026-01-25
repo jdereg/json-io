@@ -26,5 +26,5 @@
 
     <!-- Logo text -->
     <text x="150" y="155" text-anchor="middle" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="#FF8C00">json-io</text>
-    <text x="150" y="178" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#666666">Full Fidelity JSON for Java</text>
+    <text x="150" y="178" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#666666">JSON/TOON for Java</text>
 </svg>
