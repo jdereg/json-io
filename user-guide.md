@@ -575,6 +575,47 @@ TOON only supports 5 escape sequences (fewer than JSON):
 - `\r` — carriage return
 - `\t` — tab
 
+### TOON Supported Types
+
+json-io's TOON support includes all types supported by the [java-util Converter](https://github.com/jdereg/java-util).
+This provides comprehensive coverage far exceeding other TOON implementations:
+
+| Category | Types | TOON Output |
+|----------|-------|-------------|
+| **Primitives & Wrappers** | `byte`, `Byte`, `short`, `Short`, `int`, `Integer`, `long`, `Long`, `float`, `Float`, `double`, `Double`, `boolean`, `Boolean`, `char`, `Character` | Numeric form or `true`/`false` |
+| **Big Numbers** | `BigInteger`, `BigDecimal` | Numeric (unquoted) |
+| **Atomic Types** | `AtomicInteger`, `AtomicLong`, `AtomicBoolean` | Unwrapped numeric/boolean value |
+| **Date/Time (java.util)** | `Date`, `Calendar`, `TimeZone` | ISO-8601 string |
+| **Date/Time (java.sql)** | `java.sql.Date`, `Timestamp` | ISO-8601 string |
+| **Date/Time (java.time)** | `Instant`, `Duration`, `Period`, `LocalDate`, `LocalTime`, `LocalDateTime`, `ZonedDateTime`, `OffsetDateTime`, `OffsetTime`, `Year`, `YearMonth`, `MonthDay`, `ZoneId`, `ZoneOffset` | ISO-8601 string |
+| **String Types** | `String`, `StringBuffer`, `StringBuilder`, `char[]`, `Character[]`, `CharBuffer` | String value (quoted if needed) |
+| **Binary/Buffer** | `byte[]`, `ByteBuffer`, `BitSet` | Base64 encoded string |
+| **ID/Location** | `UUID`, `URI`, `URL`, `Locale`, `Currency`, `Pattern`, `File`, `Path`, `Class` | String representation |
+| **Geometric (java-util)** | `Color`, `Dimension`, `Point`, `Rectangle`, `Insets` | Object with component fields |
+| **Collections** | `List`, `Set`, `Collection`, `EnumSet` | Array `[N]: ...` or list format |
+| **Maps** | `Map`, `HashMap`, `TreeMap`, etc. | Object with key-value pairs |
+| **Arrays** | `Object[]`, primitive arrays (`int[]`, `double[]`, etc.) | Inline `[N]: a,b,c` or list format |
+| **Enums** | Any `Enum` type | Enum name as string |
+| **Other** | `Throwable`, custom objects with accessible fields | Object with fields |
+
+**Comparison with JToon (toon-format/toon-java):**
+
+| Feature | json-io | JToon |
+|---------|---------|-------|
+| Primitive types | ✓ All 8 | ✓ All 8 |
+| Date/Time types | ✓ 18 types | ✓ 8 types |
+| Atomic types | ✓ 3 types | ✗ |
+| Geometric types | ✓ 5 types | ✗ |
+| `UUID`, `URI`, `URL` | ✓ | ✗ |
+| `Locale`, `Currency`, `Pattern` | ✓ | ✗ |
+| `File`, `Path`, `Class` | ✓ | ✗ |
+| `BitSet`, `ByteBuffer`, `CharBuffer` | ✓ | ✗ |
+| `StringBuffer`, `StringBuilder` | ✓ | ✗ |
+| Complex object graphs | ✓ Full support | Limited |
+| Cyclic reference handling | ✓ Graceful null | N/A |
+| Generic type preservation | ✓ Via TypeHolder | ✗ |
+| Custom type extensibility | ✓ ClassFactory/Writer | Limited |
+
 ### When to Use TOON
 
 **Use TOON when:**

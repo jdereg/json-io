@@ -87,7 +87,22 @@ MyClass obj = JsonIo.fromToon(toon, readOptions).asClass(MyClass.class);
 | TOON | `name: John`<br>`age: 30`<br>`tags[2]: java,json` | ~9 | 38 chars |
 
 TOON uses indentation-based structure, minimal quoting, and inline arrays to reduce token count
-while remaining human-readable. JSON5 saves ~12% over JSON; TOON saves ~40% over JSON. See the [TOON section in the User Guide](/user-guide.md#toon-output-support) for details.
+while remaining human-readable. JSON5 saves ~12% over JSON; TOON saves ~40% over JSON. See the [TOON section in the User Guide](/user-guide.md#toon-support) for details.
+
+**Supported types** (55+ built-in):
+
+| Category | Types |
+|----------|-------|
+| Primitives | `byte`, `short`, `int`, `long`, `float`, `double`, `boolean`, `char` + wrappers |
+| Numbers | `BigInteger`, `BigDecimal`, `AtomicInteger`, `AtomicLong`, `AtomicBoolean` |
+| Date/Time | `Date`, `Calendar`, `Instant`, `LocalDate`, `LocalTime`, `LocalDateTime`, `ZonedDateTime`, `OffsetDateTime`, `Duration`, `Period`, + 8 more |
+| Strings | `String`, `StringBuffer`, `StringBuilder`, `char[]`, `CharBuffer` |
+| Binary | `byte[]`, `ByteBuffer`, `BitSet` |
+| IDs | `UUID`, `URI`, `URL`, `Class`, `Locale`, `Currency`, `Pattern`, `File`, `Path` |
+| Geometric | `Color`, `Dimension`, `Point`, `Rectangle`, `Insets` |
+| Collections | All `Collection`, `Map`, `EnumSet`, and array types |
+
+See the [complete type comparison](/user-guide.md#toon-supported-types) showing json-io's comprehensive support vs other TOON implementations.
 
 ## Cloud Native & Microservices
 
