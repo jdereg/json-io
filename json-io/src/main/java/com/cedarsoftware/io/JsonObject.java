@@ -68,6 +68,11 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     private String typeString;
     private byte jsonTypeCache;
 
+    // Stored element type for collections/arrays (or value type for maps).
+    // Used to preserve generic type information that would otherwise be lost
+    // when createInstance changes the type to a concrete class.
+    private transient java.lang.reflect.Type itemElementType;
+
     /**
      * Type classification for optimized dispatch in Resolver.
      */
@@ -188,6 +193,25 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
 
     void setTypeString(String typeString) {
         this.typeString = typeString;
+    }
+
+    /**
+     * Get the stored element type for collections/arrays (or value type for maps).
+     * This preserves generic type information that would otherwise be lost when
+     * the type is changed to a concrete class during instance creation.
+     * @return the element/value type, or null if not set
+     */
+    public java.lang.reflect.Type getItemElementType() {
+        return itemElementType;
+    }
+
+    /**
+     * Set the element type for collections/arrays (or value type for maps).
+     * Should be called before createInstance to preserve generic type information.
+     * @param elementType the element/value type from the ParameterizedType
+     */
+    public void setItemElementType(java.lang.reflect.Type elementType) {
+        this.itemElementType = elementType;
     }
 
     // ========== Map Interface ==========

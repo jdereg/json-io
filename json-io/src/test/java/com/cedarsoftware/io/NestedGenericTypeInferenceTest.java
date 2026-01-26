@@ -392,14 +392,7 @@ class NestedGenericTypeInferenceTest {
 
     /**
      * Test triple-nested generics: List<List<List<User>>>
-     *
-     * Note: This test is currently disabled as a known limitation.
-     * Triple-nested collections require additional work in handleArrayInCollection()
-     * to properly propagate generic type information through multiple levels of nesting.
-     * The fix for this is complex because the same method handles both nested collection
-     * arrays and Map value arrays, which have different semantics.
      */
-    @org.junit.jupiter.api.Disabled("Known limitation: triple-nested collections not yet supported")
     @Test
     void testTripleNestedListTypeInference() {
         String json = "{\"groups\": [[[{\"id\": \"1\", \"name\": \"Alice\", \"age\": 30}]]]}";

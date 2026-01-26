@@ -159,6 +159,12 @@ public class ObjectResolver extends Resolver
             // This enables proper type inference for JSON without @type markers.
             if (fieldType instanceof ParameterizedType) {
                 markUntypedObjects(fieldType, jsonArray);
+                // Store element type before createInstance changes the type to a raw Class.
+                // This preserves generic type information for traverseCollection.
+                Type[] typeArgs = ((ParameterizedType) fieldType).getActualTypeArguments();
+                if (typeArgs.length > 0) {
+                    jsonArray.setItemElementType(typeArgs[0]);
+                }
             }
 
             createInstance(jsonArray);
@@ -175,6 +181,18 @@ public class ObjectResolver extends Resolver
                     addUnresolvedReference(new UnresolvedReference(jsonObj, injector.getName(), jsRhs.getReferenceId()));
                 }
             } else {    // Direct assignment for nested objects.
+                // For Map fields with ParameterizedType, preserve the value type before createInstance
+                // changes the type to a raw Class. This enables proper type inference in traverseMap.
+                if (fieldType instanceof ParameterizedType) {
+                    Class<?> rawClass = TypeUtilities.getRawClass(fieldType);
+                    if (rawClass != null && Map.class.isAssignableFrom(rawClass)) {
+                        Type[] typeArgs = ((ParameterizedType) fieldType).getActualTypeArguments();
+                        if (typeArgs.length >= 2) {
+                            // Store value type (second type arg) for traverseMap to use
+                            jsRhs.setItemElementType(typeArgs[1]);
+                        }
+                    }
+                }
                 // Create instance first so @ref references to this object can resolve
                 createInstance(jsRhs);
                 Object fieldObject = jsRhs.getTarget();
@@ -288,21 +306,30 @@ public class ObjectResolver extends Resolver
         final boolean isList = col instanceof List;
         int idx = 0;
 
-        // Extract element type from the collection's original type if it was a ParameterizedType.
-        // Note: After resolveTargetType() in createInstance(), the type may be converted to a raw
-        // Class, but markUntypedObjects() may have already stamped types on the elements.
+        // Extract element type - first check for stored element type (preserved before createInstance
+        // changed the type to a raw Class), then fall back to extracting from ParameterizedType.
         // We use Object.class as fallback when element type cannot be determined.
-        final Type collectionType = jsonObj.getType();
-        Type elementType = Object.class;
+        Type elementType = jsonObj.getItemElementType();
         Class<?> rawElementType = Object.class;
-        if (collectionType instanceof ParameterizedType) {
-            Type[] typeArgs = ((ParameterizedType) collectionType).getActualTypeArguments();
-            if (typeArgs.length > 0) {
-                elementType = typeArgs[0];
-                rawElementType = TypeUtilities.getRawClass(elementType);
-                if (rawElementType == null) {
-                    rawElementType = Object.class;
+        if (elementType != null) {
+            rawElementType = TypeUtilities.getRawClass(elementType);
+            if (rawElementType == null) {
+                rawElementType = Object.class;
+            }
+        } else {
+            final Type collectionType = jsonObj.getType();
+            if (collectionType instanceof ParameterizedType) {
+                Type[] typeArgs = ((ParameterizedType) collectionType).getActualTypeArguments();
+                if (typeArgs.length > 0) {
+                    elementType = typeArgs[0];
+                    rawElementType = TypeUtilities.getRawClass(elementType);
+                    if (rawElementType == null) {
+                        rawElementType = Object.class;
+                    }
                 }
+            }
+            if (elementType == null) {
+                elementType = Object.class;
             }
         }
 
@@ -340,12 +367,23 @@ public class ObjectResolver extends Resolver
                     addResolvedObjectToCollection(jObj, col);
                 }
             } else if (elementClass.isArray()) {
-                // For array elements inside the collection, use the helper to extract the array component type.
-                Type arrayComponentType = TypeUtilities.extractArrayComponentType(elementType);
-                if (arrayComponentType == null) {
-                    arrayComponentType = Object.class;
+                // Determine the type for the nested array/collection.
+                // If elementType is a Collection type (e.g., List<User>), pass it directly.
+                // If elementType is an array type (e.g., User[]), extract its component type.
+                // This enables proper conversion of JSON arrays to nested collections.
+                Type nestedType;
+                Class<?> rawElementType2 = TypeUtilities.getRawClass(elementType);
+                if (rawElementType2 != null && Collection.class.isAssignableFrom(rawElementType2)) {
+                    // elementType is a Collection (e.g., List<User>), use it directly
+                    nestedType = elementType;
+                } else {
+                    // elementType is an array type, extract its component type
+                    nestedType = TypeUtilities.extractArrayComponentType(elementType);
+                    if (nestedType == null) {
+                        nestedType = Object.class;
+                    }
                 }
-                wrapArrayAndAddToCollection((Object[]) element, arrayComponentType, col);
+                wrapArrayAndAddToCollection((Object[]) element, nestedType, col);
             } else {
                 // Check for custom factory or converter support
                 Object special = readWithFactoryIfExists(element, rawElementType);
@@ -356,6 +394,195 @@ public class ObjectResolver extends Resolver
                 }
             }
             idx++;
+        }
+    }
+
+    /**
+     * Process java.util.Map and its derivatives with support for parameterized value types.
+     * When the Map type is parameterized (e.g., Map<String, List<User>>), this method ensures
+     * that values are properly converted to their target collection types.
+     *
+     * @param jsonObj a Map-of-Map representation of the JSON input stream.
+     */
+    @Override
+    protected void traverseMap(JsonObject jsonObj) {
+        if (jsonObj.isFinished) {
+            return;
+        }
+        jsonObj.setFinished();
+
+        // Get keys/items using asTwoArrays() to get validation (throws if @keys/@items have different lengths)
+        Map.Entry<Object[], Object[]> pair = jsonObj.asTwoArrays();
+        Object[] existingKeys = pair.getKey();
+        Object[] existingItems = pair.getValue();
+
+        if (existingKeys == null) {  // If keys is null, items is also null
+            addMapToRehash(jsonObj);
+            return;
+        }
+
+        // Extract value type - first check for stored value type (preserved before createInstance
+        // changed the type to a raw Class), then fall back to extracting from ParameterizedType.
+        Type valueType = jsonObj.getItemElementType();  // For Maps, this stores the value type
+        if (valueType == null) {
+            Type mapType = jsonObj.getType();
+            if (mapType instanceof ParameterizedType) {
+                Type[] typeArgs = ((ParameterizedType) mapType).getActualTypeArguments();
+                if (typeArgs.length >= 2) {
+                    valueType = typeArgs[1];
+                }
+            }
+            if (valueType == null) {
+                valueType = Object.class;
+            }
+        }
+
+        Class<?> rawValueType = TypeUtilities.getRawClass(valueType);
+        boolean valueIsCollection = rawValueType != null && Collection.class.isAssignableFrom(rawValueType);
+
+        // Check if this is @keys/@items format (both explicitly set via setKeys/setItems)
+        // vs standard entry format (entries added via put())
+        boolean isKeysItemsFormat = jsonObj.getKeys() != null;
+
+        if (isKeysItemsFormat) {
+            // @keys/@items format - process arrays directly
+            processMapKeysValues(existingKeys, existingItems, valueType, valueIsCollection);
+        } else {
+            // Standard entry format - process entries and convert values if needed
+            processMapEntries(jsonObj, existingKeys, existingItems, valueType, valueIsCollection);
+        }
+
+        addMapToRehash(jsonObj);
+    }
+
+    /**
+     * Process Map in @keys/@items format.
+     */
+    private void processMapKeysValues(Object[] keys, Object[] items, Type valueType, boolean valueIsCollection) {
+        // Process keys
+        JsonObject keysWrapper = new JsonObject();
+        keysWrapper.setItems(keys);
+        keysWrapper.setTarget(keys);
+        push(keysWrapper);
+
+        // Extract element type for collection values
+        Type valueElementType = null;
+        if (valueIsCollection && valueType instanceof ParameterizedType) {
+            Type[] typeArgs = ((ParameterizedType) valueType).getActualTypeArguments();
+            if (typeArgs.length > 0) {
+                valueElementType = typeArgs[0];
+            }
+        }
+
+        // Process values - convert to collections if needed
+        if (valueIsCollection) {
+            for (int i = 0; i < items.length; i++) {
+                Object value = items[i];
+                if (value instanceof Object[] && !(value instanceof JsonObject)) {
+                    JsonObject wrapper = new JsonObject();
+                    wrapper.setType(valueType);
+                    wrapper.setItems((Object[]) value);
+                    // Preserve element type for traverseCollection
+                    if (valueElementType != null) {
+                        wrapper.setItemElementType(valueElementType);
+                    }
+                    createInstance(wrapper);
+                    // Store actual collection instance, not wrapper
+                    items[i] = wrapper.getTarget();
+                    push(wrapper);
+                } else if (value instanceof JsonObject) {
+                    JsonObject jObj = (JsonObject) value;
+                    if (jObj.getType() == null) {
+                        jObj.setType(valueType);
+                    }
+                    // Preserve element type for traverseCollection
+                    if (valueElementType != null && jObj.getItemElementType() == null) {
+                        jObj.setItemElementType(valueElementType);
+                    }
+                    createInstance(jObj);
+                    // Store actual target instance
+                    if (jObj.getTarget() != null) {
+                        items[i] = jObj.getTarget();
+                    }
+                    push(jObj);
+                }
+            }
+        } else {
+            JsonObject itemsWrapper = new JsonObject();
+            itemsWrapper.setItems(items);
+            itemsWrapper.setTarget(items);
+            push(itemsWrapper);
+        }
+    }
+
+    /**
+     * Process Map in standard entry format, converting values to collections if needed.
+     * Uses the pre-validated keys/items arrays from asTwoArrays().
+     */
+    private void processMapEntries(JsonObject jsonObj, Object[] keys, Object[] items, Type valueType, boolean valueIsCollection) {
+        if (valueIsCollection) {
+            // Extract element type for collection values
+            Type valueElementType = null;
+            if (valueType instanceof ParameterizedType) {
+                Type[] typeArgs = ((ParameterizedType) valueType).getActualTypeArguments();
+                if (typeArgs.length > 0) {
+                    valueElementType = typeArgs[0];
+                }
+            }
+
+            // Iterate over entries and wrap array values as typed collections
+            // Note: items array corresponds to the values in the map
+            int len = Math.min(keys.length, items.length);
+            for (int i = 0; i < len; i++) {
+                Object value = items[i];
+                if (value instanceof Object[] && !(value instanceof JsonObject)) {
+                    // Wrap raw array in JsonObject with collection type
+                    JsonObject wrapper = new JsonObject();
+                    wrapper.setType(valueType);
+                    wrapper.setItems((Object[]) value);
+                    // Preserve element type for traverseCollection
+                    if (valueElementType != null) {
+                        wrapper.setItemElementType(valueElementType);
+                    }
+                    createInstance(wrapper);
+                    // Update items array with the actual collection instance
+                    items[i] = wrapper.getTarget();
+                    push(wrapper);
+                } else if (value instanceof JsonObject) {
+                    JsonObject jObj = (JsonObject) value;
+                    if (jObj.getType() == null) {
+                        jObj.setType(valueType);
+                    }
+                    // Preserve element type for traverseCollection
+                    if (valueElementType != null && jObj.getItemElementType() == null) {
+                        jObj.setItemElementType(valueElementType);
+                    }
+                    createInstance(jObj);
+                    // Update items array with the actual target instance
+                    if (jObj.getTarget() != null) {
+                        items[i] = jObj.getTarget();
+                    }
+                    push(jObj);
+                }
+            }
+
+            // Still need to push wrappers for keys for traversal
+            JsonObject keysWrapper = new JsonObject();
+            keysWrapper.setItems(keys);
+            keysWrapper.setTarget(keys);
+            push(keysWrapper);
+        } else {
+            // Use default behavior - wrap and push arrays for traversal.
+            // IMPORTANT: Must use the original arrays (not copies) because rehashMaps() modifies them in place.
+            JsonObject keysWrapper = new JsonObject();
+            keysWrapper.setItems(keys);
+            keysWrapper.setTarget(keys);
+            push(keysWrapper);
+
+            JsonObject itemsWrapper = new JsonObject();
+            itemsWrapper.setItems(items);
+            itemsWrapper.setTarget(items);
+            push(itemsWrapper);
         }
     }
 
@@ -629,12 +856,29 @@ public class ObjectResolver extends Resolver
     }
 
     /**
-     * Handles nested arrays within collections (e.g., int[][], String[][]).
+     * Handles arrays that represent collection contents during type marking.
+     * The arrayInstance contains the elements of a collection (e.g., User objects in a List<User>).
+     *
+     * @param arrayInstance The array containing collection elements
+     * @param containerType The full parameterized type of the collection (e.g., List<User>)
+     * @param collectionClass The raw collection class (e.g., List.class) - unused after refactor
+     * @param stack The processing stack for type marking
      */
     private void handleArrayInCollection(final Object arrayInstance,
                                           final Type containerType,
                                           final Class<?> collectionClass,
                                           final Deque<Map.Entry<Type, Object>> stack) {
+        // Extract the element type from containerType.
+        // For List<User>, elementType = User
+        // For List<List<User>>, elementType = List<User>
+        Type elementType = Object.class;
+        if (containerType instanceof ParameterizedType) {
+            Type[] typeArgs = ((ParameterizedType) containerType).getActualTypeArguments();
+            if (typeArgs.length > 0) {
+                elementType = typeArgs[0];
+            }
+        }
+
         int len = ArrayUtilities.getLength(arrayInstance);
         for (int i = 0; i < len; i++) {
             Object element = ArrayUtilities.getElement(arrayInstance, i);
@@ -642,7 +886,7 @@ public class ObjectResolver extends Resolver
                 continue;
             }
 
-            // Handle nested array (e.g., element is int[] within int[][])
+            // Handle nested array (e.g., element is Object[] representing a List<User> within List<List<User>>)
             if (element.getClass().isArray()) {
                 // Convert the inner array to a List for type resolution
                 int innerLen = ArrayUtilities.getLength(element);
@@ -651,13 +895,15 @@ public class ObjectResolver extends Resolver
                     items.add(ArrayUtilities.getElement(element, j));
                 }
 
+                // Wrap the array in a JsonObject with the element type (e.g., List<User>)
                 JsonObject coll = new JsonObject();
-                coll.setType(collectionClass);
+                coll.setType(elementType);  // Use full parameterized type, not raw class
                 coll.setItems((Object[]) element);
-                stack.addFirst(new AbstractMap.SimpleEntry<>(containerType, items));
+                stack.addFirst(new AbstractMap.SimpleEntry<>(elementType, items));
                 ArrayUtilities.setElement(arrayInstance, i, coll);
             } else {
-                stack.addFirst(new AbstractMap.SimpleEntry<>(containerType, element));
+                // Non-array elements (e.g., JsonObjects representing Users) get the element type
+                stack.addFirst(new AbstractMap.SimpleEntry<>(elementType, element));
             }
         }
     }
@@ -735,6 +981,9 @@ public class ObjectResolver extends Resolver
 
     /**
      * Helper method to add array items to the stack with their type.
+     * Used by handleMapTypeMarking() to process Map keys and values.
+     * Each element is added individually since they are separate Map entries,
+     * not elements of a single collection.
      */
     private void addItemsToStack(final Deque<Map.Entry<Type, Object>> stack,
                                   final Object[] items,
@@ -749,15 +998,11 @@ public class ObjectResolver extends Resolver
             return;
         }
 
-        Class<?> rawType = TypeUtilities.getRawClass(itemType);
-        if (rawType != null && Collection.class.isAssignableFrom(rawType)) {
-            // Treat the entire array as a collection
-            stack.addFirst(new AbstractMap.SimpleEntry<>(itemType, items));
-        } else {
-            // Iterate in reverse to preserve order after addFirst
-            for (int i = items.length - 1; i >= 0; i--) {
-                stack.addFirst(new AbstractMap.SimpleEntry<>(itemType, items[i]));
-            }
+        // Add each item individually with its type.
+        // For Map<K, V>, each item is a separate key or value, not elements of one collection.
+        // Iterate in reverse to preserve order after addFirst.
+        for (int i = items.length - 1; i >= 0; i--) {
+            stack.addFirst(new AbstractMap.SimpleEntry<>(itemType, items[i]));
         }
     }
 
@@ -878,6 +1123,34 @@ public class ObjectResolver extends Resolver
      */
     private char[] handleCharArrayElement(Object[] arrayElement) {
         return arrayElement.length == 0 ? new char[]{} : ((String) arrayElement[0]).toCharArray();
+    }
+
+    /**
+     * Override to preserve element type for nested collections.
+     * Wraps a raw Object[] array element in a JsonObject with the proper type information,
+     * creates its instance, adds it to the collection, and pushes it for traversal.
+     *
+     * @param arrayElement the raw Object[] to wrap
+     * @param componentType the full generic type for the collection/array (e.g., List<User>)
+     * @param col the collection to add the created instance to
+     */
+    @Override
+    protected void wrapArrayAndAddToCollection(Object[] arrayElement, Type componentType, Collection<Object> col) {
+        JsonObject jObj = new JsonObject();
+        jObj.setType(componentType);
+        jObj.setItems(arrayElement);
+
+        // Preserve element type for nested collections (e.g., List<List<User>> -> List<User>)
+        if (componentType instanceof ParameterizedType) {
+            Type[] typeArgs = ((ParameterizedType) componentType).getActualTypeArguments();
+            if (typeArgs.length > 0) {
+                jObj.setItemElementType(typeArgs[0]);
+            }
+        }
+
+        createInstance(jObj);
+        col.add(jObj.getTarget());
+        push(jObj);
     }
 
 }

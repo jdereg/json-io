@@ -142,7 +142,7 @@ public abstract class JsonValue {
         if (type == null) {
             return;
         }
-        
+
         if (type == this.type || type.equals(this.type)) {
             return;
         }
