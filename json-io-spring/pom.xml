@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.cedarsoftware</groupId>
         <artifactId>json-io-parent</artifactId>
-        <version>4.86.0</version>
+        <version>4.87.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -99,6 +99,20 @@
                     <encoding>${project.build.sourceEncoding}</encoding>
                     <parameters>true</parameters>
                 </configuration>
+            </plugin>
+
+            <!-- Required for Maven Central deployment -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
             </plugin>
         </plugins>
     </build>

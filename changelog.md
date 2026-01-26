@@ -1,4 +1,9 @@
 ### Revision History
+#### 4.87.0 - 2026-01-26
+* **BUILD**: Fixed `json-io-spring-boot-starter` Maven Central deployment
+  * Added required deployment plugins (maven-source-plugin, maven-javadoc-plugin, central-publishing-maven-plugin)
+  * Spring Boot starter now properly publishes to Maven Central alongside json-io core
+
 #### 4.86.0 - 2025-01-26
 * **FEATURE**: Spring Boot Starter module (`json-io-spring-boot-starter`)
   * New Maven artifact for seamless Spring Boot 3.x integration
