@@ -1,5 +1,5 @@
 ### Revision History
-#### 4.85.0 - 2025-01-24
+#### 4.86.0 - 2025-01-26
 * **FEATURE**: Spring Boot Starter module (`json-io-spring-boot-starter`)
   * New Maven artifact for seamless Spring Boot 3.x integration
   * Auto-configuration for Spring MVC with `HttpMessageConverter` support
@@ -25,6 +25,8 @@
 * **BUILD**: Converted to multi-module Maven project structure
   * `json-io` - Core library (unchanged artifact coordinates)
   * `json-io-spring-boot-starter` - Spring Boot integration module
+
+#### 4.85.0 - 2025-01-24
 * **FEATURE**: TOON (Token-Oriented Object Notation) output support
   * Added `JsonIo.toToon(Object, WriteOptions)` - Convert Java objects to TOON format string
   * Added `JsonIo.toToon(OutputStream, Object, WriteOptions)` - Stream TOON output directly
