@@ -87,7 +87,7 @@ json-io's TOON implementation offers comprehensive Java type coverage while JToo
 
 **Gradle**
 ```groovy
-implementation 'com.cedarsoftware:json-io:4.85.0'
+implementation 'com.cedarsoftware:json-io:4.86.0'
 ```
 
 **Maven**
@@ -95,7 +95,7 @@ implementation 'com.cedarsoftware:json-io:4.85.0'
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>4.85.0</version>
+  <version>4.86.0</version>
 </dependency>
 ```
 
@@ -121,7 +121,7 @@ json-io provides a Spring Boot starter for seamless integration with Spring MVC 
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io-spring-boot-starter</artifactId>
-  <version>4.85.0</version>
+  <version>4.86.0</version>
 </dependency>
 ```
 
@@ -168,7 +168,7 @@ See the [complete type comparison](/user-guide.md#toon-supported-types) showing 
 - [Spring Integration Guide](/user-guide-spring.md)
 - [Revision History](/changelog.md)
 
-## Release [4.85.0](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.85.0/index.html)
+## Release [4.86.0](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.86.0/index.html)
 
 | | |
 |---|---|
@@ -176,9 +176,9 @@ See the [complete type comparison](/user-guide.md#toon-supported-types) showing 
 | **Java** | JDK 1.8+ (multi-release JAR with module-info.class) |
 | **Package** | com.cedarsoftware.io |
 
-**API** — Static methods on [JsonIo](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.85.0/com/cedarsoftware/io/JsonIo.html): `toJson()`, `toJava()`, `toMaps()`, `toToon()`, `fromToon()`, `formatJson()`, `deepCopy()`
+**API** — Static methods on [JsonIo](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.86.0/com/cedarsoftware/io/JsonIo.html): `toJson()`, `toJava()`, `toMaps()`, `toToon()`, `fromToon()`, `formatJson()`, `deepCopy()`
 
-Configure via [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md). Use [ClassFactory](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.85.0/com/cedarsoftware/io/ClassFactory.html) for difficult-to-instantiate classes.
+Configure via [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md). Use [ClassFactory](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.86.0/com/cedarsoftware/io/ClassFactory.html) for difficult-to-instantiate classes.
 
 ### Logging
 
