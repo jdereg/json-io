@@ -152,6 +152,15 @@ public class ObjectResolver extends Resolver
             JsonObject jsonArray = new JsonObject();
             jsonArray.setType(fieldType);
             jsonArray.setItems(elements);
+
+            // Mark types on untyped objects within the array for nested generic types.
+            // This must be done BEFORE createInstance() which may convert the ParameterizedType
+            // to a raw Class (e.g., List<User> becomes ArrayList.class).
+            // This enables proper type inference for JSON without @type markers.
+            if (fieldType instanceof ParameterizedType) {
+                markUntypedObjects(fieldType, jsonArray);
+            }
+
             createInstance(jsonArray);
             injector.inject(target, jsonArray.getTarget());
             push(jsonArray);
@@ -279,10 +288,23 @@ public class ObjectResolver extends Resolver
         final boolean isList = col instanceof List;
         int idx = 0;
 
-        // Element type defaults to Object.class since the collection's type is always
-        // a concrete Class (not ParameterizedType) after resolveTargetType() in createInstance()
-        final Type elementType = Object.class;
-        final Class<?> rawElementType = Object.class;
+        // Extract element type from the collection's original type if it was a ParameterizedType.
+        // Note: After resolveTargetType() in createInstance(), the type may be converted to a raw
+        // Class, but markUntypedObjects() may have already stamped types on the elements.
+        // We use Object.class as fallback when element type cannot be determined.
+        final Type collectionType = jsonObj.getType();
+        Type elementType = Object.class;
+        Class<?> rawElementType = Object.class;
+        if (collectionType instanceof ParameterizedType) {
+            Type[] typeArgs = ((ParameterizedType) collectionType).getActualTypeArguments();
+            if (typeArgs.length > 0) {
+                elementType = typeArgs[0];
+                rawElementType = TypeUtilities.getRawClass(elementType);
+                if (rawElementType == null) {
+                    rawElementType = Object.class;
+                }
+            }
+        }
 
         for (Object element : items) {
             if (element == null) {
@@ -307,8 +329,13 @@ public class ObjectResolver extends Resolver
                 if (jObj.isReference()) {
                     resolveReferenceInCollection(jObj, jsonObj, col, idx, isList);
                 } else {
-                    // Set the element's full type to the extracted element type.
-                    jObj.setType(elementType);
+                    // Set the element's full type to the extracted element type, but only if
+                    // the element doesn't already have a type set (e.g., from markUntypedObjects()
+                    // or from @type in the JSON). This enables proper type inference for nested
+                    // generic types when deserializing JSON without @type markers.
+                    if (jObj.getType() == null) {
+                        jObj.setType(elementType);
+                    }
                     createInstance(jObj);
                     addResolvedObjectToCollection(jObj, col);
                 }
