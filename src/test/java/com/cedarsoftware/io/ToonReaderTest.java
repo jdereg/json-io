@@ -47,6 +47,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
 import com.cedarsoftware.util.DeepEquals;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -1252,5 +1253,316 @@ class ToonReaderTest {
         assertEquals("java", tags.get(0));
         assertEquals("json", tags.get(1));
         assertEquals("toon", tags.get(2));
+    }
+
+    // ========== TOON Spec Compliance Tests ==========
+    // These tests verify compliance with TOON spec features
+    // Reference: https://github.com/toon-format/spec/blob/main/SPEC.md
+
+    // --- String Quoting Rules (per TOON spec) ---
+
+    @Test
+    void testStringStartingWithHyphen() {
+        // TOON spec: Strings starting with hyphens require quoting
+        Map<String, Object> map = mapOf("value", "-starting-with-hyphen");
+        String toon = JsonIo.toToon(map, null);
+        assertTrue(toon.contains("\""), "Hyphen-starting string should be quoted");
+        Map<String, Object> restored = JsonIo.fromToonToMaps(toon, null).asClass(Map.class);
+        assertEquals("-starting-with-hyphen", restored.get("value"));
+    }
+
+    @Test
+    void testStringWithBrackets() {
+        // TOON spec: Strings containing brackets require quoting
+        roundTrip("array[0]");
+        roundTrip("[bracketed]");
+        roundTrip("test]value");
+    }
+
+    @Test
+    void testStringWithBraces() {
+        // TOON spec: Strings containing braces require quoting
+        roundTrip("{braced}");
+        roundTrip("test{value}");
+        roundTrip("end}brace");
+    }
+
+    @Test
+    void testStringWithCarriageReturn() {
+        // TOON spec: \r is a valid escape sequence
+        String withCR = "line1\rline2";
+        String toon = JsonIo.toToon(withCR, null);
+        assertTrue(toon.contains("\\r"), "Carriage return should be escaped as \\r");
+        String restored = JsonIo.fromToon(toon, null).asClass(String.class);
+        assertEquals(withCR, restored);
+    }
+
+    @Test
+    void testStringWithAllEscapes() {
+        // TOON spec: Only 5 valid escapes: \\, \", \n, \r, \t
+        String allEscapes = "back\\slash\tTab\nNewline\rCR\"Quote";
+        roundTrip(allEscapes);
+    }
+
+    @Test
+    void testStringLooksLikeLeadingZeroNumber() {
+        // TOON spec: Strings matching forbidden-leading-zero patterns must be quoted
+        // Examples: "007", "00", "0123" - these look like numbers but have leading zeros
+        Map<String, Object> map = mapOf(
+            "bond", "007",
+            "zeros", "00",
+            "octal", "0123"
+        );
+        String toon = JsonIo.toToon(map, null);
+        Map<String, Object> restored = JsonIo.fromToonToMaps(toon, null).asClass(Map.class);
+        assertEquals("007", restored.get("bond"));
+        assertEquals("00", restored.get("zeros"));
+        assertEquals("0123", restored.get("octal"));
+    }
+
+    @Test
+    void testStringLooksLikeExponentNumber() {
+        // TOON spec: Strings matching numeric patterns must be quoted
+        Map<String, Object> map = mapOf("value", "1e10");
+        String toon = JsonIo.toToon(map, null);
+        assertTrue(toon.contains("\"1e10\""), "Exponent-like string should be quoted");
+        Map<String, Object> restored = JsonIo.fromToonToMaps(toon, null).asClass(Map.class);
+        assertEquals("1e10", restored.get("value"));
+    }
+
+    // --- Key Quoting Rules (per TOON spec) ---
+
+    @Test
+    void testKeyWithSpace() {
+        // TOON spec: Keys not matching ^[A-Za-z_][A-Za-z0-9_.]*$ must be quoted
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("key with space", "value");
+        String toon = JsonIo.toToon(map, null);
+        Map<String, Object> restored = JsonIo.fromToonToMaps(toon, null).asClass(Map.class);
+        assertEquals("value", restored.get("key with space"));
+    }
+
+    @Test
+    void testKeyStartingWithNumber() {
+        // TOON spec: Keys starting with numbers must be quoted
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("123key", "value");
+        String toon = JsonIo.toToon(map, null);
+        Map<String, Object> restored = JsonIo.fromToonToMaps(toon, null).asClass(Map.class);
+        assertEquals("value", restored.get("123key"));
+    }
+
+    @Test
+    void testKeyWithSpecialChars() {
+        // TOON spec: Keys with special chars (except _ and .) must be quoted
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("key-with-hyphen", "value1");
+        map.put("key:with:colon", "value2");
+        map.put("key@with@at", "value3");
+        String toon = JsonIo.toToon(map, null);
+        Map<String, Object> restored = JsonIo.fromToonToMaps(toon, null).asClass(Map.class);
+        assertEquals("value1", restored.get("key-with-hyphen"));
+        assertEquals("value2", restored.get("key:with:colon"));
+        assertEquals("value3", restored.get("key@with@at"));
+    }
+
+    @Test
+    void testKeyWithUnderscore() {
+        // TOON spec: Underscores are allowed in unquoted keys
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("valid_key", "value1");
+        map.put("_leading", "value2");
+        map.put("with_multiple_underscores", "value3");
+        String toon = JsonIo.toToon(map, null);
+        // Underscores should NOT require quoting
+        Map<String, Object> restored = JsonIo.fromToonToMaps(toon, null).asClass(Map.class);
+        assertEquals("value1", restored.get("valid_key"));
+        assertEquals("value2", restored.get("_leading"));
+        assertEquals("value3", restored.get("with_multiple_underscores"));
+    }
+
+    @Test
+    void testKeyWithDot() {
+        // TOON spec: Dots are allowed in unquoted keys (part of IdentifierSegment)
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("dotted.key", "value");
+        String toon = JsonIo.toToon(map, null);
+        Map<String, Object> restored = JsonIo.fromToonToMaps(toon, null).asClass(Map.class);
+        assertEquals("value", restored.get("dotted.key"));
+    }
+
+    @Test
+    void testEmptyKey() {
+        // TOON spec: Empty keys must be quoted
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("", "empty-key-value");
+        String toon = JsonIo.toToon(map, null);
+        assertTrue(toon.contains("\"\":"), "Empty key should be quoted");
+        Map<String, Object> restored = JsonIo.fromToonToMaps(toon, null).asClass(Map.class);
+        assertEquals("empty-key-value", restored.get(""));
+    }
+
+    // --- Number Normalization (per TOON spec) ---
+
+    @Test
+    void testNumberNoExponentNotation() {
+        // TOON spec: Numbers normalize to non-exponential decimal form
+        double largeNum = 1234567890.0;
+        String toon = JsonIo.toToon(largeNum, null);
+        assertFalse(toon.contains("e") || toon.contains("E"),
+                "Number should not use exponent notation: " + toon);
+    }
+
+    @Test
+    void testNumberNoTrailingZeros() {
+        // TOON spec: No fractional trailing zeros
+        double val = 3.10; // Should become 3.1
+        String toon = JsonIo.toToon(val, null);
+        // The value 3.10 in Java is actually 3.1, but let's test with a map
+        Map<String, Object> map = mapOf("value", 3.0);
+        String toon2 = JsonIo.toToon(map, null);
+        assertTrue(toon2.contains("value: 3") && !toon2.contains("3.0"),
+                "3.0 should be written as 3, not 3.0: " + toon2);
+    }
+
+    // --- Empty Document Handling ---
+
+    @Test
+    void testEmptyDocument() {
+        // TOON spec: Empty documents yield {}
+        String emptyToon = "";
+        // Parsing empty string should yield empty map
+        Map<String, Object> restored = JsonIo.fromToonToMaps(emptyToon, null).asClass(Map.class);
+        assertTrue(restored.isEmpty(), "Empty document should yield empty map");
+    }
+
+    @Test
+    void testWhitespaceOnlyDocument() {
+        // TOON spec: Empty documents (whitespace only) yield {}
+        String whitespaceToon = "   \n  \n   ";
+        Map<String, Object> restored = JsonIo.fromToonToMaps(whitespaceToon, null).asClass(Map.class);
+        assertTrue(restored.isEmpty(), "Whitespace-only document should yield empty map");
+    }
+
+    // --- Root Form Detection ---
+
+    @Test
+    void testRootPrimitive() {
+        // TOON spec: Single non-empty line that isn't header or key-value = primitive
+        assertEquals("hello", JsonIo.fromToon("hello", null).asClass(String.class));
+        assertEquals(42L, JsonIo.fromToon("42", null).asClass(Object.class));
+        assertEquals(true, JsonIo.fromToon("true", null).asClass(Object.class));
+        assertNull(JsonIo.fromToon("null", null).asClass(Object.class));
+    }
+
+    @Test
+    void testRootArrayDetection() {
+        // TOON spec: If first non-empty line is array header, decode root array
+        String toon = "[3]: a,b,c";
+        Object[] arr = JsonIo.fromToonToMaps(toon, null).asClass(Object[].class);
+        assertEquals(3, arr.length);
+        assertEquals("a", arr[0]);
+    }
+
+    // --- Key Ordering Preservation ---
+
+    @Test
+    void testKeyOrderingPreserved() {
+        // TOON spec: Key ordering must be maintained as encountered
+        Map<String, Object> original = new LinkedHashMap<>();
+        original.put("zebra", 1);
+        original.put("alpha", 2);
+        original.put("mango", 3);
+        original.put("beta", 4);
+
+        String toon = JsonIo.toToon(original, null);
+        Map<String, Object> restored = JsonIo.fromToonToMaps(toon, null).asClass(LinkedHashMap.class);
+
+        // Verify order matches original
+        String[] expectedOrder = {"zebra", "alpha", "mango", "beta"};
+        int i = 0;
+        for (String key : restored.keySet()) {
+            assertEquals(expectedOrder[i], key, "Key order should be preserved at position " + i);
+            i++;
+        }
+    }
+
+    // --- Object Field Syntax ---
+
+    @Test
+    void testFieldSyntaxSingleSpaceAfterColon() {
+        // TOON spec: Fields use "key: value" syntax with exactly one space after colon
+        Map<String, Object> map = mapOf("name", "John");
+        String toon = JsonIo.toToon(map, null);
+        assertTrue(toon.contains("name: John"), "Should have exactly one space after colon");
+        assertFalse(toon.contains("name:  "), "Should not have multiple spaces after colon");
+    }
+
+    // --- Array Count Verification ---
+
+    @Test
+    void testArrayCountMatchesDeclared() {
+        // TOON spec: Array counts must match declared lengths
+        int[] arr = {1, 2, 3, 4, 5};
+        String toon = JsonIo.toToon(arr, null);
+        assertTrue(toon.contains("[5]:"), "Array header should declare correct count");
+    }
+
+    // --- Mixed Content Arrays ---
+
+    @Test
+    void testArrayWithMixedTypes() {
+        // Array containing different types (non-uniform)
+        Object[] mixed = {1, "two", 3.0, true, null};
+        roundTrip(mixed);
+    }
+
+    @Test
+    void testArrayOfArraysDifferentSizes() {
+        // Jagged array - arrays of different lengths
+        int[][] jagged = {{1}, {2, 3}, {4, 5, 6}};
+        roundTrip(jagged);
+    }
+
+    // --- Strings with Active Delimiters ---
+
+    @Test
+    void testStringContainingComma() {
+        // TOON spec: Strings containing the active delimiter must be quoted
+        roundTrip("hello,world");
+        roundTrip("a,b,c");
+    }
+
+    @Test
+    void testStringContainingPipe() {
+        // Pipe is an alternative delimiter, should be handled
+        roundTrip("hello|world");
+    }
+
+    // --- Control Characters ---
+
+    @Test
+    void testControlCharactersInString() {
+        // TOON spec: Control characters require quoting
+        // Testing common control chars (other than \n, \r, \t which have escapes)
+        String withBell = "bell\u0007char";
+        String toon = JsonIo.toToon(withBell, null);
+        assertTrue(toon.startsWith("\""), "Control character string should be quoted");
+    }
+
+    // --- Deeply Nested with Arrays ---
+
+    @Test
+    void testDeeplyNestedWithArrays() {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("level1", mapOf(
+            "level2", mapOf(
+                "items", Arrays.asList(
+                    mapOf("id", 1, "name", "first"),
+                    mapOf("id", 2, "name", "second")
+                )
+            )
+        ));
+        roundTrip(data);
     }
 }

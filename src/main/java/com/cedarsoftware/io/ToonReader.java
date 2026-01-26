@@ -73,14 +73,19 @@ public class ToonReader {
         try {
             String line = peekLine();
             if (line == null) {
-                return null;  // Empty input
+                // Empty input - TOON spec: empty documents yield {}
+                JsonObject emptyMap = new JsonObject();
+                if (suggestedType != null) {
+                    emptyMap.setType(suggestedType);
+                }
+                return emptyMap;
             }
 
             // Determine type from first line content
             String trimmed = line.trim();
             if (trimmed.isEmpty()) {
                 consumeLine();
-                return readValue(suggestedType);  // Skip empty lines
+                return readValue(suggestedType);  // Skip empty lines (recurses until non-empty or EOF)
             }
 
             // Check for empty map syntax: {}

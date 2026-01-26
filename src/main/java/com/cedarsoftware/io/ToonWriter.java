@@ -199,13 +199,17 @@ public class ToonWriter implements Closeable, Flushable {
             return true;
         }
 
-        // Check for special characters
+        // Check for special characters and control characters
         int len = str.length();
         for (int i = 0; i < len; i++) {
             char c = str.charAt(i);
+            // Control characters (ASCII 0-31) require quoting
+            // Note: \n (10), \r (13), \t (9) are control chars that need escaping
+            if (c < 32) {
+                return true;
+            }
             if (c == ':' || c == '"' || c == '\\' || c == '[' || c == ']' ||
-                c == '{' || c == '}' || c == '\n' || c == '\r' || c == '\t' ||
-                c == delimiter) {
+                c == '{' || c == '}' || c == delimiter) {
                 return true;
             }
         }
@@ -292,6 +296,7 @@ public class ToonWriter implements Closeable, Flushable {
 
     /**
      * Write a number value.
+     * TOON spec: Numbers normalize to non-exponential decimal form with no trailing zeros.
      */
     private void writeNumber(Number num) throws IOException {
         if (num instanceof Double) {
@@ -301,7 +306,7 @@ public class ToonWriter implements Closeable, Flushable {
             } else if (d == -0.0) {
                 out.write("0");  // TOON spec: -0 -> 0
             } else {
-                out.write(num.toString());
+                out.write(formatDecimalNumber(d));
             }
         } else if (num instanceof Float) {
             float f = num.floatValue();
@@ -310,11 +315,11 @@ public class ToonWriter implements Closeable, Flushable {
             } else if (f == -0.0f) {
                 out.write("0");
             } else {
-                out.write(num.toString());
+                out.write(formatDecimalNumber(f));
             }
         } else if (num instanceof BigDecimal) {
             BigDecimal bd = (BigDecimal) num;
-            out.write(bd.toPlainString());
+            out.write(formatBigDecimal(bd));
         } else if (num instanceof BigInteger) {
             out.write(num.toString());
         } else if (num instanceof AtomicInteger || num instanceof AtomicLong) {
@@ -323,6 +328,42 @@ public class ToonWriter implements Closeable, Flushable {
             // Integer, Long, Short, Byte
             out.write(num.toString());
         }
+    }
+
+    /**
+     * Format a decimal number (double or float) according to TOON spec:
+     * - No exponent notation
+     * - No trailing zeros in fractional part
+     * - Whole numbers have no decimal point
+     */
+    private String formatDecimalNumber(double d) {
+        // Use BigDecimal for precise conversion without exponent notation
+        BigDecimal bd = BigDecimal.valueOf(d);
+        return formatBigDecimal(bd);
+    }
+
+    /**
+     * Format a BigDecimal according to TOON spec:
+     * - No exponent notation (use toPlainString)
+     * - No trailing zeros in fractional part
+     * - Whole numbers have no decimal point
+     */
+    private String formatBigDecimal(BigDecimal bd) {
+        // Strip trailing zeros first
+        bd = bd.stripTrailingZeros();
+        String plain = bd.toPlainString();
+
+        // If the result ends with ".0" style patterns, we need to handle it
+        // stripTrailingZeros handles fractional trailing zeros but may leave
+        // numbers like "3" with scale 0 which toPlainString renders correctly
+
+        // However, for numbers like 3.0, stripTrailingZeros gives us scale 0,
+        // and toPlainString gives us "3" directly.
+        // For numbers like 3.10, stripTrailingZeros gives us 3.1.
+
+        // Special case: if stripTrailingZeros resulted in a negative scale
+        // (e.g., 1000 becomes 1E+3 internally), toPlainString still works correctly
+        return plain;
     }
 
     /**
@@ -359,6 +400,15 @@ public class ToonWriter implements Closeable, Flushable {
                 } else if (element.getClass().isArray()) {
                     // Nested array - recurse
                     writeArray(element);
+                } else if (element instanceof Map) {
+                    // Nested map - write as map structure
+                    out.write(NEW_LINE);
+                    depth++;
+                    writeMap((Map<?, ?>) element);
+                    depth--;
+                } else if (element instanceof Collection) {
+                    // Nested collection - recurse
+                    writeCollection((Collection<?>) element);
                 } else {
                     // Complex object
                     out.write(NEW_LINE);
@@ -411,6 +461,12 @@ public class ToonWriter implements Closeable, Flushable {
                 out.write("- ");
                 if (element == null || isPrimitive(element)) {
                     writeValue(element);
+                } else if (element instanceof Map) {
+                    // Nested map - write as map structure
+                    out.write(NEW_LINE);
+                    depth++;
+                    writeMap((Map<?, ?>) element);
+                    depth--;
                 } else if (element instanceof Collection) {
                     // Nested collection - recurse
                     writeCollection((Collection<?>) element);
