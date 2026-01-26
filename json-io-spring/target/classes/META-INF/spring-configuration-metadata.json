@@ -1,0 +1,107 @@
+{
+  "groups": [
+    {
+      "name": "spring.json-io",
+      "type": "com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties",
+      "sourceType": "com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties"
+    },
+    {
+      "name": "spring.json-io.integration",
+      "type": "com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties$Integration",
+      "sourceType": "com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties",
+      "sourceMethod": "getIntegration()"
+    },
+    {
+      "name": "spring.json-io.read",
+      "type": "com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties$Read",
+      "sourceType": "com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties",
+      "sourceMethod": "getRead()"
+    },
+    {
+      "name": "spring.json-io.write",
+      "type": "com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties$Write",
+      "sourceType": "com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties",
+      "sourceMethod": "getWrite()"
+    }
+  ],
+  "properties": [
+    {
+      "name": "spring.json-io.integration.jackson-mode",
+      "type": "com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties$JacksonMode",
+      "description": "How json-io coexists with Jackson.",
+      "sourceType": "com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties$Integration",
+      "defaultValue": "coexist"
+    },
+    {
+      "name": "spring.json-io.read.allow-nan-and-infinity",
+      "type": "java.lang.Boolean",
+      "description": "Allow NaN and Infinity values in numeric fields.",
+      "sourceType": "com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties$Read",
+      "defaultValue": false
+    },
+    {
+      "name": "spring.json-io.read.fail-on-unknown-type",
+      "type": "java.lang.Boolean",
+      "description": "Fail when encountering unknown type in JSON.",
+      "sourceType": "com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties$Read",
+      "defaultValue": false
+    },
+    {
+      "name": "spring.json-io.read.max-depth",
+      "type": "java.lang.Integer",
+      "description": "Maximum depth for nested object parsing.",
+      "sourceType": "com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties$Read",
+      "defaultValue": 1000
+    },
+    {
+      "name": "spring.json-io.read.return-as-java-maps",
+      "type": "java.lang.Boolean",
+      "description": "Return Java Maps instead of fully typed objects.",
+      "sourceType": "com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties$Read",
+      "defaultValue": false
+    },
+    {
+      "name": "spring.json-io.write.allow-nan-and-infinity",
+      "type": "java.lang.Boolean",
+      "description": "Allow NaN and Infinity values in numeric output.",
+      "sourceType": "com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties$Write",
+      "defaultValue": false
+    },
+    {
+      "name": "spring.json-io.write.pretty-print",
+      "type": "java.lang.Boolean",
+      "description": "Enable pretty printing of JSON output.",
+      "sourceType": "com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties$Write",
+      "defaultValue": false
+    },
+    {
+      "name": "spring.json-io.write.short-meta-keys",
+      "type": "java.lang.Boolean",
+      "description": "Short meta-key names (@type becomes @t, @id becomes @i, etc.)",
+      "sourceType": "com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties$Write",
+      "defaultValue": false
+    },
+    {
+      "name": "spring.json-io.write.show-type-info",
+      "type": "com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties$ShowTypeInfo",
+      "description": "When to include type information in JSON output.",
+      "sourceType": "com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties$Write",
+      "defaultValue": "minimal"
+    },
+    {
+      "name": "spring.json-io.write.skip-null-fields",
+      "type": "java.lang.Boolean",
+      "description": "Skip null field values in output.",
+      "sourceType": "com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties$Write",
+      "defaultValue": false
+    },
+    {
+      "name": "spring.json-io.write.write-longs-as-strings",
+      "type": "java.lang.Boolean",
+      "description": "Write longs as strings to prevent JavaScript precision loss.",
+      "sourceType": "com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties$Write",
+      "defaultValue": false
+    }
+  ],
+  "hints": []
+}

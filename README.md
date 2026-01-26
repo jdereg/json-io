@@ -82,7 +82,6 @@ json-io's TOON implementation offers comprehensive Java type coverage while JToo
 ### What's Coming Next
 
 - **Annotations** — Custom serialization control via annotations
-- **Improved Spring support** — Better integration with Spring Framework
 
 ## Installation
 
@@ -112,6 +111,38 @@ String toon = JsonIo.toToon(myObject, writeOptions);
 MyClass obj = JsonIo.fromToon(toon, readOptions).asClass(MyClass.class);
 ```
 
+## Spring Boot Integration
+
+json-io provides a Spring Boot starter for seamless integration with Spring MVC and WebFlux applications.
+
+**Add the dependency:**
+
+```xml
+<dependency>
+  <groupId>com.cedarsoftware</groupId>
+  <artifactId>json-io-spring-boot-starter</artifactId>
+  <version>4.85.0</version>
+</dependency>
+```
+
+Your REST controllers now support JSON, JSON5, and TOON formats via content negotiation:
+
+```java
+@RestController
+public class ApiController {
+    @GetMapping("/data")
+    public MyData getData() {
+        return myData;  // Returns JSON, JSON5, or TOON based on Accept header
+    }
+}
+```
+
+Request TOON format for LLM applications: `Accept: application/vnd.toon`
+
+**Also supports WebFlux and WebClient** for reactive applications.
+
+See the [Spring Integration Guide](/user-guide-spring.md) for configuration options, WebFlux usage, customizers, and Jackson coexistence modes.
+
 ## Supported Types (60+ built-in)
 
 json-io handles your **business objects, DTOs, and Records** automatically—no annotations required. It also provides optimized handling for these built-in types:
@@ -134,6 +165,7 @@ See the [complete type comparison](/user-guide.md#toon-supported-types) showing 
 - [User Guide](/user-guide.md)
 - [WriteOptions Reference](/user-guide-writeOptions.md)
 - [ReadOptions Reference](/user-guide-readOptions.md)
+- [Spring Integration Guide](/user-guide-spring.md)
 - [Revision History](/changelog.md)
 
 ## Release [4.85.0](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.85.0/index.html)

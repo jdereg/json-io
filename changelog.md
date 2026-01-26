@@ -1,5 +1,30 @@
 ### Revision History
 #### 4.85.0 - 2025-01-24
+* **FEATURE**: Spring Boot Starter module (`json-io-spring-boot-starter`)
+  * New Maven artifact for seamless Spring Boot 3.x integration
+  * Auto-configuration for Spring MVC with `HttpMessageConverter` support
+  * Spring MVC HttpMessageConverters for content negotiation:
+    * `JsonIoHttpMessageConverter` - `application/json`
+    * `Json5HttpMessageConverter` - `application/vnd.json5`
+    * `ToonHttpMessageConverter` - `application/vnd.toon`
+  * WebFlux Encoders/Decoders for reactive applications:
+    * `JsonIoEncoder` / `JsonIoDecoder` - `application/json`
+    * `Json5Encoder` / `Json5Decoder` - `application/vnd.json5`
+    * `ToonEncoder` / `ToonDecoder` - `application/vnd.toon`
+  * Configuration properties under `spring.json-io.*`:
+    * Write options: `pretty-print`, `show-type-info`, `skip-null-fields`, `short-meta-keys`, etc.
+    * Read options: `max-depth`, `fail-on-unknown-type`, `allow-nan-and-infinity`
+    * Integration: `jackson-mode` (COEXIST, REPLACE, JSON5_ONLY)
+  * Customizer interfaces for programmatic configuration:
+    * `ReadOptionsCustomizer` - Customize read behavior
+    * `WriteOptionsCustomizer` - Customize write behavior
+  * Jackson coexistence modes:
+    * `COEXIST` (default) - json-io handles JSON5/TOON, Jackson handles JSON
+    * `REPLACE` - json-io handles all formats
+  * See [Spring Integration Guide](/user-guide-spring.md) for details
+* **BUILD**: Converted to multi-module Maven project structure
+  * `json-io` - Core library (unchanged artifact coordinates)
+  * `json-io-spring-boot-starter` - Spring Boot integration module
 * **FEATURE**: TOON (Token-Oriented Object Notation) output support
   * Added `JsonIo.toToon(Object, WriteOptions)` - Convert Java objects to TOON format string
   * Added `JsonIo.toToon(OutputStream, Object, WriteOptions)` - Stream TOON output directly

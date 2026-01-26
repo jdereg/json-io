@@ -1,0 +1,3 @@
+com.cedarsoftware.io.spring.autoconfigure.JsonIoAutoConfiguration
+com.cedarsoftware.io.spring.autoconfigure.JsonIoWebMvcAutoConfiguration
+com.cedarsoftware.io.spring.autoconfigure.JsonIoWebFluxAutoConfiguration

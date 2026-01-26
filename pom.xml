@@ -1,13 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <name>json-io</name>
+    <name>json-io-parent</name>
     <groupId>com.cedarsoftware</groupId>
-    <artifactId>json-io</artifactId>
-    <packaging>bundle</packaging>
+    <artifactId>json-io-parent</artifactId>
+    <packaging>pom</packaging>
     <version>4.85.0</version>
-    <description>Java JSON serialization</description>
+    <description>Parent POM for json-io modules</description>
     <url>https://github.com/jdereg/json-io</url>
+
+    <modules>
+        <module>json-io</module>
+        <module>json-io-spring</module>
+    </modules>
 
     <developers>
         <developer>
@@ -159,6 +164,71 @@
     <distributionManagement>
     </distributionManagement>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.cedarsoftware</groupId>
+                <artifactId>java-util</artifactId>
+                <version>${version.java-util}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-engine</artifactId>
+                <version>${version.junit-jupiter-api}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-api</artifactId>
+                <version>${version.junit-jupiter-api}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-params</artifactId>
+                <version>${version.junit-jupiter-params}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-junit-jupiter</artifactId>
+                <version>${version.mockito-junit-jupiter}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.assertj</groupId>
+                <artifactId>assertj-core</artifactId>
+                <version>${version.assertj-core}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.google.code.gson</groupId>
+                <artifactId>gson</artifactId>
+                <version>${version.gson}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>${version.jackson-core}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>${version.jackson-core}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${version.jackson-core}</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <build>
         <pluginManagement>
             <plugins>
@@ -177,259 +247,120 @@
                     <artifactId>maven-deploy-plugin</artifactId>
                     <version>${version.maven-deploy-plugin}</version>
                 </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>${version.maven-jar-plugin}</version>
+                    <configuration>
+                        <archive>
+                            <manifestEntries>
+                                <Implementation-Title>${project.name}</Implementation-Title>
+                                <Implementation-Version>${project.version}</Implementation-Version>
+                                <Implementation-Vendor-Id>com.cedarsoftware</Implementation-Vendor-Id>
+                                <Implementation-URL>https://github.com/jdereg/json-io</Implementation-URL>
+                                <Built-By>${user.name}</Built-By>
+                                <Build-Timestamp>${maven.build.timestamp}</Build-Timestamp>
+                                <Build-Jdk>${java.version} (${java.vendor} ${java.vm.version})</Build-Jdk>
+                                <Build-OS>${os.name} ${os.arch} ${os.version}</Build-OS>
+                            </manifestEntries>
+                            <manifest>
+                                <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            </manifest>
+                        </archive>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>${version.maven-source-plugin}</version>
+                    <executions>
+                        <execution>
+                            <id>attach-sources</id>
+                            <goals>
+                                <goal>jar-no-fork</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>${version.maven-javadoc-plugin}</version>
+                    <configuration>
+                        <additionalOptions>-Xdoclint:none</additionalOptions>
+                        <additionalJOption>-Xdoclint:none</additionalJOption>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>attach-javadocs</id>
+                            <goals>
+                                <goal>jar</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.sonatype.central</groupId>
+                    <artifactId>central-publishing-maven-plugin</artifactId>
+                    <version>${version.central-publishing-maven-plugin}</version>
+                    <extensions>true</extensions>
+                    <configuration>
+                        <publishingServerId>central</publishingServerId>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${version.maven-surefire-plugin}</version>
+                    <configuration>
+                        <useModulePath>false</useModulePath>
+                        <useSystemClassLoader>false</useSystemClassLoader>
+                        <argLine>
+                            -Duser.timezone=America/New_York
+                            -Duser.language=en
+                            -Duser.region=US
+                            -Duser.country=US
+                            -Xmx1024m
+                        </argLine>
+                        <forkCount>1</forkCount>
+                        <reuseForks>true</reuseForks>
+                        <properties>
+                            <property>
+                                <name>junit.jupiter.extensions.autodetection.enabled</name>
+                                <value>true</value>
+                            </property>
+                        </properties>
+                    </configuration>
+                </plugin>
             </plugins>
         </pluginManagement>
-        <plugins>
 
+        <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>${version.maven-jar-plugin}</version> <!-- Use the latest version available -->
-                <configuration>
-                    <archive>
-                        <manifestEntries>
-                            <Implementation-Title>json-io</Implementation-Title>
-                            <Implementation-Version>${project.version}</Implementation-Version>
-                            <Implementation-Vendor-Id>com.cedarsoftware</Implementation-Vendor-Id>
-                            <Implementation-URL>https://github.com/jdereg/json-io</Implementation-URL>
-                            <Built-By>${user.name}</Built-By>
-                            <Build-Timestamp>${maven.build.timestamp}</Build-Timestamp>
-                            <Build-Jdk>${java.version} (${java.vendor} ${java.vm.version})</Build-Jdk>
-                            <Build-OS>${os.name} ${os.arch} ${os.version}</Build-OS>
-                        </manifestEntries>
-                        <manifest>
-                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                        </manifest>
-                    </archive>
-                </configuration>
             </plugin>
-
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-scr-plugin</artifactId>
-                <version>${version.maven-scr-plugin}</version>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <version>${version.maven-bundle-plugin}</version>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Import-Package>
-                            com.cedarsoftware.util,
-                            com.cedarsoftware.util.convert,
-                            com.cedarsoftware.util.geom</Import-Package>
-                        <Export-Package>
-                            com.cedarsoftware.io,
-                            com.cedarsoftware.io.factory,
-                            com.cedarsoftware.io.prettyprint,
-                            com.cedarsoftware.io.reflect,
-                            com.cedarsoftware.io.reflect.factories,
-                            com.cedarsoftware.io.reflect.filters,
-                            com.cedarsoftware.io.reflect.filters.field,
-                            com.cedarsoftware.io.reflect.filters.method,
-                            com.cedarsoftware.io.reflect.injectors,
-                            com.cedarsoftware.io.util,
-                            com.cedarsoftware.io.writers
-                        </Export-Package>
-                        <DynamicImport-Package>*</DynamicImport-Package>
-                    </instructions>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>bundle-manifest</id>
-                        <goals>
-                            <goal>
-                                manifest
-                            </goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>${version.maven-source-plugin}</version>
-                <executions>
-                    <execution>
-                        <id>attach-sources</id>
-                        <goals>
-                            <goal>jar-no-fork</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>${version.maven-javadoc-plugin}</version>
-                <configuration>
-                    <additionalOptions>-Xdoclint:none</additionalOptions>
-                    <additionalJOption>-Xdoclint:none</additionalJOption>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>attach-javadocs</id>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
-
             <plugin>
                 <groupId>org.sonatype.central</groupId>
                 <artifactId>central-publishing-maven-plugin</artifactId>
-                <version>${version.central-publishing-maven-plugin}</version>
-                <extensions>true</extensions>
-                <configuration>
-                    <publishingServerId>central</publishingServerId>
-                    <!--
-                    <autoPublish>true</autoPublish>
-                    <waitUntil>published</waitUntil>
-                    -->
-                </configuration>
             </plugin>
-            
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>${version.maven-surefire-plugin}</version>
-                <configuration>
-                    <useModulePath>false</useModulePath> <!-- Ensure module path is disabled for JDK8 -->
-                    <useSystemClassLoader>false</useSystemClassLoader>
-                    <argLine>
-                        -Duser.timezone=America/New_York
-                        -Duser.language=en
-                        -Duser.region=US
-                        -Duser.country=US
-                        -Xmx1024m
-                    </argLine>
-                    <forkCount>1</forkCount>
-                    <reuseForks>true</reuseForks>
-                    <!-- Enable JUnit Platform (JUnit 5) -->
-                    <properties>
-                        <property>
-                            <name>junit.jupiter.extensions.autodetection.enabled</name>
-                            <value>true</value>
-                        </property>
-                    </properties>
-                </configuration>
             </plugin>
-
-            <plugin>
-                <groupId>org.moditect</groupId>
-                <artifactId>moditect-maven-plugin</artifactId>
-                <version>${version.moditect-maven-plugin}</version>
-                <executions>
-                    <execution>
-                        <id>add-module-infos</id>
-                        <goals>
-                            <goal>add-module-info</goal>
-                        </goals>
-                        <phase>package</phase>
-                        <configuration>
-                            <jvmVersion>base</jvmVersion>
-                            <module>
-                                <moduleInfoSource>
-                                    module com.cedarsoftware.io {
-                                    requires com.cedarsoftware.util;
-                                    requires static java.sql;
-                                    exports com.cedarsoftware.io;
-                                    exports com.cedarsoftware.io.factory;
-                                    exports com.cedarsoftware.io.prettyprint;
-                                    exports com.cedarsoftware.io.reflect;
-                                    exports com.cedarsoftware.io.reflect.factories;
-                                    exports com.cedarsoftware.io.reflect.filters;
-                                    exports com.cedarsoftware.io.reflect.filters.field;
-                                    exports com.cedarsoftware.io.reflect.filters.method;
-                                    exports com.cedarsoftware.io.reflect.injectors;
-                                    exports com.cedarsoftware.io.util;
-                                    exports com.cedarsoftware.io.writers;
-                                    }
-                                </moduleInfoSource>
-                            </module>
-                            <overwriteExistingFiles>true</overwriteExistingFiles>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
         </plugins>
     </build>
-
-    <dependencies>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
-            <version>${version.junit-jupiter-api}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-            <version>${version.junit-jupiter-api}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-params</artifactId>
-            <version>${version.junit-jupiter-params}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-junit-jupiter</artifactId>
-            <version>${version.mockito-junit-jupiter}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.assertj</groupId>
-            <artifactId>assertj-core</artifactId>
-            <version>${version.assertj-core}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.cedarsoftware</groupId>
-            <artifactId>java-util</artifactId>
-            <version>${version.java-util}</version>
-        </dependency>
-        
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>${version.gson}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-            <version>${version.jackson-core}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-annotations</artifactId>
-            <version>${version.jackson-core}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>${version.jackson-core}</version>
-            <scope>test</scope>
-        </dependency>
-
-    </dependencies>
 </project>
