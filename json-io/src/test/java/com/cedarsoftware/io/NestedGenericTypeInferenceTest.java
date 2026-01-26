@@ -1,7 +1,15 @@
 package com.cedarsoftware.io;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Queue;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
@@ -476,5 +484,384 @@ class NestedGenericTypeInferenceTest {
         public int hashCode() {
             return value;
         }
+    }
+
+    // ========== Additional Generic Type Inference Tests ==========
+
+    // Task 1: Test Set<User> type inference
+    /**
+     * Test that Set<User> properly infers element types.
+     */
+    @Test
+    void testSetTypeInference() {
+        String json = "{\"userSet\": [{\"id\": \"1\", \"name\": \"Alice\", \"age\": 30}, {\"id\": \"2\", \"name\": \"Bob\", \"age\": 25}]}";
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        UserSetContainer result = JsonIo.toJava(json, readOptions).asClass(UserSetContainer.class);
+
+        assertNotNull(result);
+        assertNotNull(result.getUserSet());
+        assertEquals(2, result.getUserSet().size());
+
+        // Key assertion - elements should be User instances, not Maps
+        Object firstElement = result.getUserSet().iterator().next();
+        assertTrue(firstElement instanceof Users.User,
+                "Set elements should be User instances, not " + firstElement.getClass().getName());
+    }
+
+    // Container class for Set<User>
+    public static class UserSetContainer {
+        private Set<Users.User> userSet;
+
+        public Set<Users.User> getUserSet() { return userSet; }
+        public void setUserSet(Set<Users.User> userSet) { this.userSet = userSet; }
+    }
+
+    // Task 2: Test Map<String, Map<String, User>> type inference
+    /**
+     * Test nested maps - Map<String, Map<String, User>>.
+     */
+    @Test
+    void testNestedMapTypeInference() {
+        String json = "{\"nestedMap\": {\"dept1\": {\"alice\": {\"id\": \"1\", \"name\": \"Alice\", \"age\": 30}}, \"dept2\": {\"bob\": {\"id\": \"2\", \"name\": \"Bob\", \"age\": 25}}}}";
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        NestedMapContainer result = JsonIo.toJava(json, readOptions).asClass(NestedMapContainer.class);
+
+        assertNotNull(result);
+        assertNotNull(result.getNestedMap());
+        assertEquals(2, result.getNestedMap().size());
+
+        Map<String, Users.User> dept1 = result.getNestedMap().get("dept1");
+        assertNotNull(dept1);
+        assertEquals(1, dept1.size());
+
+        Object aliceValue = dept1.get("alice");
+        assertTrue(aliceValue instanceof Users.User,
+                "Nested map values should be User instances, not " + aliceValue.getClass().getName());
+
+        Users.User alice = (Users.User) aliceValue;
+        assertEquals("Alice", alice.getName());
+    }
+
+    // Container class for Map<String, Map<String, User>>
+    public static class NestedMapContainer {
+        private Map<String, Map<String, Users.User>> nestedMap;
+
+        public Map<String, Map<String, Users.User>> getNestedMap() { return nestedMap; }
+        public void setNestedMap(Map<String, Map<String, Users.User>> nestedMap) { this.nestedMap = nestedMap; }
+    }
+
+    // Task 3: Test Queue<User> and Deque<User> type inference
+    /**
+     * Test Queue<User> type inference.
+     */
+    @Test
+    void testQueueTypeInference() {
+        String json = "{\"userQueue\": [{\"id\": \"1\", \"name\": \"Alice\", \"age\": 30}, {\"id\": \"2\", \"name\": \"Bob\", \"age\": 25}]}";
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        UserQueueContainer result = JsonIo.toJava(json, readOptions).asClass(UserQueueContainer.class);
+
+        assertNotNull(result);
+        assertNotNull(result.getUserQueue());
+        assertEquals(2, result.getUserQueue().size());
+
+        Object firstElement = result.getUserQueue().peek();
+        assertTrue(firstElement instanceof Users.User,
+                "Queue elements should be User instances, not " + firstElement.getClass().getName());
+    }
+
+    /**
+     * Test Deque<User> type inference.
+     */
+    @Test
+    void testDequeTypeInference() {
+        String json = "{\"userDeque\": [{\"id\": \"1\", \"name\": \"Alice\", \"age\": 30}, {\"id\": \"2\", \"name\": \"Bob\", \"age\": 25}]}";
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        UserDequeContainer result = JsonIo.toJava(json, readOptions).asClass(UserDequeContainer.class);
+
+        assertNotNull(result);
+        assertNotNull(result.getUserDeque());
+        assertEquals(2, result.getUserDeque().size());
+
+        Object firstElement = result.getUserDeque().peekFirst();
+        assertTrue(firstElement instanceof Users.User,
+                "Deque elements should be User instances, not " + firstElement.getClass().getName());
+    }
+
+    // Container classes for Queue and Deque
+    public static class UserQueueContainer {
+        private Queue<Users.User> userQueue;
+
+        public Queue<Users.User> getUserQueue() { return userQueue; }
+        public void setUserQueue(Queue<Users.User> userQueue) { this.userQueue = userQueue; }
+    }
+
+    public static class UserDequeContainer {
+        private Deque<Users.User> userDeque;
+
+        public Deque<Users.User> getUserDeque() { return userDeque; }
+        public void setUserDeque(Deque<Users.User> userDeque) { this.userDeque = userDeque; }
+    }
+
+    // Task 4: Test List<User[]> type inference
+    /**
+     * Test List<User[]> - collection containing arrays.
+     */
+    @Test
+    void testListOfArraysTypeInference() {
+        String json = "{\"userArrayList\": [[{\"id\": \"1\", \"name\": \"Alice\", \"age\": 30}], [{\"id\": \"2\", \"name\": \"Bob\", \"age\": 25}]]}";
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        ListOfArraysContainer result = JsonIo.toJava(json, readOptions).asClass(ListOfArraysContainer.class);
+
+        assertNotNull(result);
+        assertNotNull(result.getUserArrayList());
+        assertEquals(2, result.getUserArrayList().size());
+
+        Object firstElement = result.getUserArrayList().get(0);
+        assertTrue(firstElement instanceof Users.User[],
+                "List elements should be User[] arrays, not " + firstElement.getClass().getName());
+
+        Users.User[] firstArray = (Users.User[]) firstElement;
+        assertEquals(1, firstArray.length);
+        assertEquals("Alice", firstArray[0].getName());
+    }
+
+    // Container class for List<User[]>
+    public static class ListOfArraysContainer {
+        private List<Users.User[]> userArrayList;
+
+        public List<Users.User[]> getUserArrayList() { return userArrayList; }
+        public void setUserArrayList(List<Users.User[]> userArrayList) { this.userArrayList = userArrayList; }
+    }
+
+    // Task 5: Test List<Integer> and List<Long> type inference
+    /**
+     * Test List<Integer> - boxed primitives in collections.
+     */
+    @Test
+    void testListOfIntegersTypeInference() {
+        String json = "{\"numbers\": [1, 2, 3, 4, 5]}";
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        IntegerListContainer result = JsonIo.toJava(json, readOptions).asClass(IntegerListContainer.class);
+
+        assertNotNull(result);
+        assertNotNull(result.getNumbers());
+        assertEquals(5, result.getNumbers().size());
+
+        // Verify elements are proper Integer instances
+        Object firstElement = result.getNumbers().get(0);
+        assertTrue(firstElement instanceof Number,
+                "List elements should be Number instances, not " + firstElement.getClass().getName());
+
+        assertEquals(Integer.valueOf(1), result.getNumbers().get(0));
+        assertEquals(Integer.valueOf(5), result.getNumbers().get(4));
+    }
+
+    /**
+     * Test List<Long> - boxed primitives in collections.
+     */
+    @Test
+    void testListOfLongsTypeInference() {
+        String json = "{\"numbers\": [1000000000000, 2000000000000, 3000000000000]}";
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        LongListContainer result = JsonIo.toJava(json, readOptions).asClass(LongListContainer.class);
+
+        assertNotNull(result);
+        assertNotNull(result.getNumbers());
+        assertEquals(3, result.getNumbers().size());
+
+        assertEquals(Long.valueOf(1000000000000L), result.getNumbers().get(0));
+        assertEquals(Long.valueOf(3000000000000L), result.getNumbers().get(2));
+    }
+
+    // Container classes for boxed primitives
+    public static class IntegerListContainer {
+        private List<Integer> numbers;
+
+        public List<Integer> getNumbers() { return numbers; }
+        public void setNumbers(List<Integer> numbers) { this.numbers = numbers; }
+    }
+
+    public static class LongListContainer {
+        private List<Long> numbers;
+
+        public List<Long> getNumbers() { return numbers; }
+        public void setNumbers(List<Long> numbers) { this.numbers = numbers; }
+    }
+
+    // Task 6: Test Collection<User> interface field type inference
+    /**
+     * Test Collection<User> - interface field type instead of concrete List.
+     */
+    @Test
+    void testCollectionInterfaceTypeInference() {
+        String json = "{\"users\": [{\"id\": \"1\", \"name\": \"Alice\", \"age\": 30}, {\"id\": \"2\", \"name\": \"Bob\", \"age\": 25}]}";
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        CollectionInterfaceContainer result = JsonIo.toJava(json, readOptions).asClass(CollectionInterfaceContainer.class);
+
+        assertNotNull(result);
+        assertNotNull(result.getUsers());
+        assertEquals(2, result.getUsers().size());
+
+        Object firstElement = result.getUsers().iterator().next();
+        assertTrue(firstElement instanceof Users.User,
+                "Collection elements should be User instances, not " + firstElement.getClass().getName());
+    }
+
+    // Container class for Collection<User> interface
+    public static class CollectionInterfaceContainer {
+        private Collection<Users.User> users;
+
+        public Collection<Users.User> getUsers() { return users; }
+        public void setUsers(Collection<Users.User> users) { this.users = users; }
+    }
+
+    // Task 7: Test generic inheritance type inference
+    /**
+     * Test a class that extends ArrayList<User>.
+     */
+    @Test
+    void testGenericInheritanceTypeInference() {
+        // Create test data using the custom list
+        UserList original = new UserList();
+        Users.User alice = new Users.User();
+        alice.setId("1");
+        alice.setName("Alice");
+        alice.setAge(30);
+        original.add(alice);
+
+        // Serialize with json-io
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        String json = JsonIo.toJson(original, writeOptions);
+
+        // Deserialize
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        UserList result = JsonIo.toJava(json, readOptions).asClass(UserList.class);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+
+        Object firstElement = result.get(0);
+        assertTrue(firstElement instanceof Users.User,
+                "Elements should be User instances, not " + firstElement.getClass().getName());
+
+        assertEquals("Alice", ((Users.User) firstElement).getName());
+    }
+
+    /**
+     * Test container with field of type that extends ArrayList<User>.
+     */
+    @Test
+    void testGenericInheritanceContainerTypeInference() {
+        String json = "{\"userList\": [{\"id\": \"1\", \"name\": \"Alice\", \"age\": 30}]}";
+
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        GenericInheritanceContainer result = JsonIo.toJava(json, readOptions).asClass(GenericInheritanceContainer.class);
+
+        assertNotNull(result);
+        assertNotNull(result.getUserList());
+        assertEquals(1, result.getUserList().size());
+
+        Object firstElement = result.getUserList().get(0);
+        assertTrue(firstElement instanceof Users.User,
+                "Elements should be User instances, not " + firstElement.getClass().getName());
+    }
+
+    // Custom class extending ArrayList<User>
+    public static class UserList extends ArrayList<Users.User> {
+    }
+
+    // Container with field of type UserList
+    public static class GenericInheritanceContainer {
+        private UserList userList;
+
+        public UserList getUserList() { return userList; }
+        public void setUserList(UserList userList) { this.userList = userList; }
+    }
+
+    // Task 8: Test Map<User, String> complex key type inference
+    /**
+     * Test Map with complex object keys - Map<User, String>.
+     * Note: This requires json-io's @keys/@items format since JSON object keys must be strings.
+     */
+    @Test
+    void testMapWithComplexKeyTypeInference() {
+        // Create test data
+        Users.User alice = new Users.User();
+        alice.setId("1");
+        alice.setName("Alice");
+        alice.setAge(30);
+
+        java.util.Map<Users.User, String> original = new java.util.HashMap<>();
+        original.put(alice, "Developer");
+
+        // Serialize with json-io (will use @keys/@items format)
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        String json = JsonIo.toJson(original, writeOptions);
+
+        // Deserialize back
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        @SuppressWarnings("unchecked")
+        java.util.Map<Users.User, String> result = JsonIo.toJava(json, readOptions).asClass(java.util.Map.class);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+
+        // Get the first key and verify it's a User
+        Object firstKey = result.keySet().iterator().next();
+        assertTrue(firstKey instanceof Users.User,
+                "Map keys should be User instances, not " + firstKey.getClass().getName());
+
+        Users.User keyUser = (Users.User) firstKey;
+        assertEquals("Alice", keyUser.getName());
+        assertEquals("Developer", result.get(keyUser));
+    }
+
+    /**
+     * Test container with Map<User, String> field.
+     */
+    @Test
+    void testMapWithComplexKeyContainerTypeInference() {
+        // Create and serialize test data
+        ComplexKeyMapContainer original = new ComplexKeyMapContainer();
+        java.util.Map<Users.User, String> roleMap = new java.util.HashMap<>();
+
+        Users.User alice = new Users.User();
+        alice.setId("1");
+        alice.setName("Alice");
+        alice.setAge(30);
+        roleMap.put(alice, "Developer");
+
+        original.setRoleMap(roleMap);
+
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        String json = JsonIo.toJson(original, writeOptions);
+
+        // Deserialize
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        ComplexKeyMapContainer result = JsonIo.toJava(json, readOptions).asClass(ComplexKeyMapContainer.class);
+
+        assertNotNull(result);
+        assertNotNull(result.getRoleMap());
+        assertEquals(1, result.getRoleMap().size());
+
+        Object firstKey = result.getRoleMap().keySet().iterator().next();
+        assertTrue(firstKey instanceof Users.User,
+                "Map keys should be User instances, not " + firstKey.getClass().getName());
+    }
+
+    // Container for Map<User, String>
+    public static class ComplexKeyMapContainer {
+        private Map<Users.User, String> roleMap;
+
+        public Map<Users.User, String> getRoleMap() { return roleMap; }
+        public void setRoleMap(Map<Users.User, String> roleMap) { this.roleMap = roleMap; }
     }
 }

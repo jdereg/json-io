@@ -327,6 +327,15 @@ public class ObjectResolver extends Resolver
                         rawElementType = Object.class;
                     }
                 }
+            } else if (collectionType instanceof Class) {
+                // Handle classes that extend generic collections (e.g., UserList extends ArrayList<User>)
+                elementType = extractElementTypeFromGenericSuperclass((Class<?>) collectionType);
+                if (elementType != null) {
+                    rawElementType = TypeUtilities.getRawClass(elementType);
+                    if (rawElementType == null) {
+                        rawElementType = Object.class;
+                    }
+                }
             }
             if (elementType == null) {
                 elementType = Object.class;
@@ -341,7 +350,14 @@ public class ObjectResolver extends Resolver
             }
 
             // Fast path for native JSON types (includes BigInteger/BigDecimal from JsonParser)
+            // but convert numbers to target type if needed (e.g., Long -> Integer for List<Integer>)
             if (isDirectlyAddableJsonValue(element)) {
+                if (element instanceof Number && rawElementType != Object.class
+                        && Number.class.isAssignableFrom(rawElementType)
+                        && !rawElementType.isInstance(element)) {
+                    // Convert to target numeric type (e.g., Long to Integer)
+                    element = converter.convert(element, rawElementType);
+                }
                 col.add(element);
                 idx++;
                 continue;
@@ -368,22 +384,24 @@ public class ObjectResolver extends Resolver
                 }
             } else if (elementClass.isArray()) {
                 // Determine the type for the nested array/collection.
-                // If elementType is a Collection type (e.g., List<User>), pass it directly.
-                // If elementType is an array type (e.g., User[]), extract its component type.
-                // This enables proper conversion of JSON arrays to nested collections.
-                Type nestedType;
+                // If elementType is a Collection type (e.g., List<User>), wrap as collection.
+                // If elementType is an array type (e.g., User[]), create an actual array.
                 Class<?> rawElementType2 = TypeUtilities.getRawClass(elementType);
                 if (rawElementType2 != null && Collection.class.isAssignableFrom(rawElementType2)) {
                     // elementType is a Collection (e.g., List<User>), use it directly
-                    nestedType = elementType;
+                    wrapArrayAndAddToCollection((Object[]) element, elementType, col);
+                } else if (rawElementType2 != null && rawElementType2.isArray()) {
+                    // elementType is an array type (e.g., User[]), create an actual array
+                    Object arrayInstance = handleNestedArrayElement((Object[]) element, elementType);
+                    col.add(arrayInstance);
                 } else {
-                    // elementType is an array type, extract its component type
-                    nestedType = TypeUtilities.extractArrayComponentType(elementType);
+                    // Fallback: extract component type for nested collection
+                    Type nestedType = TypeUtilities.extractArrayComponentType(elementType);
                     if (nestedType == null) {
                         nestedType = Object.class;
                     }
+                    wrapArrayAndAddToCollection((Object[]) element, nestedType, col);
                 }
-                wrapArrayAndAddToCollection((Object[]) element, nestedType, col);
             } else {
                 // Check for custom factory or converter support
                 Object special = readWithFactoryIfExists(element, rawElementType);
@@ -1151,6 +1169,43 @@ public class ObjectResolver extends Resolver
         createInstance(jObj);
         col.add(jObj.getTarget());
         push(jObj);
+    }
+
+    /**
+     * Extracts the element type from a class that extends a generic Collection.
+     * For example, if UserList extends ArrayList&lt;User&gt;, this method returns User.
+     * Returns null if the element type is unresolved (e.g., a TypeVariable).
+     *
+     * @param clazz the class to examine
+     * @return the element type, or null if not found or unresolved
+     */
+    private Type extractElementTypeFromGenericSuperclass(Class<?> clazz) {
+        if (clazz == null || !Collection.class.isAssignableFrom(clazz)) {
+            return null;
+        }
+
+        // Walk up the class hierarchy looking for a parameterized superclass
+        Class<?> current = clazz;
+        while (current != null && current != Object.class) {
+            Type genericSuper = current.getGenericSuperclass();
+            if (genericSuper instanceof ParameterizedType) {
+                ParameterizedType pt = (ParameterizedType) genericSuper;
+                Class<?> rawSuper = TypeUtilities.getRawClass(pt);
+                // Check if this is a Collection superclass
+                if (rawSuper != null && Collection.class.isAssignableFrom(rawSuper)) {
+                    Type[] typeArgs = pt.getActualTypeArguments();
+                    if (typeArgs.length > 0) {
+                        Type elementType = typeArgs[0];
+                        // Only return if the type is resolved (not a TypeVariable)
+                        if (!TypeUtilities.hasUnresolvedType(elementType)) {
+                            return elementType;
+                        }
+                    }
+                }
+            }
+            current = current.getSuperclass();
+        }
+        return null;
     }
 
 }
