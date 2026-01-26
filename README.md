@@ -186,6 +186,4 @@ json-io uses `java.util.logging` to minimize dependencies. See the [user guide](
 
 ---
 
-Featured on [json.org](http://json.org).
-
 For useful Java utilities, check out [java-util](http://github.com/jdereg/java-util)
