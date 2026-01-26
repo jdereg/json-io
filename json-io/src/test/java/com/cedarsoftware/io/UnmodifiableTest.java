@@ -2,12 +2,11 @@ package com.cedarsoftware.io;
 
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.Set;
 
-import com.cedarsoftware.util.convert.CollectionsWrappers;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -27,28 +26,40 @@ import org.junit.jupiter.api.Test;
  *         limitations under the License.
  */
 class UnmodifiableTest {
-    @Disabled
+
     @Test
     void testUnmodifiableSetAtRoot() {
-        Set set = new HashSet();
+        // Create an unmodifiable set
+        Set<String> set = new HashSet<>();
         set.add("foo");
         set.add("bar");
         set.add("baz");
         set = Collections.unmodifiableSet(set);
 
-        WriteOptions writeOptionss = new WriteOptionsBuilder().build();
-        String json = TestUtil.toJson(set, writeOptionss);
-        assert json.contains("\"UnmodifiableSet\"");
+        // Serialize
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        String json = TestUtil.toJson(set, writeOptions);
 
-        Set set2 = TestUtil.toJava(json, null).asClass(CollectionsWrappers.getUnmodifiableSetClass());
-        assert CollectionsWrappers.getUnmodifiableCollectionClass().isAssignableFrom(set2.getClass());
-        json = TestUtil.toJson(set2, writeOptionss);
-        assert json.contains("\"UnmodifiableSet\"");
+        // Deserialize
+        Set<String> set2 = TestUtil.toJava(json, null).asClass(Set.class);
 
-        // Only asking for a "Set", not an "unmodifiable" Set.
-        Set set3 = TestUtil.toJava(json, null).asClass(Set.class);
+        // Verify contents are preserved
+        assertNotNull(set2);
+        assertEquals(3, set2.size());
+        assertTrue(set2.contains("foo"));
+        assertTrue(set2.contains("bar"));
+        assertTrue(set2.contains("baz"));
 
-        // Lock in expectation that LinkedHashSet is fallback
-        assert LinkedHashSet.class.isAssignableFrom(set3.getClass());
+        // Verify the set is unmodifiable by attempting to add an element
+        assertThrows(UnsupportedOperationException.class, () -> set2.add("qux"),
+                "Deserialized set should be unmodifiable - add() should throw UnsupportedOperationException");
+
+        // Verify remove also throws
+        assertThrows(UnsupportedOperationException.class, () -> set2.remove("foo"),
+                "Deserialized set should be unmodifiable - remove() should throw UnsupportedOperationException");
+
+        // Verify clear also throws
+        assertThrows(UnsupportedOperationException.class, () -> set2.clear(),
+                "Deserialized set should be unmodifiable - clear() should throw UnsupportedOperationException");
     }
 }

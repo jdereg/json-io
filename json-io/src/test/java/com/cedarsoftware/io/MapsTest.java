@@ -39,7 +39,6 @@ import com.cedarsoftware.io.models.ModelHoldingSingleHashMap;
 import com.cedarsoftware.util.CompactMap;
 import com.cedarsoftware.util.CompactSet;
 import com.cedarsoftware.util.DeepEquals;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -875,7 +874,6 @@ class MapsTest
         assertEquals(json1, json2);
     }
 
-    @Disabled("If we use CompactMap for JsonObject, then we can enable this - it can handle circlular references")
     @Test
     void testMapWithCircularReferenceInKeys() {
         TestMapKeys tmk = new TestMapKeys();
@@ -893,7 +891,6 @@ class MapsTest
         assertEquals(json1, json2);
     }
 
-    @Disabled("If we use CompactMap for JsonObject, then we can enable this - it can handle circlular references")
     @Test
     void testMapWithCircularReferenceInKeyAndValue() {
         TestMapKeyValueCircular tmkvc = new TestMapKeyValueCircular();
@@ -928,7 +925,6 @@ class MapsTest
         assertEquals(json1, json2);
     }
 
-    @Disabled("If we use CompactMap for JsonObject, then we can enable this - it can handle circlular references")
     @Test
     void testMapWithNestedCircularReferenceInKeys() {
         TestMapKeysNested tmkn = new TestMapKeysNested();
@@ -946,7 +942,6 @@ class MapsTest
         assertEquals(json1, json2);
     }
 
-    @Disabled("If we use CompactMap for JsonObject, then we can enable this - it can handle circlular references")
     @Test
     void testMapWithNestedCircularReferenceInKeyAndValue() {
         TestMapKeyValueCircularNested tmkvcn = new TestMapKeyValueCircularNested();
