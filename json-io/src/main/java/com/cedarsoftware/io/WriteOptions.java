@@ -43,9 +43,9 @@ import com.cedarsoftware.util.convert.ConverterOptions;
 public interface WriteOptions {
     // Properties
 
-    // Enum for the 3-state property
+    // Enum for the type info display modes
     enum ShowType {
-        ALWAYS, NEVER, MINIMAL
+        ALWAYS, NEVER, MINIMAL, COMPACT
     }
 
     /**
@@ -157,6 +157,13 @@ public interface WriteOptions {
      * @return boolean true if set to show minimal type (@type)
      */
     boolean isMinimalShowingType();
+
+    /**
+     * @return boolean true if set to show compact type info. Compact mode extends minimal mode by also
+     * omitting @type for Collections and Maps whose runtime type is the "natural default" for the field's
+     * declared type (e.g., ArrayList for List, LinkedHashSet for Set, LinkedHashMap for Map).
+     */
+    boolean isCompactShowingType();
 
     /**
      * @return boolean true if the root type (@type on the root object) should be shown, false to omit it.
@@ -329,4 +336,5 @@ public interface WriteOptions {
      * elements. Default is false. Note: This is NOT enabled by the json5() umbrella method.
      */
     boolean isJson5TrailingCommas();
+
 }

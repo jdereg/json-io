@@ -14,13 +14,27 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NavigableMap;
+import java.util.NavigableSet;
+import java.util.Queue;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.logging.Logger;
 
 import com.cedarsoftware.io.reflect.Accessor;
@@ -121,6 +135,22 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     private static final char[] HEX = "0123456789abcdef".toCharArray();
 
+    // Natural default collection/map types: maps declared interface to the concrete type that CollectionFactory
+    // and MapFactory create when reading. Used by compact format to omit @type wrapper when runtime type matches.
+    private static final Map<Class<?>, Class<?>> NATURAL_DEFAULTS = new HashMap<>();
+    static {
+        NATURAL_DEFAULTS.put(List.class, ArrayList.class);
+        NATURAL_DEFAULTS.put(Collection.class, ArrayList.class);
+        NATURAL_DEFAULTS.put(Set.class, LinkedHashSet.class);
+        NATURAL_DEFAULTS.put(SortedSet.class, TreeSet.class);
+        NATURAL_DEFAULTS.put(NavigableSet.class, TreeSet.class);
+        NATURAL_DEFAULTS.put(Queue.class, LinkedList.class);
+        NATURAL_DEFAULTS.put(Deque.class, ArrayDeque.class);
+        NATURAL_DEFAULTS.put(Map.class, LinkedHashMap.class);
+        NATURAL_DEFAULTS.put(SortedMap.class, TreeMap.class);
+        NATURAL_DEFAULTS.put(NavigableMap.class, TreeMap.class);
+    }
+
     // Selected prefixes based on options
     private final String idPrefix;
     private final String typePrefix;
@@ -167,6 +197,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private final int indentationThreshold;
     private final int indentationSize;
     private final boolean cycleSupport;
+    private final boolean compactFormat;
 
     // Context tracking for automatic comma management
     private final Deque<WriteContext> contextStack = new ArrayDeque<>();
@@ -343,6 +374,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         this.indentationThreshold = this.writeOptions.getIndentationThreshold();
         this.indentationSize = this.writeOptions.getIndentationSize();
         this.cycleSupport = this.writeOptions.isCycleSupport();
+        this.compactFormat = this.writeOptions.isCompactShowingType();
     }
 
     public WriteOptions getWriteOptions() {
@@ -1895,7 +1927,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
         // Must be exact match (==), not isAssignableFrom
         // This ensures the Resolver can instantiate the correct concrete type
-        return elementClass != declaredElementType;
+        if (elementClass == declaredElementType) {
+            return false;
+        }
+        // Compact format: treat natural defaults as matching (e.g., ArrayList for List element type)
+        if (compactFormat && NATURAL_DEFAULTS.getOrDefault(declaredElementType, Void.class) == elementClass) {
+            return false;
+        }
+        return true;
     }
 
     private void writeEnumSet(final EnumSet<?> enumSet) throws IOException {
@@ -2159,6 +2198,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         if (objectClass == declaredType) {
+            return false;
+        }
+
+        // Compact format: omit @type when the runtime type is the "natural default" for the declared type.
+        // E.g., ArrayList for List, LinkedHashSet for Set, LinkedHashMap for Map.
+        // The reader creates these same defaults via CollectionFactory/MapFactory when @type is absent.
+        if (compactFormat && NATURAL_DEFAULTS.getOrDefault(declaredType, Void.class) == objectClass) {
             return false;
         }
 

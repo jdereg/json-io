@@ -575,6 +575,14 @@ public class WriteOptionsBuilder {
     }
 
     /**
+     * Call this method to set a permanent (JVM lifetime) type info display setting to compact.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     */
+    public static void addPermanentShowTypeInfoCompact() {
+        BASE_SHOW_TYPE_INFO = WriteOptions.ShowType.COMPACT;
+    }
+
+    /**
      * Call this method to set a permanent (JVM lifetime) pretty print setting.
      * All WriteOptions instances will be initialized with this value unless explicitly overridden.
      * 
@@ -826,6 +834,20 @@ public class WriteOptionsBuilder {
     }
 
     /**
+     * Set to show compact type info. This extends minimal mode by also omitting {@literal @type} for Collections
+     * and Maps whose runtime type is the "natural default" for the field's declared type. For example, an
+     * ArrayList in a List field writes as direct [...] instead of {"@type":"ArrayList","@items":[...]}.
+     * Natural defaults include: List→ArrayList, Set→LinkedHashSet, Map→LinkedHashMap, SortedSet→TreeSet, etc.
+     * The reader already handles this compact format via field type inference.
+     *
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder showTypeInfoCompact() {
+        options.showTypeInfo = WriteOptions.ShowType.COMPACT;
+        return this;
+    }
+
+    /**
      * @param prettyPrint boolean 'prettyPrint' setting, true to turn on, false will turn off.
      * @return WriteOptionsBuilder for chained access.
      */
@@ -944,24 +966,24 @@ public class WriteOptionsBuilder {
 
     /**
      * Show the @type on the root object in the JSON output. This is the default behavior
-     * when using showTypeInfoMinimal().
+     * when using showTypeInfoMinimal() or showTypeInfoCompact().
      * <p>
      * The root type is useful when the receiving system does not know the type of the incoming
      * object. However, if the receiver uses .asClass() or .asType() to specify the expected type,
      * the root @type becomes redundant.
      * </p>
      * <p>
-     * <b>Note:</b> This method is only valid when using showTypeInfoMinimal(). When using
-     * showTypeInfoAlways() or showTypeInfoNever(), the root type behavior is determined by
+     * <b>Note:</b> This method is only valid when using showTypeInfoMinimal() or showTypeInfoCompact().
+     * When using showTypeInfoAlways() or showTypeInfoNever(), the root type behavior is determined by
      * the global setting and cannot be overridden.
      * </p>
      * @return WriteOptionsBuilder for chained access.
-     * @throws IllegalStateException if not in showTypeInfoMinimal() mode.
+     * @throws IllegalStateException if not in showTypeInfoMinimal() or showTypeInfoCompact() mode.
      */
     public WriteOptionsBuilder showRootTypeInfo() {
-        if (options.showTypeInfo != WriteOptions.ShowType.MINIMAL) {
+        if (options.showTypeInfo != WriteOptions.ShowType.MINIMAL && options.showTypeInfo != WriteOptions.ShowType.COMPACT) {
             throw new IllegalStateException(
-                "showRootTypeInfo() is only valid when using showTypeInfoMinimal(). " +
+                "showRootTypeInfo() is only valid when using showTypeInfoMinimal() or showTypeInfoCompact(). " +
                 "With showTypeInfoAlways() or showTypeInfoNever(), root type behavior " +
                 "is determined by the global setting.");
         }
@@ -977,8 +999,8 @@ public class WriteOptionsBuilder {
      * Omitting the root type reduces JSON payload size.
      * </p>
      * <p>
-     * <b>Note:</b> This method is only valid when using showTypeInfoMinimal(). When using
-     * showTypeInfoAlways() or showTypeInfoNever(), the root type behavior is determined by
+     * <b>Note:</b> This method is only valid when using showTypeInfoMinimal() or showTypeInfoCompact().
+     * When using showTypeInfoAlways() or showTypeInfoNever(), the root type behavior is determined by
      * the global setting and cannot be overridden.
      * </p>
      * <p>
@@ -986,12 +1008,12 @@ public class WriteOptionsBuilder {
      * but this default will likely change to omit root type in a future release.
      * </p>
      * @return WriteOptionsBuilder for chained access.
-     * @throws IllegalStateException if not in showTypeInfoMinimal() mode.
+     * @throws IllegalStateException if not in showTypeInfoMinimal() or showTypeInfoCompact() mode.
      */
     public WriteOptionsBuilder omitRootTypeInfo() {
-        if (options.showTypeInfo != WriteOptions.ShowType.MINIMAL) {
+        if (options.showTypeInfo != WriteOptions.ShowType.MINIMAL && options.showTypeInfo != WriteOptions.ShowType.COMPACT) {
             throw new IllegalStateException(
-                "omitRootTypeInfo() is only valid when using showTypeInfoMinimal(). " +
+                "omitRootTypeInfo() is only valid when using showTypeInfoMinimal() or showTypeInfoCompact(). " +
                 "With showTypeInfoAlways() or showTypeInfoNever(), root type behavior " +
                 "is determined by the global setting.");
         }
@@ -1095,6 +1117,7 @@ public class WriteOptionsBuilder {
         options.json5TrailingCommas = enable;
         return this;
     }
+
 
     /**
      * @param customWrittenClasses Map of Class to JsonClassWriter.  Establish the passed in Map as the
@@ -1636,10 +1659,18 @@ public class WriteOptionsBuilder {
         }
 
         /**
-         * @return boolean true if set to show minimal type (@type)
+         * @return boolean true if set to show minimal type (@type).
+         * Note: COMPACT mode is a superset of MINIMAL, so this returns true for both.
          */
         public boolean isMinimalShowingType() {
-            return showTypeInfo == ShowType.MINIMAL;
+            return showTypeInfo == ShowType.MINIMAL || showTypeInfo == ShowType.COMPACT;
+        }
+
+        /**
+         * @return boolean true if set to show compact type info.
+         */
+        public boolean isCompactShowingType() {
+            return showTypeInfo == ShowType.COMPACT;
         }
 
         /**
@@ -1848,6 +1879,7 @@ public class WriteOptionsBuilder {
         public boolean isJson5TrailingCommas() {
             return json5TrailingCommas;
         }
+
 
         /**
          * Dummy place-holder class exists only because ConcurrentHashMap cannot contain a
