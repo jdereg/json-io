@@ -36,7 +36,7 @@
         <version.junit-jupiter-api>5.14.2</version.junit-jupiter-api>
         <version.junit-jupiter-params>5.14.2</version.junit-jupiter-params>
         <version.mockito-junit-jupiter>4.11.0</version.mockito-junit-jupiter>
-        <version.assertj-core>3.27.6</version.assertj-core>
+        <version.assertj-core>3.27.7</version.assertj-core>
         <version.gson>2.13.2</version.gson>
         <version.jackson-core>2.19.4</version.jackson-core>
 
