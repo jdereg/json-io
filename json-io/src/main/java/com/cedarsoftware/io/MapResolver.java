@@ -183,6 +183,11 @@ public class MapResolver extends Resolver {
      */
     @Override
     protected void traverseMap(JsonObject jsonObj) {
+        // Guard against reprocessing already-finished objects
+        if (jsonObj.isFinished) {
+            return;
+        }
+
         // Apply sorted collection substitution ONLY for types from JSON's @type (typeString set),
         // not for types from user's asClass() request
         if (jsonObj.getTypeString() != null) {
@@ -448,6 +453,11 @@ public class MapResolver extends Resolver {
     }
 
     protected void traverseArray(JsonObject jsonObj) {
+        // Guard against reprocessing already-finished objects
+        if (markFinishedIfNot(jsonObj)) {
+            return;
+        }
+
         Object[] items = jsonObj.getItems();
         if (ArrayUtilities.isEmpty(items)) {
             return;
@@ -476,7 +486,7 @@ public class MapResolver extends Resolver {
                 processArrayElement(element, elementClass, componentType, target, refArray, i, isPrimitive);
             }
         }
-        jsonObj.setFinished();
+        // Note: setFinished() already called by markFinishedIfNot() at method start
     }
 
     /**
@@ -568,7 +578,8 @@ public class MapResolver extends Resolver {
      */
     @Override
     protected void traverseCollection(final JsonObject jsonObj) {
-        if (jsonObj.isFinished) {
+        // Guard against reprocessing already-finished objects
+        if (markFinishedIfNot(jsonObj)) {
             return;
         }
 
@@ -604,7 +615,7 @@ public class MapResolver extends Resolver {
                 idx++;
             }
         }
-        jsonObj.setFinished();
+        // Note: setFinished() already called by markFinishedIfNot() at method start
     }
 
     /**

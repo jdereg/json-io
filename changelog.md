@@ -1,8 +1,13 @@
 ### Revision History
-#### 4.87.0 - 2026-01-26
+#### 4.88.0 - 2026-01-26
+* **IMPROVED**: `MapResolver` - Applied consistency improvements from ObjectResolver patterns
+  * Added `isFinished` guard to `traverseMap()` to prevent reprocessing
+  * Updated `traverseArray()` and `traverseCollection()` to use `markFinishedIfNot()` helper
+  * Removed redundant `setFinished()` calls at method ends (now handled by guard pattern)
 * **BUILD**: Fixed `json-io-spring-boot-starter` Maven Central deployment
   * Added required deployment plugins (maven-source-plugin, maven-javadoc-plugin, central-publishing-maven-plugin)
   * Spring Boot starter now properly publishes to Maven Central alongside json-io core
+* **BUILD**: Updated java-util dependency to 4.88.0
 
 #### 4.86.0 - 2025-01-26
 * **FEATURE**: Spring Boot Starter module (`json-io-spring-boot-starter`)
