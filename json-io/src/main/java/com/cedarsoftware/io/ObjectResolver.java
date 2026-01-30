@@ -108,7 +108,7 @@ public class ObjectResolver extends Resolver
      * @param injector an instance of Injector used for setting values on the target object.
      * @param rhs      the JSON value that will be converted and stored in the field on the associated Java target object.
      */
-    public void assignField(final JsonObject jsonObj, final Injector injector, final Object rhs) {
+    private void assignField(final JsonObject jsonObj, final Injector injector, final Object rhs) {
         final Object target = jsonObj.getTarget();
         final Type fieldType = injector.getGenericType();
         final Class<?> rawFieldType = TypeUtilities.getRawClass(fieldType);
