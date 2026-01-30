@@ -575,11 +575,11 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * Call this method to set a permanent (JVM lifetime) type info display setting to compact.
+     * Call this method to set a permanent (JVM lifetime) type info display setting to minimal plus.
      * All WriteOptions instances will be initialized with this value unless explicitly overridden.
      */
-    public static void addPermanentShowTypeInfoCompact() {
-        BASE_SHOW_TYPE_INFO = WriteOptions.ShowType.COMPACT;
+    public static void addPermanentShowTypeInfoMinimalPlus() {
+        BASE_SHOW_TYPE_INFO = WriteOptions.ShowType.MINIMAL_PLUS;
     }
 
     /**
@@ -834,7 +834,7 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * Set to show compact type info. This extends minimal mode by also omitting {@literal @type} for Collections
+     * Set to show minimal plus type info. This extends minimal mode by also omitting {@literal @type} for Collections
      * and Maps whose runtime type is the "natural default" for the field's declared type. For example, an
      * ArrayList in a List field writes as direct [...] instead of {"@type":"ArrayList","@items":[...]}.
      * Natural defaults include: List→ArrayList, Set→LinkedHashSet, Map→LinkedHashMap, SortedSet→TreeSet, etc.
@@ -842,8 +842,8 @@ public class WriteOptionsBuilder {
      *
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder showTypeInfoCompact() {
-        options.showTypeInfo = WriteOptions.ShowType.COMPACT;
+    public WriteOptionsBuilder showTypeInfoMinimalPlus() {
+        options.showTypeInfo = WriteOptions.ShowType.MINIMAL_PLUS;
         return this;
     }
 
@@ -966,24 +966,24 @@ public class WriteOptionsBuilder {
 
     /**
      * Show the @type on the root object in the JSON output. This is the default behavior
-     * when using showTypeInfoMinimal() or showTypeInfoCompact().
+     * when using showTypeInfoMinimal() or showTypeInfoMinimalPlus().
      * <p>
      * The root type is useful when the receiving system does not know the type of the incoming
      * object. However, if the receiver uses .asClass() or .asType() to specify the expected type,
      * the root @type becomes redundant.
      * </p>
      * <p>
-     * <b>Note:</b> This method is only valid when using showTypeInfoMinimal() or showTypeInfoCompact().
+     * <b>Note:</b> This method is only valid when using showTypeInfoMinimal() or showTypeInfoMinimalPlus().
      * When using showTypeInfoAlways() or showTypeInfoNever(), the root type behavior is determined by
      * the global setting and cannot be overridden.
      * </p>
      * @return WriteOptionsBuilder for chained access.
-     * @throws IllegalStateException if not in showTypeInfoMinimal() or showTypeInfoCompact() mode.
+     * @throws IllegalStateException if not in showTypeInfoMinimal() or showTypeInfoMinimalPlus() mode.
      */
     public WriteOptionsBuilder showRootTypeInfo() {
-        if (options.showTypeInfo != WriteOptions.ShowType.MINIMAL && options.showTypeInfo != WriteOptions.ShowType.COMPACT) {
+        if (options.showTypeInfo != WriteOptions.ShowType.MINIMAL && options.showTypeInfo != WriteOptions.ShowType.MINIMAL_PLUS) {
             throw new IllegalStateException(
-                "showRootTypeInfo() is only valid when using showTypeInfoMinimal() or showTypeInfoCompact(). " +
+                "showRootTypeInfo() is only valid when using showTypeInfoMinimal() or showTypeInfoMinimalPlus(). " +
                 "With showTypeInfoAlways() or showTypeInfoNever(), root type behavior " +
                 "is determined by the global setting.");
         }
@@ -999,7 +999,7 @@ public class WriteOptionsBuilder {
      * Omitting the root type reduces JSON payload size.
      * </p>
      * <p>
-     * <b>Note:</b> This method is only valid when using showTypeInfoMinimal() or showTypeInfoCompact().
+     * <b>Note:</b> This method is only valid when using showTypeInfoMinimal() or showTypeInfoMinimalPlus().
      * When using showTypeInfoAlways() or showTypeInfoNever(), the root type behavior is determined by
      * the global setting and cannot be overridden.
      * </p>
@@ -1008,12 +1008,12 @@ public class WriteOptionsBuilder {
      * but this default will likely change to omit root type in a future release.
      * </p>
      * @return WriteOptionsBuilder for chained access.
-     * @throws IllegalStateException if not in showTypeInfoMinimal() or showTypeInfoCompact() mode.
+     * @throws IllegalStateException if not in showTypeInfoMinimal() or showTypeInfoMinimalPlus() mode.
      */
     public WriteOptionsBuilder omitRootTypeInfo() {
-        if (options.showTypeInfo != WriteOptions.ShowType.MINIMAL && options.showTypeInfo != WriteOptions.ShowType.COMPACT) {
+        if (options.showTypeInfo != WriteOptions.ShowType.MINIMAL && options.showTypeInfo != WriteOptions.ShowType.MINIMAL_PLUS) {
             throw new IllegalStateException(
-                "omitRootTypeInfo() is only valid when using showTypeInfoMinimal() or showTypeInfoCompact(). " +
+                "omitRootTypeInfo() is only valid when using showTypeInfoMinimal() or showTypeInfoMinimalPlus(). " +
                 "With showTypeInfoAlways() or showTypeInfoNever(), root type behavior " +
                 "is determined by the global setting.");
         }
@@ -1660,17 +1660,17 @@ public class WriteOptionsBuilder {
 
         /**
          * @return boolean true if set to show minimal type (@type).
-         * Note: COMPACT mode is a superset of MINIMAL, so this returns true for both.
+         * Note: MINIMAL_PLUS mode is a superset of MINIMAL, so this returns true for both.
          */
         public boolean isMinimalShowingType() {
-            return showTypeInfo == ShowType.MINIMAL || showTypeInfo == ShowType.COMPACT;
+            return showTypeInfo == ShowType.MINIMAL || showTypeInfo == ShowType.MINIMAL_PLUS;
         }
 
         /**
-         * @return boolean true if set to show compact type info.
+         * @return boolean true if set to show minimal plus type info.
          */
-        public boolean isCompactShowingType() {
-            return showTypeInfo == ShowType.COMPACT;
+        public boolean isMinimalPlusShowingType() {
+            return showTypeInfo == ShowType.MINIMAL_PLUS;
         }
 
         /**

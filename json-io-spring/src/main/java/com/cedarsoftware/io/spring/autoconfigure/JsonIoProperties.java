@@ -12,7 +12,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *   json-io:
  *     write:
  *       pretty-print: true
- *       show-type-info: MINIMAL
+ *       show-type-info: MINIMAL_PLUS
  *       skip-null-fields: true
  *     read:
  *       max-depth: 1000
@@ -68,7 +68,7 @@ public class JsonIoProperties {
         /**
          * When to include type information in JSON output.
          */
-        private ShowTypeInfo showTypeInfo = ShowTypeInfo.MINIMAL;
+        private ShowTypeInfo showTypeInfo = ShowTypeInfo.MINIMAL_PLUS;
 
         /**
          * Skip null field values in output.
@@ -226,6 +226,13 @@ public class JsonIoProperties {
          * Include @type only when needed for polymorphic types.
          */
         MINIMAL,
+        /**
+         * Extends MINIMAL with optimizations for collections, maps, and convertible types.
+         * Omits @type for natural defaults (e.g., ArrayList for List) and types with
+         * lossless String round-trips (e.g., ZonedDateTime, UUID, BigDecimal).
+         * This is the default for Spring integration.
+         */
+        MINIMAL_PLUS,
         /**
          * Never include @type metadata.
          */

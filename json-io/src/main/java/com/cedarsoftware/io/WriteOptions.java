@@ -45,7 +45,7 @@ public interface WriteOptions {
 
     // Enum for the type info display modes
     enum ShowType {
-        ALWAYS, NEVER, MINIMAL, COMPACT
+        ALWAYS, NEVER, MINIMAL, MINIMAL_PLUS
     }
 
     /**
@@ -159,11 +159,11 @@ public interface WriteOptions {
     boolean isMinimalShowingType();
 
     /**
-     * @return boolean true if set to show compact type info. Compact mode extends minimal mode by also
+     * @return boolean true if set to show minimal plus type info. Minimal plus mode extends minimal mode by also
      * omitting @type for Collections and Maps whose runtime type is the "natural default" for the field's
      * declared type (e.g., ArrayList for List, LinkedHashSet for Set, LinkedHashMap for Map).
      */
-    boolean isCompactShowingType();
+    boolean isMinimalPlusShowingType();
 
     /**
      * @return boolean true if the root type (@type on the root object) should be shown, false to omit it.

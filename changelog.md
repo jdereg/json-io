@@ -1,4 +1,15 @@
 ### Revision History
+#### 4.89.0 (Unreleased)
+* **RENAMED**: `showTypeInfoCompact()` → `showTypeInfoMinimalPlus()` for clearer naming
+  * `WriteOptionsBuilder.showTypeInfoCompact()` → `WriteOptionsBuilder.showTypeInfoMinimalPlus()`
+  * `WriteOptionsBuilder.addPermanentShowTypeInfoCompact()` → `WriteOptionsBuilder.addPermanentShowTypeInfoMinimalPlus()`
+  * `WriteOptions.isCompactShowingType()` → `WriteOptions.isMinimalPlusShowingType()`
+  * `ShowType.COMPACT` enum value → `ShowType.MINIMAL_PLUS`
+  * The name "MinimalPlus" better conveys that this mode extends MINIMAL with additional type inference optimizations
+* **SPRING**: Default `show-type-info` changed from `MINIMAL` to `MINIMAL_PLUS`
+  * Spring Boot starter now uses `MINIMAL_PLUS` as the default for optimal JSON size
+  * Added `MINIMAL_PLUS` option to Spring configuration properties
+
 #### 4.88.0 - 2026-01-26
 * **IMPROVED**: `MapResolver` - Applied consistency improvements from ObjectResolver patterns
   * Added `isFinished` guard to `traverseMap()` to prevent reprocessing

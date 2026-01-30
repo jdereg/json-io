@@ -350,13 +350,13 @@ public class ObjectResolver extends Resolver
             }
 
             // Fast path for native JSON types (includes BigInteger/BigDecimal from JsonParser)
-            // but convert numbers to target type if needed (e.g., Long -> Integer for List<Integer>)
+            // but convert to target type if needed (e.g., Long -> Integer, String -> ZonedDateTime)
             if (isDirectlyAddableJsonValue(element)) {
-                if (element instanceof Number && rawElementType != Object.class
-                        && Number.class.isAssignableFrom(rawElementType)
-                        && !rawElementType.isInstance(element)) {
-                    // Convert to target numeric type (e.g., Long to Integer)
-                    element = converter.convert(element, rawElementType);
+                if (rawElementType != Object.class && !rawElementType.isInstance(element)) {
+                    // Convert to target type if conversion is supported
+                    if (converter.isSimpleTypeConversionSupported(element.getClass(), rawElementType)) {
+                        element = converter.convert(element, rawElementType);
+                    }
                 }
                 col.add(element);
                 idx++;
@@ -529,6 +529,8 @@ public class ObjectResolver extends Resolver
             JsonObject itemsWrapper = new JsonObject();
             itemsWrapper.setItems(items);
             itemsWrapper.setTarget(items);
+            // Set element type for Map values so traverseArray can convert them (e.g., String -> ZonedDateTime)
+            itemsWrapper.setItemElementType(valueType);
             push(itemsWrapper);
         }
     }
@@ -600,6 +602,8 @@ public class ObjectResolver extends Resolver
             JsonObject itemsWrapper = new JsonObject();
             itemsWrapper.setItems(items);
             itemsWrapper.setTarget(items);
+            // Set element type for Map values so traverseArray can convert them (e.g., String -> ZonedDateTime)
+            itemsWrapper.setItemElementType(valueType);
             push(itemsWrapper);
         }
     }
@@ -626,7 +630,11 @@ public class ObjectResolver extends Resolver
         final Class<?> fallbackCompType = array.getClass().getComponentType();
 
         // Use the helper to extract the effective component type from the full type.
-        Type effectiveComponentType = TypeUtilities.extractArrayComponentType(jsonObj.getType());
+        // Check getItemElementType() first (set for Map values), then try extracting from array type.
+        Type effectiveComponentType = jsonObj.getItemElementType();
+        if (effectiveComponentType == null) {
+            effectiveComponentType = TypeUtilities.extractArrayComponentType(jsonObj.getType());
+        }
         if (effectiveComponentType == null) {
             effectiveComponentType = fallbackCompType;
         }

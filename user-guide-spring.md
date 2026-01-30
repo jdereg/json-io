@@ -88,9 +88,10 @@ spring:
 
       # When to include @type metadata
       # ALWAYS - Always include type info
-      # MINIMAL - Only when needed for polymorphism (default)
+      # MINIMAL - Only when needed for polymorphism
+      # MINIMAL_PLUS - Extends MINIMAL with optimizations for collections, maps, and convertible types (default)
       # NEVER - Never include type info
-      show-type-info: MINIMAL
+      show-type-info: MINIMAL_PLUS
 
       # Skip fields with null values
       skip-null-fields: false
@@ -482,7 +483,7 @@ Configure `show-type-info`:
 spring:
   json-io:
     write:
-      show-type-info: ALWAYS  # or MINIMAL for polymorphic types only
+      show-type-info: ALWAYS  # or MINIMAL/MINIMAL_PLUS for polymorphic types only
 ```
 
 ### Stack overflow on deeply nested objects

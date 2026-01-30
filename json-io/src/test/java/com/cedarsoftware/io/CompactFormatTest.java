@@ -15,9 +15,10 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests for the showTypeInfoCompact() WriteOption. When enabled, Collections and Maps whose runtime type
- * is the "natural default" for the field's declared type are written without the @type/@items wrapper.
- * For example, an ArrayList in a List field writes as direct [...] instead of {"@type":"ArrayList","@items":[...]}.
+ * Tests for the showTypeInfoMinimalPlus() WriteOption (formerly showTypeInfoCompact()). When enabled, Collections
+ * and Maps whose runtime type is the "natural default" for the field's declared type are written without the
+ * @type/@items wrapper. For example, an ArrayList in a List field writes as direct [...] instead of
+ * {"@type":"ArrayList","@items":[...]}.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -103,11 +104,11 @@ class CompactFormatTest {
     // ========== Helper methods ==========
 
     private WriteOptions compactWriteOpts() {
-        return new WriteOptionsBuilder().showTypeInfoCompact().build();
+        return new WriteOptionsBuilder().showTypeInfoMinimalPlus().build();
     }
 
     private WriteOptions compactPrettyWriteOpts() {
-        return new WriteOptionsBuilder().showTypeInfoCompact().prettyPrint(true).build();
+        return new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
     }
 
     private WriteOptions defaultWriteOpts() {
@@ -222,7 +223,7 @@ class CompactFormatTest {
         holder.names = new ArrayList<>(Arrays.asList("Alice", "Bob"));
 
         WriteOptions opts = new WriteOptionsBuilder()
-                .showTypeInfoCompact()
+                .showTypeInfoMinimalPlus()
                 .showTypeInfoAlways()
                 .build();
 
@@ -523,7 +524,7 @@ class CompactFormatTest {
         holder.uuid = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
 
         WriteOptions prettyDefault = new WriteOptionsBuilder().prettyPrint(true).build();
-        WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoCompact().prettyPrint(true).build();
+        WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
 
         String jsonDefault = JsonIo.toJson(holder, prettyDefault);
         String jsonCompact = JsonIo.toJson(holder, prettyCompact);
@@ -531,7 +532,7 @@ class CompactFormatTest {
         // Print for manual inspection
         System.out.println("=== DEFAULT (showTypeInfoMinimal) ===");
         System.out.println(jsonDefault);
-        System.out.println("\n=== COMPACT (showTypeInfoCompact) ===");
+        System.out.println("\n=== MINIMAL_PLUS (showTypeInfoMinimalPlus) ===");
         System.out.println(jsonCompact);
 
         // Compact should be shorter or equal (never longer)
@@ -556,14 +557,14 @@ class CompactFormatTest {
         holder.utilDate = new java.sql.Timestamp(1703462400000L);  // Timestamp IS-A Date
 
         WriteOptions prettyDefault = new WriteOptionsBuilder().prettyPrint(true).build();
-        WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoCompact().prettyPrint(true).build();
+        WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
 
         String jsonDefault = JsonIo.toJson(holder, prettyDefault);
         String jsonCompact = JsonIo.toJson(holder, prettyCompact);
 
         System.out.println("=== Cross-type: Timestamp in Date field (DEFAULT) ===");
         System.out.println(jsonDefault);
-        System.out.println("\n=== Cross-type: Timestamp in Date field (COMPACT) ===");
+        System.out.println("\n=== Cross-type: Timestamp in Date field (MINIMAL_PLUS) ===");
         System.out.println(jsonCompact);
 
         // In compact mode, @type for Timestamp should be omitted since both Date and Timestamp are convertable
@@ -588,5 +589,386 @@ class CompactFormatTest {
 
         SimpleTypesHolder result = JsonIo.toJava(json, defaultReadOpts()).asClass(SimpleTypesHolder.class);
         assertEquals(holder.zdt, result.zdt);
+    }
+
+    // ==================== Collection element Converter-aware simplification tests ====================
+
+    // Model class for Collection element tests
+    static class ZonedDateTimeListHolder {
+        List<ZonedDateTime> events;
+    }
+
+    static class LocalDateSetHolder {
+        Set<LocalDate> dates;
+    }
+
+    static class MixedCollectionHolder {
+        List<ZonedDateTime> zdtList;
+        Set<LocalDate> localDates;
+        List<UUID> uuids;
+        List<BigDecimal> decimals;
+    }
+
+    // ========== 22. List<ZonedDateTime> elements written as plain strings ==========
+
+    @Test
+    void testListOfZonedDateTime_compactFormat() {
+        ZonedDateTimeListHolder holder = new ZonedDateTimeListHolder();
+        holder.events = new ArrayList<>();
+        holder.events.add(ZonedDateTime.parse("2023-10-22T12:03:01+03:00[Asia/Aden]"));
+        holder.events.add(ZonedDateTime.parse("2023-11-15T14:30:45-05:00[America/New_York]"));
+        holder.events.add(ZonedDateTime.parse("2024-01-01T00:00:00Z[UTC]"));
+
+        WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
+        String json = JsonIo.toJson(holder, prettyCompact);
+
+        System.out.println("=== List<ZonedDateTime> MINIMAL_PLUS ===");
+        System.out.println(json);
+
+        // Elements should be plain strings, no @type or "zonedDateTime" key wrapper
+        assertFalse(json.contains("\"zonedDateTime\""), "Elements should not have 'zonedDateTime' key wrapper");
+
+        // The list should be a direct array (no @type on ArrayList since it's the natural default)
+        assertFalse(json.contains("ArrayList"), "ArrayList should not have @type (natural default for List)");
+
+        // Round-trip verification
+        ZonedDateTimeListHolder result = JsonIo.toJava(json, defaultReadOpts()).asClass(ZonedDateTimeListHolder.class);
+        assertEquals(3, result.events.size());
+        assertEquals(holder.events.get(0), result.events.get(0));
+        assertEquals(holder.events.get(1), result.events.get(1));
+        assertEquals(holder.events.get(2), result.events.get(2));
+    }
+
+    // ========== 23. Set<LocalDate> elements written as plain strings ==========
+
+    @Test
+    void testSetOfLocalDate_compactFormat() {
+        LocalDateSetHolder holder = new LocalDateSetHolder();
+        holder.dates = new LinkedHashSet<>();
+        holder.dates.add(LocalDate.of(2023, 12, 25));
+        holder.dates.add(LocalDate.of(2024, 1, 1));
+        holder.dates.add(LocalDate.of(2024, 7, 4));
+
+        WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
+        String json = JsonIo.toJson(holder, prettyCompact);
+
+        System.out.println("=== Set<LocalDate> MINIMAL_PLUS ===");
+        System.out.println(json);
+
+        // Elements should be plain strings (no @type wrapper), but class name contains "LocalDate"
+        assertFalse(json.contains("\"@type\":\"LocalDate\""), "LocalDate elements should not have @type wrapper");
+
+        // Round-trip verification
+        LocalDateSetHolder result = JsonIo.toJava(json, defaultReadOpts()).asClass(LocalDateSetHolder.class);
+        assertEquals(3, result.dates.size());
+        assertTrue(result.dates.contains(LocalDate.of(2023, 12, 25)));
+        assertTrue(result.dates.contains(LocalDate.of(2024, 1, 1)));
+        assertTrue(result.dates.contains(LocalDate.of(2024, 7, 4)));
+    }
+
+    // ========== 24. Mixed collections with various convertable types ==========
+
+    @Test
+    void testMixedCollections_compactFormat() {
+        MixedCollectionHolder holder = new MixedCollectionHolder();
+        holder.zdtList = new ArrayList<>();
+        holder.zdtList.add(ZonedDateTime.parse("2023-10-22T12:03:01+03:00[Asia/Aden]"));
+
+        holder.localDates = new LinkedHashSet<>();
+        holder.localDates.add(LocalDate.of(2023, 12, 25));
+
+        holder.uuids = new ArrayList<>();
+        holder.uuids.add(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
+
+        holder.decimals = new ArrayList<>();
+        holder.decimals.add(new BigDecimal("12345.67890"));
+
+        WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
+        String json = JsonIo.toJson(holder, prettyCompact);
+
+        System.out.println("=== Mixed Collections MINIMAL_PLUS ===");
+        System.out.println(json);
+
+        // None of the element types should have @type wrappers
+        assertFalse(json.contains("ZonedDateTime"), "ZonedDateTime should not have @type");
+        assertFalse(json.contains("LocalDate"), "LocalDate should not have @type");
+        assertFalse(json.contains("UUID"), "UUID should not have @type");
+        assertFalse(json.contains("BigDecimal"), "BigDecimal should not have @type");
+
+        // Round-trip verification
+        MixedCollectionHolder result = JsonIo.toJava(json, defaultReadOpts()).asClass(MixedCollectionHolder.class);
+        assertEquals(holder.zdtList.get(0), result.zdtList.get(0));
+        assertTrue(result.localDates.contains(LocalDate.of(2023, 12, 25)));
+        assertEquals(holder.uuids.get(0), result.uuids.get(0));
+        assertEquals(0, holder.decimals.get(0).compareTo(result.decimals.get(0)));
+    }
+
+    // ========== 25. Before/After comparison for Collection elements ==========
+
+    @Test
+    void testCollectionElementsBeforeAfterComparison() {
+        ZonedDateTimeListHolder holder = new ZonedDateTimeListHolder();
+        holder.events = new ArrayList<>();
+        holder.events.add(ZonedDateTime.parse("2023-10-22T12:03:01+03:00[Asia/Aden]"));
+        holder.events.add(ZonedDateTime.parse("2023-11-15T14:30:45-05:00[America/New_York]"));
+
+        WriteOptions prettyDefault = new WriteOptionsBuilder().prettyPrint(true).build();
+        WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
+
+        String jsonDefault = JsonIo.toJson(holder, prettyDefault);
+        String jsonCompact = JsonIo.toJson(holder, prettyCompact);
+
+        System.out.println("=== Collection Elements DEFAULT ===");
+        System.out.println(jsonDefault);
+        System.out.println("\n=== Collection Elements MINIMAL_PLUS ===");
+        System.out.println(jsonCompact);
+
+        // Compact should be shorter (no @type wrappers on container)
+        assertTrue(jsonCompact.length() < jsonDefault.length(),
+                "Compact JSON should be shorter than default JSON for collection elements");
+
+        // Compact format round-trips correctly because field type (List<ZonedDateTime>) is preserved
+        ZonedDateTimeListHolder resultCompact = JsonIo.toJava(jsonCompact, defaultReadOpts()).asClass(ZonedDateTimeListHolder.class);
+        assertEquals(holder.events, resultCompact.events);
+
+        // Note: DEFAULT format with @type:"ArrayList" loses generic type info, so elements stay as strings.
+        // This is expected behavior - the wrapper loses the parameterized type information.
+    }
+
+    // ========== ARRAY COMPONENT TYPE SIMPLIFICATION TESTS ==========
+
+    public static class ZonedDateTimeArrayHolder {
+        public ZonedDateTime[] events;
+    }
+
+    public static class LocalDateArrayHolder {
+        public LocalDate[] dates;
+    }
+
+    public static class UuidArrayHolder {
+        public UUID[] ids;
+    }
+
+    // ========== 26. ZonedDateTime[] elements written as plain strings ==========
+
+    @Test
+    void testZonedDateTimeArray_compactFormat() {
+        ZonedDateTimeArrayHolder holder = new ZonedDateTimeArrayHolder();
+        holder.events = new ZonedDateTime[] {
+            ZonedDateTime.parse("2023-10-22T12:03:01+03:00[Asia/Aden]"),
+            ZonedDateTime.parse("2023-11-15T14:30:45-05:00[America/New_York]")
+        };
+
+        WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
+        String json = JsonIo.toJson(holder, prettyCompact);
+
+        System.out.println("=== ZonedDateTime[] MINIMAL_PLUS ===");
+        System.out.println(json);
+
+        // Elements should be plain strings (no @type wrapper)
+        assertFalse(json.contains("\"@type\":\"ZonedDateTime\""), "ZonedDateTime array elements should not have @type");
+
+        // Round-trip verification
+        ZonedDateTimeArrayHolder result = JsonIo.toJava(json, defaultReadOpts()).asClass(ZonedDateTimeArrayHolder.class);
+        assertEquals(2, result.events.length);
+        assertEquals(holder.events[0], result.events[0]);
+        assertEquals(holder.events[1], result.events[1]);
+    }
+
+    // ========== 27. LocalDate[] elements written as plain strings ==========
+
+    @Test
+    void testLocalDateArray_compactFormat() {
+        LocalDateArrayHolder holder = new LocalDateArrayHolder();
+        holder.dates = new LocalDate[] {
+            LocalDate.of(2023, 12, 25),
+            LocalDate.of(2024, 1, 1),
+            LocalDate.of(2024, 7, 4)
+        };
+
+        WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
+        String json = JsonIo.toJson(holder, prettyCompact);
+
+        System.out.println("=== LocalDate[] MINIMAL_PLUS ===");
+        System.out.println(json);
+
+        // Elements should be plain strings
+        assertFalse(json.contains("\"@type\":\"LocalDate\""), "LocalDate array elements should not have @type wrapper");
+
+        // Round-trip verification
+        LocalDateArrayHolder result = JsonIo.toJava(json, defaultReadOpts()).asClass(LocalDateArrayHolder.class);
+        assertEquals(3, result.dates.length);
+        assertEquals(holder.dates[0], result.dates[0]);
+        assertEquals(holder.dates[1], result.dates[1]);
+        assertEquals(holder.dates[2], result.dates[2]);
+    }
+
+    // ========== 28. UUID[] elements written as plain strings ==========
+
+    @Test
+    void testUuidArray_compactFormat() {
+        UuidArrayHolder holder = new UuidArrayHolder();
+        holder.ids = new UUID[] {
+            UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
+            UUID.fromString("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
+        };
+
+        WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
+        String json = JsonIo.toJson(holder, prettyCompact);
+
+        System.out.println("=== UUID[] MINIMAL_PLUS ===");
+        System.out.println(json);
+
+        // Elements should be plain strings
+        assertFalse(json.contains("\"@type\":\"UUID\""), "UUID array elements should not have @type wrapper");
+
+        // Round-trip verification
+        UuidArrayHolder result = JsonIo.toJava(json, defaultReadOpts()).asClass(UuidArrayHolder.class);
+        assertEquals(2, result.ids.length);
+        assertEquals(holder.ids[0], result.ids[0]);
+        assertEquals(holder.ids[1], result.ids[1]);
+    }
+
+    // ========== 29. Array comparison: before and after compact format ==========
+
+    @Test
+    void testArrayElementsBeforeAfterComparison() {
+        ZonedDateTimeArrayHolder holder = new ZonedDateTimeArrayHolder();
+        holder.events = new ZonedDateTime[] {
+            ZonedDateTime.parse("2023-10-22T12:03:01+03:00[Asia/Aden]"),
+            ZonedDateTime.parse("2023-11-15T14:30:45-05:00[America/New_York]")
+        };
+
+        WriteOptions prettyDefault = new WriteOptionsBuilder().prettyPrint(true).build();
+        WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
+
+        String jsonDefault = JsonIo.toJson(holder, prettyDefault);
+        String jsonCompact = JsonIo.toJson(holder, prettyCompact);
+
+        System.out.println("=== Array Elements DEFAULT ===");
+        System.out.println(jsonDefault);
+        System.out.println("\n=== Array Elements MINIMAL_PLUS ===");
+        System.out.println(jsonCompact);
+
+        // Both should have similar length for arrays (no @type wrapper needed on container)
+        // Compact round-trip should work
+        ZonedDateTimeArrayHolder resultCompact = JsonIo.toJava(jsonCompact, defaultReadOpts()).asClass(ZonedDateTimeArrayHolder.class);
+        assertArrayEquals(holder.events, resultCompact.events);
+    }
+
+    // ========== MAP VALUE TYPE SIMPLIFICATION TESTS ==========
+
+    public static class StringToZdtMapHolder {
+        public Map<String, ZonedDateTime> events;
+    }
+
+    public static class StringToLocalDateMapHolder {
+        public Map<String, LocalDate> dates;
+    }
+
+    public static class StringToUuidMapHolder {
+        public Map<String, UUID> ids;
+    }
+
+    // ========== 30. Map<String, ZonedDateTime> values written as plain strings ==========
+
+    @Test
+    void testMapWithZonedDateTimeValues_compactFormat() {
+        StringToZdtMapHolder holder = new StringToZdtMapHolder();
+        holder.events = new LinkedHashMap<>();
+        holder.events.put("event1", ZonedDateTime.parse("2023-10-22T12:03:01+03:00[Asia/Aden]"));
+        holder.events.put("event2", ZonedDateTime.parse("2023-11-15T14:30:45-05:00[America/New_York]"));
+
+        WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
+        String json = JsonIo.toJson(holder, prettyCompact);
+
+        System.out.println("=== Map<String, ZonedDateTime> MINIMAL_PLUS ===");
+        System.out.println(json);
+
+        // Values should be plain strings (no @type wrapper)
+        assertFalse(json.contains("\"@type\":\"ZonedDateTime\""), "ZonedDateTime map values should not have @type");
+
+        // Round-trip verification
+        StringToZdtMapHolder result = JsonIo.toJava(json, defaultReadOpts()).asClass(StringToZdtMapHolder.class);
+        assertEquals(2, result.events.size());
+        assertEquals(holder.events.get("event1"), result.events.get("event1"));
+        assertEquals(holder.events.get("event2"), result.events.get("event2"));
+    }
+
+    // ========== 31. Map<String, LocalDate> values written as plain strings ==========
+
+    @Test
+    void testMapWithLocalDateValues_compactFormat() {
+        StringToLocalDateMapHolder holder = new StringToLocalDateMapHolder();
+        holder.dates = new LinkedHashMap<>();
+        holder.dates.put("christmas", LocalDate.of(2023, 12, 25));
+        holder.dates.put("newYear", LocalDate.of(2024, 1, 1));
+        holder.dates.put("july4th", LocalDate.of(2024, 7, 4));
+
+        WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
+        String json = JsonIo.toJson(holder, prettyCompact);
+
+        System.out.println("=== Map<String, LocalDate> MINIMAL_PLUS ===");
+        System.out.println(json);
+
+        // Values should be plain strings
+        assertFalse(json.contains("\"@type\":\"LocalDate\""), "LocalDate map values should not have @type wrapper");
+
+        // Round-trip verification
+        StringToLocalDateMapHolder result = JsonIo.toJava(json, defaultReadOpts()).asClass(StringToLocalDateMapHolder.class);
+        assertEquals(3, result.dates.size());
+        assertEquals(holder.dates.get("christmas"), result.dates.get("christmas"));
+        assertEquals(holder.dates.get("newYear"), result.dates.get("newYear"));
+        assertEquals(holder.dates.get("july4th"), result.dates.get("july4th"));
+    }
+
+    // ========== 32. Map<String, UUID> values written as plain strings ==========
+
+    @Test
+    void testMapWithUuidValues_compactFormat() {
+        StringToUuidMapHolder holder = new StringToUuidMapHolder();
+        holder.ids = new LinkedHashMap<>();
+        holder.ids.put("user1", UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
+        holder.ids.put("user2", UUID.fromString("6ba7b810-9dad-11d1-80b4-00c04fd430c8"));
+
+        WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
+        String json = JsonIo.toJson(holder, prettyCompact);
+
+        System.out.println("=== Map<String, UUID> MINIMAL_PLUS ===");
+        System.out.println(json);
+
+        // Values should be plain strings
+        assertFalse(json.contains("\"@type\":\"UUID\""), "UUID map values should not have @type wrapper");
+
+        // Round-trip verification
+        StringToUuidMapHolder result = JsonIo.toJava(json, defaultReadOpts()).asClass(StringToUuidMapHolder.class);
+        assertEquals(2, result.ids.size());
+        assertEquals(holder.ids.get("user1"), result.ids.get("user1"));
+        assertEquals(holder.ids.get("user2"), result.ids.get("user2"));
+    }
+
+    // ========== 33. Map comparison: before and after compact format ==========
+
+    @Test
+    void testMapValuesBeforeAfterComparison() {
+        StringToZdtMapHolder holder = new StringToZdtMapHolder();
+        holder.events = new LinkedHashMap<>();
+        holder.events.put("event1", ZonedDateTime.parse("2023-10-22T12:03:01+03:00[Asia/Aden]"));
+        holder.events.put("event2", ZonedDateTime.parse("2023-11-15T14:30:45-05:00[America/New_York]"));
+
+        WriteOptions prettyDefault = new WriteOptionsBuilder().prettyPrint(true).build();
+        WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
+
+        String jsonDefault = JsonIo.toJson(holder, prettyDefault);
+        String jsonCompact = JsonIo.toJson(holder, prettyCompact);
+
+        System.out.println("=== Map Values DEFAULT ===");
+        System.out.println(jsonDefault);
+        System.out.println("\n=== Map Values MINIMAL_PLUS ===");
+        System.out.println(jsonCompact);
+
+        // Compact round-trip should work
+        StringToZdtMapHolder resultCompact = JsonIo.toJava(jsonCompact, defaultReadOpts()).asClass(StringToZdtMapHolder.class);
+        assertEquals(holder.events, resultCompact.events);
     }
 }

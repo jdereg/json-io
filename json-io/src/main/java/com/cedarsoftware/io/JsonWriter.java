@@ -273,7 +273,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private final int indentationThreshold;
     private final int indentationSize;
     private final boolean cycleSupport;
-    private final boolean compactFormat;
+    private final boolean minimalPlusFormat;
 
     // Context tracking for automatic comma management
     private final Deque<WriteContext> contextStack = new ArrayDeque<>();
@@ -450,7 +450,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         this.indentationThreshold = this.writeOptions.getIndentationThreshold();
         this.indentationSize = this.writeOptions.getIndentationSize();
         this.cycleSupport = this.writeOptions.isCycleSupport();
-        this.compactFormat = this.writeOptions.isCompactShowingType();
+        this.minimalPlusFormat = this.writeOptions.isMinimalPlusShowingType();
     }
 
     public WriteOptions getWriteOptions() {
@@ -2006,12 +2006,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (elementClass == declaredElementType) {
             return false;
         }
-        // Compact format: treat natural defaults as matching (e.g., ArrayList for List element type)
-        if (compactFormat && NATURAL_DEFAULTS.getOrDefault(declaredElementType, Void.class) == elementClass) {
+        // Minimal plus format: treat natural defaults as matching (e.g., ArrayList for List element type)
+        if (minimalPlusFormat && NATURAL_DEFAULTS.getOrDefault(declaredElementType, Void.class) == elementClass) {
             return false;
         }
-        // Compact format: treat convertable types as matching (e.g., ZonedDateTime element in Temporal list)
-        if (compactFormat && CONVERTABLE_TYPES.contains(declaredElementType) && CONVERTABLE_TYPES.contains(elementClass)) {
+        // Minimal plus format: treat convertable types as matching (e.g., ZonedDateTime element in Temporal list)
+        if (minimalPlusFormat && CONVERTABLE_TYPES.contains(declaredElementType) && CONVERTABLE_TYPES.contains(elementClass)) {
             return false;
         }
         return true;
@@ -2281,17 +2281,17 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             return false;
         }
 
-        // Compact format: omit @type when the runtime type is the "natural default" for the declared type.
+        // Minimal plus format: omit @type when the runtime type is the "natural default" for the declared type.
         // E.g., ArrayList for List, LinkedHashSet for Set, LinkedHashMap for Map.
         // The reader creates these same defaults via CollectionFactory/MapFactory when @type is absent.
-        if (compactFormat && NATURAL_DEFAULTS.getOrDefault(declaredType, Void.class) == objectClass) {
+        if (minimalPlusFormat && NATURAL_DEFAULTS.getOrDefault(declaredType, Void.class) == objectClass) {
             return false;
         }
 
-        // Compact format: omit @type when both the declared type and runtime type are "convertable" types
+        // Minimal plus format: omit @type when both the declared type and runtime type are "convertable" types
         // that have lossless String round-trips. The reader's Injector catches ClassCastException and calls
         // Converter.convert(value, fieldType) to reconstruct the correct type from the primitive form.
-        if (compactFormat && CONVERTABLE_TYPES.contains(declaredType) && CONVERTABLE_TYPES.contains(objectClass)) {
+        if (minimalPlusFormat && CONVERTABLE_TYPES.contains(declaredType) && CONVERTABLE_TYPES.contains(objectClass)) {
             return false;
         }
 
