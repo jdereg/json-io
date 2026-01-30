@@ -9,6 +9,12 @@
 * **SPRING**: Default `show-type-info` changed from `MINIMAL` to `MINIMAL_PLUS`
   * Spring Boot starter now uses `MINIMAL_PLUS` as the default for optimal JSON size
   * Added `MINIMAL_PLUS` option to Spring configuration properties
+* **IMPROVED**: Numeric primitive simplification in `MINIMAL_PLUS` and `NEVER` type info modes
+  * `Byte`, `Short`, `Integer`, and `Float` values now write as plain JSON numbers when the declared type is `Object`
+  * Applies to fields declared as `Object`, collection elements in raw collections, and `Map<String, Object>` values
+  * These types round-trip as `Long` (for integers) or `Double` (for floats) when read back
+  * Reduces JSON size by eliminating `{"@type":"Integer","value":42}` wrappers in favor of plain `42`
+  * Does not apply to `MINIMAL` or `ALWAYS` modes to maintain backward compatibility
 
 #### 4.88.0 - 2026-01-26
 * **IMPROVED**: `MapResolver` - Applied consistency improvements from ObjectResolver patterns

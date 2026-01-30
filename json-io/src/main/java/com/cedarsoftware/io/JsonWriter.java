@@ -227,6 +227,21 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         CONVERTABLE_TYPES.add(StringBuilder.class);
     }
 
+    // Numeric primitives that can safely write as plain JSON numbers in MINIMAL/MINIMAL_PLUS modes.
+    // These types round-trip as Long (for integers) or Double (for floats) when no @type is present.
+    // Excludes: Character (String != Character), Atomic* (behavioral semantics), Big* (precision/range)
+    private static final Set<Class<?>> NUMERIC_PRIMITIVES_FOR_COMPACT = new HashSet<>();
+    static {
+        NUMERIC_PRIMITIVES_FOR_COMPACT.add(Byte.class);
+        NUMERIC_PRIMITIVES_FOR_COMPACT.add(byte.class);
+        NUMERIC_PRIMITIVES_FOR_COMPACT.add(Short.class);
+        NUMERIC_PRIMITIVES_FOR_COMPACT.add(short.class);
+        NUMERIC_PRIMITIVES_FOR_COMPACT.add(Integer.class);
+        NUMERIC_PRIMITIVES_FOR_COMPACT.add(int.class);
+        NUMERIC_PRIMITIVES_FOR_COMPACT.add(Float.class);
+        NUMERIC_PRIMITIVES_FOR_COMPACT.add(float.class);
+    }
+
     // Selected prefixes based on options
     private final String idPrefix;
     private final String typePrefix;
@@ -1993,8 +2008,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * @return true if @type should be written, false if it can be omitted
      */
     private boolean shouldShowTypeForElement(Class<?> elementClass) {
-        // If no declared element type context, default to showing type
+        // If no declared element type context (raw collection), treat numeric primitives as safe to omit @type
+        // in NEVER and MINIMAL_PLUS modes since they round-trip as Long/Double.
         if (declaredElementType == null) {
+            if ((minimalPlusFormat || neverShowingType) && NUMERIC_PRIMITIVES_FOR_COMPACT.contains(elementClass)) {
+                return false;
+            }
             return true;
         }
         // Enums always need @type for proper deserialization (written as String, need type to convert back)
@@ -2012,6 +2031,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
         // Minimal plus format: treat convertable types as matching (e.g., ZonedDateTime element in Temporal list)
         if (minimalPlusFormat && CONVERTABLE_TYPES.contains(declaredElementType) && CONVERTABLE_TYPES.contains(elementClass)) {
+            return false;
+        }
+        // Numeric primitives (Byte/Short/Integer/Float) write as plain JSON numbers when element type is Object.
+        // They round-trip as Long (for integers) or Double (for floats).
+        // This applies to NEVER and MINIMAL_PLUS modes (not MINIMAL or ALWAYS).
+        if ((minimalPlusFormat || neverShowingType) && declaredElementType == Object.class && NUMERIC_PRIMITIVES_FOR_COMPACT.contains(elementClass)) {
             return false;
         }
         return true;
@@ -2278,6 +2303,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         if (objectClass == declaredType) {
+            return false;
+        }
+
+        // Numeric primitives (Byte/Short/Integer/Float) write as plain JSON numbers when declared type is Object.
+        // They round-trip as Long (for integers) or Double (for floats).
+        // This applies to NEVER and MINIMAL_PLUS modes (not MINIMAL or ALWAYS).
+        if ((minimalPlusFormat || neverShowingType) && declaredType == Object.class && NUMERIC_PRIMITIVES_FOR_COMPACT.contains(objectClass)) {
             return false;
         }
 
