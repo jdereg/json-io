@@ -1,6 +1,13 @@
 package com.cedarsoftware.io;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.net.URI;
+import java.time.LocalDate;
+import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
@@ -425,5 +432,161 @@ class CompactFormatTest {
 
     static class SortedMapHolder {
         SortedMap<String, Integer> sorted;
+    }
+
+    // ==================== Converter-aware type simplification tests ====================
+
+    // Model classes for Converter-aware tests
+    static class SimpleTypesHolder {
+        ZonedDateTime zdt;
+        LocalDate localDate;
+        BigDecimal bigDecimal;
+        BigInteger bigInteger;
+        UUID uuid;
+        URI uri;
+        AtomicInteger atomicInt;
+        AtomicLong atomicLong;
+        Class<?> clazz;
+    }
+
+    static class DateFieldHolder {
+        java.util.Date utilDate;
+        java.sql.Timestamp timestamp;
+    }
+
+    // ========== 17. ZonedDateTime field: exact type match already works, compact should too ==========
+
+    @Test
+    void testZonedDateTimeField_compactFormat() {
+        SimpleTypesHolder holder = new SimpleTypesHolder();
+        holder.zdt = ZonedDateTime.parse("2023-10-22T12:03:01+03:00[Asia/Aden]");
+
+        // Default (minimal) - should already write as primitive (exact type match)
+        String jsonDefault = JsonIo.toJson(holder, defaultWriteOpts());
+
+        // Compact - should also write as primitive
+        String jsonCompact = JsonIo.toJson(holder, compactWriteOpts());
+
+        // Both should NOT contain @type for ZonedDateTime (exact match in both modes)
+        // The key test is that compact doesn't BREAK anything for exact matches
+        SimpleTypesHolder resultDefault = JsonIo.toJava(jsonDefault, defaultReadOpts()).asClass(SimpleTypesHolder.class);
+        SimpleTypesHolder resultCompact = JsonIo.toJava(jsonCompact, defaultReadOpts()).asClass(SimpleTypesHolder.class);
+
+        assertEquals(holder.zdt, resultDefault.zdt);
+        assertEquals(holder.zdt, resultCompact.zdt);
+    }
+
+    // ========== 18. Multiple simple-type fields round-trip correctly ==========
+
+    @Test
+    void testMultipleSimpleTypeFields_compactRoundTrip() {
+        SimpleTypesHolder holder = new SimpleTypesHolder();
+        holder.zdt = ZonedDateTime.parse("2023-10-22T12:03:01+03:00[Asia/Aden]");
+        holder.localDate = LocalDate.of(2023, 12, 25);
+        holder.bigDecimal = new BigDecimal("123456789.987654321");
+        holder.bigInteger = new BigInteger("99999999999999999999");
+        holder.uuid = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
+        holder.uri = URI.create("https://example.com/path?q=1");
+        holder.atomicInt = new AtomicInteger(42);
+        holder.atomicLong = new AtomicLong(Long.MAX_VALUE);
+        holder.clazz = String.class;
+
+        String json = JsonIo.toJson(holder, compactWriteOpts());
+
+        // Verify no @type wrappers for these simple types (they match their declared types)
+        assertFalse(json.contains("ZonedDateTime"), "ZonedDateTime should not have @type");
+        assertFalse(json.contains("LocalDate"), "LocalDate should not have @type");
+        assertFalse(json.contains("BigDecimal"), "BigDecimal should not have @type");
+        assertFalse(json.contains("BigInteger"), "BigInteger should not have @type");
+
+        // Round-trip
+        SimpleTypesHolder result = JsonIo.toJava(json, defaultReadOpts()).asClass(SimpleTypesHolder.class);
+        assertEquals(holder.zdt, result.zdt);
+        assertEquals(holder.localDate, result.localDate);
+        assertEquals(0, holder.bigDecimal.compareTo(result.bigDecimal));
+        assertEquals(holder.bigInteger, result.bigInteger);
+        assertEquals(holder.uuid, result.uuid);
+        assertEquals(holder.uri, result.uri);
+        assertEquals(holder.atomicInt.get(), result.atomicInt.get());
+        assertEquals(holder.atomicLong.get(), result.atomicLong.get());
+        assertEquals(holder.clazz, result.clazz);
+    }
+
+    // ========== 19. Before/After JSON comparison for user inspection ==========
+
+    @Test
+    void testBeforeAfterJsonComparison() {
+        SimpleTypesHolder holder = new SimpleTypesHolder();
+        holder.zdt = ZonedDateTime.parse("2023-10-22T12:03:01+03:00[Asia/Aden]");
+        holder.localDate = LocalDate.of(2023, 12, 25);
+        holder.bigDecimal = new BigDecimal("99.95");
+        holder.uuid = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
+
+        WriteOptions prettyDefault = new WriteOptionsBuilder().prettyPrint(true).build();
+        WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoCompact().prettyPrint(true).build();
+
+        String jsonDefault = JsonIo.toJson(holder, prettyDefault);
+        String jsonCompact = JsonIo.toJson(holder, prettyCompact);
+
+        // Print for manual inspection
+        System.out.println("=== DEFAULT (showTypeInfoMinimal) ===");
+        System.out.println(jsonDefault);
+        System.out.println("\n=== COMPACT (showTypeInfoCompact) ===");
+        System.out.println(jsonCompact);
+
+        // Compact should be shorter or equal (never longer)
+        assertTrue(jsonCompact.length() <= jsonDefault.length(),
+                "Compact JSON should not be longer than default JSON");
+
+        // Both should round-trip correctly
+        SimpleTypesHolder resultDefault = JsonIo.toJava(jsonDefault, defaultReadOpts()).asClass(SimpleTypesHolder.class);
+        SimpleTypesHolder resultCompact = JsonIo.toJava(jsonCompact, defaultReadOpts()).asClass(SimpleTypesHolder.class);
+
+        assertEquals(holder.zdt, resultDefault.zdt);
+        assertEquals(holder.zdt, resultCompact.zdt);
+        assertEquals(holder.localDate, resultDefault.localDate);
+        assertEquals(holder.localDate, resultCompact.localDate);
+    }
+
+    // ========== 20. Cross-type conversion: sql.Timestamp in util.Date field ==========
+
+    @Test
+    void testCrossTypeConversion_timestampInDateField() {
+        DateFieldHolder holder = new DateFieldHolder();
+        holder.utilDate = new java.sql.Timestamp(1703462400000L);  // Timestamp IS-A Date
+
+        WriteOptions prettyDefault = new WriteOptionsBuilder().prettyPrint(true).build();
+        WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoCompact().prettyPrint(true).build();
+
+        String jsonDefault = JsonIo.toJson(holder, prettyDefault);
+        String jsonCompact = JsonIo.toJson(holder, prettyCompact);
+
+        System.out.println("=== Cross-type: Timestamp in Date field (DEFAULT) ===");
+        System.out.println(jsonDefault);
+        System.out.println("\n=== Cross-type: Timestamp in Date field (COMPACT) ===");
+        System.out.println(jsonCompact);
+
+        // In compact mode, @type for Timestamp should be omitted since both Date and Timestamp are convertable
+        // The reader will read the value and Converter.convert it to the field's declared type (Date)
+        DateFieldHolder resultCompact = JsonIo.toJava(jsonCompact, defaultReadOpts()).asClass(DateFieldHolder.class);
+
+        // Note: the result type will be java.util.Date (not Timestamp) since the declared type is Date.
+        // The millis should be preserved.
+        assertNotNull(resultCompact.utilDate);
+        assertEquals(1703462400000L, resultCompact.utilDate.getTime());
+    }
+
+    // ========== 21. Backward compatibility: default mode unchanged ==========
+
+    @Test
+    void testDefaultMode_noConvertableOptimization() {
+        SimpleTypesHolder holder = new SimpleTypesHolder();
+        holder.zdt = ZonedDateTime.parse("2023-10-22T12:03:01+03:00[Asia/Aden]");
+
+        // Default mode should work exactly as before
+        String json = JsonIo.toJson(holder, defaultWriteOpts());
+
+        SimpleTypesHolder result = JsonIo.toJava(json, defaultReadOpts()).asClass(SimpleTypesHolder.class);
+        assertEquals(holder.zdt, result.zdt);
     }
 }

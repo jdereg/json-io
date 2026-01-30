@@ -12,7 +12,24 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.net.URI;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.MonthDay;
+import java.time.OffsetDateTime;
+import java.time.OffsetTime;
+import java.time.Period;
+import java.time.Year;
+import java.time.YearMonth;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,10 +38,14 @@ import java.util.Deque;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Currency;
+import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
@@ -33,9 +54,15 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
+import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 import com.cedarsoftware.io.reflect.Accessor;
 import com.cedarsoftware.util.ArrayUtilities;
@@ -149,6 +176,55 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         NATURAL_DEFAULTS.put(Map.class, LinkedHashMap.class);
         NATURAL_DEFAULTS.put(SortedMap.class, TreeMap.class);
         NATURAL_DEFAULTS.put(NavigableMap.class, TreeMap.class);
+    }
+
+    // Types that have lossless String round-trips via PrimitiveTypeWriter (write) and Converter (read).
+    // When compact format is enabled and the field's declared type is in this set, @type can be omitted
+    // because the reader's Injector will use Converter.convert(String, fieldType) to reconstruct the value.
+    private static final Set<Class<?>> CONVERTABLE_TYPES = new HashSet<>();
+    static {
+        // Java Time types
+        CONVERTABLE_TYPES.add(Duration.class);
+        CONVERTABLE_TYPES.add(Instant.class);
+        CONVERTABLE_TYPES.add(LocalDate.class);
+        CONVERTABLE_TYPES.add(LocalDateTime.class);
+        CONVERTABLE_TYPES.add(LocalTime.class);
+        CONVERTABLE_TYPES.add(MonthDay.class);
+        CONVERTABLE_TYPES.add(OffsetDateTime.class);
+        CONVERTABLE_TYPES.add(OffsetTime.class);
+        CONVERTABLE_TYPES.add(Period.class);
+        CONVERTABLE_TYPES.add(Year.class);
+        CONVERTABLE_TYPES.add(YearMonth.class);
+        CONVERTABLE_TYPES.add(ZonedDateTime.class);
+        CONVERTABLE_TYPES.add(ZoneId.class);
+        CONVERTABLE_TYPES.add(ZoneOffset.class);
+
+        // Date types
+        CONVERTABLE_TYPES.add(Date.class);
+        CONVERTABLE_TYPES.add(java.sql.Date.class);
+        CONVERTABLE_TYPES.add(java.sql.Timestamp.class);
+
+        // Numeric types (BigInteger/BigDecimal write as strings, Atomics write as numbers)
+        CONVERTABLE_TYPES.add(BigInteger.class);
+        CONVERTABLE_TYPES.add(BigDecimal.class);
+        CONVERTABLE_TYPES.add(AtomicBoolean.class);
+        CONVERTABLE_TYPES.add(AtomicInteger.class);
+        CONVERTABLE_TYPES.add(AtomicLong.class);
+
+        // Utility types
+        CONVERTABLE_TYPES.add(UUID.class);
+        CONVERTABLE_TYPES.add(URI.class);
+        CONVERTABLE_TYPES.add(URL.class);
+        CONVERTABLE_TYPES.add(Path.class);
+        CONVERTABLE_TYPES.add(Locale.class);
+        CONVERTABLE_TYPES.add(TimeZone.class);
+        CONVERTABLE_TYPES.add(Currency.class);
+        CONVERTABLE_TYPES.add(Pattern.class);
+        CONVERTABLE_TYPES.add(Class.class);
+
+        // String-like types
+        CONVERTABLE_TYPES.add(StringBuffer.class);
+        CONVERTABLE_TYPES.add(StringBuilder.class);
     }
 
     // Selected prefixes based on options
@@ -1934,6 +2010,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (compactFormat && NATURAL_DEFAULTS.getOrDefault(declaredElementType, Void.class) == elementClass) {
             return false;
         }
+        // Compact format: treat convertable types as matching (e.g., ZonedDateTime element in Temporal list)
+        if (compactFormat && CONVERTABLE_TYPES.contains(declaredElementType) && CONVERTABLE_TYPES.contains(elementClass)) {
+            return false;
+        }
         return true;
     }
 
@@ -2205,6 +2285,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // E.g., ArrayList for List, LinkedHashSet for Set, LinkedHashMap for Map.
         // The reader creates these same defaults via CollectionFactory/MapFactory when @type is absent.
         if (compactFormat && NATURAL_DEFAULTS.getOrDefault(declaredType, Void.class) == objectClass) {
+            return false;
+        }
+
+        // Compact format: omit @type when both the declared type and runtime type are "convertable" types
+        // that have lossless String round-trips. The reader's Injector catches ClassCastException and calls
+        // Converter.convert(value, fieldType) to reconstruct the correct type from the primitive form.
+        if (compactFormat && CONVERTABLE_TYPES.contains(declaredType) && CONVERTABLE_TYPES.contains(objectClass)) {
             return false;
         }
 
