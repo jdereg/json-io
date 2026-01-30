@@ -84,9 +84,9 @@ public class JsonPerformanceTest {
 
         TestData testData = createTestData();
         ObjectMapper jacksonMapper = new ObjectMapper();
-        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoMinimalPlus().build();
         // cycleSupport(false) skips traceReferences() pass - faster for acyclic data
-        WriteOptions writeOptionsNoCycles = new WriteOptionsBuilder().cycleSupport(false).build();
+        WriteOptions writeOptionsNoCycles = new WriteOptionsBuilder().showTypeInfoMinimalPlus().cycleSupport(false).build();
         ReadOptions readOptions = ReadOptionsBuilder.getDefaultReadOptions();
 
         // Warm-up
@@ -175,9 +175,9 @@ public class JsonPerformanceTest {
 
         TestData testData = createTestData();
         ObjectMapper jacksonMapper = new ObjectMapper();
-        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoMinimalPlus().build();
         // cycleSupport(false) skips traceReferences() pass - faster for acyclic data
-        WriteOptions writeOptionsNoCycles = new WriteOptionsBuilder().cycleSupport(false).build();
+        WriteOptions writeOptionsNoCycles = new WriteOptionsBuilder().showTypeInfoMinimalPlus().cycleSupport(false).build();
         ReadOptions readOptions = ReadOptionsBuilder.getDefaultReadOptions();
 
         // Warm-up
