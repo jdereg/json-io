@@ -992,11 +992,7 @@ public class ObjectResolver extends Resolver
         }
 
         // Skip primitives and their wrappers - they have no fields
-        if (rawClass.isPrimitive() ||
-            rawClass == String.class ||
-            Number.class.isAssignableFrom(rawClass) ||
-            rawClass == Boolean.class ||
-            rawClass == Character.class) {
+        if (Primitives.isPrimitive(rawClass) || rawClass == String.class || rawClass.isInstance(Number.class)) {
             return true;
         }
 

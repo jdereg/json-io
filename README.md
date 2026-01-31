@@ -35,6 +35,21 @@
 
 json-io is a powerful and lightweight Java library that simplifies **JSON5**, **JSON**, and **TOON** serialization and deserialization while handling complex object graphs with ease. Unlike basic JSON parsers, json-io preserves object references, handles polymorphic types, and maintains cyclic relationships in your data structures.
 
+## Table of Contents
+
+- [Key Features](#key-features)
+- [Why json-io?](#why-json-io)
+  - [vs Jackson/Gson](#vs-jacksongson-json)
+  - [vs JToon](#vs-jtoon-toon)
+  - [What's Coming Next](#whats-coming-next)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Spring Boot Integration](#spring-boot-integration)
+- [Supported Types](#supported-types-60-built-in)
+- [Documentation](#documentation)
+- [Release Info](#release-4890)
+  - [Logging](#logging)
+
 ## Key Features
 
 - Full **JSON5** support including single-line and multi-line comments, single-quoted strings, unquoted object keys, trailing commas, and more — while remaining fully backward compatible with standard JSON (RFC 8259)
@@ -87,7 +102,7 @@ json-io's TOON implementation offers comprehensive Java type coverage while JToo
 
 **Gradle**
 ```groovy
-implementation 'com.cedarsoftware:json-io:4.88.0'
+implementation 'com.cedarsoftware:json-io:4.89.0'
 ```
 
 **Maven**
@@ -95,7 +110,7 @@ implementation 'com.cedarsoftware:json-io:4.88.0'
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>4.88.0</version>
+  <version>4.89.0</version>
 </dependency>
 ```
 
@@ -121,7 +136,7 @@ json-io provides a Spring Boot starter for seamless integration with Spring MVC 
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io-spring-boot-starter</artifactId>
-  <version>4.88.0</version>
+  <version>4.89.0</version>
 </dependency>
 ```
 
@@ -168,7 +183,7 @@ See the [complete type comparison](/user-guide.md#toon-supported-types) showing 
 - [Spring Integration Guide](/user-guide-spring.md)
 - [Revision History](/changelog.md)
 
-## Release [4.88.0](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.88.0/index.html)
+## Release [4.89.0](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.89.0/index.html)
 
 | | |
 |---|---|
@@ -176,9 +191,9 @@ See the [complete type comparison](/user-guide.md#toon-supported-types) showing 
 | **Java** | JDK 1.8+ (multi-release JAR with module-info.class) |
 | **Package** | com.cedarsoftware.io |
 
-**API** — Static methods on [JsonIo](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.88.0/com/cedarsoftware/io/JsonIo.html): `toJson()`, `toJava()`, `toMaps()`, `toToon()`, `fromToon()`, `formatJson()`, `deepCopy()`
+**API** — Static methods on [JsonIo](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.89.0/com/cedarsoftware/io/JsonIo.html): `toJson()`, `toJava()`, `toMaps()`, `toToon()`, `fromToon()`, `formatJson()`, `deepCopy()`
 
-Configure via [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md). Use [ClassFactory](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.88.0/com/cedarsoftware/io/ClassFactory.html) for difficult-to-instantiate classes.
+Configure via [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md). Use [ClassFactory](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.89.0/com/cedarsoftware/io/ClassFactory.html) for difficult-to-instantiate classes.
 
 ### Logging
 

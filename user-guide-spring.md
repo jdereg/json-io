@@ -26,13 +26,13 @@ Add the Spring Boot starter to your project:
 <dependency>
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io-spring-boot-starter</artifactId>
-    <version>4.88.0</version>
+    <version>4.89.0</version>
 </dependency>
 ```
 
 **Gradle**
 ```groovy
-implementation 'com.cedarsoftware:json-io-spring-boot-starter:4.88.0'
+implementation 'com.cedarsoftware:json-io-spring-boot-starter:4.89.0'
 ```
 
 **Requirements:**

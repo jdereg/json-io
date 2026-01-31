@@ -6,6 +6,7 @@ import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -118,7 +119,7 @@ class JsonParser {
         ESCAPE_CHAR_MAP['t'] = '\t';
 
         // Initialize hex value map
-        java.util.Arrays.fill(HEX_VALUE_MAP, -1);
+        Arrays.fill(HEX_VALUE_MAP, -1);
         for (int i = '0'; i <= '9'; i++) {
             HEX_VALUE_MAP[i] = i - '0';
         }

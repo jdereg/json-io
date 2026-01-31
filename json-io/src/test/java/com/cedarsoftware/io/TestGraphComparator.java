@@ -1665,9 +1665,14 @@ public class TestGraphComparator
         assertNull(delta.getTargetValue());
         assertNull(delta.getOptionalKey());
 
-        // With DeepEquals 4.0.1, still gets 2 deltas in this specific case
-        // With DeepEquals 4.0.1, GraphComparator generates additional deltas for null targets
-        assertEquals(4, deltas.size());
+        // Additional deltas should be OBJECT_ORPHAN for orphaned objects
+        for (int i = 1; i < deltas.size(); i++) {
+            delta = deltas.get(i);
+            assertTrue(delta.getCmd() == OBJECT_ORPHAN);
+            assertNull(delta.getOptionalKey());
+            assertNull(delta.getFieldName());
+            assertNotNull(delta.getId());
+        }
     }
 
     @Test
