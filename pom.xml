@@ -5,7 +5,7 @@
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io-parent</artifactId>
     <packaging>pom</packaging>
-    <version>4.88.0</version>
+    <version>4.89.0</version>
     <description>Parent POM for json-io modules</description>
     <url>https://github.com/jdereg/json-io</url>
 
