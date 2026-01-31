@@ -3,7 +3,6 @@ package com.cedarsoftware.io;
 import java.lang.reflect.Array;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.AbstractMap;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -772,22 +771,35 @@ public class ObjectResolver extends Resolver
      * This enables correct instantiation later during deserialization.
      * Uses a stack-based traversal to handle arbitrarily deep object graphs.
      */
+    /**
+     * Lightweight pair class for type marking traversal.
+     * Avoids the overhead of AbstractMap.SimpleEntry.
+     */
+    private static final class TypedItem {
+        final Type type;
+        final Object item;
+
+        TypedItem(Type type, Object item) {
+            this.type = type;
+            this.item = item;
+        }
+    }
+
     private void markUntypedObjects(final Type type, final JsonObject rhs) {
         if (rhs.isFinished) {
-            return;     // Already marked.
+            return;     // Already processed by main traversal.
         }
 
-        // Use Map.Entry for type-safe pairing of Type and instance
-        final Deque<Map.Entry<Type, Object>> stack = new ArrayDeque<>();
+        final Deque<TypedItem> stack = new ArrayDeque<>();
         // Track visited JsonObjects to prevent duplicate traversal when reachable via multiple paths
         // Uses lightweight IdentitySet instead of IdentityHashMap for better performance
         final Set<JsonObject> visited = new IdentitySet<>();
-        stack.addFirst(new AbstractMap.SimpleEntry<>(type, rhs));
+        stack.addFirst(new TypedItem(type, rhs));
 
         while (!stack.isEmpty()) {
-            Map.Entry<Type, Object> item = stack.removeFirst();
-            final Type t = item.getKey();
-            final Object instance = item.getValue();
+            TypedItem entry = stack.removeFirst();
+            final Type t = entry.type;
+            final Object instance = entry.item;
 
             if (instance == null) {
                 continue;
@@ -816,7 +828,7 @@ public class ObjectResolver extends Resolver
     private void handleParameterizedTypeMarking(final ParameterizedType pType,
                                                  final Object instance,
                                                  final Type parentType,
-                                                 final Deque<Map.Entry<Type, Object>> stack) {
+                                                 final Deque<TypedItem> stack) {
         Class<?> clazz = TypeUtilities.getRawClass(pType);
         Type[] typeArgs = pType.getActualTypeArguments();
 
@@ -842,7 +854,7 @@ public class ObjectResolver extends Resolver
      */
     private void handleMapTypeMarking(final Object instance,
                                        final Type[] typeArgs,
-                                       final Deque<Map.Entry<Type, Object>> stack) {
+                                       final Deque<TypedItem> stack) {
         JsonObject jsonObj = (JsonObject) instance;
         Map.Entry<Object[], Object[]> pair = jsonObj.asTwoArrays();
         addItemsToStack(stack, pair.getKey(), typeArgs[0]);
@@ -850,13 +862,13 @@ public class ObjectResolver extends Resolver
     }
 
     /**
-     * Handles {@code Collection<T>}to type marking for arrays, Collections, and JsonObjects.
+     * Handles {@code Collection<T>} type marking for arrays, Collections, and JsonObjects.
      */
     private void handleCollectionTypeMarking(final Object instance,
                                               final Type containerType,
                                               final Type[] typeArgs,
                                               final Class<?> collectionClass,
-                                              final Deque<Map.Entry<Type, Object>> stack) {
+                                              final Deque<TypedItem> stack) {
         if (instance.getClass().isArray()) {
             handleArrayInCollection(instance, containerType, collectionClass, stack);
         } else if (instance instanceof Collection) {
@@ -865,7 +877,7 @@ public class ObjectResolver extends Resolver
                 return;
             }
             for (Object o : (Collection<?>) instance) {
-                stack.addFirst(new AbstractMap.SimpleEntry<>(typeArgs[0], o));
+                stack.addFirst(new TypedItem(typeArgs[0], o));
             }
         } else if (instance instanceof JsonObject) {
             // OPTIMIZATION: Skip if array items don't need field traversal
@@ -875,7 +887,7 @@ public class ObjectResolver extends Resolver
             final Object[] array = ((JsonObject) instance).getItems();
             if (array != null) {
                 for (Object o : array) {
-                    stack.addFirst(new AbstractMap.SimpleEntry<>(typeArgs[0], o));
+                    stack.addFirst(new TypedItem(typeArgs[0], o));
                 }
             }
         }
@@ -893,7 +905,7 @@ public class ObjectResolver extends Resolver
     private void handleArrayInCollection(final Object arrayInstance,
                                           final Type containerType,
                                           final Class<?> collectionClass,
-                                          final Deque<Map.Entry<Type, Object>> stack) {
+                                          final Deque<TypedItem> stack) {
         // Extract the element type from containerType.
         // For List<User>, elementType = User
         // For List<List<User>>, elementType = List<User>
@@ -925,11 +937,11 @@ public class ObjectResolver extends Resolver
                 JsonObject coll = new JsonObject();
                 coll.setType(elementType);  // Use full parameterized type, not raw class
                 coll.setItems((Object[]) element);
-                stack.addFirst(new AbstractMap.SimpleEntry<>(elementType, items));
+                stack.addFirst(new TypedItem(elementType, items));
                 ArrayUtilities.setElement(arrayInstance, i, coll);
             } else {
                 // Non-array elements (e.g., JsonObjects representing Users) get the element type
-                stack.addFirst(new AbstractMap.SimpleEntry<>(elementType, element));
+                stack.addFirst(new TypedItem(elementType, element));
             }
         }
     }
@@ -940,7 +952,7 @@ public class ObjectResolver extends Resolver
     private void handleObjectFieldsMarking(final Object instance,
                                             final Type containerType,
                                             final Type[] typeArgs,
-                                            final Deque<Map.Entry<Type, Object>> stack) {
+                                            final Deque<TypedItem> stack) {
         if (!(instance instanceof JsonObject)) {
             return;
         }
@@ -974,7 +986,7 @@ public class ObjectResolver extends Resolver
 
                 // OPTIMIZATION: Skip if field type doesn't need traversal
                 if (!shouldSkipTraversal(resolved)) {
-                    stack.addFirst(new AbstractMap.SimpleEntry<>(resolved, entry.getValue()));
+                    stack.addFirst(new TypedItem(resolved, entry.getValue()));
                 }
             }
         }
@@ -1007,7 +1019,7 @@ public class ObjectResolver extends Resolver
      * Each element is added individually since they are separate Map entries,
      * not elements of a single collection.
      */
-    private void addItemsToStack(final Deque<Map.Entry<Type, Object>> stack,
+    private void addItemsToStack(final Deque<TypedItem> stack,
                                   final Object[] items,
                                   final Type itemType) {
         if (items == null || items.length < 1) {
@@ -1024,7 +1036,7 @@ public class ObjectResolver extends Resolver
         // For Map<K, V>, each item is a separate key or value, not elements of one collection.
         // Iterate in reverse to preserve order after addFirst.
         for (int i = items.length - 1; i >= 0; i--) {
-            stack.addFirst(new AbstractMap.SimpleEntry<>(itemType, items[i]));
+            stack.addFirst(new TypedItem(itemType, items[i]));
         }
     }
 
