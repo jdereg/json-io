@@ -1,5 +1,5 @@
 ### Revision History
-#### 4.89.0 (Unreleased)
+#### 4.89.0 - 2026-01-31
 * **RENAMED**: `showTypeInfoCompact()` → `showTypeInfoMinimalPlus()` for clearer naming
   * `WriteOptionsBuilder.showTypeInfoCompact()` → `WriteOptionsBuilder.showTypeInfoMinimalPlus()`
   * `WriteOptionsBuilder.addPermanentShowTypeInfoCompact()` → `WriteOptionsBuilder.addPermanentShowTypeInfoMinimalPlus()`
@@ -16,7 +16,7 @@
   * Reduces JSON size by eliminating `{"@type":"Integer","value":42}` wrappers in favor of plain `42`
   * Does not apply to `MINIMAL` or `ALWAYS` modes to maintain backward compatibility
 
-#### 4.89.0 - 2026-01-26
+#### 4.88.0 - 2026-01-26
 * **IMPROVED**: `MapResolver` - Applied consistency improvements from ObjectResolver patterns
   * Added `isFinished` guard to `traverseMap()` to prevent reprocessing
   * Updated `traverseArray()` and `traverseCollection()` to use `markFinishedIfNot()` helper
@@ -26,7 +26,7 @@
   * Spring Boot starter now properly publishes to Maven Central alongside json-io core
 * **BUILD**: Updated java-util dependency to 4.89.0
 
-#### 4.86.0 - 2025-01-26
+#### 4.87.0 - 2025-01-26
 * **FEATURE**: Spring Boot Starter module (`json-io-spring-boot-starter`)
   * New Maven artifact for seamless Spring Boot 3.x integration
   * Auto-configuration for Spring MVC with `HttpMessageConverter` support
