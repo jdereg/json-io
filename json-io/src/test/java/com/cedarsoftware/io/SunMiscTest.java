@@ -4,7 +4,6 @@ package com.cedarsoftware.io;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.cedarsoftware.util.ClassUtilities;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -73,22 +72,20 @@ public class SunMiscTest
     {
         // This test verifies that inner classes can be instantiated with unsafe mode enabled
         Dog.OtherShoe shoe = Dog.OtherShoe.construct();
-        
-        // For this specific test, we need to enable unsafe mode directly because
-        // Dog.OtherShoe has a complex nested structure that requires special handling
-        ClassUtilities.setUseUnsafe(true);
-        try {
-            Dog.OtherShoe oShoe = TestUtil.toJava(TestUtil.toJson(shoe), null).asClass(Dog.OtherShoe.class);
-            assertEquals(shoe, oShoe);
-            oShoe = TestUtil.toJava(TestUtil.toJson(shoe), null).asClass(Dog.OtherShoe.class);
-            assertEquals(shoe, oShoe);
-            
-            // Verify unsafe mode is working by instantiating again
-            oShoe = TestUtil.toJava(TestUtil.toJson(shoe), null).asClass(Dog.OtherShoe.class);
-            assertEquals(shoe, oShoe);
-        } finally {
-            ClassUtilities.setUseUnsafe(false);
-        }
+
+        // Use ReadOptionsBuilder.useUnsafe(true) for test isolation - avoids global state leakage
+        ReadOptions readOptions = new ReadOptionsBuilder()
+                .useUnsafe(true)
+                .build();
+
+        Dog.OtherShoe oShoe = TestUtil.toJava(TestUtil.toJson(shoe), readOptions).asClass(Dog.OtherShoe.class);
+        assertEquals(shoe, oShoe);
+        oShoe = TestUtil.toJava(TestUtil.toJson(shoe), readOptions).asClass(Dog.OtherShoe.class);
+        assertEquals(shoe, oShoe);
+
+        // Verify unsafe mode is working by instantiating again
+        oShoe = TestUtil.toJava(TestUtil.toJson(shoe), readOptions).asClass(Dog.OtherShoe.class);
+        assertEquals(shoe, oShoe);
     }
 
     @Test
