@@ -43,17 +43,14 @@ import java.util.Set;
  *         limitations under the License.
  */
 public class JsonObject extends JsonValue implements Map<Object, Object>, Serializable {
-    // Shared empty arrays for lazy allocation - avoids creating arrays until first put()
-    private static final Object[] EMPTY_ARRAY = new Object[0];
-    private static final int INITIAL_CAPACITY = 4;  // Reduced from 16 - most JSON objects are small
+    private static final int INITIAL_CAPACITY = 16;
     // Threshold for switching from linear search to HashMap index.
     // Lower values reduce O(n²) cost of building objects with many fields.
     private static volatile int INDEX_THRESHOLD = 4;
 
     // Map storage: parallel arrays for map entries (POJOs, maps with String keys)
-    // Uses shared EMPTY_ARRAY until first put() to avoid allocation
-    private Object[] keys = EMPTY_ARRAY;
-    private Object[] values = EMPTY_ARRAY;
+    private Object[] keys;
+    private Object[] values;
     private int size;
 
     // Separate storage for @items content (arrays, collections, map values for @keys format)
@@ -81,13 +78,10 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
      */
     public enum JsonType { ARRAY, COLLECTION, MAP, OBJECT }
 
-    /**
-     * Default constructor uses lazy allocation - arrays are shared empty
-     * until first put() to avoid allocating memory for empty objects.
-     */
     public JsonObject() {
-        // keys and values initialized to EMPTY_ARRAY at field declaration
-        // size defaults to 0
+        keys = new Object[INITIAL_CAPACITY];
+        values = new Object[INITIAL_CAPACITY];
+        size = 0;
     }
 
     // ========== Type Classification ==========
@@ -410,10 +404,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     private void ensureCapacity(int minCapacity) {
         if (keys.length >= minCapacity) return;
 
-        // Handle lazy allocation: EMPTY_ARRAY has length 0, so first put triggers allocation
-        int newCapacity = keys.length == 0
-                ? Math.max(INITIAL_CAPACITY, minCapacity)
-                : Math.max(keys.length * 2, minCapacity);
+        int newCapacity = Math.max(keys.length * 2, minCapacity);
         keys = Arrays.copyOf(keys, newCapacity);
         values = Arrays.copyOf(values, newCapacity);
     }
