@@ -574,27 +574,45 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
     }
 
-    private boolean isCustomWrittenClass(Class<?> c, Object o) {
-        // Exit early if the class is explicitly marked as not-custom-written.
-        if (writeOptions.isNotCustomWrittenClass(c)) {
-            return false;
+    /**
+     * Get the custom writer for the object if custom writing is allowed.
+     * Returns null if custom writing should not be used for this object.
+     * This method combines the check and lookup to avoid redundant getCustomWriter calls.
+     *
+     * @param declaredClass the declared type (e.g., field type, array component type)
+     * @param o the object to write
+     * @return the JsonClassWriter to use, or null if custom writing is not allowed
+     */
+    private com.cedarsoftware.io.JsonClassWriter getCustomWriterIfAllowed(Class<?> declaredClass, Object o) {
+        // Exit early if the declared class is explicitly marked as not-custom-written
+        if (writeOptions.isNotCustomWrittenClass(declaredClass)) {
+            return null;
         }
 
-        // Exit early if there is no custom writer.
-        if (writeOptions.getCustomWriter(c) == null) {
-            return false;
-        }
-
-        // Exit early if 'o' is a CompactSet, and it is the default CompactSet.
+        // Exit early if 'o' is a default CompactSet/CompactMap (use standard serialization)
         if ((o instanceof CompactSet) && ((CompactSet<?>) o).isDefaultCompactSet()) {
-            return false;
+            return null;
+        }
+        if ((o instanceof CompactMap) && ((CompactMap<?, ?>) o).isDefaultCompactMap()) {
+            return null;
         }
 
-        // Exit early if 'o' is a CompactMap, and it is the default CompactMap.
-        if ((o instanceof CompactMap) && ((CompactMap<?, ?>) o).isDefaultCompactMap()) {
-            return false;
+        // Get the actual runtime class
+        Class<?> actualClass = o.getClass();
+
+        // Optimization: when declared type equals runtime type, only one lookup needed
+        if (declaredClass == actualClass) {
+            return writeOptions.getCustomWriter(actualClass);
         }
-        return true;
+
+        // Different types: check if declared type has a writer (gatekeeper)
+        // If declared type has no writer, don't use custom writing even if actual type has one
+        if (writeOptions.getCustomWriter(declaredClass) == null) {
+            return null;
+        }
+
+        // Get the writer for the actual runtime type (may be more specific)
+        return writeOptions.getCustomWriter(actualClass);
     }
 
     /**
@@ -629,14 +647,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * @return true if the array element was written, false otherwise.
      */
     protected boolean writeCustom(Class<?> clazz, Object o, boolean showType, Writer output) throws IOException {
-        if (!isCustomWrittenClass(clazz, o)) {
+        // Combined check and lookup - avoids redundant getCustomWriter calls
+        com.cedarsoftware.io.JsonClassWriter closestWriter = getCustomWriterIfAllowed(clazz, o);
+        if (closestWriter == null) {
             return false;
         }
         if (neverShowingType) {
             showType = false;
         }
-
-        com.cedarsoftware.io.JsonClassWriter closestWriter = writeOptions.getCustomWriter(o.getClass());
 
         if (writeOptionalReference(o)) {
             return true;

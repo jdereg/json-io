@@ -11,6 +11,9 @@
   * Uses new `FastReader.readUntil()` for bulk reads until quote or backslash
   * Reduces per-character I/O overhead with 256-char buffer reads
   * Bulk appends to StringBuilder instead of character-by-character
+* **PERFORMANCE**: Optimized `JsonWriter.writeCustom()` to avoid redundant `getCustomWriter` lookups
+  * Combined `isCustomWrittenClass` check with writer lookup into single `getCustomWriterIfAllowed` method
+  * When declared type equals runtime type (common case), only one `getCustomWriter` call instead of two
 
 #### 4.89.0 - 2026-01-31
 * **RENAMED**: `showTypeInfoCompact()` → `showTypeInfoMinimalPlus()` for clearer naming
