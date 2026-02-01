@@ -7,6 +7,10 @@
   * Extracted common `parseAndResolve()` helper method using functional interface pattern
   * Unified error handling, unsafe mode management, and cleanup across all 5 builders
   * Reduced ~150 lines of duplicated code to ~35 lines of shared infrastructure
+* **PERFORMANCE**: Optimized `JsonParser.readString()` with bulk character reading
+  * Uses new `FastReader.readUntil()` for bulk reads until quote or backslash
+  * Reduces per-character I/O overhead with 256-char buffer reads
+  * Bulk appends to StringBuilder instead of character-by-character
 
 #### 4.89.0 - 2026-01-31
 * **RENAMED**: `showTypeInfoCompact()` → `showTypeInfoMinimalPlus()` for clearer naming

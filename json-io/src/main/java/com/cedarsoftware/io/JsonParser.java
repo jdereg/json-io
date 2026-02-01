@@ -78,6 +78,7 @@ class JsonParser {
     private static final JsonObject EMPTY_ARRAY = new JsonObject();  // compared with ==
     private final FastReader input;
     private final StringBuilder strBuf;
+    private final char[] readBuf = new char[256];  // Reusable buffer for bulk string reading
     private final StringBuilder numBuf = new StringBuilder();
     private int curParseDepth = 0;
     private final boolean allowNanAndInfinity;
@@ -755,22 +756,32 @@ class JsonParser {
         final StringBuilder str = strBuf;
         str.setLength(0);
         final FastReader in = input;
+        final char[] buf = readBuf;
 
         // Lookup tables for character handling
         final char[] ESCAPE_CHARS = ESCAPE_CHAR_MAP;
         final int[] HEX_VALUES = HEX_VALUE_MAP;
 
-        // Main loop with optimized path for non-escape characters
+        // Main loop - bulk read until delimiter, then handle delimiter
         while (true) {
+            // Bulk read characters until we hit quote or backslash
+            int charsRead = in.readUntil(buf, 0, buf.length, quoteChar, '\\');
+            if (charsRead == -1) {
+                error("EOF reached while reading JSON string");
+            }
+            if (charsRead > 0) {
+                str.append(buf, 0, charsRead);
+            }
+
+            // If buffer was filled completely, we may not have hit a delimiter yet - continue reading
+            if (charsRead == buf.length) {
+                continue;
+            }
+
+            // Read the delimiter character (we know it's quote or backslash)
             int c = in.read();
             if (c == -1) {
                 error("EOF reached while reading JSON string");
-            }
-
-            // Fast path for regular characters (most common)
-            if (c != '\\' && c != quoteChar) {
-                str.append((char) c);
-                continue;
             }
 
             // Handle string termination
@@ -785,7 +796,7 @@ class JsonParser {
                 break;
             }
 
-            // Must be an escape sequence
+            // Must be an escape sequence (c == '\\')
             c = in.read();
             if (c == -1) {
                 error("EOF reached while reading escape sequence");
