@@ -696,8 +696,6 @@ public class ObjectResolver extends Resolver
      * @return The Java object converted from the passed-in object o, or null if there is no custom reader.
      */
     protected Object readWithFactoryIfExists(final Object o, final Type inferredType) {
-        Convention.throwIfNull(o, "Bug in json-io, null must be checked before calling this method.");
-
         // Extract the raw type from the suggested inferred type.
         Class<?> rawInferred = (inferredType != null) ? TypeUtilities.getRawClass(inferredType) : null;
 

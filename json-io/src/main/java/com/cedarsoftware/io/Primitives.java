@@ -1,7 +1,8 @@
 package com.cedarsoftware.io;
 
-import java.util.HashSet;
 import java.util.Set;
+
+import com.cedarsoftware.util.IdentitySet;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -21,8 +22,8 @@ import java.util.Set;
  *         limitations under the License.
  */
 public class Primitives {
-    private static final Set<Class<?>> PRIMITIVE_WRAPPERS = new HashSet<>();
-    private static final Set<Class<?>> NATIVE_JSON_TYPES = new HashSet<>();
+    private static final Set<Class<?>> PRIMITIVE_WRAPPERS = new IdentitySet<>();
+    private static final Set<Class<?>> NATIVE_JSON_TYPES = new IdentitySet<>();
 
     static {
         PRIMITIVE_WRAPPERS.add(Byte.class);

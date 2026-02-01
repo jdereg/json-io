@@ -34,13 +34,12 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Deque;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Currency;
 import java.util.Date;
-import java.util.HashSet;
+import java.util.Deque;
+import java.util.EnumSet;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -71,6 +70,7 @@ import com.cedarsoftware.util.CompactMap;
 import com.cedarsoftware.util.CompactSet;
 import com.cedarsoftware.util.FastWriter;
 import com.cedarsoftware.util.IOUtilities;
+import com.cedarsoftware.util.IdentitySet;
 import com.cedarsoftware.util.TypeUtilities;
 
 import static com.cedarsoftware.io.JsonValue.ENUM;
@@ -160,7 +160,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private static final String ITEMS_DOLLAR_SHORT_QUOTED = "\"$e\":";
     private static final String KEYS_DOLLAR_SHORT_QUOTED = "\"$k\":";
 
-    // Pre-computed escape strings for ASCII characters (GSON-style optimization)
+    // Pre-computed escape strings for ASCII characters
     // null = character doesn't need escaping, non-null = the escape sequence to write
     // This combines "needs escape?" and "what is the escape?" into a single array lookup
     private static final String[] ESCAPE_STRINGS = new String[128];
@@ -185,7 +185,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     // Natural default collection/map types: maps declared interface to the concrete type that CollectionFactory
     // and MapFactory create when reading. Used by compact format to omit @type wrapper when runtime type matches.
-    private static final Map<Class<?>, Class<?>> NATURAL_DEFAULTS = new HashMap<>();
+    private static final Map<Class<?>, Class<?>> NATURAL_DEFAULTS = new IdentityHashMap<>();
     static {
         NATURAL_DEFAULTS.put(List.class, ArrayList.class);
         NATURAL_DEFAULTS.put(Collection.class, ArrayList.class);
@@ -202,7 +202,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     // Types that have lossless String round-trips via PrimitiveTypeWriter (write) and Converter (read).
     // When compact format is enabled and the field's declared type is in this set, @type can be omitted
     // because the reader's Injector will use Converter.convert(String, fieldType) to reconstruct the value.
-    private static final Set<Class<?>> CONVERTABLE_TYPES = new HashSet<>();
+    private static final Set<Class<?>> CONVERTABLE_TYPES = new IdentitySet<>();
     static {
         // Java Time types
         CONVERTABLE_TYPES.add(Duration.class);
@@ -251,7 +251,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     // Numeric primitives that can safely write as plain JSON numbers in MINIMAL/MINIMAL_PLUS modes.
     // These types round-trip as Long (for integers) or Double (for floats) when no @type is present.
     // Excludes: Character (String != Character), Atomic* (behavioral semantics), Big* (precision/range)
-    private static final Set<Class<?>> NUMERIC_PRIMITIVES_FOR_COMPACT = new HashSet<>();
+    private static final Set<Class<?>> NUMERIC_PRIMITIVES_FOR_COMPACT = new IdentitySet<>();
     static {
         NUMERIC_PRIMITIVES_FOR_COMPACT.add(Byte.class);
         NUMERIC_PRIMITIVES_FOR_COMPACT.add(byte.class);

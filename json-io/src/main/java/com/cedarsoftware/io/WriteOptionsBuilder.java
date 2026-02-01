@@ -32,7 +32,6 @@ import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.RegexUtilities;
 import com.cedarsoftware.util.ClassValueMap;
 import com.cedarsoftware.util.ClassValueSet;
-import com.cedarsoftware.util.ConcurrentSet;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.LRUCache;
 import com.cedarsoftware.util.ReflectionUtils;
@@ -74,13 +73,13 @@ public class WriteOptionsBuilder {
     private static final Logger LOG = Logger.getLogger(WriteOptionsBuilder.class.getName());
     static { LoggingConfig.init(); }
 
-    // The BASE_* Maps are regular ConcurrentHashMap's because they are not constantly searched, otherwise they would be ClassValueMaps.
+    // The BASE_* Maps/Sets with Class<?> keys use ClassValueMap/ClassValueSet for fast lookups (2-10x faster than ConcurrentHashMap)
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
-    private static final Map<Class<?>, JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
-    private static final Set<Class<?>> BASE_NON_REFS = new ConcurrentSet<>();
-    private static final Set<Class<?>> BASE_NOT_CUSTOM_WRITTEN = new ConcurrentSet<>();
-    static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ConcurrentHashMap<>();
-    private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_GETTERS = new ConcurrentHashMap<>();;
+    private static final Map<Class<?>, JsonClassWriter> BASE_WRITERS = new ClassValueMap<>();
+    private static final Set<Class<?>> BASE_NON_REFS = new ClassValueSet();
+    private static final Set<Class<?>> BASE_NOT_CUSTOM_WRITTEN = new ClassValueSet();
+    static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ClassValueMap<>();
+    private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_GETTERS = new ClassValueMap<>();
     private static final Map<String, FieldFilter> BASE_FIELD_FILTERS = new ConcurrentHashMap<>();
     private static final Map<String, MethodFilter> BASE_METHOD_FILTERS = new ConcurrentHashMap<>();
     private static final Map<String, AccessorFactory> BASE_ACCESSOR_FACTORIES = new ConcurrentHashMap<>();

@@ -34,7 +34,6 @@ import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.ClassValueMap;
 import com.cedarsoftware.util.ClassValueSet;
 import com.cedarsoftware.util.RegexUtilities;
-import com.cedarsoftware.util.ConcurrentSet;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.ReflectionUtils;
 import com.cedarsoftware.util.StringUtilities;
@@ -74,16 +73,16 @@ public class ReadOptionsBuilder {
     private static final Logger LOG = Logger.getLogger(ReadOptionsBuilder.class.getName());
     static { LoggingConfig.init(); }
 
-    // The BASE_* Maps are regular ConcurrentHashMap's because they are not constantly searched, otherwise they would be ClassValueMaps.
-    private static final Map<Class<?>, JsonClassReader> BASE_READERS = new ConcurrentHashMap<>();
-    private static final Map<Class<?>, ClassFactory> BASE_CLASS_FACTORIES = new ConcurrentHashMap<>();
+    // The BASE_* Maps/Sets with Class<?> keys use ClassValueMap/ClassValueSet for fast lookups (2-10x faster than ConcurrentHashMap)
+    private static final Map<Class<?>, JsonClassReader> BASE_READERS = new ClassValueMap<>();
+    private static final Map<Class<?>, ClassFactory> BASE_CLASS_FACTORIES = new ClassValueMap<>();
     // BASE_ALIAS_MAPPINGS uses LinkedHashMap to maintain insertion order so later aliases override earlier ones
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = Collections.synchronizedMap(new LinkedHashMap<>());
-    private static final Map<Class<?>, Class<?>> BASE_COERCED_TYPES = new ConcurrentHashMap<>();
-    private static final Set<Class<?>> BASE_NON_REFS = new ConcurrentSet<>();
-    private static final Set<Class<?>> BASE_NOT_CUSTOM_READ = new ConcurrentSet<>();
-    private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_SETTERS = new ConcurrentHashMap<>();
-    private static final Map<Class<?>, Set<String>> BASE_NOT_IMPORTED_FIELDS = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Class<?>> BASE_COERCED_TYPES = new ClassValueMap<>();
+    private static final Set<Class<?>> BASE_NON_REFS = new ClassValueSet();
+    private static final Set<Class<?>> BASE_NOT_CUSTOM_READ = new ClassValueSet();
+    private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_SETTERS = new ClassValueMap<>();
+    private static final Map<Class<?>, Set<String>> BASE_NOT_IMPORTED_FIELDS = new ClassValueMap<>();
     
     // Base permanent security limits - default to unlimited for backward compatibility
     private static volatile int BASE_MAX_UNRESOLVED_REFERENCES = Integer.MAX_VALUE;

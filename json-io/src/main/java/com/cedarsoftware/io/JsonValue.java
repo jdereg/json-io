@@ -139,11 +139,7 @@ public abstract class JsonValue {
      */
     public void setType(Type type) {
         // Fix NPE vulnerability - check null first before any operations
-        if (type == null) {
-            return;
-        }
-
-        if (type == this.type || type.equals(this.type)) {
+        if (type == null || type == this.type || type.equals(this.type)) {
             return;
         }
         if (type == Object.class && this.type != null) {
