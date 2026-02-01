@@ -21,7 +21,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{\"@type\":\"java.util.ArrayList\",\"@items\":\"not an array\"}";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected @items to have an array []"));
@@ -38,7 +38,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{\"@type\":\"java.util.HashSet\",\"@items\":12345}";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected @items to have an array []"));
@@ -56,7 +56,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{\"@type\":\"java.util.LinkedList\",\"@items\":{\"nested\":\"object\"}}";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected @items to have an array []"));
@@ -73,7 +73,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{\"@type\":\"java.util.TreeSet\",\"@items\":true}";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected @items to have an array []"));
@@ -90,7 +90,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{\"@type\":\"java.util.ArrayList\",\"@items\":null}";
 
         // Should not throw - null @items is valid
-        Object result = JsonIo.toObjects(json, null, Object.class);
+        Object result = JsonIo.toJava(json, null).asClass(Object.class);
         assertNotNull(result);
     }
 
@@ -101,7 +101,7 @@ public class JsonParserErrorHandlingTest {
     public void testItemsWithArrayValue_ShouldWork() {
         String json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[1,2,3]}";
 
-        Object result = JsonIo.toObjects(json, null, Object.class);
+        Object result = JsonIo.toJava(json, null).asClass(Object.class);
         assertNotNull(result);
         assertTrue(result instanceof java.util.ArrayList);
         assertEquals(3, ((java.util.ArrayList<?>) result).size());
@@ -120,7 +120,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{123: \"value\"}";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected quote before field name"));
@@ -136,7 +136,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{!field: \"value\"}";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected quote before field name"));
@@ -152,7 +152,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{#field: \"value\"}";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected quote before field name"));
@@ -168,7 +168,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{%field: \"value\"}";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected quote before field name"));
@@ -185,7 +185,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{-field: \"value\"}";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected quote before field name"));
@@ -204,7 +204,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{\"field\": tru";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("EOF reached while reading token"));
@@ -220,7 +220,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{\"field\": fals";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("EOF reached while reading token"));
@@ -236,7 +236,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{\"field\": nul";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("EOF reached while reading token"));
@@ -253,7 +253,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{\"field\": trux}";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected token:"));
@@ -269,7 +269,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{\"field\": falsx}";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected token:"));
@@ -285,7 +285,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{\"field\": nulx}";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected token:"));
@@ -305,7 +305,7 @@ public class JsonParserErrorHandlingTest {
         ReadOptions opts = new ReadOptionsBuilder().allowNanAndInfinity(true).build();
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, opts, Object.class);
+            JsonIo.toJava(json, opts).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("EOF reached while reading token"));
@@ -323,7 +323,7 @@ public class JsonParserErrorHandlingTest {
         ReadOptions opts = new ReadOptionsBuilder().allowNanAndInfinity(true).build();
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, opts, Object.class);
+            JsonIo.toJava(json, opts).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected token:"));
@@ -340,7 +340,7 @@ public class JsonParserErrorHandlingTest {
         ReadOptions opts = new ReadOptionsBuilder().allowNanAndInfinity(true).build();
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, opts, Object.class);
+            JsonIo.toJava(json, opts).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("EOF reached while reading token"));
@@ -357,7 +357,7 @@ public class JsonParserErrorHandlingTest {
         ReadOptions opts = new ReadOptionsBuilder().allowNanAndInfinity(true).build();
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, opts, Object.class);
+            JsonIo.toJava(json, opts).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected token:"));
@@ -373,7 +373,7 @@ public class JsonParserErrorHandlingTest {
         // JSON5 allows explicit positive sign
         String json = "[+42, +3.14]";
 
-        Object result = JsonIo.toObjects(json, null, Object.class);
+        Object result = JsonIo.toJava(json, null).asClass(Object.class);
         assertNotNull(result);
         assertTrue(result instanceof Object[]);
         Object[] arr = (Object[]) result;
@@ -395,7 +395,7 @@ public class JsonParserErrorHandlingTest {
         String json = "[42]";
         ReadOptions opts = new ReadOptionsBuilder().integerTypeBigInteger().build();
 
-        Object result = JsonIo.toObjects(json, opts, Object.class);
+        Object result = JsonIo.toJava(json, opts).asClass(Object.class);
         assertNotNull(result);
         assertTrue(result instanceof Object[]);
         Object[] arr = (Object[]) result;
@@ -413,7 +413,7 @@ public class JsonParserErrorHandlingTest {
         String json = "[-12345]";
         ReadOptions opts = new ReadOptionsBuilder().integerTypeBigInteger().build();
 
-        Object result = JsonIo.toObjects(json, opts, Object.class);
+        Object result = JsonIo.toJava(json, opts).asClass(Object.class);
         assertNotNull(result);
         assertTrue(result instanceof Object[]);
         Object[] arr = (Object[]) result;
@@ -435,7 +435,7 @@ public class JsonParserErrorHandlingTest {
         String json = "[9223372036854775808]";  // Long.MAX_VALUE + 1
         ReadOptions opts = new ReadOptionsBuilder().integerTypeBoth().build();
 
-        Object result = JsonIo.toObjects(json, opts, Object.class);
+        Object result = JsonIo.toJava(json, opts).asClass(Object.class);
         assertNotNull(result);
         assertTrue(result instanceof Object[]);
         Object[] arr = (Object[]) result;
@@ -454,7 +454,7 @@ public class JsonParserErrorHandlingTest {
         String json = "[1234567890123456789012345]";
         ReadOptions opts = new ReadOptionsBuilder().integerTypeBoth().build();
 
-        Object result = JsonIo.toObjects(json, opts, Object.class);
+        Object result = JsonIo.toJava(json, opts).asClass(Object.class);
         assertNotNull(result);
         assertTrue(result instanceof Object[]);
         Object[] arr = (Object[]) result;
@@ -474,7 +474,7 @@ public class JsonParserErrorHandlingTest {
         String json = "[9223372036854775808]";  // Long.MAX_VALUE + 1
         // Default options - integerTypeBoth is false
 
-        Object result = JsonIo.toObjects(json, null, Object.class);
+        Object result = JsonIo.toJava(json, null).asClass(Object.class);
         assertNotNull(result);
         assertTrue(result instanceof Object[]);
         Object[] arr = (Object[]) result;
@@ -495,7 +495,7 @@ public class JsonParserErrorHandlingTest {
         String json = "[-9223372036854775809]";  // Long.MIN_VALUE - 1
         ReadOptions opts = new ReadOptionsBuilder().integerTypeBoth().build();
 
-        Object result = JsonIo.toObjects(json, opts, Object.class);
+        Object result = JsonIo.toJava(json, opts).asClass(Object.class);
         assertNotNull(result);
         assertTrue(result instanceof Object[]);
         Object[] arr = (Object[]) result;
@@ -517,7 +517,7 @@ public class JsonParserErrorHandlingTest {
         String json = "\"hello\" extra";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("EOF expected, content found after string"));
@@ -533,7 +533,7 @@ public class JsonParserErrorHandlingTest {
         String json = "\"hello\\";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("EOF reached while reading escape sequence"));
@@ -549,7 +549,7 @@ public class JsonParserErrorHandlingTest {
         String json = "\"hello\\u00";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("EOF reached while reading Unicode escape sequence"));
@@ -565,7 +565,7 @@ public class JsonParserErrorHandlingTest {
         String json = "\"hello\\u00GG\"";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected hexadecimal digit, got:"));
@@ -579,7 +579,7 @@ public class JsonParserErrorHandlingTest {
         // Valid Unicode escape for 'A' (U+0041)
         String json = "\"\\u0041\"";
 
-        Object result = JsonIo.toObjects(json, null, Object.class);
+        Object result = JsonIo.toJava(json, null).asClass(Object.class);
         assertEquals("A", result);
     }
 
@@ -596,7 +596,7 @@ public class JsonParserErrorHandlingTest {
         String json = "\"" + "\\u" + "D800" + "\\u" + "00";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("EOF reached while reading Unicode escape sequence"));
@@ -612,7 +612,7 @@ public class JsonParserErrorHandlingTest {
         String json = "\"" + "\\u" + "D800" + "\\u" + "DCGG\"";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected hexadecimal digit, got:"));
@@ -628,7 +628,7 @@ public class JsonParserErrorHandlingTest {
         // High surrogate followed by backslash-u0041 (not a low surrogate, just 'A')
         String json = "\"" + "\\u" + "D800" + "\\u" + "0041\"";
 
-        Object result = JsonIo.toObjects(json, null, Object.class);
+        Object result = JsonIo.toJava(json, null).asClass(Object.class);
         assertNotNull(result);
         // Should contain both characters: the orphan high surrogate and 'A'
         String str = (String) result;
@@ -647,7 +647,7 @@ public class JsonParserErrorHandlingTest {
         // High surrogate followed by backslash-n (newline escape)
         String json = "\"" + "\\u" + "D800" + "\\n\"";
 
-        Object result = JsonIo.toObjects(json, null, Object.class);
+        Object result = JsonIo.toJava(json, null).asClass(Object.class);
         assertNotNull(result);
         String str = (String) result;
         assertEquals(2, str.length());
@@ -664,7 +664,7 @@ public class JsonParserErrorHandlingTest {
         // High surrogate followed by regular character 'X'
         String json = "\"" + "\\u" + "D800X\"";
 
-        Object result = JsonIo.toObjects(json, null, Object.class);
+        Object result = JsonIo.toJava(json, null).asClass(Object.class);
         assertNotNull(result);
         String str = (String) result;
         assertEquals(2, str.length());
@@ -682,7 +682,7 @@ public class JsonParserErrorHandlingTest {
         // High surrogate: D83D, Low surrogate: DE00
         String json = "\"" + "\\u" + "D83D" + "\\u" + "DE00\"";
 
-        Object result = JsonIo.toObjects(json, null, Object.class);
+        Object result = JsonIo.toJava(json, null).asClass(Object.class);
         assertNotNull(result);
         String str = (String) result;
         // Should be a single code point (2 UTF-16 chars)
@@ -703,7 +703,7 @@ public class JsonParserErrorHandlingTest {
         ReadOptions opts = new ReadOptionsBuilder().strictJson().build();
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, opts, Object.class);
+            JsonIo.toJava(json, opts).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Multi-line strings not allowed in strict JSON mode"));
@@ -720,7 +720,7 @@ public class JsonParserErrorHandlingTest {
         ReadOptions opts = new ReadOptionsBuilder().strictJson().build();
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, opts, Object.class);
+            JsonIo.toJava(json, opts).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Multi-line strings not allowed in strict JSON mode"));
@@ -735,7 +735,7 @@ public class JsonParserErrorHandlingTest {
         // Backslash followed by newline - allowed in JSON5
         String json = "\"hello\\\nworld\"";
 
-        Object result = JsonIo.toObjects(json, null, Object.class);
+        Object result = JsonIo.toJava(json, null).asClass(Object.class);
         assertEquals("helloworld", result);  // Backslash-newline is removed
     }
 
@@ -752,7 +752,7 @@ public class JsonParserErrorHandlingTest {
         String json = "[0x12345678901234567]";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Hexadecimal number too large"));
@@ -767,7 +767,7 @@ public class JsonParserErrorHandlingTest {
         // 16 hex digits = exactly 64 bits - should work
         String json = "[0xFFFFFFFFFFFFFFFF]";
 
-        Object result = JsonIo.toObjects(json, null, Object.class);
+        Object result = JsonIo.toJava(json, null).asClass(Object.class);
         assertNotNull(result);
         assertTrue(result instanceof Object[]);
         Object[] arr = (Object[]) result;
@@ -789,7 +789,7 @@ public class JsonParserErrorHandlingTest {
         String json = "[+";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Unexpected end of input after '+'"));
@@ -807,7 +807,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{\"@type\":\"java.util.LinkedHashMap\",\"@keys\":\"notanarray\",\"@items\":[1,2,3]}";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected @keys to have an array []"));
@@ -822,7 +822,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{\"@type\":\"java.util.HashMap\",\"@keys\":12345,\"@items\":[1,2,3]}";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected @keys to have an array []"));
@@ -840,7 +840,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{\"@type\":12345}";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected a String for @type"));
@@ -855,7 +855,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{\"@type\":[1,2,3]}";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected a String for @type"));
@@ -873,7 +873,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{\"@id\":null,\"value\":42}";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Null value provided for @id"));
@@ -889,7 +889,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{\"@id\":\"notanumber\",\"value\":42}";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected a number for @id"));
@@ -907,7 +907,7 @@ public class JsonParserErrorHandlingTest {
         ReadOptions opts = new ReadOptionsBuilder().maxIdValue(100).build();
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, opts, Object.class);
+            JsonIo.toJava(json, opts).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("ID value out of safe range"));
@@ -925,7 +925,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{\"@ref\":null}";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Null value provided for @ref"));
@@ -941,7 +941,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{\"@ref\":\"notanumber\"}";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected a number for @ref"));
@@ -958,7 +958,7 @@ public class JsonParserErrorHandlingTest {
         ReadOptions opts = new ReadOptionsBuilder().maxIdValue(100).build();
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, opts, Object.class);
+            JsonIo.toJava(json, opts).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Reference ID value out of safe range"));
@@ -976,7 +976,7 @@ public class JsonParserErrorHandlingTest {
         String json = "{\"@enum\":12345}";
 
         JsonIoException exception = assertThrows(JsonIoException.class, () -> {
-            JsonIo.toObjects(json, null, Object.class);
+            JsonIo.toJava(json, null).asClass(Object.class);
         });
 
         assertTrue(exception.getMessage().contains("Expected a String for @enum"));
@@ -990,15 +990,15 @@ public class JsonParserErrorHandlingTest {
     @Test
     public void testValidTokens_ShouldWork() {
         // Valid true
-        Object result = JsonIo.toObjects("{\"a\": true}", null, Object.class);
+        Object result = JsonIo.toJava("{\"a\": true}", null).asClass(Object.class);
         assertNotNull(result);
 
         // Valid false
-        result = JsonIo.toObjects("{\"b\": false}", null, Object.class);
+        result = JsonIo.toJava("{\"b\": false}", null).asClass(Object.class);
         assertNotNull(result);
 
         // Valid null
-        result = JsonIo.toObjects("{\"c\": null}", null, Object.class);
+        result = JsonIo.toJava("{\"c\": null}", null).asClass(Object.class);
         assertNotNull(result);
     }
 }

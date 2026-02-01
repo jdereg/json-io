@@ -143,18 +143,18 @@ class ReadWithFactoryDeadCodeTest {
 
         // Simple object with primitive fields
         String json = "{\"@type\":\"java.util.HashMap\",\"name\":\"test\",\"value\":42}";
-        Map<String, Object> result = JsonIo.toObjects(json, null, null);
+        Map<String, Object> result = JsonIo.toJava(json, null).asClass(null);
         assertThat(result).containsEntry("name", "test");
         assertThat(result).containsEntry("value", 42L);
 
         // Array of primitives
         json = "[\"a\", \"b\", \"c\"]";
-        Object[] array = JsonIo.toObjects(json, null, Object[].class);
+        Object[] array = JsonIo.toJava(json, null).asClass(Object[].class);
         assertThat(array).containsExactly("a", "b", "c");
 
         // Nested structure
         json = "{\"@type\":\"java.util.HashMap\",\"items\":[1,2,3]}";
-        result = JsonIo.toObjects(json, null, null);
+        result = JsonIo.toJava(json, null).asClass(null);
         assertThat(result).containsKey("items");
     }
 

@@ -1,4 +1,9 @@
 ### Revision History
+#### 4.90.0 - (unreleased)
+* **MAINTENANCE**: Migrated test files from deprecated `JsonIo.toObjects()` to `JsonIo.toJava().asClass()` API
+  * Updated ~148 calls across 5 test files to use the new fluent builder pattern
+  * Deprecated `toObjects()` methods remain available in `JsonIo.java` for backward compatibility
+
 #### 4.89.0 - 2026-01-31
 * **RENAMED**: `showTypeInfoCompact()` → `showTypeInfoMinimalPlus()` for clearer naming
   * `WriteOptionsBuilder.showTypeInfoCompact()` → `WriteOptionsBuilder.showTypeInfoMinimalPlus()`

@@ -59,14 +59,14 @@ class MapToNonMapConversionTest {
     @Test
     void testMapWithValueKey_toBoolean_true() {
         String json = "{\"_v\":true}";
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isTrue();
     }
 
     @Test
     void testMapWithValueKey_toBoolean_false() {
         String json = "{\"_v\":false}";
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isFalse();
     }
 
@@ -74,7 +74,7 @@ class MapToNonMapConversionTest {
     void testMapWithValueKey_toBoolean_fromNumber() {
         // Non-zero numbers should convert to true
         String json = "{\"_v\":16}";
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isTrue();
     }
 
@@ -82,77 +82,77 @@ class MapToNonMapConversionTest {
     void testMapWithValueKey_toBoolean_fromZero() {
         // Zero should convert to false
         String json = "{\"_v\":0}";
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isFalse();
     }
 
     @Test
     void testMapWithValueKey_toInteger() {
         String json = "{\"_v\":42}";
-        Integer result = JsonIo.toObjects(json, READ_OPTIONS, Integer.class);
+        Integer result = JsonIo.toJava(json, READ_OPTIONS).asClass(Integer.class);
         assertThat(result).isEqualTo(42);
     }
 
     @Test
     void testMapWithValueKey_toLong() {
         String json = "{\"_v\":9876543210}";
-        Long result = JsonIo.toObjects(json, READ_OPTIONS, Long.class);
+        Long result = JsonIo.toJava(json, READ_OPTIONS).asClass(Long.class);
         assertThat(result).isEqualTo(9876543210L);
     }
 
     @Test
     void testMapWithValueKey_toDouble() {
         String json = "{\"_v\":3.14159}";
-        Double result = JsonIo.toObjects(json, READ_OPTIONS, Double.class);
+        Double result = JsonIo.toJava(json, READ_OPTIONS).asClass(Double.class);
         assertThat(result).isEqualTo(3.14159);
     }
 
     @Test
     void testMapWithValueKey_toFloat() {
         String json = "{\"_v\":2.5}";
-        Float result = JsonIo.toObjects(json, READ_OPTIONS, Float.class);
+        Float result = JsonIo.toJava(json, READ_OPTIONS).asClass(Float.class);
         assertThat(result).isEqualTo(2.5f);
     }
 
     @Test
     void testMapWithValueKey_toShort() {
         String json = "{\"_v\":100}";
-        Short result = JsonIo.toObjects(json, READ_OPTIONS, Short.class);
+        Short result = JsonIo.toJava(json, READ_OPTIONS).asClass(Short.class);
         assertThat(result).isEqualTo((short) 100);
     }
 
     @Test
     void testMapWithValueKey_toByte() {
         String json = "{\"_v\":50}";
-        Byte result = JsonIo.toObjects(json, READ_OPTIONS, Byte.class);
+        Byte result = JsonIo.toJava(json, READ_OPTIONS).asClass(Byte.class);
         assertThat(result).isEqualTo((byte) 50);
     }
 
     @Test
     void testMapWithValueKey_toCharacter() {
         String json = "{\"_v\":\"A\"}";
-        Character result = JsonIo.toObjects(json, READ_OPTIONS, Character.class);
+        Character result = JsonIo.toJava(json, READ_OPTIONS).asClass(Character.class);
         assertThat(result).isEqualTo('A');
     }
 
     @Test
     void testMapWithValueKey_toString() {
         String json = "{\"_v\":\"hello\"}";
-        String result = JsonIo.toObjects(json, READ_OPTIONS, String.class);
+        String result = JsonIo.toJava(json, READ_OPTIONS).asClass(String.class);
         assertThat(result).isEqualTo("hello");
     }
 
     @Test
     void testMapWithValueKey_toBigInteger() {
         String json = "{\"_v\":\"12345678901234567890\"}";
-        BigInteger result = JsonIo.toObjects(json, READ_OPTIONS, BigInteger.class);
+        BigInteger result = JsonIo.toJava(json, READ_OPTIONS).asClass(BigInteger.class);
         assertThat(result).isEqualTo(new BigInteger("12345678901234567890"));
     }
 
     @Test
     void testMapWithValueKey_toBigDecimal() {
         String json = "{\"_v\":\"123.456789\"}";
-        BigDecimal result = JsonIo.toObjects(json, READ_OPTIONS, BigDecimal.class);
+        BigDecimal result = JsonIo.toJava(json, READ_OPTIONS).asClass(BigDecimal.class);
         assertThat(result).isEqualTo(new BigDecimal("123.456789"));
     }
 
@@ -162,77 +162,77 @@ class MapToNonMapConversionTest {
     @Test
     void testHashMapWithType_toBoolean_true() {
         String json = "{\"@type\":\"java.util.HashMap\",\"_v\":true}";
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isTrue();
     }
 
     @Test
     void testHashMapWithType_toBoolean_fromNumber() {
         String json = "{\"@type\":\"java.util.HashMap\",\"_v\":16}";
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isTrue();
     }
 
     @Test
     void testHashMapWithType_toBoolean_fromZero() {
         String json = "{\"@type\":\"java.util.HashMap\",\"_v\":0}";
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isFalse();
     }
 
     @Test
     void testHashMapWithType_toInteger() {
         String json = "{\"@type\":\"java.util.HashMap\",\"_v\":42}";
-        Integer result = JsonIo.toObjects(json, READ_OPTIONS, Integer.class);
+        Integer result = JsonIo.toJava(json, READ_OPTIONS).asClass(Integer.class);
         assertThat(result).isEqualTo(42);
     }
 
     @Test
     void testHashMapWithType_toLong() {
         String json = "{\"@type\":\"java.util.HashMap\",\"_v\":9876543210}";
-        Long result = JsonIo.toObjects(json, READ_OPTIONS, Long.class);
+        Long result = JsonIo.toJava(json, READ_OPTIONS).asClass(Long.class);
         assertThat(result).isEqualTo(9876543210L);
     }
 
     @Test
     void testHashMapWithType_toDouble() {
         String json = "{\"@type\":\"java.util.HashMap\",\"_v\":3.14}";
-        Double result = JsonIo.toObjects(json, READ_OPTIONS, Double.class);
+        Double result = JsonIo.toJava(json, READ_OPTIONS).asClass(Double.class);
         assertThat(result).isEqualTo(3.14);
     }
 
     @Test
     void testHashMapWithType_toFloat() {
         String json = "{\"@type\":\"java.util.HashMap\",\"_v\":2.5}";
-        Float result = JsonIo.toObjects(json, READ_OPTIONS, Float.class);
+        Float result = JsonIo.toJava(json, READ_OPTIONS).asClass(Float.class);
         assertThat(result).isEqualTo(2.5f);
     }
 
     @Test
     void testHashMapWithType_toShort() {
         String json = "{\"@type\":\"java.util.HashMap\",\"_v\":100}";
-        Short result = JsonIo.toObjects(json, READ_OPTIONS, Short.class);
+        Short result = JsonIo.toJava(json, READ_OPTIONS).asClass(Short.class);
         assertThat(result).isEqualTo((short) 100);
     }
 
     @Test
     void testHashMapWithType_toByte() {
         String json = "{\"@type\":\"java.util.HashMap\",\"_v\":50}";
-        Byte result = JsonIo.toObjects(json, READ_OPTIONS, Byte.class);
+        Byte result = JsonIo.toJava(json, READ_OPTIONS).asClass(Byte.class);
         assertThat(result).isEqualTo((byte) 50);
     }
 
     @Test
     void testLinkedHashMapWithType_toBoolean() {
         String json = "{\"@type\":\"java.util.LinkedHashMap\",\"_v\":true}";
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isTrue();
     }
 
     @Test
     void testTreeMapWithType_toBoolean() {
         String json = "{\"@type\":\"java.util.TreeMap\",\"_v\":true}";
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isTrue();
     }
 
@@ -243,7 +243,7 @@ class MapToNonMapConversionTest {
     void testNestedMap_toBoolean() {
         // {_v: {_v: 5.0}} should convert to true (non-zero)
         String json = "{\"_v\":{\"_v\":5.0}}";
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isTrue();
     }
 
@@ -251,28 +251,28 @@ class MapToNonMapConversionTest {
     void testNestedMap_toBoolean_zero() {
         // {_v: {_v: 0}} should convert to false
         String json = "{\"_v\":{\"_v\":0}}";
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isFalse();
     }
 
     @Test
     void testNestedMap_toInteger() {
         String json = "{\"_v\":{\"_v\":42}}";
-        Integer result = JsonIo.toObjects(json, READ_OPTIONS, Integer.class);
+        Integer result = JsonIo.toJava(json, READ_OPTIONS).asClass(Integer.class);
         assertThat(result).isEqualTo(42);
     }
 
     @Test
     void testNestedMap_toLong() {
         String json = "{\"_v\":{\"_v\":9876543210}}";
-        Long result = JsonIo.toObjects(json, READ_OPTIONS, Long.class);
+        Long result = JsonIo.toJava(json, READ_OPTIONS).asClass(Long.class);
         assertThat(result).isEqualTo(9876543210L);
     }
 
     @Test
     void testNestedMap_toDouble() {
         String json = "{\"_v\":{\"_v\":3.14}}";
-        Double result = JsonIo.toObjects(json, READ_OPTIONS, Double.class);
+        Double result = JsonIo.toJava(json, READ_OPTIONS).asClass(Double.class);
         assertThat(result).isEqualTo(3.14);
     }
 
@@ -280,21 +280,21 @@ class MapToNonMapConversionTest {
     void testTripleNestedMap_toBoolean() {
         // {_v: {_v: {_v: 1}}} should convert to true
         String json = "{\"_v\":{\"_v\":{\"_v\":1}}}";
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isTrue();
     }
 
     @Test
     void testNestedMapWithHashMapType_toBoolean() {
         String json = "{\"@type\":\"java.util.HashMap\",\"_v\":{\"@type\":\"java.util.HashMap\",\"_v\":5.0}}";
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isTrue();
     }
 
     @Test
     void testNestedMapWithHashMapType_toInteger() {
         String json = "{\"@type\":\"java.util.HashMap\",\"_v\":{\"@type\":\"java.util.HashMap\",\"_v\":42}}";
-        Integer result = JsonIo.toObjects(json, READ_OPTIONS, Integer.class);
+        Integer result = JsonIo.toJava(json, READ_OPTIONS).asClass(Integer.class);
         assertThat(result).isEqualTo(42);
     }
 
@@ -307,7 +307,7 @@ class MapToNonMapConversionTest {
         map.put("_v", 16);
 
         String json = JsonIo.toJson(map, WRITE_OPTIONS);
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isTrue();
     }
 
@@ -317,7 +317,7 @@ class MapToNonMapConversionTest {
         map.put("_v", 0);
 
         String json = JsonIo.toJson(map, WRITE_OPTIONS);
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isFalse();
     }
 
@@ -327,7 +327,7 @@ class MapToNonMapConversionTest {
         map.put("_v", 42);
 
         String json = JsonIo.toJson(map, WRITE_OPTIONS);
-        Integer result = JsonIo.toObjects(json, READ_OPTIONS, Integer.class);
+        Integer result = JsonIo.toJava(json, READ_OPTIONS).asClass(Integer.class);
         assertThat(result).isEqualTo(42);
     }
 
@@ -337,7 +337,7 @@ class MapToNonMapConversionTest {
         map.put("_v", 9876543210L);
 
         String json = JsonIo.toJson(map, WRITE_OPTIONS);
-        Long result = JsonIo.toObjects(json, READ_OPTIONS, Long.class);
+        Long result = JsonIo.toJava(json, READ_OPTIONS).asClass(Long.class);
         assertThat(result).isEqualTo(9876543210L);
     }
 
@@ -347,7 +347,7 @@ class MapToNonMapConversionTest {
         map.put("_v", 3.14159);
 
         String json = JsonIo.toJson(map, WRITE_OPTIONS);
-        Double result = JsonIo.toObjects(json, READ_OPTIONS, Double.class);
+        Double result = JsonIo.toJava(json, READ_OPTIONS).asClass(Double.class);
         assertThat(result).isEqualTo(3.14159);
     }
 
@@ -359,7 +359,7 @@ class MapToNonMapConversionTest {
         outer.put("_v", inner);
 
         String json = JsonIo.toJson(outer, WRITE_OPTIONS);
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isTrue();
     }
 
@@ -371,7 +371,7 @@ class MapToNonMapConversionTest {
         outer.put("_v", inner);
 
         String json = JsonIo.toJson(outer, WRITE_OPTIONS);
-        Double result = JsonIo.toObjects(json, READ_OPTIONS, Double.class);
+        Double result = JsonIo.toJava(json, READ_OPTIONS).asClass(Double.class);
         assertThat(result).isEqualTo(3.14159);
     }
 
@@ -381,7 +381,7 @@ class MapToNonMapConversionTest {
         map.put("_v", true);
 
         String json = JsonIo.toJson(map, WRITE_OPTIONS);
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isTrue();
     }
 
@@ -391,7 +391,7 @@ class MapToNonMapConversionTest {
         map.put("_v", 100);
 
         String json = JsonIo.toJson(map, WRITE_OPTIONS);
-        Integer result = JsonIo.toObjects(json, READ_OPTIONS, Integer.class);
+        Integer result = JsonIo.toJava(json, READ_OPTIONS).asClass(Integer.class);
         assertThat(result).isEqualTo(100);
     }
 
@@ -400,42 +400,42 @@ class MapToNonMapConversionTest {
     @Test
     void testMapToAtomicBoolean() {
         String json = "{\"_v\":true}";
-        AtomicBoolean result = JsonIo.toObjects(json, READ_OPTIONS, AtomicBoolean.class);
+        AtomicBoolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(AtomicBoolean.class);
         assertThat(result.get()).isTrue();
     }
 
     @Test
     void testMapToAtomicBoolean_false() {
         String json = "{\"_v\":false}";
-        AtomicBoolean result = JsonIo.toObjects(json, READ_OPTIONS, AtomicBoolean.class);
+        AtomicBoolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(AtomicBoolean.class);
         assertThat(result.get()).isFalse();
     }
 
     @Test
     void testMapToAtomicInteger() {
         String json = "{\"_v\":42}";
-        AtomicInteger result = JsonIo.toObjects(json, READ_OPTIONS, AtomicInteger.class);
+        AtomicInteger result = JsonIo.toJava(json, READ_OPTIONS).asClass(AtomicInteger.class);
         assertThat(result.get()).isEqualTo(42);
     }
 
     @Test
     void testMapToAtomicLong() {
         String json = "{\"_v\":9876543210}";
-        AtomicLong result = JsonIo.toObjects(json, READ_OPTIONS, AtomicLong.class);
+        AtomicLong result = JsonIo.toJava(json, READ_OPTIONS).asClass(AtomicLong.class);
         assertThat(result.get()).isEqualTo(9876543210L);
     }
 
     @Test
     void testHashMapWithTypeToAtomicBoolean() {
         String json = "{\"@type\":\"java.util.HashMap\",\"_v\":true}";
-        AtomicBoolean result = JsonIo.toObjects(json, READ_OPTIONS, AtomicBoolean.class);
+        AtomicBoolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(AtomicBoolean.class);
         assertThat(result.get()).isTrue();
     }
 
     @Test
     void testHashMapWithTypeToAtomicInteger() {
         String json = "{\"@type\":\"java.util.HashMap\",\"_v\":42}";
-        AtomicInteger result = JsonIo.toObjects(json, READ_OPTIONS, AtomicInteger.class);
+        AtomicInteger result = JsonIo.toJava(json, READ_OPTIONS).asClass(AtomicInteger.class);
         assertThat(result.get()).isEqualTo(42);
     }
 
@@ -444,28 +444,28 @@ class MapToNonMapConversionTest {
     @Test
     void testMapWithStringNumber_toInteger() {
         String json = "{\"_v\":\"42\"}";
-        Integer result = JsonIo.toObjects(json, READ_OPTIONS, Integer.class);
+        Integer result = JsonIo.toJava(json, READ_OPTIONS).asClass(Integer.class);
         assertThat(result).isEqualTo(42);
     }
 
     @Test
     void testMapWithStringNumber_toLong() {
         String json = "{\"_v\":\"9876543210\"}";
-        Long result = JsonIo.toObjects(json, READ_OPTIONS, Long.class);
+        Long result = JsonIo.toJava(json, READ_OPTIONS).asClass(Long.class);
         assertThat(result).isEqualTo(9876543210L);
     }
 
     @Test
     void testMapWithStringBoolean_toBoolean_true() {
         String json = "{\"_v\":\"true\"}";
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isTrue();
     }
 
     @Test
     void testMapWithStringBoolean_toBoolean_false() {
         String json = "{\"_v\":\"false\"}";
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isFalse();
     }
 
@@ -475,21 +475,21 @@ class MapToNonMapConversionTest {
     void testMapWithValueKeyAlternate_toBoolean() {
         // Test "value" key instead of "_v"
         String json = "{\"value\":true}";
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isTrue();
     }
 
     @Test
     void testMapWithValueKeyAlternate_toInteger() {
         String json = "{\"value\":42}";
-        Integer result = JsonIo.toObjects(json, READ_OPTIONS, Integer.class);
+        Integer result = JsonIo.toJava(json, READ_OPTIONS).asClass(Integer.class);
         assertThat(result).isEqualTo(42);
     }
 
     @Test
     void testHashMapWithValueKeyAlternate_toBoolean() {
         String json = "{\"@type\":\"java.util.HashMap\",\"value\":true}";
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isTrue();
     }
 
@@ -503,7 +503,7 @@ class MapToNonMapConversionTest {
         // Duration serializes to {"@type":"Duration","duration":"PT5S"}
         // This should NOT go through Map→Long conversion since @type is Duration, not HashMap
         // But Duration→Long is supported by Converter after resolution
-        Long result = JsonIo.toObjects(json, READ_OPTIONS, Long.class);
+        Long result = JsonIo.toJava(json, READ_OPTIONS).asClass(Long.class);
         assertThat(result).isEqualTo(5000L);
     }
 
@@ -514,7 +514,7 @@ class MapToNonMapConversionTest {
         // Empty map cannot be converted to Boolean without _v key
         String json = "{\"@type\":\"java.util.HashMap\"}";
         try {
-            Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+            Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
             // If it doesn't throw, result should indicate no value was found
             assertThat(result).isNull();
         } catch (JsonIoException e) {
@@ -526,7 +526,7 @@ class MapToNonMapConversionTest {
     @Test
     void testMapWithNullValue_toBoolean() {
         String json = "{\"_v\":null}";
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         // null _v should convert to null or false
         assertThat(result).isNull();
     }
@@ -534,7 +534,7 @@ class MapToNonMapConversionTest {
     @Test
     void testMapWithNestedNullValue_toBoolean() {
         String json = "{\"_v\":{\"_v\":null}}";
-        Boolean result = JsonIo.toObjects(json, READ_OPTIONS, Boolean.class);
+        Boolean result = JsonIo.toJava(json, READ_OPTIONS).asClass(Boolean.class);
         assertThat(result).isNull();
     }
 
@@ -543,7 +543,7 @@ class MapToNonMapConversionTest {
     @Test
     void testMapWithType_toMap_returnsMap() {
         String json = "{\"@type\":\"java.util.HashMap\",\"_v\":42}";
-        Map result = JsonIo.toObjects(json, READ_OPTIONS, Map.class);
+        Map result = JsonIo.toJava(json, READ_OPTIONS).asClass(Map.class);
         assertThat(result).isInstanceOf(HashMap.class);
         assertThat(result.get("_v")).isEqualTo(42L);  // JSON parser returns Long for integers
     }
@@ -551,7 +551,7 @@ class MapToNonMapConversionTest {
     @Test
     void testMapWithType_toObject_returnsMap() {
         String json = "{\"@type\":\"java.util.HashMap\",\"_v\":42}";
-        Object result = JsonIo.toObjects(json, READ_OPTIONS, Object.class);
+        Object result = JsonIo.toJava(json, READ_OPTIONS).asClass(Object.class);
         assertThat(result).isInstanceOf(HashMap.class);
     }
 
@@ -567,7 +567,7 @@ class MapToNonMapConversionTest {
         char[] chars = new char[]{'a', 'b', 'c'};
         String json = JsonIo.toJson(chars, WRITE_OPTIONS);
 
-        byte[] result = JsonIo.toObjects(json, READ_OPTIONS, byte[].class);
+        byte[] result = JsonIo.toJava(json, READ_OPTIONS).asClass(byte[].class);
 
         // Expected: bytes representing 'a', 'b', 'c' (ASCII 97, 98, 99)
         assertThat(result).isNotNull();
@@ -584,7 +584,7 @@ class MapToNonMapConversionTest {
         byte[] bytes = new byte[]{65, 66, 67}; // ASCII for 'A', 'B', 'C'
         String json = JsonIo.toJson(bytes, WRITE_OPTIONS);
 
-        char[] result = JsonIo.toObjects(json, READ_OPTIONS, char[].class);
+        char[] result = JsonIo.toJava(json, READ_OPTIONS).asClass(char[].class);
 
         // Expected: chars 'A', 'B', 'C'
         assertThat(result).isNotNull();
@@ -600,7 +600,7 @@ class MapToNonMapConversionTest {
         char[] chars = new char[]{'h', 'e', 'l', 'l', 'o'};
         String json = JsonIo.toJson(chars, WRITE_OPTIONS);
 
-        char[] result = JsonIo.toObjects(json, READ_OPTIONS, char[].class);
+        char[] result = JsonIo.toJava(json, READ_OPTIONS).asClass(char[].class);
 
         assertThat(result).isEqualTo(chars);
     }
@@ -611,7 +611,7 @@ class MapToNonMapConversionTest {
         byte[] bytes = new byte[]{1, 2, 3, 4, 5};
         String json = JsonIo.toJson(bytes, WRITE_OPTIONS);
 
-        byte[] result = JsonIo.toObjects(json, READ_OPTIONS, byte[].class);
+        byte[] result = JsonIo.toJava(json, READ_OPTIONS).asClass(byte[].class);
 
         assertThat(result).isEqualTo(bytes);
     }
@@ -622,7 +622,7 @@ class MapToNonMapConversionTest {
         int[] ints = new int[]{1, 2, 3};
         String json = JsonIo.toJson(ints, WRITE_OPTIONS);
 
-        long[] result = JsonIo.toObjects(json, READ_OPTIONS, long[].class);
+        long[] result = JsonIo.toJava(json, READ_OPTIONS).asClass(long[].class);
 
         assertThat(result).containsExactly(1L, 2L, 3L);
     }
@@ -633,7 +633,7 @@ class MapToNonMapConversionTest {
         short[] shorts = new short[]{10, 20, 30};
         String json = JsonIo.toJson(shorts, WRITE_OPTIONS);
 
-        int[] result = JsonIo.toObjects(json, READ_OPTIONS, int[].class);
+        int[] result = JsonIo.toJava(json, READ_OPTIONS).asClass(int[].class);
 
         assertThat(result).containsExactly(10, 20, 30);
     }
@@ -649,7 +649,7 @@ class MapToNonMapConversionTest {
         char[] chars = new char[]{'x', 'y', 'z'};
         String json = JsonIo.toJson(chars, WRITE_OPTIONS);
 
-        List result = JsonIo.toObjects(json, READ_OPTIONS, List.class);
+        List result = JsonIo.toJava(json, READ_OPTIONS).asClass(List.class);
 
         assertThat(result).containsExactly('x', 'y', 'z');
     }
@@ -660,7 +660,7 @@ class MapToNonMapConversionTest {
         byte[] bytes = new byte[]{1, 2, 3};
         String json = JsonIo.toJson(bytes, WRITE_OPTIONS);
 
-        Set result = JsonIo.toObjects(json, READ_OPTIONS, Set.class);
+        Set result = JsonIo.toJava(json, READ_OPTIONS).asClass(Set.class);
 
         assertThat(result).containsExactlyInAnyOrder((byte) 1, (byte) 2, (byte) 3);
     }
@@ -671,7 +671,7 @@ class MapToNonMapConversionTest {
         List<Integer> list = Arrays.asList(65, 66, 67);
         String json = JsonIo.toJson(list, WRITE_OPTIONS);
 
-        char[] result = JsonIo.toObjects(json, READ_OPTIONS, char[].class);
+        char[] result = JsonIo.toJava(json, READ_OPTIONS).asClass(char[].class);
 
         assertThat(new String(result)).isEqualTo("ABC");
     }
@@ -682,7 +682,7 @@ class MapToNonMapConversionTest {
         List<Integer> list = Arrays.asList(97, 98, 99);
         String json = JsonIo.toJson(list, WRITE_OPTIONS);
 
-        byte[] result = JsonIo.toObjects(json, READ_OPTIONS, byte[].class);
+        byte[] result = JsonIo.toJava(json, READ_OPTIONS).asClass(byte[].class);
 
         assertThat(result).containsExactly((byte) 97, (byte) 98, (byte) 99);
     }
@@ -728,7 +728,7 @@ class MapToNonMapConversionTest {
 
         // Read it back, but the Holder's generic type parameter doesn't affect runtime
         // The char[] inside should remain as char[] since we're reading Holder, not Holder<byte[]>
-        Holder result = JsonIo.toObjects(json, READ_OPTIONS, Holder.class);
+        Holder result = JsonIo.toJava(json, READ_OPTIONS).asClass(Holder.class);
 
         assertThat(result.name).isEqualTo("test");
         assertThat(result.value).isInstanceOf(char[].class);
@@ -745,7 +745,7 @@ class MapToNonMapConversionTest {
         String json = JsonIo.toJson(map, WRITE_OPTIONS);
 
         // Read back as Map - the char[] should be preserved
-        Map result = JsonIo.toObjects(json, READ_OPTIONS, Map.class);
+        Map result = JsonIo.toJava(json, READ_OPTIONS).asClass(Map.class);
 
         assertThat(result.get("name")).isEqualTo("test");
         assertThat(result.get("data")).isInstanceOf(char[].class);
@@ -774,7 +774,7 @@ class MapToNonMapConversionTest {
         String json = JsonIo.toJson(outerMap, WRITE_OPTIONS);
 
         // Read back - the deeply nested char[] should be preserved correctly
-        Map result = JsonIo.toObjects(json, READ_OPTIONS, Map.class);
+        Map result = JsonIo.toJava(json, READ_OPTIONS).asClass(Map.class);
 
         // Navigate 7 levels deep
         List level1 = (List) result.get("level1");
@@ -801,7 +801,7 @@ class MapToNonMapConversionTest {
         String json = JsonIo.toJson(arrayOfCharArrays, WRITE_OPTIONS);
 
         // Read back as char[][] - each nested char[] should be correctly resolved
-        char[][] result = JsonIo.toObjects(json, READ_OPTIONS, char[][].class);
+        char[][] result = JsonIo.toJava(json, READ_OPTIONS).asClass(char[][].class);
 
         assertThat(result.length).isEqualTo(3);
         assertThat(result[0]).containsExactly('a', 'b');
@@ -823,7 +823,7 @@ class MapToNonMapConversionTest {
 
         String json = JsonIo.toJson(outer, WRITE_OPTIONS);
 
-        Map result = JsonIo.toObjects(json, READ_OPTIONS, Map.class);
+        Map result = JsonIo.toJava(json, READ_OPTIONS).asClass(Map.class);
 
         Map containerResult = (Map) result.get("container");
         Map nestedResult = (Map) containerResult.get("nested");
@@ -901,7 +901,7 @@ class MapToNonMapConversionTest {
                 "\"name\":\"test\"," +
                 "\"data\":{\"@type\":\"char[]\",\"@items\":[\"abc\"]}}";
 
-        DataHolder result = JsonIo.toObjects(json, READ_OPTIONS, DataHolder.class);
+        DataHolder result = JsonIo.toJava(json, READ_OPTIONS).asClass(DataHolder.class);
 
         assertThat(result.name).isEqualTo("test");
         // The char[] should be converted to byte[]
@@ -917,7 +917,7 @@ class MapToNonMapConversionTest {
                 "\"name\":\"test\"," +
                 "\"data\":{\"@type\":\"byte[]\",\"@items\":[65,66,67]}}";
 
-        CharDataHolder result = JsonIo.toObjects(json, READ_OPTIONS, CharDataHolder.class);
+        CharDataHolder result = JsonIo.toJava(json, READ_OPTIONS).asClass(CharDataHolder.class);
 
         assertThat(result.name).isEqualTo("test");
         // The byte[] should be converted to char[]
@@ -943,7 +943,7 @@ class MapToNonMapConversionTest {
                     "}]" +
                 "}]}";
 
-        Location result = JsonIo.toObjects(json, READ_OPTIONS, Location.class);
+        Location result = JsonIo.toJava(json, READ_OPTIONS).asClass(Location.class);
 
         assertThat(result.name).isEqualTo("HQ");
         assertThat(result.buildings).hasSize(1);
@@ -972,7 +972,7 @@ class MapToNonMapConversionTest {
                 "}" +
             "}";
 
-        Map result = JsonIo.toObjects(json, READ_OPTIONS, Map.class);
+        Map result = JsonIo.toJava(json, READ_OPTIONS).asClass(Map.class);
 
         Map location = (Map) result.get("location");
         assertThat(location.get("name")).isEqualTo("HQ");

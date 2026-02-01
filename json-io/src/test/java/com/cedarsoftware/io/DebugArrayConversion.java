@@ -15,7 +15,7 @@ public class DebugArrayConversion {
         // Enable debug
         System.setProperty("json-io.debug", "true");
         
-        byte[] result = JsonIo.toObjects(json, readOptions, byte[].class);
+        byte[] result = JsonIo.toJava(json, readOptions).asClass(byte[].class);
         System.out.println("Result: " + (result != null ? java.util.Arrays.toString(result) : "null"));
     }
 }

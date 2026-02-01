@@ -222,7 +222,7 @@ class Json5WriteTrailingCommasTest {
         assertTrue(json.contains(",]"), "Should contain trailing comma: " + json);
 
         // json-io reads JSON5 by default, so trailing commas should be accepted
-        String[] result = JsonIo.toObjects(json, null, String[].class);
+        String[] result = JsonIo.toJava(json, null).asClass(String[].class);
 
         assertArrayEquals(original, result);
     }
