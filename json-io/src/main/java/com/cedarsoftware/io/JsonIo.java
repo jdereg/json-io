@@ -1,5 +1,6 @@
 package com.cedarsoftware.io;
 
+import java.io.Closeable;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -146,6 +147,70 @@ public class JsonIo {
     private JsonIo() {}
 
     // ========== Internal Helper Methods ==========
+
+    /**
+     * Functional interface for parsing operations that produce an intermediate representation.
+     * The resolver is passed in case the parser needs it (e.g., JsonParser).
+     */
+    @FunctionalInterface
+    private interface ParseFunction {
+        Object parse(Resolver resolver) throws Exception;
+    }
+
+    /**
+     * Common parsing and resolution logic shared by all builders.
+     * Handles parse phase, unsafe mode management, resolution, and cleanup.
+     *
+     * @param readOptions read configuration
+     * @param targetType the target type for resolution
+     * @param parseFunction function that performs the parse operation (receives Resolver)
+     * @param parseErrorMessage error message to use if parsing fails
+     * @param streamToClose optional stream to close (null if not applicable)
+     * @return the resolved Java object
+     */
+    @SuppressWarnings("unchecked")
+    private static <T> T parseAndResolve(
+            ReadOptions readOptions,
+            java.lang.reflect.Type targetType,
+            ParseFunction parseFunction,
+            String parseErrorMessage,
+            Closeable streamToClose) {
+
+        Resolver resolver = createResolver(readOptions);
+
+        // Parse phase
+        Object parsed;
+        try {
+            parsed = parseFunction.parse(resolver);
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new JsonIoException(parseErrorMessage, e);
+        }
+
+        // Resolve phase
+        boolean shouldManageUnsafe = readOptions.isUseUnsafe();
+        if (shouldManageUnsafe) {
+            ClassUtilities.setUseUnsafe(true);
+        }
+
+        try {
+            return (T) resolver.toJava(targetType, parsed);
+        } catch (Exception e) {
+            if (e instanceof JsonIoException) {
+                throw (JsonIoException) e;
+            }
+            throw new JsonIoException(e.getMessage(), e);
+        } finally {
+            if (shouldManageUnsafe) {
+                ClassUtilities.setUseUnsafe(false);
+            }
+            resolver.cleanup();
+            if (streamToClose != null && readOptions.isCloseStream()) {
+                IOUtilities.close(streamToClose);
+            }
+        }
+    }
 
     /**
      * Creates a Resolver with the appropriate type (MapResolver or ObjectResolver) based on ReadOptions.
@@ -921,50 +986,16 @@ public class JsonIo {
          * @throws JsonIoException if an error occurs during parsing or conversion
          */
         public <T> T asType(TypeHolder<T> typeHolder) {
-            try {
-                return parseJson(typeHolder);
-            } catch (JsonIoException je) {
-                throw je;
-            } catch (Exception e) {
-                throw new JsonIoException(e);
-            }
-        }
-
-        @SuppressWarnings("unchecked")
-        private <T> T parseJson(TypeHolder<T> typeHolder) {
             FastReader input = new FastReader(new StringReader(json), 65536, 16);
-            Resolver resolver = createResolver(readOptions);
-            JsonParser parser = new JsonParser(input, resolver);
-
-            // Parse phase
-            Object parsed;
-            try {
-                parsed = parser.readValue(typeHolder.getType());
-            } catch (JsonIoException e) {
-                throw e;
-            } catch (Exception e) {
-                throw new JsonIoException("Error parsing JSON value", e);
-            }
-
-            // Resolve phase
-            boolean shouldManageUnsafe = readOptions.isUseUnsafe();
-            if (shouldManageUnsafe) {
-                ClassUtilities.setUseUnsafe(true);
-            }
-
-            try {
-                return (T) resolver.toJava(typeHolder.getType(), parsed);
-            } catch (Exception e) {
-                if (e instanceof JsonIoException) {
-                    throw (JsonIoException) e;
-                }
-                throw new JsonIoException(e.getMessage(), e);
-            } finally {
-                if (shouldManageUnsafe) {
-                    ClassUtilities.setUseUnsafe(false);
-                }
-                resolver.cleanup();
-            }
+            return parseAndResolve(
+                    readOptions,
+                    typeHolder.getType(),
+                    resolver -> {
+                        JsonParser parser = new JsonParser(input, resolver);
+                        return parser.readValue(typeHolder.getType());
+                    },
+                    "Error parsing JSON value",
+                    null);
         }
     }
 
@@ -1036,44 +1067,17 @@ public class JsonIo {
          * @return an object of the specified type populated from the JSON
          * @throws JsonIoException if an error occurs during parsing or conversion
          */
-        @SuppressWarnings("unchecked")
         public <T> T asType(TypeHolder<T> typeHolder) {
             FastReader input = new FastReader(new InputStreamReader(in, StandardCharsets.UTF_8), 65536, 16);
-            Resolver resolver = createResolver(readOptions);
-            JsonParser parser = new JsonParser(input, resolver);
-
-            // Parse phase
-            Object parsed;
-            try {
-                parsed = parser.readValue(typeHolder.getType());
-            } catch (JsonIoException e) {
-                throw e;
-            } catch (Exception e) {
-                throw new JsonIoException("Error parsing JSON value", e);
-            }
-
-            // Resolve phase
-            boolean shouldManageUnsafe = readOptions.isUseUnsafe();
-            if (shouldManageUnsafe) {
-                ClassUtilities.setUseUnsafe(true);
-            }
-
-            try {
-                return (T) resolver.toJava(typeHolder.getType(), parsed);
-            } catch (Exception e) {
-                if (e instanceof JsonIoException) {
-                    throw (JsonIoException) e;
-                }
-                throw new JsonIoException(e.getMessage(), e);
-            } finally {
-                if (shouldManageUnsafe) {
-                    ClassUtilities.setUseUnsafe(false);
-                }
-                resolver.cleanup();
-                if (readOptions.isCloseStream()) {
-                    IOUtilities.close(input);
-                }
-            }
+            return parseAndResolve(
+                    readOptions,
+                    typeHolder.getType(),
+                    resolver -> {
+                        JsonParser parser = new JsonParser(input, resolver);
+                        return parser.readValue(typeHolder.getType());
+                    },
+                    "Error parsing JSON value",
+                    input);
         }
     }
 
@@ -1162,34 +1166,17 @@ public class JsonIo {
          *                   do it's best to infer type's/classes, though we recommend passing a Type.
          * @return an object of the specified type populated from the JsonObject
          */
-        @SuppressWarnings("unchecked")
         public <T> T asType(TypeHolder<T> typeHolder) {
             ReadOptions effectiveOptions = readOptions;
             if (!effectiveOptions.isReturningJavaObjects()) {
                 effectiveOptions = new ReadOptionsBuilder(effectiveOptions).returnAsJavaObjects().build();
             }
-
-            Resolver resolver = createResolver(effectiveOptions);
-
-            // Handle unsafe mode and resolve
-            boolean shouldManageUnsafe = effectiveOptions.isUseUnsafe();
-            if (shouldManageUnsafe) {
-                ClassUtilities.setUseUnsafe(true);
-            }
-
-            try {
-                return (T) resolver.toJava(typeHolder.getType(), jsonObject);
-            } catch (Exception e) {
-                if (e instanceof JsonIoException) {
-                    throw (JsonIoException) e;
-                }
-                throw new JsonIoException(e.getMessage(), e);
-            } finally {
-                if (shouldManageUnsafe) {
-                    ClassUtilities.setUseUnsafe(false);
-                }
-                resolver.cleanup();
-            }
+            return parseAndResolve(
+                    effectiveOptions,
+                    typeHolder.getType(),
+                    resolver -> jsonObject,  // No parsing needed - already have JsonObject
+                    "Error converting JsonObject",
+                    null);
         }
     }
 
@@ -1228,52 +1215,15 @@ public class JsonIo {
          * @return an object of the specified type populated from the TOON
          * @throws JsonIoException if an error occurs during parsing or conversion
          */
-        @SuppressWarnings("unchecked")
         public <T> T asType(TypeHolder<T> typeHolder) {
-            try {
-                return parseToon(typeHolder);
-            } catch (JsonIoException je) {
-                throw je;
-            } catch (Exception e) {
-                throw new JsonIoException(e);
-            }
-        }
-
-        @SuppressWarnings("unchecked")
-        private <T> T parseToon(TypeHolder<T> typeHolder) {
             StringReader stringReader = new StringReader(toon);
             ToonReader parser = new ToonReader(stringReader, readOptions);
-
-            // Parse phase - produces JsonObject/Object[]/primitive structure
-            Object parsed;
-            try {
-                parsed = parser.readValue(typeHolder.getType());
-            } catch (JsonIoException e) {
-                throw e;
-            } catch (Exception e) {
-                throw new JsonIoException("Error parsing TOON value", e);
-            }
-
-            // Resolve phase - converts to Java objects using existing Resolver
-            Resolver resolver = createResolver(readOptions);
-            boolean shouldManageUnsafe = readOptions.isUseUnsafe();
-            if (shouldManageUnsafe) {
-                ClassUtilities.setUseUnsafe(true);
-            }
-
-            try {
-                return (T) resolver.toJava(typeHolder.getType(), parsed);
-            } catch (Exception e) {
-                if (e instanceof JsonIoException) {
-                    throw (JsonIoException) e;
-                }
-                throw new JsonIoException(e.getMessage(), e);
-            } finally {
-                if (shouldManageUnsafe) {
-                    ClassUtilities.setUseUnsafe(false);
-                }
-                resolver.cleanup();
-            }
+            return parseAndResolve(
+                    readOptions,
+                    typeHolder.getType(),
+                    resolver -> parser.readValue(typeHolder.getType()),
+                    "Error parsing TOON value",
+                    null);
         }
     }
 
@@ -1313,44 +1263,15 @@ public class JsonIo {
          * @return an object of the specified type populated from the TOON
          * @throws JsonIoException if an error occurs during parsing or conversion
          */
-        @SuppressWarnings("unchecked")
         public <T> T asType(TypeHolder<T> typeHolder) {
             InputStreamReader streamReader = new InputStreamReader(in, StandardCharsets.UTF_8);
             ToonReader parser = new ToonReader(streamReader, readOptions);
-
-            // Parse phase
-            Object parsed;
-            try {
-                parsed = parser.readValue(typeHolder.getType());
-            } catch (JsonIoException e) {
-                throw e;
-            } catch (Exception e) {
-                throw new JsonIoException("Error parsing TOON value", e);
-            }
-
-            // Resolve phase
-            Resolver resolver = createResolver(readOptions);
-            boolean shouldManageUnsafe = readOptions.isUseUnsafe();
-            if (shouldManageUnsafe) {
-                ClassUtilities.setUseUnsafe(true);
-            }
-
-            try {
-                return (T) resolver.toJava(typeHolder.getType(), parsed);
-            } catch (Exception e) {
-                if (e instanceof JsonIoException) {
-                    throw (JsonIoException) e;
-                }
-                throw new JsonIoException(e.getMessage(), e);
-            } finally {
-                if (shouldManageUnsafe) {
-                    ClassUtilities.setUseUnsafe(false);
-                }
-                resolver.cleanup();
-                if (readOptions.isCloseStream()) {
-                    IOUtilities.close(streamReader);
-                }
-            }
+            return parseAndResolve(
+                    readOptions,
+                    typeHolder.getType(),
+                    resolver -> parser.readValue(typeHolder.getType()),
+                    "Error parsing TOON value",
+                    streamReader);
         }
     }
 

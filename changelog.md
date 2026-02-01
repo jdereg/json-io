@@ -3,6 +3,10 @@
 * **MAINTENANCE**: Migrated test files from deprecated `JsonIo.toObjects()` to `JsonIo.toJava().asClass()` API
   * Updated ~148 calls across 5 test files to use the new fluent builder pattern
   * Deprecated `toObjects()` methods remain available in `JsonIo.java` for backward compatibility
+* **REFACTOR**: Consolidated duplicate parse/resolve logic in `JsonIo` builder classes
+  * Extracted common `parseAndResolve()` helper method using functional interface pattern
+  * Unified error handling, unsafe mode management, and cleanup across all 5 builders
+  * Reduced ~150 lines of duplicated code to ~35 lines of shared infrastructure
 
 #### 4.89.0 - 2026-01-31
 * **RENAMED**: `showTypeInfoCompact()` → `showTypeInfoMinimalPlus()` for clearer naming
