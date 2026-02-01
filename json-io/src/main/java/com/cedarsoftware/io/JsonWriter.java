@@ -160,7 +160,28 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private static final String ITEMS_DOLLAR_SHORT_QUOTED = "\"$e\":";
     private static final String KEYS_DOLLAR_SHORT_QUOTED = "\"$k\":";
 
-    private static final char[] HEX = "0123456789abcdef".toCharArray();
+    // Pre-computed escape strings for ASCII characters (GSON-style optimization)
+    // null = character doesn't need escaping, non-null = the escape sequence to write
+    // This combines "needs escape?" and "what is the escape?" into a single array lookup
+    private static final String[] ESCAPE_STRINGS = new String[128];
+    static {
+        // Control characters (0x00-0x1F) need \\u00xx escaping
+        for (int i = 0; i <= 0x1F; i++) {
+            ESCAPE_STRINGS[i] = String.format("\\u%04x", i);
+        }
+        // Override with short escapes for common control characters
+        ESCAPE_STRINGS['\b'] = "\\b";
+        ESCAPE_STRINGS['\t'] = "\\t";
+        ESCAPE_STRINGS['\n'] = "\\n";
+        ESCAPE_STRINGS['\f'] = "\\f";
+        ESCAPE_STRINGS['\r'] = "\\r";
+        // Quote and backslash always need escaping
+        ESCAPE_STRINGS['"'] = "\\\"";
+        ESCAPE_STRINGS['\\'] = "\\\\";
+        // 0x20-0x7E are printable ASCII - leave as null (no escape needed)
+        // 0x7F (DEL) needs escaping
+        ESCAPE_STRINGS[0x7F] = "\\u007f";
+    }
 
     // Natural default collection/map types: maps declared interface to the concrete type that CollectionFactory
     // and MapFactory create when reading. Used by compact format to omit @type wrapper when runtime type matches.
@@ -2488,52 +2509,40 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         output.write('"');
-        int start = 0;
+        int last = 0;
 
-        for (int i = 0; i < len; ) {
+        // GSON-style loop: single array lookup determines both "needs escape?" and "what is escape?"
+        for (int i = 0; i < len; i++) {
             char ch = s.charAt(i);
+            String escape;
 
-            // Fast path: printable ASCII that doesn't need escaping
-            if (ch >= 0x20 && ch < 0x7F && ch != '"' && ch != '\\') {
-                i++;
-                continue;
-            }
-
-            // Write accumulated safe characters
-            if (i > start) {
-                output.write(s, start, i - start);
-            }
-
-            // Handle special character
-            if (ch < 0x80) {
-                // ASCII requiring escape
-                switch (ch) {
-                    case '"':  output.write("\\\""); break;
-                    case '\\': output.write("\\\\"); break;
-                    case '\b': output.write("\\b"); break;
-                    case '\f': output.write("\\f"); break;
-                    case '\n': output.write("\\n"); break;
-                    case '\r': output.write("\\r"); break;
-                    case '\t': output.write("\\t"); break;
-                    default:
-                        // Control characters:
-                        output.write("\\u00");
-                        output.write(HEX[(ch >> 4) & 0xF]);
-                        output.write(HEX[ch & 0xF]);
+            if (ch < 128) {
+                // ASCII: use pre-computed escape table
+                escape = ESCAPE_STRINGS[ch];
+                if (escape == null) {
+                    continue;  // No escape needed - most common path
                 }
-                i++;
+            } else if (ch == '\u2028') {
+                // Unicode line separator - escape for JavaScript compatibility
+                escape = "\\u2028";
+            } else if (ch == '\u2029') {
+                // Unicode paragraph separator - escape for JavaScript compatibility
+                escape = "\\u2029";
             } else {
-                // Non-ASCII: write directly (UTF-8 encoding handled by Writer)
-                int charCount = Character.charCount(s.codePointAt(i));
-                output.write(s, i, charCount);
-                i += charCount;
+                continue;  // Non-ASCII characters written as-is (UTF-8 handled by Writer)
             }
-            start = i;
+
+            // Write accumulated safe characters, then the escape
+            if (last < i) {
+                output.write(s, last, i - last);
+            }
+            output.write(escape);
+            last = i + 1;
         }
 
         // Write remaining safe characters
-        if (start < len) {
-            output.write(s, start, len - start);
+        if (last < len) {
+            output.write(s, last, len - last);
         }
         output.write('"');
     }
