@@ -183,11 +183,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         ESCAPE_STRINGS[0x7F] = "\\u007f";
     }
 
-    // ThreadLocal reusable buffer for string escaping (Jackson-style optimization)
-    // Avoids allocation overhead by reusing the same char[] across calls within a thread
-    private static final int INITIAL_BUFFER_SIZE = 1024;
-    private static final ThreadLocal<char[]> stringBuffer = ThreadLocal.withInitial(() -> new char[INITIAL_BUFFER_SIZE]);
-
     // Natural default collection/map types: maps declared interface to the concrete type that CollectionFactory
     // and MapFactory create when reading. Used by compact format to omit @type wrapper when runtime type matches.
     private static final Map<Class<?>, Class<?>> NATURAL_DEFAULTS = new HashMap<>();
@@ -2491,8 +2486,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * Writes a JSON string value to the output, properly escaped according to JSON specifications.
      * Handles control characters, quotes, backslashes, and properly processes Unicode code points.
      * <p>
-     * OPTIMIZED VERSION: Uses ThreadLocal reusable buffer (Jackson-style) to avoid charAt() overhead,
-     * combined with GSON-style escape lookup table for minimal per-character processing.
+     * OPTIMIZED VERSION: Uses batch scanning to write runs of safe characters in one operation,
+     * significantly reducing write() calls and improving performance.
      *
      * @param output          The Writer to write to
      * @param s               The string to be written as a JSON string value
@@ -2514,22 +2509,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         output.write('"');
-
-        // Get or grow the ThreadLocal buffer (Jackson-style optimization)
-        char[] buf = stringBuffer.get();
-        if (buf.length < len) {
-            buf = new char[len];
-            stringBuffer.set(buf);
-        }
-
-        // Copy string to buffer once - avoids repeated charAt() method calls
-        s.getChars(0, len, buf, 0);
-
         int last = 0;
 
-        // Process from buffer with GSON-style escape lookup
+        // GSON-style loop: single array lookup determines both "needs escape?" and "what is escape?"
         for (int i = 0; i < len; i++) {
-            char ch = buf[i];
+            char ch = s.charAt(i);
             String escape;
 
             if (ch < 128) {
@@ -2548,9 +2532,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 continue;  // Non-ASCII characters written as-is (UTF-8 handled by Writer)
             }
 
-            // Write accumulated safe characters from buffer, then the escape
+            // Write accumulated safe characters, then the escape
             if (last < i) {
-                output.write(buf, last, i - last);
+                output.write(s, last, i - last);
             }
             output.write(escape);
             last = i + 1;
@@ -2558,7 +2542,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         // Write remaining safe characters
         if (last < len) {
-            output.write(buf, last, len - last);
+            output.write(s, last, len - last);
         }
         output.write('"');
     }

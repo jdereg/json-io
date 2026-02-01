@@ -14,10 +14,9 @@
 * **PERFORMANCE**: Optimized `JsonWriter.writeCustom()` to avoid redundant `getCustomWriter` lookups
   * Combined `isCustomWrittenClass` check with writer lookup into single `getCustomWriterIfAllowed` method
   * When declared type equals runtime type (common case), only one `getCustomWriter` call instead of two
-* **PERFORMANCE**: Optimized `JsonWriter.writeJsonUtf8String()` with GSON/Jackson-style techniques
-  * Pre-computed `ESCAPE_STRINGS[128]` array: null = no escape, non-null = the escape string (GSON-style)
-  * ThreadLocal reusable `char[]` buffer avoids `charAt()` method call overhead (Jackson-style)
-  * Buffer is reused across calls within a thread, eliminating per-string allocation
+* **PERFORMANCE**: Optimized `JsonWriter.writeJsonUtf8String()` with GSON-style escape lookup table
+  * Pre-computed `ESCAPE_STRINGS[128]` array: null = no escape, non-null = the escape string
+  * Single array lookup replaces 4 comparisons + switch statement
   * Also escapes Unicode line/paragraph separators (U+2028/U+2029) for JavaScript compatibility
 
 #### 4.89.0 - 2026-01-31
