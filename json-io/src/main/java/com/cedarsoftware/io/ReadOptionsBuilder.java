@@ -306,6 +306,16 @@ public class ReadOptionsBuilder {
     }
 
     /**
+     * Check if a class is a primitive type (including wrappers) or String.
+     * These types cannot have custom readers or factories registered for them.
+     */
+    private static void throwIfPrimitiveOrString(Class<?> clazz, String operation) {
+        if (Primitives.isPrimitive(clazz) || clazz == String.class) {
+            throw new JsonIoException("Cannot " + operation + " for primitive type or String: " + clazz.getName());
+        }
+    }
+
+    /**
      * Call this method to add a factory class that will be used to create instances of another class.  This is useful
      * when you have a class that `json-io` cannot instantiate due to private or other constructor issues.  Add
      * a ClassFactory class (that you implement) and associate it to the passed in 'classToCreate'.  Your
@@ -315,8 +325,10 @@ public class ReadOptionsBuilder {
      * @param sourceClass String class name (fully qualified name) to associate to your ClassFactory implementation.
      * @param factory     ClassFactory your ClassFactory implementation that creates/loads the associated
      *                    class using the Map (JsonObject) of data passed to it.
+     * @throws JsonIoException if sourceClass is a primitive type or String
      */
     public static void addPermanentClassFactory(Class<?> sourceClass, ClassFactory factory) {
+        throwIfPrimitiveOrString(sourceClass, "register ClassFactory");
         BASE_CLASS_FACTORIES.put(sourceClass, factory);
     }
 
@@ -386,8 +398,10 @@ public class ReadOptionsBuilder {
      *
      * @param c      Class to assign a custom JSON reader to
      * @param reader The JsonClassReader which will read the custom JSON format of 'c'
+     * @throws JsonIoException if c is a primitive type or String
      */
     public static void addPermanentReader(Class<?> c, JsonClassReader reader) {
+        throwIfPrimitiveOrString(c, "register custom reader");
         BASE_READERS.put(c, reader);
     }
 
@@ -810,8 +824,10 @@ public class ReadOptionsBuilder {
      *                     Custom readers are passed an empty instance.  Use a ClassFactory if you want to instantiate
      *                     and load the class in one step.
      * @return ReadOptionsBuilder for chained access.
+     * @throws JsonIoException if clazz is a primitive type or String
      */
     public <T> ReadOptionsBuilder addCustomReaderClass(Class<T> clazz, JsonClassReader<? super T> customReader) {
+        throwIfPrimitiveOrString(clazz, "register custom reader");
         options.customReaderClasses.put(clazz, customReader);
         return this;
     }
@@ -835,8 +851,10 @@ public class ReadOptionsBuilder {
      * @param clazz   Class that is difficult to instantiate.
      * @param factory Class written to instantiate the 'clazz' and load it's values.
      * @return ReadOptionsBuilder for chained access.
+     * @throws JsonIoException if clazz is a primitive type or String
      */
     public ReadOptionsBuilder addClassFactory(Class<?> clazz, ClassFactory factory) {
+        throwIfPrimitiveOrString(clazz, "register ClassFactory");
         options.classFactoryMap.put(clazz, factory);
         return this;
     }

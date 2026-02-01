@@ -687,57 +687,113 @@ public class ObjectResolver extends Resolver
     }
 
     /**
-     * Convert the passed-in object (o) to a proper Java object. If the passed-in object (o) has a custom reader
-     * associated to it, then have it convert the object. If there is no custom reader, then return null.
-     *
-     * @param o            Object to read (convert). This will be either a JsonObject or a JSON primitive
-     *                     (String, long, boolean, double, or null).
-     * @param inferredType The full target Type (including generics) to which 'o' should be converted.
-     * @return The Java object converted from the passed-in object o, or null if there is no custom reader.
+     * {@inheritDoc}
+     * <p>
+     * ObjectResolver implementation tries strategies in order:
+     * <ol>
+     *   <li>Simple type conversion via Converter</li>
+     *   <li>ClassFactory instantiation (+ population if isObjectFinal)</li>
+     *   <li>JsonClassReader custom reading</li>
+     * </ol>
      */
     protected Object readWithFactoryIfExists(final Object o, final Type inferredType) {
-        // Extract the raw type from the suggested inferred type.
-        Class<?> rawInferred = (inferredType != null) ? TypeUtilities.getRawClass(inferredType) : null;
+        Class<?> rawInferred = TypeUtilities.getRawClass(inferredType);
 
-        // Check if we should skip due to not using custom reader for this type
-        if (rawInferred != null && readOptions.isNotCustomReaderClass(rawInferred)) {
+        // FAST PATH: Non-JsonObject primitives and Strings never need factory/reader lookup.
+        // However, they may still need type conversion (Long→int, String→UUID, etc.)
+        if (!(o instanceof JsonObject)) {
+            Class<?> valueClass = o.getClass();
+            if (Primitives.isPrimitive(valueClass) || valueClass == String.class) {
+                // Same type or assignable - no conversion needed
+                if (rawInferred == null || rawInferred == valueClass || rawInferred.isAssignableFrom(valueClass)) {
+                    return null;
+                }
+                // Type mismatch - try converter directly (skip factory/reader overhead)
+                if (converter.isSimpleTypeConversionSupported(valueClass, rawInferred)) {
+                    return converter.convert(o, rawInferred);
+                }
+                return null;
+            }
+        }
+
+        // Early exit: skip if custom reading is disabled for the inferred type
+        if (readOptions.isNotCustomReaderClass(rawInferred)) {
             return null;
         }
 
-        JsonObject jsonObj;
-        Class<?> targetClass;
-
-        if (o instanceof JsonObject) {
-            jsonObj = (JsonObject) o;
-            if (jsonObj.isReference()) {
-                return null; // no factory for references.
-            }
-            if (jsonObj.getTarget() == null) {
-                targetClass = jsonObj.getRawType();
-                if (targetClass == null || rawInferred == null) {
-                    return null;
-                }
-                // Attempt early instance creation.
-                Object factoryCreated = createInstance(jsonObj);
-                if (factoryCreated != null && jsonObj.isFinished()) {
-                    return factoryCreated;
-                }
-            } else {
-                targetClass = jsonObj.getRawType();
-            }
-        } else {
-            // o is not a JsonObject; use the inferred type (or o.getClass() if rawInferred is Object or null).
-            targetClass = (rawInferred == null || rawInferred == Object.class) ? o.getClass() : rawInferred;
-            jsonObj = new JsonObject();
-            jsonObj.setValue(o);
-            jsonObj.setType(targetClass);
+        // Normalize input to JsonObject + targetClass
+        JsonObject jsonObj = normalizeToJsonObject(o, rawInferred);
+        if (jsonObj == null) {
+            return null;
         }
 
+        Class<?> targetClass = resolveTargetClass(jsonObj);
+        if (targetClass == null) {
+            return null;
+        }
+
+        // Skip if custom reading is disabled for the resolved target type
         if (targetClass != rawInferred && readOptions.isNotCustomReaderClass(targetClass)) {
             return null;
         }
 
-        // Simple type conversion if possible
+        // Try each strategy in order
+        Object result;
+        if ((result = trySimpleConversion(jsonObj, targetClass)) != null) {
+            return result;
+        }
+        if ((result = tryClassFactory(jsonObj, targetClass)) != null) {
+            return result;
+        }
+        if ((result = tryCustomReader(o, jsonObj, targetClass)) != null) {
+            return result;
+        }
+
+        return null;
+    }
+
+    /**
+     * Normalize input to a JsonObject, handling both JsonObject and primitive inputs.
+     * @return JsonObject wrapper, or null if input cannot be processed (e.g., reference)
+     */
+    private JsonObject normalizeToJsonObject(final Object o, final Class<?> rawInferred) {
+        if (o instanceof JsonObject) {
+            JsonObject jsonObj = (JsonObject) o;
+            if (jsonObj.isReference()) {
+                return null; // References are resolved elsewhere
+            }
+            // Attempt early instance creation if no target exists yet
+            if (jsonObj.getTarget() == null) {
+                if (jsonObj.getRawType() == null || rawInferred == null) {
+                    return null; // Insufficient type information
+                }
+                Object factoryCreated = createInstance(jsonObj);
+                if (factoryCreated != null && jsonObj.isFinished()) {
+                    return null; // Already fully handled by createInstance
+                }
+            }
+            return jsonObj;
+        } else {
+            // Wrap primitive value in a JsonObject
+            Class<?> targetClass = (rawInferred == null || rawInferred == Object.class) ? o.getClass() : rawInferred;
+            JsonObject jsonObj = new JsonObject();
+            jsonObj.setValue(o);
+            jsonObj.setType(targetClass);
+            return jsonObj;
+        }
+    }
+
+    /**
+     * Resolve the target class for conversion.
+     */
+    private Class<?> resolveTargetClass(final JsonObject jsonObj) {
+        return jsonObj.getRawType();
+    }
+
+    /**
+     * Try simple type conversion via Converter (e.g., String → UUID, String → Date).
+     */
+    private Object trySimpleConversion(final JsonObject jsonObj, final Class<?> targetClass) {
         if (jsonObj.getTarget() == null && jsonObj.hasValue()) {
             Object value = jsonObj.getValue();
             if (converter.isSimpleTypeConversionSupported(value.getClass(), targetClass)) {
@@ -745,8 +801,13 @@ public class ObjectResolver extends Resolver
                 return jsonObj.setFinishedTarget(converted, true);
             }
         }
+        return null;
+    }
 
-        // Try custom class factory
+    /**
+     * Try ClassFactory instantiation. Factory may also populate if isObjectFinal() returns true.
+     */
+    private Object tryClassFactory(final JsonObject jsonObj, final Class<?> targetClass) {
         ClassFactory classFactory = readOptions.getClassFactory(targetClass);
         if (classFactory != null && jsonObj.getTarget() == null) {
             Object target = createInstanceUsingClassFactory(targetClass, jsonObj);
@@ -754,13 +815,18 @@ public class ObjectResolver extends Resolver
                 return target;
             }
         }
+        return null;
+    }
 
-        // Try a custom reader
+    /**
+     * Try JsonClassReader custom reading.
+     */
+    private Object tryCustomReader(final Object originalInput, final JsonObject jsonObj, final Class<?> targetClass) {
         JsonClassReader reader = readOptions.getCustomReader(targetClass);
         if (reader == null) {
             return null;
         }
-        Object read = reader.read(o, this);
+        Object read = reader.read(originalInput, this);
         return (read != null) ? jsonObj.setFinishedTarget(read, true) : null;
     }
 

@@ -33,9 +33,10 @@ class ReadWithFactoryDeadCodeTest {
     }
 
     /**
-     * After removing the dead code at lines 428-430, calling with null inferredType
-     * and a primitive value now processes normally using the primitive's own class.
-     * Previously this would early-exit with null, but that code path was unreachable.
+     * With the optimized fast path for primitives, calling with null inferredType
+     * and a primitive value returns null (meaning "no custom handling needed").
+     * The caller will use the value as-is. This is an optimization that avoids
+     * unnecessary factory/reader lookups for primitive types.
      */
     @Test
     void testReadWithFactoryIfExists_withNullTypeAndPrimitive_nowProcessesNormally() throws Exception {
@@ -45,25 +46,20 @@ class ReadWithFactoryDeadCodeTest {
         Method method = ObjectResolver.class.getDeclaredMethod("readWithFactoryIfExists", Object.class, Type.class);
         method.setAccessible(true);
 
-        // Call with a primitive (String) and null type - now it processes using String.class
-        // Since there's no custom reader for String, it returns null (no custom handling)
-        // But the processing path is different - it creates a JsonObject wrapper and tries conversion
+        // Call with a primitive (String) and null type - fast path returns null
+        // (no custom handling needed, caller uses value as-is)
         Object result = method.invoke(resolver, "test string", null);
+        assertThat(result).isNull();
 
-        // With null type, the code uses o.getClass() (String.class) as the target type.
-        // Since converter.isSimpleTypeConversionSupported(String.class, String.class) is true,
-        // it returns the converted value (which is the same string).
-        assertThat(result).isEqualTo("test string");
-
-        // For numeric types, same-type conversion returns the value
+        // For numeric types, same behavior - null means "no custom handling"
         result = method.invoke(resolver, Long.valueOf(42L), null);
-        assertThat(result).isEqualTo(42L);
+        assertThat(result).isNull();
 
         result = method.invoke(resolver, Double.valueOf(3.14), null);
-        assertThat(result).isEqualTo(3.14);
+        assertThat(result).isNull();
 
         result = method.invoke(resolver, Boolean.TRUE, null);
-        assertThat(result).isEqualTo(Boolean.TRUE);
+        assertThat(result).isNull();
     }
 
     /**

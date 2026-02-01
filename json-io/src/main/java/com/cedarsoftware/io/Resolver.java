@@ -923,7 +923,7 @@ public abstract class Resolver {
             return;
         }
         Object special;
-        if ((special = readWithFactoryIfExists(jsonObj, null)) != null) {
+        if ((special = readWithFactoryIfExists(jsonObj)) != null) {
             jsonObj.setTarget(special);
         } else {
             traverseFields(jsonObj);
@@ -952,7 +952,35 @@ public abstract class Resolver {
 
     public abstract void traverseFields(final JsonObject jsonObj);
 
-    protected abstract Object readWithFactoryIfExists(final Object o, final Type compType);
+    /**
+     * Attempt to convert the passed-in object using a custom reader, class factory, or simple type conversion.
+     * Called when no contextual type hint is available - relies solely on the object's own @type annotation.
+     *
+     * @param o Object to read (convert). This will be either a JsonObject or a JSON primitive.
+     * @return The converted Java object, or null if no custom handling applies.
+     */
+    protected Object readWithFactoryIfExists(final Object o) {
+        return readWithFactoryIfExists(o, null);
+    }
+
+    /**
+     * Attempt to convert the passed-in object using a custom reader, class factory, or simple type conversion.
+     * <p>
+     * This method tries the following strategies in order:
+     * <ol>
+     *   <li>Simple type conversion via Converter (e.g., String → UUID)</li>
+     *   <li>ClassFactory instantiation (may also populate if isObjectFinal() returns true)</li>
+     *   <li>JsonClassReader custom reading</li>
+     * </ol>
+     * If none of these apply, returns null to indicate normal field traversal should be used.
+     *
+     * @param o            Object to read (convert). This will be either a JsonObject or a JSON primitive
+     *                     (String, long, boolean, double, or null).
+     * @param inferredType The full target Type (including generics) to which 'o' should be converted,
+     *                     or null if no contextual type hint is available (uses object's own @type).
+     * @return The converted Java object, or null if no custom handling applies.
+     */
+    protected abstract Object readWithFactoryIfExists(final Object o, final Type inferredType);
 
     protected abstract void traverseCollection(JsonObject jsonObj);
 
