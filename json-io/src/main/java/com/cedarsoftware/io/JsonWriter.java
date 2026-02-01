@@ -162,32 +162,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     private static final char[] HEX = "0123456789abcdef".toCharArray();
 
-    // Lookup table: true = character is safe (printable ASCII, not " or \)
-    // This replaces 4 comparisons with a single array lookup
-    private static final boolean[] SAFE_CHARS = new boolean[128];
-
-    // Pre-computed escape sequences for ASCII characters that need escaping
-    // Index by character value, null means no escape needed or use \\u00xx format
-    private static final char[][] ESCAPE_CHARS = new char[128][];
-
-    static {
-        // Initialize safe characters: printable ASCII except " and \
-        for (int i = 0x20; i < 0x7F; i++) {
-            SAFE_CHARS[i] = true;
-        }
-        SAFE_CHARS['"'] = false;
-        SAFE_CHARS['\\'] = false;
-
-        // Initialize escape sequences
-        ESCAPE_CHARS['"'] = new char[] {'\\', '"'};
-        ESCAPE_CHARS['\\'] = new char[] {'\\', '\\'};
-        ESCAPE_CHARS['\b'] = new char[] {'\\', 'b'};
-        ESCAPE_CHARS['\f'] = new char[] {'\\', 'f'};
-        ESCAPE_CHARS['\n'] = new char[] {'\\', 'n'};
-        ESCAPE_CHARS['\r'] = new char[] {'\\', 'r'};
-        ESCAPE_CHARS['\t'] = new char[] {'\\', 't'};
-    }
-
     // Natural default collection/map types: maps declared interface to the concrete type that CollectionFactory
     // and MapFactory create when reading. Used by compact format to omit @type wrapper when runtime type matches.
     private static final Map<Class<?>, Class<?>> NATURAL_DEFAULTS = new HashMap<>();
@@ -2473,8 +2447,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * Writes a JSON string value to the output, properly escaped according to JSON specifications.
      * Handles control characters, quotes, backslashes, and properly processes Unicode code points.
      * <p>
-     * OPTIMIZED VERSION: Uses lookup tables to minimize per-character comparisons and
-     * batch scanning to write runs of safe characters in one operation.
+     * OPTIMIZED VERSION: Uses batch scanning to write runs of safe characters in one operation,
+     * significantly reducing write() calls and improving performance.
      *
      * @param output          The Writer to write to
      * @param s               The string to be written as a JSON string value
@@ -2498,44 +2472,42 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         output.write('"');
         int start = 0;
 
-        // Convert to char array for faster iteration (avoids charAt() method call overhead)
-        final char[] chars = s.toCharArray();
-
         for (int i = 0; i < len; ) {
-            char ch = chars[i];
+            char ch = s.charAt(i);
 
-            // Fast path: use lookup table instead of 4 comparisons
-            // SAFE_CHARS[ch] is true for printable ASCII except " and \
-            if (ch < 128 && SAFE_CHARS[ch]) {
+            // Fast path: printable ASCII that doesn't need escaping
+            if (ch >= 0x20 && ch < 0x7F && ch != '"' && ch != '\\') {
                 i++;
                 continue;
             }
 
             // Write accumulated safe characters
             if (i > start) {
-                output.write(chars, start, i - start);
+                output.write(s, start, i - start);
             }
 
             // Handle special character
-            if (ch < 128) {
-                // ASCII requiring escape - use pre-computed escape sequences
-                char[] escape = ESCAPE_CHARS[ch];
-                if (escape != null) {
-                    output.write(escape);
-                } else {
-                    // Control characters: write as \\u00xx
-                    output.write('\\');
-                    output.write('u');
-                    output.write('0');
-                    output.write('0');
-                    output.write(HEX[(ch >> 4) & 0xF]);
-                    output.write(HEX[ch & 0xF]);
+            if (ch < 0x80) {
+                // ASCII requiring escape
+                switch (ch) {
+                    case '"':  output.write("\\\""); break;
+                    case '\\': output.write("\\\\"); break;
+                    case '\b': output.write("\\b"); break;
+                    case '\f': output.write("\\f"); break;
+                    case '\n': output.write("\\n"); break;
+                    case '\r': output.write("\\r"); break;
+                    case '\t': output.write("\\t"); break;
+                    default:
+                        // Control characters:
+                        output.write("\\u00");
+                        output.write(HEX[(ch >> 4) & 0xF]);
+                        output.write(HEX[ch & 0xF]);
                 }
                 i++;
             } else {
                 // Non-ASCII: write directly (UTF-8 encoding handled by Writer)
-                int charCount = Character.charCount(Character.codePointAt(chars, i));
-                output.write(chars, i, charCount);
+                int charCount = Character.charCount(s.codePointAt(i));
+                output.write(s, i, charCount);
                 i += charCount;
             }
             start = i;
@@ -2543,7 +2515,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         // Write remaining safe characters
         if (start < len) {
-            output.write(chars, start, len - start);
+            output.write(s, start, len - start);
         }
         output.write('"');
     }
