@@ -11,6 +11,9 @@
   * Uses new `FastReader.readUntil()` for bulk reads until quote or backslash
   * Reduces per-character I/O overhead with 256-char buffer reads
   * Bulk appends to StringBuilder instead of character-by-character
+* **PERFORMANCE**: Optimized `JsonWriter.writeJsonUtf8String()` fast path
+  * Added `SAFE_CHARS[128]` lookup table replacing 4 comparisons with single array access
+  * Fast path: `ch < 128 && SAFE_CHARS[ch]` vs `ch >= 0x20 && ch < 0x7F && ch != '"' && ch != '\\'`
 
 #### 4.89.0 - 2026-01-31
 * **RENAMED**: `showTypeInfoCompact()` → `showTypeInfoMinimalPlus()` for clearer naming

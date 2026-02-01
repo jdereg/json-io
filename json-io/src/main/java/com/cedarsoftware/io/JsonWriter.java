@@ -162,6 +162,17 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     private static final char[] HEX = "0123456789abcdef".toCharArray();
 
+    // Lookup table: true = character is safe (printable ASCII, not " or \)
+    // Replaces 4 comparisons with single array lookup in writeJsonUtf8String hot path
+    private static final boolean[] SAFE_CHARS = new boolean[128];
+    static {
+        for (int i = 0x20; i < 0x7F; i++) {
+            SAFE_CHARS[i] = true;
+        }
+        SAFE_CHARS['"'] = false;
+        SAFE_CHARS['\\'] = false;
+    }
+
     // Natural default collection/map types: maps declared interface to the concrete type that CollectionFactory
     // and MapFactory create when reading. Used by compact format to omit @type wrapper when runtime type matches.
     private static final Map<Class<?>, Class<?>> NATURAL_DEFAULTS = new HashMap<>();
@@ -2475,8 +2486,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         for (int i = 0; i < len; ) {
             char ch = s.charAt(i);
 
-            // Fast path: printable ASCII that doesn't need escaping
-            if (ch >= 0x20 && ch < 0x7F && ch != '"' && ch != '\\') {
+            // Fast path: use lookup table (1 bounds check + 1 array access vs 4 comparisons)
+            if (ch < 128 && SAFE_CHARS[ch]) {
                 i++;
                 continue;
             }
