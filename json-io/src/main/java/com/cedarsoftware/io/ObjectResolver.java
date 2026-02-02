@@ -127,7 +127,6 @@ public class ObjectResolver extends Resolver
     /**
      * Ordered list of strategies to try for field assignment.
      * Strategies are tried in order; first one that returns true wins.
-     * Initially empty - strategies will be added in subsequent phases.
      */
     private final List<AssignmentStrategy> strategies = new ArrayList<>();
 
@@ -151,19 +150,14 @@ public class ObjectResolver extends Resolver
      * Called from constructor to populate the strategies list.
      */
     private void initializeStrategies() {
-        // Phase 1: Null and Reference handling
+        // Field assignment strategies (assignField)
         strategies.add(this::handleNullStrategy);
         strategies.add(this::handleReferenceStrategy);
-        // Phase 2: Direct Assignment and Converter
         strategies.add(this::handleDirectAssignStrategy);
         strategies.add(this::handleConverterStrategy);
-        // Phase 3: Array handling
         strategies.add(this::handleArrayStrategy);
-        // Phase 4: JsonObject handling
         strategies.add(this::handleJsonObjectStrategy);
-        // Final fallback for edge cases (empty strings, etc.)
         strategies.add(this::handleFallbackStrategy);
-        // Phase 5: Cleanup will remove legacy fallback
     }
 
     // ========================================================================
@@ -969,7 +963,7 @@ public class ObjectResolver extends Resolver
             effectiveComponentType = fallbackCompType;
         }
         // For operations that require a Class, extract the raw type.
-        final Class effectiveRawComponentType = TypeUtilities.getRawClass(effectiveComponentType);
+        final Class<?> effectiveRawComponentType = TypeUtilities.getRawClass(effectiveComponentType);
 
         // Optimize: check array type ONCE, not on every element assignment
         final boolean isPrimitive = fallbackCompType.isPrimitive();
@@ -977,42 +971,73 @@ public class ObjectResolver extends Resolver
 
         for (int i = 0; i < len; i++) {
             final Object element = jsonItems[i];
-            Object resolved;
 
+            // Strategy 1: NULL - fastest check
             if (element == null) {
                 setArrayElement(array, refArray, i, null, isPrimitive);
-            } else if ((resolved = readWithFactoryIfExists(element, effectiveRawComponentType)) != null) {
-                // Custom reader/factory or Converter handled it (including String→Enum, Number→Enum)
+                continue;
+            }
+
+            final Class<?> elementClass = element.getClass();
+
+            // Strategy 2: DIRECT ASSIGN - skip expensive factory/converter if already correct type
+            // This is a major optimization for arrays of simple types (String[], Integer[], etc.)
+            // IMPORTANT: Skip this fast path for:
+            //   - JsonObject (needs instantiation/traversal)
+            //   - Object[] (nested arrays need processing)
+            //   - When component type is Object (could contain anything)
+            if (effectiveRawComponentType != null
+                    && effectiveRawComponentType != Object.class
+                    && !(element instanceof JsonObject)
+                    && !elementClass.isArray()
+                    && effectiveRawComponentType.isAssignableFrom(elementClass)) {
+                setArrayElement(array, refArray, i, element, isPrimitive);
+                continue;
+            }
+
+            // Strategy 3: REFERENCE - check before expensive factory lookup
+            if (element instanceof JsonObject) {
+                JsonObject jsonElement = (JsonObject) element;
+                if (jsonElement.isReference()) {
+                    Object resolved = resolveReferenceElement(jsonElement, jsonObj, i);
+                    if (resolved != UNRESOLVED_REFERENCE) {
+                        setArrayElement(array, refArray, i, resolved, isPrimitive);
+                    }
+                    // If unresolved, the helper already added it to unresolved references
+                    continue;
+                }
+            }
+
+            // Strategy 4: FACTORY/CONVERTER - handles custom readers, converters (String→Enum, etc.)
+            Object resolved = readWithFactoryIfExists(element, effectiveRawComponentType);
+            if (resolved != null) {
                 setArrayElement(array, refArray, i, resolved, isPrimitive);
-            } else if (element.getClass().isArray()) {
-                // Array of arrays - use shared helpers
+                continue;
+            }
+
+            // Strategy 5: NESTED ARRAY - array of arrays
+            if (elementClass.isArray()) {
                 if (char[].class == effectiveRawComponentType) {
                     setArrayElement(array, refArray, i, handleCharArrayElement((Object[]) element), isPrimitive);
                 } else {
                     setArrayElement(array, refArray, i, handleNestedArrayElement((Object[]) element, effectiveComponentType), isPrimitive);
                 }
-            } else if (element instanceof JsonObject) {
-                JsonObject jsonElement = (JsonObject) element;
-                if (jsonElement.isReference()) {
-                    // Use shared reference resolution helper
-                    resolved = resolveReferenceElement(jsonElement, jsonObj, i);
-                    if (resolved != UNRESOLVED_REFERENCE) {
-                        setArrayElement(array, refArray, i, resolved, isPrimitive);
-                    }
-                    // If unresolved, the helper already added it to unresolved references
-                } else {
-                    // Use shared JsonObject processing helper
-                    resolved = processJsonObjectElement(jsonElement, effectiveComponentType);
-                    setArrayElement(array, refArray, i, resolved, isPrimitive);
-                }
-            } else {
-                // Allow empty strings to null out non-String, non-Object array elements
-                boolean isEmptyString = element instanceof String
-                        && ((String) element).trim().isEmpty()
-                        && effectiveRawComponentType != String.class
-                        && effectiveRawComponentType != Object.class;
-                setArrayElement(array, refArray, i, isEmptyString ? null : element, isPrimitive);
+                continue;
             }
+
+            // Strategy 6: JSONOBJECT - needs instantiation and traversal
+            if (element instanceof JsonObject) {
+                resolved = processJsonObjectElement((JsonObject) element, effectiveComponentType);
+                setArrayElement(array, refArray, i, resolved, isPrimitive);
+                continue;
+            }
+
+            // Strategy 7: FALLBACK - empty strings and direct assignment
+            boolean isEmptyString = element instanceof String
+                    && ((String) element).trim().isEmpty()
+                    && effectiveRawComponentType != String.class
+                    && effectiveRawComponentType != Object.class;
+            setArrayElement(array, refArray, i, isEmptyString ? null : element, isPrimitive);
         }
         jsonObj.clear();
     }
