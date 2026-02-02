@@ -367,19 +367,26 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
-     * Write an array value.
+     * Write an array value (standalone, not as a field value).
      */
     private void writeArray(Object array) throws IOException {
         int length = ArrayUtilities.getLength(array);
+        out.write("[" + length + "]:");
+        writeArrayElements(array, length);
+    }
 
+    /**
+     * Write array elements (after the [N]: marker has been written).
+     * Per TOON spec: first field of object elements goes on hyphen line.
+     */
+    private void writeArrayElements(Object array, int length) throws IOException {
         if (length == 0) {
-            out.write("[0]:");
             return;
         }
 
         // Check if all elements are primitives (can use inline format)
         if (isAllPrimitives(array, length)) {
-            out.write("[" + length + "]: ");
+            out.write(" ");
             for (int i = 0; i < length; i++) {
                 if (i > 0) {
                     out.write(delimiter);
@@ -388,47 +395,32 @@ public class ToonWriter implements Closeable, Flushable {
             }
         } else {
             // Mixed/complex array - use list format with hyphens
-            out.write("[" + length + "]:");
             depth++;
             for (int i = 0; i < length; i++) {
                 out.write(NEW_LINE);
                 writeIndent();
-                out.write("- ");
+                out.write("-");
                 Object element = ArrayUtilities.getElement(array, i);
-                if (element == null || isPrimitive(element)) {
-                    writeValue(element);
-                } else if (element.getClass().isArray()) {
-                    // Nested array - recurse
-                    writeArray(element);
-                } else if (element instanceof Map) {
-                    // Nested map - write as map structure
-                    out.write(NEW_LINE);
-                    depth++;
-                    writeMap((Map<?, ?>) element);
-                    depth--;
-                } else if (element instanceof Collection) {
-                    // Nested collection - recurse
-                    writeCollection((Collection<?>) element);
-                } else {
-                    // Complex object
-                    out.write(NEW_LINE);
-                    depth++;
-                    writeNestedObject(element);
-                    depth--;
-                }
+                writeListElement(element);
             }
             depth--;
         }
     }
 
     /**
-     * Write a Collection value.
+     * Write a Collection value (standalone, not as a field value).
      */
     private void writeCollection(Collection<?> collection) throws IOException {
-        int size = collection.size();
+        out.write("[" + collection.size() + "]:");
+        writeCollectionElements(collection);
+    }
 
-        if (size == 0) {
-            out.write("[0]:");
+    /**
+     * Write collection elements (after the [N]: marker has been written).
+     * Per TOON spec: first field of object elements goes on hyphen line.
+     */
+    private void writeCollectionElements(Collection<?> collection) throws IOException {
+        if (collection.isEmpty()) {
             return;
         }
 
@@ -442,7 +434,7 @@ public class ToonWriter implements Closeable, Flushable {
         }
 
         if (allPrimitives) {
-            out.write("[" + size + "]: ");
+            out.write(" ");
             boolean first = true;
             for (Object element : collection) {
                 if (!first) {
@@ -452,37 +444,116 @@ public class ToonWriter implements Closeable, Flushable {
                 writeInlineValue(element);
             }
         } else {
-            // Mixed/complex - use list format
-            out.write("[" + size + "]:");
+            // Mixed/complex - use list format with hyphens
             depth++;
             for (Object element : collection) {
                 out.write(NEW_LINE);
                 writeIndent();
-                out.write("- ");
-                if (element == null || isPrimitive(element)) {
-                    writeValue(element);
-                } else if (element instanceof Map) {
-                    // Nested map - write as map structure
-                    out.write(NEW_LINE);
-                    depth++;
-                    writeMap((Map<?, ?>) element);
-                    depth--;
-                } else if (element instanceof Collection) {
-                    // Nested collection - recurse
-                    writeCollection((Collection<?>) element);
-                } else if (element.getClass().isArray()) {
-                    // Nested array - recurse
-                    writeArray(element);
-                } else {
-                    // Complex object
-                    out.write(NEW_LINE);
-                    depth++;
-                    writeNestedObject(element);
-                    depth--;
-                }
+                out.write("-");
+                writeListElement(element);
             }
             depth--;
         }
+    }
+
+    /**
+     * Write a single list element (after the hyphen has been written).
+     * Per TOON spec: for object/map elements, first field goes on hyphen line.
+     */
+    private void writeListElement(Object element) throws IOException {
+        if (element == null || isPrimitive(element)) {
+            out.write(" ");
+            writeValue(element);
+        } else if (element instanceof Map) {
+            // Nested map - first field on hyphen line per TOON spec
+            writeMapInline((Map<?, ?>) element);
+        } else if (element instanceof Collection) {
+            // Nested collection
+            out.write(" ");
+            writeCollection((Collection<?>) element);
+        } else if (element.getClass().isArray()) {
+            // Nested array
+            out.write(" ");
+            writeArray(element);
+        } else {
+            // Complex object - first field on hyphen line
+            writeObjectInline(element);
+        }
+    }
+
+    /**
+     * Write a map with first field on the current line (for list elements).
+     * Per TOON spec: "first field on the hyphen line"
+     */
+    private void writeMapInline(Map<?, ?> map) throws IOException {
+        if (map.isEmpty()) {
+            out.write(" {}");
+            return;
+        }
+
+        boolean first = true;
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            if (first) {
+                // First field goes on same line as hyphen
+                out.write(" ");
+                first = false;
+            } else {
+                // Subsequent fields on new lines at depth+1
+                out.write(NEW_LINE);
+                depth++;
+                writeIndent();
+                depth--;
+            }
+
+            // Write key
+            Object key = entry.getKey();
+            String keyStr = (key == null) ? "null" : key.toString();
+
+            // Write value - handle arrays/collections specially
+            Object value = entry.getValue();
+            if (value != null && value.getClass().isArray()) {
+                int length = ArrayUtilities.getLength(value);
+                writeString(keyStr);
+                out.write("[" + length + "]:");
+                writeArrayElements(value, length);
+            } else if (value instanceof Collection) {
+                Collection<?> coll = (Collection<?>) value;
+                writeString(keyStr);
+                out.write("[" + coll.size() + "]:");
+                writeCollectionElements(coll);
+            } else {
+                writeString(keyStr);
+                out.write(": ");
+                if (value != null && !isPrimitive(value)) {
+                    out.write(NEW_LINE);
+                    depth += 2;
+                    if (value instanceof Map) {
+                        writeMap((Map<?, ?>) value);
+                    } else {
+                        writeNestedObject(value);
+                    }
+                    depth -= 2;
+                } else {
+                    writeValue(value);
+                }
+            }
+        }
+    }
+
+    /**
+     * Write an object with first field on the current line (for list elements).
+     */
+    private void writeObjectInline(Object obj) throws IOException {
+        // Check for cycle
+        int visited = objVisited.get(obj);
+        if (visited != 0) {
+            out.write(" null");
+            return;
+        }
+        objVisited.put(obj, 1);
+
+        Map<String, Object> fields = getObjectFields(obj);
+        writeMapInline(fields);
     }
 
     /**
@@ -525,6 +596,7 @@ public class ToonWriter implements Closeable, Flushable {
 
     /**
      * Write a map with simple keys (String, Number, etc.) using the standard key: value format.
+     * Per TOON spec, array/collection values combine key with size marker: fieldName[N]:
      */
     private void writeMapWithSimpleKeys(Map<?, ?> map) throws IOException {
         boolean first = true;
@@ -537,34 +609,39 @@ public class ToonWriter implements Closeable, Flushable {
 
             // Write key
             Object key = entry.getKey();
-            if (key == null) {
-                out.write("null");
-            } else {
-                writeString(key.toString());
-            }
-            out.write(": ");
+            String keyStr = (key == null) ? "null" : key.toString();
 
-            // Write value
+            // Write value - handle arrays/collections specially to combine key with size marker
             Object value = entry.getValue();
-            if (value != null && !isPrimitive(value)) {
-                out.write(NEW_LINE);
-                depth++;
-                if (value instanceof Map) {
-                    // writeMap handles its own indentation per entry
-                    writeMap((Map<?, ?>) value);
-                } else if (value instanceof Collection) {
-                    writeIndent();
-                    writeCollection((Collection<?>) value);
-                } else if (value.getClass().isArray()) {
-                    writeIndent();
-                    writeArray(value);
-                } else {
-                    // Use writeObject for cycle detection
-                    writeNestedObject(value);
-                }
-                depth--;
+            if (value != null && value.getClass().isArray()) {
+                // Combine key with array size: fieldName[N]:
+                int length = ArrayUtilities.getLength(value);
+                writeString(keyStr);
+                out.write("[" + length + "]:");
+                writeArrayElements(value, length);
+            } else if (value instanceof Collection) {
+                // Combine key with collection size: fieldName[N]:
+                Collection<?> coll = (Collection<?>) value;
+                writeString(keyStr);
+                out.write("[" + coll.size() + "]:");
+                writeCollectionElements(coll);
             } else {
-                writeValue(value);
+                writeString(keyStr);
+                out.write(": ");
+                if (value != null && !isPrimitive(value)) {
+                    out.write(NEW_LINE);
+                    depth++;
+                    if (value instanceof Map) {
+                        // writeMap handles its own indentation per entry
+                        writeMap((Map<?, ?>) value);
+                    } else {
+                        // Use writeObject for cycle detection
+                        writeNestedObject(value);
+                    }
+                    depth--;
+                } else {
+                    writeValue(value);
+                }
             }
         }
     }
