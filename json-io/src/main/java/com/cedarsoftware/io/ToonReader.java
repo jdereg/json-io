@@ -239,6 +239,7 @@ public class ToonReader {
 
     /**
      * Parse an array from a line containing [N]: ... or [N]{cols}: ...
+     * Supports delimiter variants: [N] for comma, [N\t] for tab, [N|] for pipe
      * Returns ArrayList instead of Object[] for better Java interoperability.
      */
     private List<Object> parseArrayFromLine(String trimmed) throws IOException {
@@ -249,9 +250,23 @@ public class ToonReader {
         }
 
         String countStr = trimmed.substring(1, bracketEnd);
+
+        // Detect delimiter from count string: [2] = comma, [2\t] = tab, [2|] = pipe
+        char delimiter = DELIMITER;  // Default to comma
+        if (!countStr.isEmpty()) {
+            char lastChar = countStr.charAt(countStr.length() - 1);
+            if (lastChar == '\t') {
+                delimiter = '\t';
+                countStr = countStr.substring(0, countStr.length() - 1);
+            } else if (lastChar == '|') {
+                delimiter = '|';
+                countStr = countStr.substring(0, countStr.length() - 1);
+            }
+        }
+
         int count;
         try {
-            count = Integer.parseInt(countStr);
+            count = Integer.parseInt(countStr.trim());
         } catch (NumberFormatException e) {
             throw new JsonIoException("Invalid array count at line " + lineNumber + ": " + countStr);
         }
@@ -268,7 +283,7 @@ public class ToonReader {
             int braceEnd = trimmed.indexOf('}', afterBracket);
             if (braceEnd > afterBracket) {
                 String headerStr = trimmed.substring(afterBracket + 1, braceEnd);
-                columnHeaders = parseColumnHeaders(headerStr);
+                columnHeaders = parseColumnHeaders(headerStr, delimiter);
                 afterBracket = braceEnd + 1;
             }
         }
@@ -283,10 +298,10 @@ public class ToonReader {
 
         if (columnHeaders != null) {
             // Tabular format: [N]{cols}: followed by CSV rows
-            return readTabularArray(count, columnHeaders);
+            return readTabularArray(count, columnHeaders, delimiter);
         } else if (!content.isEmpty()) {
             // Inline array: [N]: elem1,elem2,elem3
-            return readInlineArray(content, count);
+            return readInlineArray(content, count, delimiter);
         } else {
             // List format array: [N]: followed by - elem lines
             return readListArray(count);
@@ -294,15 +309,15 @@ public class ToonReader {
     }
 
     /**
-     * Parse column headers from a comma-separated string.
+     * Parse column headers from a delimiter-separated string.
      */
-    private List<String> parseColumnHeaders(String headerStr) {
+    private List<String> parseColumnHeaders(String headerStr, char delimiter) {
         List<String> headers = new ArrayList<>();
         StringBuilder current = new StringBuilder();
 
         for (int i = 0; i < headerStr.length(); i++) {
             char c = headerStr.charAt(i);
-            if (c == DELIMITER) {
+            if (c == delimiter) {
                 headers.add(current.toString().trim());
                 current.setLength(0);
             } else {
@@ -317,9 +332,9 @@ public class ToonReader {
     }
 
     /**
-     * Read a tabular array: rows of CSV data where each row becomes an object.
+     * Read a tabular array: rows of delimiter-separated data where each row becomes an object.
      */
-    private List<Object> readTabularArray(int count, List<String> columnHeaders) throws IOException {
+    private List<Object> readTabularArray(int count, List<String> columnHeaders, char delimiter) throws IOException {
         List<Object> elements = new ArrayList<>(count);
         int baseIndent = -1;
 
@@ -346,15 +361,17 @@ public class ToonReader {
             }
 
             // Skip lines that look like key: value (they belong to parent object)
-            if (findColonPosition(trimmed) > 0 && !trimmed.contains(",")) {
+            // Check that the line doesn't contain the delimiter (unless it's comma which could be in key:value)
+            String delimStr = String.valueOf(delimiter);
+            if (findColonPosition(trimmed) > 0 && !trimmed.contains(delimStr)) {
                 break;
             }
 
             consumeLine();
 
-            // Parse the CSV row into an object
+            // Parse the row into an object
             JsonObject rowObj = new JsonObject();
-            List<Object> values = readInlineArray(trimmed, columnHeaders.size());
+            List<Object> values = readInlineArray(trimmed, columnHeaders.size(), delimiter);
 
             for (int i = 0; i < columnHeaders.size() && i < values.size(); i++) {
                 rowObj.put(columnHeaders.get(i), values.get(i));
@@ -369,8 +386,17 @@ public class ToonReader {
     /**
      * Read an inline array: [N]: elem1,elem2,elem3
      * Returns ArrayList instead of Object[] for better Java interoperability.
+     * Uses the default comma delimiter.
      */
     List<Object> readInlineArray(String content, int count) {
+        return readInlineArray(content, count, DELIMITER);
+    }
+
+    /**
+     * Read an inline array with a specific delimiter.
+     * Returns ArrayList instead of Object[] for better Java interoperability.
+     */
+    List<Object> readInlineArray(String content, int count, char delimiter) {
         List<Object> elements = new ArrayList<>(count);
         StringBuilder current = new StringBuilder();
         boolean inQuotes = false;
@@ -397,7 +423,7 @@ public class ToonReader {
                 continue;
             }
 
-            if (c == DELIMITER && !inQuotes) {
+            if (c == delimiter && !inQuotes) {
                 elements.add(readScalar(current.toString().trim()));
                 current.setLength(0);
             } else {

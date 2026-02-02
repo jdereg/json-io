@@ -636,4 +636,54 @@ class ToonWriterTest {
         assertNotNull(toon);
         assertTrue(toon.contains("self"));
     }
+
+    @Test
+    void testTabularDelimiterVariants_Read() {
+        // Test TOON spec: three equivalent tabular format delimiter variants
+        // 1. Comma-separated (default): [N]{col1,col2}:
+        // 2. Tab-separated: [N\t]{col1\tcol2}:
+        // 3. Pipe-separated: [N|]{col1|col2}:
+
+        // Variant 1: Comma (default)
+        String toonComma = "items[2]{sku,name,qty,price}:\n" +
+                           "  A1,Widget,2,9.99\n" +
+                           "  B2,Gadget,1,14.5";
+
+        Map<String, Object> parsedComma = JsonIo.fromToon(toonComma, null).asClass(Map.class);
+        verifyTabularData(parsedComma, "comma");
+
+        // Variant 2: Tab-separated
+        String toonTab = "items[2\t]{sku\tname\tqty\tprice}:\n" +
+                         "  A1\tWidget\t2\t9.99\n" +
+                         "  B2\tGadget\t1\t14.5";
+
+        Map<String, Object> parsedTab = JsonIo.fromToon(toonTab, null).asClass(Map.class);
+        verifyTabularData(parsedTab, "tab");
+
+        // Variant 3: Pipe-separated
+        String toonPipe = "items[2|]{sku|name|qty|price}:\n" +
+                          "  A1|Widget|2|9.99\n" +
+                          "  B2|Gadget|1|14.5";
+
+        Map<String, Object> parsedPipe = JsonIo.fromToon(toonPipe, null).asClass(Map.class);
+        verifyTabularData(parsedPipe, "pipe");
+    }
+
+    private void verifyTabularData(Map<String, Object> parsed, String variant) {
+        List<?> items = (List<?>) parsed.get("items");
+        assertNotNull(items, variant + ": items should not be null");
+        assertEquals(2, items.size(), variant + ": should have 2 items");
+
+        Map<?, ?> item0 = (Map<?, ?>) items.get(0);
+        assertEquals("A1", item0.get("sku"), variant + ": item[0].sku");
+        assertEquals("Widget", item0.get("name"), variant + ": item[0].name");
+        assertEquals(2L, item0.get("qty"), variant + ": item[0].qty");
+        assertEquals(9.99, item0.get("price"), variant + ": item[0].price");
+
+        Map<?, ?> item1 = (Map<?, ?>) items.get(1);
+        assertEquals("B2", item1.get("sku"), variant + ": item[1].sku");
+        assertEquals("Gadget", item1.get("name"), variant + ": item[1].name");
+        assertEquals(1L, item1.get("qty"), variant + ": item[1].qty");
+        assertEquals(14.5, item1.get("price"), variant + ": item[1].price");
+    }
 }

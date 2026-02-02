@@ -1,5 +1,10 @@
 ### Revision History
 #### 4.90.0 - (unreleased)
+* **FEATURE**: TOON tabular format delimiter variants support
+  * Added support for tab-separated tabular format: `items[2\t]{col1\tcol2}:` with tab-delimited rows
+  * Added support for pipe-separated tabular format: `items[2|]{col1|col2}:` with pipe-delimited rows
+  * Comma delimiter remains the default: `items[2]{col1,col2}:`
+  * All three variants parse to identical data structures and round-trip correctly
 * **MAINTENANCE**: Migrated test files from deprecated `JsonIo.toObjects()` to `JsonIo.toJava().asClass()` API
   * Updated ~148 calls across 5 test files to use the new fluent builder pattern
   * Deprecated `toObjects()` methods remain available in `JsonIo.java` for backward compatibility
