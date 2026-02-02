@@ -101,7 +101,7 @@ json-io's TOON implementation offers comprehensive Java type coverage while JToo
 ## Installation
 To include in your project:
 > Replace `LATEST_VERSION` with the version shown here:
-[![Maven Central](https://img.shields.io/maven-central/v/com.cedarsoftware/java-util)](https://central.sonatype.com/artifact/com.cedarsoftware/json-io)
+[![Maven Central](https://img.shields.io/maven-central/v/com.cedarsoftware/json-io)](https://central.sonatype.com/artifact/com.cedarsoftware/json-io)
 
 **Gradle**
 ```groovy
@@ -186,7 +186,7 @@ See the [complete type comparison](/user-guide.md#toon-supported-types) showing 
 - [Spring Integration Guide](/user-guide-spring.md)
 - [Revision History](/changelog.md)
 
-## Release [![Maven Central](https://img.shields.io/maven-central/v/com.cedarsoftware/java-util)](https://central.sonatype.com/artifact/com.cedarsoftware/java-util)
+## Release [![Maven Central](https://img.shields.io/maven-central/v/com.cedarsoftware/json-io)](https://central.sonatype.com/artifact/com.cedarsoftware/json-io)
 
 | | |
 |---|---|
