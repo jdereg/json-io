@@ -99,12 +99,11 @@ json-io's TOON implementation offers comprehensive Java type coverage while JToo
 - **Annotations** — Custom serialization control via annotations
 
 ## Installation
-
-**Gradle**
 To include in your project:
 > Replace `LATEST_VERSION` with the version shown here:
-[![Maven Central](https://img.shields.io/maven-central/v/com.cedarsoftware/java-util)](https://central.sonatype.com/artifact/com.cedarsoftware/java-util)
+[![Maven Central](https://img.shields.io/maven-central/v/com.cedarsoftware/java-util)](https://central.sonatype.com/artifact/com.cedarsoftware/json-io)
 
+**Gradle**
 ```groovy
 implementation 'com.cedarsoftware:json-io:LATEST_VERSION'
 ```
