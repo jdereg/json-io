@@ -1,6 +1,7 @@
 package com.cedarsoftware.io;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.Flushable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -14,6 +15,8 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URI;
 import java.net.URL;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -33,9 +36,11 @@ import java.time.ZonedDateTime;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Currency;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.Deque;
 import java.util.EnumSet;
 import java.util.IdentityHashMap;
@@ -220,10 +225,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         CONVERTABLE_TYPES.add(ZoneId.class);
         CONVERTABLE_TYPES.add(ZoneOffset.class);
 
-        // Date types
+        // Date/Calendar types
         CONVERTABLE_TYPES.add(Date.class);
         CONVERTABLE_TYPES.add(java.sql.Date.class);
         CONVERTABLE_TYPES.add(java.sql.Timestamp.class);
+        CONVERTABLE_TYPES.add(Calendar.class);
+        CONVERTABLE_TYPES.add(GregorianCalendar.class);
 
         // Numeric types (BigInteger/BigDecimal write as strings, Atomics write as numbers)
         CONVERTABLE_TYPES.add(BigInteger.class);
@@ -236,6 +243,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         CONVERTABLE_TYPES.add(UUID.class);
         CONVERTABLE_TYPES.add(URI.class);
         CONVERTABLE_TYPES.add(URL.class);
+        CONVERTABLE_TYPES.add(File.class);
         CONVERTABLE_TYPES.add(Path.class);
         CONVERTABLE_TYPES.add(Locale.class);
         CONVERTABLE_TYPES.add(TimeZone.class);
@@ -243,9 +251,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         CONVERTABLE_TYPES.add(Pattern.class);
         CONVERTABLE_TYPES.add(Class.class);
 
-        // String-like types
+        // String-like and buffer types
         CONVERTABLE_TYPES.add(StringBuffer.class);
         CONVERTABLE_TYPES.add(StringBuilder.class);
+        CONVERTABLE_TYPES.add(CharBuffer.class);
+        CONVERTABLE_TYPES.add(ByteBuffer.class);
     }
 
     // Numeric primitives that can safely write as plain JSON numbers in MINIMAL/MINIMAL_PLUS modes.

@@ -24,12 +24,18 @@ java.lang.Boolean
 
 java.lang.Class
 java.lang.String
+java.lang.StringBuffer
+java.lang.StringBuilder
+
+java.io.File
 
 java.math.BigInteger
 java.math.BigDecimal
 
 java.net.URI
 java.net.URL
+
+java.nio.file.Path
 
 java.sql.Date
 java.sql.Timestamp
@@ -51,11 +57,16 @@ java.time.ZoneOffset
 java.time.ZoneRegion
 
 java.util.Calendar
-java.util.GregorianCalendar
+java.util.Currency
 java.util.Date
+java.util.GregorianCalendar
+java.util.Locale
+java.util.TimeZone
 java.util.UUID
 java.util.concurrent.atomic.AtomicBoolean
 java.util.concurrent.atomic.AtomicInteger
 java.util.concurrent.atomic.AtomicLong
+
+java.util.regex.Pattern
 
 sun.util.calendar.ZoneInfo
