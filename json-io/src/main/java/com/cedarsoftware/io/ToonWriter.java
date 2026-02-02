@@ -148,6 +148,28 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
+     * Write a key string, handling dots appropriately based on key folding setting.
+     * When key folding is OFF, dots in keys must be quoted to prevent expansion on read.
+     */
+    private void writeKeyString(String key) throws IOException {
+        if (!writeOptions.isToonKeyFolding() && key.contains(".")) {
+            // Key folding is OFF, so quote keys with dots to preserve them as literals
+            writeQuotedString(key);
+        } else {
+            writeString(key);
+        }
+    }
+
+    /**
+     * Write a quoted string with escaping.
+     */
+    private void writeQuotedString(String str) throws IOException {
+        out.write('"');
+        writeEscapedString(str);
+        out.write('"');
+    }
+
+    /**
      * Write a string value, quoting only when necessary per TOON spec.
      * <p>
      * Strings must be quoted when they:
@@ -163,9 +185,7 @@ public class ToonWriter implements Closeable, Flushable {
      */
     private void writeString(String str) throws IOException {
         if (needsQuoting(str)) {
-            out.write('"');
-            writeEscapedString(str);
-            out.write('"');
+            writeQuotedString(str);
         } else {
             out.write(str);
         }
@@ -665,19 +685,19 @@ public class ToonWriter implements Closeable, Flushable {
             Object value = entry.getValue();
             if (value != null && value.getClass().isArray()) {
                 int length = ArrayUtilities.getLength(value);
-                writeString(keyStr);
+                writeKeyString(keyStr);
                 out.write("[" + length + "]:");
                 writeArrayElements(value, length);
             } else if (value instanceof Collection) {
                 Collection<?> coll = (Collection<?>) value;
-                writeString(keyStr);
+                writeKeyString(keyStr);
                 out.write("[" + coll.size() + "]");
                 // Extra depth for collection elements inside inline map
                 depth++;
                 writeCollectionElementsWithHeader(coll);
                 depth--;
             } else {
-                writeString(keyStr);
+                writeKeyString(keyStr);
                 out.write(":");
                 if (value != null && !isPrimitive(value)) {
                     // Nested object - newline, no trailing space after colon
@@ -771,20 +791,30 @@ public class ToonWriter implements Closeable, Flushable {
 
             // Write value - handle arrays/collections specially to combine key with size marker
             Object value = entry.getValue();
+
+            // Check for key folding: collapse single-key map chains into dotted notation
+            if (writeOptions.isToonKeyFolding() && value instanceof Map && isValidFoldableKey(keyStr)) {
+                FoldedEntry folded = collectFoldedPath(keyStr, value);
+                if (folded != null) {
+                    writeFoldedEntry(folded.path, folded.value);
+                    continue;
+                }
+            }
+
             if (value != null && value.getClass().isArray()) {
                 // Combine key with array size: fieldName[N]:
                 int length = ArrayUtilities.getLength(value);
-                writeString(keyStr);
+                writeKeyString(keyStr);
                 out.write("[" + length + "]:");
                 writeArrayElements(value, length);
             } else if (value instanceof Collection) {
                 // Combine key with collection size: fieldName[N]: or fieldName[N]{cols}:
                 Collection<?> coll = (Collection<?>) value;
-                writeString(keyStr);
+                writeKeyString(keyStr);
                 out.write("[" + coll.size() + "]");
                 writeCollectionElementsWithHeader(coll);
             } else {
-                writeString(keyStr);
+                writeKeyString(keyStr);
                 out.write(":");
                 if (value != null && !isPrimitive(value)) {
                     // Nested object - newline, no trailing space after colon
@@ -804,6 +834,44 @@ public class ToonWriter implements Closeable, Flushable {
                     writeValue(value);
                 }
             }
+        }
+    }
+
+    /**
+     * Write a folded entry (key path and value).
+     */
+    private void writeFoldedEntry(String path, Object value) throws IOException {
+        if (value != null && value.getClass().isArray()) {
+            int length = ArrayUtilities.getLength(value);
+            writeString(path);
+            out.write("[" + length + "]:");
+            writeArrayElements(value, length);
+        } else if (value instanceof Collection) {
+            Collection<?> coll = (Collection<?>) value;
+            writeString(path);
+            out.write("[" + coll.size() + "]");
+            writeCollectionElementsWithHeader(coll);
+        } else if (value instanceof Map) {
+            // Non-foldable map at the end of the chain
+            writeString(path);
+            out.write(":");
+            out.write(NEW_LINE);
+            depth++;
+            writeMap((Map<?, ?>) value);
+            depth--;
+        } else if (value != null && !isPrimitive(value)) {
+            // Object at end of chain
+            writeString(path);
+            out.write(":");
+            out.write(NEW_LINE);
+            depth++;
+            writeNestedObject(value);
+            depth--;
+        } else {
+            // Primitive value
+            writeString(path);
+            out.write(": ");
+            writeValue(value);
         }
     }
 
@@ -1009,6 +1077,78 @@ public class ToonWriter implements Closeable, Flushable {
     private void writeIndent() throws IOException {
         for (int i = 0; i < depth; i++) {
             out.write(INDENT);
+        }
+    }
+
+    // ========== Key Folding Support ==========
+
+    /**
+     * Check if a key is a valid identifier for folding (matches ^[A-Za-z_][A-Za-z0-9_]*$).
+     */
+    private boolean isValidFoldableKey(String key) {
+        if (key == null || key.isEmpty()) {
+            return false;
+        }
+        char first = key.charAt(0);
+        if (!Character.isLetter(first) && first != '_') {
+            return false;
+        }
+        for (int i = 1; i < key.length(); i++) {
+            char c = key.charAt(i);
+            if (!Character.isLetterOrDigit(c) && c != '_') {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Check if a map is foldable (has exactly one entry with a valid identifier key).
+     */
+    private boolean isFoldableMap(Map<?, ?> map) {
+        if (map.size() != 1) {
+            return false;
+        }
+        Object key = map.keySet().iterator().next();
+        return key instanceof String && isValidFoldableKey((String) key);
+    }
+
+    /**
+     * Collect the folded key path and leaf value from a chain of single-key maps.
+     * Returns null if the chain is not foldable.
+     */
+    private FoldedEntry collectFoldedPath(String firstKey, Object value) {
+        StringBuilder path = new StringBuilder(firstKey);
+        Object current = value;
+
+        while (current instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) current;
+            if (!isFoldableMap(map)) {
+                break;
+            }
+            Map.Entry<?, ?> entry = map.entrySet().iterator().next();
+            String key = (String) entry.getKey();
+            path.append('.').append(key);
+            current = entry.getValue();
+        }
+
+        // Only fold if we actually folded something (path contains a dot)
+        if (path.indexOf(".") > 0) {
+            return new FoldedEntry(path.toString(), current);
+        }
+        return null;
+    }
+
+    /**
+     * Helper class to hold folded key path and leaf value.
+     */
+    private static class FoldedEntry {
+        final String path;
+        final Object value;
+
+        FoldedEntry(String path, Object value) {
+            this.path = path;
+            this.value = value;
         }
     }
 

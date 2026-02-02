@@ -165,6 +165,7 @@ public class ToonReader {
             String valuePart = trimmed.substring(colonPos + 1).trim();
 
             // Check for combined field+array notation: fieldName[N]: or fieldName[N]{cols}:
+            // Also handles folded keys with array: data.items[N]:
             // Per TOON spec, this means 'fieldName' contains an array of N elements
             // Tabular format: fieldName[N]{col1,col2,...}: followed by CSV rows
             if (key.contains("[")) {
@@ -174,12 +175,18 @@ public class ToonReader {
                 if (!valuePart.isEmpty()) {
                     arraySyntax += " " + valuePart;
                 }
-                // Unquote real key if needed
-                realKey = unquoteString(realKey);
+                // Check if key was quoted - quoted keys are NOT expanded
+                boolean wasQuoted = realKey.startsWith("\"");
+                if (wasQuoted) {
+                    realKey = unquoteString(realKey);
+                }
                 // parseArrayFromLine handles inline, list-format, and tabular arrays
-                jsonObj.put(realKey, parseArrayFromLine(arraySyntax));
+                putValue(jsonObj, realKey, parseArrayFromLine(arraySyntax), wasQuoted);
                 continue;
             }
+
+            // Check if key was quoted (before unquoting) - quoted keys are NOT expanded
+            boolean wasQuoted = key.startsWith("\"");
 
             // Unquote key if needed
             key = unquoteString(key);
@@ -190,22 +197,22 @@ public class ToonReader {
                 if (nextLine != null && getIndentLevel(nextLine) > baseIndent) {
                     String nextTrimmed = nextLine.trim();
                     if (isArrayStart(nextTrimmed)) {
-                        jsonObj.put(key, readArray(baseIndent + 1, null));
+                        putValue(jsonObj, key, readArray(baseIndent + 1, null), wasQuoted);
                     } else {
-                        jsonObj.put(key, readObject(baseIndent + 1, null));
+                        putValue(jsonObj, key, readObject(baseIndent + 1, null), wasQuoted);
                     }
                 } else {
-                    jsonObj.put(key, null);  // Empty value
+                    putValue(jsonObj, key, null, wasQuoted);  // Empty value
                 }
             } else if (isArrayStart(valuePart)) {
                 // Inline array on same line as key
-                jsonObj.put(key, parseArrayFromLine(valuePart));
+                putValue(jsonObj, key, parseArrayFromLine(valuePart), wasQuoted);
             } else if ("{}".equals(valuePart)) {
                 // Empty map as value
-                jsonObj.put(key, new JsonObject());
+                putValue(jsonObj, key, new JsonObject(), wasQuoted);
             } else {
                 // Scalar value
-                jsonObj.put(key, readScalar(valuePart));
+                putValue(jsonObj, key, readScalar(valuePart), wasQuoted);
             }
         }
 
@@ -530,6 +537,7 @@ public class ToonReader {
             String valuePart = firstFieldLine.substring(colonPos + 1).trim();
 
             // Check for combined field+array notation: fieldName[N]: or fieldName[N]{cols}:
+            // Also handles folded keys: data.items[N]:
             if (key.contains("[")) {
                 int bracketStart = key.indexOf('[');
                 String realKey = key.substring(0, bracketStart);
@@ -537,9 +545,13 @@ public class ToonReader {
                 if (!valuePart.isEmpty()) {
                     arraySyntax += " " + valuePart;
                 }
-                realKey = unquoteString(realKey);
-                jsonObj.put(realKey, parseArrayFromLine(arraySyntax));
+                boolean wasQuoted = realKey.startsWith("\"");
+                if (wasQuoted) {
+                    realKey = unquoteString(realKey);
+                }
+                putValue(jsonObj, realKey, parseArrayFromLine(arraySyntax), wasQuoted);
             } else {
+                boolean wasQuoted = key.startsWith("\"");
                 key = unquoteString(key);
                 if (valuePart.isEmpty()) {
                     // Check for nested structure on next line
@@ -547,19 +559,19 @@ public class ToonReader {
                     if (nextLine != null && getIndentLevel(nextLine) > hyphenIndent) {
                         String nextTrimmed = nextLine.trim();
                         if (isArrayStart(nextTrimmed)) {
-                            jsonObj.put(key, readArray(hyphenIndent + 1, null));
+                            putValue(jsonObj, key, readArray(hyphenIndent + 1, null), wasQuoted);
                         } else {
-                            jsonObj.put(key, readObject(hyphenIndent + 1, null));
+                            putValue(jsonObj, key, readObject(hyphenIndent + 1, null), wasQuoted);
                         }
                     } else {
-                        jsonObj.put(key, null);
+                        putValue(jsonObj, key, null, wasQuoted);
                     }
                 } else if (isArrayStart(valuePart)) {
-                    jsonObj.put(key, parseArrayFromLine(valuePart));
+                    putValue(jsonObj, key, parseArrayFromLine(valuePart), wasQuoted);
                 } else if ("{}".equals(valuePart)) {
-                    jsonObj.put(key, new JsonObject());
+                    putValue(jsonObj, key, new JsonObject(), wasQuoted);
                 } else {
-                    jsonObj.put(key, readScalar(valuePart));
+                    putValue(jsonObj, key, readScalar(valuePart), wasQuoted);
                 }
             }
         }
@@ -600,6 +612,7 @@ public class ToonReader {
             String valuePart = trimmed.substring(colonPos + 1).trim();
 
             // Check for combined field+array notation
+            // Also handles folded keys: data.items[N]:
             if (key.endsWith("]") && key.contains("[")) {
                 int bracketStart = key.lastIndexOf('[');
                 String realKey = key.substring(0, bracketStart);
@@ -607,11 +620,15 @@ public class ToonReader {
                 if (!valuePart.isEmpty()) {
                     arraySyntax += " " + valuePart;
                 }
-                realKey = unquoteString(realKey);
-                jsonObj.put(realKey, parseArrayFromLine(arraySyntax));
+                boolean wasQuoted = realKey.startsWith("\"");
+                if (wasQuoted) {
+                    realKey = unquoteString(realKey);
+                }
+                putValue(jsonObj, realKey, parseArrayFromLine(arraySyntax), wasQuoted);
                 continue;
             }
 
+            boolean wasQuoted = key.startsWith("\"");
             key = unquoteString(key);
 
             if (valuePart.isEmpty()) {
@@ -619,19 +636,19 @@ public class ToonReader {
                 if (nextLine != null && getIndentLevel(nextLine) > fieldIndent) {
                     String nextTrimmed = nextLine.trim();
                     if (isArrayStart(nextTrimmed)) {
-                        jsonObj.put(key, readArray(fieldIndent + 1, null));
+                        putValue(jsonObj, key, readArray(fieldIndent + 1, null), wasQuoted);
                     } else {
-                        jsonObj.put(key, readObject(fieldIndent + 1, null));
+                        putValue(jsonObj, key, readObject(fieldIndent + 1, null), wasQuoted);
                     }
                 } else {
-                    jsonObj.put(key, null);
+                    putValue(jsonObj, key, null, wasQuoted);
                 }
             } else if (isArrayStart(valuePart)) {
-                jsonObj.put(key, parseArrayFromLine(valuePart));
+                putValue(jsonObj, key, parseArrayFromLine(valuePart), wasQuoted);
             } else if ("{}".equals(valuePart)) {
-                jsonObj.put(key, new JsonObject());
+                putValue(jsonObj, key, new JsonObject(), wasQuoted);
             } else {
-                jsonObj.put(key, readScalar(valuePart));
+                putValue(jsonObj, key, readScalar(valuePart), wasQuoted);
             }
         }
 
@@ -826,5 +843,91 @@ public class ToonReader {
             return parseQuotedString(text);
         }
         return text;
+    }
+
+    // ========== Key Folding Support ==========
+
+    /**
+     * Check if a key is a folded dotted key that should be expanded.
+     * A key is foldable if it contains dots and all segments match the safe identifier pattern.
+     * Quoted keys (starting with ") are NOT expanded.
+     */
+    private boolean isFoldedKey(String key) {
+        if (key.startsWith("\"") || !key.contains(".")) {
+            return false;
+        }
+        // Check that all segments match safe identifier pattern: ^[A-Za-z_][A-Za-z0-9_]*$
+        // The last segment may have array notation like "items[2]"
+        String[] segments = key.split("\\.");
+        for (int i = 0; i < segments.length; i++) {
+            String segment = segments[i];
+            // Last segment may have array notation
+            if (i == segments.length - 1 && segment.contains("[")) {
+                segment = segment.substring(0, segment.indexOf('['));
+            }
+            if (!isValidIdentifier(segment)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Check if a string is a valid identifier segment for key folding.
+     */
+    private boolean isValidIdentifier(String segment) {
+        if (segment.isEmpty()) {
+            return false;
+        }
+        char first = segment.charAt(0);
+        if (!Character.isLetter(first) && first != '_') {
+            return false;
+        }
+        for (int i = 1; i < segment.length(); i++) {
+            char c = segment.charAt(i);
+            if (!Character.isLetterOrDigit(c) && c != '_') {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Put a value into a JsonObject, optionally expanding dotted keys.
+     * If wasQuoted is true, the key is treated as a literal (no expansion).
+     */
+    private void putValue(JsonObject target, String key, Object value, boolean wasQuoted) {
+        if (wasQuoted || !isFoldedKey(key)) {
+            target.put(key, value);
+        } else {
+            putWithKeyExpansion(target, key, value);
+        }
+    }
+
+    /**
+     * Put a value into a JsonObject, expanding dotted keys into nested structure.
+     * For example: putWithKeyExpansion(obj, "data.meta.items", value) creates:
+     * obj = {data: {meta: {items: value}}}
+     */
+    private void putWithKeyExpansion(JsonObject target, String key, Object value) {
+        String[] segments = key.split("\\.");
+        JsonObject current = target;
+
+        // Navigate/create nested structure for all segments except the last
+        for (int i = 0; i < segments.length - 1; i++) {
+            String segment = segments[i];
+            Object existing = current.get(segment);
+            if (existing instanceof JsonObject) {
+                current = (JsonObject) existing;
+            } else {
+                JsonObject nested = new JsonObject();
+                current.put(segment, nested);
+                current = nested;
+            }
+        }
+
+        // Put the value at the last segment
+        String lastSegment = segments[segments.length - 1];
+        current.put(lastSegment, value);
     }
 }

@@ -686,4 +686,116 @@ class ToonWriterTest {
         assertEquals(1L, item1.get("qty"), variant + ": item[1].qty");
         assertEquals(14.5, item1.get("price"), variant + ": item[1].price");
     }
+
+    // ========== Key Folding Tests ==========
+
+    @Test
+    void testKeyFolding_WriteAndRead() {
+        // Create nested single-key structure: {data: {metadata: {value: 42}}}
+        Map<String, Object> innerMost = new LinkedHashMap<>();
+        innerMost.put("value", 42);
+
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("metadata", innerMost);
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("data", metadata);
+
+        // Write WITHOUT key folding (default)
+        String toonNormal = JsonIo.toToon(data, null);
+        assertTrue(toonNormal.contains("data:"), "Without folding: should have nested 'data:'");
+        assertTrue(toonNormal.contains("metadata:"), "Without folding: should have nested 'metadata:'");
+        assertFalse(toonNormal.contains("data.metadata"), "Without folding: should NOT have dotted key");
+
+        // Write WITH key folding
+        WriteOptions foldingOptions = new WriteOptionsBuilder().toonKeyFolding(true).build();
+        String toonFolded = JsonIo.toToon(data, foldingOptions);
+        assertTrue(toonFolded.contains("data.metadata.value:"), "With folding: should have folded key");
+        assertFalse(toonFolded.contains("\n  metadata:"), "With folding: should NOT have nested structure");
+
+        // Read folded TOON and verify structure
+        Map<String, Object> restored = JsonIo.fromToon(toonFolded, null).asClass(Map.class);
+        Map<?, ?> restoredData = (Map<?, ?>) restored.get("data");
+        assertNotNull(restoredData, "Restored should have 'data' key");
+        Map<?, ?> restoredMetadata = (Map<?, ?>) restoredData.get("metadata");
+        assertNotNull(restoredMetadata, "Restored should have 'metadata' key");
+        assertEquals(42L, restoredMetadata.get("value"), "Restored value should be 42");
+
+        // Verify round-trip: folded -> read -> write without folding -> same nested structure
+        String toonUnfolded = JsonIo.toToon(restored, null);
+        assertTrue(toonUnfolded.contains("data:"), "Round-trip: should expand to nested 'data:'");
+        assertTrue(toonUnfolded.contains("metadata:"), "Round-trip: should expand to nested 'metadata:'");
+    }
+
+    @Test
+    void testKeyFolding_WithArray() {
+        // Create structure: {data: {metadata: {items: [a, b, c]}}}
+        Map<String, Object> items = new LinkedHashMap<>();
+        items.put("items", Arrays.asList("a", "b", "c"));
+
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("metadata", items);
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("data", metadata);
+
+        // Write with key folding
+        WriteOptions foldingOptions = new WriteOptionsBuilder().toonKeyFolding(true).build();
+        String toonFolded = JsonIo.toToon(data, foldingOptions);
+        assertTrue(toonFolded.contains("data.metadata.items[3]:"), "Should fold with array notation");
+
+        // Read and verify
+        Map<String, Object> restored = JsonIo.fromToon(toonFolded, null).asClass(Map.class);
+        Map<?, ?> restoredData = (Map<?, ?>) restored.get("data");
+        Map<?, ?> restoredMetadata = (Map<?, ?>) restoredData.get("metadata");
+        List<?> restoredItems = (List<?>) restoredMetadata.get("items");
+        assertEquals(3, restoredItems.size());
+        assertEquals("a", restoredItems.get(0));
+        assertEquals("b", restoredItems.get(1));
+        assertEquals("c", restoredItems.get(2));
+    }
+
+    @Test
+    void testKeyFolding_MultipleKeysNotFolded() {
+        // Structure with multiple keys should NOT be folded
+        Map<String, Object> multiKey = new LinkedHashMap<>();
+        multiKey.put("a", 1);
+        multiKey.put("b", 2);
+
+        Map<String, Object> wrapper = new LinkedHashMap<>();
+        wrapper.put("data", multiKey);
+
+        WriteOptions foldingOptions = new WriteOptionsBuilder().toonKeyFolding(true).build();
+        String toon = JsonIo.toToon(wrapper, foldingOptions);
+
+        // Should NOT fold because inner map has multiple keys
+        assertTrue(toon.contains("data:"), "Should have 'data:' (not folded)");
+        assertTrue(toon.contains("a: 1"), "Should have 'a: 1'");
+        assertTrue(toon.contains("b: 2"), "Should have 'b: 2'");
+        assertFalse(toon.contains("data.a"), "Should NOT have 'data.a'");
+    }
+
+    @Test
+    void testKeyFolding_ReadExpandsDottedKeys() {
+        // Test that reader expands dotted keys into nested structure
+        String folded = "config.database.host: localhost";
+        Map<String, Object> parsed = JsonIo.fromToon(folded, null).asClass(Map.class);
+
+        Map<?, ?> config = (Map<?, ?>) parsed.get("config");
+        assertNotNull(config, "Should have 'config' key");
+        Map<?, ?> database = (Map<?, ?>) config.get("database");
+        assertNotNull(database, "Should have 'database' key");
+        assertEquals("localhost", database.get("host"));
+    }
+
+    @Test
+    void testKeyFolding_QuotedKeysNotExpanded() {
+        // Quoted keys with dots should NOT be expanded
+        String literal = "\"dotted.key\": value";
+        Map<String, Object> parsed = JsonIo.fromToon(literal, null).asClass(Map.class);
+
+        assertTrue(parsed.containsKey("dotted.key"), "Should have literal 'dotted.key'");
+        assertEquals("value", parsed.get("dotted.key"));
+        assertFalse(parsed.containsKey("dotted"), "Should NOT have 'dotted' key");
+    }
 }

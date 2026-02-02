@@ -337,4 +337,11 @@ public interface WriteOptions {
      */
     boolean isJson5TrailingCommas();
 
+    /**
+     * @return boolean true if TOON key folding is enabled. When true, chains of single-key objects
+     * will be collapsed into dotted key notation (e.g., data.metadata.value instead of nested objects).
+     * Default is false.
+     */
+    boolean isToonKeyFolding();
+
 }

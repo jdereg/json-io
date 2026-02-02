@@ -1117,6 +1117,30 @@ public class WriteOptionsBuilder {
         return this;
     }
 
+    // ========== TOON Write Options ==========
+
+    /**
+     * Enable or disable TOON key folding. When enabled, chains of single-key objects will be
+     * collapsed into dotted key notation. For example, instead of:
+     * <pre>
+     * data:
+     *   metadata:
+     *     value: 42
+     * </pre>
+     * The output will be:
+     * <pre>
+     * data.metadata.value: 42
+     * </pre>
+     * This produces more compact TOON output. Default is false.
+     *
+     * @param enable true to enable key folding, false to disable (default nested structure)
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder toonKeyFolding(boolean enable) {
+        options.toonKeyFolding = enable;
+        return this;
+    }
+
 
     /**
      * @param customWrittenClasses Map of Class to JsonClassWriter.  Establish the passed in Map as the
@@ -1569,6 +1593,9 @@ public class WriteOptionsBuilder {
         private boolean json5InfinityNaN = false;
         private boolean json5TrailingCommas = false;
 
+        // TOON write options
+        private boolean toonKeyFolding = false;
+
         // Meta key prefix override (null = use default based on JSON5 mode, '@' = force @, '$' = force $)
         private Character metaPrefixOverride = null;
 
@@ -1877,6 +1904,13 @@ public class WriteOptionsBuilder {
          */
         public boolean isJson5TrailingCommas() {
             return json5TrailingCommas;
+        }
+
+        /**
+         * @return boolean true if TOON key folding is enabled.
+         */
+        public boolean isToonKeyFolding() {
+            return toonKeyFolding;
         }
 
 

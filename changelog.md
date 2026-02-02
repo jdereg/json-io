@@ -1,5 +1,12 @@
 ### Revision History
 #### 4.90.0 - (unreleased)
+* **FEATURE**: TOON key folding support (optional, spec-compliant)
+  * Writer: Added `WriteOptionsBuilder.toonKeyFolding(boolean)` to collapse single-key object chains into dotted notation
+    * `{data: {metadata: {value: 42}}}` → `data.metadata.value: 42`
+    * Works with arrays: `data.metadata.items[3]: a,b,c`
+  * Reader: Always expands dotted keys into nested structures (unless quoted)
+    * `config.database.host: localhost` → `{config: {database: {host: localhost}}}`
+    * Quoted keys preserved as literals: `"dotted.key": value` → `{dotted.key: value}`
 * **FEATURE**: TOON tabular format delimiter variants support
   * Added support for tab-separated tabular format: `items[2\t]{col1\tcol2}:` with tab-delimited rows
   * Added support for pipe-separated tabular format: `items[2|]{col1|col2}:` with pipe-delimited rows
