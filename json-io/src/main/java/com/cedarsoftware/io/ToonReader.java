@@ -164,6 +164,23 @@ public class ToonReader {
             String key = trimmed.substring(0, colonPos).trim();
             String valuePart = trimmed.substring(colonPos + 1).trim();
 
+            // Check for combined field+array notation: fieldName[N]: or fieldName[N]{cols}:
+            // Per TOON spec, this means 'fieldName' contains an array of N elements
+            // Tabular format: fieldName[N]{col1,col2,...}: followed by CSV rows
+            if (key.contains("[")) {
+                int bracketStart = key.indexOf('[');
+                String realKey = key.substring(0, bracketStart);
+                String arraySyntax = key.substring(bracketStart) + ":";
+                if (!valuePart.isEmpty()) {
+                    arraySyntax += " " + valuePart;
+                }
+                // Unquote real key if needed
+                realKey = unquoteString(realKey);
+                // parseArrayFromLine handles inline, list-format, and tabular arrays
+                jsonObj.put(realKey, parseArrayFromLine(arraySyntax));
+                continue;
+            }
+
             // Unquote key if needed
             key = unquoteString(key);
 
@@ -221,7 +238,7 @@ public class ToonReader {
     }
 
     /**
-     * Parse an array from a line containing [N]: ...
+     * Parse an array from a line containing [N]: ... or [N]{cols}: ...
      * Returns ArrayList instead of Object[] for better Java interoperability.
      */
     private List<Object> parseArrayFromLine(String trimmed) throws IOException {
@@ -244,21 +261,109 @@ public class ToonReader {
             return new ArrayList<>();
         }
 
-        // Get content after [N]:
-        int colonPos = trimmed.indexOf(':', bracketEnd);
+        // Check for tabular format: [N]{col1,col2,...}:
+        int afterBracket = bracketEnd + 1;
+        List<String> columnHeaders = null;
+        if (afterBracket < trimmed.length() && trimmed.charAt(afterBracket) == '{') {
+            int braceEnd = trimmed.indexOf('}', afterBracket);
+            if (braceEnd > afterBracket) {
+                String headerStr = trimmed.substring(afterBracket + 1, braceEnd);
+                columnHeaders = parseColumnHeaders(headerStr);
+                afterBracket = braceEnd + 1;
+            }
+        }
+
+        // Get content after [N]: or [N]{cols}:
+        int colonPos = trimmed.indexOf(':', afterBracket);
         if (colonPos < 0) {
             throw new JsonIoException("Malformed array syntax (missing colon) at line " + lineNumber);
         }
 
         String content = trimmed.substring(colonPos + 1).trim();
 
-        if (!content.isEmpty()) {
+        if (columnHeaders != null) {
+            // Tabular format: [N]{cols}: followed by CSV rows
+            return readTabularArray(count, columnHeaders);
+        } else if (!content.isEmpty()) {
             // Inline array: [N]: elem1,elem2,elem3
             return readInlineArray(content, count);
         } else {
             // List format array: [N]: followed by - elem lines
             return readListArray(count);
         }
+    }
+
+    /**
+     * Parse column headers from a comma-separated string.
+     */
+    private List<String> parseColumnHeaders(String headerStr) {
+        List<String> headers = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+
+        for (int i = 0; i < headerStr.length(); i++) {
+            char c = headerStr.charAt(i);
+            if (c == DELIMITER) {
+                headers.add(current.toString().trim());
+                current.setLength(0);
+            } else {
+                current.append(c);
+            }
+        }
+        if (current.length() > 0) {
+            headers.add(current.toString().trim());
+        }
+
+        return headers;
+    }
+
+    /**
+     * Read a tabular array: rows of CSV data where each row becomes an object.
+     */
+    private List<Object> readTabularArray(int count, List<String> columnHeaders) throws IOException {
+        List<Object> elements = new ArrayList<>(count);
+        int baseIndent = -1;
+
+        while (elements.size() < count) {
+            String line = peekLine();
+            if (line == null) {
+                break;  // EOF
+            }
+
+            String trimmed = line.trim();
+            if (trimmed.isEmpty()) {
+                consumeLine();
+                continue;
+            }
+
+            int indent = getIndentLevel(line);
+
+            // First row determines base indent
+            if (baseIndent < 0) {
+                baseIndent = indent;
+            } else if (indent < baseIndent) {
+                // Line at lower indent - end of tabular data
+                break;
+            }
+
+            // Skip lines that look like key: value (they belong to parent object)
+            if (findColonPosition(trimmed) > 0 && !trimmed.contains(",")) {
+                break;
+            }
+
+            consumeLine();
+
+            // Parse the CSV row into an object
+            JsonObject rowObj = new JsonObject();
+            List<Object> values = readInlineArray(trimmed, columnHeaders.size());
+
+            for (int i = 0; i < columnHeaders.size() && i < values.size(); i++) {
+                rowObj.put(columnHeaders.get(i), values.get(i));
+            }
+
+            elements.add(rowObj);
+        }
+
+        return elements;
     }
 
     /**
@@ -368,15 +473,143 @@ public class ToonReader {
             } else if (isArrayStart(elementContent)) {
                 elements.add(parseArrayFromLine(elementContent));
             } else if (findColonPosition(elementContent) > 0 && !elementContent.startsWith("\"")) {
-                // Inline object - but this shouldn't happen in TOON format
-                // The value after - should be a scalar or trigger nested parsing
-                elements.add(readScalar(elementContent));
+                // Per TOON spec: first field of object is on hyphen line
+                // e.g., "- name: John" followed by "  age: 30" on next line
+                // This is an inline object - read it with subsequent fields
+                JsonObject inlineObj = readInlineObject(elementContent, indent);
+                elements.add(inlineObj);
             } else {
                 elements.add(readScalar(elementContent));
             }
         }
 
         return elements;
+    }
+
+    /**
+     * Read an inline object where the first field is on the current line.
+     * Per TOON spec: "- name: John" followed by indented "age: 30"
+     *
+     * @param firstFieldLine the first field (e.g., "name: John")
+     * @param hyphenIndent the indent level of the hyphen that preceded this
+     * @return JsonObject with all fields
+     */
+    private JsonObject readInlineObject(String firstFieldLine, int hyphenIndent) throws IOException {
+        JsonObject jsonObj = new JsonObject();
+
+        // Parse first field from the provided line
+        int colonPos = findColonPosition(firstFieldLine);
+        if (colonPos > 0) {
+            String key = firstFieldLine.substring(0, colonPos).trim();
+            String valuePart = firstFieldLine.substring(colonPos + 1).trim();
+
+            // Check for combined field+array notation: fieldName[N]: or fieldName[N]{cols}:
+            if (key.contains("[")) {
+                int bracketStart = key.indexOf('[');
+                String realKey = key.substring(0, bracketStart);
+                String arraySyntax = key.substring(bracketStart) + ":";
+                if (!valuePart.isEmpty()) {
+                    arraySyntax += " " + valuePart;
+                }
+                realKey = unquoteString(realKey);
+                jsonObj.put(realKey, parseArrayFromLine(arraySyntax));
+            } else {
+                key = unquoteString(key);
+                if (valuePart.isEmpty()) {
+                    // Check for nested structure on next line
+                    String nextLine = peekLine();
+                    if (nextLine != null && getIndentLevel(nextLine) > hyphenIndent) {
+                        String nextTrimmed = nextLine.trim();
+                        if (isArrayStart(nextTrimmed)) {
+                            jsonObj.put(key, readArray(hyphenIndent + 1, null));
+                        } else {
+                            jsonObj.put(key, readObject(hyphenIndent + 1, null));
+                        }
+                    } else {
+                        jsonObj.put(key, null);
+                    }
+                } else if (isArrayStart(valuePart)) {
+                    jsonObj.put(key, parseArrayFromLine(valuePart));
+                } else if ("{}".equals(valuePart)) {
+                    jsonObj.put(key, new JsonObject());
+                } else {
+                    jsonObj.put(key, readScalar(valuePart));
+                }
+            }
+        }
+
+        // Read subsequent fields at the same indent level as the first field's content
+        // The first field's key started at hyphenIndent+1 (after the "- "), so subsequent
+        // fields should also be at hyphenIndent+1
+        int fieldIndent = hyphenIndent + 1;
+
+        while (true) {
+            String line = peekLine();
+            if (line == null) {
+                break;  // EOF
+            }
+
+            int indent = getIndentLevel(line);
+            if (indent < fieldIndent) {
+                break;  // Back to parent level
+            }
+            if (indent > fieldIndent) {
+                break;  // This belongs to a nested structure
+            }
+
+            String trimmed = line.trim();
+            if (trimmed.isEmpty()) {
+                consumeLine();
+                continue;
+            }
+
+            // Must be a key: value at our indent level
+            colonPos = findColonPosition(trimmed);
+            if (colonPos <= 0) {
+                break;  // Not a key: value pair
+            }
+
+            consumeLine();
+            String key = trimmed.substring(0, colonPos).trim();
+            String valuePart = trimmed.substring(colonPos + 1).trim();
+
+            // Check for combined field+array notation
+            if (key.endsWith("]") && key.contains("[")) {
+                int bracketStart = key.lastIndexOf('[');
+                String realKey = key.substring(0, bracketStart);
+                String arraySyntax = key.substring(bracketStart) + ":";
+                if (!valuePart.isEmpty()) {
+                    arraySyntax += " " + valuePart;
+                }
+                realKey = unquoteString(realKey);
+                jsonObj.put(realKey, parseArrayFromLine(arraySyntax));
+                continue;
+            }
+
+            key = unquoteString(key);
+
+            if (valuePart.isEmpty()) {
+                String nextLine = peekLine();
+                if (nextLine != null && getIndentLevel(nextLine) > fieldIndent) {
+                    String nextTrimmed = nextLine.trim();
+                    if (isArrayStart(nextTrimmed)) {
+                        jsonObj.put(key, readArray(fieldIndent + 1, null));
+                    } else {
+                        jsonObj.put(key, readObject(fieldIndent + 1, null));
+                    }
+                } else {
+                    jsonObj.put(key, null);
+                }
+            } else if (isArrayStart(valuePart)) {
+                jsonObj.put(key, parseArrayFromLine(valuePart));
+            } else if ("{}".equals(valuePart)) {
+                jsonObj.put(key, new JsonObject());
+            } else {
+                jsonObj.put(key, readScalar(valuePart));
+            }
+        }
+
+        return jsonObj;
     }
 
     // ========== Scalar Parsing ==========

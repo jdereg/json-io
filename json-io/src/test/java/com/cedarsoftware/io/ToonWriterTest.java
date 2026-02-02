@@ -219,15 +219,13 @@ class ToonWriterTest {
     @Test
     void testMixedNonUniformArray_Level3() {
         // Level 3: Three levels of nesting - ensures generic handling
-        // Structure: root -> items[] -> nested object -> data[] -> objects
-        // Expected format:
+        // Structure: root -> items[] -> nested object -> data[] -> uniform objects
+        // Expected format (tabular for uniform object arrays per TOON spec):
         // items[1]:
         //   - info:
-        //       data[2]:
-        //         - id: 1
-        //           value: a
-        //         - id: 2
-        //           value: b
+        //       data[2]{id,value}:
+        //         1,a
+        //         2,b
         Map<String, Object> dataElem1 = new LinkedHashMap<>();
         dataElem1.put("id", 1);
         dataElem1.put("value", "a");
@@ -254,14 +252,12 @@ class ToonWriterTest {
 
         String toon = JsonIo.toToon(root, null);
 
-        // Verify three-level nesting structure
+        // Verify three-level nesting structure with tabular format for uniform arrays
         assertTrue(toon.contains("items[1]:"), "Root field should combine with array size");
         assertTrue(toon.contains("- info:"), "First field of items element on hyphen line");
-        assertTrue(toon.contains("data[2]:"), "Nested field should combine with array size");
-        assertTrue(toon.contains("- id: 1"), "First field of data element on hyphen line");
-        assertTrue(toon.contains("value: a"), "Second field of first data element");
-        assertTrue(toon.contains("- id: 2"), "First field of second data element on hyphen line");
-        assertTrue(toon.contains("value: b"), "Second field of second data element");
+        assertTrue(toon.contains("data[2]{id,value}:"), "Uniform array uses tabular format with headers");
+        assertTrue(toon.contains("1,a"), "First row of tabular data");
+        assertTrue(toon.contains("2,b"), "Second row of tabular data");
     }
 
     @Test
@@ -317,6 +313,7 @@ class ToonWriterTest {
     void testDeeplyNestedArrays_Level4() {
         // Level 4: Four levels of nesting to prove the algorithm is generic
         // a[1] -> b[1] -> c[1] -> d[1] -> {value: deep}
+        // Uniform single-element arrays use tabular format: d[1]{value}: deep
         Map<String, Object> deepest = new LinkedHashMap<>();
         deepest.put("value", "deep");
 
@@ -347,11 +344,12 @@ class ToonWriterTest {
         String toon = JsonIo.toToon(root, null);
 
         // Verify four-level nesting - each level should have proper format
+        // Uniform arrays use tabular format with column headers
         assertTrue(toon.contains("a[1]:"), "Level 1 field+size");
         assertTrue(toon.contains("- b[1]:"), "Level 2 on hyphen line with size");
         assertTrue(toon.contains("- c[1]:"), "Level 3 on hyphen line with size");
-        assertTrue(toon.contains("- d[1]:"), "Level 4 on hyphen line with size");
-        assertTrue(toon.contains("- value: deep"), "Deepest value on hyphen line");
+        assertTrue(toon.contains("- d[1]{value}:"), "Level 4 uses tabular format");
+        assertTrue(toon.contains("deep"), "Deepest value in tabular row");
     }
 
     // ==================== Collection Tests ====================
@@ -389,6 +387,159 @@ class ToonWriterTest {
         String toon = JsonIo.toToon(map, null);
         assertTrue(toon.contains("name: John"));
         assertTrue(toon.contains("age: 30"));
+    }
+
+    @Test
+    void testMapWithStringArrayField_RoundTrip() {
+        // Test TOON spec example: tags[3]: admin,ops,dev
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("tags", new String[]{"admin", "ops", "dev"});
+
+        // Write to TOON
+        String toon = JsonIo.toToon(map, null);
+        assertEquals("tags[3]: admin,ops,dev", toon);
+
+        // Read back
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        assertNotNull(restored.get("tags"));
+        assertTrue(restored.get("tags") instanceof List);
+        List<?> tags = (List<?>) restored.get("tags");
+        assertEquals(3, tags.size());
+        assertEquals("admin", tags.get(0));
+        assertEquals("ops", tags.get(1));
+        assertEquals("dev", tags.get(2));
+
+        // Write again and verify round-trip
+        String toon2 = JsonIo.toToon(restored, null);
+        assertEquals("tags[3]: admin,ops,dev", toon2);
+    }
+
+    @Test
+    void testNestedTabularArrayInObject_RoundTrip() {
+        // Test TOON spec nested tabular format:
+        // items[1]:
+        //   - users[2]{id,name}:
+        //       1,Ada
+        //       2,Bob
+        //     status: active
+        //
+        // This tests:
+        // - Hyphen list element containing an object
+        // - First field (users) is a tabular array on the hyphen line
+        // - Tabular rows are indented relative to the field
+        // - Second field (status) is at the same level as the field name
+
+        Map<String, Object> user1 = new LinkedHashMap<>();
+        user1.put("id", 1);
+        user1.put("name", "Ada");
+
+        Map<String, Object> user2 = new LinkedHashMap<>();
+        user2.put("id", 2);
+        user2.put("name", "Bob");
+
+        List<Map<String, Object>> users = new ArrayList<>();
+        users.add(user1);
+        users.add(user2);
+
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("users", users);
+        item.put("status", "active");
+
+        List<Map<String, Object>> items = new ArrayList<>();
+        items.add(item);
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("items", items);
+
+        // Write to TOON
+        String toon = JsonIo.toToon(root, null);
+        assertTrue(toon.contains("items[1]:"), "Should have items array");
+        assertTrue(toon.contains("- users[2]{id,name}:"), "First field should be tabular on hyphen line");
+        assertTrue(toon.contains("1,Ada"), "First tabular row");
+        assertTrue(toon.contains("2,Bob"), "Second tabular row");
+        assertTrue(toon.contains("status: active"), "Second field of item");
+
+        // Read back
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> restoredItems = (List<?>) restored.get("items");
+        assertEquals(1, restoredItems.size());
+
+        Map<?, ?> restoredItem = (Map<?, ?>) restoredItems.get(0);
+        assertEquals("active", restoredItem.get("status"));
+
+        List<?> restoredUsers = (List<?>) restoredItem.get("users");
+        assertEquals(2, restoredUsers.size());
+
+        Map<?, ?> restoredUser1 = (Map<?, ?>) restoredUsers.get(0);
+        assertEquals(1L, restoredUser1.get("id"));
+        assertEquals("Ada", restoredUser1.get("name"));
+
+        Map<?, ?> restoredUser2 = (Map<?, ?>) restoredUsers.get(1);
+        assertEquals(2L, restoredUser2.get("id"));
+        assertEquals("Bob", restoredUser2.get("name"));
+
+        // Write again and verify round-trip
+        String toon2 = JsonIo.toToon(restored, null);
+        assertEquals(toon, toon2, "Round-trip should produce identical TOON");
+    }
+
+    @Test
+    void testTabularArrayFormat_RoundTrip() {
+        // Test TOON spec tabular format:
+        // items[2]{sku,qty,price}:
+        //   A1,2,9.99
+        //   B2,1,14.5
+        //
+        // This is a compact CSV-like format for arrays of uniform objects.
+        // - items: field name
+        // - [2]: array has 2 elements
+        // - {sku,qty,price}: column headers (property names)
+        // - Each indented line is one object with values in header order
+
+        Map<String, Object> item1 = new LinkedHashMap<>();
+        item1.put("sku", "A1");
+        item1.put("qty", 2);
+        item1.put("price", 9.99);
+
+        Map<String, Object> item2 = new LinkedHashMap<>();
+        item2.put("sku", "B2");
+        item2.put("qty", 1);
+        item2.put("price", 14.5);
+
+        List<Map<String, Object>> items = new ArrayList<>();
+        items.add(item1);
+        items.add(item2);
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("items", items);
+
+        // Write to TOON - should produce tabular format
+        String toon = JsonIo.toToon(root, null);
+        assertTrue(toon.contains("items[2]{sku,qty,price}:"), "Should use tabular header format");
+        assertTrue(toon.contains("A1,2,9.99"), "First row of tabular data");
+        assertTrue(toon.contains("B2,1,14.5"), "Second row of tabular data");
+
+        // Read back
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        assertNotNull(restored.get("items"));
+        List<?> restoredItems = (List<?>) restored.get("items");
+        assertEquals(2, restoredItems.size());
+
+        // Verify first item
+        Map<?, ?> restoredItem1 = (Map<?, ?>) restoredItems.get(0);
+        assertEquals("A1", restoredItem1.get("sku"));
+        assertEquals(2L, restoredItem1.get("qty"));
+        assertEquals(9.99, restoredItem1.get("price"));
+
+        // Verify second item
+        Map<?, ?> restoredItem2 = (Map<?, ?>) restoredItems.get(1);
+        assertEquals("B2", restoredItem2.get("sku"));
+        assertEquals(1L, restoredItem2.get("qty"));
+        assertEquals(14.5, restoredItem2.get("price"));
+
+        // Write again and verify round-trip
+        String toon2 = JsonIo.toToon(restored, null);
+        assertEquals(toon, toon2, "Round-trip should produce identical TOON");
     }
 
     @Test

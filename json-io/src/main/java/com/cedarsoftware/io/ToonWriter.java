@@ -9,8 +9,10 @@ import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -416,8 +418,60 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
+     * Write collection elements with header (colon or tabular header).
+     * Called from writeMapWithSimpleKeys after [N] has been written.
+     */
+    private void writeCollectionElementsWithHeader(Collection<?> collection) throws IOException {
+        if (collection.isEmpty()) {
+            out.write(":");
+            return;
+        }
+
+        // Check if all elements are primitives
+        boolean allPrimitives = true;
+        for (Object element : collection) {
+            if (element != null && !isPrimitive(element)) {
+                allPrimitives = false;
+                break;
+            }
+        }
+
+        if (allPrimitives) {
+            out.write(": ");
+            boolean first = true;
+            for (Object element : collection) {
+                if (!first) {
+                    out.write(delimiter);
+                }
+                first = false;
+                writeInlineValue(element);
+            }
+        } else {
+            // Check for uniform object array (all Maps with same keys)
+            List<String> uniformKeys = getUniformKeys(collection);
+            if (uniformKeys != null) {
+                // Tabular format: {key1,key2,...}: followed by CSV rows
+                writeTabularHeader(uniformKeys);
+                writeTabularRows(collection, uniformKeys);
+            } else {
+                // Mixed/complex - use list format with hyphens
+                out.write(":");
+                depth++;
+                for (Object element : collection) {
+                    out.write(NEW_LINE);
+                    writeIndent();
+                    out.write("-");
+                    writeListElement(element);
+                }
+                depth--;
+            }
+        }
+    }
+
+    /**
      * Write collection elements (after the [N]: marker has been written).
      * Per TOON spec: first field of object elements goes on hyphen line.
+     * For uniform object arrays, uses tabular format: {col1,col2}: row1 row2
      */
     private void writeCollectionElements(Collection<?> collection) throws IOException {
         if (collection.isEmpty()) {
@@ -444,16 +498,114 @@ public class ToonWriter implements Closeable, Flushable {
                 writeInlineValue(element);
             }
         } else {
-            // Mixed/complex - use list format with hyphens
-            depth++;
-            for (Object element : collection) {
-                out.write(NEW_LINE);
-                writeIndent();
-                out.write("-");
-                writeListElement(element);
+            // Check for uniform object array (all Maps with same keys)
+            List<String> uniformKeys = getUniformKeys(collection);
+            if (uniformKeys != null) {
+                // Tabular format: {key1,key2,...}: followed by CSV rows
+                writeTabularHeader(uniformKeys);
+                writeTabularRows(collection, uniformKeys);
+            } else {
+                // Mixed/complex - use list format with hyphens
+                depth++;
+                for (Object element : collection) {
+                    out.write(NEW_LINE);
+                    writeIndent();
+                    out.write("-");
+                    writeListElement(element);
+                }
+                depth--;
             }
-            depth--;
         }
+    }
+
+    /**
+     * Check if a collection contains uniform objects (all Maps with identical keys and primitive values).
+     * Returns the ordered list of keys if uniform, null otherwise.
+     */
+    private List<String> getUniformKeys(Collection<?> collection) {
+        List<String> keys = null;
+
+        for (Object element : collection) {
+            if (element == null) {
+                return null;  // Null elements break uniformity
+            }
+
+            // Only Maps are candidates for tabular format
+            // Collections, arrays, and arbitrary objects don't qualify
+            if (!(element instanceof Map)) {
+                return null;
+            }
+
+            Map<?, ?> map = (Map<?, ?>) element;
+
+            if (map.isEmpty()) {
+                return null;  // Empty objects break uniformity
+            }
+
+            // Check all keys are simple types (strings)
+            List<String> elementKeys = new ArrayList<>();
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                Object key = entry.getKey();
+                if (!(key instanceof String)) {
+                    return null;  // Non-string keys break uniformity
+                }
+                // Check that values are primitives (for tabular format)
+                Object value = entry.getValue();
+                if (value != null && !isPrimitive(value)) {
+                    return null;  // Complex values break tabular format
+                }
+                elementKeys.add((String) key);
+            }
+
+            if (keys == null) {
+                keys = elementKeys;
+            } else if (!keys.equals(elementKeys)) {
+                return null;  // Different keys break uniformity
+            }
+        }
+
+        return keys;
+    }
+
+    /**
+     * Write tabular header: {col1,col2,...}:
+     */
+    private void writeTabularHeader(List<String> keys) throws IOException {
+        out.write("{");
+        boolean first = true;
+        for (String key : keys) {
+            if (!first) {
+                out.write(delimiter);
+            }
+            first = false;
+            out.write(key);
+        }
+        out.write("}:");
+    }
+
+    /**
+     * Write tabular rows (CSV-like format).
+     */
+    private void writeTabularRows(Collection<?> collection, List<String> keys) throws IOException {
+        depth++;
+        for (Object element : collection) {
+            out.write(NEW_LINE);
+            writeIndent();
+
+            // Elements are guaranteed to be Maps by getUniformKeys check
+            Map<?, ?> map = (Map<?, ?>) element;
+
+            // Write values in key order
+            boolean first = true;
+            for (String key : keys) {
+                if (!first) {
+                    out.write(delimiter);
+                }
+                first = false;
+                writeInlineValue(map.get(key));
+            }
+        }
+        depth--;
     }
 
     /**
@@ -519,12 +671,16 @@ public class ToonWriter implements Closeable, Flushable {
             } else if (value instanceof Collection) {
                 Collection<?> coll = (Collection<?>) value;
                 writeString(keyStr);
-                out.write("[" + coll.size() + "]:");
-                writeCollectionElements(coll);
+                out.write("[" + coll.size() + "]");
+                // Extra depth for collection elements inside inline map
+                depth++;
+                writeCollectionElementsWithHeader(coll);
+                depth--;
             } else {
                 writeString(keyStr);
-                out.write(": ");
+                out.write(":");
                 if (value != null && !isPrimitive(value)) {
+                    // Nested object - newline, no trailing space after colon
                     out.write(NEW_LINE);
                     depth += 2;
                     if (value instanceof Map) {
@@ -534,6 +690,8 @@ public class ToonWriter implements Closeable, Flushable {
                     }
                     depth -= 2;
                 } else {
+                    // Primitive value on same line - space before value
+                    out.write(" ");
                     writeValue(value);
                 }
             }
@@ -620,15 +778,16 @@ public class ToonWriter implements Closeable, Flushable {
                 out.write("[" + length + "]:");
                 writeArrayElements(value, length);
             } else if (value instanceof Collection) {
-                // Combine key with collection size: fieldName[N]:
+                // Combine key with collection size: fieldName[N]: or fieldName[N]{cols}:
                 Collection<?> coll = (Collection<?>) value;
                 writeString(keyStr);
-                out.write("[" + coll.size() + "]:");
-                writeCollectionElements(coll);
+                out.write("[" + coll.size() + "]");
+                writeCollectionElementsWithHeader(coll);
             } else {
                 writeString(keyStr);
-                out.write(": ");
+                out.write(":");
                 if (value != null && !isPrimitive(value)) {
+                    // Nested object - newline, no trailing space after colon
                     out.write(NEW_LINE);
                     depth++;
                     if (value instanceof Map) {
@@ -640,6 +799,8 @@ public class ToonWriter implements Closeable, Flushable {
                     }
                     depth--;
                 } else {
+                    // Primitive value on same line - space before value
+                    out.write(" ");
                     writeValue(value);
                 }
             }
