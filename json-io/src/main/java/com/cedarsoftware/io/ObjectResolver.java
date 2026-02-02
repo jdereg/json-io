@@ -1115,12 +1115,14 @@ public class ObjectResolver extends Resolver
             return jsonObj.getTarget();
         }
 
-        Class<?> targetClass = resolveTargetClass(jsonObj);
+        Class<?> targetClass = jsonObj.getRawType();
         if (targetClass == null) {
             return null;
         }
 
-        // Skip if custom reading is disabled for the resolved target type
+        // Skip if custom reading is disabled for the resolved target type.
+        // This check is needed here for cases where target already exists (normalizeToJsonObject
+        // returns early). Also checked in normalizeToJsonObject() to avoid wasteful createInstance().
         if (targetClass != rawInferred && readOptions.isNotCustomReaderClass(targetClass)) {
             return null;
         }
@@ -1160,7 +1162,14 @@ public class ObjectResolver extends Resolver
         }
 
         // Insufficient type information to create instance
-        if (jsonObj.getRawType() == null || rawInferred == null) {
+        Class<?> targetClass = jsonObj.getRawType();
+        if (targetClass == null || rawInferred == null) {
+            return null;
+        }
+
+        // Early exit: skip if custom reading is disabled for the resolved target type
+        // This check MUST happen BEFORE createInstance() to avoid wasteful instantiation
+        if (targetClass != rawInferred && readOptions.isNotCustomReaderClass(targetClass)) {
             return null;
         }
 
