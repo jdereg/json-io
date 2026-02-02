@@ -699,10 +699,12 @@ public class ObjectResolver extends Resolver
     protected Object readWithFactoryIfExists(final Object o, final Type inferredType) {
         Class<?> rawInferred = TypeUtilities.getRawClass(inferredType);
 
-        // FAST PATH: Non-JsonObject primitives and Strings never need factory/reader lookup.
-        // However, they may still need type conversion (Long→int, String→UUID, etc.)
+        // FAST PATH: Non-JsonObject values can often use Converter directly,
+        // avoiding expensive JsonObject wrapper creation and factory/reader lookups.
         if (!(o instanceof JsonObject)) {
             Class<?> valueClass = o.getClass();
+
+            // Fast path for primitives and Strings
             if (Primitives.isPrimitive(valueClass) || valueClass == String.class) {
                 // Same type or assignable - no conversion needed
                 if (rawInferred == null || rawInferred == valueClass || rawInferred.isAssignableFrom(valueClass)) {
@@ -712,6 +714,13 @@ public class ObjectResolver extends Resolver
                 if (converter.isSimpleTypeConversionSupported(valueClass, rawInferred)) {
                     return converter.convert(o, rawInferred);
                 }
+                return null;
+            }
+
+            // Fast path: If target is Object or compatible, no conversion needed
+            // Note: We do NOT use Converter for Object[] → typed array/collection here because
+            // array elements may contain JsonObjects that need factory processing, not simple conversion.
+            if (rawInferred == null || rawInferred == Object.class || rawInferred.isAssignableFrom(valueClass)) {
                 return null;
             }
         }
@@ -727,6 +736,11 @@ public class ObjectResolver extends Resolver
             return null;
         }
 
+        // If createInstance already fully handled this object, return the target directly
+        if (jsonObj.isFinished()) {
+            return jsonObj.getTarget();
+        }
+
         Class<?> targetClass = resolveTargetClass(jsonObj);
         if (targetClass == null) {
             return null;
@@ -739,9 +753,6 @@ public class ObjectResolver extends Resolver
 
         // Try each strategy in order
         Object result;
-        if ((result = trySimpleConversion(jsonObj, targetClass)) != null) {
-            return result;
-        }
         if ((result = tryClassFactory(jsonObj, targetClass)) != null) {
             return result;
         }
@@ -757,30 +768,31 @@ public class ObjectResolver extends Resolver
      * @return JsonObject wrapper, or null if input cannot be processed (e.g., reference)
      */
     private JsonObject normalizeToJsonObject(final Object o, final Class<?> rawInferred) {
-        if (o instanceof JsonObject) {
-            JsonObject jsonObj = (JsonObject) o;
-            if (jsonObj.isReference()) {
-                return null; // References are resolved elsewhere
-            }
-            // Attempt early instance creation if no target exists yet
-            if (jsonObj.getTarget() == null) {
-                if (jsonObj.getRawType() == null || rawInferred == null) {
-                    return null; // Insufficient type information
-                }
-                Object factoryCreated = createInstance(jsonObj);
-                if (factoryCreated != null && jsonObj.isFinished()) {
-                    return null; // Already fully handled by createInstance
-                }
-            }
-            return jsonObj;
-        } else {
-            // Wrap primitive value in a JsonObject
-            Class<?> targetClass = (rawInferred == null || rawInferred == Object.class) ? o.getClass() : rawInferred;
-            JsonObject jsonObj = new JsonObject();
-            jsonObj.setValue(o);
-            jsonObj.setType(targetClass);
+        // Only process JsonObject inputs - non-JsonObject values are handled by the fast path
+        if (!(o instanceof JsonObject)) {
+            return null;
+        }
+
+        JsonObject jsonObj = (JsonObject) o;
+
+        // References are resolved elsewhere
+        if (jsonObj.isReference()) {
+            return null;
+        }
+
+        // If target already exists, no initialization needed
+        if (jsonObj.getTarget() != null) {
             return jsonObj;
         }
+
+        // Insufficient type information to create instance
+        if (jsonObj.getRawType() == null || rawInferred == null) {
+            return null;
+        }
+
+        // Attempt instance creation
+        createInstance(jsonObj);
+        return jsonObj;
     }
 
     /**
@@ -788,20 +800,6 @@ public class ObjectResolver extends Resolver
      */
     private Class<?> resolveTargetClass(final JsonObject jsonObj) {
         return jsonObj.getRawType();
-    }
-
-    /**
-     * Try simple type conversion via Converter (e.g., String → UUID, String → Date).
-     */
-    private Object trySimpleConversion(final JsonObject jsonObj, final Class<?> targetClass) {
-        if (jsonObj.getTarget() == null && jsonObj.hasValue()) {
-            Object value = jsonObj.getValue();
-            if (converter.isSimpleTypeConversionSupported(value.getClass(), targetClass)) {
-                Object converted = converter.convert(value, targetClass);
-                return jsonObj.setFinishedTarget(converted, true);
-            }
-        }
-        return null;
     }
 
     /**
