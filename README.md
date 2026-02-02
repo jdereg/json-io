@@ -101,8 +101,12 @@ json-io's TOON implementation offers comprehensive Java type coverage while JToo
 ## Installation
 
 **Gradle**
+To include in your project:
+> Replace `LATEST_VERSION` with the version shown here:
+[![Maven Central](https://img.shields.io/maven-central/v/com.cedarsoftware/java-util)](https://central.sonatype.com/artifact/com.cedarsoftware/java-util)
+
 ```groovy
-implementation 'com.cedarsoftware:json-io:4.89.0'
+implementation 'com.cedarsoftware:json-io:LATEST_VERSION'
 ```
 
 **Maven**
@@ -110,23 +114,11 @@ implementation 'com.cedarsoftware:json-io:4.89.0'
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>4.89.0</version>
+  <version>LATEST_VERSION</version>
 </dependency>
 ```
 
-## Quick Start
-
-```java
-// JSON
-String json = JsonIo.toJson(myObject);
-MyClass obj = JsonIo.toJava(json).asClass(MyClass.class);
-
-// TOON (~40% fewer tokens than JSON)
-String toon = JsonIo.toToon(myObject, writeOptions);
-MyClass obj = JsonIo.fromToon(toon, readOptions).asClass(MyClass.class);
-```
-
-## Spring Boot Integration
+### Spring Boot Integration
 
 json-io provides a Spring Boot starter for seamless integration with Spring MVC and WebFlux applications.
 
@@ -136,7 +128,7 @@ json-io provides a Spring Boot starter for seamless integration with Spring MVC 
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io-spring-boot-starter</artifactId>
-  <version>4.89.0</version>
+  <version>LATEST_VERSION</version>
 </dependency>
 ```
 
@@ -150,6 +142,18 @@ public class ApiController {
         return myData;  // Returns JSON, JSON5, or TOON based on Accept header
     }
 }
+```
+
+## Quick Start
+
+```java
+// JSON
+String json = JsonIo.toJson(myObject);
+MyClass obj = JsonIo.toJava(json).asClass(MyClass.class);
+
+// TOON (~40% fewer tokens than JSON)
+String toon = JsonIo.toToon(myObject, writeOptions);
+MyClass obj = JsonIo.fromToon(toon, readOptions).asClass(MyClass.class);
 ```
 
 Request TOON format for LLM applications: `Accept: application/vnd.toon`
@@ -183,7 +187,7 @@ See the [complete type comparison](/user-guide.md#toon-supported-types) showing 
 - [Spring Integration Guide](/user-guide-spring.md)
 - [Revision History](/changelog.md)
 
-## Release [4.89.0](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.89.0/index.html)
+## Release [![Maven Central](https://img.shields.io/maven-central/v/com.cedarsoftware/java-util)](https://central.sonatype.com/artifact/com.cedarsoftware/java-util)
 
 | | |
 |---|---|
@@ -191,9 +195,9 @@ See the [complete type comparison](/user-guide.md#toon-supported-types) showing 
 | **Java** | JDK 1.8+ (multi-release JAR with module-info.class) |
 | **Package** | com.cedarsoftware.io |
 
-**API** — Static methods on [JsonIo](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.89.0/com/cedarsoftware/io/JsonIo.html): `toJson()`, `toJava()`, `toMaps()`, `toToon()`, `fromToon()`, `formatJson()`, `deepCopy()`
+**API** — Static methods on [JsonIo](/json-io/src/main/java/com/cedarsoftware/io/JsonIo.java): `toJson()`, `toJava()`, `toMaps()`, `toToon()`, `fromToon()`, `formatJson()`, `deepCopy()`
 
-Configure via [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md). Use [ClassFactory](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.89.0/com/cedarsoftware/io/ClassFactory.html) for difficult-to-instantiate classes.
+Configure via [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md). Use [ClassFactory](/json-io/src/main/java/com/cedarsoftware/io/ClassFactory.java) for difficult-to-instantiate classes.
 
 ### Logging
 

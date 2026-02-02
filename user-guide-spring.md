@@ -19,20 +19,22 @@ This guide covers integrating json-io with Spring Boot applications, providing a
 
 ## Installation
 
-Add the Spring Boot starter to your project:
+Add the Spring Boot starter to your project.
+
+Replace LATEST_VERSION with the versuin show here: [![Maven Central](https://img.shields.io/maven-central/v/com.cedarsoftware/java-util)](https://central.sonatype.com/artifact/com.cedarsoftware/java-util)
 
 **Maven**
 ```xml
 <dependency>
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io-spring-boot-starter</artifactId>
-    <version>4.89.0</version>
+    <version>LATEST_VERSION</version>
 </dependency>
 ```
 
 **Gradle**
 ```groovy
-implementation 'com.cedarsoftware:json-io-spring-boot-starter:4.89.0'
+implementation 'com.cedarsoftware:json-io-spring-boot-starter:LATEST_VERSION'
 ```
 
 **Requirements:**
