@@ -10,6 +10,8 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
@@ -69,7 +71,417 @@ public class ObjectResolver extends Resolver
      */
     public ObjectResolver(ReadOptions readOptions, ReferenceTracker references, Converter converter) {
         super(readOptions, references, converter);
+        initializeStrategies();
     }
+
+    // ========================================================================
+    // Strategy Pattern Infrastructure (Phase 0)
+    // ========================================================================
+
+    /**
+     * Strategy for handling field assignment. Each strategy attempts to handle
+     * a specific RHS/LHS combination. Returns true if handled, false to try next strategy.
+     */
+    @FunctionalInterface
+    interface AssignmentStrategy {
+        /**
+         * Attempt to handle field assignment.
+         * @param rhs The right-hand side value from JSON (JsonObject, Object[], primitive, String, null)
+         * @param fieldType The target field's Type (may be ParameterizedType for generics)
+         * @param injector The injector to use for setting the field value
+         * @param target The target Java object being populated
+         * @param ctx Context providing access to resolver capabilities
+         * @return true if this strategy handled the assignment, false to try next strategy
+         */
+        boolean tryAssign(Object rhs, Type fieldType, Injector injector,
+                          Object target, AssignmentContext ctx);
+    }
+
+    /**
+     * Context providing access to resolver capabilities for strategies.
+     * This allows strategies to remain stateless while accessing necessary utilities.
+     */
+    static class AssignmentContext {
+        final Converter converter;
+        final ReadOptions readOptions;
+        final JsonObject parentJsonObj;  // The parent JsonObject being traversed
+        final Consumer<JsonObject> pushToStack;
+        final Function<JsonObject, JsonObject> resolveReference;
+        final Consumer<UnresolvedReference> addUnresolvedRef;
+
+        AssignmentContext(Converter converter,
+                          ReadOptions readOptions,
+                          JsonObject parentJsonObj,
+                          Consumer<JsonObject> pushToStack,
+                          Function<JsonObject, JsonObject> resolveReference,
+                          Consumer<UnresolvedReference> addUnresolvedRef) {
+            this.converter = converter;
+            this.readOptions = readOptions;
+            this.parentJsonObj = parentJsonObj;
+            this.pushToStack = pushToStack;
+            this.resolveReference = resolveReference;
+            this.addUnresolvedRef = addUnresolvedRef;
+        }
+    }
+
+    /**
+     * Ordered list of strategies to try for field assignment.
+     * Strategies are tried in order; first one that returns true wins.
+     * Initially empty - strategies will be added in subsequent phases.
+     */
+    private final List<AssignmentStrategy> strategies = new ArrayList<>();
+
+    /**
+     * Creates the context for strategy execution.
+     * @param parentJsonObj The parent JsonObject being traversed (needed for unresolved refs)
+     */
+    private AssignmentContext createAssignmentContext(JsonObject parentJsonObj) {
+        return new AssignmentContext(
+                converter,
+                readOptions,
+                parentJsonObj,
+                this::push,
+                this::resolveReference,
+                this::addUnresolvedReference
+        );
+    }
+
+    /**
+     * Initializes the strategy chain with all implemented strategies.
+     * Called from constructor to populate the strategies list.
+     */
+    private void initializeStrategies() {
+        // Phase 1: Null and Reference handling
+        strategies.add(this::handleNullStrategy);
+        strategies.add(this::handleReferenceStrategy);
+        // Phase 2: Direct Assignment and Converter
+        strategies.add(this::handleDirectAssignStrategy);
+        strategies.add(this::handleConverterStrategy);
+        // Phase 3: Array handling
+        strategies.add(this::handleArrayStrategy);
+        // Phase 4: JsonObject handling
+        strategies.add(this::handleJsonObjectStrategy);
+        // Final fallback for edge cases (empty strings, etc.)
+        strategies.add(this::handleFallbackStrategy);
+        // Phase 5: Cleanup will remove legacy fallback
+    }
+
+    // ========================================================================
+    // Strategy Implementations
+    // ========================================================================
+
+    /**
+     * Strategy for handling null RHS values.
+     * Injects null for reference types, or primitive default for primitive types.
+     */
+    private boolean handleNullStrategy(Object rhs, Type fieldType, Injector injector,
+                                        Object target, AssignmentContext ctx) {
+        if (rhs != null) {
+            return false;  // Not null, try next strategy
+        }
+
+        Class<?> rawType = TypeUtilities.getRawClass(fieldType);
+        Object value = rawType.isPrimitive()
+                ? ctx.converter.convert(null, rawType)  // Primitive default (0, false, etc.)
+                : null;
+        injector.inject(target, value);
+        return true;  // Handled
+    }
+
+    /**
+     * Strategy for handling @ref references.
+     * Resolves the reference and injects the target, or queues for later resolution.
+     */
+    private boolean handleReferenceStrategy(Object rhs, Type fieldType, Injector injector,
+                                             Object target, AssignmentContext ctx) {
+        if (!(rhs instanceof JsonObject)) {
+            return false;  // Not a JsonObject, try next strategy
+        }
+
+        JsonObject jsObj = (JsonObject) rhs;
+        if (!jsObj.isReference()) {
+            return false;  // Not a reference, try next strategy
+        }
+
+        JsonObject refObject = ctx.resolveReference.apply(jsObj);
+        if (refObject != null && refObject.getTarget() != null) {
+            injector.inject(target, refObject.getTarget());
+        } else {
+            // Queue for later resolution when the referenced object is created
+            ctx.addUnresolvedRef.accept(new UnresolvedReference(
+                    ctx.parentJsonObj,  // Use parent JsonObject from context
+                    injector.getName(),
+                    jsObj.getReferenceId()
+            ));
+        }
+        return true;  // Handled (even if queued for later)
+    }
+
+    /**
+     * Strategy for direct assignment when RHS is already the correct type.
+     * Handles cases where no conversion is needed.
+     */
+    private boolean handleDirectAssignStrategy(Object rhs, Type fieldType, Injector injector,
+                                                Object target, AssignmentContext ctx) {
+        // Skip JsonObject and Object[] - they need special handling
+        if (rhs instanceof JsonObject || rhs instanceof Object[]) {
+            return false;
+        }
+
+        Class<?> rawType = TypeUtilities.getRawClass(fieldType);
+        if (rawType == null) {
+            return false;
+        }
+
+        // Direct assignment if already correct type
+        if (rawType.isAssignableFrom(rhs.getClass())) {
+            injector.inject(target, rhs);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Strategy for scalar-to-scalar conversions using Converter.
+     * Handles primitives, wrappers, String, and simple JDK types.
+     */
+    private boolean handleConverterStrategy(Object rhs, Type fieldType, Injector injector,
+                                             Object target, AssignmentContext ctx) {
+        // Skip JsonObject and Object[] - they need special handling
+        if (rhs instanceof JsonObject || rhs instanceof Object[]) {
+            return false;
+        }
+
+        Class<?> rawType = TypeUtilities.getRawClass(fieldType);
+        Class<?> rhsClass = rhs.getClass();
+
+        // Only handle conversions to simple types (scalars)
+        if (!isSimpleType(rawType)) {
+            return false;
+        }
+
+        // Check if Converter supports this conversion
+        if (ctx.converter.isSimpleTypeConversionSupported(rhsClass, rawType)) {
+            Object converted = ctx.converter.convert(rhs, rawType);
+            injector.inject(target, converted);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Checks if a class is a "simple type" that Converter can handle completely.
+     * Simple types include primitives, wrappers, String, and non-referenceable JDK types.
+     */
+    private boolean isSimpleType(Class<?> clazz) {
+        if (clazz == null) {
+            return false;
+        }
+        return clazz.isPrimitive()
+                || clazz == String.class
+                || Number.class.isAssignableFrom(clazz)
+                || clazz == Boolean.class
+                || clazz == Character.class
+                || readOptions.isNonReferenceableClass(clazz);
+    }
+
+    /**
+     * Strategy for handling Object[] RHS values.
+     * Wraps the array in a JsonObject, preserves generic type info, and queues for traversal.
+     * This handles both array fields (String[]) and collection fields (List<String>).
+     */
+    private boolean handleArrayStrategy(Object rhs, Type fieldType, Injector injector,
+                                         Object target, AssignmentContext ctx) {
+        if (!(rhs instanceof Object[])) {
+            return false;  // Not an Object[], try next strategy
+        }
+
+        final Object[] elements = (Object[]) rhs;
+
+        // Check if we can use fast-path conversion (simple element types)
+        Class<?> rawFieldType = TypeUtilities.getRawClass(fieldType);
+        if (rawFieldType != null && rawFieldType.isArray()) {
+            Class<?> componentType = rawFieldType.getComponentType();
+            if (canUseFastPathForArray(elements, componentType, ctx)) {
+                // Fast path: use Converter for simple type arrays (e.g., int[] -> long[])
+                Object converted = ctx.converter.convert(elements, rawFieldType);
+                injector.inject(target, converted);
+                return true;
+            }
+        }
+
+        // Slow path: wrap in JsonObject and queue for traversal
+        JsonObject jsonArray = new JsonObject();
+        jsonArray.setType(fieldType);
+        jsonArray.setItems(elements);
+
+        // Preserve generic type information for collections
+        // Use just-in-time type stamping instead of markUntypedObjects pre-pass
+        if (fieldType instanceof ParameterizedType) {
+            Type[] typeArgs = ((ParameterizedType) fieldType).getActualTypeArguments();
+            if (typeArgs.length > 0) {
+                Type elementType = typeArgs[0];
+                jsonArray.setItemElementType(elementType);
+
+                // Just-in-time type stamping: set type on untyped JsonObject elements
+                stampElementTypes(elements, elementType);
+            }
+        }
+
+        createInstance(jsonArray);
+        injector.inject(target, jsonArray.getTarget());
+
+        // Queue for traversal unless it's a non-referenceable type
+        if (!ctx.readOptions.isNonReferenceableClass(jsonArray.getRawType())) {
+            ctx.pushToStack.accept(jsonArray);
+        }
+        return true;
+    }
+
+    /**
+     * Checks if we can use fast-path Converter for array elements.
+     * Returns true only when we're confident Converter can handle the conversion safely.
+     * This is conservative to avoid conversion failures for edge cases.
+     */
+    private boolean canUseFastPathForArray(Object[] elements, Class<?> targetComponentType,
+                                            AssignmentContext ctx) {
+        if (!isSimpleType(targetComponentType)) {
+            return false;
+        }
+
+        // Must have at least one element to check source type
+        if (elements.length == 0) {
+            return true;  // Empty array - Converter can handle this
+        }
+
+        // Find the first non-null element to determine source type
+        Class<?> sourceElementType = null;
+        for (Object element : elements) {
+            if (element != null) {
+                sourceElementType = element.getClass();
+                break;
+            }
+        }
+
+        if (sourceElementType == null) {
+            return true;  // All nulls - Converter can handle this
+        }
+
+        // Only use fast-path when source and target are SAME type (no conversion needed)
+        // or when both are numeric types (safe numeric conversions)
+        if (sourceElementType == targetComponentType) {
+            return true;  // Same type, no conversion needed
+        }
+
+        // Allow numeric-to-numeric conversions (int[] -> long[], etc.)
+        if (Number.class.isAssignableFrom(sourceElementType) && Number.class.isAssignableFrom(targetComponentType)) {
+            return true;
+        }
+
+        // For other cases, don't use fast-path - let the normal path handle it
+        // This avoids issues like String -> char where multi-char strings fail
+        return false;
+    }
+
+    /**
+     * Just-in-time type stamping for array elements.
+     * Sets the type on untyped JsonObject elements before they are processed.
+     * This replaces the markUntypedObjects pre-pass for simple cases.
+     */
+    private void stampElementTypes(Object[] elements, Type elementType) {
+        for (Object element : elements) {
+            if (element instanceof JsonObject) {
+                JsonObject jObj = (JsonObject) element;
+                // Only stamp if no type is set and it's not a reference
+                if (jObj.getType() == null && !jObj.isReference()) {
+                    jObj.setType(elementType);
+                }
+            }
+        }
+    }
+
+    /**
+     * Strategy for handling JsonObject RHS values (non-reference).
+     * Handles nested objects, Maps, and custom classes.
+     */
+    private boolean handleJsonObjectStrategy(Object rhs, Type fieldType, Injector injector,
+                                              Object target, AssignmentContext ctx) {
+        if (!(rhs instanceof JsonObject)) {
+            return false;  // Not a JsonObject, try next strategy
+        }
+
+        JsonObject jsRhs = (JsonObject) rhs;
+
+        // References are handled by handleReferenceStrategy
+        if (jsRhs.isReference()) {
+            return false;  // Let reference strategy handle it (shouldn't get here normally)
+        }
+
+        // Handle type marking for nested generic types
+        if (fieldType instanceof ParameterizedType) {
+            // For nested generic types, propagate type info before createInstance
+            markUntypedObjects(fieldType, jsRhs);
+        }
+
+        // Set type on JsonObject if not already set
+        Type explicitType = jsRhs.getType();
+        if (explicitType != null && !TypeUtilities.hasUnresolvedType(explicitType)) {
+            // If the field has an explicit type, use it
+            jsRhs.setType(explicitType);
+        } else {
+            // Resolve the field type in the context of the target object
+            Type resolvedFieldType = TypeUtilities.resolveTypeUsingInstance(target, fieldType);
+            jsRhs.setType(resolvedFieldType);
+        }
+
+        // For Map fields with ParameterizedType, preserve the value type before createInstance
+        // changes the type to a raw Class. This enables proper type inference in traverseMap.
+        if (fieldType instanceof ParameterizedType) {
+            Class<?> rawClass = TypeUtilities.getRawClass(fieldType);
+            if (rawClass != null && Map.class.isAssignableFrom(rawClass)) {
+                Type[] typeArgs = ((ParameterizedType) fieldType).getActualTypeArguments();
+                if (typeArgs.length >= 2) {
+                    // Store value type (second type arg) for traverseMap to use
+                    jsRhs.setItemElementType(typeArgs[1]);
+                }
+            }
+        }
+
+        // Create instance first so @ref references to this object can resolve
+        createInstance(jsRhs);
+        Object fieldObject = jsRhs.getTarget();
+        injector.inject(target, fieldObject);
+
+        // Queue for field traversal unless it's a non-referenceable type
+        if (!ctx.readOptions.isNonReferenceableClass(jsRhs.getRawType())) {
+            ctx.pushToStack.accept(jsRhs);
+        }
+        return true;
+    }
+
+    /**
+     * Final fallback strategy for edge cases not handled by other strategies.
+     * Handles empty strings to non-String fields and direct injection.
+     */
+    private boolean handleFallbackStrategy(Object rhs, Type fieldType, Injector injector,
+                                            Object target, AssignmentContext ctx) {
+        // This should catch anything that fell through other strategies
+        Class<?> rawFieldType = TypeUtilities.getRawClass(fieldType);
+
+        // Allow empty strings to null out non-String fields
+        if (rhs instanceof String && StringUtilities.isEmpty((String) rhs) && rawFieldType != String.class) {
+            injector.inject(target, null);
+            return true;
+        }
+
+        // Direct injection as last resort
+        injector.inject(target, rhs);
+        return true;
+    }
+
+    // ========================================================================
+    // End Strategy Pattern Infrastructure
+    // ========================================================================
 
     /**
      * Walk the Java object fields and copy them from the JSON object to the Java object,
@@ -102,6 +514,7 @@ public class ObjectResolver extends Resolver
 
     /**
      * Map a JSON object field to a Java object field.
+     * Tries strategies in order; if none handle it, falls back to legacy code.
      *
      * @param jsonObj  a Map-of-Map representation of the current object being examined (containing all fields).
      * @param injector an instance of Injector used for setting values on the target object.
@@ -110,104 +523,22 @@ public class ObjectResolver extends Resolver
     private void assignField(final JsonObject jsonObj, final Injector injector, final Object rhs) {
         final Object target = jsonObj.getTarget();
         final Type fieldType = injector.getGenericType();
-        final Class<?> rawFieldType = TypeUtilities.getRawClass(fieldType);
 
-        if (rhs == null) {
-            injector.inject(target, rawFieldType.isPrimitive() ? converter.convert(null, rawFieldType) : null);
-            return;
-        }
-
-        // If there is a "tree" of objects (e.g., Map<String, List<Person>>), the sub-objects may not have a
-        // @type on them if the JSON source is from JSON.stringify(). Deep traverse the values and assign
-        // the full generic type based on the parameterized type.
-        if (rhs instanceof JsonObject) {
-            if (fieldType instanceof ParameterizedType) {
-                markUntypedObjects(fieldType, (JsonObject) rhs);
-            }
-
-            final JsonObject jObj = (JsonObject) rhs;
-            Type explicitType = jObj.getType();
-            if (explicitType != null && !TypeUtilities.hasUnresolvedType(explicitType)) {
-                // If the field has an explicit type, use it.
-                jObj.setType(explicitType);
-            } else {
-                // Resolve the field type in the context of the target object.
-                // TypeUtilities.resolveTypeUsingInstance() internally caches results.
-                Type resolvedFieldType = TypeUtilities.resolveTypeUsingInstance(target, fieldType);
-                jObj.setType(resolvedFieldType);
+        // Try strategies first (Phase 1+ will add strategies here)
+        if (!strategies.isEmpty()) {
+            AssignmentContext ctx = createAssignmentContext(jsonObj);
+            for (AssignmentStrategy strategy : strategies) {
+                if (strategy.tryAssign(rhs, fieldType, injector, target, ctx)) {
+                    return;  // Strategy handled it
+                }
             }
         }
 
-        Object special;
-        // Use the raw type (extracted from the full generic type) when checking for custom conversion.
-        if ((special = readWithFactoryIfExists(rhs, rawFieldType)) != null) {
-            injector.inject(target, special);
-        } else if (rhs instanceof Object[]) {
-            // If the RHS is an Object[], wrap it in a JsonObject for processing.
-            // This handles both array fields (String[]) and collection fields (List<String>).
-            // Note: Primitive arrays (int[], etc.) are already handled by createAndPopulateArray
-            // and returned as the correct primitive array type, so they bypass this branch.
-            final Object[] elements = (Object[]) rhs;
-            JsonObject jsonArray = new JsonObject();
-            jsonArray.setType(fieldType);
-            jsonArray.setItems(elements);
-
-            // Mark types on untyped objects within the array for nested generic types.
-            // This must be done BEFORE createInstance() which may convert the ParameterizedType
-            // to a raw Class (e.g., List<User> becomes ArrayList.class).
-            // This enables proper type inference for JSON without @type markers.
-            if (fieldType instanceof ParameterizedType) {
-                markUntypedObjects(fieldType, jsonArray);
-                // Store element type before createInstance changes the type to a raw Class.
-                // This preserves generic type information for traverseCollection.
-                Type[] typeArgs = ((ParameterizedType) fieldType).getActualTypeArguments();
-                if (typeArgs.length > 0) {
-                    jsonArray.setItemElementType(typeArgs[0]);
-                }
-            }
-
-            createInstance(jsonArray);
-            injector.inject(target, jsonArray.getTarget());
-            push(jsonArray);
-        } else if (rhs instanceof JsonObject) {
-            final JsonObject jsRhs = (JsonObject) rhs;
-
-            final JsonObject refObject = resolveReference(jsRhs);
-            if (refObject != null) {    // Handle field references.
-                if (refObject.getTarget() != null) {
-                    injector.inject(target, refObject.getTarget());
-                } else {
-                    addUnresolvedReference(new UnresolvedReference(jsonObj, injector.getName(), jsRhs.getReferenceId()));
-                }
-            } else {    // Direct assignment for nested objects.
-                // For Map fields with ParameterizedType, preserve the value type before createInstance
-                // changes the type to a raw Class. This enables proper type inference in traverseMap.
-                if (fieldType instanceof ParameterizedType) {
-                    Class<?> rawClass = TypeUtilities.getRawClass(fieldType);
-                    if (rawClass != null && Map.class.isAssignableFrom(rawClass)) {
-                        Type[] typeArgs = ((ParameterizedType) fieldType).getActualTypeArguments();
-                        if (typeArgs.length >= 2) {
-                            // Store value type (second type arg) for traverseMap to use
-                            jsRhs.setItemElementType(typeArgs[1]);
-                        }
-                    }
-                }
-                // Create instance first so @ref references to this object can resolve
-                createInstance(jsRhs);
-                Object fieldObject = jsRhs.getTarget();
-                injector.inject(target, fieldObject);
-                if (!readOptions.isNonReferenceableClass(jsRhs.getRawType())) {
-                    push(jsRhs);
-                }
-            }
-        } else {
-            // Allow empty strings to null out non-String fields
-            if (rhs instanceof String && StringUtilities.isEmpty((String)rhs) && rawFieldType != String.class) {
-                injector.inject(target, null);
-            } else {
-                injector.inject(target, rhs);
-            }
-        }
+        // All strategies implemented - legacy code removed in Phase 5
+        // If we get here, it's a programming error - add strategy for this case
+        throw new JsonIoException("No strategy handled field assignment. " +
+                "RHS type: " + (rhs == null ? "null" : rhs.getClass().getName()) +
+                ", Field type: " + fieldType);
     }
 
     /**
