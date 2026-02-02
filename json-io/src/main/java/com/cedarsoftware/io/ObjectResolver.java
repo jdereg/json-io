@@ -667,46 +667,51 @@ public class ObjectResolver extends Resolver
         }
 
         for (Object element : items) {
+            // Strategy 1: NULL - fastest check
             if (element == null) {
                 col.add(null);
                 idx++;
                 continue;
             }
 
-            // Fast path for native JSON types (includes BigInteger/BigDecimal from JsonParser)
-            // but convert to target type if needed (e.g., Long -> Integer, String -> ZonedDateTime)
-            if (isDirectlyAddableJsonValue(element)) {
-                if (rawElementType != Object.class && !rawElementType.isInstance(element)) {
-                    // Convert to target type if conversion is supported
-                    if (converter.isSimpleTypeConversionSupported(element.getClass(), rawElementType)) {
-                        element = converter.convert(element, rawElementType);
-                    }
-                }
+            final Class<?> elementClass = element.getClass();
+
+            // Strategy 2: DIRECT ASSIGN - skip expensive factory/converter if already correct type
+            // This is a major optimization for collections of simple types (List<String>, Set<UUID>, etc.)
+            // IMPORTANT: Skip this fast path for:
+            //   - JsonObject (needs instantiation/traversal)
+            //   - Object[] (nested arrays need processing)
+            //   - When element type is Object (could contain anything)
+            if (rawElementType != null
+                    && rawElementType != Object.class
+                    && !(element instanceof JsonObject)
+                    && !elementClass.isArray()
+                    && rawElementType.isAssignableFrom(elementClass)) {
                 col.add(element);
                 idx++;
                 continue;
             }
 
-            // Pre-cache element class to avoid repeated getClass() calls
-            final Class<?> elementClass = element.getClass();
-
+            // Strategy 3: REFERENCE - check before expensive factory lookup
             if (element instanceof JsonObject) {
-                // Most common case after primitives - handle JsonObject
                 JsonObject jObj = (JsonObject) element;
                 if (jObj.isReference()) {
                     resolveReferenceInCollection(jObj, jsonObj, col, idx, isList);
-                } else {
-                    // Set the element's full type to the extracted element type, but only if
-                    // the element doesn't already have a type set (e.g., from markUntypedObjects()
-                    // or from @type in the JSON). This enables proper type inference for nested
-                    // generic types when deserializing JSON without @type markers.
-                    if (jObj.getType() == null) {
-                        jObj.setType(elementType);
-                    }
-                    createInstance(jObj);
-                    addResolvedObjectToCollection(jObj, col);
+                    idx++;
+                    continue;
                 }
-            } else if (elementClass.isArray()) {
+            }
+
+            // Strategy 4: FACTORY/CONVERTER - handles custom readers, converters (String→Enum, etc.)
+            Object special = readWithFactoryIfExists(element, rawElementType);
+            if (special != null) {
+                col.add(special);
+                idx++;
+                continue;
+            }
+
+            // Strategy 5: NESTED ARRAY - array within collection
+            if (elementClass.isArray()) {
                 // Determine the type for the nested array/collection.
                 // If elementType is a Collection type (e.g., List<User>), wrap as collection.
                 // If elementType is an array type (e.g., User[]), create an actual array.
@@ -726,15 +731,28 @@ public class ObjectResolver extends Resolver
                     }
                     wrapArrayAndAddToCollection((Object[]) element, nestedType, col);
                 }
-            } else {
-                // Check for custom factory or converter support
-                Object special = readWithFactoryIfExists(element, rawElementType);
-                if (special != null) {
-                    col.add(special);
-                } else {
-                    col.add(element);
-                }
+                idx++;
+                continue;
             }
+
+            // Strategy 6: JSONOBJECT - needs instantiation and traversal
+            if (element instanceof JsonObject) {
+                JsonObject jObj = (JsonObject) element;
+                // Set the element's full type to the extracted element type, but only if
+                // the element doesn't already have a type set (e.g., from markUntypedObjects()
+                // or from @type in the JSON). This enables proper type inference for nested
+                // generic types when deserializing JSON without @type markers.
+                if (jObj.getType() == null) {
+                    jObj.setType(elementType);
+                }
+                createInstance(jObj);
+                addResolvedObjectToCollection(jObj, col);
+                idx++;
+                continue;
+            }
+
+            // Strategy 7: FALLBACK - direct add
+            col.add(element);
             idx++;
         }
     }
