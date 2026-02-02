@@ -811,6 +811,85 @@ By carefully selecting which classes are marked as non-referenceable, developers
 >#### `WriteOptionsBuilder` addNonReferenceableClass( `Class` )
 >- [ ] Adds a class to be considered "non-referenceable."
 
+### TOON Key Folding
+
+When writing TOON format output using `JsonIo.toToon()`, you can enable key folding to produce more compact output. Key folding collapses single-key object chains into dotted notation.
+
+#### How Key Folding Works
+
+**Without key folding (default):**
+```
+data:
+  metadata:
+    value: 42
+```
+
+**With key folding enabled:**
+```
+data.metadata.value: 42
+```
+
+Key folding only applies when:
+- Each nested object has exactly one key
+- All key segments are valid identifiers (letters, digits, underscores, starting with letter/underscore)
+
+Arrays are also supported in folded paths:
+```
+data.items[3]: foo,bar,baz
+```
+
+#### Configuration
+
+>#### `boolean` isToonKeyFolding()
+>- [ ] Returns `true` if TOON key folding is enabled for writing, `false` otherwise. Default is `false`.
+
+>#### `WriteOptionsBuilder` toonKeyFolding(`boolean enable`)
+>- [ ] Enables or disables TOON key folding when writing TOON format. When `true`, single-key object chains are collapsed into dotted notation.
+
+#### Example Usage
+
+```java
+// Without key folding (default)
+String toon1 = JsonIo.toToon(data, null);
+// Output:
+// data:
+//   metadata:
+//     value: 42
+
+// With key folding
+WriteOptions options = new WriteOptionsBuilder()
+        .toonKeyFolding(true)
+        .build();
+String toon2 = JsonIo.toToon(data, options);
+// Output:
+// data.metadata.value: 42
+```
+
+#### Reading Folded Keys
+
+The TOON reader automatically handles both formats - folded dotted keys are expanded into nested structures during parsing. No special configuration is needed on the read side.
+
+```java
+// This TOON input:
+// config.database.host: localhost
+
+// Parses to this structure:
+// {config: {database: {host: "localhost"}}}
+```
+
+Quoted keys are preserved as literals (not expanded):
+```
+"dotted.key": value
+// Parses to: {dotted.key: "value"}
+```
+
+#### Benefits
+
+- **Compact Output**: Reduces output size by eliminating indentation for single-key chains
+- **Improved Readability**: Dotted paths are easier to scan for deeply nested configuration values
+- **LLM Efficiency**: Fewer tokens for the same data structure
+- **Round-trip Safe**: Folded output parses back to identical data structures
+
 ---
 ## Application Scoped Options (Full Lifecycle of JVM)
 
