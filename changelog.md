@@ -1,5 +1,6 @@
 ### Revision History
-#### 4.90.0 - (unreleased)
+
+#### 4.91.0 - (unreleased)
 * **FEATURE**: TOON key folding support (optional, spec-compliant)
   * Writer: Added `WriteOptionsBuilder.toonKeyFolding(boolean)` to collapse single-key object chains into dotted notation
     * `{data: {metadata: {value: 42}}}` → `data.metadata.value: 42`
@@ -12,6 +13,8 @@
   * Added support for pipe-separated tabular format: `items[2|]{col1|col2}:` with pipe-delimited rows
   * Comma delimiter remains the default: `items[2]{col1,col2}:`
   * All three variants parse to identical data structures and round-trip correctly
+
+#### 4.90.0 - 2026-02-02
 * **MAINTENANCE**: Migrated test files from deprecated `JsonIo.toObjects()` to `JsonIo.toJava().asClass()` API
   * Updated ~148 calls across 5 test files to use the new fluent builder pattern
   * Deprecated `toObjects()` methods remain available in `JsonIo.java` for backward compatibility
