@@ -157,8 +157,12 @@ public class ObjectResolver extends Resolver
      */
     private static Object fastPrimitiveCoercion(Object value, Class<?> valueClass, Class<?> targetType) {
         if (valueClass == Long.class) {
+            // Identity: Long→long/Long needs no conversion - return original object (avoids unbox+rebox)
+            if (targetType == long.class || targetType == Long.class) return value;
             return coerceLong((Long) value, targetType);
         } else if (valueClass == Double.class) {
+            // Identity: Double→double/Double needs no conversion - return original object (avoids unbox+rebox)
+            if (targetType == double.class || targetType == Double.class) return value;
             return coerceDouble((Double) value, targetType);
         }
         return null;
