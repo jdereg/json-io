@@ -1,6 +1,11 @@
 ### Revision History
 
 #### 4.91.0 - (unreleased)
+* **PERFORMANCE**: Optimized `Resolver`/`ObjectResolver` read path (~6% faster Java deserialization)
+  * **Correctness fix**: `createSameTypeCollection()` - Fixed inheritance-order bug where `LinkedHashSet` was incorrectly created as `HashSet`, losing insertion-order preservation
+  * **Correctness fix**: `shouldSkipTraversal()` - Fixed `rawClass.isInstance(Number.class)` (always false) to `Number.class.isAssignableFrom(rawClass)`
+  * **Performance**: Eliminated strategy pattern in `assignField()` - removed `AssignmentStrategy` interface, `AssignmentContext` class, and 7 strategy methods; inlined as direct if/else chain, eliminating ~16M object allocations per 100k iterations
+  * **Performance**: Added fast primitive coercion to `ObjectResolver` (`traverseArray`, `traverseCollection`, `assignField`) - direct Long→int/short/byte and Double→float casts bypass expensive `Converter` lookup chains
 * **FEATURE**: TOON key folding support (optional, spec-compliant)
   * Writer: Added `WriteOptionsBuilder.toonKeyFolding(boolean)` to collapse single-key object chains into dotted notation
     * `{data: {metadata: {value: 42}}}` → `data.metadata.value: 42`
@@ -35,12 +40,6 @@
   * Also escapes Unicode line/paragraph separators (U+2028/U+2029) for JavaScript compatibility
 
 #### 4.89.0 - 2026-01-31
-* **RENAMED**: `showTypeInfoCompact()` → `showTypeInfoMinimalPlus()` for clearer naming
-  * `WriteOptionsBuilder.showTypeInfoCompact()` → `WriteOptionsBuilder.showTypeInfoMinimalPlus()`
-  * `WriteOptionsBuilder.addPermanentShowTypeInfoCompact()` → `WriteOptionsBuilder.addPermanentShowTypeInfoMinimalPlus()`
-  * `WriteOptions.isCompactShowingType()` → `WriteOptions.isMinimalPlusShowingType()`
-  * `ShowType.COMPACT` enum value → `ShowType.MINIMAL_PLUS`
-  * The name "MinimalPlus" better conveys that this mode extends MINIMAL with additional type inference optimizations
 * **SPRING**: Default `show-type-info` changed from `MINIMAL` to `MINIMAL_PLUS`
   * Spring Boot starter now uses `MINIMAL_PLUS` as the default for optimal JSON size
   * Added `MINIMAL_PLUS` option to Spring configuration properties
