@@ -217,7 +217,6 @@ public class MapResolver extends Resolver {
      * Also handles nested arrays recursively to avoid JsonObject wrapper allocations.
      */
     private void traverseArrayForRefs(Object[] array) {
-        final ReferenceTracker refTracker = references;
         final int len = array.length;
         for (int i = 0; i < len; i++) {
             Object element = array[i];
@@ -369,14 +368,14 @@ public class MapResolver extends Resolver {
                 }
                 JsonObject refObject = resolveReference(jObj);
                 if (refObject != null) {    // Correct field references
-                    jsonObj.put(fieldName, refObject);    // Update Map-of-Maps reference
+                    e.setValue(refObject);   // Direct update - avoids indexOf() lookup
                 } else {
                     // In Maps mode, convert JsonObjects with simple types (Byte, Short, etc.)
                     // to their Java equivalents and update the Map entry
                     Object converted = convertIfNonRefType(jObj, jObj.getRawType());
                     if (converted != null) {
                         jObj.setFinishedTarget(converted, true);
-                        jsonObj.put(fieldName, converted);  // Update Map entry with converted value
+                        e.setValue(converted);  // Direct update - avoids indexOf() lookup
                     } else {
                         push(jObj);
                     }
@@ -396,15 +395,15 @@ public class MapResolver extends Resolver {
                 // Fast path for common JSON primitive coercions (Long->int, Double->float, etc.)
                 Object fastValue = fastPrimitiveCoercion(rhs, rhsClass, fieldType);
                 if (fastValue != null) {
-                    jsonObj.put(fieldName, fastValue);
+                    e.setValue(fastValue);   // Direct update - avoids indexOf() lookup
                 } else if (converter.isConversionSupportedFor(rhsClass, fieldType)) {
                     Object fieldValue = converter.convert(rhs, fieldType);
-                    jsonObj.put(fieldName, fieldValue);
+                    e.setValue(fieldValue);  // Direct update - avoids indexOf() lookup
                 } else if (rhs instanceof String && StringUtilities.isEmpty((String)rhs)) {
                     // Fallback: Allow "" to null out a field when converter doesn't support String conversion.
                     // Note: fieldType cannot be String.class here (line 390 checks rhsClass == fieldType).
                     // StringBuilder/StringBuffer have converter support, so they're handled above.
-                    jsonObj.put(fieldName, null);
+                    e.setValue(null);        // Direct update - avoids indexOf() lookup
                 }
             }
         }
@@ -583,8 +582,11 @@ public class MapResolver extends Resolver {
             return;
         }
 
-        // Apply sorted collection substitution before instance creation
-        substituteSortedCollectionType(jsonObj);
+        // Apply sorted collection substitution ONLY for types from JSON's @type (typeString set),
+        // not for types from user's asClass() request (consistent with traverseMap behavior)
+        if (jsonObj.getTypeString() != null) {
+            substituteSortedCollectionType(jsonObj);
+        }
 
         Object[] items = jsonObj.getItems();
         Collection<Object> col = (Collection<Object>) jsonObj.getTarget();
