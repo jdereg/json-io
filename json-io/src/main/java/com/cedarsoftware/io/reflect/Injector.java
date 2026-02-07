@@ -1,5 +1,7 @@
 package com.cedarsoftware.io.reflect;
 
+import java.lang.invoke.CallSite;
+import java.lang.invoke.LambdaMetafactory;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -7,6 +9,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
+import java.util.function.BiConsumer;
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.ReflectionUtils;
@@ -109,6 +112,7 @@ public class Injector {
     private MethodHandle injector;
     private Object varHandle; // For JDK 17+ VarHandle-based injection
     private final boolean useFieldSet; // flag to use Field.set() instead of MethodHandle
+    private BiConsumer<Object, Object> consumer; // LambdaMetafactory-generated fast setter (JIT-inlinable)
 
     // Cached values for performance - computed once at construction
     private final Class<?> fieldType;
@@ -150,6 +154,74 @@ public class Injector {
         // Cache values for performance
         this.fieldType = field.getType();
         this.fieldName = field.getName();
+    }
+
+    // Constructor for LambdaMetafactory-accelerated injection
+    private Injector(Field field, MethodHandle handle, String uniqueFieldName, String displayName, BiConsumer<Object, Object> consumer) {
+        this.field = field;
+        this.displayName = displayName;
+        this.uniqueFieldName = uniqueFieldName;
+        this.injector = handle;
+        this.useFieldSet = false;
+        this.consumer = consumer;
+
+        // Cache values for performance
+        this.fieldType = field.getType();
+        this.fieldName = field.getName();
+    }
+
+    /**
+     * Attempt to create a LambdaMetafactory-generated BiConsumer for the given MethodHandle.
+     * The generated BiConsumer is JIT-inlinable, providing near-direct field access speed.
+     * Returns null if creation fails (caller should fall back to existing mechanisms).
+     *
+     * <p>The generated lambda class needs access to the target class (the setter's declaring class).
+     * This method uses {@code privateLookupIn} (JDK 9+) to obtain a Lookup with proper access.
+     * For non-public classes on JDK 8 (where privateLookupIn is unavailable), returns null
+     * to avoid IllegalAccessError at invocation time.</p>
+     */
+    @SuppressWarnings("unchecked")
+    private static BiConsumer<Object, Object> createLambdaConsumer(MethodHandles.Lookup lookup, MethodHandle setter) {
+        try {
+            Class<?> targetClass = setter.type().parameterType(0);
+            MethodHandles.Lookup lambdaLookup = tryPrivateLookup(targetClass, lookup);
+
+            // If we couldn't get a private lookup and the target class is not public,
+            // the generated lambda would fail at runtime with IllegalAccessError
+            if (lambdaLookup == lookup && !Modifier.isPublic(targetClass.getModifiers())) {
+                return null;
+            }
+
+            CallSite callSite = LambdaMetafactory.metafactory(
+                    lambdaLookup,
+                    "accept",
+                    MethodType.methodType(BiConsumer.class),
+                    MethodType.methodType(void.class, Object.class, Object.class),  // SAM erased type
+                    setter,
+                    setter.type()  // e.g. (Foo, int)void — LambdaMetafactory handles auto-unboxing
+            );
+            return (BiConsumer<Object, Object>) callSite.getTarget().invokeExact();
+        } catch (Throwable t) {
+            return null;  // Fall back to existing mechanisms
+        }
+    }
+
+    /**
+     * Try to get a Lookup with private access to the target class via privateLookupIn (JDK 9+).
+     * Returns the fallback Lookup if privateLookupIn is unavailable or fails.
+     */
+    private static MethodHandles.Lookup tryPrivateLookup(Class<?> targetClass, MethodHandles.Lookup fallback) {
+        if (PRIVATE_LOOKUP_IN_METHOD != null && LOOKUP != null) {
+            try {
+                Object result = PRIVATE_LOOKUP_IN_METHOD.invoke(null, targetClass, LOOKUP);
+                if (result instanceof MethodHandles.Lookup) {
+                    return (MethodHandles.Lookup) result;
+                }
+            } catch (Exception e) {
+                // privateLookupIn failed, use fallback
+            }
+        }
+        return fallback;
     }
 
     public static Injector create(Field field, String uniqueFieldName) {
@@ -198,7 +270,12 @@ public class Injector {
         }
 
         try {
-            MethodHandle handle = MethodHandles.lookup().unreflectSetter(field);
+            MethodHandles.Lookup fieldLookup = MethodHandles.lookup();
+            MethodHandle handle = fieldLookup.unreflectSetter(field);
+            BiConsumer<Object, Object> lambda = createLambdaConsumer(fieldLookup, handle);
+            if (lambda != null) {
+                return new Injector(field, handle, uniqueFieldName, field.getName(), lambda);
+            }
             return new Injector(field, handle, uniqueFieldName, field.getName());
         } catch (IllegalAccessException e) {
             if (IS_JDK17_OR_HIGHER) {
@@ -221,12 +298,29 @@ public class Injector {
         try {
             Class<?> declaringClass = field.getDeclaringClass();
 
-            Object privateLookup = PRIVATE_LOOKUP_IN_METHOD.invoke(null, declaringClass, LOOKUP);
-            if (privateLookup == null) {
+            Object privateLookupObj = PRIVATE_LOOKUP_IN_METHOD.invoke(null, declaringClass, LOOKUP);
+            if (privateLookupObj == null) {
                 return null;
             }
-            
-            Object varHandle = FIND_VAR_HANDLE_METHOD.invoke(privateLookup, declaringClass, field.getName(), field.getType());
+
+            // First try: MethodHandle + LambdaMetafactory via privateLookup (fastest path)
+            if (privateLookupObj instanceof MethodHandles.Lookup) {
+                MethodHandles.Lookup privateLookup = (MethodHandles.Lookup) privateLookupObj;
+                try {
+                    MethodHandle handle = privateLookup.unreflectSetter(field);
+                    BiConsumer<Object, Object> lambda = createLambdaConsumer(privateLookup, handle);
+                    if (lambda != null) {
+                        return new Injector(field, handle, uniqueFieldName, field.getName(), lambda);
+                    }
+                    // Lambda failed but handle works — use MethodHandle path
+                    return new Injector(field, handle, uniqueFieldName, field.getName());
+                } catch (IllegalAccessException e) {
+                    // unreflectSetter failed (e.g. final field) — fall through to VarHandle
+                }
+            }
+
+            // Second try: VarHandle (existing fallback path)
+            Object varHandle = FIND_VAR_HANDLE_METHOD.invoke(privateLookupObj, declaringClass, field.getName(), field.getType());
             if (varHandle == null) {
                 return null;
             }
@@ -251,8 +345,13 @@ public class Injector {
         }
 
         try {
+            MethodHandles.Lookup methodLookup = MethodHandles.lookup();
             MethodType methodType = MethodType.methodType(void.class, field.getType());
-            MethodHandle handle = MethodHandles.lookup().findVirtual(field.getDeclaringClass(), methodName, methodType);
+            MethodHandle handle = methodLookup.findVirtual(field.getDeclaringClass(), methodName, methodType);
+            BiConsumer<Object, Object> lambda = createLambdaConsumer(methodLookup, handle);
+            if (lambda != null) {
+                return new Injector(field, handle, uniqueFieldName, methodName, lambda);
+            }
             return new Injector(field, handle, uniqueFieldName, methodName);
         } catch (NoSuchMethodException e) {
             throw new JsonIoException("Method not found: " + methodName + " in class: " + field.getDeclaringClass().getName(), e);
@@ -267,7 +366,10 @@ public class Injector {
         }
 
         try {
-            if (varHandle != null) {
+            if (consumer != null) {
+                // LambdaMetafactory path: JIT-inlinable, near-direct field access speed
+                consumer.accept(object, value);
+            } else if (varHandle != null) {
                 // Use VarHandle-based injection if available (JDK 17+)
                 injectWithVarHandle(object, value);
             } else if (useFieldSet) {
@@ -284,7 +386,9 @@ public class Injector {
             }
             try {
                 Object convertedValue = Converter.convert(value, fieldType);
-                if (varHandle != null) {
+                if (consumer != null) {
+                    consumer.accept(object, convertedValue);
+                } else if (varHandle != null) {
                     injectWithVarHandle(object, convertedValue);
                 } else if (useFieldSet) {
                     field.set(object, convertedValue);
