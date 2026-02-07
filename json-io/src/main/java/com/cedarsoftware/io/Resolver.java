@@ -774,14 +774,15 @@ public abstract class Resolver {
      */
     private Collection<Object> createSameTypeCollection(Collection<?> source, int size) {
         // Try to create the same collection type
+        // Note: Check LinkedHashSet before HashSet since LinkedHashSet extends HashSet
         if (source instanceof ArrayList) {
             return new ArrayList<>(size);
         } else if (source instanceof LinkedList) {
             return new LinkedList<>();
-        } else if (source instanceof HashSet) {
-            return new HashSet<>(size);
         } else if (source instanceof LinkedHashSet) {
             return new LinkedHashSet<>(size);
+        } else if (source instanceof HashSet) {
+            return new HashSet<>(size);
         } else if (source instanceof TreeSet) {
             return new TreeSet<>();
         }
