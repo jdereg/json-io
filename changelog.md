@@ -7,6 +7,7 @@
   * **Performance**: Eliminated strategy pattern in `assignField()` - removed `AssignmentStrategy` interface, `AssignmentContext` class, and 7 strategy methods; inlined as direct if/else chain, eliminating ~16M object allocations per 100k iterations
   * **Performance**: Added fast primitive coercion to `ObjectResolver` (`traverseArray`, `traverseCollection`, `assignField`) - direct Long→int/short/byte and Double→float casts bypass expensive `Converter` lookup chains
   * **Performance**: `Injector` now uses `LambdaMetafactory`-generated `BiConsumer` for field injection (~5-8% faster Read). The JIT can inline the generated lambda to near-direct field access speed, replacing non-inlinable `MethodHandle`/`VarHandle` instance-field dispatch. Uses `privateLookupIn` (JDK 9+) for non-public classes; falls back gracefully to existing mechanisms.
+  * **Performance**: `Accessor` now uses `LambdaMetafactory`-generated `Function` for field access during JSON writing. Same JIT-inlinable technique as `Injector`, applied to the write path.
 * **FEATURE**: TOON key folding support (optional, spec-compliant)
   * Writer: Added `WriteOptionsBuilder.toonKeyFolding(boolean)` to collapse single-key object chains into dotted notation
     * `{data: {metadata: {value: 42}}}` → `data.metadata.value: 42`

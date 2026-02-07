@@ -1,5 +1,7 @@
 package com.cedarsoftware.io.reflect;
 
+import java.lang.invoke.CallSite;
+import java.lang.invoke.LambdaMetafactory;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -7,6 +9,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
+import java.util.function.Function;
 
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.util.ExceptionUtilities;
@@ -98,6 +101,7 @@ public class Accessor {
     private final MethodHandle methodHandle;
     private final Object varHandle;  // For JDK 17+ VarHandle-based access
     private final boolean isPublic;
+    private Function<Object, Object> function;  // LambdaMetafactory-generated fast getter (JIT-inlinable)
 
     // Private constructor for MethodHandle-based access
     private Accessor(Field field, MethodHandle methodHandle, String uniqueFieldName, String fieldOrMethodName, boolean isPublic, boolean isMethod) {
@@ -121,6 +125,68 @@ public class Accessor {
         this.isMethod = false;
     }
 
+    // Private constructor for LambdaMetafactory-accelerated access
+    private Accessor(Field field, MethodHandle methodHandle, String uniqueFieldName, String fieldOrMethodName,
+                     boolean isPublic, boolean isMethod, Function<Object, Object> function) {
+        this.field = field;
+        this.methodHandle = methodHandle;
+        this.varHandle = null;
+        this.uniqueFieldName = uniqueFieldName;
+        this.fieldOrMethodName = fieldOrMethodName;
+        this.isPublic = isPublic;
+        this.isMethod = isMethod;
+        this.function = function;
+    }
+
+    /**
+     * Attempt to create a LambdaMetafactory-generated Function for the given getter MethodHandle.
+     * The generated Function is JIT-inlinable, providing near-direct field access speed.
+     * Returns null if creation fails (caller should fall back to existing mechanisms).
+     */
+    @SuppressWarnings("unchecked")
+    private static Function<Object, Object> createLambdaAccessor(MethodHandles.Lookup lookup, MethodHandle getter) {
+        try {
+            Class<?> targetClass = getter.type().parameterType(0);
+            MethodHandles.Lookup lambdaLookup = tryPrivateLookup(targetClass, lookup);
+
+            // If we couldn't get a private lookup and the target class is not public,
+            // the generated lambda would fail at runtime with IllegalAccessError
+            if (lambdaLookup == lookup && !Modifier.isPublic(targetClass.getModifiers())) {
+                return null;
+            }
+
+            CallSite callSite = LambdaMetafactory.metafactory(
+                    lambdaLookup,
+                    "apply",
+                    MethodType.methodType(Function.class),
+                    MethodType.methodType(Object.class, Object.class),  // SAM erased type
+                    getter,
+                    getter.type()  // e.g. (Foo) -> int — LambdaMetafactory handles auto-boxing
+            );
+            return (Function<Object, Object>) callSite.getTarget().invokeExact();
+        } catch (Throwable t) {
+            return null;  // Fall back to existing mechanisms
+        }
+    }
+
+    /**
+     * Try to get a Lookup with private access to the target class via privateLookupIn (JDK 9+).
+     * Returns the fallback Lookup if privateLookupIn is unavailable or fails.
+     */
+    private static MethodHandles.Lookup tryPrivateLookup(Class<?> targetClass, MethodHandles.Lookup fallback) {
+        if (PRIVATE_LOOKUP_IN_METHOD != null && LOOKUP != null) {
+            try {
+                Object result = PRIVATE_LOOKUP_IN_METHOD.invoke(null, targetClass, LOOKUP);
+                if (result instanceof MethodHandles.Lookup) {
+                    return (MethodHandles.Lookup) result;
+                }
+            } catch (Exception e) {
+                // privateLookupIn failed, use fallback
+            }
+        }
+        return fallback;
+    }
+
     public static Accessor createFieldAccessor(Field field, String uniqueFieldName) {
         boolean isPublicField = Modifier.isPublic(field.getModifiers()) && Modifier.isPublic(field.getDeclaringClass().getModifiers());
 
@@ -131,7 +197,12 @@ public class Accessor {
 
         // Try MethodHandle first (maintains getMethodHandle() API compatibility)
         try {
-            MethodHandle handle = MethodHandles.lookup().unreflectGetter(field);
+            MethodHandles.Lookup fieldLookup = MethodHandles.lookup();
+            MethodHandle handle = fieldLookup.unreflectGetter(field);
+            Function<Object, Object> lambda = createLambdaAccessor(fieldLookup, handle);
+            if (lambda != null) {
+                return new Accessor(field, handle, uniqueFieldName, field.getName(), Modifier.isPublic(field.getModifiers()), false, lambda);
+            }
             return new Accessor(field, handle, uniqueFieldName, field.getName(), Modifier.isPublic(field.getModifiers()), false);
         } catch (IllegalAccessException ex) {
             // MethodHandle failed - try VarHandle on JDK 17+ for module system compatibility
@@ -154,12 +225,29 @@ public class Accessor {
 
         try {
             Class<?> declaringClass = field.getDeclaringClass();
-            Object privateLookup = PRIVATE_LOOKUP_IN_METHOD.invoke(null, declaringClass, LOOKUP);
-            if (privateLookup == null) {
+            Object privateLookupObj = PRIVATE_LOOKUP_IN_METHOD.invoke(null, declaringClass, LOOKUP);
+            if (privateLookupObj == null) {
                 return null;
             }
 
-            Object varHandle = FIND_VAR_HANDLE_METHOD.invoke(privateLookup, declaringClass, field.getName(), field.getType());
+            // First try: MethodHandle + LambdaMetafactory via privateLookup (fastest path)
+            if (privateLookupObj instanceof MethodHandles.Lookup) {
+                MethodHandles.Lookup privateLookup = (MethodHandles.Lookup) privateLookupObj;
+                try {
+                    MethodHandle handle = privateLookup.unreflectGetter(field);
+                    Function<Object, Object> lambda = createLambdaAccessor(privateLookup, handle);
+                    if (lambda != null) {
+                        return new Accessor(field, handle, uniqueFieldName, field.getName(), Modifier.isPublic(field.getModifiers()), false, lambda);
+                    }
+                    // Lambda failed but handle works — use MethodHandle path
+                    return new Accessor(field, handle, uniqueFieldName, field.getName(), Modifier.isPublic(field.getModifiers()), false);
+                } catch (IllegalAccessException e) {
+                    // unreflectGetter failed — fall through to VarHandle
+                }
+            }
+
+            // Second try: VarHandle (existing fallback path)
+            Object varHandle = FIND_VAR_HANDLE_METHOD.invoke(privateLookupObj, declaringClass, field.getName(), field.getType());
             if (varHandle == null) {
                 return null;
             }
@@ -173,8 +261,13 @@ public class Accessor {
 
     public static Accessor createMethodAccessor(Field field, String methodName, String uniqueFieldName) {
         try {
+            MethodHandles.Lookup methodLookup = MethodHandles.publicLookup();
             MethodType type = MethodType.methodType(field.getType());
-            MethodHandle handle = MethodHandles.publicLookup().findVirtual(field.getDeclaringClass(), methodName, type);
+            MethodHandle handle = methodLookup.findVirtual(field.getDeclaringClass(), methodName, type);
+            Function<Object, Object> lambda = createLambdaAccessor(methodLookup, handle);
+            if (lambda != null) {
+                return new Accessor(field, handle, uniqueFieldName, methodName, true, true, lambda);
+            }
             return new Accessor(field, handle, uniqueFieldName, methodName, true, true);
         } catch (Exception ignore) {
             return null;
@@ -187,7 +280,12 @@ public class Accessor {
         }
 
         try {
-            // Try VarHandle first (JDK 17+)
+            // LambdaMetafactory path: JIT-inlinable, near-direct field access speed
+            if (function != null) {
+                return function.apply(o);
+            }
+
+            // Try VarHandle (JDK 17+ fallback for final fields)
             if (varHandle != null) {
                 try {
                     return VAR_HANDLE_GET_METHOD.invoke(varHandle, o);
