@@ -54,7 +54,7 @@ json-io is a powerful and lightweight Java library that simplifies **JSON5**, **
 
 - Full **JSON5** support including single-line and multi-line comments, single-quoted strings, unquoted object keys, trailing commas, and more — while remaining fully backward compatible with standard JSON (RFC 8259)
 - **TOON read/write** — [Token-Oriented Object Notation](https://toonformat.dev/) for LLM-optimized serialization (~40-50% fewer tokens than JSON)
-- Preserves object references and handles cyclic relationships (use `cycleSupport(false)` for ~35-40% faster writes on acyclic data)
+- Preserves object references and handles cyclic relationships (use `cycleSupport(false)` for ~35-40% faster writes on acyclic data) - for `JSON/JSON5`.
 - Supports polymorphic types and complex object graphs
 - Zero external dependencies (other than java-util)
 - Fully compatible with both JPMS and OSGi environments
