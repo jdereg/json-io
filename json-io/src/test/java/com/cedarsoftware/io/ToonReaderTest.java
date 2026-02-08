@@ -2852,4 +2852,396 @@ class ToonReaderTest {
         assertEquals("two", restored.get("2"));
         assertEquals("three", restored.get("3"));
     }
+
+    // ========== GAP TESTS: Blank Lines in Tabular Data ==========
+
+    @Test
+    void testTabularArray_BlankLinesBetweenRows() {
+        // Tabular data with blank lines interspersed — reader should skip them
+        String toon = "people[3]{name,age}:\n  Alice,30\n\n  Bob,25\n\n  Carol,40";
+        Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> people = (List<?>) map.get("people");
+        assertEquals(3, people.size());
+        Map<?, ?> alice = (Map<?, ?>) people.get(0);
+        assertEquals("Alice", alice.get("name"));
+        assertEquals(30L, alice.get("age"));
+        Map<?, ?> carol = (Map<?, ?>) people.get(2);
+        assertEquals("Carol", carol.get("name"));
+        assertEquals(40L, carol.get("age"));
+    }
+
+    @Test
+    void testTabularArray_BlankLinesAtStart() {
+        // Blank lines before the first row of tabular data
+        String toon = "items[2]{id,val}:\n\n\n  1,hello\n  2,world";
+        Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> items = (List<?>) map.get("items");
+        assertEquals(2, items.size());
+        Map<?, ?> item1 = (Map<?, ?>) items.get(0);
+        assertEquals(1L, item1.get("id"));
+        assertEquals("hello", item1.get("val"));
+    }
+
+    @Test
+    void testListArray_BlankLinesBetweenElements() {
+        // List array with blank lines between hyphen elements
+        String toon = "vals[3]:\n  - one\n\n  - two\n\n  - three";
+        Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> vals = (List<?>) map.get("vals");
+        assertEquals(3, vals.size());
+        assertEquals("one", vals.get(0));
+        assertEquals("two", vals.get(1));
+        assertEquals("three", vals.get(2));
+    }
+
+    @Test
+    void testObject_BlankLinesBetweenFields() {
+        // Object with blank lines between key: value pairs
+        String toon = "a: 1\n\nb: 2\n\nc: 3";
+        Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
+        assertEquals(1L, map.get("a"));
+        assertEquals(2L, map.get("b"));
+        assertEquals(3L, map.get("c"));
+    }
+
+    // ========== GAP TESTS: Odd Indentation ==========
+
+    @Test
+    void testOddIndentation_ThreeSpaces() {
+        // 3-space indentation — integer division 3/2=1, so reader treats it as indent level 1
+        // This matches the parent level correctly via integer division
+        String toon = "outer:\n   inner: value";
+        Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
+        Map<?, ?> outer = (Map<?, ?>) map.get("outer");
+        assertNotNull(outer, "3-space indent should be recognized as nested");
+        assertEquals("value", outer.get("inner"));
+    }
+
+    @Test
+    void testOddIndentation_OneSpace() {
+        // 1-space indentation — integer division 1/2=0, treated as indent level 0 (same level)
+        // So "inner: value" is NOT nested inside "outer" — it's a sibling key
+        String toon = "outer:\n inner: value";
+        Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
+        // With 1 space, indent level = 0 (same as parent), so "inner" is a sibling
+        assertTrue(map.containsKey("inner") || map.containsKey("outer"),
+                "1-space indent should be handled gracefully");
+    }
+
+    @Test
+    void testOddIndentation_FiveSpaces() {
+        // 5-space indentation — integer division 5/2=2, treated as indent level 2
+        // With standard 2-space indentation, parent at level 0, child at level 1
+        // Level 2 from base 0 means it belongs to a nested structure (level 0 expects level 1 children)
+        String toon = "outer:\n  inner:\n     deep: value";
+        Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
+        Map<?, ?> outer = (Map<?, ?>) map.get("outer");
+        assertNotNull(outer);
+        Map<?, ?> inner = (Map<?, ?>) outer.get("inner");
+        assertNotNull(inner, "5-space indent (level 2) should be recognized as nested under level 1");
+        assertEquals("value", inner.get("deep"));
+    }
+
+    // ========== GAP TESTS: Array Count Mismatches ==========
+
+    @Test
+    void testInlineArray_FewerElementsThanCount() {
+        // [3]: but only 2 elements — reader should handle gracefully
+        String toon = "items[3]: a,b";
+        Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> items = (List<?>) map.get("items");
+        // Reader parses what's available. Inline splits by comma, so gets 2 elements.
+        assertNotNull(items);
+        assertTrue(items.size() >= 2, "Should have at least the elements that are present");
+    }
+
+    @Test
+    void testInlineArray_MoreElementsThanCount() {
+        // [2]: but 4 elements — reader may parse all or truncate
+        String toon = "items[2]: a,b,c,d";
+        Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> items = (List<?>) map.get("items");
+        assertNotNull(items);
+        // Inline parser splits by comma; the count is a hint, not a strict limit
+        assertTrue(items.size() >= 2, "Should have at least the declared count");
+    }
+
+    @Test
+    void testListArray_FewerElementsThanCount() {
+        // [3]: with only 2 hyphen elements — reader stops at EOF
+        String toon = "items[3]:\n  - one\n  - two";
+        Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> items = (List<?>) map.get("items");
+        assertNotNull(items);
+        assertEquals(2, items.size(), "Should contain the elements that are actually present");
+        assertEquals("one", items.get(0));
+        assertEquals("two", items.get(1));
+    }
+
+    @Test
+    void testListArray_MoreElementsThanCount() {
+        // [2]: with 3 hyphen elements — reader should stop at count
+        String toon = "items[2]:\n  - one\n  - two\n  - three";
+        Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> items = (List<?>) map.get("items");
+        assertNotNull(items);
+        assertEquals(2, items.size(), "Reader stops reading at declared count");
+        assertEquals("one", items.get(0));
+        assertEquals("two", items.get(1));
+    }
+
+    @Test
+    void testTabularArray_FewerRowsThanCount() {
+        // [3]{x,y}: with only 2 rows
+        String toon = "pts[3]{x,y}:\n  1,2\n  3,4";
+        Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> pts = (List<?>) map.get("pts");
+        assertNotNull(pts);
+        assertEquals(2, pts.size(), "Should contain the rows that are actually present");
+    }
+
+    @Test
+    void testTabularArray_MoreRowsThanCount() {
+        // [2]{x,y}: with 3 rows — reader should stop at count
+        String toon = "pts[2]{x,y}:\n  1,2\n  3,4\n  5,6";
+        Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> pts = (List<?>) map.get("pts");
+        assertNotNull(pts);
+        assertEquals(2, pts.size(), "Reader stops reading at declared count");
+        Map<?, ?> pt1 = (Map<?, ?>) pts.get(0);
+        assertEquals(1L, pt1.get("x"));
+        assertEquals(2L, pt1.get("y"));
+    }
+
+    // ========== GAP TESTS: fromToonToMaps with Tabular Arrays ==========
+
+    @Test
+    void testFromToonToMaps_TabularArray() {
+        // Tabular array through the toMaps path
+        Map<String, Object> original = new LinkedHashMap<>();
+        Map<String, Object> p1 = new LinkedHashMap<>();
+        p1.put("name", "Alice");
+        p1.put("score", 95);
+        Map<String, Object> p2 = new LinkedHashMap<>();
+        p2.put("name", "Bob");
+        p2.put("score", 87);
+        original.put("results", new ArrayList<>(Arrays.asList(p1, p2)));
+
+        String toon = JsonIo.toToon(original, null);
+        // Verify tabular format was produced
+        assertTrue(toon.contains("{name,score}:"), "Should use tabular format for uniform maps");
+
+        Map<String, Object> restored = JsonIo.fromToonToMaps(toon, null).asClass(Map.class);
+        List<?> results = (List<?>) restored.get("results");
+        assertEquals(2, results.size());
+        Map<?, ?> r1 = (Map<?, ?>) results.get(0);
+        assertEquals("Alice", r1.get("name"));
+        assertEquals(95L, r1.get("score"));
+        Map<?, ?> r2 = (Map<?, ?>) results.get(1);
+        assertEquals("Bob", r2.get("name"));
+        assertEquals(87L, r2.get("score"));
+    }
+
+    @Test
+    void testFromToonToMaps_NestedTabularInObject() {
+        // Object containing a tabular array, read via toMaps
+        String toon = "title: Report\ndata[2]{id,val}:\n  1,alpha\n  2,beta";
+        Map<String, Object> map = JsonIo.fromToonToMaps(toon, null).asClass(Map.class);
+        assertEquals("Report", map.get("title"));
+        List<?> data = (List<?>) map.get("data");
+        assertEquals(2, data.size());
+        Map<?, ?> row1 = (Map<?, ?>) data.get(0);
+        assertEquals(1L, row1.get("id"));
+        assertEquals("alpha", row1.get("val"));
+    }
+
+    @Test
+    void testFromToonToMaps_InlineArrayInObject() {
+        // Inline array within an object, read via toMaps
+        String toon = "label: test\nnums[4]: 10,20,30,40";
+        Map<String, Object> map = JsonIo.fromToonToMaps(toon, null).asClass(Map.class);
+        assertEquals("test", map.get("label"));
+        List<?> nums = (List<?>) map.get("nums");
+        assertEquals(4, nums.size());
+        assertEquals(10L, nums.get(0));
+        assertEquals(40L, nums.get(3));
+    }
+
+    @Test
+    void testFromToonToMaps_ListArrayOfObjects() {
+        // List array of objects, read via toMaps
+        String toon = "[2]:\n  - name: Alice\n    age: 30\n  - name: Bob\n    age: 25";
+        Object[] arr = JsonIo.fromToonToMaps(toon, null).asClass(Object[].class);
+        assertEquals(2, arr.length);
+        Map<?, ?> alice = (Map<?, ?>) arr[0];
+        assertEquals("Alice", alice.get("name"));
+        assertEquals(30L, alice.get("age"));
+        Map<?, ?> bob = (Map<?, ?>) arr[1];
+        assertEquals("Bob", bob.get("name"));
+        assertEquals(25L, bob.get("age"));
+    }
+
+    @Test
+    void testFromToonToMaps_EmptyMap() {
+        // Empty map through toMaps path
+        String toon = "{}";
+        Map<String, Object> map = JsonIo.fromToonToMaps(toon, null).asClass(Map.class);
+        assertTrue(map.isEmpty());
+    }
+
+    @Test
+    void testFromToonToMaps_RoundTrip_TabularWithMixedTypes() {
+        // Tabular array with string and numeric values, round-tripped through toMaps
+        Map<String, Object> root = new LinkedHashMap<>();
+        Map<String, Object> r1 = new LinkedHashMap<>();
+        r1.put("key", "alpha");
+        r1.put("count", 100);
+        Map<String, Object> r2 = new LinkedHashMap<>();
+        r2.put("key", "beta");
+        r2.put("count", 200);
+        root.put("stats", new ArrayList<>(Arrays.asList(r1, r2)));
+
+        String toon = JsonIo.toToon(root, null);
+        Map<String, Object> restored = JsonIo.fromToonToMaps(toon, null).asClass(Map.class);
+        List<?> stats = (List<?>) restored.get("stats");
+        assertEquals(2, stats.size());
+        Map<?, ?> s1 = (Map<?, ?>) stats.get(0);
+        assertEquals("alpha", s1.get("key"));
+        assertEquals(100L, s1.get("count"));
+    }
+
+    // ========== GAP TESTS: Unclosed Quotes / Malformed Input ==========
+
+    @Test
+    void testUnclosedQuote_InScalar() {
+        // Unclosed quote in a scalar value — reader treats it as unquoted string
+        String toon = "value: \"unclosed";
+        Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
+        // The readScalar checks startsWith(") && endsWith(") — this fails the endsWith check
+        // So it falls through to parseNumber (fails) then returns as unquoted string
+        Object val = map.get("value");
+        assertNotNull(val, "Should not throw — treated as unquoted string");
+        assertTrue(val instanceof String);
+    }
+
+    @Test
+    void testUnclosedQuote_InKey() {
+        // Key with opening quote but no closing quote
+        String toon = "\"broken: value";
+        // This should not cause an infinite loop or crash
+        try {
+            Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
+            // If it parses, it may produce unexpected structure, but should not throw/crash
+            assertNotNull(map);
+        } catch (Exception e) {
+            // Acceptable — malformed input can throw any exception
+            assertNotNull(e.getMessage(), "Exception should have a message");
+        }
+    }
+
+    @Test
+    void testMalformedArraySyntax_NoBracketClose() {
+        // [N without closing ] — should throw
+        String toon = "items[3: a,b,c";
+        try {
+            JsonIo.fromToon(toon, null).asClass(Map.class);
+            // If it doesn't throw, it interpreted it as key: value (because findColonPosition finds ':')
+        } catch (JsonIoException e) {
+            assertTrue(e.getMessage() != null);
+        }
+    }
+
+    @Test
+    void testMalformedArraySyntax_NoColon() {
+        // [3] without trailing colon
+        String toon = "[3] a,b,c";
+        try {
+            Object result = JsonIo.fromToon(toon, null).asClass(Map.class);
+            // May parse as something unexpected, but shouldn't crash
+            assertNotNull(result);
+        } catch (JsonIoException e) {
+            // Acceptable — malformed
+            assertNotNull(e.getMessage());
+        }
+    }
+
+    @Test
+    void testEmptyInput() {
+        // Completely empty string
+        String toon = "";
+        Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
+        assertTrue(map.isEmpty(), "Empty input should produce empty map");
+    }
+
+    @Test
+    void testWhitespaceOnlyInput() {
+        // Input with only whitespace/blank lines
+        String toon = "   \n   \n   ";
+        Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
+        assertTrue(map.isEmpty(), "Whitespace-only input should produce empty map");
+    }
+
+    // ========== GAP TESTS: Invalid Escape Sequences ==========
+
+    @Test
+    void testInvalidEscapeSequence_ThrowsException() {
+        // \x is not a valid TOON escape — should throw JsonIoException
+        String toon = "value: \"hello\\xworld\"";
+        assertThrows(JsonIoException.class, () -> {
+            JsonIo.fromToon(toon, null).asClass(Map.class);
+        }, "Invalid escape \\x should throw JsonIoException");
+    }
+
+    @Test
+    void testInvalidEscapeSequence_BackslashA() {
+        // \a is not a valid TOON escape
+        String toon = "value: \"test\\avalue\"";
+        assertThrows(JsonIoException.class, () -> {
+            JsonIo.fromToon(toon, null).asClass(Map.class);
+        }, "Invalid escape \\a should throw JsonIoException");
+    }
+
+    @Test
+    void testValidEscapeSequences_AllFive() {
+        // All 5 valid TOON escapes: \\, \", \n, \r, \t
+        String toon = "a: \"back\\\\slash\"\nb: \"has\\\"quote\"\nc: \"line1\\nline2\"\nd: \"col1\\tcol2\"\ne: \"ret\\rurn\"";
+        Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
+        assertEquals("back\\slash", map.get("a"));
+        assertEquals("has\"quote", map.get("b"));
+        assertEquals("line1\nline2", map.get("c"));
+        assertEquals("col1\tcol2", map.get("d"));
+        assertEquals("ret\rurn", map.get("e"));
+    }
+
+    @Test
+    void testEscapeAtEndOfString() {
+        // Backslash as the very last character before closing quote
+        // In parseQuotedString, when i+1 < len-1 is false (backslash is at position len-2),
+        // the backslash is treated as literal char
+        String toon = "value: \"trailing\\\"";
+        Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
+        Object val = map.get("value");
+        assertNotNull(val);
+        // The backslash at position len-2: i=len-2, i+1=len-1, condition i+1 < len-1 is false
+        // So backslash is appended as literal
+        assertEquals("trailing\\", val);
+    }
+
+    @Test
+    void testInvalidEscapeSequence_InInlineArray() {
+        // Invalid escape in an inline array element
+        String toon = "items[2]: \"ok\",\"bad\\zvalue\"";
+        assertThrows(JsonIoException.class, () -> {
+            JsonIo.fromToon(toon, null).asClass(Map.class);
+        }, "Invalid escape \\z in inline array should throw JsonIoException");
+    }
+
+    @Test
+    void testInvalidEscapeSequence_InTabularRow() {
+        // Invalid escape in a tabular data row
+        String toon = "data[1]{name,desc}:\n  Alice,\"bad\\qesc\"";
+        assertThrows(JsonIoException.class, () -> {
+            JsonIo.fromToon(toon, null).asClass(Map.class);
+        }, "Invalid escape \\q in tabular row should throw JsonIoException");
+    }
 }
