@@ -1,6 +1,7 @@
 package com.cedarsoftware.io.util;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.function.Supplier;
@@ -173,7 +174,7 @@ class SealableSetTest {
 
     @Test
     void testToArray() {
-        assert deepEquals(setOf(10, 20, null), set);
+        assert deepEquals(new HashSet<>(Arrays.asList(10, 20, null)), set);
     }
 
     @Test
