@@ -1781,6 +1781,272 @@ class ToonReaderTest {
         assertEquals(3L, restoredConfig.get("level"));
     }
 
+    @Test
+    void testHeterogeneousDepth_TabularThenListThenInline() {
+        // Chain: Object → Tabular → Object → List(non-uniform) → [Object → Inline, scalar]
+        // Starts with tabular at the outermost array level, then nests list and inline deeper.
+
+        // Inner inline array (all primitives → compact format)
+        List<Object> tags = new ArrayList<>(Arrays.asList("red", "green", "blue"));
+
+        // Inner object containing the inline array
+        Map<String, Object> detail1 = new LinkedHashMap<>();
+        detail1.put("label", "item-A");
+        detail1.put("tags", tags);
+
+        // A different-shaped object (non-uniform with detail1 → forces list format)
+        Map<String, Object> detail2 = new LinkedHashMap<>();
+        detail2.put("label", "item-B");
+        detail2.put("count", 7);
+
+        // Non-uniform list containing objects and a scalar
+        List<Object> mixed = new ArrayList<>();
+        mixed.add(detail1);
+        mixed.add(detail2);
+        mixed.add("standalone");
+
+        // Objects for the outer tabular array
+        Map<String, Object> row1 = new LinkedHashMap<>();
+        row1.put("id", 1);
+        row1.put("name", "first");
+        Map<String, Object> row2 = new LinkedHashMap<>();
+        row2.put("id", 2);
+        row2.put("name", "second");
+        List<Object> tabular = new ArrayList<>(Arrays.asList(row1, row2));
+
+        // Root: tabular at top, list deeper
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("people", tabular);
+        root.put("extras", mixed);
+
+        String toon = JsonIo.toToon(root, null);
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+
+        // Verify tabular
+        List<?> resPeople = (List<?>) restored.get("people");
+        assertEquals(2, resPeople.size());
+        assertEquals(1L, ((Map<?, ?>) resPeople.get(0)).get("id"));
+        assertEquals("second", ((Map<?, ?>) resPeople.get(1)).get("name"));
+
+        // Verify non-uniform list
+        List<?> resExtras = (List<?>) restored.get("extras");
+        assertEquals(3, resExtras.size());
+
+        // First element: object with inline array
+        Map<?, ?> resDetail1 = (Map<?, ?>) resExtras.get(0);
+        assertEquals("item-A", resDetail1.get("label"));
+        List<?> resTags = (List<?>) resDetail1.get("tags");
+        assertEquals(3, resTags.size());
+        assertEquals("red", resTags.get(0));
+        assertEquals("blue", resTags.get(2));
+
+        // Second element: different object
+        Map<?, ?> resDetail2 = (Map<?, ?>) resExtras.get(1);
+        assertEquals("item-B", resDetail2.get("label"));
+        assertEquals(7L, resDetail2.get("count"));
+
+        // Third element: scalar
+        assertEquals("standalone", resExtras.get(2));
+    }
+
+    @Test
+    void testHeterogeneousDepth_InlineThenObjectThenTabular() {
+        // Chain: Object → Inline(primitives) + Object → Object → Tabular → Object
+        // Inline array is at the outermost level, tabular is deepest.
+
+        // Deepest: tabular array
+        Map<String, Object> entry1 = new LinkedHashMap<>();
+        entry1.put("k", "a");
+        entry1.put("v", 1);
+        Map<String, Object> entry2 = new LinkedHashMap<>();
+        entry2.put("k", "b");
+        entry2.put("v", 2);
+        List<Object> tabular = new ArrayList<>(Arrays.asList(entry1, entry2));
+
+        // Mid-level: object wrapping tabular
+        Map<String, Object> registry = new LinkedHashMap<>();
+        registry.put("version", 3);
+        registry.put("entries", tabular);
+
+        // Another mid-level: object wrapping that
+        Map<String, Object> config = new LinkedHashMap<>();
+        config.put("name", "main-config");
+        config.put("registry", registry);
+
+        // Outer inline array (all primitives)
+        List<Object> codes = new ArrayList<>(Arrays.asList(100, 200, 300, 400));
+
+        // Root
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("codes", codes);
+        root.put("config", config);
+
+        String toon = JsonIo.toToon(root, null);
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+
+        // Verify inline array
+        List<?> resCodes = (List<?>) restored.get("codes");
+        assertEquals(4, resCodes.size());
+        assertEquals(100L, resCodes.get(0));
+        assertEquals(400L, resCodes.get(3));
+
+        // Verify nested object chain → tabular
+        Map<?, ?> resConfig = (Map<?, ?>) restored.get("config");
+        assertEquals("main-config", resConfig.get("name"));
+        Map<?, ?> resRegistry = (Map<?, ?>) resConfig.get("registry");
+        assertEquals(3L, resRegistry.get("version"));
+        List<?> resEntries = (List<?>) resRegistry.get("entries");
+        assertEquals(2, resEntries.size());
+        assertEquals("a", ((Map<?, ?>) resEntries.get(0)).get("k"));
+        assertEquals(2L, ((Map<?, ?>) resEntries.get(1)).get("v"));
+    }
+
+    @Test
+    void testHeterogeneousDepth_ListContainingAllArrayFormats() {
+        // Chain: Object → List(non-uniform) → [Inline(array), Tabular(array), scalar, Object]
+        // A single list whose elements exercise every array format plus scalar and object.
+
+        // Element 1: an inline-eligible array (all primitives)
+        List<Object> inlineArr = new ArrayList<>(Arrays.asList(1, 2, 3));
+
+        // Element 2: a tabular-eligible array (uniform objects)
+        Map<String, Object> tRow1 = new LinkedHashMap<>();
+        tRow1.put("a", 10);
+        tRow1.put("b", 20);
+        Map<String, Object> tRow2 = new LinkedHashMap<>();
+        tRow2.put("a", 30);
+        tRow2.put("b", 40);
+        List<Object> tabularArr = new ArrayList<>(Arrays.asList(tRow1, tRow2));
+
+        // Element 3: a plain scalar
+        // Element 4: an object (map)
+        Map<String, Object> obj = new LinkedHashMap<>();
+        obj.put("key", "val");
+
+        List<Object> megaList = new ArrayList<>();
+        megaList.add(inlineArr);
+        megaList.add(tabularArr);
+        megaList.add("hello");
+        megaList.add(obj);
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("everything", megaList);
+
+        String toon = JsonIo.toToon(root, null);
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+
+        List<?> res = (List<?>) restored.get("everything");
+        assertEquals(4, res.size());
+
+        // Inline array element
+        List<?> resInline = (List<?>) res.get(0);
+        assertEquals(3, resInline.size());
+        assertEquals(1L, resInline.get(0));
+        assertEquals(3L, resInline.get(2));
+
+        // Tabular array element
+        List<?> resTabular = (List<?>) res.get(1);
+        assertEquals(2, resTabular.size());
+        assertEquals(10L, ((Map<?, ?>) resTabular.get(0)).get("a"));
+        assertEquals(40L, ((Map<?, ?>) resTabular.get(1)).get("b"));
+
+        // Scalar element
+        assertEquals("hello", res.get(2));
+
+        // Object element
+        Map<?, ?> resObj = (Map<?, ?>) res.get(3);
+        assertEquals("val", resObj.get("key"));
+    }
+
+    @Test
+    void testHeterogeneousDepth_TripleNestedLists() {
+        // Chain: Object → List → List → List → scalar
+        // Three levels of list nesting, no objects in between.
+
+        List<Object> innermost = new ArrayList<>(Arrays.asList("a", "b"));
+        List<Object> middle = new ArrayList<>();
+        middle.add(innermost);
+        middle.add(new ArrayList<>(Arrays.asList(1, 2, 3)));
+        List<Object> outer = new ArrayList<>();
+        outer.add(middle);
+        outer.add(new ArrayList<>(Collections.singletonList("solo")));
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("nested", outer);
+
+        String toon = JsonIo.toToon(root, null);
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+
+        List<?> resOuter = (List<?>) restored.get("nested");
+        assertEquals(2, resOuter.size());
+
+        List<?> resMiddle = (List<?>) resOuter.get(0);
+        assertEquals(2, resMiddle.size());
+
+        List<?> resInnermost = (List<?>) resMiddle.get(0);
+        assertEquals(2, resInnermost.size());
+        assertEquals("a", resInnermost.get(0));
+        assertEquals("b", resInnermost.get(1));
+
+        List<?> resNums = (List<?>) resMiddle.get(1);
+        assertEquals(3, resNums.size());
+        assertEquals(1L, resNums.get(0));
+
+        List<?> resSolo = (List<?>) resOuter.get(1);
+        assertEquals(1, resSolo.size());
+        assertEquals("solo", resSolo.get(0));
+    }
+
+    @Test
+    void testHeterogeneousDepth_RootIsList() {
+        // Chain: root is List(non-uniform) → [Object, scalar, Tabular(array), Inline(array)]
+        // Root is NOT an object — it's a collection, exercising a different entry point.
+
+        Map<String, Object> obj = new LinkedHashMap<>();
+        obj.put("name", "Alice");
+        obj.put("role", "admin");
+
+        Map<String, Object> tRow1 = new LinkedHashMap<>();
+        tRow1.put("x", 1);
+        Map<String, Object> tRow2 = new LinkedHashMap<>();
+        tRow2.put("x", 2);
+        List<Object> tabular = new ArrayList<>(Arrays.asList(tRow1, tRow2));
+
+        List<Object> inline = new ArrayList<>(Arrays.asList(10, 20));
+
+        List<Object> rootList = new ArrayList<>();
+        rootList.add(obj);
+        rootList.add(42);
+        rootList.add(tabular);
+        rootList.add(inline);
+
+        String toon = JsonIo.toToon(rootList, null);
+        // Root is a list — read back as list
+        List<?> restored = JsonIo.fromToon(toon, null).asClass(List.class);
+
+        assertEquals(4, restored.size());
+
+        // Object element
+        Map<?, ?> resObj = (Map<?, ?>) restored.get(0);
+        assertEquals("Alice", resObj.get("name"));
+        assertEquals("admin", resObj.get("role"));
+
+        // Scalar
+        assertEquals(42L, restored.get(1));
+
+        // Tabular array
+        List<?> resTabular = (List<?>) restored.get(2);
+        assertEquals(2, resTabular.size());
+        assertEquals(1L, ((Map<?, ?>) resTabular.get(0)).get("x"));
+        assertEquals(2L, ((Map<?, ?>) resTabular.get(1)).get("x"));
+
+        // Inline array
+        List<?> resInline = (List<?>) restored.get(3);
+        assertEquals(2, resInline.size());
+        assertEquals(10L, resInline.get(0));
+        assertEquals(20L, resInline.get(1));
+    }
+
     // --- Deeply Nested with Arrays ---
 
     @Test
