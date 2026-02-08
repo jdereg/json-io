@@ -11,9 +11,10 @@
 * **BUG FIX**: `JsonWriter.doesValueTypeMatchFieldType()` - `declaredClassIsLongWrittenAsString` incorrectly checked `objectClass` instead of `declaredType` for the `long.class` case, causing unnecessary `@type` wrappers on primitive long fields when `writeLongsAsStrings` was enabled
 * **BUG FIX**: `JsonWriter.doesValueTypeMatchFieldType()` - `Long.class` vs `long.class` autoboxing mismatch caused unnecessary `@type` wrappers on `Long` values assigned to primitive `long` fields
 * **BUG FIX**: `JsonWriter` - Removed JSON5 trailing comma writes; trailing commas are now supported on READ (JSON5 tolerance) but never written, as they added complexity without benefit
-* **BUG FIX**: `ToonWriter`/`ToonReader` - Fixed empty map handling (empty maps were not round-tripping correctly)
-* **BUG FIX**: `ToonReader.parseNumber()` - Fixed handling of extreme doubles and large integers
-* **BUG FIX**: `ToonWriter`/`ToonReader` - Fixed nested collection and tabular array handling
+* **BUG FIX**: `ToonWriter`/`ToonReader` - Fixed empty map handling: `ToonWriter` now writes empty maps inline as `{}` in both standalone and list-element contexts; `ToonReader` now recognizes `{}` in list arrays as empty objects instead of treating them as strings
+* **BUG FIX**: `ToonReader.parseNumber()` - Replaced custom numeric parsing with delegation to `MathUtilities.parseToMinimalNumericType()` from java-util, fixing extreme doubles (e.g., `Double.MAX_VALUE` written as 309-digit plain integer) and large `BigInteger` values that were incorrectly returned as strings
+* **BUG FIX**: `ToonWriter` - Fixed double-colon bug in nested collections: `writeCollection()` was writing `[N]:` then calling `writeCollectionElements()` which added `{cols}:` for tabular format, producing `[N]:{cols}:` instead of `[N]{cols}:`
+* **BUG FIX**: `ToonReader.isArrayStart()` - Fixed tabular array detection: the method checked for `]:` as a contiguous substring but tabular format `[N]{cols}:` has `]{` between `]` and `:`. Now correctly checks the character after `]` for either `:` or `{`
 * **PERFORMANCE**: `JsonWriter` - Pre-fetched custom writers for primitive array hot paths (`long[]`, `double[]`, `float[]`), avoiding per-array `getCustomWriter()` lookups
 * **PERFORMANCE**: `JsonWriter` - Added `writeIntDirect()` for zero-allocation int/short writing using digit-pair lookup tables, replacing `Integer.toString()` + `Writer.write(String)`
 * **PERFORMANCE**: `JsonWriter` - Cached `EnumSet.elementType` field reflectively (lazy-initialized volatile) to avoid repeated `getDeepDeclaredFields()` lookups
@@ -30,9 +31,14 @@
   * Added support for pipe-separated tabular format: `items[2|]{col1|col2}:` with pipe-delimited rows
   * Comma delimiter remains the default: `items[2]{col1,col2}:`
   * All three variants parse to identical data structures and round-trip correctly
-* **TESTING**: Added 109 TOON spec compliance tests covering edge cases, nested structures, and format variants
+* **TESTING**: Comprehensive TOON test suite — 241 tests total across `ToonReaderTest` and `ToonWriterTest`
+  * 30 high-priority spec compliance tests (scalars, arrays, objects, nesting, round-trips)
+  * 43 medium/lower priority tests (special types, edge cases, quoting rules, format variants)
+  * 9 heterogeneous depth chain tests (all structural type combinations at every nesting level)
+  * 31 gap tests: blank lines in tabular/list/object data, odd indentation, array count mismatches, `fromToonToMaps()` with tabular arrays, unclosed quotes/malformed input resilience, invalid escape sequence error handling
 * **MAINTENANCE**: Version 4.92.0, java-util dependency updated to 4.92.0
 
+#### 4.91.0 - not released
 #### 4.90.0 - 2026-02-02
 * **MAINTENANCE**: Migrated test files from deprecated `JsonIo.toObjects()` to `JsonIo.toJava().asClass()` API
   * Updated ~148 calls across 5 test files to use the new fluent builder pattern
