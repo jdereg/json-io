@@ -2155,6 +2155,47 @@ class ToonReaderTest {
     }
 
     @Test
+    void testExtremeDoublesAsMapValues() {
+        // Bug 3: Double.MAX_VALUE produces a 309-digit plain integer string (no decimal point).
+        // ToonReader.parseNumber must not return null for such strings; it should fall back
+        // from Long.parseLong to BigInteger (preserving precision).
+        // Testing via Map to verify values come back as Numbers (not Strings).
+        double[] extremes = {Double.MAX_VALUE, -Double.MAX_VALUE, Double.MIN_VALUE, Double.MIN_NORMAL};
+        for (double extreme : extremes) {
+            Map<String, Object> original = new LinkedHashMap<>();
+            original.put("val", extreme);
+
+            String toon = JsonIo.toToon(original, null);
+            Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+
+            Object val = restored.get("val");
+            assertTrue(val instanceof Number,
+                    "Extreme double " + extreme + " should parse as Number, got: " +
+                            (val == null ? "null" : val.getClass().getName() + " = " + val));
+            assertEquals(extreme, ((Number) val).doubleValue(), 0.0,
+                    "Extreme double " + extreme + " should preserve value after round-trip");
+        }
+    }
+
+    @Test
+    void testBigIntegerViaMapRoundTrip() {
+        // A BigInteger larger than Long.MAX_VALUE - should come back as BigInteger
+        java.math.BigInteger big = new java.math.BigInteger("12345678901234567890");
+        Map<String, Object> original = new LinkedHashMap<>();
+        original.put("big", big);
+
+        String toon = JsonIo.toToon(original, null);
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+
+        Object val = restored.get("big");
+        assertTrue(val instanceof Number,
+                "BigInteger should parse as Number, got: " + (val == null ? "null" : val.getClass().getName()));
+        assertTrue(val instanceof java.math.BigInteger,
+                "Should preserve as BigInteger, got: " + val.getClass().getName());
+        assertEquals(big, val, "BigInteger value should be preserved exactly");
+    }
+
+    @Test
     void testObjectWithAllNullFields() {
         // POJO with all fields at default values
         TestPerson person = new TestPerson();

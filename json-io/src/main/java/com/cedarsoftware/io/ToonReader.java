@@ -7,6 +7,8 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.cedarsoftware.util.MathUtilities;
+
 /**
  * Parse TOON (Token-Oriented Object Notation) format into JsonObject structures.
  * <p>
@@ -738,7 +740,10 @@ public class ToonReader {
 
     /**
      * Try to parse text as a number.
-     * Returns Long for integers, Double for decimals, null if not a number.
+     * Delegates to MathUtilities.parseToMinimalNumericType() which returns the most
+     * appropriate type: Long for integers, BigInteger for large integers, Double for
+     * decimals with <= 16 mantissa digits, BigDecimal for high-precision decimals.
+     * Returns null if text is not a valid number.
      */
     Number parseNumber(String text) {
         if (text.isEmpty()) {
@@ -751,13 +756,7 @@ public class ToonReader {
         }
 
         try {
-            // Check if it contains decimal point or exponent
-            if (text.indexOf('.') >= 0 || text.indexOf('e') >= 0 || text.indexOf('E') >= 0) {
-                return Double.parseDouble(text);
-            } else {
-                // Try long first
-                return Long.parseLong(text);
-            }
+            return MathUtilities.parseToMinimalNumericType(text);
         } catch (NumberFormatException e) {
             return null;  // Not a valid number
         }
