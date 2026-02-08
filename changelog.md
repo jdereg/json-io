@@ -1,6 +1,6 @@
 ### Revision History
 
-#### 4.91.0 - (unreleased)
+#### 4.92.0 - 2026-02-08
 * **PERFORMANCE**: Optimized `Resolver`/`ObjectResolver` read path (~6% faster Java deserialization)
   * **Correctness fix**: `createSameTypeCollection()` - Fixed inheritance-order bug where `LinkedHashSet` was incorrectly created as `HashSet`, losing insertion-order preservation
   * **Correctness fix**: `shouldSkipTraversal()` - Fixed `rawClass.isInstance(Number.class)` (always false) to `Number.class.isAssignableFrom(rawClass)`
@@ -11,11 +11,13 @@
 * **BUG FIX**: `JsonWriter.doesValueTypeMatchFieldType()` - `declaredClassIsLongWrittenAsString` incorrectly checked `objectClass` instead of `declaredType` for the `long.class` case, causing unnecessary `@type` wrappers on primitive long fields when `writeLongsAsStrings` was enabled
 * **BUG FIX**: `JsonWriter.doesValueTypeMatchFieldType()` - `Long.class` vs `long.class` autoboxing mismatch caused unnecessary `@type` wrappers on `Long` values assigned to primitive `long` fields
 * **BUG FIX**: `JsonWriter` - Removed JSON5 trailing comma writes; trailing commas are now supported on READ (JSON5 tolerance) but never written, as they added complexity without benefit
+* **BUG FIX**: `ToonWriter`/`ToonReader` - Fixed empty map handling (empty maps were not round-tripping correctly)
+* **BUG FIX**: `ToonReader.parseNumber()` - Fixed handling of extreme doubles and large integers
+* **BUG FIX**: `ToonWriter`/`ToonReader` - Fixed nested collection and tabular array handling
 * **PERFORMANCE**: `JsonWriter` - Pre-fetched custom writers for primitive array hot paths (`long[]`, `double[]`, `float[]`), avoiding per-array `getCustomWriter()` lookups
 * **PERFORMANCE**: `JsonWriter` - Added `writeIntDirect()` for zero-allocation int/short writing using digit-pair lookup tables, replacing `Integer.toString()` + `Writer.write(String)`
 * **PERFORMANCE**: `JsonWriter` - Cached `EnumSet.elementType` field reflectively (lazy-initialized volatile) to avoid repeated `getDeepDeclaredFields()` lookups
 * **PERFORMANCE**: `ObjectResolver.coerceLong()` - Reordered branches by frequency (int/double first, then byte/float/short)
-* **MAINTENANCE**: Version bump to 4.91.0, java-util dependency updated to 4.91.0
 * **FEATURE**: TOON key folding support (optional, spec-compliant)
   * Writer: Added `WriteOptionsBuilder.toonKeyFolding(boolean)` to collapse single-key object chains into dotted notation
     * `{data: {metadata: {value: 42}}}` → `data.metadata.value: 42`
@@ -28,6 +30,8 @@
   * Added support for pipe-separated tabular format: `items[2|]{col1|col2}:` with pipe-delimited rows
   * Comma delimiter remains the default: `items[2]{col1,col2}:`
   * All three variants parse to identical data structures and round-trip correctly
+* **TESTING**: Added 109 TOON spec compliance tests covering edge cases, nested structures, and format variants
+* **MAINTENANCE**: Version 4.92.0, java-util dependency updated to 4.92.0
 
 #### 4.90.0 - 2026-02-02
 * **MAINTENANCE**: Migrated test files from deprecated `JsonIo.toObjects()` to `JsonIo.toJava().asClass()` API
