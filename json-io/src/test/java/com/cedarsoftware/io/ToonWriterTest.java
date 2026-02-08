@@ -1068,4 +1068,238 @@ class ToonWriterTest {
         Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
         assertEquals("-", restored.get("value"));
     }
+
+    // ========== Medium Priority Gap Tests ==========
+
+    @Test
+    void testReservedWordsAsMapKeys() {
+        // TOON spec: Keys "true", "false", "null" - should they be quoted?
+        // These are valid identifiers per ^[A-Za-z_][A-Za-z0-9_.]*$ but could be
+        // confused with boolean/null values during parsing.
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("true", "value1");
+        map.put("false", "value2");
+        map.put("null", "value3");
+
+        String toon = JsonIo.toToon(map, null);
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+
+        assertEquals("value1", restored.get("true"), "Key 'true' should survive round-trip");
+        assertEquals("value2", restored.get("false"), "Key 'false' should survive round-trip");
+        assertEquals("value3", restored.get("null"), "Key 'null' should survive round-trip");
+    }
+
+    @Test
+    void testNumericLookingKeys() {
+        // TOON spec: Keys that look like numbers must be quoted
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("42", "numeric");
+        map.put("3.14", "decimal");
+        map.put("-5", "negative");
+        map.put("1e10", "exponent");
+
+        String toon = JsonIo.toToon(map, null);
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+
+        assertEquals("numeric", restored.get("42"), "Numeric key '42' should survive");
+        assertEquals("decimal", restored.get("3.14"), "Decimal key '3.14' should survive");
+        assertEquals("negative", restored.get("-5"), "Negative key '-5' should survive");
+        assertEquals("exponent", restored.get("1e10"), "Exponent key '1e10' should survive");
+    }
+
+    @Test
+    void testSingleColumnTabular() {
+        // Edge case: tabular array with only 1 field per object
+        Map<String, Object> item1 = new LinkedHashMap<>();
+        item1.put("name", "Alice");
+
+        Map<String, Object> item2 = new LinkedHashMap<>();
+        item2.put("name", "Bob");
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("people", Arrays.asList(item1, item2));
+
+        String toon = JsonIo.toToon(root, null);
+        assertTrue(toon.contains("{name}:"), "Single-column tabular should have header: " + toon);
+
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> people = (List<?>) restored.get("people");
+        assertEquals(2, people.size());
+        assertEquals("Alice", ((Map<?, ?>) people.get(0)).get("name"));
+        assertEquals("Bob", ((Map<?, ?>) people.get(1)).get("name"));
+    }
+
+    @Test
+    void testCaseSensitiveReservedWords() {
+        // TOON spec: Reserved words are case-sensitive.
+        // "True", "FALSE", "Null" are NOT reserved and should NOT be quoted.
+        assertEquals("True", JsonIo.toToon("True", null), "\"True\" should not be quoted");
+        assertEquals("FALSE", JsonIo.toToon("FALSE", null), "\"FALSE\" should not be quoted");
+        assertEquals("Null", JsonIo.toToon("Null", null), "\"Null\" should not be quoted");
+        assertEquals("TRUE", JsonIo.toToon("TRUE", null), "\"TRUE\" should not be quoted");
+    }
+
+    @Test
+    void testMapWithNullValues() {
+        // Map<String, Object> containing null values
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("name", "John");
+        map.put("middle", null);
+        map.put("last", "Doe");
+
+        String toon = JsonIo.toToon(map, null);
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+
+        assertEquals("John", restored.get("name"));
+        assertTrue(restored.containsKey("middle"), "Key 'middle' should exist");
+        assertNull(restored.get("middle"), "Null value should survive round-trip");
+        assertEquals("Doe", restored.get("last"));
+    }
+
+    @Test
+    void testInlineArrayWithQuotedValues() {
+        // Array containing strings that need quoting in inline format
+        String[] arr = {"hello,world", "true", "", "-flag", "normal"};
+        String toon = JsonIo.toToon(arr, null);
+
+        // Should be inline format since all values are primitives
+        String[] restored = JsonIo.fromToon(toon, null).asClass(String[].class);
+        assertEquals(5, restored.length);
+        assertEquals("hello,world", restored[0]);
+        assertEquals("true", restored[1]);
+        assertEquals("", restored[2]);
+        assertEquals("-flag", restored[3]);
+        assertEquals("normal", restored[4]);
+    }
+
+    @Test
+    void testArrayOfAllNulls() {
+        // Array where every element is null
+        Object[] arr = {null, null, null};
+        String toon = JsonIo.toToon(arr, null);
+
+        Object[] restored = JsonIo.fromToon(toon, null).asClass(Object[].class);
+        assertEquals(3, restored.length);
+        assertNull(restored[0]);
+        assertNull(restored[1]);
+        assertNull(restored[2]);
+    }
+
+    @Test
+    void testExponentNumberInput() {
+        // TOON spec: Reader should accept exponent notation even though writer never emits it
+        String toon = "value: 1e6";
+        Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
+        assertEquals(1000000.0, ((Number) map.get("value")).doubleValue(), 0.1,
+                "Reader should parse 1e6 as 1000000");
+
+        toon = "value: 1.5E-3";
+        map = JsonIo.fromToon(toon, null).asClass(Map.class);
+        assertEquals(0.0015, ((Number) map.get("value")).doubleValue(), 0.00001,
+                "Reader should parse 1.5E-3 as 0.0015");
+    }
+
+    @Test
+    void test3DArray() {
+        // 3D primitive array
+        int[][][] arr = {{{1, 2}, {3, 4}}, {{5, 6}, {7, 8}}};
+        String toon = JsonIo.toToon(arr, null);
+
+        int[][][] restored = JsonIo.fromToon(toon, null).asClass(int[][][].class);
+        assertEquals(1, restored[0][0][0]);
+        assertEquals(4, restored[0][1][1]);
+        assertEquals(5, restored[1][0][0]);
+        assertEquals(8, restored[1][1][1]);
+    }
+
+    @Test
+    void testObjectWithAllNullFields() {
+        // POJO with all null/zero fields
+        Person person = new Person();
+        String toon = JsonIo.toToon(person, null);
+
+        Person restored = JsonIo.fromToon(toon, null).asClass(Person.class);
+        assertNull(restored.name);
+        assertEquals(0, restored.age);
+    }
+
+    @Test
+    void testVeryLongString() {
+        // String > 10K chars
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 10000; i++) {
+            sb.append((char) ('a' + (i % 26)));
+        }
+        String longStr = sb.toString();
+
+        String toon = JsonIo.toToon(longStr, null);
+        String restored = JsonIo.fromToon(toon, null).asClass(String.class);
+        assertEquals(longStr, restored, "Very long string should survive round-trip");
+    }
+
+    @Test
+    void testLargeArray() {
+        // Array with 1000+ elements
+        int[] arr = new int[1000];
+        for (int i = 0; i < 1000; i++) {
+            arr[i] = i;
+        }
+        String toon = JsonIo.toToon(arr, null);
+        assertTrue(toon.contains("[1000]:"), "Should declare correct count");
+
+        int[] restored = JsonIo.fromToon(toon, null).asClass(int[].class);
+        assertEquals(1000, restored.length);
+        assertEquals(0, restored[0]);
+        assertEquals(999, restored[999]);
+    }
+
+    @Test
+    void testNumberRoundTripFidelity() {
+        // TOON spec: decode(encode(x)) MUST equal x for numbers
+        // Note: Extreme values (Double.MIN_NORMAL, Double.MAX_VALUE) produce 300+ digit
+        // plain decimal strings per TOON's no-exponent rule. These are a known limitation
+        // where the reader may not parse back correctly. Test with practical doubles.
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("pi", Math.PI);
+        map.put("euler", Math.E);
+        map.put("small", 0.000001);
+        map.put("large", 9999999.999999);
+        map.put("negative", -123.456789);
+
+        String toon = JsonIo.toToon(map, null);
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+
+        assertEquals(Math.PI, ((Number) restored.get("pi")).doubleValue(), 0,
+                "Math.PI should survive round-trip with full precision");
+        assertEquals(Math.E, ((Number) restored.get("euler")).doubleValue(), 0,
+                "Math.E should survive round-trip with full precision");
+        assertEquals(0.000001, ((Number) restored.get("small")).doubleValue(), 0,
+                "Small decimal should survive round-trip");
+        assertEquals(9999999.999999, ((Number) restored.get("large")).doubleValue(), 0,
+                "Large decimal should survive round-trip");
+        assertEquals(-123.456789, ((Number) restored.get("negative")).doubleValue(), 0,
+                "Negative decimal should survive round-trip");
+    }
+
+    @Test
+    void testEmptyObjectInListArray_WriterOutput() {
+        // Test that ToonWriter writes empty map as "- {}" in list context
+        Map<String, Object> emptyObj = new LinkedHashMap<>();
+        Map<String, Object> namedObj = new LinkedHashMap<>();
+        namedObj.put("name", "Bob");
+
+        List<Object> items = new ArrayList<>();
+        items.add(emptyObj);
+        items.add(namedObj);
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("items", items);
+
+        String toon = JsonIo.toToon(root, null);
+        // Writer should produce "- {}" for empty map in list
+        assertTrue(toon.contains("- {}"), "Empty map in list should write as '- {}': " + toon);
+        assertTrue(toon.contains("- name: Bob"), "Named object should use hyphen format");
+        // NOTE: ToonReader currently parses "{}" as a string in list context,
+        // not as an empty map. This is a known ToonReader bug to fix separately.
+    }
 }
