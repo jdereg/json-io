@@ -28,6 +28,7 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Currency;
 import java.util.Date;
 import java.util.HashMap;
@@ -1549,6 +1550,235 @@ class ToonReaderTest {
         String withBell = "bell\u0007char";
         String toon = JsonIo.toToon(withBell, null);
         assertTrue(toon.startsWith("\""), "Control character string should be quoted");
+    }
+
+    // --- Deeply Nested with Heterogeneous Type Transitions ---
+
+    @Test
+    void testHeterogeneousDepth_ObjectArrayObjectTabularArray() {
+        // Tests depth transitions through different TOON structural types:
+        // root(object) → list(array) → object → inline(array) → object → tabular(array) → object
+        // This exercises indentation tracking and context switching at every level.
+
+        // Level 6-7: innermost objects for tabular array
+        Map<String, Object> row1 = new LinkedHashMap<>();
+        row1.put("id", 1);
+        row1.put("label", "alpha");
+        Map<String, Object> row2 = new LinkedHashMap<>();
+        row2.put("id", 2);
+        row2.put("label", "beta");
+        List<Object> tabularData = new ArrayList<>(Arrays.asList(row1, row2));
+
+        // Level 5: object wrapping the tabular array
+        Map<String, Object> level5 = new LinkedHashMap<>();
+        level5.put("type", "tabular-container");
+        level5.put("rows", tabularData);
+
+        // Level 4: inline array of primitives (will use compact inline format)
+        List<Object> inlineNums = new ArrayList<>(Arrays.asList(10, 20, 30));
+
+        // Level 3: object containing both inline array and nested object
+        Map<String, Object> level3 = new LinkedHashMap<>();
+        level3.put("scores", inlineNums);
+        level3.put("details", level5);
+
+        // Level 2: list array of heterogeneous objects (non-uniform → list format)
+        Map<String, Object> listItem1 = new LinkedHashMap<>();
+        listItem1.put("name", "first");
+        listItem1.put("inner", level3);
+        Map<String, Object> listItem2 = new LinkedHashMap<>();
+        listItem2.put("name", "second");
+        listItem2.put("value", 42);
+        List<Object> listArray = new ArrayList<>(Arrays.asList(listItem1, listItem2));
+
+        // Level 1: root object
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("title", "heterogeneous-depth-test");
+        root.put("items", listArray);
+        root.put("footer", "end");
+
+        // Round-trip
+        String toon = JsonIo.toToon(root, null);
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+
+        // Verify root level
+        assertEquals("heterogeneous-depth-test", restored.get("title"));
+        assertEquals("end", restored.get("footer"));
+
+        // Verify list array
+        List<?> restoredItems = (List<?>) restored.get("items");
+        assertEquals(2, restoredItems.size());
+
+        // Verify first list item → object → inline array + nested object → tabular
+        Map<?, ?> item1 = (Map<?, ?>) restoredItems.get(0);
+        assertEquals("first", item1.get("name"));
+
+        Map<?, ?> innerObj = (Map<?, ?>) item1.get("inner");
+        List<?> scores = (List<?>) innerObj.get("scores");
+        assertEquals(3, scores.size());
+        assertEquals(10L, scores.get(0));
+        assertEquals(20L, scores.get(1));
+        assertEquals(30L, scores.get(2));
+
+        Map<?, ?> detailsObj = (Map<?, ?>) innerObj.get("details");
+        assertEquals("tabular-container", detailsObj.get("type"));
+        List<?> rows = (List<?>) detailsObj.get("rows");
+        assertEquals(2, rows.size());
+        assertEquals(1L, ((Map<?, ?>) rows.get(0)).get("id"));
+        assertEquals("alpha", ((Map<?, ?>) rows.get(0)).get("label"));
+        assertEquals(2L, ((Map<?, ?>) rows.get(1)).get("id"));
+        assertEquals("beta", ((Map<?, ?>) rows.get(1)).get("label"));
+
+        // Verify second list item
+        Map<?, ?> item2 = (Map<?, ?>) restoredItems.get(1);
+        assertEquals("second", item2.get("name"));
+        assertEquals(42L, item2.get("value"));
+    }
+
+    @Test
+    void testHeterogeneousDepth_ArrayOfArraysOfObjects() {
+        // Tests: root(object) → list(array of arrays) → inner arrays → objects with mixed values
+        // This exercises array-in-array nesting where inner arrays contain objects.
+
+        Map<String, Object> obj1 = new LinkedHashMap<>();
+        obj1.put("x", 1);
+        obj1.put("tag", "hello");
+        Map<String, Object> obj2 = new LinkedHashMap<>();
+        obj2.put("x", 2);
+        obj2.put("tag", "world");
+
+        List<Object> innerList1 = new ArrayList<>(Arrays.asList(obj1, obj2));
+
+        Map<String, Object> obj3 = new LinkedHashMap<>();
+        obj3.put("x", 3);
+        obj3.put("tag", "foo");
+        List<Object> innerList2 = new ArrayList<>(Collections.singletonList(obj3));
+
+        List<Object> outerList = new ArrayList<>(Arrays.asList(innerList1, innerList2));
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("matrix", outerList);
+        root.put("dims", 2);
+
+        String toon = JsonIo.toToon(root, null);
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+
+        assertEquals(2L, restored.get("dims"));
+        List<?> restoredMatrix = (List<?>) restored.get("matrix");
+        assertEquals(2, restoredMatrix.size());
+
+        List<?> restoredInner1 = (List<?>) restoredMatrix.get(0);
+        assertEquals(2, restoredInner1.size());
+        assertEquals(1L, ((Map<?, ?>) restoredInner1.get(0)).get("x"));
+        assertEquals("hello", ((Map<?, ?>) restoredInner1.get(0)).get("tag"));
+        assertEquals(2L, ((Map<?, ?>) restoredInner1.get(1)).get("x"));
+        assertEquals("world", ((Map<?, ?>) restoredInner1.get(1)).get("tag"));
+
+        List<?> restoredInner2 = (List<?>) restoredMatrix.get(1);
+        assertEquals(1, restoredInner2.size());
+        assertEquals(3L, ((Map<?, ?>) restoredInner2.get(0)).get("x"));
+        assertEquals("foo", ((Map<?, ?>) restoredInner2.get(0)).get("tag"));
+    }
+
+    @Test
+    void testHeterogeneousDepth_ObjectWithEmptyAndNullAtDepth() {
+        // Tests that empty/null values survive at various nesting depths.
+        // object → object → list → [empty map, null, object with empty list, object with empty string]
+
+        Map<String, Object> emptyMap = new LinkedHashMap<>();
+        Map<String, Object> objWithEmptyList = new LinkedHashMap<>();
+        objWithEmptyList.put("items", new ArrayList<>());
+        Map<String, Object> objWithEmptyStr = new LinkedHashMap<>();
+        objWithEmptyStr.put("name", "");
+
+        List<Object> mixedList = new ArrayList<>();
+        mixedList.add(emptyMap);
+        mixedList.add(null);
+        mixedList.add(objWithEmptyList);
+        mixedList.add(objWithEmptyStr);
+
+        Map<String, Object> inner = new LinkedHashMap<>();
+        inner.put("data", mixedList);
+        inner.put("count", 4);
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("wrapper", inner);
+
+        String toon = JsonIo.toToon(root, null);
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+
+        Map<?, ?> restoredWrapper = (Map<?, ?>) restored.get("wrapper");
+        assertEquals(4L, restoredWrapper.get("count"));
+        List<?> restoredList = (List<?>) restoredWrapper.get("data");
+        assertEquals(4, restoredList.size());
+
+        // Empty map
+        assertTrue(restoredList.get(0) instanceof Map, "First element should be a Map");
+        assertTrue(((Map<?, ?>) restoredList.get(0)).isEmpty(), "First element should be empty map");
+
+        // Null
+        assertNull(restoredList.get(1), "Second element should be null");
+
+        // Object with empty list
+        Map<?, ?> restoredObjWithList = (Map<?, ?>) restoredList.get(2);
+        Object items = restoredObjWithList.get("items");
+        assertTrue(items instanceof List, "Should have items list");
+        assertTrue(((List<?>) items).isEmpty(), "Items list should be empty");
+
+        // Object with empty string
+        Map<?, ?> restoredObjWithStr = (Map<?, ?>) restoredList.get(3);
+        assertEquals("", restoredObjWithStr.get("name"), "Empty string should survive at depth");
+    }
+
+    @Test
+    void testHeterogeneousDepth_TabularInsideListInsideObject() {
+        // Tests: root → object → list array (non-uniform) → [tabular array, primitive, object]
+        // The list array contains radically different element types.
+
+        // A tabular-eligible array of uniform objects
+        Map<String, Object> person1 = new LinkedHashMap<>();
+        person1.put("name", "Alice");
+        person1.put("age", 30);
+        Map<String, Object> person2 = new LinkedHashMap<>();
+        person2.put("name", "Bob");
+        person2.put("age", 25);
+        List<Object> people = new ArrayList<>(Arrays.asList(person1, person2));
+
+        // A nested object
+        Map<String, Object> config = new LinkedHashMap<>();
+        config.put("debug", true);
+        config.put("level", 3);
+
+        // A non-uniform list mixing an array, a number, and an object
+        List<Object> mixedList = new ArrayList<>();
+        mixedList.add(people);
+        mixedList.add(99);
+        mixedList.add(config);
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("mixed", mixedList);
+
+        String toon = JsonIo.toToon(root, null);
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+
+        List<?> restoredMixed = (List<?>) restored.get("mixed");
+        assertEquals(3, restoredMixed.size());
+
+        // First element: the people list
+        List<?> restoredPeople = (List<?>) restoredMixed.get(0);
+        assertEquals(2, restoredPeople.size());
+        assertEquals("Alice", ((Map<?, ?>) restoredPeople.get(0)).get("name"));
+        assertEquals(30L, ((Map<?, ?>) restoredPeople.get(0)).get("age"));
+        assertEquals("Bob", ((Map<?, ?>) restoredPeople.get(1)).get("name"));
+        assertEquals(25L, ((Map<?, ?>) restoredPeople.get(1)).get("age"));
+
+        // Second element: a number
+        assertEquals(99L, restoredMixed.get(1));
+
+        // Third element: the config object
+        Map<?, ?> restoredConfig = (Map<?, ?>) restoredMixed.get(2);
+        assertEquals(true, restoredConfig.get("debug"));
+        assertEquals(3L, restoredConfig.get("level"));
     }
 
     // --- Deeply Nested with Arrays ---

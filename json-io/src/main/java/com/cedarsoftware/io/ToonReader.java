@@ -227,7 +227,16 @@ public class ToonReader {
      * Check if a line starts with array syntax [N]:
      */
     private boolean isArrayStart(String trimmed) {
-        return trimmed.startsWith("[") && trimmed.contains("]:");
+        if (!trimmed.startsWith("[")) {
+            return false;
+        }
+        int bracketEnd = trimmed.indexOf(']');
+        if (bracketEnd < 0 || bracketEnd + 1 >= trimmed.length()) {
+            return false;
+        }
+        // After ']', expect ':' (inline/list) or '{' (tabular: [N]{cols}:)
+        char next = trimmed.charAt(bracketEnd + 1);
+        return next == ':' || next == '{';
     }
 
     /**

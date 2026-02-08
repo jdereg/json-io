@@ -433,8 +433,8 @@ public class ToonWriter implements Closeable, Flushable {
      * Write a Collection value (standalone, not as a field value).
      */
     private void writeCollection(Collection<?> collection) throws IOException {
-        out.write("[" + collection.size() + "]:");
-        writeCollectionElements(collection);
+        out.write("[" + collection.size() + "]");
+        writeCollectionElementsWithHeader(collection);
     }
 
     /**
