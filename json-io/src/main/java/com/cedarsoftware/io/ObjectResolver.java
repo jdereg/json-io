@@ -174,14 +174,14 @@ public class ObjectResolver extends Resolver
     private static Object coerceLong(long longVal, Class<?> targetType) {
         if (targetType == int.class || targetType == Integer.class) {
             return (int) longVal;
-        } else if (targetType == short.class || targetType == Short.class) {
-            return (short) longVal;
-        } else if (targetType == byte.class || targetType == Byte.class) {
-            return (byte) longVal;
         } else if (targetType == double.class || targetType == Double.class) {
             return (double) longVal;
+        } else if (targetType == byte.class || targetType == Byte.class) {
+            return (byte) longVal;
         } else if (targetType == float.class || targetType == Float.class) {
             return (float) longVal;
+        } else if (targetType == short.class || targetType == Short.class) {
+            return (short) longVal;
         }
         return null;
     }

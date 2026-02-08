@@ -192,6 +192,37 @@ public class LongTest
         private final Long _null;
     }
 
+    /**
+     * Test that primitive 'long' fields round-trip correctly with writeLongsAsStrings=true.
+     * Verifies that no unnecessary @type wrapper is emitted for primitive long fields,
+     * and that the reader correctly converts the string value back to long.
+     */
+    @Test
+    public void testPrimitiveLongFieldWithWriteLongsAsStrings()
+    {
+        PrimitiveLongHolder holder = new PrimitiveLongHolder();
+        holder.primitiveLong = 42L;
+        holder.boxedLong = 99L;
+
+        WriteOptions options = new WriteOptionsBuilder().writeLongsAsStrings(true).build();
+        String json = TestUtil.toJson(holder, options);
+
+        // Both fields should have string values
+        assertThat(json).contains("\"42\"");
+        assertThat(json).contains("\"99\"");
+
+        // Round-trip: should deserialize back correctly
+        PrimitiveLongHolder result = TestUtil.toJava(json, null).asClass(PrimitiveLongHolder.class);
+        Assertions.assertEquals(42L, result.primitiveLong);
+        Assertions.assertEquals(99L, (long) result.boxedLong);
+    }
+
+    private static class PrimitiveLongHolder
+    {
+        private long primitiveLong;
+        private Long boxedLong;
+    }
+
     private static class PhysicalAttributes
     {
         public Long getAge()

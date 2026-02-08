@@ -8,6 +8,14 @@
   * **Performance**: Added fast primitive coercion to `ObjectResolver` (`traverseArray`, `traverseCollection`, `assignField`) - direct Long→int/short/byte and Double→float casts bypass expensive `Converter` lookup chains
   * **Performance**: `Injector` now uses `LambdaMetafactory`-generated `BiConsumer` for field injection (~5-8% faster Read). The JIT can inline the generated lambda to near-direct field access speed, replacing non-inlinable `MethodHandle`/`VarHandle` instance-field dispatch. Uses `privateLookupIn` (JDK 9+) for non-public classes; falls back gracefully to existing mechanisms.
   * **Performance**: `Accessor` now uses `LambdaMetafactory`-generated `Function` for field access during JSON writing. Same JIT-inlinable technique as `Injector`, applied to the write path.
+* **BUG FIX**: `JsonWriter.doesValueTypeMatchFieldType()` - `declaredClassIsLongWrittenAsString` incorrectly checked `objectClass` instead of `declaredType` for the `long.class` case, causing unnecessary `@type` wrappers on primitive long fields when `writeLongsAsStrings` was enabled
+* **BUG FIX**: `JsonWriter.doesValueTypeMatchFieldType()` - `Long.class` vs `long.class` autoboxing mismatch caused unnecessary `@type` wrappers on `Long` values assigned to primitive `long` fields
+* **BUG FIX**: `JsonWriter` - Removed JSON5 trailing comma writes; trailing commas are now supported on READ (JSON5 tolerance) but never written, as they added complexity without benefit
+* **PERFORMANCE**: `JsonWriter` - Pre-fetched custom writers for primitive array hot paths (`long[]`, `double[]`, `float[]`), avoiding per-array `getCustomWriter()` lookups
+* **PERFORMANCE**: `JsonWriter` - Added `writeIntDirect()` for zero-allocation int/short writing using digit-pair lookup tables, replacing `Integer.toString()` + `Writer.write(String)`
+* **PERFORMANCE**: `JsonWriter` - Cached `EnumSet.elementType` field reflectively (lazy-initialized volatile) to avoid repeated `getDeepDeclaredFields()` lookups
+* **PERFORMANCE**: `ObjectResolver.coerceLong()` - Reordered branches by frequency (int/double first, then byte/float/short)
+* **MAINTENANCE**: Version bump to 4.91.0, java-util dependency updated to 4.91.0
 * **FEATURE**: TOON key folding support (optional, spec-compliant)
   * Writer: Added `WriteOptionsBuilder.toonKeyFolding(boolean)` to collapse single-key object chains into dotted notation
     * `{data: {metadata: {value: 42}}}` → `data.metadata.value: 42`

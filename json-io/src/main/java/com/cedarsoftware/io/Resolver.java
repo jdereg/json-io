@@ -678,7 +678,6 @@ public abstract class Resolver {
      * Unified type conversion for all cases (arrays, objects, primitives).
      * Checks type compatibility and converts if necessary.
      */
-    @SuppressWarnings("unchecked")
     private Object convertToType(Object value, Type targetType) {
         if (targetType == null || value == null) {
             return value;

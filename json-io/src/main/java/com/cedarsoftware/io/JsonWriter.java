@@ -273,6 +273,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         NUMERIC_PRIMITIVES_FOR_COMPACT.add(float.class);
     }
 
+    // Cached Field for EnumSet.elementType (lazy-initialized, immutable once set)
+    private static volatile Field enumSetElementTypeField;
+    private static volatile boolean enumSetFieldResolved = false;
+
     // Selected prefixes based on options
     private final String idPrefix;
     private final String typePrefix;
@@ -307,7 +311,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     // Pre-fetched WriteOptions values for hot path performance (immutable after construction)
     private final boolean skipNullFields;
-    private final boolean json5TrailingCommas;
     private final boolean json5UnquotedKeys;
     private final int maxStringLength;
     private final boolean prettyPrint;
@@ -320,6 +323,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private final int indentationSize;
     private final boolean cycleSupport;
     private final boolean minimalPlusFormat;
+
+    // Pre-fetched custom writers for primitive array hot paths (avoids per-array lookup)
+    private final com.cedarsoftware.io.JsonClassWriter longBoxedWriter;
+    private final com.cedarsoftware.io.JsonClassWriter longPrimitiveWriter;
+    private final com.cedarsoftware.io.JsonClassWriter doubleWriter;
+    private final com.cedarsoftware.io.JsonClassWriter floatWriter;
 
     // Context tracking for automatic comma management
     private final Deque<WriteContext> contextStack = new ArrayDeque<>();
@@ -484,7 +493,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         // Pre-fetch frequently accessed WriteOptions for hot path performance
         this.skipNullFields = this.writeOptions.isSkipNullFields();
-        this.json5TrailingCommas = this.writeOptions.isJson5TrailingCommas();
         this.json5UnquotedKeys = isJson5UnquotedKeys;  // Already computed above
         this.maxStringLength = this.writeOptions.getMaxStringLength();
         this.prettyPrint = this.writeOptions.isPrettyPrint();
@@ -497,6 +505,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         this.indentationSize = this.writeOptions.getIndentationSize();
         this.cycleSupport = this.writeOptions.isCycleSupport();
         this.minimalPlusFormat = this.writeOptions.isMinimalPlusShowingType();
+
+        // Pre-fetch custom writers for primitive array hot paths
+        this.longBoxedWriter = this.writeOptions.getCustomWriter(Long.class);
+        this.longPrimitiveWriter = this.writeOptions.getCustomWriter(long.class);
+        this.doubleWriter = this.writeOptions.getCustomWriter(Double.class);
+        this.floatWriter = this.writeOptions.getCustomWriter(Float.class);
     }
 
     public WriteOptions getWriteOptions() {
@@ -1114,6 +1128,45 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         out.write(longBuffer, idx, longBuffer.length - idx);
     }
 
+    /**
+     * Write an int value directly to output without creating a String object.
+     * Reuses the longBuffer and digit pair lookup tables.
+     */
+    private void writeIntDirect(int value) throws IOException {
+        if (value == 0) {
+            out.write('0');
+            return;
+        }
+
+        int idx = longBuffer.length;
+        boolean negative = value < 0;
+        if (!negative) {
+            value = -value;  // Work with negative to handle Integer.MIN_VALUE
+        }
+
+        // Extract digits two at a time using lookup tables
+        while (value <= -100) {
+            int q = value / 100;
+            int r = (q * 100) - value;  // remainder 0-99
+            value = q;
+            longBuffer[--idx] = DIGIT_ONES[r];
+            longBuffer[--idx] = DIGIT_TENS[r];
+        }
+
+        // Handle remaining 1-2 digits
+        int r = -value;
+        longBuffer[--idx] = DIGIT_ONES[r];
+        if (r >= 10) {
+            longBuffer[--idx] = DIGIT_TENS[r];
+        }
+
+        if (negative) {
+            longBuffer[--idx] = '-';
+        }
+
+        out.write(longBuffer, idx, longBuffer.length - idx);
+    }
+
     // Optimized writeType method
     private void writeType(String name, Writer output) throws IOException {
         if (neverShowingType) {
@@ -1136,8 +1189,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 out.write(',');
             }
 
-            com.cedarsoftware.io.JsonClassWriter writer = writeOptions.getCustomWriter(Long.class);
-            writer.write(obj, showType, out, this);
+            longBoxedWriter.write(obj, showType, out, this);
 
             if (showType) {
                 out.write('}');
@@ -1219,10 +1271,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
 
-        // Trailing comma for JSON5
-        if (len > 0 && json5TrailingCommas) {
-            output.write(',');
-        }
         tabOut();
         output.write(']');
         if (typeWritten || referenced) {
@@ -1237,7 +1285,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
         final int len = ArrayUtilities.getLength(array);
         boolean referenced = objsReferenced.containsKey(array);
-        boolean typeWritten = showType && !(arrayType.equals(Object[].class));
+        boolean typeWritten = showType;  // Primitive arrays are never Object[], type always written when showType
         final Writer output = this.out;
 
         if (typeWritten || referenced) {
@@ -1298,10 +1346,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             writeBooleanArray((boolean[]) array, lenMinus1);
         }
 
-        // Trailing comma for JSON5
-        if (len > 0 && json5TrailingCommas) {
-            output.write(',');
-        }
         tabOut();
         output.write(']');
         if (typeWritten || referenced) {
@@ -1320,88 +1364,55 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     private void writeDoubleArray(double[] doubles, int lenMinus1) throws IOException {
         final Writer output = this.out;
-        final com.cedarsoftware.io.JsonClassWriter writer = writeOptions.getCustomWriter(Double.class);
         for (int i = 0; i < lenMinus1; i++) {
-            writer.write(doubles[i], false, output, this);
+            doubleWriter.write(doubles[i], false, output, this);
             output.write(',');
         }
-        writer.write(doubles[lenMinus1], false, output, this);
+        doubleWriter.write(doubles[lenMinus1], false, output, this);
     }
 
     private void writeFloatArray(float[] floats, int lenMinus1) throws IOException {
         final Writer output = this.out;
-        final com.cedarsoftware.io.JsonClassWriter writer = writeOptions.getCustomWriter(Float.class);
         for (int i = 0; i < lenMinus1; i++) {
-            writer.write(floats[i], false, output, this);
+            floatWriter.write(floats[i], false, output, this);
             output.write(',');
         }
-
-        writer.write(floats[lenMinus1], false, output, this);
+        floatWriter.write(floats[lenMinus1], false, output, this);
     }
 
     private void writeLongArray(long[] longs, int lenMinus1) throws IOException {
         final Writer output = this.out;
-
-        com.cedarsoftware.io.JsonClassWriter writer = writeOptions.getCustomWriter(long.class);
         for (int i = 0; i < lenMinus1; i++) {
-            writer.write(longs[i], false, output, this);
+            longPrimitiveWriter.write(longs[i], false, output, this);
             output.write(',');
         }
-        writer.write(longs[lenMinus1], false, output, this);
-
+        longPrimitiveWriter.write(longs[lenMinus1], false, output, this);
     }
 
     private void writeIntArray(int[] ints, int lenMinus1) throws IOException {
-        // Add bounds checking for safety
-        if (ints == null) {
-            throw new JsonIoException("Int array cannot be null");
-        }
-        if (lenMinus1 < 0 || lenMinus1 >= ints.length) {
-            throw new JsonIoException("Invalid array bounds: lenMinus1=" + lenMinus1 + ", array.length=" + ints.length);
-        }
-
-        final Writer output = this.out;
         for (int i = 0; i < lenMinus1; i++) {
-            output.write(Integer.toString(ints[i]));
-            output.write(',');
+            writeIntDirect(ints[i]);
+            out.write(',');
         }
-        output.write(Integer.toString(ints[lenMinus1]));
+        writeIntDirect(ints[lenMinus1]);
     }
 
     private void writeShortArray(short[] shorts, int lenMinus1) throws IOException {
-        final Writer output = this.out;
         for (int i = 0; i < lenMinus1; i++) {
-            output.write(Integer.toString(shorts[i]));
-            output.write(',');
+            writeIntDirect(shorts[i]);
+            out.write(',');
         }
-        output.write(Integer.toString(shorts[lenMinus1]));
+        writeIntDirect(shorts[lenMinus1]);
     }
 
     private void writeByteArray(byte[] bytes, int lenMinus1) throws IOException {
-        // Add bounds checking for safety
-        if (bytes == null) {
-            throw new JsonIoException("Byte array cannot be null");
-        }
-        if (lenMinus1 < 0 || lenMinus1 >= bytes.length) {
-            throw new JsonIoException("Invalid array bounds: lenMinus1=" + lenMinus1 + ", array.length=" + bytes.length);
-        }
-
         final Writer output = this.out;
         final Object[] byteStrs = byteStrings;
         for (int i = 0; i < lenMinus1; i++) {
-            int index = bytes[i] + 128;
-            // Bounds check for byteStrings array access
-            if (index < 0 || index >= byteStrs.length) {
-                throw new JsonIoException("Byte value out of range: " + bytes[i]);
-            }
-            output.write((char[]) byteStrs[index]);
+            output.write((char[]) byteStrs[bytes[i] + 128]);
             output.write(',');
         }
-        int finalIndex = bytes[lenMinus1] + 128;
-        if (finalIndex < 0 || finalIndex >= byteStrs.length) {
-            throw new JsonIoException("Byte value out of range: " + bytes[lenMinus1]);
-        }
-        output.write((char[]) byteStrs[finalIndex]);
+        output.write((char[]) byteStrs[bytes[lenMinus1] + 128]);
     }
 
     private void writeCollection(Collection<?> col, boolean showType) throws IOException {
@@ -1436,10 +1447,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         writeElements(output, i);
 
-        // Trailing comma for JSON5 (collection is non-empty at this point)
-        if (json5TrailingCommas) {
-            output.write(',');
-        }
         tabOut();
         output.write(']');
         if (showType || referenced) {   // Finished object, as it was output as an object if @id or @type was output
@@ -1607,10 +1614,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
 
-        // Trailing comma for JSON5
-        if (len > 0 && json5TrailingCommas) {
-            output.write(',');
-        }
         tabOut();
         output.write(']');
         if (typeWritten || referenced) {
@@ -1824,10 +1827,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 writeImpl(value, !doesValueTypeMatchFieldType(type, fieldName, value));
             }
         }
-        // Trailing comma for JSON5 (check if object has entries)
-        if (!jObj.isEmpty() && json5TrailingCommas) {
-            output.write(',');
-        }
         tabOut();
         output.write('}');
     }
@@ -1901,10 +1900,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         declaredElementType = declaredKeyType;
         writeElements(output, i);
 
-        // Trailing comma for @keys array
-        if (!map.isEmpty() && json5TrailingCommas) {
-            output.write(',');
-        }
         tabOut();
         output.write("],");
         newLine();
@@ -1917,16 +1912,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         declaredElementType = savedValueType;
         writeElements(output, i);
 
-        // Trailing comma for @items array
-        if (!map.isEmpty() && json5TrailingCommas) {
-            output.write(',');
-        }
         tabOut();
         output.write(']');
-        // Trailing comma for outer object
-        if (json5TrailingCommas) {
-            output.write(',');
-        }
         tabOut();
         output.write('}');
     }
@@ -1991,10 +1978,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             wroteEntry = true;
         }
 
-        // Trailing comma for JSON5
-        if (wroteEntry && json5TrailingCommas) {
-            output.write(',');
-        }
         tabOut();
         output.write('}');
         return true;
@@ -2110,8 +2093,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // Obtain the actual Enum class
         Class<?> enumClass = null;
 
-        // Attempt to get the enum class from the 'elementType' field of EnumSet
-        Field elementTypeField = writeOptions.getDeepDeclaredFields(EnumSet.class).get("elementType");
+        // Attempt to get the enum class from the 'elementType' field of EnumSet (cached)
+        if (!enumSetFieldResolved) {
+            enumSetElementTypeField = writeOptions.getDeepDeclaredFields(EnumSet.class).get("elementType");
+            enumSetFieldResolved = true;
+        }
+        Field elementTypeField = enumSetElementTypeField;
         if (elementTypeField != null) {
             enumClass = (Class<?>) getValueByReflect(enumSet, elementTypeField);
             // Ensure we get the actual enum class, not an anonymous subclass
@@ -2333,7 +2320,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // When no type is written we can check the Object itself not the declaration
         // Uses pre-fetched writeLongsAsStrings member variable
         final boolean objectClassIsLongWrittenAsString = (objectClass == Long.class || objectClass == long.class) && writeLongsAsStrings;
-        final boolean declaredClassIsLongWrittenAsString = (declaredType == Long.class || objectClass == long.class) && writeLongsAsStrings;
+        final boolean declaredClassIsLongWrittenAsString = (declaredType == Long.class || declaredType == long.class) && writeLongsAsStrings;
 
         if (Primitives.isNativeJsonType(objectClass) && !objectClassIsLongWrittenAsString) {
             return false;
@@ -2352,6 +2339,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         if (objectClass == declaredType) {
+            return false;
+        }
+
+        // Handle Long.class <-> long.class equivalence (autoboxing)
+        if (objectClass == Long.class && declaredType == long.class) {
             return false;
         }
 

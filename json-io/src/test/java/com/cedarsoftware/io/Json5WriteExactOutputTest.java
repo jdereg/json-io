@@ -193,7 +193,7 @@ class Json5WriteExactOutputTest {
                 .build();
         String json = JsonIo.toJson(array, options);
 
-        assertEquals("[1,2,3,]", json);
+        assertEquals("[1,2,3]", json);  // Trailing commas are never written
     }
 
     @Test
@@ -207,7 +207,7 @@ class Json5WriteExactOutputTest {
                 .build();
         String json = JsonIo.toJson(map, options);
 
-        assertEquals("{\"a\":1,}", json);
+        assertEquals("{\"a\":1}", json);  // Trailing commas are never written
     }
 
     @Test
@@ -253,8 +253,8 @@ class Json5WriteExactOutputTest {
                 .build();
         String json = JsonIo.toJson(map, options);
 
-        // unquoted keys, single quotes for string with ", Infinity literal, trailing comma
-        assertEquals("{name:'He said \"Hi\"',inf:Infinity,}", json);
+        // unquoted keys, single quotes for string with ", Infinity literal (no trailing commas written)
+        assertEquals("{name:'He said \"Hi\"',inf:Infinity}", json);
     }
 
     @Test
@@ -363,7 +363,7 @@ class Json5WriteExactOutputTest {
         // Verify format
         assertTrue(json.contains("point:{"), "Should have unquoted key for nested object");
         assertTrue(json.contains("'A \"point\"'"), "Should use single quotes for label");
-        assertTrue(json.contains(",}"), "Should have trailing commas");
+        assertFalse(json.contains(",}"), "Trailing commas are never written");
 
         // Round trip
         Map<String, Object> result = JsonIo.toMaps(json, null).asClass(Map.class);
