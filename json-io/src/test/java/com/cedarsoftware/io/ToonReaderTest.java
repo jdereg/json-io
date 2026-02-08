@@ -1,6 +1,7 @@
 package com.cedarsoftware.io;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -1564,5 +1565,361 @@ class ToonReaderTest {
             )
         ));
         roundTrip(data);
+    }
+
+    // ========== High Priority Gap Tests: Tabular Edge Cases ==========
+
+    @Test
+    void testTabularWithDelimiterInValue_RoundTrip() {
+        // TOON spec: Tabular cell values containing the active delimiter (comma) must be quoted.
+        // This tests that "hello,world" as a value in a tabular row survives round-trip.
+        Map<String, Object> item1 = new LinkedHashMap<>();
+        item1.put("id", 1);
+        item1.put("desc", "hello,world");
+
+        Map<String, Object> item2 = new LinkedHashMap<>();
+        item2.put("id", 2);
+        item2.put("desc", "simple");
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("items", Arrays.asList(item1, item2));
+
+        String toon = JsonIo.toToon(root, null);
+
+        // The comma in "hello,world" must be protected (quoted) in the tabular row
+        assertTrue(toon.contains("\"hello,world\""),
+                "Tabular value containing comma should be quoted: " + toon);
+
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> items = (List<?>) restored.get("items");
+        assertEquals(2, items.size());
+        Map<?, ?> restoredItem1 = (Map<?, ?>) items.get(0);
+        assertEquals(1L, restoredItem1.get("id"));
+        assertEquals("hello,world", restoredItem1.get("desc"), "Comma-containing value should survive round-trip");
+        Map<?, ?> restoredItem2 = (Map<?, ?>) items.get(1);
+        assertEquals(2L, restoredItem2.get("id"));
+        assertEquals("simple", restoredItem2.get("desc"));
+    }
+
+    @Test
+    void testTabularWithMultipleDelimitersInValue() {
+        // Multiple commas in a single value
+        Map<String, Object> item1 = new LinkedHashMap<>();
+        item1.put("id", 1);
+        item1.put("csv", "a,b,c,d");
+
+        Map<String, Object> item2 = new LinkedHashMap<>();
+        item2.put("id", 2);
+        item2.put("csv", "e,f");
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("data", Arrays.asList(item1, item2));
+
+        String toon = JsonIo.toToon(root, null);
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> data = (List<?>) restored.get("data");
+        assertEquals("a,b,c,d", ((Map<?, ?>) data.get(0)).get("csv"));
+        assertEquals("e,f", ((Map<?, ?>) data.get(1)).get("csv"));
+    }
+
+    @Test
+    void testTabularWithNullValues_RoundTrip() {
+        // TOON spec: null values in tabular rows
+        Map<String, Object> item1 = new LinkedHashMap<>();
+        item1.put("id", 1);
+        item1.put("name", "Alice");
+        item1.put("note", null);
+
+        Map<String, Object> item2 = new LinkedHashMap<>();
+        item2.put("id", 2);
+        item2.put("name", null);
+        item2.put("note", "important");
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("items", Arrays.asList(item1, item2));
+
+        String toon = JsonIo.toToon(root, null);
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> items = (List<?>) restored.get("items");
+        assertEquals(2, items.size());
+
+        Map<?, ?> r1 = (Map<?, ?>) items.get(0);
+        assertEquals(1L, r1.get("id"));
+        assertEquals("Alice", r1.get("name"));
+        assertNull(r1.get("note"), "null value should survive tabular round-trip");
+
+        Map<?, ?> r2 = (Map<?, ?>) items.get(1);
+        assertEquals(2L, r2.get("id"));
+        assertNull(r2.get("name"), "null value should survive tabular round-trip");
+        assertEquals("important", r2.get("note"));
+    }
+
+    @Test
+    void testTabularWithEmptyStringValues_RoundTrip() {
+        // TOON spec: Empty string values in tabular rows must be quoted as ""
+        Map<String, Object> item1 = new LinkedHashMap<>();
+        item1.put("id", 1);
+        item1.put("name", "");
+
+        Map<String, Object> item2 = new LinkedHashMap<>();
+        item2.put("id", 2);
+        item2.put("name", "Bob");
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("items", Arrays.asList(item1, item2));
+
+        String toon = JsonIo.toToon(root, null);
+
+        // Empty string must be quoted in tabular row
+        assertTrue(toon.contains("\"\""), "Empty string in tabular should be quoted: " + toon);
+
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> items = (List<?>) restored.get("items");
+        Map<?, ?> r1 = (Map<?, ?>) items.get(0);
+        assertEquals("", r1.get("name"), "Empty string should survive tabular round-trip");
+        Map<?, ?> r2 = (Map<?, ?>) items.get(1);
+        assertEquals("Bob", r2.get("name"));
+    }
+
+    @Test
+    void testTabularWithReservedWordValues_RoundTrip() {
+        // TOON spec: Strings "true", "false", "null" in tabular rows must be quoted
+        // to distinguish from the actual boolean/null values
+        Map<String, Object> item1 = new LinkedHashMap<>();
+        item1.put("id", 1);
+        item1.put("label", "true");   // String "true", not boolean true
+
+        Map<String, Object> item2 = new LinkedHashMap<>();
+        item2.put("id", 2);
+        item2.put("label", "false");  // String "false", not boolean false
+
+        Map<String, Object> item3 = new LinkedHashMap<>();
+        item3.put("id", 3);
+        item3.put("label", "null");   // String "null", not actual null
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("items", Arrays.asList(item1, item2, item3));
+
+        String toon = JsonIo.toToon(root, null);
+
+        // These strings should be quoted to preserve their string type
+        assertTrue(toon.contains("\"true\""), "String 'true' in tabular should be quoted: " + toon);
+        assertTrue(toon.contains("\"false\""), "String 'false' in tabular should be quoted: " + toon);
+        assertTrue(toon.contains("\"null\""), "String 'null' in tabular should be quoted: " + toon);
+
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> items = (List<?>) restored.get("items");
+
+        Map<?, ?> r1 = (Map<?, ?>) items.get(0);
+        assertEquals("true", r1.get("label"), "String 'true' should survive as string, not become boolean");
+        assertTrue(r1.get("label") instanceof String, "Should be String, not Boolean");
+
+        Map<?, ?> r2 = (Map<?, ?>) items.get(1);
+        assertEquals("false", r2.get("label"), "String 'false' should survive as string");
+        assertTrue(r2.get("label") instanceof String, "Should be String, not Boolean");
+
+        Map<?, ?> r3 = (Map<?, ?>) items.get(2);
+        assertEquals("null", r3.get("label"), "String 'null' should survive as string");
+        assertNotNull(r3.get("label"), "Should be String 'null', not actual null");
+    }
+
+    @Test
+    void testTabularWithNumericStringValues_RoundTrip() {
+        // Strings that look like numbers in tabular rows must be quoted
+        Map<String, Object> item1 = new LinkedHashMap<>();
+        item1.put("id", 1);
+        item1.put("code", "42");      // String "42", not number 42
+
+        Map<String, Object> item2 = new LinkedHashMap<>();
+        item2.put("id", 2);
+        item2.put("code", "3.14");    // String "3.14", not number 3.14
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("items", Arrays.asList(item1, item2));
+
+        String toon = JsonIo.toToon(root, null);
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> items = (List<?>) restored.get("items");
+
+        Map<?, ?> r1 = (Map<?, ?>) items.get(0);
+        assertEquals("42", r1.get("code"), "Numeric string should survive as string");
+        assertTrue(r1.get("code") instanceof String, "Should be String, not Long");
+
+        Map<?, ?> r2 = (Map<?, ?>) items.get(1);
+        assertEquals("3.14", r2.get("code"), "Decimal string should survive as string");
+        assertTrue(r2.get("code") instanceof String, "Should be String, not Double");
+    }
+
+    @Test
+    void testTabularWithHyphenStringValues_RoundTrip() {
+        // Strings starting with hyphen in tabular rows must be quoted
+        Map<String, Object> item1 = new LinkedHashMap<>();
+        item1.put("id", 1);
+        item1.put("flag", "-verbose");
+
+        Map<String, Object> item2 = new LinkedHashMap<>();
+        item2.put("id", 2);
+        item2.put("flag", "-");
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("items", Arrays.asList(item1, item2));
+
+        String toon = JsonIo.toToon(root, null);
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> items = (List<?>) restored.get("items");
+
+        Map<?, ?> r1 = (Map<?, ?>) items.get(0);
+        assertEquals("-verbose", r1.get("flag"));
+
+        Map<?, ?> r2 = (Map<?, ?>) items.get(1);
+        assertEquals("-", r2.get("flag"), "Hyphen string should survive tabular round-trip");
+    }
+
+    @Test
+    void testTabularWithAllEdgeCaseValues() {
+        // Cross-product: tabular row with comma-value, empty, null, reserved word, hyphen all together
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("a", "hello,world");
+        item.put("b", "");
+        item.put("c", null);
+        item.put("d", "true");
+        item.put("e", "-flag");
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("items", Arrays.asList(item));
+
+        String toon = JsonIo.toToon(root, null);
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> items = (List<?>) restored.get("items");
+        Map<?, ?> r = (Map<?, ?>) items.get(0);
+
+        assertEquals("hello,world", r.get("a"), "Comma-containing value");
+        assertEquals("", r.get("b"), "Empty string value");
+        assertNull(r.get("c"), "Null value");
+        assertEquals("true", r.get("d"), "Reserved word string value");
+        assertEquals("-flag", r.get("e"), "Hyphen-starting string value");
+    }
+
+    // ========== High Priority Gap Tests: Float Infinity Round-Trip ==========
+
+    @Test
+    void testFloatPositiveInfinity_becomesNull() {
+        // Per TOON spec, Float.POSITIVE_INFINITY becomes null
+        String toon = JsonIo.toToon(Float.POSITIVE_INFINITY, null);
+        assertEquals("null", toon);
+        Object restored = JsonIo.fromToon(toon, null).asClass(Object.class);
+        assertNull(restored, "Float.POSITIVE_INFINITY should become null in TOON");
+    }
+
+    @Test
+    void testFloatNegativeInfinity_becomesNull() {
+        // Per TOON spec, Float.NEGATIVE_INFINITY becomes null
+        String toon = JsonIo.toToon(Float.NEGATIVE_INFINITY, null);
+        assertEquals("null", toon);
+        Object restored = JsonIo.fromToon(toon, null).asClass(Object.class);
+        assertNull(restored, "Float.NEGATIVE_INFINITY should become null in TOON");
+    }
+
+    @Test
+    void testNanAndInfinityInObject() {
+        // NaN and Infinity as field values in an object
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("normal", 3.14);
+        map.put("nan", Double.NaN);
+        map.put("posInf", Double.POSITIVE_INFINITY);
+        map.put("negInf", Double.NEGATIVE_INFINITY);
+
+        String toon = JsonIo.toToon(map, null);
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+
+        assertEquals(3.14, restored.get("normal"));
+        assertNull(restored.get("nan"), "NaN field should become null");
+        assertNull(restored.get("posInf"), "Positive Infinity field should become null");
+        assertNull(restored.get("negInf"), "Negative Infinity field should become null");
+    }
+
+    @Test
+    void testNanAndInfinityInArray() {
+        // NaN and Infinity as array elements
+        // Note: TOON normalizes 1.0 -> 1, so reading back as Object[] gives Long(1).
+        // Use non-integer doubles to verify double round-trip.
+        Double[] arr = {1.5, Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, 2.5};
+        String toon = JsonIo.toToon(arr, null);
+
+        Object[] restored = JsonIo.fromToon(toon, null).asClass(Object[].class);
+        assertEquals(5, restored.length);
+        assertEquals(1.5, restored[0]);
+        assertNull(restored[1], "NaN element should become null");
+        assertNull(restored[2], "Positive Infinity element should become null");
+        assertNull(restored[3], "Negative Infinity element should become null");
+        assertEquals(2.5, restored[4]);
+    }
+
+    // ========== High Priority Gap Tests: String "-" Round-Trip ==========
+
+    @Test
+    void testStringHyphen_RoundTrip() {
+        // A string that is just "-" must be quoted to avoid confusion with list marker
+        roundTrip("-");
+    }
+
+    @Test
+    void testStringHyphen_InArray() {
+        // Hyphen strings in an array context
+        Object[] arr = {"hello", "-", "world"};
+        String toon = JsonIo.toToon(arr, null);
+
+        Object[] restored = JsonIo.fromToon(toon, null).asClass(Object[].class);
+        assertEquals(3, restored.length);
+        assertEquals("hello", restored[0]);
+        assertEquals("-", restored[1], "Hyphen string in array should survive round-trip");
+        assertEquals("world", restored[2]);
+    }
+
+    @Test
+    void testStringHyphen_InListFormat() {
+        // Hyphen strings in a list-format array (where "-" is the list marker)
+        Map<String, Object> obj = new LinkedHashMap<>();
+        obj.put("x", 1);
+
+        List<Object> list = new ArrayList<>();
+        list.add("-");
+        list.add(obj);
+        list.add("-");
+
+        String toon = JsonIo.toToon(list, null);
+        // This should use list format (has complex elements), so "-" values
+        // must be quoted to distinguish from the list item markers
+
+        Map<String, Object> wrapper = new LinkedHashMap<>();
+        wrapper.put("items", list);
+        toon = JsonIo.toToon(wrapper, null);
+
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> items = (List<?>) restored.get("items");
+        assertEquals(3, items.size());
+        assertEquals("-", items.get(0), "Hyphen string in list format should survive round-trip");
+        assertTrue(items.get(1) instanceof Map, "Object element should remain a Map");
+        assertEquals("-", items.get(2), "Hyphen string in list format should survive round-trip");
+    }
+
+    // ========== High Priority Gap Tests: OutputStream Round-Trip ==========
+
+    @Test
+    void testOutputStreamToInputStream_RoundTrip() {
+        // Full round-trip via stream APIs: write with OutputStream, read with InputStream
+        TestPerson original = new TestPerson("StreamTest", 42);
+        original.setAddress(new TestAddress("StreamCity", "99999"));
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        JsonIo.toToon(baos, original, null);
+
+        ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+        TestPerson restored = JsonIo.fromToon(bais, null).asClass(TestPerson.class);
+
+        assertEquals(original.getName(), restored.getName());
+        assertEquals(original.getAge(), restored.getAge());
+        assertEquals(original.getAddress().getCity(), restored.getAddress().getCity());
+        assertEquals(original.getAddress().getZip(), restored.getAddress().getZip());
     }
 }

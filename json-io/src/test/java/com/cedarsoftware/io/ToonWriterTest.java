@@ -1,5 +1,7 @@
 package com.cedarsoftware.io;
 
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -797,5 +799,273 @@ class ToonWriterTest {
         assertTrue(parsed.containsKey("dotted.key"), "Should have literal 'dotted.key'");
         assertEquals("value", parsed.get("dotted.key"));
         assertFalse(parsed.containsKey("dotted"), "Should NOT have 'dotted' key");
+    }
+
+    // ========== High Priority Gap Tests: Output Format Compliance ==========
+
+    @Test
+    void testNoTrailingSpacesOnOutputLines() {
+        // TOON spec: No trailing spaces at the end of any line
+        Map<String, Object> nested = new LinkedHashMap<>();
+        nested.put("name", "John");
+        nested.put("age", 30);
+        Map<String, Object> address = new LinkedHashMap<>();
+        address.put("city", "NYC");
+        address.put("zip", "10001");
+        nested.put("address", address);
+
+        String toon = JsonIo.toToon(nested, null);
+        String[] lines = toon.split("\n", -1);
+        for (int i = 0; i < lines.length; i++) {
+            assertFalse(lines[i].endsWith(" "),
+                    "Line " + (i + 1) + " has trailing space: '" + lines[i] + "'");
+        }
+    }
+
+    @Test
+    void testNoTrailingNewlineAtEndOfDocument() {
+        // TOON spec: No trailing newline at the end of the document
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("name", "John");
+        map.put("age", 30);
+
+        String toon = JsonIo.toToon(map, null);
+        assertFalse(toon.endsWith("\n"), "TOON output should not end with newline");
+        assertFalse(toon.endsWith("\r"), "TOON output should not end with carriage return");
+    }
+
+    @Test
+    void testOutputUsesLfOnly() {
+        // TOON spec: UTF-8 with LF line endings (not CRLF)
+        Map<String, Object> nested = new LinkedHashMap<>();
+        nested.put("name", "John");
+        Map<String, Object> addr = new LinkedHashMap<>();
+        addr.put("city", "NYC");
+        nested.put("address", addr);
+
+        String toon = JsonIo.toToon(nested, null);
+        assertFalse(toon.contains("\r\n"), "TOON output must use LF, not CRLF");
+        assertFalse(toon.contains("\r"), "TOON output must not contain carriage returns");
+        assertTrue(toon.contains("\n"), "Multi-line output should use LF");
+    }
+
+    @Test
+    void testNoTrailingSpaces_TabularFormat() {
+        // TOON spec: No trailing spaces - specifically in tabular format
+        Map<String, Object> item1 = new LinkedHashMap<>();
+        item1.put("id", 1);
+        item1.put("name", "Alice");
+
+        Map<String, Object> item2 = new LinkedHashMap<>();
+        item2.put("id", 2);
+        item2.put("name", "Bob");
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("items", Arrays.asList(item1, item2));
+
+        String toon = JsonIo.toToon(root, null);
+        String[] lines = toon.split("\n", -1);
+        for (int i = 0; i < lines.length; i++) {
+            assertFalse(lines[i].endsWith(" "),
+                    "Tabular line " + (i + 1) + " has trailing space: '" + lines[i] + "'");
+        }
+    }
+
+    @Test
+    void testNoTrailingSpaces_EmptyValues() {
+        // Check output with null values doesn't produce trailing spaces
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("name", "John");
+        map.put("middle", null);
+        map.put("age", 30);
+
+        String toon = JsonIo.toToon(map, null);
+        String[] lines = toon.split("\n", -1);
+        for (int i = 0; i < lines.length; i++) {
+            assertFalse(lines[i].endsWith(" "),
+                    "Line " + (i + 1) + " has trailing space: '" + lines[i] + "'");
+        }
+    }
+
+    @Test
+    void testNoTrailingNewline_SinglePrimitive() {
+        // Even single-value outputs should not end with newline
+        String toon = JsonIo.toToon(42, null);
+        assertFalse(toon.endsWith("\n"), "Single primitive should not end with newline");
+
+        toon = JsonIo.toToon("hello", null);
+        assertFalse(toon.endsWith("\n"), "Single string should not end with newline");
+
+        toon = JsonIo.toToon(true, null);
+        assertFalse(toon.endsWith("\n"), "Single boolean should not end with newline");
+
+        toon = JsonIo.toToon(null, null);
+        assertFalse(toon.endsWith("\n"), "Null should not end with newline");
+    }
+
+    @Test
+    void testNoTrailingNewline_Array() {
+        int[] arr = {1, 2, 3};
+        String toon = JsonIo.toToon(arr, null);
+        assertFalse(toon.endsWith("\n"), "Array output should not end with newline");
+    }
+
+    @Test
+    void testNoTrailingNewline_ListArray() {
+        // List-format arrays (with hyphens) also must not have trailing newline
+        Map<String, Object> obj = new LinkedHashMap<>();
+        obj.put("x", 10);
+
+        List<Object> mixedList = new ArrayList<>();
+        mixedList.add(42);
+        mixedList.add(obj);
+
+        String toon = JsonIo.toToon(mixedList, null);
+        assertFalse(toon.endsWith("\n"), "List-format array should not end with newline");
+    }
+
+    // ========== High Priority Gap Tests: Float Infinity ==========
+
+    @Test
+    void testFloatPositiveInfinity() {
+        // TOON spec: Infinity should be converted to null
+        assertEquals("null", JsonIo.toToon(Float.POSITIVE_INFINITY, null));
+    }
+
+    @Test
+    void testFloatNegativeInfinity() {
+        // TOON spec: -Infinity should be converted to null
+        assertEquals("null", JsonIo.toToon(Float.NEGATIVE_INFINITY, null));
+    }
+
+    @Test
+    void testFloatNegativeZero() {
+        // TOON spec: -0 should be normalized to 0
+        assertEquals("0", JsonIo.toToon(-0.0f, null));
+    }
+
+    // ========== High Priority Gap Tests: OutputStream API ==========
+
+    @Test
+    void testToToonOutputStream_SimpleObject() {
+        // Verify OutputStream API produces same output as String API
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("name", "John");
+        map.put("age", 30);
+
+        String toonString = JsonIo.toToon(map, null);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        JsonIo.toToon(baos, map, null);
+        String toonStream = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+
+        assertEquals(toonString, toonStream, "String and OutputStream APIs should produce identical output");
+    }
+
+    @Test
+    void testToToonOutputStream_NestedObject() {
+        Map<String, Object> address = new LinkedHashMap<>();
+        address.put("city", "NYC");
+        address.put("zip", "10001");
+
+        Map<String, Object> person = new LinkedHashMap<>();
+        person.put("name", "John");
+        person.put("address", address);
+
+        String toonString = JsonIo.toToon(person, null);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        JsonIo.toToon(baos, person, null);
+        String toonStream = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+
+        assertEquals(toonString, toonStream, "Nested object via OutputStream should match String API");
+    }
+
+    @Test
+    void testToToonOutputStream_Array() {
+        int[] arr = {1, 2, 3, 4, 5};
+
+        String toonString = JsonIo.toToon(arr, null);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        JsonIo.toToon(baos, arr, null);
+        String toonStream = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+
+        assertEquals(toonString, toonStream, "Array via OutputStream should match String API");
+    }
+
+    @Test
+    void testToToonOutputStream_TabularArray() {
+        Map<String, Object> item1 = new LinkedHashMap<>();
+        item1.put("sku", "A1");
+        item1.put("qty", 2);
+
+        Map<String, Object> item2 = new LinkedHashMap<>();
+        item2.put("sku", "B2");
+        item2.put("qty", 1);
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("items", Arrays.asList(item1, item2));
+
+        String toonString = JsonIo.toToon(root, null);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        JsonIo.toToon(baos, root, null);
+        String toonStream = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+
+        assertEquals(toonString, toonStream, "Tabular array via OutputStream should match String API");
+    }
+
+    @Test
+    void testToToonOutputStream_Null() {
+        String toonString = JsonIo.toToon(null, null);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        JsonIo.toToon(baos, null, null);
+        String toonStream = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+
+        assertEquals(toonString, toonStream, "Null via OutputStream should match String API");
+    }
+
+    @Test
+    void testToToonOutputStream_RoundTrip() {
+        // Write via OutputStream, then read back and verify
+        Map<String, Object> original = new LinkedHashMap<>();
+        original.put("name", "Alice");
+        original.put("scores", Arrays.asList(95, 87, 92));
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        JsonIo.toToon(baos, original, null);
+        String toon = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        assertEquals("Alice", restored.get("name"));
+        List<?> scores = (List<?>) restored.get("scores");
+        assertEquals(3, scores.size());
+        assertEquals(95L, scores.get(0));
+        assertEquals(87L, scores.get(1));
+        assertEquals(92L, scores.get(2));
+    }
+
+    // ========== High Priority Gap Tests: String "-" (Hyphen) ==========
+
+    @Test
+    void testStringHyphen_Standalone() {
+        // TOON spec: String "-" must be quoted (equals "-" or starts with "-")
+        String toon = JsonIo.toToon("-", null);
+        assertTrue(toon.startsWith("\""), "Hyphen string should be quoted: " + toon);
+        assertTrue(toon.endsWith("\""), "Hyphen string should be quoted: " + toon);
+    }
+
+    @Test
+    void testStringHyphen_AsFieldValue() {
+        // Hyphen as a field value must be quoted to avoid confusion with list marker
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("value", "-");
+        String toon = JsonIo.toToon(map, null);
+        assertTrue(toon.contains("\"-\""), "Hyphen field value should be quoted: " + toon);
+
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        assertEquals("-", restored.get("value"));
     }
 }
