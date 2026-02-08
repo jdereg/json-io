@@ -699,7 +699,10 @@ public class ToonWriter implements Closeable, Flushable {
             } else {
                 writeKeyString(keyStr);
                 out.write(":");
-                if (value != null && !isPrimitive(value)) {
+                if (value instanceof Map && ((Map<?, ?>) value).isEmpty()) {
+                    // Empty map - write inline as "key: {}"
+                    out.write(" {}");
+                } else if (value != null && !isPrimitive(value)) {
                     // Nested object - newline, no trailing space after colon
                     out.write(NEW_LINE);
                     depth += 2;
@@ -816,7 +819,10 @@ public class ToonWriter implements Closeable, Flushable {
             } else {
                 writeKeyString(keyStr);
                 out.write(":");
-                if (value != null && !isPrimitive(value)) {
+                if (value instanceof Map && ((Map<?, ?>) value).isEmpty()) {
+                    // Empty map - write inline as "key: {}"
+                    out.write(" {}");
+                } else if (value != null && !isPrimitive(value)) {
                     // Nested object - newline, no trailing space after colon
                     out.write(NEW_LINE);
                     depth++;

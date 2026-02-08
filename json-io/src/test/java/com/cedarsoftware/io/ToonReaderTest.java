@@ -2241,16 +2241,24 @@ class ToonReaderTest {
 
     @Test
     void testEmptyMapInObject() {
-        // Object containing an empty map
-        // Note: ToonWriter currently writes "metadata:\n{}" with {} at depth 0
-        // which causes the reader to not associate {} with metadata.
-        // TODO: Fix ToonWriter to write empty nested maps inline as "metadata: {}"
-        // For now, test standalone empty map round-trip
-        Map<String, Object> empty = new LinkedHashMap<>();
-        String toon = JsonIo.toToon(empty, null);
-        assertEquals("{}", toon, "Standalone empty map should be {}");
+        // Object containing an empty nested map - should round-trip correctly.
+        // ToonWriter writes "metadata: {}" inline, ToonReader parses "{}" as empty map.
+        Map<String, Object> original = new LinkedHashMap<>();
+        original.put("name", "test");
+        original.put("metadata", new LinkedHashMap<>());
+        original.put("after", "value");
+
+        String toon = JsonIo.toToon(original, null);
+        // Writer should produce inline "metadata: {}"
+        assertTrue(toon.contains("metadata: {}"), "Empty nested map should be inline: " + toon);
+
         Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
-        assertTrue(restored.isEmpty(), "Empty map should round-trip");
+        assertEquals("test", restored.get("name"));
+        Object metadata = restored.get("metadata");
+        assertNotNull(metadata, "metadata key should exist");
+        assertTrue(metadata instanceof Map, "metadata should be a Map, got: " + metadata.getClass().getName());
+        assertTrue(((Map<?, ?>) metadata).isEmpty(), "metadata should be empty");
+        assertEquals("value", restored.get("after"), "Field after empty map should be preserved");
     }
 
     @Test

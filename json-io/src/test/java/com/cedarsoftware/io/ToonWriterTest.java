@@ -1282,8 +1282,10 @@ class ToonWriterTest {
     }
 
     @Test
-    void testEmptyObjectInListArray_WriterOutput() {
-        // Test that ToonWriter writes empty map as "- {}" in list context
+    void testEmptyObjectInListArray_RoundTrip() {
+        // Test that an empty map in a list-format array can round-trip.
+        // Writer: produces "- {}" for empty map in list context
+        // Reader: recognizes "{}" as empty object in list element
         Map<String, Object> emptyObj = new LinkedHashMap<>();
         Map<String, Object> namedObj = new LinkedHashMap<>();
         namedObj.put("name", "Bob");
@@ -1299,7 +1301,13 @@ class ToonWriterTest {
         // Writer should produce "- {}" for empty map in list
         assertTrue(toon.contains("- {}"), "Empty map in list should write as '- {}': " + toon);
         assertTrue(toon.contains("- name: Bob"), "Named object should use hyphen format");
-        // NOTE: ToonReader currently parses "{}" as a string in list context,
-        // not as an empty map. This is a known ToonReader bug to fix separately.
+
+        // Round-trip: reader should parse "{}" back as empty map
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> restoredItems = (List<?>) restored.get("items");
+        assertEquals(2, restoredItems.size());
+        assertTrue(restoredItems.get(0) instanceof Map, "Empty map should restore as Map");
+        assertTrue(((Map<?, ?>) restoredItems.get(0)).isEmpty(), "Empty map should be empty");
+        assertEquals("Bob", ((Map<?, ?>) restoredItems.get(1)).get("name"));
     }
 }

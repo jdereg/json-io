@@ -503,6 +503,9 @@ public class ToonReader {
                 } else {
                     elements.add(null);
                 }
+            } else if ("{}".equals(elementContent)) {
+                // Empty object: - {}
+                elements.add(new JsonObject());
             } else if (isArrayStart(elementContent)) {
                 elements.add(parseArrayFromLine(elementContent));
             } else if (findColonPosition(elementContent) > 0 && !elementContent.startsWith("\"")) {
