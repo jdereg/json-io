@@ -48,7 +48,7 @@ public class JsonPerformanceTest {
         public String description;
         public String[] tags;  // Additional array field
         public Map<String, Object> metadata;  // Additional map field
-
+    
         // Additional integer fields
         public int itemCount;
         public int priority;

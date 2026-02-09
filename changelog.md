@@ -1,5 +1,9 @@
 ### Revision History
 
+#### 4.93.0 (Unreleased)
+* **PERFORMANCE**: `JsonWriter` - Localized `this.out` to stack variable in 8 hot-path methods (`writeKey`, `writeField`, `writeObject`, `writePrimitive`, `writeLongDirect`, `writeIntDirect`, `writeIntArray`, `writeShortArray`, `writeIdAndTypeIfNeeded`) for consistent register allocation, matching the pattern already used by 14 other methods in the class.
+* **MAINTENANCE**: Version bump to 4.93.0, java-util dependency updated to 4.93.0.
+
 #### 4.92.0 - 2026-02-08
 * **PERFORMANCE**: Optimized `Resolver`/`ObjectResolver` read path (~6% faster Java deserialization)
   * **Correctness fix**: `createSameTypeCollection()` - Fixed inheritance-order bug where `LinkedHashSet` was incorrectly created as `HashSet`, losing insertion-order preservation

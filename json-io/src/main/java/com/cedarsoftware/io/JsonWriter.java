@@ -167,7 +167,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     // Pre-computed escape strings for ASCII characters
     // null = character doesn't need escaping, non-null = the escape sequence to write
-    // This combines "needs escape?" and "what is the escape?" into a single array lookup
     private static final String[] ESCAPE_STRINGS = new String[128];
     static {
         // Control characters (0x00-0x1F) need \\u00xx escaping
@@ -1094,8 +1093,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * Uses digit pair lookup tables for efficient conversion.
      */
     private void writeLongDirect(long value) throws IOException {
+        final Writer output = this.out;
         if (value == 0) {
-            out.write('0');
+            output.write('0');
             return;
         }
 
@@ -1125,7 +1125,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             longBuffer[--idx] = '-';
         }
 
-        out.write(longBuffer, idx, longBuffer.length - idx);
+        output.write(longBuffer, idx, longBuffer.length - idx);
     }
 
     /**
@@ -1133,8 +1133,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * Reuses the longBuffer and digit pair lookup tables.
      */
     private void writeIntDirect(int value) throws IOException {
+        final Writer output = this.out;
         if (value == 0) {
-            out.write('0');
+            output.write('0');
             return;
         }
 
@@ -1164,7 +1165,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             longBuffer[--idx] = '-';
         }
 
-        out.write(longBuffer, idx, longBuffer.length - idx);
+        output.write(longBuffer, idx, longBuffer.length - idx);
     }
 
     // Optimized writeType method
@@ -1182,24 +1183,25 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (neverShowingType) {
             showType = false;
         }
+        final Writer output = this.out;
         if (obj instanceof Long && writeLongsAsStrings) {
             if (showType) {
-                out.write('{');
-                writeType("long", out);
-                out.write(',');
+                output.write('{');
+                writeType("long", output);
+                output.write(',');
             }
 
-            longBoxedWriter.write(obj, showType, out, this);
+            longBoxedWriter.write(obj, showType, output, this);
 
             if (showType) {
-                out.write('}');
+                output.write('}');
             }
         } else if (!isNanInfinityAllowed() && obj instanceof Double && (Double.isNaN((Double) obj) || Double.isInfinite((Double) obj))) {
-            out.write("null");
+            output.write("null");
         } else if (!isNanInfinityAllowed() && obj instanceof Float && (Float.isNaN((Float) obj) || Float.isInfinite((Float) obj))) {
-            out.write("null");
+            output.write("null");
         } else {
-            out.write(obj.toString());
+            output.write(obj.toString());
         }
     }
 
@@ -1390,17 +1392,19 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private void writeIntArray(int[] ints, int lenMinus1) throws IOException {
+        final Writer output = this.out;
         for (int i = 0; i < lenMinus1; i++) {
             writeIntDirect(ints[i]);
-            out.write(',');
+            output.write(',');
         }
         writeIntDirect(ints[lenMinus1]);
     }
 
     private void writeShortArray(short[] shorts, int lenMinus1) throws IOException {
+        final Writer output = this.out;
         for (int i = 0; i < lenMinus1; i++) {
             writeIntDirect(shorts[i]);
-            out.write(',');
+            output.write(',');
         }
         writeIntDirect(shorts[lenMinus1]);
     }
@@ -1507,11 +1511,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         if (showType) {
+            final Writer output = this.out;
             if (referenced) {
-                out.write(',');
+                output.write(',');
                 newLine();
             }
-            writeType(getTypeNameForOutput(col), out);
+            writeType(getTypeNameForOutput(col), output);
         }
     }
 
@@ -2188,21 +2193,22 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (neverShowingType) {
             showType = false;
         }
+        final Writer output = this.out;
         final boolean referenced = this.objsReferenced.containsKey(obj);
         if (!bodyOnly) {
-            out.write('{');
+            output.write('{');
             tabIn();
             if (referenced) {
                 writeId(getIdInt(obj));
             }
 
             if (referenced && showType) {
-                out.write(',');
+                output.write(',');
                 newLine();
             }
 
             if (showType) {
-                writeType(obj.getClass().getName(), out);
+                writeType(obj.getClass().getName(), output);
             }
         }
 
@@ -2220,7 +2226,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         if (!bodyOnly) {
             tabOut();
-            out.write('}');
+            output.write('}');
         }
     }
 
@@ -2271,15 +2277,16 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             return first;
         }
 
+        final Writer output = this.out;
         if (!first) {
-            out.write(',');
+            output.write(',');
             newLine();
         }
 
         writeKey(fieldName);
 
         if (o == null) {    // don't quote null
-            out.write("null");
+            output.write("null");
             return false;
         }
 
@@ -2908,12 +2915,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * @param name the key name to write
      */
     private void writeKey(String name) throws IOException {
+        final Writer output = this.out;
         if (json5UnquotedKeys && isValidJson5Identifier(name)) {
-            out.write(name);
-            out.write(':');
+            output.write(name);
+            output.write(':');
         } else {
-            writeJsonUtf8String(out, name, maxStringLength);
-            out.write(':');
+            writeJsonUtf8String(output, name, maxStringLength);
+            output.write(':');
         }
     }
 

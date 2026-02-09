@@ -5,7 +5,7 @@
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io-parent</artifactId>
     <packaging>pom</packaging>
-    <version>4.92.0</version>
+    <version>4.93.0</version>
     <description>Parent POM for json-io modules</description>
     <url>https://github.com/jdereg/json-io</url>
 
@@ -31,7 +31,7 @@
         <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ss.SSSZ</maven.build.timestamp.format>
         <!-- remove source encoding warnings from maven output -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <version.java-util>4.92.0</version.java-util>
+        <version.java-util>4.93.0</version.java-util>
         <!-- testing only -->
         <version.junit-jupiter-api>5.14.2</version.junit-jupiter-api>
         <version.junit-jupiter-params>5.14.2</version.junit-jupiter-params>
