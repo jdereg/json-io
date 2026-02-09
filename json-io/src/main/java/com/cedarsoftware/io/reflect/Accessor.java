@@ -45,8 +45,7 @@ import com.cedarsoftware.util.SystemUtilities;
  *         limitations under the License.
  */
 public class Accessor {
-    // JDK version detection and VarHandle infrastructure (JDK 9+)
-    private static final boolean IS_JDK17_OR_HIGHER;
+    // VarHandle infrastructure (JDK 9+)
     private static final Object LOOKUP;
     private static final Method PRIVATE_LOOKUP_IN_METHOD;
     private static final Method FIND_VAR_HANDLE_METHOD;
@@ -54,7 +53,6 @@ public class Accessor {
 
     static {
         int javaVersion = SystemUtilities.currentJdkMajorVersion();
-        IS_JDK17_OR_HIGHER = javaVersion >= 17;
 
         Object lookup = null;
         Method privateLookupInMethod = null;
@@ -190,12 +188,21 @@ public class Accessor {
     public static Accessor createFieldAccessor(Field field, String uniqueFieldName) {
         boolean isPublicField = Modifier.isPublic(field.getModifiers()) && Modifier.isPublic(field.getDeclaringClass().getModifiers());
 
-        // Ensure field is accessible if needed
+        // ── PHASE 1: Modern path (JDK 9+) ──
+        // Try privateLookupIn-based paths FIRST — no setAccessible needed.
+        // This is future-proof for Java 25+ where setAccessible is increasingly restricted.
+        if (PRIVATE_LOOKUP_IN_METHOD != null) {
+            Accessor accessor = createWithVarHandle(field, uniqueFieldName);
+            if (accessor != null) {
+                return accessor;
+            }
+        }
+
+        // ── PHASE 2: Legacy path (JDK 8, or JDK 9+ where modern path failed) ──
         if (!isPublicField) {
             ExceptionUtilities.safelyIgnoreException(() -> field.setAccessible(true));
         }
 
-        // Try MethodHandle first (maintains getMethodHandle() API compatibility)
         try {
             MethodHandles.Lookup fieldLookup = MethodHandles.lookup();
             MethodHandle handle = fieldLookup.unreflectGetter(field);
@@ -205,13 +212,6 @@ public class Accessor {
             }
             return new Accessor(field, handle, uniqueFieldName, field.getName(), Modifier.isPublic(field.getModifiers()), false);
         } catch (IllegalAccessException ex) {
-            // MethodHandle failed - try VarHandle on JDK 17+ for module system compatibility
-            if (IS_JDK17_OR_HIGHER) {
-                Accessor varHandleAccessor = createWithVarHandle(field, uniqueFieldName);
-                if (varHandleAccessor != null) {
-                    return varHandleAccessor;
-                }
-            }
             // Final fallback: create an accessor that uses field.get() directly
             return new Accessor(field, (MethodHandle) null, uniqueFieldName, field.getName(), Modifier.isPublic(field.getModifiers()), false);
         }

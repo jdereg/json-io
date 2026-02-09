@@ -119,7 +119,7 @@ public class Injector {
     private final String fieldName;
 
     // Constructor for MethodHandle injection
-    public Injector(Field field, MethodHandle handle, String uniqueFieldName, String displayName) {
+    private Injector(Field field, MethodHandle handle, String uniqueFieldName, String displayName) {
         this.field = field;
         this.displayName = displayName;
         this.uniqueFieldName = uniqueFieldName;
@@ -232,23 +232,24 @@ public class Injector {
 
         if (StringUtilities.isEmpty(uniqueFieldName)) {
             throw new JsonIoException("Unique field name cannot be null or empty");
-
         }
 
-        // Always try to make the field accessible, regardless of whether it is static.
+        // ── PHASE 1: Modern path (JDK 9+) ──
+        // Try privateLookupIn-based paths FIRST — no setAccessible needed.
+        // This is future-proof for Java 25+ where setAccessible is increasingly restricted.
+        if (PRIVATE_LOOKUP_IN_METHOD != null) {
+            Injector injector = createWithVarHandle(field, uniqueFieldName);
+            if (injector != null) {
+                return injector;
+            }
+        }
+
+        // ── PHASE 2: Legacy path (JDK 8, or JDK 9+ where modern path failed) ──
         if (!field.isAccessible()) {
             try {
-                // Security: Log the setAccessible call for audit purposes
                 field.setAccessible(true);
-            } catch (Exception ioe) {
-                // Security: Handle access denial gracefully
-                if (IS_JDK17_OR_HIGHER) {
-                    Injector varHandleInjector = createWithVarHandle(field, uniqueFieldName);
-                    if (varHandleInjector != null) {
-                        return varHandleInjector;
-                    }
-                }
-                // Final fallback to Field.set() injection
+            } catch (Exception e) {
+                // setAccessible failed — return Field.set() fallback (last resort)
                 return new Injector(field, uniqueFieldName, field.getName(), true);
             }
         }
@@ -269,6 +270,7 @@ public class Injector {
             return new Injector(field, uniqueFieldName, field.getName(), true);
         }
 
+        // setAccessible succeeded — try MethodHandle → LambdaMetafactory
         try {
             MethodHandles.Lookup fieldLookup = MethodHandles.lookup();
             MethodHandle handle = fieldLookup.unreflectSetter(field);
@@ -278,13 +280,7 @@ public class Injector {
             }
             return new Injector(field, handle, uniqueFieldName, field.getName());
         } catch (IllegalAccessException e) {
-            if (IS_JDK17_OR_HIGHER) {
-                Injector varHandleInjector = createWithVarHandle(field, uniqueFieldName);
-                if (varHandleInjector != null) {
-                    return varHandleInjector;
-                }
-            }
-            // Fallback to Field.set() injection if we cannot get a MethodHandle.
+            // Fallback to Field.set() injection
             return new Injector(field, uniqueFieldName, field.getName(), true);
         }
     }
