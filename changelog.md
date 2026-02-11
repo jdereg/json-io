@@ -1,7 +1,8 @@
 ### Revision History
 
-#### 4.93.0 (Unreleased)
+#### 4.93.0 - 2026-02-10
 * **PERFORMANCE**: `JsonWriter` - Localized `this.out` to stack variable in 8 hot-path methods (`writeKey`, `writeField`, `writeObject`, `writePrimitive`, `writeLongDirect`, `writeIntDirect`, `writeIntArray`, `writeShortArray`, `writeIdAndTypeIfNeeded`) for consistent register allocation, matching the pattern already used by 14 other methods in the class.
+* **MAINTENANCE**: `Injector`/`Accessor` - Reordered creation paths to prefer `privateLookupIn`-based LambdaMetafactory first (no `setAccessible` needed), demoting `setAccessible(true)` to a legacy fallback. Prepares for Java 25+ which may further restrict reflective access. No behavioral change — runtime dispatch order unchanged.
 * **MAINTENANCE**: Version bump to 4.93.0, java-util dependency updated to 4.93.0.
 
 #### 4.92.0 - 2026-02-08
