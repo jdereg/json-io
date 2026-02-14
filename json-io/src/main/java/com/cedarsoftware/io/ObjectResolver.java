@@ -163,6 +163,52 @@ public class ObjectResolver extends Resolver
     }
 
     /**
+     * Directly assign parsed JSON Long/Double values into primitive arrays, avoiding
+     * intermediate wrapper allocation from fastPrimitiveCoercion() in hot array loops.
+     */
+    private static boolean tryAssignParsedNumberToPrimitiveArray(
+            Object array, int index, Class<?> primitiveType, Object element, Class<?> elementClass) {
+        if (elementClass == Long.class) {
+            long value = (Long) element;
+            if (primitiveType == long.class) {
+                ((long[]) array)[index] = value;
+                return true;
+            } else if (primitiveType == int.class) {
+                ((int[]) array)[index] = (int) value;
+                return true;
+            } else if (primitiveType == double.class) {
+                ((double[]) array)[index] = (double) value;
+                return true;
+            } else if (primitiveType == byte.class) {
+                ((byte[]) array)[index] = (byte) value;
+                return true;
+            } else if (primitiveType == float.class) {
+                ((float[]) array)[index] = (float) value;
+                return true;
+            } else if (primitiveType == short.class) {
+                ((short[]) array)[index] = (short) value;
+                return true;
+            }
+        } else if (elementClass == Double.class) {
+            double value = (Double) element;
+            if (primitiveType == double.class) {
+                ((double[]) array)[index] = value;
+                return true;
+            } else if (primitiveType == float.class) {
+                ((float[]) array)[index] = (float) value;
+                return true;
+            } else if (primitiveType == long.class) {
+                ((long[]) array)[index] = (long) value;
+                return true;
+            } else if (primitiveType == int.class) {
+                ((int[]) array)[index] = (int) value;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Handle assignment of an Object[] RHS to a field.
      * Wraps the array in a JsonObject, preserves generic type info, and queues for traversal.
      * This handles both array fields (String[]) and collection fields (List&lt;String&gt;).
@@ -916,6 +962,9 @@ public class ObjectResolver extends Resolver
             // JSON only produces Long for integers and Double for decimals.
             // Convert directly to the target type without going through Converter lookup.
             if (hasSpecificComponentType) {
+                if (isPrimitive && tryAssignParsedNumberToPrimitiveArray(array, i, fallbackCompType, element, elementClass)) {
+                    continue;
+                }
                 Object coerced = fastPrimitiveCoercion(element, elementClass, effectiveRawComponentType);
                 if (coerced != null) {
                     setArrayElement(array, refArray, i, coerced, isPrimitive);

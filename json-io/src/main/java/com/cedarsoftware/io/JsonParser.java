@@ -680,7 +680,7 @@ class JsonParser {
 
         try {
             if (isFloat) {
-                return readFloatingPoint(number.toString());
+                return readFloatingPoint(number);
             } else {
                 return readInteger(number);
             }
@@ -735,17 +735,17 @@ class JsonParser {
         }
     }
 
-    private Number readFloatingPoint(String numStr) {
+    private Number readFloatingPoint(CharSequence numStr) {
         if (floatingPointBigDecimal) {
-            return new BigDecimal(numStr);
+            return new BigDecimal(numStr.toString());
         }
 
-        Number number = parseToMinimalNumericType(numStr);
-        if (floatingPointBoth) {
-            return number;
-        } else {
-            return number.doubleValue();
+        // Hot path: default mode is DOUBLE, so bypass minimal-type analysis.
+        if (!floatingPointBoth) {
+            return Double.parseDouble(numStr.toString());
         }
+
+        return parseToMinimalNumericType(numStr.toString());
     }
 
     /**

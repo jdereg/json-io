@@ -6,6 +6,9 @@
   * `toJson(Object, WriteOptions)` now reuses `FastByteArrayOutputStream` and `FastWriter` buffers.
   * `toJava(String, ...)` and `toJava(InputStream, ...)` builder paths now reuse `FastReader` char/pushback buffers.
   This removes repeated stream/buffer construction churn in benchmark loops and reduces allocation pressure.
+* **PERFORMANCE**: Read numeric pipeline optimized:
+  * `JsonParser` floating-point parsing now takes a direct `Double.parseDouble()` fast path when configured for `DOUBLE` mode, bypassing minimal-number analysis in the default path.
+  * `ObjectResolver.traverseArray()` now has a primitive-array direct assignment path for parsed JSON `Long`/`Double` values, avoiding intermediate wrapper coercion in hot loops.
 * **PERFORMANCE**: `JsonWriter` custom-writer gate checks are now class-cached via shared `DefaultWriteOptions` caches (using `ClassValueMap`):
   * Added per-declared-class gate cache for `isNotCustomWrittenClass` and declared custom writer resolution.
   * Runtime custom writer resolution now reuses the existing `getCustomWriter()`/`writerCache` path after gate pass (no duplicate runtime cache layer).
