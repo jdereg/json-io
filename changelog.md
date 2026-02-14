@@ -6,6 +6,10 @@
   * `toJson(Object, WriteOptions)` now reuses `FastByteArrayOutputStream` and `FastWriter` buffers.
   * `toJava(String, ...)` and `toJava(InputStream, ...)` builder paths now reuse `FastReader` char/pushback buffers.
   This removes repeated stream/buffer construction churn in benchmark loops and reduces allocation pressure.
+* **PERFORMANCE**: `JsonWriter` custom-writer gate checks are now class-cached via shared `DefaultWriteOptions` caches (using `ClassValueMap`):
+  * Added per-declared-class gate cache for `isNotCustomWrittenClass` and declared custom writer resolution.
+  * Runtime custom writer resolution now reuses the existing `getCustomWriter()`/`writerCache` path after gate pass (no duplicate runtime cache layer).
+  This lowers hot-loop cost in `writeUsingCustomWriter()` / `getCustomWriterIfAllowed()`, avoids per-`JsonWriter` cache construction churn in short-lived writer workloads, and removes redundant runtime cache indirection.
 * **PERFORMANCE**: `JsonWriter` now consistently honors `cycleSupport(false)` by bypassing `objsReferenced` / `@id` lookup work across write hot paths (object/map/collection/array/custom writer) while retaining lightweight visited-marker guarding to prevent infinite recursion on accidental cyclic input.
 * **PERFORMANCE**: Added cached write-field planning (`WriteFieldPlan`) in `WriteOptionsBuilder` and switched `JsonWriter` object/enum/trace field loops to use precomputed per-class metadata (serialized key literal, declared container generic types, and trace-skip hints), reducing repeated reflection/generic analysis in hot paths.
 * **PERFORMANCE**: Added cached read injector planning (`InjectorPlan`) in `ReadOptionsBuilder` and wired `ObjectResolver`/`Resolver` field lookup paths to use it, reducing repeated map resolution overhead during traversal and unresolved-reference patching.

@@ -306,6 +306,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     // Lookup table for single-quoted strings (JSON5) - escapes ' instead of "
     private static final boolean[] NEEDS_ESCAPE_SINGLE_QUOTE = new boolean[128];
     private final WriteOptions writeOptions;
+    private final WriteOptionsBuilder.DefaultWriteOptions defaultWriteOptions;
     // Lightweight identity-based maps for reference tracking (faster than IdentityHashMap<Object, Long>)
     // Uses primitive int values and open addressing - no boxing, no Entry objects
     private final IdentityIntMap objVisited = new IdentityIntMap(256);
@@ -453,6 +454,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     public JsonWriter(Writer out, WriteOptions writeOptions) {
         this.out = out;
         this.writeOptions = writeOptions == null ? WriteOptionsBuilder.getDefaultWriteOptions() : writeOptions;
+        this.defaultWriteOptions = this.writeOptions instanceof WriteOptionsBuilder.DefaultWriteOptions
+                ? (WriteOptionsBuilder.DefaultWriteOptions) this.writeOptions : null;
 
         // Pre-compute meta key prefixes based on options
         // JSON5 mode uses $ prefix (valid unquoted identifier), standard mode uses @ prefix (requires quotes)
@@ -654,8 +657,19 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * @return the JsonClassWriter to use, or null if custom writing is not allowed
      */
     private com.cedarsoftware.io.JsonClassWriter getCustomWriterIfAllowed(Class<?> declaredClass, Object o) {
+        final boolean notCustomWrittenClass;
+        final com.cedarsoftware.io.JsonClassWriter declaredWriter;
+        if (defaultWriteOptions != null) {
+            WriteOptionsBuilder.DefaultWriteOptions.CustomWriterGate gate = defaultWriteOptions.getCustomWriterGate(declaredClass);
+            notCustomWrittenClass = gate.notCustomWrittenClass;
+            declaredWriter = gate.declaredWriter;
+        } else {
+            notCustomWrittenClass = writeOptions.isNotCustomWrittenClass(declaredClass);
+            declaredWriter = writeOptions.getCustomWriter(declaredClass);
+        }
+
         // Exit early if the declared class is explicitly marked as not-custom-written
-        if (writeOptions.isNotCustomWrittenClass(declaredClass)) {
+        if (notCustomWrittenClass) {
             return null;
         }
 
@@ -672,12 +686,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         // Optimization: when declared type equals runtime type, only one lookup needed
         if (declaredClass == actualClass) {
-            return writeOptions.getCustomWriter(actualClass);
+            return declaredWriter;
         }
 
         // Different types: check if declared type has a writer (gatekeeper)
         // If declared type has no writer, don't use custom writing even if actual type has one
-        if (writeOptions.getCustomWriter(declaredClass) == null) {
+        if (declaredWriter == null) {
             return null;
         }
 

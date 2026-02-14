@@ -1634,6 +1634,7 @@ public class WriteOptionsBuilder {
         // Runtime caches (not feature options), since looking up writers can be expensive
         // when one does not exist, we cache the writer or a nullWriter if one does not exist.
         private final Map<Class<?>, JsonClassWriter> writerCache = new ClassValueMap<>();
+        private final Map<Class<?>, CustomWriterGate> customWriterGateCache = new ClassValueMap<>();
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
         private Map<Class<?>, List<Accessor>> accessorsCache = new ClassValueMap<>();
@@ -1939,6 +1940,16 @@ public class WriteOptionsBuilder {
 
         static final NullClass nullWriter = new NullClass();
 
+        static final class CustomWriterGate {
+            final boolean notCustomWrittenClass;
+            final JsonClassWriter declaredWriter;
+
+            CustomWriterGate(boolean notCustomWrittenClass, JsonClassWriter declaredWriter) {
+                this.notCustomWrittenClass = notCustomWrittenClass;
+                this.declaredWriter = declaredWriter;
+            }
+        }
+
         /**
          * Fetch the custom writer for the passed in Class.  If it is cached (already associated to the
          * passed in Class), return the same instance, otherwise, make a call to get the custom writer
@@ -1955,6 +1966,17 @@ public class WriteOptionsBuilder {
                 writerCache.put(c, writer);
             }
             return writer == nullWriter ? null : writer;
+        }
+
+        CustomWriterGate getCustomWriterGate(Class<?> declaredType) {
+            CustomWriterGate gate = customWriterGateCache.get(declaredType);
+            if (gate == null) {
+                gate = new CustomWriterGate(
+                        isNotCustomWrittenClass(declaredType),
+                        getCustomWriter(declaredType));
+                customWriterGateCache.put(declaredType, gate);
+            }
+            return gate;
         }
 
         JsonClassWriter findCustomWriter(Class<?> c) {
@@ -2044,6 +2066,7 @@ public class WriteOptionsBuilder {
             classMetaCache.clear();
             accessorsCache.clear();
             writeFieldPlanCache.clear();
+            customWriterGateCache.clear();
         }
 
         private List<WriteFieldPlan> buildWriteFieldPlans(final Class<?> clazz) {
