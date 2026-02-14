@@ -77,6 +77,26 @@ import com.cedarsoftware.util.convert.Converter;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class Resolver {
     private static final String NO_FACTORY = "_︿_ψ_☼";
+    protected static final int NUM_NONE = 0;
+    protected static final int NUM_INT = 1;
+    protected static final int NUM_DOUBLE = 2;
+    protected static final int NUM_BYTE = 3;
+    protected static final int NUM_FLOAT = 4;
+    protected static final int NUM_SHORT = 5;
+    protected static final int NUM_LONG = 6;
+
+    protected static final ClassValue<Integer> NUMERIC_TYPE_KIND = new ClassValue<Integer>() {
+        @Override
+        protected Integer computeValue(Class<?> type) {
+            if (type == int.class || type == Integer.class) return NUM_INT;
+            if (type == double.class || type == Double.class) return NUM_DOUBLE;
+            if (type == byte.class || type == Byte.class) return NUM_BYTE;
+            if (type == float.class || type == Float.class) return NUM_FLOAT;
+            if (type == short.class || type == Short.class) return NUM_SHORT;
+            if (type == long.class || type == Long.class) return NUM_LONG;
+            return NUM_NONE;
+        }
+    };
 
     // Common ancestor roots to skip when checking type compatibility (using IdentitySet for Class comparison)
     private static final Set<Class<?>> SKIP_COMMON_ROOTS;
@@ -135,6 +155,36 @@ public abstract class Resolver {
             referencingObj = referrer;
             index = idx;
             refId = id;
+        }
+    }
+
+    protected static Object coerceLong(long longVal, Class<?> targetType) {
+        switch (NUMERIC_TYPE_KIND.get(targetType)) {
+            case NUM_INT:
+                return (int) longVal;
+            case NUM_DOUBLE:
+                return (double) longVal;
+            case NUM_BYTE:
+                return (byte) longVal;
+            case NUM_FLOAT:
+                return (float) longVal;
+            case NUM_SHORT:
+                return (short) longVal;
+            default:
+                return null;
+        }
+    }
+
+    protected static Object coerceDouble(double doubleVal, Class<?> targetType) {
+        switch (NUMERIC_TYPE_KIND.get(targetType)) {
+            case NUM_FLOAT:
+                return (float) doubleVal;
+            case NUM_LONG:
+                return (long) doubleVal;
+            case NUM_INT:
+                return (int) doubleVal;
+            default:
+                return null;
         }
     }
 

@@ -442,7 +442,16 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * @see WriteOptions Javadoc.
      */
     public JsonWriter(OutputStream out, WriteOptions writeOptions) {
-        this.out = new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
+        this(new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8)), writeOptions);
+    }
+
+    /**
+     * @param out          Writer to which the JSON output will be written.
+     * @param writeOptions WriteOptions containing many feature options to control the JSON output. Can be null,
+     *                     in which case the default WriteOptions will be used.
+     */
+    public JsonWriter(Writer out, WriteOptions writeOptions) {
+        this.out = out;
         this.writeOptions = writeOptions == null ? WriteOptionsBuilder.getDefaultWriteOptions() : writeOptions;
 
         // Pre-compute meta key prefixes based on options
@@ -721,7 +730,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             return true;
         }
 
-        boolean referenced = objsReferenced.containsKey(o);
+        boolean referenced = cycleSupport && objsReferenced.containsKey(o);
 
         if (closestWriter.hasPrimitiveForm(this)) {
             if ((!referenced && !showType) || closestWriter instanceof Writers.JsonStringWriter) {
@@ -768,7 +777,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 traceReferences(obj);
                 objVisited.clear();
             }
-            // When cycleSupport=false, objVisited will be used during write to detect cycles
+            // When cycleSupport=false, reference tracking is bypassed for maximum throughput.
             boolean showType = writeOptions.isShowingRootTypeInfo();
             if (obj != null) {
                 if (neverShowingType) {
@@ -971,13 +980,21 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             return false;
         }
 
+        if (!cycleSupport) {
+            // cycleSupport=false: keep a lightweight visited marker to avoid infinite recursion
+            // on accidental cyclic graphs, but do not emit @id/@ref metadata.
+            if (objVisited.containsKey(obj)) {
+                return true;
+            }
+            objVisited.put(obj, -1);
+            return false;
+        }
+
         final Writer output = this.out;
         if (objVisited.containsKey(obj)) {    // Only write (define) an object once in the JSON stream, otherwise emit a @ref
             int id = getIdInt(obj);
             if (id == 0) {   // Test for 0 because of Weak/Soft references being gc'd during serialization.
-                // When cycleSupport=false, objects won't have IDs, but we still need to skip
-                // duplicates to prevent infinite recursion. Return true to skip silently.
-                return !cycleSupport;
+                return false;
             }
             output.write('{');
             output.write(refPrefix);
@@ -1227,7 +1244,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             showType = false;
         }
         final int len = array.length;  // Direct access - no reflection needed
-        boolean referenced = objsReferenced.containsKey(array);
+        boolean referenced = cycleSupport && objsReferenced.containsKey(array);
         boolean typeWritten = showType && !(arrayType.equals(Object[].class));
         final Writer output = this.out;
 
@@ -1303,7 +1320,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             showType = false;
         }
         final int len = ArrayUtilities.getLength(array);
-        boolean referenced = objsReferenced.containsKey(array);
+        boolean referenced = cycleSupport && objsReferenced.containsKey(array);
         boolean typeWritten = showType;  // Primitive arrays are never Object[], type always written when showType
         final Writer output = this.out;
 
@@ -1441,7 +1458,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             showType = false;
         }
         final Writer output = this.out;
-        boolean referenced = this.objsReferenced.containsKey(col);
+        boolean referenced = cycleSupport && this.objsReferenced.containsKey(col);
         boolean isEmpty = col.isEmpty();
 
         if (referenced || showType) {
@@ -1854,7 +1871,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private boolean adjustIfReferenced(JsonObject jObj) {
-        int idx = objsReferenced.get(jObj);  // Returns 0 if not found
+        int idx = cycleSupport ? objsReferenced.get(jObj) : 0;  // Returns 0 if not found
         if (!jObj.hasId() && idx > 0) {   // Referenced object that needs an ID copied to it.
             jObj.id = idx;
         }
@@ -1879,7 +1896,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             showType = false;
         }
         final Writer output = this.out;
-        boolean referenced = this.objsReferenced.containsKey(map);
+        boolean referenced = cycleSupport && this.objsReferenced.containsKey(map);
 
         output.write('{');
         tabIn();
@@ -1949,7 +1966,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             return false;
         }
 
-        boolean referenced = this.objsReferenced.containsKey(map);
+        boolean referenced = cycleSupport && this.objsReferenced.containsKey(map);
 
         out.write('{');
         tabIn();
@@ -2101,7 +2118,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         out.write('{');
         tabIn();
 
-        boolean referenced = this.objsReferenced.containsKey(enumSet);
+        boolean referenced = cycleSupport && this.objsReferenced.containsKey(enumSet);
         if (referenced) {
             writeId(getIdInt(enumSet));
             out.write(',');
@@ -2212,7 +2229,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             showType = false;
         }
         final Writer output = this.out;
-        final boolean referenced = this.objsReferenced.containsKey(obj);
+        final boolean referenced = cycleSupport && this.objsReferenced.containsKey(obj);
         if (!bodyOnly) {
             output.write('{');
             tabIn();
@@ -2401,6 +2418,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * For other objects, looks up in objsReferenced map.
      */
     private int getIdInt(Object o) {
+        if (!cycleSupport) {
+            return 0;
+        }
         if (o instanceof JsonObject) {
             int id = ((JsonObject) o).id;
             if (id > 0) {

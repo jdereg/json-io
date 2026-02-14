@@ -163,38 +163,6 @@ public class ObjectResolver extends Resolver
     }
 
     /**
-     * Coerce a Long value to the target numeric type.
-     */
-    private static Object coerceLong(long longVal, Class<?> targetType) {
-        if (targetType == int.class || targetType == Integer.class) {
-            return (int) longVal;
-        } else if (targetType == double.class || targetType == Double.class) {
-            return (double) longVal;
-        } else if (targetType == byte.class || targetType == Byte.class) {
-            return (byte) longVal;
-        } else if (targetType == float.class || targetType == Float.class) {
-            return (float) longVal;
-        } else if (targetType == short.class || targetType == Short.class) {
-            return (short) longVal;
-        }
-        return null;
-    }
-
-    /**
-     * Coerce a Double value to the target numeric type.
-     */
-    private static Object coerceDouble(double doubleVal, Class<?> targetType) {
-        if (targetType == float.class || targetType == Float.class) {
-            return (float) doubleVal;
-        } else if (targetType == long.class || targetType == Long.class) {
-            return (long) doubleVal;
-        } else if (targetType == int.class || targetType == Integer.class) {
-            return (int) doubleVal;
-        }
-        return null;
-    }
-
-    /**
      * Handle assignment of an Object[] RHS to a field.
      * Wraps the array in a JsonObject, preserves generic type info, and queues for traversal.
      * This handles both array fields (String[]) and collection fields (List&lt;String&gt;).
@@ -402,11 +370,15 @@ public class ObjectResolver extends Resolver
                     injector.inject(target, rhs);
                     return;
                 }
-                // 3b. FAST PRIMITIVE COERCION - Long→int, Double→float, etc.
-                Object coerced = fastPrimitiveCoercion(rhs, rhsClass, rawType);
-                if (coerced != null) {
-                    injector.inject(target, coerced);
-                    return;
+                // 3b. FAST NUMERIC INJECTION - Long→int, Double→float, etc.
+                if (rhsClass == Long.class) {
+                    if (injector.injectLong(target, (Long) rhs)) {
+                        return;
+                    }
+                } else if (rhsClass == Double.class) {
+                    if (injector.injectDouble(target, (Double) rhs)) {
+                        return;
+                    }
                 }
                 // 4. CONVERTER - scalar-to-scalar conversion for simple types
                 if (isSimpleType(rawType) && converter.isSimpleTypeConversionSupported(rhsClass, rawType)) {

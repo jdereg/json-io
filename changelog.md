@@ -1,6 +1,11 @@
 ### Revision History
 
 #### 4.94.0 - 2026-02-14
+* **PERFORMANCE**: Added thread-local buffer recycling in `JsonIo` String-based JSON paths:
+  * `toJson(Object, WriteOptions)` now reuses `FastByteArrayOutputStream` and `FastWriter` buffers.
+  * `toJava(String, ...)` and `toJava(InputStream, ...)` builder paths now reuse `FastReader` char/pushback buffers.
+  This removes repeated stream/buffer construction churn in benchmark loops and reduces allocation pressure.
+* **PERFORMANCE**: `JsonWriter` now consistently honors `cycleSupport(false)` by bypassing `objsReferenced` / `@id` lookup work across write hot paths (object/map/collection/array/custom writer) while retaining lightweight visited-marker guarding to prevent infinite recursion on accidental cyclic input.
 * **PERFORMANCE**: Added cached write-field planning (`WriteFieldPlan`) in `WriteOptionsBuilder` and switched `JsonWriter` object/enum/trace field loops to use precomputed per-class metadata (serialized key literal, declared container generic types, and trace-skip hints), reducing repeated reflection/generic analysis in hot paths.
 * **PERFORMANCE**: Added cached read injector planning (`InjectorPlan`) in `ReadOptionsBuilder` and wired `ObjectResolver`/`Resolver` field lookup paths to use it, reducing repeated map resolution overhead during traversal and unresolved-reference patching.
 * **PERFORMANCE**: `Accessor.retrieve()` now uses sticky fallback flags for lambda/VarHandle/MethodHandle paths; once an optimized path fails, it is bypassed on subsequent calls instead of repeatedly throwing/falling back.

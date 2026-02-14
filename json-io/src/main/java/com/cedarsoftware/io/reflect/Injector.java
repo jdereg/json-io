@@ -118,6 +118,15 @@ public class Injector {
     private final Class<?> fieldType;
     private final Class<?> assignmentType;
     private final String fieldName;
+    private final int fieldNumericKind;
+
+    private static final int NUM_NONE = 0;
+    private static final int NUM_INT = 1;
+    private static final int NUM_DOUBLE = 2;
+    private static final int NUM_BYTE = 3;
+    private static final int NUM_FLOAT = 4;
+    private static final int NUM_SHORT = 5;
+    private static final int NUM_LONG = 6;
 
     // Constructor for MethodHandle injection
     private Injector(Field field, MethodHandle handle, String uniqueFieldName, String displayName) {
@@ -130,6 +139,7 @@ public class Injector {
         // Cache values for performance
         this.fieldType = field.getType();
         this.assignmentType = this.fieldType.isPrimitive() ? primitiveWrapper(this.fieldType) : this.fieldType;
+        this.fieldNumericKind = numericKind(this.fieldType);
         this.fieldName = field.getName();
     }
 
@@ -143,6 +153,7 @@ public class Injector {
         // Cache values for performance
         this.fieldType = field.getType();
         this.assignmentType = this.fieldType.isPrimitive() ? primitiveWrapper(this.fieldType) : this.fieldType;
+        this.fieldNumericKind = numericKind(this.fieldType);
         this.fieldName = field.getName();
     }
 
@@ -157,6 +168,7 @@ public class Injector {
         // Cache values for performance
         this.fieldType = field.getType();
         this.assignmentType = this.fieldType.isPrimitive() ? primitiveWrapper(this.fieldType) : this.fieldType;
+        this.fieldNumericKind = numericKind(this.fieldType);
         this.fieldName = field.getName();
     }
 
@@ -172,6 +184,7 @@ public class Injector {
         // Cache values for performance
         this.fieldType = field.getType();
         this.assignmentType = this.fieldType.isPrimitive() ? primitiveWrapper(this.fieldType) : this.fieldType;
+        this.fieldNumericKind = numericKind(this.fieldType);
         this.fieldName = field.getName();
     }
 
@@ -392,6 +405,72 @@ public class Injector {
         }
     }
 
+    public boolean injectLong(Object object, long value) {
+        if (object == null) {
+            throw new JsonIoException("Attempting to set field: " + fieldName + " on null object.");
+        }
+
+        try {
+            switch (fieldNumericKind) {
+                case NUM_LONG:
+                    injectAsLong(object, value);
+                    return true;
+                case NUM_INT:
+                    injectAsInt(object, (int) value);
+                    return true;
+                case NUM_SHORT:
+                    injectAsShort(object, (short) value);
+                    return true;
+                case NUM_BYTE:
+                    injectAsByte(object, (byte) value);
+                    return true;
+                case NUM_FLOAT:
+                    injectAsFloat(object, (float) value);
+                    return true;
+                case NUM_DOUBLE:
+                    injectAsDouble(object, (double) value);
+                    return true;
+                default:
+                    return false;
+            }
+        } catch (Throwable t) {
+            if (t instanceof JsonIoException) {
+                throw (JsonIoException) t;
+            }
+            throw new JsonIoException("Unable to set field: " + fieldName + " using " + displayName, t);
+        }
+    }
+
+    public boolean injectDouble(Object object, double value) {
+        if (object == null) {
+            throw new JsonIoException("Attempting to set field: " + fieldName + " on null object.");
+        }
+
+        try {
+            switch (fieldNumericKind) {
+                case NUM_DOUBLE:
+                    injectAsDouble(object, value);
+                    return true;
+                case NUM_FLOAT:
+                    injectAsFloat(object, (float) value);
+                    return true;
+                case NUM_LONG:
+                    injectAsLong(object, (long) value);
+                    return true;
+                case NUM_INT:
+                    injectAsInt(object, (int) value);
+                    return true;
+                default:
+                    return false;
+            }
+        } catch (Throwable t) {
+            if (t instanceof JsonIoException) {
+                throw (JsonIoException) t;
+            }
+            throw new JsonIoException("Unable to set field: " + fieldName + " using " + displayName, t);
+        }
+    }
+
     private boolean requiresPreConversion(Object value) {
         return value != null && !assignmentType.isInstance(value);
     }
@@ -406,6 +485,112 @@ public class Injector {
         } else {
             injector.invoke(object, value);
         }
+    }
+
+    private void injectAsLong(Object object, long value) throws Throwable {
+        if (fieldType == long.class) {
+            if (useFieldSet) {
+                field.setLong(object, value);
+            } else if (injector != null) {
+                injector.invoke(object, value);
+            } else if (varHandle != null) {
+                injectWithVarHandle(object, value);
+            } else {
+                consumer.accept(object, value);
+            }
+        } else {
+            injectDirect(object, value);
+        }
+    }
+
+    private void injectAsInt(Object object, int value) throws Throwable {
+        if (fieldType == int.class) {
+            if (useFieldSet) {
+                field.setInt(object, value);
+            } else if (injector != null) {
+                injector.invoke(object, value);
+            } else if (varHandle != null) {
+                injectWithVarHandle(object, value);
+            } else {
+                consumer.accept(object, value);
+            }
+        } else {
+            injectDirect(object, value);
+        }
+    }
+
+    private void injectAsShort(Object object, short value) throws Throwable {
+        if (fieldType == short.class) {
+            if (useFieldSet) {
+                field.setShort(object, value);
+            } else if (injector != null) {
+                injector.invoke(object, value);
+            } else if (varHandle != null) {
+                injectWithVarHandle(object, value);
+            } else {
+                consumer.accept(object, value);
+            }
+        } else {
+            injectDirect(object, value);
+        }
+    }
+
+    private void injectAsByte(Object object, byte value) throws Throwable {
+        if (fieldType == byte.class) {
+            if (useFieldSet) {
+                field.setByte(object, value);
+            } else if (injector != null) {
+                injector.invoke(object, value);
+            } else if (varHandle != null) {
+                injectWithVarHandle(object, value);
+            } else {
+                consumer.accept(object, value);
+            }
+        } else {
+            injectDirect(object, value);
+        }
+    }
+
+    private void injectAsFloat(Object object, float value) throws Throwable {
+        if (fieldType == float.class) {
+            if (useFieldSet) {
+                field.setFloat(object, value);
+            } else if (injector != null) {
+                injector.invoke(object, value);
+            } else if (varHandle != null) {
+                injectWithVarHandle(object, value);
+            } else {
+                consumer.accept(object, value);
+            }
+        } else {
+            injectDirect(object, value);
+        }
+    }
+
+    private void injectAsDouble(Object object, double value) throws Throwable {
+        if (fieldType == double.class) {
+            if (useFieldSet) {
+                field.setDouble(object, value);
+            } else if (injector != null) {
+                injector.invoke(object, value);
+            } else if (varHandle != null) {
+                injectWithVarHandle(object, value);
+            } else {
+                consumer.accept(object, value);
+            }
+        } else {
+            injectDirect(object, value);
+        }
+    }
+
+    private static int numericKind(Class<?> type) {
+        if (type == int.class || type == Integer.class) return NUM_INT;
+        if (type == double.class || type == Double.class) return NUM_DOUBLE;
+        if (type == byte.class || type == Byte.class) return NUM_BYTE;
+        if (type == float.class || type == Float.class) return NUM_FLOAT;
+        if (type == short.class || type == Short.class) return NUM_SHORT;
+        if (type == long.class || type == Long.class) return NUM_LONG;
+        return NUM_NONE;
     }
 
     private static Class<?> primitiveWrapper(Class<?> primitiveType) {
