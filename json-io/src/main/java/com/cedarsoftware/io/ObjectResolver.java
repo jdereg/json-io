@@ -427,7 +427,7 @@ public class ObjectResolver extends Resolver
                     }
                 }
                 // 4. CONVERTER - scalar-to-scalar conversion for simple types
-                if (isSimpleType(rawType) && converter.isSimpleTypeConversionSupported(rhsClass, rawType)) {
+                if (isSimpleType(rawType) && converter.isConversionSupportedFor(rhsClass, rawType)) {
                     injector.inject(target, converter.convert(rhs, rawType));
                     return;
                 }
