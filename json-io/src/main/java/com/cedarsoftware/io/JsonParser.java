@@ -308,7 +308,7 @@ class JsonParser {
             // Fast path for regular fields (95%+ of fields don't start with '@')
             // Note: length check MUST come first for short-circuit evaluation (empty field names are valid JSON)
             if (field.length() == 0 || field.charAt(0) != '@') {
-                jObj.put(field, value);
+                jObj.appendFieldForParser(field, value);
             } else {
                 // Process special meta fields (@type, @id, @ref, etc.)
                 // Use StringUtilities.equals() for CharSequence comparison with String constants
@@ -331,7 +331,7 @@ class JsonParser {
                     // Legacy support (@enum was used to indicate EnumSet in prior versions)
                     loadEnum(value, jObj);
                 } else {
-                    jObj.put(field, value); // Store unrecognized @-prefixed fields
+                    jObj.appendFieldForParser(field, value); // Store unrecognized @-prefixed fields
                 }
             }
 

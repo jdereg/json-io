@@ -1,6 +1,7 @@
 ### Revision History
 
 #### 4.94.0 - 2026-02-14
+* **PERFORMANCE**: `JsonParser` now uses a parser-only `JsonObject.appendFieldForParser()` fast path for object field insertion, avoiding `JsonObject.put()` duplicate-key search (`indexOf`) on the common unique-key path. This reduces parse-time key insertion overhead and shifts work from linear duplicate checks to direct append.
 * **PERFORMANCE**: Added thread-local buffer recycling in `JsonIo` String-based JSON paths:
   * `toJson(Object, WriteOptions)` now reuses `FastByteArrayOutputStream` and `FastWriter` buffers.
   * `toJava(String, ...)` and `toJava(InputStream, ...)` builder paths now reuse `FastReader` char/pushback buffers.
