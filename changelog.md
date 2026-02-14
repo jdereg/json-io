@@ -1,6 +1,10 @@
 ### Revision History
 
 #### 4.94.0 - 2026-02-14
+* **PERFORMANCE**: Added cached write-field planning (`WriteFieldPlan`) in `WriteOptionsBuilder` and switched `JsonWriter` object/enum/trace field loops to use precomputed per-class metadata (serialized key literal, declared container generic types, and trace-skip hints), reducing repeated reflection/generic analysis in hot paths.
+* **PERFORMANCE**: Added cached read injector planning (`InjectorPlan`) in `ReadOptionsBuilder` and wired `ObjectResolver`/`Resolver` field lookup paths to use it, reducing repeated map resolution overhead during traversal and unresolved-reference patching.
+* **PERFORMANCE**: `Accessor.retrieve()` now uses sticky fallback flags for lambda/VarHandle/MethodHandle paths; once an optimized path fails, it is bypassed on subsequent calls instead of repeatedly throwing/falling back.
+* **PERFORMANCE**: `Injector.inject()` now applies assignability-based pre-conversion before reflective set/invoke, reducing exception-driven control flow in hot assignment paths while preserving fallback conversion behavior.
 * **BUG FIX / PERFORMANCE**: `ObjectResolver` generic inference now runs incrementally (on-demand) and no longer relies on the deep `markUntypedObjects()` pre-pass. This reduces upfront traversal work while preserving nested generic correctness across parameterized object fields, collections, and maps.
 * **BUG FIX**: `ObjectResolver` map generic typing now preserves and applies both key and value generic types during traversal, fixing cases where complex map keys/values could remain as `JsonObject` instead of resolving to target types.
 * **CLEANUP**: Removed legacy pre-pass code path and associated temporary API toggles (`ReadOptions.useLegacyMarkUntypedObjectsPrepass()` and `ReadOptionsBuilder.useLegacyMarkUntypedObjectsPrepass(boolean)`).

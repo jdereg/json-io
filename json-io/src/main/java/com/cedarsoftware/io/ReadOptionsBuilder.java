@@ -1618,6 +1618,7 @@ public class ReadOptionsBuilder {
 
         // Runtime cache (not feature options)
         private final Map<Class<?>, JsonClassReader> readerCache = new ClassValueMap<>();
+        private final Map<Class<?>, InjectorPlan> injectorPlanCache = new ClassValueMap<>();
         private final ClassFactory throwableFactory = new ThrowableFactory();
         private final ClassFactory enumFactory = new EnumClassFactory();
         private static final ClassFactory recordFactory = new RecordFactory();
@@ -2004,8 +2005,21 @@ public class ReadOptionsBuilder {
             return injectors;
         }
 
+        InjectorPlan getInjectorPlan(Class<?> classToTraverse) {
+            if (classToTraverse == null) {
+                return InjectorPlan.EMPTY;
+            }
+            InjectorPlan plan = injectorPlanCache.get(classToTraverse);
+            if (plan == null) {
+                plan = new InjectorPlan(getDeepInjectorMap(classToTraverse));
+                injectorPlanCache.put(classToTraverse, plan);
+            }
+            return plan;
+        }
+
         public void clearCaches() {
             injectorsCache.clear();
+            injectorPlanCache.clear();
         }
 
         private Map<String, Injector> buildInjectors(Class<?> c) {
@@ -2258,5 +2272,26 @@ public class ReadOptionsBuilder {
                 addPermanentNonStandardSetter(clazz, stringEntry.getKey(), stringEntry.getValue());
             }
         }
+    }
+
+    static InjectorPlan getInjectorPlan(ReadOptions options, Class<?> clazz) {
+        if (options instanceof DefaultReadOptions) {
+            return ((DefaultReadOptions) options).getInjectorPlan(clazz);
+        }
+        return new InjectorPlan(options.getDeepInjectorMap(clazz));
+    }
+
+    static final class InjectorPlan {
+        private static final InjectorPlan EMPTY = new InjectorPlan(Collections.emptyMap());
+        private final Map<String, Injector> injectorsByName;
+
+        InjectorPlan(Map<String, Injector> injectorsByName) {
+            this.injectorsByName = injectorsByName;
+        }
+
+        Injector get(String fieldName) {
+            return injectorsByName.get(fieldName);
+        }
+
     }
 }

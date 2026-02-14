@@ -100,6 +100,9 @@ public class Accessor {
     private final Object varHandle;  // For JDK 17+ VarHandle-based access
     private final boolean isPublic;
     private Function<Object, Object> function;  // LambdaMetafactory-generated fast getter (JIT-inlinable)
+    private volatile boolean functionFailed;
+    private volatile boolean varHandleFailed;
+    private volatile boolean methodHandleFailed;
 
     // Private constructor for MethodHandle-based access
     private Accessor(Field field, MethodHandle methodHandle, String uniqueFieldName, String fieldOrMethodName, boolean isPublic, boolean isMethod) {
@@ -281,27 +284,29 @@ public class Accessor {
 
         try {
             // LambdaMetafactory path: JIT-inlinable, near-direct field access speed
-            if (function != null) {
-                return function.apply(o);
+            if (function != null && !functionFailed) {
+                try {
+                    return function.apply(o);
+                } catch (Throwable t) {
+                    functionFailed = true;
+                }
             }
 
             // Try VarHandle (JDK 17+ fallback for final fields)
-            if (varHandle != null) {
+            if (varHandle != null && !varHandleFailed) {
                 try {
                     return VAR_HANDLE_GET_METHOD.invoke(varHandle, o);
                 } catch (Throwable t) {
-                    // Fallback to field.get() if VarHandle fails
-                    return field.get(o);
+                    varHandleFailed = true;
                 }
             }
 
             // Try MethodHandle (JDK 8-16 or method accessor)
-            if (methodHandle != null) {
+            if (methodHandle != null && !methodHandleFailed) {
                 try {
                     return methodHandle.invoke(o);
                 } catch (Throwable t) {
-                    // Fallback to field.get() if MethodHandle fails
-                    return field.get(o);
+                    methodHandleFailed = true;
                 }
             }
 

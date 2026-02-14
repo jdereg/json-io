@@ -2,6 +2,10 @@ package com.cedarsoftware.io;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.io.IOException;
+import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -36,6 +40,7 @@ import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.LRUCache;
 import com.cedarsoftware.util.ReflectionUtils;
 import com.cedarsoftware.util.StringUtilities;
+import com.cedarsoftware.util.TypeUtilities;
 import com.cedarsoftware.util.LoggingConfig;
 import com.cedarsoftware.util.convert.CommonValues;
 import com.cedarsoftware.util.convert.Convert;
@@ -1632,6 +1637,7 @@ public class WriteOptionsBuilder {
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
         private Map<Class<?>, List<Accessor>> accessorsCache = new ClassValueMap<>();
+        private Map<Class<?>, List<WriteFieldPlan>> writeFieldPlanCache = new ClassValueMap<>();
         private Map<Class<?>, Map<String, Field>> classMetaCache = new ClassValueMap<>();
 
         // Cache for isNonReferenceableClass() result - avoids repeated hierarchy checks for POJOs
@@ -1735,6 +1741,15 @@ public class WriteOptionsBuilder {
                 accessorsCache.put(c, accessors);
             }
             return accessors;
+        }
+
+        List<WriteFieldPlan> getWriteFieldPlansForClass(final Class<?> c) {
+            List<WriteFieldPlan> plans = writeFieldPlanCache.get(c);
+            if (plans == null) {
+                plans = buildWriteFieldPlans(c);
+                writeFieldPlanCache.put(c, plans);
+            }
+            return plans;
         }
 
         /**
@@ -2028,6 +2043,16 @@ public class WriteOptionsBuilder {
         public void clearCaches() {
             classMetaCache.clear();
             accessorsCache.clear();
+            writeFieldPlanCache.clear();
+        }
+
+        private List<WriteFieldPlan> buildWriteFieldPlans(final Class<?> clazz) {
+            final List<Accessor> accessors = getAccessorsForClass(clazz);
+            final List<WriteFieldPlan> plans = new ArrayList<>(accessors.size());
+            for (Accessor accessor : accessors) {
+                plans.add(WriteFieldPlan.create(accessor, this));
+            }
+            return Collections.unmodifiableList(plans);
         }
 
         private List<Accessor> buildDeepAccessors(final Class<?> clazz) {
@@ -2240,6 +2265,150 @@ public class WriteOptionsBuilder {
             for (Map.Entry<String, String> fieldToAltName : pairingsMap.entrySet()) {
                 addPermanentNonStandardGetter(clazz, fieldToAltName.getKey(), fieldToAltName.getValue());
             }
+        }
+    }
+
+    static List<WriteFieldPlan> getWriteFieldPlans(WriteOptions options, Class<?> clazz) {
+        if (options instanceof DefaultWriteOptions) {
+            return ((DefaultWriteOptions) options).getWriteFieldPlansForClass(clazz);
+        }
+        List<Accessor> accessors = options.getAccessorsForClass(clazz);
+        List<WriteFieldPlan> plans = new ArrayList<>(accessors.size());
+        for (Accessor accessor : accessors) {
+            plans.add(WriteFieldPlan.create(accessor, options));
+        }
+        return plans;
+    }
+
+    static final class WriteFieldPlan {
+        private final Accessor accessor;
+        private final String fieldName;
+        private final String serializedKey;
+        private final Class<?> declaredFieldType;
+        private final Class<?> declaredElementType;
+        private final Class<?> declaredKeyType;
+        private final boolean enumPublicOnlySkipCandidate;
+        private final boolean applyDeclaredContainerTypes;
+        private final boolean skipReferenceTrace;
+
+        private WriteFieldPlan(Accessor accessor, String fieldName, String serializedKey, Class<?> declaredFieldType,
+                               Class<?> declaredElementType, Class<?> declaredKeyType,
+                               boolean enumPublicOnlySkipCandidate, boolean applyDeclaredContainerTypes,
+                               boolean skipReferenceTrace) {
+            this.accessor = accessor;
+            this.fieldName = fieldName;
+            this.serializedKey = serializedKey;
+            this.declaredFieldType = declaredFieldType;
+            this.declaredElementType = declaredElementType;
+            this.declaredKeyType = declaredKeyType;
+            this.enumPublicOnlySkipCandidate = enumPublicOnlySkipCandidate;
+            this.applyDeclaredContainerTypes = applyDeclaredContainerTypes;
+            this.skipReferenceTrace = skipReferenceTrace;
+        }
+
+        static WriteFieldPlan create(Accessor accessor, WriteOptions options) {
+            String fieldName = accessor.getUniqueFieldName();
+            String keyLiteral = buildKeyLiteral(fieldName, options);
+            Class<?> fieldType = accessor.getFieldType();
+            Class<?> elementType = null;
+            Class<?> keyType = null;
+            boolean applyContainerTypes = false;
+            Class<?> declaringClass = accessor.getDeclaringClass();
+
+            if ((Collection.class.isAssignableFrom(fieldType) || Map.class.isAssignableFrom(fieldType))
+                    && !Throwable.class.isAssignableFrom(declaringClass)) {
+                Type genericType = accessor.getGenericType();
+                if (genericType != null) {
+                    if (Map.class.isAssignableFrom(fieldType) && genericType instanceof ParameterizedType) {
+                        Type[] typeArgs = ((ParameterizedType) genericType).getActualTypeArguments();
+                        if (typeArgs.length >= 1 && typeArgs[0] instanceof Class) {
+                            keyType = (Class<?>) typeArgs[0];
+                        }
+                    }
+                    Type inferred = TypeUtilities.inferElementType(genericType, null);
+                    if (inferred instanceof Class) {
+                        elementType = (Class<?>) inferred;
+                    }
+                    applyContainerTypes = keyType != null || elementType != null;
+                }
+            }
+
+            boolean enumSkip = Enum.class.isAssignableFrom(declaringClass) && !accessor.isPublic();
+            boolean skipTrace = fieldType.isPrimitive()
+                    || (Modifier.isFinal(fieldType.getModifiers()) && options.isNonReferenceableClass(fieldType));
+
+            return new WriteFieldPlan(accessor, fieldName, keyLiteral, fieldType, elementType, keyType,
+                    enumSkip, applyContainerTypes, skipTrace);
+        }
+
+        private static String buildKeyLiteral(String fieldName, WriteOptions options) {
+            if (options.isJson5UnquotedKeys() && isValidJson5Identifier(fieldName)) {
+                return fieldName + ':';
+            }
+            try {
+                StringWriter sw = new StringWriter(fieldName.length() + 8);
+                JsonWriter.writeJsonUtf8String(sw, fieldName, options.getMaxStringLength());
+                sw.write(':');
+                return sw.toString();
+            } catch (IOException e) {
+                throw new JsonIoException("Unable to precompute JSON key literal for field: " + fieldName, e);
+            }
+        }
+
+        private static boolean isValidJson5Identifier(String name) {
+            if (name == null || name.isEmpty()) {
+                return false;
+            }
+            char first = name.charAt(0);
+            if (!isIdentifierStart(first)) {
+                return false;
+            }
+            for (int i = 1; i < name.length(); i++) {
+                if (!isIdentifierPart(name.charAt(i))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private static boolean isIdentifierStart(char c) {
+            return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '$';
+        }
+
+        private static boolean isIdentifierPart(char c) {
+            return isIdentifierStart(c) || (c >= '0' && c <= '9');
+        }
+
+        Accessor accessor() {
+            return accessor;
+        }
+
+        String serializedKey() {
+            return serializedKey;
+        }
+
+        Class<?> declaredFieldType() {
+            return declaredFieldType;
+        }
+
+        Class<?> declaredElementType() {
+            return declaredElementType;
+        }
+
+        Class<?> declaredKeyType() {
+            return declaredKeyType;
+        }
+
+        boolean enumPublicOnlySkipCandidate() {
+            return enumPublicOnlySkipCandidate;
+        }
+
+        boolean applyDeclaredContainerTypes() {
+            return applyDeclaredContainerTypes;
+        }
+
+        boolean skipReferenceTrace() {
+            return skipReferenceTrace;
         }
     }
 }

@@ -116,6 +116,7 @@ public class Injector {
 
     // Cached values for performance - computed once at construction
     private final Class<?> fieldType;
+    private final Class<?> assignmentType;
     private final String fieldName;
 
     // Constructor for MethodHandle injection
@@ -128,6 +129,7 @@ public class Injector {
 
         // Cache values for performance
         this.fieldType = field.getType();
+        this.assignmentType = this.fieldType.isPrimitive() ? primitiveWrapper(this.fieldType) : this.fieldType;
         this.fieldName = field.getName();
     }
 
@@ -140,6 +142,7 @@ public class Injector {
 
         // Cache values for performance
         this.fieldType = field.getType();
+        this.assignmentType = this.fieldType.isPrimitive() ? primitiveWrapper(this.fieldType) : this.fieldType;
         this.fieldName = field.getName();
     }
 
@@ -153,6 +156,7 @@ public class Injector {
 
         // Cache values for performance
         this.fieldType = field.getType();
+        this.assignmentType = this.fieldType.isPrimitive() ? primitiveWrapper(this.fieldType) : this.fieldType;
         this.fieldName = field.getName();
     }
 
@@ -167,6 +171,7 @@ public class Injector {
 
         // Cache values for performance
         this.fieldType = field.getType();
+        this.assignmentType = this.fieldType.isPrimitive() ? primitiveWrapper(this.fieldType) : this.fieldType;
         this.fieldName = field.getName();
     }
 
@@ -361,36 +366,21 @@ public class Injector {
             throw new JsonIoException("Attempting to set field: " + fieldName + " on null object.");
         }
 
+        Object valueToInject = value;
+        if (requiresPreConversion(value)) {
+            valueToInject = Converter.convert(value, fieldType);
+        }
+
         try {
-            if (consumer != null) {
-                // LambdaMetafactory path: JIT-inlinable, near-direct field access speed
-                consumer.accept(object, value);
-            } else if (varHandle != null) {
-                // Use VarHandle-based injection if available (JDK 17+)
-                injectWithVarHandle(object, value);
-            } else if (useFieldSet) {
-                // For JDK 8-16, fallback to using Field.set()
-                field.set(object, value);
-            } else {
-                // Otherwise, use the MethodHandle-based injection.
-                injector.invoke(object, value);
-            }
+            injectDirect(object, valueToInject);
         } catch (ClassCastException e) {
             String msg = e.getMessage();
             if (StringUtilities.hasContent(msg) && msg.contains("LinkedHashMap")) {
                 throw new JsonIoException("Unable to set field: " + fieldName + " using " + displayName + ".", e);
             }
             try {
-                Object convertedValue = Converter.convert(value, fieldType);
-                if (consumer != null) {
-                    consumer.accept(object, convertedValue);
-                } else if (varHandle != null) {
-                    injectWithVarHandle(object, convertedValue);
-                } else if (useFieldSet) {
-                    field.set(object, convertedValue);
-                } else {
-                    injector.invoke(object, convertedValue);
-                }
+                Object convertedValue = Converter.convert(valueToInject, fieldType);
+                injectDirect(object, convertedValue);
             } catch (Throwable t) {
                 throw new JsonIoException("Unable to set field: " + fieldName + " using " + displayName + ". Getting a ClassCastException.", e);
             }
@@ -400,6 +390,34 @@ public class Injector {
             }
             throw new JsonIoException("Unable to set field: " + fieldName + " using " + displayName, t);
         }
+    }
+
+    private boolean requiresPreConversion(Object value) {
+        return value != null && !assignmentType.isInstance(value);
+    }
+
+    private void injectDirect(Object object, Object value) throws Throwable {
+        if (consumer != null) {
+            consumer.accept(object, value);
+        } else if (varHandle != null) {
+            injectWithVarHandle(object, value);
+        } else if (useFieldSet) {
+            field.set(object, value);
+        } else {
+            injector.invoke(object, value);
+        }
+    }
+
+    private static Class<?> primitiveWrapper(Class<?> primitiveType) {
+        if (primitiveType == int.class) return Integer.class;
+        if (primitiveType == long.class) return Long.class;
+        if (primitiveType == short.class) return Short.class;
+        if (primitiveType == byte.class) return Byte.class;
+        if (primitiveType == boolean.class) return Boolean.class;
+        if (primitiveType == char.class) return Character.class;
+        if (primitiveType == float.class) return Float.class;
+        if (primitiveType == double.class) return Double.class;
+        return Void.class;
     }
 
     private void injectWithVarHandle(Object object, Object value) throws Throwable {

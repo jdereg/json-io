@@ -1361,9 +1361,8 @@ public abstract class Resolver {
                 }
             } else {    // Fix field forward reference
                 // ReadOptions.getDeepInjectorMap() already caches via ClassValueMap - no local cache needed
-                Map<String, Injector> injectors = readOptions.getDeepInjectorMap(objToFix.getClass());
-
-                Injector injector = injectors.get(ref.field);
+                ReadOptionsBuilder.InjectorPlan plan = ReadOptionsBuilder.getInjectorPlan(readOptions, objToFix.getClass());
+                Injector injector = plan.get(ref.field);
                 if (injector != null) {
                     try {
                         injector.inject(objToFix, referencedTarget);

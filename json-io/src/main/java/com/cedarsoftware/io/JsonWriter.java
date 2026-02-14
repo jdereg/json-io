@@ -69,6 +69,7 @@ import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 import com.cedarsoftware.io.reflect.Accessor;
+import com.cedarsoftware.io.WriteOptionsBuilder.WriteFieldPlan;
 import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.CompactMap;
@@ -952,12 +953,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * @param depth       Current depth in the object graph
      */
     protected void processFields(final Deque<Object> objectStack, final Object obj, int depth) {
-        // If caller has special Field specifier for a given class
-        // then use it, otherwise use reflection.
-        Collection<Accessor> fields = writeOptions.getAccessorsForClass(obj.getClass());
-
-        for (final Accessor accessor : fields) {
-            final Object o = accessor.retrieve(obj);
+        List<WriteFieldPlan> fields = WriteOptionsBuilder.getWriteFieldPlans(writeOptions, obj.getClass());
+        for (WriteFieldPlan fieldPlan : fields) {
+            if (fieldPlan.skipReferenceTrace()) {
+                continue;
+            }
+            final Object o = fieldPlan.accessor().retrieve(obj);
             if (o != null) {   // Trace through objects that can reference other objects
                 objectStack.addFirst(o);
                 pushDepth(depth);
@@ -2171,7 +2172,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 firstInSet = false;
 
                 // Determine whether to write the full enum object or just the name
-                Collection<Accessor> mapOfFields = writeOptions.getAccessorsForClass(e.getClass());
+                List<WriteFieldPlan> mapOfFields = WriteOptionsBuilder.getWriteFieldPlans(writeOptions, e.getClass());
                 int enumFieldsCount = mapOfFields.size();
 
                 if (enumFieldsCount <= 2) {
@@ -2181,8 +2182,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                     // Write the enum as a JSON object with its fields
                     out.write('{');
                     boolean firstInEntry = true;
-                    for (Accessor f : mapOfFields) {
-                        firstInEntry = writeField(e, firstInEntry, f.getUniqueFieldName(), f);
+                    for (WriteFieldPlan plan : mapOfFields) {
+                        firstInEntry = writeField(e, firstInEntry, plan);
                     }
                     out.write('}');
                 }
@@ -2234,11 +2235,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             first = false;
         }
 
-        Collection<Accessor> accessors = writeOptions.getAccessorsForClass(obj.getClass());
-
-        for (final Accessor accessor : accessors) {
-            final String fieldName = accessor.getUniqueFieldName();
-            first = writeField(obj, first, fieldName, accessor);
+        List<WriteFieldPlan> accessors = WriteOptionsBuilder.getWriteFieldPlans(writeOptions, obj.getClass());
+        for (WriteFieldPlan plan : accessors) {
+            first = writeField(obj, first, plan);
         }
 
         if (!bodyOnly) {
@@ -2283,9 +2282,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
     }
 
-    private boolean writeField(Object obj, boolean first, String fieldName, Accessor accessor) throws IOException {
-        final Class<?> fieldDeclaringClass = accessor.getDeclaringClass();
-        if (Enum.class.isAssignableFrom(fieldDeclaringClass) && !accessor.isPublic() && writeOptions.isEnumPublicFieldsOnly()) {
+    private boolean writeField(Object obj, boolean first, WriteFieldPlan plan) throws IOException {
+        final Accessor accessor = plan.accessor();
+        if (plan.enumPublicOnlySkipCandidate() && writeOptions.isEnumPublicFieldsOnly()) {
             return first;
         }
         Object o = accessor.retrieve(obj);
@@ -2300,7 +2299,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             newLine();
         }
 
-        writeKey(fieldName);
+        output.write(plan.serializedKey());
 
         if (o == null) {    // don't quote null
             output.write("null");
@@ -2308,29 +2307,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         // check to see if type needs to be written.
-        Class<?> type = accessor.getFieldType();
-
-        // For Collection/Map fields, extract the element type from generic type to eliminate redundant @type on elements
-        // Skip this optimization for Throwables - ThrowableFactory uses ClassFactory which needs @type info
+        Class<?> type = plan.declaredFieldType();
         Class<?> savedElementType = declaredElementType;
         Class<?> savedKeyType = declaredKeyType;
         try {
-            if ((o instanceof Collection || o instanceof Map) && !Throwable.class.isAssignableFrom(fieldDeclaringClass)) {
-                Type genericType = accessor.getGenericType();
-                if (genericType != null) {
-                    // For Maps, extract both key type and value type
-                    if (o instanceof Map) {
-                        Type keyType = extractMapKeyType(genericType);
-                        if (keyType instanceof Class) {
-                            declaredKeyType = (Class<?>) keyType;
-                        }
-                    }
-                    // inferElementType returns value type for Maps, element type for Collections
-                    Type elementType = TypeUtilities.inferElementType(genericType, null);
-                    if (elementType instanceof Class) {
-                        declaredElementType = (Class<?>) elementType;
-                    }
-                }
+            if (plan.applyDeclaredContainerTypes() && (o instanceof Collection || o instanceof Map)) {
+                declaredKeyType = plan.declaredKeyType();
+                declaredElementType = plan.declaredElementType();
             }
             writeImpl(o, isForceType(o.getClass(), type));
         } finally {
@@ -2398,21 +2381,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         return true;
-    }
-
-    /**
-     * Extract the key type from a Map type (e.g., Map<Building, Person> -> Building).
-     * Used to eliminate redundant @type on Map keys when key type is known from field generics.
-     */
-    private Type extractMapKeyType(Type mapType) {
-        if (mapType instanceof java.lang.reflect.ParameterizedType) {
-            java.lang.reflect.ParameterizedType pt = (java.lang.reflect.ParameterizedType) mapType;
-            java.lang.reflect.Type[] typeArgs = pt.getActualTypeArguments();
-            if (typeArgs.length >= 1) {
-                return typeArgs[0];  // Key type is at index 0
-            }
-        }
-        return null;
     }
 
     public void flush() {

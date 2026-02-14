@@ -341,13 +341,13 @@ public class ObjectResolver extends Resolver
         }
 
         final Object javaMate = jsonObj.getTarget();
-        final Map<String, Injector> injectorMap = readOptions.getDeepInjectorMap(javaMate.getClass());
+        final ReadOptionsBuilder.InjectorPlan injectorPlan = ReadOptionsBuilder.getInjectorPlan(readOptions, javaMate.getClass());
 
         // Enhanced for-loop is more efficient than iterator for EntrySet
         // Uses cached missingFieldHandler from parent Resolver for performance
         for (Map.Entry<Object, Object> entry : jsonObj.entrySet()) {
             String key = (String) entry.getKey();
-            final Injector injector = injectorMap.get(key);
+            final Injector injector = injectorPlan.get(key);
             Object rhs = entry.getValue();
             if (injector != null) {
                 assignField(jsonObj, injector, rhs);
