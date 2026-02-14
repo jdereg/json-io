@@ -231,7 +231,7 @@ public class MapResolver extends Resolver {
                 } else {
                     push(jObj);  // Traverse nested object
                 }
-            } else if (element.getClass().isArray()) {
+            } else if (element instanceof Object[]) {
                 // Recursively traverse nested arrays inline to avoid JsonObject allocation
                 traverseArrayForRefs((Object[]) element);
             }
@@ -428,7 +428,7 @@ public class MapResolver extends Resolver {
 
         if (element instanceof JsonObject && ((JsonObject) element).isArray()) {
             jsonObject = (JsonObject) element;
-        } else if (element != null && element.getClass().isArray()) {
+        } else if (element instanceof Object[]) {
             jsonObject = new JsonObject();
             jsonObject.setItems((Object[])element);
         }
@@ -448,6 +448,9 @@ public class MapResolver extends Resolver {
             }
             // Push the JsonObject for further processing
             push(jsonObject);
+        } else if (target instanceof Object[]) {
+            // Primitive nested arrays cannot be wrapped as Object[]; keep original value.
+            ((Object[]) target)[index] = element;
         }
     }
 
@@ -479,10 +482,11 @@ public class MapResolver extends Resolver {
             }
 
             final Class<?> elementClass = element.getClass();
-            if (elementClass.isArray() || (element instanceof JsonObject && ((JsonObject) element).isArray())) {
+            final JsonObject jsonElement = element instanceof JsonObject ? (JsonObject) element : null;
+            if (elementClass.isArray() || (jsonElement != null && jsonElement.isArray())) {
                 handleNestedArray(element, componentType, target, i);
             } else {
-                processArrayElement(element, elementClass, componentType, target, refArray, i, isPrimitive);
+                processArrayElement(element, jsonElement, elementClass, componentType, target, refArray, i, isPrimitive);
             }
         }
         // Note: setFinished() already called by markFinishedIfNot() at method start
@@ -504,7 +508,7 @@ public class MapResolver extends Resolver {
     /**
      * Process a single array element that is not a nested array.
      */
-    private void processArrayElement(Object element, Class<?> elementClass, Class<?> componentType,
+    private void processArrayElement(Object element, JsonObject jsonElement, Class<?> elementClass, Class<?> componentType,
                                      Object target, Object[] refArray, int index, boolean isPrimitive) {
         // Fast path for common JSON primitive coercions
         Object fastValue = fastPrimitiveCoercion(element, elementClass, componentType);
@@ -519,8 +523,8 @@ public class MapResolver extends Resolver {
             return;
         }
 
-        if (element instanceof JsonObject) {
-            processJsonObjectArrayElement((JsonObject) element, target, refArray, index, isPrimitive);
+        if (jsonElement != null) {
+            processJsonObjectArrayElement(jsonElement, target, refArray, index, isPrimitive);
             return;
         }
 
@@ -609,10 +613,15 @@ public class MapResolver extends Resolver {
                     col.add(null);
                 } else if (isDirectlyAddableJsonValue(element)) {
                     col.add(element);
-                } else if (element.getClass().isArray()) {
+                } else if (element instanceof Object[]) {
                     wrapArrayAndAddToCollection((Object[]) element, Object[].class, col);
                 } else {
-                    processJsonObjectElement((JsonObject) element, jsonObj, col, idx, isList, isEnumSet);
+                    if (element instanceof JsonObject) {
+                        processJsonObjectElement((JsonObject) element, jsonObj, col, idx, isList, isEnumSet);
+                    } else {
+                        // Preserve non-JsonObject values in maps mode instead of hard-casting.
+                        col.add(element);
+                    }
                 }
                 idx++;
             }

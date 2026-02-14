@@ -4,7 +4,6 @@ import java.lang.reflect.Array;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.List;
@@ -520,6 +519,11 @@ public class ObjectResolver extends Resolver
                 elementType = Object.class;
             }
         }
+        final boolean hasSpecificElementType = rawElementType != null && rawElementType != Object.class;
+        final Class<?> rawNestedElementType = TypeUtilities.getRawClass(elementType);
+        final boolean nestedElementIsCollectionType = rawNestedElementType != null
+                && Collection.class.isAssignableFrom(rawNestedElementType);
+        final boolean nestedElementIsArrayType = rawNestedElementType != null && rawNestedElementType.isArray();
 
         for (Object element : items) {
             // Strategy 1: NULL - fastest check
@@ -530,6 +534,8 @@ public class ObjectResolver extends Resolver
             }
 
             final Class<?> elementClass = element.getClass();
+            final JsonObject jsonElement = element instanceof JsonObject ? (JsonObject) element : null;
+            final boolean elementIsArray = elementClass.isArray();
 
             // Strategy 2: DIRECT ASSIGN - skip expensive factory/converter if already correct type
             // This is a major optimization for collections of simple types (List<String>, Set<UUID>, etc.)
@@ -537,10 +543,9 @@ public class ObjectResolver extends Resolver
             //   - JsonObject (needs instantiation/traversal)
             //   - Object[] (nested arrays need processing)
             //   - When element type is Object (could contain anything)
-            if (rawElementType != null
-                    && rawElementType != Object.class
-                    && !(element instanceof JsonObject)
-                    && !elementClass.isArray()
+            if (hasSpecificElementType
+                    && jsonElement == null
+                    && !elementIsArray
                     && rawElementType.isAssignableFrom(elementClass)) {
                 col.add(element);
                 idx++;
@@ -548,7 +553,7 @@ public class ObjectResolver extends Resolver
             }
 
             // Strategy 3: FAST PRIMITIVE COERCION - avoid readWithFactoryIfExists overhead
-            if (rawElementType != null && rawElementType != Object.class) {
+            if (hasSpecificElementType) {
                 Object coerced = fastPrimitiveCoercion(element, elementClass, rawElementType);
                 if (coerced != null) {
                     col.add(coerced);
@@ -558,13 +563,10 @@ public class ObjectResolver extends Resolver
             }
 
             // Strategy 4: REFERENCE - check before expensive factory lookup
-            if (element instanceof JsonObject) {
-                JsonObject jObj = (JsonObject) element;
-                if (jObj.isReference()) {
-                    resolveReferenceInCollection(jObj, jsonObj, col, idx, isList);
-                    idx++;
-                    continue;
-                }
+            if (jsonElement != null && jsonElement.isReference()) {
+                resolveReferenceInCollection(jsonElement, jsonObj, col, idx, isList);
+                idx++;
+                continue;
             }
 
             // Strategy 5: FACTORY/CONVERTER - handles custom readers, converters (String→Enum, etc.)
@@ -576,15 +578,14 @@ public class ObjectResolver extends Resolver
             }
 
             // Strategy 6: NESTED ARRAY - array within collection
-            if (elementClass.isArray()) {
+            if (elementIsArray) {
                 // Determine the type for the nested array/collection.
                 // If elementType is a Collection type (e.g., List<User>), wrap as collection.
                 // If elementType is an array type (e.g., User[]), create an actual array.
-                Class<?> rawElementType2 = TypeUtilities.getRawClass(elementType);
-                if (rawElementType2 != null && Collection.class.isAssignableFrom(rawElementType2)) {
+                if (nestedElementIsCollectionType) {
                     // elementType is a Collection (e.g., List<User>), use it directly
                     wrapArrayAndAddToCollection((Object[]) element, elementType, col);
-                } else if (rawElementType2 != null && rawElementType2.isArray()) {
+                } else if (nestedElementIsArrayType) {
                     // elementType is an array type (e.g., User[]), create an actual array
                     Object arrayInstance = handleNestedArrayElement((Object[]) element, elementType);
                     col.add(arrayInstance);
@@ -601,17 +602,16 @@ public class ObjectResolver extends Resolver
             }
 
             // Strategy 7: JSONOBJECT - needs instantiation and traversal
-            if (element instanceof JsonObject) {
-                JsonObject jObj = (JsonObject) element;
+            if (jsonElement != null) {
                 // Set the element's full type to the extracted element type, but only if
                 // the element doesn't already have a type set (e.g., from markUntypedObjects()
                 // or from @type in the JSON). This enables proper type inference for nested
                 // generic types when deserializing JSON without @type markers.
-                if (jObj.getType() == null) {
-                    jObj.setType(elementType);
+                if (jsonElement.getType() == null) {
+                    jsonElement.setType(elementType);
                 }
-                createInstance(jObj);
-                addResolvedObjectToCollection(jObj, col);
+                createInstance(jsonElement);
+                addResolvedObjectToCollection(jsonElement, col);
                 idx++;
                 continue;
             }
@@ -847,6 +847,8 @@ public class ObjectResolver extends Resolver
         }
         // For operations that require a Class, extract the raw type.
         final Class<?> effectiveRawComponentType = TypeUtilities.getRawClass(effectiveComponentType);
+        final boolean hasSpecificComponentType = effectiveRawComponentType != null
+                && effectiveRawComponentType != Object.class;
 
         // Optimize: check array type ONCE, not on every element assignment
         final boolean isPrimitive = fallbackCompType.isPrimitive();
@@ -862,6 +864,8 @@ public class ObjectResolver extends Resolver
             }
 
             final Class<?> elementClass = element.getClass();
+            final JsonObject jsonElement = element instanceof JsonObject ? (JsonObject) element : null;
+            final boolean elementIsArray = elementClass.isArray();
 
             // Strategy 2: DIRECT ASSIGN - skip expensive factory/converter if already correct type
             // This is a major optimization for arrays of simple types (String[], Integer[], etc.)
@@ -869,10 +873,9 @@ public class ObjectResolver extends Resolver
             //   - JsonObject (needs instantiation/traversal)
             //   - Object[] (nested arrays need processing)
             //   - When component type is Object (could contain anything)
-            if (effectiveRawComponentType != null
-                    && effectiveRawComponentType != Object.class
-                    && !(element instanceof JsonObject)
-                    && !elementClass.isArray()
+            if (hasSpecificComponentType
+                    && jsonElement == null
+                    && !elementIsArray
                     && effectiveRawComponentType.isAssignableFrom(elementClass)) {
                 setArrayElement(array, refArray, i, element, isPrimitive);
                 continue;
@@ -881,7 +884,7 @@ public class ObjectResolver extends Resolver
             // Strategy 3: FAST PRIMITIVE COERCION - avoid readWithFactoryIfExists overhead
             // JSON only produces Long for integers and Double for decimals.
             // Convert directly to the target type without going through Converter lookup.
-            if (effectiveRawComponentType != null && effectiveRawComponentType != Object.class) {
+            if (hasSpecificComponentType) {
                 Object coerced = fastPrimitiveCoercion(element, elementClass, effectiveRawComponentType);
                 if (coerced != null) {
                     setArrayElement(array, refArray, i, coerced, isPrimitive);
@@ -890,16 +893,13 @@ public class ObjectResolver extends Resolver
             }
 
             // Strategy 4: REFERENCE - check before expensive factory lookup
-            if (element instanceof JsonObject) {
-                JsonObject jsonElement = (JsonObject) element;
-                if (jsonElement.isReference()) {
-                    Object resolved = resolveReferenceElement(jsonElement, jsonObj, i);
-                    if (resolved != UNRESOLVED_REFERENCE) {
-                        setArrayElement(array, refArray, i, resolved, isPrimitive);
-                    }
-                    // If unresolved, the helper already added it to unresolved references
-                    continue;
+            if (jsonElement != null && jsonElement.isReference()) {
+                Object resolved = resolveReferenceElement(jsonElement, jsonObj, i);
+                if (resolved != UNRESOLVED_REFERENCE) {
+                    setArrayElement(array, refArray, i, resolved, isPrimitive);
                 }
+                // If unresolved, the helper already added it to unresolved references
+                continue;
             }
 
             // Strategy 5: FACTORY/CONVERTER - handles custom readers, converters (String→Enum, etc.)
@@ -910,7 +910,7 @@ public class ObjectResolver extends Resolver
             }
 
             // Strategy 6: NESTED ARRAY - array of arrays
-            if (elementClass.isArray()) {
+            if (elementIsArray) {
                 if (char[].class == effectiveRawComponentType) {
                     setArrayElement(array, refArray, i, handleCharArrayElement((Object[]) element), isPrimitive);
                 } else {
@@ -920,8 +920,8 @@ public class ObjectResolver extends Resolver
             }
 
             // Strategy 7: JSONOBJECT - needs instantiation and traversal
-            if (element instanceof JsonObject) {
-                resolved = processJsonObjectElement((JsonObject) element, effectiveComponentType);
+            if (jsonElement != null) {
+                resolved = processJsonObjectElement(jsonElement, effectiveComponentType);
                 setArrayElement(array, refArray, i, resolved, isPrimitive);
                 continue;
             }
@@ -1157,7 +1157,7 @@ public class ObjectResolver extends Resolver
         if (Map.class.isAssignableFrom(clazz)) {
             handleMapTypeMarking(instance, typeArgs, stack);
         } else if (Collection.class.isAssignableFrom(clazz)) {
-            handleCollectionTypeMarking(instance, pType, typeArgs, clazz, stack);
+            handleCollectionTypeMarking(instance, pType, typeArgs, stack);
         } else {
             handleObjectFieldsMarking(instance, pType, typeArgs, stack);
         }
@@ -1181,10 +1181,9 @@ public class ObjectResolver extends Resolver
     private void handleCollectionTypeMarking(final Object instance,
                                               final Type containerType,
                                               final Type[] typeArgs,
-                                              final Class<?> collectionClass,
                                               final Deque<TypedItem> stack) {
         if (instance.getClass().isArray()) {
-            handleArrayInCollection(instance, containerType, collectionClass, stack);
+            handleArrayInCollection(instance, containerType, stack);
         } else if (instance instanceof Collection) {
             // OPTIMIZATION: Skip if collection items don't need field traversal
             if (shouldSkipTraversal(typeArgs[0])) {
@@ -1213,12 +1212,10 @@ public class ObjectResolver extends Resolver
      *
      * @param arrayInstance The array containing collection elements
      * @param containerType The full parameterized type of the collection (e.g., List<User>)
-     * @param collectionClass The raw collection class (e.g., List.class) - unused after refactor
      * @param stack The processing stack for type marking
      */
     private void handleArrayInCollection(final Object arrayInstance,
                                           final Type containerType,
-                                          final Class<?> collectionClass,
                                           final Deque<TypedItem> stack) {
         // Extract the element type from containerType.
         // For List<User>, elementType = User
@@ -1240,18 +1237,11 @@ public class ObjectResolver extends Resolver
 
             // Handle nested array (e.g., element is Object[] representing a List<User> within List<List<User>>)
             if (element.getClass().isArray()) {
-                // Convert the inner array to a List for type resolution
-                int innerLen = ArrayUtilities.getLength(element);
-                List<Object> items = new ArrayList<>(innerLen);
-                for (int j = 0; j < innerLen; j++) {
-                    items.add(ArrayUtilities.getElement(element, j));
-                }
-
                 // Wrap the array in a JsonObject with the element type (e.g., List<User>)
                 JsonObject coll = new JsonObject();
                 coll.setType(elementType);  // Use full parameterized type, not raw class
                 coll.setItems((Object[]) element);
-                stack.addFirst(new TypedItem(elementType, items));
+                stack.addFirst(new TypedItem(elementType, coll));
                 ArrayUtilities.setElement(arrayInstance, i, coll);
             } else {
                 // Non-array elements (e.g., JsonObjects representing Users) get the element type
@@ -1437,7 +1427,10 @@ public class ObjectResolver extends Resolver
      * @return The created target object
      */
     private Object processJsonObjectElement(JsonObject jObj, Type componentType) {
-        jObj.setType(componentType);
+        // Preserve explicit @type metadata on array elements (polymorphic arrays).
+        if (jObj.getType() == null) {
+            jObj.setType(componentType);
+        }
         createInstance(jObj);
         Object target = jObj.getTarget();
         if (target != null && !jObj.isFinished && !readOptions.isNonReferenceableClass(target.getClass())) {

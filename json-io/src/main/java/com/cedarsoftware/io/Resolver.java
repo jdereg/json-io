@@ -1463,12 +1463,10 @@ public abstract class Resolver {
     }
 
     /**
-     * Wraps an exception in a JsonIoException, preserving the original stack trace.
+     * Wraps an exception in a JsonIoException, preserving the causal chain.
      */
     private JsonIoException wrapException(Exception e) {
-        JsonIoException jioe = new JsonIoException(e.getMessage());
-        jioe.setStackTrace(e.getStackTrace());
-        return jioe;
+        return new JsonIoException(e.getMessage(), e);
     }
 
     protected void setArrayElement(Object array, int index, Object element) {

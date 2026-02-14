@@ -83,6 +83,17 @@ class ResolverValueToTargetTest {
                 .isInstanceOf(JsonIoException.class);
     }
 
+    @Test
+    void conversionFailurePreservesCause() {
+        JsonObject arrayObj = new JsonObject();
+        arrayObj.setType(int[].class);
+        arrayObj.setItems(new Object[]{"bad"});
+
+        assertThatThrownBy(() -> resolver.callValueToTarget(arrayObj))
+                .isInstanceOf(JsonIoException.class)
+                .hasCauseInstanceOf(Exception.class);
+    }
+
     /**
      * Tests that Resolver.toJava() converts a primitive array (int[]) to a different
      * target primitive array type (long[]) when the Converter supports the conversion.

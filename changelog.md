@@ -1,6 +1,11 @@
 ### Revision History
 
 #### 4.94.0 - 2026-02-14
+* **BUG FIX**: `ObjectResolver.processJsonObjectElement()` now preserves explicit element `@type` metadata in arrays by only applying declared component type when the element type is missing. This fixes polymorphic array deserialization where explicit subtype entries could be overwritten by the declared array component type.
+* **TESTING**: Added `PolymorphicArrayElementTypeTest` to verify explicit array element `@type` is honored over declared component type inference.
+* **BUG FIX**: `Resolver.wrapException()` now preserves the causal chain by constructing `JsonIoException(message, cause)` instead of creating a message-only wrapper. This restores root exception context for conversion failures.
+* **TESTING**: Added `ResolverValueToTargetTest.conversionFailurePreservesCause()` to assert conversion failure wrappers retain the original cause.
+* **MAINTENANCE/PERFORMANCE**: `ObjectResolver` nested collection type-marking path was cleaned up by removing an unused `collectionClass` parameter and eliminating per-nested-array `ArrayList` copy allocation in `handleArrayInCollection()`. Nested arrays now reuse the existing `JsonObject` wrapper for traversal, reducing allocation churn in deep generic collection payloads.
 * **MAINTENANCE**: Version bump to 4.94.0, java-util dependency updated to 4.94.0.
 
 #### 4.93.0 - 2026-02-10
