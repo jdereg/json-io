@@ -1,6 +1,14 @@
 ### Revision History
 
 #### 4.94.0 - 2026-02-14
+* **BUG FIX / PERFORMANCE**: `ObjectResolver` generic inference now runs incrementally (on-demand) and no longer relies on the deep `markUntypedObjects()` pre-pass. This reduces upfront traversal work while preserving nested generic correctness across parameterized object fields, collections, and maps.
+* **BUG FIX**: `ObjectResolver` map generic typing now preserves and applies both key and value generic types during traversal, fixing cases where complex map keys/values could remain as `JsonObject` instead of resolving to target types.
+* **CLEANUP**: Removed legacy pre-pass code path and associated temporary API toggles (`ReadOptions.useLegacyMarkUntypedObjectsPrepass()` and `ReadOptionsBuilder.useLegacyMarkUntypedObjectsPrepass(boolean)`).
+* **BUG FIX**: `JsonWriter.write()` now always clears `objVisited`/`objsReferenced` in a `finally` block, preventing state leakage and object retention if write/flush throws.
+* **BUG FIX**: `JsonWriter.traceReferences()` object-limit handling now enforces limits without off-by-one behavior at the configured boundary.
+* **PERFORMANCE**: `JsonWriter` string escaping/writing hot paths optimized: removed `String.format("\\u%04x", ...)` from control-char escaping, added precomputed control escape strings, and unified smart-quote decision logic to avoid duplicated scanning code.
+* **PERFORMANCE**: `JsonParser` hot paths optimized with ASCII-only lowercase conversion for token reads, lookup-table hex parsing, bounded string dedupe caching, and simplified strict-mode whitespace/comment handling.
+* **MAINTENANCE**: Removed redundant strict-mode checks in `skipWhitespaceRead()` that were unreachable after strict-branch early return.
 * **BUG FIX**: `ObjectResolver.processJsonObjectElement()` now preserves explicit element `@type` metadata in arrays by only applying declared component type when the element type is missing. This fixes polymorphic array deserialization where explicit subtype entries could be overwritten by the declared array component type.
 * **TESTING**: Added `PolymorphicArrayElementTypeTest` to verify explicit array element `@type` is honored over declared component type inference.
 * **BUG FIX**: `Resolver.wrapException()` now preserves the causal chain by constructing `JsonIoException(message, cause)` instead of creating a message-only wrapper. This restores root exception context for conversion failures.

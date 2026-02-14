@@ -1525,6 +1525,14 @@ class ArrayTest
         public Collection<String>[] collections;
     }
 
+    public static class NestedDogHouseHolder {
+        public List<List<DogHouse>> neighborhoods;
+    }
+
+    public static class DogHouse {
+        public String name;
+    }
+
     @Test
     void testArrayOfLists_withoutTypeInfo() {
         // JSON without @type - simulates external JSON (e.g., from JavaScript JSON.stringify)
@@ -1626,6 +1634,22 @@ class ArrayTest
         assertEquals("one", restored.lists[0].get(0));
         assertEquals("two", restored.lists[0].get(1));
         assertEquals("three", restored.lists[1].get(0));
+    }
+
+    @Test
+    void testNestedParameterizedField_IncrementalStamping() {
+        String json = "{\"@type\":\"" + NestedDogHouseHolder.class.getName() + "\"," +
+                "\"neighborhoods\":[[{\"name\":\"A1\"},{\"name\":\"A2\"}],[{\"name\":\"B1\"}]]}";
+
+        NestedDogHouseHolder holder = TestUtil.toJava(json, null).asClass(NestedDogHouseHolder.class);
+
+        assertNotNull(holder.neighborhoods);
+        assertEquals(2, holder.neighborhoods.size());
+        assertEquals(2, holder.neighborhoods.get(0).size());
+        assertEquals("A1", holder.neighborhoods.get(0).get(0).name);
+        assertEquals("A2", holder.neighborhoods.get(0).get(1).name);
+        assertEquals("B1", holder.neighborhoods.get(1).get(0).name);
+        assertEquals(DogHouse.class, holder.neighborhoods.get(0).get(0).getClass());
     }
 
     // =========================================================================

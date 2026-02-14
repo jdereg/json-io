@@ -90,6 +90,7 @@ class JsonParser {
     // Instance-level cache for string deduplication (array-based for zero-allocation hits)
     // Uses simple hash-indexed slots with last-write-wins collision handling
     private static final int STRING_CACHE_MASK = 2047;  // 2048 slots (power of 2 - 1)
+    private static final int MAX_CACHED_STRING_LENGTH = 64;
     private final String[] stringCacheArray = new String[STRING_CACHE_MASK + 1];
     // Performance: Hoisted ReadOptions constants to avoid repeated method calls
     private final long maxIdValue;
@@ -507,7 +508,10 @@ class JsonParser {
                 if (c == -1) {
                     error("EOF reached while reading token: " + token);
                 }
-                c = Character.toLowerCase((char) c);
+                // Fast ASCII lowercase conversion (tokens are ASCII)
+                if (c >= 'A' && c <= 'Z') {
+                    c += 32;
+                }
                 int loTokenChar = token.charAt(i);
 
                 if (loTokenChar != c) {
@@ -562,6 +566,10 @@ class JsonParser {
         boolean isFloat = false;
         boolean isNegative = (firstChar == '-');
         boolean isPositive = (firstChar == '+');  // JSON5 explicit positive sign
+        boolean seenDot = false;
+        boolean seenExp = false;
+        boolean seenDigit = false;
+        boolean seenDigitAfterExp = false;
 
         // Check for hex number (JSON5 feature): 0x or 0X
         int startChar = firstChar;
@@ -598,33 +606,76 @@ class JsonParser {
             if (c == -1) {
                 return (Number) error("Unexpected end of input after '+'");
             }
-            number.append((char) c);
-            // Check for leading decimal (e.g., +.5)
-            if (c == '.') {
-                isFloat = true;
-            }
-        } else {
+            firstChar = c;
+        } else if (firstChar == '-') {
             number.append((char) firstChar);
+            // Read the first numeric character after the negative sign.
+            int c = in.read();
+            if (c == -1) {
+                return (Number) error("Invalid number: -");
+            }
+            firstChar = c;
         }
 
-        // JSON5: Leading decimal point (e.g., .5) - mark as float immediately
-        if (firstChar == '.') {
+        // Process the first numeric character after any optional sign.
+        if (firstChar >= '0' && firstChar <= '9') {
+            number.append((char) firstChar);
+            seenDigit = true;
+        } else if (firstChar == '.') {
+            number.append((char) firstChar);
             isFloat = true;
+            seenDot = true;
+        } else {
+            return (Number) error("Invalid number: " + (isPositive ? "+" : "") + number + (char) firstChar);
         }
 
         while (true) {
             int c = in.read();
-            if ((c >= '0' && c <= '9') || c == '-' || c == '+') {
+            if (c >= '0' && c <= '9') {
                 number.append((char) c);
-            } else if (c == '.' || c == 'e' || c == 'E') {
+                seenDigit = true;
+                if (seenExp) {
+                    seenDigitAfterExp = true;
+                }
+            } else if (c == '.') {
+                if (seenDot || seenExp) {
+                    return (Number) error("Invalid number: " + number + ".");
+                }
                 number.append((char) c);
                 isFloat = true;
+                seenDot = true;
+            } else if (c == 'e' || c == 'E') {
+                if (seenExp || !seenDigit) {
+                    return (Number) error("Invalid number: " + number + (char) c);
+                }
+                number.append((char) c);
+                isFloat = true;
+                seenExp = true;
+
+                int next = in.read();
+                if (next == '+' || next == '-') {
+                    number.append((char) next);
+                    next = in.read();
+                }
+                if (next < '0' || next > '9') {
+                    if (next != -1) {
+                        in.pushback((char) next);
+                    }
+                    return (Number) error("Invalid exponent in number: " + number);
+                }
+                number.append((char) next);
+                seenDigit = true;
+                seenDigitAfterExp = true;
             } else if (c == -1) {
                 break;
             } else {
                 in.pushback((char) c);
                 break;
             }
+        }
+
+        if (!seenDigit || (seenExp && !seenDigitAfterExp)) {
+            return (Number) error("Invalid number: " + number);
         }
 
         try {
@@ -707,20 +758,14 @@ class JsonParser {
      */
     private Number readHexNumber(boolean isNegative) {
         final FastReader in = input;
+        final int[] hexMap = HEX_VALUE_MAP;
         long value = 0;
         int digitCount = 0;
 
         while (true) {
             int c = in.read();
-            int digit;
-
-            if (c >= '0' && c <= '9') {
-                digit = c - '0';
-            } else if (c >= 'a' && c <= 'f') {
-                digit = c - 'a' + 10;
-            } else if (c >= 'A' && c <= 'F') {
-                digit = c - 'A' + 10;
-            } else {
+            int digit = (c >= 0 && c < 128) ? hexMap[c] : -1;
+            if (digit < 0) {
                 // End of hex digits
                 if (c != -1) {
                     in.pushback((char) c);
@@ -918,10 +963,19 @@ class JsonParser {
      * Uses simple hash-indexed slots with last-write-wins collision handling.
      */
     private CharSequence cacheString(CharSequence str) {
+        final int len = str.length();
+        if (len == 0) {
+            return "";
+        }
+
+        // Long string values are frequently unique; skip cache bookkeeping in those cases.
+        if (len > MAX_CACHED_STRING_LENGTH) {
+            return str.toString();
+        }
+
         // Compute hashCode directly from CharSequence (same algorithm as String.hashCode())
         // This avoids String allocation just to compute the hash
         int hash = 0;
-        final int len = str.length();
         for (int i = 0; i < len; i++) {
             hash = 31 * hash + str.charAt(i);
         }
@@ -952,6 +1006,31 @@ class JsonParser {
     private int skipWhitespaceRead(boolean throwOnEof) throws IOException {
         final Reader in = input;
         int c;
+        // Strict mode has no comments, so use a tighter whitespace-only loop.
+        if (strictJson) {
+            while (true) {
+                c = in.read();
+                if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+                    continue;
+                }
+                if (c == '/') {
+                    int next = in.read();
+                    if (next == '/' || next == '*') {
+                        error("Comments not allowed in strict JSON mode");
+                    }
+                    if (next != -1) {
+                        input.pushback((char) next);
+                    }
+                    return c;
+                }
+                break;
+            }
+            if (c == -1 && throwOnEof) {
+                error("EOF reached prematurely");
+            }
+            return c;
+        }
+
         // Performance: Direct character comparison is faster than array bounds check + lookup.
         // JSON whitespace is defined as: space (0x20), tab (0x09), newline (0x0A), carriage return (0x0D)
         while (true) {
@@ -967,16 +1046,10 @@ class JsonParser {
                 int next = in.read();
                 if (next == '/') {
                     // Single-line comment: skip until end of line
-                    if (strictJson) {
-                        error("Comments not allowed in strict JSON mode");
-                    }
                     skipSingleLineComment();
                     continue;
                 } else if (next == '*') {
                     // Block comment: skip until */
-                    if (strictJson) {
-                        error("Comments not allowed in strict JSON mode");
-                    }
                     skipBlockComment();
                     continue;
                 } else {

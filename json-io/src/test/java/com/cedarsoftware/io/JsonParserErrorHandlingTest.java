@@ -795,6 +795,28 @@ public class JsonParserErrorHandlingTest {
         assertTrue(exception.getMessage().contains("Unexpected end of input after '+'"));
     }
 
+    @Test
+    public void testInvalidExponentWithoutDigits_ShouldThrowJsonIoException() {
+        String json = "[1e+]";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toJava(json, null).asClass(Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Invalid exponent in number"));
+    }
+
+    @Test
+    public void testInvalidMultipleDecimalPoints_ShouldThrowJsonIoException() {
+        String json = "[1..2]";
+
+        JsonIoException exception = assertThrows(JsonIoException.class, () -> {
+            JsonIo.toJava(json, null).asClass(Object.class);
+        });
+
+        assertTrue(exception.getMessage().contains("Invalid number"));
+    }
+
     // ========== Tests for loadKeys() error handling ==========
 
     /**

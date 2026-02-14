@@ -3,15 +3,11 @@ package com.cedarsoftware.io;
 import java.lang.reflect.Array;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.ArrayDeque;
 import java.util.Collection;
-import java.util.Deque;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
-import com.cedarsoftware.util.IdentitySet;
 import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.TypeUtilities;
 import com.cedarsoftware.util.convert.Converter;
@@ -135,7 +131,6 @@ public class ObjectResolver extends Resolver
     /**
      * Just-in-time type stamping for array elements.
      * Sets the type on untyped JsonObject elements before they are processed.
-     * This replaces the markUntypedObjects pre-pass for simple cases.
      */
     private void stampElementTypes(Object[] elements, Type elementType) {
         for (Object element : elements) {
@@ -246,37 +241,86 @@ public class ObjectResolver extends Resolver
      */
     private void assignJsonObjectField(final JsonObject jsonObj, final Injector injector,
                                         final JsonObject jsRhs, final Type fieldType, final Object target) {
-        // Handle type marking for nested generic types
-        if (fieldType instanceof ParameterizedType) {
-            markUntypedObjects(fieldType, jsRhs);
-        }
+        final Type resolvedFieldType = TypeUtilities.resolveTypeUsingInstance(target, fieldType);
 
-        // Set type on JsonObject if not already set
+        // Preserve explicit type metadata when present and resolved.
         Type explicitType = jsRhs.getType();
-        if (explicitType != null && !TypeUtilities.hasUnresolvedType(explicitType)) {
-            jsRhs.setType(explicitType);
-        } else {
-            Type resolvedFieldType = TypeUtilities.resolveTypeUsingInstance(target, fieldType);
+        if (explicitType == null || TypeUtilities.hasUnresolvedType(explicitType)) {
             jsRhs.setType(resolvedFieldType);
         }
 
-        // For Map fields with ParameterizedType, preserve the value type before createInstance
-        // changes the type to a raw Class.
-        if (fieldType instanceof ParameterizedType) {
-            Class<?> rawClass = TypeUtilities.getRawClass(fieldType);
-            if (rawClass != null && Map.class.isAssignableFrom(rawClass)) {
-                Type[] typeArgs = ((ParameterizedType) fieldType).getActualTypeArguments();
-                if (typeArgs.length >= 2) {
-                    jsRhs.setItemElementType(typeArgs[1]);
-                }
-            }
-        }
+        seedIncrementalContainerMetadata(resolvedFieldType, jsRhs);
 
         createInstance(jsRhs);
         injector.inject(target, jsRhs.getTarget());
 
         if (!readOptions.isNonReferenceableClass(jsRhs.getRawType())) {
             push(jsRhs);
+        }
+    }
+
+    /**
+     * Seed container metadata on the current JsonObject so downstream traversal can stamp types incrementally.
+     * This avoids deep pre-pass traversal and only annotates the immediate container when metadata is missing.
+     */
+    private void seedIncrementalContainerMetadata(final Type fieldType, final JsonObject jsRhs) {
+        if (!(fieldType instanceof ParameterizedType)) {
+            return;
+        }
+
+        ParameterizedType pType = (ParameterizedType) fieldType;
+        Class<?> rawClass = TypeUtilities.getRawClass(pType);
+        if (rawClass == null || jsRhs.getItemElementType() != null) {
+            return;
+        }
+
+        Type[] typeArgs = pType.getActualTypeArguments();
+        if (Map.class.isAssignableFrom(rawClass)) {
+            if (typeArgs.length >= 1 && jsRhs.getMapKeyType() == null) {
+                jsRhs.setMapKeyType(typeArgs[0]);
+            }
+            if (typeArgs.length >= 2) {
+                jsRhs.setItemElementType(typeArgs[1]);
+            }
+            return;
+        }
+
+        if (Collection.class.isAssignableFrom(rawClass) && typeArgs.length >= 1) {
+            jsRhs.setItemElementType(typeArgs[0]);
+            return;
+        }
+
+        // For parameterized object types (non-Map, non-Collection), stamp immediate child JsonObjects
+        // with resolved field types so traversal can continue incrementally.
+        Map<String, Injector> fields = readOptions.getDeepInjectorMap(rawClass);
+        if (fields.isEmpty()) {
+            return;
+        }
+
+        for (Map.Entry<Object, Object> entry : jsRhs.entrySet()) {
+            Object key = entry.getKey();
+            if (!(key instanceof String)) {
+                continue;
+            }
+            Injector childInjector = fields.get(key);
+            if (childInjector == null) {
+                continue;
+            }
+
+            Type childGenericType = childInjector.getGenericType();
+            Type childResolvedType = TypeUtilities.resolveType(fieldType, childGenericType);
+            if (TypeUtilities.hasUnresolvedType(childResolvedType)) {
+                continue;
+            }
+
+            Object childValue = entry.getValue();
+            if (childValue instanceof JsonObject) {
+                JsonObject childJson = (JsonObject) childValue;
+                if (childJson.getType() == null) {
+                    childJson.setType(childResolvedType);
+                }
+                seedIncrementalContainerMetadata(childResolvedType, childJson);
+            }
         }
     }
 
@@ -604,12 +648,13 @@ public class ObjectResolver extends Resolver
             // Strategy 7: JSONOBJECT - needs instantiation and traversal
             if (jsonElement != null) {
                 // Set the element's full type to the extracted element type, but only if
-                // the element doesn't already have a type set (e.g., from markUntypedObjects()
-                // or from @type in the JSON). This enables proper type inference for nested
-                // generic types when deserializing JSON without @type markers.
+                // the element doesn't already have a type set (e.g., from @type in the JSON).
+                // This enables proper type inference for nested generic types when
+                // deserializing JSON without @type markers.
                 if (jsonElement.getType() == null) {
                     jsonElement.setType(elementType);
                 }
+                seedIncrementalContainerMetadata(elementType, jsonElement);
                 createInstance(jsonElement);
                 addResolvedObjectToCollection(jsonElement, col);
                 idx++;
@@ -646,20 +691,31 @@ public class ObjectResolver extends Resolver
             return;
         }
 
-        // Extract value type - first check for stored value type (preserved before createInstance
+        // Extract key/value types - first check for stored value type (preserved before createInstance
         // changed the type to a raw Class), then fall back to extracting from ParameterizedType.
+        Type keyType = jsonObj.getMapKeyType();
+        if (keyType == null) {
+            keyType = Object.class;
+        }
         Type valueType = jsonObj.getItemElementType();  // For Maps, this stores the value type
+        Type mapType = jsonObj.getType();
+        if (mapType instanceof ParameterizedType) {
+            Type[] typeArgs = ((ParameterizedType) mapType).getActualTypeArguments();
+            if (typeArgs.length >= 1 && keyType == Object.class) {
+                keyType = typeArgs[0];
+            }
+            if (valueType == null && typeArgs.length >= 2) {
+                valueType = typeArgs[1];
+            }
+        }
         if (valueType == null) {
-            Type mapType = jsonObj.getType();
-            if (mapType instanceof ParameterizedType) {
-                Type[] typeArgs = ((ParameterizedType) mapType).getActualTypeArguments();
-                if (typeArgs.length >= 2) {
-                    valueType = typeArgs[1];
-                }
-            }
-            if (valueType == null) {
-                valueType = Object.class;
-            }
+            valueType = Object.class;
+        }
+        if (TypeUtilities.hasUnresolvedType(keyType)) {
+            keyType = Object.class;
+        }
+        if (TypeUtilities.hasUnresolvedType(valueType)) {
+            valueType = Object.class;
         }
 
         Class<?> rawValueType = TypeUtilities.getRawClass(valueType);
@@ -671,10 +727,10 @@ public class ObjectResolver extends Resolver
 
         if (isKeysItemsFormat) {
             // @keys/@items format - process arrays directly
-            processMapKeysValues(existingKeys, existingItems, valueType, valueIsCollection);
+            processMapKeysValues(existingKeys, existingItems, keyType, valueType, valueIsCollection);
         } else {
             // Standard entry format - process entries and convert values if needed
-            processMapEntries(jsonObj, existingKeys, existingItems, valueType, valueIsCollection);
+            processMapEntries(jsonObj, existingKeys, existingItems, keyType, valueType, valueIsCollection);
         }
 
         addMapToRehash(jsonObj);
@@ -683,11 +739,12 @@ public class ObjectResolver extends Resolver
     /**
      * Process Map in @keys/@items format.
      */
-    private void processMapKeysValues(Object[] keys, Object[] items, Type valueType, boolean valueIsCollection) {
+    private void processMapKeysValues(Object[] keys, Object[] items, Type keyType, Type valueType, boolean valueIsCollection) {
         // Process keys
         JsonObject keysWrapper = new JsonObject();
         keysWrapper.setItems(keys);
         keysWrapper.setTarget(keys);
+        keysWrapper.setItemElementType(keyType);
         push(keysWrapper);
 
         // Extract element type for collection values
@@ -746,7 +803,7 @@ public class ObjectResolver extends Resolver
      * Process Map in standard entry format, converting values to collections if needed.
      * Uses the pre-validated keys/items arrays from asTwoArrays().
      */
-    private void processMapEntries(JsonObject jsonObj, Object[] keys, Object[] items, Type valueType, boolean valueIsCollection) {
+    private void processMapEntries(JsonObject jsonObj, Object[] keys, Object[] items, Type keyType, Type valueType, boolean valueIsCollection) {
         if (valueIsCollection) {
             // Extract element type for collection values
             Type valueElementType = null;
@@ -797,6 +854,7 @@ public class ObjectResolver extends Resolver
             JsonObject keysWrapper = new JsonObject();
             keysWrapper.setItems(keys);
             keysWrapper.setTarget(keys);
+            keysWrapper.setItemElementType(keyType);
             push(keysWrapper);
         } else {
             // Use default behavior - wrap and push arrays for traversal.
@@ -804,6 +862,7 @@ public class ObjectResolver extends Resolver
             JsonObject keysWrapper = new JsonObject();
             keysWrapper.setItems(keys);
             keysWrapper.setTarget(keys);
+            keysWrapper.setItemElementType(keyType);
             push(keysWrapper);
 
             JsonObject itemsWrapper = new JsonObject();
@@ -1080,284 +1139,6 @@ public class ObjectResolver extends Resolver
         return (read != null) ? jsonObj.setFinishedTarget(read, true) : null;
     }
 
-    /**
-     * Traverses untyped JSON objects and stamps them with their inferred Java types.
-     * This enables correct instantiation later during deserialization.
-     * Uses a stack-based traversal to handle arbitrarily deep object graphs.
-     */
-    /**
-     * Lightweight pair class for type marking traversal.
-     * Avoids the overhead of AbstractMap.SimpleEntry.
-     */
-    private static final class TypedItem {
-        final Type type;
-        final Object item;
-
-        TypedItem(Type type, Object item) {
-            this.type = type;
-            this.item = item;
-        }
-    }
-
-    private void markUntypedObjects(final Type type, final JsonObject rhs) {
-        if (rhs.isFinished) {
-            return;     // Already processed by main traversal.
-        }
-
-        final Deque<TypedItem> stack = new ArrayDeque<>();
-        // Track visited JsonObjects to prevent duplicate traversal when reachable via multiple paths
-        // Uses lightweight IdentitySet instead of IdentityHashMap for better performance
-        final Set<JsonObject> visited = new IdentitySet<>();
-        stack.addFirst(new TypedItem(type, rhs));
-
-        while (!stack.isEmpty()) {
-            TypedItem entry = stack.removeFirst();
-            final Type t = entry.type;
-            final Object instance = entry.item;
-
-            if (instance == null) {
-                continue;
-            }
-
-            // Skip already-processed JsonObjects (visited in this call or finished by main traversal)
-            if (instance instanceof JsonObject) {
-                JsonObject jObj = (JsonObject) instance;
-                // add() returns false if already present
-                if (jObj.isFinished || !visited.add(jObj)) {
-                    continue;
-                }
-            }
-
-            if (t instanceof ParameterizedType) {
-                handleParameterizedTypeMarking((ParameterizedType) t, instance, type, stack);
-            } else {
-                stampTypeOnJsonObject(instance, t);
-            }
-        }
-    }
-
-    /**
-     * Handles type marking for parameterized types {@code List<T>, Map<K,V>}, etc.
-     */
-    private void handleParameterizedTypeMarking(final ParameterizedType pType,
-                                                 final Object instance,
-                                                 final Type parentType,
-                                                 final Deque<TypedItem> stack) {
-        Class<?> clazz = TypeUtilities.getRawClass(pType);
-        Type[] typeArgs = pType.getActualTypeArguments();
-
-        if (typeArgs.length < 1 || clazz == null) {
-            return;
-        }
-
-        // Resolve the type in the context of the parent type
-        Type resolvedType = TypeUtilities.resolveType(parentType, pType);
-        stampTypeOnJsonObject(instance, resolvedType);
-
-        if (Map.class.isAssignableFrom(clazz)) {
-            handleMapTypeMarking(instance, typeArgs, stack);
-        } else if (Collection.class.isAssignableFrom(clazz)) {
-            handleCollectionTypeMarking(instance, pType, typeArgs, stack);
-        } else {
-            handleObjectFieldsMarking(instance, pType, typeArgs, stack);
-        }
-    }
-
-    /**
-     * Handles {@code Map<K,V>} type marking by processing keys and values.
-     */
-    private void handleMapTypeMarking(final Object instance,
-                                       final Type[] typeArgs,
-                                       final Deque<TypedItem> stack) {
-        JsonObject jsonObj = (JsonObject) instance;
-        Map.Entry<Object[], Object[]> pair = jsonObj.asTwoArrays();
-        addItemsToStack(stack, pair.getKey(), typeArgs[0]);
-        addItemsToStack(stack, pair.getValue(), typeArgs[1]);
-    }
-
-    /**
-     * Handles {@code Collection<T>} type marking for arrays, Collections, and JsonObjects.
-     */
-    private void handleCollectionTypeMarking(final Object instance,
-                                              final Type containerType,
-                                              final Type[] typeArgs,
-                                              final Deque<TypedItem> stack) {
-        if (instance.getClass().isArray()) {
-            handleArrayInCollection(instance, containerType, stack);
-        } else if (instance instanceof Collection) {
-            // OPTIMIZATION: Skip if collection items don't need field traversal
-            if (shouldSkipTraversal(typeArgs[0])) {
-                return;
-            }
-            for (Object o : (Collection<?>) instance) {
-                stack.addFirst(new TypedItem(typeArgs[0], o));
-            }
-        } else if (instance instanceof JsonObject) {
-            // OPTIMIZATION: Skip if array items don't need field traversal
-            if (shouldSkipTraversal(typeArgs[0])) {
-                return;
-            }
-            final Object[] array = ((JsonObject) instance).getItems();
-            if (array != null) {
-                for (Object o : array) {
-                    stack.addFirst(new TypedItem(typeArgs[0], o));
-                }
-            }
-        }
-    }
-
-    /**
-     * Handles arrays that represent collection contents during type marking.
-     * The arrayInstance contains the elements of a collection (e.g., User objects in a List<User>).
-     *
-     * @param arrayInstance The array containing collection elements
-     * @param containerType The full parameterized type of the collection (e.g., List<User>)
-     * @param stack The processing stack for type marking
-     */
-    private void handleArrayInCollection(final Object arrayInstance,
-                                          final Type containerType,
-                                          final Deque<TypedItem> stack) {
-        // Extract the element type from containerType.
-        // For List<User>, elementType = User
-        // For List<List<User>>, elementType = List<User>
-        Type elementType = Object.class;
-        if (containerType instanceof ParameterizedType) {
-            Type[] typeArgs = ((ParameterizedType) containerType).getActualTypeArguments();
-            if (typeArgs.length > 0) {
-                elementType = typeArgs[0];
-            }
-        }
-
-        int len = ArrayUtilities.getLength(arrayInstance);
-        for (int i = 0; i < len; i++) {
-            Object element = ArrayUtilities.getElement(arrayInstance, i);
-            if (element == null) {
-                continue;
-            }
-
-            // Handle nested array (e.g., element is Object[] representing a List<User> within List<List<User>>)
-            if (element.getClass().isArray()) {
-                // Wrap the array in a JsonObject with the element type (e.g., List<User>)
-                JsonObject coll = new JsonObject();
-                coll.setType(elementType);  // Use full parameterized type, not raw class
-                coll.setItems((Object[]) element);
-                stack.addFirst(new TypedItem(elementType, coll));
-                ArrayUtilities.setElement(arrayInstance, i, coll);
-            } else {
-                // Non-array elements (e.g., JsonObjects representing Users) get the element type
-                stack.addFirst(new TypedItem(elementType, element));
-            }
-        }
-    }
-
-    /**
-     * Handles regular object field type marking (non-Map, non-Collection).
-     */
-    private void handleObjectFieldsMarking(final Object instance,
-                                            final Type containerType,
-                                            final Type[] typeArgs,
-                                            final Deque<TypedItem> stack) {
-        if (!(instance instanceof JsonObject)) {
-            return;
-        }
-
-        // Compute field map for THIS type (critical for nested objects of different types)
-        Class<?> rawClass = TypeUtilities.getRawClass(containerType);
-        if (rawClass == null) {
-            return;
-        }
-        Map<String, Injector> classFields = readOptions.getDeepInjectorMap(rawClass);
-
-        final JsonObject jObj = (JsonObject) instance;
-        for (Map.Entry<Object, Object> entry : jObj.entrySet()) {
-            final String fieldName = (String) entry.getKey();
-
-            // Skip synthetic outer class references
-            if (fieldName.startsWith("this$")) {
-                continue;
-            }
-
-            Injector injector = classFields.get(fieldName);
-            if (injector != null) {
-                Type genericType = injector.getGenericType();
-                // Resolve the field's type using the parent type
-                Type resolved = TypeUtilities.resolveType(containerType, genericType);
-
-                // Fallback if resolution didn't fully resolve the type
-                if (TypeUtilities.hasUnresolvedType(resolved)) {
-                    resolved = typeArgs[0];  // Use first type argument as fallback
-                }
-
-                // OPTIMIZATION: Skip if field type doesn't need traversal
-                if (!shouldSkipTraversal(resolved)) {
-                    stack.addFirst(new TypedItem(resolved, entry.getValue()));
-                }
-            }
-        }
-    }
-
-    /**
-     * Determines if a type should skip traversal because it doesn't need field-level type inference.
-     * Types with isObjectFinal() factories are fully created/loaded by the factory and have no
-     * fields needing type marking.
-     */
-    private boolean shouldSkipTraversal(final Type type) {
-        Class<?> rawClass = TypeUtilities.getRawClass(type);
-        if (rawClass == null) {
-            return false;        // defensive code, can't execute until behavior of getRawClass() changes
-        }
-
-        // Skip primitives and their wrappers - they have no fields
-        if (Primitives.isPrimitive(rawClass) || rawClass == String.class || Number.class.isAssignableFrom(rawClass)) {
-            return true;
-        }
-
-        // Skip types with final factories - they're fully created with no field traversal needed
-        ClassFactory factory = readOptions.getClassFactory(rawClass);
-        return factory != null && factory.isObjectFinal();
-    }
-
-    /**
-     * Helper method to add array items to the stack with their type.
-     * Used by handleMapTypeMarking() to process Map keys and values.
-     * Each element is added individually since they are separate Map entries,
-     * not elements of a single collection.
-     */
-    private void addItemsToStack(final Deque<TypedItem> stack,
-                                  final Object[] items,
-                                  final Type itemType) {
-        if (items == null || items.length < 1) {
-            return;
-        }
-
-        // OPTIMIZATION: Skip if itemType has a final factory or is a primitive type
-        // These types don't need field-level type inference
-        if (shouldSkipTraversal(itemType)) {
-            return;
-        }
-
-        // Add each item individually with its type.
-        // For Map<K, V>, each item is a separate key or value, not elements of one collection.
-        // Iterate in reverse to preserve order after addFirst.
-        for (int i = items.length - 1; i >= 0; i--) {
-            stack.addFirst(new TypedItem(itemType, items[i]));
-        }
-    }
-
-    /**
-     * Mark 'type' on JsonObject when the type is missing and is a 'leaf' node
-     * (no further subtypes in its parameterized type definition).
-     */
-    private static void stampTypeOnJsonObject(final Object o, final Type t) {
-        if (o instanceof JsonObject && t != null) {
-            JsonObject jObj = (JsonObject) o;
-            if (jObj.getType() == null) {
-                // Bypass setter because it could throw an unresolved type exception
-                jObj.type = t;
-            }
-        }
-    }
-
     protected Object resolveArray(Type suggestedType, List<Object> list) {
         // No type info - return Object[]
         if (suggestedType == null || TypeUtilities.getRawClass(suggestedType) == Object.class) {
@@ -1431,6 +1212,7 @@ public class ObjectResolver extends Resolver
         if (jObj.getType() == null) {
             jObj.setType(componentType);
         }
+        seedIncrementalContainerMetadata(componentType, jObj);
         createInstance(jObj);
         Object target = jObj.getTarget();
         if (target != null && !jObj.isFinished && !readOptions.isNonReferenceableClass(target.getClass())) {

@@ -168,10 +168,26 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     // Pre-computed escape strings for ASCII characters
     // null = character doesn't need escaping, non-null = the escape sequence to write
     private static final String[] ESCAPE_STRINGS = new String[128];
+    private static final String[] CONTROL_UNICODE_ESCAPES = new String[32];
+    private static final char[] HEX_DIGITS = "0123456789abcdef".toCharArray();
+
+    private static String toUnicodeEscape(int codePoint) {
+        char[] chars = new char[6];
+        chars[0] = '\\';
+        chars[1] = 'u';
+        chars[2] = HEX_DIGITS[(codePoint >>> 12) & 0xF];
+        chars[3] = HEX_DIGITS[(codePoint >>> 8) & 0xF];
+        chars[4] = HEX_DIGITS[(codePoint >>> 4) & 0xF];
+        chars[5] = HEX_DIGITS[codePoint & 0xF];
+        return new String(chars);
+    }
+
     static {
         // Control characters (0x00-0x1F) need \\u00xx escaping
         for (int i = 0; i <= 0x1F; i++) {
-            ESCAPE_STRINGS[i] = String.format("\\u%04x", i);
+            String unicodeEscape = toUnicodeEscape(i);
+            ESCAPE_STRINGS[i] = unicodeEscape;
+            CONTROL_UNICODE_ESCAPES[i] = unicodeEscape;
         }
         // Override with short escapes for common control characters
         ESCAPE_STRINGS['\b'] = "\\b";
@@ -746,12 +762,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * @param obj Object any Java Object or JsonObject.
      */
     public void write(Object obj) {
-        if (cycleSupport) {
-            traceReferences(obj);
-            objVisited.clear();
-        }
-        // When cycleSupport=false, objVisited will be used during write to detect cycles
         try {
+            if (cycleSupport) {
+                traceReferences(obj);
+                objVisited.clear();
+            }
+            // When cycleSupport=false, objVisited will be used during write to detect cycles
             boolean showType = writeOptions.isShowingRootTypeInfo();
             if (obj != null) {
                 if (neverShowingType) {
@@ -770,14 +786,15 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 }
             }
             writeImpl(obj, showType);
+            flush();
         } catch (JsonIoException e) {
             throw e;
         } catch (Exception e) {
             throw new JsonIoException("Error writing object to JSON:", e);
+        } finally {
+            objVisited.clear();
+            objsReferenced.clear();
         }
-        flush();
-        objVisited.clear();
-        objsReferenced.clear();
     }
 
     /**
@@ -810,7 +827,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         final int MAX_OBJECTS = writeOptions.getMaxObjectCount();
         int processedCount = 0;
 
-        while (!objectStack.isEmpty() && processedCount < MAX_OBJECTS) {
+        while (!objectStack.isEmpty()) {
+            if (processedCount >= MAX_OBJECTS) {
+                throw new JsonIoException("Object graph too large (>" + MAX_OBJECTS + " objects). This may indicate excessive nesting or a memory leak.");
+            }
             final Object obj = objectStack.removeFirst();
             final int currentDepth = traceDepths[--traceDepthIndex];
             processedCount++;
@@ -855,10 +875,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
 
-        // Check if we hit the object limit
-        if (processedCount >= MAX_OBJECTS) {
-            throw new JsonIoException("Object graph too large (>" + MAX_OBJECTS + " objects). This may indicate excessive nesting or a memory leak.");
-        }
     }
 
     /**
@@ -1927,7 +1943,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (neverShowingType) {
             showType = false;
         }
-        if (writeOptions.isForceMapOutputAsTwoArrays() || !ensureJsonPrimitiveKeys(map)) {
+        final boolean keysKnownString = declaredKeyType == String.class;
+        if (writeOptions.isForceMapOutputAsTwoArrays() || (!keysKnownString && !ensureJsonPrimitiveKeys(map))) {
             return false;
         }
 
@@ -2468,23 +2485,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         int maxLen = writeOptions.getMaxStringLength();
-
-        // Scan string to determine quote strategy
-        boolean hasDoubleQuote = false;
-        boolean hasSingleQuote = false;
-        int len = s != null ? s.length() : 0;
-
-        for (int i = 0; i < len && !(hasDoubleQuote && hasSingleQuote); i++) {
-            char c = s.charAt(i);
-            if (c == '"') {
-                hasDoubleQuote = true;
-            } else if (c == '\'') {
-                hasSingleQuote = true;
-            }
-        }
-
-        // Use single quotes only if string has " but no '
-        if (hasDoubleQuote && !hasSingleQuote) {
+        if (shouldUseSingleQuotedString(s)) {
             writeSingleQuotedString(output, s, maxLen);
         } else {
             writeJsonUtf8String(output, s, maxLen);
@@ -2570,27 +2571,20 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             writeJsonUtf8String(out, s, maxStringLength);
             return;
         }
-
-        // Scan string to determine quote strategy
-        boolean hasDoubleQuote = false;
-        boolean hasSingleQuote = false;
-        int len = s != null ? s.length() : 0;
-
-        for (int i = 0; i < len && !(hasDoubleQuote && hasSingleQuote); i++) {
-            char c = s.charAt(i);
-            if (c == '"') {
-                hasDoubleQuote = true;
-            } else if (c == '\'') {
-                hasSingleQuote = true;
-            }
-        }
-
-        // Use single quotes only if string has " but no '
-        if (hasDoubleQuote && !hasSingleQuote) {
+        if (shouldUseSingleQuotedString(s)) {
             writeSingleQuotedString(out, s, maxStringLength);
         } else {
             writeJsonUtf8String(out, s, maxStringLength);
         }
+    }
+
+    private static boolean shouldUseSingleQuotedString(String s) {
+        if (s == null || s.isEmpty()) {
+            return false;
+        }
+        // Use single quotes only if string contains double quote and does not contain single quote.
+        // indexOf() is intrinsified in modern JDKs and is usually faster than manual char-by-char scans.
+        return s.indexOf('"') >= 0 && s.indexOf('\'') < 0;
     }
 
     /**
@@ -2656,7 +2650,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                         output.write("\\t");
                         break;
                     default:
-                        output.write(String.format("\\u%04x", codePoint));
+                        output.write(CONTROL_UNICODE_ESCAPES[codePoint]);
                 }
             } else if (codePoint == '\'') {
                 output.write("\\'");

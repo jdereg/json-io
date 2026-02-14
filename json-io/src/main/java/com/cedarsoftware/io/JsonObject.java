@@ -72,6 +72,9 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     // Used to preserve generic type information that would otherwise be lost
     // when createInstance changes the type to a concrete class.
     private transient java.lang.reflect.Type itemElementType;
+    // Stored key type for maps. Used to preserve generic key information when type
+    // is changed to a concrete class during instance creation.
+    private transient java.lang.reflect.Type mapKeyType;
 
     /**
      * Type classification for optimized dispatch in Resolver.
@@ -214,6 +217,23 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         this.itemElementType = elementType;
     }
 
+    /**
+     * Get the stored key type for maps.
+     * @return the map key type, or null if not set
+     */
+    public java.lang.reflect.Type getMapKeyType() {
+        return mapKeyType;
+    }
+
+    /**
+     * Set the key type for maps.
+     * Should be called before createInstance to preserve generic key type information.
+     * @param keyType the key type from the ParameterizedType
+     */
+    public void setMapKeyType(java.lang.reflect.Type keyType) {
+        this.mapKeyType = keyType;
+    }
+
     // ========== Map Interface ==========
 
     /**
@@ -337,6 +357,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         Arrays.fill(values, 0, size, null);
         size = 0;
         items = null;
+        itemElementType = null;
+        mapKeyType = null;
         hash = null;
         index = null;
         itemsWereSet = false;
