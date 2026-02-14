@@ -943,6 +943,23 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private void processMap(Map<?, ?> map, Deque<Object> objectStack, int depth) {
+        if (map instanceof JsonObject) {
+            JsonObject jsonObject = (JsonObject) map;
+            int len = jsonObject.fastEntryCount();
+            for (int i = 0; i < len; i++) {
+                Object key = jsonObject.fastKeyAt(i);
+                Object value = jsonObject.fastValueAt(i);
+                if (key != null) {
+                    objectStack.addFirst(key);
+                    pushDepth(depth);
+                }
+                if (value != null) {
+                    objectStack.addFirst(value);
+                    pushDepth(depth);
+                }
+            }
+            return;
+        }
         for (Map.Entry<?, ?> entry : map.entrySet()) {
             Object key = entry.getKey();
             Object value = entry.getValue();
@@ -977,7 +994,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      */
     protected void processFields(final Deque<Object> objectStack, final Object obj, int depth) {
         List<WriteFieldPlan> fields = WriteOptionsBuilder.getWriteFieldPlans(writeOptions, obj.getClass());
-        for (WriteFieldPlan fieldPlan : fields) {
+        int len = fields.size();
+        for (int i = 0; i < len; i++) {
+            WriteFieldPlan fieldPlan = fields.get(i);
             if (fieldPlan.skipReferenceTrace()) {
                 continue;
             }
@@ -1776,7 +1795,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             newLine();
         }
 
-        return writeMapBody(jObj.entrySet().iterator());
+        return writeMapBody(jObj);
     }
 
     private boolean emitIdAndTypeIfNeeded(JsonObject jObj, boolean showType, Writer output) throws IOException {
@@ -2020,6 +2039,40 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
             // Inline key writing with pre-fetched member variables
             String key = (String) att2value.getKey();
+            if (json5UnquotedKeys && isValidJson5Identifier(key)) {
+                output.write(key);
+                output.write(':');
+            } else {
+                writeJsonUtf8String(output, key, maxStringLength);
+                output.write(':');
+            }
+
+            writeCollectionElement(value);
+            wroteEntry = true;
+        }
+
+        tabOut();
+        output.write('}');
+        return true;
+    }
+
+    private boolean writeMapBody(final JsonObject jObj) throws IOException {
+        final Writer output = out;
+        boolean wroteEntry = false;
+        int len = jObj.fastEntryCount();
+
+        for (int idx = 0; idx < len; idx++) {
+            Object value = jObj.fastValueAt(idx);
+            if (skipNullFields && value == null) {
+                continue;
+            }
+
+            if (wroteEntry) {
+                output.write(',');
+                newLine();
+            }
+
+            String key = (String) jObj.fastKeyAt(idx);
             if (json5UnquotedKeys && isValidJson5Identifier(key)) {
                 output.write(key);
                 output.write(':');

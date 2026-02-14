@@ -470,6 +470,20 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         return new EntrySet();
     }
 
+    // Package-private fast path for hot loops that need stable insertion-order entry traversal
+    // without allocating iterator/entry wrapper objects.
+    int fastEntryCount() {
+        return size();
+    }
+
+    Object fastKeyAt(int index) {
+        return keys[index];
+    }
+
+    Object fastValueAt(int index) {
+        return (keysWereSet && itemsWereSet) ? items[index] : values[index];
+    }
+
     private class KeySet extends AbstractSet<Object> {
         @Override
         public int size() {
