@@ -1041,7 +1041,7 @@ public class ObjectResolver extends Resolver
                     return null;
                 }
                 // Type mismatch - try converter directly (skip factory/reader overhead)
-                if (converter.isSimpleTypeConversionSupported(valueClass, rawInferred)) {
+                if (converter.isConversionSupportedFor(valueClass, rawInferred)) {
                     return converter.convert(o, rawInferred);
                 }
                 return null;

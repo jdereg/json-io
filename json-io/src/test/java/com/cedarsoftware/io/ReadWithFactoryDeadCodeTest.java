@@ -154,6 +154,21 @@ class ReadWithFactoryDeadCodeTest {
         assertThat(result).containsKey("items");
     }
 
+    @Test
+    void testReadWithFactoryIfExists_primitiveStringMismatchUsesConversionSupportGate() throws Exception {
+        ObjectResolver resolver = createResolver();
+        Method method = ObjectResolver.class.getDeclaredMethod("readWithFactoryIfExists", Object.class, Type.class);
+        method.setAccessible(true);
+
+        // Supported scalar conversion: String -> Integer
+        Object converted = method.invoke(resolver, "42", Integer.class);
+        assertThat(converted).isEqualTo(42);
+
+        // Unsupported scalar conversion should continue normal path (return null)
+        Object unsupported = method.invoke(resolver, "42", Thread.class);
+        assertThat(unsupported).isNull();
+    }
+
     /**
      * CONCLUSION: The condition at lines 428-430 is DEAD CODE because:
      *
