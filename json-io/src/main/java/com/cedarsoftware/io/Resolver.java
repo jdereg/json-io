@@ -49,7 +49,7 @@ import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.TypeUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
-import static com.cedarsoftware.util.Converter.isConversionSupportedFor;
+import static com.cedarsoftware.util.Converter.isSimpleTypeConversionSupported;
 
 /**
  * This class is used to convert a source of Java Maps that were created from
@@ -1473,17 +1473,13 @@ public abstract class Resolver {
 
     /**
      * Returns true when the type should be treated as a pseudo-primitive in json-io resolution.
-     * Pseudo-primitives are non-container types that have bidirectional String conversion support.
+     * Pseudo-primitives are non-container types that have String conversion support.
      */
     static boolean isPseudoPrimitive(Class<?> type) {
-        if (type == null ||
-                type.isArray() ||
-                Collection.class.isAssignableFrom(type) ||
-                Map.class.isAssignableFrom(type) ||
-                Enum.class.isAssignableFrom(type)) {
+        if (type == null || Enum.class.isAssignableFrom(type)) {
             return false;
         }
-        return isConversionSupportedFor(type, String.class);
+        return isSimpleTypeConversionSupported(String.class, type);
     }
 
     /**
