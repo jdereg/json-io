@@ -7,7 +7,18 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -42,6 +53,10 @@ class ResolverValueToTargetTest {
 
         @Override
         protected void traverseArray(JsonObject jsonObj) {
+        }
+
+        @Override
+        protected void traverseMap(JsonObject jsonObj) {
         }
 
         @Override
@@ -217,6 +232,182 @@ class ResolverValueToTargetTest {
         assertThat(resolver.callValueToTarget(arrayObj)).isTrue();
         assertThat(arrayObj.getTarget()).isInstanceOf(String[].class);
         assertThat((String[]) arrayObj.getTarget()).containsExactly("hello", "world", "test");
+    }
+
+    @Test
+    void toJava_collectionBranch_createSameTypeCollection_arrayList() {
+        ArrayList<Object> source = new ArrayList<>();
+        source.add(miniJson("a", 1));
+        source.add(miniJson("b", 2));
+
+        Type targetType = new TypeHolder<ArrayList<Mini>>() {}.getType();
+        Object result = resolver.callToJava(targetType, source);
+
+        assertThat(result).isInstanceOf(ArrayList.class);
+        Collection<?> out = (Collection<?>) result;
+        assertThat(out).hasSize(2);
+        assertThat(out.iterator().next()).isInstanceOf(Mini.class);
+    }
+
+    @Test
+    void toJava_collectionBranch_createSameTypeCollection_linkedList() {
+        LinkedList<Object> source = new LinkedList<>();
+        source.add(miniJson("a", 1));
+        source.add(miniJson("b", 2));
+
+        Type targetType = new TypeHolder<LinkedList<Mini>>() {}.getType();
+        Object result = resolver.callToJava(targetType, source);
+
+        assertThat(result).isInstanceOf(LinkedList.class);
+        Collection<?> out = (Collection<?>) result;
+        assertThat(out).hasSize(2);
+        assertThat(out.iterator().next()).isInstanceOf(Mini.class);
+    }
+
+    @Test
+    void toJava_collectionBranch_createSameTypeCollection_linkedHashSet() {
+        LinkedHashSet<Object> source = new LinkedHashSet<>();
+        source.add(miniJson("a", 1));
+        source.add(miniJson("b", 2));
+
+        Type targetType = new TypeHolder<LinkedHashSet<Mini>>() {}.getType();
+        Object result = resolver.callToJava(targetType, source);
+
+        assertThat(result).isInstanceOf(LinkedHashSet.class);
+        Collection<?> out = (Collection<?>) result;
+        assertThat(out).hasSize(2);
+        assertThat(out.iterator().next()).isInstanceOf(Mini.class);
+    }
+
+    @Test
+    void toJava_collectionBranch_createSameTypeCollection_hashSet() {
+        HashSet<Object> source = new HashSet<>();
+        source.add(miniJson("a", 1));
+        source.add(miniJson("b", 2));
+
+        Type targetType = new TypeHolder<HashSet<Mini>>() {}.getType();
+        Object result = resolver.callToJava(targetType, source);
+
+        assertThat(result).isInstanceOf(HashSet.class);
+        Collection<?> out = (Collection<?>) result;
+        assertThat(out).hasSize(2);
+        assertThat(out.iterator().next()).isInstanceOf(Mini.class);
+    }
+
+    @Test
+    void toJava_collectionBranch_createSameTypeCollection_treeSet() {
+        TreeSet<Object> source = new TreeSet<>((a, b) -> {
+            JsonObject x = (JsonObject) a;
+            JsonObject y = (JsonObject) b;
+            Integer rx = (Integer) x.get("rank");
+            Integer ry = (Integer) y.get("rank");
+            return Integer.compare(rx, ry);
+        });
+        source.add(orderedMiniJson("x", 2));
+        source.add(orderedMiniJson("y", 1));
+
+        Type targetType = new TypeHolder<TreeSet<OrderedMini>>() {}.getType();
+        Object result = resolver.callToJava(targetType, source);
+
+        assertThat(result).isInstanceOf(TreeSet.class);
+        TreeSet<?> out = (TreeSet<?>) result;
+        assertThat(out).isNotEmpty();
+        assertThat(out).allMatch(OrderedMini.class::isInstance);
+    }
+
+    @Test
+    void toJava_collectionBranch_createSameTypeCollection_defaultArrayList() {
+        Vector<Object> source = new Vector<>();
+        source.add(miniJson("a", 1));
+        source.add(miniJson("b", 2));
+
+        Type targetType = new TypeHolder<Vector<Mini>>() {}.getType();
+        Object result = resolver.callToJava(targetType, source);
+
+        // Default branch in createSameTypeCollection() is ArrayList for unknown collection types.
+        assertThat(result).isInstanceOf(ArrayList.class);
+        Collection<?> out = (Collection<?>) result;
+        assertThat(out).hasSize(2);
+        assertThat(out.iterator().next()).isInstanceOf(Mini.class);
+    }
+
+    @Test
+    void toJava_mapBranch_createSameTypeMap_linkedHashMapAndMapInterface() {
+        JsonObject source = mapWithMiniValues();
+
+        Object asLinked = resolver.callToJava(new TypeHolder<LinkedHashMap<String, Mini>>() {}.getType(), source);
+        assertThat(asLinked).isInstanceOf(LinkedHashMap.class);
+        assertThat(((Map<?, ?>) asLinked).get("k1")).isInstanceOf(Mini.class);
+
+        Object asMap = resolver.callToJava(new TypeHolder<Map<String, Mini>>() {}.getType(), source);
+        assertThat(asMap).isInstanceOf(LinkedHashMap.class);
+        assertThat(((Map<?, ?>) asMap).get("k2")).isInstanceOf(Mini.class);
+    }
+
+    @Test
+    void toJava_mapBranch_createSameTypeMap_hashMap() {
+        JsonObject source = mapWithMiniValues();
+        Object result = resolver.callToJava(new TypeHolder<HashMap<String, Mini>>() {}.getType(), source);
+
+        assertThat(result).isInstanceOf(HashMap.class);
+        assertThat(((Map<?, ?>) result).get("k1")).isInstanceOf(Mini.class);
+    }
+
+    @Test
+    void toJava_mapBranch_createSameTypeMap_treeMap() {
+        JsonObject source = mapWithMiniValues();
+        Object result = resolver.callToJava(new TypeHolder<TreeMap<String, Mini>>() {}.getType(), source);
+
+        assertThat(result).isInstanceOf(TreeMap.class);
+        assertThat(((Map<?, ?>) result).get("k1")).isInstanceOf(Mini.class);
+    }
+
+    @Test
+    void toJava_mapBranch_createSameTypeMap_defaultLinkedHashMap() {
+        JsonObject source = mapWithMiniValues();
+        Object result = resolver.callToJava(new TypeHolder<ConcurrentHashMap<String, Mini>>() {}.getType(), source);
+
+        // Default branch in createSameTypeMap() uses LinkedHashMap for non-explicit target classes.
+        assertThat(result).isInstanceOf(LinkedHashMap.class);
+        assertThat(((Map<?, ?>) result).get("k2")).isInstanceOf(Mini.class);
+    }
+
+    private static JsonObject miniJson(String name, int score) {
+        JsonObject j = new JsonObject();
+        j.put("name", name);
+        j.put("score", score);
+        return j;
+    }
+
+    private static JsonObject orderedMiniJson(String name, int rank) {
+        JsonObject j = new JsonObject();
+        j.put("name", name);
+        j.put("rank", rank);
+        return j;
+    }
+
+    private static JsonObject mapWithMiniValues() {
+        JsonObject source = new JsonObject();
+        source.put("k1", miniJson("a", 1));
+        source.put("k2", miniJson("b", 2));
+        return source;
+    }
+
+    public static class Mini {
+        public String name;
+        public int score;
+    }
+
+    public static class OrderedMini implements Comparable<OrderedMini> {
+        public String name;
+        public int rank;
+
+        @Override
+        public int compareTo(OrderedMini o) {
+            String left = this.name == null ? "" : this.name;
+            String right = o.name == null ? "" : o.name;
+            return left.compareTo(right);
+        }
     }
 
     // Common interface for testing lenient mode

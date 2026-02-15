@@ -671,7 +671,7 @@ public class ObjectResolver extends Resolver
 
     /**
      * Process java.util.Map and its derivatives with support for parameterized value types.
-     * When the Map type is parameterized (e.g., Map<String, List<User>>), this method ensures
+     * When the Map type is parameterized (e.g., {@code Map<String, List<User>>}), this method ensures
      * that values are properly converted to their target collection types.
      *
      * @param jsonObj a Map-of-Map representation of the JSON input stream.

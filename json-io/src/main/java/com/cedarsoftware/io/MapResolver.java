@@ -341,7 +341,8 @@ public class MapResolver extends Resolver {
         }
 
         for (Map.Entry<Object, Object> e : jsonObj.entrySet()) {
-            final String fieldName = (String) e.getKey();
+            final Object fieldKey = e.getKey();
+            final String fieldName = fieldKey instanceof String ? (String) fieldKey : null;
             final Object rhs = e.getValue();
             
             if (rhs == null) {
@@ -351,7 +352,7 @@ public class MapResolver extends Resolver {
             
             // Pre-cache class and injector to avoid repeated lookups
             final Class<?> rhsClass = rhs.getClass();
-            final Injector injector = (injectorMap == null) ? null : injectorMap.get(fieldName);
+            final Injector injector = (injectorMap == null || fieldName == null) ? null : injectorMap.get(fieldName);
             
             if (rhsClass.isArray()) {   // RHS is an array
                 // Traverse array inline to patch @refs - avoids JsonObject wrapper allocation

@@ -37,6 +37,10 @@ class ResolverSetArrayElementTest {
         }
 
         @Override
+        protected void traverseMap(JsonObject jsonObj) {
+        }
+
+        @Override
         protected Object resolveArray(Type suggestedType, List<Object> list) {
             return null;
         }

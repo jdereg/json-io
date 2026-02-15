@@ -1060,6 +1060,13 @@ public abstract class Resolver {
     protected abstract void traverseCollection(JsonObject jsonObj);
 
     protected abstract void traverseArray(JsonObject jsonObj);
+
+    /**
+     * Process java.util.Map and its derivatives.
+     *
+     * @param jsonObj a Map-of-Map representation of the JSON input stream.
+     */
+    protected abstract void traverseMap(JsonObject jsonObj);
     
     /**
      * Security-aware method to add unresolved references with size limits
@@ -1110,38 +1117,6 @@ public abstract class Resolver {
     }
 
     /**
-     * Process java.util.Map and it's derivatives.  These are written specially
-     * so that the serialization does not expose the class internals
-     * (internal fields of TreeMap for example).
-     *
-     * @param jsonObj a Map-of-Map representation of the JSON input stream.
-     */
-    protected void traverseMap(JsonObject jsonObj) {
-        if (jsonObj.isFinished) {
-            return;
-        }
-        jsonObj.setFinished();
-        Map.Entry<Object[], Object[]> pair = jsonObj.asTwoArrays();
-        final Object[] keys = pair.getKey();
-        final Object[] items = pair.getValue();
-
-        if (keys == null) {  // If keys is null, items is also null due to JsonObject validation
-            return;
-        }
-
-        buildCollection(keys);
-        buildCollection(items);
-
-        // Save these for later so that unresolved references inside keys or values
-        // get patched first, and then build the Maps.
-        // Security: Prevent unbounded memory growth via excessive map creation (uses hoisted constant)
-        if (maxMapsToRehash != Integer.MAX_VALUE && mapsToRehash.size() >= maxMapsToRehash) {
-            throw new JsonIoException("Security limit exceeded: Maximum maps to rehash (" + maxMapsToRehash + ") reached. Possible DoS attack.");
-        }
-        mapsToRehash.add(jsonObj);
-    }
-
-    /**
      * Add a JsonObject to the list of maps that need rehashing after resolution.
      * This is called by subclasses that override traverseMap() to ensure proper
      * map population via rehashMaps().
@@ -1152,13 +1127,6 @@ public abstract class Resolver {
             throw new JsonIoException("Security limit exceeded: Maximum maps to rehash (" + maxMapsToRehash + ") reached. Possible DoS attack.");
         }
         mapsToRehash.add(jsonObj);
-    }
-
-    private void buildCollection(Object[] arrayContent) {
-        final JsonObject collection = new JsonObject();
-        collection.setItems(arrayContent);
-        collection.setTarget(arrayContent);
-        push(collection);
     }
 
     // Create a ClassValueMap for direct instantiation of certain classes
