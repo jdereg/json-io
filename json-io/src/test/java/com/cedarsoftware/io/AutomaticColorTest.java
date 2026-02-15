@@ -132,7 +132,7 @@ class AutomaticColorTest {
         Converter converter = new Converter(options.getConverterOptions());
         
         // Check if Color is considered a "simple type" now
-        boolean isSimpleType = converter.isSimpleTypeConversionSupported(Color.class);
+        boolean isSimpleType = Resolver.isPseudoPrimitive(Color.class);
         LOG.info("Color is simple type: " + isSimpleType);
         
         // Test Color to String conversion

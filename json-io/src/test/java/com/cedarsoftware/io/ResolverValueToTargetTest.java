@@ -193,7 +193,7 @@ class ResolverValueToTargetTest {
     /**
      * Tests that valueToTarget returns false for non-simple types.
      * This exercises lines 1282-1283 in Resolver.java where
-     * !converter.isSimpleTypeConversionSupported(javaType) is true.
+     * !Resolver.isPseudoPrimitive(javaType) is true.
      */
     @Test
     void valueToTarget_returnsFalseForNonSimpleType() {

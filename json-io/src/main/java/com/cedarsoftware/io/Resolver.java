@@ -49,6 +49,8 @@ import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.TypeUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
+import static com.cedarsoftware.util.Converter.isConversionSupportedFor;
+
 /**
  * This class is used to convert a source of Java Maps that were created from
  * the JsonParser.  These are in 'raw' form with no 'pointers'.  This code will
@@ -472,45 +474,17 @@ public abstract class Resolver {
         // - Target is an Enum (json-io has special factory handling for enums)
         if (!jsonObj.isArray() && type != null) {
             Class<?> targetClass = TypeUtilities.getRawClass(type);
-            // Check if @type is a Map type - if so, we may need early conversion
             Type jsonType = jsonObj.getType();
-            boolean jsonTypeIsMap = jsonType == null ||
-                    Map.class.isAssignableFrom(TypeUtilities.getRawClass(jsonType));
+            boolean jsonTypeIsMap = isMapLikeJsonType(jsonType);
 
-            if (jsonTypeIsMap
-                    && !Map.class.isAssignableFrom(targetClass)
-                    && targetClass != Object.class
-                    && !Enum.class.isAssignableFrom(targetClass)
-                    && converter.isConversionSupportedFor(Map.class, targetClass)) {
+            if (shouldEarlyConvertMapToNonMap(targetClass, jsonTypeIsMap)) {
                 // Convert directly using the unmodified JsonObject (which has Map data)
                 return convertToType(jsonObj, type);
             }
 
-            // Special case: Map with JsonObject values (e.g., from ToonReader)
-            // When the target type is a ParameterizedType like Map<String, Person>, we need to
-            // convert each JsonObject value to the target value type.
-            // Only do this when:
-            // - The value type is a concrete POJO class (not Object, not Map, not interface, not simple type)
-            // - The JsonObject doesn't use @keys/@items format (which indicates special map serialization)
-            if (jsonTypeIsMap
-                    && Map.class.isAssignableFrom(targetClass)
-                    && type instanceof ParameterizedType
-                    && jsonObj.getKeys() == null) {  // Skip if uses @keys/@items format
-                Type[] typeArgs = ((ParameterizedType) type).getActualTypeArguments();
-                if (typeArgs.length >= 2 && mapValuesContainJsonObjects(jsonObj)) {
-                    Type valueType = typeArgs[1];
-                    Class<?> valueClass = TypeUtilities.getRawClass(valueType);
-                    // Only convert if value type is a concrete POJO class that needs conversion
-                    // Skip if value type is Object, Map, Collection, interface, or simple type
-                    if (valueClass != null
-                            && valueClass != Object.class
-                            && !valueClass.isInterface()
-                            && !isSimpleType(valueClass)
-                            && !Map.class.isAssignableFrom(valueClass)
-                            && !Collection.class.isAssignableFrom(valueClass)) {
-                        return convertMapValues(jsonObj, targetClass, valueType);
-                    }
-                }
+            Type mapPojoValueType = resolveMapPojoValueTypeForPreConversion(jsonObj, type, targetClass, jsonTypeIsMap);
+            if (mapPojoValueType != null) {
+                return convertMapValues(jsonObj, targetClass, mapPojoValueType);
             }
         }
 
@@ -766,7 +740,9 @@ public abstract class Resolver {
         // 4. Lenient mode for complex objects: accept if they share meaningful common ancestors
         //    This is for POJOs/complex objects, NOT for primitives or simple types.
         //    Only apply this when value is a "complex" object (not a primitive wrapper, String, etc.)
-        if (!isSimpleType(value.getClass())) {
+        Class<?> valueClass = value.getClass();
+        boolean simpleLike = isPseudoPrimitive(valueClass) || valueClass.isEnum() || valueClass == Class.class;
+        if (!simpleLike) {
             Set<Class<?>> commonAncestors = ClassUtilities.findLowestCommonSupertypesExcluding(value.getClass(), targetClass, SKIP_COMMON_ROOTS);
             if (!commonAncestors.isEmpty()) {
                 return value;
@@ -777,18 +753,67 @@ public abstract class Resolver {
         throw new JsonIoException("Return type mismatch. Expecting: " + targetClass.getName() + ", found: " + value.getClass().getName(), cause);
     }
 
+    private static boolean isMapLikeJsonType(Type jsonType) {
+        return jsonType == null || Map.class.isAssignableFrom(TypeUtilities.getRawClass(jsonType));
+    }
+
     /**
-     * Check if a class is a "simple" type (primitive, wrapper, String, etc.)
-     * that should NOT get the lenient common-ancestors check.
+     * Determines if a map-like JsonObject should be converted directly to a non-Map target
+     * before normal traversal mutates map content.
      */
-    private boolean isSimpleType(Class<?> clazz) {
-        return clazz.isPrimitive() ||
-                Number.class.isAssignableFrom(clazz) ||
-                Boolean.class == clazz ||
-                Character.class == clazz ||
-                String.class == clazz ||
-                Class.class == clazz ||
-                clazz.isEnum();
+    private boolean shouldEarlyConvertMapToNonMap(Class<?> targetClass, boolean jsonTypeIsMap) {
+        return jsonTypeIsMap
+                && targetClass != null
+                && !Map.class.isAssignableFrom(targetClass)
+                && targetClass != Object.class
+                && !Enum.class.isAssignableFrom(targetClass)
+                && converter.isConversionSupportedFor(Map.class, targetClass);
+    }
+
+    /**
+     * Returns the parameterized Map value type when map values should be materialized as POJOs
+     * during the pre-resolution map conversion phase; otherwise returns null.
+     */
+    private Type resolveMapPojoValueTypeForPreConversion(JsonObject jsonObj, Type requestedType,
+                                                         Class<?> targetClass, boolean jsonTypeIsMap) {
+        if (!jsonTypeIsMap
+                || targetClass == null
+                || !Map.class.isAssignableFrom(targetClass)
+                || !(requestedType instanceof ParameterizedType)
+                || jsonObj.getKeys() != null
+                || !mapValuesContainJsonObjects(jsonObj)) {
+            return null;
+        }
+
+        Type[] typeArgs = ((ParameterizedType) requestedType).getActualTypeArguments();
+        if (typeArgs.length < 2) {
+            return null;
+        }
+
+        Type valueType = typeArgs[1];
+        Class<?> valueClass = TypeUtilities.getRawClass(valueType);
+        return shouldConvertMapValueTypeAsPojo(valueClass) ? valueType : null;
+    }
+
+    /**
+     * Determines whether a parameterized Map value type should be treated as a POJO target
+     * for map-value conversion (JsonObject -> concrete object).
+     *
+     * <p>Returns true only for concrete, non-container, non-scalar, non-enum types.
+     * This preserves existing behavior: simple/scalar types are handled by converter paths,
+     * while this gate is reserved for complex object value materialization.</p>
+     *
+     * @param valueType resolved raw value class from a parameterized Map value type
+     * @return true if map values should be converted as POJOs
+     */
+    private static boolean shouldConvertMapValueTypeAsPojo(Class<?> valueType) {
+        return valueType != null
+                && valueType != Object.class
+                && !valueType.isInterface()
+                && !isPseudoPrimitive(valueType)
+                && !valueType.isEnum()
+                && !Map.class.isAssignableFrom(valueType)
+                && !Collection.class.isAssignableFrom(valueType);
     }
 
     /**
@@ -1262,7 +1287,7 @@ public abstract class Resolver {
         }
 
         // Knock out popular easy classes to instantiate and finish.
-        if (converter.isSimpleTypeConversionSupported(targetType)) {
+        if (isPseudoPrimitive(targetType)) {
             Object result = converter.convert(jsonObj, targetType);
             return jsonObj.setFinishedTarget(result, true);
         }
@@ -1454,8 +1479,7 @@ public abstract class Resolver {
         Class<?> javaType = jsonObject.getRawType();
         // For arrays, attempt simple type conversion.
         if (javaType.isArray() &&
-                converter.isSimpleTypeConversionSupported(javaType.getComponentType(),
-                        javaType.getComponentType())) {
+                isPseudoPrimitive(javaType.getComponentType())) {
             Object[] jsonItems = jsonObject.getItems();
             Class<?> componentType = javaType.getComponentType();
             if (jsonItems == null) {    // empty array
@@ -1485,7 +1509,7 @@ public abstract class Resolver {
             return true;
         }
 
-        if (!converter.isSimpleTypeConversionSupported(javaType)) {
+        if (!isPseudoPrimitive(javaType)) {
             return false;
         }
 
@@ -1509,6 +1533,21 @@ public abstract class Resolver {
             }
         }
         return defaultType;
+    }
+
+    /**
+     * Returns true when the type should be treated as a pseudo-primitive in json-io resolution.
+     * Pseudo-primitives are non-container types that have bidirectional String conversion support.
+     */
+    static boolean isPseudoPrimitive(Class<?> type) {
+        if (type == null ||
+                type.isArray() ||
+                Collection.class.isAssignableFrom(type) ||
+                Map.class.isAssignableFrom(type) ||
+                Enum.class.isAssignableFrom(type)) {
+            return false;
+        }
+        return isConversionSupportedFor(type, String.class);
     }
 
     /**

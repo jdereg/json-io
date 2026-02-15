@@ -24,7 +24,7 @@ class AutomaticPathTest {
         Converter converter = new Converter(options.getConverterOptions());
         
         // Check if Path is considered a "simple type" now
-        boolean isSimpleType = converter.isSimpleTypeConversionSupported(Path.class);
+        boolean isSimpleType = Resolver.isPseudoPrimitive(Path.class);
         LOG.info("Path is simple type: " + isSimpleType);
         
         // Test Path to String conversion
@@ -75,7 +75,7 @@ class AutomaticPathTest {
         // When: We check various conversion capabilities
         boolean stringToPath = converter.isConversionSupportedFor(String.class, Path.class);
         boolean pathToString = converter.isConversionSupportedFor(Path.class, String.class);
-        boolean isSimpleType = converter.isSimpleTypeConversionSupported(Path.class);
+        boolean isSimpleType = Resolver.isPseudoPrimitive(Path.class);
         
         // Then: Log the current state
         LOG.info("String to Path supported: " + stringToPath);

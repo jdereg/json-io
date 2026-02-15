@@ -91,11 +91,12 @@ public class MapResolver extends Resolver {
         if (rawRootType != null && rawRootType.isArray()) {
             typeToCheck = getUltimateComponentType(rootType);
             Class<?> ultimateRawType = TypeUtilities.getRawClass(typeToCheck);
-            if (converter.isSimpleTypeConversionSupported(ultimateRawType) ||
+            if (isPseudoPrimitive(ultimateRawType) ||
+                    ultimateRawType == Number.class ||
                     (ultimateRawType != null && ultimateRawType.equals(Object.class))) {
                 return;
             }
-        } else if (converter.isSimpleTypeConversionSupported(rawRootType)) {
+        } else if (isPseudoPrimitive(rawRootType) || rawRootType == Number.class) {
             return;
         }
 
@@ -268,7 +269,7 @@ public class MapResolver extends Resolver {
         Class<?> javaClass = TypeUtilities.getRawClass(javaType);
 
         // If @type is a simple type or Number, convert jsonObj to its basic type
-        if (converter.isSimpleTypeConversionSupported(javaClass) ||
+        if (isPseudoPrimitive(javaClass) ||
                 Number.class.isAssignableFrom(javaClass)) {
             Class<?> basicType = getJsonSynonymType(javaClass);
             return converter.convert(rootObj, basicType);
@@ -301,7 +302,7 @@ public class MapResolver extends Resolver {
         if (obj == null) {
             return false;
         }
-        return converter.isSimpleTypeConversionSupported(obj.getClass());
+        return isPseudoPrimitive(obj.getClass());
     }
 
     protected Object readWithFactoryIfExists(Object o, Type compType) {

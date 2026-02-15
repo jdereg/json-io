@@ -69,28 +69,12 @@ public class ObjectResolver extends Resolver
     // ========================================================================
 
     /**
-     * Checks if a class is a "simple type" that Converter can handle completely.
-     * Simple types include primitives, wrappers, String, and non-referenceable JDK types.
-     */
-    private boolean isSimpleType(Class<?> clazz) {
-        if (clazz == null) {
-            return false;
-        }
-        return clazz.isPrimitive()
-                || clazz == String.class
-                || Number.class.isAssignableFrom(clazz)
-                || clazz == Boolean.class
-                || clazz == Character.class
-                || readOptions.isNonReferenceableClass(clazz);
-    }
-
-    /**
      * Checks if we can use fast-path Converter for array elements.
      * Returns true only when we're confident Converter can handle the conversion safely.
      * This is conservative to avoid conversion failures for edge cases.
      */
     private boolean canUseFastPathForArray(Object[] elements, Class<?> targetComponentType) {
-        if (!isSimpleType(targetComponentType)) {
+        if (!isPseudoPrimitive(targetComponentType)) {
             return false;
         }
 
@@ -427,7 +411,7 @@ public class ObjectResolver extends Resolver
                     }
                 }
                 // 4. CONVERTER - scalar-to-scalar conversion for simple types
-                if (isSimpleType(rawType) && converter.isConversionSupportedFor(rhsClass, rawType)) {
+                if (isPseudoPrimitive(rawType) && converter.isConversionSupportedFor(rhsClass, rawType)) {
                     injector.inject(target, converter.convert(rhs, rawType));
                     return;
                 }

@@ -23,7 +23,7 @@ class AutomaticFileTest {
         Converter converter = new Converter(options.getConverterOptions());
         
         // Check if File is considered a "simple type" now
-        boolean isSimpleType = converter.isSimpleTypeConversionSupported(File.class);
+        boolean isSimpleType = Resolver.isPseudoPrimitive(File.class);
         LOG.info("File is simple type: " + isSimpleType);
         
         // Test File to String conversion
@@ -74,7 +74,7 @@ class AutomaticFileTest {
         // When: We check various conversion capabilities
         boolean stringToFile = converter.isConversionSupportedFor(String.class, File.class);
         boolean fileToString = converter.isConversionSupportedFor(File.class, String.class);
-        boolean isSimpleType = converter.isSimpleTypeConversionSupported(File.class);
+        boolean isSimpleType = Resolver.isPseudoPrimitive(File.class);
         
         // Then: Log the current state
         LOG.info("String to File supported: " + stringToFile);
