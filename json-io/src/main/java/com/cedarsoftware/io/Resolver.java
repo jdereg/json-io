@@ -1343,7 +1343,17 @@ public abstract class Resolver {
             instance = jsonObject;
         } else {
             Class<?> targetClass = isUnknownObject ? unknownTypeClass : c;
-            instance = ClassUtilities.newInstance(converter, targetClass, jsonObj);
+            // For unknownTypeClass maps, always use no-arg construction.
+            // Passing JsonObject into ClassUtilities.newInstance() can select Map-copy constructors
+            // (e.g., LinkedHashMap(Map)), which can be sensitive to iterator entry reuse patterns.
+            // Resolver traversal + rehashMaps() will populate the map contents after instantiation.
+            if (isUnknownObject
+                    && targetClass != null
+                    && Map.class.isAssignableFrom(targetClass)) {
+                instance = ClassUtilities.newInstance(converter, targetClass, null);
+            } else {
+                instance = ClassUtilities.newInstance(converter, targetClass, jsonObj);
+            }
         }
 
         return jsonObj.setTarget(instance);
