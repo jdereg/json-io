@@ -79,27 +79,15 @@ import static com.cedarsoftware.util.Converter.isConversionSupportedFor;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class Resolver {
     private static final String NO_FACTORY = "_︿_ψ_☼";
-    protected static final int NUM_NONE = 0;
-    protected static final int NUM_INT = 1;
-    protected static final int NUM_DOUBLE = 2;
-    protected static final int NUM_BYTE = 3;
-    protected static final int NUM_FLOAT = 4;
-    protected static final int NUM_SHORT = 5;
-    protected static final int NUM_LONG = 6;
-
-    protected static final ClassValue<Integer> NUMERIC_TYPE_KIND = new ClassValue<Integer>() {
-        @Override
-        protected Integer computeValue(Class<?> type) {
-            if (type == int.class || type == Integer.class) return NUM_INT;
-            if (type == double.class || type == Double.class) return NUM_DOUBLE;
-            if (type == byte.class || type == Byte.class) return NUM_BYTE;
-            if (type == float.class || type == Float.class) return NUM_FLOAT;
-            if (type == short.class || type == Short.class) return NUM_SHORT;
-            if (type == long.class || type == Long.class) return NUM_LONG;
-            return NUM_NONE;
-        }
-    };
-
+    protected static final int TARGET_OTHER = 0;
+    protected static final int TARGET_INT = 1;
+    protected static final int TARGET_DOUBLE = 2;
+    protected static final int TARGET_BYTE = 3;
+    protected static final int TARGET_FLOAT = 4;
+    protected static final int TARGET_SHORT = 5;
+    protected static final int TARGET_LONG = 6;
+    protected static final int TARGET_BOOLEAN = 7;
+    protected static final int TARGET_CHAR = 8;
     // Common ancestor roots to skip when checking type compatibility (using IdentitySet for Class comparison)
     private static final Set<Class<?>> SKIP_COMMON_ROOTS;
     static {
@@ -157,36 +145,6 @@ public abstract class Resolver {
             referencingObj = referrer;
             index = idx;
             refId = id;
-        }
-    }
-
-    protected static Object coerceLong(long longVal, Class<?> targetType) {
-        switch (NUMERIC_TYPE_KIND.get(targetType)) {
-            case NUM_INT:
-                return (int) longVal;
-            case NUM_DOUBLE:
-                return (double) longVal;
-            case NUM_BYTE:
-                return (byte) longVal;
-            case NUM_FLOAT:
-                return (float) longVal;
-            case NUM_SHORT:
-                return (short) longVal;
-            default:
-                return null;
-        }
-    }
-
-    protected static Object coerceDouble(double doubleVal, Class<?> targetType) {
-        switch (NUMERIC_TYPE_KIND.get(targetType)) {
-            case NUM_FLOAT:
-                return (float) doubleVal;
-            case NUM_LONG:
-                return (long) doubleVal;
-            case NUM_INT:
-                return (int) doubleVal;
-            default:
-                return null;
         }
     }
 
@@ -1612,6 +1570,132 @@ public abstract class Resolver {
         } else {
             refArray[index] = value;
         }
+    }
+
+    /**
+     * Categorize a target type into a compact scalar kind for hot conversion paths.
+     */
+    protected static int scalarTargetKind(Class<?> targetType) {
+        if (targetType == int.class || targetType == Integer.class) return TARGET_INT;
+        if (targetType == double.class || targetType == Double.class) return TARGET_DOUBLE;
+        if (targetType == byte.class || targetType == Byte.class) return TARGET_BYTE;
+        if (targetType == float.class || targetType == Float.class) return TARGET_FLOAT;
+        if (targetType == short.class || targetType == Short.class) return TARGET_SHORT;
+        if (targetType == long.class || targetType == Long.class) return TARGET_LONG;
+        if (targetType == boolean.class || targetType == Boolean.class) return TARGET_BOOLEAN;
+        if (targetType == char.class || targetType == Character.class) return TARGET_CHAR;
+        return TARGET_OTHER;
+    }
+
+    /**
+     * Fast scalar conversion for values typically produced by JsonParser (Long, Double, Boolean, String).
+     * Returns null when no direct scalar conversion is available.
+     */
+    protected static Object fastScalarCoercion(Object value, Class<?> valueClass, int targetKind) {
+        if (targetKind == TARGET_OTHER) {
+            return null;
+        }
+        if (valueClass == Long.class) {
+            long v = (Long) value;
+            switch (targetKind) {
+                case TARGET_LONG: return value;
+                case TARGET_INT: return (int) v;
+                case TARGET_DOUBLE: return (double) v;
+                case TARGET_BYTE: return (byte) v;
+                case TARGET_FLOAT: return (float) v;
+                case TARGET_SHORT: return (short) v;
+                case TARGET_CHAR: return (char) v;
+                default: return null;
+            }
+        }
+        if (valueClass == Double.class) {
+            double v = (Double) value;
+            switch (targetKind) {
+                case TARGET_DOUBLE: return value;
+                case TARGET_FLOAT: return (float) v;
+                case TARGET_LONG: return (long) v;
+                case TARGET_INT: return (int) v;
+                case TARGET_SHORT: return (short) v;
+                case TARGET_BYTE: return (byte) v;
+                case TARGET_CHAR: return (char) ((int) v);
+                default: return null;
+            }
+        }
+        if (targetKind == TARGET_BOOLEAN && valueClass == Boolean.class) {
+            return value;
+        }
+        if (targetKind == TARGET_CHAR) {
+            if (valueClass == Character.class) {
+                return value;
+            }
+            if (valueClass == String.class) {
+                String s = (String) value;
+                return s.length() == 1 ? s.charAt(0) : null;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Fast array assignment for parsed scalar values, avoiding wrapper churn for primitive arrays.
+     */
+    protected static boolean tryAssignParsedScalarToArray(
+            Object array, Object[] refArray, int index, Object element, Class<?> elementClass, boolean isPrimitive, int targetKind) {
+        if (targetKind == TARGET_OTHER) {
+            return false;
+        }
+        if (isPrimitive) {
+            if (elementClass == Long.class) {
+                long v = (Long) element;
+                switch (targetKind) {
+                    case TARGET_LONG: ((long[]) array)[index] = v; return true;
+                    case TARGET_INT: ((int[]) array)[index] = (int) v; return true;
+                    case TARGET_DOUBLE: ((double[]) array)[index] = (double) v; return true;
+                    case TARGET_BYTE: ((byte[]) array)[index] = (byte) v; return true;
+                    case TARGET_FLOAT: ((float[]) array)[index] = (float) v; return true;
+                    case TARGET_SHORT: ((short[]) array)[index] = (short) v; return true;
+                    case TARGET_CHAR: ((char[]) array)[index] = (char) v; return true;
+                    default: return false;
+                }
+            }
+            if (elementClass == Double.class) {
+                double v = (Double) element;
+                switch (targetKind) {
+                    case TARGET_DOUBLE: ((double[]) array)[index] = v; return true;
+                    case TARGET_FLOAT: ((float[]) array)[index] = (float) v; return true;
+                    case TARGET_LONG: ((long[]) array)[index] = (long) v; return true;
+                    case TARGET_INT: ((int[]) array)[index] = (int) v; return true;
+                    case TARGET_SHORT: ((short[]) array)[index] = (short) v; return true;
+                    case TARGET_BYTE: ((byte[]) array)[index] = (byte) v; return true;
+                    case TARGET_CHAR: ((char[]) array)[index] = (char) ((int) v); return true;
+                    default: return false;
+                }
+            }
+            if (targetKind == TARGET_BOOLEAN && elementClass == Boolean.class) {
+                ((boolean[]) array)[index] = (Boolean) element;
+                return true;
+            }
+            if (targetKind == TARGET_CHAR) {
+                if (elementClass == Character.class) {
+                    ((char[]) array)[index] = (Character) element;
+                    return true;
+                }
+                if (elementClass == String.class) {
+                    String s = (String) element;
+                    if (s.length() == 1) {
+                        ((char[]) array)[index] = s.charAt(0);
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        Object coerced = fastScalarCoercion(element, elementClass, targetKind);
+        if (coerced == null) {
+            return false;
+        }
+        refArray[index] = coerced;
+        return true;
     }
 
     /**

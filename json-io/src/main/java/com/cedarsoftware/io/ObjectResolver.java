@@ -129,70 +129,6 @@ public class ObjectResolver extends Resolver
     }
 
     /**
-     * Fast path for common JSON primitive to Java primitive coercions.
-     * JSON only produces Long, Double, String, Boolean - handle common cases without Converter lookup.
-     * Returns null if no fast conversion is available (fall through to readWithFactoryIfExists).
-     */
-    private static Object fastPrimitiveCoercion(Object value, Class<?> valueClass, Class<?> targetType) {
-        if (valueClass == Long.class) {
-            // Identity: Long→long/Long needs no conversion - return original object (avoids unbox+rebox)
-            if (targetType == long.class || targetType == Long.class) return value;
-            return coerceLong((Long) value, targetType);
-        } else if (valueClass == Double.class) {
-            // Identity: Double→double/Double needs no conversion - return original object (avoids unbox+rebox)
-            if (targetType == double.class || targetType == Double.class) return value;
-            return coerceDouble((Double) value, targetType);
-        }
-        return null;
-    }
-
-    /**
-     * Directly assign parsed JSON Long/Double values into primitive arrays, avoiding
-     * intermediate wrapper allocation from fastPrimitiveCoercion() in hot array loops.
-     */
-    private static boolean tryAssignParsedNumberToPrimitiveArray(
-            Object array, int index, Class<?> primitiveType, Object element, Class<?> elementClass) {
-        if (elementClass == Long.class) {
-            long value = (Long) element;
-            if (primitiveType == long.class) {
-                ((long[]) array)[index] = value;
-                return true;
-            } else if (primitiveType == int.class) {
-                ((int[]) array)[index] = (int) value;
-                return true;
-            } else if (primitiveType == double.class) {
-                ((double[]) array)[index] = (double) value;
-                return true;
-            } else if (primitiveType == byte.class) {
-                ((byte[]) array)[index] = (byte) value;
-                return true;
-            } else if (primitiveType == float.class) {
-                ((float[]) array)[index] = (float) value;
-                return true;
-            } else if (primitiveType == short.class) {
-                ((short[]) array)[index] = (short) value;
-                return true;
-            }
-        } else if (elementClass == Double.class) {
-            double value = (Double) element;
-            if (primitiveType == double.class) {
-                ((double[]) array)[index] = value;
-                return true;
-            } else if (primitiveType == float.class) {
-                ((float[]) array)[index] = (float) value;
-                return true;
-            } else if (primitiveType == long.class) {
-                ((long[]) array)[index] = (long) value;
-                return true;
-            } else if (primitiveType == int.class) {
-                ((int[]) array)[index] = (int) value;
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
      * Handle assignment of an Object[] RHS to a field.
      * Wraps the array in a JsonObject, preserves generic type info, and queues for traversal.
      * This handles both array fields (String[]) and collection fields (List&lt;String&gt;).
@@ -566,6 +502,7 @@ public class ObjectResolver extends Resolver
             }
         }
         final boolean hasSpecificElementType = rawElementType != null && rawElementType != Object.class;
+        final int targetElementKind = hasSpecificElementType ? scalarTargetKind(rawElementType) : TARGET_OTHER;
         final Class<?> rawNestedElementType = TypeUtilities.getRawClass(elementType);
         final boolean nestedElementIsCollectionType = rawNestedElementType != null
                 && Collection.class.isAssignableFrom(rawNestedElementType);
@@ -599,8 +536,8 @@ public class ObjectResolver extends Resolver
             }
 
             // Strategy 3: FAST PRIMITIVE COERCION - avoid readWithFactoryIfExists overhead
-            if (hasSpecificElementType) {
-                Object coerced = fastPrimitiveCoercion(element, elementClass, rawElementType);
+            if (hasSpecificElementType && targetElementKind != TARGET_OTHER) {
+                Object coerced = fastScalarCoercion(element, elementClass, targetElementKind);
                 if (coerced != null) {
                     col.add(coerced);
                     idx++;
@@ -910,6 +847,7 @@ public class ObjectResolver extends Resolver
         final Class<?> effectiveRawComponentType = TypeUtilities.getRawClass(effectiveComponentType);
         final boolean hasSpecificComponentType = effectiveRawComponentType != null
                 && effectiveRawComponentType != Object.class;
+        final int targetComponentKind = hasSpecificComponentType ? scalarTargetKind(effectiveRawComponentType) : TARGET_OTHER;
 
         // Optimize: check array type ONCE, not on every element assignment
         final boolean isPrimitive = fallbackCompType.isPrimitive();
@@ -946,12 +884,7 @@ public class ObjectResolver extends Resolver
             // JSON only produces Long for integers and Double for decimals.
             // Convert directly to the target type without going through Converter lookup.
             if (hasSpecificComponentType) {
-                if (isPrimitive && tryAssignParsedNumberToPrimitiveArray(array, i, fallbackCompType, element, elementClass)) {
-                    continue;
-                }
-                Object coerced = fastPrimitiveCoercion(element, elementClass, effectiveRawComponentType);
-                if (coerced != null) {
-                    setArrayElement(array, refArray, i, coerced, isPrimitive);
+                if (tryAssignParsedScalarToArray(array, refArray, i, element, elementClass, isPrimitive, targetComponentKind)) {
                     continue;
                 }
             }

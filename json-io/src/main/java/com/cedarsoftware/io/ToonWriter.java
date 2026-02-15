@@ -489,56 +489,6 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
-     * Write collection elements (after the [N]: marker has been written).
-     * Per TOON spec: first field of object elements goes on hyphen line.
-     * For uniform object arrays, uses tabular format: {col1,col2}: row1 row2
-     */
-    private void writeCollectionElements(Collection<?> collection) throws IOException {
-        if (collection.isEmpty()) {
-            return;
-        }
-
-        // Check if all elements are primitives
-        boolean allPrimitives = true;
-        for (Object element : collection) {
-            if (element != null && !isPrimitive(element)) {
-                allPrimitives = false;
-                break;
-            }
-        }
-
-        if (allPrimitives) {
-            out.write(" ");
-            boolean first = true;
-            for (Object element : collection) {
-                if (!first) {
-                    out.write(delimiter);
-                }
-                first = false;
-                writeInlineValue(element);
-            }
-        } else {
-            // Check for uniform object array (all Maps with same keys)
-            List<String> uniformKeys = getUniformKeys(collection);
-            if (uniformKeys != null) {
-                // Tabular format: {key1,key2,...}: followed by CSV rows
-                writeTabularHeader(uniformKeys);
-                writeTabularRows(collection, uniformKeys);
-            } else {
-                // Mixed/complex - use list format with hyphens
-                depth++;
-                for (Object element : collection) {
-                    out.write(NEW_LINE);
-                    writeIndent();
-                    out.write("-");
-                    writeListElement(element);
-                }
-                depth--;
-            }
-        }
-    }
-
-    /**
      * Check if a collection contains uniform objects (all Maps with identical keys and primitive values).
      * Returns the ordered list of keys if uniform, null otherwise.
      */

@@ -1,6 +1,14 @@
 ### Revision History
 
 #### 4.94.0 - 2026-02-14
+* **PERFORMANCE**: Read-side scalar coercion hot paths refactored to avoid legacy `coerceLong()`/`coerceDouble()` indirection:
+  * Added target-kind based scalar coercion (`scalarTargetKind` / `fastScalarCoercion`) in `Resolver`.
+  * `ObjectResolver` / `MapResolver` now use precomputed scalar target kinds in array and field hot loops.
+  * Primitive array assignment now uses direct no-allocation writes via shared `tryAssignParsedScalarToArray(...)`.
+  This reduces wrapper churn and removes repeated coercion dispatch overhead in numeric-heavy deserialization.
+* **PERFORMANCE**: `JsonWriter.writeMapBody(...)` (both `Iterator` and `JsonObject` paths) now uses specialized loop branches with hoisted invariants (`skipNullFields`, `json5UnquotedKeys`, `maxStringLength`) to reduce per-entry branch checks in map write hot loops.
+* **MAINTENANCE/PERFORMANCE**: Inlined and removed now-redundant `MapResolver.fastPrimitiveCoercion(...)` wrapper after scalar coercion consolidation.
+* **MAINTENANCE**: Removed unused private method `ToonWriter.writeCollectionElements(Collection<?>)`.
 * **PERFORMANCE**: `JsonParser` now uses a parser-only `JsonObject.appendFieldForParser()` fast path for object field insertion, avoiding `JsonObject.put()` duplicate-key search (`indexOf`) on the common unique-key path. This reduces parse-time key insertion overhead and shifts work from linear duplicate checks to direct append.
 * **PERFORMANCE**: Added thread-local buffer recycling in `JsonIo` String-based JSON paths:
   * `toJson(Object, WriteOptions)` now reuses `FastByteArrayOutputStream` and `FastWriter` buffers.

@@ -395,7 +395,8 @@ public class MapResolver extends Resolver {
                     continue;
                 }
                 // Fast path for common JSON primitive coercions (Long->int, Double->float, etc.)
-                Object fastValue = fastPrimitiveCoercion(rhs, rhsClass, fieldType);
+                int fieldTargetKind = scalarTargetKind(fieldType);
+                Object fastValue = fastScalarCoercion(rhs, rhsClass, fieldTargetKind);
                 if (fastValue != null) {
                     e.setValue(fastValue);   // Direct update - avoids indexOf() lookup
                 } else if (converter.isConversionSupportedFor(rhsClass, fieldType)) {
@@ -469,6 +470,7 @@ public class MapResolver extends Resolver {
 
         Object target = jsonObj.getTarget() != null ? jsonObj.getTarget() : items;
         Class<?> componentType = getArrayComponentType(jsonObj);
+        final int targetComponentKind = scalarTargetKind(componentType);
 
         // Optimize: check array type ONCE, not on every element assignment
         final boolean isPrimitive = componentType.isPrimitive();
@@ -488,7 +490,7 @@ public class MapResolver extends Resolver {
             if (elementClass.isArray() || (jsonElement != null && jsonElement.isArray())) {
                 handleNestedArray(element, componentType, target, i);
             } else {
-                processArrayElement(element, jsonElement, elementClass, componentType, target, refArray, i, isPrimitive);
+                processArrayElement(element, jsonElement, elementClass, componentType, target, refArray, i, isPrimitive, targetComponentKind);
             }
         }
         // Note: setFinished() already called by markFinishedIfNot() at method start
@@ -511,9 +513,13 @@ public class MapResolver extends Resolver {
      * Process a single array element that is not a nested array.
      */
     private void processArrayElement(Object element, JsonObject jsonElement, Class<?> elementClass, Class<?> componentType,
-                                     Object target, Object[] refArray, int index, boolean isPrimitive) {
+                                     Object target, Object[] refArray, int index, boolean isPrimitive, int targetComponentKind) {
+        if (tryAssignParsedScalarToArray(target, refArray, index, element, elementClass, isPrimitive, targetComponentKind)) {
+            return;
+        }
+
         // Fast path for common JSON primitive coercions
-        Object fastValue = fastPrimitiveCoercion(element, elementClass, componentType);
+        Object fastValue = fastScalarCoercion(element, elementClass, targetComponentKind);
         if (fastValue != null) {
             setArrayElement(target, refArray, index, fastValue, isPrimitive);
             return;
@@ -683,24 +689,6 @@ public class MapResolver extends Resolver {
 
         jsonArray.setItems(list.toArray());
         return jsonArray;
-    }
-
-    /**
-     * Fast path for common JSON primitive to Java primitive coercions.
-     * JSON only produces Long, Double, String, Boolean - handle common cases without Converter lookup.
-     * Returns null if no fast conversion is available (fall through to Converter).
-     */
-    private static Object fastPrimitiveCoercion(Object value, Class<?> valueClass, Class<?> targetType) {
-        if (valueClass == Long.class) {
-            // Identity: Long→long/Long needs no conversion - return original object (avoids unbox+rebox)
-            if (targetType == long.class || targetType == Long.class) return value;
-            return coerceLong((Long) value, targetType);
-        } else if (valueClass == Double.class) {
-            // Identity: Double→double/Double needs no conversion - return original object (avoids unbox+rebox)
-            if (targetType == double.class || targetType == Double.class) return value;
-            return coerceDouble((Double) value, targetType);
-        }
-        return null;
     }
 
 }

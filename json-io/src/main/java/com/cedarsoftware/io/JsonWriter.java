@@ -2021,34 +2021,64 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     private boolean writeMapBody(final Iterator i) throws IOException {
         final Writer output = out;
+        final boolean skipNulls = skipNullFields;
+        final boolean unquotedKeys = json5UnquotedKeys;
+        final int maxLen = maxStringLength;
         boolean wroteEntry = false;
 
-        while (i.hasNext()) {
-            Entry att2value = (Entry) i.next();
-            Object value = att2value.getValue();
+        if (skipNulls) {
+            while (i.hasNext()) {
+                Entry att2value = (Entry) i.next();
+                Object value = att2value.getValue();
+                if (value == null) {
+                    continue;
+                }
 
-            if (skipNullFields && value == null) {
-                continue;
-            }
+                if (wroteEntry) {
+                    output.write(',');
+                    newLine();
+                }
 
-            // Write comma and newline BEFORE entry (except first) - avoids double hasNext() call
-            if (wroteEntry) {
-                output.write(',');
-                newLine();
-            }
-
-            // Inline key writing with pre-fetched member variables
-            String key = (String) att2value.getKey();
-            if (json5UnquotedKeys && isValidJson5Identifier(key)) {
-                output.write(key);
+                String key = (String) att2value.getKey();
+                if (unquotedKeys && isValidJson5Identifier(key)) {
+                    output.write(key);
+                } else {
+                    writeJsonUtf8String(output, key, maxLen);
+                }
                 output.write(':');
-            } else {
-                writeJsonUtf8String(output, key, maxStringLength);
-                output.write(':');
+                writeCollectionElement(value);
+                wroteEntry = true;
             }
+        } else if (unquotedKeys) {
+            while (i.hasNext()) {
+                Entry att2value = (Entry) i.next();
+                if (wroteEntry) {
+                    output.write(',');
+                    newLine();
+                }
 
-            writeCollectionElement(value);
-            wroteEntry = true;
+                String key = (String) att2value.getKey();
+                if (isValidJson5Identifier(key)) {
+                    output.write(key);
+                } else {
+                    writeJsonUtf8String(output, key, maxLen);
+                }
+                output.write(':');
+                writeCollectionElement(att2value.getValue());
+                wroteEntry = true;
+            }
+        } else {
+            while (i.hasNext()) {
+                Entry att2value = (Entry) i.next();
+                if (wroteEntry) {
+                    output.write(',');
+                    newLine();
+                }
+                writeJsonUtf8String(output, (String) att2value.getKey(), maxLen);
+                output.write(':');
+                writeCollectionElement(att2value.getValue());
+                wroteEntry = true;
+            }
         }
 
         tabOut();
@@ -2058,31 +2088,60 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     private boolean writeMapBody(final JsonObject jObj) throws IOException {
         final Writer output = out;
+        final boolean skipNulls = skipNullFields;
+        final boolean unquotedKeys = json5UnquotedKeys;
+        final int maxLen = maxStringLength;
         boolean wroteEntry = false;
         int len = jObj.fastEntryCount();
 
-        for (int idx = 0; idx < len; idx++) {
-            Object value = jObj.fastValueAt(idx);
-            if (skipNullFields && value == null) {
-                continue;
-            }
+        if (skipNulls) {
+            for (int idx = 0; idx < len; idx++) {
+                Object value = jObj.fastValueAt(idx);
+                if (value == null) {
+                    continue;
+                }
+                if (wroteEntry) {
+                    output.write(',');
+                    newLine();
+                }
 
-            if (wroteEntry) {
-                output.write(',');
-                newLine();
-            }
-
-            String key = (String) jObj.fastKeyAt(idx);
-            if (json5UnquotedKeys && isValidJson5Identifier(key)) {
-                output.write(key);
+                String key = (String) jObj.fastKeyAt(idx);
+                if (unquotedKeys && isValidJson5Identifier(key)) {
+                    output.write(key);
+                } else {
+                    writeJsonUtf8String(output, key, maxLen);
+                }
                 output.write(':');
-            } else {
-                writeJsonUtf8String(output, key, maxStringLength);
-                output.write(':');
+                writeCollectionElement(value);
+                wroteEntry = true;
             }
-
-            writeCollectionElement(value);
-            wroteEntry = true;
+        } else if (unquotedKeys) {
+            for (int idx = 0; idx < len; idx++) {
+                if (wroteEntry) {
+                    output.write(',');
+                    newLine();
+                }
+                String key = (String) jObj.fastKeyAt(idx);
+                if (isValidJson5Identifier(key)) {
+                    output.write(key);
+                } else {
+                    writeJsonUtf8String(output, key, maxLen);
+                }
+                output.write(':');
+                writeCollectionElement(jObj.fastValueAt(idx));
+                wroteEntry = true;
+            }
+        } else {
+            for (int idx = 0; idx < len; idx++) {
+                if (wroteEntry) {
+                    output.write(',');
+                    newLine();
+                }
+                writeJsonUtf8String(output, (String) jObj.fastKeyAt(idx), maxLen);
+                output.write(':');
+                writeCollectionElement(jObj.fastValueAt(idx));
+                wroteEntry = true;
+            }
         }
 
         tabOut();
