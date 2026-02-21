@@ -11,67 +11,53 @@ import java.time.Year;
 import java.util.BitSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 /**
- * Debug test to investigate skipped conversions in ConverterEverythingTest
+ * Tests for round-trip serialization of types that were previously skipped
+ * in ConverterEverythingTest.
  */
 public class SkippedConversionsDebugTest {
 
     @Test
     void testAtomicIntegerToMap() {
         AtomicInteger source = new AtomicInteger(42);
-        System.out.println("=== AtomicInteger → Map ===");
         String json = JsonIo.toJson(source, null);
-        System.out.println("JSON: " + json);
         Object readBack = JsonIo.toJava(json, null).asClass(Object.class);
-        System.out.println("Read back type: " + readBack.getClass().getName());
-        System.out.println("Read back value: " + readBack);
+        assertInstanceOf(AtomicInteger.class, readBack);
+        assertEquals(42, ((AtomicInteger) readBack).get());
     }
 
     @Test
     void testByteToYear() {
         Byte source = (byte) 24;
-        System.out.println("\n=== Byte → Year ===");
         String json = JsonIo.toJson(source, null);
-        System.out.println("JSON: " + json);
-        try {
-            Year readBack = JsonIo.toJava(json, null).asClass(Year.class);
-            System.out.println("Read back type: " + readBack.getClass().getName());
-            System.out.println("Read back value: " + readBack);
-        } catch (Exception e) {
-            System.out.println("Exception: " + e.getMessage());
-        }
+        assertThrows(Exception.class, () -> JsonIo.toJava(json, null).asClass(Year.class),
+                "Byte cannot be read back as Year");
     }
 
     @Test
     void testMapToMap() {
-        // Test with simple string values (matching ConverterEverythingTest)
+        // Simple string values
         Map<String, String> source = new LinkedHashMap<>();
         source.put("message", "in a bottle");
-        System.out.println("\n=== Map → Map (simple strings) ===");
         String json = JsonIo.toJson(source, null);
-        System.out.println("JSON: " + json);
         Object readBack = JsonIo.toJava(json, null).asClass(Map.class);
-        System.out.println("Read back type: " + readBack.getClass().getName());
-        System.out.println("Read back value: " + readBack);
-        System.out.println("Equal? " + source.equals(readBack));
+        assertInstanceOf(Map.class, readBack);
+        assertEquals(source, readBack);
 
-        // Test with mixed types
+        // Mixed types
         Map<String, Object> source2 = new LinkedHashMap<>();
         source2.put("key1", "value1");
         source2.put("key2", 42);
-        System.out.println("\n=== Map → Map (mixed types) ===");
         String json2 = JsonIo.toJson(source2, null);
-        System.out.println("JSON: " + json2);
         Object readBack2 = JsonIo.toJava(json2, null).asClass(Map.class);
-        System.out.println("Read back type: " + readBack2.getClass().getName());
-        System.out.println("Read back value: " + readBack2);
-        System.out.println("Equal? " + source2.equals(readBack2));
+        assertInstanceOf(Map.class, readBack2);
+        assertEquals(source2, readBack2);
     }
 
     @Test
@@ -79,16 +65,10 @@ public class SkippedConversionsDebugTest {
         Map<String, Object> source = new LinkedHashMap<>();
         source.put("message", "test error");
         source.put("detailMessage", "test error");
-        System.out.println("\n=== Map → Throwable ===");
         String json = JsonIo.toJson(source, null);
-        System.out.println("JSON: " + json);
-        try {
-            Throwable readBack = JsonIo.toJava(json, null).asClass(Throwable.class);
-            System.out.println("Read back type: " + readBack.getClass().getName());
-            System.out.println("Read back value: " + readBack.getMessage());
-        } catch (Exception e) {
-            System.out.println("Exception: " + e.getClass().getName() + ": " + e.getMessage());
-        }
+        Throwable readBack = JsonIo.toJava(json, null).asClass(Throwable.class);
+        assertNotNull(readBack);
+        assertEquals("test error", readBack.getMessage());
     }
 
     @Test
@@ -97,134 +77,79 @@ public class SkippedConversionsDebugTest {
         source.set(1);
         source.set(5);
         source.set(10);
-        System.out.println("\n=== BitSet (non-empty) ===");
         String json = JsonIo.toJson(source, null);
-        System.out.println("JSON: " + json);
-        try {
-            Object readBack = JsonIo.toJava(json, null).asClass(BitSet.class);
-            System.out.println("Read back type: " + readBack.getClass().getName());
-            System.out.println("Read back value: " + readBack);
-            System.out.println("Equal? " + source.equals(readBack));
-        } catch (Exception e) {
-            System.out.println("Exception: " + e.getClass().getName() + ": " + e.getMessage());
-        }
+        BitSet readBack = JsonIo.toJava(json, null).asClass(BitSet.class);
+        assertEquals(source, readBack);
 
+        // Empty BitSet
         BitSet empty = new BitSet();
-        System.out.println("\n=== BitSet (empty) ===");
         String jsonEmpty = JsonIo.toJson(empty, null);
-        System.out.println("JSON: " + jsonEmpty);
-        try {
-            Object readBackEmpty = JsonIo.toJava(jsonEmpty, null).asClass(BitSet.class);
-            System.out.println("Read back type: " + readBackEmpty.getClass().getName());
-            System.out.println("Read back value: " + readBackEmpty);
-            System.out.println("Equal? " + empty.equals(readBackEmpty));
-        } catch (Exception e) {
-            System.out.println("Exception: " + e.getClass().getName() + ": " + e.getMessage());
-        }
+        BitSet readBackEmpty = JsonIo.toJava(jsonEmpty, null).asClass(BitSet.class);
+        assertEquals(empty, readBackEmpty);
     }
 
     @Test
     void testAtomicIntegerArray() {
         AtomicIntegerArray source = new AtomicIntegerArray(new int[]{1, 2, 3, 4, 5});
-        System.out.println("\n=== AtomicIntegerArray ===");
         String json = JsonIo.toJson(source, null);
-        System.out.println("JSON: " + json);
-        try {
-            Object readBack = JsonIo.toJava(json, null).asClass(AtomicIntegerArray.class);
-            System.out.println("Read back type: " + readBack.getClass().getName());
-            System.out.println("Read back value: " + readBack);
-        } catch (Exception e) {
-            System.out.println("Exception: " + e.getClass().getName() + ": " + e.getMessage());
+        AtomicIntegerArray readBack = JsonIo.toJava(json, null).asClass(AtomicIntegerArray.class);
+        assertNotNull(readBack);
+        assertEquals(source.length(), readBack.length());
+        for (int i = 0; i < source.length(); i++) {
+            assertEquals(source.get(i), readBack.get(i));
         }
     }
 
     @Test
     void testAtomicLongArray() {
         AtomicLongArray source = new AtomicLongArray(new long[]{1L, 2L, 3L});
-        System.out.println("\n=== AtomicLongArray ===");
         String json = JsonIo.toJson(source, null);
-        System.out.println("JSON: " + json);
-        try {
-            Object readBack = JsonIo.toJava(json, null).asClass(AtomicLongArray.class);
-            System.out.println("Read back type: " + readBack.getClass().getName());
-            System.out.println("Read back value: " + readBack);
-        } catch (Exception e) {
-            System.out.println("Exception: " + e.getClass().getName() + ": " + e.getMessage());
+        AtomicLongArray readBack = JsonIo.toJava(json, null).asClass(AtomicLongArray.class);
+        assertNotNull(readBack);
+        assertEquals(source.length(), readBack.length());
+        for (int i = 0; i < source.length(); i++) {
+            assertEquals(source.get(i), readBack.get(i));
         }
     }
 
     @Test
     void testStringBufferToCharSequence() {
         StringBuffer source = new StringBuffer("hello world");
-        System.out.println("\n=== StringBuffer → CharSequence ===");
         String json = JsonIo.toJson(source, null);
-        System.out.println("JSON: " + json);
         Object readBack = JsonIo.toJava(json, null).asClass(CharSequence.class);
-        System.out.println("Read back type: " + readBack.getClass().getName());
-        System.out.println("Read back value: " + readBack);
+        assertInstanceOf(StringBuffer.class, readBack);
+        assertEquals("hello world", readBack.toString());
     }
 
     @Test
     void testFile() {
         File source = new File("/tmp/test.txt");
-        System.out.println("\n=== File ===");
         String json = JsonIo.toJson(source, null);
-        System.out.println("JSON: " + json);
-        try {
-            File readBack = JsonIo.toJava(json, null).asClass(File.class);
-            System.out.println("Read back type: " + readBack.getClass().getName());
-            System.out.println("Read back value: " + readBack);
-            System.out.println("Equal? " + source.equals(readBack));
-        } catch (Exception e) {
-            System.out.println("Exception: " + e.getClass().getName() + ": " + e.getMessage());
-        }
+        File readBack = JsonIo.toJava(json, null).asClass(File.class);
+        assertEquals(source, readBack);
     }
 
     @Test
     void testPath() {
         Path source = Paths.get("/tmp/test.txt");
-        System.out.println("\n=== Path ===");
         String json = JsonIo.toJson(source, null);
-        System.out.println("JSON: " + json);
-        try {
-            Path readBack = JsonIo.toJava(json, null).asClass(Path.class);
-            System.out.println("Read back type: " + readBack.getClass().getName());
-            System.out.println("Read back value: " + readBack);
-            System.out.println("Equal? " + source.equals(readBack));
-        } catch (Exception e) {
-            System.out.println("Exception: " + e.getClass().getName() + ": " + e.getMessage());
-        }
+        Path readBack = JsonIo.toJava(json, null).asClass(Path.class);
+        assertEquals(source, readBack);
     }
 
     @Test
     void testURI() {
         URI source = URI.create("https://example.com/path?query=value");
-        System.out.println("\n=== URI ===");
         String json = JsonIo.toJson(source, null);
-        System.out.println("JSON: " + json);
-        try {
-            URI readBack = JsonIo.toJava(json, null).asClass(URI.class);
-            System.out.println("Read back type: " + readBack.getClass().getName());
-            System.out.println("Read back value: " + readBack);
-            System.out.println("Equal? " + source.equals(readBack));
-        } catch (Exception e) {
-            System.out.println("Exception: " + e.getClass().getName() + ": " + e.getMessage());
-        }
+        URI readBack = JsonIo.toJava(json, null).asClass(URI.class);
+        assertEquals(source, readBack);
     }
 
     @Test
     void testURL() throws Exception {
         URL source = new URL("https://example.com/path?query=value");
-        System.out.println("\n=== URL ===");
         String json = JsonIo.toJson(source, null);
-        System.out.println("JSON: " + json);
-        try {
-            URL readBack = JsonIo.toJava(json, null).asClass(URL.class);
-            System.out.println("Read back type: " + readBack.getClass().getName());
-            System.out.println("Read back value: " + readBack);
-            System.out.println("Equal? " + source.equals(readBack));
-        } catch (Exception e) {
-            System.out.println("Exception: " + e.getClass().getName() + ": " + e.getMessage());
-        }
+        URL readBack = JsonIo.toJava(json, null).asClass(URL.class);
+        assertEquals(source, readBack);
     }
 }

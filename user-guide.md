@@ -222,6 +222,18 @@ When `strictJson()` is enabled, the following will cause parse errors:
 - Non-standard number formats (.5, 5., +5)
 - Infinity and NaN literals
 
+For TOON parsing strictness, use `strictToon()` on `ReadOptionsBuilder`:
+
+```java
+ReadOptions strictToonOptions = new ReadOptionsBuilder()
+        .strictToon()
+        .build();
+```
+
+`strictToon()` is **off by default** for backward compatibility. When enabled, TOON parsing enforces strict
+format checks such as indentation validity, array count matching, delimiter/header consistency, and rejection
+of blank lines inside list/tabular arrays.
+
 ### Writing JSON5
 
 json-io can also **write** JSON5 format, which no other major Java JSON library supports natively.

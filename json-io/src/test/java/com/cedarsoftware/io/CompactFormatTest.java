@@ -529,12 +529,6 @@ class CompactFormatTest {
         String jsonDefault = JsonIo.toJson(holder, prettyDefault);
         String jsonCompact = JsonIo.toJson(holder, prettyCompact);
 
-        // Print for manual inspection
-        System.out.println("=== DEFAULT (showTypeInfoMinimal) ===");
-        System.out.println(jsonDefault);
-        System.out.println("\n=== MINIMAL_PLUS (showTypeInfoMinimalPlus) ===");
-        System.out.println(jsonCompact);
-
         // Compact should be shorter or equal (never longer)
         assertTrue(jsonCompact.length() <= jsonDefault.length(),
                 "Compact JSON should not be longer than default JSON");
@@ -561,11 +555,6 @@ class CompactFormatTest {
 
         String jsonDefault = JsonIo.toJson(holder, prettyDefault);
         String jsonCompact = JsonIo.toJson(holder, prettyCompact);
-
-        System.out.println("=== Cross-type: Timestamp in Date field (DEFAULT) ===");
-        System.out.println(jsonDefault);
-        System.out.println("\n=== Cross-type: Timestamp in Date field (MINIMAL_PLUS) ===");
-        System.out.println(jsonCompact);
 
         // In compact mode, @type for Timestamp should be omitted since both Date and Timestamp are convertable
         // The reader will read the value and Converter.convert it to the field's declared type (Date)
@@ -622,9 +611,6 @@ class CompactFormatTest {
         WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
         String json = JsonIo.toJson(holder, prettyCompact);
 
-        System.out.println("=== List<ZonedDateTime> MINIMAL_PLUS ===");
-        System.out.println(json);
-
         // Elements should be plain strings, no @type or "zonedDateTime" key wrapper
         assertFalse(json.contains("\"zonedDateTime\""), "Elements should not have 'zonedDateTime' key wrapper");
 
@@ -651,9 +637,6 @@ class CompactFormatTest {
 
         WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
         String json = JsonIo.toJson(holder, prettyCompact);
-
-        System.out.println("=== Set<LocalDate> MINIMAL_PLUS ===");
-        System.out.println(json);
 
         // Elements should be plain strings (no @type wrapper), but class name contains "LocalDate"
         assertFalse(json.contains("\"@type\":\"LocalDate\""), "LocalDate elements should not have @type wrapper");
@@ -686,9 +669,6 @@ class CompactFormatTest {
         WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
         String json = JsonIo.toJson(holder, prettyCompact);
 
-        System.out.println("=== Mixed Collections MINIMAL_PLUS ===");
-        System.out.println(json);
-
         // None of the element types should have @type wrappers
         assertFalse(json.contains("ZonedDateTime"), "ZonedDateTime should not have @type");
         assertFalse(json.contains("LocalDate"), "LocalDate should not have @type");
@@ -717,11 +697,6 @@ class CompactFormatTest {
 
         String jsonDefault = JsonIo.toJson(holder, prettyDefault);
         String jsonCompact = JsonIo.toJson(holder, prettyCompact);
-
-        System.out.println("=== Collection Elements DEFAULT ===");
-        System.out.println(jsonDefault);
-        System.out.println("\n=== Collection Elements MINIMAL_PLUS ===");
-        System.out.println(jsonCompact);
 
         // Compact should be shorter (no @type wrappers on container)
         assertTrue(jsonCompact.length() < jsonDefault.length(),
@@ -762,9 +737,6 @@ class CompactFormatTest {
         WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
         String json = JsonIo.toJson(holder, prettyCompact);
 
-        System.out.println("=== ZonedDateTime[] MINIMAL_PLUS ===");
-        System.out.println(json);
-
         // Elements should be plain strings (no @type wrapper)
         assertFalse(json.contains("\"@type\":\"ZonedDateTime\""), "ZonedDateTime array elements should not have @type");
 
@@ -789,9 +761,6 @@ class CompactFormatTest {
         WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
         String json = JsonIo.toJson(holder, prettyCompact);
 
-        System.out.println("=== LocalDate[] MINIMAL_PLUS ===");
-        System.out.println(json);
-
         // Elements should be plain strings
         assertFalse(json.contains("\"@type\":\"LocalDate\""), "LocalDate array elements should not have @type wrapper");
 
@@ -815,9 +784,6 @@ class CompactFormatTest {
 
         WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
         String json = JsonIo.toJson(holder, prettyCompact);
-
-        System.out.println("=== UUID[] MINIMAL_PLUS ===");
-        System.out.println(json);
 
         // Elements should be plain strings
         assertFalse(json.contains("\"@type\":\"UUID\""), "UUID array elements should not have @type wrapper");
@@ -844,11 +810,6 @@ class CompactFormatTest {
 
         String jsonDefault = JsonIo.toJson(holder, prettyDefault);
         String jsonCompact = JsonIo.toJson(holder, prettyCompact);
-
-        System.out.println("=== Array Elements DEFAULT ===");
-        System.out.println(jsonDefault);
-        System.out.println("\n=== Array Elements MINIMAL_PLUS ===");
-        System.out.println(jsonCompact);
 
         // Both should have similar length for arrays (no @type wrapper needed on container)
         // Compact round-trip should work
@@ -882,9 +843,6 @@ class CompactFormatTest {
         WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
         String json = JsonIo.toJson(holder, prettyCompact);
 
-        System.out.println("=== Map<String, ZonedDateTime> MINIMAL_PLUS ===");
-        System.out.println(json);
-
         // Values should be plain strings (no @type wrapper)
         assertFalse(json.contains("\"@type\":\"ZonedDateTime\""), "ZonedDateTime map values should not have @type");
 
@@ -908,9 +866,6 @@ class CompactFormatTest {
         WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
         String json = JsonIo.toJson(holder, prettyCompact);
 
-        System.out.println("=== Map<String, LocalDate> MINIMAL_PLUS ===");
-        System.out.println(json);
-
         // Values should be plain strings
         assertFalse(json.contains("\"@type\":\"LocalDate\""), "LocalDate map values should not have @type wrapper");
 
@@ -933,9 +888,6 @@ class CompactFormatTest {
 
         WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
         String json = JsonIo.toJson(holder, prettyCompact);
-
-        System.out.println("=== Map<String, UUID> MINIMAL_PLUS ===");
-        System.out.println(json);
 
         // Values should be plain strings
         assertFalse(json.contains("\"@type\":\"UUID\""), "UUID map values should not have @type wrapper");
@@ -961,11 +913,6 @@ class CompactFormatTest {
 
         String jsonDefault = JsonIo.toJson(holder, prettyDefault);
         String jsonCompact = JsonIo.toJson(holder, prettyCompact);
-
-        System.out.println("=== Map Values DEFAULT ===");
-        System.out.println(jsonDefault);
-        System.out.println("\n=== Map Values MINIMAL_PLUS ===");
-        System.out.println(jsonCompact);
 
         // Compact round-trip should work
         StringToZdtMapHolder resultCompact = JsonIo.toJava(jsonCompact, defaultReadOpts()).asClass(StringToZdtMapHolder.class);

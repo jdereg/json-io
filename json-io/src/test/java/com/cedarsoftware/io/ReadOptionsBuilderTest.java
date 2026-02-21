@@ -121,4 +121,26 @@ class ReadOptionsBuilderTest {
         assertTrue(options.isClassCoerced(SourceClass.class));
         assertThat(options.getCoercedClass(SourceClass.class)).isSameAs(DestinationClass.class);
     }
+
+    @Test
+    void testStrictToon_DefaultFalse() {
+        ReadOptions options = new ReadOptionsBuilder().build();
+        assertFalse(options.isStrictToon());
+    }
+
+    @Test
+    void testStrictToon_EnableAndDisable() {
+        ReadOptions strict = new ReadOptionsBuilder().strictToon().build();
+        assertTrue(strict.isStrictToon());
+
+        ReadOptions nonStrict = new ReadOptionsBuilder().strictToon(true).strictToon(false).build();
+        assertFalse(nonStrict.isStrictToon());
+    }
+
+    @Test
+    void testStrictToon_Copied() {
+        ReadOptions source = new ReadOptionsBuilder().strictToon().build();
+        ReadOptions copy = new ReadOptionsBuilder(source).build();
+        assertTrue(copy.isStrictToon());
+    }
 }

@@ -240,6 +240,7 @@ public class ReadOptionsBuilder {
             options.integerType = other.integerType;
             options.useUnsafe = other.useUnsafe;
             options.strictJson = other.strictJson;
+            options.strictToon = other.strictToon;
 
             // Copy security limits
             options.maxUnresolvedReferences = other.maxUnresolvedReferences;
@@ -1249,6 +1250,25 @@ public class ReadOptionsBuilder {
     }
 
     /**
+     * Enable strict TOON parsing mode.
+     * Default is permissive mode.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder strictToon() {
+        options.strictToon = true;
+        return this;
+    }
+
+    /**
+     * @param strictToon boolean true to enable strict TOON parsing mode.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder strictToon(boolean strictToon) {
+        options.strictToon = strictToon;
+        return this;
+    }
+
+    /**
      * @param aliasTypeNames Map containing String class names to alias names.  The passed in Map will
      *                       be copied, and be the new baseline settings.
      * @return ReadOptionsBuilder for chained access.
@@ -1571,6 +1591,7 @@ public class ReadOptionsBuilder {
         private ReadOptions.Integers integerType = Integers.LONG;
         private boolean allowNanAndInfinity = false;
         private boolean strictJson = false;  // Default to false (permissive JSON5 mode)
+        private boolean strictToon = false;  // Default to false (permissive TOON mode)
         private boolean useUnsafe = false;  // Default to false for security
         
         // Security limits - default to unlimited for backward compatibility
@@ -1649,6 +1670,10 @@ public class ReadOptionsBuilder {
 
         public boolean isStrictJson() {
             return strictJson;
+        }
+
+        public boolean isStrictToon() {
+            return strictToon;
         }
 
         /**

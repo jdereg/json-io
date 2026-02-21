@@ -65,6 +65,10 @@ public class ToonReader {
         this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
     }
 
+    private boolean isStrictToon() {
+        return readOptions != null && readOptions.isStrictToon();
+    }
+
     /**
      * Read the complete TOON value.
      *
@@ -301,8 +305,11 @@ public class ToonReader {
             int braceEnd = trimmed.indexOf('}', afterBracket);
             if (braceEnd > afterBracket) {
                 String headerStr = trimmed.substring(afterBracket + 1, braceEnd);
+                validateFieldDelimiterConsistency(headerStr, delimiter);
                 columnHeaders = parseColumnHeaders(headerStr, delimiter);
                 afterBracket = braceEnd + 1;
+            } else if (isStrictToon()) {
+                throw new JsonIoException("Malformed array syntax (missing closing brace) at line " + lineNumber);
             }
         }
 
@@ -349,6 +356,21 @@ public class ToonReader {
         return headers;
     }
 
+    private void validateFieldDelimiterConsistency(String headerStr, char delimiter) {
+        if (!isStrictToon()) {
+            return;
+        }
+        if (delimiter == ',' && (headerStr.indexOf('\t') >= 0 || headerStr.indexOf('|') >= 0)) {
+            throw new JsonIoException("Delimiter mismatch in tabular header at line " + lineNumber);
+        }
+        if (delimiter == '\t' && (headerStr.indexOf(',') >= 0 || headerStr.indexOf('|') >= 0)) {
+            throw new JsonIoException("Delimiter mismatch in tabular header at line " + lineNumber);
+        }
+        if (delimiter == '|' && (headerStr.indexOf(',') >= 0 || headerStr.indexOf('\t') >= 0)) {
+            throw new JsonIoException("Delimiter mismatch in tabular header at line " + lineNumber);
+        }
+    }
+
     /**
      * Read a tabular array: rows of delimiter-separated data where each row becomes an object.
      */
@@ -364,6 +386,9 @@ public class ToonReader {
 
             String trimmed = line.trim();
             if (trimmed.isEmpty()) {
+                if (isStrictToon()) {
+                    throw new JsonIoException("Blank lines are not allowed inside tabular arrays at line " + lineNumber);
+                }
                 consumeLine();
                 continue;
             }
@@ -390,6 +415,10 @@ public class ToonReader {
             // Parse the row into an object
             JsonObject rowObj = new JsonObject();
             List<Object> values = readInlineArray(trimmed, columnHeaders.size(), delimiter);
+            if (isStrictToon() && values.size() != columnHeaders.size()) {
+                throw new JsonIoException("Tabular row width mismatch at line " + lineNumber +
+                        ", expected " + columnHeaders.size() + " values, got " + values.size());
+            }
 
             for (int i = 0; i < columnHeaders.size() && i < values.size(); i++) {
                 rowObj.put(columnHeaders.get(i), values.get(i));
@@ -398,7 +427,35 @@ public class ToonReader {
             elements.add(rowObj);
         }
 
+        if (isStrictToon()) {
+            if (elements.size() != count) {
+                throw new JsonIoException("Tabular array count mismatch at line " + lineNumber +
+                        ", expected " + count + " rows, got " + elements.size());
+            }
+            if (elements.size() == count && hasAdditionalTabularRows(baseIndent, delimiter)) {
+                throw new JsonIoException("Tabular array has more rows than declared count " + count +
+                        " at line " + lineNumber);
+            }
+        }
+
         return elements;
+    }
+
+    private boolean hasAdditionalTabularRows(int baseIndent, char delimiter) throws IOException {
+        String line = peekLine();
+        if (line == null) {
+            return false;
+        }
+        String trimmed = line.trim();
+        if (trimmed.isEmpty()) {
+            return false;
+        }
+        int indent = getIndentLevel(line);
+        if (indent < baseIndent) {
+            return false;
+        }
+        String delimStr = String.valueOf(delimiter);
+        return !(findColonPosition(trimmed) > 0 && !trimmed.contains(delimStr));
     }
 
     /**
@@ -454,6 +511,11 @@ public class ToonReader {
             elements.add(readScalar(current.toString().trim()));
         }
 
+        if (isStrictToon() && elements.size() != count) {
+            throw new JsonIoException("Inline array count mismatch at line " + lineNumber +
+                    ", expected " + count + " values, got " + elements.size());
+        }
+
         return elements;
     }
 
@@ -473,6 +535,9 @@ public class ToonReader {
 
             String trimmed = line.trim();
             if (trimmed.isEmpty()) {
+                if (isStrictToon()) {
+                    throw new JsonIoException("Blank lines are not allowed inside list arrays at line " + lineNumber);
+                }
                 consumeLine();
                 continue;
             }
@@ -530,7 +595,31 @@ public class ToonReader {
             }
         }
 
+        if (isStrictToon()) {
+            if (elements.size() != count) {
+                throw new JsonIoException("List array count mismatch at line " + lineNumber +
+                        ", expected " + count + " elements, got " + elements.size());
+            }
+            if (elements.size() == count && hasAdditionalListElements(baseIndent)) {
+                throw new JsonIoException("List array has more elements than declared count " + count +
+                        " at line " + lineNumber);
+            }
+        }
+
         return elements;
+    }
+
+    private boolean hasAdditionalListElements(int baseIndent) throws IOException {
+        String line = peekLine();
+        if (line == null) {
+            return false;
+        }
+        String trimmed = line.trim();
+        if (trimmed.isEmpty()) {
+            return false;
+        }
+        int indent = getIndentLevel(line);
+        return indent >= baseIndent && trimmed.startsWith("-");
     }
 
     /**
@@ -679,6 +768,14 @@ public class ToonReader {
             return null;
         }
 
+        if (isStrictToon()) {
+            boolean startsQuote = text.startsWith("\"");
+            boolean endsQuote = text.endsWith("\"");
+            if (startsQuote != endsQuote) {
+                throw new JsonIoException("Unclosed quoted string at line " + lineNumber);
+            }
+        }
+
         // Handle null
         if ("null".equals(text)) {
             return null;
@@ -803,11 +900,21 @@ public class ToonReader {
         }
         int spaces = 0;
         for (int i = 0; i < line.length(); i++) {
-            if (line.charAt(i) == ' ') {
+            char c = line.charAt(i);
+            if (c == ' ') {
                 spaces++;
+            } else if (c == '\t') {
+                if (isStrictToon()) {
+                    throw new JsonIoException("Tabs are not allowed in indentation at line " + lineNumber);
+                }
+                break;
             } else {
                 break;
             }
+        }
+        if (isStrictToon() && spaces % INDENT_SIZE != 0) {
+            throw new JsonIoException("Indentation must be a multiple of " + INDENT_SIZE +
+                    " spaces at line " + lineNumber);
         }
         return spaces / INDENT_SIZE;
     }
@@ -850,6 +957,13 @@ public class ToonReader {
      * Unquote a string if it's quoted.
      */
     private String unquoteString(String text) {
+        if (isStrictToon()) {
+            boolean startsQuote = text.startsWith("\"");
+            boolean endsQuote = text.endsWith("\"");
+            if (startsQuote != endsQuote) {
+                throw new JsonIoException("Unclosed quoted key at line " + lineNumber);
+            }
+        }
         if (text.startsWith("\"") && text.endsWith("\"") && text.length() >= 2) {
             return parseQuotedString(text);
         }
@@ -909,6 +1023,14 @@ public class ToonReader {
      */
     private void putValue(JsonObject target, String key, Object value, boolean wasQuoted) {
         if (wasQuoted || !isFoldedKey(key)) {
+            Object existing = target.get(key);
+            if (isStrictToon() && existing != null) {
+                boolean existingObj = existing instanceof JsonObject;
+                boolean incomingObj = value instanceof JsonObject;
+                if (existingObj != incomingObj) {
+                    throw new JsonIoException("Path expansion conflict at line " + lineNumber + " for key: " + key);
+                }
+            }
             target.put(key, value);
         } else {
             putWithKeyExpansion(target, key, value);
@@ -930,6 +1052,13 @@ public class ToonReader {
             Object existing = current.get(segment);
             if (existing instanceof JsonObject) {
                 current = (JsonObject) existing;
+            } else if (existing != null) {
+                if (isStrictToon()) {
+                    throw new JsonIoException("Path expansion conflict at line " + lineNumber + " for key: " + key);
+                }
+                JsonObject nested = new JsonObject();
+                current.put(segment, nested);
+                current = nested;
             } else {
                 JsonObject nested = new JsonObject();
                 current.put(segment, nested);
@@ -939,6 +1068,30 @@ public class ToonReader {
 
         // Put the value at the last segment
         String lastSegment = segments[segments.length - 1];
+        Object existingLast = current.get(lastSegment);
+        if (existingLast instanceof JsonObject && value instanceof JsonObject) {
+            mergeJsonObjects((JsonObject) existingLast, (JsonObject) value);
+            return;
+        }
+        if (existingLast != null && isStrictToon()) {
+            throw new JsonIoException("Path expansion conflict at line " + lineNumber + " for key: " + key);
+        }
         current.put(lastSegment, value);
+    }
+
+    private void mergeJsonObjects(JsonObject target, JsonObject source) {
+        for (Object entryObj : source.entrySet()) {
+            java.util.Map.Entry<?, ?> entry = (java.util.Map.Entry<?, ?>) entryObj;
+            String key = String.valueOf(entry.getKey());
+            Object sourceVal = entry.getValue();
+            Object targetVal = target.get(key);
+            if (targetVal instanceof JsonObject && sourceVal instanceof JsonObject) {
+                mergeJsonObjects((JsonObject) targetVal, (JsonObject) sourceVal);
+            } else if (targetVal != null && isStrictToon()) {
+                throw new JsonIoException("Path expansion conflict at line " + lineNumber + " for key: " + key);
+            } else {
+                target.put(key, sourceVal);
+            }
+        }
     }
 }

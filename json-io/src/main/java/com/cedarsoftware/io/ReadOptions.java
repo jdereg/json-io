@@ -100,6 +100,14 @@ public interface ReadOptions {
     boolean isStrictJson();
 
     /**
+     * @return true if strict TOON parsing is enabled.
+     * When true, TOON input is expected to follow strict conformance checks
+     * (for example, indentation, array count, and structural validation rules).
+     * Default is false (permissive mode).
+     */
+    boolean isStrictToon();
+
+    /**
      * @return ClassLoader to be used when reading JSON to resolve String named classes.
      */
     ClassLoader getClassLoader();

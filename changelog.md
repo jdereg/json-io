@@ -5,6 +5,10 @@
 * **TESTING**: Added 17 new TOON format tests covering both tabular and list POJO format paths:
   * 10 writer tests: tabular default, prettyPrint list fallback, non-primitive field fallback, array tabular, mixed-type fallback, round-trip for both formats.
   * 7 reader tests: hand-authored tabular/list parsing, end-to-end write-then-read round-trips, both-formats-same-result verification.
+* **CLEANUP**: Silenced verbose test output that cluttered Maven build logs:
+  * `JsonIoMainTest`: Suppressed logger to prevent full conversion table dump to stdout.
+  * `CompactFormatTest`: Removed 36 debug `System.out.println` calls; all 33 tests and assertions retained.
+  * `SkippedConversionsDebugTest`: Replaced 60+ debug `println` calls with proper JUnit assertions; all 12 tests retained.
 
 #### 4.94.0 - 2026-02-14
 * **FEATURE**: Added TOON strict-read configuration to `ReadOptions` / `ReadOptionsBuilder`:

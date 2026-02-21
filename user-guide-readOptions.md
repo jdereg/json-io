@@ -253,6 +253,17 @@ These settings provide flexibility in how large or special floating point number
 >- [ ] true will allow`doubles`and`floats`to be output as`NaN`and`INFINITY`,`false`and these values will come across
    as`null.`
 
+### TOON Parsing Strictness
+
+> #### `boolean` isStrictToon()
+>- [ ] Returns `true` when strict TOON parsing is enabled. Default is `false`.
+
+> #### `ReadOptionsBuilder` strictToon()
+>- [ ] Enables strict TOON parsing mode.
+
+> #### `ReadOptionsBuilder` strictToon(`boolean strictToon`)
+>- [ ] Enables or disables strict TOON parsing mode.
+
 >#### `boolean` isFloatingPointDouble()
 >- [ ] return `true` if floating point values should always be returned as `Double.`  This is the default.
 >#### `ReadOptionsBuilder` floatPointDouble()
