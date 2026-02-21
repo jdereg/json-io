@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Collections;
 
 import org.junit.jupiter.api.Test;
 
@@ -1309,5 +1310,213 @@ class ToonWriterTest {
         assertTrue(restoredItems.get(0) instanceof Map, "Empty map should restore as Map");
         assertTrue(((Map<?, ?>) restoredItems.get(0)).isEmpty(), "Empty map should be empty");
         assertEquals("Bob", ((Map<?, ?>) restoredItems.get(1)).get("name"));
+    }
+
+    @Test
+    void testCanonicalIndentation_ListItemWithTabularFirstField() {
+        Map<String, Object> user1 = new LinkedHashMap<>();
+        user1.put("id", 1);
+        user1.put("name", "Ada");
+
+        Map<String, Object> user2 = new LinkedHashMap<>();
+        user2.put("id", 2);
+        user2.put("name", "Bob");
+
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("users", Arrays.asList(user1, user2));
+        item.put("status", "active");
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("items", Collections.singletonList(item));
+
+        String toon = JsonIo.toToon(root, null);
+        String[] lines = toon.split("\n");
+
+        int hyphenLine = -1;
+        int statusLine = -1;
+        int firstRowLine = -1;
+        for (int i = 0; i < lines.length; i++) {
+            if (lines[i].startsWith("  - users[2]{id,name}:")) {
+                hyphenLine = i;
+            } else if (lines[i].startsWith("    status: active")) {
+                statusLine = i;
+            } else if (lines[i].startsWith("      1,Ada")) {
+                firstRowLine = i;
+            }
+        }
+
+        assertTrue(hyphenLine >= 0, "Expected tabular header on hyphen line");
+        assertTrue(statusLine > hyphenLine, "Expected sibling field one level deeper than hyphen line");
+        assertTrue(firstRowLine > hyphenLine, "Expected tabular rows two levels deeper than hyphen line");
+    }
+
+    // ========== POJO Tabular Format Tests ==========
+
+    @Test
+    void testPojoList_DefaultWritesTabularFormat() {
+        // Gap 1: Verify that a list of uniform POJOs produces tabular output by default
+        List<Person> people = Arrays.asList(
+            new Person("Alice", 25),
+            new Person("Bob", 30)
+        );
+        String toon = JsonIo.toToon(people, null);
+
+        // Should use tabular format with column headers
+        assertTrue(toon.contains("{name,age}:"),
+            "Uniform POJO list should produce tabular header: " + toon);
+        assertTrue(toon.contains("Alice,25"),
+            "First tabular row should contain Alice's data: " + toon);
+        assertTrue(toon.contains("Bob,30"),
+            "Second tabular row should contain Bob's data: " + toon);
+        // Should NOT contain list-format hyphens
+        assertFalse(toon.contains("- name:"),
+            "Tabular format should not use list-format hyphens: " + toon);
+    }
+
+    @Test
+    void testPojoList_PrettyPrintWritesListFormat() {
+        // Gap 2: Verify that prettyPrint=true forces list format for POJO collections
+        List<Person> people = Arrays.asList(
+            new Person("Alice", 25),
+            new Person("Bob", 30)
+        );
+        WriteOptions prettyOptions = new WriteOptionsBuilder().prettyPrint(true).build();
+        String toon = JsonIo.toToon(people, prettyOptions);
+
+        // Should use list format with hyphens (not tabular)
+        assertTrue(toon.contains("- name: Alice"),
+            "prettyPrint should use list format with hyphens: " + toon);
+        assertTrue(toon.contains("age: 25"),
+            "prettyPrint should list age on separate line: " + toon);
+        assertFalse(toon.contains("{name,age"),
+            "prettyPrint should NOT use tabular header: " + toon);
+    }
+
+    @Test
+    void testPojoList_NonPrimitiveFieldFallsToListFormat() {
+        // Gap 3: POJOs with non-primitive fields should fall to list format
+        Company company = new Company();
+        company.name = "Acme";
+        company.employees = Arrays.asList(
+            new Person("Alice", 25),
+            new Person("Bob", 30)
+        );
+
+        Company company2 = new Company();
+        company2.name = "Globex";
+        company2.employees = Arrays.asList(
+            new Person("Charlie", 35)
+        );
+
+        List<Company> companies = Arrays.asList(company, company2);
+        String toon = JsonIo.toToon(companies, null);
+
+        // Company has a List<Person> field (non-primitive), so tabular should NOT apply
+        assertTrue(toon.contains("- name: Acme"),
+            "Non-uniform POJOs should use list format: " + toon);
+        assertFalse(toon.contains("{name,employees}:"),
+            "Should NOT produce tabular header for non-primitive fields: " + toon);
+    }
+
+    @Test
+    void testPojoArray_DefaultWritesTabularFormat() {
+        // Gap 5: Object[] array of uniform POJOs should also produce tabular
+        Person[] people = {
+            new Person("Alice", 25),
+            new Person("Bob", 30),
+            new Person("Charlie", 35)
+        };
+        String toon = JsonIo.toToon(people, null);
+
+        // Should use tabular format
+        assertTrue(toon.contains("{name,age}:"),
+            "POJO array should produce tabular header: " + toon);
+        assertTrue(toon.contains("Alice,25"),
+            "First row should contain Alice's data: " + toon);
+        assertFalse(toon.contains("- name:"),
+            "Should not use list-format hyphens: " + toon);
+    }
+
+    @Test
+    void testPojoArray_PrettyPrintWritesListFormat() {
+        // Object[] array with prettyPrint should use list format
+        Person[] people = {
+            new Person("Alice", 25),
+            new Person("Bob", 30)
+        };
+        WriteOptions prettyOptions = new WriteOptionsBuilder().prettyPrint(true).build();
+        String toon = JsonIo.toToon(people, prettyOptions);
+
+        assertTrue(toon.contains("- name: Alice"),
+            "prettyPrint array should use list format: " + toon);
+        assertFalse(toon.contains("{name,age"),
+            "prettyPrint array should NOT use tabular header: " + toon);
+    }
+
+    @Test
+    void testPojoTabularRoundTrip() {
+        // Tabular POJO write → POJO read round-trip
+        List<Person> original = Arrays.asList(
+            new Person("Alice", 25),
+            new Person("Bob", 30)
+        );
+        String toon = JsonIo.toToon(original, null);
+
+        // Verify tabular format was used
+        assertTrue(toon.contains("{name,age}:"), "Should write tabular");
+
+        // Read back as Maps (no type info needed)
+        Map<String, Object> wrapper = new LinkedHashMap<>();
+        wrapper.put("people", original);
+        String wrappedToon = JsonIo.toToon(wrapper, null);
+        Map<String, Object> restored = JsonIo.fromToon(wrappedToon, null).asClass(Map.class);
+        List<?> restoredPeople = (List<?>) restored.get("people");
+        assertEquals(2, restoredPeople.size());
+
+        Map<?, ?> person0 = (Map<?, ?>) restoredPeople.get(0);
+        assertEquals("Alice", person0.get("name"));
+        assertEquals(25L, person0.get("age"));
+    }
+
+    @Test
+    void testPrettyPrintListFormatRoundTrip() {
+        // prettyPrint list write → read round-trip
+        List<Person> original = Arrays.asList(
+            new Person("Alice", 25),
+            new Person("Bob", 30)
+        );
+        WriteOptions prettyOptions = new WriteOptionsBuilder().prettyPrint(true).build();
+        String toon = JsonIo.toToon(original, prettyOptions);
+
+        // Verify list format was used
+        assertTrue(toon.contains("- name: Alice"), "Should use list format");
+
+        // Read back as Map list
+        Map<String, Object> wrapper = new LinkedHashMap<>();
+        wrapper.put("people", original);
+        String wrappedToon = JsonIo.toToon(wrapper, prettyOptions);
+        Map<String, Object> restored = JsonIo.fromToon(wrappedToon, null).asClass(Map.class);
+        List<?> restoredPeople = (List<?>) restored.get("people");
+        assertEquals(2, restoredPeople.size());
+
+        Map<?, ?> person0 = (Map<?, ?>) restoredPeople.get(0);
+        assertEquals("Alice", person0.get("name"));
+        assertEquals(25L, person0.get("age"));
+    }
+
+    @Test
+    void testMixedPojoTypes_FallsToListFormat() {
+        // A list containing different POJO types should not use tabular
+        List<Object> mixed = new ArrayList<>();
+        mixed.add(new Person("Alice", 25));
+        mixed.add(new Node("beta"));  // Different class than Person
+
+        String toon = JsonIo.toToon(mixed, null);
+
+        // Different classes have different fields, so should fall to list format
+        assertTrue(toon.contains("-"),
+            "Mixed POJO types should use list format: " + toon);
+        assertFalse(toon.contains("{name,age"),
+            "Mixed types should NOT produce tabular header: " + toon);
     }
 }

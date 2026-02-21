@@ -1,6 +1,18 @@
 ### Revision History
 
+#### 4.95.0 (Unreleased)
+* **FEATURE**: `ToonWriter` now supports tabular format for POJO collections and arrays. When `prettyPrint` is `false` (default), uniform POJO lists/arrays are written in compact CSV-style tabular format (`[N]{field1,field2,...}: row1 row2 ...`). When `prettyPrint` is `true`, the verbose list format (`- key: value`) is used instead.
+* **TESTING**: Added 17 new TOON format tests covering both tabular and list POJO format paths:
+  * 10 writer tests: tabular default, prettyPrint list fallback, non-primitive field fallback, array tabular, mixed-type fallback, round-trip for both formats.
+  * 7 reader tests: hand-authored tabular/list parsing, end-to-end write-then-read round-trips, both-formats-same-result verification.
+
 #### 4.94.0 - 2026-02-14
+* **FEATURE**: Added TOON strict-read configuration to `ReadOptions` / `ReadOptionsBuilder`:
+  * New `ReadOptions.isStrictToon()` getter.
+  * New `ReadOptionsBuilder.strictToon()` and `ReadOptionsBuilder.strictToon(boolean)` setters.
+  * `ToonReader` now enforces strict-mode validation (indentation, array counts, blank lines in arrays, delimiter/header consistency) when enabled.
+  * Copy-constructor propagation and builder tests added.
+* **TESTING**: Added `ToonSpecDecodeFixturesTest` to run official `toon-format/spec` decode fixtures against `JsonIo.fromToon()` (opt-in via `RUN_TOON_SPEC_FIXTURES=true`).
 * **PERFORMANCE**: Read-side scalar coercion hot paths refactored to avoid legacy `coerceLong()`/`coerceDouble()` indirection:
   * Added target-kind based scalar coercion (`scalarTargetKind` / `fastScalarCoercion`) in `Resolver`.
   * `ObjectResolver` / `MapResolver` now use precomputed scalar target kinds in array and field hot loops.

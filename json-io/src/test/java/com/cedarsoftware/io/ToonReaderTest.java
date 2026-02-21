@@ -49,6 +49,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
 import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.io.TypeHolder;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -91,6 +92,10 @@ class ToonReaderTest {
             map.put((String) keysAndValues[i], keysAndValues[i + 1]);
         }
         return map;
+    }
+
+    private ReadOptions toonOptions(boolean strictToon) {
+        return new ReadOptionsBuilder().strictToon(strictToon).build();
     }
 
     // ========== 1. Primitive Values ==========
@@ -3013,6 +3018,70 @@ class ToonReaderTest {
         assertEquals(2L, pt1.get("y"));
     }
 
+    // ========== strictToon Paired Behavior Tests ==========
+
+    @Test
+    void testStrictToon_BlankLinesInListArray_StrictFailsPermissiveWorks() {
+        String toon = "vals[3]:\n  - one\n\n  - two\n\n  - three";
+
+        assertThrows(JsonIoException.class,
+                () -> JsonIo.fromToon(toon, toonOptions(true)).asClass(Map.class));
+
+        Map<String, Object> map = JsonIo.fromToon(toon, toonOptions(false)).asClass(Map.class);
+        List<?> vals = (List<?>) map.get("vals");
+        assertEquals(3, vals.size());
+    }
+
+    @Test
+    void testStrictToon_OddIndentation_StrictFailsPermissiveWorks() {
+        String toon = "outer:\n   inner: value";
+
+        assertThrows(JsonIoException.class,
+                () -> JsonIo.fromToon(toon, toonOptions(true)).asClass(Map.class));
+
+        Map<String, Object> map = JsonIo.fromToon(toon, toonOptions(false)).asClass(Map.class);
+        Map<?, ?> outer = (Map<?, ?>) map.get("outer");
+        assertNotNull(outer);
+        assertEquals("value", outer.get("inner"));
+    }
+
+    @Test
+    void testStrictToon_ArrayCountMismatch_StrictFailsPermissiveWorks() {
+        String toon = "items[3]: a,b";
+
+        assertThrows(JsonIoException.class,
+                () -> JsonIo.fromToon(toon, toonOptions(true)).asClass(Map.class));
+
+        Map<String, Object> map = JsonIo.fromToon(toon, toonOptions(false)).asClass(Map.class);
+        List<?> items = (List<?>) map.get("items");
+        assertNotNull(items);
+        assertEquals(2, items.size());
+    }
+
+    @Test
+    void testStrictToon_DelimiterMismatchInHeader_StrictFailsPermissiveWorks() {
+        String toon = "items[2|]{id,name}:\n  1|Alice\n  2|Bob";
+
+        assertThrows(JsonIoException.class,
+                () -> JsonIo.fromToon(toon, toonOptions(true)).asClass(Map.class));
+
+        Map<String, Object> map = JsonIo.fromToon(toon, toonOptions(false)).asClass(Map.class);
+        List<?> items = (List<?>) map.get("items");
+        assertNotNull(items);
+        assertEquals(2, items.size());
+    }
+
+    @Test
+    void testStrictToon_UnclosedQuotedScalar_StrictFailsPermissiveWorks() {
+        String toon = "value: \"unclosed";
+
+        assertThrows(JsonIoException.class,
+                () -> JsonIo.fromToon(toon, toonOptions(true)).asClass(Map.class));
+
+        Map<String, Object> map = JsonIo.fromToon(toon, toonOptions(false)).asClass(Map.class);
+        assertEquals("\"unclosed", map.get("value"));
+    }
+
     // ========== GAP TESTS: fromToonToMaps with Tabular Arrays ==========
 
     @Test
@@ -3243,5 +3312,204 @@ class ToonReaderTest {
         assertThrows(JsonIoException.class, () -> {
             JsonIo.fromToon(toon, null).asClass(Map.class);
         }, "Invalid escape \\q in tabular row should throw JsonIoException");
+    }
+
+    @Test
+    void testStrictToon_PathExpansionConflict_StrictFailsPermissiveUsesLww() {
+        String toon = "a.b: 1\na: 2";
+
+        assertThrows(JsonIoException.class,
+                () -> JsonIo.fromToon(toon, toonOptions(true)).asClass(Map.class));
+
+        Map<String, Object> permissive = JsonIo.fromToon(toon, toonOptions(false)).asClass(Map.class);
+        assertEquals(2L, permissive.get("a"));
+    }
+
+    @Test
+    void testStrictToon_TabsInIndentation_StrictFailsPermissiveWorks() {
+        String toon = "outer:\n\tinner: value";
+
+        assertThrows(JsonIoException.class,
+                () -> JsonIo.fromToon(toon, toonOptions(true)).asClass(Map.class));
+
+        Map<String, Object> permissive = JsonIo.fromToon(toon, toonOptions(false)).asClass(Map.class);
+        assertTrue(permissive.containsKey("inner") || permissive.containsKey("outer"));
+    }
+
+    @Test
+    void testQuotedKeyArrayHeader_ParsesAsLiteralKey() {
+        String toon = "\"my-key\"[3]: 1,2,3";
+        Map<String, Object> map = JsonIo.fromToon(toon, toonOptions(true)).asClass(Map.class);
+        List<?> values = (List<?>) map.get("my-key");
+        assertNotNull(values);
+        assertEquals(3, values.size());
+        assertEquals(1L, values.get(0));
+        assertEquals(2L, values.get(1));
+        assertEquals(3L, values.get(2));
+    }
+
+    @Test
+    void testQuotedKeyTabularHeader_ParsesAsLiteralKey() {
+        String toon = "\"x-items\"[2]{id,name}:\n  1,Ada\n  2,Bob";
+        Map<String, Object> map = JsonIo.fromToon(toon, toonOptions(true)).asClass(Map.class);
+        List<?> items = (List<?>) map.get("x-items");
+        assertNotNull(items);
+        assertEquals(2, items.size());
+        Map<?, ?> first = (Map<?, ?>) items.get(0);
+        assertEquals(1L, first.get("id"));
+        assertEquals("Ada", first.get("name"));
+    }
+
+    // ========== POJO Tabular Format Read Tests ==========
+    // These tests verify that the reader correctly handles tabular format
+    // when reading into typed POJO classes, and that both tabular and list
+    // formats can be read back correctly.
+
+    @Test
+    void testHandAuthoredTabular_ReadAsTypedPojo() {
+        // Gap 4: Hand-authored tabular TOON → typed POJO read
+        String toon = "people[2]{name,age}:\n  John,30\n  Jane,25";
+        Map<String, Object> wrapper = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> people = (List<?>) wrapper.get("people");
+        assertEquals(2, people.size());
+
+        Map<?, ?> person0 = (Map<?, ?>) people.get(0);
+        assertEquals("John", person0.get("name"));
+        assertEquals(30L, person0.get("age"));
+
+        Map<?, ?> person1 = (Map<?, ?>) people.get(1);
+        assertEquals("Jane", person1.get("name"));
+        assertEquals(25L, person1.get("age"));
+    }
+
+    @Test
+    void testHandAuthoredListFormat_ReadAsTypedPojo() {
+        // Hand-authored list-format TOON → typed POJO read
+        String toon = "people[2]:\n  - name: John\n    age: 30\n  - name: Jane\n    age: 25";
+        Map<String, Object> wrapper = JsonIo.fromToon(toon, null).asClass(Map.class);
+        List<?> people = (List<?>) wrapper.get("people");
+        assertEquals(2, people.size());
+
+        Map<?, ?> person0 = (Map<?, ?>) people.get(0);
+        assertEquals("John", person0.get("name"));
+        assertEquals(30L, person0.get("age"));
+
+        Map<?, ?> person1 = (Map<?, ?>) people.get(1);
+        assertEquals("Jane", person1.get("name"));
+        assertEquals(25L, person1.get("age"));
+    }
+
+    @Test
+    void testHandAuthoredTabular_StandaloneArray_ReadAsTypedPojo() {
+        // Standalone tabular array (no wrapping key) → typed list read
+        String toon = "[3]{name,age}:\n  Alice,25\n  Bob,30\n  Charlie,35";
+
+        // Read as typed list using TypeHolder
+        List<TestPerson> people = JsonIo.fromToon(toon, null)
+                .asType(new TypeHolder<List<TestPerson>>() {});
+        assertEquals(3, people.size());
+        assertEquals("Alice", people.get(0).getName());
+        assertEquals(25, people.get(0).getAge());
+        assertEquals("Bob", people.get(1).getName());
+        assertEquals(30, people.get(1).getAge());
+        assertEquals("Charlie", people.get(2).getName());
+        assertEquals(35, people.get(2).getAge());
+    }
+
+    @Test
+    void testHandAuthoredListFormat_StandaloneArray_ReadAsTypedPojo() {
+        // Standalone list-format array → typed list read
+        String toon = "[2]:\n  - name: Alice\n    age: 25\n  - name: Bob\n    age: 30";
+
+        List<TestPerson> people = JsonIo.fromToon(toon, null)
+                .asType(new TypeHolder<List<TestPerson>>() {});
+        assertEquals(2, people.size());
+        assertEquals("Alice", people.get(0).getName());
+        assertEquals(25, people.get(0).getAge());
+        assertEquals("Bob", people.get(1).getName());
+        assertEquals(30, people.get(1).getAge());
+    }
+
+    @Test
+    void testWriteTabularToon_ReadBackAsTypedPojoList() {
+        // End-to-end: write POJOs → tabular TOON → read back as typed POJOs
+        List<TestPerson> original = Arrays.asList(
+            new TestPerson("John", 30),
+            new TestPerson("Jane", 25)
+        );
+
+        // Write (default = tabular for uniform POJOs with primitive fields)
+        String toon = JsonIo.toToon(original, null);
+
+        // Verify tabular format was actually used
+        assertTrue(toon.contains("{name,age,address}:"),
+            "Should use tabular format for uniform POJOs: " + toon);
+
+        // Read back as typed list
+        List<TestPerson> restored = JsonIo.fromToon(toon, null)
+                .asType(new TypeHolder<List<TestPerson>>() {});
+        assertEquals(2, restored.size());
+        assertEquals("John", restored.get(0).getName());
+        assertEquals(30, restored.get(0).getAge());
+        assertNull(restored.get(0).getAddress());
+        assertEquals("Jane", restored.get(1).getName());
+        assertEquals(25, restored.get(1).getAge());
+        assertNull(restored.get(1).getAddress());
+    }
+
+    @Test
+    void testWritePrettyPrintToon_ReadBackAsTypedPojoList() {
+        // End-to-end: write POJOs (prettyPrint=true) → list TOON → read back as typed POJOs
+        List<TestPerson> original = Arrays.asList(
+            new TestPerson("John", 30),
+            new TestPerson("Jane", 25)
+        );
+
+        WriteOptions prettyOptions = new WriteOptionsBuilder().prettyPrint(true).build();
+        String toon = JsonIo.toToon(original, prettyOptions);
+
+        // Verify list format was used
+        assertTrue(toon.contains("- name: John"),
+            "Should use list format with prettyPrint: " + toon);
+
+        // Read back as typed list
+        List<TestPerson> restored = JsonIo.fromToon(toon, null)
+                .asType(new TypeHolder<List<TestPerson>>() {});
+        assertEquals(2, restored.size());
+        assertEquals("John", restored.get(0).getName());
+        assertEquals(30, restored.get(0).getAge());
+        assertEquals("Jane", restored.get(1).getName());
+        assertEquals(25, restored.get(1).getAge());
+    }
+
+    @Test
+    void testBothFormatsProduceSameReadResult() {
+        // Verify that tabular and list format produce identical Java objects when read
+        List<TestPerson> original = Arrays.asList(
+            new TestPerson("Alice", 25),
+            new TestPerson("Bob", 30)
+        );
+
+        // Write in tabular format (default)
+        String tabularToon = JsonIo.toToon(original, null);
+
+        // Write in list format (prettyPrint=true)
+        WriteOptions prettyOptions = new WriteOptionsBuilder().prettyPrint(true).build();
+        String listToon = JsonIo.toToon(original, prettyOptions);
+
+        // Both should be different strings
+        assertNotEquals(tabularToon, listToon, "Tabular and list format should differ");
+
+        // But both should read back to identical objects
+        List<TestPerson> fromTabular = JsonIo.fromToon(tabularToon, null)
+                .asType(new TypeHolder<List<TestPerson>>() {});
+        List<TestPerson> fromList = JsonIo.fromToon(listToon, null)
+                .asType(new TypeHolder<List<TestPerson>>() {});
+
+        assertEquals(fromTabular.size(), fromList.size());
+        for (int i = 0; i < fromTabular.size(); i++) {
+            assertEquals(fromTabular.get(i).getName(), fromList.get(i).getName());
+            assertEquals(fromTabular.get(i).getAge(), fromList.get(i).getAge());
+        }
     }
 }

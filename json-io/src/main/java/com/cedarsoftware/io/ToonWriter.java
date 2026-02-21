@@ -415,8 +415,49 @@ public class ToonWriter implements Closeable, Flushable {
                 }
                 writeInlineValue(ArrayUtilities.getElement(array, i));
             }
+        } else if (!writeOptions.isPrettyPrint()) {
+            // Try tabular format for uniform POJO arrays
+            List<String> uniformPOJOKeys = getUniformPOJOKeysFromArray(array, length);
+            if (uniformPOJOKeys != null) {
+                out.write("{");
+                boolean firstKey = true;
+                for (String key : uniformPOJOKeys) {
+                    if (!firstKey) {
+                        out.write(delimiter);
+                    }
+                    firstKey = false;
+                    out.write(key);
+                }
+                out.write("}:");
+                depth++;
+                for (int i = 0; i < length; i++) {
+                    out.write(NEW_LINE);
+                    writeIndent();
+                    Map<String, Object> fields = getObjectFields(ArrayUtilities.getElement(array, i));
+                    boolean firstVal = true;
+                    for (String key : uniformPOJOKeys) {
+                        if (!firstVal) {
+                            out.write(delimiter);
+                        }
+                        firstVal = false;
+                        writeInlineValue(fields.get(key));
+                    }
+                }
+                depth--;
+            } else {
+                // Mixed/complex array - use list format with hyphens
+                depth++;
+                for (int i = 0; i < length; i++) {
+                    out.write(NEW_LINE);
+                    writeIndent();
+                    out.write("-");
+                    Object element = ArrayUtilities.getElement(array, i);
+                    writeListElement(element);
+                }
+                depth--;
+            }
         } else {
-            // Mixed/complex array - use list format with hyphens
+            // prettyPrint=true → always use verbose list format
             depth++;
             for (int i = 0; i < length; i++) {
                 out.write(NEW_LINE);
@@ -467,14 +508,32 @@ public class ToonWriter implements Closeable, Flushable {
                 writeInlineValue(element);
             }
         } else {
-            // Check for uniform object array (all Maps with same keys)
+            // Check for uniform Map array (all Maps with same keys) → tabular format
             List<String> uniformKeys = getUniformKeys(collection);
             if (uniformKeys != null) {
                 // Tabular format: {key1,key2,...}: followed by CSV rows
                 writeTabularHeader(uniformKeys);
                 writeTabularRows(collection, uniformKeys);
+            } else if (!writeOptions.isPrettyPrint()) {
+                // Check for uniform POJO array → tabular format (default, compact)
+                List<String> uniformPOJOKeys = getUniformPOJOKeys(collection);
+                if (uniformPOJOKeys != null) {
+                    writeTabularHeader(uniformPOJOKeys);
+                    writeTabularPOJORows(collection, uniformPOJOKeys);
+                } else {
+                    // Non-uniform or mixed - use list format with hyphens
+                    out.write(":");
+                    depth++;
+                    for (Object element : collection) {
+                        out.write(NEW_LINE);
+                        writeIndent();
+                        out.write("-");
+                        writeListElement(element);
+                    }
+                    depth--;
+                }
             } else {
-                // Mixed/complex - use list format with hyphens
+                // prettyPrint=true → always use verbose list format
                 out.write(":");
                 depth++;
                 for (Object element : collection) {
@@ -573,6 +632,119 @@ public class ToonWriter implements Closeable, Flushable {
                 }
                 first = false;
                 writeInlineValue(map.get(key));
+            }
+        }
+        depth--;
+    }
+
+    /**
+     * Check if a collection contains uniform POJOs (all non-Map objects with identical
+     * field names and primitive field values).
+     * Returns the ordered list of field names if uniform, null otherwise.
+     * <p>
+     * POJOs qualify for tabular format when:
+     * <ul>
+     *   <li>All elements are the same concrete class</li>
+     *   <li>All field values are primitives (no nested objects/arrays)</li>
+     *   <li>All elements have the same fields in the same order</li>
+     * </ul>
+     */
+    private List<String> getUniformPOJOKeys(Collection<?> collection) {
+        List<String> keys = null;
+
+        for (Object element : collection) {
+            if (element == null) {
+                return null;  // Null elements break uniformity
+            }
+
+            // Skip Maps, Collections, and arrays — already handled by getUniformKeys
+            if (element instanceof Map || element instanceof Collection || element.getClass().isArray()) {
+                return null;
+            }
+
+            // Skip pure primitive types — those belong in the primitive path
+            if (isPrimitive(element)) {
+                return null;
+            }
+
+            // Get the object's field names and values
+            Map<String, Object> fields = getObjectFields(element);
+            if (fields.isEmpty()) {
+                return null;  // Empty objects break tabular format
+            }
+
+            // All field values must be primitive for tabular format
+            for (Object value : fields.values()) {
+                if (value != null && !isPrimitive(value)) {
+                    return null;
+                }
+            }
+
+            List<String> elementKeys = new ArrayList<>(fields.keySet());
+            if (keys == null) {
+                keys = elementKeys;
+            } else if (!keys.equals(elementKeys)) {
+                return null;  // Different fields break uniformity
+            }
+        }
+
+        return keys;
+    }
+
+    /**
+     * Check if an Object[] array contains uniform POJOs eligible for tabular format.
+     * Same criteria as getUniformPOJOKeys(Collection) but operates on an array.
+     */
+    private List<String> getUniformPOJOKeysFromArray(Object array, int length) {
+        List<String> keys = null;
+        for (int i = 0; i < length; i++) {
+            Object element = ArrayUtilities.getElement(array, i);
+            if (element == null) {
+                return null;
+            }
+            if (element instanceof Map || element instanceof Collection || element.getClass().isArray()) {
+                return null;
+            }
+            if (isPrimitive(element)) {
+                return null;
+            }
+            Map<String, Object> fields = getObjectFields(element);
+            if (fields.isEmpty()) {
+                return null;
+            }
+            for (Object value : fields.values()) {
+                if (value != null && !isPrimitive(value)) {
+                    return null;
+                }
+            }
+            List<String> elementKeys = new ArrayList<>(fields.keySet());
+            if (keys == null) {
+                keys = elementKeys;
+            } else if (!keys.equals(elementKeys)) {
+                return null;
+            }
+        }
+        return keys;
+    }
+
+    /**
+     * Write tabular rows for a collection of uniform POJOs (CSV-like format).
+     * Calls getObjectFields() per element to retrieve field values in key order.
+     */
+    private void writeTabularPOJORows(Collection<?> collection, List<String> keys) throws IOException {
+        depth++;
+        for (Object element : collection) {
+            out.write(NEW_LINE);
+            writeIndent();
+
+            Map<String, Object> fields = getObjectFields(element);
+            boolean first = true;
+            for (String key : keys) {
+                if (!first) {
+                    out.write(delimiter);
+                }
+                first = false;
+                writeInlineValue(fields.get(key));
             }
         }
         depth--;
