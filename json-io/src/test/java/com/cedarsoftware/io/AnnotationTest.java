@@ -14,6 +14,7 @@ import com.cedarsoftware.io.annotation.IoPropertyOrder;
 import com.cedarsoftware.io.reflect.AnnotationResolver;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import org.junit.jupiter.api.Test;
@@ -1260,5 +1261,71 @@ class AnnotationTest {
         AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(EmailAddress.class);
         assertNotNull(meta.getValueMethod(), "ValueMethod should be found");
         assertEquals("toValue", meta.getValueMethod().getName());
+    }
+
+    // ===================== Jackson @JsonValue Test Models =====================
+
+    static class JacksonValueModel {
+        private final String data;
+
+        @JsonCreator
+        JacksonValueModel(@JsonProperty("data") String data) {
+            this.data = data;
+        }
+
+        @JsonValue
+        public String getData() {
+            return data;
+        }
+    }
+
+    // Model with @IoValue that should win over @JsonValue
+    static class ValuePriorityModel {
+        private final String value;
+
+        ValuePriorityModel(String value) {
+            this.value = value;
+        }
+
+        @IoValue
+        public String ioGetter() {
+            return "io:" + value;
+        }
+
+        @JsonValue
+        public String jacksonGetter() {
+            return "jackson:" + value;
+        }
+    }
+
+    // ===================== Jackson @JsonValue Tests =====================
+
+    @Test
+    void testExternalValueWrite() {
+        JacksonValueModel model = new JacksonValueModel("hello");
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+
+        String json = JsonIo.toJson(model, wo);
+        // Should serialize as a single string via @JsonValue
+        assertEquals("\"hello\"", json.trim());
+    }
+
+    @Test
+    void testExternalValueToonWrite() {
+        JacksonValueModel model = new JacksonValueModel("toon-test");
+        WriteOptions wo = new WriteOptionsBuilder().build();
+
+        String toon = JsonIo.toToon(model, wo);
+        assertTrue(toon.contains("toon-test"), "TOON should contain the value: " + toon);
+    }
+
+    @Test
+    void testIoValueOverridesJsonValue() {
+        ValuePriorityModel model = new ValuePriorityModel("test");
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+
+        String json = JsonIo.toJson(model, wo);
+        // @IoValue should win over @JsonValue
+        assertEquals("\"io:test\"", json.trim(), "@IoValue should win over @JsonValue");
     }
 }

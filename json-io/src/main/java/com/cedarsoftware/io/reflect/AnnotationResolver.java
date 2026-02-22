@@ -69,6 +69,8 @@ public class AnnotationResolver {
     @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_CREATOR;
     @SuppressWarnings("unchecked")
+    private static final Class<? extends Annotation> EXT_VALUE;
+    @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_PROPERTY;
     @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_IGNORE;
@@ -91,6 +93,7 @@ public class AnnotationResolver {
     static {
         boolean available = false;
         Class<? extends Annotation> extCreator = null;
+        Class<? extends Annotation> extValue = null;
         Class<? extends Annotation> extProperty = null;
         Class<? extends Annotation> extIgnore = null;
         Class<? extends Annotation> extIgnoreProperties = null;
@@ -106,6 +109,7 @@ public class AnnotationResolver {
 
         try {
             extCreator = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonCreator");
+            extValue = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonValue");
             extProperty = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonProperty");
             extIgnore = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonIgnore");
             extIgnoreProperties = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonIgnoreProperties");
@@ -135,6 +139,7 @@ public class AnnotationResolver {
 
         externalAvailable = available;
         EXT_CREATOR = extCreator;
+        EXT_VALUE = extValue;
         EXT_PROPERTY = extProperty;
         EXT_IGNORE = extIgnore;
         EXT_IGNORE_PROPERTIES = extIgnoreProperties;
@@ -494,6 +499,7 @@ public class AnnotationResolver {
      * The method must be a no-arg instance method with a non-void return type.
      */
     private static Method scanValueMethod(Class<?> clazz) {
+        // Check for @IoValue first
         try {
             for (Method method : clazz.getDeclaredMethods()) {
                 if (method.isAnnotationPresent(IoValue.class)
@@ -505,6 +511,22 @@ public class AnnotationResolver {
             }
         } catch (SecurityException e) {
             // Skip if methods are inaccessible
+        }
+
+        // Fall back to Jackson @JsonValue if no native annotation found
+        if (externalAvailable && EXT_VALUE != null) {
+            try {
+                for (Method method : clazz.getDeclaredMethods()) {
+                    if (method.isAnnotationPresent(EXT_VALUE)
+                            && !Modifier.isStatic(method.getModifiers())
+                            && method.getParameterCount() == 0
+                            && method.getReturnType() != void.class) {
+                        return ReflectionUtils.getMethod(clazz, method.getName());
+                    }
+                }
+            } catch (SecurityException e) {
+                // Skip if methods are inaccessible
+            }
         }
         return null;
     }
