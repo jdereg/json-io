@@ -11,6 +11,8 @@ import com.cedarsoftware.io.annotation.IoNaming;
 import com.cedarsoftware.io.annotation.IoProperty;
 import com.cedarsoftware.io.annotation.IoPropertyOrder;
 import com.cedarsoftware.io.reflect.AnnotationResolver;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import org.junit.jupiter.api.Test;
@@ -1072,5 +1074,103 @@ class AnnotationTest {
         AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(CreatorConstructorModel.class);
         assertNotNull(meta.getCreator(), "Creator should be found");
         assertTrue(meta.getCreator() instanceof java.lang.reflect.Constructor, "Should be a Constructor");
+    }
+
+    // ===================== Jackson @JsonCreator Test Models =====================
+
+    static class JacksonCreatorModel {
+        final String name;
+        final int age;
+
+        @JsonCreator
+        JacksonCreatorModel(@JsonProperty("name") String name, @JsonProperty("age") int age) {
+            this.name = name;
+            this.age = age;
+        }
+    }
+
+    static class JacksonCreatorStaticFactory {
+        final String color;
+        final int brightness;
+
+        private JacksonCreatorStaticFactory(String color, int brightness) {
+            this.color = color;
+            this.brightness = brightness;
+        }
+
+        @JsonCreator
+        static JacksonCreatorStaticFactory of(@JsonProperty("color") String color,
+                                              @JsonProperty("brightness") int brightness) {
+            return new JacksonCreatorStaticFactory(color, brightness);
+        }
+    }
+
+    // Model with @IoCreator that should win over @JsonCreator
+    // Uses a static field to track which path was used
+    static class CreatorPriorityModel {
+        static String createdBy;
+        String value;
+
+        CreatorPriorityModel() {}
+
+        @IoCreator
+        CreatorPriorityModel(@IoProperty("value") String value) {
+            this.value = value;
+            createdBy = "IoCreator";
+        }
+
+        @JsonCreator
+        static CreatorPriorityModel fromJson(@JsonProperty("value") String value) {
+            CreatorPriorityModel m = new CreatorPriorityModel();
+            m.value = value;
+            createdBy = "JsonCreator";
+            return m;
+        }
+    }
+
+    // ===================== Jackson @JsonCreator Tests =====================
+
+    @Test
+    void testExternalCreatorConstructor() {
+        String json = "{\"name\":\"Alice\",\"age\":30}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        JacksonCreatorModel result = JsonIo.toJava(json, ro).asClass(JacksonCreatorModel.class);
+        assertEquals("Alice", result.name);
+        assertEquals(30, result.age);
+    }
+
+    @Test
+    void testExternalCreatorStaticFactory() {
+        String json = "{\"color\":\"red\",\"brightness\":100}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        JacksonCreatorStaticFactory result = JsonIo.toJava(json, ro).asClass(JacksonCreatorStaticFactory.class);
+        assertEquals("red", result.color);
+        assertEquals(100, result.brightness);
+    }
+
+    @Test
+    void testIoCreatorOverridesJsonCreator() {
+        // @IoCreator should win over @JsonCreator
+        CreatorPriorityModel.createdBy = null;
+        String json = "{\"value\":\"test\"}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        CreatorPriorityModel result = JsonIo.toJava(json, ro).asClass(CreatorPriorityModel.class);
+        assertEquals("IoCreator", CreatorPriorityModel.createdBy, "@IoCreator should win over @JsonCreator");
+        assertEquals("test", result.value);
+    }
+
+    @Test
+    void testExternalCreatorRoundTrip() {
+        JacksonCreatorModel original = new JacksonCreatorModel("Bob", 25);
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, wo);
+        JacksonCreatorModel restored = JsonIo.toJava(json, ro).asClass(JacksonCreatorModel.class);
+        assertEquals("Bob", restored.name);
+        assertEquals(25, restored.age);
     }
 }

@@ -6,6 +6,7 @@ import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Parameter;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -21,6 +22,7 @@ import com.cedarsoftware.io.annotation.IoNaming;
 import com.cedarsoftware.io.annotation.IoProperty;
 import com.cedarsoftware.io.annotation.IoPropertyOrder;
 import com.cedarsoftware.util.ClassValueMap;
+import com.cedarsoftware.util.ReflectionUtils;
 
 /**
  * Scans classes for json-io annotation metadata and caches the results.
@@ -64,6 +66,8 @@ public class AnnotationResolver {
     private static final Class<? extends Annotation> EXT_NAMING;
     private static final Method EXT_NAMING_VALUE;
     @SuppressWarnings("unchecked")
+    private static final Class<? extends Annotation> EXT_CREATOR;
+    @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_PROPERTY;
     @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_IGNORE;
@@ -85,6 +89,7 @@ public class AnnotationResolver {
 
     static {
         boolean available = false;
+        Class<? extends Annotation> extCreator = null;
         Class<? extends Annotation> extProperty = null;
         Class<? extends Annotation> extIgnore = null;
         Class<? extends Annotation> extIgnoreProperties = null;
@@ -99,6 +104,7 @@ public class AnnotationResolver {
         Object extIncludeNonNull = null;
 
         try {
+            extCreator = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonCreator");
             extProperty = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonProperty");
             extIgnore = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonIgnore");
             extIgnoreProperties = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonIgnoreProperties");
@@ -127,6 +133,7 @@ public class AnnotationResolver {
         }
 
         externalAvailable = available;
+        EXT_CREATOR = extCreator;
         EXT_PROPERTY = extProperty;
         EXT_IGNORE = extIgnore;
         EXT_IGNORE_PROPERTIES = extIgnoreProperties;
@@ -421,32 +428,87 @@ public class AnnotationResolver {
      * Returns the annotated Executable, or null if none found.
      */
     private static Executable scanCreator(Class<?> clazz) {
-        // Check constructors
+        // Check constructors for @IoCreator — iterate declared constructors without making them accessible,
+        // then use ReflectionUtils.getConstructor() only for the annotated one (handles caching + accessibility)
         try {
             for (Constructor<?> ctor : clazz.getDeclaredConstructors()) {
                 if (ctor.isAnnotationPresent(IoCreator.class)) {
-                    ctor.setAccessible(true);
-                    return ctor;
+                    return ReflectionUtils.getConstructor(clazz, ctor.getParameterTypes());
                 }
             }
         } catch (SecurityException e) {
             // Skip if constructors are inaccessible
         }
 
-        // Check static methods
+        // Check static methods for @IoCreator
         try {
             for (Method method : clazz.getDeclaredMethods()) {
                 if (method.isAnnotationPresent(IoCreator.class)
                         && Modifier.isStatic(method.getModifiers())) {
-                    method.setAccessible(true);
-                    return method;
+                    return ReflectionUtils.getMethod(clazz, method.getName(), method.getParameterTypes());
                 }
             }
         } catch (SecurityException e) {
             // Skip if methods are inaccessible
         }
 
+        // Fall back to Jackson @JsonCreator if no native annotation found
+        if (externalAvailable && EXT_CREATOR != null) {
+            try {
+                for (Constructor<?> ctor : clazz.getDeclaredConstructors()) {
+                    if (ctor.isAnnotationPresent(EXT_CREATOR)) {
+                        return ReflectionUtils.getConstructor(clazz, ctor.getParameterTypes());
+                    }
+                }
+            } catch (SecurityException e) {
+                // Skip if constructors are inaccessible
+            }
+
+            try {
+                for (Method method : clazz.getDeclaredMethods()) {
+                    if (method.isAnnotationPresent(EXT_CREATOR)
+                            && Modifier.isStatic(method.getModifiers())) {
+                        return ReflectionUtils.getMethod(clazz, method.getName(), method.getParameterTypes());
+                    }
+                }
+            } catch (SecurityException e) {
+                // Skip if methods are inaccessible
+            }
+        }
+
         return null;
+    }
+
+    // ---- Parameter-level helpers ----
+
+    /**
+     * Get the JSON key name for a constructor/method parameter, checking @IoProperty first,
+     * then Jackson @JsonProperty as fallback, then the parameter's declared name.
+     *
+     * @param param the parameter to inspect
+     * @return the JSON key name to use for matching
+     */
+    public static String getParameterJsonKey(Parameter param) {
+        // Check @IoProperty first
+        IoProperty prop = param.getAnnotation(IoProperty.class);
+        if (prop != null && !prop.value().isEmpty()) {
+            return prop.value();
+        }
+        // Fall back to Jackson @JsonProperty on the parameter
+        if (externalAvailable && EXT_PROPERTY != null) {
+            Annotation extProp = param.getAnnotation(EXT_PROPERTY);
+            if (extProp != null) {
+                try {
+                    String val = (String) EXT_PROPERTY_VALUE.invoke(extProp);
+                    if (val != null && !val.isEmpty()) {
+                        return val;
+                    }
+                } catch (Exception e) {
+                    // Ignore reflection failure
+                }
+            }
+        }
+        return param.getName();
     }
 
     // ---- Field-level scanners ----

@@ -34,7 +34,6 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 
-import com.cedarsoftware.io.annotation.IoProperty;
 import com.cedarsoftware.io.reflect.AnnotationResolver;
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
@@ -1376,9 +1375,8 @@ public abstract class Resolver {
 
         for (int i = 0; i < params.length; i++) {
             Parameter param = params[i];
-            // Check for @IoProperty on the parameter for renamed keys
-            IoProperty prop = param.getAnnotation(IoProperty.class);
-            String jsonKey = (prop != null && !prop.value().isEmpty()) ? prop.value() : param.getName();
+            // Check for @IoProperty or @JsonProperty on the parameter for renamed keys
+            String jsonKey = AnnotationResolver.getParameterJsonKey(param);
 
             Object value = jsonMap.get(jsonKey);
             if (value != null) {
