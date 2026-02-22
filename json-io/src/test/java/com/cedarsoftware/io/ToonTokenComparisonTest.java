@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.Encoding;
@@ -25,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class ToonTokenComparisonTest {
 
+    private static final Logger LOG = Logger.getLogger(ToonTokenComparisonTest.class.getName());
     private static Encoding encoding;
 
     @BeforeAll
@@ -97,13 +99,11 @@ class ToonTokenComparisonTest {
         int toonTokens = countTokens(toon);
         double savings = 100.0 * (jsonTokens - toonTokens) / jsonTokens;
 
-        System.out.println("\n=== " + label + " ===");
-        System.out.println("JSON (" + jsonTokens + " tokens):");
-        System.out.println(json);
-        System.out.println("\nTOON (" + toonTokens + " tokens):");
-        System.out.println(toon);
-        System.out.printf("\nToken savings: %d → %d (%.1f%% fewer tokens)%n",
-                jsonTokens, toonTokens, savings);
+        LOG.info("=== " + label + " ===");
+        LOG.info("JSON (" + jsonTokens + " tokens):\n" + json);
+        LOG.info("TOON (" + toonTokens + " tokens):\n" + toon);
+        LOG.info(String.format("Token savings: %d → %d (%.1f%% fewer tokens)",
+                jsonTokens, toonTokens, savings));
     }
 
     // ==================== Tests ====================
@@ -268,14 +268,14 @@ class ToonTokenComparisonTest {
         int toonTokens = countTokens(toon);
         double savings = 100.0 * (jsonTokens - toonTokens) / jsonTokens;
 
-        System.out.println("\n=== AGGREGATE COMPARISON (20 employees) ===");
-        System.out.println("JSON tokens: " + jsonTokens);
-        System.out.println("TOON tokens: " + toonTokens);
-        System.out.printf("Token savings: %.1f%%%n", savings);
-        System.out.println("JSON bytes: " + json.length());
-        System.out.println("TOON bytes: " + toon.length());
-        System.out.printf("Byte savings: %.1f%%%n",
-                100.0 * (json.length() - toon.length()) / json.length());
+        LOG.info("===AGGREGATE COMPARISON (20 employees) ===");
+        LOG.info("JSON tokens: " + jsonTokens);
+        LOG.info("TOON tokens: " + toonTokens);
+        LOG.info(String.format("Token savings: %.1f%%", savings));
+        LOG.info("JSON bytes: " + json.length());
+        LOG.info("TOON bytes: " + toon.length());
+        LOG.info(String.format("Byte savings: %.1f%%",
+                100.0 * (json.length() - toon.length()) / json.length()));
 
         assertTrue(savings > 30,
                 "Expected > 30% aggregate token savings for 20-item uniform list, got " + String.format("%.1f%%", savings));
@@ -324,17 +324,14 @@ class ToonTokenComparisonTest {
         double toonVsCsv = 100.0 * (csvTokens - toonTokens) / csvTokens;
         double csvVsJson = 100.0 * (jsonTokens - csvTokens) / jsonTokens;
 
-        System.out.println("\n=== THREE-WAY: JSON vs TOON Tabular vs CSV (10 flat employees) ===");
-        System.out.println("CSV (" + csvTokens + " tokens):");
-        System.out.println(csv);
-        System.out.println("\nTOON (" + toonTokens + " tokens):");
-        System.out.println(toon);
-        System.out.println("\nJSON (" + jsonTokens + " tokens):");
-        System.out.println(json);
-        System.out.printf("\nTOON vs JSON: %.1f%% fewer tokens%n", toonVsJson);
-        System.out.printf("CSV  vs JSON: %.1f%% fewer tokens%n", csvVsJson);
-        System.out.printf("TOON vs CSV:  %.1f%% %s tokens%n",
-                Math.abs(toonVsCsv), toonVsCsv > 0 ? "fewer" : "more");
+        LOG.info("===THREE-WAY: JSON vs TOON Tabular vs CSV (10 flat employees) ===");
+        LOG.info("CSV (" + csvTokens + " tokens):\n" + csv);
+        LOG.info("TOON (" + toonTokens + " tokens):\n" + toon);
+        LOG.info("JSON (" + jsonTokens + " tokens):\n" + json);
+        LOG.info(String.format("TOON vs JSON: %.1f%% fewer tokens", toonVsJson));
+        LOG.info(String.format("CSV  vs JSON: %.1f%% fewer tokens", csvVsJson));
+        LOG.info(String.format("TOON vs CSV:  %.1f%% %s tokens",
+                Math.abs(toonVsCsv), toonVsCsv > 0 ? "fewer" : "more"));
 
         // TOON tabular should be much better than JSON
         assertTrue(toonVsJson > 25, "TOON should be >25% better than JSON for flat data");
@@ -402,16 +399,13 @@ class ToonTokenComparisonTest {
         double toonVsJson = 100.0 * (jsonTokens - toonTokens) / jsonTokens;
         double toonVsCsv = 100.0 * (csvTokens - toonTokens) / csvTokens;
 
-        System.out.println("\n=== THREE-WAY: Nested Data (CSV must denormalize) ===");
-        System.out.println("CSV denormalized (" + csvTokens + " tokens):");
-        System.out.println(csv);
-        System.out.println("\nTOON (" + toonTokens + " tokens):");
-        System.out.println(toon);
-        System.out.println("\nJSON (" + jsonTokens + " tokens):");
-        System.out.println(json);
-        System.out.printf("\nTOON vs JSON: %.1f%% fewer tokens%n", toonVsJson);
-        System.out.printf("TOON vs CSV:  %.1f%% fewer tokens%n", toonVsCsv);
-        System.out.println("\nNote: CSV lost structural information (hierarchy) during denormalization.");
+        LOG.info("===THREE-WAY: Nested Data (CSV must denormalize) ===");
+        LOG.info("CSV denormalized (" + csvTokens + " tokens):\n" + csv);
+        LOG.info("TOON (" + toonTokens + " tokens):\n" + toon);
+        LOG.info("JSON (" + jsonTokens + " tokens):\n" + json);
+        LOG.info(String.format("TOON vs JSON: %.1f%% fewer tokens", toonVsJson));
+        LOG.info(String.format("TOON vs CSV:  %.1f%% fewer tokens", toonVsCsv));
+        LOG.info("Note: CSV lost structural information (hierarchy) during denormalization.");
 
         assertTrue(toonTokens < jsonTokens, "TOON should beat JSON for nested data");
         assertTrue(toonTokens < csvTokens,
@@ -448,22 +442,24 @@ class ToonTokenComparisonTest {
         int toonTok = countTokens(toon);
         int csvTok = countTokens(csv);
 
-        System.out.println("\n╔══════════════════════════════════════════════════════════════╗");
-        System.out.println("║     TOKEN COMPARISON SUMMARY (cl100k_base / GPT-4)          ║");
-        System.out.println("╠══════════════════════════════════════════════════════════════╣");
-        System.out.printf("║ %-18s │ %8s │ %8s │ %8s ║%n", "Format", "Tokens", "vs JSON", "vs CSV");
-        System.out.println("╠══════════════════════════════════════════════════════════════╣");
-        System.out.printf("║ %-18s │ %8d │ %7s │ %7s  ║%n", "JSON (no @type)", jsonTok, "---",
-                String.format("+%.0f%%", 100.0 * (jsonTok - csvTok) / csvTok));
-        System.out.printf("║ %-18s │ %8d │ %6.1f%% │ %7s  ║%n", "TOON (tabular)", toonTok,
+        StringBuilder table = new StringBuilder();
+        table.append("╔══════════════════════════════════════════════════════════════╗\n");
+        table.append("║     TOKEN COMPARISON SUMMARY (cl100k_base / GPT-4)          ║\n");
+        table.append("╠══════════════════════════════════════════════════════════════╣\n");
+        table.append(String.format("║ %-18s │ %8s │ %8s │ %8s ║%n", "Format", "Tokens", "vs JSON", "vs CSV"));
+        table.append("╠══════════════════════════════════════════════════════════════╣\n");
+        table.append(String.format("║ %-18s │ %8d │ %7s │ %7s  ║%n", "JSON (no @type)", jsonTok, "---",
+                String.format("+%.0f%%", 100.0 * (jsonTok - csvTok) / csvTok)));
+        table.append(String.format("║ %-18s │ %8d │ %6.1f%% │ %7s  ║%n", "TOON (tabular)", toonTok,
                 -100.0 * (jsonTok - toonTok) / jsonTok,
-                String.format("%+.1f%%", -100.0 * (csvTok - toonTok) / csvTok));
-        System.out.printf("║ %-18s │ %8d │ %6.1f%% │ %7s  ║%n", "CSV", csvTok,
-                -100.0 * (jsonTok - csvTok) / jsonTok, "---");
-        System.out.println("╠══════════════════════════════════════════════════════════════╣");
-        System.out.println("║ TOON ≈ CSV for flat data, but TOON also handles nesting     ║");
-        System.out.println("║ CSV cannot represent hierarchical/nested data structures     ║");
-        System.out.println("╚══════════════════════════════════════════════════════════════╝");
+                String.format("%+.1f%%", -100.0 * (csvTok - toonTok) / csvTok)));
+        table.append(String.format("║ %-18s │ %8d │ %6.1f%% │ %7s  ║%n", "CSV", csvTok,
+                -100.0 * (jsonTok - csvTok) / jsonTok, "---"));
+        table.append("╠══════════════════════════════════════════════════════════════╣\n");
+        table.append("║ TOON ≈ CSV for flat data, but TOON also handles nesting     ║\n");
+        table.append("║ CSV cannot represent hierarchical/nested data structures     ║\n");
+        table.append("╚══════════════════════════════════════════════════════════════╝");
+        LOG.info(table.toString());
 
         // TOON should be significantly better than JSON
         assertTrue(toonTok < jsonTok, "TOON must beat JSON");
