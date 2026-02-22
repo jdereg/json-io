@@ -1,6 +1,15 @@
 ### Revision History
 
 #### 4.95.0 (Unreleased)
+* **FEATURE**: Annotation-based serialization control. json-io now supports 6 annotations in `com.cedarsoftware.io.annotation`:
+  * `@IoProperty("name")` — rename a field in JSON output and accept the renamed key on read.
+  * `@IoIgnore` — exclude a field from serialization and deserialization.
+  * `@IoIgnoreProperties({"a","b"})` — class-level field exclusion by name.
+  * `@IoAlias({"alt1","alt2"})` — accept alternate JSON property names on read.
+  * `@IoPropertyOrder({"x","y"})` — control field order during serialization.
+  * `@IoInclude(Include.NON_NULL)` — per-field null skipping on write.
+  Annotations are scanned once per class and cached in a `ClassValueMap`. Programmatic API overrides annotations.
+* **FEATURE**: Jackson annotation compatibility. json-io reflectively honors `@JsonProperty`, `@JsonIgnore`, `@JsonIgnoreProperties`, `@JsonAlias`, `@JsonPropertyOrder`, and `@JsonInclude(Include.NON_NULL)` when the Jackson annotations JAR is on the classpath — with zero compile-time dependency. json-io annotations take priority over Jackson annotations on the same element.
 * **FEATURE**: `ToonWriter` now supports configurable delimiters for tabular arrays and inline primitive arrays. Supported delimiters: comma (`,`, default), tab (`\t`), and pipe (`|`). Configure via `WriteOptionsBuilder.toonDelimiter(char)` per-instance or `WriteOptionsBuilder.addPermanentToonDelimiter(char)` for JVM-wide defaults. The delimiter is encoded in the count bracket (`[N]`, `[N\t]`, `[N|]`) so the `ToonReader` auto-detects it on read — no read-side configuration needed. Tab delimiters can further reduce BPE token count for LLM payloads.
 * **FEATURE**: `ToonWriter` now supports tabular format for POJO collections and arrays. When `prettyPrint` is `false` (default), uniform POJO lists/arrays are written in compact CSV-style tabular format (`[N]{field1,field2,...}: row1 row2 ...`). When `prettyPrint` is `true`, the verbose list format (`- key: value`) is used instead.
 * **TESTING**: Added 17 new TOON format tests covering both tabular and list POJO format paths:

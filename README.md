@@ -62,6 +62,7 @@ json-io is a powerful and lightweight Java library that simplifies **JSON5**, **
 - Compatible with JDK 1.8 through JDK 24
 - The library is built with the `-parameters` compiler flag. Parameter names are now retained for tasks such as constructor discovery.
 - Optional unsafe mode for deserializing package-private classes, inner classes, and classes without accessible constructors (opt-in for security)
+- **Annotation support** — json-io's own `@Io*` annotations plus automatic recognition of Jackson annotations (no compile-time dependency)
 - Extensive configuration options via `ReadOptionsBuilder` and `WriteOptionsBuilder`
 - Two modes: typed Java objects (`toJava()`) or class-independent Maps (`toMaps()`)
 - Parse JSON with unknown class references into a Map-of-Maps representation without requiring classes on classpath
@@ -75,7 +76,7 @@ json-io is a powerful and lightweight Java library that simplifies **JSON5**, **
 |------------|---------|--------------|
 | Object graph cycles | Full support (`@id`/`@ref`) | None |
 | Polymorphic types | Automatic (`@type` when needed) | Requires annotations |
-| Configuration | Zero-config default | Annotation-heavy |
+| Configuration | Zero-config default; optional annotations | Annotation-heavy |
 | Dependencies | java-util (~1MB total) | Multiple JARs (~2.5MB+) |
 
 **Trade-off**: json-io prioritizes **correctness over speed**. It preserves graph shape and Java type semantics—handling cycles, references, and polymorphism that break other serializers. Jackson/Gson are faster for simple DTOs, but json-io handles what they cannot.
@@ -94,9 +95,15 @@ json-io is a powerful and lightweight Java library that simplifies **JSON5**, **
 
 json-io's TOON implementation offers comprehensive Java type coverage while JToon focuses on basic types with Jackson integration.
 
-### What's Coming Next
+### Annotation Support
 
-- **Annotations** — Custom serialization control via annotations
+json-io provides its own lightweight annotations (`@IoProperty`, `@IoIgnore`, `@IoIgnoreProperties`, `@IoAlias`, `@IoPropertyOrder`, `@IoInclude`) in the `com.cedarsoftware.io.annotation` package for controlling serialization — field renaming, exclusion, alternate read names, field ordering, and per-field null skipping.
+
+Additionally, json-io **reflectively honors Jackson annotations** (`@JsonProperty`, `@JsonIgnore`, `@JsonIgnoreProperties`, `@JsonAlias`, `@JsonPropertyOrder`, `@JsonInclude`) when they are on the classpath — with zero compile-time dependency on Jackson. If your classes already use Jackson annotations, json-io will recognize them automatically.
+
+**Precedence:** Programmatic API > json-io annotations > Jackson annotations.
+
+See the [Annotations section of the User Guide](/user-guide.md#annotations) for full details and examples.
 
 ## Installation
 To include in your project:

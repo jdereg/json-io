@@ -72,6 +72,7 @@ import com.cedarsoftware.io.reflect.Accessor;
 import com.cedarsoftware.io.WriteOptionsBuilder.WriteFieldPlan;
 import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.ClassValueMap;
 import com.cedarsoftware.util.CompactMap;
 import com.cedarsoftware.util.CompactSet;
 import com.cedarsoftware.util.FastWriter;
@@ -287,6 +288,23 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         NUMERIC_PRIMITIVES_FOR_COMPACT.add(int.class);
         NUMERIC_PRIMITIVES_FOR_COMPACT.add(Float.class);
         NUMERIC_PRIMITIVES_FOR_COMPACT.add(float.class);
+    }
+
+    // Dispatch table for primitive array serialization (replaces class == chain)
+    @FunctionalInterface
+    private interface PrimitiveArrayHandler {
+        void write(JsonWriter writer, Object array, int lenMinus1) throws IOException;
+    }
+    private static final ClassValueMap<PrimitiveArrayHandler> PRIM_ARRAY_WRITERS = new ClassValueMap<>();
+    static {
+        PRIM_ARRAY_WRITERS.put(byte[].class, (w, a, len) -> w.writeByteArray((byte[]) a, len));
+        PRIM_ARRAY_WRITERS.put(char[].class, (w, a, len) -> w.writeStringValue(new String((char[]) a)));
+        PRIM_ARRAY_WRITERS.put(short[].class, (w, a, len) -> w.writeShortArray((short[]) a, len));
+        PRIM_ARRAY_WRITERS.put(int[].class, (w, a, len) -> w.writeIntArray((int[]) a, len));
+        PRIM_ARRAY_WRITERS.put(long[].class, (w, a, len) -> w.writeLongArray((long[]) a, len));
+        PRIM_ARRAY_WRITERS.put(float[].class, (w, a, len) -> w.writeFloatArray((float[]) a, len));
+        PRIM_ARRAY_WRITERS.put(double[].class, (w, a, len) -> w.writeDoubleArray((double[]) a, len));
+        PRIM_ARRAY_WRITERS.put(boolean[].class, (w, a, len) -> w.writeBooleanArray((boolean[]) a, len));
     }
 
     // Cached Field for EnumSet.elementType (lazy-initialized, immutable once set)
@@ -1396,23 +1414,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         final int lenMinus1 = len - 1;
 
-        // Handle each primitive array type with optimized loops
-        if (byte[].class == arrayType) {
-            writeByteArray((byte[]) array, lenMinus1);
-        } else if (char[].class == arrayType) {
-            writeStringValue(new String((char[]) array));
-        } else if (short[].class == arrayType) {
-            writeShortArray((short[]) array, lenMinus1);
-        } else if (int[].class == arrayType) {
-            writeIntArray((int[]) array, lenMinus1);
-        } else if (long[].class == arrayType) {
-            writeLongArray((long[]) array, lenMinus1);
-        } else if (float[].class == arrayType) {
-            writeFloatArray((float[]) array, lenMinus1);
-        } else if (double[].class == arrayType) {
-            writeDoubleArray((double[]) array, lenMinus1);
-        } else if (boolean[].class == arrayType) {
-            writeBooleanArray((boolean[]) array, lenMinus1);
+        // Handle each primitive array type via ClassValueMap dispatch
+        PrimitiveArrayHandler handler = PRIM_ARRAY_WRITERS.get(arrayType);
+        if (handler != null) {
+            handler.write(this, array, lenMinus1);
         }
 
         tabOut();
@@ -2432,7 +2437,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
         Object o = accessor.retrieve(obj);
 
-        if (skipNullFields && o == null) {   // If skip null, skip field and return the same status on first field written indicator
+        if ((skipNullFields || plan.skipIfNull()) && o == null) {   // If skip null (global or per-field annotation), skip field
             return first;
         }
 

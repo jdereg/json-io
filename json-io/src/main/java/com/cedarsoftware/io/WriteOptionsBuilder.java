@@ -24,6 +24,7 @@ import java.util.regex.Pattern;
 
 import com.cedarsoftware.io.reflect.Accessor;
 import com.cedarsoftware.io.reflect.AccessorFactory;
+import com.cedarsoftware.io.reflect.AnnotationResolver;
 import com.cedarsoftware.io.reflect.factories.GetMethodAccessorFactory;
 import com.cedarsoftware.io.reflect.factories.IsMethodAccessorFactory;
 import com.cedarsoftware.io.reflect.filters.FieldFilter;
@@ -2114,17 +2115,55 @@ public class WriteOptionsBuilder {
             for (Accessor accessor : accessors) {
                 plans.add(WriteFieldPlan.create(accessor, this));
             }
+
+            // Apply @IoPropertyOrder / @JsonPropertyOrder if present
+            final AnnotationResolver.ClassAnnotationMetadata annMeta = AnnotationResolver.getMetadata(clazz);
+            final String[] order = annMeta.getPropertyOrder();
+            if (order != null && order.length > 0) {
+                reorderPlans(plans, order);
+            }
+
             return Collections.unmodifiableList(plans);
+        }
+
+        /**
+         * Reorder write field plans so that fields listed in the order array appear first,
+         * in the specified order. Remaining fields follow in their original order.
+         */
+        private static void reorderPlans(List<WriteFieldPlan> plans, String[] order) {
+            Map<String, WriteFieldPlan> planByName = new LinkedHashMap<>(plans.size());
+            for (WriteFieldPlan plan : plans) {
+                planByName.put(plan.fieldName, plan);
+            }
+
+            List<WriteFieldPlan> reordered = new ArrayList<>(plans.size());
+
+            // Add ordered fields first
+            for (String name : order) {
+                WriteFieldPlan plan = planByName.remove(name);
+                if (plan != null) {
+                    reordered.add(plan);
+                }
+            }
+
+            // Add remaining fields in original order
+            reordered.addAll(planByName.values());
+
+            plans.clear();
+            plans.addAll(reordered);
         }
 
         private List<Accessor> buildDeepAccessors(final Class<?> clazz) {
             final Map<String, Field> fields = getDeepDeclaredFields(clazz);
             final List<Accessor> accessors = new ArrayList<>(fields.size());
-            
+            final AnnotationResolver.ClassAnnotationMetadata annMeta = AnnotationResolver.getMetadata(clazz);
+
             for (final Map.Entry<String, Field> entry : fields.entrySet()) {
 
                 final Field field = entry.getValue();
-                final String uniqueFieldName = entry.getKey();
+                // Apply @IoProperty rename if present; otherwise use the original field name
+                final String serializedName = annMeta.getSerializedName(field.getName());
+                final String uniqueFieldName = serializedName != null ? serializedName : entry.getKey();
 
                 Accessor accessor = findMethodAccessor(field, uniqueFieldName);
                 if (accessor != null && isMethodFiltered(clazz, accessor.getFieldOrMethodName())) {
@@ -2187,6 +2226,7 @@ public class WriteOptionsBuilder {
             final Set<String> excluded = new HashSet<>();
             final Set<String> includedFields = includedFieldNames.get(c);
             final Set<String> included = includedFields == null ? new HashSet<>() : includedFields;
+            final AnnotationResolver.ClassAnnotationMetadata annMeta = AnnotationResolver.getMetadata(c);
             Class<?> curr = c;
 
             while (curr != null) {
@@ -2210,8 +2250,8 @@ public class WriteOptionsBuilder {
                         fieldName = field.getDeclaringClass().getSimpleName() + '.' + fieldName;
                     }
 
-                    // FieldFilter or 'Excluded listing' automatically eliminates field.
-                    if (isFieldFiltered(field) || excluded.contains(fieldName)) {
+                    // FieldFilter, 'Excluded listing', or annotation-based ignore eliminates field.
+                    if (isFieldFiltered(field) || excluded.contains(fieldName) || annMeta.isIgnored(fieldName)) {
                         continue;
                     }
 
@@ -2352,11 +2392,12 @@ public class WriteOptionsBuilder {
         private final boolean enumPublicOnlySkipCandidate;
         private final boolean applyDeclaredContainerTypes;
         private final boolean skipReferenceTrace;
+        private final boolean skipIfNull;
 
         private WriteFieldPlan(Accessor accessor, String fieldName, String serializedKey, Class<?> declaredFieldType,
                                Class<?> declaredElementType, Class<?> declaredKeyType,
                                boolean enumPublicOnlySkipCandidate, boolean applyDeclaredContainerTypes,
-                               boolean skipReferenceTrace) {
+                               boolean skipReferenceTrace, boolean skipIfNull) {
             this.accessor = accessor;
             this.fieldName = fieldName;
             this.serializedKey = serializedKey;
@@ -2366,6 +2407,7 @@ public class WriteOptionsBuilder {
             this.enumPublicOnlySkipCandidate = enumPublicOnlySkipCandidate;
             this.applyDeclaredContainerTypes = applyDeclaredContainerTypes;
             this.skipReferenceTrace = skipReferenceTrace;
+            this.skipIfNull = skipIfNull;
         }
 
         static WriteFieldPlan create(Accessor accessor, WriteOptions options) {
@@ -2399,8 +2441,12 @@ public class WriteOptionsBuilder {
             boolean skipTrace = fieldType.isPrimitive()
                     || (Modifier.isFinal(fieldType.getModifiers()) && options.isNonReferenceableClass(fieldType));
 
+            // Pre-compute per-field null-skip from @IoInclude(NON_NULL) / @JsonInclude(NON_NULL)
+            AnnotationResolver.ClassAnnotationMetadata annMeta = AnnotationResolver.getMetadata(declaringClass);
+            boolean nullSkip = annMeta.isNonNull(accessor.getActualFieldName());
+
             return new WriteFieldPlan(accessor, fieldName, keyLiteral, fieldType, elementType, keyType,
-                    enumSkip, applyContainerTypes, skipTrace);
+                    enumSkip, applyContainerTypes, skipTrace, nullSkip);
         }
 
         private static String buildKeyLiteral(String fieldName, WriteOptions options) {
@@ -2471,6 +2517,10 @@ public class WriteOptionsBuilder {
 
         boolean skipReferenceTrace() {
             return skipReferenceTrace;
+        }
+
+        boolean skipIfNull() {
+            return skipIfNull;
         }
     }
 }

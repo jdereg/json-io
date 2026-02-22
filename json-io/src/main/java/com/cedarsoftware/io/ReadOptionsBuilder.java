@@ -24,6 +24,7 @@ import com.cedarsoftware.io.factory.ArrayFactory;
 import com.cedarsoftware.io.factory.EnumClassFactory;
 import com.cedarsoftware.io.factory.RecordFactory;
 import com.cedarsoftware.io.factory.ThrowableFactory;
+import com.cedarsoftware.io.reflect.AnnotationResolver;
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.io.reflect.InjectorFactory;
 import com.cedarsoftware.io.reflect.factories.MethodInjectorFactory;
@@ -2053,11 +2054,12 @@ public class ReadOptionsBuilder {
         private Map<String, Injector> buildInjectors(Class<?> c) {
             final Map<String, Field> fields = getDeepDeclaredFields(c);
             final Map<String, Injector> injectors = new LinkedHashMap<>(fields.size());
+            final AnnotationResolver.ClassAnnotationMetadata annMeta = AnnotationResolver.getMetadata(c);
 
             for (final Map.Entry<String, Field> entry : fields.entrySet()) {
                 final Field field = entry.getValue();
                 final String fieldName = entry.getKey();
-                
+
                 Injector injector = this.findInjector(field, fieldName);
 
                 if (injector == null) {
@@ -2066,9 +2068,27 @@ public class ReadOptionsBuilder {
 
                 if (injector != null) {
                     injectors.put(fieldName, injector);
+
+                    // @IoProperty rename: register injector under the serialized name too
+                    String serializedName = annMeta.getSerializedName(field.getName());
+                    if (serializedName != null && !serializedName.equals(fieldName)) {
+                        injectors.putIfAbsent(serializedName, injector);
+                    }
                 }
 
             }
+
+            // @IoAlias: register injectors under alternate JSON names
+            Map<String, String> aliasMap = annMeta.getAliasToFieldName();
+            for (Map.Entry<String, String> aliasEntry : aliasMap.entrySet()) {
+                String alias = aliasEntry.getKey();
+                String targetFieldName = aliasEntry.getValue();
+                Injector targetInjector = injectors.get(targetFieldName);
+                if (targetInjector != null) {
+                    injectors.putIfAbsent(alias, targetInjector);
+                }
+            }
+
             return injectors;
         }
 
@@ -2124,6 +2144,7 @@ public class ReadOptionsBuilder {
 
             final Map<String, Field> map = new LinkedHashMap<>();
             final Set<String> excludedFields = new HashSet<>();
+            final AnnotationResolver.ClassAnnotationMetadata annMeta = AnnotationResolver.getMetadata(clazz);
 
             Class<?> curr = clazz;
             while (curr != null) {
@@ -2141,7 +2162,7 @@ public class ReadOptionsBuilder {
                 }
 
                 for (Field field : fields) {
-                    if (excludedFields.contains(field.getName()) || fieldIsFiltered(field)) {
+                    if (excludedFields.contains(field.getName()) || fieldIsFiltered(field) || annMeta.isIgnored(field.getName())) {
                         continue;
                     }
 

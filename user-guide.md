@@ -648,6 +648,130 @@ is encountered twice during serialization, the second occurrence is written as `
 This is consistent with TOON's design goal of compact, LLM-friendly output where
 cyclic references are typically not needed.
 
+## Annotations
+
+json-io provides annotation-based serialization control through its own lightweight annotations in the `com.cedarsoftware.io.annotation` package. In addition, json-io **reflectively honors Jackson annotations** when the Jackson annotations JAR is on the classpath — with zero compile-time dependency on Jackson.
+
+### Annotation Precedence
+
+When both json-io and Jackson annotations are present on the same element:
+
+1. **Programmatic API** (`WriteOptionsBuilder`/`ReadOptionsBuilder` methods like `addExcludedField()`, `addIncludedField()`, etc.) — highest priority, always wins
+2. **json-io annotations** (`@IoProperty`, `@IoIgnore`, etc.) — checked first among annotations
+3. **Jackson annotations** (`@JsonProperty`, `@JsonIgnore`, etc.) — used as fallback if no json-io annotation is present on the same element
+
+If Jackson annotations are not on the classpath, external annotation detection is silently skipped with zero overhead.
+
+### Available Annotations
+
+#### `@IoProperty("name")` — Field Rename
+Renames a Java field in the serialized JSON output and accepts the renamed key during deserialization. Equivalent to Jackson's `@JsonProperty`.
+
+```java
+public class User {
+    @IoProperty("full_name")
+    private String name;     // Serializes as "full_name" in JSON
+    private int age;
+}
+```
+
+#### `@IoIgnore` — Field Exclusion
+Excludes a field from both serialization and deserialization. Equivalent to Jackson's `@JsonIgnore`.
+
+```java
+public class Account {
+    private String username;
+    @IoIgnore
+    private String password;  // Never appears in JSON, never read from JSON
+}
+```
+
+#### `@IoIgnoreProperties({"field1", "field2"})` — Class-Level Exclusion
+Excludes multiple fields by name at the class level. Equivalent to Jackson's `@JsonIgnoreProperties`.
+
+```java
+@IoIgnoreProperties({"secret", "internal"})
+public class Config {
+    private String name;
+    private String secret;     // Excluded
+    private String internal;   // Excluded
+    private int value;
+}
+```
+
+#### `@IoAlias({"alt1", "alt2"})` — Read-Side Alternate Names
+Specifies alternate JSON property names accepted during deserialization. The primary field name (or `@IoProperty` name) is always used for serialization. Equivalent to Jackson's `@JsonAlias`.
+
+```java
+public class Person {
+    @IoAlias({"firstName", "first_name", "fname"})
+    private String name;
+}
+// Any of {"name":"Alice"}, {"firstName":"Alice"}, {"first_name":"Alice"}, {"fname":"Alice"}
+// will deserialize correctly into the 'name' field.
+```
+
+#### `@IoPropertyOrder({"field1", "field2", ...})` — Write-Side Field Ordering
+Controls the order of fields during JSON serialization. Fields listed in the annotation appear first in the specified order; any remaining fields follow in their natural declaration order. Equivalent to Jackson's `@JsonPropertyOrder`.
+
+```java
+@IoPropertyOrder({"id", "name", "email"})
+public class User {
+    private String email;
+    private String name;
+    private long id;
+    private int age;
+}
+// Serializes as: {"id":1, "name":"Alice", "email":"alice@example.com", "age":30}
+```
+
+#### `@IoInclude(Include.NON_NULL)` — Per-Field Null Skipping
+Controls the inclusion of a field during serialization. When set to `NON_NULL`, the field is omitted from JSON output if its value is `null`, regardless of the global `skipNullFields` setting. Equivalent to Jackson's `@JsonInclude(Include.NON_NULL)`.
+
+```java
+public class Response {
+    @IoInclude(IoInclude.Include.NON_NULL)
+    private String optionalMessage;  // Omitted from JSON when null
+    private String status;           // Always present, even if null
+}
+```
+
+### Combining Annotations
+
+Annotations can be combined on the same field or class:
+
+```java
+@IoPropertyOrder({"id", "username"})
+@IoIgnoreProperties({"password"})
+public class UserProfile {
+    private long id;
+
+    @IoProperty("username")
+    @IoAlias({"user_name", "login"})
+    private String name;        // Writes as "username"; reads "username", "user_name", or "login"
+
+    private String password;    // Excluded by class-level annotation
+
+    @IoInclude(IoInclude.Include.NON_NULL)
+    private String bio;         // Omitted when null
+}
+```
+
+### Jackson Annotation Compatibility
+
+If your classes already use Jackson annotations, json-io will honor them automatically — no code changes needed. The following Jackson annotations are supported:
+
+| Jackson Annotation | json-io Equivalent | Effect |
+|---|---|---|
+| `@JsonProperty("name")` | `@IoProperty("name")` | Renames field in JSON |
+| `@JsonIgnore` | `@IoIgnore` | Excludes field |
+| `@JsonIgnoreProperties({"a","b"})` | `@IoIgnoreProperties({"a","b"})` | Class-level field exclusion |
+| `@JsonAlias({"alt1","alt2"})` | `@IoAlias({"alt1","alt2"})` | Accept alternate names on read |
+| `@JsonPropertyOrder({"x","y"})` | `@IoPropertyOrder({"x","y"})` | Control field order on write |
+| `@JsonInclude(Include.NON_NULL)` | `@IoInclude(Include.NON_NULL)` | Per-field null skipping |
+
+Jackson's `jackson-annotations` JAR (~75KB) is commonly already on the classpath in Spring applications. json-io detects it via `Class.forName()` at startup — there is no compile-time dependency and no Jackson-specific naming anywhere in json-io's source code.
+
 ## Advanced Usage
 Sometimes you will run into a class that does not want to serialize.  On the read-side, this can be a class that does
 not want to be instantiated easily.  A class that has private constructors, constructor with many difficult to supply

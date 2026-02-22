@@ -1,0 +1,543 @@
+package com.cedarsoftware.io;
+
+import java.util.Map;
+
+import com.cedarsoftware.io.annotation.IoAlias;
+import com.cedarsoftware.io.annotation.IoIgnore;
+import com.cedarsoftware.io.annotation.IoIgnoreProperties;
+import com.cedarsoftware.io.annotation.IoInclude;
+import com.cedarsoftware.io.annotation.IoProperty;
+import com.cedarsoftware.io.annotation.IoPropertyOrder;
+import com.cedarsoftware.io.reflect.AnnotationResolver;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+/**
+ * Tests for json-io annotation support:
+ * - @IoProperty (field rename)
+ * - @IoIgnore (field exclusion)
+ * - @IoIgnoreProperties (class-level field exclusion)
+ * - @IoAlias (read-side alternate names)
+ * - @IoPropertyOrder (write-side field ordering)
+ * - @IoInclude(NON_NULL) (per-field null skipping)
+ * - External (Jackson) annotation fallback
+ * - Priority: json-io annotations win over Jackson
+ * - Programmatic API overrides annotations
+ */
+class AnnotationTest {
+
+    // ===================== Test Models =====================
+
+    static class RenamedFieldModel {
+        @IoProperty("full_name")
+        private String name;
+        private int age;
+
+        RenamedFieldModel() {}
+        RenamedFieldModel(String name, int age) {
+            this.name = name;
+            this.age = age;
+        }
+    }
+
+    static class FieldIgnoreModel {
+        private String visible;
+        @IoIgnore
+        private String hidden;
+        private int count;
+
+        FieldIgnoreModel() {}
+        FieldIgnoreModel(String visible, String hidden, int count) {
+            this.visible = visible;
+            this.hidden = hidden;
+            this.count = count;
+        }
+    }
+
+    @IoIgnoreProperties({"secret", "internal"})
+    static class ClassIgnoreModel {
+        private String name;
+        private String secret;
+        private String internal;
+        private int value;
+
+        ClassIgnoreModel() {}
+        ClassIgnoreModel(String name, String secret, String internal, int value) {
+            this.name = name;
+            this.secret = secret;
+            this.internal = internal;
+            this.value = value;
+        }
+    }
+
+    static class AliasModel {
+        @IoAlias({"firstName", "first_name", "fname"})
+        private String name;
+        private int age;
+
+        AliasModel() {}
+        AliasModel(String name, int age) {
+            this.name = name;
+            this.age = age;
+        }
+    }
+
+    @IoPropertyOrder({"id", "name", "email"})
+    static class OrderedModel {
+        private String email;
+        private String name;
+        private long id;
+        private int age;
+
+        OrderedModel() {}
+        OrderedModel(long id, String name, String email, int age) {
+            this.id = id;
+            this.name = name;
+            this.email = email;
+            this.age = age;
+        }
+    }
+
+    static class NonNullModel {
+        @IoInclude(IoInclude.Include.NON_NULL)
+        private String optional;
+        private String alwaysWritten;
+        private int count;
+
+        NonNullModel() {}
+        NonNullModel(String optional, String alwaysWritten, int count) {
+            this.optional = optional;
+            this.alwaysWritten = alwaysWritten;
+            this.count = count;
+        }
+    }
+
+    static class NoAnnotationModel {
+        private String name;
+        private int value;
+
+        NoAnnotationModel() {}
+        NoAnnotationModel(String name, int value) {
+            this.name = name;
+            this.value = value;
+        }
+    }
+
+    // Model with rename + alias combined
+    static class RenameAndAliasModel {
+        @IoProperty("user_name")
+        @IoAlias({"username", "login"})
+        private String name;
+        private int age;
+
+        RenameAndAliasModel() {}
+        RenameAndAliasModel(String name, int age) {
+            this.name = name;
+            this.age = age;
+        }
+    }
+
+    // ===================== @IoProperty Tests =====================
+
+    @Test
+    void testIoPropertyWriteRename() {
+        RenamedFieldModel model = new RenamedFieldModel("Alice", 30);
+        WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoNever().build();
+        String json = JsonIo.toJson(model, writeOptions);
+
+        assertTrue(json.contains("\"full_name\""), "JSON should use renamed field: " + json);
+        assertFalse(json.contains("\"name\""), "JSON should NOT contain original field name: " + json);
+        assertTrue(json.contains("\"age\""), "Non-renamed field should be present: " + json);
+    }
+
+    @Test
+    void testIoPropertyReadRename() {
+        // JSON uses the serialized name "full_name"
+        String json = "{\"@type\":\"com.cedarsoftware.io.AnnotationTest$RenamedFieldModel\",\"full_name\":\"Bob\",\"age\":25}";
+        RenamedFieldModel model = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(RenamedFieldModel.class);
+
+        assertEquals("Bob", model.name);
+        assertEquals(25, model.age);
+    }
+
+    @Test
+    void testIoPropertyRoundTrip() {
+        RenamedFieldModel original = new RenamedFieldModel("Charlie", 40);
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, writeOptions);
+        RenamedFieldModel restored = JsonIo.toJava(json, readOptions).asClass(RenamedFieldModel.class);
+
+        assertEquals(original.name, restored.name);
+        assertEquals(original.age, restored.age);
+    }
+
+    // ===================== @IoIgnore Tests =====================
+
+    @Test
+    void testIoIgnoreWrite() {
+        FieldIgnoreModel model = new FieldIgnoreModel("shown", "secret", 42);
+        WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoNever().build();
+        String json = JsonIo.toJson(model, writeOptions);
+
+        assertTrue(json.contains("\"visible\""), "Visible field should be present: " + json);
+        assertFalse(json.contains("\"hidden\""), "Hidden field should NOT be present: " + json);
+        assertTrue(json.contains("\"count\""), "Count field should be present: " + json);
+    }
+
+    @Test
+    void testIoIgnoreRead() {
+        // JSON includes the "hidden" field, but it should be ignored on read
+        String json = "{\"@type\":\"com.cedarsoftware.io.AnnotationTest$FieldIgnoreModel\",\"visible\":\"shown\",\"hidden\":\"should_be_ignored\",\"count\":10}";
+        FieldIgnoreModel model = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(FieldIgnoreModel.class);
+
+        assertEquals("shown", model.visible);
+        assertNull(model.hidden, "Ignored field should remain null (default)");
+        assertEquals(10, model.count);
+    }
+
+    @Test
+    void testIoIgnoreRoundTrip() {
+        FieldIgnoreModel original = new FieldIgnoreModel("visible", "hidden_data", 99);
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, writeOptions);
+        FieldIgnoreModel restored = JsonIo.toJava(json, readOptions).asClass(FieldIgnoreModel.class);
+
+        assertEquals("visible", restored.visible);
+        assertNull(restored.hidden, "Ignored field should be null after round-trip");
+        assertEquals(99, restored.count);
+    }
+
+    // ===================== @IoIgnoreProperties Tests =====================
+
+    @Test
+    void testIoIgnorePropertiesWrite() {
+        ClassIgnoreModel model = new ClassIgnoreModel("Alice", "pass123", "internal_data", 42);
+        WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoNever().build();
+        String json = JsonIo.toJson(model, writeOptions);
+
+        assertTrue(json.contains("\"name\""), "Non-excluded field should be present: " + json);
+        assertFalse(json.contains("\"secret\""), "Class-excluded 'secret' should NOT be present: " + json);
+        assertFalse(json.contains("\"internal\""), "Class-excluded 'internal' should NOT be present: " + json);
+        assertTrue(json.contains("\"value\""), "Non-excluded field should be present: " + json);
+    }
+
+    @Test
+    void testIoIgnorePropertiesRead() {
+        String json = "{\"@type\":\"com.cedarsoftware.io.AnnotationTest$ClassIgnoreModel\",\"name\":\"Bob\",\"secret\":\"pass\",\"internal\":\"data\",\"value\":7}";
+        ClassIgnoreModel model = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(ClassIgnoreModel.class);
+
+        assertEquals("Bob", model.name);
+        assertNull(model.secret, "Class-excluded 'secret' should remain null on read");
+        assertNull(model.internal, "Class-excluded 'internal' should remain null on read");
+        assertEquals(7, model.value);
+    }
+
+    // ===================== @IoAlias Tests =====================
+
+    @Test
+    void testIoAliasReadWithFirstName() {
+        String json = "{\"@type\":\"com.cedarsoftware.io.AnnotationTest$AliasModel\",\"firstName\":\"John\",\"age\":30}";
+        AliasModel model = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(AliasModel.class);
+
+        assertEquals("John", model.name);
+        assertEquals(30, model.age);
+    }
+
+    @Test
+    void testIoAliasReadWithSnakeCase() {
+        String json = "{\"@type\":\"com.cedarsoftware.io.AnnotationTest$AliasModel\",\"first_name\":\"Jane\",\"age\":25}";
+        AliasModel model = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(AliasModel.class);
+
+        assertEquals("Jane", model.name);
+        assertEquals(25, model.age);
+    }
+
+    @Test
+    void testIoAliasReadWithShortName() {
+        String json = "{\"@type\":\"com.cedarsoftware.io.AnnotationTest$AliasModel\",\"fname\":\"Jim\",\"age\":40}";
+        AliasModel model = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(AliasModel.class);
+
+        assertEquals("Jim", model.name);
+        assertEquals(40, model.age);
+    }
+
+    @Test
+    void testIoAliasReadWithOriginalName() {
+        String json = "{\"@type\":\"com.cedarsoftware.io.AnnotationTest$AliasModel\",\"name\":\"Kate\",\"age\":35}";
+        AliasModel model = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(AliasModel.class);
+
+        assertEquals("Kate", model.name);
+        assertEquals(35, model.age);
+    }
+
+    @Test
+    void testIoAliasWriteUsesOriginalName() {
+        // Write should use the original field name, not any alias
+        AliasModel model = new AliasModel("Bob", 28);
+        WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoNever().build();
+        String json = JsonIo.toJson(model, writeOptions);
+
+        assertTrue(json.contains("\"name\""), "Write should use original field name: " + json);
+        assertFalse(json.contains("\"firstName\""), "Write should NOT use alias: " + json);
+        assertFalse(json.contains("\"first_name\""), "Write should NOT use alias: " + json);
+    }
+
+    // ===================== @IoPropertyOrder Tests =====================
+
+    @Test
+    void testIoPropertyOrderWrite() {
+        OrderedModel model = new OrderedModel(1L, "Alice", "alice@example.com", 30);
+        WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoNever().build();
+        String json = JsonIo.toJson(model, writeOptions);
+
+        int idPos = json.indexOf("\"id\"");
+        int namePos = json.indexOf("\"name\"");
+        int emailPos = json.indexOf("\"email\"");
+        int agePos = json.indexOf("\"age\"");
+
+        assertTrue(idPos >= 0, "id should be present");
+        assertTrue(namePos >= 0, "name should be present");
+        assertTrue(emailPos >= 0, "email should be present");
+        assertTrue(agePos >= 0, "age should be present");
+
+        assertTrue(idPos < namePos, "id should appear before name: " + json);
+        assertTrue(namePos < emailPos, "name should appear before email: " + json);
+        assertTrue(emailPos < agePos, "email should appear before age: " + json);
+    }
+
+    @Test
+    void testIoPropertyOrderRoundTrip() {
+        OrderedModel original = new OrderedModel(42L, "Bob", "bob@test.com", 25);
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, writeOptions);
+        OrderedModel restored = JsonIo.toJava(json, readOptions).asClass(OrderedModel.class);
+
+        assertEquals(42L, restored.id);
+        assertEquals("Bob", restored.name);
+        assertEquals("bob@test.com", restored.email);
+        assertEquals(25, restored.age);
+    }
+
+    // ===================== @IoInclude(NON_NULL) Tests =====================
+
+    @Test
+    void testIoIncludeNonNullSkipsNull() {
+        NonNullModel model = new NonNullModel(null, null, 5);
+        WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoNever().build();
+        String json = JsonIo.toJson(model, writeOptions);
+
+        assertFalse(json.contains("\"optional\""), "NON_NULL field with null value should be absent: " + json);
+        assertTrue(json.contains("\"alwaysWritten\""), "Non-annotated field should be present even when null: " + json);
+        assertTrue(json.contains("\"count\""), "Non-null field should be present: " + json);
+    }
+
+    @Test
+    void testIoIncludeNonNullWritesWhenPresent() {
+        NonNullModel model = new NonNullModel("hello", "world", 10);
+        WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoNever().build();
+        String json = JsonIo.toJson(model, writeOptions);
+
+        assertTrue(json.contains("\"optional\""), "NON_NULL field with non-null value should be present: " + json);
+        assertTrue(json.contains("\"alwaysWritten\""), "Non-annotated field should be present: " + json);
+    }
+
+    @Test
+    void testIoIncludeNonNullRoundTrip() {
+        NonNullModel original = new NonNullModel("data", "always", 7);
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, writeOptions);
+        NonNullModel restored = JsonIo.toJava(json, readOptions).asClass(NonNullModel.class);
+
+        assertEquals("data", restored.optional);
+        assertEquals("always", restored.alwaysWritten);
+        assertEquals(7, restored.count);
+    }
+
+    @Test
+    void testIoIncludeNonNullRoundTripWithNull() {
+        NonNullModel original = new NonNullModel(null, "always", 3);
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, writeOptions);
+        NonNullModel restored = JsonIo.toJava(json, readOptions).asClass(NonNullModel.class);
+
+        assertNull(restored.optional, "optional should be null after round-trip");
+        assertEquals("always", restored.alwaysWritten);
+        assertEquals(3, restored.count);
+    }
+
+    // ===================== No Annotation Regression Tests =====================
+
+    @Test
+    void testNoAnnotationRoundTrip() {
+        NoAnnotationModel original = new NoAnnotationModel("test", 42);
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, writeOptions);
+        NoAnnotationModel restored = JsonIo.toJava(json, readOptions).asClass(NoAnnotationModel.class);
+
+        assertEquals("test", restored.name);
+        assertEquals(42, restored.value);
+    }
+
+    @Test
+    void testNoAnnotationMetadataIsEmpty() {
+        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(NoAnnotationModel.class);
+        assertTrue(meta.isEmpty(), "Metadata for un-annotated class should be empty");
+    }
+
+    // ===================== Combined Rename + Alias Tests =====================
+
+    @Test
+    void testRenameAndAliasWrite() {
+        RenameAndAliasModel model = new RenameAndAliasModel("Alice", 30);
+        WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoNever().build();
+        String json = JsonIo.toJson(model, writeOptions);
+
+        assertTrue(json.contains("\"user_name\""), "Write should use renamed name: " + json);
+        assertFalse(json.contains("\"name\""), "Write should NOT use original name: " + json);
+    }
+
+    @Test
+    void testRenameAndAliasReadWithRenamedName() {
+        String json = "{\"@type\":\"com.cedarsoftware.io.AnnotationTest$RenameAndAliasModel\",\"user_name\":\"Bob\",\"age\":25}";
+        RenameAndAliasModel model = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(RenameAndAliasModel.class);
+        assertEquals("Bob", model.name);
+    }
+
+    @Test
+    void testRenameAndAliasReadWithAlias() {
+        String json = "{\"@type\":\"com.cedarsoftware.io.AnnotationTest$RenameAndAliasModel\",\"username\":\"Charlie\",\"age\":35}";
+        RenameAndAliasModel model = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(RenameAndAliasModel.class);
+        assertEquals("Charlie", model.name);
+    }
+
+    @Test
+    void testRenameAndAliasReadWithOriginalFieldName() {
+        String json = "{\"@type\":\"com.cedarsoftware.io.AnnotationTest$RenameAndAliasModel\",\"name\":\"Dave\",\"age\":45}";
+        RenameAndAliasModel model = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(RenameAndAliasModel.class);
+        assertEquals("Dave", model.name);
+    }
+
+    @Test
+    void testRenameAndAliasRoundTrip() {
+        RenameAndAliasModel original = new RenameAndAliasModel("Eve", 28);
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, writeOptions);
+        RenameAndAliasModel restored = JsonIo.toJava(json, readOptions).asClass(RenameAndAliasModel.class);
+
+        assertEquals("Eve", restored.name);
+        assertEquals(28, restored.age);
+    }
+
+    // ===================== AnnotationResolver Direct Tests =====================
+
+    @Test
+    void testAnnotationResolverMetadataCaching() {
+        AnnotationResolver.ClassAnnotationMetadata meta1 = AnnotationResolver.getMetadata(RenamedFieldModel.class);
+        AnnotationResolver.ClassAnnotationMetadata meta2 = AnnotationResolver.getMetadata(RenamedFieldModel.class);
+        assertSame(meta1, meta2, "Metadata should be cached and return same instance");
+    }
+
+    @Test
+    void testAnnotationResolverNullClass() {
+        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(null);
+        assertNotNull(meta, "Null class should return non-null empty metadata");
+        assertTrue(meta.isEmpty(), "Null class metadata should be empty");
+    }
+
+    @Test
+    void testAnnotationResolverRenamedFields() {
+        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(RenamedFieldModel.class);
+        assertEquals("full_name", meta.getSerializedName("name"));
+        assertNull(meta.getSerializedName("age"), "Non-renamed field should return null");
+    }
+
+    @Test
+    void testAnnotationResolverIgnoredFields() {
+        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(FieldIgnoreModel.class);
+        assertTrue(meta.isIgnored("hidden"));
+        assertFalse(meta.isIgnored("visible"));
+        assertFalse(meta.isIgnored("count"));
+    }
+
+    @Test
+    void testAnnotationResolverClassLevelIgnore() {
+        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(ClassIgnoreModel.class);
+        assertTrue(meta.isIgnored("secret"));
+        assertTrue(meta.isIgnored("internal"));
+        assertFalse(meta.isIgnored("name"));
+        assertFalse(meta.isIgnored("value"));
+    }
+
+    @Test
+    void testAnnotationResolverAliases() {
+        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(AliasModel.class);
+        Map<String, String> aliases = meta.getAliasToFieldName();
+
+        assertEquals("name", aliases.get("firstName"));
+        assertEquals("name", aliases.get("first_name"));
+        assertEquals("name", aliases.get("fname"));
+    }
+
+    @Test
+    void testAnnotationResolverPropertyOrder() {
+        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(OrderedModel.class);
+        String[] order = meta.getPropertyOrder();
+
+        assertNotNull(order);
+        assertArrayEquals(new String[]{"id", "name", "email"}, order);
+    }
+
+    @Test
+    void testAnnotationResolverNonNull() {
+        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(NonNullModel.class);
+        assertTrue(meta.isNonNull("optional"));
+        assertFalse(meta.isNonNull("alwaysWritten"));
+        assertFalse(meta.isNonNull("count"));
+    }
+
+    // ===================== Map (toMaps) Tests =====================
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void testIoPropertyWriteToMaps() {
+        RenamedFieldModel model = new RenamedFieldModel("Alice", 30);
+        WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoNever().build();
+        String json = JsonIo.toJson(model, writeOptions);
+
+        ReadOptions readOptions = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        Map<String, Object> map = JsonIo.toJava(json, readOptions).asClass(Map.class);
+
+        assertTrue(map.containsKey("full_name"), "Map should contain renamed key: " + map);
+        assertFalse(map.containsKey("name"), "Map should NOT contain original key: " + map);
+        assertEquals("Alice", map.get("full_name"));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void testIoIgnoreWriteToMaps() {
+        FieldIgnoreModel model = new FieldIgnoreModel("shown", "secret", 42);
+        WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoNever().build();
+        String json = JsonIo.toJson(model, writeOptions);
+
+        ReadOptions readOptions = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        Map<String, Object> map = JsonIo.toJava(json, readOptions).asClass(Map.class);
+
+        assertTrue(map.containsKey("visible"), "Map should contain visible field");
+        assertFalse(map.containsKey("hidden"), "Map should NOT contain ignored field");
+    }
+}

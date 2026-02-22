@@ -1131,14 +1131,17 @@ public class ToonWriter implements Closeable, Flushable {
         Map<String, Object> result = new LinkedHashMap<>();
 
         // Use WriteOptions' cached field retrieval (respects excluded/included fields, filters, etc.)
-        Map<String, java.lang.reflect.Field> fieldMap = writeOptions.getDeepDeclaredFields(obj.getClass());
+        Class<?> clazz = obj.getClass();
+        Map<String, java.lang.reflect.Field> fieldMap = writeOptions.getDeepDeclaredFields(clazz);
+        com.cedarsoftware.io.reflect.AnnotationResolver.ClassAnnotationMetadata annMeta =
+                com.cedarsoftware.io.reflect.AnnotationResolver.getMetadata(clazz);
 
         for (Map.Entry<String, java.lang.reflect.Field> entry : fieldMap.entrySet()) {
             java.lang.reflect.Field field = entry.getValue();
             try {
                 field.setAccessible(true);
                 Object value = field.get(obj);
-                if (value != null || !writeOptions.isSkipNullFields()) {
+                if (value != null || (!writeOptions.isSkipNullFields() && !annMeta.isNonNull(field.getName()))) {
                     result.put(entry.getKey(), value);
                 }
             } catch (IllegalAccessException e) {

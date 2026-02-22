@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 
+import com.cedarsoftware.io.reflect.AnnotationResolver;
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.ClassUtilities;
@@ -88,6 +89,27 @@ public abstract class Resolver {
     protected static final int TARGET_LONG = 6;
     protected static final int TARGET_BOOLEAN = 7;
     protected static final int TARGET_CHAR = 8;
+    // O(1) ClassValueMap for scalar type categorization (replaces 16 sequential class == checks)
+    private static final ClassValueMap<Integer> SCALAR_KINDS = new ClassValueMap<>();
+    static {
+        SCALAR_KINDS.put(int.class, TARGET_INT);
+        SCALAR_KINDS.put(Integer.class, TARGET_INT);
+        SCALAR_KINDS.put(double.class, TARGET_DOUBLE);
+        SCALAR_KINDS.put(Double.class, TARGET_DOUBLE);
+        SCALAR_KINDS.put(byte.class, TARGET_BYTE);
+        SCALAR_KINDS.put(Byte.class, TARGET_BYTE);
+        SCALAR_KINDS.put(float.class, TARGET_FLOAT);
+        SCALAR_KINDS.put(Float.class, TARGET_FLOAT);
+        SCALAR_KINDS.put(short.class, TARGET_SHORT);
+        SCALAR_KINDS.put(Short.class, TARGET_SHORT);
+        SCALAR_KINDS.put(long.class, TARGET_LONG);
+        SCALAR_KINDS.put(Long.class, TARGET_LONG);
+        SCALAR_KINDS.put(boolean.class, TARGET_BOOLEAN);
+        SCALAR_KINDS.put(Boolean.class, TARGET_BOOLEAN);
+        SCALAR_KINDS.put(char.class, TARGET_CHAR);
+        SCALAR_KINDS.put(Character.class, TARGET_CHAR);
+    }
+
     // Common ancestor roots to skip when checking type compatibility (using IdentitySet for Class comparison)
     private static final Set<Class<?>> SKIP_COMMON_ROOTS;
     static {
@@ -1310,7 +1332,20 @@ public abstract class Resolver {
                     && Map.class.isAssignableFrom(targetClass)) {
                 instance = ClassUtilities.newInstance(converter, targetClass, null);
             } else {
-                instance = ClassUtilities.newInstance(converter, targetClass, jsonObj);
+                // Remove annotation-ignored fields so they are not matched to constructor parameters
+                AnnotationResolver.ClassAnnotationMetadata annMeta = AnnotationResolver.getMetadata(targetClass);
+                Map<Object, Object> filtered = null;
+                if (!annMeta.isEmpty()) {
+                    for (Object key : jsonObj.keySet()) {
+                        if (key instanceof String && annMeta.isIgnored((String) key)) {
+                            if (filtered == null) {
+                                filtered = new LinkedHashMap<>(jsonObj);
+                            }
+                            filtered.remove(key);
+                        }
+                    }
+                }
+                instance = ClassUtilities.newInstance(converter, targetClass, filtered != null ? filtered : jsonObj);
             }
         }
 
@@ -1572,15 +1607,8 @@ public abstract class Resolver {
      * Categorize a target type into a compact scalar kind for hot conversion paths.
      */
     protected static int scalarTargetKind(Class<?> targetType) {
-        if (targetType == int.class || targetType == Integer.class) return TARGET_INT;
-        if (targetType == double.class || targetType == Double.class) return TARGET_DOUBLE;
-        if (targetType == byte.class || targetType == Byte.class) return TARGET_BYTE;
-        if (targetType == float.class || targetType == Float.class) return TARGET_FLOAT;
-        if (targetType == short.class || targetType == Short.class) return TARGET_SHORT;
-        if (targetType == long.class || targetType == Long.class) return TARGET_LONG;
-        if (targetType == boolean.class || targetType == Boolean.class) return TARGET_BOOLEAN;
-        if (targetType == char.class || targetType == Character.class) return TARGET_CHAR;
-        return TARGET_OTHER;
+        Integer kind = SCALAR_KINDS.get(targetType);
+        return kind != null ? kind : TARGET_OTHER;
     }
 
     /**

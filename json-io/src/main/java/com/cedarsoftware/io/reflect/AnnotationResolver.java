@@ -1,0 +1,433 @@
+package com.cedarsoftware.io.reflect;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
+
+import com.cedarsoftware.io.annotation.IoAlias;
+import com.cedarsoftware.io.annotation.IoIgnore;
+import com.cedarsoftware.io.annotation.IoIgnoreProperties;
+import com.cedarsoftware.io.annotation.IoInclude;
+import com.cedarsoftware.io.annotation.IoProperty;
+import com.cedarsoftware.io.annotation.IoPropertyOrder;
+import com.cedarsoftware.util.ClassValueMap;
+
+/**
+ * Scans classes for json-io annotation metadata and caches the results.
+ * <p>
+ * Supports two annotation sources with the following priority:
+ * <ol>
+ *   <li>json-io native annotations ({@code com.cedarsoftware.io.annotation.*}) — checked first</li>
+ *   <li>External annotations (e.g., Jackson's {@code com.fasterxml.jackson.annotation.*}) —
+ *       checked via reflection only if native annotation is absent on the same element</li>
+ * </ol>
+ * <p>
+ * External annotations are detected lazily via {@code Class.forName()} with no compile-time
+ * dependency. If the external annotation library is not on the classpath, detection is silently
+ * skipped with zero overhead.
+ * <p>
+ * Results are cached in a static {@link ClassValueMap} — each class is scanned exactly once
+ * per JVM lifetime. Annotation metadata is intrinsic to classes and does not depend on
+ * ReadOptions/WriteOptions settings.
+ *
+ * @author John DeRegnaucourt (jdereg@gmail.com)
+ *         <br>
+ *         Copyright (c) Cedar Software LLC
+ *         <br><br>
+ *         Licensed under the Apache License, Version 2.0 (the "License");
+ *         you may not use this file except in compliance with the License.
+ *         You may obtain a copy of the License at
+ *         <br><br>
+ *         <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
+ */
+public class AnnotationResolver {
+
+    // ======================== External annotation detection ========================
+    // All external annotation classes and methods are resolved once in this static block.
+    // If the external library is not on the classpath, externalAvailable = false and
+    // all external lookups short-circuit with zero overhead.
+
+    private static final boolean externalAvailable;
+    @SuppressWarnings("unchecked")
+    private static final Class<? extends Annotation> EXT_PROPERTY;
+    @SuppressWarnings("unchecked")
+    private static final Class<? extends Annotation> EXT_IGNORE;
+    @SuppressWarnings("unchecked")
+    private static final Class<? extends Annotation> EXT_IGNORE_PROPERTIES;
+    @SuppressWarnings("unchecked")
+    private static final Class<? extends Annotation> EXT_ALIAS;
+    @SuppressWarnings("unchecked")
+    private static final Class<? extends Annotation> EXT_PROPERTY_ORDER;
+    @SuppressWarnings("unchecked")
+    private static final Class<? extends Annotation> EXT_INCLUDE;
+
+    private static final Method EXT_PROPERTY_VALUE;
+    private static final Method EXT_IGNORE_PROPERTIES_VALUE;
+    private static final Method EXT_ALIAS_VALUE;
+    private static final Method EXT_PROPERTY_ORDER_VALUE;
+    private static final Method EXT_INCLUDE_VALUE;
+    private static final Object EXT_INCLUDE_NON_NULL;
+
+    static {
+        boolean available = false;
+        Class<? extends Annotation> extProperty = null;
+        Class<? extends Annotation> extIgnore = null;
+        Class<? extends Annotation> extIgnoreProperties = null;
+        Class<? extends Annotation> extAlias = null;
+        Class<? extends Annotation> extPropertyOrder = null;
+        Class<? extends Annotation> extInclude = null;
+        Method extPropertyValue = null;
+        Method extIgnorePropertiesValue = null;
+        Method extAliasValue = null;
+        Method extPropertyOrderValue = null;
+        Method extIncludeValue = null;
+        Object extIncludeNonNull = null;
+
+        try {
+            extProperty = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonProperty");
+            extIgnore = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonIgnore");
+            extIgnoreProperties = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonIgnoreProperties");
+            extAlias = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonAlias");
+            extPropertyOrder = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonPropertyOrder");
+            extInclude = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonInclude");
+
+            extPropertyValue = extProperty.getMethod("value");
+            extIgnorePropertiesValue = extIgnoreProperties.getMethod("value");
+            extAliasValue = extAlias.getMethod("value");
+            extPropertyOrderValue = extPropertyOrder.getMethod("value");
+            extIncludeValue = extInclude.getMethod("value");
+
+            // Resolve the NON_NULL enum constant from JsonInclude.Include
+            Class<?> includeEnum = Class.forName("com.fasterxml.jackson.annotation.JsonInclude$Include");
+            for (Object enumConst : includeEnum.getEnumConstants()) {
+                if ("NON_NULL".equals(((Enum<?>) enumConst).name())) {
+                    extIncludeNonNull = enumConst;
+                    break;
+                }
+            }
+
+            available = true;
+        } catch (Throwable t) {
+            // External annotations not available — silently skip
+        }
+
+        externalAvailable = available;
+        EXT_PROPERTY = extProperty;
+        EXT_IGNORE = extIgnore;
+        EXT_IGNORE_PROPERTIES = extIgnoreProperties;
+        EXT_ALIAS = extAlias;
+        EXT_PROPERTY_ORDER = extPropertyOrder;
+        EXT_INCLUDE = extInclude;
+        EXT_PROPERTY_VALUE = extPropertyValue;
+        EXT_IGNORE_PROPERTIES_VALUE = extIgnorePropertiesValue;
+        EXT_ALIAS_VALUE = extAliasValue;
+        EXT_PROPERTY_ORDER_VALUE = extPropertyOrderValue;
+        EXT_INCLUDE_VALUE = extIncludeValue;
+        EXT_INCLUDE_NON_NULL = extIncludeNonNull;
+    }
+
+    // ======================== Cache ========================
+
+    private static final ClassValueMap<ClassAnnotationMetadata> cache = new ClassValueMap<>();
+    private static final ClassAnnotationMetadata EMPTY = new ClassAnnotationMetadata(
+            Collections.<String, String>emptyMap(),
+            Collections.<String>emptySet(),
+            Collections.<String, String>emptyMap(),
+            null,
+            Collections.<String>emptySet());
+
+    /**
+     * Get annotation metadata for a class. Scans once, caches forever.
+     * Thread-safe via ClassValueMap.
+     */
+    public static ClassAnnotationMetadata getMetadata(Class<?> clazz) {
+        if (clazz == null) {
+            return EMPTY;
+        }
+        ClassAnnotationMetadata meta = cache.get(clazz);
+        if (meta == null) {
+            meta = scan(clazz);
+            cache.put(clazz, meta);
+        }
+        return meta;
+    }
+
+    /**
+     * @return true if external annotation support is available on the classpath
+     */
+    public static boolean isExternalAnnotationAvailable() {
+        return externalAvailable;
+    }
+
+    // ======================== Scanning ========================
+
+    private static ClassAnnotationMetadata scan(Class<?> clazz) {
+        Map<String, String> renames = new LinkedHashMap<>();
+        Set<String> ignored = new LinkedHashSet<>();
+        Map<String, String> aliases = new LinkedHashMap<>();
+        Set<String> nonNullFields = new LinkedHashSet<>();
+        String[] order = null;
+
+        // 1. Class-level annotations
+        order = scanClassLevelAnnotations(clazz, ignored);
+
+        // 2. Field-level annotations — walk entire class hierarchy
+        Class<?> curr = clazz;
+        while (curr != null && curr != Object.class) {
+            Field[] fields;
+            try {
+                fields = curr.getDeclaredFields();
+            } catch (SecurityException e) {
+                curr = curr.getSuperclass();
+                continue;
+            }
+
+            for (Field field : fields) {
+                String fieldName = field.getName();
+
+                // Skip synthetic/bridge fields
+                if (field.isSynthetic()) {
+                    continue;
+                }
+
+                // @IoIgnore / external equivalent
+                if (scanIgnore(field)) {
+                    ignored.add(fieldName);
+                    continue;
+                }
+
+                // @IoProperty / external equivalent
+                String rename = scanProperty(field);
+                if (rename != null) {
+                    renames.put(fieldName, rename);
+                }
+
+                // @IoAlias / external equivalent
+                String[] fieldAliases = scanAlias(field);
+                if (fieldAliases != null) {
+                    for (String alt : fieldAliases) {
+                        aliases.put(alt, fieldName);
+                    }
+                }
+
+                // @IoInclude / external equivalent
+                if (scanNonNull(field)) {
+                    nonNullFields.add(fieldName);
+                }
+            }
+            curr = curr.getSuperclass();
+        }
+
+        // Renamed fields: the serialized name should also be accepted on read
+        for (Map.Entry<String, String> entry : renames.entrySet()) {
+            String serializedName = entry.getValue();
+            String javaFieldName = entry.getKey();
+            if (!aliases.containsKey(serializedName)) {
+                aliases.put(serializedName, javaFieldName);
+            }
+        }
+
+        if (renames.isEmpty() && ignored.isEmpty() && aliases.isEmpty()
+                && order == null && nonNullFields.isEmpty()) {
+            return EMPTY;
+        }
+
+        return new ClassAnnotationMetadata(
+                Collections.unmodifiableMap(renames),
+                Collections.unmodifiableSet(ignored),
+                Collections.unmodifiableMap(aliases),
+                order,
+                Collections.unmodifiableSet(nonNullFields));
+    }
+
+    // ---- Class-level scanners ----
+
+    private static String[] scanClassLevelAnnotations(Class<?> clazz, Set<String> ignored) {
+        String[] order = null;
+
+        // @IoIgnoreProperties
+        IoIgnoreProperties iip = clazz.getAnnotation(IoIgnoreProperties.class);
+        if (iip != null) {
+            Collections.addAll(ignored, iip.value());
+        } else if (externalAvailable) {
+            Annotation extIgp = clazz.getAnnotation(EXT_IGNORE_PROPERTIES);
+            if (extIgp != null) {
+                try {
+                    String[] vals = (String[]) EXT_IGNORE_PROPERTIES_VALUE.invoke(extIgp);
+                    Collections.addAll(ignored, vals);
+                } catch (Exception e) {
+                    // Ignore reflection failure
+                }
+            }
+        }
+
+        // @IoPropertyOrder
+        IoPropertyOrder ipo = clazz.getAnnotation(IoPropertyOrder.class);
+        if (ipo != null) {
+            order = ipo.value();
+        } else if (externalAvailable) {
+            Annotation extOrd = clazz.getAnnotation(EXT_PROPERTY_ORDER);
+            if (extOrd != null) {
+                try {
+                    order = (String[]) EXT_PROPERTY_ORDER_VALUE.invoke(extOrd);
+                } catch (Exception e) {
+                    // Ignore reflection failure
+                }
+            }
+        }
+
+        return order;
+    }
+
+    // ---- Field-level scanners ----
+
+    private static boolean scanIgnore(Field field) {
+        if (field.isAnnotationPresent(IoIgnore.class)) {
+            return true;
+        }
+        if (externalAvailable) {
+            return field.getAnnotation(EXT_IGNORE) != null;
+        }
+        return false;
+    }
+
+    private static String scanProperty(Field field) {
+        IoProperty prop = field.getAnnotation(IoProperty.class);
+        if (prop != null) {
+            String val = prop.value();
+            return (val != null && !val.isEmpty()) ? val : null;
+        }
+        if (externalAvailable) {
+            Annotation extProp = field.getAnnotation(EXT_PROPERTY);
+            if (extProp != null) {
+                try {
+                    String val = (String) EXT_PROPERTY_VALUE.invoke(extProp);
+                    return (val != null && !val.isEmpty()) ? val : null;
+                } catch (Exception e) {
+                    // Ignore reflection failure
+                }
+            }
+        }
+        return null;
+    }
+
+    private static String[] scanAlias(Field field) {
+        IoAlias alias = field.getAnnotation(IoAlias.class);
+        if (alias != null) {
+            return alias.value().length > 0 ? alias.value() : null;
+        }
+        if (externalAvailable) {
+            Annotation extAlias = field.getAnnotation(EXT_ALIAS);
+            if (extAlias != null) {
+                try {
+                    String[] vals = (String[]) EXT_ALIAS_VALUE.invoke(extAlias);
+                    return (vals != null && vals.length > 0) ? vals : null;
+                } catch (Exception e) {
+                    // Ignore reflection failure
+                }
+            }
+        }
+        return null;
+    }
+
+    private static boolean scanNonNull(Field field) {
+        IoInclude inc = field.getAnnotation(IoInclude.class);
+        if (inc != null) {
+            return inc.value() == IoInclude.Include.NON_NULL;
+        }
+        if (externalAvailable && EXT_INCLUDE_NON_NULL != null) {
+            Annotation extInc = field.getAnnotation(EXT_INCLUDE);
+            if (extInc != null) {
+                try {
+                    Object incValue = EXT_INCLUDE_VALUE.invoke(extInc);
+                    return EXT_INCLUDE_NON_NULL.equals(incValue);
+                } catch (Exception e) {
+                    // Ignore reflection failure
+                }
+            }
+        }
+        return false;
+    }
+
+    // ======================== Metadata Container ========================
+
+    /**
+     * Immutable per-class annotation metadata. Computed once, cached by ClassValueMap.
+     */
+    public static final class ClassAnnotationMetadata {
+        private final Map<String, String> renamedFields;
+        private final Set<String> ignoredFields;
+        private final Map<String, String> aliasToFieldName;
+        private final String[] propertyOrder;
+        private final Set<String> nonNullFields;
+
+        ClassAnnotationMetadata(Map<String, String> renamedFields,
+                                Set<String> ignoredFields,
+                                Map<String, String> aliasToFieldName,
+                                String[] propertyOrder,
+                                Set<String> nonNullFields) {
+            this.renamedFields = renamedFields;
+            this.ignoredFields = ignoredFields;
+            this.aliasToFieldName = aliasToFieldName;
+            this.propertyOrder = propertyOrder;
+            this.nonNullFields = nonNullFields;
+        }
+
+        /**
+         * Get the serialized JSON name for a Java field, or null if the field is not renamed.
+         * @param javaFieldName the Java field name
+         * @return the serialized name, or null if no rename is specified
+         */
+        public String getSerializedName(String javaFieldName) {
+            return renamedFields.get(javaFieldName);
+        }
+
+        /**
+         * Check if a field should be ignored (excluded from serialization/deserialization).
+         * @param fieldName the Java field name
+         * @return true if the field should be ignored
+         */
+        public boolean isIgnored(String fieldName) {
+            return ignoredFields.contains(fieldName);
+        }
+
+        /**
+         * Get the alias-to-field-name mapping for read-side alternate name support.
+         * @return unmodifiable map of alternate JSON name → Java field name
+         */
+        public Map<String, String> getAliasToFieldName() {
+            return aliasToFieldName;
+        }
+
+        /**
+         * Get the property order for serialization, or null if not specified.
+         * @return ordered array of field names, or null
+         */
+        public String[] getPropertyOrder() {
+            return propertyOrder;
+        }
+
+        /**
+         * Check if a field should skip null values during serialization.
+         * @param fieldName the Java field name
+         * @return true if the field should be omitted when its value is null
+         */
+        public boolean isNonNull(String fieldName) {
+            return nonNullFields.contains(fieldName);
+        }
+
+        /**
+         * @return true if this metadata has no annotation information (empty/default)
+         */
+        public boolean isEmpty() {
+            return renamedFields.isEmpty() && ignoredFields.isEmpty()
+                    && aliasToFieldName.isEmpty() && propertyOrder == null
+                    && nonNullFields.isEmpty();
+        }
+    }
+}
