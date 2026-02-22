@@ -39,6 +39,7 @@
         <version.assertj-core>3.27.7</version.assertj-core>
         <version.gson>2.13.2</version.gson>
         <version.jackson-core>2.19.4</version.jackson-core>
+        <version.jtokkit>1.1.0</version.jtokkit>
 
         <!-- Build maven-***-plugins-->
         <version.maven-jar-plugin>3.4.2</version.maven-jar-plugin>
@@ -224,6 +225,12 @@
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
                 <version>${version.jackson-core}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.knuddels</groupId>
+                <artifactId>jtokkit</artifactId>
+                <version>${version.jtokkit}</version>
                 <scope>test</scope>
             </dependency>
         </dependencies>

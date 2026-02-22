@@ -151,5 +151,10 @@
             <artifactId>jackson-databind</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.knuddels</groupId>
+            <artifactId>jtokkit</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>
