@@ -3,6 +3,11 @@ package com.cedarsoftware.io;
 import java.io.Externalizable;
 import java.io.Serializable;
 import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Executable;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
@@ -29,6 +34,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 
+import com.cedarsoftware.io.annotation.IoProperty;
 import com.cedarsoftware.io.reflect.AnnotationResolver;
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
@@ -1345,11 +1351,61 @@ public abstract class Resolver {
                         }
                     }
                 }
-                instance = ClassUtilities.newInstance(converter, targetClass, filtered != null ? filtered : jsonObj);
+                Map<Object, Object> args = filtered != null ? filtered : jsonObj;
+
+                // Use @IoCreator if present; otherwise fall back to ClassUtilities heuristics
+                Executable creator = annMeta.getCreator();
+                if (creator != null) {
+                    instance = invokeCreator(creator, args);
+                } else {
+                    instance = ClassUtilities.newInstance(converter, targetClass, args);
+                }
             }
         }
 
         return jsonObj.setTarget(instance);
+    }
+
+    /**
+     * Invoke an @IoCreator constructor or static factory method, matching parameters by name
+     * from the JSON object map. Parameters annotated with @IoProperty use the renamed key.
+     */
+    private Object invokeCreator(Executable creator, Map<Object, Object> jsonMap) {
+        Parameter[] params = creator.getParameters();
+        Object[] args = new Object[params.length];
+
+        for (int i = 0; i < params.length; i++) {
+            Parameter param = params[i];
+            // Check for @IoProperty on the parameter for renamed keys
+            IoProperty prop = param.getAnnotation(IoProperty.class);
+            String jsonKey = (prop != null && !prop.value().isEmpty()) ? prop.value() : param.getName();
+
+            Object value = jsonMap.get(jsonKey);
+            if (value != null) {
+                Class<?> paramType = param.getType();
+                if (!paramType.isInstance(value)) {
+                    try {
+                        value = converter.convert(value, paramType);
+                    } catch (Exception e) {
+                        // Leave value as-is; constructor may accept it or throw
+                    }
+                }
+            }
+            args[i] = value;
+        }
+
+        try {
+            if (creator instanceof Constructor) {
+                return ((Constructor<?>) creator).newInstance(args);
+            } else {
+                return ((Method) creator).invoke(null, args);
+            }
+        } catch (InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            throw new JsonIoException("@IoCreator invocation failed for " + creator.getDeclaringClass().getName(), cause);
+        } catch (Exception e) {
+            throw new JsonIoException("@IoCreator invocation failed for " + creator.getDeclaringClass().getName(), e);
+        }
     }
 
     /**

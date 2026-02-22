@@ -1,8 +1,11 @@
 package com.cedarsoftware.io.reflect;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -10,6 +13,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.cedarsoftware.io.annotation.IoAlias;
+import com.cedarsoftware.io.annotation.IoCreator;
 import com.cedarsoftware.io.annotation.IoIgnore;
 import com.cedarsoftware.io.annotation.IoIgnoreProperties;
 import com.cedarsoftware.io.annotation.IoInclude;
@@ -160,7 +164,8 @@ public class AnnotationResolver {
             Collections.<String>emptySet(),
             Collections.<String, String>emptyMap(),
             null,
-            Collections.<String>emptySet());
+            Collections.<String>emptySet(),
+            null);
 
     /**
      * Get annotation metadata for a class. Scans once, caches forever.
@@ -262,8 +267,11 @@ public class AnnotationResolver {
             }
         }
 
+        // 4. Scan for @IoCreator on constructors and static factory methods
+        Executable creator = scanCreator(clazz);
+
         if (renames.isEmpty() && ignored.isEmpty() && aliases.isEmpty()
-                && order == null && nonNullFields.isEmpty()) {
+                && order == null && nonNullFields.isEmpty() && creator == null) {
             return EMPTY;
         }
 
@@ -272,7 +280,8 @@ public class AnnotationResolver {
                 Collections.unmodifiableSet(ignored),
                 Collections.unmodifiableMap(aliases),
                 order,
-                Collections.unmodifiableSet(nonNullFields));
+                Collections.unmodifiableSet(nonNullFields),
+                creator);
     }
 
     // ---- Class-level scanners ----
@@ -405,6 +414,41 @@ public class AnnotationResolver {
         return sb.toString();
     }
 
+    // ---- Creator scanner ----
+
+    /**
+     * Scan constructors and static methods for @IoCreator.
+     * Returns the annotated Executable, or null if none found.
+     */
+    private static Executable scanCreator(Class<?> clazz) {
+        // Check constructors
+        try {
+            for (Constructor<?> ctor : clazz.getDeclaredConstructors()) {
+                if (ctor.isAnnotationPresent(IoCreator.class)) {
+                    ctor.setAccessible(true);
+                    return ctor;
+                }
+            }
+        } catch (SecurityException e) {
+            // Skip if constructors are inaccessible
+        }
+
+        // Check static methods
+        try {
+            for (Method method : clazz.getDeclaredMethods()) {
+                if (method.isAnnotationPresent(IoCreator.class)
+                        && Modifier.isStatic(method.getModifiers())) {
+                    method.setAccessible(true);
+                    return method;
+                }
+            }
+        } catch (SecurityException e) {
+            // Skip if methods are inaccessible
+        }
+
+        return null;
+    }
+
     // ---- Field-level scanners ----
 
     private static boolean scanIgnore(Field field) {
@@ -486,17 +530,20 @@ public class AnnotationResolver {
         private final Map<String, String> aliasToFieldName;
         private final String[] propertyOrder;
         private final Set<String> nonNullFields;
+        private final Executable creator;
 
         ClassAnnotationMetadata(Map<String, String> renamedFields,
                                 Set<String> ignoredFields,
                                 Map<String, String> aliasToFieldName,
                                 String[] propertyOrder,
-                                Set<String> nonNullFields) {
+                                Set<String> nonNullFields,
+                                Executable creator) {
             this.renamedFields = renamedFields;
             this.ignoredFields = ignoredFields;
             this.aliasToFieldName = aliasToFieldName;
             this.propertyOrder = propertyOrder;
             this.nonNullFields = nonNullFields;
+            this.creator = creator;
         }
 
         /**
@@ -543,12 +590,20 @@ public class AnnotationResolver {
         }
 
         /**
+         * Get the @IoCreator constructor or static factory method, or null if not specified.
+         * @return the annotated Executable, or null
+         */
+        public Executable getCreator() {
+            return creator;
+        }
+
+        /**
          * @return true if this metadata has no annotation information (empty/default)
          */
         public boolean isEmpty() {
             return renamedFields.isEmpty() && ignoredFields.isEmpty()
                     && aliasToFieldName.isEmpty() && propertyOrder == null
-                    && nonNullFields.isEmpty();
+                    && nonNullFields.isEmpty() && creator == null;
         }
     }
 }

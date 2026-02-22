@@ -30,7 +30,7 @@ import java.lang.annotation.Target;
  *         <br><br>
  *         <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
  */
-@Target(ElementType.FIELD)
+@Target({ElementType.FIELD, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface IoProperty {

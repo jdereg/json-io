@@ -3,6 +3,7 @@ package com.cedarsoftware.io;
 import java.util.Map;
 
 import com.cedarsoftware.io.annotation.IoAlias;
+import com.cedarsoftware.io.annotation.IoCreator;
 import com.cedarsoftware.io.annotation.IoIgnore;
 import com.cedarsoftware.io.annotation.IoIgnoreProperties;
 import com.cedarsoftware.io.annotation.IoInclude;
@@ -916,5 +917,160 @@ class AnnotationTest {
         NamingPriorityModel restored = JsonIo.toJava(json, ro).asClass(NamingPriorityModel.class);
         assertEquals("Prio", restored.firstName);
         assertEquals("Test", restored.lastName);
+    }
+
+    // ===================== @IoCreator Test Models =====================
+
+    static class CreatorConstructorModel {
+        final String name;
+        final int age;
+
+        @IoCreator
+        CreatorConstructorModel(String name, int age) {
+            this.name = name;
+            this.age = age;
+        }
+    }
+
+    static class CreatorStaticFactory {
+        final String label;
+        final double value;
+
+        private CreatorStaticFactory(String label, double value) {
+            this.label = label;
+            this.value = value;
+        }
+
+        @IoCreator
+        static CreatorStaticFactory of(String label, double value) {
+            return new CreatorStaticFactory(label, value);
+        }
+    }
+
+    static class CreatorRenamedParams {
+        final String firstName;
+        final String lastName;
+
+        @IoCreator
+        CreatorRenamedParams(@IoProperty("first_name") String firstName,
+                             @IoProperty("last_name") String lastName) {
+            this.firstName = firstName;
+            this.lastName = lastName;
+        }
+    }
+
+    static class CreatorWithIgnore {
+        final String visible;
+        @IoIgnore
+        String hidden;
+        final int count;
+
+        @IoCreator
+        CreatorWithIgnore(String visible, int count) {
+            this.visible = visible;
+            this.count = count;
+        }
+    }
+
+    @IoNaming(IoNaming.Strategy.SNAKE_CASE)
+    static class CreatorWithNaming {
+        final String firstName;
+        final String lastName;
+
+        @IoCreator
+        CreatorWithNaming(@IoProperty("first_name") String firstName,
+                          @IoProperty("last_name") String lastName) {
+            this.firstName = firstName;
+            this.lastName = lastName;
+        }
+    }
+
+    // ===================== @IoCreator Tests =====================
+
+    @Test
+    void testIoCreatorConstructor() {
+        String json = "{\"name\":\"Alice\",\"age\":30}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        CreatorConstructorModel obj = JsonIo.toJava(json, ro).asClass(CreatorConstructorModel.class);
+        assertEquals("Alice", obj.name);
+        assertEquals(30, obj.age);
+    }
+
+    @Test
+    void testIoCreatorStaticFactory() {
+        String json = "{\"label\":\"pi\",\"value\":3.14}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        CreatorStaticFactory obj = JsonIo.toJava(json, ro).asClass(CreatorStaticFactory.class);
+        assertEquals("pi", obj.label);
+        assertEquals(3.14, obj.value, 0.001);
+    }
+
+    @Test
+    void testIoCreatorWithRenamedParams() {
+        String json = "{\"first_name\":\"Bob\",\"last_name\":\"Smith\"}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        CreatorRenamedParams obj = JsonIo.toJava(json, ro).asClass(CreatorRenamedParams.class);
+        assertEquals("Bob", obj.firstName);
+        assertEquals("Smith", obj.lastName);
+    }
+
+    @Test
+    void testIoCreatorRoundTrip() {
+        CreatorConstructorModel original = new CreatorConstructorModel("Carol", 25);
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, wo);
+        CreatorConstructorModel restored = JsonIo.toJava(json, ro).asClass(CreatorConstructorModel.class);
+        assertEquals("Carol", restored.name);
+        assertEquals(25, restored.age);
+    }
+
+    @Test
+    void testIoCreatorIgnoredFieldsFiltered() {
+        // hidden field is @IoIgnore, so even if present in JSON it should not reach the creator
+        String json = "{\"visible\":\"yes\",\"hidden\":\"secret\",\"count\":5}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        CreatorWithIgnore obj = JsonIo.toJava(json, ro).asClass(CreatorWithIgnore.class);
+        assertEquals("yes", obj.visible);
+        assertEquals(5, obj.count);
+        assertNull(obj.hidden, "Ignored field should be null");
+    }
+
+    @Test
+    void testIoCreatorWithNamingStrategy() {
+        CreatorWithNaming original = new CreatorWithNaming("Dave", "Brown");
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, wo);
+        assertTrue(json.contains("first_name"), "Should use snake_case: " + json);
+
+        CreatorWithNaming restored = JsonIo.toJava(json, ro).asClass(CreatorWithNaming.class);
+        assertEquals("Dave", restored.firstName);
+        assertEquals("Brown", restored.lastName);
+    }
+
+    @Test
+    void testIoCreatorToonRoundTrip() {
+        CreatorConstructorModel original = new CreatorConstructorModel("Toon", 99);
+        WriteOptions wo = new WriteOptionsBuilder().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String toon = JsonIo.toToon(original, wo);
+        CreatorConstructorModel restored = JsonIo.fromToon(toon, ro).asClass(CreatorConstructorModel.class);
+        assertEquals("Toon", restored.name);
+        assertEquals(99, restored.age);
+    }
+
+    @Test
+    void testIoCreatorResolverApi() {
+        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(CreatorConstructorModel.class);
+        assertNotNull(meta.getCreator(), "Creator should be found");
+        assertTrue(meta.getCreator() instanceof java.lang.reflect.Constructor, "Should be a Constructor");
     }
 }
