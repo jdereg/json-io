@@ -13,6 +13,7 @@ import com.cedarsoftware.io.annotation.IoAlias;
 import com.cedarsoftware.io.annotation.IoIgnore;
 import com.cedarsoftware.io.annotation.IoIgnoreProperties;
 import com.cedarsoftware.io.annotation.IoInclude;
+import com.cedarsoftware.io.annotation.IoNaming;
 import com.cedarsoftware.io.annotation.IoProperty;
 import com.cedarsoftware.io.annotation.IoPropertyOrder;
 import com.cedarsoftware.util.ClassValueMap;
@@ -176,7 +177,10 @@ public class AnnotationResolver {
         // 1. Class-level annotations
         order = scanClassLevelAnnotations(clazz, ignored);
 
-        // 2. Field-level annotations — walk entire class hierarchy
+        // 2. @IoNaming — class-level naming strategy
+        IoNaming.Strategy namingStrategy = scanNamingStrategy(clazz);
+
+        // 3. Field-level annotations — walk entire class hierarchy
         Class<?> curr = clazz;
         while (curr != null && curr != Object.class) {
             Field[] fields;
@@ -205,6 +209,12 @@ public class AnnotationResolver {
                 String rename = scanProperty(field);
                 if (rename != null) {
                     renames.put(fieldName, rename);
+                } else if (namingStrategy != null) {
+                    // Apply @IoNaming strategy when no explicit @IoProperty
+                    String transformed = applyNamingStrategy(fieldName, namingStrategy);
+                    if (transformed != null && !transformed.equals(fieldName)) {
+                        renames.put(fieldName, transformed);
+                    }
                 }
 
                 // @IoAlias / external equivalent
@@ -282,6 +292,63 @@ public class AnnotationResolver {
         }
 
         return order;
+    }
+
+    private static IoNaming.Strategy scanNamingStrategy(Class<?> clazz) {
+        IoNaming naming = clazz.getAnnotation(IoNaming.class);
+        if (naming != null) {
+            return naming.value();
+        }
+        return null;
+    }
+
+    /**
+     * Apply a naming strategy to transform a Java field name.
+     * Returns null if the field name would not change (e.g., single-word lowercase).
+     */
+    static String applyNamingStrategy(String fieldName, IoNaming.Strategy strategy) {
+        if (fieldName == null || fieldName.isEmpty()) {
+            return null;
+        }
+        switch (strategy) {
+            case SNAKE_CASE:
+                return camelToSeparated(fieldName, '_');
+            case KEBAB_CASE:
+                return camelToSeparated(fieldName, '-');
+            case LOWER_DOT_CASE:
+                return camelToSeparated(fieldName, '.');
+            case UPPER_CAMEL_CASE:
+                return Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Convert a camelCase name to a separated format (snake_case, kebab-case, lower.dot.case).
+     * Handles consecutive uppercase letters (e.g., parseXMLDocument → parse_xml_document).
+     */
+    private static String camelToSeparated(String name, char separator) {
+        StringBuilder sb = new StringBuilder(name.length() + 4);
+        for (int i = 0; i < name.length(); i++) {
+            char c = name.charAt(i);
+            if (Character.isUpperCase(c)) {
+                if (i > 0) {
+                    // Insert separator before uppercase that follows lowercase,
+                    // or before uppercase that precedes lowercase (end of acronym)
+                    char prev = name.charAt(i - 1);
+                    if (Character.isLowerCase(prev)) {
+                        sb.append(separator);
+                    } else if (i + 1 < name.length() && Character.isLowerCase(name.charAt(i + 1))) {
+                        sb.append(separator);
+                    }
+                }
+                sb.append(Character.toLowerCase(c));
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 
     // ---- Field-level scanners ----

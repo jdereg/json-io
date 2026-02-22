@@ -6,6 +6,7 @@ import com.cedarsoftware.io.annotation.IoAlias;
 import com.cedarsoftware.io.annotation.IoIgnore;
 import com.cedarsoftware.io.annotation.IoIgnoreProperties;
 import com.cedarsoftware.io.annotation.IoInclude;
+import com.cedarsoftware.io.annotation.IoNaming;
 import com.cedarsoftware.io.annotation.IoProperty;
 import com.cedarsoftware.io.annotation.IoPropertyOrder;
 import com.cedarsoftware.io.reflect.AnnotationResolver;
@@ -612,5 +613,219 @@ class AnnotationTest {
 
         assertEquals("Eve", restored.name);
         assertEquals(28, restored.age);
+    }
+
+    // ===================== @IoNaming Test Models =====================
+
+    @IoNaming(IoNaming.Strategy.SNAKE_CASE)
+    static class SnakeCaseModel {
+        String firstName;
+        String lastName;
+        int loginCount;
+
+        SnakeCaseModel() {}
+        SnakeCaseModel(String firstName, String lastName, int loginCount) {
+            this.firstName = firstName;
+            this.lastName = lastName;
+            this.loginCount = loginCount;
+        }
+    }
+
+    @IoNaming(IoNaming.Strategy.KEBAB_CASE)
+    static class KebabCaseModel {
+        String firstName;
+        String lastName;
+
+        KebabCaseModel() {}
+        KebabCaseModel(String firstName, String lastName) {
+            this.firstName = firstName;
+            this.lastName = lastName;
+        }
+    }
+
+    @IoNaming(IoNaming.Strategy.UPPER_CAMEL_CASE)
+    static class UpperCamelModel {
+        String firstName;
+        String lastName;
+
+        UpperCamelModel() {}
+        UpperCamelModel(String firstName, String lastName) {
+            this.firstName = firstName;
+            this.lastName = lastName;
+        }
+    }
+
+    @IoNaming(IoNaming.Strategy.LOWER_DOT_CASE)
+    static class LowerDotModel {
+        String firstName;
+        String lastName;
+
+        LowerDotModel() {}
+        LowerDotModel(String firstName, String lastName) {
+            this.firstName = firstName;
+            this.lastName = lastName;
+        }
+    }
+
+    @IoNaming(IoNaming.Strategy.SNAKE_CASE)
+    static class NamingWithPropertyOverride {
+        String firstName;
+        String lastName;
+        @IoProperty("uid")
+        String userId;
+
+        NamingWithPropertyOverride() {}
+        NamingWithPropertyOverride(String firstName, String lastName, String userId) {
+            this.firstName = firstName;
+            this.lastName = lastName;
+            this.userId = userId;
+        }
+    }
+
+    @IoNaming(IoNaming.Strategy.SNAKE_CASE)
+    static class AcronymModel {
+        String parseXMLDocument;
+        String httpURL;
+
+        AcronymModel() {}
+        AcronymModel(String parseXMLDocument, String httpURL) {
+            this.parseXMLDocument = parseXMLDocument;
+            this.httpURL = httpURL;
+        }
+    }
+
+    // ===================== @IoNaming Tests =====================
+
+    @Test
+    void testIoNamingSnakeCase() {
+        SnakeCaseModel original = new SnakeCaseModel("Alice", "Smith", 42);
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, wo);
+        assertTrue(json.contains("first_name"), "Should use snake_case: " + json);
+        assertTrue(json.contains("last_name"), "Should use snake_case: " + json);
+        assertTrue(json.contains("login_count"), "Should use snake_case: " + json);
+        assertFalse(json.contains("firstName"), "Should NOT contain camelCase: " + json);
+
+        SnakeCaseModel restored = JsonIo.toJava(json, ro).asClass(SnakeCaseModel.class);
+        assertEquals("Alice", restored.firstName);
+        assertEquals("Smith", restored.lastName);
+        assertEquals(42, restored.loginCount);
+    }
+
+    @Test
+    void testIoNamingKebabCase() {
+        KebabCaseModel original = new KebabCaseModel("Bob", "Jones");
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, wo);
+        assertTrue(json.contains("first-name"), "Should use kebab-case: " + json);
+        assertTrue(json.contains("last-name"), "Should use kebab-case: " + json);
+
+        KebabCaseModel restored = JsonIo.toJava(json, ro).asClass(KebabCaseModel.class);
+        assertEquals("Bob", restored.firstName);
+        assertEquals("Jones", restored.lastName);
+    }
+
+    @Test
+    void testIoNamingUpperCamelCase() {
+        UpperCamelModel original = new UpperCamelModel("Carol", "White");
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, wo);
+        assertTrue(json.contains("FirstName"), "Should use UpperCamelCase: " + json);
+        assertTrue(json.contains("LastName"), "Should use UpperCamelCase: " + json);
+
+        UpperCamelModel restored = JsonIo.toJava(json, ro).asClass(UpperCamelModel.class);
+        assertEquals("Carol", restored.firstName);
+        assertEquals("White", restored.lastName);
+    }
+
+    @Test
+    void testIoNamingLowerDotCase() {
+        LowerDotModel original = new LowerDotModel("Dave", "Brown");
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, wo);
+        assertTrue(json.contains("first.name"), "Should use lower.dot.case: " + json);
+        assertTrue(json.contains("last.name"), "Should use lower.dot.case: " + json);
+
+        LowerDotModel restored = JsonIo.toJava(json, ro).asClass(LowerDotModel.class);
+        assertEquals("Dave", restored.firstName);
+        assertEquals("Brown", restored.lastName);
+    }
+
+    @Test
+    void testIoNamingWithIoPropertyOverride() {
+        NamingWithPropertyOverride original = new NamingWithPropertyOverride("Eve", "Black", "user123");
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, wo);
+        assertTrue(json.contains("first_name"), "Should use snake_case: " + json);
+        assertTrue(json.contains("last_name"), "Should use snake_case: " + json);
+        assertTrue(json.contains("uid"), "@IoProperty should override @IoNaming: " + json);
+        assertFalse(json.contains("user_id"), "@IoProperty should win: " + json);
+
+        NamingWithPropertyOverride restored = JsonIo.toJava(json, ro).asClass(NamingWithPropertyOverride.class);
+        assertEquals("Eve", restored.firstName);
+        assertEquals("Black", restored.lastName);
+        assertEquals("user123", restored.userId);
+    }
+
+    @Test
+    void testIoNamingAcronyms() {
+        AcronymModel original = new AcronymModel("doc.xml", "https://example.com");
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, wo);
+        assertTrue(json.contains("parse_xml_document"), "Acronyms should be lowered: " + json);
+        assertTrue(json.contains("http_url"), "Acronyms should be lowered: " + json);
+
+        AcronymModel restored = JsonIo.toJava(json, ro).asClass(AcronymModel.class);
+        assertEquals("doc.xml", restored.parseXMLDocument);
+        assertEquals("https://example.com", restored.httpURL);
+    }
+
+    @Test
+    void testIoNamingToonRoundTrip() {
+        SnakeCaseModel original = new SnakeCaseModel("Toon", "User", 99);
+        WriteOptions wo = new WriteOptionsBuilder().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String toon = JsonIo.toToon(original, wo);
+        assertTrue(toon.contains("first_name"), "TOON should use snake_case: " + toon);
+
+        SnakeCaseModel restored = JsonIo.fromToon(toon, ro).asClass(SnakeCaseModel.class);
+        assertEquals("Toon", restored.firstName);
+        assertEquals("User", restored.lastName);
+        assertEquals(99, restored.loginCount);
+    }
+
+    @Test
+    void testIoNamingResolverApi() {
+        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(SnakeCaseModel.class);
+        assertEquals("first_name", meta.getSerializedName("firstName"));
+        assertEquals("last_name", meta.getSerializedName("lastName"));
+        assertEquals("login_count", meta.getSerializedName("loginCount"));
+    }
+
+    @Test
+    void testIoNamingMapMode() {
+        SnakeCaseModel original = new SnakeCaseModel("Map", "Test", 7);
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+        ReadOptions ro = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+
+        String json = JsonIo.toJson(original, wo);
+        Map<String, Object> map = JsonIo.toJava(json, ro).asClass(Map.class);
+
+        assertTrue(map.containsKey("first_name"), "Map should use snake_case keys");
+        assertTrue(map.containsKey("last_name"), "Map should use snake_case keys");
+        assertEquals("Map", map.get("first_name"));
     }
 }
