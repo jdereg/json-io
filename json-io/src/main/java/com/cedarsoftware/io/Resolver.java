@@ -1355,7 +1355,17 @@ public abstract class Resolver {
                 // Use @IoCreator if present; otherwise fall back to ClassUtilities heuristics
                 Executable creator = annMeta.getCreator();
                 if (creator != null) {
-                    instance = invokeCreator(creator, args);
+                    // If the class has @IoValue and the JSON has a "value" key (from typed write),
+                    // pass the single value to the creator's first parameter
+                    if (annMeta.getValueMethod() != null && args.containsKey("value") && creator.getParameterCount() == 1) {
+                        Map<Object, Object> valueArgs = new LinkedHashMap<>();
+                        // Map the "value" key to whatever the creator's first parameter name is
+                        String paramKey = AnnotationResolver.getParameterJsonKey(creator.getParameters()[0]);
+                        valueArgs.put(paramKey, args.get("value"));
+                        instance = invokeCreator(creator, valueArgs);
+                    } else {
+                        instance = invokeCreator(creator, args);
+                    }
                 } else {
                     instance = ClassUtilities.newInstance(converter, targetClass, args);
                 }

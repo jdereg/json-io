@@ -20,6 +20,7 @@ import com.cedarsoftware.io.annotation.IoIgnoreProperties;
 import com.cedarsoftware.io.annotation.IoInclude;
 import com.cedarsoftware.io.annotation.IoNaming;
 import com.cedarsoftware.io.annotation.IoProperty;
+import com.cedarsoftware.io.annotation.IoValue;
 import com.cedarsoftware.io.annotation.IoPropertyOrder;
 import com.cedarsoftware.util.ClassValueMap;
 import com.cedarsoftware.util.ReflectionUtils;
@@ -172,6 +173,7 @@ public class AnnotationResolver {
             Collections.<String, String>emptyMap(),
             null,
             Collections.<String>emptySet(),
+            null,
             null);
 
     /**
@@ -277,8 +279,12 @@ public class AnnotationResolver {
         // 4. Scan for @IoCreator on constructors and static factory methods
         Executable creator = scanCreator(clazz);
 
+        // 5. Scan for @IoValue on instance methods
+        Method valueMethod = scanValueMethod(clazz);
+
         if (renames.isEmpty() && ignored.isEmpty() && aliases.isEmpty()
-                && order == null && nonNullFields.isEmpty() && creator == null) {
+                && order == null && nonNullFields.isEmpty() && creator == null
+                && valueMethod == null) {
             return EMPTY;
         }
 
@@ -288,7 +294,8 @@ public class AnnotationResolver {
                 Collections.unmodifiableMap(aliases),
                 order,
                 Collections.unmodifiableSet(nonNullFields),
-                creator);
+                creator,
+                valueMethod);
     }
 
     // ---- Class-level scanners ----
@@ -479,6 +486,29 @@ public class AnnotationResolver {
         return null;
     }
 
+    // ---- Value method scanner ----
+
+    /**
+     * Scan instance methods for @IoValue.
+     * Returns the annotated Method, or null if none found.
+     * The method must be a no-arg instance method with a non-void return type.
+     */
+    private static Method scanValueMethod(Class<?> clazz) {
+        try {
+            for (Method method : clazz.getDeclaredMethods()) {
+                if (method.isAnnotationPresent(IoValue.class)
+                        && !Modifier.isStatic(method.getModifiers())
+                        && method.getParameterCount() == 0
+                        && method.getReturnType() != void.class) {
+                    return ReflectionUtils.getMethod(clazz, method.getName());
+                }
+            }
+        } catch (SecurityException e) {
+            // Skip if methods are inaccessible
+        }
+        return null;
+    }
+
     // ---- Parameter-level helpers ----
 
     /**
@@ -593,19 +623,22 @@ public class AnnotationResolver {
         private final String[] propertyOrder;
         private final Set<String> nonNullFields;
         private final Executable creator;
+        private final Method valueMethod;
 
         ClassAnnotationMetadata(Map<String, String> renamedFields,
                                 Set<String> ignoredFields,
                                 Map<String, String> aliasToFieldName,
                                 String[] propertyOrder,
                                 Set<String> nonNullFields,
-                                Executable creator) {
+                                Executable creator,
+                                Method valueMethod) {
             this.renamedFields = renamedFields;
             this.ignoredFields = ignoredFields;
             this.aliasToFieldName = aliasToFieldName;
             this.propertyOrder = propertyOrder;
             this.nonNullFields = nonNullFields;
             this.creator = creator;
+            this.valueMethod = valueMethod;
         }
 
         /**
@@ -660,12 +693,21 @@ public class AnnotationResolver {
         }
 
         /**
+         * Get the @IoValue method for single-value serialization, or null if not specified.
+         * @return the annotated Method, or null
+         */
+        public Method getValueMethod() {
+            return valueMethod;
+        }
+
+        /**
          * @return true if this metadata has no annotation information (empty/default)
          */
         public boolean isEmpty() {
             return renamedFields.isEmpty() && ignoredFields.isEmpty()
                     && aliasToFieldName.isEmpty() && propertyOrder == null
-                    && nonNullFields.isEmpty() && creator == null;
+                    && nonNullFields.isEmpty() && creator == null
+                    && valueMethod == null;
         }
     }
 }

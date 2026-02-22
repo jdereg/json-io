@@ -17,6 +17,9 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import java.lang.reflect.Method;
+
+import com.cedarsoftware.io.reflect.AnnotationResolver;
 import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.FastWriter;
@@ -154,9 +157,20 @@ public class ToonWriter implements Closeable, Flushable {
         else if (Converter.isConversionSupportedFor(clazz, String.class)) {
             writeString(Converter.convert(value, String.class));
         }
-        // Fallback - complex object as key: value pairs
+        // Check @IoValue - serialize via single method return value
         else {
-            writeObject(value);
+            Method valueMethod = AnnotationResolver.getMetadata(clazz).getValueMethod();
+            if (valueMethod != null) {
+                try {
+                    Object val = valueMethod.invoke(value);
+                    writeValue(val);
+                } catch (Exception e) {
+                    throw new JsonIoException("@IoValue method invocation failed for " + clazz.getName(), e);
+                }
+            } else {
+                // Fallback - complex object as key: value pairs
+                writeObject(value);
+            }
         }
     }
 

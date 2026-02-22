@@ -69,6 +69,7 @@ import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 import com.cedarsoftware.io.reflect.Accessor;
+import com.cedarsoftware.io.reflect.AnnotationResolver;
 import com.cedarsoftware.io.WriteOptionsBuilder.WriteFieldPlan;
 import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.ClassUtilities;
@@ -1093,6 +1094,32 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         final Class<?> objClass = obj.getClass();
+
+        // Check @IoValue — serialize via single method return value
+        Method valueMethod = AnnotationResolver.getMetadata(objClass).getValueMethod();
+        if (valueMethod != null) {
+            try {
+                Object val = valueMethod.invoke(obj);
+                if (showType) {
+                    out.write('{');
+                    tabIn();
+                    writeType(objClass.getName(), out);
+                    out.write(',');
+                    newLine();
+                    writeBasicString(out, "value");
+                    out.write(':');
+                    writeImpl(val, false);
+                    tabOut();
+                    newLine();
+                    out.write('}');
+                } else {
+                    writeImpl(val, false);
+                }
+            } catch (Exception e) {
+                throw new JsonIoException("@IoValue method invocation failed for " + objClass.getName(), e);
+            }
+            return;
+        }
 
         // Type-indexed dispatch using cached WriteType (avoids repeated instanceof checks)
         switch (writeTypeCache.get(objClass)) {

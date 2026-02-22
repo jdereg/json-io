@@ -5,6 +5,7 @@ import java.util.Map;
 import com.cedarsoftware.io.annotation.IoAlias;
 import com.cedarsoftware.io.annotation.IoCreator;
 import com.cedarsoftware.io.annotation.IoIgnore;
+import com.cedarsoftware.io.annotation.IoValue;
 import com.cedarsoftware.io.annotation.IoIgnoreProperties;
 import com.cedarsoftware.io.annotation.IoInclude;
 import com.cedarsoftware.io.annotation.IoNaming;
@@ -1172,5 +1173,92 @@ class AnnotationTest {
         JacksonCreatorModel restored = JsonIo.toJava(json, ro).asClass(JacksonCreatorModel.class);
         assertEquals("Bob", restored.name);
         assertEquals(25, restored.age);
+    }
+
+    // ===================== @IoValue Test Models =====================
+
+    static class EmailAddress {
+        private final String address;
+
+        @IoCreator
+        EmailAddress(@IoProperty("address") String address) {
+            this.address = address;
+        }
+
+        @IoValue
+        public String toValue() {
+            return address;
+        }
+    }
+
+    static class MoneyValue {
+        private final long cents;
+        private final String currency;
+
+        @IoCreator
+        MoneyValue(@IoProperty("cents") long cents, @IoProperty("currency") String currency) {
+            this.cents = cents;
+            this.currency = currency;
+        }
+
+        @IoValue
+        public String toValue() {
+            return cents + " " + currency;
+        }
+    }
+
+    // ===================== @IoValue Tests =====================
+
+    @Test
+    void testIoValueWrite() {
+        EmailAddress email = new EmailAddress("user@example.com");
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+
+        String json = JsonIo.toJson(email, wo);
+        // Should serialize as a single string value, not {"address":"user@example.com"}
+        assertEquals("\"user@example.com\"", json.trim());
+    }
+
+    @Test
+    void testIoValueRoundTripWithType() {
+        EmailAddress original = new EmailAddress("test@test.com");
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoAlways().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, wo);
+        // With type info, the JSON is {"@type":"...","value":"test@test.com"}
+        assertTrue(json.contains("@type"), "Should include type info: " + json);
+
+        EmailAddress restored = JsonIo.toJava(json, ro).asClass(EmailAddress.class);
+        assertEquals("test@test.com", restored.address);
+    }
+
+    @Test
+    void testIoValueWithTypeInfo() {
+        EmailAddress email = new EmailAddress("typed@example.com");
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoAlways().build();
+
+        String json = JsonIo.toJson(email, wo);
+        // When type info is needed, should wrap as {"@type":"...","value":"..."}
+        assertTrue(json.contains("@type"), "Should include @type: " + json);
+        assertTrue(json.contains("value"), "Should include value key: " + json);
+        assertTrue(json.contains("typed@example.com"), "Should include the value: " + json);
+    }
+
+    @Test
+    void testIoValueToonWrite() {
+        EmailAddress email = new EmailAddress("toon@example.com");
+        WriteOptions wo = new WriteOptionsBuilder().build();
+
+        String toon = JsonIo.toToon(email, wo);
+        // TOON should serialize via @IoValue as a single value
+        assertTrue(toon.contains("toon@example.com"), "TOON should contain the value: " + toon);
+    }
+
+    @Test
+    void testIoValueResolverApi() {
+        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(EmailAddress.class);
+        assertNotNull(meta.getValueMethod(), "ValueMethod should be found");
+        assertEquals("toValue", meta.getValueMethod().getName());
     }
 }
