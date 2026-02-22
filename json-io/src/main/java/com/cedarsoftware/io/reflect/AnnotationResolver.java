@@ -54,6 +54,11 @@ public class AnnotationResolver {
     // all external lookups short-circuit with zero overhead.
 
     private static final boolean externalAvailable;
+    // @JsonNaming lives in jackson-databind (separate jar), detected independently
+    private static final boolean extNamingAvailable;
+    @SuppressWarnings("unchecked")
+    private static final Class<? extends Annotation> EXT_NAMING;
+    private static final Method EXT_NAMING_VALUE;
     @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_PROPERTY;
     @SuppressWarnings("unchecked")
@@ -130,6 +135,21 @@ public class AnnotationResolver {
         EXT_PROPERTY_ORDER_VALUE = extPropertyOrderValue;
         EXT_INCLUDE_VALUE = extIncludeValue;
         EXT_INCLUDE_NON_NULL = extIncludeNonNull;
+
+        // @JsonNaming lives in jackson-databind (separate jar from jackson-annotations)
+        boolean namingAvail = false;
+        Class<? extends Annotation> extNaming = null;
+        Method extNamingValue = null;
+        try {
+            extNaming = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.databind.annotation.JsonNaming");
+            extNamingValue = extNaming.getMethod("value");
+            namingAvail = true;
+        } catch (Throwable t) {
+            // jackson-databind not on classpath — silently skip
+        }
+        extNamingAvailable = namingAvail;
+        EXT_NAMING = extNaming;
+        EXT_NAMING_VALUE = extNamingValue;
     }
 
     // ======================== Cache ========================
@@ -299,7 +319,41 @@ public class AnnotationResolver {
         if (naming != null) {
             return naming.value();
         }
+        if (extNamingAvailable) {
+            Annotation extNaming = clazz.getAnnotation(EXT_NAMING);
+            if (extNaming != null) {
+                try {
+                    Class<?> strategyClass = (Class<?>) EXT_NAMING_VALUE.invoke(extNaming);
+                    return mapExternalNamingStrategy(strategyClass);
+                } catch (Exception e) {
+                    // Ignore reflection failure
+                }
+            }
+        }
         return null;
+    }
+
+    /**
+     * Map a Jackson PropertyNamingStrategies strategy class to the corresponding IoNaming.Strategy.
+     * Uses class name matching to avoid compile-time dependency on jackson-databind.
+     */
+    private static IoNaming.Strategy mapExternalNamingStrategy(Class<?> strategyClass) {
+        if (strategyClass == null) {
+            return null;
+        }
+        String name = strategyClass.getSimpleName();
+        switch (name) {
+            case "SnakeCaseStrategy":
+                return IoNaming.Strategy.SNAKE_CASE;
+            case "KebabCaseStrategy":
+                return IoNaming.Strategy.KEBAB_CASE;
+            case "UpperCamelCaseStrategy":
+                return IoNaming.Strategy.UPPER_CAMEL_CASE;
+            case "LowerDotCaseStrategy":
+                return IoNaming.Strategy.LOWER_DOT_CASE;
+            default:
+                return null;
+        }
     }
 
     /**

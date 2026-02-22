@@ -10,6 +10,8 @@ import com.cedarsoftware.io.annotation.IoNaming;
 import com.cedarsoftware.io.annotation.IoProperty;
 import com.cedarsoftware.io.annotation.IoPropertyOrder;
 import com.cedarsoftware.io.reflect.AnnotationResolver;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -827,5 +829,92 @@ class AnnotationTest {
         assertTrue(map.containsKey("first_name"), "Map should use snake_case keys");
         assertTrue(map.containsKey("last_name"), "Map should use snake_case keys");
         assertEquals("Map", map.get("first_name"));
+    }
+
+    // ===================== Jackson @JsonNaming Test Models =====================
+
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    static class JacksonSnakeCaseModel {
+        String firstName;
+        String lastName;
+
+        JacksonSnakeCaseModel() {}
+        JacksonSnakeCaseModel(String firstName, String lastName) {
+            this.firstName = firstName;
+            this.lastName = lastName;
+        }
+    }
+
+    @JsonNaming(PropertyNamingStrategies.KebabCaseStrategy.class)
+    static class JacksonKebabCaseModel {
+        String firstName;
+        String lastName;
+
+        JacksonKebabCaseModel() {}
+        JacksonKebabCaseModel(String firstName, String lastName) {
+            this.firstName = firstName;
+            this.lastName = lastName;
+        }
+    }
+
+    // @IoNaming takes priority over @JsonNaming
+    @IoNaming(IoNaming.Strategy.KEBAB_CASE)
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    static class NamingPriorityModel {
+        String firstName;
+        String lastName;
+
+        NamingPriorityModel() {}
+        NamingPriorityModel(String firstName, String lastName) {
+            this.firstName = firstName;
+            this.lastName = lastName;
+        }
+    }
+
+    // ===================== Jackson @JsonNaming Tests =====================
+
+    @Test
+    void testExternalNamingSnakeCase() {
+        JacksonSnakeCaseModel original = new JacksonSnakeCaseModel("Jack", "Son");
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, wo);
+        assertTrue(json.contains("first_name"), "Jackson @JsonNaming should produce snake_case: " + json);
+        assertTrue(json.contains("last_name"), "Jackson @JsonNaming should produce snake_case: " + json);
+
+        JacksonSnakeCaseModel restored = JsonIo.toJava(json, ro).asClass(JacksonSnakeCaseModel.class);
+        assertEquals("Jack", restored.firstName);
+        assertEquals("Son", restored.lastName);
+    }
+
+    @Test
+    void testExternalNamingKebabCase() {
+        JacksonKebabCaseModel original = new JacksonKebabCaseModel("Jane", "Doe");
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, wo);
+        assertTrue(json.contains("first-name"), "Jackson @JsonNaming should produce kebab-case: " + json);
+
+        JacksonKebabCaseModel restored = JsonIo.toJava(json, ro).asClass(JacksonKebabCaseModel.class);
+        assertEquals("Jane", restored.firstName);
+        assertEquals("Doe", restored.lastName);
+    }
+
+    @Test
+    void testIoNamingOverridesJsonNaming() {
+        NamingPriorityModel original = new NamingPriorityModel("Prio", "Test");
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, wo);
+        // @IoNaming(KEBAB_CASE) should win over @JsonNaming(SnakeCaseStrategy)
+        assertTrue(json.contains("first-name"), "@IoNaming should win: " + json);
+        assertFalse(json.contains("first_name"), "@JsonNaming should NOT win: " + json);
+
+        NamingPriorityModel restored = JsonIo.toJava(json, ro).asClass(NamingPriorityModel.class);
+        assertEquals("Prio", restored.firstName);
+        assertEquals("Test", restored.lastName);
     }
 }
