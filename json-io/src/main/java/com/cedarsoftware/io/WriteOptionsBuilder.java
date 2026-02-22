@@ -113,6 +113,7 @@ public class WriteOptionsBuilder {
     private static volatile boolean BASE_ENUM_SET_WRITTEN_OLD_WAY = true;
     private static volatile boolean BASE_CLOSE_STREAM = true;
     private static volatile boolean BASE_CYCLE_SUPPORT = true;
+    private static volatile char BASE_TOON_DELIMITER = ',';
     private static volatile ClassLoader BASE_CLASS_LOADER = ClassUtilities.getClassLoader(WriteOptionsBuilder.class);
     
     private static final WriteOptions defWriteOptions;
@@ -196,6 +197,7 @@ public class WriteOptionsBuilder {
         options.enumPublicFieldsOnly = BASE_ENUM_PUBLIC_FIELDS_ONLY;
         options.enumSetWrittenOldWay = BASE_ENUM_SET_WRITTEN_OLD_WAY;
         options.closeStream = BASE_CLOSE_STREAM;
+        options.toonDelimiter = BASE_TOON_DELIMITER;
         options.classLoader = BASE_CLASS_LOADER;
         
         // Initialize cache sizes with the permanent LRU size
@@ -232,6 +234,12 @@ public class WriteOptionsBuilder {
             options.skipNullFields = other.skipNullFields;
             options.writeLongsAsStrings = other.writeLongsAsStrings;
             options.cycleSupport = other.cycleSupport;
+            options.json5UnquotedKeys = other.json5UnquotedKeys;
+            options.json5SmartQuotes = other.json5SmartQuotes;
+            options.json5InfinityNaN = other.json5InfinityNaN;
+            options.json5TrailingCommas = other.json5TrailingCommas;
+            options.toonKeyFolding = other.toonKeyFolding;
+            options.toonDelimiter = other.toonDelimiter;
 
             // Copy security limits
             options.maxIndentationDepth = other.maxIndentationDepth;
@@ -705,6 +713,20 @@ public class WriteOptionsBuilder {
     }
 
     /**
+     * Call this method to set a permanent (JVM lifetime) TOON delimiter.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     *
+     * @param delimiter char the delimiter for TOON tabular arrays. Must be ',' (comma), '\t' (tab), or '|' (pipe).
+     *                  Default is ','.
+     */
+    public static void addPermanentToonDelimiter(char delimiter) {
+        if (delimiter != ',' && delimiter != '\t' && delimiter != '|') {
+            throw new IllegalArgumentException("TOON delimiter must be ',' (comma), '\\t' (tab), or '|' (pipe)");
+        }
+        BASE_TOON_DELIMITER = delimiter;
+    }
+
+    /**
      * @param loader ClassLoader to use when writing JSON to resolve String named classes.
      * @return WriteOptionsBuilder for chained access.
      */
@@ -1146,6 +1168,19 @@ public class WriteOptionsBuilder {
         return this;
     }
 
+    /**
+     * Set the delimiter for TOON tabular arrays and inline primitive arrays.
+     * Supported values: ',' (comma, default), '\t' (tab), '|' (pipe).
+     * @param delimiter the delimiter character
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder toonDelimiter(char delimiter) {
+        if (delimiter != ',' && delimiter != '\t' && delimiter != '|') {
+            throw new IllegalArgumentException("TOON delimiter must be ',' (comma), '\\t' (tab), or '|' (pipe)");
+        }
+        options.toonDelimiter = delimiter;
+        return this;
+    }
 
     /**
      * @param customWrittenClasses Map of Class to JsonClassWriter.  Establish the passed in Map as the
@@ -1600,6 +1635,7 @@ public class WriteOptionsBuilder {
 
         // TOON write options
         private boolean toonKeyFolding = false;
+        private char toonDelimiter = ',';
 
         // Meta key prefix override (null = use default based on JSON5 mode, '@' = force @, '$' = force $)
         private Character metaPrefixOverride = null;
@@ -1929,6 +1965,9 @@ public class WriteOptionsBuilder {
             return toonKeyFolding;
         }
 
+        public char getToonDelimiter() {
+            return toonDelimiter;
+        }
 
         /**
          * Dummy place-holder class exists only because ConcurrentHashMap cannot contain a

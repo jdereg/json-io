@@ -84,7 +84,20 @@ public class ToonWriter implements Closeable, Flushable {
     public ToonWriter(OutputStream out, WriteOptions writeOptions) {
         this.writeOptions = writeOptions == null ? WriteOptionsBuilder.getDefaultWriteOptions() : writeOptions;
         this.out = new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
-        this.delimiter = ',';  // TODO: get from writeOptions.getToonDelimiter() when added
+        this.delimiter = this.writeOptions.getToonDelimiter();
+    }
+
+    /**
+     * Return the TOON array count marker string.
+     * For comma (default): "[N]"
+     * For tab: "[N\t]"  (reader auto-detects via trailing char)
+     * For pipe: "[N|]"
+     */
+    private String countMarker(int count) {
+        if (delimiter == ',') {
+            return "[" + count + "]";
+        }
+        return "[" + count + delimiter + "]";
     }
 
     /**
@@ -393,7 +406,7 @@ public class ToonWriter implements Closeable, Flushable {
      */
     private void writeArray(Object array) throws IOException {
         int length = ArrayUtilities.getLength(array);
-        out.write("[" + length + "]:");
+        out.write(countMarker(length) + ":");
         writeArrayElements(array, length);
     }
 
@@ -474,7 +487,7 @@ public class ToonWriter implements Closeable, Flushable {
      * Write a Collection value (standalone, not as a field value).
      */
     private void writeCollection(Collection<?> collection) throws IOException {
-        out.write("[" + collection.size() + "]");
+        out.write(countMarker(collection.size()));
         writeCollectionElementsWithHeader(collection);
     }
 
@@ -808,12 +821,12 @@ public class ToonWriter implements Closeable, Flushable {
             if (value != null && value.getClass().isArray()) {
                 int length = ArrayUtilities.getLength(value);
                 writeKeyString(keyStr);
-                out.write("[" + length + "]:");
+                out.write(countMarker(length) + ":");
                 writeArrayElements(value, length);
             } else if (value instanceof Collection) {
                 Collection<?> coll = (Collection<?>) value;
                 writeKeyString(keyStr);
-                out.write("[" + coll.size() + "]");
+                out.write(countMarker(coll.size()));
                 // Extra depth for collection elements inside inline map
                 depth++;
                 writeCollectionElementsWithHeader(coll);
@@ -930,13 +943,13 @@ public class ToonWriter implements Closeable, Flushable {
                 // Combine key with array size: fieldName[N]:
                 int length = ArrayUtilities.getLength(value);
                 writeKeyString(keyStr);
-                out.write("[" + length + "]:");
+                out.write(countMarker(length) + ":");
                 writeArrayElements(value, length);
             } else if (value instanceof Collection) {
                 // Combine key with collection size: fieldName[N]: or fieldName[N]{cols}:
                 Collection<?> coll = (Collection<?>) value;
                 writeKeyString(keyStr);
-                out.write("[" + coll.size() + "]");
+                out.write(countMarker(coll.size()));
                 writeCollectionElementsWithHeader(coll);
             } else {
                 writeKeyString(keyStr);
@@ -972,12 +985,12 @@ public class ToonWriter implements Closeable, Flushable {
         if (value != null && value.getClass().isArray()) {
             int length = ArrayUtilities.getLength(value);
             writeString(path);
-            out.write("[" + length + "]:");
+            out.write(countMarker(length) + ":");
             writeArrayElements(value, length);
         } else if (value instanceof Collection) {
             Collection<?> coll = (Collection<?>) value;
             writeString(path);
-            out.write("[" + coll.size() + "]");
+            out.write(countMarker(coll.size()));
             writeCollectionElementsWithHeader(coll);
         } else if (value instanceof Map) {
             // Non-foldable map at the end of the chain
@@ -1013,7 +1026,7 @@ public class ToonWriter implements Closeable, Flushable {
      */
     private void writeMapWithComplexKeys(Map<?, ?> map) throws IOException {
         // Write as array of entries
-        out.write("[" + map.size() + "]:");
+        out.write(countMarker(map.size()) + ":");
 
         for (Map.Entry<?, ?> entry : map.entrySet()) {
             out.write(NEW_LINE);

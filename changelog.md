@@ -1,6 +1,7 @@
 ### Revision History
 
 #### 4.95.0 (Unreleased)
+* **FEATURE**: `ToonWriter` now supports configurable delimiters for tabular arrays and inline primitive arrays. Supported delimiters: comma (`,`, default), tab (`\t`), and pipe (`|`). Configure via `WriteOptionsBuilder.toonDelimiter(char)` per-instance or `WriteOptionsBuilder.addPermanentToonDelimiter(char)` for JVM-wide defaults. The delimiter is encoded in the count bracket (`[N]`, `[N\t]`, `[N|]`) so the `ToonReader` auto-detects it on read — no read-side configuration needed. Tab delimiters can further reduce BPE token count for LLM payloads.
 * **FEATURE**: `ToonWriter` now supports tabular format for POJO collections and arrays. When `prettyPrint` is `false` (default), uniform POJO lists/arrays are written in compact CSV-style tabular format (`[N]{field1,field2,...}: row1 row2 ...`). When `prettyPrint` is `true`, the verbose list format (`- key: value`) is used instead.
 * **TESTING**: Added 17 new TOON format tests covering both tabular and list POJO format paths:
   * 10 writer tests: tabular default, prettyPrint list fallback, non-primitive field fallback, array tabular, mixed-type fallback, round-trip for both formats.

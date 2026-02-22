@@ -890,6 +890,107 @@ Quoted keys are preserved as literals (not expanded):
 - **LLM Efficiency**: Fewer tokens for the same data structure
 - **Round-trip Safe**: Folded output parses back to identical data structures
 
+### TOON Delimiter
+
+When writing TOON format output, you can configure the delimiter used in tabular arrays and inline primitive arrays. The default delimiter is a comma (`,`), but tab (`\t`) and pipe (`|`) are also supported.
+
+Tab delimiters can further reduce token count since tabs tokenize more efficiently than commas in most BPE tokenizers, and they rarely appear in natural text (reducing the need for value quoting).
+
+#### How TOON Delimiters Work
+
+The delimiter affects three areas of TOON output:
+1. **Tabular headers** — field names in the `{field1,field2}` header
+2. **Tabular rows** — values in each data row
+3. **Inline primitive arrays** — compact single-line arrays like `1,2,3`
+
+The delimiter is encoded in the count bracket so the reader can auto-detect it:
+- Comma (default): `[3]` — no suffix needed
+- Tab: `[3\t]` — tab character after the count
+- Pipe: `[3|]` — pipe character after the count
+
+**Comma (default):**
+```
+[3]{name,age}:
+  Alice,25
+  Bob,30
+  Charlie,22
+```
+
+**Tab delimiter:**
+```
+[3	]{name	age}:
+  Alice	25
+  Bob	30
+  Charlie	22
+```
+
+**Pipe delimiter:**
+```
+[3|]{name|age}:
+  Alice|25
+  Bob|30
+  Charlie|22
+```
+
+#### Configuration
+
+>#### `char` getToonDelimiter()
+>- [ ] Returns the delimiter character used for TOON tabular arrays and inline primitive arrays. Supported values: `','` (comma, default), `'\t'` (tab), `'|'` (pipe).
+
+>#### `WriteOptionsBuilder` toonDelimiter(`char delimiter`)
+>- [ ] Sets the delimiter for TOON tabular and inline array output. Must be `','`, `'\t'`, or `'|'`. Throws `IllegalArgumentException` for unsupported delimiters.
+
+#### Example Usage
+
+```java
+// Default comma delimiter
+String toon1 = JsonIo.toToon(employees, null);
+// Output: [3]{name,age}: Alice,25  Bob,30  Charlie,22
+
+// Tab delimiter
+WriteOptions tabOpts = new WriteOptionsBuilder()
+        .toonDelimiter('\t')
+        .build();
+String toon2 = JsonIo.toToon(employees, tabOpts);
+// Output: [3\t]{name\tage}: Alice\t25  Bob\t30  Charlie\t22
+
+// Pipe delimiter
+WriteOptions pipeOpts = new WriteOptionsBuilder()
+        .toonDelimiter('|')
+        .build();
+String toon3 = JsonIo.toToon(employees, pipeOpts);
+// Output: [3|]{name|age}: Alice|25  Bob|30  Charlie|22
+```
+
+#### Quoting Behavior
+
+When a value contains the active delimiter character, it is automatically quoted:
+
+```java
+// With tab delimiter, commas in values do NOT need quoting
+WriteOptions tabOpts = new WriteOptionsBuilder().toonDelimiter('\t').build();
+// "Smith, John" is written as-is: Smith, John\t30
+
+// With pipe delimiter, pipe in values IS quoted
+WriteOptions pipeOpts = new WriteOptionsBuilder().toonDelimiter('|').build();
+// "A|B" is written as: "A|B"|30
+```
+
+#### Reading Delimiter-Aware TOON
+
+The TOON reader automatically detects the delimiter from the count bracket suffix (`[N]`, `[N\t]`, `[N|]`). No special read-side configuration is needed.
+
+```java
+// Write with tab delimiter
+WriteOptions opts = new WriteOptionsBuilder().toonDelimiter('\t').build();
+String toon = JsonIo.toToon(data, opts);
+
+// Read — delimiter auto-detected
+List<?> restored = JsonIo.fromToon(toon, null).asClass(List.class);
+```
+
+---
+
 ---
 ## Application Scoped Options (Full Lifecycle of JVM)
 
@@ -1148,6 +1249,10 @@ Sets the permanent close stream setting for all new `WriteOptions` instances. Wh
 ### addPermanentCycleSupport
 Sets the permanent cycle support setting for all new `WriteOptions` instances. When enabled (default), the writer performs a `traceReferences()` pre-pass to identify multi-referenced objects and emit `@id`/`@ref`. When disabled, the pre-pass is skipped for ~35-40% faster serialization of acyclic data.
 >#### WriteOptionsBuilder.addPermanentCycleSupport(`boolean cycleSupport`)
+
+### addPermanentToonDelimiter
+Sets the permanent TOON delimiter for all new `WriteOptions` instances. Must be `','` (comma, default), `'\t'` (tab), or `'|'` (pipe). This sets the default delimiter used for TOON tabular arrays and inline primitive arrays.
+>#### WriteOptionsBuilder.addPermanentToonDelimiter(`char delimiter`)
 
 ### Combined Configuration Example
 You can configure multiple permanent settings together for your application's global defaults:

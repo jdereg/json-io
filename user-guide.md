@@ -627,6 +627,7 @@ This provides comprehensive coverage far exceeding other TOON implementations:
 | Cyclic reference handling | ✓ Graceful null | N/A |
 | Generic type preservation | ✓ Via TypeHolder | ✗ |
 | Custom type extensibility | ✓ ClassFactory/Writer | Limited |
+| Delimiter options (comma/tab/pipe) | ✓ | ✓ |
 
 ### When to Use TOON
 

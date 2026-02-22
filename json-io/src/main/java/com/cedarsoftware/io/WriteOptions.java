@@ -344,4 +344,10 @@ public interface WriteOptions {
      */
     boolean isToonKeyFolding();
 
+    /**
+     * @return char the delimiter used for TOON tabular arrays and inline primitive arrays.
+     * Supported values: ',' (comma, default), '\t' (tab), '|' (pipe).
+     */
+    char getToonDelimiter();
+
 }
