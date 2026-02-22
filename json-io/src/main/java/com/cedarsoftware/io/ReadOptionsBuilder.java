@@ -303,6 +303,9 @@ public class ReadOptionsBuilder {
 
             options.nonRefClasses.clear();
             options.nonRefClasses.addAll(other.nonRefClasses);
+
+            options.customOptions.clear();
+            options.customOptions.putAll(other.customOptions);
         }
     }
 
