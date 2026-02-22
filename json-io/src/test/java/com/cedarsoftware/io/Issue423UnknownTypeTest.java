@@ -30,10 +30,6 @@ public class Issue423UnknownTypeTest {
         // Parse JSON with Object.class target
         Object result = JsonIo.toJava(json, options).asClass(Object.class);
         
-        // Verify actual behavior: returns JsonObject, not LinkedHashMap
-        System.out.println("Result type: " + result.getClass().getName());
-        System.out.println("Result: " + result);
-        
         // Default returns JsonObject (which implements Map)
         assertTrue(result instanceof JsonObject, "Default behavior returns JsonObject");
         assertFalse(result instanceof LinkedHashMap, "Default does NOT return LinkedHashMap");
@@ -61,9 +57,6 @@ public class Issue423UnknownTypeTest {
         
         Object result = JsonIo.toJava(json, options).asClass(Object.class);
         
-        System.out.println("With LinkedHashMap - Result type: " + result.getClass().getName());
-        System.out.println("With LinkedHashMap - Result: " + result);
-        
         // With explicit LinkedHashMap, should return LinkedHashMap
         assertTrue(result instanceof LinkedHashMap, 
                 "Should return LinkedHashMap when explicitly set");
@@ -86,7 +79,6 @@ public class Issue423UnknownTypeTest {
                 .build();
         
         Object defaultResult = JsonIo.toJava(json, defaultOptions).asClass(Object.class);
-        System.out.println("Unknown type default - Result type: " + defaultResult.getClass().getName());
         // When unknown type with failOnUnknownType(false), actually uses LinkedHashMap
         assertTrue(defaultResult instanceof LinkedHashMap, 
                 "With unknown @type and failOnUnknownType(false), returns LinkedHashMap");
@@ -98,8 +90,7 @@ public class Issue423UnknownTypeTest {
                 .build();
         
         Object linkedHashMapResult = JsonIo.toJava(json, linkedHashMapOptions).asClass(Object.class);
-        System.out.println("Unknown type LinkedHashMap - Result type: " + linkedHashMapResult.getClass().getName());
-        assertTrue(linkedHashMapResult instanceof LinkedHashMap, 
+        assertTrue(linkedHashMapResult instanceof LinkedHashMap,
                 "With LinkedHashMap setting, unknown types should be LinkedHashMap");
     }
     
@@ -139,9 +130,6 @@ public class Issue423UnknownTypeTest {
         
         // Note: JsonIo doesn't have a toObjects method, using toJava instead
         Object result = JsonIo.toJava(json, options).asClass(Object.class);
-        
-        System.out.println("toJava result: " + result);
-        System.out.println("Result class: " + result.getClass().getName());
         
         // Verify actual behavior
         assertTrue(result instanceof JsonObject, 

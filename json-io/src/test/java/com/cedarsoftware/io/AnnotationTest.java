@@ -540,4 +540,77 @@ class AnnotationTest {
         assertTrue(map.containsKey("visible"), "Map should contain visible field");
         assertFalse(map.containsKey("hidden"), "Map should NOT contain ignored field");
     }
+
+    // ===================== TOON Round-Trip Tests =====================
+
+    @Test
+    void testIoPropertyToonRoundTrip() {
+        RenamedFieldModel original = new RenamedFieldModel("Alice", 30);
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+
+        String toon = JsonIo.toToon(original, writeOptions);
+        assertTrue(toon.contains("full_name"), "TOON should use renamed field: " + toon);
+
+        RenamedFieldModel restored = JsonIo.fromToon(toon, readOptions).asClass(RenamedFieldModel.class);
+        assertEquals("Alice", restored.name);
+        assertEquals(30, restored.age);
+    }
+
+    @Test
+    void testIoIgnoreToonRoundTrip() {
+        FieldIgnoreModel original = new FieldIgnoreModel("visible", "hidden_data", 99);
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+
+        String toon = JsonIo.toToon(original, writeOptions);
+        assertFalse(toon.contains("hidden"), "TOON should NOT contain ignored field: " + toon);
+
+        FieldIgnoreModel restored = JsonIo.fromToon(toon, readOptions).asClass(FieldIgnoreModel.class);
+        assertEquals("visible", restored.visible);
+        assertNull(restored.hidden, "Ignored field should be null after TOON round-trip");
+        assertEquals(99, restored.count);
+    }
+
+    @Test
+    void testIoPropertyOrderToonWrite() {
+        OrderedModel model = new OrderedModel(1L, "Alice", "alice@example.com", 30);
+        WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoNever().build();
+        String toon = JsonIo.toToon(model, writeOptions);
+
+        int idPos = toon.indexOf("id");
+        int namePos = toon.indexOf("name");
+        int emailPos = toon.indexOf("email");
+        int agePos = toon.indexOf("age");
+
+        assertTrue(idPos >= 0 && namePos >= 0 && emailPos >= 0 && agePos >= 0,
+                "All fields should be present in TOON");
+        assertTrue(idPos < namePos, "id should appear before name in TOON: " + toon);
+        assertTrue(namePos < emailPos, "name should appear before email in TOON: " + toon);
+        assertTrue(emailPos < agePos, "email should appear before age in TOON: " + toon);
+    }
+
+    @Test
+    void testIoIncludeNonNullToonWrite() {
+        NonNullModel model = new NonNullModel(null, null, 5);
+        WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoNever().build();
+        String toon = JsonIo.toToon(model, writeOptions);
+
+        assertFalse(toon.contains("optional"), "NON_NULL field with null value should be absent from TOON: " + toon);
+        assertTrue(toon.contains("alwaysWritten"), "Non-annotated field should be present in TOON: " + toon);
+    }
+
+    @Test
+    void testIoAliasToonRead() {
+        // Write TOON with renamed field, read back using alias
+        RenameAndAliasModel original = new RenameAndAliasModel("Eve", 28);
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+
+        String toon = JsonIo.toToon(original, writeOptions);
+        RenameAndAliasModel restored = JsonIo.fromToon(toon, readOptions).asClass(RenameAndAliasModel.class);
+
+        assertEquals("Eve", restored.name);
+        assertEquals(28, restored.age);
+    }
 }

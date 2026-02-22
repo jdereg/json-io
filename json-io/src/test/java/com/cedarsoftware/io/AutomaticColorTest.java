@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Logger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -18,7 +17,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * system for Map <-> Color transformations.
  */
 class AutomaticColorTest {
-    private static final Logger LOG = Logger.getLogger(AutomaticColorTest.class.getName());
 
     @Test
     void testColorSerializationAndDeserialization() {
@@ -27,12 +25,7 @@ class AutomaticColorTest {
 
         // When: We serialize and deserialize it
         String json = JsonIo.toJson(originalColor, new WriteOptionsBuilder().build());
-        LOG.info("Serialized JSON: " + json);
-        
         Object result = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(Color.class);
-        LOG.info("Deserialized result type: " + result.getClass());
-        LOG.info("Deserialized result: " + result);
-        
         Color deserializedColor = (Color) result;
 
         // Then: The color should be preserved
@@ -113,9 +106,6 @@ class AutomaticColorTest {
         // Note: This test verifies the conversion path works, assuming java-util supports it
         String json = JsonIo.toJson(colorMap, new WriteOptionsBuilder().build());
         
-        // First, let's see what the JSON looks like
-        LOG.info("Color map JSON: " + json);
-        
         // For now, we can't fully test this until java-util has Color conversion support
         // But we can verify the map structure is preserved
         Map<String, Object> deserializedMap = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(Map.class);
@@ -131,42 +121,31 @@ class AutomaticColorTest {
         ReadOptions options = new ReadOptionsBuilder().build();
         Converter converter = new Converter(options.getConverterOptions());
         
-        // Check if Color is considered a "simple type" now
-        boolean isSimpleType = Resolver.isPseudoPrimitive(Color.class);
-        LOG.info("Color is simple type: " + isSimpleType);
-        
-        // Test Color to String conversion
+        // Color should be considered a "simple type"
+        assertThat(Resolver.isPseudoPrimitive(Color.class)).isTrue();
+
+        // Test Color to String round-trip conversion
         Color testColor = new Color(255, 128, 64, 192);
-        if (isSimpleType) {
-            String colorString = converter.convert(testColor, String.class);
-            LOG.info("Color to String: " + colorString);
-            
-            // Test String back to Color
-            Color backToColor = converter.convert(colorString, Color.class);
-            LOG.info("String back to Color: " + backToColor);
-            assertThat(backToColor).isEqualTo(testColor);
-        }
-        
+        String colorString = converter.convert(testColor, String.class);
+        assertThat(colorString).isNotEmpty();
+
+        Color backToColor = converter.convert(colorString, Color.class);
+        assertThat(backToColor).isEqualTo(testColor);
+
+        // Verify Map to Color conversion is supported
+        assertThat(converter.isConversionSupportedFor(Map.class, Color.class)).isTrue();
+
         Map<String, Object> colorMap = new HashMap<>();
         colorMap.put("red", 255);
         colorMap.put("green", 128);
         colorMap.put("blue", 64);
         colorMap.put("alpha", 192);
 
-        // When: We check if conversion is supported
-        boolean isSupported = converter.isConversionSupportedFor(Map.class, Color.class);
-        
-        // Then: We can report the current state
-        LOG.info("Map to Color conversion supported: " + isSupported);
-        
-        if (isSupported) {
-            // This should work now with updated java-util
-            Color convertedColor = converter.convert(colorMap, Color.class);
-            assertThat(convertedColor.getRed()).isEqualTo(255);
-            assertThat(convertedColor.getGreen()).isEqualTo(128);
-            assertThat(convertedColor.getBlue()).isEqualTo(64);
-            assertThat(convertedColor.getAlpha()).isEqualTo(192);
-        }
+        Color convertedColor = converter.convert(colorMap, Color.class);
+        assertThat(convertedColor.getRed()).isEqualTo(255);
+        assertThat(convertedColor.getGreen()).isEqualTo(128);
+        assertThat(convertedColor.getBlue()).isEqualTo(64);
+        assertThat(convertedColor.getAlpha()).isEqualTo(192);
     }
 
     /**

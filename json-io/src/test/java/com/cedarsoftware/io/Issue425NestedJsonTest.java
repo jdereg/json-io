@@ -1,6 +1,5 @@
 package com.cedarsoftware.io;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashMap;
@@ -21,16 +20,12 @@ public class Issue425NestedJsonTest {
     public void testNestedJsonWithLinkedHashMapDuplication() {
         // This is the reported issue - inner values are duplicated to outer
         String json = "{\"outer\":{\"inner\":\"value\"}}";
-        System.out.println("Original JSON: " + json);
-        
         ReadOptions options = new ReadOptionsBuilder()
                 .unknownTypeClass(LinkedHashMap.class)
                 .build();
         
         // Use toObjects as reported in the issue
         Object result = JsonIo.toJava(json, options).asClass(Object.class);
-        
-        System.out.println("Parsed result: " + result);
         
         // The bug: result contains both "inner" and "outer" at top level
         assertTrue(result instanceof LinkedHashMap, "Result should be LinkedHashMap");
@@ -51,8 +46,7 @@ public class Issue425NestedJsonTest {
         
         // Verify round-trip
         String roundTripJson = JsonIo.toJson(result, null);
-        System.out.println("Round-trip JSON: " + roundTripJson);
-        
+
         // The bug manifests in round-trip: inner value appears at both levels
         assertFalse(roundTripJson.contains("\"inner\":\"value\",\"outer\""), 
                 "Round-trip should not have duplicated inner value at top level");
@@ -66,8 +60,6 @@ public class Issue425NestedJsonTest {
         ReadOptions options = new ReadOptionsBuilder().build();
         
         Object result = JsonIo.toJava(json, options).asClass(Object.class);
-        
-        System.out.println("JsonObject default result: " + result);
         
         assertTrue(result instanceof JsonObject, "Result should be JsonObject by default");
         JsonObject jsonObj = (JsonObject) result;
@@ -84,7 +76,7 @@ public class Issue425NestedJsonTest {
         
         // Verify round-trip
         String roundTripJson = JsonIo.toJson(result, null);
-        System.out.println("JsonObject round-trip: " + roundTripJson);
+        assertNotNull(roundTripJson);
     }
     
     @Test
@@ -98,8 +90,6 @@ public class Issue425NestedJsonTest {
         
         Object result = JsonIo.toJava(json, options).asClass(Object.class);
         
-        System.out.println("Explicit JsonObject result: " + result);
-        
         assertTrue(result instanceof JsonObject, "Result should be JsonObject");
         JsonObject jsonObj = (JsonObject) result;
         
@@ -110,8 +100,7 @@ public class Issue425NestedJsonTest {
         
         // Verify round-trip - should not have @type markers with explicit JsonObject
         String roundTripJson = JsonIo.toJson(result, null);
-        System.out.println("Explicit JsonObject round-trip: " + roundTripJson);
-        
+
         // With explicit JsonObject, no @type markers expected
         assertEquals("{\"outer\":{\"inner\":\"value\"}}", roundTripJson,
                 "Round-trip should match original JSON when using explicit JsonObject");
@@ -127,8 +116,6 @@ public class Issue425NestedJsonTest {
                 .build();
         
         Object result = JsonIo.toJava(json, options).asClass(Object.class);
-        
-        System.out.println("Deep nested result: " + result);
         
         assertTrue(result instanceof LinkedHashMap);
         Map<?, ?> resultMap = (Map<?, ?>) result;
@@ -166,8 +153,6 @@ public class Issue425NestedJsonTest {
         
         Object result = JsonIo.toJava(json, options).asClass(Object.class);
         
-        System.out.println("Multiple properties result: " + result);
-        
         assertTrue(result instanceof LinkedHashMap);
         Map<?, ?> resultMap = (Map<?, ?>) result;
         
@@ -198,8 +183,6 @@ public class Issue425NestedJsonTest {
                 .build();
         
         Object result = JsonIo.toJava(json, options).asClass(Object[].class);
-        
-        System.out.println("Array with nested objects: " + java.util.Arrays.toString((Object[]) result));
         
         assertTrue(result instanceof Object[]);
         Object[] array = (Object[]) result;

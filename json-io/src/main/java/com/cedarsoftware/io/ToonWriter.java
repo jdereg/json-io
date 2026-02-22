@@ -1142,11 +1142,27 @@ public class ToonWriter implements Closeable, Flushable {
                 field.setAccessible(true);
                 Object value = field.get(obj);
                 if (value != null || (!writeOptions.isSkipNullFields() && !annMeta.isNonNull(field.getName()))) {
-                    result.put(entry.getKey(), value);
+                    // Apply @IoProperty rename: use serialized name if present, otherwise original key
+                    String serializedName = annMeta.getSerializedName(field.getName());
+                    String key = serializedName != null ? serializedName : entry.getKey();
+                    result.put(key, value);
                 }
             } catch (IllegalAccessException e) {
                 // Skip inaccessible fields
             }
+        }
+
+        // Apply @IoPropertyOrder if present
+        String[] order = annMeta.getPropertyOrder();
+        if (order != null && order.length > 0 && result.size() > 1) {
+            Map<String, Object> ordered = new LinkedHashMap<>(result.size());
+            for (String name : order) {
+                if (result.containsKey(name)) {
+                    ordered.put(name, result.remove(name));
+                }
+            }
+            ordered.putAll(result);
+            return ordered;
         }
 
         return result;

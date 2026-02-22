@@ -1,5 +1,6 @@
 package com.cedarsoftware.io;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,18 +35,28 @@ public class SecurityAuditLoggerTest {
     
     private SecurityAuditLogger auditLogger;
     private TestLogHandler testHandler;
-    
+    private Logger logger;
+    private boolean savedUseParentHandlers;
+
     @BeforeEach
     public void setUp() {
         auditLogger = SecurityAuditLogger.getInstance();
         auditLogger.resetCounters();
         auditLogger.setAuditEnabled(true);
-        
-        // Set up test log handler
+
+        // Set up test log handler and suppress console output
         testHandler = new TestLogHandler();
-        Logger logger = Logger.getLogger(SecurityAuditLogger.class.getName());
+        logger = Logger.getLogger(SecurityAuditLogger.class.getName());
+        savedUseParentHandlers = logger.getUseParentHandlers();
+        logger.setUseParentHandlers(false);
         logger.addHandler(testHandler);
         logger.setLevel(Level.ALL);
+    }
+
+    @AfterEach
+    public void tearDown() {
+        logger.removeHandler(testHandler);
+        logger.setUseParentHandlers(savedUseParentHandlers);
     }
     
     @Test

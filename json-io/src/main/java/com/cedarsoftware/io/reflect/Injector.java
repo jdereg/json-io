@@ -11,6 +11,7 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.function.BiConsumer;
 import com.cedarsoftware.io.JsonIoException;
+import com.cedarsoftware.util.ClassValueMap;
 import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.ReflectionUtils;
 import com.cedarsoftware.util.StringUtilities;
@@ -127,6 +128,33 @@ public class Injector {
     private static final int NUM_FLOAT = 4;
     private static final int NUM_SHORT = 5;
     private static final int NUM_LONG = 6;
+
+    // O(1) ClassValueMap lookups for type categorization (replaces sequential class == chains)
+    private static final ClassValueMap<Integer> NUMERIC_KINDS = new ClassValueMap<>();
+    private static final ClassValueMap<Class<?>> PRIM_TO_WRAPPER = new ClassValueMap<>();
+    static {
+        NUMERIC_KINDS.put(int.class, NUM_INT);
+        NUMERIC_KINDS.put(Integer.class, NUM_INT);
+        NUMERIC_KINDS.put(double.class, NUM_DOUBLE);
+        NUMERIC_KINDS.put(Double.class, NUM_DOUBLE);
+        NUMERIC_KINDS.put(byte.class, NUM_BYTE);
+        NUMERIC_KINDS.put(Byte.class, NUM_BYTE);
+        NUMERIC_KINDS.put(float.class, NUM_FLOAT);
+        NUMERIC_KINDS.put(Float.class, NUM_FLOAT);
+        NUMERIC_KINDS.put(short.class, NUM_SHORT);
+        NUMERIC_KINDS.put(Short.class, NUM_SHORT);
+        NUMERIC_KINDS.put(long.class, NUM_LONG);
+        NUMERIC_KINDS.put(Long.class, NUM_LONG);
+
+        PRIM_TO_WRAPPER.put(int.class, Integer.class);
+        PRIM_TO_WRAPPER.put(long.class, Long.class);
+        PRIM_TO_WRAPPER.put(short.class, Short.class);
+        PRIM_TO_WRAPPER.put(byte.class, Byte.class);
+        PRIM_TO_WRAPPER.put(boolean.class, Boolean.class);
+        PRIM_TO_WRAPPER.put(char.class, Character.class);
+        PRIM_TO_WRAPPER.put(float.class, Float.class);
+        PRIM_TO_WRAPPER.put(double.class, Double.class);
+    }
 
     // Constructor for MethodHandle injection
     private Injector(Field field, MethodHandle handle, String uniqueFieldName, String displayName) {
@@ -584,25 +612,13 @@ public class Injector {
     }
 
     private static int numericKind(Class<?> type) {
-        if (type == int.class || type == Integer.class) return NUM_INT;
-        if (type == double.class || type == Double.class) return NUM_DOUBLE;
-        if (type == byte.class || type == Byte.class) return NUM_BYTE;
-        if (type == float.class || type == Float.class) return NUM_FLOAT;
-        if (type == short.class || type == Short.class) return NUM_SHORT;
-        if (type == long.class || type == Long.class) return NUM_LONG;
-        return NUM_NONE;
+        Integer kind = NUMERIC_KINDS.get(type);
+        return kind != null ? kind : NUM_NONE;
     }
 
     private static Class<?> primitiveWrapper(Class<?> primitiveType) {
-        if (primitiveType == int.class) return Integer.class;
-        if (primitiveType == long.class) return Long.class;
-        if (primitiveType == short.class) return Short.class;
-        if (primitiveType == byte.class) return Byte.class;
-        if (primitiveType == boolean.class) return Boolean.class;
-        if (primitiveType == char.class) return Character.class;
-        if (primitiveType == float.class) return Float.class;
-        if (primitiveType == double.class) return Double.class;
-        return Void.class;
+        Class<?> w = PRIM_TO_WRAPPER.get(primitiveType);
+        return w != null ? w : Void.class;
     }
 
     private void injectWithVarHandle(Object object, Object value) throws Throwable {
