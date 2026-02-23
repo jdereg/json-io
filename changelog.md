@@ -1,6 +1,7 @@
 ### Revision History
 
 #### 4.95.0 (Unreleased)
+* **IMPROVEMENT**: `@type` elimination on write now considers `@IoDeserialize(as=X)` and `@IoTypeInfo(X)` annotations. When the runtime type of a field matches the annotation-specified type, `@type` is omitted from JSON output because the reader can infer the correct type from the annotation. This produces smaller JSON without sacrificing round-trip fidelity.
 * **IMPROVEMENT**: `AnnotationResolver` now uses `ClassUtilities.forName()` instead of `Class.forName()` for external annotation detection, ensuring proper classloader resolution in OSGi and JPMS environments.
 * **FEATURE**: ToonWriter now uses the same `WriteFieldPlan` / `Accessor` abstraction as JsonWriter. This gives TOON serialization automatic support for `@IoGetter`, `@IoFormat`, `@IoAnyGetter`, and all other write-side annotations. Previously ToonWriter used direct `Field.get()` which bypassed custom getter methods and format patterns.
 * **PERFORMANCE**: `Accessor.retrieve()` now uses sticky fallback flags for lambda/VarHandle/MethodHandle paths; once an optimized path fails, it is bypassed on subsequent calls instead of repeatedly throwing/falling back.

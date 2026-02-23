@@ -3634,4 +3634,123 @@ class AnnotationTest {
         assertEquals(7, restored.version);
         assertEquals("value1", restored.extras.get("extra1"));
     }
+
+    // ===================== @type Elimination via Annotations =====================
+
+    @Test
+    void testIoDeserializeEliminatesType() {
+        // @IoDeserialize(as=LinkedList.class) on a List<String> field holding a LinkedList
+        // should allow @type to be dropped since the reader knows the concrete type
+        LinkedList<String> items = new LinkedList<>();
+        items.add("a");
+        items.add("b");
+        DeserializeListField original = new DeserializeListField(items, 2);
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoMinimal().build();
+
+        String json = JsonIo.toJson(original, wo);
+        assertFalse(json.contains("LinkedList"), "@type for LinkedList should be eliminated when @IoDeserialize(as=LinkedList.class) matches runtime type");
+
+        // Round-trip: reader should reconstruct LinkedList from annotation without @type
+        ReadOptions ro = new ReadOptionsBuilder().build();
+        DeserializeListField result = JsonIo.toJava(json, ro).asClass(DeserializeListField.class);
+        assertNotNull(result.getItems());
+        assertTrue(result.getItems() instanceof LinkedList,
+                "Should reconstruct as LinkedList via @IoDeserialize: " + result.getItems().getClass().getName());
+        assertEquals(2, result.getItems().size());
+        assertEquals("a", result.getItems().get(0));
+    }
+
+    @Test
+    void testIoTypeInfoEliminatesType() {
+        // @IoTypeInfo(LinkedList.class) on a List<String> field holding a LinkedList
+        // should allow @type to be dropped
+        LinkedList<String> names = new LinkedList<>();
+        names.add("x");
+        names.add("y");
+        TypeInfoListField original = new TypeInfoListField(names, 2);
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoMinimal().build();
+
+        String json = JsonIo.toJson(original, wo);
+        assertFalse(json.contains("LinkedList"), "@type for LinkedList should be eliminated when @IoTypeInfo(LinkedList.class) matches runtime type");
+
+        // Round-trip: reader should reconstruct LinkedList from annotation without @type
+        ReadOptions ro = new ReadOptionsBuilder().build();
+        TypeInfoListField result = JsonIo.toJava(json, ro).asClass(TypeInfoListField.class);
+        assertNotNull(result.getNames());
+        assertTrue(result.getNames() instanceof LinkedList,
+                "Should reconstruct as LinkedList via @IoTypeInfo: " + result.getNames().getClass().getName());
+        assertEquals(2, result.getNames().size());
+    }
+
+    @Test
+    void testAnnotationTypeMismatchStillEmitsType() {
+        // @IoDeserialize(as=LinkedList.class) on a field, but runtime value is ArrayList
+        // Since runtime type != annotation type, @type MUST be written
+        ArrayList<String> items = new ArrayList<>();
+        items.add("mismatch");
+        DeserializeListField original = new DeserializeListField(items, 1);
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoMinimal().build();
+
+        String json = JsonIo.toJson(original, wo);
+        assertTrue(json.contains("ArrayList"), "@type for ArrayList should be emitted when it differs from @IoDeserialize(as=LinkedList.class)");
+    }
+
+    static class PlainListField {
+        private List<String> items;
+        PlainListField() { }
+        PlainListField(List<String> items) { this.items = items; }
+        public List<String> getItems() { return items; }
+    }
+
+    @Test
+    void testNoAnnotationUnchangedBehavior() {
+        // Plain field without type annotations — @type behavior unchanged
+        // A field declared as List<String> holding a LinkedList still needs @type
+        // because declared type (List) != runtime type (LinkedList) and no annotation helps
+        LinkedList<String> items = new LinkedList<>();
+        items.add("plain");
+        PlainListField original = new PlainListField(items);
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoMinimal().build();
+
+        String json = JsonIo.toJson(original, wo);
+        assertTrue(json.contains("LinkedList"), "Without type annotation, @type for LinkedList should still be emitted for a List<String> field");
+    }
+
+    @Test
+    void testIoDeserializeMapEliminatesType() {
+        // @IoDeserialize(as=LinkedHashMap.class) on a Map<String,Object> field holding a LinkedHashMap
+        LinkedHashMap<String, Object> data = new LinkedHashMap<>();
+        data.put("key1", "val1");
+        DeserializeMapField original = new DeserializeMapField(data);
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoMinimal().build();
+
+        String json = JsonIo.toJson(original, wo);
+        // LinkedHashMap is the natural default for Map in MINIMAL mode, but the annotation also matches
+        assertFalse(json.contains("LinkedHashMap"), "@type for LinkedHashMap should be eliminated");
+
+        ReadOptions ro = new ReadOptionsBuilder().build();
+        DeserializeMapField result = JsonIo.toJava(json, ro).asClass(DeserializeMapField.class);
+        assertNotNull(result.getData());
+        assertTrue(result.getData() instanceof LinkedHashMap);
+        assertEquals("val1", result.getData().get("key1"));
+    }
+
+    @Test
+    void testIoTypeInfoObjectFieldEliminatesType() {
+        // @IoTypeInfo(ArrayList.class) on an Object field holding an ArrayList
+        ArrayList<Integer> list = new ArrayList<>();
+        list.add(1);
+        list.add(2);
+        TypeInfoObjectField original = new TypeInfoObjectField(list, "test");
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoMinimal().build();
+
+        String json = JsonIo.toJson(original, wo);
+        assertFalse(json.contains("ArrayList"), "@type for ArrayList should be eliminated when @IoTypeInfo(ArrayList.class) matches runtime type on Object field");
+
+        ReadOptions ro = new ReadOptionsBuilder().build();
+        TypeInfoObjectField result = JsonIo.toJava(json, ro).asClass(TypeInfoObjectField.class);
+        assertNotNull(result.getItems());
+        assertTrue(result.getItems() instanceof ArrayList,
+                "Should reconstruct as ArrayList via @IoTypeInfo: " + result.getItems().getClass().getName());
+    }
 }

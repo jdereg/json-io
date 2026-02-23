@@ -2495,7 +2495,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         // check to see if type needs to be written.
-        Class<?> type = plan.declaredFieldType();
+        // Uses annotation-aware type: @IoDeserialize(as=X) > @IoTypeInfo(X) > Field.getType()
+        Class<?> type = plan.effectiveDeclaredType();
         Class<?> savedElementType = declaredElementType;
         Class<?> savedKeyType = declaredKeyType;
         String savedFormatPattern = fieldFormatPattern;

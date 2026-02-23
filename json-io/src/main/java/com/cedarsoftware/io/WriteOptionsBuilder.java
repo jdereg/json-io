@@ -2446,11 +2446,13 @@ public class WriteOptionsBuilder {
         private final boolean skipReferenceTrace;
         private final boolean skipIfNull;
         private final String formatPattern;
+        private final Class<?> effectiveDeclaredType;
 
         private WriteFieldPlan(Accessor accessor, String fieldName, String serializedKey, Class<?> declaredFieldType,
                                Class<?> declaredElementType, Class<?> declaredKeyType,
                                boolean enumPublicOnlySkipCandidate, boolean applyDeclaredContainerTypes,
-                               boolean skipReferenceTrace, boolean skipIfNull, String formatPattern) {
+                               boolean skipReferenceTrace, boolean skipIfNull, String formatPattern,
+                               Class<?> effectiveDeclaredType) {
             this.accessor = accessor;
             this.fieldName = fieldName;
             this.serializedKey = serializedKey;
@@ -2462,6 +2464,7 @@ public class WriteOptionsBuilder {
             this.skipReferenceTrace = skipReferenceTrace;
             this.skipIfNull = skipIfNull;
             this.formatPattern = formatPattern;
+            this.effectiveDeclaredType = effectiveDeclaredType;
         }
 
         static WriteFieldPlan create(Accessor accessor, WriteOptions options) {
@@ -2495,15 +2498,29 @@ public class WriteOptionsBuilder {
             boolean skipTrace = fieldType.isPrimitive()
                     || (Modifier.isFinal(fieldType.getModifiers()) && options.isNonReferenceableClass(fieldType));
 
-            // Pre-compute per-field null-skip from @IoInclude(NON_NULL) / @JsonInclude(NON_NULL)
+            // Pre-compute annotation metadata for this field
             AnnotationResolver.ClassAnnotationMetadata annMeta = AnnotationResolver.getMetadata(declaringClass);
-            boolean nullSkip = annMeta.isNonNull(accessor.getActualFieldName());
+            String actualFieldName = accessor.getActualFieldName();
+            boolean nullSkip = annMeta.isNonNull(actualFieldName);
 
             // Pre-compute per-field format pattern from @IoFormat / @JsonFormat
-            String formatPat = annMeta.getFieldFormatPattern(accessor.getActualFieldName());
+            String formatPat = annMeta.getFieldFormatPattern(actualFieldName);
+
+            // Pre-compute effective declared type from @IoDeserialize(as=...) / @IoTypeInfo
+            // Priority: @IoDeserialize > @IoTypeInfo > Field.getType()
+            Class<?> effectiveType = fieldType;
+            Class<?> deserOverride = annMeta.getFieldDeserializeOverride(actualFieldName);
+            if (deserOverride != null) {
+                effectiveType = deserOverride;
+            } else {
+                Class<?> typeInfoDefault = annMeta.getFieldTypeInfoDefault(actualFieldName);
+                if (typeInfoDefault != null) {
+                    effectiveType = typeInfoDefault;
+                }
+            }
 
             return new WriteFieldPlan(accessor, fieldName, keyLiteral, fieldType, elementType, keyType,
-                    enumSkip, applyContainerTypes, skipTrace, nullSkip, formatPat);
+                    enumSkip, applyContainerTypes, skipTrace, nullSkip, formatPat, effectiveType);
         }
 
         private static String buildKeyLiteral(String fieldName, WriteOptions options) {
@@ -2582,6 +2599,10 @@ public class WriteOptionsBuilder {
 
         String formatPattern() {
             return formatPattern;
+        }
+
+        Class<?> effectiveDeclaredType() {
+            return effectiveDeclaredType;
         }
     }
 }
