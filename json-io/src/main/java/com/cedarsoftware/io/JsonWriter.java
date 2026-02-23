@@ -2422,6 +2422,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             first = writeField(obj, first, plan);
         }
 
+        // @IoAnyGetter — write extra fields from annotated method
+        Method anyGetter = AnnotationResolver.getMetadata(obj.getClass()).getAnyGetterMethod();
+        if (anyGetter != null) {
+            first = writeAnyGetterFields(obj, anyGetter, first);
+        }
+
         if (!bodyOnly) {
             tabOut();
             output.write('}');
@@ -2506,6 +2512,43 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             fieldFormatPattern = savedFormatPattern;
         }
         return false;
+    }
+
+    /**
+     * Write extra fields from an @IoAnyGetter method. The method returns a Map&lt;String, Object&gt;
+     * whose entries are written as additional JSON fields after the regular declared fields.
+     */
+    @SuppressWarnings("unchecked")
+    private boolean writeAnyGetterFields(Object obj, Method anyGetter, boolean first) throws IOException {
+        Map<String, Object> extras;
+        try {
+            extras = (Map<String, Object>) anyGetter.invoke(obj);
+        } catch (Exception e) {
+            throw new JsonIoException("Error invoking @IoAnyGetter method: " + anyGetter.getName(), e);
+        }
+        if (extras == null || extras.isEmpty()) {
+            return first;
+        }
+        final Writer output = this.out;
+        for (Map.Entry<String, Object> entry : extras.entrySet()) {
+            Object value = entry.getValue();
+            if ((skipNullFields) && value == null) {
+                continue;
+            }
+            if (!first) {
+                output.write(',');
+                newLine();
+            }
+            writeBasicString(output, entry.getKey());
+            output.write(':');
+            if (value == null) {
+                output.write("null");
+            } else {
+                writeImpl(value, isForceType(value.getClass(), Object.class));
+            }
+            first = false;
+        }
+        return first;
     }
 
     private boolean isForceType(Class<?> objectClass, Class<?> declaredType) {

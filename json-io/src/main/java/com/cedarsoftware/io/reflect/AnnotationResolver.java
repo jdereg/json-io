@@ -18,6 +18,8 @@ import com.cedarsoftware.io.ClassFactory;
 import com.cedarsoftware.io.JsonClassReader;
 import com.cedarsoftware.io.JsonClassWriter;
 import com.cedarsoftware.io.annotation.IoAlias;
+import com.cedarsoftware.io.annotation.IoAnyGetter;
+import com.cedarsoftware.io.annotation.IoAnySetter;
 import com.cedarsoftware.io.annotation.IoClassFactory;
 import com.cedarsoftware.io.annotation.IoCustomReader;
 import com.cedarsoftware.io.annotation.IoCustomWriter;
@@ -118,6 +120,8 @@ public class AnnotationResolver {
     private static final Class<? extends Annotation> EXT_TYPE_NAME;
     @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_FORMAT;
+    private static final Class<? extends Annotation> EXT_ANY_SETTER;
+    private static final Class<? extends Annotation> EXT_ANY_GETTER;
 
     private static final Method EXT_GETTER_VALUE;
     private static final Method EXT_SETTER_VALUE;
@@ -149,6 +153,8 @@ public class AnnotationResolver {
         Class<? extends Annotation> extSetter = null;
         Class<? extends Annotation> extTypeName = null;
         Class<? extends Annotation> extFormat = null;
+        Class<? extends Annotation> extAnySetter = null;
+        Class<? extends Annotation> extAnyGetter = null;
         Method extGetterValue = null;
         Method extSetterValue = null;
         Method extTypeNameValue = null;
@@ -178,6 +184,8 @@ public class AnnotationResolver {
             extSetter = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonSetter");
             extTypeName = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonTypeName");
             extFormat = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonFormat");
+            extAnySetter = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonAnySetter");
+            extAnyGetter = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonAnyGetter");
 
             extGetterValue = extGetter.getMethod("value");
             extSetterValue = extSetter.getMethod("value");
@@ -221,6 +229,8 @@ public class AnnotationResolver {
         EXT_SETTER = extSetter;
         EXT_TYPE_NAME = extTypeName;
         EXT_FORMAT = extFormat;
+        EXT_ANY_SETTER = extAnySetter;
+        EXT_ANY_GETTER = extAnyGetter;
         EXT_GETTER_VALUE = extGetterValue;
         EXT_SETTER_VALUE = extSetterValue;
         EXT_TYPE_NAME_VALUE = extTypeNameValue;
@@ -290,6 +300,8 @@ public class AnnotationResolver {
             false,
             false,
             false,
+            null,
+            null,
             null,
             null,
             null,
@@ -573,6 +585,11 @@ public class AnnotationResolver {
             setterMethods = getterSetterMaps[1];
         }
 
+        // 7. Scan for @IoAnySetter/@IoAnyGetter on instance methods
+        Method[] anyMethods = scanAnySetterGetterMethods(clazz);
+        Method anySetterMethod = anyMethods[0];
+        Method anyGetterMethod = anyMethods[1];
+
         if (renames.isEmpty() && ignored.isEmpty() && aliases.isEmpty()
                 && order == null && nonNullFields.isEmpty() && creator == null
                 && valueMethod == null && includedFields == null && !ignoredType
@@ -580,7 +597,8 @@ public class AnnotationResolver {
                 && classFactory == null && getterMethods == null && setterMethods == null
                 && !nonReferenceable && !notCustomRead && !notCustomWrite
                 && customWriter == null && customReader == null
-                && typeName == null && fieldFormatPatterns == null) {
+                && typeName == null && fieldFormatPatterns == null
+                && anySetterMethod == null && anyGetterMethod == null) {
             return EMPTY;
         }
 
@@ -605,7 +623,9 @@ public class AnnotationResolver {
                 customWriter,
                 customReader,
                 typeName,
-                fieldFormatPatterns != null ? Collections.unmodifiableMap(fieldFormatPatterns) : null);
+                fieldFormatPatterns != null ? Collections.unmodifiableMap(fieldFormatPatterns) : null,
+                anySetterMethod,
+                anyGetterMethod);
     }
 
     // ---- Class-level scanners ----
@@ -969,6 +989,64 @@ public class AnnotationResolver {
         return new Map[]{getterMethods, setterMethods};
     }
 
+    // ---- @IoAnySetter / @IoAnyGetter scanner ----
+
+    /**
+     * Scan instance methods for @IoAnySetter and @IoAnyGetter (and Jackson @JsonAnySetter/@JsonAnyGetter fallback).
+     * Returns a two-element array: [0] = anySetterMethod, [1] = anyGetterMethod.
+     * Either element may be null if no annotation is found.
+     */
+    private static Method[] scanAnySetterGetterMethods(Class<?> clazz) {
+        Method anySetter = null;
+        Method anyGetter = null;
+
+        Class<?> curr = clazz;
+        while (curr != null && curr != Object.class) {
+            Method[] methods;
+            try {
+                methods = curr.getDeclaredMethods();
+            } catch (SecurityException e) {
+                curr = curr.getSuperclass();
+                continue;
+            }
+
+            for (Method method : methods) {
+                if (Modifier.isStatic(method.getModifiers())) {
+                    continue;
+                }
+
+                // --- @IoAnySetter / @JsonAnySetter ---
+                if (anySetter == null) {
+                    if (method.isAnnotationPresent(IoAnySetter.class)
+                            && method.getParameterCount() == 2) {
+                        anySetter = ReflectionUtils.getMethod(curr, method.getName(), method.getParameterTypes());
+                    } else if (externalAvailable && EXT_ANY_SETTER != null
+                            && method.isAnnotationPresent(EXT_ANY_SETTER)
+                            && method.getParameterCount() == 2) {
+                        anySetter = ReflectionUtils.getMethod(curr, method.getName(), method.getParameterTypes());
+                    }
+                }
+
+                // --- @IoAnyGetter / @JsonAnyGetter ---
+                if (anyGetter == null) {
+                    if (method.isAnnotationPresent(IoAnyGetter.class)
+                            && method.getParameterCount() == 0
+                            && Map.class.isAssignableFrom(method.getReturnType())) {
+                        anyGetter = ReflectionUtils.getMethod(curr, method.getName());
+                    } else if (externalAvailable && EXT_ANY_GETTER != null
+                            && method.isAnnotationPresent(EXT_ANY_GETTER)
+                            && method.getParameterCount() == 0
+                            && Map.class.isAssignableFrom(method.getReturnType())) {
+                        anyGetter = ReflectionUtils.getMethod(curr, method.getName());
+                    }
+                }
+            }
+            curr = curr.getSuperclass();
+        }
+
+        return new Method[]{anySetter, anyGetter};
+    }
+
     // ---- Parameter-level helpers ----
 
     /**
@@ -1098,6 +1176,8 @@ public class AnnotationResolver {
         private final Class<? extends JsonClassReader> customReader;
         private final String typeName;
         private final Map<String, String> fieldFormatPatterns;
+        private final Method anySetterMethod;
+        private final Method anyGetterMethod;
 
         ClassAnnotationMetadata(Map<String, String> renamedFields,
                                 Set<String> ignoredFields,
@@ -1119,7 +1199,9 @@ public class AnnotationResolver {
                                 Class<? extends JsonClassWriter> customWriter,
                                 Class<? extends JsonClassReader> customReader,
                                 String typeName,
-                                Map<String, String> fieldFormatPatterns) {
+                                Map<String, String> fieldFormatPatterns,
+                                Method anySetterMethod,
+                                Method anyGetterMethod) {
             this.renamedFields = renamedFields;
             this.ignoredFields = ignoredFields;
             this.aliasToFieldName = aliasToFieldName;
@@ -1141,6 +1223,8 @@ public class AnnotationResolver {
             this.customReader = customReader;
             this.typeName = typeName;
             this.fieldFormatPatterns = fieldFormatPatterns;
+            this.anySetterMethod = anySetterMethod;
+            this.anyGetterMethod = anyGetterMethod;
         }
 
         /**
@@ -1323,6 +1407,22 @@ public class AnnotationResolver {
         }
 
         /**
+         * Get the @IoAnySetter method for handling unrecognized fields during deserialization, or null if not specified.
+         * @return the annotated Method, or null
+         */
+        public Method getAnySetterMethod() {
+            return anySetterMethod;
+        }
+
+        /**
+         * Get the @IoAnyGetter method for providing extra fields during serialization, or null if not specified.
+         * @return the annotated Method, or null
+         */
+        public Method getAnyGetterMethod() {
+            return anyGetterMethod;
+        }
+
+        /**
          * @return true if this metadata has no annotation information (empty/default)
          */
         public boolean isEmpty() {
@@ -1335,7 +1435,8 @@ public class AnnotationResolver {
                     && getterMethods == null && setterMethods == null
                     && !nonReferenceable && !notCustomRead && !notCustomWrite
                     && customWriter == null && customReader == null
-                    && typeName == null && fieldFormatPatterns == null;
+                    && typeName == null && fieldFormatPatterns == null
+                    && anySetterMethod == null && anyGetterMethod == null;
         }
     }
 }

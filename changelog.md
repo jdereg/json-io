@@ -2,7 +2,7 @@
 
 #### 4.95.0 (Unreleased)
 * **PERFORMANCE**: `Accessor.retrieve()` now uses sticky fallback flags for lambda/VarHandle/MethodHandle paths; once an optimized path fails, it is bypassed on subsequent calls instead of repeatedly throwing/falling back.
-* **FEATURE**: `AnnotationResolver` — annotation-based serialization control. json-io now supports 23 annotations in `com.cedarsoftware.io.annotation`:
+* **FEATURE**: `AnnotationResolver` — annotation-based serialization control. json-io now supports 25 annotations in `com.cedarsoftware.io.annotation`:
   * `@IoProperty("name")` — rename a field in JSON output and accept the renamed key on read.
   * `@IoIgnore` — exclude a field from serialization and deserialization.
   * `@IoIgnoreProperties({"a","b"})` — class-level field exclusion by name.
@@ -25,11 +25,13 @@
   * `@IoCustomWriter(MyWriter.class)` — class-level annotation specifying a `JsonClassWriter` implementation for custom serialization. Writer instances are cached and shared. Programmatic `addCustomWrittenClass()` takes priority.
   * `@IoCustomReader(MyReader.class)` — class-level annotation specifying a `JsonClassReader` implementation for custom deserialization. Reader instances are cached and shared. Programmatic `addCustomReaderClass()` takes priority.
   * `@IoTypeName("ShortName")` — class-level annotation assigning a short alias for `@type` in JSON. Equivalent of `aliases.txt` and `aliasTypeName()`. On write, emits the alias instead of the FQCN; on read, resolves the alias back to the class. Programmatic `aliasTypeName()` takes priority.
+  * `@IoAnySetter` — method-level annotation marking a 2-arg instance method `(String key, Object value)` as the receiver for unrecognized JSON fields during deserialization. Takes priority over the global `MissingFieldHandler`. Equivalent to Jackson's `@JsonAnySetter`.
+  * `@IoAnyGetter` — method-level annotation marking a no-arg instance method returning `Map<String, Object>` as the source of extra fields during serialization. Extra fields are written after regular declared fields. Equivalent to Jackson's `@JsonAnyGetter`.
   * `@IoFormat("pattern")` — field-level annotation specifying a format pattern for date/time, numeric, or any type. Three pattern engines are auto-detected: (1) **C-style `String.format()`** patterns containing `%` (e.g., `"%,d"`, `"%.2f"`, `"%05d"`, `"%x"`, `"%10s"`) — works on any type; (2) **`DecimalFormat`** patterns (e.g., `"#,###"`, `"$#,##0.00"`, `"0.00"`) — for numeric types; (3) **`DateTimeFormatter`/`SimpleDateFormat`** patterns (e.g., `"dd/MM/yyyy"`, `"yyyy-MM-dd HH:mm"`) — for date/time types. Formatted values are written as JSON strings and parsed back on read. Supports `String`, `LocalDate`, `LocalTime`, `LocalDateTime`, `ZonedDateTime`, `OffsetDateTime`, `OffsetTime`, `Instant`, `java.util.Date`, `int`, `long`, `double`, `float`, `short`, `byte` (and wrappers), `BigDecimal`, `BigInteger`, `AtomicInteger`, `AtomicLong`.
   Annotations are scanned once per class and cached in a `ClassValueMap`. Programmatic API always overrides annotations.
 * **FEATURE**: `AnnotationResolver` — Jackson annotation compatibility. json-io reflectively honors Jackson annotations when the Jackson JAR is on the classpath — with zero compile-time dependency. json-io annotations take priority over Jackson annotations on the same element. Supported Jackson annotations:
   * `@JsonProperty`, `@JsonIgnore`, `@JsonIgnoreProperties`, `@JsonAlias`, `@JsonPropertyOrder`, `@JsonInclude(Include.NON_NULL)` (jackson-annotations)
-  * `@JsonCreator`, `@JsonValue`, `@JsonIgnoreType`, `@JsonTypeInfo(defaultImpl=...)`, `@JsonIncludeProperties`, `@JsonGetter`, `@JsonSetter`, `@JsonTypeName`, `@JsonFormat(pattern="...")` (jackson-annotations)
+  * `@JsonCreator`, `@JsonValue`, `@JsonIgnoreType`, `@JsonTypeInfo(defaultImpl=...)`, `@JsonIncludeProperties`, `@JsonGetter`, `@JsonSetter`, `@JsonTypeName`, `@JsonFormat(pattern="...")`, `@JsonAnySetter`, `@JsonAnyGetter` (jackson-annotations)
   * `@JsonNaming(SnakeCaseStrategy.class)`, `@JsonDeserialize(as=...)` (jackson-databind)
 * **PERFORMANCE**: `Injector` numeric kind and primitive-wrapper lookups now use `ClassValueMap` O(1) dispatch instead of sequential `class ==` chains.
 * **PERFORMANCE**: `Injector.inject()` now applies assignability-based pre-conversion before reflective set/invoke, reducing exception-driven control flow in hot assignment paths while preserving fallback conversion behavior.

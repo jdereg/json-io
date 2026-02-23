@@ -97,7 +97,7 @@ json-io's TOON implementation offers comprehensive Java type coverage while JToo
 
 ### Annotation Support
 
-json-io provides 23 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization:
+json-io provides 25 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization:
 
 | Annotation | Target | Purpose |
 |---|---|---|
@@ -123,9 +123,11 @@ json-io provides 23 annotations in the `com.cedarsoftware.io.annotation` package
 | `@IoCustomWriter(MyWriter.class)` | Class | Specify custom `JsonClassWriter` for serialization |
 | `@IoCustomReader(MyReader.class)` | Class | Specify custom `JsonClassReader` for deserialization |
 | `@IoTypeName("ShortName")` | Class | Alias for `@type` in JSON (replaces FQCN) |
+| `@IoAnySetter` | Method | Receive unrecognized JSON fields during deserialization |
+| `@IoAnyGetter` | Method | Provide extra fields during serialization |
 | `@IoFormat("pattern")` | Field | Per-field format pattern (`String.format`, `DecimalFormat`, `DateTimeFormatter`, or `SimpleDateFormat`) |
 
-Additionally, json-io **reflectively honors Jackson annotations** when they are on the classpath — with zero compile-time dependency on Jackson. Supported: `@JsonProperty`, `@JsonIgnore`, `@JsonIgnoreProperties`, `@JsonAlias`, `@JsonPropertyOrder`, `@JsonInclude`, `@JsonCreator`, `@JsonValue`, `@JsonIgnoreType`, `@JsonTypeInfo`, `@JsonIncludeProperties`, `@JsonNaming`, `@JsonDeserialize`, `@JsonGetter`, `@JsonSetter`, `@JsonTypeName`, `@JsonFormat`.
+Additionally, json-io **reflectively honors Jackson annotations** when they are on the classpath — with zero compile-time dependency on Jackson. Supported: `@JsonProperty`, `@JsonIgnore`, `@JsonIgnoreProperties`, `@JsonAlias`, `@JsonPropertyOrder`, `@JsonInclude`, `@JsonCreator`, `@JsonValue`, `@JsonIgnoreType`, `@JsonTypeInfo`, `@JsonIncludeProperties`, `@JsonNaming`, `@JsonDeserialize`, `@JsonGetter`, `@JsonSetter`, `@JsonTypeName`, `@JsonFormat`, `@JsonAnySetter`, `@JsonAnyGetter`.
 
 **Precedence:** Programmatic API > json-io annotations > Jackson annotations.
 

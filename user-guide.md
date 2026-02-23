@@ -650,7 +650,7 @@ cyclic references are typically not needed.
 
 ## Annotations
 
-json-io provides 23 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization. In addition, json-io **reflectively honors Jackson annotations** when the Jackson JAR is on the classpath — with zero compile-time dependency on Jackson.
+json-io provides 25 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization. In addition, json-io **reflectively honors Jackson annotations** when the Jackson JAR is on the classpath — with zero compile-time dependency on Jackson.
 
 ### Annotation Precedence
 
@@ -1130,6 +1130,70 @@ public class Label {
 ```
 
 All formatted values are written as **quoted JSON strings** and parsed back correctly on read. Round-trip precision depends on the pattern — for example, `"%.2f"` on `3.14159` writes `"3.14"` and reads back as `3.14`.
+
+#### `@IoAnySetter` / `@IoAnyGetter` — Extra Field Handling
+
+These annotations allow a class to absorb unrecognized JSON fields during deserialization and emit extra fields during serialization — without requiring a global `MissingFieldHandler`.
+
+**`@IoAnySetter`** marks a method that receives each unrecognized field name and value:
+
+```java
+public class FlexibleConfig {
+    private String name;
+    private Map<String, Object> extras = new LinkedHashMap<>();
+
+    @IoAnySetter
+    public void handleUnknown(String key, Object value) {
+        extras.put(key, value);
+    }
+}
+```
+
+**Contract:** Non-static instance method with exactly 2 parameters `(String fieldName, Object value)`.
+
+**`@IoAnyGetter`** marks a method that returns a `Map<String, Object>` of extra fields to include during serialization:
+
+```java
+public class FlexibleConfig {
+    private String name;
+    private Map<String, Object> extras = new LinkedHashMap<>();
+
+    @IoAnyGetter
+    public Map<String, Object> getExtras() {
+        return extras;
+    }
+}
+```
+
+**Contract:** Non-static, no-arg instance method returning `Map` (or any `Map` subtype).
+
+**Typical usage** — combine both annotations for round-trip support:
+
+```java
+public class FlexibleConfig {
+    private String name;
+    private int version;
+    private Map<String, Object> extras = new LinkedHashMap<>();
+
+    @IoAnySetter
+    public void handleUnknown(String key, Object value) {
+        extras.put(key, value);
+    }
+
+    @IoAnyGetter
+    public Map<String, Object> getExtras() {
+        return extras;
+    }
+}
+```
+
+**Behavior notes:**
+- Extra fields from `@IoAnyGetter` are written **after** regular declared fields
+- `@IoAnySetter` takes **priority** over the global `MissingFieldHandler` configured via `ReadOptionsBuilder`
+- Null values in the `@IoAnyGetter` map respect the `skipNullFields` setting
+- If the `@IoAnyGetter` method returns `null` or an empty map, no extra fields are written
+
+Equivalent to Jackson's `@JsonAnySetter` / `@JsonAnyGetter`.
 
 ### Combining Annotations
 

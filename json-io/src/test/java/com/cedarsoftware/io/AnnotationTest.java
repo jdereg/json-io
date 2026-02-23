@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.Map;
 
 import com.cedarsoftware.io.annotation.IoAlias;
+import com.cedarsoftware.io.annotation.IoAnyGetter;
+import com.cedarsoftware.io.annotation.IoAnySetter;
 import com.cedarsoftware.io.annotation.IoClassFactory;
 import com.cedarsoftware.io.annotation.IoCustomReader;
 import com.cedarsoftware.io.annotation.IoCustomWriter;
@@ -3333,5 +3335,195 @@ class AnnotationTest {
         assertEquals(1234567, restored.cStyleInt);
         assertEquals(9876.54, restored.decimalFormatDouble, 0.01);
         assertEquals(LocalDate.of(2026, 2, 23), restored.dateTimeFormatDate);
+    }
+
+    // ===================== @IoAnySetter / @IoAnyGetter Test Models =====================
+
+    static class FlexibleConfig {
+        String name;
+        int version;
+        private Map<String, Object> extras = new LinkedHashMap<>();
+
+        FlexibleConfig() {}
+        FlexibleConfig(String name, int version) {
+            this.name = name;
+            this.version = version;
+        }
+
+        @IoAnySetter
+        public void handleUnknown(String key, Object value) {
+            extras.put(key, value);
+        }
+
+        @IoAnyGetter
+        public Map<String, Object> getExtras() {
+            return extras;
+        }
+    }
+
+    static class AnyGetterOnlyModel {
+        String id;
+        private Map<String, Object> extra = new LinkedHashMap<>();
+
+        AnyGetterOnlyModel() {}
+        AnyGetterOnlyModel(String id) {
+            this.id = id;
+        }
+
+        @IoAnyGetter
+        public Map<String, Object> getExtra() {
+            return extra;
+        }
+    }
+
+    static class AnySetterOnlyModel {
+        String id;
+        Map<String, Object> captured = new LinkedHashMap<>();
+
+        AnySetterOnlyModel() {}
+
+        @IoAnySetter
+        public void set(String key, Object value) {
+            captured.put(key, value);
+        }
+    }
+
+    // ===================== @IoAnySetter / @IoAnyGetter Tests =====================
+
+    @Test
+    void testIoAnyGetterWrite() {
+        AnyGetterOnlyModel model = new AnyGetterOnlyModel("abc");
+        model.extra.put("color", "red");
+        model.extra.put("size", 42L);
+
+        WriteOptions wo = new WriteOptionsBuilder().shortMetaKeys(true).build();
+        String json = JsonIo.toJson(model, wo);
+        assertTrue(json.contains("\"color\":\"red\""), "Extra field 'color' should be in JSON: " + json);
+        assertTrue(json.contains("\"size\":42"), "Extra field 'size' should be in JSON: " + json);
+        assertTrue(json.contains("\"id\":\"abc\""), "Regular field 'id' should be in JSON: " + json);
+    }
+
+    @Test
+    void testIoAnySetterRead() {
+        // JSON with fields that don't exist on AnySetterOnlyModel (only 'id' and 'captured' exist)
+        String json = "{\"@type\":\"com.cedarsoftware.io.AnnotationTest$AnySetterOnlyModel\",\"id\":\"xyz\",\"color\":\"blue\",\"weight\":99}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        AnySetterOnlyModel model = JsonIo.toJava(json, ro).asClass(AnySetterOnlyModel.class);
+        assertEquals("xyz", model.id);
+        assertEquals("blue", model.captured.get("color"));
+        assertEquals(99L, model.captured.get("weight"));
+    }
+
+    @Test
+    void testIoAnySetterAndAnyGetterRoundTrip() {
+        FlexibleConfig original = new FlexibleConfig("myApp", 3);
+        original.extras.put("debug", true);
+        original.extras.put("timeout", 30L);
+        original.extras.put("label", "production");
+
+        WriteOptions wo = new WriteOptionsBuilder().shortMetaKeys(true).build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, wo);
+
+        // Verify extras are written
+        assertTrue(json.contains("\"debug\":true"), "Extra 'debug' should be in JSON: " + json);
+        assertTrue(json.contains("\"timeout\":30"), "Extra 'timeout' should be in JSON: " + json);
+        assertTrue(json.contains("\"label\":\"production\""), "Extra 'label' should be in JSON: " + json);
+
+        // Read back — unknown extras should be routed to @IoAnySetter
+        FlexibleConfig restored = JsonIo.toJava(json, ro).asClass(FlexibleConfig.class);
+        assertEquals("myApp", restored.name);
+        assertEquals(3, restored.version);
+        assertEquals(true, restored.extras.get("debug"));
+        assertEquals(30L, restored.extras.get("timeout"));
+        assertEquals("production", restored.extras.get("label"));
+    }
+
+    @Test
+    void testIoAnyGetterEmptyMap() {
+        AnyGetterOnlyModel model = new AnyGetterOnlyModel("empty");
+        // extra map is empty
+
+        WriteOptions wo = new WriteOptionsBuilder().shortMetaKeys(true).build();
+        String json = JsonIo.toJson(model, wo);
+        assertTrue(json.contains("\"id\":\"empty\""), "Regular field should be present: " + json);
+        // Should not contain any extra fields beyond 'id' and possibly 'extra'
+    }
+
+    @Test
+    void testIoAnyGetterNullMap() {
+        AnyGetterOnlyModel model = new AnyGetterOnlyModel("nullmap");
+        model.extra = null;  // null map
+
+        WriteOptions wo = new WriteOptionsBuilder().shortMetaKeys(true).build();
+        String json = JsonIo.toJson(model, wo);
+        // Should not throw, should produce valid JSON
+        assertTrue(json.contains("\"id\":\"nullmap\""), "Regular field should be present: " + json);
+    }
+
+    @Test
+    void testIoAnySetterWithNoUnknownFields() {
+        // JSON with only known fields — @IoAnySetter should not be called
+        String json = "{\"@type\":\"com.cedarsoftware.io.AnnotationTest$AnySetterOnlyModel\",\"id\":\"known\"}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        AnySetterOnlyModel model = JsonIo.toJava(json, ro).asClass(AnySetterOnlyModel.class);
+        assertEquals("known", model.id);
+        assertTrue(model.captured.isEmpty(), "No unknown fields, captured should be empty");
+    }
+
+    @Test
+    void testIoAnySetterPriorityOverMissingFieldHandler() {
+        // Both @IoAnySetter and MissingFieldHandler configured — annotation should win
+        final Map<String, Object> handlerCapture = new LinkedHashMap<>();
+        MissingFieldHandler handler = (obj, fieldName, value) -> handlerCapture.put(fieldName, value);
+
+        String json = "{\"@type\":\"com.cedarsoftware.io.AnnotationTest$AnySetterOnlyModel\",\"id\":\"test\",\"extra1\":\"val1\"}";
+        ReadOptions ro = new ReadOptionsBuilder().missingFieldHandler(handler).build();
+
+        AnySetterOnlyModel model = JsonIo.toJava(json, ro).asClass(AnySetterOnlyModel.class);
+        assertEquals("test", model.id);
+        // @IoAnySetter should have captured it, not the MissingFieldHandler
+        assertEquals("val1", model.captured.get("extra1"));
+        assertTrue(handlerCapture.isEmpty(), "MissingFieldHandler should NOT have been called when @IoAnySetter is present");
+    }
+
+    @Test
+    void testIoAnyGetterSkipNullFields() {
+        AnyGetterOnlyModel model = new AnyGetterOnlyModel("skipnull");
+        model.extra.put("present", "yes");
+        model.extra.put("absent", null);
+
+        WriteOptions wo = new WriteOptionsBuilder().shortMetaKeys(true).skipNullFields(true).build();
+        String json = JsonIo.toJson(model, wo);
+        assertTrue(json.contains("\"present\":\"yes\""), "Non-null extra should be present: " + json);
+        assertFalse(json.contains("\"absent\""), "Null extra should be skipped with skipNullFields: " + json);
+    }
+
+    @Test
+    void testIoAnyGetterAndRegularFieldsCoexist() {
+        FlexibleConfig model = new FlexibleConfig("app", 1);
+        model.extras.put("custom1", "abc");
+        model.extras.put("custom2", 42L);
+
+        WriteOptions wo = new WriteOptionsBuilder().shortMetaKeys(true).build();
+        String json = JsonIo.toJson(model, wo);
+
+        // Both regular and extra fields
+        assertTrue(json.contains("\"name\":\"app\""), "Regular field 'name': " + json);
+        assertTrue(json.contains("\"version\":1"), "Regular field 'version': " + json);
+        assertTrue(json.contains("\"custom1\":\"abc\""), "Extra field 'custom1': " + json);
+        assertTrue(json.contains("\"custom2\":42"), "Extra field 'custom2': " + json);
+    }
+
+    @Test
+    void testIoAnySetterMetadataApi() {
+        // Verify annotation metadata is correctly scanned
+        assertNotNull(com.cedarsoftware.io.reflect.AnnotationResolver.getMetadata(FlexibleConfig.class).getAnySetterMethod());
+        assertNotNull(com.cedarsoftware.io.reflect.AnnotationResolver.getMetadata(FlexibleConfig.class).getAnyGetterMethod());
+        assertNull(com.cedarsoftware.io.reflect.AnnotationResolver.getMetadata(String.class).getAnySetterMethod());
+        assertNull(com.cedarsoftware.io.reflect.AnnotationResolver.getMetadata(String.class).getAnyGetterMethod());
     }
 }

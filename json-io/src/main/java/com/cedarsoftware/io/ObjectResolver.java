@@ -1,6 +1,7 @@
 package com.cedarsoftware.io;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
@@ -304,6 +305,8 @@ public class ObjectResolver extends Resolver
 
         final Object javaMate = jsonObj.getTarget();
         final ReadOptionsBuilder.InjectorPlan injectorPlan = ReadOptionsBuilder.getInjectorPlan(readOptions, javaMate.getClass());
+        // Cache @IoAnySetter lookup (O(1) via ClassValueMap) — hoisted outside loop
+        final Method anySetter = AnnotationResolver.getMetadata(javaMate.getClass()).getAnySetterMethod();
 
         // Enhanced for-loop is more efficient than iterator for EntrySet
         // Uses cached missingFieldHandler from parent Resolver for performance
@@ -313,6 +316,8 @@ public class ObjectResolver extends Resolver
             Object rhs = entry.getValue();
             if (injector != null) {
                 assignField(jsonObj, injector, rhs);
+            } else if (anySetter != null) {
+                invokeAnySetter(javaMate, anySetter, key, rhs);
             } else if (missingFieldHandler != null) {
                 handleMissingField(jsonObj, rhs, key);
             }
@@ -1304,6 +1309,32 @@ public class ObjectResolver extends Resolver
      * Walks the class hierarchy to find the format pattern for the field name.
      * @return parsed object if pattern found and parsing succeeded, null otherwise
      */
+    /**
+     * Invoke the @IoAnySetter method on the target object for an unrecognized JSON field.
+     * Simple values (String, Number, Boolean, null) are passed as-is.
+     * JsonObject values that have a resolved target are unwrapped to the target.
+     */
+    private void invokeAnySetter(Object target, Method anySetter, String fieldName, Object rhs) {
+        try {
+            Object value;
+            if (rhs == null || rhs instanceof String || rhs instanceof Number || rhs instanceof Boolean) {
+                value = rhs;
+            } else if (rhs instanceof JsonObject) {
+                JsonObject jObj = (JsonObject) rhs;
+                if (jObj.getTarget() != null) {
+                    value = jObj.getTarget();
+                } else {
+                    value = rhs;
+                }
+            } else {
+                value = rhs;
+            }
+            anySetter.invoke(target, fieldName, value);
+        } catch (Exception e) {
+            // If invocation fails, silently skip (same behavior as missingFieldHandler errors)
+        }
+    }
+
     private static Object parseWithFieldFormat(Class<?> targetClass, String fieldName, String value, Class<?> targetType) {
         // Walk the class hierarchy to find the field's format pattern
         String pattern = null;
