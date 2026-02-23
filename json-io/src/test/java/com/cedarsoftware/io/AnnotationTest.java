@@ -2,6 +2,7 @@ package com.cedarsoftware.io;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -3025,5 +3026,146 @@ class AnnotationTest {
         assertTrue(json.contains("25/12/2025"), "Annotated field uses custom format: " + json);
         // created (unannotated): "2025-12-31"
         assertTrue(json.contains("2025-12-31"), "Unannotated field uses ISO default: " + json);
+    }
+
+    // ===================== @IoFormat Numeric Test Models =====================
+
+    static class FormatIntModel {
+        @IoFormat("#,###")
+        int quantity;
+        int plain;  // no annotation
+
+        FormatIntModel() {}
+        FormatIntModel(int quantity, int plain) {
+            this.quantity = quantity;
+            this.plain = plain;
+        }
+    }
+
+    static class FormatDoubleModel {
+        @IoFormat("0.00")
+        double price;
+
+        FormatDoubleModel() {}
+        FormatDoubleModel(double price) {
+            this.price = price;
+        }
+    }
+
+    static class FormatBigDecimalModel {
+        @IoFormat("$#,##0.00")
+        BigDecimal amount;
+
+        FormatBigDecimalModel() {}
+        FormatBigDecimalModel(BigDecimal amount) {
+            this.amount = amount;
+        }
+    }
+
+    static class FormatLongModel {
+        @IoFormat("#,###")
+        long population;
+
+        FormatLongModel() {}
+        FormatLongModel(long population) {
+            this.population = population;
+        }
+    }
+
+    static class MixedNumericAndDateModel {
+        @IoFormat("#,###")
+        int count;
+        @IoFormat("dd/MM/yyyy")
+        LocalDate when;
+
+        MixedNumericAndDateModel() {}
+        MixedNumericAndDateModel(int count, LocalDate when) {
+            this.count = count;
+            this.when = when;
+        }
+    }
+
+    // ===================== @IoFormat Numeric Tests =====================
+
+    @Test
+    void testIoFormatWriteIntWithCommaFormat() {
+        FormatIntModel model = new FormatIntModel(1234567, 42);
+        String json = JsonIo.toJson(model, new WriteOptionsBuilder().shortMetaKeys(true).build());
+
+        // quantity should be formatted as "1,234,567" (quoted string, not bare number)
+        assertTrue(json.contains("\"1,234,567\""), "quantity should use comma format: " + json);
+        // plain should be bare unquoted number
+        assertTrue(json.contains("\"plain\":42"), "plain should be unquoted number: " + json);
+    }
+
+    @Test
+    void testIoFormatWriteDoubleWithFixedDecimals() {
+        FormatDoubleModel model = new FormatDoubleModel(3.14159);
+        String json = JsonIo.toJson(model, new WriteOptionsBuilder().shortMetaKeys(true).build());
+
+        // price should be formatted as "3.14" (2 decimal places)
+        assertTrue(json.contains("\"3.14\""), "price should have 2 decimal places: " + json);
+    }
+
+    @Test
+    void testIoFormatWriteBigDecimalWithCurrency() {
+        FormatBigDecimalModel model = new FormatBigDecimalModel(new BigDecimal("1234.56"));
+        String json = JsonIo.toJson(model, new WriteOptionsBuilder().shortMetaKeys(true).build());
+
+        // amount should be formatted as "$1,234.56"
+        assertTrue(json.contains("$1,234.56"), "BigDecimal should use currency format: " + json);
+    }
+
+    @Test
+    void testIoFormatWriteLongWithCommaFormat() {
+        FormatLongModel model = new FormatLongModel(8000000L);
+        String json = JsonIo.toJson(model, new WriteOptionsBuilder().shortMetaKeys(true).build());
+
+        // population should be formatted as "8,000,000"
+        assertTrue(json.contains("\"8,000,000\""), "long should use comma format: " + json);
+    }
+
+    @Test
+    void testIoFormatRoundTripInt() {
+        FormatIntModel original = new FormatIntModel(1234567, 42);
+        WriteOptions wo = new WriteOptionsBuilder().shortMetaKeys(true).build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, wo);
+        assertTrue(json.contains("\"1,234,567\""), "Should contain formatted int: " + json);
+
+        FormatIntModel restored = JsonIo.toJava(json, ro).asClass(FormatIntModel.class);
+        assertEquals(original.quantity, restored.quantity, "quantity should round-trip correctly");
+        assertEquals(original.plain, restored.plain, "plain should round-trip correctly");
+    }
+
+    @Test
+    void testIoFormatRoundTripBigDecimal() {
+        FormatBigDecimalModel original = new FormatBigDecimalModel(new BigDecimal("1234.56"));
+        WriteOptions wo = new WriteOptionsBuilder().shortMetaKeys(true).build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, wo);
+        assertTrue(json.contains("$1,234.56"), "Should contain currency-formatted BigDecimal: " + json);
+
+        FormatBigDecimalModel restored = JsonIo.toJava(json, ro).asClass(FormatBigDecimalModel.class);
+        assertEquals(0, original.amount.compareTo(restored.amount), "BigDecimal should round-trip correctly");
+    }
+
+    @Test
+    void testIoFormatMixedNumericAndDate() {
+        MixedNumericAndDateModel model = new MixedNumericAndDateModel(
+                9999, LocalDate.of(2026, 2, 23));
+        WriteOptions wo = new WriteOptionsBuilder().shortMetaKeys(true).build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(model, wo);
+        assertTrue(json.contains("\"9,999\""), "int should use comma format: " + json);
+        assertTrue(json.contains("23/02/2026"), "date should use dd/MM/yyyy format: " + json);
+
+        // Round-trip
+        MixedNumericAndDateModel restored = JsonIo.toJava(json, ro).asClass(MixedNumericAndDateModel.class);
+        assertEquals(model.count, restored.count);
+        assertEquals(model.when, restored.when);
     }
 }

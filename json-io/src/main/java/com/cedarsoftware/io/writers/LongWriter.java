@@ -34,6 +34,7 @@ public class LongWriter extends Writers.PrimitiveTypeWriter {
      * </p>
      */
     public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+        if (Writers.writeNumericWithFieldFormat(o, output, context)) { return; }
         String value = o.toString();
         if (context.getWriteOptions().isWriteLongsAsStrings()) {
             // Write long as quoted string for JavaScript compatibility

@@ -1044,10 +1044,12 @@ public class SensorReading {
 
 **Note:** Programmatic `aliasTypeName()` takes priority over the annotation. The alias is registered in a reverse lookup map when the class is first scanned, allowing deserialization to resolve the alias back to the class.
 
-#### `@IoFormat("pattern")` — Per-Field Date/Time Format
-Specifies a custom format pattern for date/time fields during serialization and deserialization. Instead of the default ISO format, the field will be written and read using the given pattern. Equivalent to Jackson's `@JsonFormat(pattern="...")`.
+#### `@IoFormat("pattern")` — Per-Field Format Pattern
+Specifies a custom format pattern for date/time or numeric fields during serialization and deserialization. Instead of the default format, the field will be written and read using the given pattern. Equivalent to Jackson's `@JsonFormat(pattern="...")`.
 
-Supported types: `LocalDate`, `LocalTime`, `LocalDateTime`, `ZonedDateTime`, `OffsetDateTime`, `OffsetTime`, `Instant`, `java.util.Date`.
+**Supported date/time types:** `LocalDate`, `LocalTime`, `LocalDateTime`, `ZonedDateTime`, `OffsetDateTime`, `OffsetTime`, `Instant`, `java.util.Date`.
+
+**Supported numeric types:** `int`, `long`, `double`, `float`, `short`, `byte` (and wrappers), `BigDecimal`, `BigInteger`, `AtomicInteger`, `AtomicLong`.
 
 ```java
 public class Event {
@@ -1064,7 +1066,22 @@ public class Event {
 }
 ```
 
-Format patterns follow `java.time.format.DateTimeFormatter` syntax for java.time types, and `java.text.SimpleDateFormat` syntax for `java.util.Date`. The format is used for both writing and reading — values round-trip correctly through the custom format.
+```java
+public class Invoice {
+    @IoFormat("#,###")
+    private int quantity;            // Serializes as "1,234" instead of 1234
+
+    @IoFormat("$#,##0.00")
+    private BigDecimal total;        // Serializes as "$1,234.56" instead of "1234.56"
+
+    @IoFormat("0.00")
+    private double rate;             // Serializes as "3.14" instead of 3.14159
+
+    private int plain;               // Uses default unquoted JSON number
+}
+```
+
+Date/time patterns follow `java.time.format.DateTimeFormatter` syntax (or `java.text.SimpleDateFormat` for `java.util.Date`). Numeric patterns follow `java.text.DecimalFormat` syntax. Formatted values are written as JSON strings and parsed back correctly on read.
 
 ### Combining Annotations
 
@@ -1113,7 +1130,7 @@ If your classes already use Jackson annotations, json-io will honor them automat
 | `@JsonGetter("fieldName")` | `@IoGetter("fieldName")` | Custom getter method for serialization |
 | `@JsonSetter("fieldName")` | `@IoSetter("fieldName")` | Custom setter method for deserialization |
 | `@JsonTypeName("ShortName")` | `@IoTypeName("ShortName")` | Type alias for `@type` in JSON |
-| `@JsonFormat(pattern="...")` | `@IoFormat("pattern")` | Per-field date/time format pattern |
+| `@JsonFormat(pattern="...")` | `@IoFormat("pattern")` | Per-field date/time or numeric format pattern |
 
 Jackson's `jackson-annotations` JAR (~75KB) is commonly already on the classpath in Spring applications. json-io detects annotations via `Class.forName()` at startup — there is no compile-time dependency. Some annotations (`@JsonNaming`, `@JsonDeserialize`) live in `jackson-databind` and are detected independently.
 

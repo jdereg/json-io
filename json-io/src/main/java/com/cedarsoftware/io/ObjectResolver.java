@@ -3,7 +3,12 @@ package com.cedarsoftware.io;
 import java.lang.reflect.Array;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -1315,29 +1320,59 @@ public class ObjectResolver extends Resolver
         }
 
         try {
-            DateTimeFormatter fmt = Writers.getFormatter(pattern);
-            if (targetType == LocalDate.class) {
-                return LocalDate.parse(value, fmt);
-            } else if (targetType == LocalDateTime.class) {
-                return LocalDateTime.parse(value, fmt);
-            } else if (targetType == LocalTime.class) {
-                return LocalTime.parse(value, fmt);
-            } else if (targetType == ZonedDateTime.class) {
-                return ZonedDateTime.parse(value, fmt);
-            } else if (targetType == OffsetDateTime.class) {
-                return OffsetDateTime.parse(value, fmt);
-            } else if (targetType == OffsetTime.class) {
-                return OffsetTime.parse(value, fmt);
-            } else if (targetType == Instant.class) {
-                return fmt.withZone(java.time.ZoneOffset.UTC).parse(value, Instant::from);
+            // Date/time types — DateTimeFormatter / SimpleDateFormat
+            if (targetType == LocalDate.class || targetType == LocalDateTime.class ||
+                    targetType == LocalTime.class || targetType == ZonedDateTime.class ||
+                    targetType == OffsetDateTime.class || targetType == OffsetTime.class ||
+                    targetType == Instant.class) {
+                DateTimeFormatter fmt = Writers.getFormatter(pattern);
+                if (targetType == LocalDate.class) {
+                    return LocalDate.parse(value, fmt);
+                } else if (targetType == LocalDateTime.class) {
+                    return LocalDateTime.parse(value, fmt);
+                } else if (targetType == LocalTime.class) {
+                    return LocalTime.parse(value, fmt);
+                } else if (targetType == ZonedDateTime.class) {
+                    return ZonedDateTime.parse(value, fmt);
+                } else if (targetType == OffsetDateTime.class) {
+                    return OffsetDateTime.parse(value, fmt);
+                } else if (targetType == OffsetTime.class) {
+                    return OffsetTime.parse(value, fmt);
+                } else {
+                    return fmt.withZone(java.time.ZoneOffset.UTC).parse(value, Instant::from);
+                }
             } else if (Date.class.isAssignableFrom(targetType)) {
                 SimpleDateFormat sdf = new SimpleDateFormat(pattern);
                 return sdf.parse(value);
+            }
+
+            // Numeric types — DecimalFormat
+            if (Number.class.isAssignableFrom(targetType) || isNumericPrimitive(targetType)) {
+                DecimalFormat df = new DecimalFormat(pattern);
+                if (targetType == BigDecimal.class) {
+                    df.setParseBigDecimal(true);
+                    return df.parse(value);
+                }
+                Number parsed = df.parse(value);
+                if (targetType == int.class || targetType == Integer.class) { return parsed.intValue(); }
+                if (targetType == long.class || targetType == Long.class) { return parsed.longValue(); }
+                if (targetType == double.class || targetType == Double.class) { return parsed.doubleValue(); }
+                if (targetType == float.class || targetType == Float.class) { return parsed.floatValue(); }
+                if (targetType == short.class || targetType == Short.class) { return (short) parsed.intValue(); }
+                if (targetType == byte.class || targetType == Byte.class) { return (byte) parsed.intValue(); }
+                if (targetType == BigInteger.class) { return BigInteger.valueOf(parsed.longValue()); }
+                if (AtomicInteger.class.isAssignableFrom(targetType)) { return new AtomicInteger(parsed.intValue()); }
+                if (AtomicLong.class.isAssignableFrom(targetType)) { return new AtomicLong(parsed.longValue()); }
             }
         } catch (Exception e) {
             // If format parsing fails, fall through to normal converter path
         }
         return null;
+    }
+
+    private static boolean isNumericPrimitive(Class<?> type) {
+        return type == int.class || type == long.class || type == double.class ||
+                type == float.class || type == short.class || type == byte.class;
     }
 
 }

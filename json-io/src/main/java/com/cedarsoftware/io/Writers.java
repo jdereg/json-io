@@ -21,6 +21,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.SignStyle;
 import java.time.temporal.TemporalAccessor;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Map;
 import java.util.Currency;
@@ -87,6 +88,20 @@ public class Writers {
     }
 
     /**
+     * If the WriterContext has a field format pattern and the value is a Number,
+     * format it using DecimalFormat and write as a quoted JSON string. Returns true if handled.
+     */
+    public static boolean writeNumericWithFieldFormat(Object o, Writer output, WriterContext context) throws IOException {
+        String pat = context.getFieldFormatPattern();
+        if (pat != null && o instanceof Number) {
+            DecimalFormat df = new DecimalFormat(pat);
+            JsonWriter.writeBasicString(output, df.format(o));
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Used as a template to write out types that will have a primitive form.
      * Uses the default key of "value" unless overridden
      */
@@ -122,6 +137,7 @@ public class Writers {
          * Writes out a basic value type, no quotes.  to write strings use PrimitiveUtf8StringWriter.
          */
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeNumericWithFieldFormat(o, output, context)) { return; }
             output.write(extractString(o));
         }
     }
@@ -136,6 +152,7 @@ public class Writers {
          */
         @SuppressWarnings("unchecked")
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeNumericWithFieldFormat(o, output, context)) { return; }
             WriteOptions options = context.getWriteOptions();
             boolean allowNanInfinity = options.isAllowNanAndInfinity() || options.isJson5InfinityNaN();
             if (allowNanInfinity || !isNanOrInfinity((T) o)) {
@@ -538,6 +555,7 @@ public class Writers {
 
     public static class BigIntegerWriter extends PrimitiveTypeWriter {
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeNumericWithFieldFormat(o, output, context)) { return; }
             BigInteger big = (BigInteger) o;
             JsonWriter.writeBasicString(output, big.toString(10));
         }
@@ -559,6 +577,7 @@ public class Writers {
 
     public static class BigDecimalWriter extends PrimitiveTypeWriter {
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeNumericWithFieldFormat(o, output, context)) { return; }
             BigDecimal big = (BigDecimal) o;
             JsonWriter.writeBasicString(output, big.toPlainString());
         }
