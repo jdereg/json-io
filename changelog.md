@@ -1,6 +1,7 @@
 ### Revision History
 
 #### 4.95.0 (Unreleased)
+* **FEATURE**: Spring Boot starter — expanded YAML configuration properties. All commonly used `WriteOptions` and `ReadOptions` settings are now configurable via `application.yml` without writing Java code. New write properties: `force-map-output-as-two-arrays`, `write-enum-as-json-object`, `cycle-support`, `json5`, `date-format`, `indentation-size`, `show-root-type-info`, `meta-prefix`, `toon-delimiter`. New read properties: `use-unsafe`, `floating-point`, `integer-type`. Advanced/internal tuning settings remain available through `ReadOptionsCustomizer`/`WriteOptionsCustomizer` beans.
 * **IMPROVEMENT**: `@type` elimination on write now considers `@IoDeserialize(as=X)` and `@IoTypeInfo(X)` annotations. When the runtime type of a field matches the annotation-specified type, `@type` is omitted from JSON output because the reader can infer the correct type from the annotation. This produces smaller JSON without sacrificing round-trip fidelity.
 * **IMPROVEMENT**: `AnnotationResolver` now uses `ClassUtilities.forName()` instead of `Class.forName()` for external annotation detection, ensuring proper classloader resolution in OSGi and JPMS environments.
 * **FEATURE**: ToonWriter now uses the same `WriteFieldPlan` / `Accessor` abstraction as JsonWriter. This gives TOON serialization automatic support for `@IoGetter`, `@IoFormat`, `@IoAnyGetter`, and all other write-side annotations. Previously ToonWriter used direct `Field.get()` which bypassed custom getter methods and format patterns.

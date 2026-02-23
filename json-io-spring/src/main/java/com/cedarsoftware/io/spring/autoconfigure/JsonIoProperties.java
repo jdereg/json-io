@@ -14,9 +14,26 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *       pretty-print: true
  *       show-type-info: MINIMAL_PLUS
  *       skip-null-fields: true
+ *       short-meta-keys: false
+ *       write-longs-as-strings: false
+ *       allow-nan-and-infinity: false
+ *       force-map-output-as-two-arrays: false
+ *       write-enum-as-json-object: false
+ *       cycle-support: true
+ *       json5: false
+ *       date-format: ISO
+ *       indentation-size: 2
+ *       show-root-type-info: true
+ *       meta-prefix: AT
+ *       toon-delimiter: ","
  *     read:
  *       max-depth: 1000
  *       fail-on-unknown-type: false
+ *       return-as-java-maps: false
+ *       allow-nan-and-infinity: false
+ *       use-unsafe: false
+ *       floating-point: DOUBLE
+ *       integer-type: LONG
  *     integration:
  *       jackson-mode: COEXIST
  * </pre>
@@ -90,6 +107,56 @@ public class JsonIoProperties {
          */
         private boolean allowNanAndInfinity = false;
 
+        /**
+         * Force all Maps to be written as two parallel arrays (@keys and @values).
+         * Useful when Map keys are complex objects rather than simple Strings.
+         */
+        private boolean forceMapOutputAsTwoArrays = false;
+
+        /**
+         * Write enums as JSON objects with public fields instead of as string names.
+         */
+        private boolean writeEnumAsJsonObject = false;
+
+        /**
+         * Enable cycle detection and reference tracking (@id/@ref).
+         * Disable for ~35-40% faster writes on acyclic data.
+         */
+        private boolean cycleSupport = true;
+
+        /**
+         * Enable JSON5 output (unquoted keys, smart quotes, Infinity/NaN support).
+         */
+        private boolean json5 = false;
+
+        /**
+         * Date format for serialization (ISO or LONG).
+         */
+        private DateFormat dateFormat = DateFormat.ISO;
+
+        /**
+         * Number of spaces per indentation level when pretty-printing.
+         */
+        private int indentationSize = 2;
+
+        /**
+         * Include @type on the root object. Useful when the root type is known
+         * by the consumer and the @type can be omitted.
+         */
+        private boolean showRootTypeInfo = true;
+
+        /**
+         * Prefix character for meta-keys (@type, @id, @ref, etc.).
+         * AT uses '@' (default), DOLLAR uses '$' (useful for MongoDB compatibility).
+         */
+        private MetaPrefix metaPrefix = MetaPrefix.AT;
+
+        /**
+         * Delimiter character for TOON format output.
+         * Supported values: ',' (comma, default), '\t' (tab), '|' (pipe).
+         */
+        private Character toonDelimiter = null;
+
         public boolean isPrettyPrint() {
             return prettyPrint;
         }
@@ -137,6 +204,78 @@ public class JsonIoProperties {
         public void setAllowNanAndInfinity(boolean allowNanAndInfinity) {
             this.allowNanAndInfinity = allowNanAndInfinity;
         }
+
+        public boolean isForceMapOutputAsTwoArrays() {
+            return forceMapOutputAsTwoArrays;
+        }
+
+        public void setForceMapOutputAsTwoArrays(boolean forceMapOutputAsTwoArrays) {
+            this.forceMapOutputAsTwoArrays = forceMapOutputAsTwoArrays;
+        }
+
+        public boolean isWriteEnumAsJsonObject() {
+            return writeEnumAsJsonObject;
+        }
+
+        public void setWriteEnumAsJsonObject(boolean writeEnumAsJsonObject) {
+            this.writeEnumAsJsonObject = writeEnumAsJsonObject;
+        }
+
+        public boolean isCycleSupport() {
+            return cycleSupport;
+        }
+
+        public void setCycleSupport(boolean cycleSupport) {
+            this.cycleSupport = cycleSupport;
+        }
+
+        public boolean isJson5() {
+            return json5;
+        }
+
+        public void setJson5(boolean json5) {
+            this.json5 = json5;
+        }
+
+        public DateFormat getDateFormat() {
+            return dateFormat;
+        }
+
+        public void setDateFormat(DateFormat dateFormat) {
+            this.dateFormat = dateFormat;
+        }
+
+        public int getIndentationSize() {
+            return indentationSize;
+        }
+
+        public void setIndentationSize(int indentationSize) {
+            this.indentationSize = indentationSize;
+        }
+
+        public boolean isShowRootTypeInfo() {
+            return showRootTypeInfo;
+        }
+
+        public void setShowRootTypeInfo(boolean showRootTypeInfo) {
+            this.showRootTypeInfo = showRootTypeInfo;
+        }
+
+        public MetaPrefix getMetaPrefix() {
+            return metaPrefix;
+        }
+
+        public void setMetaPrefix(MetaPrefix metaPrefix) {
+            this.metaPrefix = metaPrefix;
+        }
+
+        public Character getToonDelimiter() {
+            return toonDelimiter;
+        }
+
+        public void setToonDelimiter(Character toonDelimiter) {
+            this.toonDelimiter = toonDelimiter;
+        }
     }
 
     /**
@@ -162,6 +301,22 @@ public class JsonIoProperties {
          * Allow NaN and Infinity values in numeric fields.
          */
         private boolean allowNanAndInfinity = false;
+
+        /**
+         * Allow deserialization of package-private classes, inner classes, and
+         * classes without accessible constructors using sun.misc.Unsafe (opt-in).
+         */
+        private boolean useUnsafe = false;
+
+        /**
+         * How to parse JSON floating-point numbers (DOUBLE, BIG_DECIMAL, or BOTH).
+         */
+        private FloatingPoint floatingPoint = FloatingPoint.DOUBLE;
+
+        /**
+         * How to parse JSON integer numbers (LONG, BIG_INTEGER, or BOTH).
+         */
+        private IntegerType integerType = IntegerType.LONG;
 
         public int getMaxDepth() {
             return maxDepth;
@@ -193,6 +348,30 @@ public class JsonIoProperties {
 
         public void setAllowNanAndInfinity(boolean allowNanAndInfinity) {
             this.allowNanAndInfinity = allowNanAndInfinity;
+        }
+
+        public boolean isUseUnsafe() {
+            return useUnsafe;
+        }
+
+        public void setUseUnsafe(boolean useUnsafe) {
+            this.useUnsafe = useUnsafe;
+        }
+
+        public FloatingPoint getFloatingPoint() {
+            return floatingPoint;
+        }
+
+        public void setFloatingPoint(FloatingPoint floatingPoint) {
+            this.floatingPoint = floatingPoint;
+        }
+
+        public IntegerType getIntegerType() {
+            return integerType;
+        }
+
+        public void setIntegerType(IntegerType integerType) {
+            this.integerType = integerType;
         }
     }
 
@@ -252,5 +431,69 @@ public class JsonIoProperties {
          * json-io handles all formats; Jackson converters are removed.
          */
         REPLACE
+    }
+
+    /**
+     * Prefix character for JSON meta-keys.
+     */
+    public enum MetaPrefix {
+        /**
+         * Use '@' prefix (@type, @id, @ref) — the default.
+         */
+        AT,
+        /**
+         * Use '$' prefix ($type, $id, $ref) — useful for MongoDB compatibility.
+         */
+        DOLLAR
+    }
+
+    /**
+     * Date serialization format.
+     */
+    public enum DateFormat {
+        /**
+         * ISO 8601 format (e.g., "2024-01-15T10:30:00Z").
+         */
+        ISO,
+        /**
+         * Long epoch milliseconds (e.g., 1705312200000).
+         */
+        LONG
+    }
+
+    /**
+     * How JSON floating-point numbers are parsed.
+     */
+    public enum FloatingPoint {
+        /**
+         * Parse as Double (default).
+         */
+        DOUBLE,
+        /**
+         * Parse as BigDecimal for arbitrary precision.
+         */
+        BIG_DECIMAL,
+        /**
+         * Parse as Double when possible, BigDecimal for large values.
+         */
+        BOTH
+    }
+
+    /**
+     * How JSON integer numbers are parsed.
+     */
+    public enum IntegerType {
+        /**
+         * Parse as Long (default).
+         */
+        LONG,
+        /**
+         * Parse as BigInteger for arbitrary precision.
+         */
+        BIG_INTEGER,
+        /**
+         * Parse as Long when possible, BigInteger for large values.
+         */
+        BOTH
     }
 }

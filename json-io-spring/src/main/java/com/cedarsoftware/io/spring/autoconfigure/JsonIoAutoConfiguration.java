@@ -7,6 +7,10 @@ import com.cedarsoftware.io.ReadOptions;
 import com.cedarsoftware.io.ReadOptionsBuilder;
 import com.cedarsoftware.io.WriteOptions;
 import com.cedarsoftware.io.WriteOptionsBuilder;
+import com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties.DateFormat;
+import com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties.FloatingPoint;
+import com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties.IntegerType;
+import com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties.MetaPrefix;
 import com.cedarsoftware.io.spring.autoconfigure.JsonIoProperties.ShowTypeInfo;
 import com.cedarsoftware.io.spring.customizer.ReadOptionsCustomizer;
 import com.cedarsoftware.io.spring.customizer.WriteOptionsCustomizer;
@@ -64,6 +68,37 @@ public class JsonIoAutoConfiguration {
                 .failOnUnknownType(properties.getRead().isFailOnUnknownType());
 
         builder.allowNanAndInfinity(properties.getRead().isAllowNanAndInfinity());
+        builder.useUnsafe(properties.getRead().isUseUnsafe());
+
+        // Configure floating-point parsing
+        FloatingPoint fp = properties.getRead().getFloatingPoint();
+        switch (fp) {
+            case BIG_DECIMAL:
+                builder.floatPointBigDecimal();
+                break;
+            case BOTH:
+                builder.floatPointBoth();
+                break;
+            case DOUBLE:
+            default:
+                builder.floatPointDouble();
+                break;
+        }
+
+        // Configure integer parsing
+        IntegerType it = properties.getRead().getIntegerType();
+        switch (it) {
+            case BIG_INTEGER:
+                builder.integerTypeBigInteger();
+                break;
+            case BOTH:
+                builder.integerTypeBoth();
+                break;
+            case LONG:
+            default:
+                builder.integerTypeLong();
+                break;
+        }
 
         // Apply customizers
         List<ReadOptionsCustomizer> customizerList = customizers.orderedStream().toList();
@@ -86,7 +121,53 @@ public class JsonIoAutoConfiguration {
                 .skipNullFields(properties.getWrite().isSkipNullFields())
                 .shortMetaKeys(properties.getWrite().isShortMetaKeys())
                 .writeLongsAsStrings(properties.getWrite().isWriteLongsAsStrings())
-                .allowNanAndInfinity(properties.getWrite().isAllowNanAndInfinity());
+                .allowNanAndInfinity(properties.getWrite().isAllowNanAndInfinity())
+                .forceMapOutputAsTwoArrays(properties.getWrite().isForceMapOutputAsTwoArrays())
+                .writeEnumAsJsonObject(properties.getWrite().isWriteEnumAsJsonObject())
+                .cycleSupport(properties.getWrite().isCycleSupport())
+                .indentationSize(properties.getWrite().getIndentationSize());
+
+        // Configure root type info
+        if (properties.getWrite().isShowRootTypeInfo()) {
+            builder.showRootTypeInfo();
+        } else {
+            builder.omitRootTypeInfo();
+        }
+
+        // Configure meta-key prefix (@ vs $)
+        MetaPrefix metaPrefix = properties.getWrite().getMetaPrefix();
+        switch (metaPrefix) {
+            case DOLLAR:
+                builder.useMetaPrefixDollar();
+                break;
+            case AT:
+            default:
+                builder.useMetaPrefixAt();
+                break;
+        }
+
+        // Configure TOON delimiter
+        Character toonDelimiter = properties.getWrite().getToonDelimiter();
+        if (toonDelimiter != null) {
+            builder.toonDelimiter(toonDelimiter);
+        }
+
+        // Configure JSON5 output
+        if (properties.getWrite().isJson5()) {
+            builder.json5();
+        }
+
+        // Configure date format
+        DateFormat dateFormat = properties.getWrite().getDateFormat();
+        switch (dateFormat) {
+            case LONG:
+                builder.longDateFormat();
+                break;
+            case ISO:
+            default:
+                builder.isoDateFormat();
+                break;
+        }
 
         // Configure type info
         ShowTypeInfo showTypeInfo = properties.getWrite().getShowTypeInfo();

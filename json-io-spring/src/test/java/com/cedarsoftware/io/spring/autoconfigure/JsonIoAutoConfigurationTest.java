@@ -103,4 +103,152 @@ class JsonIoAutoConfigurationTest {
                     assertThat(readOptions.getMaxDepth()).isEqualTo(100);
                 });
     }
+
+    // --- New Write property tests ---
+
+    @Test
+    void forceMapOutputAsTwoArraysCanBeConfigured() {
+        contextRunner
+                .withPropertyValues("spring.json-io.write.force-map-output-as-two-arrays=true")
+                .run(context -> {
+                    WriteOptions writeOptions = context.getBean(WriteOptions.class);
+                    assertThat(writeOptions.isForceMapOutputAsTwoArrays()).isTrue();
+                });
+    }
+
+    @Test
+    void writeEnumAsJsonObjectCanBeConfigured() {
+        contextRunner
+                .withPropertyValues("spring.json-io.write.write-enum-as-json-object=true")
+                .run(context -> {
+                    WriteOptions writeOptions = context.getBean(WriteOptions.class);
+                    assertThat(writeOptions.isEnumPublicFieldsOnly()).isTrue();
+                });
+    }
+
+    @Test
+    void cycleSupportCanBeConfigured() {
+        contextRunner
+                .withPropertyValues("spring.json-io.write.cycle-support=false")
+                .run(context -> {
+                    WriteOptions writeOptions = context.getBean(WriteOptions.class);
+                    assertThat(writeOptions.isCycleSupport()).isFalse();
+                });
+    }
+
+    @Test
+    void json5CanBeConfigured() {
+        contextRunner
+                .withPropertyValues("spring.json-io.write.json5=true")
+                .run(context -> {
+                    WriteOptions writeOptions = context.getBean(WriteOptions.class);
+                    assertThat(writeOptions.isJson5UnquotedKeys()).isTrue();
+                    assertThat(writeOptions.isJson5SmartQuotes()).isTrue();
+                    assertThat(writeOptions.isJson5InfinityNaN()).isTrue();
+                });
+    }
+
+    @Test
+    void dateFormatLongCanBeConfigured() {
+        contextRunner
+                .withPropertyValues("spring.json-io.write.date-format=LONG")
+                .run(context -> {
+                    WriteOptions writeOptions = context.getBean(WriteOptions.class);
+                    assertThat(writeOptions.isLongDateFormat()).isTrue();
+                });
+    }
+
+    // --- New Read property tests ---
+
+    @Test
+    void useUnsafeCanBeConfigured() {
+        contextRunner
+                .withPropertyValues("spring.json-io.read.use-unsafe=true")
+                .run(context -> {
+                    ReadOptions readOptions = context.getBean(ReadOptions.class);
+                    assertThat(readOptions.isUseUnsafe()).isTrue();
+                });
+    }
+
+    @Test
+    void floatingPointBigDecimalCanBeConfigured() {
+        contextRunner
+                .withPropertyValues("spring.json-io.read.floating-point=BIG_DECIMAL")
+                .run(context -> {
+                    ReadOptions readOptions = context.getBean(ReadOptions.class);
+                    assertThat(readOptions.isFloatingPointBigDecimal()).isTrue();
+                });
+    }
+
+    @Test
+    void floatingPointBothCanBeConfigured() {
+        contextRunner
+                .withPropertyValues("spring.json-io.read.floating-point=BOTH")
+                .run(context -> {
+                    ReadOptions readOptions = context.getBean(ReadOptions.class);
+                    assertThat(readOptions.isFloatingPointBoth()).isTrue();
+                });
+    }
+
+    @Test
+    void integerTypeBigIntegerCanBeConfigured() {
+        contextRunner
+                .withPropertyValues("spring.json-io.read.integer-type=BIG_INTEGER")
+                .run(context -> {
+                    ReadOptions readOptions = context.getBean(ReadOptions.class);
+                    assertThat(readOptions.isIntegerTypeBigInteger()).isTrue();
+                });
+    }
+
+    @Test
+    void integerTypeBothCanBeConfigured() {
+        contextRunner
+                .withPropertyValues("spring.json-io.read.integer-type=BOTH")
+                .run(context -> {
+                    ReadOptions readOptions = context.getBean(ReadOptions.class);
+                    assertThat(readOptions.isIntegerTypeBoth()).isTrue();
+                });
+    }
+
+    // --- Additional Write property tests ---
+
+    @Test
+    void indentationSizeCanBeConfigured() {
+        contextRunner
+                .withPropertyValues("spring.json-io.write.indentation-size=4")
+                .run(context -> {
+                    WriteOptions writeOptions = context.getBean(WriteOptions.class);
+                    assertThat(writeOptions.getIndentationSize()).isEqualTo(4);
+                });
+    }
+
+    @Test
+    void showRootTypeInfoCanBeConfigured() {
+        contextRunner
+                .withPropertyValues("spring.json-io.write.show-root-type-info=false")
+                .run(context -> {
+                    WriteOptions writeOptions = context.getBean(WriteOptions.class);
+                    assertThat(writeOptions.isShowingRootTypeInfo()).isFalse();
+                });
+    }
+
+    @Test
+    void metaPrefixDollarCanBeConfigured() {
+        contextRunner
+                .withPropertyValues("spring.json-io.write.meta-prefix=DOLLAR")
+                .run(context -> {
+                    WriteOptions writeOptions = context.getBean(WriteOptions.class);
+                    assertThat(writeOptions.getMetaPrefixOverride()).isEqualTo('$');
+                });
+    }
+
+    @Test
+    void toonDelimiterCanBeConfigured() {
+        contextRunner
+                .withPropertyValues("spring.json-io.write.toon-delimiter=|")
+                .run(context -> {
+                    WriteOptions writeOptions = context.getBean(WriteOptions.class);
+                    assertThat(writeOptions.getToonDelimiter()).isEqualTo('|');
+                });
+    }
 }

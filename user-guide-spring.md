@@ -106,6 +106,41 @@ spring:
 
       # Allow NaN and Infinity in numeric output
       allow-nan-and-infinity: false
+
+      # Force Maps to be written as two parallel arrays (@keys and @values)
+      # Useful when Map keys are complex objects rather than simple Strings
+      force-map-output-as-two-arrays: false
+
+      # Write enums as JSON objects with public fields instead of as string names
+      write-enum-as-json-object: false
+
+      # Enable cycle detection and reference tracking (@id/@ref)
+      # Disable for ~35-40% faster writes on acyclic data
+      cycle-support: true
+
+      # Enable JSON5 output (unquoted keys, smart quotes, Infinity/NaN support)
+      json5: false
+
+      # Date format for serialization
+      # ISO - ISO 8601 format (e.g., "2024-01-15T10:30:00Z")
+      # LONG - Epoch milliseconds (e.g., 1705312200000)
+      date-format: ISO
+
+      # Number of spaces per indentation level when pretty-printing
+      indentation-size: 2
+
+      # Include @type on the root object
+      # Set to false when the root type is known by the consumer
+      show-root-type-info: true
+
+      # Prefix character for meta-keys (@type, @id, @ref)
+      # AT - Use '@' prefix (default)
+      # DOLLAR - Use '$' prefix (useful for MongoDB compatibility)
+      meta-prefix: AT
+
+      # Delimiter character for TOON format output
+      # Supported: "," (comma, default), "\t" (tab), "|" (pipe)
+      toon-delimiter: ","
 ```
 
 ### Read Options
@@ -125,6 +160,22 @@ spring:
 
       # Allow NaN and Infinity values in numeric fields
       allow-nan-and-infinity: false
+
+      # Allow sun.misc.Unsafe for deserializing package-private classes, inner classes,
+      # and classes without accessible constructors (opt-in for security)
+      use-unsafe: false
+
+      # How to parse JSON floating-point numbers
+      # DOUBLE - Parse as Double (default)
+      # BIG_DECIMAL - Parse as BigDecimal for arbitrary precision
+      # BOTH - Parse as Double when possible, BigDecimal for large values
+      floating-point: DOUBLE
+
+      # How to parse JSON integer numbers
+      # LONG - Parse as Long (default)
+      # BIG_INTEGER - Parse as BigInteger for arbitrary precision
+      # BOTH - Parse as Long when possible, BigInteger for large values
+      integer-type: LONG
 ```
 
 ### Integration Options
