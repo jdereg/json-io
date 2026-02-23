@@ -2,7 +2,7 @@
 
 #### 4.95.0 (Unreleased)
 * **PERFORMANCE**: `Accessor.retrieve()` now uses sticky fallback flags for lambda/VarHandle/MethodHandle paths; once an optimized path fails, it is bypassed on subsequent calls instead of repeatedly throwing/falling back.
-* **FEATURE**: `AnnotationResolver` — annotation-based serialization control. json-io now supports 17 annotations in `com.cedarsoftware.io.annotation`:
+* **FEATURE**: `AnnotationResolver` — annotation-based serialization control. json-io now supports 14 annotations in `com.cedarsoftware.io.annotation`:
   * `@IoProperty("name")` — rename a field in JSON output and accept the renamed key on read.
   * `@IoIgnore` — exclude a field from serialization and deserialization.
   * `@IoIgnoreProperties({"a","b"})` — class-level field exclusion by name.

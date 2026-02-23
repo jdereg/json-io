@@ -97,9 +97,26 @@ json-io's TOON implementation offers comprehensive Java type coverage while JToo
 
 ### Annotation Support
 
-json-io provides its own lightweight annotations (`@IoProperty`, `@IoIgnore`, `@IoIgnoreProperties`, `@IoAlias`, `@IoPropertyOrder`, `@IoInclude`) in the `com.cedarsoftware.io.annotation` package for controlling serialization — field renaming, exclusion, alternate read names, field ordering, and per-field null skipping.
+json-io provides 14 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization:
 
-Additionally, json-io **reflectively honors Jackson annotations** (`@JsonProperty`, `@JsonIgnore`, `@JsonIgnoreProperties`, `@JsonAlias`, `@JsonPropertyOrder`, `@JsonInclude`) when they are on the classpath — with zero compile-time dependency on Jackson. If your classes already use Jackson annotations, json-io will recognize them automatically.
+| Annotation | Target | Purpose |
+|---|---|---|
+| `@IoProperty("name")` | Field | Rename field in JSON |
+| `@IoIgnore` | Field | Exclude field |
+| `@IoIgnoreProperties({"a","b"})` | Class | Exclude fields by name |
+| `@IoAlias({"alt1","alt2"})` | Field | Accept alternate names on read |
+| `@IoPropertyOrder({"x","y"})` | Class | Control field order on write |
+| `@IoInclude(Include.NON_NULL)` | Field | Skip null on write |
+| `@IoCreator` | Constructor/Method | Custom deserialization constructor or static factory |
+| `@IoValue` | Method | Single-value serialization |
+| `@IoNaming(Strategy.SNAKE_CASE)` | Class | Naming strategy for all fields |
+| `@IoIncludeProperties({"a","b"})` | Class | Whitelist of included fields |
+| `@IoIgnoreType` | Class | Exclude all fields of this type everywhere |
+| `@IoTypeInfo(LinkedList.class)` | Field | Default concrete type when `@type` absent |
+| `@IoDeserialize(as=LinkedList.class)` | Field/Class | Force type override during deserialization |
+| `@IoClassFactory(MyFactory.class)` | Class | Specify a ClassFactory for deserialization |
+
+Additionally, json-io **reflectively honors Jackson annotations** when they are on the classpath — with zero compile-time dependency on Jackson. Supported: `@JsonProperty`, `@JsonIgnore`, `@JsonIgnoreProperties`, `@JsonAlias`, `@JsonPropertyOrder`, `@JsonInclude`, `@JsonCreator`, `@JsonValue`, `@JsonIgnoreType`, `@JsonTypeInfo`, `@JsonIncludeProperties`, `@JsonNaming`, `@JsonDeserialize`.
 
 **Precedence:** Programmatic API > json-io annotations > Jackson annotations.
 

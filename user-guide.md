@@ -650,17 +650,20 @@ cyclic references are typically not needed.
 
 ## Annotations
 
-json-io provides annotation-based serialization control through its own lightweight annotations in the `com.cedarsoftware.io.annotation` package. In addition, json-io **reflectively honors Jackson annotations** when the Jackson annotations JAR is on the classpath — with zero compile-time dependency on Jackson.
+json-io provides 14 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization. In addition, json-io **reflectively honors Jackson annotations** when the Jackson JAR is on the classpath — with zero compile-time dependency on Jackson.
 
 ### Annotation Precedence
 
 When both json-io and Jackson annotations are present on the same element:
 
-1. **Programmatic API** (`WriteOptionsBuilder`/`ReadOptionsBuilder` methods like `addExcludedField()`, `addIncludedField()`, etc.) — highest priority, always wins
+1. **Programmatic API** (`WriteOptionsBuilder`/`ReadOptionsBuilder` methods like `addExcludedField()`, `addClassFactory()`, etc.) — highest priority, always wins
 2. **json-io annotations** (`@IoProperty`, `@IoIgnore`, etc.) — checked first among annotations
 3. **Jackson annotations** (`@JsonProperty`, `@JsonIgnore`, etc.) — used as fallback if no json-io annotation is present on the same element
 
 If Jackson annotations are not on the classpath, external annotation detection is silently skipped with zero overhead.
+
+For type-resolution annotations on fields, a more specific precedence applies:
+- `@type` in JSON > `@IoDeserialize` > `@IoTypeInfo` > declared field type
 
 ### Available Annotations
 
@@ -696,6 +699,19 @@ public class Config {
     private String secret;     // Excluded
     private String internal;   // Excluded
     private int value;
+}
+```
+
+#### `@IoIncludeProperties({"field1", "field2"})` — Class-Level Whitelist
+The inverse of `@IoIgnoreProperties` — only the listed fields are included in serialization and deserialization. All other fields are excluded. Equivalent to Jackson's `@JsonIncludeProperties`.
+
+```java
+@IoIncludeProperties({"name", "email"})
+public class User {
+    private String name;       // Included
+    private String email;      // Included
+    private String password;   // Excluded (not in whitelist)
+    private int age;           // Excluded (not in whitelist)
 }
 ```
 
@@ -736,6 +752,132 @@ public class Response {
 }
 ```
 
+#### `@IoNaming(Strategy)` — Class-Level Naming Strategy
+Applies a naming strategy to all fields in a class, transforming Java camelCase names to the chosen format. Individual fields can override the strategy with `@IoProperty`. Equivalent to Jackson's `@JsonNaming`.
+
+Available strategies: `SNAKE_CASE`, `KEBAB_CASE`, `UPPER_CAMEL_CASE`, `LOWER_DOT_CASE`.
+
+```java
+@IoNaming(IoNaming.Strategy.SNAKE_CASE)
+public class UserProfile {
+    private String firstName;    // Serializes as "first_name"
+    private String lastName;     // Serializes as "last_name"
+    private int loginCount;      // Serializes as "login_count"
+
+    @IoProperty("uid")
+    private String userId;       // Overrides strategy — serializes as "uid"
+}
+```
+
+#### `@IoCreator` — Constructor/Factory Deserialization
+Marks a constructor or static factory method for json-io to use during deserialization. Parameters are matched to JSON keys by name (or via `@IoProperty` on parameters). Equivalent to Jackson's `@JsonCreator`.
+
+```java
+public class Money {
+    private final long cents;
+    private final String currency;
+
+    @IoCreator
+    Money(@IoProperty("cents") long cents, @IoProperty("currency") String currency) {
+        this.cents = cents;
+        this.currency = currency;
+    }
+}
+
+// Static factory also supported:
+public class Color {
+    private final int r, g, b;
+    private Color(int r, int g, int b) { this.r = r; this.g = g; this.b = b; }
+
+    @IoCreator
+    static Color of(@IoProperty("r") int r, @IoProperty("g") int g, @IoProperty("b") int b) {
+        return new Color(r, g, b);
+    }
+}
+```
+
+#### `@IoValue` — Single-Value Serialization
+Marks a no-arg instance method whose return value is used as the serialized representation. Useful for wrapper types that should serialize as a single value rather than an object with fields. Equivalent to Jackson's `@JsonValue`.
+
+```java
+public class EmailAddress {
+    private final String address;
+
+    @IoCreator
+    EmailAddress(@IoProperty("address") String address) { this.address = address; }
+
+    @IoValue
+    public String toValue() { return address; }
+}
+// Serializes as: "user@example.com" (not {"address":"user@example.com"})
+```
+
+#### `@IoIgnoreType` — Type-Level Exclusion
+When placed on a class, all fields of that type are excluded from serialization and deserialization across all classes. Useful for cross-cutting exclusion of internal metadata types. Equivalent to Jackson's `@JsonIgnoreType`.
+
+```java
+@IoIgnoreType
+public class InternalMetadata {
+    private String traceId;
+    private long timestamp;
+}
+
+public class Order {
+    private String orderId;
+    private InternalMetadata meta;  // Automatically excluded everywhere
+    private String status;
+}
+```
+
+#### `@IoTypeInfo(ConcreteClass.class)` — Default Concrete Type
+Field-level annotation that specifies the default concrete type to use during deserialization when no `@type` metadata is present in the JSON. Useful for polymorphic fields declared as interfaces or abstract classes. If `@type` IS present in the JSON, it takes precedence. Equivalent to Jackson's `@JsonTypeInfo(defaultImpl=...)`.
+
+```java
+public class Container {
+    @IoTypeInfo(ArrayList.class)
+    private Object items;              // Defaults to ArrayList when @type absent
+
+    @IoTypeInfo(LinkedHashMap.class)
+    private Map<String, Object> data;  // Defaults to LinkedHashMap
+}
+```
+
+#### `@IoDeserialize(as=ConcreteClass.class)` — Forced Type Override
+Field-level or class-level annotation that always overrides the declared type during deserialization (forced coercion). Unlike `@IoTypeInfo`, this is not just a default — it is always applied unless `@type` is present in the JSON. Equivalent to Jackson's `@JsonDeserialize(as=...)`.
+
+```java
+public class Config {
+    @IoDeserialize(as = LinkedList.class)
+    private List<String> items;              // Always deserialized as LinkedList
+
+    @IoDeserialize(as = LinkedHashMap.class)
+    private Map<String, Object> data;        // Always deserialized as LinkedHashMap
+}
+```
+
+**Difference from `@IoTypeInfo`:** `@IoDeserialize(as=...)` always overrides the declared type (forced coercion). `@IoTypeInfo` only provides a default when no type can be inferred. When both are present on the same field, `@IoDeserialize` takes priority.
+
+#### `@IoClassFactory(FactoryClass.class)` — Custom ClassFactory
+Class-level annotation that specifies a `ClassFactory` implementation to use when deserializing instances of this class. The factory class must have a no-arg constructor. Factory instances are automatically cached and shared. Programmatic `addClassFactory()` takes priority.
+
+```java
+@IoClassFactory(WidgetFactory.class)
+public class Widget {
+    private final String name;
+    private final int size;
+    private Widget(String name, int size) { this.name = name; this.size = size; }
+}
+
+public class WidgetFactory implements ClassFactory {
+    public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
+        String name = (String) jObj.get("name");
+        int size = ((Number) jObj.get("size")).intValue();
+        return new Widget(name, size);
+    }
+    public boolean isObjectFinal() { return true; }  // Factory fully populates the object
+}
+```
+
 ### Combining Annotations
 
 Annotations can be combined on the same field or class:
@@ -743,6 +885,7 @@ Annotations can be combined on the same field or class:
 ```java
 @IoPropertyOrder({"id", "username"})
 @IoIgnoreProperties({"password"})
+@IoNaming(IoNaming.Strategy.SNAKE_CASE)
 public class UserProfile {
     private long id;
 
@@ -754,6 +897,9 @@ public class UserProfile {
 
     @IoInclude(IoInclude.Include.NON_NULL)
     private String bio;         // Omitted when null
+
+    @IoDeserialize(as = LinkedList.class)
+    private List<String> tags;  // Always deserialized as LinkedList
 }
 ```
 
@@ -766,11 +912,18 @@ If your classes already use Jackson annotations, json-io will honor them automat
 | `@JsonProperty("name")` | `@IoProperty("name")` | Renames field in JSON |
 | `@JsonIgnore` | `@IoIgnore` | Excludes field |
 | `@JsonIgnoreProperties({"a","b"})` | `@IoIgnoreProperties({"a","b"})` | Class-level field exclusion |
+| `@JsonIncludeProperties({"a","b"})` | `@IoIncludeProperties({"a","b"})` | Class-level field whitelist |
 | `@JsonAlias({"alt1","alt2"})` | `@IoAlias({"alt1","alt2"})` | Accept alternate names on read |
 | `@JsonPropertyOrder({"x","y"})` | `@IoPropertyOrder({"x","y"})` | Control field order on write |
 | `@JsonInclude(Include.NON_NULL)` | `@IoInclude(Include.NON_NULL)` | Per-field null skipping |
+| `@JsonCreator` | `@IoCreator` | Custom deserialization constructor/factory |
+| `@JsonValue` | `@IoValue` | Single-value serialization |
+| `@JsonNaming(SnakeCaseStrategy.class)` | `@IoNaming(Strategy.SNAKE_CASE)` | Class-level naming strategy |
+| `@JsonIgnoreType` | `@IoIgnoreType` | Exclude all fields of this type |
+| `@JsonTypeInfo(defaultImpl=...)` | `@IoTypeInfo(...)` | Default concrete type hint |
+| `@JsonDeserialize(as=...)` | `@IoDeserialize(as=...)` | Forced deserialization type override |
 
-Jackson's `jackson-annotations` JAR (~75KB) is commonly already on the classpath in Spring applications. json-io detects it via `Class.forName()` at startup — there is no compile-time dependency and no Jackson-specific naming anywhere in json-io's source code.
+Jackson's `jackson-annotations` JAR (~75KB) is commonly already on the classpath in Spring applications. json-io detects annotations via `Class.forName()` at startup — there is no compile-time dependency. Some annotations (`@JsonNaming`, `@JsonDeserialize`) live in `jackson-databind` and are detected independently.
 
 ## Advanced Usage
 Sometimes you will run into a class that does not want to serialize.  On the read-side, this can be a class that does
