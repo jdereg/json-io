@@ -1,22 +1,76 @@
 ### Revision History
 
 #### 4.95.0 (Unreleased)
-* **FEATURE**: Annotation-based serialization control. json-io now supports 6 annotations in `com.cedarsoftware.io.annotation`:
+* **PERFORMANCE**: `Accessor.retrieve()` now uses sticky fallback flags for lambda/VarHandle/MethodHandle paths; once an optimized path fails, it is bypassed on subsequent calls instead of repeatedly throwing/falling back.
+* **FEATURE**: `AnnotationResolver` — annotation-based serialization control. json-io now supports 17 annotations in `com.cedarsoftware.io.annotation`:
   * `@IoProperty("name")` — rename a field in JSON output and accept the renamed key on read.
   * `@IoIgnore` — exclude a field from serialization and deserialization.
   * `@IoIgnoreProperties({"a","b"})` — class-level field exclusion by name.
   * `@IoAlias({"alt1","alt2"})` — accept alternate JSON property names on read.
   * `@IoPropertyOrder({"x","y"})` — control field order during serialization.
   * `@IoInclude(Include.NON_NULL)` — per-field null skipping on write.
-  Annotations are scanned once per class and cached in a `ClassValueMap`. Programmatic API overrides annotations.
-* **FEATURE**: Jackson annotation compatibility. json-io reflectively honors `@JsonProperty`, `@JsonIgnore`, `@JsonIgnoreProperties`, `@JsonAlias`, `@JsonPropertyOrder`, and `@JsonInclude(Include.NON_NULL)` when the Jackson annotations JAR is on the classpath — with zero compile-time dependency. json-io annotations take priority over Jackson annotations on the same element.
-* **FEATURE**: `ToonWriter` now supports configurable delimiters for tabular arrays and inline primitive arrays. Supported delimiters: comma (`,`, default), tab (`\t`), and pipe (`|`). Configure via `WriteOptionsBuilder.toonDelimiter(char)` per-instance or `WriteOptionsBuilder.addPermanentToonDelimiter(char)` for JVM-wide defaults. The delimiter is encoded in the count bracket (`[N]`, `[N\t]`, `[N|]`) so the `ToonReader` auto-detects it on read — no read-side configuration needed. Tab delimiters can further reduce BPE token count for LLM payloads.
-* **FEATURE**: `ToonWriter` now supports tabular format for POJO collections and arrays. When `prettyPrint` is `false` (default), uniform POJO lists/arrays are written in compact CSV-style tabular format (`[N]{field1,field2,...}: row1 row2 ...`). When `prettyPrint` is `true`, the verbose list format (`- key: value`) is used instead.
+  * `@IoCreator` — mark a constructor or static factory method for deserialization (supports `@IoProperty` on parameters for JSON key mapping).
+  * `@IoValue` — mark a no-arg instance method for single-value serialization (e.g., `EmailAddress` → `"user@example.com"`).
+  * `@IoNaming(Strategy.SNAKE_CASE)` — class-level naming strategy (SNAKE_CASE, KEBAB_CASE, UPPER_CAMEL_CASE, LOWER_DOT_CASE). `@IoProperty` on individual fields overrides the strategy.
+  * `@IoIncludeProperties({"a","b"})` — class-level whitelist of fields to include (inverse of `@IoIgnoreProperties`).
+  * `@IoIgnoreType` — class-level annotation that excludes all fields of this type from serialization/deserialization across all classes.
+  * `@IoTypeInfo(LinkedList.class)` — field-level default concrete type when no `@type` is present in JSON (fallback hint for polymorphic fields).
+  * `@IoDeserialize(as = LinkedList.class)` — field-level or class-level forced type override during deserialization. Priority: `@type` in JSON > `@IoDeserialize` > `@IoTypeInfo` > declared field type.
+  * `@IoClassFactory(MyFactory.class)` — class-level annotation specifying a `ClassFactory` implementation for custom deserialization. Factory instances are cached and shared. Programmatic `addClassFactory()` takes priority.
+  Annotations are scanned once per class and cached in a `ClassValueMap`. Programmatic API always overrides annotations.
+* **FEATURE**: `AnnotationResolver` — Jackson annotation compatibility. json-io reflectively honors Jackson annotations when the Jackson JAR is on the classpath — with zero compile-time dependency. json-io annotations take priority over Jackson annotations on the same element. Supported Jackson annotations:
+  * `@JsonProperty`, `@JsonIgnore`, `@JsonIgnoreProperties`, `@JsonAlias`, `@JsonPropertyOrder`, `@JsonInclude(Include.NON_NULL)` (jackson-annotations)
+  * `@JsonCreator`, `@JsonValue`, `@JsonIgnoreType`, `@JsonTypeInfo(defaultImpl=...)`, `@JsonIncludeProperties` (jackson-annotations)
+  * `@JsonNaming(SnakeCaseStrategy.class)`, `@JsonDeserialize(as=...)` (jackson-databind)
+* **PERFORMANCE**: `Injector` numeric kind and primitive-wrapper lookups now use `ClassValueMap` O(1) dispatch instead of sequential `class ==` chains.
+* **PERFORMANCE**: `Injector.inject()` now applies assignability-based pre-conversion before reflective set/invoke, reducing exception-driven control flow in hot assignment paths while preserving fallback conversion behavior.
+* **PERFORMANCE**: `JsonIo` — added thread-local buffer recycling in String-based JSON paths:
+  * `toJson(Object, WriteOptions)` now reuses `FastByteArrayOutputStream` and `FastWriter` buffers.
+  * `toJava(String, ...)` and `toJava(InputStream, ...)` builder paths now reuse `FastReader` char/pushback buffers.
+  This removes repeated stream/buffer construction churn in benchmark loops and reduces allocation pressure.
+* **PERFORMANCE**: `JsonObject.appendFieldForParser()` — `JsonParser` now uses a parser-only fast path for object field insertion, avoiding `JsonObject.put()` duplicate-key search (`indexOf`) on the common unique-key path. This reduces parse-time key insertion overhead and shifts work from linear duplicate checks to direct append.
+* **PERFORMANCE**: `JsonParser` — read numeric pipeline optimized:
+  * Floating-point parsing now takes a direct `Double.parseDouble()` fast path when configured for `DOUBLE` mode, bypassing minimal-number analysis in the default path.
+  * `ObjectResolver.traverseArray()` now has a primitive-array direct assignment path for parsed JSON `Long`/`Double` values, avoiding intermediate wrapper coercion in hot loops.
+* **PERFORMANCE**: `JsonParser` — hot paths optimized with ASCII-only lowercase conversion for token reads, lookup-table hex parsing, bounded string dedupe caching, and simplified strict-mode whitespace/comment handling.
+* **MAINTENANCE**: `JsonParser` — removed redundant strict-mode checks in `skipWhitespaceRead()` that were unreachable after strict-branch early return.
+* **BUG FIX**: `JsonWriter.write()` now always clears `objVisited`/`objsReferenced` in a `finally` block, preventing state leakage and object retention if write/flush throws.
+* **BUG FIX**: `JsonWriter.traceReferences()` object-limit handling now enforces limits without off-by-one behavior at the configured boundary.
+* **PERFORMANCE**: `JsonWriter` — string escaping/writing hot paths optimized: removed `String.format("\\u%04x", ...)` from control-char escaping, added precomputed control escape strings, and unified smart-quote decision logic to avoid duplicated scanning code.
+* **PERFORMANCE**: `JsonWriter.writeMapBody(...)` (both `Iterator` and `JsonObject` paths) now uses specialized loop branches with hoisted invariants (`skipNullFields`, `json5UnquotedKeys`, `maxStringLength`) to reduce per-entry branch checks in map write hot loops.
+* **PERFORMANCE**: `JsonWriter` — custom-writer gate checks are now class-cached via shared `DefaultWriteOptions` caches (using `ClassValueMap`):
+  * Added per-declared-class gate cache for `isNotCustomWrittenClass` and declared custom writer resolution.
+  * Runtime custom writer resolution now reuses the existing `getCustomWriter()`/`writerCache` path after gate pass (no duplicate runtime cache layer).
+  This lowers hot-loop cost in `writeUsingCustomWriter()` / `getCustomWriterIfAllowed()`, avoids per-`JsonWriter` cache construction churn in short-lived writer workloads, and removes redundant runtime cache indirection.
+* **PERFORMANCE**: `JsonWriter` — now consistently honors `cycleSupport(false)` by bypassing `objsReferenced` / `@id` lookup work across write hot paths (object/map/collection/array/custom writer) while retaining lightweight visited-marker guarding to prevent infinite recursion on accidental cyclic input.
+* **MAINTENANCE/PERFORMANCE**: `MapResolver` — inlined and removed now-redundant `fastPrimitiveCoercion(...)` wrapper after scalar coercion consolidation.
+* **BUG FIX / PERFORMANCE**: `ObjectResolver` — generic inference now runs incrementally (on-demand) and no longer relies on the deep `markUntypedObjects()` pre-pass. This reduces upfront traversal work while preserving nested generic correctness across parameterized object fields, collections, and maps.
+* **BUG FIX**: `ObjectResolver` — map generic typing now preserves and applies both key and value generic types during traversal, fixing cases where complex map keys/values could remain as `JsonObject` instead of resolving to target types.
+* **BUG FIX**: `ObjectResolver.processJsonObjectElement()` now preserves explicit element `@type` metadata in arrays by only applying declared component type when the element type is missing. This fixes polymorphic array deserialization where explicit subtype entries could be overwritten by the declared array component type.
+* **MAINTENANCE**: `ObjectResolver` — scalar fast-path conversion gates now use `converter.isConversionSupportedFor(source, target)` in both `assignField()` and `readWithFactoryIfExists()` (with existing scalar/simple checks retained), reducing dependence on the pair-form "simple type" API without changing behavior.
+* **MAINTENANCE/PERFORMANCE**: `ObjectResolver` — nested collection type-marking path was cleaned up by removing an unused `collectionClass` parameter and eliminating per-nested-array `ArrayList` copy allocation in `handleArrayInCollection()`. Nested arrays now reuse the existing `JsonObject` wrapper for traversal, reducing allocation churn in deep generic collection payloads.
+* **CLEANUP**: `ReadOptions` — removed legacy pre-pass code path and associated temporary API toggles (`ReadOptions.useLegacyMarkUntypedObjectsPrepass()` and `ReadOptionsBuilder.useLegacyMarkUntypedObjectsPrepass(boolean)`).
+* **PERFORMANCE**: `ReadOptionsBuilder` — added cached read injector planning (`InjectorPlan`) and wired `ObjectResolver`/`Resolver` field lookup paths to use it, reducing repeated map resolution overhead during traversal and unresolved-reference patching.
+* **PERFORMANCE**: `Resolver` — read-side scalar coercion hot paths refactored to avoid legacy `coerceLong()`/`coerceDouble()` indirection:
+  * Added target-kind based scalar coercion (`scalarTargetKind` / `fastScalarCoercion`) in `Resolver`.
+  * `ObjectResolver` / `MapResolver` now use precomputed scalar target kinds in array and field hot loops.
+  * Primitive array assignment now uses direct no-allocation writes via shared `tryAssignParsedScalarToArray(...)`.
+  This reduces wrapper churn and removes repeated coercion dispatch overhead in numeric-heavy deserialization.
+* **BUG FIX**: `Resolver.wrapException()` now preserves the causal chain by constructing `JsonIoException(message, cause)` instead of creating a message-only wrapper. This restores root exception context for conversion failures.
+* **MAINTENANCE**: `Resolver` — replaced resolver/read-path usage of Converter "simple type" APIs with internal `Resolver.isPseudoPrimitive(Class<?>)` gating (string-convertible, non-container, non-enum scalar-like types). This reduces dependency on confusing Converter simple-type API surface while preserving behavior in `Resolver`, `ObjectResolver`, and `MapResolver`.
+* **MAINTENANCE**: `Resolver.isPseudoPrimitive(Class<?>)` refined to align with read-side semantics by checking `isSimpleTypeConversionSupported(String.class, type)` (materializable from JSON scalar strings), while still excluding enums.
+* **MAINTENANCE**: `Resolver.toJava()` — simplified map pre-conversion decision logic by consolidating overlapping conditions into focused helpers (`isMapLikeJsonType`, `shouldEarlyConvertMapToNonMap`, `resolveMapPojoValueTypeForPreConversion`, `shouldConvertMapValueTypeAsPojo`) with parity behavior for map-to-POJO and parameterized map value materialization paths.
+* **BUG FIX**: `ToonWriter` now applies `@IoProperty` rename and `@IoPropertyOrder` reordering in its `getObjectFields()` path, ensuring annotations produce identical output across both JSON and TOON writers.
+* **FEATURE**: `ToonWriter` — now supports configurable delimiters for tabular arrays and inline primitive arrays. Supported delimiters: comma (`,`, default), tab (`\t`), and pipe (`|`). Configure via `WriteOptionsBuilder.toonDelimiter(char)` per-instance or `WriteOptionsBuilder.addPermanentToonDelimiter(char)` for JVM-wide defaults. The delimiter is encoded in the count bracket (`[N]`, `[N\t]`, `[N|]`) so the `ToonReader` auto-detects it on read — no read-side configuration needed. Tab delimiters can further reduce BPE token count for LLM payloads.
+* **FEATURE**: `ToonWriter` — now supports tabular format for POJO collections and arrays. When `prettyPrint` is `false` (default), uniform POJO lists/arrays are written in compact CSV-style tabular format (`[N]{field1,field2,...}: row1 row2 ...`). When `prettyPrint` is `true`, the verbose list format (`- key: value`) is used instead.
+* **MAINTENANCE**: `ToonWriter` — removed unused private method `writeCollectionElements(Collection<?>)`.
+* **PERFORMANCE**: `WriteOptionsBuilder` — added cached write-field planning (`WriteFieldPlan`) and switched `JsonWriter` object/enum/trace field loops to use precomputed per-class metadata (serialized key literal, declared container generic types, and trace-skip hints), reducing repeated reflection/generic analysis in hot paths.
 * **TESTING**: Added 17 new TOON format tests covering both tabular and list POJO format paths:
   * 10 writer tests: tabular default, prettyPrint list fallback, non-primitive field fallback, array tabular, mixed-type fallback, round-trip for both formats.
   * 7 reader tests: hand-authored tabular/list parsing, end-to-end write-then-read round-trips, both-formats-same-result verification.
-* **BUG FIX**: `ToonWriter` now applies `@IoProperty` rename and `@IoPropertyOrder` reordering in its `getObjectFields()` path, ensuring annotations produce identical output across both JSON and TOON writers.
-* **PERFORMANCE**: `Injector` numeric kind and primitive-wrapper lookups now use `ClassValueMap` O(1) dispatch instead of sequential `class ==` chains.
+* **TESTING**: Added `PolymorphicArrayElementTypeTest` to verify explicit array element `@type` is honored over declared component type inference.
+* **TESTING**: Added `ReadWithFactoryDeadCodeTest.testReadWithFactoryIfExists_primitiveStringMismatchUsesConversionSupportGate()` to verify the primitive/String mismatch fast path uses conversion support checks and preserves null-return fallback for unsupported scalar targets.
+* **TESTING**: Added `ResolverValueToTargetTest.conversionFailurePreservesCause()` to assert conversion failure wrappers retain the original cause.
 * **CLEANUP**: Silenced verbose test output that cluttered Maven build logs:
   * `JsonIoMainTest`: Suppressed logger to prevent full conversion table dump to stdout.
   * `CompactFormatTest`: Removed 36 debug `System.out.println` calls; all 33 tests and assertions retained.
