@@ -2,7 +2,7 @@
 
 #### 4.95.0 (Unreleased)
 * **PERFORMANCE**: `Accessor.retrieve()` now uses sticky fallback flags for lambda/VarHandle/MethodHandle paths; once an optimized path fails, it is bypassed on subsequent calls instead of repeatedly throwing/falling back.
-* **FEATURE**: `AnnotationResolver` — annotation-based serialization control. json-io now supports 19 annotations in `com.cedarsoftware.io.annotation`:
+* **FEATURE**: `AnnotationResolver` — annotation-based serialization control. json-io now supports 21 annotations in `com.cedarsoftware.io.annotation`:
   * `@IoProperty("name")` — rename a field in JSON output and accept the renamed key on read.
   * `@IoIgnore` — exclude a field from serialization and deserialization.
   * `@IoIgnoreProperties({"a","b"})` — class-level field exclusion by name.
@@ -22,6 +22,8 @@
   * `@IoNonReferenceable` — class-level annotation marking a type as non-referenceable. Instances will never emit `@id`/`@ref` pairs. Annotation equivalent of `config/nonRefs.txt` and `addNonReferenceableClass()`.
   * `@IoNotCustomRead` — class-level annotation that suppresses custom reader usage for this type, even if a custom reader exists for a parent class. Annotation equivalent of `config/notCustomRead.txt` and `addNotCustomReaderClass()`.
   * `@IoNotCustomWrite` — class-level annotation that suppresses custom writer usage for this type, even if a custom writer exists for a parent class. Annotation equivalent of `config/notCustomWritten.txt` and `addNotCustomWrittenClass()`.
+  * `@IoCustomWriter(MyWriter.class)` — class-level annotation specifying a `JsonClassWriter` implementation for custom serialization. Writer instances are cached and shared. Programmatic `addCustomWrittenClass()` takes priority.
+  * `@IoCustomReader(MyReader.class)` — class-level annotation specifying a `JsonClassReader` implementation for custom deserialization. Reader instances are cached and shared. Programmatic `addCustomReaderClass()` takes priority.
   Annotations are scanned once per class and cached in a `ClassValueMap`. Programmatic API always overrides annotations.
 * **FEATURE**: `AnnotationResolver` — Jackson annotation compatibility. json-io reflectively honors Jackson annotations when the Jackson JAR is on the classpath — with zero compile-time dependency. json-io annotations take priority over Jackson annotations on the same element. Supported Jackson annotations:
   * `@JsonProperty`, `@JsonIgnore`, `@JsonIgnoreProperties`, `@JsonAlias`, `@JsonPropertyOrder`, `@JsonInclude(Include.NON_NULL)` (jackson-annotations)

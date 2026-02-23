@@ -14,8 +14,12 @@ import java.util.Map;
 import java.util.Set;
 
 import com.cedarsoftware.io.ClassFactory;
+import com.cedarsoftware.io.JsonClassReader;
+import com.cedarsoftware.io.JsonClassWriter;
 import com.cedarsoftware.io.annotation.IoAlias;
 import com.cedarsoftware.io.annotation.IoClassFactory;
+import com.cedarsoftware.io.annotation.IoCustomReader;
+import com.cedarsoftware.io.annotation.IoCustomWriter;
 import com.cedarsoftware.io.annotation.IoCreator;
 import com.cedarsoftware.io.annotation.IoDeserialize;
 import com.cedarsoftware.io.annotation.IoGetter;
@@ -262,7 +266,9 @@ public class AnnotationResolver {
             null,
             false,
             false,
-            false);
+            false,
+            null,
+            null);
 
     /**
      * Get annotation metadata for a class. Scans once, caches forever.
@@ -333,6 +339,20 @@ public class AnnotationResolver {
 
         // 1g. @IoNotCustomWrite — class-level flag to suppress custom writer
         boolean notCustomWrite = clazz.isAnnotationPresent(IoNotCustomWrite.class);
+
+        // 1h. @IoCustomWriter — class-level custom writer
+        Class<? extends JsonClassWriter> customWriter = null;
+        IoCustomWriter writerAnn = clazz.getAnnotation(IoCustomWriter.class);
+        if (writerAnn != null) {
+            customWriter = writerAnn.value();
+        }
+
+        // 1i. @IoCustomReader — class-level custom reader
+        Class<? extends JsonClassReader> customReader = null;
+        IoCustomReader readerAnn = clazz.getAnnotation(IoCustomReader.class);
+        if (readerAnn != null) {
+            customReader = readerAnn.value();
+        }
 
         // 2. @IoNaming — class-level naming strategy
         IoNaming.Strategy namingStrategy = scanNamingStrategy(clazz);
@@ -478,7 +498,8 @@ public class AnnotationResolver {
                 && valueMethod == null && includedFields == null && !ignoredType
                 && fieldTypeInfoDefaults == null && fieldDeserializeOverrides == null
                 && classFactory == null && getterMethods == null && setterMethods == null
-                && !nonReferenceable && !notCustomRead && !notCustomWrite) {
+                && !nonReferenceable && !notCustomRead && !notCustomWrite
+                && customWriter == null && customReader == null) {
             return EMPTY;
         }
 
@@ -499,7 +520,9 @@ public class AnnotationResolver {
                 setterMethods != null ? Collections.unmodifiableMap(setterMethods) : null,
                 nonReferenceable,
                 notCustomRead,
-                notCustomWrite);
+                notCustomWrite,
+                customWriter,
+                customReader);
     }
 
     // ---- Class-level scanners ----
@@ -988,6 +1011,8 @@ public class AnnotationResolver {
         private final boolean nonReferenceable;
         private final boolean notCustomRead;
         private final boolean notCustomWrite;
+        private final Class<? extends JsonClassWriter> customWriter;
+        private final Class<? extends JsonClassReader> customReader;
 
         ClassAnnotationMetadata(Map<String, String> renamedFields,
                                 Set<String> ignoredFields,
@@ -1005,7 +1030,9 @@ public class AnnotationResolver {
                                 Map<String, String> setterMethods,
                                 boolean nonReferenceable,
                                 boolean notCustomRead,
-                                boolean notCustomWrite) {
+                                boolean notCustomWrite,
+                                Class<? extends JsonClassWriter> customWriter,
+                                Class<? extends JsonClassReader> customReader) {
             this.renamedFields = renamedFields;
             this.ignoredFields = ignoredFields;
             this.aliasToFieldName = aliasToFieldName;
@@ -1023,6 +1050,8 @@ public class AnnotationResolver {
             this.nonReferenceable = nonReferenceable;
             this.notCustomRead = notCustomRead;
             this.notCustomWrite = notCustomWrite;
+            this.customWriter = customWriter;
+            this.customReader = customReader;
         }
 
         /**
@@ -1172,6 +1201,22 @@ public class AnnotationResolver {
         }
 
         /**
+         * Get the @IoCustomWriter class for this type, or null if not specified.
+         * @return the JsonClassWriter implementation class, or null
+         */
+        public Class<? extends JsonClassWriter> getCustomWriter() {
+            return customWriter;
+        }
+
+        /**
+         * Get the @IoCustomReader class for this type, or null if not specified.
+         * @return the JsonClassReader implementation class, or null
+         */
+        public Class<? extends JsonClassReader> getCustomReader() {
+            return customReader;
+        }
+
+        /**
          * @return true if this metadata has no annotation information (empty/default)
          */
         public boolean isEmpty() {
@@ -1182,7 +1227,8 @@ public class AnnotationResolver {
                     && !ignoredType && fieldTypeInfoDefaults == null
                     && fieldDeserializeOverrides == null && classFactory == null
                     && getterMethods == null && setterMethods == null
-                    && !nonReferenceable && !notCustomRead && !notCustomWrite;
+                    && !nonReferenceable && !notCustomRead && !notCustomWrite
+                    && customWriter == null && customReader == null;
         }
     }
 }

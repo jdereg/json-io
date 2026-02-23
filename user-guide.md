@@ -650,7 +650,7 @@ cyclic references are typically not needed.
 
 ## Annotations
 
-json-io provides 19 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization. In addition, json-io **reflectively honors Jackson annotations** when the Jackson JAR is on the classpath — with zero compile-time dependency on Jackson.
+json-io provides 21 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization. In addition, json-io **reflectively honors Jackson annotations** when the Jackson JAR is on the classpath — with zero compile-time dependency on Jackson.
 
 ### Annotation Precedence
 
@@ -978,6 +978,56 @@ public class MySpecialCollection extends ArrayList<String> {
 ```
 
 **Note:** `@IoNotCustomWrite` is additive with the programmatic API (`addNotCustomWrittenClass()`) and the `notCustomWritten.txt` config file. Config files are used for JDK classes that cannot be annotated; annotations are for user classes.
+
+#### `@IoCustomWriter(MyWriter.class)` — Custom Writer
+Specifies a `JsonClassWriter` implementation to use when serializing instances of this class. This is the annotation equivalent of calling `WriteOptionsBuilder.addCustomWrittenClass(Class, JsonClassWriter)` or adding an entry to `customWriters.txt`.
+
+The writer class must have a public no-arg constructor. Instances are cached and shared.
+
+```java
+@IoCustomWriter(MoneyWriter.class)
+public class Money {
+    private BigDecimal amount;
+    private Currency currency;
+}
+
+public class MoneyWriter implements JsonClassWriter {
+    public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException {
+        if (showType) { output.write("\"value\":"); }
+        writePrimitiveForm(o, output, context);
+    }
+    public boolean hasPrimitiveForm(WriterContext context) { return true; }
+    public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+        Money m = (Money) o;
+        output.write("\"" + m.getAmount() + " " + m.getCurrency() + "\"");
+    }
+}
+```
+
+**Note:** Programmatic `addCustomWrittenClass()` takes priority over the annotation.
+
+#### `@IoCustomReader(MyReader.class)` — Custom Reader
+Specifies a `JsonClassReader` implementation to use when deserializing instances of this class. This is the annotation equivalent of calling `ReadOptionsBuilder.addCustomReaderClass(Class, JsonClassReader)` or adding an entry to `customReaders.txt`.
+
+The reader class must have a public no-arg constructor. Instances are cached and shared.
+
+```java
+@IoCustomReader(MoneyReader.class)
+public class Money {
+    private BigDecimal amount;
+    private Currency currency;
+}
+
+public class MoneyReader implements JsonClassReader {
+    public Object read(Object jsonObj, Resolver resolver) {
+        String s = (jsonObj instanceof String) ? (String) jsonObj : (String) ((JsonObject) jsonObj).get("value");
+        String[] parts = s.split(" ");
+        return new Money(new BigDecimal(parts[0]), Currency.getInstance(parts[1]));
+    }
+}
+```
+
+Both annotations can be combined on the same class to provide custom serialization in both directions. **Note:** Programmatic `addCustomReaderClass()` takes priority over the annotation. Config files are used for JDK classes that cannot be annotated; annotations are for user classes.
 
 ### Combining Annotations
 

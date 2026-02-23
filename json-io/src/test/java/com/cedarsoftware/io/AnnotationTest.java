@@ -1,5 +1,7 @@
 package com.cedarsoftware.io;
 
+import java.io.IOException;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -8,6 +10,8 @@ import java.util.Map;
 
 import com.cedarsoftware.io.annotation.IoAlias;
 import com.cedarsoftware.io.annotation.IoClassFactory;
+import com.cedarsoftware.io.annotation.IoCustomReader;
+import com.cedarsoftware.io.annotation.IoCustomWriter;
 import com.cedarsoftware.io.annotation.IoCreator;
 import com.cedarsoftware.io.annotation.IoDeserialize;
 import com.cedarsoftware.io.annotation.IoGetter;
@@ -2591,5 +2595,109 @@ class AnnotationTest {
         WriteStandardWidget restored = JsonIo.toJava(json, readOptions).asClass(WriteStandardWidget.class);
         assertEquals("gizmo", restored.name);
         assertEquals(99, restored.count);
+    }
+
+    // ======================== @IoCustomWriter / @IoCustomReader ========================
+
+    public static class GadgetWriter implements JsonClassWriter {
+        public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException {
+            if (showType) {
+                output.write("\"value\":");
+            }
+            writePrimitiveForm(o, output, context);
+        }
+        public boolean hasPrimitiveForm(WriterContext context) { return true; }
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            Gadget g = (Gadget) o;
+            output.write("\"gadget:" + g.label + ":" + g.size + "\"");
+        }
+    }
+
+    public static class GadgetReader implements JsonClassReader {
+        public Object read(Object jsonObj, Resolver resolver) {
+            String s;
+            if (jsonObj instanceof String) {
+                s = (String) jsonObj;
+            } else {
+                // When @type is present, jsonObj is a JsonObject with a "value" field
+                JsonObject jObj = (JsonObject) jsonObj;
+                s = (String) jObj.get("value");
+            }
+            String[] parts = s.split(":");
+            // format: "gadget:label:size"
+            return new Gadget(parts[1], Integer.parseInt(parts[2]));
+        }
+    }
+
+    @IoCustomWriter(GadgetWriter.class)
+    @IoCustomReader(GadgetReader.class)
+    static class Gadget {
+        String label;
+        int size;
+        Gadget() {}
+        Gadget(String label, int size) { this.label = label; this.size = size; }
+    }
+
+    static class PlainGadget {
+        String label;
+        int size;
+        PlainGadget() {}
+        PlainGadget(String label, int size) { this.label = label; this.size = size; }
+    }
+
+    @Test
+    void testIoCustomWriterMetadataApi() {
+        assertEquals(GadgetWriter.class, AnnotationResolver.getMetadata(Gadget.class).getCustomWriter(),
+                "@IoCustomWriter should return GadgetWriter.class");
+        assertNull(AnnotationResolver.getMetadata(PlainGadget.class).getCustomWriter(),
+                "Unannotated class should return null for custom writer");
+    }
+
+    @Test
+    void testIoCustomReaderMetadataApi() {
+        assertEquals(GadgetReader.class, AnnotationResolver.getMetadata(Gadget.class).getCustomReader(),
+                "@IoCustomReader should return GadgetReader.class");
+        assertNull(AnnotationResolver.getMetadata(PlainGadget.class).getCustomReader(),
+                "Unannotated class should return null for custom reader");
+    }
+
+    @Test
+    void testIoCustomWriterOptions() {
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        assertNotNull(writeOptions.getCustomWriter(Gadget.class),
+                "Gadget should have a custom writer via annotation");
+        assertNull(writeOptions.getCustomWriter(PlainGadget.class),
+                "PlainGadget should not have a custom writer");
+    }
+
+    @Test
+    void testIoCustomReaderOptions() {
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        assertNotNull(readOptions.getCustomReader(Gadget.class),
+                "Gadget should have a custom reader via annotation");
+        assertNull(readOptions.getCustomReader(PlainGadget.class),
+                "PlainGadget should not have a custom reader");
+    }
+
+    @Test
+    void testIoCustomWriterOutput() {
+        Gadget gadget = new Gadget("foo", 42);
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        String json = JsonIo.toJson(gadget, writeOptions);
+        assertTrue(json.contains("gadget:foo:42"), "JSON should use custom writer format: " + json);
+    }
+
+    @Test
+    void testIoCustomReaderWriterRoundTrip() {
+        Gadget gadget = new Gadget("bar", 99);
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(gadget, writeOptions);
+        assertTrue(json.contains("gadget:bar:99"), "JSON should use custom writer format: " + json);
+
+        Gadget restored = JsonIo.toJava(json, readOptions).asClass(Gadget.class);
+        assertEquals("bar", restored.label);
+        assertEquals(99, restored.size);
     }
 }

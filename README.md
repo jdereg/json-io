@@ -97,7 +97,7 @@ json-io's TOON implementation offers comprehensive Java type coverage while JToo
 
 ### Annotation Support
 
-json-io provides 19 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization:
+json-io provides 21 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization:
 
 | Annotation | Target | Purpose |
 |---|---|---|
@@ -120,6 +120,8 @@ json-io provides 19 annotations in the `com.cedarsoftware.io.annotation` package
 | `@IoNonReferenceable` | Class | Suppress `@id`/`@ref` for instances of this type |
 | `@IoNotCustomRead` | Class | Suppress custom reader (use standard deserialization) |
 | `@IoNotCustomWrite` | Class | Suppress custom writer (use standard serialization) |
+| `@IoCustomWriter(MyWriter.class)` | Class | Specify custom `JsonClassWriter` for serialization |
+| `@IoCustomReader(MyReader.class)` | Class | Specify custom `JsonClassReader` for deserialization |
 
 Additionally, json-io **reflectively honors Jackson annotations** when they are on the classpath — with zero compile-time dependency on Jackson. Supported: `@JsonProperty`, `@JsonIgnore`, `@JsonIgnoreProperties`, `@JsonAlias`, `@JsonPropertyOrder`, `@JsonInclude`, `@JsonCreator`, `@JsonValue`, `@JsonIgnoreType`, `@JsonTypeInfo`, `@JsonIncludeProperties`, `@JsonNaming`, `@JsonDeserialize`, `@JsonGetter`, `@JsonSetter`.
 

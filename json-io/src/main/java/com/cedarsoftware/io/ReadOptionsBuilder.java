@@ -82,6 +82,7 @@ public class ReadOptionsBuilder {
     private static final Map<Class<?>, Class<?>> BASE_COERCED_TYPES = new ClassValueMap<>();
     private static final Set<Class<?>> BASE_NON_REFS = new ClassValueSet();
     private static final Set<Class<?>> BASE_NOT_CUSTOM_READ = new ClassValueSet();
+    private static final Map<Class<? extends JsonClassReader>, JsonClassReader> annotationReaderCache = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_SETTERS = new ClassValueMap<>();
     private static final Map<Class<?>, Set<String>> BASE_NOT_IMPORTED_FIELDS = new ClassValueMap<>();
     
@@ -1960,7 +1961,18 @@ public class ReadOptionsBuilder {
          * @return JsonClassReader for the custom class (if one exists), null otherwise.
          */
         public JsonClassReader getCustomReader(Class<?> c) {
-            JsonClassReader reader = readerCache.computeIfAbsent(c, cls -> ClassUtilities.findClosest(c, customReaderClasses, nullReader));
+            JsonClassReader reader = readerCache.computeIfAbsent(c, cls -> {
+                JsonClassReader found = ClassUtilities.findClosest(c, customReaderClasses, nullReader);
+                if (found != nullReader) {
+                    return found;
+                }
+                // Annotation fallback: @IoCustomReader
+                Class<? extends JsonClassReader> readerClass = AnnotationResolver.getMetadata(c).getCustomReader();
+                if (readerClass != null) {
+                    return getOrCreateAnnotationReader(readerClass);
+                }
+                return nullReader;
+            });
             return reader == nullReader ? null : reader;
         }
 
@@ -2298,6 +2310,20 @@ public class ReadOptionsBuilder {
                 addPermanentNotCustomReadClass(loadedClass);
             }
         }
+    }
+
+    /**
+     * Get or create a cached JsonClassReader instance from an @IoCustomReader annotation.
+     * Keyed by reader class so one instance is shared if the same reader is used on multiple classes.
+     */
+    private static JsonClassReader getOrCreateAnnotationReader(Class<? extends JsonClassReader> readerClass) {
+        return annotationReaderCache.computeIfAbsent(readerClass, cls -> {
+            try {
+                return cls.getDeclaredConstructor().newInstance();
+            } catch (Exception e) {
+                throw new JsonIoException("Unable to instantiate @IoCustomReader: " + cls.getName(), e);
+            }
+        });
     }
 
     @FunctionalInterface

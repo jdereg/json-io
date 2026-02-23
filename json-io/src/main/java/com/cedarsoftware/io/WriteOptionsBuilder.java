@@ -84,6 +84,7 @@ public class WriteOptionsBuilder {
     private static final Map<Class<?>, JsonClassWriter> BASE_WRITERS = new ClassValueMap<>();
     private static final Set<Class<?>> BASE_NON_REFS = new ClassValueSet();
     private static final Set<Class<?>> BASE_NOT_CUSTOM_WRITTEN = new ClassValueSet();
+    private static final Map<Class<? extends JsonClassWriter>, JsonClassWriter> annotationWriterCache = new ConcurrentHashMap<>();
     static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ClassValueMap<>();
     private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_GETTERS = new ClassValueMap<>();
     private static final Map<String, FieldFilter> BASE_FIELD_FILTERS = new ConcurrentHashMap<>();
@@ -2025,10 +2026,14 @@ public class WriteOptionsBuilder {
             JsonClassWriter writer = ClassUtilities.findClosest(c, customWrittenClasses, nullWriter);
             if (writer != nullWriter) {
                 return writer;
-            } else {
-                Class<?> enumClass = ClassUtilities.getClassIfEnum(c);
-                return (enumClass != null) ? enumWriter : nullWriter;
             }
+            // Annotation fallback: @IoCustomWriter
+            Class<? extends JsonClassWriter> writerClass = AnnotationResolver.getMetadata(c).getCustomWriter();
+            if (writerClass != null) {
+                return getOrCreateAnnotationWriter(writerClass);
+            }
+            Class<?> enumClass = ClassUtilities.getClassIfEnum(c);
+            return (enumClass != null) ? enumWriter : nullWriter;
         }
         
         public Object getCustomOption(String key)
@@ -2369,7 +2374,21 @@ public class WriteOptionsBuilder {
             }
         }
     }
-    
+
+    /**
+     * Get or create a cached JsonClassWriter instance from an @IoCustomWriter annotation.
+     * Keyed by writer class so one instance is shared if the same writer is used on multiple classes.
+     */
+    private static JsonClassWriter getOrCreateAnnotationWriter(Class<? extends JsonClassWriter> writerClass) {
+        return annotationWriterCache.computeIfAbsent(writerClass, cls -> {
+            try {
+                return cls.getDeclaredConstructor().newInstance();
+            } catch (Exception e) {
+                throw new JsonIoException("Unable to instantiate @IoCustomWriter: " + cls.getName(), e);
+            }
+        });
+    }
+
     private static void loadBaseExcludedFields() {
         Map<Class<?>, Set<String>> allExcludedFields = ReadOptionsBuilder.loadClassToSetOfStrings("config/fieldsNotExported.txt");
         for (Map.Entry<Class<?>, Set<String>> entry : allExcludedFields.entrySet()) {
