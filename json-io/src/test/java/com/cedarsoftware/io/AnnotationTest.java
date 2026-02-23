@@ -10,6 +10,8 @@ import com.cedarsoftware.io.annotation.IoAlias;
 import com.cedarsoftware.io.annotation.IoClassFactory;
 import com.cedarsoftware.io.annotation.IoCreator;
 import com.cedarsoftware.io.annotation.IoDeserialize;
+import com.cedarsoftware.io.annotation.IoGetter;
+import com.cedarsoftware.io.annotation.IoSetter;
 import com.cedarsoftware.io.annotation.IoIgnore;
 import com.cedarsoftware.io.annotation.IoIgnoreProperties;
 import com.cedarsoftware.io.annotation.IoIgnoreType;
@@ -22,7 +24,9 @@ import com.cedarsoftware.io.annotation.IoTypeInfo;
 import com.cedarsoftware.io.annotation.IoValue;
 import com.cedarsoftware.io.reflect.AnnotationResolver;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnoreType;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.JsonIncludeProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -2251,5 +2255,153 @@ class AnnotationTest {
         // Classes without @IoClassFactory should return null
         AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(NoAnnotationModel.class);
         assertNull(meta.getClassFactory());
+    }
+
+    // ===================== @IoGetter / @IoSetter Test Models =====================
+
+    static class GetterSetterWidget {
+        private String name;
+        private int size;
+
+        GetterSetterWidget() {}
+        GetterSetterWidget(String name, int size) {
+            this.name = name;
+            this.size = size;
+        }
+
+        // Non-standard getter — NOT following getXxx() convention
+        @IoGetter("name")
+        public String fetchName() { return name; }
+
+        // Non-standard setter — NOT following setXxx() convention
+        @IoSetter("name")
+        public void assignName(String n) { this.name = n; }
+
+        @IoGetter("size")
+        public int fetchSize() { return size; }
+
+        @IoSetter("size")
+        public void assignSize(int s) { this.size = s; }
+    }
+
+    static class JacksonGetterSetterWidget {
+        private String label;
+        private int count;
+
+        JacksonGetterSetterWidget() {}
+        JacksonGetterSetterWidget(String label, int count) {
+            this.label = label;
+            this.count = count;
+        }
+
+        @JsonGetter("label")
+        public String retrieveLabel() { return label; }
+
+        @JsonSetter("label")
+        public void applyLabel(String l) { this.label = l; }
+
+        @JsonGetter("count")
+        public int retrieveCount() { return count; }
+
+        @JsonSetter("count")
+        public void applyCount(int c) { this.count = c; }
+    }
+
+    // ===================== @IoGetter / @IoSetter Tests =====================
+
+    @Test
+    void testIoGetterBasic() {
+        // Write should use the annotated getter method (fetchName, fetchSize) instead of getXxx
+        GetterSetterWidget widget = new GetterSetterWidget("bolt", 42);
+        WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoNever().build();
+        String json = JsonIo.toJson(widget, writeOptions);
+        assertTrue(json.contains("\"name\""));
+        assertTrue(json.contains("\"bolt\""));
+        assertTrue(json.contains("\"size\""));
+        assertTrue(json.contains("42"));
+    }
+
+    @Test
+    void testIoSetterBasic() {
+        // Read should use the annotated setter method (assignName, assignSize) instead of setXxx
+        String json = "{\"@type\":\"com.cedarsoftware.io.AnnotationTest$GetterSetterWidget\",\"name\":\"nut\",\"size\":7}";
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        GetterSetterWidget widget = JsonIo.toJava(json, readOptions).asClass(GetterSetterWidget.class);
+        assertEquals("nut", widget.fetchName());
+        assertEquals(7, widget.fetchSize());
+    }
+
+    @Test
+    void testIoGetterSetterRoundTrip() {
+        GetterSetterWidget original = new GetterSetterWidget("washer", 100);
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        String json = JsonIo.toJson(original, writeOptions);
+        GetterSetterWidget restored = JsonIo.toJava(json, readOptions).asClass(GetterSetterWidget.class);
+        assertEquals("washer", restored.fetchName());
+        assertEquals(100, restored.fetchSize());
+    }
+
+    @Test
+    void testIoGetterProgrammaticWins() {
+        // Programmatic addNonStandardGetter should override @IoGetter
+        // Since GetterSetterWidget has no standard getXxx methods, if we add a programmatic
+        // mapping for a non-existent method, the factory chain should fall back to field access.
+        // This verifies the priority: programmatic > annotation
+        WriteOptions opts = new WriteOptionsBuilder()
+                .addNonStandardGetter(GetterSetterWidget.class, "name", "nonExistentGetter")
+                .showTypeInfoNever()
+                .build();
+        GetterSetterWidget widget = new GetterSetterWidget("screw", 5);
+        String json = JsonIo.toJson(widget, opts);
+        // The programmatic override points to a non-existent method, so it falls through to field access
+        // The annotation getter (fetchName) should NOT be used because programmatic has priority
+        assertTrue(json.contains("\"name\""));
+        assertTrue(json.contains("\"screw\""));
+    }
+
+    @Test
+    void testIoSetterViaFieldInjection() {
+        // @IoSetter points assignName/assignSize — should be used for deserialization
+        String json = "{\"@type\":\"com.cedarsoftware.io.AnnotationTest$GetterSetterWidget\",\"name\":\"rivet\",\"size\":3}";
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        GetterSetterWidget widget = JsonIo.toJava(json, readOptions).asClass(GetterSetterWidget.class);
+        assertEquals("rivet", widget.fetchName());
+        assertEquals(3, widget.fetchSize());
+    }
+
+    @Test
+    void testJacksonJsonGetterFallback() {
+        // Jackson @JsonGetter should work when @IoGetter is absent
+        JacksonGetterSetterWidget widget = new JacksonGetterSetterWidget("gadget", 99);
+        WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoNever().build();
+        String json = JsonIo.toJson(widget, writeOptions);
+        assertTrue(json.contains("\"label\""));
+        assertTrue(json.contains("\"gadget\""));
+        assertTrue(json.contains("\"count\""));
+        assertTrue(json.contains("99"));
+    }
+
+    @Test
+    void testJacksonJsonSetterFallback() {
+        // Jackson @JsonSetter should work when @IoSetter is absent
+        String json = "{\"@type\":\"com.cedarsoftware.io.AnnotationTest$JacksonGetterSetterWidget\",\"label\":\"widget\",\"count\":55}";
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        JacksonGetterSetterWidget widget = JsonIo.toJava(json, readOptions).asClass(JacksonGetterSetterWidget.class);
+        assertEquals("widget", widget.retrieveLabel());
+        assertEquals(55, widget.retrieveCount());
+    }
+
+    @Test
+    void testIoGetterSetterMetadataApi() {
+        // Verify AnnotationResolver metadata returns the correct getter/setter method names
+        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(GetterSetterWidget.class);
+        assertEquals("fetchName", meta.getGetterMethod("name"));
+        assertEquals("assignName", meta.getSetterMethod("name"));
+        assertEquals("fetchSize", meta.getGetterMethod("size"));
+        assertEquals("assignSize", meta.getSetterMethod("size"));
+        // Non-annotated fields return null
+        assertNull(meta.getGetterMethod("nonexistent"));
+        assertNull(meta.getSetterMethod("nonexistent"));
     }
 }

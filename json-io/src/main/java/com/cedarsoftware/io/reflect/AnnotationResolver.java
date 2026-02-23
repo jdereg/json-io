@@ -18,6 +18,7 @@ import com.cedarsoftware.io.annotation.IoAlias;
 import com.cedarsoftware.io.annotation.IoClassFactory;
 import com.cedarsoftware.io.annotation.IoCreator;
 import com.cedarsoftware.io.annotation.IoDeserialize;
+import com.cedarsoftware.io.annotation.IoGetter;
 import com.cedarsoftware.io.annotation.IoIgnore;
 import com.cedarsoftware.io.annotation.IoIgnoreProperties;
 import com.cedarsoftware.io.annotation.IoIgnoreType;
@@ -25,6 +26,7 @@ import com.cedarsoftware.io.annotation.IoInclude;
 import com.cedarsoftware.io.annotation.IoIncludeProperties;
 import com.cedarsoftware.io.annotation.IoNaming;
 import com.cedarsoftware.io.annotation.IoProperty;
+import com.cedarsoftware.io.annotation.IoSetter;
 import com.cedarsoftware.io.annotation.IoTypeInfo;
 import com.cedarsoftware.io.annotation.IoValue;
 import com.cedarsoftware.io.annotation.IoPropertyOrder;
@@ -98,7 +100,13 @@ public class AnnotationResolver {
     private static final Class<? extends Annotation> EXT_IGNORE_TYPE;
     @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_TYPE_INFO;
+    @SuppressWarnings("unchecked")
+    private static final Class<? extends Annotation> EXT_GETTER;
+    @SuppressWarnings("unchecked")
+    private static final Class<? extends Annotation> EXT_SETTER;
 
+    private static final Method EXT_GETTER_VALUE;
+    private static final Method EXT_SETTER_VALUE;
     private static final Method EXT_PROPERTY_VALUE;
     private static final Method EXT_IGNORE_PROPERTIES_VALUE;
     private static final Method EXT_ALIAS_VALUE;
@@ -121,6 +129,10 @@ public class AnnotationResolver {
         Class<? extends Annotation> extIncludeProperties = null;
         Class<? extends Annotation> extIgnoreType = null;
         Class<? extends Annotation> extTypeInfo = null;
+        Class<? extends Annotation> extGetter = null;
+        Class<? extends Annotation> extSetter = null;
+        Method extGetterValue = null;
+        Method extSetterValue = null;
         Method extPropertyValue = null;
         Method extIgnorePropertiesValue = null;
         Method extAliasValue = null;
@@ -142,7 +154,11 @@ public class AnnotationResolver {
             extIncludeProperties = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonIncludeProperties");
             extIgnoreType = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonIgnoreType");
             extTypeInfo = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonTypeInfo");
+            extGetter = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonGetter");
+            extSetter = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonSetter");
 
+            extGetterValue = extGetter.getMethod("value");
+            extSetterValue = extSetter.getMethod("value");
             extPropertyValue = extProperty.getMethod("value");
             extIncludePropertiesValue = extIncludeProperties.getMethod("value");
             extIgnorePropertiesValue = extIgnoreProperties.getMethod("value");
@@ -177,6 +193,10 @@ public class AnnotationResolver {
         EXT_INCLUDE_PROPERTIES = extIncludeProperties;
         EXT_IGNORE_TYPE = extIgnoreType;
         EXT_TYPE_INFO = extTypeInfo;
+        EXT_GETTER = extGetter;
+        EXT_SETTER = extSetter;
+        EXT_GETTER_VALUE = extGetterValue;
+        EXT_SETTER_VALUE = extSetterValue;
         EXT_PROPERTY_VALUE = extPropertyValue;
         EXT_INCLUDE_PROPERTIES_VALUE = extIncludePropertiesValue;
         EXT_IGNORE_PROPERTIES_VALUE = extIgnorePropertiesValue;
@@ -232,6 +252,8 @@ public class AnnotationResolver {
             null,
             null,
             false,
+            null,
+            null,
             null,
             null,
             null);
@@ -425,11 +447,22 @@ public class AnnotationResolver {
         // 5. Scan for @IoValue on instance methods
         Method valueMethod = scanValueMethod(clazz);
 
+        // 6. Scan for @IoGetter/@IoSetter on instance methods
+        Map<String, String> getterMethods = null;
+        Map<String, String> setterMethods = null;
+        Map<String, String>[] getterSetterMaps = scanGetterSetterMethods(clazz);
+        if (getterSetterMaps[0] != null) {
+            getterMethods = getterSetterMaps[0];
+        }
+        if (getterSetterMaps[1] != null) {
+            setterMethods = getterSetterMaps[1];
+        }
+
         if (renames.isEmpty() && ignored.isEmpty() && aliases.isEmpty()
                 && order == null && nonNullFields.isEmpty() && creator == null
                 && valueMethod == null && includedFields == null && !ignoredType
                 && fieldTypeInfoDefaults == null && fieldDeserializeOverrides == null
-                && classFactory == null) {
+                && classFactory == null && getterMethods == null && setterMethods == null) {
             return EMPTY;
         }
 
@@ -445,7 +478,9 @@ public class AnnotationResolver {
                 ignoredType,
                 fieldTypeInfoDefaults != null ? Collections.unmodifiableMap(fieldTypeInfoDefaults) : null,
                 fieldDeserializeOverrides != null ? Collections.unmodifiableMap(fieldDeserializeOverrides) : null,
-                classFactory);
+                classFactory,
+                getterMethods != null ? Collections.unmodifiableMap(getterMethods) : null,
+                setterMethods != null ? Collections.unmodifiableMap(setterMethods) : null);
     }
 
     // ---- Class-level scanners ----
@@ -719,6 +754,96 @@ public class AnnotationResolver {
         return null;
     }
 
+    // ---- Getter/Setter scanner ----
+
+    /**
+     * Scan instance methods for @IoGetter/@IoSetter (and Jackson @JsonGetter/@JsonSetter fallback).
+     * Returns a two-element array: [0] = getterMethods (fieldName → methodName), [1] = setterMethods.
+     * Either element may be null if no annotations are found.
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<String, String>[] scanGetterSetterMethods(Class<?> clazz) {
+        Map<String, String> getterMethods = null;
+        Map<String, String> setterMethods = null;
+
+        Class<?> curr = clazz;
+        while (curr != null && curr != Object.class) {
+            Method[] methods;
+            try {
+                methods = curr.getDeclaredMethods();
+            } catch (SecurityException e) {
+                curr = curr.getSuperclass();
+                continue;
+            }
+
+            for (Method method : methods) {
+                if (Modifier.isStatic(method.getModifiers())) {
+                    continue;
+                }
+
+                // --- @IoGetter / @JsonGetter ---
+                IoGetter ioGetter = method.getAnnotation(IoGetter.class);
+                String getterFieldName = null;
+                if (ioGetter != null && !ioGetter.value().isEmpty()
+                        && method.getParameterCount() == 0
+                        && method.getReturnType() != void.class) {
+                    getterFieldName = ioGetter.value();
+                } else if (externalAvailable && EXT_GETTER != null && ioGetter == null) {
+                    Annotation extGet = method.getAnnotation(EXT_GETTER);
+                    if (extGet != null
+                            && method.getParameterCount() == 0
+                            && method.getReturnType() != void.class) {
+                        try {
+                            String val = (String) EXT_GETTER_VALUE.invoke(extGet);
+                            if (val != null && !val.isEmpty()) {
+                                getterFieldName = val;
+                            }
+                        } catch (Exception e) {
+                            // Ignore reflection failure
+                        }
+                    }
+                }
+
+                if (getterFieldName != null) {
+                    if (getterMethods == null) {
+                        getterMethods = new LinkedHashMap<>();
+                    }
+                    getterMethods.putIfAbsent(getterFieldName, method.getName());
+                }
+
+                // --- @IoSetter / @JsonSetter ---
+                IoSetter ioSetter = method.getAnnotation(IoSetter.class);
+                String setterFieldName = null;
+                if (ioSetter != null && !ioSetter.value().isEmpty()
+                        && method.getParameterCount() == 1) {
+                    setterFieldName = ioSetter.value();
+                } else if (externalAvailable && EXT_SETTER != null && ioSetter == null) {
+                    Annotation extSet = method.getAnnotation(EXT_SETTER);
+                    if (extSet != null && method.getParameterCount() == 1) {
+                        try {
+                            String val = (String) EXT_SETTER_VALUE.invoke(extSet);
+                            if (val != null && !val.isEmpty()) {
+                                setterFieldName = val;
+                            }
+                        } catch (Exception e) {
+                            // Ignore reflection failure
+                        }
+                    }
+                }
+
+                if (setterFieldName != null) {
+                    if (setterMethods == null) {
+                        setterMethods = new LinkedHashMap<>();
+                    }
+                    setterMethods.putIfAbsent(setterFieldName, method.getName());
+                }
+            }
+            curr = curr.getSuperclass();
+        }
+
+        return new Map[]{getterMethods, setterMethods};
+    }
+
     // ---- Parameter-level helpers ----
 
     /**
@@ -839,6 +964,8 @@ public class AnnotationResolver {
         private final Map<String, Class<?>> fieldTypeInfoDefaults;
         private final Map<String, Class<?>> fieldDeserializeOverrides;
         private final Class<? extends ClassFactory> classFactory;
+        private final Map<String, String> getterMethods;
+        private final Map<String, String> setterMethods;
 
         ClassAnnotationMetadata(Map<String, String> renamedFields,
                                 Set<String> ignoredFields,
@@ -851,7 +978,9 @@ public class AnnotationResolver {
                                 boolean ignoredType,
                                 Map<String, Class<?>> fieldTypeInfoDefaults,
                                 Map<String, Class<?>> fieldDeserializeOverrides,
-                                Class<? extends ClassFactory> classFactory) {
+                                Class<? extends ClassFactory> classFactory,
+                                Map<String, String> getterMethods,
+                                Map<String, String> setterMethods) {
             this.renamedFields = renamedFields;
             this.ignoredFields = ignoredFields;
             this.aliasToFieldName = aliasToFieldName;
@@ -864,6 +993,8 @@ public class AnnotationResolver {
             this.fieldTypeInfoDefaults = fieldTypeInfoDefaults;
             this.fieldDeserializeOverrides = fieldDeserializeOverrides;
             this.classFactory = classFactory;
+            this.getterMethods = getterMethods;
+            this.setterMethods = setterMethods;
         }
 
         /**
@@ -974,6 +1105,24 @@ public class AnnotationResolver {
         }
 
         /**
+         * Get the @IoGetter method name for a field, or null if not specified.
+         * @param fieldName the Java field name
+         * @return the getter method name, or null
+         */
+        public String getGetterMethod(String fieldName) {
+            return getterMethods == null ? null : getterMethods.get(fieldName);
+        }
+
+        /**
+         * Get the @IoSetter method name for a field, or null if not specified.
+         * @param fieldName the Java field name
+         * @return the setter method name, or null
+         */
+        public String getSetterMethod(String fieldName) {
+            return setterMethods == null ? null : setterMethods.get(fieldName);
+        }
+
+        /**
          * @return true if this metadata has no annotation information (empty/default)
          */
         public boolean isEmpty() {
@@ -982,7 +1131,8 @@ public class AnnotationResolver {
                     && nonNullFields.isEmpty() && creator == null
                     && valueMethod == null && includedFields == null
                     && !ignoredType && fieldTypeInfoDefaults == null
-                    && fieldDeserializeOverrides == null && classFactory == null;
+                    && fieldDeserializeOverrides == null && classFactory == null
+                    && getterMethods == null && setterMethods == null;
         }
     }
 }

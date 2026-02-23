@@ -2165,7 +2165,22 @@ public class WriteOptionsBuilder {
                 final String serializedName = annMeta.getSerializedName(field.getName());
                 final String uniqueFieldName = serializedName != null ? serializedName : entry.getKey();
 
-                Accessor accessor = findMethodAccessor(field, uniqueFieldName);
+                Accessor accessor = null;
+
+                // Check @IoGetter/@JsonGetter annotation — but only if no programmatic override exists
+                String annotationGetter = annMeta.getGetterMethod(field.getName());
+                if (annotationGetter != null) {
+                    Map<String, String> classGetters = nonStandardGetters.get(field.getDeclaringClass());
+                    if (classGetters == null || !classGetters.containsKey(field.getName())) {
+                        accessor = Accessor.createMethodAccessor(field, annotationGetter, uniqueFieldName);
+                    }
+                }
+
+                // Fall back to factory chain (nonStandardGetters + getXxx convention)
+                if (accessor == null) {
+                    accessor = findMethodAccessor(field, uniqueFieldName);
+                }
+
                 if (accessor != null && isMethodFiltered(clazz, accessor.getFieldOrMethodName())) {
                     accessor = null;
                 }

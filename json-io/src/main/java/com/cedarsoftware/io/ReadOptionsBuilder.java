@@ -2060,7 +2060,25 @@ public class ReadOptionsBuilder {
                 final Field field = entry.getValue();
                 final String fieldName = entry.getKey();
 
-                Injector injector = this.findInjector(field, fieldName);
+                Injector injector = null;
+
+                // Check @IoSetter/@JsonSetter annotation — but only if no programmatic override exists
+                String annotationSetter = annMeta.getSetterMethod(field.getName());
+                if (annotationSetter != null) {
+                    Map<String, String> classSetters = BASE_NONSTANDARD_SETTERS.get(field.getDeclaringClass());
+                    if (classSetters == null || !classSetters.containsKey(field.getName())) {
+                        try {
+                            injector = Injector.create(field, annotationSetter, fieldName);
+                        } catch (Exception ignore) {
+                            // Method may not be accessible (e.g., package-private class) — fall through
+                        }
+                    }
+                }
+
+                // Fall back to factory chain (BASE_NONSTANDARD_SETTERS + setXxx convention)
+                if (injector == null) {
+                    injector = this.findInjector(field, fieldName);
+                }
 
                 if (injector == null) {
                     injector = Injector.create(field, fieldName);
