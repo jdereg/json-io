@@ -28,6 +28,7 @@ import com.cedarsoftware.io.annotation.IoNotCustomWrite;
 import com.cedarsoftware.io.annotation.IoProperty;
 import com.cedarsoftware.io.annotation.IoPropertyOrder;
 import com.cedarsoftware.io.annotation.IoTypeInfo;
+import com.cedarsoftware.io.annotation.IoTypeName;
 import com.cedarsoftware.io.annotation.IoValue;
 import com.cedarsoftware.io.reflect.AnnotationResolver;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -37,6 +38,7 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.JsonIncludeProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -2699,5 +2701,128 @@ class AnnotationTest {
         Gadget restored = JsonIo.toJava(json, readOptions).asClass(Gadget.class);
         assertEquals("bar", restored.label);
         assertEquals(99, restored.size);
+    }
+
+    // ================================================================
+    // @IoTypeName tests
+    // ================================================================
+
+    @IoTypeName("Sensor")
+    static class SensorReading {
+        double value;
+        String unit;
+
+        SensorReading() {}
+
+        SensorReading(double value, String unit) {
+            this.value = value;
+            this.unit = unit;
+        }
+    }
+
+    @JsonTypeName("jSensor")
+    static class JacksonSensorReading {
+        double value;
+        String unit;
+
+        JacksonSensorReading() {}
+
+        JacksonSensorReading(double value, String unit) {
+            this.value = value;
+            this.unit = unit;
+        }
+    }
+
+    static class PlainReading {
+        double value;
+        String unit;
+
+        PlainReading() {}
+
+        PlainReading(double value, String unit) {
+            this.value = value;
+            this.unit = unit;
+        }
+    }
+
+    @Test
+    void testIoTypeNameMetadataApi() {
+        // @IoTypeName("Sensor") should be accessible via getMetadata()
+        String alias = AnnotationResolver.getMetadata(SensorReading.class).getTypeName();
+        assertEquals("Sensor", alias);
+
+        // Unannotated class returns null
+        assertNull(AnnotationResolver.getMetadata(PlainReading.class).getTypeName());
+    }
+
+    @Test
+    void testIoTypeNameWriteUsesAlias() {
+        SensorReading sensor = new SensorReading(23.5, "C");
+        WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoAlways().build();
+        String json = JsonIo.toJson(sensor, writeOptions);
+
+        // Should use the alias "Sensor" not the fully-qualified class name
+        assertTrue(json.contains("\"Sensor\""), "JSON should contain alias 'Sensor': " + json);
+        assertFalse(json.contains("SensorReading"), "JSON should NOT contain class name 'SensorReading': " + json);
+    }
+
+    @Test
+    void testIoTypeNameRoundTrip() {
+        SensorReading sensor = new SensorReading(23.5, "C");
+        WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoAlways().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(sensor, writeOptions);
+        assertTrue(json.contains("\"Sensor\""), "JSON should contain alias 'Sensor': " + json);
+
+        SensorReading restored = JsonIo.toJava(json, readOptions).asClass(SensorReading.class);
+        assertEquals(23.5, restored.value, 0.001);
+        assertEquals("C", restored.unit);
+    }
+
+    @Test
+    void testIoTypeNameReverseMap() {
+        // Ensure the class has been scanned (getMetadata triggers scan)
+        AnnotationResolver.getMetadata(SensorReading.class);
+
+        // The reverse map should resolve "Sensor" → fully-qualified class name
+        String fqcn = AnnotationResolver.resolveAnnotationAlias("Sensor");
+        assertEquals(SensorReading.class.getName(), fqcn);
+
+        // Unknown alias returns null
+        assertNull(AnnotationResolver.resolveAnnotationAlias("Unknown"));
+    }
+
+    @Test
+    void testJacksonJsonTypeNameFallback() {
+        // @JsonTypeName("jSensor") should work as fallback
+        String alias = AnnotationResolver.getMetadata(JacksonSensorReading.class).getTypeName();
+        assertEquals("jSensor", alias);
+
+        // Write side: should use the alias
+        JacksonSensorReading sensor = new JacksonSensorReading(42.0, "F");
+        WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoAlways().build();
+        String json = JsonIo.toJson(sensor, writeOptions);
+        assertTrue(json.contains("\"jSensor\""), "JSON should contain Jackson alias 'jSensor': " + json);
+
+        // Round-trip
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        JacksonSensorReading restored = JsonIo.toJava(json, readOptions).asClass(JacksonSensorReading.class);
+        assertEquals(42.0, restored.value, 0.001);
+        assertEquals("F", restored.unit);
+    }
+
+    @Test
+    void testIoTypeNameProgrammaticOverridesAnnotation() {
+        // Programmatic alias should take priority over @IoTypeName
+        SensorReading sensor = new SensorReading(10.0, "K");
+        WriteOptions writeOptions = new WriteOptionsBuilder()
+                .showTypeInfoAlways()
+                .aliasTypeName(SensorReading.class, "ProgSensor")
+                .build();
+
+        String json = JsonIo.toJson(sensor, writeOptions);
+        assertTrue(json.contains("\"ProgSensor\""), "Programmatic alias should win: " + json);
+        assertFalse(json.contains("\"Sensor\""), "Annotation alias should be overridden: " + json);
     }
 }

@@ -1706,7 +1706,18 @@ public class WriteOptionsBuilder {
          */
         public String getTypeNameAlias(String typeName) {
             String alias = aliasTypeNames.get(typeName);
-            return alias == null ? typeName : alias;
+            if (alias != null) {
+                return alias;
+            }
+            // Annotation fallback: @IoTypeName / @JsonTypeName
+            Class<?> clazz = ClassUtilities.forName(typeName, getClassLoader());
+            if (clazz != null) {
+                String annAlias = AnnotationResolver.getMetadata(clazz).getTypeName();
+                if (annAlias != null) {
+                    return annAlias;
+                }
+            }
+            return typeName;
         }
 
         /**

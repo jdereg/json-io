@@ -1829,7 +1829,15 @@ public class ReadOptionsBuilder {
          */
         public String getTypeNameAlias(String typeName) {
             String alias = aliasTypeNames.get(typeName);
-            return alias == null ? typeName : alias;
+            if (alias != null) {
+                return alias;
+            }
+            // Annotation reverse lookup: alias → className via @IoTypeName / @JsonTypeName
+            String resolved = AnnotationResolver.resolveAnnotationAlias(typeName);
+            if (resolved != null) {
+                return resolved;
+            }
+            return typeName;
         }
 
         /**

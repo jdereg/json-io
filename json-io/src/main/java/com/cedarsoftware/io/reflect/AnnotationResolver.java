@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.cedarsoftware.io.ClassFactory;
 import com.cedarsoftware.io.JsonClassReader;
@@ -35,6 +36,7 @@ import com.cedarsoftware.io.annotation.IoNotCustomWrite;
 import com.cedarsoftware.io.annotation.IoProperty;
 import com.cedarsoftware.io.annotation.IoSetter;
 import com.cedarsoftware.io.annotation.IoTypeInfo;
+import com.cedarsoftware.io.annotation.IoTypeName;
 import com.cedarsoftware.io.annotation.IoValue;
 import com.cedarsoftware.io.annotation.IoPropertyOrder;
 import com.cedarsoftware.util.ClassValueMap;
@@ -111,9 +113,12 @@ public class AnnotationResolver {
     private static final Class<? extends Annotation> EXT_GETTER;
     @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_SETTER;
+    @SuppressWarnings("unchecked")
+    private static final Class<? extends Annotation> EXT_TYPE_NAME;
 
     private static final Method EXT_GETTER_VALUE;
     private static final Method EXT_SETTER_VALUE;
+    private static final Method EXT_TYPE_NAME_VALUE;
     private static final Method EXT_PROPERTY_VALUE;
     private static final Method EXT_IGNORE_PROPERTIES_VALUE;
     private static final Method EXT_ALIAS_VALUE;
@@ -138,8 +143,10 @@ public class AnnotationResolver {
         Class<? extends Annotation> extTypeInfo = null;
         Class<? extends Annotation> extGetter = null;
         Class<? extends Annotation> extSetter = null;
+        Class<? extends Annotation> extTypeName = null;
         Method extGetterValue = null;
         Method extSetterValue = null;
+        Method extTypeNameValue = null;
         Method extPropertyValue = null;
         Method extIgnorePropertiesValue = null;
         Method extAliasValue = null;
@@ -163,9 +170,11 @@ public class AnnotationResolver {
             extTypeInfo = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonTypeInfo");
             extGetter = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonGetter");
             extSetter = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonSetter");
+            extTypeName = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonTypeName");
 
             extGetterValue = extGetter.getMethod("value");
             extSetterValue = extSetter.getMethod("value");
+            extTypeNameValue = extTypeName.getMethod("value");
             extPropertyValue = extProperty.getMethod("value");
             extIncludePropertiesValue = extIncludeProperties.getMethod("value");
             extIgnorePropertiesValue = extIgnoreProperties.getMethod("value");
@@ -202,8 +211,10 @@ public class AnnotationResolver {
         EXT_TYPE_INFO = extTypeInfo;
         EXT_GETTER = extGetter;
         EXT_SETTER = extSetter;
+        EXT_TYPE_NAME = extTypeName;
         EXT_GETTER_VALUE = extGetterValue;
         EXT_SETTER_VALUE = extSetterValue;
+        EXT_TYPE_NAME_VALUE = extTypeNameValue;
         EXT_PROPERTY_VALUE = extPropertyValue;
         EXT_INCLUDE_PROPERTIES_VALUE = extIncludePropertiesValue;
         EXT_IGNORE_PROPERTIES_VALUE = extIgnorePropertiesValue;
@@ -247,6 +258,8 @@ public class AnnotationResolver {
     // ======================== Cache ========================
 
     private static final ClassValueMap<ClassAnnotationMetadata> cache = new ClassValueMap<>();
+    // Reverse map for @IoTypeName / @JsonTypeName: alias → fully-qualified class name
+    private static final Map<String, String> annotationAliasToClassName = new ConcurrentHashMap<>();
     // ThreadLocal to track classes currently being scanned (prevents recursive stack overflow)
     private static final ThreadLocal<Set<Class<?>>> SCANNING = ThreadLocal.withInitial(LinkedHashSet::new);
     private static final ClassAnnotationMetadata EMPTY = new ClassAnnotationMetadata(
@@ -268,7 +281,18 @@ public class AnnotationResolver {
             false,
             false,
             null,
+            null,
             null);
+
+    /**
+     * Resolve an annotation-based type alias back to the fully-qualified class name.
+     * Populated by {@code @IoTypeName} / {@code @JsonTypeName} scan results.
+     * @param alias the alias string (e.g., "Sensor")
+     * @return the fully-qualified class name, or null if not found
+     */
+    public static String resolveAnnotationAlias(String alias) {
+        return annotationAliasToClassName.get(alias);
+    }
 
     /**
      * Get annotation metadata for a class. Scans once, caches forever.
@@ -352,6 +376,26 @@ public class AnnotationResolver {
         IoCustomReader readerAnn = clazz.getAnnotation(IoCustomReader.class);
         if (readerAnn != null) {
             customReader = readerAnn.value();
+        }
+
+        // 1j. @IoTypeName — class-level type alias (or Jackson @JsonTypeName fallback)
+        String typeName = null;
+        IoTypeName typeNameAnn = clazz.getAnnotation(IoTypeName.class);
+        if (typeNameAnn != null) {
+            typeName = typeNameAnn.value();
+        } else if (externalAvailable && EXT_TYPE_NAME != null) {
+            Annotation jtn = clazz.getAnnotation(EXT_TYPE_NAME);
+            if (jtn != null) {
+                try {
+                    typeName = (String) EXT_TYPE_NAME_VALUE.invoke(jtn);
+                } catch (Exception ignore) {
+                }
+            }
+        }
+        if (typeName != null && !typeName.isEmpty()) {
+            annotationAliasToClassName.put(typeName, clazz.getName());
+        } else {
+            typeName = null;  // normalize empty string to null
         }
 
         // 2. @IoNaming — class-level naming strategy
@@ -499,7 +543,8 @@ public class AnnotationResolver {
                 && fieldTypeInfoDefaults == null && fieldDeserializeOverrides == null
                 && classFactory == null && getterMethods == null && setterMethods == null
                 && !nonReferenceable && !notCustomRead && !notCustomWrite
-                && customWriter == null && customReader == null) {
+                && customWriter == null && customReader == null
+                && typeName == null) {
             return EMPTY;
         }
 
@@ -522,7 +567,8 @@ public class AnnotationResolver {
                 notCustomRead,
                 notCustomWrite,
                 customWriter,
-                customReader);
+                customReader,
+                typeName);
     }
 
     // ---- Class-level scanners ----
@@ -1013,6 +1059,7 @@ public class AnnotationResolver {
         private final boolean notCustomWrite;
         private final Class<? extends JsonClassWriter> customWriter;
         private final Class<? extends JsonClassReader> customReader;
+        private final String typeName;
 
         ClassAnnotationMetadata(Map<String, String> renamedFields,
                                 Set<String> ignoredFields,
@@ -1032,7 +1079,8 @@ public class AnnotationResolver {
                                 boolean notCustomRead,
                                 boolean notCustomWrite,
                                 Class<? extends JsonClassWriter> customWriter,
-                                Class<? extends JsonClassReader> customReader) {
+                                Class<? extends JsonClassReader> customReader,
+                                String typeName) {
             this.renamedFields = renamedFields;
             this.ignoredFields = ignoredFields;
             this.aliasToFieldName = aliasToFieldName;
@@ -1052,6 +1100,7 @@ public class AnnotationResolver {
             this.notCustomWrite = notCustomWrite;
             this.customWriter = customWriter;
             this.customReader = customReader;
+            this.typeName = typeName;
         }
 
         /**
@@ -1217,6 +1266,14 @@ public class AnnotationResolver {
         }
 
         /**
+         * Get the @IoTypeName alias for this class, or null if not specified.
+         * @return the type alias string, or null
+         */
+        public String getTypeName() {
+            return typeName;
+        }
+
+        /**
          * @return true if this metadata has no annotation information (empty/default)
          */
         public boolean isEmpty() {
@@ -1228,7 +1285,8 @@ public class AnnotationResolver {
                     && fieldDeserializeOverrides == null && classFactory == null
                     && getterMethods == null && setterMethods == null
                     && !nonReferenceable && !notCustomRead && !notCustomWrite
-                    && customWriter == null && customReader == null;
+                    && customWriter == null && customReader == null
+                    && typeName == null;
         }
     }
 }

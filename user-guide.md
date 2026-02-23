@@ -650,7 +650,7 @@ cyclic references are typically not needed.
 
 ## Annotations
 
-json-io provides 21 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization. In addition, json-io **reflectively honors Jackson annotations** when the Jackson JAR is on the classpath — with zero compile-time dependency on Jackson.
+json-io provides 22 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization. In addition, json-io **reflectively honors Jackson annotations** when the Jackson JAR is on the classpath — with zero compile-time dependency on Jackson.
 
 ### Annotation Precedence
 
@@ -1029,6 +1029,21 @@ public class MoneyReader implements JsonClassReader {
 
 Both annotations can be combined on the same class to provide custom serialization in both directions. **Note:** Programmatic `addCustomReaderClass()` takes priority over the annotation. Config files are used for JDK classes that cannot be annotated; annotations are for user classes.
 
+#### `@IoTypeName("ShortName")` — Type Alias
+Assigns a short alias name to a class for use in the `@type` field during JSON serialization. Instead of writing the fully-qualified class name, json-io will write the alias. On deserialization, the alias is resolved back to the original class. This is the annotation equivalent of calling `WriteOptionsBuilder.aliasTypeName(Class, String)` / `ReadOptionsBuilder.aliasTypeName(Class, String)` or adding an entry to the `config/aliases.txt` configuration file. Equivalent to Jackson's `@JsonTypeName`.
+
+```java
+@IoTypeName("Sensor")
+public class SensorReading {
+    private double value;
+    private String unit;
+}
+// Serializes as: {"@type":"Sensor","value":23.5,"unit":"C"}
+// Instead of:    {"@type":"com.example.SensorReading","value":23.5,"unit":"C"}
+```
+
+**Note:** Programmatic `aliasTypeName()` takes priority over the annotation. The alias is registered in a reverse lookup map when the class is first scanned, allowing deserialization to resolve the alias back to the class.
+
 ### Combining Annotations
 
 Annotations can be combined on the same field or class:
@@ -1075,6 +1090,7 @@ If your classes already use Jackson annotations, json-io will honor them automat
 | `@JsonDeserialize(as=...)` | `@IoDeserialize(as=...)` | Forced deserialization type override |
 | `@JsonGetter("fieldName")` | `@IoGetter("fieldName")` | Custom getter method for serialization |
 | `@JsonSetter("fieldName")` | `@IoSetter("fieldName")` | Custom setter method for deserialization |
+| `@JsonTypeName("ShortName")` | `@IoTypeName("ShortName")` | Type alias for `@type` in JSON |
 
 Jackson's `jackson-annotations` JAR (~75KB) is commonly already on the classpath in Spring applications. json-io detects annotations via `Class.forName()` at startup — there is no compile-time dependency. Some annotations (`@JsonNaming`, `@JsonDeserialize`) live in `jackson-databind` and are detected independently.
 
