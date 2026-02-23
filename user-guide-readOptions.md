@@ -336,6 +336,8 @@ Aliasing simplifies JSON output by converting fully qualified Java class names i
 
 - **External Alias Configuration**: Alternatively, you can manage aliases externally by creating an [aliases.txt](/src/main/resources/config/aliases.txt) file and placing it in the class path. `json-io` includes a comprehensive list of default aliases, but you can override this by providing your own file.
 
+- **Annotation Alternative:** For your own classes, use `@IoTypeName("ShortName")` directly on the class. See [Annotations](/user-guide.md#iotypenameshortnameclass-level).
+
 **Note**: When adding an alias, `json-io` not only adds the alias for the class itself but also for its 1D, 2D, and 3D array representations, ensuring that all forms of the class are consistently aliased in the JSON output. Aliasing `Foo` also generates `Foo[]`, `Foo[][]`, and `Foo[][][]` aliases, ensuring consistency across all usages of the class in JSON
 >#### `String` getTypeNameAlias(`String typeName`)
 >- [ ] Pass in a String class name, and it will return the alias for it, or it will return the same string you passed in (non-aliased).
@@ -493,6 +495,8 @@ will likely be deprecated in a future release as using a `ClassFactory` is a sup
 
 Custom Readers provide a powerful tool for extending and customizing the behavior of `json-io`, making it possible to tailor the deserialization process to fit exact requirements, particularly for complex or non-standard class structures.
 
+**Annotation Alternative:** Use `@IoCustomReader(MyReader.class)` on your class to associate a custom reader without programmatic configuration. See [Annotations](/user-guide.md#annotations).
+
 >#### `Map<Class, JsonClassReader>` getCustomReaderClasses()
 >- [ ] Fetch`Map`of`Class`to custom`JsonClassReader's` used to read JSON when the class is encountered during
    serialization to JSON.  This is the entire`Map`of Custom Readers.
@@ -526,6 +530,8 @@ unintentionally apply to subclasses.
 This functionality is essential for maintaining precise control over the deserialization process in complex inheritance
 scenarios, preventing unwanted side effects from broadly applied Custom Readers.
 
+**Annotation Alternative:** Use `@IoNotCustomReader` on your class to suppress custom reader inheritance. See [Annotations](/user-guide.md#annotations).
+
 >#### `boolean` isNotCustomReaderClass(`Class`)
 >- [ ]  Pass in Class to check if it's on the not-customized list.  Classes are added to this list when a class is being
    picked up through inheritance, and you don't want it to have a custom reader associated to it.
@@ -552,6 +558,8 @@ In `json-io`, certain classes are treated as non-referenceable, meaning they do 
 - **Handling Common Values**: `json-io` automatically collapses common logical primitive values to maintain consistency. For instance, the string representations of "true", "false", the numbers -1, 0, and 1, and the strings "0" through "9", "on", "off", and other common strings are treated such that multiple occurrences are represented by a single instance in memory, promoting efficiency and reducing memory usage.
 
 This feature enhances the efficiency of serialization and deserialization processes, especially for common and frequently used immutable values, while allowing for customization to suit specific application needs.
+
+**Annotation Alternative:** Use `@IoNonReferenceable` on your class to mark it non-referenceable without programmatic configuration. See [Annotations](/user-guide.md#annotations).
 
 >#### `boolean` isNonReferenceableClass(`Class`)
 >- [ ] Checks if a class is non-referenceable. Returns`true`if the passed in class is considered a non-referenceable class.
@@ -633,6 +641,8 @@ The `addPermanentAlias` method in `json-io` allows you to establish a permanent 
 
 This feature enhances the manageability and clarity of JSON output and input within large applications, especially those that utilize complex object hierarchies or extensive data interchange.
 
+**Annotation Alternative:** Use `@IoTypeName("Alias")` on your class. See [Annotations](/user-guide.md#annotations).
+
 >#### ReadOptionsBuilder.addPermanentAlias(`Class<?> sourceClass, String alias`)
 
 ### Remove Permanent Alias Type Names Matching
@@ -684,6 +694,8 @@ The `addPermanentNonReferenceableClass` method in `json-io` allows you to design
 
 Adding classes to the non-referenceable list can significantly enhance the performance and clarity of JSON serialization processes, especially in complex systems where certain objects are better handled as value types rather than reference types.
 
+**Annotation Alternative:** Use `@IoNonReferenceable` on your class. See [Annotations](/user-guide.md#annotations).
+
 >#### ReadOptionsBuilder.addPermanentNonReferenceableClass(Class<?> clazz)
 
 ### Add Permanent Not Custom Read Class
@@ -699,6 +711,8 @@ The `addPermanentNotCustomReadClass` method in `json-io` allows you to exempt sp
 - **Use Cases**: Typically used when you need to override inheritance-based custom reader application, or when you want to ensure that certain classes are always deserialized using the default behavior regardless of other configuration settings.
 
 Adding classes to the not-custom-read list can help control deserialization behavior in complex class hierarchies, particularly when you need exceptions to your custom reader rules.
+
+**Annotation Alternative:** Use `@IoNotCustomReader` on your class. See [Annotations](/user-guide.md#annotations).
 
 >#### ReadOptionsBuilder.addPermanentNotCustomReadClass(Class<?> clazz)
  
@@ -716,6 +730,8 @@ The `addPermanentNotImportedField` method in `json-io` allows you to permanently
 
 This method enhances data handling efficiency and accuracy within your application by ensuring that only relevant and necessary data is processed during JSON deserialization, simplifying object models and reducing potential errors.
 
+**Annotation Alternative:** Use `@IoIgnore` on individual fields or `@IoIgnoreProperties({"field1","field2"})` on the class. See [Annotations](/user-guide.md#annotations).
+
 >#### ReadOptionsBuilder.addPermanentNotImportedField(`Class<?> clazz, String fieldName`)
 
 ### Add Permanent Non-Standard Setter
@@ -727,6 +743,8 @@ The `addPermanentNonStandardSetter` method in `json-io` allows you to define cus
 - **Functionality**: When you specify a non-standard setter, `json-io` will invoke this method instead of the standard setter during the deserialization process. This is essential for classes where the setter methods do not follow the typical `setFieldName` format.
 
 - **Example Usage**: An example of using this feature is with the `Throwable` class in Java. Typically, to set a cause on a `Throwable`, the `initCause()` method is used instead of a standard setter. Configuring `addPermanentNonStandardSetter(Throwable.class, "cause", "initCause")` instructs `json-io` to use `initCause()` to set the cause from the JSON data:
+
+**Annotation Alternative:** Use `@IoSetter("fieldName")` on your setter method. See [Annotations](/user-guide.md#annotations).
 
 >#### ReadOptionsBuilder.addPermanentNonStandardSetter(`Class<?> clazz, String fieldName, String setterName`)
 

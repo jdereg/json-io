@@ -112,8 +112,8 @@ json-io provides 25 annotations in the `com.cedarsoftware.io.annotation` package
 | `@IoNaming(Strategy.SNAKE_CASE)` | Class | Naming strategy for all fields |
 | `@IoIncludeProperties({"a","b"})` | Class | Whitelist of included fields |
 | `@IoIgnoreType` | Class | Exclude all fields of this type everywhere |
-| `@IoTypeInfo(LinkedList.class)` | Field | Default concrete type when `@type` absent |
-| `@IoDeserialize(as=LinkedList.class)` | Field/Class | Force type override during deserialization |
+| `@IoTypeInfo(LinkedList.class)` | Field | Default concrete type when `@type` absent; also eliminates `@type` on write when runtime type matches |
+| `@IoDeserialize(as=LinkedList.class)` | Field/Class | Force type override during deserialization; also eliminates `@type` on write when runtime type matches |
 | `@IoClassFactory(MyFactory.class)` | Class | Specify a ClassFactory for deserialization |
 | `@IoGetter("fieldName")` | Method | Custom getter method for serialization |
 | `@IoSetter("fieldName")` | Method | Custom setter method for deserialization |

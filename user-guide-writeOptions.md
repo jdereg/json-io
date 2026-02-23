@@ -162,6 +162,8 @@ Aliasing is a feature in `json-io` that simplifies JSON output by converting ful
 - **External Alias Configuration**: Alternatively, you can manage aliases by creating an [aliases.txt](/src/main/resources/config/aliases.txt) file and placing
   it in the class path. `json-io` provides a comprehensive default list, but you can override this by providing your own
   file.
+- **Annotation Alternative:** For your own classes, use `@IoTypeName("ShortName")` directly on the class. See [Annotations](/user-guide.md#annotations).
+
 >#### `String` getTypeNameAlias(`String typeName`)
 >- [ ] Alias Type Names, e.g. "ArrayList" instead of "java.util.ArrayList".
 >#### `Map<String, String>` aliases()
@@ -578,6 +580,8 @@ useful for interacting with properties where the accessor methods have unique na
 - **Flexibility in Serialization**: Allows developers to precisely control how properties are accessed and serialized, accommodating various coding styles and requirements.
   By enabling custom accessors for non-standard method names, developers can enhance the adaptability and robustness of their serialization logic in json-io, ensuring compatibility across different Java versions and compliance with modern encapsulation practices.
 
+**Annotation Alternative:** Use `@IoGetter("fieldName")` on your getter method. See [Annotations](/user-guide.md#annotations).
+
 #### Configuring Non-Standard Accessors:
 This option allows `json-io` to recognize and utilize these non-standard method names as accessors during serialization, ensuring that property values can be correctly retrieved and included in the JSON output.
 >#### `WriteOptionsBuilder` addNonStandardGetter(`Class, String fieldName, String methodName`)
@@ -805,6 +809,8 @@ JSON output while still maintaining a clear and accurate representation of the d
 
 By carefully selecting which classes are marked as non-referenceable, developers can optimize the serialization process in json-io to suit their specific requirements for data integrity and readability.
 
+**Annotation Alternative:** Use `@IoNonReferenceable` on your class. See [Annotations](/user-guide.md#annotations).
+
 >#### `boolean` isNonReferenceableClass( `Class` )
 >- [ ] Checks if a class is non-referenceable. Returns `true` if the passed in class is considered a non-referenceable class.
 
@@ -1021,6 +1027,8 @@ and reducing the complexity of managing individual WriteOptions instances throug
 Call this method to add a permanent (JVM lifetime) alias of a class to a shorter, name.  All `WriteOptions`
 will automatically be created with permanent aliases added to them.
 
+**Annotation Alternative:** Use `@IoTypeName("Alias")` on your class. See [Annotations](/user-guide.md#annotations).
+
 >#### WriteOptionsBuilder.addPermanentAlias(`Class<?> clazz, String alias`)
 
 ### Remove Permanent Alias Type Names Matching
@@ -1072,6 +1080,8 @@ the 'read' side.
 Call this method to add a permanent (JVM lifetime) excluded (not exported) field name of class.  All `WriteOptions` will
 automatically be created with the named field on the not-exported list.
 
+**Annotation Alternative:** Use `@IoIgnore` on individual fields or `@IoIgnoreProperties({"field1","field2"})` on the class. See [Annotations](/user-guide.md#annotations).
+
 >#### WriteOptionsBuilder.addPermanentNotExportedField(`Class<?> clazz, String fieldName`)
 
 ### addPermanentNonRef
@@ -1079,6 +1089,9 @@ automatically be created with the named field on the not-exported list.
 Call this method to add a permanent (JVM lifetime) class that should not be treated as referencable
 when being written out to JSON.  This means it will never have an @id nor @ref.  This feature is
 useful for small, immutable classes.
+
+**Annotation Alternative:** Use `@IoNonReferenceable` on your class. See [Annotations](/user-guide.md#annotations).
+
 >#### WriteOptionsBuilder.addPermanentNonRef(`Class<?> clazz`)
 
 ### addPermanentNotCustomWrittenClass
@@ -1088,6 +1101,9 @@ Register a class to be excluded from custom JSON serialization for the lifetime 
 This method prevents the specified class from being serialized by any custom writer, even if it 
 inherits from a class that would normally use custom serialization. Once registered, this exclusion
 persists until the JVM terminates.
+
+**Annotation Alternative:** Use `@IoNotCustomWritten` on your class. See [Annotations](/user-guide.md#annotations).
+
 >#### WriteOptionsBuilder.addPermanentNotCustomWrittenClass(`Class<?> clazz`)
 
 ### addPermanentWriter
@@ -1096,6 +1112,8 @@ Call this method to add a permanent (JVM lifetime) custom JSON writer to `json-i
 `clazz` to the writer you pass in.  The writers are found with `isAssignableFrom().` If this is too broad, causing too
 many classes to be associated to the custom writer, you can indicate that `json-io` should not use a custom write for a
 particular class, by calling the `addNotCustomWrittenClass()` method.
+
+**Annotation Alternative:** Use `@IoCustomWriter(MyWriter.class)` on your class. See [Annotations](/user-guide.md#annotations).
 
 >#### WriteOptionsBuilder.addPermanentWriter(`Class<?> clazz, JsonClassWriter writer`)
 
@@ -1129,6 +1147,8 @@ an `Instant` object.
   `json-io` facilitates streamlined integration and usage, even with complex object models.
 
 The `addPermanentNonStandardGetter()` API enhances the robustness of JSON serialization in json-io, accommodating advanced use cases and modern Java functionalities.
+
+**Annotation Alternative:** Use `@IoGetter("fieldName")` on your getter method. See [Annotations](/user-guide.md#annotations).
 
 >#### WriteOptionsBuilder.addPermanentNonStandardGetter(`Class<?> clazz, String field, String methodName`)
 

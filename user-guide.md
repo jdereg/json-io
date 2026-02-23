@@ -842,6 +842,8 @@ public class Container {
 }
 ```
 
+**Write-side benefit:** When the runtime type of a field matches the `@IoTypeInfo` type, `@type` is omitted from JSON output — the reader infers the type from the annotation, producing smaller JSON.
+
 #### `@IoDeserialize(as=ConcreteClass.class)` — Forced Type Override
 Field-level or class-level annotation that always overrides the declared type during deserialization (forced coercion). Unlike `@IoTypeInfo`, this is not just a default — it is always applied unless `@type` is present in the JSON. Equivalent to Jackson's `@JsonDeserialize(as=...)`.
 
@@ -856,6 +858,8 @@ public class Config {
 ```
 
 **Difference from `@IoTypeInfo`:** `@IoDeserialize(as=...)` always overrides the declared type (forced coercion). `@IoTypeInfo` only provides a default when no type can be inferred. When both are present on the same field, `@IoDeserialize` takes priority.
+
+**Write-side benefit:** When the runtime type of a field matches the `@IoDeserialize(as=X)` type, `@type` is omitted from JSON output — the reader infers the type from the annotation, producing smaller JSON.
 
 #### `@IoClassFactory(FactoryClass.class)` — Custom ClassFactory
 Class-level annotation that specifies a `ClassFactory` implementation to use when deserializing instances of this class. The factory class must have a no-arg constructor. Factory instances are automatically cached and shared. Programmatic `addClassFactory()` takes priority.
@@ -1434,6 +1438,7 @@ static class PersonFactory implements ClassFactory {
 - Example: `java.math.BigInteger = BigInteger`
 - Lightweight, just changes the string representation
 - Doesn't affect class loading or behavior
+- **Annotation equivalent:** `@IoTypeName("ShortName")` on a class
 #### Coerced Types (coercedTypes.txt) - Second
 - Used during class instantiation (`Resolver`)
 - Changes actual class used for instantiation
@@ -1449,11 +1454,13 @@ static class PersonFactory implements ClassFactory {
 - Most flexible and powerful mechanism
 - Proper place for custom instantiation logic
 - Examples: `EnumSetFactory`, `CollectionFactory`, etc.
+- **Annotation equivalent:** `@IoClassFactory(MyFactory.class)` on a class
 #### Custom Readers/Writers - (When applicable)
 - Used for special serialization/deserialization logic
 - Can completely override normal processing
 - Most complex but most powerful
 - Strongly recommended: Use `ClassFactory` instead of a `CustomReader` as it **creates** and **loads**.
+- **Annotation equivalents:** `@IoCustomReader(MyReader.class)`, `@IoCustomWriter(MyWriter.class)` on a class
 ---
 ## Javascript
 Included is a small Javascript utility (`jsonUtil.js` in the root folder) that will take a JSON output
