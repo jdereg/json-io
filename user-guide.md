@@ -650,7 +650,7 @@ cyclic references are typically not needed.
 
 ## Annotations
 
-json-io provides 22 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization. In addition, json-io **reflectively honors Jackson annotations** when the Jackson JAR is on the classpath — with zero compile-time dependency on Jackson.
+json-io provides 23 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization. In addition, json-io **reflectively honors Jackson annotations** when the Jackson JAR is on the classpath — with zero compile-time dependency on Jackson.
 
 ### Annotation Precedence
 
@@ -1044,6 +1044,28 @@ public class SensorReading {
 
 **Note:** Programmatic `aliasTypeName()` takes priority over the annotation. The alias is registered in a reverse lookup map when the class is first scanned, allowing deserialization to resolve the alias back to the class.
 
+#### `@IoFormat("pattern")` — Per-Field Date/Time Format
+Specifies a custom format pattern for date/time fields during serialization and deserialization. Instead of the default ISO format, the field will be written and read using the given pattern. Equivalent to Jackson's `@JsonFormat(pattern="...")`.
+
+Supported types: `LocalDate`, `LocalTime`, `LocalDateTime`, `ZonedDateTime`, `OffsetDateTime`, `OffsetTime`, `Instant`, `java.util.Date`.
+
+```java
+public class Event {
+    @IoFormat("dd/MM/yyyy")
+    private LocalDate eventDate;     // Serializes as "23/02/2026" instead of "2026-02-23"
+
+    @IoFormat("yyyy-MM-dd HH:mm")
+    private LocalDateTime startTime; // Serializes as "2026-02-23 14:30" instead of ISO
+
+    @IoFormat("MM/dd/yyyy")
+    private Date legacyDate;         // Serializes as "02/23/2026" instead of epoch millis
+
+    private LocalDate plain;         // Uses default ISO format (no annotation)
+}
+```
+
+Format patterns follow `java.time.format.DateTimeFormatter` syntax for java.time types, and `java.text.SimpleDateFormat` syntax for `java.util.Date`. The format is used for both writing and reading — values round-trip correctly through the custom format.
+
 ### Combining Annotations
 
 Annotations can be combined on the same field or class:
@@ -1091,6 +1113,7 @@ If your classes already use Jackson annotations, json-io will honor them automat
 | `@JsonGetter("fieldName")` | `@IoGetter("fieldName")` | Custom getter method for serialization |
 | `@JsonSetter("fieldName")` | `@IoSetter("fieldName")` | Custom setter method for deserialization |
 | `@JsonTypeName("ShortName")` | `@IoTypeName("ShortName")` | Type alias for `@type` in JSON |
+| `@JsonFormat(pattern="...")` | `@IoFormat("pattern")` | Per-field date/time format pattern |
 
 Jackson's `jackson-annotations` JAR (~75KB) is commonly already on the classpath in Spring applications. json-io detects annotations via `Class.forName()` at startup — there is no compile-time dependency. Some annotations (`@JsonNaming`, `@JsonDeserialize`) live in `jackson-databind` and are detected independently.
 

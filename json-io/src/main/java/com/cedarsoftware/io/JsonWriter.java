@@ -344,6 +344,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     // For Maps with non-String keys written as @keys/@items arrays, declaredKeyType tracks the key type.
     private Class<?> declaredElementType = null;
     private Class<?> declaredKeyType = null;
+    // Per-field format pattern from @IoFormat / @JsonFormat — set during writeField(), cleared after
+    private String fieldFormatPattern = null;
 
     // Pre-fetched WriteOptions values for hot path performance (immutable after construction)
     private final boolean skipNullFields;
@@ -562,6 +564,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     public WriteOptions getWriteOptions() {
         return writeOptions;
+    }
+
+    @Override
+    public String getFieldFormatPattern() {
+        return fieldFormatPattern;
     }
 
     /**
@@ -2485,15 +2492,18 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         Class<?> type = plan.declaredFieldType();
         Class<?> savedElementType = declaredElementType;
         Class<?> savedKeyType = declaredKeyType;
+        String savedFormatPattern = fieldFormatPattern;
         try {
             if (plan.applyDeclaredContainerTypes() && (o instanceof Collection || o instanceof Map)) {
                 declaredKeyType = plan.declaredKeyType();
                 declaredElementType = plan.declaredElementType();
             }
+            fieldFormatPattern = plan.formatPattern();
             writeImpl(o, isForceType(o.getClass(), type));
         } finally {
             declaredElementType = savedElementType;
             declaredKeyType = savedKeyType;
+            fieldFormatPattern = savedFormatPattern;
         }
         return false;
     }

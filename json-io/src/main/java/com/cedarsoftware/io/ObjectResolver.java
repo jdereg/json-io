@@ -3,7 +3,17 @@ package com.cedarsoftware.io;
 import java.lang.reflect.Array;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.OffsetTime;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import com.cedarsoftware.io.reflect.AnnotationResolver;
@@ -356,6 +366,14 @@ public class ObjectResolver extends Resolver
                     }
                 } else if (rhsClass == Double.class) {
                     if (injector.injectDouble(target, (Double) rhs)) {
+                        return;
+                    }
+                }
+                // 3c. FORMAT-AWARE PARSING — @IoFormat / @JsonFormat per-field pattern
+                if (rhs instanceof String) {
+                    Object formatted = parseWithFieldFormat(target.getClass(), injector.getName(), (String) rhs, rawType);
+                    if (formatted != null) {
+                        injector.inject(target, formatted);
                         return;
                     }
                 }
@@ -1272,6 +1290,52 @@ public class ObjectResolver extends Resolver
                 }
             }
             current = current.getSuperclass();
+        }
+        return null;
+    }
+
+    /**
+     * Check if the field has an @IoFormat / @JsonFormat annotation and parse the string accordingly.
+     * Walks the class hierarchy to find the format pattern for the field name.
+     * @return parsed object if pattern found and parsing succeeded, null otherwise
+     */
+    private static Object parseWithFieldFormat(Class<?> targetClass, String fieldName, String value, Class<?> targetType) {
+        // Walk the class hierarchy to find the field's format pattern
+        String pattern = null;
+        Class<?> cls = targetClass;
+        while (cls != null && cls != Object.class) {
+            pattern = AnnotationResolver.getMetadata(cls).getFieldFormatPattern(fieldName);
+            if (pattern != null) {
+                break;
+            }
+            cls = cls.getSuperclass();
+        }
+        if (pattern == null) {
+            return null;
+        }
+
+        try {
+            DateTimeFormatter fmt = Writers.getFormatter(pattern);
+            if (targetType == LocalDate.class) {
+                return LocalDate.parse(value, fmt);
+            } else if (targetType == LocalDateTime.class) {
+                return LocalDateTime.parse(value, fmt);
+            } else if (targetType == LocalTime.class) {
+                return LocalTime.parse(value, fmt);
+            } else if (targetType == ZonedDateTime.class) {
+                return ZonedDateTime.parse(value, fmt);
+            } else if (targetType == OffsetDateTime.class) {
+                return OffsetDateTime.parse(value, fmt);
+            } else if (targetType == OffsetTime.class) {
+                return OffsetTime.parse(value, fmt);
+            } else if (targetType == Instant.class) {
+                return fmt.withZone(java.time.ZoneOffset.UTC).parse(value, Instant::from);
+            } else if (Date.class.isAssignableFrom(targetType)) {
+                SimpleDateFormat sdf = new SimpleDateFormat(pattern);
+                return sdf.parse(value);
+            }
+        } catch (Exception e) {
+            // If format parsing fails, fall through to normal converter path
         }
         return null;
     }

@@ -2445,11 +2445,12 @@ public class WriteOptionsBuilder {
         private final boolean applyDeclaredContainerTypes;
         private final boolean skipReferenceTrace;
         private final boolean skipIfNull;
+        private final String formatPattern;
 
         private WriteFieldPlan(Accessor accessor, String fieldName, String serializedKey, Class<?> declaredFieldType,
                                Class<?> declaredElementType, Class<?> declaredKeyType,
                                boolean enumPublicOnlySkipCandidate, boolean applyDeclaredContainerTypes,
-                               boolean skipReferenceTrace, boolean skipIfNull) {
+                               boolean skipReferenceTrace, boolean skipIfNull, String formatPattern) {
             this.accessor = accessor;
             this.fieldName = fieldName;
             this.serializedKey = serializedKey;
@@ -2460,6 +2461,7 @@ public class WriteOptionsBuilder {
             this.applyDeclaredContainerTypes = applyDeclaredContainerTypes;
             this.skipReferenceTrace = skipReferenceTrace;
             this.skipIfNull = skipIfNull;
+            this.formatPattern = formatPattern;
         }
 
         static WriteFieldPlan create(Accessor accessor, WriteOptions options) {
@@ -2497,8 +2499,11 @@ public class WriteOptionsBuilder {
             AnnotationResolver.ClassAnnotationMetadata annMeta = AnnotationResolver.getMetadata(declaringClass);
             boolean nullSkip = annMeta.isNonNull(accessor.getActualFieldName());
 
+            // Pre-compute per-field format pattern from @IoFormat / @JsonFormat
+            String formatPat = annMeta.getFieldFormatPattern(accessor.getActualFieldName());
+
             return new WriteFieldPlan(accessor, fieldName, keyLiteral, fieldType, elementType, keyType,
-                    enumSkip, applyContainerTypes, skipTrace, nullSkip);
+                    enumSkip, applyContainerTypes, skipTrace, nullSkip, formatPat);
         }
 
         private static String buildKeyLiteral(String fieldName, WriteOptions options) {
@@ -2573,6 +2578,10 @@ public class WriteOptionsBuilder {
 
         boolean skipIfNull() {
             return skipIfNull;
+        }
+
+        String formatPattern() {
+            return formatPattern;
         }
     }
 }

@@ -20,7 +20,11 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.SignStyle;
+import java.time.temporal.TemporalAccessor;
+import java.text.SimpleDateFormat;
+import java.util.Map;
 import java.util.Currency;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
@@ -56,6 +60,30 @@ import static java.time.temporal.ChronoField.YEAR;
 public class Writers {
 
     private Writers() {
+    }
+
+    // Shared cache for DateTimeFormatter instances created from @IoFormat / @JsonFormat patterns
+    private static final Map<String, DateTimeFormatter> PATTERN_CACHE = new ConcurrentHashMap<>();
+
+    /**
+     * Get or create a DateTimeFormatter for the given pattern.
+     */
+    static DateTimeFormatter getFormatter(String pattern) {
+        return PATTERN_CACHE.computeIfAbsent(pattern, DateTimeFormatter::ofPattern);
+    }
+
+    /**
+     * If the WriterContext has a field format pattern and the value is a TemporalAccessor,
+     * write it using the custom pattern and return true. Otherwise return false.
+     */
+    static boolean writeWithFieldFormat(Object o, Writer output, WriterContext context) throws IOException {
+        String pat = context.getFieldFormatPattern();
+        if (pat != null && o instanceof TemporalAccessor) {
+            DateTimeFormatter fmt = getFormatter(pat);
+            JsonWriter.writeJsonUtf8String(output, fmt.format((TemporalAccessor) o));
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -215,6 +243,12 @@ public class Writers {
 
     public static class DateWriter implements JsonClassWriter {
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            String pat = context.getFieldFormatPattern();
+            if (pat != null) {
+                SimpleDateFormat sdf = new SimpleDateFormat(pat);
+                JsonWriter.writeBasicString(output, sdf.format((java.util.Date) o));
+                return;
+            }
             if (o instanceof java.sql.Date) {
                 // Write just the date portion - no time, no timezone
                 String formatted = ((java.sql.Date) o).toLocalDate().toString();
@@ -243,6 +277,12 @@ public class Writers {
 
     public static class DateAsLongWriter extends DateWriter {
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            String pat = context.getFieldFormatPattern();
+            if (pat != null) {
+                SimpleDateFormat sdf = new SimpleDateFormat(pat);
+                JsonWriter.writeBasicString(output, sdf.format((java.util.Date) o));
+                return;
+            }
             if (o instanceof java.sql.Date) {
                 // Same pure date format for sql.Date in both writers
                 String formatted = ((java.sql.Date) o).toLocalDate().toString();
@@ -266,6 +306,7 @@ public class Writers {
         }
 
         public void writePrimitiveForm(Object o, Writer output, WriterContext writerContext) throws IOException {
+            if (writeWithFieldFormat(o, output, writerContext)) { return; }
             LocalDate localDate = (LocalDate) o;
             ZonedDateTime zonedDateTime = localDate.atStartOfDay(zoneId);
 
@@ -288,6 +329,7 @@ public class Writers {
         }
 
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeWithFieldFormat(o, output, context)) { return; }
             LocalDate ld = (LocalDate) o;
             JsonWriter.writeJsonUtf8String(output, ld == null ? null : FORMATTER.format(ld));
         }
@@ -303,6 +345,7 @@ public class Writers {
         }
 
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeWithFieldFormat(o, output, context)) { return; }
             LocalTime lt = (LocalTime) o;
             JsonWriter.writeJsonUtf8String(output, lt == null ? null : FORMATTER.format(lt));
         }
@@ -318,6 +361,7 @@ public class Writers {
         }
 
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeWithFieldFormat(o, output, context)) { return; }
             LocalDateTime ldt = (LocalDateTime) o;
             JsonWriter.writeJsonUtf8String(output, ldt == null ? null : FORMATTER.format(ldt));
         }
@@ -336,6 +380,7 @@ public class Writers {
         }
 
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeWithFieldFormat(o, output, context)) { return; }
             ZonedDateTime zdt = (ZonedDateTime) o;
             if (zdt == null) {
                 JsonWriter.writeBasicString(output, null);
@@ -387,6 +432,7 @@ public class Writers {
         }
 
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeWithFieldFormat(o, output, context)) { return; }
             OffsetTime ot = (OffsetTime) o;
             JsonWriter.writeJsonUtf8String(output, ot == null ? null : FORMATTER.format(ot));
         }
@@ -402,6 +448,7 @@ public class Writers {
         }
 
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeWithFieldFormat(o, output, context)) { return; }
             OffsetDateTime odt = (OffsetDateTime) o;
             JsonWriter.writeJsonUtf8String(output, odt == null ? null : FORMATTER.format(odt));
         }
@@ -413,6 +460,12 @@ public class Writers {
         }
 
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            String pat = context.getFieldFormatPattern();
+            if (pat != null) {
+                DateTimeFormatter fmt = getFormatter(pat).withZone(ZoneOffset.UTC);
+                JsonWriter.writeJsonUtf8String(output, fmt.format((Instant) o));
+                return;
+            }
             Instant instant = (Instant) o;
             JsonWriter.writeJsonUtf8String(output, instant == null ? null : instant.toString());
         }

@@ -2,7 +2,12 @@ package com.cedarsoftware.io;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -14,6 +19,7 @@ import com.cedarsoftware.io.annotation.IoCustomReader;
 import com.cedarsoftware.io.annotation.IoCustomWriter;
 import com.cedarsoftware.io.annotation.IoCreator;
 import com.cedarsoftware.io.annotation.IoDeserialize;
+import com.cedarsoftware.io.annotation.IoFormat;
 import com.cedarsoftware.io.annotation.IoGetter;
 import com.cedarsoftware.io.annotation.IoSetter;
 import com.cedarsoftware.io.annotation.IoIgnore;
@@ -2824,5 +2830,200 @@ class AnnotationTest {
         String json = JsonIo.toJson(sensor, writeOptions);
         assertTrue(json.contains("\"ProgSensor\""), "Programmatic alias should win: " + json);
         assertFalse(json.contains("\"Sensor\""), "Annotation alias should be overridden: " + json);
+    }
+
+    // ===================== @IoFormat Test Models =====================
+
+    static class FormatLocalDateModel {
+        @IoFormat("dd/MM/yyyy")
+        LocalDate birthday;
+        LocalDate created;  // no annotation — uses ISO default
+
+        FormatLocalDateModel() {}
+        FormatLocalDateModel(LocalDate birthday, LocalDate created) {
+            this.birthday = birthday;
+            this.created = created;
+        }
+    }
+
+    static class FormatLocalDateTimeModel {
+        @IoFormat("yyyy-MM-dd HH:mm")
+        LocalDateTime event;
+
+        FormatLocalDateTimeModel() {}
+        FormatLocalDateTimeModel(LocalDateTime event) {
+            this.event = event;
+        }
+    }
+
+    static class FormatDateModel {
+        @IoFormat("MM/dd/yyyy")
+        Date legacy;
+
+        FormatDateModel() {}
+        FormatDateModel(Date legacy) {
+            this.legacy = legacy;
+        }
+    }
+
+    static class FormatLocalTimeModel {
+        @IoFormat("HH:mm")
+        LocalTime alarm;
+
+        FormatLocalTimeModel() {}
+        FormatLocalTimeModel(LocalTime alarm) {
+            this.alarm = alarm;
+        }
+    }
+
+    @com.fasterxml.jackson.annotation.JsonFormat(pattern = "dd-MM-yyyy")
+    static class JacksonFormatField {
+        // Jackson @JsonFormat on field (not class) — need to put it on the field
+    }
+
+    static class JacksonFormatModel {
+        @com.fasterxml.jackson.annotation.JsonFormat(pattern = "dd-MM-yyyy")
+        LocalDate dateField;
+
+        JacksonFormatModel() {}
+        JacksonFormatModel(LocalDate dateField) {
+            this.dateField = dateField;
+        }
+    }
+
+    // ===================== @IoFormat Tests =====================
+
+    @Test
+    void testIoFormatMetadataApi() {
+        // @IoFormat("dd/MM/yyyy") should be accessible via getMetadata()
+        String pattern = AnnotationResolver.getMetadata(FormatLocalDateModel.class).getFieldFormatPattern("birthday");
+        assertEquals("dd/MM/yyyy", pattern);
+
+        // Field without annotation returns null
+        assertNull(AnnotationResolver.getMetadata(FormatLocalDateModel.class).getFieldFormatPattern("created"));
+
+        // Class without any @IoFormat returns null for any field
+        assertNull(AnnotationResolver.getMetadata(PlainReading.class).getFieldFormatPattern("value"));
+    }
+
+    @Test
+    void testIoFormatWriteLocalDate() {
+        FormatLocalDateModel model = new FormatLocalDateModel(
+                LocalDate.of(2026, 2, 23),
+                LocalDate.of(2026, 1, 15));
+
+        String json = JsonIo.toJson(model, new WriteOptionsBuilder().shortMetaKeys(true).build());
+
+        // birthday should be formatted as "23/02/2026" (dd/MM/yyyy)
+        assertTrue(json.contains("23/02/2026"), "birthday should use custom format: " + json);
+
+        // created should use ISO default "2026-01-15"
+        assertTrue(json.contains("2026-01-15"), "created should use ISO default: " + json);
+    }
+
+    @Test
+    void testIoFormatWriteLocalDateTime() {
+        FormatLocalDateTimeModel model = new FormatLocalDateTimeModel(
+                LocalDateTime.of(2026, 3, 15, 14, 30, 0));
+
+        String json = JsonIo.toJson(model, new WriteOptionsBuilder().shortMetaKeys(true).build());
+
+        // event should be formatted as "2026-03-15 14:30" (yyyy-MM-dd HH:mm)
+        assertTrue(json.contains("2026-03-15 14:30"), "event should use custom format: " + json);
+        // Should NOT contain seconds (ISO default would have them)
+        assertFalse(json.contains("14:30:00"), "Should not contain seconds: " + json);
+    }
+
+    @Test
+    void testIoFormatWriteDate() throws Exception {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Date date = sdf.parse("2026-02-23");
+        FormatDateModel model = new FormatDateModel(date);
+
+        String json = JsonIo.toJson(model, new WriteOptionsBuilder().shortMetaKeys(true).build());
+
+        // legacy should be formatted as "02/23/2026" (MM/dd/yyyy)
+        assertTrue(json.contains("02/23/2026"), "legacy should use custom format: " + json);
+    }
+
+    @Test
+    void testIoFormatWriteLocalTime() {
+        FormatLocalTimeModel model = new FormatLocalTimeModel(
+                LocalTime.of(8, 30, 45));
+
+        String json = JsonIo.toJson(model, new WriteOptionsBuilder().shortMetaKeys(true).build());
+
+        // alarm should be formatted as "08:30" (HH:mm) — no seconds
+        assertTrue(json.contains("08:30"), "alarm should use custom HH:mm format: " + json);
+        assertFalse(json.contains("08:30:45"), "alarm should NOT contain seconds: " + json);
+    }
+
+    @Test
+    void testIoFormatRoundTripLocalDate() {
+        FormatLocalDateModel original = new FormatLocalDateModel(
+                LocalDate.of(2026, 2, 23),
+                LocalDate.of(2026, 1, 15));
+
+        WriteOptions writeOptions = new WriteOptionsBuilder().shortMetaKeys(true).build();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, writeOptions);
+
+        // Verify the custom format is in the JSON
+        assertTrue(json.contains("23/02/2026"), "Should contain custom-formatted date: " + json);
+
+        // Read it back — should parse correctly using the @IoFormat pattern
+        FormatLocalDateModel restored = JsonIo.toJava(json, readOptions).asClass(FormatLocalDateModel.class);
+        assertEquals(original.birthday, restored.birthday, "birthday should round-trip correctly");
+        assertEquals(original.created, restored.created, "created (ISO default) should round-trip correctly");
+    }
+
+    @Test
+    void testIoFormatRoundTripDate() throws Exception {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Date date = sdf.parse("2026-02-23");
+        FormatDateModel original = new FormatDateModel(date);
+
+        WriteOptions writeOptions = new WriteOptionsBuilder().shortMetaKeys(true).build();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, writeOptions);
+        assertTrue(json.contains("02/23/2026"), "Should contain custom-formatted date: " + json);
+
+        // Read back
+        FormatDateModel restored = JsonIo.toJava(json, readOptions).asClass(FormatDateModel.class);
+        assertEquals(sdf.format(original.legacy), sdf.format(restored.legacy), "Date should round-trip correctly");
+    }
+
+    @Test
+    void testIoFormatJacksonFallback() {
+        // Jackson @JsonFormat(pattern="dd-MM-yyyy") should be detected as fallback
+        String pattern = AnnotationResolver.getMetadata(JacksonFormatModel.class).getFieldFormatPattern("dateField");
+        assertEquals("dd-MM-yyyy", pattern);
+
+        // Write with Jackson fallback
+        JacksonFormatModel model = new JacksonFormatModel(LocalDate.of(2026, 2, 23));
+        String json = JsonIo.toJson(model, new WriteOptionsBuilder().shortMetaKeys(true).build());
+        assertTrue(json.contains("23-02-2026"), "Jackson @JsonFormat fallback should format: " + json);
+
+        // Round-trip
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        JacksonFormatModel restored = JsonIo.toJava(json, readOptions).asClass(JacksonFormatModel.class);
+        assertEquals(model.dateField, restored.dateField, "Jackson format should round-trip");
+    }
+
+    @Test
+    void testIoFormatMixedFieldsEachUsesOwnFormat() {
+        // One field with @IoFormat, another without — each should use its own format
+        FormatLocalDateModel model = new FormatLocalDateModel(
+                LocalDate.of(2025, 12, 25),
+                LocalDate.of(2025, 12, 31));
+
+        String json = JsonIo.toJson(model, new WriteOptionsBuilder().shortMetaKeys(true).build());
+
+        // birthday (annotated): "25/12/2025"
+        assertTrue(json.contains("25/12/2025"), "Annotated field uses custom format: " + json);
+        // created (unannotated): "2025-12-31"
+        assertTrue(json.contains("2025-12-31"), "Unannotated field uses ISO default: " + json);
     }
 }

@@ -23,6 +23,7 @@ import com.cedarsoftware.io.annotation.IoCustomReader;
 import com.cedarsoftware.io.annotation.IoCustomWriter;
 import com.cedarsoftware.io.annotation.IoCreator;
 import com.cedarsoftware.io.annotation.IoDeserialize;
+import com.cedarsoftware.io.annotation.IoFormat;
 import com.cedarsoftware.io.annotation.IoGetter;
 import com.cedarsoftware.io.annotation.IoIgnore;
 import com.cedarsoftware.io.annotation.IoIgnoreProperties;
@@ -115,10 +116,13 @@ public class AnnotationResolver {
     private static final Class<? extends Annotation> EXT_SETTER;
     @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_TYPE_NAME;
+    @SuppressWarnings("unchecked")
+    private static final Class<? extends Annotation> EXT_FORMAT;
 
     private static final Method EXT_GETTER_VALUE;
     private static final Method EXT_SETTER_VALUE;
     private static final Method EXT_TYPE_NAME_VALUE;
+    private static final Method EXT_FORMAT_PATTERN;
     private static final Method EXT_PROPERTY_VALUE;
     private static final Method EXT_IGNORE_PROPERTIES_VALUE;
     private static final Method EXT_ALIAS_VALUE;
@@ -144,6 +148,7 @@ public class AnnotationResolver {
         Class<? extends Annotation> extGetter = null;
         Class<? extends Annotation> extSetter = null;
         Class<? extends Annotation> extTypeName = null;
+        Class<? extends Annotation> extFormat = null;
         Method extGetterValue = null;
         Method extSetterValue = null;
         Method extTypeNameValue = null;
@@ -155,6 +160,7 @@ public class AnnotationResolver {
         Object extIncludeNonNull = null;
         Method extIncludePropertiesValue = null;
         Method extTypeInfoDefaultImpl = null;
+        Method extFormatPattern = null;
 
         try {
             extCreator = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonCreator");
@@ -171,10 +177,12 @@ public class AnnotationResolver {
             extGetter = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonGetter");
             extSetter = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonSetter");
             extTypeName = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonTypeName");
+            extFormat = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonFormat");
 
             extGetterValue = extGetter.getMethod("value");
             extSetterValue = extSetter.getMethod("value");
             extTypeNameValue = extTypeName.getMethod("value");
+            extFormatPattern = extFormat.getMethod("pattern");
             extPropertyValue = extProperty.getMethod("value");
             extIncludePropertiesValue = extIncludeProperties.getMethod("value");
             extIgnorePropertiesValue = extIgnoreProperties.getMethod("value");
@@ -212,9 +220,11 @@ public class AnnotationResolver {
         EXT_GETTER = extGetter;
         EXT_SETTER = extSetter;
         EXT_TYPE_NAME = extTypeName;
+        EXT_FORMAT = extFormat;
         EXT_GETTER_VALUE = extGetterValue;
         EXT_SETTER_VALUE = extSetterValue;
         EXT_TYPE_NAME_VALUE = extTypeNameValue;
+        EXT_FORMAT_PATTERN = extFormatPattern;
         EXT_PROPERTY_VALUE = extPropertyValue;
         EXT_INCLUDE_PROPERTIES_VALUE = extIncludePropertiesValue;
         EXT_IGNORE_PROPERTIES_VALUE = extIgnorePropertiesValue;
@@ -282,6 +292,7 @@ public class AnnotationResolver {
             false,
             null,
             null,
+            null,
             null);
 
     /**
@@ -336,6 +347,7 @@ public class AnnotationResolver {
         Set<String> nonNullFields = new LinkedHashSet<>();
         Map<String, Class<?>> fieldTypeInfoDefaults = null;
         Map<String, Class<?>> fieldDeserializeOverrides = null;
+        Map<String, String> fieldFormatPatterns = null;
         String[] order = null;
 
         // 1. Class-level annotations
@@ -507,6 +519,30 @@ public class AnnotationResolver {
                         }
                     }
                 }
+
+                // @IoFormat — per-field date/time format pattern (or Jackson @JsonFormat fallback)
+                IoFormat ioFormat = field.getAnnotation(IoFormat.class);
+                if (ioFormat != null && !ioFormat.value().isEmpty()) {
+                    if (fieldFormatPatterns == null) {
+                        fieldFormatPatterns = new LinkedHashMap<>();
+                    }
+                    fieldFormatPatterns.put(fieldName, ioFormat.value());
+                } else if (externalAvailable && EXT_FORMAT != null) {
+                    Annotation jf = field.getAnnotation(EXT_FORMAT);
+                    if (jf != null) {
+                        try {
+                            String pat = (String) EXT_FORMAT_PATTERN.invoke(jf);
+                            if (pat != null && !pat.isEmpty()) {
+                                if (fieldFormatPatterns == null) {
+                                    fieldFormatPatterns = new LinkedHashMap<>();
+                                }
+                                fieldFormatPatterns.put(fieldName, pat);
+                            }
+                        } catch (Exception e) {
+                            // Ignore reflection failure
+                        }
+                    }
+                }
             }
             curr = curr.getSuperclass();
         }
@@ -544,7 +580,7 @@ public class AnnotationResolver {
                 && classFactory == null && getterMethods == null && setterMethods == null
                 && !nonReferenceable && !notCustomRead && !notCustomWrite
                 && customWriter == null && customReader == null
-                && typeName == null) {
+                && typeName == null && fieldFormatPatterns == null) {
             return EMPTY;
         }
 
@@ -568,7 +604,8 @@ public class AnnotationResolver {
                 notCustomWrite,
                 customWriter,
                 customReader,
-                typeName);
+                typeName,
+                fieldFormatPatterns != null ? Collections.unmodifiableMap(fieldFormatPatterns) : null);
     }
 
     // ---- Class-level scanners ----
@@ -1060,6 +1097,7 @@ public class AnnotationResolver {
         private final Class<? extends JsonClassWriter> customWriter;
         private final Class<? extends JsonClassReader> customReader;
         private final String typeName;
+        private final Map<String, String> fieldFormatPatterns;
 
         ClassAnnotationMetadata(Map<String, String> renamedFields,
                                 Set<String> ignoredFields,
@@ -1080,7 +1118,8 @@ public class AnnotationResolver {
                                 boolean notCustomWrite,
                                 Class<? extends JsonClassWriter> customWriter,
                                 Class<? extends JsonClassReader> customReader,
-                                String typeName) {
+                                String typeName,
+                                Map<String, String> fieldFormatPatterns) {
             this.renamedFields = renamedFields;
             this.ignoredFields = ignoredFields;
             this.aliasToFieldName = aliasToFieldName;
@@ -1101,6 +1140,7 @@ public class AnnotationResolver {
             this.customWriter = customWriter;
             this.customReader = customReader;
             this.typeName = typeName;
+            this.fieldFormatPatterns = fieldFormatPatterns;
         }
 
         /**
@@ -1274,6 +1314,15 @@ public class AnnotationResolver {
         }
 
         /**
+         * Get the @IoFormat pattern for a field, or null if not specified.
+         * @param fieldName the Java field name
+         * @return the format pattern string, or null
+         */
+        public String getFieldFormatPattern(String fieldName) {
+            return fieldFormatPatterns == null ? null : fieldFormatPatterns.get(fieldName);
+        }
+
+        /**
          * @return true if this metadata has no annotation information (empty/default)
          */
         public boolean isEmpty() {
@@ -1286,7 +1335,7 @@ public class AnnotationResolver {
                     && getterMethods == null && setterMethods == null
                     && !nonReferenceable && !notCustomRead && !notCustomWrite
                     && customWriter == null && customReader == null
-                    && typeName == null;
+                    && typeName == null && fieldFormatPatterns == null;
         }
     }
 }

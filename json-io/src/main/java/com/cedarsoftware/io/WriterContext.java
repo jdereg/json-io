@@ -28,6 +28,15 @@ public interface WriterContext {
     WriteOptions getWriteOptions();
 
     /**
+     * Returns the per-field format pattern (e.g., date/time pattern from {@code @IoFormat}),
+     * or {@code null} if no field-level format is active. Only meaningful during field writing.
+     * @return the format pattern string, or null
+     */
+    default String getFieldFormatPattern() {
+        return null;
+    }
+
+    /**
      * Allows you to use the current JsonWriter to write an object out.
      */
     void writeObject(final Object obj, boolean showType, boolean bodyOnly) throws IOException;
