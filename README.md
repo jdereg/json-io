@@ -118,8 +118,8 @@ json-io provides 25 annotations in the `com.cedarsoftware.io.annotation` package
 | `@IoGetter("fieldName")` | Method | Custom getter method for serialization |
 | `@IoSetter("fieldName")` | Method | Custom setter method for deserialization |
 | `@IoNonReferenceable` | Class | Suppress `@id`/`@ref` for instances of this type |
-| `@IoNotCustomRead` | Class | Suppress custom reader (use standard deserialization) |
-| `@IoNotCustomWrite` | Class | Suppress custom writer (use standard serialization) |
+| `@IoNotCustomReader` | Class | Suppress custom reader (use standard deserialization) |
+| `@IoNotCustomWritten` | Class | Suppress custom writer (use standard serialization) |
 | `@IoCustomWriter(MyWriter.class)` | Class | Specify custom `JsonClassWriter` for serialization |
 | `@IoCustomReader(MyReader.class)` | Class | Specify custom `JsonClassReader` for deserialization |
 | `@IoTypeName("ShortName")` | Class | Alias for `@type` in JSON (replaces FQCN) |

@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
 /**
  * Marks a class to suppress custom writer usage during serialization.
  * <p>
- * When a class is annotated with {@code @IoNotCustomWrite}, json-io will use standard
+ * When a class is annotated with {@code @IoNotCustomWritten}, json-io will use standard
  * field-by-field serialization instead of any custom writer that might otherwise apply
  * (e.g., inherited from a parent class). This is the annotation equivalent of adding
  * a class to the {@code config/notCustomWritten.txt} configuration file or calling
@@ -21,16 +21,16 @@ import java.lang.annotation.Target;
  * </p>
  *
  * <pre>{@code
- * @IoNotCustomWrite
+ * @IoNotCustomWritten
  * public class MySpecialSet extends HashSet<String> {
  *     // Will NOT use HashSet's custom writer — uses standard field-by-field serialization
  * }
  * }</pre>
  *
- * @see IoNotCustomRead
+ * @see IoNotCustomReader
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface IoNotCustomWrite {
+public @interface IoNotCustomWritten {
 }

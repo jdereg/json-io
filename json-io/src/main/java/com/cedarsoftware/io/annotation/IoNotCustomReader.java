@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
 /**
  * Marks a class to suppress custom reader usage during deserialization.
  * <p>
- * When a class is annotated with {@code @IoNotCustomRead}, json-io will use standard
+ * When a class is annotated with {@code @IoNotCustomReader}, json-io will use standard
  * field-by-field deserialization instead of any custom reader that might otherwise apply
  * (e.g., inherited from a parent class). This is the annotation equivalent of adding
  * a class to the {@code config/notCustomRead.txt} configuration file or calling
@@ -21,16 +21,16 @@ import java.lang.annotation.Target;
  * </p>
  *
  * <pre>{@code
- * @IoNotCustomRead
+ * @IoNotCustomReader
  * public class MySpecialSet extends HashSet<String> {
  *     // Will NOT use HashSet's custom reader — uses standard field-by-field deserialization
  * }
  * }</pre>
  *
- * @see IoNotCustomWrite
+ * @see IoNotCustomWritten
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface IoNotCustomRead {
+public @interface IoNotCustomReader {
 }

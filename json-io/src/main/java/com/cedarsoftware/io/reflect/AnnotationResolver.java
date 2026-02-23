@@ -34,8 +34,8 @@ import com.cedarsoftware.io.annotation.IoInclude;
 import com.cedarsoftware.io.annotation.IoIncludeProperties;
 import com.cedarsoftware.io.annotation.IoNaming;
 import com.cedarsoftware.io.annotation.IoNonReferenceable;
-import com.cedarsoftware.io.annotation.IoNotCustomRead;
-import com.cedarsoftware.io.annotation.IoNotCustomWrite;
+import com.cedarsoftware.io.annotation.IoNotCustomReader;
+import com.cedarsoftware.io.annotation.IoNotCustomWritten;
 import com.cedarsoftware.io.annotation.IoProperty;
 import com.cedarsoftware.io.annotation.IoSetter;
 import com.cedarsoftware.io.annotation.IoTypeInfo;
@@ -382,11 +382,11 @@ public class AnnotationResolver {
         // 1e. @IoNonReferenceable — class-level non-referenceable flag
         boolean nonReferenceable = clazz.isAnnotationPresent(IoNonReferenceable.class);
 
-        // 1f. @IoNotCustomRead — class-level flag to suppress custom reader
-        boolean notCustomRead = clazz.isAnnotationPresent(IoNotCustomRead.class);
+        // 1f. @IoNotCustomReader — class-level flag to suppress custom reader
+        boolean notCustomRead = clazz.isAnnotationPresent(IoNotCustomReader.class);
 
-        // 1g. @IoNotCustomWrite — class-level flag to suppress custom writer
-        boolean notCustomWrite = clazz.isAnnotationPresent(IoNotCustomWrite.class);
+        // 1g. @IoNotCustomWritten — class-level flag to suppress custom writer
+        boolean notCustomWrite = clazz.isAnnotationPresent(IoNotCustomWritten.class);
 
         // 1h. @IoCustomWriter — class-level custom writer
         Class<? extends JsonClassWriter> customWriter = null;
@@ -1360,14 +1360,14 @@ public class AnnotationResolver {
         }
 
         /**
-         * @return true if this class is annotated with @IoNotCustomRead
+         * @return true if this class is annotated with @IoNotCustomReader
          */
         public boolean isNotCustomRead() {
             return notCustomRead;
         }
 
         /**
-         * @return true if this class is annotated with @IoNotCustomWrite
+         * @return true if this class is annotated with @IoNotCustomWritten
          */
         public boolean isNotCustomWrite() {
             return notCustomWrite;
