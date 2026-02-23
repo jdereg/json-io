@@ -85,6 +85,8 @@ import static com.cedarsoftware.util.Converter.isSimpleTypeConversionSupported;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class Resolver {
     private static final String NO_FACTORY = "_︿_ψ_☼";
+    // Cache for ClassFactory instances created from @IoClassFactory annotations (keyed by factory class)
+    private static final ConcurrentHashMap<Class<? extends ClassFactory>, ClassFactory> annotationFactoryCache = new ConcurrentHashMap<>();
     protected static final int TARGET_OTHER = 0;
     protected static final int TARGET_INT = 1;
     protected static final int TARGET_DOUBLE = 2;
@@ -1437,6 +1439,14 @@ public abstract class Resolver {
 
         ClassFactory classFactory = readOptions.getClassFactory(c);
 
+        // Annotation fallback: check for @IoClassFactory on the class
+        if (classFactory == null) {
+            Class<? extends ClassFactory> factoryClass = AnnotationResolver.getMetadata(c).getClassFactory();
+            if (factoryClass != null) {
+                classFactory = getOrCreateAnnotationFactory(factoryClass);
+            }
+        }
+
         if (classFactory == null) {
             return NO_FACTORY;
         }
@@ -1452,6 +1462,20 @@ public abstract class Resolver {
         }
 
         return jsonObj.setTarget(target);
+    }
+
+    /**
+     * Get or create a cached ClassFactory instance from an @IoClassFactory annotation.
+     * Keyed by factory class so one instance is shared if the same factory is used on multiple classes.
+     */
+    private static ClassFactory getOrCreateAnnotationFactory(Class<? extends ClassFactory> factoryClass) {
+        return annotationFactoryCache.computeIfAbsent(factoryClass, cls -> {
+            try {
+                return cls.getDeclaredConstructor().newInstance();
+            } catch (Exception e) {
+                throw new JsonIoException("Unable to instantiate @IoClassFactory: " + cls.getName(), e);
+            }
+        });
     }
 
     /**

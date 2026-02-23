@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.cedarsoftware.io.annotation.IoAlias;
+import com.cedarsoftware.io.annotation.IoClassFactory;
 import com.cedarsoftware.io.annotation.IoCreator;
 import com.cedarsoftware.io.annotation.IoDeserialize;
 import com.cedarsoftware.io.annotation.IoIgnore;
@@ -2097,5 +2098,158 @@ class AnnotationTest {
         assertNotNull(result.getItems());
         assertTrue(result.getItems() instanceof LinkedList,
                 "@IoDeserialize should win over @JsonDeserialize: " + result.getItems().getClass().getName());
+    }
+
+    // ===================== @IoClassFactory Models =====================
+
+    /**
+     * Simple widget class with a private constructor — can only be created via its factory.
+     */
+    @IoClassFactory(CustomWidgetFactory.class)
+    static class CustomWidget {
+        private final String name;
+        private final int size;
+
+        private CustomWidget(String name, int size) {
+            this.name = name;
+            this.size = size;
+        }
+
+        public String getName() { return name; }
+        public int getSize() { return size; }
+    }
+
+    /**
+     * ClassFactory that creates CustomWidget instances and fully populates them (isObjectFinal=true).
+     */
+    static class CustomWidgetFactory implements ClassFactory {
+        @Override
+        public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
+            String name = (String) jObj.get("name");
+            Number size = (Number) jObj.get("size");
+            return new CustomWidget(name != null ? name : "default", size != null ? size.intValue() : 0);
+        }
+
+        @Override
+        public boolean isObjectFinal() {
+            return true;
+        }
+    }
+
+    /**
+     * Widget with a non-final factory (isObjectFinal=false) — json-io continues field processing after factory.
+     */
+    @IoClassFactory(NonFinalWidgetFactory.class)
+    static class NonFinalWidget {
+        String label;
+        int count;
+
+        NonFinalWidget() { }
+        NonFinalWidget(String label, int count) {
+            this.label = label;
+            this.count = count;
+        }
+
+        public String getLabel() { return label; }
+        public int getCount() { return count; }
+    }
+
+    static class NonFinalWidgetFactory implements ClassFactory {
+        @Override
+        public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
+            // Just create the instance — let json-io handle field injection
+            return new NonFinalWidget();
+        }
+
+        @Override
+        public boolean isObjectFinal() {
+            return false;
+        }
+    }
+
+    // ===================== @IoClassFactory Tests =====================
+
+    @Test
+    void testIoClassFactoryBasic() {
+        String json = "{\"@type\":\"" + CustomWidget.class.getName() + "\",\"name\":\"gadget\",\"size\":42}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        CustomWidget result = JsonIo.toJava(json, ro).asClass(CustomWidget.class);
+        assertNotNull(result);
+        assertEquals("gadget", result.getName());
+        assertEquals(42, result.getSize());
+    }
+
+    @Test
+    void testIoClassFactoryIsObjectFinal() {
+        // The factory returns isObjectFinal=true, so json-io should not try to do further field processing
+        String json = "{\"@type\":\"" + CustomWidget.class.getName() + "\",\"name\":\"final\",\"size\":99}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        CustomWidget result = JsonIo.toJava(json, ro).asClass(CustomWidget.class);
+        assertEquals("final", result.getName());
+        assertEquals(99, result.getSize());
+    }
+
+    @Test
+    void testIoClassFactoryNonFinal() {
+        // Factory creates the object but isObjectFinal=false → json-io continues field injection
+        String json = "{\"@type\":\"" + NonFinalWidget.class.getName() + "\",\"label\":\"test\",\"count\":7}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        NonFinalWidget result = JsonIo.toJava(json, ro).asClass(NonFinalWidget.class);
+        assertNotNull(result);
+        assertEquals("test", result.getLabel());
+        assertEquals(7, result.getCount());
+    }
+
+    @Test
+    void testIoClassFactoryProgrammaticWins() {
+        // Programmatic addClassFactory should take priority over @IoClassFactory annotation
+        ClassFactory programmaticFactory = new ClassFactory() {
+            @Override
+            public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
+                return new CustomWidget("programmatic", 0);
+            }
+            @Override
+            public boolean isObjectFinal() { return true; }
+        };
+
+        ReadOptions ro = new ReadOptionsBuilder()
+                .addClassFactory(CustomWidget.class, programmaticFactory)
+                .build();
+
+        String json = "{\"@type\":\"" + CustomWidget.class.getName() + "\",\"name\":\"annotation\",\"size\":99}";
+        CustomWidget result = JsonIo.toJava(json, ro).asClass(CustomWidget.class);
+
+        assertEquals("programmatic", result.getName(), "Programmatic factory should win over @IoClassFactory");
+        assertEquals(0, result.getSize());
+    }
+
+    @Test
+    void testIoClassFactoryRoundTrip() {
+        CustomWidget original = new CustomWidget("round-trip", 55);
+        WriteOptions wo = new WriteOptionsBuilder().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, wo);
+        CustomWidget result = JsonIo.toJava(json, ro).asClass(CustomWidget.class);
+
+        assertEquals("round-trip", result.getName());
+        assertEquals(55, result.getSize());
+    }
+
+    @Test
+    void testIoClassFactoryResolverApi() {
+        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(CustomWidget.class);
+        assertNotNull(meta.getClassFactory());
+        assertEquals(CustomWidgetFactory.class, meta.getClassFactory());
+    }
+
+    @Test
+    void testIoClassFactoryNoAnnotation() {
+        // Classes without @IoClassFactory should return null
+        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(NoAnnotationModel.class);
+        assertNull(meta.getClassFactory());
     }
 }

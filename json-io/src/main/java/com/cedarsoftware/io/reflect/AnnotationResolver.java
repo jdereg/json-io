@@ -13,7 +13,9 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
+import com.cedarsoftware.io.ClassFactory;
 import com.cedarsoftware.io.annotation.IoAlias;
+import com.cedarsoftware.io.annotation.IoClassFactory;
 import com.cedarsoftware.io.annotation.IoCreator;
 import com.cedarsoftware.io.annotation.IoDeserialize;
 import com.cedarsoftware.io.annotation.IoIgnore;
@@ -231,6 +233,7 @@ public class AnnotationResolver {
             null,
             false,
             null,
+            null,
             null);
 
     /**
@@ -286,6 +289,13 @@ public class AnnotationResolver {
         // 1c. @IoIgnoreType — class-level type exclusion flag (or Jackson @JsonIgnoreType)
         boolean ignoredType = clazz.isAnnotationPresent(IoIgnoreType.class)
                 || (externalAvailable && EXT_IGNORE_TYPE != null && clazz.isAnnotationPresent(EXT_IGNORE_TYPE));
+
+        // 1d. @IoClassFactory — class-level factory for deserialization
+        Class<? extends ClassFactory> classFactory = null;
+        IoClassFactory factoryAnn = clazz.getAnnotation(IoClassFactory.class);
+        if (factoryAnn != null) {
+            classFactory = factoryAnn.value();
+        }
 
         // 2. @IoNaming — class-level naming strategy
         IoNaming.Strategy namingStrategy = scanNamingStrategy(clazz);
@@ -418,7 +428,8 @@ public class AnnotationResolver {
         if (renames.isEmpty() && ignored.isEmpty() && aliases.isEmpty()
                 && order == null && nonNullFields.isEmpty() && creator == null
                 && valueMethod == null && includedFields == null && !ignoredType
-                && fieldTypeInfoDefaults == null && fieldDeserializeOverrides == null) {
+                && fieldTypeInfoDefaults == null && fieldDeserializeOverrides == null
+                && classFactory == null) {
             return EMPTY;
         }
 
@@ -433,7 +444,8 @@ public class AnnotationResolver {
                 includedFields != null ? Collections.unmodifiableSet(includedFields) : null,
                 ignoredType,
                 fieldTypeInfoDefaults != null ? Collections.unmodifiableMap(fieldTypeInfoDefaults) : null,
-                fieldDeserializeOverrides != null ? Collections.unmodifiableMap(fieldDeserializeOverrides) : null);
+                fieldDeserializeOverrides != null ? Collections.unmodifiableMap(fieldDeserializeOverrides) : null,
+                classFactory);
     }
 
     // ---- Class-level scanners ----
@@ -826,6 +838,7 @@ public class AnnotationResolver {
         private final boolean ignoredType;
         private final Map<String, Class<?>> fieldTypeInfoDefaults;
         private final Map<String, Class<?>> fieldDeserializeOverrides;
+        private final Class<? extends ClassFactory> classFactory;
 
         ClassAnnotationMetadata(Map<String, String> renamedFields,
                                 Set<String> ignoredFields,
@@ -837,7 +850,8 @@ public class AnnotationResolver {
                                 Set<String> includedFields,
                                 boolean ignoredType,
                                 Map<String, Class<?>> fieldTypeInfoDefaults,
-                                Map<String, Class<?>> fieldDeserializeOverrides) {
+                                Map<String, Class<?>> fieldDeserializeOverrides,
+                                Class<? extends ClassFactory> classFactory) {
             this.renamedFields = renamedFields;
             this.ignoredFields = ignoredFields;
             this.aliasToFieldName = aliasToFieldName;
@@ -849,6 +863,7 @@ public class AnnotationResolver {
             this.ignoredType = ignoredType;
             this.fieldTypeInfoDefaults = fieldTypeInfoDefaults;
             this.fieldDeserializeOverrides = fieldDeserializeOverrides;
+            this.classFactory = classFactory;
         }
 
         /**
@@ -951,6 +966,14 @@ public class AnnotationResolver {
         }
 
         /**
+         * Get the @IoClassFactory factory class for this class, or null if not specified.
+         * @return the ClassFactory implementation class, or null
+         */
+        public Class<? extends ClassFactory> getClassFactory() {
+            return classFactory;
+        }
+
+        /**
          * @return true if this metadata has no annotation information (empty/default)
          */
         public boolean isEmpty() {
@@ -959,7 +982,7 @@ public class AnnotationResolver {
                     && nonNullFields.isEmpty() && creator == null
                     && valueMethod == null && includedFields == null
                     && !ignoredType && fieldTypeInfoDefaults == null
-                    && fieldDeserializeOverrides == null;
+                    && fieldDeserializeOverrides == null && classFactory == null;
         }
     }
 }
