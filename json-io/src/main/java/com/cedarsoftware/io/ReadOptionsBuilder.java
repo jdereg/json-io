@@ -2161,12 +2161,19 @@ public class ReadOptionsBuilder {
                     excludedFields.addAll(notImported);
                 }
 
+                // @IoIncludeProperties whitelist: if present, only include listed fields
+                final Set<String> annIncluded = annMeta.getIncludedFields();
+
                 for (Field field : fields) {
-                    if (excludedFields.contains(field.getName()) || fieldIsFiltered(field) || annMeta.isIgnored(field.getName())) {
+                    String name = field.getName();
+                    if (excludedFields.contains(name) || fieldIsFiltered(field) || annMeta.isIgnored(name)) {
                         continue;
                     }
 
-                    String name = field.getName();
+                    // If annotation whitelist is specified, skip fields not in the whitelist
+                    if (annIncluded != null && !annIncluded.contains(name)) {
+                        continue;
+                    }
 
                     if (map.putIfAbsent(name, field) != null) {
                         map.put(field.getDeclaringClass().getSimpleName() + '.' + name, field);

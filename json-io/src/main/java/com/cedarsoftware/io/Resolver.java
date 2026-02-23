@@ -1337,16 +1337,22 @@ public abstract class Resolver {
                     && Map.class.isAssignableFrom(targetClass)) {
                 instance = ClassUtilities.newInstance(converter, targetClass, null);
             } else {
-                // Remove annotation-ignored fields so they are not matched to constructor parameters
+                // Remove annotation-ignored and non-whitelisted fields so they are not matched to constructor parameters
                 AnnotationResolver.ClassAnnotationMetadata annMeta = AnnotationResolver.getMetadata(targetClass);
                 Map<Object, Object> filtered = null;
                 if (!annMeta.isEmpty()) {
+                    Set<String> includedFields = annMeta.getIncludedFields();
                     for (Object key : jsonObj.keySet()) {
-                        if (key instanceof String && annMeta.isIgnored((String) key)) {
-                            if (filtered == null) {
-                                filtered = new LinkedHashMap<>(jsonObj);
+                        if (key instanceof String) {
+                            String fieldName = (String) key;
+                            boolean shouldRemove = annMeta.isIgnored(fieldName)
+                                    || (includedFields != null && !includedFields.contains(fieldName));
+                            if (shouldRemove) {
+                                if (filtered == null) {
+                                    filtered = new LinkedHashMap<>(jsonObj);
+                                }
+                                filtered.remove(key);
                             }
-                            filtered.remove(key);
                         }
                     }
                 }

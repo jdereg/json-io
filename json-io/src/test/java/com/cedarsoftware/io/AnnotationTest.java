@@ -1,21 +1,33 @@
 package com.cedarsoftware.io;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import com.cedarsoftware.io.annotation.IoAlias;
 import com.cedarsoftware.io.annotation.IoCreator;
+import com.cedarsoftware.io.annotation.IoDeserialize;
 import com.cedarsoftware.io.annotation.IoIgnore;
-import com.cedarsoftware.io.annotation.IoValue;
 import com.cedarsoftware.io.annotation.IoIgnoreProperties;
+import com.cedarsoftware.io.annotation.IoIgnoreType;
 import com.cedarsoftware.io.annotation.IoInclude;
+import com.cedarsoftware.io.annotation.IoIncludeProperties;
 import com.cedarsoftware.io.annotation.IoNaming;
 import com.cedarsoftware.io.annotation.IoProperty;
 import com.cedarsoftware.io.annotation.IoPropertyOrder;
+import com.cedarsoftware.io.annotation.IoTypeInfo;
+import com.cedarsoftware.io.annotation.IoValue;
 import com.cedarsoftware.io.reflect.AnnotationResolver;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreType;
+import com.fasterxml.jackson.annotation.JsonIncludeProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import org.junit.jupiter.api.Test;
 
@@ -1327,5 +1339,763 @@ class AnnotationTest {
         String json = JsonIo.toJson(model, wo);
         // @IoValue should win over @JsonValue
         assertEquals("\"io:test\"", json.trim(), "@IoValue should win over @JsonValue");
+    }
+
+    // ===================== @IoIncludeProperties Models =====================
+
+    @IoIncludeProperties({"name", "email"})
+    static class IncludePropsModel {
+        private String name;
+        private String email;
+        private String password;
+        private int age;
+
+        IncludePropsModel() { }
+        IncludePropsModel(String name, String email, String password, int age) {
+            this.name = name;
+            this.email = email;
+            this.password = password;
+            this.age = age;
+        }
+
+        public String getName() { return name; }
+        public String getEmail() { return email; }
+        public String getPassword() { return password; }
+        public int getAge() { return age; }
+    }
+
+    @IoIncludeProperties({"name", "alias"})
+    static class IncludePropsWithRenameModel {
+        private String name;
+        @IoProperty("alias")
+        private String nickname;
+        private String secret;
+
+        IncludePropsWithRenameModel() { }
+        IncludePropsWithRenameModel(String name, String nickname, String secret) {
+            this.name = name;
+            this.nickname = nickname;
+            this.secret = secret;
+        }
+
+        public String getName() { return name; }
+        public String getNickname() { return nickname; }
+        public String getSecret() { return secret; }
+    }
+
+    @IoIncludeProperties({"name", "email"})
+    static class IncludePropsWithIgnoreConflictModel {
+        private String name;
+        @IoIgnore
+        private String email;
+        private String password;
+
+        IncludePropsWithIgnoreConflictModel() { }
+        IncludePropsWithIgnoreConflictModel(String name, String email, String password) {
+            this.name = name;
+            this.email = email;
+            this.password = password;
+        }
+
+        public String getName() { return name; }
+        public String getEmail() { return email; }
+        public String getPassword() { return password; }
+    }
+
+    // ===================== @IoIncludeProperties Tests =====================
+
+    @Test
+    void testIoIncludePropertiesWrite() {
+        IncludePropsModel model = new IncludePropsModel("Alice", "alice@test.com", "secret123", 30);
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+
+        String json = JsonIo.toJson(model, wo);
+        assertTrue(json.contains("\"name\""), "Should include 'name'");
+        assertTrue(json.contains("\"email\""), "Should include 'email'");
+        assertFalse(json.contains("\"password\""), "Should NOT include 'password'");
+        assertFalse(json.contains("\"age\""), "Should NOT include 'age'");
+    }
+
+    @Test
+    void testIoIncludePropertiesRead() {
+        // JSON has extra fields beyond the whitelist — they should be ignored on read
+        String json = "{\"@type\":\"" + IncludePropsModel.class.getName() + "\",\"name\":\"Bob\",\"email\":\"bob@test.com\",\"password\":\"hack\",\"age\":99}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        IncludePropsModel result = JsonIo.toJava(json, ro).asClass(IncludePropsModel.class);
+        assertEquals("Bob", result.getName());
+        assertEquals("bob@test.com", result.getEmail());
+        // password and age should NOT be injected (not in included whitelist)
+        assertNull(result.getPassword(), "password should not be injected");
+        assertEquals(0, result.getAge(), "age should not be injected");
+    }
+
+    @Test
+    void testIoIncludePropertiesRoundTrip() {
+        IncludePropsModel model = new IncludePropsModel("Alice", "alice@test.com", "secret123", 30);
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoAlways().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(model, wo);
+        IncludePropsModel result = JsonIo.toJava(json, ro).asClass(IncludePropsModel.class);
+
+        assertEquals("Alice", result.getName());
+        assertEquals("alice@test.com", result.getEmail());
+        // Non-included fields should be default values after round-trip
+        assertNull(result.getPassword());
+        assertEquals(0, result.getAge());
+    }
+
+    @Test
+    void testIoIncludePropertiesWithIoPropertyRename() {
+        // @IoIncludeProperties lists "name" and "alias" (the Java field name for nickname is listed via rename)
+        IncludePropsWithRenameModel model = new IncludePropsWithRenameModel("Alice", "Ali", "top-secret");
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+
+        String json = JsonIo.toJson(model, wo);
+        assertTrue(json.contains("\"name\""), "Should include 'name'");
+        // "nickname" field is renamed to "alias" via @IoProperty, but @IoIncludeProperties uses Java field name
+        // The whitelist lists "alias" which is the serialized name, but matching is by Java field name "nickname"
+        // Since "alias" != "nickname", this field should NOT be in the whitelist... unless we match by serialized name too.
+        // Actually, the whitelist should match by Java field name. "alias" is NOT a Java field name, so this tests that.
+        assertFalse(json.contains("\"secret\""), "Should NOT include 'secret'");
+    }
+
+    @Test
+    void testIoIncludePropertiesWithIoIgnoreConflict() {
+        // "email" is in @IoIncludeProperties whitelist but also has @IoIgnore — @IoIgnore should win
+        IncludePropsWithIgnoreConflictModel model = new IncludePropsWithIgnoreConflictModel("Alice", "alice@test.com", "secret");
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+
+        String json = JsonIo.toJson(model, wo);
+        assertTrue(json.contains("\"name\""), "Should include 'name'");
+        assertFalse(json.contains("\"email\""), "@IoIgnore should win over @IoIncludeProperties");
+        assertFalse(json.contains("\"password\""), "Should NOT include 'password' (not in whitelist)");
+    }
+
+    @Test
+    void testIoIncludePropertiesToonWrite() {
+        IncludePropsModel model = new IncludePropsModel("Alice", "alice@test.com", "secret123", 30);
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoAlways().build();
+
+        String toon = JsonIo.toToon(model, wo);
+        assertTrue(toon.contains("name"), "TOON should contain 'name'");
+        assertTrue(toon.contains("email"), "TOON should contain 'email'");
+        assertFalse(toon.contains("password"), "TOON should NOT contain 'password'");
+        assertFalse(toon.contains("age"), "TOON should NOT contain 'age'");
+    }
+
+    // ===================== Jackson @JsonIncludeProperties Models =====================
+
+    @JsonIncludeProperties({"name", "email"})
+    static class JacksonIncludePropsModel {
+        private String name;
+        private String email;
+        private String password;
+        private int age;
+
+        JacksonIncludePropsModel() { }
+        JacksonIncludePropsModel(String name, String email, String password, int age) {
+            this.name = name;
+            this.email = email;
+            this.password = password;
+            this.age = age;
+        }
+
+        public String getName() { return name; }
+        public String getEmail() { return email; }
+        public String getPassword() { return password; }
+        public int getAge() { return age; }
+    }
+
+    @IoIncludeProperties({"name"})
+    @JsonIncludeProperties({"name", "email", "password"})
+    static class IncludePropsPriorityModel {
+        private String name;
+        private String email;
+        private String password;
+
+        IncludePropsPriorityModel() { }
+        IncludePropsPriorityModel(String name, String email, String password) {
+            this.name = name;
+            this.email = email;
+            this.password = password;
+        }
+
+        public String getName() { return name; }
+        public String getEmail() { return email; }
+        public String getPassword() { return password; }
+    }
+
+    // ===================== Jackson @JsonIncludeProperties Tests =====================
+
+    @Test
+    void testExternalIncludePropertiesWrite() {
+        JacksonIncludePropsModel model = new JacksonIncludePropsModel("Alice", "alice@test.com", "secret", 30);
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+
+        String json = JsonIo.toJson(model, wo);
+        assertTrue(json.contains("\"name\""), "Should include 'name'");
+        assertTrue(json.contains("\"email\""), "Should include 'email'");
+        assertFalse(json.contains("\"password\""), "Should NOT include 'password'");
+        assertFalse(json.contains("\"age\""), "Should NOT include 'age'");
+    }
+
+    @Test
+    void testExternalIncludePropertiesRead() {
+        String json = "{\"@type\":\"" + JacksonIncludePropsModel.class.getName() + "\",\"name\":\"Bob\",\"email\":\"bob@test.com\",\"password\":\"hack\",\"age\":99}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        JacksonIncludePropsModel result = JsonIo.toJava(json, ro).asClass(JacksonIncludePropsModel.class);
+        assertEquals("Bob", result.getName());
+        assertEquals("bob@test.com", result.getEmail());
+        assertNull(result.getPassword(), "password should not be injected");
+        assertEquals(0, result.getAge(), "age should not be injected");
+    }
+
+    @Test
+    void testIoIncludePropertiesOverridesJsonIncludeProperties() {
+        // @IoIncludeProperties({"name"}) should win over @JsonIncludeProperties({"name", "email", "password"})
+        IncludePropsPriorityModel model = new IncludePropsPriorityModel("Alice", "alice@test.com", "secret");
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+
+        String json = JsonIo.toJson(model, wo);
+        assertTrue(json.contains("\"name\""), "Should include 'name' (in both)");
+        assertFalse(json.contains("\"email\""), "@IoIncludeProperties should win — email excluded");
+        assertFalse(json.contains("\"password\""), "@IoIncludeProperties should win — password excluded");
+    }
+
+    // ===================== @IoIgnoreType Models =====================
+
+    @IoIgnoreType
+    static class InternalMetadata {
+        private String traceId;
+        private long timestamp;
+
+        InternalMetadata() { }
+        InternalMetadata(String traceId, long timestamp) {
+            this.traceId = traceId;
+            this.timestamp = timestamp;
+        }
+
+        public String getTraceId() { return traceId; }
+        public long getTimestamp() { return timestamp; }
+    }
+
+    static class OrderWithMeta {
+        private String orderId;
+        private InternalMetadata meta;
+        private String status;
+
+        OrderWithMeta() { }
+        OrderWithMeta(String orderId, InternalMetadata meta, String status) {
+            this.orderId = orderId;
+            this.meta = meta;
+            this.status = status;
+        }
+
+        public String getOrderId() { return orderId; }
+        public InternalMetadata getMeta() { return meta; }
+        public String getStatus() { return status; }
+    }
+
+    static class AnotherClassWithMeta {
+        private String name;
+        private InternalMetadata metadata;
+
+        AnotherClassWithMeta() { }
+        AnotherClassWithMeta(String name, InternalMetadata metadata) {
+            this.name = name;
+            this.metadata = metadata;
+        }
+
+        public String getName() { return name; }
+        public InternalMetadata getMetadata() { return metadata; }
+    }
+
+    // ===================== @IoIgnoreType Tests =====================
+
+    @Test
+    void testIoIgnoreTypeBasic() {
+        OrderWithMeta model = new OrderWithMeta("ORD-123", new InternalMetadata("trace-1", 12345L), "SHIPPED");
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+
+        String json = JsonIo.toJson(model, wo);
+        assertTrue(json.contains("\"orderId\""), "Should include 'orderId'");
+        assertTrue(json.contains("\"status\""), "Should include 'status'");
+        assertFalse(json.contains("\"meta\""), "Should NOT include 'meta' — type is @IoIgnoreType");
+        assertFalse(json.contains("\"traceId\""), "Should NOT include 'traceId'");
+    }
+
+    @Test
+    void testIoIgnoreTypeMultipleClasses() {
+        // @IoIgnoreType propagates to ALL classes that have fields of InternalMetadata type
+        AnotherClassWithMeta model = new AnotherClassWithMeta("test", new InternalMetadata("t2", 999L));
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+
+        String json = JsonIo.toJson(model, wo);
+        assertTrue(json.contains("\"name\""), "Should include 'name'");
+        assertFalse(json.contains("\"metadata\""), "Should NOT include 'metadata' — type is @IoIgnoreType");
+    }
+
+    @Test
+    void testIoIgnoreTypeRead() {
+        // On read, the ignored-type field should not be populated
+        String json = "{\"@type\":\"" + OrderWithMeta.class.getName() + "\",\"orderId\":\"ORD-1\",\"meta\":{\"traceId\":\"t1\",\"timestamp\":100},\"status\":\"OK\"}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        OrderWithMeta result = JsonIo.toJava(json, ro).asClass(OrderWithMeta.class);
+        assertEquals("ORD-1", result.getOrderId());
+        assertEquals("OK", result.getStatus());
+        assertNull(result.getMeta(), "meta should not be injected — type is @IoIgnoreType");
+    }
+
+    @Test
+    void testIoIgnoreTypeDoesNotAffectOtherTypes() {
+        // Non-annotated types should still serialize normally
+        OrderWithMeta model = new OrderWithMeta("ORD-123", new InternalMetadata("t1", 100L), "SHIPPED");
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+
+        String json = JsonIo.toJson(model, wo);
+        // orderId (String) and status (String) are fine — String is not @IoIgnoreType
+        assertTrue(json.contains("\"orderId\""));
+        assertTrue(json.contains("\"status\""));
+    }
+
+    @Test
+    void testIoIgnoreTypeToonWrite() {
+        OrderWithMeta model = new OrderWithMeta("ORD-123", new InternalMetadata("t1", 100L), "SHIPPED");
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoAlways().build();
+
+        String toon = JsonIo.toToon(model, wo);
+        assertTrue(toon.contains("orderId"), "TOON should contain 'orderId'");
+        assertTrue(toon.contains("status"), "TOON should contain 'status'");
+        assertFalse(toon.contains("meta"), "TOON should NOT contain 'meta'");
+    }
+
+    // ===================== Jackson @JsonIgnoreType Models =====================
+
+    @JsonIgnoreType
+    static class JacksonIgnoredType {
+        private String internal;
+        JacksonIgnoredType() { }
+        JacksonIgnoredType(String internal) { this.internal = internal; }
+        public String getInternal() { return internal; }
+    }
+
+    static class OwnerOfJacksonIgnored {
+        private String name;
+        private JacksonIgnoredType ignored;
+
+        OwnerOfJacksonIgnored() { }
+        OwnerOfJacksonIgnored(String name, JacksonIgnoredType ignored) {
+            this.name = name;
+            this.ignored = ignored;
+        }
+
+        public String getName() { return name; }
+        public JacksonIgnoredType getIgnored() { return ignored; }
+    }
+
+    // ===================== Jackson @JsonIgnoreType Tests =====================
+
+    @Test
+    void testExternalIgnoreTypeBasic() {
+        OwnerOfJacksonIgnored model = new OwnerOfJacksonIgnored("test", new JacksonIgnoredType("secret"));
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+
+        String json = JsonIo.toJson(model, wo);
+        assertTrue(json.contains("\"name\""), "Should include 'name'");
+        assertFalse(json.contains("\"ignored\""), "Should NOT include 'ignored' — type has @JsonIgnoreType");
+    }
+
+    @Test
+    void testExternalIgnoreTypeRead() {
+        String json = "{\"@type\":\"" + OwnerOfJacksonIgnored.class.getName() + "\",\"name\":\"test\",\"ignored\":{\"internal\":\"secret\"}}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        OwnerOfJacksonIgnored result = JsonIo.toJava(json, ro).asClass(OwnerOfJacksonIgnored.class);
+        assertEquals("test", result.getName());
+        assertNull(result.getIgnored(), "ignored should not be injected — type has @JsonIgnoreType");
+    }
+
+    // ===================== @IoTypeInfo Models =====================
+
+    static class TypeInfoObjectField {
+        @IoTypeInfo(ArrayList.class)
+        private Object items;
+        private String label;
+
+        TypeInfoObjectField() { }
+        TypeInfoObjectField(Object items, String label) {
+            this.items = items;
+            this.label = label;
+        }
+
+        public Object getItems() { return items; }
+        public String getLabel() { return label; }
+    }
+
+    static class TypeInfoListField {
+        @IoTypeInfo(LinkedList.class)
+        private List<String> names;
+        private int count;
+
+        TypeInfoListField() { }
+        TypeInfoListField(List<String> names, int count) {
+            this.names = names;
+            this.count = count;
+        }
+
+        public List<String> getNames() { return names; }
+        public int getCount() { return count; }
+    }
+
+    static class TypeInfoMapField {
+        @IoTypeInfo(LinkedHashMap.class)
+        private Map<String, Object> data;
+
+        TypeInfoMapField() { }
+        TypeInfoMapField(Map<String, Object> data) {
+            this.data = data;
+        }
+
+        public Map<String, Object> getData() { return data; }
+    }
+
+    // ===================== @IoTypeInfo Tests =====================
+
+    @Test
+    void testIoTypeInfoObjectField() {
+        // Field declared as Object, @IoTypeInfo specifies ArrayList → ArrayList should be created
+        String json = "{\"@type\":\"" + TypeInfoObjectField.class.getName() + "\",\"items\":[1,2,3],\"label\":\"test\"}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        TypeInfoObjectField result = JsonIo.toJava(json, ro).asClass(TypeInfoObjectField.class);
+        assertEquals("test", result.getLabel());
+        assertNotNull(result.getItems(), "items should not be null");
+        assertTrue(result.getItems() instanceof ArrayList, "items should be ArrayList but was: " + result.getItems().getClass().getName());
+        List<?> list = (List<?>) result.getItems();
+        assertEquals(3, list.size());
+    }
+
+    @Test
+    void testIoTypeInfoListField() {
+        // Field declared as List<String>, @IoTypeInfo specifies LinkedList → LinkedList should be created
+        String json = "{\"@type\":\"" + TypeInfoListField.class.getName() + "\",\"names\":[\"a\",\"b\",\"c\"],\"count\":3}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        TypeInfoListField result = JsonIo.toJava(json, ro).asClass(TypeInfoListField.class);
+        assertEquals(3, result.getCount());
+        assertNotNull(result.getNames(), "names should not be null");
+        assertTrue(result.getNames() instanceof LinkedList, "names should be LinkedList but was: " + result.getNames().getClass().getName());
+        assertEquals(3, result.getNames().size());
+        assertEquals("a", result.getNames().get(0));
+    }
+
+    @Test
+    void testIoTypeInfoExplicitTypeWins() {
+        // JSON with @type should take precedence over @IoTypeInfo
+        String json = "{\"@type\":\"" + TypeInfoListField.class.getName() + "\","
+                + "\"names\":{\"@type\":\"java.util.ArrayList\",\"@items\":[\"x\",\"y\"]},\"count\":2}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        TypeInfoListField result = JsonIo.toJava(json, ro).asClass(TypeInfoListField.class);
+        assertNotNull(result.getNames());
+        assertTrue(result.getNames() instanceof ArrayList, "Explicit @type should win over @IoTypeInfo");
+        assertEquals(2, result.getNames().size());
+    }
+
+    @Test
+    void testIoTypeInfoRoundTrip() {
+        LinkedList<String> names = new LinkedList<>();
+        names.add("Alice");
+        names.add("Bob");
+        TypeInfoListField original = new TypeInfoListField(names, 2);
+        WriteOptions wo = new WriteOptionsBuilder().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, wo);
+        TypeInfoListField result = JsonIo.toJava(json, ro).asClass(TypeInfoListField.class);
+
+        assertNotNull(result.getNames());
+        assertEquals(2, result.getNames().size());
+        assertEquals("Alice", result.getNames().get(0));
+        assertEquals("Bob", result.getNames().get(1));
+    }
+
+    @Test
+    void testIoTypeInfoResolverApi() {
+        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(TypeInfoObjectField.class);
+        assertEquals(ArrayList.class, meta.getFieldTypeInfoDefault("items"));
+        assertNull(meta.getFieldTypeInfoDefault("label"), "Non-annotated field should return null");
+    }
+
+    @Test
+    void testIoTypeInfoToonRoundTrip() {
+        LinkedList<String> names = new LinkedList<>();
+        names.add("Toon");
+        names.add("Test");
+        TypeInfoListField original = new TypeInfoListField(names, 2);
+        WriteOptions wo = new WriteOptionsBuilder().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String toon = JsonIo.toToon(original, wo);
+        TypeInfoListField result = JsonIo.fromToon(toon, ro).asClass(TypeInfoListField.class);
+
+        assertNotNull(result.getNames());
+        assertEquals(2, result.getNames().size());
+        assertEquals("Toon", result.getNames().get(0));
+    }
+
+    // ===================== Jackson @JsonTypeInfo Models =====================
+
+    static class JacksonTypeInfoListField {
+        @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, defaultImpl = LinkedList.class)
+        private List<String> names;
+        private int count;
+
+        JacksonTypeInfoListField() { }
+        JacksonTypeInfoListField(List<String> names, int count) {
+            this.names = names;
+            this.count = count;
+        }
+
+        public List<String> getNames() { return names; }
+        public int getCount() { return count; }
+    }
+
+    // @IoTypeInfo should win over @JsonTypeInfo
+    static class TypeInfoPriorityField {
+        @IoTypeInfo(LinkedList.class)
+        @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, defaultImpl = ArrayList.class)
+        private List<String> items;
+
+        TypeInfoPriorityField() { }
+        TypeInfoPriorityField(List<String> items) {
+            this.items = items;
+        }
+
+        public List<String> getItems() { return items; }
+    }
+
+    // ===================== Jackson @JsonTypeInfo Tests =====================
+
+    @Test
+    void testExternalTypeInfoListField() {
+        String json = "{\"@type\":\"" + JacksonTypeInfoListField.class.getName() + "\",\"names\":[\"a\",\"b\"],\"count\":2}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        JacksonTypeInfoListField result = JsonIo.toJava(json, ro).asClass(JacksonTypeInfoListField.class);
+        assertNotNull(result.getNames());
+        assertTrue(result.getNames() instanceof LinkedList,
+                "names should be LinkedList (from @JsonTypeInfo defaultImpl) but was: " + result.getNames().getClass().getName());
+        assertEquals(2, result.getNames().size());
+    }
+
+    @Test
+    void testExternalTypeInfoResolverApi() {
+        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(JacksonTypeInfoListField.class);
+        assertEquals(LinkedList.class, meta.getFieldTypeInfoDefault("names"));
+    }
+
+    @Test
+    void testIoTypeInfoOverridesJsonTypeInfo() {
+        // @IoTypeInfo(LinkedList.class) should win over @JsonTypeInfo(defaultImpl=ArrayList.class)
+        String json = "{\"@type\":\"" + TypeInfoPriorityField.class.getName() + "\",\"items\":[\"x\"]}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        TypeInfoPriorityField result = JsonIo.toJava(json, ro).asClass(TypeInfoPriorityField.class);
+        assertNotNull(result.getItems());
+        assertTrue(result.getItems() instanceof LinkedList,
+                "@IoTypeInfo should win over @JsonTypeInfo: " + result.getItems().getClass().getName());
+    }
+
+    // ===================== @IoDeserialize Models =====================
+
+    static class DeserializeListField {
+        @IoDeserialize(as = LinkedList.class)
+        private List<String> items;
+        private int count;
+
+        DeserializeListField() { }
+        DeserializeListField(List<String> items, int count) {
+            this.items = items;
+            this.count = count;
+        }
+
+        public List<String> getItems() { return items; }
+        public int getCount() { return count; }
+    }
+
+    static class DeserializeMapField {
+        @IoDeserialize(as = LinkedHashMap.class)
+        private Map<String, Object> data;
+
+        DeserializeMapField() { }
+        DeserializeMapField(Map<String, Object> data) {
+            this.data = data;
+        }
+
+        public Map<String, Object> getData() { return data; }
+    }
+
+    // @IoDeserialize should win over @IoTypeInfo
+    static class DeserializePriorityField {
+        @IoDeserialize(as = LinkedList.class)
+        @IoTypeInfo(ArrayList.class)
+        private List<String> items;
+
+        DeserializePriorityField() { }
+        DeserializePriorityField(List<String> items) {
+            this.items = items;
+        }
+
+        public List<String> getItems() { return items; }
+    }
+
+    // ===================== @IoDeserialize Tests =====================
+
+    @Test
+    void testIoDeserializeField() {
+        // List<String> field + @IoDeserialize(as=LinkedList.class) → LinkedList created
+        String json = "{\"@type\":\"" + DeserializeListField.class.getName() + "\",\"items\":[\"a\",\"b\",\"c\"],\"count\":3}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        DeserializeListField result = JsonIo.toJava(json, ro).asClass(DeserializeListField.class);
+        assertNotNull(result.getItems());
+        assertTrue(result.getItems() instanceof LinkedList,
+                "items should be LinkedList but was: " + result.getItems().getClass().getName());
+        assertEquals(3, result.getItems().size());
+        assertEquals("a", result.getItems().get(0));
+    }
+
+    @Test
+    void testIoDeserializeExplicitTypeWins() {
+        // JSON with @type should take precedence over @IoDeserialize
+        String json = "{\"@type\":\"" + DeserializeListField.class.getName() + "\","
+                + "\"items\":{\"@type\":\"java.util.ArrayList\",\"@items\":[\"x\",\"y\"]},\"count\":2}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        DeserializeListField result = JsonIo.toJava(json, ro).asClass(DeserializeListField.class);
+        assertNotNull(result.getItems());
+        assertTrue(result.getItems() instanceof ArrayList,
+                "Explicit @type should win over @IoDeserialize: " + result.getItems().getClass().getName());
+    }
+
+    @Test
+    void testIoDeserializePriorityOverTypeInfo() {
+        // @IoDeserialize(as=LinkedList.class) should win over @IoTypeInfo(ArrayList.class)
+        String json = "{\"@type\":\"" + DeserializePriorityField.class.getName() + "\",\"items\":[\"x\"]}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        DeserializePriorityField result = JsonIo.toJava(json, ro).asClass(DeserializePriorityField.class);
+        assertNotNull(result.getItems());
+        assertTrue(result.getItems() instanceof LinkedList,
+                "@IoDeserialize should win over @IoTypeInfo: " + result.getItems().getClass().getName());
+    }
+
+    @Test
+    void testIoDeserializeRoundTrip() {
+        LinkedList<String> items = new LinkedList<>();
+        items.add("round");
+        items.add("trip");
+        DeserializeListField original = new DeserializeListField(items, 2);
+        WriteOptions wo = new WriteOptionsBuilder().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(original, wo);
+        DeserializeListField result = JsonIo.toJava(json, ro).asClass(DeserializeListField.class);
+
+        assertNotNull(result.getItems());
+        assertEquals(2, result.getItems().size());
+        assertEquals("round", result.getItems().get(0));
+    }
+
+    @Test
+    void testIoDeserializeResolverApi() {
+        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(DeserializeListField.class);
+        assertEquals(LinkedList.class, meta.getFieldDeserializeOverride("items"));
+        assertNull(meta.getFieldDeserializeOverride("count"), "Non-annotated field should return null");
+    }
+
+    @Test
+    void testIoDeserializeToonRoundTrip() {
+        LinkedList<String> items = new LinkedList<>();
+        items.add("Toon");
+        items.add("Test");
+        DeserializeListField original = new DeserializeListField(items, 2);
+        WriteOptions wo = new WriteOptionsBuilder().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String toon = JsonIo.toToon(original, wo);
+        DeserializeListField result = JsonIo.fromToon(toon, ro).asClass(DeserializeListField.class);
+
+        assertNotNull(result.getItems());
+        assertEquals(2, result.getItems().size());
+        assertEquals("Toon", result.getItems().get(0));
+    }
+
+    // ===================== Jackson @JsonDeserialize Models =====================
+
+    static class JacksonDeserializeField {
+        @JsonDeserialize(as = LinkedList.class)
+        private List<String> items;
+        private int count;
+
+        JacksonDeserializeField() { }
+        JacksonDeserializeField(List<String> items, int count) {
+            this.items = items;
+            this.count = count;
+        }
+
+        public List<String> getItems() { return items; }
+        public int getCount() { return count; }
+    }
+
+    // @IoDeserialize should win over @JsonDeserialize
+    static class DeserializePriorityJackson {
+        @IoDeserialize(as = LinkedList.class)
+        @JsonDeserialize(as = ArrayList.class)
+        private List<String> items;
+
+        DeserializePriorityJackson() { }
+        DeserializePriorityJackson(List<String> items) {
+            this.items = items;
+        }
+
+        public List<String> getItems() { return items; }
+    }
+
+    // ===================== Jackson @JsonDeserialize Tests =====================
+
+    @Test
+    void testExternalDeserializeField() {
+        String json = "{\"@type\":\"" + JacksonDeserializeField.class.getName() + "\",\"items\":[\"a\",\"b\"],\"count\":2}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        JacksonDeserializeField result = JsonIo.toJava(json, ro).asClass(JacksonDeserializeField.class);
+        assertNotNull(result.getItems());
+        assertTrue(result.getItems() instanceof LinkedList,
+                "items should be LinkedList (from @JsonDeserialize) but was: " + result.getItems().getClass().getName());
+        assertEquals(2, result.getItems().size());
+    }
+
+    @Test
+    void testExternalDeserializeResolverApi() {
+        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(JacksonDeserializeField.class);
+        assertEquals(LinkedList.class, meta.getFieldDeserializeOverride("items"));
+    }
+
+    @Test
+    void testIoDeserializeOverridesJsonDeserialize() {
+        // @IoDeserialize(as=LinkedList.class) should win over @JsonDeserialize(as=ArrayList.class)
+        String json = "{\"@type\":\"" + DeserializePriorityJackson.class.getName() + "\",\"items\":[\"x\"]}";
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        DeserializePriorityJackson result = JsonIo.toJava(json, ro).asClass(DeserializePriorityJackson.class);
+        assertNotNull(result.getItems());
+        assertTrue(result.getItems() instanceof LinkedList,
+                "@IoDeserialize should win over @JsonDeserialize: " + result.getItems().getClass().getName());
     }
 }

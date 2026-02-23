@@ -15,11 +15,15 @@ import java.util.Set;
 
 import com.cedarsoftware.io.annotation.IoAlias;
 import com.cedarsoftware.io.annotation.IoCreator;
+import com.cedarsoftware.io.annotation.IoDeserialize;
 import com.cedarsoftware.io.annotation.IoIgnore;
 import com.cedarsoftware.io.annotation.IoIgnoreProperties;
+import com.cedarsoftware.io.annotation.IoIgnoreType;
 import com.cedarsoftware.io.annotation.IoInclude;
+import com.cedarsoftware.io.annotation.IoIncludeProperties;
 import com.cedarsoftware.io.annotation.IoNaming;
 import com.cedarsoftware.io.annotation.IoProperty;
+import com.cedarsoftware.io.annotation.IoTypeInfo;
 import com.cedarsoftware.io.annotation.IoValue;
 import com.cedarsoftware.io.annotation.IoPropertyOrder;
 import com.cedarsoftware.util.ClassValueMap;
@@ -61,11 +65,15 @@ public class AnnotationResolver {
     // all external lookups short-circuit with zero overhead.
 
     private static final boolean externalAvailable;
-    // @JsonNaming lives in jackson-databind (separate jar), detected independently
+    // @JsonNaming and @JsonDeserialize live in jackson-databind (separate jar), detected independently
     private static final boolean extNamingAvailable;
     @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_NAMING;
     private static final Method EXT_NAMING_VALUE;
+    private static final boolean extDeserializeAvailable;
+    @SuppressWarnings("unchecked")
+    private static final Class<? extends Annotation> EXT_DESERIALIZE;
+    private static final Method EXT_DESERIALIZE_AS;
     @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_CREATOR;
     @SuppressWarnings("unchecked")
@@ -82,6 +90,12 @@ public class AnnotationResolver {
     private static final Class<? extends Annotation> EXT_PROPERTY_ORDER;
     @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_INCLUDE;
+    @SuppressWarnings("unchecked")
+    private static final Class<? extends Annotation> EXT_INCLUDE_PROPERTIES;
+    @SuppressWarnings("unchecked")
+    private static final Class<? extends Annotation> EXT_IGNORE_TYPE;
+    @SuppressWarnings("unchecked")
+    private static final Class<? extends Annotation> EXT_TYPE_INFO;
 
     private static final Method EXT_PROPERTY_VALUE;
     private static final Method EXT_IGNORE_PROPERTIES_VALUE;
@@ -89,6 +103,8 @@ public class AnnotationResolver {
     private static final Method EXT_PROPERTY_ORDER_VALUE;
     private static final Method EXT_INCLUDE_VALUE;
     private static final Object EXT_INCLUDE_NON_NULL;
+    private static final Method EXT_INCLUDE_PROPERTIES_VALUE;
+    private static final Method EXT_TYPE_INFO_DEFAULT_IMPL;
 
     static {
         boolean available = false;
@@ -100,12 +116,17 @@ public class AnnotationResolver {
         Class<? extends Annotation> extAlias = null;
         Class<? extends Annotation> extPropertyOrder = null;
         Class<? extends Annotation> extInclude = null;
+        Class<? extends Annotation> extIncludeProperties = null;
+        Class<? extends Annotation> extIgnoreType = null;
+        Class<? extends Annotation> extTypeInfo = null;
         Method extPropertyValue = null;
         Method extIgnorePropertiesValue = null;
         Method extAliasValue = null;
         Method extPropertyOrderValue = null;
         Method extIncludeValue = null;
         Object extIncludeNonNull = null;
+        Method extIncludePropertiesValue = null;
+        Method extTypeInfoDefaultImpl = null;
 
         try {
             extCreator = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonCreator");
@@ -116,9 +137,14 @@ public class AnnotationResolver {
             extAlias = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonAlias");
             extPropertyOrder = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonPropertyOrder");
             extInclude = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonInclude");
+            extIncludeProperties = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonIncludeProperties");
+            extIgnoreType = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonIgnoreType");
+            extTypeInfo = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonTypeInfo");
 
             extPropertyValue = extProperty.getMethod("value");
+            extIncludePropertiesValue = extIncludeProperties.getMethod("value");
             extIgnorePropertiesValue = extIgnoreProperties.getMethod("value");
+            extTypeInfoDefaultImpl = extTypeInfo.getMethod("defaultImpl");
             extAliasValue = extAlias.getMethod("value");
             extPropertyOrderValue = extPropertyOrder.getMethod("value");
             extIncludeValue = extInclude.getMethod("value");
@@ -146,12 +172,17 @@ public class AnnotationResolver {
         EXT_ALIAS = extAlias;
         EXT_PROPERTY_ORDER = extPropertyOrder;
         EXT_INCLUDE = extInclude;
+        EXT_INCLUDE_PROPERTIES = extIncludeProperties;
+        EXT_IGNORE_TYPE = extIgnoreType;
+        EXT_TYPE_INFO = extTypeInfo;
         EXT_PROPERTY_VALUE = extPropertyValue;
+        EXT_INCLUDE_PROPERTIES_VALUE = extIncludePropertiesValue;
         EXT_IGNORE_PROPERTIES_VALUE = extIgnorePropertiesValue;
         EXT_ALIAS_VALUE = extAliasValue;
         EXT_PROPERTY_ORDER_VALUE = extPropertyOrderValue;
         EXT_INCLUDE_VALUE = extIncludeValue;
         EXT_INCLUDE_NON_NULL = extIncludeNonNull;
+        EXT_TYPE_INFO_DEFAULT_IMPL = extTypeInfoDefaultImpl;
 
         // @JsonNaming lives in jackson-databind (separate jar from jackson-annotations)
         boolean namingAvail = false;
@@ -167,11 +198,28 @@ public class AnnotationResolver {
         extNamingAvailable = namingAvail;
         EXT_NAMING = extNaming;
         EXT_NAMING_VALUE = extNamingValue;
+
+        // @JsonDeserialize also lives in jackson-databind
+        boolean deserAvail = false;
+        Class<? extends Annotation> extDeserialize = null;
+        Method extDeserializeAs = null;
+        try {
+            extDeserialize = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.databind.annotation.JsonDeserialize");
+            extDeserializeAs = extDeserialize.getMethod("as");
+            deserAvail = true;
+        } catch (Throwable t) {
+            // jackson-databind not on classpath — silently skip
+        }
+        extDeserializeAvailable = deserAvail;
+        EXT_DESERIALIZE = extDeserialize;
+        EXT_DESERIALIZE_AS = extDeserializeAs;
     }
 
     // ======================== Cache ========================
 
     private static final ClassValueMap<ClassAnnotationMetadata> cache = new ClassValueMap<>();
+    // ThreadLocal to track classes currently being scanned (prevents recursive stack overflow)
+    private static final ThreadLocal<Set<Class<?>>> SCANNING = ThreadLocal.withInitial(LinkedHashSet::new);
     private static final ClassAnnotationMetadata EMPTY = new ClassAnnotationMetadata(
             Collections.<String, String>emptyMap(),
             Collections.<String>emptySet(),
@@ -179,11 +227,16 @@ public class AnnotationResolver {
             null,
             Collections.<String>emptySet(),
             null,
+            null,
+            null,
+            false,
+            null,
             null);
 
     /**
      * Get annotation metadata for a class. Scans once, caches forever.
-     * Thread-safe via ClassValueMap.
+     * Thread-safe via ClassValueMap. Recursive calls during scanning
+     * (e.g., @IoIgnoreType check on field types) return EMPTY to prevent stack overflow.
      */
     public static ClassAnnotationMetadata getMetadata(Class<?> clazz) {
         if (clazz == null) {
@@ -191,8 +244,17 @@ public class AnnotationResolver {
         }
         ClassAnnotationMetadata meta = cache.get(clazz);
         if (meta == null) {
-            meta = scan(clazz);
-            cache.put(clazz, meta);
+            Set<Class<?>> scanning = SCANNING.get();
+            if (!scanning.add(clazz)) {
+                // Already scanning this class on this thread — return EMPTY to break cycle
+                return EMPTY;
+            }
+            try {
+                meta = scan(clazz);
+                cache.put(clazz, meta);
+            } finally {
+                scanning.remove(clazz);
+            }
         }
         return meta;
     }
@@ -211,10 +273,19 @@ public class AnnotationResolver {
         Set<String> ignored = new LinkedHashSet<>();
         Map<String, String> aliases = new LinkedHashMap<>();
         Set<String> nonNullFields = new LinkedHashSet<>();
+        Map<String, Class<?>> fieldTypeInfoDefaults = null;
+        Map<String, Class<?>> fieldDeserializeOverrides = null;
         String[] order = null;
 
         // 1. Class-level annotations
         order = scanClassLevelAnnotations(clazz, ignored);
+
+        // 1b. @IoIncludeProperties — class-level whitelist
+        Set<String> includedFields = scanIncludeProperties(clazz);
+
+        // 1c. @IoIgnoreType — class-level type exclusion flag (or Jackson @JsonIgnoreType)
+        boolean ignoredType = clazz.isAnnotationPresent(IoIgnoreType.class)
+                || (externalAvailable && EXT_IGNORE_TYPE != null && clazz.isAnnotationPresent(EXT_IGNORE_TYPE));
 
         // 2. @IoNaming — class-level naming strategy
         IoNaming.Strategy namingStrategy = scanNamingStrategy(clazz);
@@ -244,6 +315,12 @@ public class AnnotationResolver {
                     continue;
                 }
 
+                // @IoIgnoreType — check if field's declared type is marked for exclusion
+                if (isFieldTypeIgnored(field)) {
+                    ignored.add(fieldName);
+                    continue;
+                }
+
                 // @IoProperty / external equivalent
                 String rename = scanProperty(field);
                 if (rename != null) {
@@ -268,6 +345,57 @@ public class AnnotationResolver {
                 if (scanNonNull(field)) {
                     nonNullFields.add(fieldName);
                 }
+
+                // @IoTypeInfo — field-level default concrete type (or Jackson @JsonTypeInfo fallback)
+                IoTypeInfo typeInfo = field.getAnnotation(IoTypeInfo.class);
+                if (typeInfo != null) {
+                    if (fieldTypeInfoDefaults == null) {
+                        fieldTypeInfoDefaults = new LinkedHashMap<>();
+                    }
+                    fieldTypeInfoDefaults.put(fieldName, typeInfo.value());
+                } else if (externalAvailable && EXT_TYPE_INFO != null) {
+                    Annotation extTI = field.getAnnotation(EXT_TYPE_INFO);
+                    if (extTI != null) {
+                        try {
+                            Class<?> defaultImpl = (Class<?>) EXT_TYPE_INFO_DEFAULT_IMPL.invoke(extTI);
+                            // Jackson uses JsonTypeInfo.None.class as the default (meaning "not specified")
+                            if (defaultImpl != null && !defaultImpl.getSimpleName().equals("None")
+                                    && defaultImpl != Void.class) {
+                                if (fieldTypeInfoDefaults == null) {
+                                    fieldTypeInfoDefaults = new LinkedHashMap<>();
+                                }
+                                fieldTypeInfoDefaults.put(fieldName, defaultImpl);
+                            }
+                        } catch (Exception e) {
+                            // Ignore reflection failure
+                        }
+                    }
+                }
+
+                // @IoDeserialize — field-level type override (or Jackson @JsonDeserialize fallback)
+                IoDeserialize deser = field.getAnnotation(IoDeserialize.class);
+                if (deser != null && deser.as() != Void.class) {
+                    if (fieldDeserializeOverrides == null) {
+                        fieldDeserializeOverrides = new LinkedHashMap<>();
+                    }
+                    fieldDeserializeOverrides.put(fieldName, deser.as());
+                } else if (extDeserializeAvailable && EXT_DESERIALIZE != null) {
+                    Annotation extDeser = field.getAnnotation(EXT_DESERIALIZE);
+                    if (extDeser != null) {
+                        try {
+                            Class<?> asClass = (Class<?>) EXT_DESERIALIZE_AS.invoke(extDeser);
+                            // Jackson uses Void.class as the default (meaning "not specified")
+                            if (asClass != null && asClass != Void.class) {
+                                if (fieldDeserializeOverrides == null) {
+                                    fieldDeserializeOverrides = new LinkedHashMap<>();
+                                }
+                                fieldDeserializeOverrides.put(fieldName, asClass);
+                            }
+                        } catch (Exception e) {
+                            // Ignore reflection failure
+                        }
+                    }
+                }
             }
             curr = curr.getSuperclass();
         }
@@ -289,7 +417,8 @@ public class AnnotationResolver {
 
         if (renames.isEmpty() && ignored.isEmpty() && aliases.isEmpty()
                 && order == null && nonNullFields.isEmpty() && creator == null
-                && valueMethod == null) {
+                && valueMethod == null && includedFields == null && !ignoredType
+                && fieldTypeInfoDefaults == null && fieldDeserializeOverrides == null) {
             return EMPTY;
         }
 
@@ -300,7 +429,11 @@ public class AnnotationResolver {
                 order,
                 Collections.unmodifiableSet(nonNullFields),
                 creator,
-                valueMethod);
+                valueMethod,
+                includedFields != null ? Collections.unmodifiableSet(includedFields) : null,
+                ignoredType,
+                fieldTypeInfoDefaults != null ? Collections.unmodifiableMap(fieldTypeInfoDefaults) : null,
+                fieldDeserializeOverrides != null ? Collections.unmodifiableMap(fieldDeserializeOverrides) : null);
     }
 
     // ---- Class-level scanners ----
@@ -340,6 +473,49 @@ public class AnnotationResolver {
         }
 
         return order;
+    }
+
+    /**
+     * Scan for @IoIncludeProperties or Jackson @JsonIncludeProperties (class-level whitelist).
+     * Returns the set of included field names, or null if not present.
+     */
+    private static Set<String> scanIncludeProperties(Class<?> clazz) {
+        IoIncludeProperties iip = clazz.getAnnotation(IoIncludeProperties.class);
+        if (iip != null && iip.value().length > 0) {
+            Set<String> included = new LinkedHashSet<>();
+            Collections.addAll(included, iip.value());
+            return included;
+        }
+        // Fall back to Jackson @JsonIncludeProperties
+        if (externalAvailable && EXT_INCLUDE_PROPERTIES != null) {
+            Annotation extIip = clazz.getAnnotation(EXT_INCLUDE_PROPERTIES);
+            if (extIip != null) {
+                try {
+                    String[] vals = (String[]) EXT_INCLUDE_PROPERTIES_VALUE.invoke(extIip);
+                    if (vals != null && vals.length > 0) {
+                        Set<String> included = new LinkedHashSet<>();
+                        Collections.addAll(included, vals);
+                        return included;
+                    }
+                } catch (Exception e) {
+                    // Ignore reflection failure
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Check if a field's declared type is annotated with @IoIgnoreType.
+     * Uses getMetadata() which is cached, so recursive calls are safe.
+     */
+    private static boolean isFieldTypeIgnored(Field field) {
+        Class<?> fieldType = field.getType();
+        // Skip primitives and common JDK types (they can't have @IoIgnoreType)
+        if (fieldType.isPrimitive() || fieldType == String.class || fieldType == Object.class) {
+            return false;
+        }
+        return getMetadata(fieldType).isIgnoredType();
     }
 
     private static IoNaming.Strategy scanNamingStrategy(Class<?> clazz) {
@@ -646,6 +822,10 @@ public class AnnotationResolver {
         private final Set<String> nonNullFields;
         private final Executable creator;
         private final Method valueMethod;
+        private final Set<String> includedFields;
+        private final boolean ignoredType;
+        private final Map<String, Class<?>> fieldTypeInfoDefaults;
+        private final Map<String, Class<?>> fieldDeserializeOverrides;
 
         ClassAnnotationMetadata(Map<String, String> renamedFields,
                                 Set<String> ignoredFields,
@@ -653,7 +833,11 @@ public class AnnotationResolver {
                                 String[] propertyOrder,
                                 Set<String> nonNullFields,
                                 Executable creator,
-                                Method valueMethod) {
+                                Method valueMethod,
+                                Set<String> includedFields,
+                                boolean ignoredType,
+                                Map<String, Class<?>> fieldTypeInfoDefaults,
+                                Map<String, Class<?>> fieldDeserializeOverrides) {
             this.renamedFields = renamedFields;
             this.ignoredFields = ignoredFields;
             this.aliasToFieldName = aliasToFieldName;
@@ -661,6 +845,10 @@ public class AnnotationResolver {
             this.nonNullFields = nonNullFields;
             this.creator = creator;
             this.valueMethod = valueMethod;
+            this.includedFields = includedFields;
+            this.ignoredType = ignoredType;
+            this.fieldTypeInfoDefaults = fieldTypeInfoDefaults;
+            this.fieldDeserializeOverrides = fieldDeserializeOverrides;
         }
 
         /**
@@ -723,13 +911,55 @@ public class AnnotationResolver {
         }
 
         /**
+         * Get the set of field names included by @IoIncludeProperties, or null if not specified.
+         * @return unmodifiable set of included field names, or null
+         */
+        public Set<String> getIncludedFields() {
+            return includedFields;
+        }
+
+        /**
+         * @return true if @IoIncludeProperties is present on the class
+         */
+        public boolean hasIncludedFields() {
+            return includedFields != null;
+        }
+
+        /**
+         * @return true if this class is annotated with @IoIgnoreType
+         */
+        public boolean isIgnoredType() {
+            return ignoredType;
+        }
+
+        /**
+         * Get the @IoTypeInfo default concrete class for a field, or null if not specified.
+         * @param fieldName the Java field name
+         * @return the default concrete class, or null
+         */
+        public Class<?> getFieldTypeInfoDefault(String fieldName) {
+            return fieldTypeInfoDefaults == null ? null : fieldTypeInfoDefaults.get(fieldName);
+        }
+
+        /**
+         * Get the @IoDeserialize override class for a field, or null if not specified.
+         * @param fieldName the Java field name
+         * @return the override class, or null
+         */
+        public Class<?> getFieldDeserializeOverride(String fieldName) {
+            return fieldDeserializeOverrides == null ? null : fieldDeserializeOverrides.get(fieldName);
+        }
+
+        /**
          * @return true if this metadata has no annotation information (empty/default)
          */
         public boolean isEmpty() {
             return renamedFields.isEmpty() && ignoredFields.isEmpty()
                     && aliasToFieldName.isEmpty() && propertyOrder == null
                     && nonNullFields.isEmpty() && creator == null
-                    && valueMethod == null;
+                    && valueMethod == null && includedFields == null
+                    && !ignoredType && fieldTypeInfoDefaults == null
+                    && fieldDeserializeOverrides == null;
         }
     }
 }

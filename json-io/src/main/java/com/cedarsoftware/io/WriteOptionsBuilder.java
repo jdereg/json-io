@@ -2225,8 +2225,13 @@ public class WriteOptionsBuilder {
             final Map<String, Field> map = new LinkedHashMap<>(32);
             final Set<String> excluded = new HashSet<>();
             final Set<String> includedFields = includedFieldNames.get(c);
-            final Set<String> included = includedFields == null ? new HashSet<>() : includedFields;
+            final Set<String> included = includedFields == null ? new HashSet<>() : new HashSet<>(includedFields);
             final AnnotationResolver.ClassAnnotationMetadata annMeta = AnnotationResolver.getMetadata(c);
+
+            // Merge annotation-based @IoIncludeProperties whitelist
+            if (annMeta.hasIncludedFields()) {
+                included.addAll(annMeta.getIncludedFields());
+            }
             Class<?> curr = c;
 
             while (curr != null) {

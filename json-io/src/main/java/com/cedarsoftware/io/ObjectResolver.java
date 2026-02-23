@@ -6,6 +6,7 @@ import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import com.cedarsoftware.io.reflect.AnnotationResolver;
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.StringUtilities;
@@ -178,9 +179,21 @@ public class ObjectResolver extends Resolver
         final Type resolvedFieldType = TypeUtilities.resolveTypeUsingInstance(target, fieldType);
 
         // Preserve explicit type metadata when present and resolved.
+        // Priority: @type in JSON > @IoDeserialize > @IoTypeInfo > declared field type
         Type explicitType = jsRhs.getType();
         if (explicitType == null || TypeUtilities.hasUnresolvedType(explicitType)) {
-            jsRhs.setType(resolvedFieldType);
+            AnnotationResolver.ClassAnnotationMetadata parentMeta = AnnotationResolver.getMetadata(target.getClass());
+            Class<?> deserializeAs = parentMeta.getFieldDeserializeOverride(injector.getName());
+            if (deserializeAs != null) {
+                jsRhs.setType(deserializeAs);
+            } else {
+                Class<?> typeInfoDefault = parentMeta.getFieldTypeInfoDefault(injector.getName());
+                if (typeInfoDefault != null) {
+                    jsRhs.setType(typeInfoDefault);
+                } else {
+                    jsRhs.setType(resolvedFieldType);
+                }
+            }
         }
 
         seedIncrementalContainerMetadata(resolvedFieldType, jsRhs);
@@ -363,7 +376,19 @@ public class ObjectResolver extends Resolver
 
         // 5. ARRAY - Object[] RHS
         if (rhs instanceof Object[]) {
-            assignArrayField(jsonObj, injector, (Object[]) rhs, fieldType, target);
+            // Check @IoDeserialize > @IoTypeInfo to override the field type for array/collection creation
+            Type effectiveFieldType = fieldType;
+            AnnotationResolver.ClassAnnotationMetadata parentMeta = AnnotationResolver.getMetadata(target.getClass());
+            Class<?> deserializeAs = parentMeta.getFieldDeserializeOverride(injector.getName());
+            if (deserializeAs != null) {
+                effectiveFieldType = deserializeAs;
+            } else {
+                Class<?> typeInfoDefault = parentMeta.getFieldTypeInfoDefault(injector.getName());
+                if (typeInfoDefault != null) {
+                    effectiveFieldType = typeInfoDefault;
+                }
+            }
+            assignArrayField(jsonObj, injector, (Object[]) rhs, effectiveFieldType, target);
             return;
         }
 
