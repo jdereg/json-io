@@ -650,7 +650,7 @@ cyclic references are typically not needed.
 
 ## Annotations
 
-json-io provides 17 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization. In addition, json-io **reflectively honors Jackson annotations** when the Jackson JAR is on the classpath — with zero compile-time dependency on Jackson.
+json-io provides 19 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization. In addition, json-io **reflectively honors Jackson annotations** when the Jackson JAR is on the classpath — with zero compile-time dependency on Jackson.
 
 ### Annotation Precedence
 
@@ -942,6 +942,42 @@ String json = JsonIo.toJson(h, writeOptions);
 On deserialization, each occurrence produces a separate object instance (no instance sharing). This is appropriate for value-like types where identity is not meaningful.
 
 **Note:** `@IoNonReferenceable` is additive with the programmatic API (`addNonReferenceableClass()`) and the `nonRefs.txt` config file. All three sources are OR'd together. The config file is used for JDK classes that cannot be annotated; the annotation is for user classes.
+
+#### `@IoNotCustomRead` — Suppress Custom Reader
+Marks a class to prevent custom reader usage during deserialization. Even if a custom reader exists for a parent class (through inheritance), the annotated class will use standard field-by-field deserialization instead. This is the annotation equivalent of the `notCustomRead.txt` config file.
+
+```java
+@IoNotCustomRead
+public class MySpecialSet extends HashSet<String> {
+    private int metadata;
+    // Will NOT use HashSet's custom reader — uses standard field-by-field deserialization
+}
+```
+
+**Note:** `@IoNotCustomRead` is additive with the programmatic API (`addNotCustomReaderClass()`) and the `notCustomRead.txt` config file.
+
+#### `@IoNotCustomWrite` — Suppress Custom Writer
+Marks a class to prevent custom writer usage during serialization. Even if a custom writer exists for a parent class (through inheritance), the annotated class will use standard field-by-field serialization instead. This is the annotation equivalent of the `notCustomWritten.txt` config file.
+
+```java
+@IoNotCustomWrite
+public class MySpecialMap extends HashMap<String, Object> {
+    private String label;
+    // Will NOT use HashMap's custom writer — uses standard field-by-field serialization
+}
+```
+
+Both annotations can be combined on the same class:
+
+```java
+@IoNotCustomRead
+@IoNotCustomWrite
+public class MySpecialCollection extends ArrayList<String> {
+    // Standard serialization AND deserialization — no custom reader or writer
+}
+```
+
+**Note:** `@IoNotCustomWrite` is additive with the programmatic API (`addNotCustomWrittenClass()`) and the `notCustomWritten.txt` config file. Config files are used for JDK classes that cannot be annotated; annotations are for user classes.
 
 ### Combining Annotations
 

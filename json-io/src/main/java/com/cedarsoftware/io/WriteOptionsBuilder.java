@@ -1769,7 +1769,8 @@ public class WriteOptionsBuilder {
          * @return boolean true if the passed in class is on the not-customized list, false otherwise.
          */
         public boolean isNotCustomWrittenClass(Class<?> clazz) {
-            return notCustomWrittenClasses.contains(clazz);
+            return notCustomWrittenClasses.contains(clazz) ||
+                    AnnotationResolver.getMetadata(clazz).isNotCustomWrite();
         }
 
         public List<Accessor> getAccessorsForClass(final Class<?> c) {

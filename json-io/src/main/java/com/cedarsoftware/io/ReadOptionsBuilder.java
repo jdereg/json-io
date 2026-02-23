@@ -1881,7 +1881,8 @@ public class ReadOptionsBuilder {
          * @return boolean true if the passed in class is on the not-customized list, false otherwise.
          */
         public boolean isNotCustomReaderClass(Class<?> clazz) {
-            return notCustomReadClasses.contains(clazz);
+            return notCustomReadClasses.contains(clazz) ||
+                    AnnotationResolver.getMetadata(clazz).isNotCustomRead();
         }
 
         /**

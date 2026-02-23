@@ -26,6 +26,8 @@ import com.cedarsoftware.io.annotation.IoInclude;
 import com.cedarsoftware.io.annotation.IoIncludeProperties;
 import com.cedarsoftware.io.annotation.IoNaming;
 import com.cedarsoftware.io.annotation.IoNonReferenceable;
+import com.cedarsoftware.io.annotation.IoNotCustomRead;
+import com.cedarsoftware.io.annotation.IoNotCustomWrite;
 import com.cedarsoftware.io.annotation.IoProperty;
 import com.cedarsoftware.io.annotation.IoSetter;
 import com.cedarsoftware.io.annotation.IoTypeInfo;
@@ -258,6 +260,8 @@ public class AnnotationResolver {
             null,
             null,
             null,
+            false,
+            false,
             false);
 
     /**
@@ -323,6 +327,12 @@ public class AnnotationResolver {
 
         // 1e. @IoNonReferenceable — class-level non-referenceable flag
         boolean nonReferenceable = clazz.isAnnotationPresent(IoNonReferenceable.class);
+
+        // 1f. @IoNotCustomRead — class-level flag to suppress custom reader
+        boolean notCustomRead = clazz.isAnnotationPresent(IoNotCustomRead.class);
+
+        // 1g. @IoNotCustomWrite — class-level flag to suppress custom writer
+        boolean notCustomWrite = clazz.isAnnotationPresent(IoNotCustomWrite.class);
 
         // 2. @IoNaming — class-level naming strategy
         IoNaming.Strategy namingStrategy = scanNamingStrategy(clazz);
@@ -468,7 +478,7 @@ public class AnnotationResolver {
                 && valueMethod == null && includedFields == null && !ignoredType
                 && fieldTypeInfoDefaults == null && fieldDeserializeOverrides == null
                 && classFactory == null && getterMethods == null && setterMethods == null
-                && !nonReferenceable) {
+                && !nonReferenceable && !notCustomRead && !notCustomWrite) {
             return EMPTY;
         }
 
@@ -487,7 +497,9 @@ public class AnnotationResolver {
                 classFactory,
                 getterMethods != null ? Collections.unmodifiableMap(getterMethods) : null,
                 setterMethods != null ? Collections.unmodifiableMap(setterMethods) : null,
-                nonReferenceable);
+                nonReferenceable,
+                notCustomRead,
+                notCustomWrite);
     }
 
     // ---- Class-level scanners ----
@@ -974,6 +986,8 @@ public class AnnotationResolver {
         private final Map<String, String> getterMethods;
         private final Map<String, String> setterMethods;
         private final boolean nonReferenceable;
+        private final boolean notCustomRead;
+        private final boolean notCustomWrite;
 
         ClassAnnotationMetadata(Map<String, String> renamedFields,
                                 Set<String> ignoredFields,
@@ -989,7 +1003,9 @@ public class AnnotationResolver {
                                 Class<? extends ClassFactory> classFactory,
                                 Map<String, String> getterMethods,
                                 Map<String, String> setterMethods,
-                                boolean nonReferenceable) {
+                                boolean nonReferenceable,
+                                boolean notCustomRead,
+                                boolean notCustomWrite) {
             this.renamedFields = renamedFields;
             this.ignoredFields = ignoredFields;
             this.aliasToFieldName = aliasToFieldName;
@@ -1005,6 +1021,8 @@ public class AnnotationResolver {
             this.getterMethods = getterMethods;
             this.setterMethods = setterMethods;
             this.nonReferenceable = nonReferenceable;
+            this.notCustomRead = notCustomRead;
+            this.notCustomWrite = notCustomWrite;
         }
 
         /**
@@ -1140,6 +1158,20 @@ public class AnnotationResolver {
         }
 
         /**
+         * @return true if this class is annotated with @IoNotCustomRead
+         */
+        public boolean isNotCustomRead() {
+            return notCustomRead;
+        }
+
+        /**
+         * @return true if this class is annotated with @IoNotCustomWrite
+         */
+        public boolean isNotCustomWrite() {
+            return notCustomWrite;
+        }
+
+        /**
          * @return true if this metadata has no annotation information (empty/default)
          */
         public boolean isEmpty() {
@@ -1150,7 +1182,7 @@ public class AnnotationResolver {
                     && !ignoredType && fieldTypeInfoDefaults == null
                     && fieldDeserializeOverrides == null && classFactory == null
                     && getterMethods == null && setterMethods == null
-                    && !nonReferenceable;
+                    && !nonReferenceable && !notCustomRead && !notCustomWrite;
         }
     }
 }

@@ -19,6 +19,8 @@ import com.cedarsoftware.io.annotation.IoInclude;
 import com.cedarsoftware.io.annotation.IoIncludeProperties;
 import com.cedarsoftware.io.annotation.IoNaming;
 import com.cedarsoftware.io.annotation.IoNonReferenceable;
+import com.cedarsoftware.io.annotation.IoNotCustomRead;
+import com.cedarsoftware.io.annotation.IoNotCustomWrite;
 import com.cedarsoftware.io.annotation.IoProperty;
 import com.cedarsoftware.io.annotation.IoPropertyOrder;
 import com.cedarsoftware.io.annotation.IoTypeInfo;
@@ -2486,5 +2488,108 @@ class AnnotationTest {
         // Unannotated class should not be non-referenceable (unless it's a built-in like String)
         assertFalse(writeOptions.isNonReferenceableClass(TokenHolder.class),
                 "Unannotated class should not be non-referenceable");
+    }
+
+    // ======================== @IoNotCustomRead / @IoNotCustomWrite ========================
+
+    @IoNotCustomRead
+    static class ReadStandardWidget {
+        String name;
+        int count;
+        ReadStandardWidget() {}
+        ReadStandardWidget(String name, int count) { this.name = name; this.count = count; }
+    }
+
+    @IoNotCustomWrite
+    static class WriteStandardWidget {
+        String name;
+        int count;
+        WriteStandardWidget() {}
+        WriteStandardWidget(String name, int count) { this.name = name; this.count = count; }
+    }
+
+    @IoNotCustomRead
+    @IoNotCustomWrite
+    static class FullStandardWidget {
+        String name;
+        int count;
+        FullStandardWidget() {}
+        FullStandardWidget(String name, int count) { this.name = name; this.count = count; }
+    }
+
+    static class PlainWidget {
+        String name;
+        int count;
+        PlainWidget() {}
+        PlainWidget(String name, int count) { this.name = name; this.count = count; }
+    }
+
+    @Test
+    void testIoNotCustomReadMetadataApi() {
+        assertTrue(AnnotationResolver.getMetadata(ReadStandardWidget.class).isNotCustomRead(),
+                "@IoNotCustomRead should be detected");
+        assertFalse(AnnotationResolver.getMetadata(ReadStandardWidget.class).isNotCustomWrite(),
+                "@IoNotCustomWrite should not be detected on ReadStandardWidget");
+        assertFalse(AnnotationResolver.getMetadata(PlainWidget.class).isNotCustomRead(),
+                "Unannotated class should not be notCustomRead");
+    }
+
+    @Test
+    void testIoNotCustomWriteMetadataApi() {
+        assertTrue(AnnotationResolver.getMetadata(WriteStandardWidget.class).isNotCustomWrite(),
+                "@IoNotCustomWrite should be detected");
+        assertFalse(AnnotationResolver.getMetadata(WriteStandardWidget.class).isNotCustomRead(),
+                "@IoNotCustomRead should not be detected on WriteStandardWidget");
+        assertFalse(AnnotationResolver.getMetadata(PlainWidget.class).isNotCustomWrite(),
+                "Unannotated class should not be notCustomWrite");
+    }
+
+    @Test
+    void testIoNotCustomReadOptions() {
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+        assertTrue(readOptions.isNotCustomReaderClass(ReadStandardWidget.class),
+                "ReadStandardWidget should be not-custom-reader via annotation");
+        assertTrue(readOptions.isNotCustomReaderClass(FullStandardWidget.class),
+                "FullStandardWidget should be not-custom-reader via annotation");
+        assertFalse(readOptions.isNotCustomReaderClass(PlainWidget.class),
+                "PlainWidget should not be not-custom-reader");
+    }
+
+    @Test
+    void testIoNotCustomWriteOptions() {
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        assertTrue(writeOptions.isNotCustomWrittenClass(WriteStandardWidget.class),
+                "WriteStandardWidget should be not-custom-written via annotation");
+        assertTrue(writeOptions.isNotCustomWrittenClass(FullStandardWidget.class),
+                "FullStandardWidget should be not-custom-written via annotation");
+        assertFalse(writeOptions.isNotCustomWrittenClass(PlainWidget.class),
+                "PlainWidget should not be not-custom-written");
+    }
+
+    @Test
+    void testIoNotCustomReadRoundTrip() {
+        ReadStandardWidget widget = new ReadStandardWidget("gadget", 42);
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(widget, writeOptions);
+        ReadStandardWidget restored = JsonIo.toJava(json, readOptions).asClass(ReadStandardWidget.class);
+        assertEquals("gadget", restored.name);
+        assertEquals(42, restored.count);
+    }
+
+    @Test
+    void testIoNotCustomWriteRoundTrip() {
+        WriteStandardWidget widget = new WriteStandardWidget("gizmo", 99);
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(widget, writeOptions);
+        assertTrue(json.contains("\"name\""), "JSON should contain field 'name'");
+        assertTrue(json.contains("\"count\""), "JSON should contain field 'count'");
+
+        WriteStandardWidget restored = JsonIo.toJava(json, readOptions).asClass(WriteStandardWidget.class);
+        assertEquals("gizmo", restored.name);
+        assertEquals(99, restored.count);
     }
 }
