@@ -3526,4 +3526,112 @@ class AnnotationTest {
         assertNull(com.cedarsoftware.io.reflect.AnnotationResolver.getMetadata(String.class).getAnySetterMethod());
         assertNull(com.cedarsoftware.io.reflect.AnnotationResolver.getMetadata(String.class).getAnyGetterMethod());
     }
+
+    // ===================== TOON Annotation Tests =====================
+
+    @Test
+    void testToonAnyGetterWrite() {
+        AnyGetterOnlyModel model = new AnyGetterOnlyModel("abc");
+        model.extra.put("color", "red");
+        model.extra.put("size", 42L);
+
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+        String toon = JsonIo.toToon(model, wo);
+        assertTrue(toon.contains("color"), "TOON output should contain @IoAnyGetter field 'color'");
+        assertTrue(toon.contains("red"), "TOON output should contain @IoAnyGetter value 'red'");
+        assertTrue(toon.contains("size"), "TOON output should contain @IoAnyGetter field 'size'");
+    }
+
+    @Test
+    void testToonAnyGetterAnySetterRoundTrip() {
+        FlexibleConfig original = new FlexibleConfig("myApp", 3);
+        original.extras.put("theme", "dark");
+        original.extras.put("retries", 5L);
+
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String toon = JsonIo.toToon(original, wo);
+        assertTrue(toon.contains("theme"), "TOON should contain extra field 'theme'");
+        assertTrue(toon.contains("dark"), "TOON should contain extra value 'dark'");
+
+        FlexibleConfig restored = JsonIo.fromToon(toon, ro).asClass(FlexibleConfig.class);
+        assertEquals("myApp", restored.name);
+        assertEquals(3, restored.version);
+        assertEquals("dark", restored.extras.get("theme"));
+        assertEquals(5L, restored.extras.get("retries"));
+    }
+
+    @Test
+    void testToonAnyGetterEmptyMap() {
+        AnyGetterOnlyModel model = new AnyGetterOnlyModel("xyz");
+        // extras map is empty — should not add extra fields
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+        String toon = JsonIo.toToon(model, wo);
+        assertTrue(toon.contains("xyz"), "TOON should contain regular field value");
+    }
+
+    @Test
+    void testToonGetterWrite() {
+        // GetterSetterWidget has @IoGetter on fetchName() and fetchSize()
+        GetterSetterWidget widget = new GetterSetterWidget("bolt", 42);
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+        String toon = JsonIo.toToon(widget, wo);
+        assertTrue(toon.contains("bolt"), "TOON should contain value from @IoGetter method");
+        assertTrue(toon.contains("42"), "TOON should contain size from @IoGetter method");
+    }
+
+    @Test
+    void testToonGetterRoundTrip() {
+        GetterSetterWidget original = new GetterSetterWidget("screw", 99);
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String toon = JsonIo.toToon(original, wo);
+        GetterSetterWidget restored = JsonIo.fromToon(toon, ro).asClass(GetterSetterWidget.class);
+        assertEquals("screw", restored.fetchName());
+        assertEquals(99, restored.fetchSize());
+    }
+
+    @Test
+    void testToonFormatDateWrite() {
+        FormatDateModel model = new FormatDateModel(new java.util.Date(1700000000000L));
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+        String toon = JsonIo.toToon(model, wo);
+        // Date should be formatted as MM/dd/yyyy
+        assertTrue(toon.contains("11/14/2023"), "TOON should contain formatted date '11/14/2023' but was: " + toon);
+    }
+
+    @Test
+    void testToonFormatDateRoundTrip() {
+        java.util.Date date = new java.util.Date(1700000000000L);
+        FormatDateModel original = new FormatDateModel(date);
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String toon = JsonIo.toToon(original, wo);
+        FormatDateModel restored = JsonIo.fromToon(toon, ro).asClass(FormatDateModel.class);
+        // Round-trip: date should be parsed back from "MM/dd/yyyy" format
+        assertNotNull(restored.legacy, "Restored date should not be null");
+    }
+
+    @Test
+    void testToonCombinedAnnotations() {
+        // Test that @IoGetter, @IoAnyGetter, and @IoProperty all work together in TOON
+        FlexibleConfig model = new FlexibleConfig("combined", 7);
+        model.extras.put("extra1", "value1");
+
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String toon = JsonIo.toToon(model, wo);
+        assertTrue(toon.contains("combined"), "TOON should contain regular field");
+        assertTrue(toon.contains("extra1"), "TOON should contain @IoAnyGetter field");
+        assertTrue(toon.contains("value1"), "TOON should contain @IoAnyGetter value");
+
+        FlexibleConfig restored = JsonIo.fromToon(toon, ro).asClass(FlexibleConfig.class);
+        assertEquals("combined", restored.name);
+        assertEquals(7, restored.version);
+        assertEquals("value1", restored.extras.get("extra1"));
+    }
 }

@@ -1138,48 +1138,91 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
-     * Get object fields as a map using WriteOptions' cached reflection.
-     * Uses getDeepDeclaredFields() which caches field discovery via ReflectionUtils.
+     * Get object fields as a map using the same WriteFieldPlan / Accessor abstraction as JsonWriter.
+     * This ensures all write-side annotations are respected: @IoGetter, @IoFormat, @IoAnyGetter,
+     * @IoProperty, @IoPropertyOrder, @IoNaming, @IoInclude(NON_NULL), etc.
      */
     private Map<String, Object> getObjectFields(Object obj) {
-        Map<String, Object> result = new LinkedHashMap<>();
-
-        // Use WriteOptions' cached field retrieval (respects excluded/included fields, filters, etc.)
         Class<?> clazz = obj.getClass();
-        Map<String, java.lang.reflect.Field> fieldMap = writeOptions.getDeepDeclaredFields(clazz);
-        com.cedarsoftware.io.reflect.AnnotationResolver.ClassAnnotationMetadata annMeta =
-                com.cedarsoftware.io.reflect.AnnotationResolver.getMetadata(clazz);
 
-        for (Map.Entry<String, java.lang.reflect.Field> entry : fieldMap.entrySet()) {
-            java.lang.reflect.Field field = entry.getValue();
-            try {
-                field.setAccessible(true);
-                Object value = field.get(obj);
-                if (value != null || (!writeOptions.isSkipNullFields() && !annMeta.isNonNull(field.getName()))) {
-                    // Apply @IoProperty rename: use serialized name if present, otherwise original key
-                    String serializedName = annMeta.getSerializedName(field.getName());
-                    String key = serializedName != null ? serializedName : entry.getKey();
-                    result.put(key, value);
-                }
-            } catch (IllegalAccessException e) {
-                // Skip inaccessible fields
+        // Use the same cached WriteFieldPlan list that JsonWriter uses
+        List<WriteOptionsBuilder.WriteFieldPlan> plans =
+                WriteOptionsBuilder.getWriteFieldPlans(writeOptions, clazz);
+
+        Map<String, Object> result = new LinkedHashMap<>(plans.size());
+
+        for (WriteOptionsBuilder.WriteFieldPlan plan : plans) {
+            // Skip non-public enum fields if configured
+            if (plan.enumPublicOnlySkipCandidate() && writeOptions.isEnumPublicFieldsOnly()) {
+                continue;
             }
+
+            // Use Accessor.retrieve() — supports @IoGetter, LambdaMetafactory, VarHandle, etc.
+            Object value = plan.accessor().retrieve(obj);
+
+            // Respect skipNullFields (global) and skipIfNull (per-field @IoInclude NON_NULL)
+            if ((writeOptions.isSkipNullFields() || plan.skipIfNull()) && value == null) {
+                continue;
+            }
+
+            // Apply @IoFormat pattern if present
+            String formatPattern = plan.formatPattern();
+            if (formatPattern != null && value != null) {
+                value = applyFormatPattern(value, formatPattern);
+            }
+
+            // Field name already has @IoProperty rename and @IoNaming applied
+            String key = plan.accessor().getUniqueFieldName();
+            result.put(key, value);
         }
 
-        // Apply @IoPropertyOrder if present
-        String[] order = annMeta.getPropertyOrder();
-        if (order != null && order.length > 0 && result.size() > 1) {
-            Map<String, Object> ordered = new LinkedHashMap<>(result.size());
-            for (String name : order) {
-                if (result.containsKey(name)) {
-                    ordered.put(name, result.remove(name));
+        // @IoAnyGetter — add extra fields from annotated method
+        AnnotationResolver.ClassAnnotationMetadata annMeta = AnnotationResolver.getMetadata(clazz);
+        Method anyGetter = annMeta.getAnyGetterMethod();
+        if (anyGetter != null) {
+            try {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> extras = (Map<String, Object>) anyGetter.invoke(obj);
+                if (extras != null) {
+                    for (Map.Entry<String, Object> extra : extras.entrySet()) {
+                        Object value = extra.getValue();
+                        if (value != null || !writeOptions.isSkipNullFields()) {
+                            result.put(extra.getKey(), value);
+                        }
+                    }
                 }
+            } catch (Exception e) {
+                throw new JsonIoException("@IoAnyGetter invocation failed on " + clazz.getName(), e);
             }
-            ordered.putAll(result);
-            return ordered;
         }
 
         return result;
+    }
+
+    /**
+     * Apply a format pattern to a value, producing a formatted String.
+     * Supports C-style String.format (detected by '%'), DateTimeFormatter,
+     * SimpleDateFormat, and DecimalFormat patterns.
+     */
+    private static Object applyFormatPattern(Object value, String pattern) {
+        try {
+            if (pattern.indexOf('%') >= 0) {
+                return String.format(pattern, value);
+            }
+            if (value instanceof java.time.temporal.TemporalAccessor) {
+                return java.time.format.DateTimeFormatter.ofPattern(pattern)
+                        .format((java.time.temporal.TemporalAccessor) value);
+            }
+            if (value instanceof java.util.Date) {
+                return new java.text.SimpleDateFormat(pattern).format((java.util.Date) value);
+            }
+            if (value instanceof Number) {
+                return new java.text.DecimalFormat(pattern).format(value);
+            }
+        } catch (Exception ignore) {
+            // If formatting fails, fall through and return the original value
+        }
+        return value;
     }
 
     /**
