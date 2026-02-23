@@ -18,6 +18,7 @@ import com.cedarsoftware.io.annotation.IoIgnoreType;
 import com.cedarsoftware.io.annotation.IoInclude;
 import com.cedarsoftware.io.annotation.IoIncludeProperties;
 import com.cedarsoftware.io.annotation.IoNaming;
+import com.cedarsoftware.io.annotation.IoNonReferenceable;
 import com.cedarsoftware.io.annotation.IoProperty;
 import com.cedarsoftware.io.annotation.IoPropertyOrder;
 import com.cedarsoftware.io.annotation.IoTypeInfo;
@@ -2403,5 +2404,87 @@ class AnnotationTest {
         // Non-annotated fields return null
         assertNull(meta.getGetterMethod("nonexistent"));
         assertNull(meta.getSetterMethod("nonexistent"));
+    }
+
+    // ===================== @IoNonReferenceable Test Models =====================
+
+    @IoNonReferenceable
+    static class Token {
+        private String value;
+        Token() {}
+        Token(String value) { this.value = value; }
+        public String getValue() { return value; }
+    }
+
+    static class TokenHolder {
+        private Token first;
+        private Token second;
+        TokenHolder() {}
+        TokenHolder(Token first, Token second) {
+            this.first = first;
+            this.second = second;
+        }
+        public Token getFirst() { return first; }
+        public Token getSecond() { return second; }
+    }
+
+    // ===================== @IoNonReferenceable Tests =====================
+
+    @Test
+    void testIoNonReferenceableMetadataApi() {
+        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(Token.class);
+        assertTrue(meta.isNonReferenceable());
+
+        // Unannotated class should NOT be non-referenceable
+        AnnotationResolver.ClassAnnotationMetadata noAnno = AnnotationResolver.getMetadata(NoAnnotationModel.class);
+        assertFalse(noAnno.isNonReferenceable());
+    }
+
+    @Test
+    void testIoNonReferenceableWriteNoIdRef() {
+        // Write two references to the SAME Token instance — JSON should contain
+        // duplicate values, no @id/@ref
+        Token shared = new Token("abc");
+        TokenHolder holder = new TokenHolder(shared, shared);
+
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        String json = JsonIo.toJson(holder, writeOptions);
+
+        // Should NOT contain @id or @ref for Token instances
+        assertFalse(json.contains("@id"), "Non-referenceable type should not emit @id");
+        assertFalse(json.contains("@ref"), "Non-referenceable type should not emit @ref");
+        // Should contain "abc" twice (once for each occurrence)
+        int firstIdx = json.indexOf("\"abc\"");
+        int secondIdx = json.indexOf("\"abc\"", firstIdx + 1);
+        assertTrue(firstIdx >= 0 && secondIdx >= 0, "Non-referenceable instances should be written in full each time");
+    }
+
+    @Test
+    void testIoNonReferenceableRoundTrip() {
+        Token shared = new Token("xyz");
+        TokenHolder holder = new TokenHolder(shared, shared);
+
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(holder, writeOptions);
+        TokenHolder restored = JsonIo.toJava(json, readOptions).asClass(TokenHolder.class);
+
+        assertEquals("xyz", restored.getFirst().getValue());
+        assertEquals("xyz", restored.getSecond().getValue());
+        // Since no @id/@ref, the two Token instances should be separate objects (not same reference)
+        assertNotSame(restored.getFirst(), restored.getSecond(),
+                "Non-referenceable instances should not be shared on read");
+    }
+
+    @Test
+    void testIoNonReferenceableWriteOptions() {
+        // Verify the WriteOptions check recognizes the annotation
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        assertTrue(writeOptions.isNonReferenceableClass(Token.class),
+                "@IoNonReferenceable class should be recognized as non-referenceable");
+        // Unannotated class should not be non-referenceable (unless it's a built-in like String)
+        assertFalse(writeOptions.isNonReferenceableClass(TokenHolder.class),
+                "Unannotated class should not be non-referenceable");
     }
 }

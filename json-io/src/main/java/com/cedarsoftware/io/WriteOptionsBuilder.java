@@ -1686,7 +1686,8 @@ public class WriteOptionsBuilder {
                         Number.class.isAssignableFrom(type) ||
                         Date.class.isAssignableFrom(type) ||
                         String.class.isAssignableFrom(type) ||
-                        type.isEnum();
+                        type.isEnum() ||
+                        AnnotationResolver.getMetadata(type).isNonReferenceable();
             }
         };
 

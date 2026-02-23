@@ -25,6 +25,7 @@ import com.cedarsoftware.io.annotation.IoIgnoreType;
 import com.cedarsoftware.io.annotation.IoInclude;
 import com.cedarsoftware.io.annotation.IoIncludeProperties;
 import com.cedarsoftware.io.annotation.IoNaming;
+import com.cedarsoftware.io.annotation.IoNonReferenceable;
 import com.cedarsoftware.io.annotation.IoProperty;
 import com.cedarsoftware.io.annotation.IoSetter;
 import com.cedarsoftware.io.annotation.IoTypeInfo;
@@ -256,7 +257,8 @@ public class AnnotationResolver {
             null,
             null,
             null,
-            null);
+            null,
+            false);
 
     /**
      * Get annotation metadata for a class. Scans once, caches forever.
@@ -318,6 +320,9 @@ public class AnnotationResolver {
         if (factoryAnn != null) {
             classFactory = factoryAnn.value();
         }
+
+        // 1e. @IoNonReferenceable — class-level non-referenceable flag
+        boolean nonReferenceable = clazz.isAnnotationPresent(IoNonReferenceable.class);
 
         // 2. @IoNaming — class-level naming strategy
         IoNaming.Strategy namingStrategy = scanNamingStrategy(clazz);
@@ -462,7 +467,8 @@ public class AnnotationResolver {
                 && order == null && nonNullFields.isEmpty() && creator == null
                 && valueMethod == null && includedFields == null && !ignoredType
                 && fieldTypeInfoDefaults == null && fieldDeserializeOverrides == null
-                && classFactory == null && getterMethods == null && setterMethods == null) {
+                && classFactory == null && getterMethods == null && setterMethods == null
+                && !nonReferenceable) {
             return EMPTY;
         }
 
@@ -480,7 +486,8 @@ public class AnnotationResolver {
                 fieldDeserializeOverrides != null ? Collections.unmodifiableMap(fieldDeserializeOverrides) : null,
                 classFactory,
                 getterMethods != null ? Collections.unmodifiableMap(getterMethods) : null,
-                setterMethods != null ? Collections.unmodifiableMap(setterMethods) : null);
+                setterMethods != null ? Collections.unmodifiableMap(setterMethods) : null,
+                nonReferenceable);
     }
 
     // ---- Class-level scanners ----
@@ -966,6 +973,7 @@ public class AnnotationResolver {
         private final Class<? extends ClassFactory> classFactory;
         private final Map<String, String> getterMethods;
         private final Map<String, String> setterMethods;
+        private final boolean nonReferenceable;
 
         ClassAnnotationMetadata(Map<String, String> renamedFields,
                                 Set<String> ignoredFields,
@@ -980,7 +988,8 @@ public class AnnotationResolver {
                                 Map<String, Class<?>> fieldDeserializeOverrides,
                                 Class<? extends ClassFactory> classFactory,
                                 Map<String, String> getterMethods,
-                                Map<String, String> setterMethods) {
+                                Map<String, String> setterMethods,
+                                boolean nonReferenceable) {
             this.renamedFields = renamedFields;
             this.ignoredFields = ignoredFields;
             this.aliasToFieldName = aliasToFieldName;
@@ -995,6 +1004,7 @@ public class AnnotationResolver {
             this.classFactory = classFactory;
             this.getterMethods = getterMethods;
             this.setterMethods = setterMethods;
+            this.nonReferenceable = nonReferenceable;
         }
 
         /**
@@ -1123,6 +1133,13 @@ public class AnnotationResolver {
         }
 
         /**
+         * @return true if this class is annotated with @IoNonReferenceable
+         */
+        public boolean isNonReferenceable() {
+            return nonReferenceable;
+        }
+
+        /**
          * @return true if this metadata has no annotation information (empty/default)
          */
         public boolean isEmpty() {
@@ -1132,7 +1149,8 @@ public class AnnotationResolver {
                     && valueMethod == null && includedFields == null
                     && !ignoredType && fieldTypeInfoDefaults == null
                     && fieldDeserializeOverrides == null && classFactory == null
-                    && getterMethods == null && setterMethods == null;
+                    && getterMethods == null && setterMethods == null
+                    && !nonReferenceable;
         }
     }
 }

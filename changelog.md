@@ -2,7 +2,7 @@
 
 #### 4.95.0 (Unreleased)
 * **PERFORMANCE**: `Accessor.retrieve()` now uses sticky fallback flags for lambda/VarHandle/MethodHandle paths; once an optimized path fails, it is bypassed on subsequent calls instead of repeatedly throwing/falling back.
-* **FEATURE**: `AnnotationResolver` — annotation-based serialization control. json-io now supports 16 annotations in `com.cedarsoftware.io.annotation`:
+* **FEATURE**: `AnnotationResolver` — annotation-based serialization control. json-io now supports 17 annotations in `com.cedarsoftware.io.annotation`:
   * `@IoProperty("name")` — rename a field in JSON output and accept the renamed key on read.
   * `@IoIgnore` — exclude a field from serialization and deserialization.
   * `@IoIgnoreProperties({"a","b"})` — class-level field exclusion by name.
@@ -19,6 +19,7 @@
   * `@IoClassFactory(MyFactory.class)` — class-level annotation specifying a `ClassFactory` implementation for custom deserialization. Factory instances are cached and shared. Programmatic `addClassFactory()` takes priority.
   * `@IoGetter("fieldName")` — method-level annotation marking a no-arg instance method as the getter for a field during serialization. Replaces the standard `getXxx()` convention. Programmatic `addNonStandardGetter()` takes priority.
   * `@IoSetter("fieldName")` — method-level annotation marking a 1-arg instance method as the setter for a field during deserialization. Replaces the standard `setXxx()` convention. Programmatic `addPermanentNonStandardSetter()` takes priority.
+  * `@IoNonReferenceable` — class-level annotation marking a type as non-referenceable. Instances will never emit `@id`/`@ref` pairs. Annotation equivalent of `config/nonRefs.txt` and `addNonReferenceableClass()`.
   Annotations are scanned once per class and cached in a `ClassValueMap`. Programmatic API always overrides annotations.
 * **FEATURE**: `AnnotationResolver` — Jackson annotation compatibility. json-io reflectively honors Jackson annotations when the Jackson JAR is on the classpath — with zero compile-time dependency. json-io annotations take priority over Jackson annotations on the same element. Supported Jackson annotations:
   * `@JsonProperty`, `@JsonIgnore`, `@JsonIgnoreProperties`, `@JsonAlias`, `@JsonPropertyOrder`, `@JsonInclude(Include.NON_NULL)` (jackson-annotations)

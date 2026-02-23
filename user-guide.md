@@ -650,7 +650,7 @@ cyclic references are typically not needed.
 
 ## Annotations
 
-json-io provides 16 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization. In addition, json-io **reflectively honors Jackson annotations** when the Jackson JAR is on the classpath — with zero compile-time dependency on Jackson.
+json-io provides 17 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization. In addition, json-io **reflectively honors Jackson annotations** when the Jackson JAR is on the classpath — with zero compile-time dependency on Jackson.
 
 ### Annotation Precedence
 
@@ -913,6 +913,35 @@ public class Sensor {
 ```
 
 **Note:** `@IoGetter`/`@IoSetter` are the annotation equivalents of the `nonStandardGetters.txt` and `nonStandardSetters.txt` config files. Config files are used for JDK classes that cannot be annotated; annotations are for user classes.
+
+#### `@IoNonReferenceable` — Suppress `@id`/`@ref`
+Marks a class as non-referenceable: instances of this type will never emit `@id` or `@ref` during serialization, even when the same instance is referenced multiple times. This is the annotation equivalent of the `nonRefs.txt` config file. No Jackson equivalent exists — Jackson does not support `@id`/`@ref` graph semantics.
+
+```java
+@IoNonReferenceable
+public class Token {
+    private String value;
+    // ...
+}
+
+public class Holder {
+    private Token first;
+    private Token second;
+}
+
+Token t = new Token("abc");
+Holder h = new Holder();
+h.first = t;
+h.second = t;  // same instance
+
+String json = JsonIo.toJson(h, writeOptions);
+// {"first":{"value":"abc"},"second":{"value":"abc"}}
+// No @id/@ref — second is written as a full duplicate
+```
+
+On deserialization, each occurrence produces a separate object instance (no instance sharing). This is appropriate for value-like types where identity is not meaningful.
+
+**Note:** `@IoNonReferenceable` is additive with the programmatic API (`addNonReferenceableClass()`) and the `nonRefs.txt` config file. All three sources are OR'd together. The config file is used for JDK classes that cannot be annotated; the annotation is for user classes.
 
 ### Combining Annotations
 

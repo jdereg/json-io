@@ -1870,7 +1870,8 @@ public class ReadOptionsBuilder {
                     Number.class.isAssignableFrom(clazz) ||
                     Date.class.isAssignableFrom(clazz) ||
                     String.class.isAssignableFrom(clazz) ||
-                    clazz.isEnum();
+                    clazz.isEnum() ||
+                    AnnotationResolver.getMetadata(clazz).isNonReferenceable();
         }
 
         /**
