@@ -41,13 +41,13 @@ json-io is a powerful and lightweight Java library that simplifies **JSON5**, **
 - [Why json-io?](#why-json-io)
   - [vs Jackson/Gson](#vs-jacksongson-json)
   - [vs JToon](#vs-jtoon-toon)
-  - [What's Coming Next](#whats-coming-next)
+  - [Annotation Support](#annotation-support)
 - [Installation](#installation)
+  - [Spring Boot Integration](#spring-boot-integration)
 - [Quick Start](#quick-start)
-- [Spring Boot Integration](#spring-boot-integration)
 - [Supported Types](#supported-types-60-built-in)
 - [Documentation](#documentation)
-- [Release Info](#release-4890)
+- [Release](#release-)
   - [Logging](#logging)
 
 ## Key Features
