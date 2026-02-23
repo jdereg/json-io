@@ -650,7 +650,7 @@ cyclic references are typically not needed.
 
 ## Annotations
 
-json-io provides 14 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization. In addition, json-io **reflectively honors Jackson annotations** when the Jackson JAR is on the classpath — with zero compile-time dependency on Jackson.
+json-io provides 16 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization. In addition, json-io **reflectively honors Jackson annotations** when the Jackson JAR is on the classpath — with zero compile-time dependency on Jackson.
 
 ### Annotation Precedence
 
@@ -878,6 +878,42 @@ public class WidgetFactory implements ClassFactory {
 }
 ```
 
+#### `@IoGetter("fieldName")` — Custom Getter Method
+Method-level annotation that marks a no-arg instance method as the getter for a specific field during serialization. Use this when your class uses non-standard getter names that don't follow the `getXxx()` convention. Programmatic `addNonStandardGetter()` takes priority.
+
+```java
+public class Sensor {
+    private double temperature;
+    private String location;
+
+    @IoGetter("temperature")
+    public double readTemperature() { return temperature; }
+
+    @IoGetter("location")
+    public String fetchLocation() { return location; }
+}
+// json-io calls readTemperature() and fetchLocation() instead of getTemperature()/getLocation()
+```
+
+#### `@IoSetter("fieldName")` — Custom Setter Method
+Method-level annotation that marks a single-argument instance method as the setter for a specific field during deserialization. Use this when your class uses non-standard setter names that don't follow the `setXxx()` convention. Programmatic `addPermanentNonStandardSetter()` takes priority.
+
+```java
+public class Sensor {
+    private double temperature;
+    private String location;
+
+    @IoSetter("temperature")
+    public void calibrateTemperature(double temp) { this.temperature = temp; }
+
+    @IoSetter("location")
+    public void assignLocation(String loc) { this.location = loc; }
+}
+// json-io calls calibrateTemperature() and assignLocation() instead of setTemperature()/setLocation()
+```
+
+**Note:** `@IoGetter`/`@IoSetter` are the annotation equivalents of the `nonStandardGetters.txt` and `nonStandardSetters.txt` config files. Config files are used for JDK classes that cannot be annotated; annotations are for user classes.
+
 ### Combining Annotations
 
 Annotations can be combined on the same field or class:
@@ -922,6 +958,8 @@ If your classes already use Jackson annotations, json-io will honor them automat
 | `@JsonIgnoreType` | `@IoIgnoreType` | Exclude all fields of this type |
 | `@JsonTypeInfo(defaultImpl=...)` | `@IoTypeInfo(...)` | Default concrete type hint |
 | `@JsonDeserialize(as=...)` | `@IoDeserialize(as=...)` | Forced deserialization type override |
+| `@JsonGetter("fieldName")` | `@IoGetter("fieldName")` | Custom getter method for serialization |
+| `@JsonSetter("fieldName")` | `@IoSetter("fieldName")` | Custom setter method for deserialization |
 
 Jackson's `jackson-annotations` JAR (~75KB) is commonly already on the classpath in Spring applications. json-io detects annotations via `Class.forName()` at startup — there is no compile-time dependency. Some annotations (`@JsonNaming`, `@JsonDeserialize`) live in `jackson-databind` and are detected independently.
 

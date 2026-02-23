@@ -97,7 +97,7 @@ json-io's TOON implementation offers comprehensive Java type coverage while JToo
 
 ### Annotation Support
 
-json-io provides 14 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization:
+json-io provides 16 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization:
 
 | Annotation | Target | Purpose |
 |---|---|---|
@@ -115,8 +115,10 @@ json-io provides 14 annotations in the `com.cedarsoftware.io.annotation` package
 | `@IoTypeInfo(LinkedList.class)` | Field | Default concrete type when `@type` absent |
 | `@IoDeserialize(as=LinkedList.class)` | Field/Class | Force type override during deserialization |
 | `@IoClassFactory(MyFactory.class)` | Class | Specify a ClassFactory for deserialization |
+| `@IoGetter("fieldName")` | Method | Custom getter method for serialization |
+| `@IoSetter("fieldName")` | Method | Custom setter method for deserialization |
 
-Additionally, json-io **reflectively honors Jackson annotations** when they are on the classpath — with zero compile-time dependency on Jackson. Supported: `@JsonProperty`, `@JsonIgnore`, `@JsonIgnoreProperties`, `@JsonAlias`, `@JsonPropertyOrder`, `@JsonInclude`, `@JsonCreator`, `@JsonValue`, `@JsonIgnoreType`, `@JsonTypeInfo`, `@JsonIncludeProperties`, `@JsonNaming`, `@JsonDeserialize`.
+Additionally, json-io **reflectively honors Jackson annotations** when they are on the classpath — with zero compile-time dependency on Jackson. Supported: `@JsonProperty`, `@JsonIgnore`, `@JsonIgnoreProperties`, `@JsonAlias`, `@JsonPropertyOrder`, `@JsonInclude`, `@JsonCreator`, `@JsonValue`, `@JsonIgnoreType`, `@JsonTypeInfo`, `@JsonIncludeProperties`, `@JsonNaming`, `@JsonDeserialize`, `@JsonGetter`, `@JsonSetter`.
 
 **Precedence:** Programmatic API > json-io annotations > Jackson annotations.
 

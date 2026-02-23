@@ -2,7 +2,7 @@
 
 #### 4.95.0 (Unreleased)
 * **PERFORMANCE**: `Accessor.retrieve()` now uses sticky fallback flags for lambda/VarHandle/MethodHandle paths; once an optimized path fails, it is bypassed on subsequent calls instead of repeatedly throwing/falling back.
-* **FEATURE**: `AnnotationResolver` — annotation-based serialization control. json-io now supports 14 annotations in `com.cedarsoftware.io.annotation`:
+* **FEATURE**: `AnnotationResolver` — annotation-based serialization control. json-io now supports 16 annotations in `com.cedarsoftware.io.annotation`:
   * `@IoProperty("name")` — rename a field in JSON output and accept the renamed key on read.
   * `@IoIgnore` — exclude a field from serialization and deserialization.
   * `@IoIgnoreProperties({"a","b"})` — class-level field exclusion by name.
@@ -17,10 +17,12 @@
   * `@IoTypeInfo(LinkedList.class)` — field-level default concrete type when no `@type` is present in JSON (fallback hint for polymorphic fields).
   * `@IoDeserialize(as = LinkedList.class)` — field-level or class-level forced type override during deserialization. Priority: `@type` in JSON > `@IoDeserialize` > `@IoTypeInfo` > declared field type.
   * `@IoClassFactory(MyFactory.class)` — class-level annotation specifying a `ClassFactory` implementation for custom deserialization. Factory instances are cached and shared. Programmatic `addClassFactory()` takes priority.
+  * `@IoGetter("fieldName")` — method-level annotation marking a no-arg instance method as the getter for a field during serialization. Replaces the standard `getXxx()` convention. Programmatic `addNonStandardGetter()` takes priority.
+  * `@IoSetter("fieldName")` — method-level annotation marking a 1-arg instance method as the setter for a field during deserialization. Replaces the standard `setXxx()` convention. Programmatic `addPermanentNonStandardSetter()` takes priority.
   Annotations are scanned once per class and cached in a `ClassValueMap`. Programmatic API always overrides annotations.
 * **FEATURE**: `AnnotationResolver` — Jackson annotation compatibility. json-io reflectively honors Jackson annotations when the Jackson JAR is on the classpath — with zero compile-time dependency. json-io annotations take priority over Jackson annotations on the same element. Supported Jackson annotations:
   * `@JsonProperty`, `@JsonIgnore`, `@JsonIgnoreProperties`, `@JsonAlias`, `@JsonPropertyOrder`, `@JsonInclude(Include.NON_NULL)` (jackson-annotations)
-  * `@JsonCreator`, `@JsonValue`, `@JsonIgnoreType`, `@JsonTypeInfo(defaultImpl=...)`, `@JsonIncludeProperties` (jackson-annotations)
+  * `@JsonCreator`, `@JsonValue`, `@JsonIgnoreType`, `@JsonTypeInfo(defaultImpl=...)`, `@JsonIncludeProperties`, `@JsonGetter`, `@JsonSetter` (jackson-annotations)
   * `@JsonNaming(SnakeCaseStrategy.class)`, `@JsonDeserialize(as=...)` (jackson-databind)
 * **PERFORMANCE**: `Injector` numeric kind and primitive-wrapper lookups now use `ClassValueMap` O(1) dispatch instead of sequential `class ==` chains.
 * **PERFORMANCE**: `Injector.inject()` now applies assignability-based pre-conversion before reflective set/invoke, reducing exception-driven control flow in hot assignment paths while preserving fallback conversion behavior.
