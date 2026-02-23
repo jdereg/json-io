@@ -3168,4 +3168,170 @@ class AnnotationTest {
         assertEquals(model.count, restored.count);
         assertEquals(model.when, restored.when);
     }
+
+    // ===================== @IoFormat C-style String.format() Test Models =====================
+
+    static class CStyleIntCommaModel {
+        @IoFormat("%,d")
+        int population;
+
+        CStyleIntCommaModel() {}
+        CStyleIntCommaModel(int population) {
+            this.population = population;
+        }
+    }
+
+    static class CStyleDoublePrecisionModel {
+        @IoFormat("%.2f")
+        double price;
+
+        CStyleDoublePrecisionModel() {}
+        CStyleDoublePrecisionModel(double price) {
+            this.price = price;
+        }
+    }
+
+    static class CStyleZeroPaddedModel {
+        @IoFormat("%05d")
+        int code;
+
+        CStyleZeroPaddedModel() {}
+        CStyleZeroPaddedModel(int code) {
+            this.code = code;
+        }
+    }
+
+    static class CStyleHexModel {
+        @IoFormat("%x")
+        int colorValue;
+
+        CStyleHexModel() {}
+        CStyleHexModel(int colorValue) {
+            this.colorValue = colorValue;
+        }
+    }
+
+    static class CStyleStringPadModel {
+        @IoFormat("%10s")
+        String label;
+
+        CStyleStringPadModel() {}
+        CStyleStringPadModel(String label) {
+            this.label = label;
+        }
+    }
+
+    static class MixedAllFormatTypesModel {
+        @IoFormat("%,d")
+        int cStyleInt;
+        @IoFormat("#,###.00")
+        double decimalFormatDouble;
+        @IoFormat("dd/MM/yyyy")
+        LocalDate dateTimeFormatDate;
+
+        MixedAllFormatTypesModel() {}
+        MixedAllFormatTypesModel(int cStyleInt, double decimalFormatDouble, LocalDate dateTimeFormatDate) {
+            this.cStyleInt = cStyleInt;
+            this.decimalFormatDouble = decimalFormatDouble;
+            this.dateTimeFormatDate = dateTimeFormatDate;
+        }
+    }
+
+    // ===================== @IoFormat C-style String.format() Tests =====================
+
+    @Test
+    void testIoFormatCStyleWriteIntWithComma() {
+        CStyleIntCommaModel model = new CStyleIntCommaModel(1234567);
+        WriteOptions wo = new WriteOptionsBuilder().shortMetaKeys(true).build();
+        String json = JsonIo.toJson(model, wo);
+        assertTrue(json.contains("\"1,234,567\""), "int should use C-style comma format: " + json);
+    }
+
+    @Test
+    void testIoFormatCStyleWriteDoubleWithPrecision() {
+        CStyleDoublePrecisionModel model = new CStyleDoublePrecisionModel(3.14159);
+        WriteOptions wo = new WriteOptionsBuilder().shortMetaKeys(true).build();
+        String json = JsonIo.toJson(model, wo);
+        assertTrue(json.contains("\"3.14\""), "double should use %.2f format: " + json);
+    }
+
+    @Test
+    void testIoFormatCStyleWriteIntZeroPadded() {
+        CStyleZeroPaddedModel model = new CStyleZeroPaddedModel(42);
+        WriteOptions wo = new WriteOptionsBuilder().shortMetaKeys(true).build();
+        String json = JsonIo.toJson(model, wo);
+        assertTrue(json.contains("\"00042\""), "int should be zero-padded: " + json);
+    }
+
+    @Test
+    void testIoFormatCStyleWriteHex() {
+        CStyleHexModel model = new CStyleHexModel(255);
+        WriteOptions wo = new WriteOptionsBuilder().shortMetaKeys(true).build();
+        String json = JsonIo.toJson(model, wo);
+        assertTrue(json.contains("\"ff\""), "int should be hex: " + json);
+    }
+
+    @Test
+    void testIoFormatCStyleWriteStringPadded() {
+        CStyleStringPadModel model = new CStyleStringPadModel("hi");
+        WriteOptions wo = new WriteOptionsBuilder().shortMetaKeys(true).build();
+        String json = JsonIo.toJson(model, wo);
+        assertTrue(json.contains("        hi"), "string should be right-padded to 10 chars: " + json);
+    }
+
+    @Test
+    void testIoFormatCStyleRoundTripIntComma() {
+        CStyleIntCommaModel model = new CStyleIntCommaModel(1234567);
+        WriteOptions wo = new WriteOptionsBuilder().shortMetaKeys(true).build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(model, wo);
+        assertTrue(json.contains("\"1,234,567\""), "JSON should contain comma-formatted int: " + json);
+
+        CStyleIntCommaModel restored = JsonIo.toJava(json, ro).asClass(CStyleIntCommaModel.class);
+        assertEquals(1234567, restored.population);
+    }
+
+    @Test
+    void testIoFormatCStyleRoundTripDoublePrecision() {
+        CStyleDoublePrecisionModel model = new CStyleDoublePrecisionModel(3.14159);
+        WriteOptions wo = new WriteOptionsBuilder().shortMetaKeys(true).build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(model, wo);
+        CStyleDoublePrecisionModel restored = JsonIo.toJava(json, ro).asClass(CStyleDoublePrecisionModel.class);
+        assertEquals(3.14, restored.price, 0.001);  // precision loss expected
+    }
+
+    @Test
+    void testIoFormatCStyleRoundTripHex() {
+        CStyleHexModel model = new CStyleHexModel(255);
+        WriteOptions wo = new WriteOptionsBuilder().shortMetaKeys(true).build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(model, wo);
+        assertTrue(json.contains("\"ff\""), "JSON should contain hex value: " + json);
+
+        CStyleHexModel restored = JsonIo.toJava(json, ro).asClass(CStyleHexModel.class);
+        assertEquals(255, restored.colorValue);
+    }
+
+    @Test
+    void testIoFormatMixedAllThreeFormatTypes() {
+        MixedAllFormatTypesModel model = new MixedAllFormatTypesModel(
+                1234567, 9876.543, LocalDate.of(2026, 2, 23));
+        WriteOptions wo = new WriteOptionsBuilder().shortMetaKeys(true).build();
+        ReadOptions ro = new ReadOptionsBuilder().build();
+
+        String json = JsonIo.toJson(model, wo);
+        assertTrue(json.contains("\"1,234,567\""), "C-style int format: " + json);
+        assertTrue(json.contains("\"9,876.54\""), "DecimalFormat double: " + json);
+        assertTrue(json.contains("23/02/2026"), "DateTimeFormatter date: " + json);
+
+        // Round-trip
+        MixedAllFormatTypesModel restored = JsonIo.toJava(json, ro).asClass(MixedAllFormatTypesModel.class);
+        assertEquals(1234567, restored.cStyleInt);
+        assertEquals(9876.54, restored.decimalFormatDouble, 0.01);
+        assertEquals(LocalDate.of(2026, 2, 23), restored.dateTimeFormatDate);
+    }
 }

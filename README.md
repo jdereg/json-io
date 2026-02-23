@@ -123,7 +123,7 @@ json-io provides 23 annotations in the `com.cedarsoftware.io.annotation` package
 | `@IoCustomWriter(MyWriter.class)` | Class | Specify custom `JsonClassWriter` for serialization |
 | `@IoCustomReader(MyReader.class)` | Class | Specify custom `JsonClassReader` for deserialization |
 | `@IoTypeName("ShortName")` | Class | Alias for `@type` in JSON (replaces FQCN) |
-| `@IoFormat("pattern")` | Field | Per-field date/time or numeric format pattern |
+| `@IoFormat("pattern")` | Field | Per-field format pattern (`String.format`, `DecimalFormat`, `DateTimeFormatter`, or `SimpleDateFormat`) |
 
 Additionally, json-io **reflectively honors Jackson annotations** when they are on the classpath — with zero compile-time dependency on Jackson. Supported: `@JsonProperty`, `@JsonIgnore`, `@JsonIgnoreProperties`, `@JsonAlias`, `@JsonPropertyOrder`, `@JsonInclude`, `@JsonCreator`, `@JsonValue`, `@JsonIgnoreType`, `@JsonTypeInfo`, `@JsonIncludeProperties`, `@JsonNaming`, `@JsonDeserialize`, `@JsonGetter`, `@JsonSetter`, `@JsonTypeName`, `@JsonFormat`.
 

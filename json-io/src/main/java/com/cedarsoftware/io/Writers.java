@@ -88,6 +88,20 @@ public class Writers {
     }
 
     /**
+     * If the WriterContext has a field format pattern containing '%' (C-style String.format),
+     * format the value using String.format() and write as a quoted JSON string.
+     * Returns true if handled, false otherwise.
+     */
+    public static boolean writeWithStringFormat(Object o, Writer output, WriterContext context) throws IOException {
+        String pat = context.getFieldFormatPattern();
+        if (pat != null && pat.indexOf('%') >= 0) {
+            JsonWriter.writeBasicString(output, String.format(pat, o));
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * If the WriterContext has a field format pattern and the value is a Number,
      * format it using DecimalFormat and write as a quoted JSON string. Returns true if handled.
      */
@@ -137,6 +151,7 @@ public class Writers {
          * Writes out a basic value type, no quotes.  to write strings use PrimitiveUtf8StringWriter.
          */
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, output, context)) { return; }
             if (writeNumericWithFieldFormat(o, output, context)) { return; }
             output.write(extractString(o));
         }
@@ -152,6 +167,7 @@ public class Writers {
          */
         @SuppressWarnings("unchecked")
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, output, context)) { return; }
             if (writeNumericWithFieldFormat(o, output, context)) { return; }
             WriteOptions options = context.getWriteOptions();
             boolean allowNanInfinity = options.isAllowNanAndInfinity() || options.isJson5InfinityNaN();
@@ -201,6 +217,7 @@ public class Writers {
         }
 
         public void writePrimitiveForm(Object o, Writer output, WriterContext writerContext) throws IOException {
+            if (writerContext != null && writeWithStringFormat(o, output, writerContext)) { return; }
             WriteOptions options = writerContext != null ? writerContext.getWriteOptions() : null;
             JsonWriter.writeJson5String(output, extractString(o), options);
         }
@@ -294,6 +311,7 @@ public class Writers {
 
     public static class DateAsLongWriter extends DateWriter {
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, output, context)) { return; }
             String pat = context.getFieldFormatPattern();
             if (pat != null) {
                 SimpleDateFormat sdf = new SimpleDateFormat(pat);
@@ -323,6 +341,7 @@ public class Writers {
         }
 
         public void writePrimitiveForm(Object o, Writer output, WriterContext writerContext) throws IOException {
+            if (writeWithStringFormat(o, output, writerContext)) { return; }
             if (writeWithFieldFormat(o, output, writerContext)) { return; }
             LocalDate localDate = (LocalDate) o;
             ZonedDateTime zonedDateTime = localDate.atStartOfDay(zoneId);
@@ -346,6 +365,7 @@ public class Writers {
         }
 
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, output, context)) { return; }
             if (writeWithFieldFormat(o, output, context)) { return; }
             LocalDate ld = (LocalDate) o;
             JsonWriter.writeJsonUtf8String(output, ld == null ? null : FORMATTER.format(ld));
@@ -362,6 +382,7 @@ public class Writers {
         }
 
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, output, context)) { return; }
             if (writeWithFieldFormat(o, output, context)) { return; }
             LocalTime lt = (LocalTime) o;
             JsonWriter.writeJsonUtf8String(output, lt == null ? null : FORMATTER.format(lt));
@@ -378,6 +399,7 @@ public class Writers {
         }
 
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, output, context)) { return; }
             if (writeWithFieldFormat(o, output, context)) { return; }
             LocalDateTime ldt = (LocalDateTime) o;
             JsonWriter.writeJsonUtf8String(output, ldt == null ? null : FORMATTER.format(ldt));
@@ -397,6 +419,7 @@ public class Writers {
         }
 
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, output, context)) { return; }
             if (writeWithFieldFormat(o, output, context)) { return; }
             ZonedDateTime zdt = (ZonedDateTime) o;
             if (zdt == null) {
@@ -449,6 +472,7 @@ public class Writers {
         }
 
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, output, context)) { return; }
             if (writeWithFieldFormat(o, output, context)) { return; }
             OffsetTime ot = (OffsetTime) o;
             JsonWriter.writeJsonUtf8String(output, ot == null ? null : FORMATTER.format(ot));
@@ -465,6 +489,7 @@ public class Writers {
         }
 
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, output, context)) { return; }
             if (writeWithFieldFormat(o, output, context)) { return; }
             OffsetDateTime odt = (OffsetDateTime) o;
             JsonWriter.writeJsonUtf8String(output, odt == null ? null : FORMATTER.format(odt));
@@ -477,6 +502,7 @@ public class Writers {
         }
 
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, output, context)) { return; }
             String pat = context.getFieldFormatPattern();
             if (pat != null) {
                 DateTimeFormatter fmt = getFormatter(pat).withZone(ZoneOffset.UTC);
@@ -555,6 +581,7 @@ public class Writers {
 
     public static class BigIntegerWriter extends PrimitiveTypeWriter {
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, output, context)) { return; }
             if (writeNumericWithFieldFormat(o, output, context)) { return; }
             BigInteger big = (BigInteger) o;
             JsonWriter.writeBasicString(output, big.toString(10));
@@ -577,6 +604,7 @@ public class Writers {
 
     public static class BigDecimalWriter extends PrimitiveTypeWriter {
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, output, context)) { return; }
             if (writeNumericWithFieldFormat(o, output, context)) { return; }
             BigDecimal big = (BigDecimal) o;
             JsonWriter.writeBasicString(output, big.toPlainString());

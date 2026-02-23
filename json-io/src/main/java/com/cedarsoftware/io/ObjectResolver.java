@@ -1320,6 +1320,20 @@ public class ObjectResolver extends Resolver
         }
 
         try {
+            // C-style String.format patterns — detected by '%' in pattern
+            if (pattern.indexOf('%') >= 0) {
+                // String fields — the formatted value IS the value
+                if (targetType == String.class) {
+                    return value;
+                }
+                // Numeric fields — parse the formatted string back to the target type
+                if (Number.class.isAssignableFrom(targetType) || isNumericPrimitive(targetType)) {
+                    return parseFormattedNumber(value, targetType, pattern);
+                }
+                // Other types — fall through to normal Converter path
+                return null;
+            }
+
             // Date/time types — DateTimeFormatter / SimpleDateFormat
             if (targetType == LocalDate.class || targetType == LocalDateTime.class ||
                     targetType == LocalTime.class || targetType == ZonedDateTime.class ||
@@ -1367,6 +1381,36 @@ public class ObjectResolver extends Resolver
         } catch (Exception e) {
             // If format parsing fails, fall through to normal converter path
         }
+        return null;
+    }
+
+    /**
+     * Parse a formatted number string back to its target numeric type.
+     * Handles C-style String.format() patterns including hex (%x/%X) and decimal formats (%d, %f, etc.).
+     */
+    private static Object parseFormattedNumber(String value, Class<?> targetType, String pattern) throws Exception {
+        // Detect hex format (%x, %X)
+        if (pattern.contains("%x") || pattern.contains("%X") ||
+                pattern.contains("%-x") || pattern.contains("%-X")) {
+            long hexVal = Long.parseUnsignedLong(value.trim(), 16);
+            if (targetType == int.class || targetType == Integer.class) { return (int) hexVal; }
+            if (targetType == long.class || targetType == Long.class) { return hexVal; }
+            if (targetType == BigInteger.class) { return new BigInteger(value.trim(), 16); }
+            return hexVal;
+        }
+        // For decimal formats (%d, %f, %e, %g, etc.), strip non-numeric chars except digits, '.', '-', 'E', 'e', '+'
+        String cleaned = value.replaceAll("[^\\d.eE\\-+]", "");
+        if (cleaned.isEmpty()) { return null; }
+        if (targetType == int.class || targetType == Integer.class) { return Integer.parseInt(cleaned); }
+        if (targetType == long.class || targetType == Long.class) { return Long.parseLong(cleaned); }
+        if (targetType == double.class || targetType == Double.class) { return Double.parseDouble(cleaned); }
+        if (targetType == float.class || targetType == Float.class) { return Float.parseFloat(cleaned); }
+        if (targetType == short.class || targetType == Short.class) { return Short.parseShort(cleaned); }
+        if (targetType == byte.class || targetType == Byte.class) { return Byte.parseByte(cleaned); }
+        if (targetType == BigDecimal.class) { return new BigDecimal(cleaned); }
+        if (targetType == BigInteger.class) { return new BigInteger(cleaned); }
+        if (AtomicInteger.class.isAssignableFrom(targetType)) { return new AtomicInteger(Integer.parseInt(cleaned)); }
+        if (AtomicLong.class.isAssignableFrom(targetType)) { return new AtomicLong(Long.parseLong(cleaned)); }
         return null;
     }
 

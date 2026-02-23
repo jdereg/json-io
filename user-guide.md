@@ -1045,43 +1045,91 @@ public class SensorReading {
 **Note:** Programmatic `aliasTypeName()` takes priority over the annotation. The alias is registered in a reverse lookup map when the class is first scanned, allowing deserialization to resolve the alias back to the class.
 
 #### `@IoFormat("pattern")` — Per-Field Format Pattern
-Specifies a custom format pattern for date/time or numeric fields during serialization and deserialization. Instead of the default format, the field will be written and read using the given pattern. Equivalent to Jackson's `@JsonFormat(pattern="...")`.
+Specifies a custom format pattern for fields during serialization and deserialization. The pattern engine is auto-detected based on the pattern string and the field's type. Equivalent to Jackson's `@JsonFormat(pattern="...")`.
 
-**Supported date/time types:** `LocalDate`, `LocalTime`, `LocalDateTime`, `ZonedDateTime`, `OffsetDateTime`, `OffsetTime`, `Instant`, `java.util.Date`.
+**Date/time patterns — which formatter is used depends on the field type:**
 
-**Supported numeric types:** `int`, `long`, `double`, `float`, `short`, `byte` (and wrappers), `BigDecimal`, `BigInteger`, `AtomicInteger`, `AtomicLong`.
+| Field Type | Pattern Engine | Pattern Syntax |
+|---|---|---|
+| `LocalDate`, `LocalTime`, `LocalDateTime`, `ZonedDateTime`, `OffsetDateTime`, `OffsetTime`, `Instant` | `java.time.format.DateTimeFormatter` | `"yyyy-MM-dd"`, `"dd/MM/yyyy HH:mm"`, etc. |
+| `java.util.Date`, `java.sql.Date`, `java.sql.Timestamp` | `java.text.SimpleDateFormat` | `"MM/dd/yyyy"`, `"yyyy-MM-dd HH:mm:ss"`, etc. |
+
+> **Note:** `DateTimeFormatter` and `SimpleDateFormat` use similar but not identical pattern letters. For example, `DateTimeFormatter` uses `uuuu` for year (though `yyyy` also works for common era dates), while `SimpleDateFormat` uses `yyyy`. Consult the Javadoc for each formatter when writing patterns.
 
 ```java
 public class Event {
     @IoFormat("dd/MM/yyyy")
-    private LocalDate eventDate;     // Serializes as "23/02/2026" instead of "2026-02-23"
+    private LocalDate eventDate;     // DateTimeFormatter — "23/02/2026"
 
     @IoFormat("yyyy-MM-dd HH:mm")
-    private LocalDateTime startTime; // Serializes as "2026-02-23 14:30" instead of ISO
+    private LocalDateTime startTime; // DateTimeFormatter — "2026-02-23 14:30"
 
     @IoFormat("MM/dd/yyyy")
-    private Date legacyDate;         // Serializes as "02/23/2026" instead of epoch millis
+    private Date legacyDate;         // SimpleDateFormat — "02/23/2026"
 
     private LocalDate plain;         // Uses default ISO format (no annotation)
 }
 ```
 
+**Numeric patterns — two engines available, distinguished by the `%` character:**
+
+| Pattern Style | Detection | Engine | Example Patterns |
+|---|---|---|---|
+| C-style | Pattern contains `%` | `String.format()` | `"%,d"`, `"%.2f"`, `"%05d"`, `"%x"` |
+| Java-style | Pattern does NOT contain `%` | `java.text.DecimalFormat` | `"#,###"`, `"$#,##0.00"`, `"0.00"` |
+
+Both engines support: `int`, `long`, `double`, `float`, `short`, `byte` (and wrappers), `BigDecimal`, `BigInteger`, `AtomicInteger`, `AtomicLong`.
+
+> **Tip:** The `%` character is the trigger. If your pattern contains `%`, `String.format()` is used. Otherwise, `DecimalFormat` is used. Use `String.format()` patterns for hex output (`%x`), zero-padding (`%05d`), or scientific notation (`%e`). Use `DecimalFormat` patterns for currency (`$#,##0.00`), percentage with DecimalFormat semantics, or locale-sensitive grouping.
+
 ```java
 public class Invoice {
+    // DecimalFormat patterns (no % character)
     @IoFormat("#,###")
-    private int quantity;            // Serializes as "1,234" instead of 1234
+    private int quantity;            // DecimalFormat — "1,234"
 
     @IoFormat("$#,##0.00")
-    private BigDecimal total;        // Serializes as "$1,234.56" instead of "1234.56"
+    private BigDecimal total;        // DecimalFormat — "$1,234.56"
 
     @IoFormat("0.00")
-    private double rate;             // Serializes as "3.14" instead of 3.14159
+    private double rate;             // DecimalFormat — "3.14"
 
-    private int plain;               // Uses default unquoted JSON number
+    private int plain;               // No annotation — default unquoted JSON number
 }
 ```
 
-Date/time patterns follow `java.time.format.DateTimeFormatter` syntax (or `java.text.SimpleDateFormat` for `java.util.Date`). Numeric patterns follow `java.text.DecimalFormat` syntax. Formatted values are written as JSON strings and parsed back correctly on read.
+```java
+public class Report {
+    // String.format() patterns (contain % character)
+    @IoFormat("%,d")
+    private int population;          // String.format — "1,234,567"
+
+    @IoFormat("%.2f")
+    private double price;            // String.format — "3.14"
+
+    @IoFormat("%05d")
+    private int code;                // String.format — "00042"
+
+    @IoFormat("%x")
+    private int color;               // String.format — "ff"
+}
+```
+
+**String patterns — `String.format()` only:**
+
+`String.format()` patterns also work on `String` fields for padding and alignment:
+
+```java
+public class Label {
+    @IoFormat("%10s")
+    private String name;             // String.format — "        hi" (right-aligned)
+
+    @IoFormat("%-10s")
+    private String code;             // String.format — "hi        " (left-aligned)
+}
+```
+
+All formatted values are written as **quoted JSON strings** and parsed back correctly on read. Round-trip precision depends on the pattern — for example, `"%.2f"` on `3.14159` writes `"3.14"` and reads back as `3.14`.
 
 ### Combining Annotations
 
@@ -1130,7 +1178,7 @@ If your classes already use Jackson annotations, json-io will honor them automat
 | `@JsonGetter("fieldName")` | `@IoGetter("fieldName")` | Custom getter method for serialization |
 | `@JsonSetter("fieldName")` | `@IoSetter("fieldName")` | Custom setter method for deserialization |
 | `@JsonTypeName("ShortName")` | `@IoTypeName("ShortName")` | Type alias for `@type` in JSON |
-| `@JsonFormat(pattern="...")` | `@IoFormat("pattern")` | Per-field date/time or numeric format pattern |
+| `@JsonFormat(pattern="...")` | `@IoFormat("pattern")` | Per-field format pattern (`String.format`, `DecimalFormat`, `DateTimeFormatter`, or `SimpleDateFormat`) |
 
 Jackson's `jackson-annotations` JAR (~75KB) is commonly already on the classpath in Spring applications. json-io detects annotations via `Class.forName()` at startup — there is no compile-time dependency. Some annotations (`@JsonNaming`, `@JsonDeserialize`) live in `jackson-databind` and are detected independently.
 
