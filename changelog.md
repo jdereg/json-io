@@ -1,6 +1,7 @@
 ### Revision History
 
 #### 4.95.0 (Unreleased)
+* **IMPROVEMENT**: `AnnotationResolver` now uses `ClassUtilities.forName()` instead of `Class.forName()` for external annotation detection, ensuring proper classloader resolution in OSGi and JPMS environments.
 * **FEATURE**: ToonWriter now uses the same `WriteFieldPlan` / `Accessor` abstraction as JsonWriter. This gives TOON serialization automatic support for `@IoGetter`, `@IoFormat`, `@IoAnyGetter`, and all other write-side annotations. Previously ToonWriter used direct `Field.get()` which bypassed custom getter methods and format patterns.
 * **PERFORMANCE**: `Accessor.retrieve()` now uses sticky fallback flags for lambda/VarHandle/MethodHandle paths; once an optimized path fails, it is bypassed on subsequent calls instead of repeatedly throwing/falling back.
 * **FEATURE**: `AnnotationResolver` — annotation-based serialization control. json-io now supports 25 annotations in `com.cedarsoftware.io.annotation`:

@@ -15,6 +15,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.cedarsoftware.io.ClassFactory;
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.io.JsonClassReader;
 import com.cedarsoftware.io.JsonClassWriter;
 import com.cedarsoftware.io.annotation.IoAlias;
@@ -55,9 +56,9 @@ import com.cedarsoftware.util.ReflectionUtils;
  *       checked via reflection only if native annotation is absent on the same element</li>
  * </ol>
  * <p>
- * External annotations are detected lazily via {@code Class.forName()} with no compile-time
- * dependency. If the external annotation library is not on the classpath, detection is silently
- * skipped with zero overhead.
+ * External annotations are detected lazily via {@code ClassUtilities.forName()} with no compile-time
+ * dependency, supporting OSGi and JPMS classloader resolution. If the external annotation library
+ * is not on the classpath, detection is silently skipped with zero overhead.
  * <p>
  * Results are cached in a static {@link ClassValueMap} — each class is scanned exactly once
  * per JVM lifetime. Annotation metadata is intrinsic to classes and does not depend on
@@ -168,24 +169,30 @@ public class AnnotationResolver {
         Method extTypeInfoDefaultImpl = null;
         Method extFormatPattern = null;
 
+        ClassLoader classLoader = ClassUtilities.getClassLoader(AnnotationResolver.class);
         try {
-            extCreator = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonCreator");
-            extValue = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonValue");
-            extProperty = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonProperty");
-            extIgnore = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonIgnore");
-            extIgnoreProperties = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonIgnoreProperties");
-            extAlias = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonAlias");
-            extPropertyOrder = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonPropertyOrder");
-            extInclude = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonInclude");
-            extIncludeProperties = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonIncludeProperties");
-            extIgnoreType = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonIgnoreType");
-            extTypeInfo = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonTypeInfo");
-            extGetter = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonGetter");
-            extSetter = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonSetter");
-            extTypeName = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonTypeName");
-            extFormat = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonFormat");
-            extAnySetter = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonAnySetter");
-            extAnyGetter = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.annotation.JsonAnyGetter");
+            extCreator = (Class<? extends Annotation>) ClassUtilities.forName("com.fasterxml.jackson.annotation.JsonCreator", classLoader);
+            extValue = (Class<? extends Annotation>) ClassUtilities.forName("com.fasterxml.jackson.annotation.JsonValue", classLoader);
+            extProperty = (Class<? extends Annotation>) ClassUtilities.forName("com.fasterxml.jackson.annotation.JsonProperty", classLoader);
+            extIgnore = (Class<? extends Annotation>) ClassUtilities.forName("com.fasterxml.jackson.annotation.JsonIgnore", classLoader);
+            extIgnoreProperties = (Class<? extends Annotation>) ClassUtilities.forName("com.fasterxml.jackson.annotation.JsonIgnoreProperties", classLoader);
+            extAlias = (Class<? extends Annotation>) ClassUtilities.forName("com.fasterxml.jackson.annotation.JsonAlias", classLoader);
+            extPropertyOrder = (Class<? extends Annotation>) ClassUtilities.forName("com.fasterxml.jackson.annotation.JsonPropertyOrder", classLoader);
+            extInclude = (Class<? extends Annotation>) ClassUtilities.forName("com.fasterxml.jackson.annotation.JsonInclude", classLoader);
+            extIncludeProperties = (Class<? extends Annotation>) ClassUtilities.forName("com.fasterxml.jackson.annotation.JsonIncludeProperties", classLoader);
+            extIgnoreType = (Class<? extends Annotation>) ClassUtilities.forName("com.fasterxml.jackson.annotation.JsonIgnoreType", classLoader);
+            extTypeInfo = (Class<? extends Annotation>) ClassUtilities.forName("com.fasterxml.jackson.annotation.JsonTypeInfo", classLoader);
+            extGetter = (Class<? extends Annotation>) ClassUtilities.forName("com.fasterxml.jackson.annotation.JsonGetter", classLoader);
+            extSetter = (Class<? extends Annotation>) ClassUtilities.forName("com.fasterxml.jackson.annotation.JsonSetter", classLoader);
+            extTypeName = (Class<? extends Annotation>) ClassUtilities.forName("com.fasterxml.jackson.annotation.JsonTypeName", classLoader);
+            extFormat = (Class<? extends Annotation>) ClassUtilities.forName("com.fasterxml.jackson.annotation.JsonFormat", classLoader);
+            extAnySetter = (Class<? extends Annotation>) ClassUtilities.forName("com.fasterxml.jackson.annotation.JsonAnySetter", classLoader);
+            extAnyGetter = (Class<? extends Annotation>) ClassUtilities.forName("com.fasterxml.jackson.annotation.JsonAnyGetter", classLoader);
+
+            // If any core annotation class was not found, Jackson annotations are not available
+            if (extCreator == null || extProperty == null || extIgnore == null) {
+                throw new ClassNotFoundException("Jackson annotations not on classpath");
+            }
 
             extGetterValue = extGetter.getMethod("value");
             extSetterValue = extSetter.getMethod("value");
@@ -200,11 +207,13 @@ public class AnnotationResolver {
             extIncludeValue = extInclude.getMethod("value");
 
             // Resolve the NON_NULL enum constant from JsonInclude.Include
-            Class<?> includeEnum = Class.forName("com.fasterxml.jackson.annotation.JsonInclude$Include");
-            for (Object enumConst : includeEnum.getEnumConstants()) {
-                if ("NON_NULL".equals(((Enum<?>) enumConst).name())) {
-                    extIncludeNonNull = enumConst;
-                    break;
+            Class<?> includeEnum = ClassUtilities.forName("com.fasterxml.jackson.annotation.JsonInclude$Include", classLoader);
+            if (includeEnum != null) {
+                for (Object enumConst : includeEnum.getEnumConstants()) {
+                    if ("NON_NULL".equals(((Enum<?>) enumConst).name())) {
+                        extIncludeNonNull = enumConst;
+                        break;
+                    }
                 }
             }
 
@@ -249,7 +258,10 @@ public class AnnotationResolver {
         Class<? extends Annotation> extNaming = null;
         Method extNamingValue = null;
         try {
-            extNaming = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.databind.annotation.JsonNaming");
+            extNaming = (Class<? extends Annotation>) ClassUtilities.forName("com.fasterxml.jackson.databind.annotation.JsonNaming", classLoader);
+            if (extNaming == null) {
+                throw new ClassNotFoundException("jackson-databind not on classpath");
+            }
             extNamingValue = extNaming.getMethod("value");
             namingAvail = true;
         } catch (Throwable t) {
@@ -264,7 +276,10 @@ public class AnnotationResolver {
         Class<? extends Annotation> extDeserialize = null;
         Method extDeserializeAs = null;
         try {
-            extDeserialize = (Class<? extends Annotation>) Class.forName("com.fasterxml.jackson.databind.annotation.JsonDeserialize");
+            extDeserialize = (Class<? extends Annotation>) ClassUtilities.forName("com.fasterxml.jackson.databind.annotation.JsonDeserialize", classLoader);
+            if (extDeserialize == null) {
+                throw new ClassNotFoundException("jackson-databind not on classpath");
+            }
             extDeserializeAs = extDeserialize.getMethod("as");
             deserAvail = true;
         } catch (Throwable t) {
