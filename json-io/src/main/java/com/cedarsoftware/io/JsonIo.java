@@ -474,6 +474,9 @@ public class JsonIo {
      * @see <a href="https://toonformat.dev/">TOON Format Specification</a>
      */
     public static String toToon(Object srcObject, WriteOptions writeOptions) {
+        if (writeOptions == null) {
+            writeOptions = new WriteOptionsBuilder().showTypeInfoNever().build();
+        }
         FastByteArrayOutputStream out = new FastByteArrayOutputStream(8192);
         try (ToonWriter writer = new ToonWriter(out, writeOptions)) {
             writer.write(srcObject);
@@ -503,7 +506,7 @@ public class JsonIo {
     public static void toToon(OutputStream out, Object source, WriteOptions writeOptions) {
         Convention.throwIfNull(out, "OutputStream cannot be null");
         if (writeOptions == null) {
-            writeOptions = WriteOptionsBuilder.getDefaultWriteOptions();
+            writeOptions = new WriteOptionsBuilder().showTypeInfoNever().build();
         }
         ToonWriter writer = null;
         try {
@@ -1327,11 +1330,13 @@ public class JsonIo {
          */
         public <T> T asType(TypeHolder<T> typeHolder) {
             StringReader stringReader = new StringReader(toon);
-            ToonReader parser = new ToonReader(stringReader, readOptions);
             return parseAndResolve(
                     readOptions,
                     typeHolder.getType(),
-                    resolver -> parser.readValue(typeHolder.getType()),
+                    resolver -> {
+                        ToonReader parser = new ToonReader(stringReader, readOptions, resolver.getReferences());
+                        return parser.readValue(typeHolder.getType());
+                    },
                     "Error parsing TOON value",
                     null);
         }
@@ -1375,11 +1380,13 @@ public class JsonIo {
          */
         public <T> T asType(TypeHolder<T> typeHolder) {
             InputStreamReader streamReader = new InputStreamReader(in, StandardCharsets.UTF_8);
-            ToonReader parser = new ToonReader(streamReader, readOptions);
             return parseAndResolve(
                     readOptions,
                     typeHolder.getType(),
-                    resolver -> parser.readValue(typeHolder.getType()),
+                    resolver -> {
+                        ToonReader parser = new ToonReader(streamReader, readOptions, resolver.getReferences());
+                        return parser.readValue(typeHolder.getType());
+                    },
                     "Error parsing TOON value",
                     streamReader);
         }

@@ -2,6 +2,7 @@ package com.cedarsoftware.io;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
@@ -336,10 +337,23 @@ public class ObjectResolver extends Resolver
     private void assignField(final JsonObject jsonObj, final Injector injector, final Object rhs) {
         final Object target = jsonObj.getTarget();
         final Type fieldType = injector.getGenericType();
+        Type effectiveFieldType = fieldType;
+
+        // Resolve @IoDeserialize > @IoTypeInfo field-level type overrides once for this assignment.
+        AnnotationResolver.ClassAnnotationMetadata parentMeta = AnnotationResolver.getMetadata(target.getClass());
+        Class<?> deserializeAs = parentMeta.getFieldDeserializeOverride(injector.getName());
+        if (deserializeAs != null) {
+            effectiveFieldType = deserializeAs;
+        } else {
+            Class<?> typeInfoDefault = parentMeta.getFieldTypeInfoDefault(injector.getName());
+            if (typeInfoDefault != null) {
+                effectiveFieldType = typeInfoDefault;
+            }
+        }
 
         // 1. NULL - fastest check
         if (rhs == null) {
-            Class<?> rawType = TypeUtilities.getRawClass(fieldType);
+            Class<?> rawType = TypeUtilities.getRawClass(effectiveFieldType);
             injector.inject(target, rawType.isPrimitive() ? converter.convert(null, rawType) : null);
             return;
         }
@@ -361,9 +375,22 @@ public class ObjectResolver extends Resolver
 
         // Scalar values (not JsonObject, not Object[]) - try direct assign or converter
         if (!(rhs instanceof JsonObject) && !(rhs instanceof Object[])) {
-            final Class<?> rawType = TypeUtilities.getRawClass(fieldType);
+            final Class<?> rawType = TypeUtilities.getRawClass(effectiveFieldType);
             final Class<?> rhsClass = rhs.getClass();
             if (rawType != null) {
+                // Collection values from TOON list notation should flow through array/collection traversal so
+                // nested JsonObject elements are materialized with field/annotation type hints.
+                if (rhs instanceof Collection
+                        && (rawType.isArray() || Collection.class.isAssignableFrom(rawType))) {
+                    assignArrayField(jsonObj, injector, ((Collection<?>) rhs).toArray(), effectiveFieldType, target);
+                    return;
+                }
+                // Complex-key map entries can be parsed as List<entry>. Route through Resolver.toJava(...)
+                // so generic key/value targets are materialized correctly.
+                if (rhs instanceof Collection && Map.class.isAssignableFrom(rawType)) {
+                    injector.inject(target, toJava(effectiveFieldType, rhs));
+                    return;
+                }
                 // 3. DIRECT ASSIGN - already correct type
                 if (rawType.isAssignableFrom(rhsClass)) {
                     injector.inject(target, rhs);
@@ -392,6 +419,11 @@ public class ObjectResolver extends Resolver
                     injector.inject(target, converter.convert(rhs, rawType));
                     return;
                 }
+                // 4b. CONVERTER - container and general conversions when annotation/type override adjusted target type
+                if (converter.isConversionSupportedFor(rhsClass, rawType)) {
+                    injector.inject(target, converter.convert(rhs, rawType));
+                    return;
+                }
             }
             // 7. FALLBACK for scalars - empty string to null, or direct inject
             if (rhs instanceof String && StringUtilities.isEmpty((String) rhs) && rawType != String.class) {
@@ -404,18 +436,6 @@ public class ObjectResolver extends Resolver
 
         // 5. ARRAY - Object[] RHS
         if (rhs instanceof Object[]) {
-            // Check @IoDeserialize > @IoTypeInfo to override the field type for array/collection creation
-            Type effectiveFieldType = fieldType;
-            AnnotationResolver.ClassAnnotationMetadata parentMeta = AnnotationResolver.getMetadata(target.getClass());
-            Class<?> deserializeAs = parentMeta.getFieldDeserializeOverride(injector.getName());
-            if (deserializeAs != null) {
-                effectiveFieldType = deserializeAs;
-            } else {
-                Class<?> typeInfoDefault = parentMeta.getFieldTypeInfoDefault(injector.getName());
-                if (typeInfoDefault != null) {
-                    effectiveFieldType = typeInfoDefault;
-                }
-            }
             assignArrayField(jsonObj, injector, (Object[]) rhs, effectiveFieldType, target);
             return;
         }
@@ -683,8 +703,8 @@ public class ObjectResolver extends Resolver
             return;
         }
 
-        // Extract key/value types - first check for stored value type (preserved before createInstance
-        // changed the type to a raw Class), then fall back to extracting from ParameterizedType.
+        // Extract key/value types - first check for stored key/value types (preserved before createInstance
+        // changed the type to a raw Class), then fall back to extracting from declared map type metadata.
         Type keyType = jsonObj.getMapKeyType();
         if (keyType == null) {
             keyType = Object.class;
@@ -698,6 +718,16 @@ public class ObjectResolver extends Resolver
             }
             if (valueType == null && typeArgs.length >= 2) {
                 valueType = typeArgs[1];
+            }
+        } else if (mapType instanceof Class) {
+            Type[] typeArgs = extractMapTypesFromGenericSuperclass((Class<?>) mapType);
+            if (typeArgs != null) {
+                if (shouldRefineFromMapClass(keyType)) {
+                    keyType = typeArgs[0];
+                }
+                if (shouldRefineFromMapClass(valueType)) {
+                    valueType = typeArgs[1];
+                }
             }
         }
         if (valueType == null) {
@@ -1063,6 +1093,50 @@ public class ObjectResolver extends Resolver
         }
 
         return null;
+    }
+
+    /**
+     * Extract key and value types from a class that extends a generic Map.
+     * For example, if UserMap extends LinkedHashMap&lt;User, Address&gt;, this returns
+     * [User.class, Address.class]. Returns null if either type is unresolved.
+     */
+    private Type[] extractMapTypesFromGenericSuperclass(Class<?> clazz) {
+        if (clazz == null || !Map.class.isAssignableFrom(clazz)) {
+            return null;
+        }
+
+        Class<?> current = clazz;
+        while (current != null && current != Object.class) {
+            Type genericSuper = current.getGenericSuperclass();
+            if (genericSuper instanceof ParameterizedType) {
+                ParameterizedType pt = (ParameterizedType) genericSuper;
+                Class<?> rawSuper = TypeUtilities.getRawClass(pt);
+                if (rawSuper != null && Map.class.isAssignableFrom(rawSuper)) {
+                    Type[] typeArgs = pt.getActualTypeArguments();
+                    if (typeArgs.length >= 2
+                            && !TypeUtilities.hasUnresolvedType(typeArgs[0])
+                            && !TypeUtilities.hasUnresolvedType(typeArgs[1])) {
+                        return new Type[]{typeArgs[0], typeArgs[1]};
+                    }
+                }
+            }
+            current = current.getSuperclass();
+        }
+        return null;
+    }
+
+    private boolean shouldRefineFromMapClass(Type currentType) {
+        if (currentType == null) {
+            return true;
+        }
+        if (TypeUtilities.hasUnresolvedType(currentType)) {
+            return true;
+        }
+        Class<?> rawClass = TypeUtilities.getRawClass(currentType);
+        return rawClass == null
+                || rawClass == Object.class
+                || rawClass.isInterface()
+                || Modifier.isAbstract(rawClass.getModifiers());
     }
 
     /**

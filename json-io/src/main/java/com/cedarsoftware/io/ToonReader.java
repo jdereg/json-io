@@ -5,8 +5,12 @@ import java.io.IOException;
 import java.io.Reader;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
+import com.cedarsoftware.util.ArrayUtilities;
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.MathUtilities;
 
 /**
@@ -48,6 +52,8 @@ public class ToonReader {
 
     private final BufferedReader reader;
     private final ReadOptions readOptions;
+    private final ReferenceTracker references;
+    private final long maxIdValue;
 
     // Line management - supports peek/consume pattern
     private String currentLine = null;
@@ -61,8 +67,21 @@ public class ToonReader {
      * @param readOptions configuration options (may be null for defaults)
      */
     public ToonReader(Reader reader, ReadOptions readOptions) {
+        this(reader, readOptions, null);
+    }
+
+    /**
+     * Create a ToonReader that reads from a Reader and tracks @id/@ref metadata.
+     *
+     * @param reader the reader to read TOON content from
+     * @param readOptions configuration options (may be null for defaults)
+     * @param references reference tracker used during resolution (may be null)
+     */
+    public ToonReader(Reader reader, ReadOptions readOptions, ReferenceTracker references) {
         this.reader = reader instanceof BufferedReader ? (BufferedReader) reader : new BufferedReader(reader);
         this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
+        this.references = references;
+        this.maxIdValue = this.readOptions.getMaxIdValue();
     }
 
     private boolean isStrictToon() {
@@ -1022,6 +1041,14 @@ public class ToonReader {
      * If wasQuoted is true, the key is treated as a literal (no expansion).
      */
     private void putValue(JsonObject target, String key, Object value, boolean wasQuoted) {
+        if (!wasQuoted) {
+            String canonicalMetaKey = canonicalMetaKey(key);
+            if (canonicalMetaKey != null) {
+                loadMetaField(target, canonicalMetaKey, value);
+                return;
+            }
+        }
+
         if (wasQuoted || !isFoldedKey(key)) {
             Object existing = target.get(key);
             if (isStrictToon() && existing != null) {
@@ -1035,6 +1062,151 @@ public class ToonReader {
         } else {
             putWithKeyExpansion(target, key, value);
         }
+    }
+
+    private String canonicalMetaKey(String key) {
+        if (JsonValue.ID.equals(key)
+                || JsonValue.SHORT_ID.equals(key)
+                || JsonValue.JSON5_ID.equals(key)
+                || JsonValue.JSON5_SHORT_ID.equals(key)) {
+            return JsonValue.ID;
+        }
+        if (JsonValue.REF.equals(key)
+                || JsonValue.SHORT_REF.equals(key)
+                || JsonValue.JSON5_REF.equals(key)
+                || JsonValue.JSON5_SHORT_REF.equals(key)) {
+            return JsonValue.REF;
+        }
+        if (JsonValue.ITEMS.equals(key)
+                || JsonValue.SHORT_ITEMS.equals(key)
+                || JsonValue.JSON5_ITEMS.equals(key)
+                || JsonValue.JSON5_SHORT_ITEMS.equals(key)) {
+            return JsonValue.ITEMS;
+        }
+        if (JsonValue.KEYS.equals(key)
+                || JsonValue.SHORT_KEYS.equals(key)
+                || JsonValue.JSON5_KEYS.equals(key)
+                || JsonValue.JSON5_SHORT_KEYS.equals(key)) {
+            return JsonValue.KEYS;
+        }
+        if (JsonValue.TYPE.equals(key)
+                || JsonValue.SHORT_TYPE.equals(key)
+                || JsonValue.JSON5_TYPE.equals(key)
+                || JsonValue.JSON5_SHORT_TYPE.equals(key)) {
+            return JsonValue.TYPE;
+        }
+        if (JsonValue.ENUM.equals(key)) {
+            return JsonValue.ENUM;
+        }
+        return null;
+    }
+
+    private void loadMetaField(JsonObject target, String metaKey, Object value) {
+        if (JsonValue.TYPE.equals(metaKey)) {
+            loadType(value, target);
+        } else if (JsonValue.ID.equals(metaKey)) {
+            loadId(value, target);
+        } else if (JsonValue.REF.equals(metaKey)) {
+            loadRef(value, target);
+        } else if (JsonValue.ITEMS.equals(metaKey)) {
+            loadItems(value, target);
+        } else if (JsonValue.KEYS.equals(metaKey)) {
+            loadKeys(value, target);
+        } else if (JsonValue.ENUM.equals(metaKey)) {
+            loadEnum(value, target);
+        }
+    }
+
+    private void loadType(Object value, JsonObject target) {
+        if (!(value instanceof String)) {
+            throw new JsonIoException("Expected a String for " + JsonValue.TYPE + " at line " + lineNumber);
+        }
+
+        String typeName = (String) value;
+        target.setTypeString(typeName);
+
+        String resolvedName = readOptions.getTypeNameAlias(typeName);
+        if (resolvedName == null) {
+            resolvedName = typeName;
+        }
+
+        Class<?> typeClass = ClassUtilities.forName(resolvedName, readOptions.getClassLoader());
+        if (typeClass == null) {
+            if (readOptions.isFailOnUnknownType()) {
+                throw new JsonIoException("Unknown type (class) '" + typeName + "' at line " + lineNumber);
+            }
+            typeClass = readOptions.getUnknownTypeClass();
+            if (typeClass == null) {
+                typeClass = LinkedHashMap.class;
+            }
+        }
+        target.setType(typeClass);
+    }
+
+    private void loadId(Object value, JsonObject target) {
+        if (!(value instanceof Number)) {
+            throw new JsonIoException("Expected a number for " + JsonValue.ID + " at line " + lineNumber);
+        }
+        long id = ((Number) value).longValue();
+        if (id < -maxIdValue || id > maxIdValue) {
+            throw new JsonIoException("ID value out of safe range at line " + lineNumber + ": " + id);
+        }
+        target.setId(id);
+        if (references != null) {
+            references.put(id, target);
+        }
+    }
+
+    private void loadRef(Object value, JsonObject target) {
+        if (!(value instanceof Number)) {
+            throw new JsonIoException("Expected a number for " + JsonValue.REF + " at line " + lineNumber);
+        }
+        long refId = ((Number) value).longValue();
+        if (refId < -maxIdValue || refId > maxIdValue) {
+            throw new JsonIoException("Reference ID value out of safe range at line " + lineNumber + ": " + refId);
+        }
+        target.setReferenceId(refId);
+    }
+
+    private void loadItems(Object value, JsonObject target) {
+        Object[] items = toObjectArray(value, JsonValue.ITEMS);
+        if (items != null) {
+            target.setItems(items);
+        }
+    }
+
+    private void loadKeys(Object value, JsonObject target) {
+        Object[] keys = toObjectArray(value, JsonValue.KEYS);
+        if (keys != null) {
+            target.setKeys(keys);
+        }
+    }
+
+    private void loadEnum(Object value, JsonObject target) {
+        if (!(value instanceof String)) {
+            throw new JsonIoException("Expected a String for " + JsonValue.ENUM + " at line " + lineNumber);
+        }
+        loadType(value, target);
+        if (target.getItems() == null) {
+            target.setItems(ArrayUtilities.EMPTY_OBJECT_ARRAY);
+        }
+    }
+
+    private Object[] toObjectArray(Object value, String metaKey) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof List) {
+            return ((List<?>) value).toArray();
+        }
+        if (value instanceof Object[]) {
+            return (Object[]) value;
+        }
+        if (value.getClass().isArray()) {
+            throw new JsonIoException("Expected object array for " + metaKey + " at line " + lineNumber
+                    + " but found primitive array type: " + value.getClass().getName());
+        }
+        throw new JsonIoException("Expected array value for " + metaKey + " at line " + lineNumber);
     }
 
     /**

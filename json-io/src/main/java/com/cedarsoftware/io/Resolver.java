@@ -396,32 +396,40 @@ public abstract class Resolver {
 
         // Primitives (String, Boolean, Number, etc.) - not JsonObjects or arrays
         if (!(value instanceof JsonObject) && !value.getClass().isArray()) {
-            // Special case: Collection with JsonObject elements (e.g., from ToonReader)
-            // When the target type is a ParameterizedType like List<Person>, we need to
-            // convert each JsonObject element to the target element type.
-            if (value instanceof Collection && type instanceof ParameterizedType) {
+            if (value instanceof Collection) {
                 Collection<?> col = (Collection<?>) value;
-                Type[] typeArgs = ((ParameterizedType) type).getActualTypeArguments();
-
-                // Special case: List of key/value entries being converted to Map (from ToonReader)
-                // When ToonWriter serializes Map<ComplexKey, Value>, it outputs an array of entries:
-                //   [2]:
-                //   -
-                //     key: ...
-                //     value: ...
-                // ToonReader parses this as a List of JsonObjects with "key" and "value" fields.
-                // When target is Map, convert by extracting and converting key/value pairs.
                 Class<?> rawClass = TypeUtilities.getRawClass(type);
-                if (Map.class.isAssignableFrom(rawClass) && typeArgs.length >= 2
-                        && isKeyValueEntryList(col)) {
-                    Type keyType = typeArgs[0];
-                    Type valueType = typeArgs[1];
+
+                // Special case: List of key/value entries being converted to Map (from ToonReader).
+                // Supports both ParameterizedType targets (Map<K,V>) and map subclasses
+                // that carry key/value types in their generic superclass.
+                if (rawClass != null && Map.class.isAssignableFrom(rawClass) && isKeyValueEntryList(col)) {
+                    Type keyType = Object.class;
+                    Type valueType = Object.class;
+                    if (type instanceof ParameterizedType) {
+                        Type[] typeArgs = ((ParameterizedType) type).getActualTypeArguments();
+                        if (typeArgs.length >= 2) {
+                            keyType = typeArgs[0];
+                            valueType = typeArgs[1];
+                        }
+                    } else if (type instanceof Class) {
+                        Type[] mapTypeArgs = extractMapTypesFromGenericSuperclass((Class<?>) type);
+                        if (mapTypeArgs != null) {
+                            keyType = mapTypeArgs[0];
+                            valueType = mapTypeArgs[1];
+                        }
+                    }
                     return convertKeyValueEntriesToMap(col, rawClass, keyType, valueType);
                 }
 
-                if (typeArgs.length > 0 && containsJsonObjects(col)) {
-                    Type elementType = typeArgs[0];
-                    return convertCollectionElements(col, elementType);
+                // Special case: Collection with JsonObject elements (e.g., from ToonReader)
+                // and a parameterized target like List<Person>.
+                if (type instanceof ParameterizedType) {
+                    Type[] typeArgs = ((ParameterizedType) type).getActualTypeArguments();
+                    if (typeArgs.length > 0 && containsJsonObjects(col)) {
+                        Type elementType = typeArgs[0];
+                        return convertCollectionElements(col, elementType);
+                    }
                 }
             }
             return convertToType(value, type);
@@ -815,6 +823,36 @@ public abstract class Resolver {
             }
         }
         return false;
+    }
+
+    /**
+     * Extract key and value types from a class that extends a generic Map.
+     * For example, if UserMap extends LinkedHashMap&lt;User, Address&gt;, this returns
+     * [User.class, Address.class]. Returns null if either type is unresolved.
+     */
+    private static Type[] extractMapTypesFromGenericSuperclass(Class<?> clazz) {
+        if (clazz == null || !Map.class.isAssignableFrom(clazz)) {
+            return null;
+        }
+
+        Class<?> current = clazz;
+        while (current != null && current != Object.class) {
+            Type genericSuper = current.getGenericSuperclass();
+            if (genericSuper instanceof ParameterizedType) {
+                ParameterizedType pt = (ParameterizedType) genericSuper;
+                Class<?> rawSuper = TypeUtilities.getRawClass(pt);
+                if (rawSuper != null && Map.class.isAssignableFrom(rawSuper)) {
+                    Type[] typeArgs = pt.getActualTypeArguments();
+                    if (typeArgs.length >= 2
+                            && !TypeUtilities.hasUnresolvedType(typeArgs[0])
+                            && !TypeUtilities.hasUnresolvedType(typeArgs[1])) {
+                        return new Type[]{typeArgs[0], typeArgs[1]};
+                    }
+                }
+            }
+            current = current.getSuperclass();
+        }
+        return null;
     }
 
     /**

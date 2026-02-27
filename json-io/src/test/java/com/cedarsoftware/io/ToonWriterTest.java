@@ -1,6 +1,7 @@
 package com.cedarsoftware.io;
 
 import java.io.ByteArrayOutputStream;
+import java.time.Duration;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -622,11 +623,13 @@ class ToonWriterTest {
         a.next = b;
         b.next = a;  // Cycle!
 
-        // Should not hang or infinite loop
+        // Should not hang or infinite loop and should preserve identity with $id/$ref.
         String toon = JsonIo.toToon(a, null);
         assertNotNull(toon);
         assertTrue(toon.contains("alpha"));
         assertTrue(toon.contains("beta"));
+        assertTrue(toon.contains("$id"));
+        assertTrue(toon.contains("$ref"));
     }
 
     @Test
@@ -634,10 +637,262 @@ class ToonWriterTest {
         Node self = new Node("self");
         self.next = self;  // Self-cycle!
 
-        // Should not hang or infinite loop
+        // Should not hang or infinite loop and should use $id/$ref.
         String toon = JsonIo.toToon(self, null);
         assertNotNull(toon);
         assertTrue(toon.contains("self"));
+        assertTrue(toon.contains("$id"));
+        assertTrue(toon.contains("$ref"));
+    }
+
+    @Test
+    void testSelfReferentialMap_NoInfiniteLoop() {
+        Map<String, Object> selfMap = new LinkedHashMap<>();
+        selfMap.put("self", selfMap);
+
+        String toon = assertTimeoutPreemptively(Duration.ofSeconds(5), () -> JsonIo.toToon(selfMap, null));
+        assertTrue(toon.contains("$id"));
+        assertTrue(toon.contains("$ref"));
+
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        assertSame(restored, restored.get("self"));
+    }
+
+    @Test
+    void testSelfReferentialCollection_NoInfiniteLoop() {
+        List<Object> selfList = new ArrayList<>();
+        selfList.add("x");
+        selfList.add(selfList);
+
+        String toon = assertTimeoutPreemptively(Duration.ofSeconds(5), () -> JsonIo.toToon(selfList, null));
+        assertTrue(toon.contains("[2]"));
+        assertTrue(toon.contains("$id"));
+        assertTrue(toon.contains("$ref"));
+
+        List<?> restored = JsonIo.fromToon(toon, null).asClass(List.class);
+        assertSame(restored, restored.get(1));
+    }
+
+    @Test
+    void testSelfReferentialMapWithKeyFolding_NoInfiniteLoop() {
+        Map<String, Object> selfMap = new LinkedHashMap<>();
+        selfMap.put("self", selfMap);
+
+        WriteOptions folding = new WriteOptionsBuilder().toonKeyFolding(true).build();
+        String toon = assertTimeoutPreemptively(Duration.ofSeconds(5), () -> JsonIo.toToon(selfMap, folding));
+        assertTrue(toon.contains("$id"));
+        assertTrue(toon.contains("$ref"));
+    }
+
+    @Test
+    void testCycleSupportFalseThrowsOnCycle() {
+        Node a = new Node("alpha");
+        Node b = new Node("beta");
+        a.next = b;
+        b.next = a;
+
+        WriteOptions noCycles = new WriteOptionsBuilder().cycleSupport(false).build();
+        JsonIoException ex = assertThrows(JsonIoException.class, () -> JsonIo.toToon(a, noCycles));
+        assertTrue(ex.getMessage().contains("cycleSupport(true)"));
+    }
+
+    @Test
+    void testCycleSupportFalseAllowsSharedReferencesWithoutCycle() {
+        Map<String, Object> shared = new LinkedHashMap<>();
+        shared.put("name", "shared");
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("a", shared);
+        root.put("b", shared);
+
+        WriteOptions noCycles = new WriteOptionsBuilder().cycleSupport(false).build();
+        String toon = JsonIo.toToon(root, noCycles);
+        assertFalse(toon.contains("@id"));
+        assertFalse(toon.contains("@ref"));
+        assertFalse(toon.contains("$id"));
+        assertFalse(toon.contains("$ref"));
+    }
+
+    @Test
+    void testSharedReferenceRoundTripPreservesIdentity() {
+        Map<String, Object> shared = new LinkedHashMap<>();
+        shared.put("value", 42);
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("left", shared);
+        root.put("right", shared);
+
+        String toon = JsonIo.toToon(root, null);
+        assertTrue(toon.contains("$id"));
+        assertTrue(toon.contains("$ref"));
+
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        assertSame(restored.get("left"), restored.get("right"));
+    }
+
+    @Test
+    void testToonComplexCycleGraphRoundTrip() {
+        Map<String, Object> fieldCycleA = new LinkedHashMap<>();
+        Map<String, Object> fieldCycleB = new LinkedHashMap<>();
+        fieldCycleA.put("name", "field-a");
+        fieldCycleB.put("name", "field-b");
+        fieldCycleA.put("other", fieldCycleB);
+        fieldCycleB.put("other", fieldCycleA);
+
+        Object[] arrayCycle = new Object[2];
+        arrayCycle[0] = "array-root";
+        arrayCycle[1] = arrayCycle;
+
+        Map<Object, Object> mapKeyCycle = new LinkedHashMap<>();
+        Map<String, Object> mapKey = new LinkedHashMap<>();
+        mapKey.put("id", "key-1");
+        mapKey.put("owner", mapKeyCycle);
+        mapKeyCycle.put(mapKey, "key-value");
+
+        Map<String, Object> mapValueCycle = new LinkedHashMap<>();
+        Map<String, Object> mapValueNode = new LinkedHashMap<>();
+        mapValueNode.put("id", "value-1");
+        mapValueNode.put("owner", mapValueCycle);
+        mapValueCycle.put("node", mapValueNode);
+
+        List<Object> collectionCycle = new ArrayList<>();
+        collectionCycle.add("collection-root");
+        collectionCycle.add(collectionCycle);
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("fieldCycleA", fieldCycleA);
+        root.put("fieldCycleB", fieldCycleB);
+        root.put("arrayCycle", arrayCycle);
+        root.put("mapKeyCycle", mapKeyCycle);
+        root.put("mapValueCycle", mapValueCycle);
+        root.put("collectionCycle", collectionCycle);
+
+        String toon = JsonIo.toToon(root, null);
+        assertTrue(toon.contains("$id"));
+        assertTrue(toon.contains("$ref"));
+        assertTrue(toon.contains("$keys"));
+        assertTrue(toon.contains("$items"));
+
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        assertNotNull(restored.get("fieldCycleA"), "Missing fieldCycleA, keys=" + restored.keySet() + "\nTOON:\n" + toon);
+        assertNotNull(restored.get("fieldCycleB"), "Missing fieldCycleB, keys=" + restored.keySet() + "\nTOON:\n" + toon);
+        Map<?, ?> restoredFieldCycleA = (Map<?, ?>) restored.get("fieldCycleA");
+        Map<?, ?> restoredFieldCycleB = (Map<?, ?>) restored.get("fieldCycleB");
+        assertSame(restoredFieldCycleB, restoredFieldCycleA.get("other"));
+        assertSame(restoredFieldCycleA, restoredFieldCycleB.get("other"));
+
+        Object restoredArrayCycle = restored.get("arrayCycle");
+        assertSelfReferenceAtIndex(restoredArrayCycle, 1);
+
+        Map<?, ?> restoredMapKeyCycle = (Map<?, ?>) restored.get("mapKeyCycle");
+        Map.Entry<?, ?> keyEntry = restoredMapKeyCycle.entrySet().iterator().next();
+        assertEquals("key-value", keyEntry.getValue());
+        Map<?, ?> restoredKey = (Map<?, ?>) keyEntry.getKey();
+        assertSame(restoredMapKeyCycle, restoredKey.get("owner"));
+
+        Map<?, ?> restoredMapValueCycle = (Map<?, ?>) restored.get("mapValueCycle");
+        Map<?, ?> restoredValueNode = (Map<?, ?>) restoredMapValueCycle.get("node");
+        assertNotNull(restoredValueNode);
+        assertSame(restoredMapValueCycle, restoredValueNode.get("owner"));
+
+        Object restoredCollectionCycle = restored.get("collectionCycle");
+        assertSelfReferenceAtIndex(restoredCollectionCycle, 1);
+    }
+
+    private void assertSelfReferenceAtIndex(Object sequence, int index) {
+        assertNotNull(sequence);
+        if (sequence instanceof List) {
+            List<?> list = (List<?>) sequence;
+            assertSame(list, list.get(index));
+        } else if (sequence instanceof Object[]) {
+            Object[] array = (Object[]) sequence;
+            assertSame(array, array[index]);
+        } else {
+            fail("Expected List or Object[] but got: " + sequence.getClass().getName());
+        }
+    }
+
+    @Test
+    void testMetaKeyVariants_AtLong() {
+        WriteOptions options = new WriteOptionsBuilder()
+                .cycleSupport(true)
+                .shortMetaKeys(false)
+                .useMetaPrefixAt()
+                .build();
+        verifyMetaVariantRoundTrip(options, "@id", "@ref", "@items", "@keys");
+    }
+
+    @Test
+    void testMetaKeyVariants_AtShort() {
+        WriteOptions options = new WriteOptionsBuilder()
+                .cycleSupport(true)
+                .shortMetaKeys(true)
+                .useMetaPrefixAt()
+                .build();
+        verifyMetaVariantRoundTrip(options, "@i", "@r", "@e", "@k");
+    }
+
+    @Test
+    void testMetaKeyVariants_DollarLong() {
+        WriteOptions options = new WriteOptionsBuilder()
+                .cycleSupport(true)
+                .shortMetaKeys(false)
+                .useMetaPrefixDollar()
+                .build();
+        verifyMetaVariantRoundTrip(options, "$id", "$ref", "$items", "$keys");
+    }
+
+    @Test
+    void testMetaKeyVariants_DollarShort() {
+        WriteOptions options = new WriteOptionsBuilder()
+                .cycleSupport(true)
+                .shortMetaKeys(true)
+                .useMetaPrefixDollar()
+                .build();
+        verifyMetaVariantRoundTrip(options, "$i", "$r", "$e", "$k");
+    }
+
+    private void verifyMetaVariantRoundTrip(WriteOptions options, String idKey, String refKey, String itemsKey,
+            String keysKey) {
+        Map<String, Object> complexKey = new LinkedHashMap<>();
+        complexKey.put("kind", "composite");
+        Map<Object, Object> root = new LinkedHashMap<>();
+        root.put(complexKey, root);
+
+        String toon = JsonIo.toToon(root, options);
+        assertTrue(toon.contains(idKey + ":"), "Expected id key variant");
+        assertTrue(toon.contains(refKey + ":"), "Expected ref key variant");
+        assertTrue(toon.contains(itemsKey + "["), "Expected items key variant");
+        assertTrue(toon.contains(keysKey + "["), "Expected keys key variant");
+
+        Map<?, ?> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        assertEquals(1, restored.size());
+        Map.Entry<?, ?> entry = restored.entrySet().iterator().next();
+        assertSame(restored, entry.getValue(), "Complex-key map self-reference should retain identity");
+        assertTrue(entry.getKey() instanceof Map);
+        Map<?, ?> restoredKey = (Map<?, ?>) entry.getKey();
+        assertEquals("composite", restoredKey.get("kind"));
+    }
+
+    @Test
+    void testToonWriterReuseDoesNotLeakVisitedState() {
+        Node node = new Node("repeat");
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ToonWriter writer = new ToonWriter(out, null);
+
+        writer.write(node);
+        out.write('\n');
+        out.write('-');
+        out.write('-');
+        out.write('-');
+        out.write('\n');
+        writer.write(node);
+
+        String result = new String(out.toByteArray(), StandardCharsets.UTF_8);
+        String[] parts = result.split("\n---\n");
+        assertEquals(2, parts.length);
+        assertEquals(parts[0], parts[1]);
+        assertNotEquals("null", parts[1].trim());
     }
 
     @Test

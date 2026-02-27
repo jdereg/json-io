@@ -48,6 +48,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
+import com.cedarsoftware.io.annotation.IoDeserialize;
+import com.cedarsoftware.io.annotation.IoTypeInfo;
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.io.TypeHolder;
 import org.junit.jupiter.api.Disabled;
@@ -3511,5 +3513,355 @@ class ToonReaderTest {
             assertEquals(fromTabular.get(i).getName(), fromList.get(i).getName());
             assertEquals(fromTabular.get(i).getAge(), fromList.get(i).getAge());
         }
+    }
+
+    @Test
+    void testToonHintsAsClassAndAsTypeControlInstantiation() {
+        ToonDog dog = new ToonDog("Rex", 7);
+        String dogToon = JsonIo.toToon(dog, null);
+
+        Object noHintDog = JsonIo.fromToon(dogToon, null).asClass(Object.class);
+        assertTrue(noHintDog instanceof Map, "Without hints, object should deserialize as Map");
+        assertThrows(ClassCastException.class, () -> {
+            ToonDog ignored = (ToonDog) noHintDog;
+            ignored.getClass();
+        });
+
+        ToonDog withAsClass = JsonIo.fromToon(dogToon, null).asClass(ToonDog.class);
+        assertDog(withAsClass, "Rex", 7);
+
+        String listToon = JsonIo.toToon(Collections.singletonList(new ToonDog("Luna", 3)), null);
+        List<?> noHintList = JsonIo.fromToon(listToon, null).asClass(List.class);
+        assertTrue(noHintList.get(0) instanceof Map, "Without hints, list element should deserialize as Map");
+
+        List<ToonDog> typedList = JsonIo.fromToon(listToon, null).asType(new TypeHolder<List<ToonDog>>() {});
+        assertDog(typedList.get(0), "Luna", 3);
+
+        Map<ToonDog, String> keyMap = new LinkedHashMap<>();
+        keyMap.put(new ToonDog("KeyDog", 9), "ok");
+        String keyMapToon = JsonIo.toToon(keyMap, null);
+        Object noHintKeyMap = JsonIo.fromToon(keyMapToon, null).asClass(Object.class);
+        assertTrue(noHintKeyMap instanceof List, "Without hints, complex-key map should deserialize as list entries");
+
+        Map<ToonDog, String> typedKeyMap = JsonIo.fromToon(keyMapToon, null)
+                .asType(new TypeHolder<Map<ToonDog, String>>() {});
+        ToonDog typedKey = typedKeyMap.keySet().iterator().next();
+        assertDog(typedKey, "KeyDog", 9);
+        assertEquals("ok", typedKeyMap.get(typedKey));
+    }
+
+    @Test
+    void testToonDefaultNoTypeLeavesPolymorphicMembersAsMaps() {
+        ToonDog original = new ToonDog("NoTypeDog", 1);
+        String toon = JsonIo.toToon(original, null);
+
+        assertFalse(toon.contains("$type"), "Default TOON output should not include $type");
+        assertFalse(toon.contains("@type"), "Default TOON output should not include @type");
+
+        Object noHint = JsonIo.fromToon(toon, null).asClass(Object.class);
+        assertTrue(noHint instanceof Map, "Without type metadata, no-hint read should deserialize root as Map");
+        assertThrows(ClassCastException.class, () -> {
+            ToonDog ignored = (ToonDog) noHint;
+            ignored.getClass();
+        });
+    }
+
+    @Test
+    void testToonReaderFieldAnnotationResolvesObjectFieldWithoutTypeMetadata() {
+        ToonAnnotatedFieldContainer original = new ToonAnnotatedFieldContainer();
+        original.field = new ToonDog("AnnotatedDog", 11);
+
+        String toon = JsonIo.toToon(original, null);
+        assertFalse(toon.contains("$type"), "Default TOON output should not include $type");
+        assertFalse(toon.contains("@type"), "Default TOON output should not include @type");
+
+        ToonAnnotatedFieldContainer restored = JsonIo.fromToon(toon, null).asClass(ToonAnnotatedFieldContainer.class);
+        assertDog(restored.field, "AnnotatedDog", 11);
+    }
+
+    @Test
+    void testToonShowTypeModesRestorePolymorphicMembersAcrossContainers() {
+        WriteOptions[] options = new WriteOptions[] {
+                new WriteOptionsBuilder().showTypeInfoMinimal().build(),
+                new WriteOptionsBuilder().showTypeInfoMinimalPlus().build(),
+                new WriteOptionsBuilder().showTypeInfoAlways().build()
+        };
+
+        for (WriteOptions optionsWithType : options) {
+            String fieldToon = JsonIo.toToon(new ToonDog("FieldDog", 1), optionsWithType);
+            assertTrue(fieldToon.contains("$type") || fieldToon.contains("@type"),
+                    "Type-enabled TOON output should include type metadata: " + fieldToon);
+            assertDog(JsonIo.fromToon(fieldToon, null).asClass(Object.class), "FieldDog", 1);
+
+            String arrayToon = JsonIo.toToon(new ToonDog[] { new ToonDog("ArrayDog", 2) }, optionsWithType);
+            assertTrue(arrayToon.contains("$type") || arrayToon.contains("@type"),
+                    "Type-enabled TOON array output should include type metadata: " + arrayToon);
+            Object arrayNoHint = JsonIo.fromToon(arrayToon, null).asClass(Object.class);
+            Object arrayFirst = arrayNoHint instanceof Object[]
+                    ? ((Object[]) arrayNoHint)[0]
+                    : ((List<?>) arrayNoHint).get(0);
+            assertDog(arrayFirst, "ArrayDog", 2);
+
+            String listToon = JsonIo.toToon(Collections.singletonList(new ToonDog("CollectionDog", 3)), optionsWithType);
+            assertTrue(listToon.contains("$type") || listToon.contains("@type"),
+                    "Type-enabled TOON list output should include type metadata: " + listToon);
+            Object listNoHint = JsonIo.fromToon(listToon, null).asClass(Object.class);
+            assertTrue(listNoHint instanceof List, "List root should deserialize as List");
+            assertDog(((List<?>) listNoHint).get(0), "CollectionDog", 3);
+
+            Map<ToonDog, String> keyMap = new LinkedHashMap<>();
+            keyMap.put(new ToonDog("KeyDog", 4), "mapped");
+            String keyMapToon = JsonIo.toToon(keyMap, optionsWithType);
+            assertTrue(keyMapToon.contains("$type") || keyMapToon.contains("@type"),
+                    "Type-enabled TOON map-key output should include type metadata: " + keyMapToon);
+            Object keyMapNoHint = JsonIo.fromToon(keyMapToon, null).asClass(Object.class);
+            if (keyMapNoHint instanceof Map) {
+                Object key = ((Map<?, ?>) keyMapNoHint).keySet().iterator().next();
+                assertDog(key, "KeyDog", 4);
+            } else {
+                assertTrue(keyMapNoHint instanceof List, "Complex-key map should deserialize as Map or entry list");
+                Object firstEntry = ((List<?>) keyMapNoHint).get(0);
+                assertTrue(firstEntry instanceof Map, "Entry-list fallback should contain map entries");
+                Object key = ((Map<?, ?>) firstEntry).get("$key");
+                assertDog(key, "KeyDog", 4);
+            }
+
+            Map<String, ToonDog> valueMap = new LinkedHashMap<>();
+            valueMap.put("valueDog", new ToonDog("ValueDog", 5));
+            String valueMapToon = JsonIo.toToon(valueMap, optionsWithType);
+            assertTrue(valueMapToon.contains("$type") || valueMapToon.contains("@type"),
+                    "Type-enabled TOON map-value output should include type metadata: " + valueMapToon);
+            Object valueMapNoHint = JsonIo.fromToon(valueMapToon, null).asClass(Object.class);
+            assertTrue(valueMapNoHint instanceof Map, "Map root should deserialize as Map");
+            assertDog(((Map<?, ?>) valueMapNoHint).get("valueDog"), "ValueDog", 5);
+        }
+    }
+
+    @Test
+    void testToonFieldAnnotationsRestorePolymorphicMembersAcrossFiveFieldShapesWithoutTypeMetadata() {
+        WriteOptions noTypeOptions = new WriteOptionsBuilder()
+                .showTypeInfoNever()
+                .prettyPrint(true)
+                .build();
+
+        ToonFieldSource fieldSource = new ToonFieldSource(new ToonDog("FieldDog", 1));
+        String noTypeFieldToon = JsonIo.toToon(fieldSource, noTypeOptions);
+        try {
+            ToonFieldNoAnnotationTarget noAnnotationField =
+                    JsonIo.fromToon(noTypeFieldToon, null).asClass(ToonFieldNoAnnotationTarget.class);
+            assertTrue(noAnnotationField.field == null || !(noAnnotationField.field instanceof ToonDog));
+        } catch (JsonIoException ignored) {
+            // Expected: no annotation/type metadata may fail to materialize polymorphic field.
+        }
+        ToonFieldAnnotatedTarget fieldAnnotated = JsonIo.fromToon(noTypeFieldToon, null).asClass(ToonFieldAnnotatedTarget.class);
+        assertDog(fieldAnnotated.field, "FieldDog", 1);
+
+        ToonArraySource arraySource = new ToonArraySource(new ToonDog[] { new ToonDog("ArrayDog", 2) });
+        String noTypeArrayToon = JsonIo.toToon(arraySource, noTypeOptions);
+        try {
+            ToonArrayNoAnnotationTarget noAnnotationArray =
+                    JsonIo.fromToon(noTypeArrayToon, null).asClass(ToonArrayNoAnnotationTarget.class);
+            assertTrue(noAnnotationArray.array == null
+                    || noAnnotationArray.array.length == 0
+                    || !(noAnnotationArray.array[0] instanceof ToonDog));
+        } catch (JsonIoException ignored) {
+            // Expected: no annotation/type metadata may fail to materialize polymorphic array element.
+        }
+        ToonArrayAnnotatedTarget arrayAnnotated = JsonIo.fromToon(noTypeArrayToon, null).asClass(ToonArrayAnnotatedTarget.class);
+        assertDog(arrayAnnotated.array[0], "ArrayDog", 2);
+
+        ToonCollectionSource collectionSource = new ToonCollectionSource(new ToonDogList(new ToonDog("CollectionDog", 3)));
+        String noTypeCollectionToon = JsonIo.toToon(collectionSource, noTypeOptions);
+        try {
+            ToonCollectionNoAnnotationTarget noAnnotationCollection =
+                    JsonIo.fromToon(noTypeCollectionToon, null).asClass(ToonCollectionNoAnnotationTarget.class);
+            assertTrue(noAnnotationCollection.collection == null
+                    || noAnnotationCollection.collection.isEmpty()
+                    || !(noAnnotationCollection.collection.get(0) instanceof ToonDog));
+        } catch (JsonIoException ignored) {
+            // Expected: no annotation/type metadata may fail to materialize polymorphic collection element.
+        }
+        ToonCollectionAnnotatedTarget collectionAnnotated = JsonIo.fromToon(noTypeCollectionToon, null)
+                .asClass(ToonCollectionAnnotatedTarget.class);
+        assertDog(collectionAnnotated.collection.get(0), "CollectionDog", 3);
+
+        String noTypeMapKeyToon = "mapKey:\n" +
+                "  [1]:\n" +
+                "    -\n" +
+                "      $key:\n" +
+                "        name: KeyDog\n" +
+                "        bark: 4\n" +
+                "      $value: mapped\n";
+        try {
+            ToonMapKeyNoAnnotationTarget noAnnotationMapKey =
+                    JsonIo.fromToon(noTypeMapKeyToon, null).asClass(ToonMapKeyNoAnnotationTarget.class);
+            Object noTypeKey = noAnnotationMapKey.mapKey == null || noAnnotationMapKey.mapKey.isEmpty()
+                    ? null : noAnnotationMapKey.mapKey.keySet().iterator().next();
+            assertTrue(noTypeKey == null || !(noTypeKey instanceof ToonDog));
+        } catch (JsonIoException ignored) {
+            // Expected: no annotation/type metadata may fail to materialize polymorphic map keys.
+        }
+        ToonMapKeyAnnotatedTarget mapKeyAnnotated = JsonIo.fromToon(noTypeMapKeyToon, null).asClass(ToonMapKeyAnnotatedTarget.class);
+        ToonPet key = mapKeyAnnotated.mapKey.keySet().iterator().next();
+        assertDog(key, "KeyDog", 4);
+        assertEquals("mapped", mapKeyAnnotated.mapKey.get(key));
+
+        String noTypeMapValueToon = "mapValue:\n" +
+                "  valueDog:\n" +
+                "    name: ValueDog\n" +
+                "    bark: 5\n";
+        try {
+            ToonMapValueNoAnnotationTarget noAnnotationMapValue =
+                    JsonIo.fromToon(noTypeMapValueToon, null).asClass(ToonMapValueNoAnnotationTarget.class);
+            Object noTypeValue = noAnnotationMapValue.mapValue == null
+                    ? null : noAnnotationMapValue.mapValue.get("valueDog");
+            assertTrue(noTypeValue == null || !(noTypeValue instanceof ToonDog));
+        } catch (JsonIoException ignored) {
+            // Expected: no annotation/type metadata may fail to materialize polymorphic map values.
+        }
+        ToonMapValueAnnotatedTarget mapValueAnnotated = JsonIo.fromToon(noTypeMapValueToon, null)
+                .asClass(ToonMapValueAnnotatedTarget.class);
+        assertDog(mapValueAnnotated.mapValue.get("valueDog"), "ValueDog", 5);
+    }
+
+    private void assertDog(Object value, String expectedName, int expectedBark) {
+        assertNotNull(value, "Expected ToonDog but found null");
+        assertTrue(value instanceof ToonDog, "Expected ToonDog but found: " + value.getClass().getName());
+        ToonDog dog = (ToonDog) value;
+        assertEquals(expectedName, dog.name);
+        assertEquals(expectedBark, dog.bark);
+    }
+
+    interface ToonPet {
+    }
+
+    static class ToonDog implements ToonPet {
+        public String name;
+        public int bark;
+
+        public ToonDog() {
+        }
+
+        ToonDog(String name, int bark) {
+            this.name = name;
+            this.bark = bark;
+        }
+    }
+
+    static class ToonAnnotatedFieldContainer {
+        @IoTypeInfo(ToonDog.class)
+        public Object field;
+    }
+
+    static class ToonDogList extends ArrayList<ToonDog> {
+        ToonDogList() {
+        }
+
+        ToonDogList(ToonDog dog) {
+            add(dog);
+        }
+    }
+
+    static class ToonDogKeyMap extends LinkedHashMap<ToonDog, String> {
+        ToonDogKeyMap() {
+        }
+
+        ToonDogKeyMap(ToonDog key, String value) {
+            put(key, value);
+        }
+    }
+
+    static class ToonDogValueMap extends LinkedHashMap<String, ToonDog> {
+        ToonDogValueMap() {
+        }
+
+        ToonDogValueMap(String key, ToonDog value) {
+            put(key, value);
+        }
+    }
+
+    static class ToonFieldSource {
+        public ToonDog field;
+
+        ToonFieldSource(ToonDog field) {
+            this.field = field;
+        }
+    }
+
+    static class ToonFieldNoAnnotationTarget {
+        public ToonPet field;
+    }
+
+    static class ToonFieldAnnotatedTarget {
+        @IoDeserialize(as = ToonDog.class)
+        public ToonPet field;
+    }
+
+    static class ToonArraySource {
+        public ToonDog[] array;
+
+        ToonArraySource(ToonDog[] array) {
+            this.array = array;
+        }
+    }
+
+    static class ToonArrayNoAnnotationTarget {
+        public ToonPet[] array;
+    }
+
+    static class ToonArrayAnnotatedTarget {
+        @IoDeserialize(as = ToonDog[].class)
+        public ToonPet[] array;
+    }
+
+    static class ToonCollectionSource {
+        public ToonDogList collection;
+
+        ToonCollectionSource(ToonDogList collection) {
+            this.collection = collection;
+        }
+    }
+
+    static class ToonCollectionNoAnnotationTarget {
+        public List<ToonPet> collection;
+    }
+
+    static class ToonCollectionAnnotatedTarget {
+        @IoDeserialize(as = ToonDogList.class)
+        public List<ToonPet> collection;
+    }
+
+    static class ToonMapKeySource {
+        public ToonDogKeyMap mapKey;
+
+        ToonMapKeySource(ToonDogKeyMap mapKey) {
+            this.mapKey = mapKey;
+        }
+    }
+
+    static class ToonMapKeyNoAnnotationTarget {
+        public Map<ToonPet, String> mapKey;
+    }
+
+    static class ToonMapKeyAnnotatedTarget {
+        @IoDeserialize(as = ToonDogKeyMap.class)
+        public Map<ToonPet, String> mapKey;
+    }
+
+    static class ToonMapValueSource {
+        public ToonDogValueMap mapValue;
+
+        ToonMapValueSource(ToonDogValueMap mapValue) {
+            this.mapValue = mapValue;
+        }
+    }
+
+    static class ToonMapValueNoAnnotationTarget {
+        public Map<String, ToonPet> mapValue;
+    }
+
+    static class ToonMapValueAnnotatedTarget {
+        @IoDeserialize(as = ToonDogValueMap.class)
+        public Map<String, ToonPet> mapValue;
     }
 }

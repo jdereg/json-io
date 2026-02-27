@@ -330,6 +330,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     // Uses primitive int values and open addressing - no boxing, no Entry objects
     private final IdentityIntMap objVisited = new IdentityIntMap(256);
     private final IdentityIntMap objsReferenced = new IdentityIntMap(256);
+    private final Map<Object, Boolean> activePath = new IdentityHashMap<>();
     private final Writer out;
     private int identity = 1;  // int is sufficient - max 2.1 billion unique objects
     private int depth = 0;
@@ -766,44 +767,51 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             showType = false;
         }
 
-        if (writeOptionalReference(o)) {
-            return true;
-        }
-
-        boolean referenced = cycleSupport && objsReferenced.containsKey(o);
-
-        if (closestWriter.hasPrimitiveForm(this)) {
-            if ((!referenced && !showType) || closestWriter instanceof Writers.JsonStringWriter) {
-                closestWriter.writePrimitiveForm(o, output, this);
+        boolean enteredActivePath = !cycleSupport && isReferenceTrackable(o) && !activePath.containsKey(o);
+        try {
+            if (writeOptionalReference(o)) {
                 return true;
             }
-        }
 
-        output.write('{');
-        tabIn();
-        if (referenced) {
-            writeId(getIdInt(o));
+            boolean referenced = cycleSupport && objsReferenced.containsKey(o);
+
+            if (closestWriter.hasPrimitiveForm(this)) {
+                if ((!referenced && !showType) || closestWriter instanceof Writers.JsonStringWriter) {
+                    closestWriter.writePrimitiveForm(o, output, this);
+                    return true;
+                }
+            }
+
+            output.write('{');
+            tabIn();
+            if (referenced) {
+                writeId(getIdInt(o));
+                if (showType) {
+                    output.write(',');
+                    newLine();
+                }
+            }
+
             if (showType) {
+                String typeName = closestWriter.getTypeName(o);
+                writeType(typeName, output);
+            }
+
+            if (referenced || showType) {
                 output.write(',');
                 newLine();
             }
+
+            closestWriter.write(o, showType || referenced, output, this);
+
+            tabOut();
+            output.write('}');
+            return true;
+        } finally {
+            if (enteredActivePath) {
+                activePath.remove(o);
+            }
         }
-
-        if (showType) {
-            String typeName = closestWriter.getTypeName(o);
-            writeType(typeName, output);
-        }
-
-        if (referenced || showType) {
-            output.write(',');
-            newLine();
-        }
-
-        closestWriter.write(o, showType || referenced, output, this);
-
-        tabOut();
-        output.write('}');
-        return true;
     }
 
     /**
@@ -817,7 +825,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 traceReferences(obj);
                 objVisited.clear();
             }
-            // When cycleSupport=false, reference tracking is bypassed for maximum throughput.
+            // When cycleSupport=false, trace pass is skipped (no @id/@ref pre-tracing).
             boolean showType = writeOptions.isShowingRootTypeInfo();
             if (obj != null) {
                 if (neverShowingType) {
@@ -844,6 +852,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         } finally {
             objVisited.clear();
             objsReferenced.clear();
+            activePath.clear();
         }
     }
 
@@ -1034,18 +1043,26 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
     }
 
+    private boolean isReferenceTrackable(Object obj) {
+        return obj != null && !writeOptions.isNonReferenceableClass(obj.getClass());
+    }
+
+    private JsonIoException cycleDetected(Object obj) {
+        return new JsonIoException("Cycle detected while writing JSON with cycleSupport(false): "
+                + obj.getClass().getName()
+                + ". To write cyclic object graphs, enable cycleSupport(true) on WriteOptions.");
+    }
+
     private boolean writeOptionalReference(Object obj) throws IOException {
-        if (obj == null || writeOptions.isNonReferenceableClass(obj.getClass())) {
+        if (!isReferenceTrackable(obj)) {
             return false;
         }
 
         if (!cycleSupport) {
-            // cycleSupport=false: keep a lightweight visited marker to avoid infinite recursion
-            // on accidental cyclic graphs, but do not emit @id/@ref metadata.
-            if (objVisited.containsKey(obj)) {
-                return true;
+            if (activePath.containsKey(obj)) {
+                throw cycleDetected(obj);
             }
-            objVisited.put(obj, -1);
+            activePath.put(obj, Boolean.TRUE);
             return false;
         }
 
@@ -1095,81 +1112,88 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             showType = false;
         }
 
-        // Custom writers and references are checked first to preserve type information
-        if (writeUsingCustomWriter(obj, showType, out) || writeOptionalReference(obj)) {
-            return;
-        }
-
-        final Class<?> objClass = obj.getClass();
-
-        // Check @IoValue — serialize via single method return value
-        Method valueMethod = AnnotationResolver.getMetadata(objClass).getValueMethod();
-        if (valueMethod != null) {
-            try {
-                Object val = valueMethod.invoke(obj);
-                if (showType) {
-                    out.write('{');
-                    tabIn();
-                    writeType(objClass.getName(), out);
-                    out.write(',');
-                    newLine();
-                    writeBasicString(out, "value");
-                    out.write(':');
-                    writeImpl(val, false);
-                    tabOut();
-                    newLine();
-                    out.write('}');
-                } else {
-                    writeImpl(val, false);
-                }
-            } catch (Exception e) {
-                throw new JsonIoException("@IoValue method invocation failed for " + objClass.getName(), e);
+        boolean enteredActivePath = !cycleSupport && isReferenceTrackable(obj) && !activePath.containsKey(obj);
+        try {
+            // Custom writers and references are checked first to preserve type information
+            if (writeUsingCustomWriter(obj, showType, out) || writeOptionalReference(obj)) {
+                return;
             }
-            return;
-        }
 
-        // Type-indexed dispatch using cached WriteType (avoids repeated instanceof checks)
-        switch (writeTypeCache.get(objClass)) {
-            case PRIMITIVE_ARRAY:
-                writePrimitiveArray(obj, objClass, showType);
-                break;
-            case OBJECT_ARRAY:
-                writeObjectArray((Object[]) obj, objClass, showType);
-                break;
-            case ENUM_SET:
-                writeEnumSet((EnumSet<?>) obj);
-                break;
-            case COLLECTION:
-                writeCollection((Collection<?>) obj, showType);
-                break;
-            case JSON_OBJECT:
-                // Performance: Use cached type classification instead of repeated isArray/isCollection/isMap checks
-                JsonObject jObj = (JsonObject) obj;
-                switch (jObj.getJsonType()) {
-                    case ARRAY:
-                        writeJsonObjectArray(jObj, showType);
-                        break;
-                    case COLLECTION:
-                        writeJsonObjectCollection(jObj, showType);
-                        break;
-                    case MAP:
-                        if (!writeJsonObjectMapWithStringKeys(jObj, showType)) {
-                            writeJsonObjectMap(jObj, showType);
-                        }
-                        break;
-                    default:
-                        writeJsonObjectObject(jObj, showType);
-                        break;
+            final Class<?> objClass = obj.getClass();
+
+            // Check @IoValue — serialize via single method return value
+            Method valueMethod = AnnotationResolver.getMetadata(objClass).getValueMethod();
+            if (valueMethod != null) {
+                try {
+                    Object val = valueMethod.invoke(obj);
+                    if (showType) {
+                        out.write('{');
+                        tabIn();
+                        writeType(objClass.getName(), out);
+                        out.write(',');
+                        newLine();
+                        writeBasicString(out, "value");
+                        out.write(':');
+                        writeImpl(val, false);
+                        tabOut();
+                        newLine();
+                        out.write('}');
+                    } else {
+                        writeImpl(val, false);
+                    }
+                } catch (Exception e) {
+                    throw new JsonIoException("@IoValue method invocation failed for " + objClass.getName(), e);
                 }
-                break;
-            case MAP:
-                if (!writeMapWithStringKeys((Map) obj, showType)) {
-                    writeMap((Map) obj, showType);
-                }
-                break;
-            case POJO:
-                writeObject(obj, showType, false);
-                break;
+                return;
+            }
+
+            // Type-indexed dispatch using cached WriteType (avoids repeated instanceof checks)
+            switch (writeTypeCache.get(objClass)) {
+                case PRIMITIVE_ARRAY:
+                    writePrimitiveArray(obj, objClass, showType);
+                    break;
+                case OBJECT_ARRAY:
+                    writeObjectArray((Object[]) obj, objClass, showType);
+                    break;
+                case ENUM_SET:
+                    writeEnumSet((EnumSet<?>) obj);
+                    break;
+                case COLLECTION:
+                    writeCollection((Collection<?>) obj, showType);
+                    break;
+                case JSON_OBJECT:
+                    // Performance: Use cached type classification instead of repeated isArray/isCollection/isMap checks
+                    JsonObject jObj = (JsonObject) obj;
+                    switch (jObj.getJsonType()) {
+                        case ARRAY:
+                            writeJsonObjectArray(jObj, showType);
+                            break;
+                        case COLLECTION:
+                            writeJsonObjectCollection(jObj, showType);
+                            break;
+                        case MAP:
+                            if (!writeJsonObjectMapWithStringKeys(jObj, showType)) {
+                                writeJsonObjectMap(jObj, showType);
+                            }
+                            break;
+                        default:
+                            writeJsonObjectObject(jObj, showType);
+                            break;
+                    }
+                    break;
+                case MAP:
+                    if (!writeMapWithStringKeys((Map) obj, showType)) {
+                        writeMap((Map) obj, showType);
+                    }
+                    break;
+                case POJO:
+                    writeObject(obj, showType, false);
+                    break;
+            }
+        } finally {
+            if (enteredActivePath) {
+                activePath.remove(obj);
+            }
         }
     }
 

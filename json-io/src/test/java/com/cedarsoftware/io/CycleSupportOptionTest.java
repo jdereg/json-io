@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for the cycleSupport WriteOption.
  *
  * When cycleSupport=true (default): Full cycle support with @id/@ref
- * When cycleSupport=false: Skip traceReferences for performance, cycles silently skipped
+ * When cycleSupport=false: Skip traceReferences for performance, cycles fail fast with guidance
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -96,8 +96,8 @@ public class CycleSupportOptionTest {
     }
 
     @Test
-    public void testCycleSupportFalse_withCycle_noInfiniteLoop() {
-        // When cycleSupport=false and data HAS cycles, should not infinite loop
+    public void testCycleSupportFalse_withCycle_throwsWithGuidance() {
+        // When cycleSupport=false and data HAS cycles, fail fast with actionable guidance
         Node alpha = new Node("alpha");
         Node beta = new Node("beta");
         alpha.next = beta;
@@ -107,19 +107,9 @@ public class CycleSupportOptionTest {
                 .cycleSupport(false)
                 .build();
 
-        // This should complete without infinite loop - cycles are silently skipped
-        String json = JsonIo.toJson(alpha, writeOptions);
-
-        // Should NOT contain @id or @ref
-        assertFalse(json.contains("@id"));
-        assertFalse(json.contains("$id"));
-        assertFalse(json.contains("@ref"));
-        assertFalse(json.contains("$ref"));
-
-        // JSON is valid but incomplete (cycle broken)
-        assertNotNull(json);
-        assertTrue(json.contains("alpha"));
-        assertTrue(json.contains("beta"));
+        JsonIoException ex = assertThrows(JsonIoException.class, () -> JsonIo.toJson(alpha, writeOptions));
+        assertTrue(ex.getMessage().contains("cycleSupport("));
+        assertTrue(ex.getMessage().contains("cycleSupport(true)"));
     }
 
     @Test
@@ -132,14 +122,9 @@ public class CycleSupportOptionTest {
                 .cycleSupport(false)
                 .build();
 
-        // Should complete without infinite loop
-        String json = JsonIo.toJson(self, writeOptions);
-
-        assertNotNull(json);
-        assertTrue(json.contains("self"));
-        // The self-reference will be skipped
-        assertFalse(json.contains("@ref"));
-        assertFalse(json.contains("$ref"));
+        JsonIoException ex = assertThrows(JsonIoException.class, () -> JsonIo.toJson(self, writeOptions));
+        assertTrue(ex.getMessage().contains("cycleSupport("));
+        assertTrue(ex.getMessage().contains("cycleSupport(true)"));
     }
 
     @Test
@@ -164,7 +149,7 @@ public class CycleSupportOptionTest {
                 .cycleSupport(false)
                 .build();
 
-        // Should complete - duplicates after first are skipped
+        // Should complete - repeated sibling references are not cycles
         String json = JsonIo.toJson(array, writeOptions);
 
         assertNotNull(json);

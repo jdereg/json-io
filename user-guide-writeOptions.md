@@ -53,15 +53,15 @@ If your data is **acyclic** (no circular references) and you don't need shared-r
 >#### `WriteOptionsBuilder` cycleSupport(`boolean enable`)
 >- [ ] Controls whether the `traceReferences()` pre-pass runs before serialization.
 >- [ ] `true` (default): Full cycle support - `@id`/`@ref` emitted for multi-referenced objects, cycles handled correctly
->- [ ] `false`: Skip traceReferences for performance - cycles detected during write are silently skipped (not written)
+>- [ ] `false`: Skip traceReferences for performance - identity is not preserved and true cycles throw `JsonIoException` with guidance to enable `cycleSupport(true)`
 
 #### Behavior Comparison
 
 | Scenario | `cycleSupport=true` (default) | `cycleSupport=false`                    |
 |----------|-------------------------------|-----------------------------------------|
 | Acyclic data | Works correctly, with overhead | Works correctly, faster                 |
-| Object referenced multiple times | `@id` on first, `@ref` on subsequent | First written fully, duplicates skipped |
-| Circular reference (A → B → A) | Handled with `@id`/`@ref` | Cycle silently broken, no infinite loop |
+| Object referenced multiple times | `@id` on first, `@ref` on subsequent | Written as repeated full values (no `@id`/`@ref`) |
+| Circular reference (A → B → A) | Handled with `@id`/`@ref` | Throws `JsonIoException` (hint: enable `cycleSupport(true)`) |
 | Performance | ~1.0x baseline | ~1.35-1.40x faster                     |
 
 #### Comparison with Other Libraries
@@ -71,7 +71,7 @@ If your data is **acyclic** (no circular references) and you don't need shared-r
 | **Jackson** | Requires `@JsonIdentityInfo` annotation on classes; throws exception if unannotated cycles |
 | **GSON** | No built-in support; throws `StackOverflowError` on cycles |
 | **json-io (cycleSupport=true)** | Automatic - no annotations needed, full graph fidelity preserved |
-| **json-io (cycleSupport=false)** | Skip overhead when cycles known to not exist; cycles silently broken |
+| **json-io (cycleSupport=false)** | Skip overhead for acyclic data; throws if a true cycle is encountered |
 
 #### Example Usage
 
@@ -1267,7 +1267,7 @@ Sets the permanent close stream setting for all new `WriteOptions` instances. Wh
 >#### WriteOptionsBuilder.addPermanentCloseStream(`boolean closeStream`)
 
 ### addPermanentCycleSupport
-Sets the permanent cycle support setting for all new `WriteOptions` instances. When enabled (default), the writer performs a `traceReferences()` pre-pass to identify multi-referenced objects and emit `@id`/`@ref`. When disabled, the pre-pass is skipped for ~35-40% faster serialization of acyclic data.
+Sets the permanent cycle support setting for all new `WriteOptions` instances. When enabled (default), the writer performs a `traceReferences()` pre-pass to identify multi-referenced objects and emit `@id`/`@ref`. When disabled, the pre-pass is skipped for ~35-40% faster serialization of acyclic data, identity markers are not emitted, and true cycles throw with remediation guidance.
 >#### WriteOptionsBuilder.addPermanentCycleSupport(`boolean cycleSupport`)
 
 ### addPermanentToonDelimiter

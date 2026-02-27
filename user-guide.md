@@ -453,6 +453,11 @@ String toon = JsonIo.toToon(person, null);
 JsonIo.toToon(outputStream, person, writeOptions);
 ```
 
+**TOON defaults with `null` write options:**
+- Type metadata is omitted (`showTypeInfoNever()` behavior).
+- Meta keys use `$` prefix by default (for JSON5-friendly identifiers).
+- You can override either behavior with explicit `WriteOptionsBuilder` settings.
+
 ### Reading TOON
 
 ```java
@@ -624,9 +629,9 @@ This provides comprehensive coverage far exceeding other TOON implementations:
 | `BitSet`, `ByteBuffer`, `CharBuffer` | ✓ | ✗ |
 | `StringBuffer`, `StringBuilder` | ✓ | ✗ |
 | Complex object graphs | ✓ Full support | Limited |
-| Cyclic reference handling | ✓ Graceful null | N/A |
+| Cyclic reference handling | ✓ `$id`/`$ref` (or `@id`/`@ref`) | N/A |
 | Generic type preservation | ✓ Via TypeHolder | ✗ |
-| Custom type extensibility | ✓ ClassFactory/Writer | Limited |
+| Custom type extensibility | ✓ ClassFactory/CustomReader | Limited |
 | Delimiter options (comma/tab/pipe) | ✓ | ✓ |
 
 ### When to Use TOON
@@ -634,19 +639,20 @@ This provides comprehensive coverage far exceeding other TOON implementations:
 **Use TOON when:**
 - Communicating with LLMs (significant token savings in both prompts and responses)
 - Human readability is important
-- Data is primarily acyclic (TOON doesn't support `@id`/`@ref` for cycles)
+- You want compact payloads while still preserving references/cycles when needed (`cycleSupport(true)`)
 
 **Use JSON when:**
 - Interoperability with other systems is required
-- Data contains cyclic references that must be preserved (`@id`/`@ref`)
+- You need strict JSON tooling compatibility
 - Standard JSON tooling is needed
 
 ### Cycle Handling in TOON
 
-TOON output silently skips cyclic references to prevent infinite loops. If an object
-is encountered twice during serialization, the second occurrence is written as `null`.
-This is consistent with TOON's design goal of compact, LLM-friendly output where
-cyclic references are typically not needed.
+TOON supports shared references and cycles when `cycleSupport(true)` is enabled (default),
+emitting TOON metadata keys (`$id`/`$ref` by default, with `@` variants also supported).
+When `cycleSupport(false)` is used, json-io skips the reference pre-pass for speed and
+throws a `JsonIoException` if an actual cycle is encountered, with guidance to enable
+`cycleSupport(true)`.
 
 ## Annotations
 

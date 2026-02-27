@@ -233,6 +233,7 @@ public class WriteOptionsBuilder {
             options.shortMetaKeys = other.shortMetaKeys;
             options.metaPrefixOverride = other.getMetaPrefixOverride();
             options.showTypeInfo = other.showTypeInfo;
+            options.showTypeInfoExplicitlySet = other.showTypeInfoExplicitlySet;
             options.skipNullFields = other.skipNullFields;
             options.writeLongsAsStrings = other.writeLongsAsStrings;
             options.cycleSupport = other.cycleSupport;
@@ -835,6 +836,7 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder showTypeInfoAlways() {
         options.showTypeInfo = WriteOptions.ShowType.ALWAYS;
+        options.showTypeInfoExplicitlySet = true;
         return this;
     }
 
@@ -845,6 +847,7 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder showTypeInfoNever() {
         options.showTypeInfo = WriteOptions.ShowType.NEVER;
+        options.showTypeInfoExplicitlySet = true;
         return this;
     }
 
@@ -858,6 +861,7 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder showTypeInfoMinimal() {
         options.showTypeInfo = WriteOptions.ShowType.MINIMAL;
+        options.showTypeInfoExplicitlySet = true;
         return this;
     }
 
@@ -872,6 +876,7 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder showTypeInfoMinimalPlus() {
         options.showTypeInfo = WriteOptions.ShowType.MINIMAL_PLUS;
+        options.showTypeInfoExplicitlySet = true;
         return this;
     }
 
@@ -1615,6 +1620,7 @@ public class WriteOptionsBuilder {
     static class DefaultWriteOptions implements WriteOptions {
         private boolean shortMetaKeys = false;
         private ShowType showTypeInfo = WriteOptions.ShowType.MINIMAL;
+        private boolean showTypeInfoExplicitlySet = false;
         private boolean prettyPrint = false;
         private int lruSize = 1000;
         private boolean writeLongsAsStrings = false;
@@ -1763,6 +1769,10 @@ public class WriteOptionsBuilder {
          */
         public boolean isShowingRootTypeInfo() {
             return showRootTypeInfo;
+        }
+
+        boolean isShowTypeInfoExplicitlySet() {
+            return showTypeInfoExplicitlySet;
         }
 
         /**
