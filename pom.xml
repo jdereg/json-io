@@ -38,7 +38,7 @@
         <version.mockito-junit-jupiter>4.11.0</version.mockito-junit-jupiter>
         <version.assertj-core>3.27.7</version.assertj-core>
         <version.gson>2.13.2</version.gson>
-        <version.jackson-core>2.19.4</version.jackson-core>
+        <version.jackson-core>2.21.1</version.jackson-core>
         <version.jtokkit>1.1.0</version.jtokkit>
 
         <!-- Build maven-***-plugins-->
