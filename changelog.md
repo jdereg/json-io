@@ -1,6 +1,6 @@
 ### Revision History
 
-#### 4.95.0 - 2026-02-28
+#### 4.96.0 - 2026-02-28
 * **FEATURE**: Spring Boot starter — expanded YAML configuration properties. All commonly used `WriteOptions` and `ReadOptions` settings are now configurable via `application.yml` without writing Java code. New write properties: `force-map-output-as-two-arrays`, `write-enum-as-json-object`, `cycle-support`, `json5`, `date-format`, `indentation-size`, `show-root-type-info`, `meta-prefix`, `toon-delimiter`. New read properties: `use-unsafe`, `floating-point`, `integer-type`. Advanced/internal tuning settings remain available through `ReadOptionsCustomizer`/`WriteOptionsCustomizer` beans.
 * **IMPROVEMENT**: `@type` elimination on write now considers `@IoDeserialize(as=X)` and `@IoTypeInfo(X)` annotations. When the runtime type of a field matches the annotation-specified type, `@type` is omitted from JSON output because the reader can infer the correct type from the annotation. This produces smaller JSON without sacrificing round-trip fidelity.
 * **IMPROVEMENT**: `AnnotationResolver` now uses `ClassUtilities.forName()` instead of `Class.forName()` for external annotation detection, ensuring proper classloader resolution in OSGi and JPMS environments.
@@ -107,6 +107,10 @@
   * `AutomaticColorTest`, `AutomaticFileTest`, `AutomaticPathTest`: Removed verbose `Logger`/`System.out.println` debug output.
   * `Issue423UnknownTypeTest`, `Issue425ExactReproTest`, `Issue425NestedJsonTest`: Removed verbose debug output.
   * `SecurityAuditLoggerTest`: Fixed log handler lifecycle to suppress console output during tests.
+* **BUG FIX**: Updated `java-util` dependency to `4.96.0-SNAPSHOT` which fixes a `ClassUtilities.trySetAccessible()` caching bug. The `WeakHashMap`-based accessibility cache used `equals()` lookup, causing different `Field` instances for the same logical field to share cache entries. This left fields inaccessible, causing `Traverser` to silently skip them and `GraphComparator.applyDelta()` to fail with "source object not found."
+* **TEST FIX**: `EnumTests` — updated `testDuplicateRef` and `testEnumField` to expect successful deserialization of non-static inner classes of package-private outer classes. These classes are correctly instantiable via `setAccessible()` on classpath (no JPMS); the previous test expectations relied on the now-fixed caching bug.
+
+#### 4.95.0 - not released
 
 #### 4.94.0 - 2026-02-14
 * **FEATURE**: Added TOON strict-read configuration to `ReadOptions` / `ReadOptionsBuilder`:
