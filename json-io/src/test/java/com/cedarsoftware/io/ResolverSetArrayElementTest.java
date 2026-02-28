@@ -101,11 +101,13 @@ class ResolverSetArrayElementTest {
         resolver.callSetArrayElement(chars, 0, null);
         resolver.callSetArrayElement(chars, 1, 'a');
         resolver.callSetArrayElement(chars, 2, "b");
-        resolver.callSetArrayElement(chars, 3, 5);
         assertThat(chars[0]).isEqualTo('\0');
         assertThat(chars[1]).isEqualTo('a');
         assertThat(chars[2]).isEqualTo('b');
-        assertThat(chars[3]).isEqualTo('\0');
+
+        // java-util 4.95.0: setPrimitiveElement now throws for incompatible types into char[]
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> resolver.callSetArrayElement(chars, 3, 5));
     }
 
     @Test
