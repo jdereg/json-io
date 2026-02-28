@@ -9,12 +9,15 @@ import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -73,11 +76,57 @@ public class ToonWriter implements Closeable, Flushable {
     private static final int INDENT_CACHE_SIZE = 32;
     private static final String[] INDENT_CACHE = buildIndentCache();
     private static final int VISITED = 1;
+    private static final int KEY_QUOTE_CACHE_MAX = 1024;
+    private static final int QUOTE_DECISION_CACHE_MAX = 4096;
+    private static final int DECIMAL_FORMAT_CACHE_MAX = 4096;
+    private static final int SMALL_LONG_CACHE_LOW = -128;
+    private static final int SMALL_LONG_CACHE_HIGH = 16384;
+    private static final String[] SMALL_LONG_STRINGS = buildSmallLongStringCache();
+    private static final Map<String, Boolean> SHARED_QUOTE_DECISION_CACHE_COMMA = new ConcurrentHashMap<>(1024);
+    private static final Map<String, Boolean> SHARED_QUOTE_DECISION_CACHE_TAB = new ConcurrentHashMap<>(512);
+    private static final Map<String, Boolean> SHARED_QUOTE_DECISION_CACHE_PIPE = new ConcurrentHashMap<>(512);
+    private static final AtomicInteger SHARED_QUOTE_DECISION_CACHE_SIZE_COMMA = new AtomicInteger();
+    private static final AtomicInteger SHARED_QUOTE_DECISION_CACHE_SIZE_TAB = new AtomicInteger();
+    private static final AtomicInteger SHARED_QUOTE_DECISION_CACHE_SIZE_PIPE = new AtomicInteger();
+    private static final Map<Long, String> SHARED_DOUBLE_FORMAT_CACHE = new ConcurrentHashMap<>(1024);
+    private static final Map<Integer, String> SHARED_FLOAT_FORMAT_CACHE = new ConcurrentHashMap<>(512);
+    private static final int COUNT_MARKER_CACHE_SIZE = 256;
+    private static final String[] COUNT_MARKER_CACHE_COMMA = buildCountMarkerCache(',');
+    private static final String[] COUNT_MARKER_CACHE_TAB = buildCountMarkerCache('\t');
+    private static final String[] COUNT_MARKER_CACHE_PIPE = buildCountMarkerCache('|');
+
+    // Cached type dispatch enum - mirrors JsonWriter's writeTypeCache pattern.
+    // Computed once per class, avoids repeated instanceof + Converter.isConversionSupportedFor() calls.
+    private enum ToonWriteType {
+        ARRAY, COLLECTION, MAP, STRING, NUMBER, BOOLEAN, CHARACTER,
+        CONVERTER_SUPPORTED, VALUE_METHOD, POJO
+    }
+
+    private static final ClassValue<ToonWriteType> writeTypeCache = new ClassValue<ToonWriteType>() {
+        @Override
+        protected ToonWriteType computeValue(Class<?> type) {
+            if (type.isArray()) return ToonWriteType.ARRAY;
+            if (Collection.class.isAssignableFrom(type)) return ToonWriteType.COLLECTION;
+            if (Map.class.isAssignableFrom(type)) return ToonWriteType.MAP;
+            if (type == String.class) return ToonWriteType.STRING;
+            if (Number.class.isAssignableFrom(type)) return ToonWriteType.NUMBER;
+            if (type == Boolean.class) return ToonWriteType.BOOLEAN;
+            if (type == Character.class) return ToonWriteType.CHARACTER;
+            if (Converter.isConversionSupportedFor(type, String.class)) return ToonWriteType.CONVERTER_SUPPORTED;
+            if (AnnotationResolver.getMetadata(type).getValueMethod() != null) return ToonWriteType.VALUE_METHOD;
+            return ToonWriteType.POJO;
+        }
+    };
 
     private final WriteOptions writeOptions;
     private final Writer out;
     private final char delimiter;  // Default comma, configurable to pipe or tab
+    private final Map<String, Boolean> quoteDecisionCache;
+    private final AtomicInteger quoteDecisionCacheSize;
     private final boolean cycleSupport;
+    private final boolean skipNullFields;
+    private final boolean toonKeyFolding;
+    private final boolean enumPublicFieldsOnly;
     private final String idKey;
     private final String refKey;
     private final String itemsKey;
@@ -93,6 +142,10 @@ public class ToonWriter implements Closeable, Flushable {
     private final IdentityIntMap objsReferenced = new IdentityIntMap(256);
     // Track active traversal path when cycleSupport=false
     private final Map<Object, Boolean> activePath = new IdentityHashMap<>();
+    // Cache resolved output type names per class for this write operation.
+    private final Map<Class<?>, String> typeNameCache = new IdentityHashMap<>(32);
+    // Cache key quote decisions for this write operation.
+    private final Map<String, Boolean> keyQuoteDecisionCache = new LinkedHashMap<>(64);
 
     private static String[] buildIndentCache() {
         String[] cache = new String[INDENT_CACHE_SIZE];
@@ -104,6 +157,30 @@ public class ToonWriter implements Closeable, Flushable {
         return cache;
     }
 
+    private static String[] buildSmallLongStringCache() {
+        int size = SMALL_LONG_CACHE_HIGH - SMALL_LONG_CACHE_LOW + 1;
+        String[] cache = new String[size];
+        for (int i = 0; i < size; i++) {
+            cache[i] = Integer.toString(i + SMALL_LONG_CACHE_LOW);
+        }
+        return cache;
+    }
+
+    private static String toCachedLongString(long value) {
+        if (value >= SMALL_LONG_CACHE_LOW && value <= SMALL_LONG_CACHE_HIGH) {
+            return SMALL_LONG_STRINGS[(int) (value - SMALL_LONG_CACHE_LOW)];
+        }
+        return Long.toString(value);
+    }
+
+    private static String[] buildCountMarkerCache(char delim) {
+        String[] cache = new String[COUNT_MARKER_CACHE_SIZE];
+        for (int i = 0; i < COUNT_MARKER_CACHE_SIZE; i++) {
+            cache[i] = delim == ',' ? "[" + i + "]" : "[" + i + delim + "]";
+        }
+        return cache;
+    }
+
     /**
      * Create a ToonWriter that writes to an OutputStream.
      *
@@ -111,10 +188,27 @@ public class ToonWriter implements Closeable, Flushable {
      * @param writeOptions configuration options (may be null for defaults)
      */
     public ToonWriter(OutputStream out, WriteOptions writeOptions) {
+        this(new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8)), writeOptions);
+    }
+
+    ToonWriter(Writer out, WriteOptions writeOptions) {
         this.writeOptions = writeOptions == null ? WriteOptionsBuilder.getDefaultWriteOptions() : writeOptions;
-        this.out = new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
+        this.out = out;
         this.delimiter = this.writeOptions.getToonDelimiter();
+        if (delimiter == '\t') {
+            this.quoteDecisionCache = SHARED_QUOTE_DECISION_CACHE_TAB;
+            this.quoteDecisionCacheSize = SHARED_QUOTE_DECISION_CACHE_SIZE_TAB;
+        } else if (delimiter == '|') {
+            this.quoteDecisionCache = SHARED_QUOTE_DECISION_CACHE_PIPE;
+            this.quoteDecisionCacheSize = SHARED_QUOTE_DECISION_CACHE_SIZE_PIPE;
+        } else {
+            this.quoteDecisionCache = SHARED_QUOTE_DECISION_CACHE_COMMA;
+            this.quoteDecisionCacheSize = SHARED_QUOTE_DECISION_CACHE_SIZE_COMMA;
+        }
         this.cycleSupport = this.writeOptions.isCycleSupport();
+        this.skipNullFields = this.writeOptions.isSkipNullFields();
+        this.toonKeyFolding = this.writeOptions.isToonKeyFolding();
+        this.enumPublicFieldsOnly = this.writeOptions.isEnumPublicFieldsOnly();
 
         // TOON defaults to '$' meta keys for JSON5-friendly unquoted identifiers.
         char prefix = '$';
@@ -142,6 +236,11 @@ public class ToonWriter implements Closeable, Flushable {
      * For pipe: "[N|]"
      */
     private String countMarker(int count) {
+        if (count >= 0 && count < COUNT_MARKER_CACHE_SIZE) {
+            if (delimiter == ',') return COUNT_MARKER_CACHE_COMMA[count];
+            if (delimiter == '\t') return COUNT_MARKER_CACHE_TAB[count];
+            return COUNT_MARKER_CACHE_PIPE[count];
+        }
         if (delimiter == ',') {
             return "[" + count + "]";
         }
@@ -160,6 +259,7 @@ public class ToonWriter implements Closeable, Flushable {
             objVisited.clear();
             objsReferenced.clear();
             activePath.clear();
+            keyQuoteDecisionCache.clear();
             nextIdentity = 1;
             if (cycleSupport) {
                 traceReferences(obj);
@@ -173,12 +273,14 @@ public class ToonWriter implements Closeable, Flushable {
             objVisited.clear();
             objsReferenced.clear();
             activePath.clear();
+            keyQuoteDecisionCache.clear();
             nextIdentity = 1;
         }
     }
 
     /**
      * Write any value - dispatches to appropriate handler based on type.
+     * Uses ClassValue cache for O(1) type dispatch (avoids repeated instanceof + Converter checks).
      */
     private void writeValue(Object value) throws IOException {
         if (value == null) {
@@ -188,48 +290,43 @@ public class ToonWriter implements Closeable, Flushable {
 
         Class<?> clazz = value.getClass();
 
-        // Structural types - handle with nested output
-        if (clazz.isArray()) {
-            writeArray(value);
-        } else if (value instanceof Collection) {
-            writeCollection((Collection<?>) value);
-        } else if (value instanceof Map) {
-            writeMap((Map<?, ?>) value);
-        }
-        // String - write directly (most common case after structures)
-        else if (value instanceof String) {
-            writeString((String) value);
-        }
-        // Number - special handling for NaN/Infinity per TOON spec
-        else if (value instanceof Number) {
-            writeNumber((Number) value);
-        }
-        // Boolean - write unquoted true/false (Converter returns string which would get quoted)
-        else if (value instanceof Boolean) {
-            out.write(((Boolean) value) ? "true" : "false");
-        }
-        // Character - convert to string
-        else if (value instanceof Character) {
-            writeString(String.valueOf(value));
-        }
-        // All other types - use Converter if supported (AtomicBoolean, Enum, BitSet, Date, Time, UUID, etc.)
-        else if (Converter.isConversionSupportedFor(clazz, String.class)) {
-            writeString(Converter.convert(value, String.class));
-        }
-        // Check @IoValue - serialize via single method return value
-        else {
-            Method valueMethod = AnnotationResolver.getMetadata(clazz).getValueMethod();
-            if (valueMethod != null) {
+        switch (writeTypeCache.get(clazz)) {
+            case ARRAY:
+                writeArray(value);
+                break;
+            case COLLECTION:
+                writeCollection((Collection<?>) value);
+                break;
+            case MAP:
+                writeMap((Map<?, ?>) value);
+                break;
+            case STRING:
+                writeString((String) value);
+                break;
+            case NUMBER:
+                writeNumber((Number) value);
+                break;
+            case BOOLEAN:
+                out.write(((Boolean) value) ? "true" : "false");
+                break;
+            case CHARACTER:
+                writeString(String.valueOf(value));
+                break;
+            case CONVERTER_SUPPORTED:
+                writeString(Converter.convert(value, String.class));
+                break;
+            case VALUE_METHOD:
                 try {
+                    Method valueMethod = AnnotationResolver.getMetadata(clazz).getValueMethod();
                     Object val = valueMethod.invoke(value);
                     writeValue(val);
                 } catch (Exception e) {
                     throw new JsonIoException("@IoValue method invocation failed for " + clazz.getName(), e);
                 }
-            } else {
-                // Fallback - complex object as key: value pairs
+                break;
+            case POJO:
                 writeObject(value);
-            }
+                break;
         }
     }
 
@@ -270,18 +367,26 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     private boolean isPrimitiveClass(Class<?> clazz) {
-        if (clazz.isArray() || Map.class.isAssignableFrom(clazz) || Collection.class.isAssignableFrom(clazz)) {
-            return false;
+        switch (writeTypeCache.get(clazz)) {
+            case STRING:
+            case NUMBER:
+            case BOOLEAN:
+            case CHARACTER:
+            case CONVERTER_SUPPORTED:
+                return true;
+            default:
+                return false;
         }
-        return clazz == String.class
-                || Number.class.isAssignableFrom(clazz)
-                || clazz == Boolean.class
-                || clazz == Character.class
-                || Converter.isConversionSupportedFor(clazz, String.class);
     }
 
     private String getTypeNameForOutput(Class<?> clazz) {
-        return writeOptions.getTypeNameAlias(clazz.getName());
+        String cached = typeNameCache.get(clazz);
+        if (cached != null) {
+            return cached;
+        }
+        String alias = writeOptions.getTypeNameAlias(clazz.getName());
+        typeNameCache.put(clazz, alias);
+        return alias;
     }
 
     private void writeTypeField(Class<?> clazz) throws IOException {
@@ -345,11 +450,40 @@ public class ToonWriter implements Closeable, Flushable {
      * When key folding is OFF, dots in keys must be quoted to prevent expansion on read.
      */
     private void writeKeyString(String key) throws IOException {
-        if (!writeOptions.isToonKeyFolding() && key.contains(".")) {
-            // Key folding is OFF, so quote keys with dots to preserve them as literals
+        if (key.isEmpty()) {
+            writeQuotedString(key);
+            return;
+        }
+
+        Boolean quote = keyQuoteDecisionCache.get(key);
+        if (quote != null) {
+            if (quote) {
+                writeQuotedString(key);
+            } else {
+                out.write(key);
+            }
+            return;
+        }
+
+        if ((toonKeyFolding || key.indexOf('.') < 0)
+                && !isReservedScalarLiteral(key)
+                && isSimpleUnquotedAsciiToken(key)) {
+            if (keyQuoteDecisionCache.size() < KEY_QUOTE_CACHE_MAX) {
+                keyQuoteDecisionCache.put(key, Boolean.FALSE);
+            }
+            out.write(key);
+            return;
+        }
+
+        quote = (!toonKeyFolding && key.indexOf('.') >= 0) || needsQuoting(key);
+        if (keyQuoteDecisionCache.size() < KEY_QUOTE_CACHE_MAX) {
+            keyQuoteDecisionCache.put(key, quote);
+        }
+
+        if (quote) {
             writeQuotedString(key);
         } else {
-            writeString(key);
+            out.write(key);
         }
     }
 
@@ -392,6 +526,66 @@ public class ToonWriter implements Closeable, Flushable {
             return true;  // Empty strings must be quoted
         }
 
+        // Check cache FIRST - covers all cases including reserved literals.
+        Boolean cached = quoteDecisionCache.get(str);
+        if (cached != null) {
+            return cached;
+        }
+
+        // Reserved literals must stay quoted to preserve scalar-vs-string semantics.
+        if (isReservedScalarLiteral(str)) {
+            cacheQuoteDecision(str, Boolean.TRUE);
+            return true;
+        }
+
+        // Fast path for common identifier-like tokens (field names, enum names, etc.).
+        if (isSimpleUnquotedAsciiToken(str)) {
+            cacheQuoteDecision(str, Boolean.FALSE);
+            return false;
+        }
+
+        boolean quote = computeNeedsQuoting(str);
+        cacheQuoteDecision(str, quote);
+        return quote;
+    }
+
+    private void cacheQuoteDecision(String str, Boolean decision) {
+        if (quoteDecisionCacheSize.get() < QUOTE_DECISION_CACHE_MAX) {
+            Boolean prior = quoteDecisionCache.putIfAbsent(str, decision);
+            if (prior == null) {
+                quoteDecisionCacheSize.incrementAndGet();
+            }
+        }
+    }
+
+    private static boolean isReservedScalarLiteral(String str) {
+        return "true".equals(str) || "false".equals(str) || "null".equals(str);
+    }
+
+    private boolean isSimpleUnquotedAsciiToken(String str) {
+        char first = str.charAt(0);
+        if (!((first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z') || first == '_')) {
+            return false;
+        }
+
+        int len = str.length();
+        for (int i = 1; i < len; i++) {
+            char c = str.charAt(i);
+            if (c == delimiter) {
+                return false;
+            }
+            if (!((c >= 'a' && c <= 'z')
+                    || (c >= 'A' && c <= 'Z')
+                    || (c >= '0' && c <= '9')
+                    || c == '_'
+                    || c == '-')) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean computeNeedsQuoting(String str) {
         // Check for leading/trailing whitespace
         char first = str.charAt(0);
         char last = str.charAt(str.length() - 1);
@@ -399,10 +593,7 @@ public class ToonWriter implements Closeable, Flushable {
             return true;
         }
 
-        // Check for reserved words
-        if ("true".equals(str) || "false".equals(str) || "null".equals(str)) {
-            return true;
-        }
+        // Note: reserved literals (true/false/null) are already handled by needsQuoting() before this call.
 
         // Check if it looks like a number
         if (looksLikeNumber(str)) {
@@ -482,30 +673,29 @@ public class ToonWriter implements Closeable, Flushable {
     /**
      * Write string content with TOON escape sequences.
      * Only valid escapes: \\, \", \n, \r, \t
+     * Uses batch-scanning to write runs of safe characters in a single write() call.
      */
     private void writeEscapedString(String str) throws IOException {
         int len = str.length();
+        int last = 0;
         for (int i = 0; i < len; i++) {
-            char c = str.charAt(i);
-            switch (c) {
-                case '\\':
-                    out.write("\\\\");
-                    break;
-                case '"':
-                    out.write("\\\"");
-                    break;
-                case '\n':
-                    out.write("\\n");
-                    break;
-                case '\r':
-                    out.write("\\r");
-                    break;
-                case '\t':
-                    out.write("\\t");
-                    break;
-                default:
-                    out.write(c);
+            String escape;
+            switch (str.charAt(i)) {
+                case '\\': escape = "\\\\"; break;
+                case '"':  escape = "\\\""; break;
+                case '\n': escape = "\\n"; break;
+                case '\r': escape = "\\r"; break;
+                case '\t': escape = "\\t"; break;
+                default: continue;
             }
+            if (last < i) {
+                out.write(str, last, i - last);
+            }
+            out.write(escape);
+            last = i + 1;
+        }
+        if (last < len) {
+            out.write(str, last, len - last);
         }
     }
 
@@ -538,10 +728,14 @@ public class ToonWriter implements Closeable, Flushable {
         } else if (num instanceof BigInteger) {
             out.write(num.toString());
         } else if (num instanceof AtomicInteger || num instanceof AtomicLong) {
-            out.write(String.valueOf(num.longValue()));
+            out.write(toCachedLongString(num.longValue()));
         } else {
             // Integer, Long, Short, Byte
-            out.write(num.toString());
+            if (num instanceof Integer || num instanceof Long || num instanceof Short || num instanceof Byte) {
+                out.write(toCachedLongString(num.longValue()));
+            } else {
+                out.write(num.toString());
+            }
         }
     }
 
@@ -552,9 +746,70 @@ public class ToonWriter implements Closeable, Flushable {
      * - Whole numbers have no decimal point
      */
     private String formatDecimalNumber(double d) {
-        // Use BigDecimal for precise conversion without exponent notation
-        BigDecimal bd = BigDecimal.valueOf(d);
-        return formatBigDecimal(bd);
+        long bits = Double.doubleToLongBits(d);
+        String cached = SHARED_DOUBLE_FORMAT_CACHE.get(bits);
+        if (cached != null) {
+            return cached;
+        }
+
+        String formatted;
+        if (d >= Long.MIN_VALUE && d <= Long.MAX_VALUE) {
+            long l = (long) d;
+            if (d == l) {
+                formatted = toCachedLongString(l);
+                if (SHARED_DOUBLE_FORMAT_CACHE.size() < DECIMAL_FORMAT_CACHE_MAX) {
+                    SHARED_DOUBLE_FORMAT_CACHE.putIfAbsent(bits, formatted);
+                }
+                return formatted;
+            }
+        }
+
+        String text = Double.toString(d);
+        if (text.indexOf('E') < 0 && text.indexOf('e') < 0) {
+            formatted = text.endsWith(".0") ? text.substring(0, text.length() - 2) : text;
+        } else {
+            formatted = formatBigDecimal(BigDecimal.valueOf(d));
+        }
+
+        if (SHARED_DOUBLE_FORMAT_CACHE.size() < DECIMAL_FORMAT_CACHE_MAX) {
+            SHARED_DOUBLE_FORMAT_CACHE.putIfAbsent(bits, formatted);
+        }
+        return formatted;
+    }
+
+    /**
+     * Float fast path equivalent of {@link #formatDecimalNumber(double)}.
+     */
+    private String formatDecimalNumber(float f) {
+        int bits = Float.floatToIntBits(f);
+        String cached = SHARED_FLOAT_FORMAT_CACHE.get(bits);
+        if (cached != null) {
+            return cached;
+        }
+
+        String formatted;
+        if (f >= Long.MIN_VALUE && f <= Long.MAX_VALUE) {
+            long l = (long) f;
+            if (f == l) {
+                formatted = toCachedLongString(l);
+                if (SHARED_FLOAT_FORMAT_CACHE.size() < DECIMAL_FORMAT_CACHE_MAX) {
+                    SHARED_FLOAT_FORMAT_CACHE.putIfAbsent(bits, formatted);
+                }
+                return formatted;
+            }
+        }
+
+        String text = Float.toString(f);
+        if (text.indexOf('E') < 0 && text.indexOf('e') < 0) {
+            formatted = text.endsWith(".0") ? text.substring(0, text.length() - 2) : text;
+        } else {
+            formatted = formatBigDecimal(new BigDecimal(text));
+        }
+
+        if (SHARED_FLOAT_FORMAT_CACHE.size() < DECIMAL_FORMAT_CACHE_MAX) {
+            SHARED_FLOAT_FORMAT_CACHE.putIfAbsent(bits, formatted);
+        }
+        return formatted;
     }
 
     /**
@@ -615,7 +870,7 @@ public class ToonWriter implements Closeable, Flushable {
                 writeIndent();
                 out.write(itemsKey);
             }
-            out.write(countMarker(length) + ":");
+            out.write(countMarker(length));
             writeArrayElements(array, length);
         } finally {
             if (!cycleSupport) {
@@ -630,48 +885,28 @@ public class ToonWriter implements Closeable, Flushable {
      */
     private void writeArrayElements(Object array, int length) throws IOException {
         if (length == 0) {
+            out.write(":");
             return;
         }
 
         // Check if all elements are primitives (can use inline format)
         if (isAllPrimitives(array, length)) {
-            out.write(" ");
+            out.write(": ");
             for (int i = 0; i < length; i++) {
                 if (i > 0) {
                     out.write(delimiter);
                 }
                 writeInlineValue(getArrayElement(array, i));
             }
-        } else if (!writeOptions.isPrettyPrint() && !typeMetadataEnabled) {
+        } else if (!writeOptions.isPrettyPrint()) {
             // Try tabular format for uniform POJO arrays
             UniformPojoArrayData uniformPOJO = getUniformPOJODataFromArray(array, length);
             if (uniformPOJO != null) {
-                out.write("{");
-                boolean firstKey = true;
-                for (String key : uniformPOJO.keys) {
-                    if (!firstKey) {
-                        out.write(delimiter);
-                    }
-                    firstKey = false;
-                    out.write(key);
-                }
-                out.write("}:");
-                depth++;
-                for (Map<String, Object> fields : uniformPOJO.rows) {
-                    out.write(NEW_LINE);
-                    writeIndent();
-                    boolean firstVal = true;
-                    for (String key : uniformPOJO.keys) {
-                        if (!firstVal) {
-                            out.write(delimiter);
-                        }
-                        firstVal = false;
-                        writeInlineValue(fields.get(key));
-                    }
-                }
-                depth--;
+                writeTabularHeader(uniformPOJO.keys);
+                writeTabularPOJORows(uniformPOJO);
             } else {
                 // Mixed/complex array - use list format with hyphens
+                out.write(":");
                 depth++;
                 for (int i = 0; i < length; i++) {
                     out.write(NEW_LINE);
@@ -684,6 +919,7 @@ public class ToonWriter implements Closeable, Flushable {
             }
         } else {
             // prettyPrint=true → always use verbose list format
+            out.write(":");
             depth++;
             for (int i = 0; i < length; i++) {
                 out.write(NEW_LINE);
@@ -774,12 +1010,12 @@ public class ToonWriter implements Closeable, Flushable {
                 // Tabular format: {key1,key2,...}: followed by CSV rows
                 writeTabularHeader(uniformKeys);
                 writeTabularRows(collection, uniformKeys);
-            } else if (!writeOptions.isPrettyPrint() && !typeMetadataEnabled) {
+            } else if (!writeOptions.isPrettyPrint()) {
                 // Check for uniform POJO array → tabular format (default, compact)
-                List<String> uniformPOJOKeys = getUniformPOJOKeys(collection);
-                if (uniformPOJOKeys != null) {
-                    writeTabularHeader(uniformPOJOKeys);
-                    writeTabularPOJORows(collection, uniformPOJOKeys);
+                UniformPojoArrayData uniformPOJO = getUniformPOJODataFromCollection(collection);
+                if (uniformPOJO != null) {
+                    writeTabularHeader(uniformPOJO.keys);
+                    writeTabularPOJORows(uniformPOJO);
                 } else {
                     // Non-uniform or mixed - use list format with hyphens
                     out.write(":");
@@ -903,7 +1139,7 @@ public class ToonWriter implements Closeable, Flushable {
     /**
      * Check if a collection contains uniform POJOs (all non-Map objects with identical
      * field names and primitive field values).
-     * Returns the ordered list of field names if uniform, null otherwise.
+     * Returns keys plus precomputed row field maps if uniform, null otherwise.
      * <p>
      * POJOs qualify for tabular format when:
      * <ul>
@@ -912,8 +1148,10 @@ public class ToonWriter implements Closeable, Flushable {
      *   <li>All elements have the same fields in the same order</li>
      * </ul>
      */
-    private List<String> getUniformPOJOKeys(Collection<?> collection) {
+    private UniformPojoArrayData getUniformPOJODataFromCollection(Collection<?> collection) {
         List<String> keys = null;
+        List<Map<String, Object>> rows = new ArrayList<>(collection.size());
+        Class<?> elementClass = null;
 
         for (Object element : collection) {
             if (element == null) {
@@ -933,6 +1171,13 @@ public class ToonWriter implements Closeable, Flushable {
                 return null;
             }
 
+            // All elements must be the same concrete class for tabular format
+            if (elementClass == null) {
+                elementClass = element.getClass();
+            } else if (elementClass != element.getClass()) {
+                return null;
+            }
+
             // Get the object's field names and values
             Map<String, Object> fields = getObjectFields(element);
             if (fields.isEmpty()) {
@@ -946,15 +1191,28 @@ public class ToonWriter implements Closeable, Flushable {
                 }
             }
 
-            List<String> elementKeys = new ArrayList<>(fields.keySet());
             if (keys == null) {
-                keys = elementKeys;
-            } else if (!keys.equals(elementKeys)) {
+                keys = new ArrayList<>(fields.keySet());
+            } else if (!hasSameKeyOrder(fields, keys)) {
                 return null;  // Different fields break uniformity
+            }
+            rows.add(fields);
+        }
+
+        if (keys == null) {
+            return null;
+        }
+
+        // Inject @type as the first column when type metadata is needed
+        if (shouldWriteTypeMetadata(elementClass)) {
+            String typeName = getTypeNameForOutput(elementClass);
+            keys.add(0, typeKey);
+            for (Map<String, Object> row : rows) {
+                row.put(typeKey, typeName);
             }
         }
 
-        return keys;
+        return new UniformPojoArrayData(keys, rows);
     }
 
     /**
@@ -964,6 +1222,7 @@ public class ToonWriter implements Closeable, Flushable {
     private UniformPojoArrayData getUniformPOJODataFromArray(Object array, int length) {
         List<String> keys = null;
         List<Map<String, Object>> rows = new ArrayList<>(length);
+        Class<?> elementClass = null;
 
         for (int i = 0; i < length; i++) {
             Object element = getArrayElement(array, i);
@@ -977,6 +1236,13 @@ public class ToonWriter implements Closeable, Flushable {
                 return null;
             }
             if (isPrimitive(element)) {
+                return null;
+            }
+
+            // All elements must be the same concrete class for tabular format
+            if (elementClass == null) {
+                elementClass = element.getClass();
+            } else if (elementClass != element.getClass()) {
                 return null;
             }
 
@@ -998,7 +1264,20 @@ public class ToonWriter implements Closeable, Flushable {
             rows.add(fields);
         }
 
-        return keys == null ? null : new UniformPojoArrayData(keys, rows);
+        if (keys == null) {
+            return null;
+        }
+
+        // Inject @type as the first column when type metadata is needed
+        if (shouldWriteTypeMetadata(elementClass)) {
+            String typeName = getTypeNameForOutput(elementClass);
+            keys.add(0, typeKey);
+            for (Map<String, Object> row : rows) {
+                row.put(typeKey, typeName);
+            }
+        }
+
+        return new UniformPojoArrayData(keys, rows);
     }
 
     private boolean hasSameKeyOrder(Map<String, Object> fields, List<String> keys) {
@@ -1016,18 +1295,17 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
-     * Write tabular rows for a collection of uniform POJOs (CSV-like format).
-     * Calls getObjectFields() per element to retrieve field values in key order.
+     * Write tabular rows for a collection/array of uniform POJOs (CSV-like format).
+     * Uses precomputed rows to avoid re-reading fields.
      */
-    private void writeTabularPOJORows(Collection<?> collection, List<String> keys) throws IOException {
+    private void writeTabularPOJORows(UniformPojoArrayData uniformPOJO) throws IOException {
         depth++;
-        for (Object element : collection) {
+        for (Map<String, Object> fields : uniformPOJO.rows) {
             out.write(NEW_LINE);
             writeIndent();
 
-            Map<String, Object> fields = getObjectFields(element);
             boolean first = true;
-            for (String key : keys) {
+            for (String key : uniformPOJO.keys) {
                 if (!first) {
                     out.write(delimiter);
                 }
@@ -1129,78 +1407,18 @@ public class ToonWriter implements Closeable, Flushable {
 
             for (Map.Entry<?, ?> entry : map.entrySet()) {
                 if (first) {
-                    // First field goes on same line as hyphen
                     out.write(" ");
                     first = false;
                 } else {
-                    // Subsequent fields on new lines at depth+1
                     out.write(NEW_LINE);
                     depth++;
                     writeIndent();
                     depth--;
                 }
 
-                // Write key
                 Object key = entry.getKey();
                 String keyStr = (key == null) ? "null" : key.toString();
-
-                // Write value - handle arrays/collections specially
-                Object value = entry.getValue();
-                if (value != null && value.getClass().isArray()) {
-                    if (shouldWrapArrayOrCollectionValue(value)) {
-                        writeKeyString(keyStr);
-                        out.write(":");
-                        out.write(NEW_LINE);
-                        depth += 2;
-                        writeIndent();
-                        writeArray(value);
-                        depth -= 2;
-                    } else {
-                        int length = ArrayUtilities.getLength(value);
-                        writeKeyString(keyStr);
-                        out.write(countMarker(length) + ":");
-                        writeArrayElements(value, length);
-                    }
-                } else if (value instanceof Collection) {
-                    if (shouldWrapArrayOrCollectionValue(value)) {
-                        writeKeyString(keyStr);
-                        out.write(":");
-                        out.write(NEW_LINE);
-                        depth += 2;
-                        writeIndent();
-                        writeCollection((Collection<?>) value);
-                        depth -= 2;
-                    } else {
-                        Collection<?> coll = (Collection<?>) value;
-                        writeKeyString(keyStr);
-                        out.write(countMarker(coll.size()));
-                        // Extra depth for collection elements inside inline map
-                        depth++;
-                        writeCollectionElementsWithHeader(coll);
-                        depth--;
-                    }
-                } else {
-                    writeKeyString(keyStr);
-                    out.write(":");
-                    if (value instanceof Map && ((Map<?, ?>) value).isEmpty()) {
-                        // Empty map - write inline as "key: {}"
-                        out.write(" {}");
-                    } else if (value != null && !isPrimitive(value)) {
-                        // Nested object - newline, no trailing space after colon
-                        out.write(NEW_LINE);
-                        depth += 2;
-                        if (value instanceof Map) {
-                            writeMap((Map<?, ?>) value);
-                        } else {
-                            writeNestedObject(value);
-                        }
-                        depth -= 2;
-                    } else {
-                        // Primitive value on same line - space before value
-                        out.write(" ");
-                        writeValue(value);
-                    }
-                }
+                writeFieldEntryInline(keyStr, entry.getValue());
             }
         } finally {
             if (!cycleSupport) {
@@ -1211,6 +1429,8 @@ public class ToonWriter implements Closeable, Flushable {
 
     /**
      * Write an object with first field on the current line (for list elements).
+     * Iterates WriteFieldPlan directly to avoid intermediate LinkedHashMap allocation.
+     * Falls back to map-based approach only when @IoAnyGetter is present (rare).
      */
     private void writeObjectInline(Object obj) throws IOException {
         if (cycleSupport) {
@@ -1225,32 +1445,104 @@ public class ToonWriter implements Closeable, Flushable {
         }
 
         try {
-            Map<String, Object> fields = getObjectFields(obj);
+            Class<?> clazz = obj.getClass();
+            AnnotationResolver.ClassAnnotationMetadata annMeta = AnnotationResolver.getMetadata(clazz);
+
+            // If @IoAnyGetter is present, fall back to map-based approach (rare path)
+            if (annMeta.getAnyGetterMethod() != null) {
+                writeObjectInlineViaMap(obj);
+                return;
+            }
+
+            List<WriteOptionsBuilder.WriteFieldPlan> plans =
+                    WriteOptionsBuilder.getWriteFieldPlans(writeOptions, clazz);
+
             boolean includeId = cycleSupport && isReferenced(obj);
-            boolean includeType = shouldWriteTypeMetadata(obj.getClass());
-            if (includeId || includeType) {
-                LinkedHashMap<String, Object> withMeta = new LinkedHashMap<>(fields.size() + 2);
-                if (includeId) {
-                    withMeta.put(idKey, getReferenceId(obj));
+            boolean includeType = shouldWriteTypeMetadata(clazz);
+            boolean first = true;
+
+            // Write metadata inline
+            if (includeId) {
+                out.write(" ");
+                writeIdField(obj);
+                first = false;
+            }
+            if (includeType) {
+                if (first) {
+                    out.write(" ");
+                    first = false;
+                } else {
+                    out.write(NEW_LINE);
+                    depth++;
+                    writeIndent();
+                    depth--;
                 }
-                if (includeType) {
-                    withMeta.put(typeKey, getTypeNameForOutput(obj.getClass()));
+                writeTypeField(clazz);
+            }
+
+            // Write fields directly from WriteFieldPlan
+            for (int i = 0, len = plans.size(); i < len; i++) {
+                WriteOptionsBuilder.WriteFieldPlan plan = plans.get(i);
+                if (plan.enumPublicOnlySkipCandidate() && enumPublicFieldsOnly) {
+                    continue;
                 }
-                for (Map.Entry<String, Object> entry : fields.entrySet()) {
-                    String key = entry.getKey();
-                    if (idKey.equals(key) || typeKey.equals(key)) {
-                        continue;
-                    }
-                    withMeta.put(key, entry.getValue());
+                Object value = plan.accessor().retrieve(obj);
+                if ((skipNullFields || plan.skipIfNull()) && value == null) {
+                    continue;
                 }
-                writeMapInline(withMeta);
-            } else {
-                writeMapInline(fields);
+                String formatPattern = plan.formatPattern();
+                if (formatPattern != null && value != null) {
+                    value = applyFormatPattern(value, formatPattern);
+                }
+                String key = plan.accessor().getUniqueFieldName();
+
+                if (first) {
+                    out.write(" ");
+                    first = false;
+                } else {
+                    out.write(NEW_LINE);
+                    depth++;
+                    writeIndent();
+                    depth--;
+                }
+                writeFieldEntryInline(key, value);
+            }
+
+            if (first) {
+                out.write(" {}");
             }
         } finally {
             if (!cycleSupport) {
                 exitActivePath(obj);
             }
+        }
+    }
+
+    /**
+     * Fallback for objects with @IoAnyGetter in inline context.
+     */
+    private void writeObjectInlineViaMap(Object obj) throws IOException {
+        Map<String, Object> fields = getObjectFields(obj);
+        boolean includeId = cycleSupport && isReferenced(obj);
+        boolean includeType = shouldWriteTypeMetadata(obj.getClass());
+        if (includeId || includeType) {
+            LinkedHashMap<String, Object> withMeta = new LinkedHashMap<>(fields.size() + 2);
+            if (includeId) {
+                withMeta.put(idKey, getReferenceId(obj));
+            }
+            if (includeType) {
+                withMeta.put(typeKey, getTypeNameForOutput(obj.getClass()));
+            }
+            for (Map.Entry<String, Object> entry : fields.entrySet()) {
+                String key = entry.getKey();
+                if (idKey.equals(key) || typeKey.equals(key)) {
+                    continue;
+                }
+                withMeta.put(key, entry.getValue());
+            }
+            writeMapInline(withMeta);
+        } else {
+            writeMapInline(fields);
         }
     }
 
@@ -1358,80 +1650,142 @@ public class ToonWriter implements Closeable, Flushable {
             first = false;
             writeIndent();
 
-            // Write key
             Object key = entry.getKey();
             String keyStr = (key == null) ? "null" : key.toString();
+            writeFieldEntry(keyStr, entry.getValue());
+        }
+    }
 
-            // Write value - handle arrays/collections specially to combine key with size marker
-            Object value = entry.getValue();
-
-            // Check for key folding: collapse single-key map chains into dotted notation
-            if (writeOptions.isToonKeyFolding()
-                    && value instanceof Map
-                    && isValidFoldableKey(keyStr)
-                    && !(cycleSupport && isReferenced(value))) {
-                FoldedEntry folded = collectFoldedPath(keyStr, value);
-                if (folded != null) {
-                    writeFoldedEntry(folded.path, folded.value);
-                    continue;
-                }
+    /**
+     * Write a single key: value field entry. Handles arrays, collections, key folding,
+     * nested objects, and primitives. Caller is responsible for indentation and newlines.
+     */
+    private void writeFieldEntry(String keyStr, Object value) throws IOException {
+        // Check for key folding: collapse single-key map chains into dotted notation
+        if (toonKeyFolding
+                && value instanceof Map
+                && isValidFoldableKey(keyStr)
+                && !(cycleSupport && isReferenced(value))) {
+            FoldedEntry folded = collectFoldedPath(keyStr, value);
+            if (folded != null) {
+                writeFoldedEntry(folded.path, folded.value);
+                return;
             }
+        }
 
-            if (value != null && value.getClass().isArray()) {
-                if (shouldWrapArrayOrCollectionValue(value)) {
-                    writeKeyString(keyStr);
-                    out.write(":");
-                    out.write(NEW_LINE);
-                    depth++;
-                    writeIndent();
-                    writeArray(value);
-                    depth--;
-                } else {
-                    // Combine key with array size: fieldName[N]:
-                    int length = ArrayUtilities.getLength(value);
-                    writeKeyString(keyStr);
-                    out.write(countMarker(length) + ":");
-                    writeArrayElements(value, length);
-                }
-            } else if (value instanceof Collection) {
-                if (shouldWrapArrayOrCollectionValue(value)) {
-                    writeKeyString(keyStr);
-                    out.write(":");
-                    out.write(NEW_LINE);
-                    depth++;
-                    writeIndent();
-                    writeCollection((Collection<?>) value);
-                    depth--;
-                } else {
-                    // Combine key with collection size: fieldName[N]: or fieldName[N]{cols}:
-                    Collection<?> coll = (Collection<?>) value;
-                    writeKeyString(keyStr);
-                    out.write(countMarker(coll.size()));
-                    writeCollectionElementsWithHeader(coll);
-                }
-            } else {
+        if (value != null && value.getClass().isArray()) {
+            if (shouldWrapArrayOrCollectionValue(value)) {
                 writeKeyString(keyStr);
                 out.write(":");
-                if (value instanceof Map && ((Map<?, ?>) value).isEmpty()) {
-                    // Empty map - write inline as "key: {}"
-                    out.write(" {}");
-                } else if (value != null && !isPrimitive(value)) {
-                    // Nested object - newline, no trailing space after colon
-                    out.write(NEW_LINE);
-                    depth++;
-                    if (value instanceof Map) {
-                        // writeMap handles its own indentation per entry
-                        writeMap((Map<?, ?>) value);
-                    } else {
-                        // Use writeObject for cycle detection
-                        writeNestedObject(value);
-                    }
-                    depth--;
+                out.write(NEW_LINE);
+                depth++;
+                writeIndent();
+                writeArray(value);
+                depth--;
+            } else {
+                // Combine key with array size: fieldName[N]:
+                int length = ArrayUtilities.getLength(value);
+                writeKeyString(keyStr);
+                out.write(countMarker(length));
+                writeArrayElements(value, length);
+            }
+        } else if (value instanceof Collection) {
+            if (shouldWrapArrayOrCollectionValue(value)) {
+                writeKeyString(keyStr);
+                out.write(":");
+                out.write(NEW_LINE);
+                depth++;
+                writeIndent();
+                writeCollection((Collection<?>) value);
+                depth--;
+            } else {
+                // Combine key with collection size: fieldName[N]: or fieldName[N]{cols}:
+                Collection<?> coll = (Collection<?>) value;
+                writeKeyString(keyStr);
+                out.write(countMarker(coll.size()));
+                writeCollectionElementsWithHeader(coll);
+            }
+        } else {
+            writeKeyString(keyStr);
+            out.write(":");
+            if (value instanceof Map && ((Map<?, ?>) value).isEmpty()) {
+                // Empty map - write inline as "key: {}"
+                out.write(" {}");
+            } else if (value != null && !isPrimitive(value)) {
+                // Nested object - newline, no trailing space after colon
+                out.write(NEW_LINE);
+                depth++;
+                if (value instanceof Map) {
+                    // writeMap handles its own indentation per entry
+                    writeMap((Map<?, ?>) value);
                 } else {
-                    // Primitive value on same line - space before value
-                    out.write(" ");
-                    writeValue(value);
+                    // Use writeObject for cycle detection
+                    writeNestedObject(value);
                 }
+                depth--;
+            } else {
+                // Primitive value on same line - space before value
+                out.write(" ");
+                writeValue(value);
+            }
+        }
+    }
+
+    /**
+     * Write a single key: value field entry in inline context (for list elements).
+     * Uses depth+2 for nested structures (instead of depth+1 in regular context).
+     * Caller is responsible for indentation and newlines.
+     */
+    private void writeFieldEntryInline(String keyStr, Object value) throws IOException {
+        if (value != null && value.getClass().isArray()) {
+            if (shouldWrapArrayOrCollectionValue(value)) {
+                writeKeyString(keyStr);
+                out.write(":");
+                out.write(NEW_LINE);
+                depth += 2;
+                writeIndent();
+                writeArray(value);
+                depth -= 2;
+            } else {
+                int length = ArrayUtilities.getLength(value);
+                writeKeyString(keyStr);
+                out.write(countMarker(length));
+                writeArrayElements(value, length);
+            }
+        } else if (value instanceof Collection) {
+            if (shouldWrapArrayOrCollectionValue(value)) {
+                writeKeyString(keyStr);
+                out.write(":");
+                out.write(NEW_LINE);
+                depth += 2;
+                writeIndent();
+                writeCollection((Collection<?>) value);
+                depth -= 2;
+            } else {
+                Collection<?> coll = (Collection<?>) value;
+                writeKeyString(keyStr);
+                out.write(countMarker(coll.size()));
+                depth++;
+                writeCollectionElementsWithHeader(coll);
+                depth--;
+            }
+        } else {
+            writeKeyString(keyStr);
+            out.write(":");
+            if (value instanceof Map && ((Map<?, ?>) value).isEmpty()) {
+                out.write(" {}");
+            } else if (value != null && !isPrimitive(value)) {
+                out.write(NEW_LINE);
+                depth += 2;
+                if (value instanceof Map) {
+                    writeMap((Map<?, ?>) value);
+                } else {
+                    writeNestedObject(value);
+                }
+                depth -= 2;
+            } else {
+                out.write(" ");
+                writeValue(value);
             }
         }
     }
@@ -1452,7 +1806,7 @@ public class ToonWriter implements Closeable, Flushable {
             } else {
                 int length = ArrayUtilities.getLength(value);
                 writeString(path);
-                out.write(countMarker(length) + ":");
+                out.write(countMarker(length));
                 writeArrayElements(value, length);
             }
         } else if (value instanceof Collection) {
@@ -1637,33 +1991,103 @@ public class ToonWriter implements Closeable, Flushable {
 
     /**
      * Write an object's fields as key: value pairs.
+     * Iterates WriteFieldPlan directly to avoid intermediate LinkedHashMap allocation.
+     * Falls back to getObjectFields() only when @IoAnyGetter is present (rare).
      */
     private void writeObjectFields(Object obj) throws IOException {
         if (obj == null) {
             return;
         }
 
-        // Use reflection to get fields
+        Class<?> clazz = obj.getClass();
+        AnnotationResolver.ClassAnnotationMetadata annMeta = AnnotationResolver.getMetadata(clazz);
+
+        // If @IoAnyGetter is present, fall back to map-based approach (rare path)
+        if (annMeta.getAnyGetterMethod() != null) {
+            writeObjectFieldsViaMap(obj);
+            return;
+        }
+
+        List<WriteOptionsBuilder.WriteFieldPlan> plans =
+                WriteOptionsBuilder.getWriteFieldPlans(writeOptions, clazz);
+
+        boolean includeId = cycleSupport && isReferenced(obj);
+        boolean includeType = shouldWriteTypeMetadata(clazz);
+        boolean wroteField = false;
+
+        // Write metadata first
+        if (includeId) {
+            writeIndent();
+            writeIdField(obj);
+            wroteField = true;
+        }
+        if (includeType) {
+            if (wroteField) {
+                out.write(NEW_LINE);
+            }
+            writeIndent();
+            writeTypeField(clazz);
+            wroteField = true;
+        }
+
+        // Write fields directly from WriteFieldPlan (no intermediate Map)
+        for (int i = 0, len = plans.size(); i < len; i++) {
+            WriteOptionsBuilder.WriteFieldPlan plan = plans.get(i);
+            if (plan.enumPublicOnlySkipCandidate() && enumPublicFieldsOnly) {
+                continue;
+            }
+            Object value = plan.accessor().retrieve(obj);
+            if ((skipNullFields || plan.skipIfNull()) && value == null) {
+                continue;
+            }
+            String formatPattern = plan.formatPattern();
+            if (formatPattern != null && value != null) {
+                value = applyFormatPattern(value, formatPattern);
+            }
+            String key = plan.accessor().getUniqueFieldName();
+
+            if (wroteField) {
+                out.write(NEW_LINE);
+            }
+            wroteField = true;
+            writeIndent();
+            writeFieldEntry(key, value);
+        }
+
+        if (!wroteField) {
+            out.write("{}");
+        }
+    }
+
+    /**
+     * Fallback for objects with @IoAnyGetter: uses getObjectFields() to collect all fields
+     * including the extra ones from the annotated method.
+     */
+    private void writeObjectFieldsViaMap(Object obj) throws IOException {
         Map<String, Object> fields = getObjectFields(obj);
         boolean includeId = cycleSupport && isReferenced(obj);
         boolean includeType = shouldWriteTypeMetadata(obj.getClass());
         if (includeId || includeType) {
-            LinkedHashMap<String, Object> withMeta = new LinkedHashMap<>(fields.size() + 2);
             if (includeId) {
-                withMeta.put(idKey, getReferenceId(obj));
+                writeIndent();
+                writeIdField(obj);
             }
             if (includeType) {
-                withMeta.put(typeKey, getTypeNameForOutput(obj.getClass()));
-            }
-            for (Map.Entry<String, Object> entry : fields.entrySet()) {
-                String key = entry.getKey();
-                if (!idKey.equals(key) && !typeKey.equals(key)) {
-                    withMeta.put(key, entry.getValue());
+                if (includeId) {
+                    out.write(NEW_LINE);
                 }
+                writeIndent();
+                writeTypeField(obj.getClass());
             }
-            fields = withMeta;
+            if (!fields.isEmpty()) {
+                out.write(NEW_LINE);
+                writeMapWithSimpleKeys(fields);
+            }
+        } else if (fields.isEmpty()) {
+            out.write("{}");
+        } else {
+            writeMapWithSimpleKeys(fields);
         }
-        writeMap(fields);
     }
 
     /**
@@ -1682,7 +2106,7 @@ public class ToonWriter implements Closeable, Flushable {
 
         for (WriteOptionsBuilder.WriteFieldPlan plan : plans) {
             // Skip non-public enum fields if configured
-            if (plan.enumPublicOnlySkipCandidate() && writeOptions.isEnumPublicFieldsOnly()) {
+            if (plan.enumPublicOnlySkipCandidate() && enumPublicFieldsOnly) {
                 continue;
             }
 
@@ -1690,7 +2114,7 @@ public class ToonWriter implements Closeable, Flushable {
             Object value = plan.accessor().retrieve(obj);
 
             // Respect skipNullFields (global) and skipIfNull (per-field @IoInclude NON_NULL)
-            if ((writeOptions.isSkipNullFields() || plan.skipIfNull()) && value == null) {
+            if ((skipNullFields || plan.skipIfNull()) && value == null) {
                 continue;
             }
 
@@ -1715,7 +2139,7 @@ public class ToonWriter implements Closeable, Flushable {
                 if (extras != null) {
                     for (Map.Entry<String, Object> extra : extras.entrySet()) {
                         Object value = extra.getValue();
-                        if (value != null || !writeOptions.isSkipNullFields()) {
+                        if (value != null || !skipNullFields) {
                             result.put(extra.getKey(), value);
                         }
                     }
@@ -1760,21 +2184,27 @@ public class ToonWriter implements Closeable, Flushable {
     private void writeInlineValue(Object value) throws IOException {
         if (value == null) {
             out.write("null");
-        } else if (value instanceof String) {
-            writeString((String) value);
-        } else if (value instanceof Number) {
-            writeNumber((Number) value);
-        } else if (value instanceof Boolean) {
-            // Write unquoted true/false
-            out.write(((Boolean) value) ? "true" : "false");
-        } else if (value instanceof Character) {
-            writeString(String.valueOf(value));
-        } else if (Converter.isConversionSupportedFor(value.getClass(), String.class)) {
-            // AtomicBoolean, Enum, BitSet, Date, Time, UUID, etc.
-            writeString(Converter.convert(value, String.class));
-        } else {
-            // Fallback for unsupported types
-            writeString(value.toString());
+            return;
+        }
+        switch (writeTypeCache.get(value.getClass())) {
+            case STRING:
+                writeString((String) value);
+                break;
+            case NUMBER:
+                writeNumber((Number) value);
+                break;
+            case BOOLEAN:
+                out.write(((Boolean) value) ? "true" : "false");
+                break;
+            case CHARACTER:
+                writeString(String.valueOf(value));
+                break;
+            case CONVERTER_SUPPORTED:
+                writeString(Converter.convert(value, String.class));
+                break;
+            default:
+                writeString(value.toString());
+                break;
         }
     }
 
@@ -1788,15 +2218,16 @@ public class ToonWriter implements Closeable, Flushable {
         if (value == null) {
             return true;
         }
-        // Structural types are not primitives even if Converter supports them
-        if (value instanceof Map || value instanceof Collection || value.getClass().isArray()) {
-            return false;
+        switch (writeTypeCache.get(value.getClass())) {
+            case STRING:
+            case NUMBER:
+            case BOOLEAN:
+            case CHARACTER:
+            case CONVERTER_SUPPORTED:
+                return true;
+            default:
+                return false;
         }
-        return value instanceof String ||
-               value instanceof Number ||
-               value instanceof Boolean ||
-               value instanceof Character ||
-               Converter.isConversionSupportedFor(value.getClass(), String.class);
     }
 
     /**
@@ -1818,15 +2249,20 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     private void traceReferences(Object root) {
-        if (!isReferenceable(root)) {
+        if (root == null || isPrimitive(root) || writeOptions.isNonReferenceableClass(root.getClass())) {
             return;
         }
-        List<Object> stack = new ArrayList<>();
-        stack.add(root);
+        final Deque<Object> stack = new ArrayDeque<>(256);
+        stack.addFirst(root);
 
         while (!stack.isEmpty()) {
-            Object current = stack.remove(stack.size() - 1);
-            if (!isReferenceable(current)) {
+            final Object current = stack.removeFirst();
+            if (current == null) {
+                continue;
+            }
+            final Class<?> clazz = current.getClass();
+            final boolean isNonReferenceable = isPrimitive(current) || writeOptions.isNonReferenceableClass(clazz);
+            if (isNonReferenceable) {
                 continue;
             }
 
@@ -1845,7 +2281,7 @@ public class ToonWriter implements Closeable, Flushable {
         }
     }
 
-    private void pushReferenceCandidates(List<Object> stack, Object current) {
+    private void pushReferenceCandidates(Deque<Object> stack, Object current) {
         if (current instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) current;
             for (Map.Entry<?, ?> entry : map.entrySet()) {
@@ -1871,15 +2307,21 @@ public class ToonWriter implements Closeable, Flushable {
             return;
         }
 
-        Map<String, Object> fields = getObjectFields(current);
-        for (Object fieldValue : fields.values()) {
-            pushReferenceCandidate(stack, fieldValue);
+        List<WriteOptionsBuilder.WriteFieldPlan> plans =
+                WriteOptionsBuilder.getWriteFieldPlans(writeOptions, current.getClass());
+        for (int i = 0, len = plans.size(); i < len; i++) {
+            WriteOptionsBuilder.WriteFieldPlan plan = plans.get(i);
+            if (plan.skipReferenceTrace()) {
+                continue;
+            }
+            Object value = plan.accessor().retrieve(current);
+            pushReferenceCandidate(stack, value);
         }
     }
 
-    private void pushReferenceCandidate(List<Object> stack, Object candidate) {
-        if (isReferenceable(candidate)) {
-            stack.add(candidate);
+    private void pushReferenceCandidate(Deque<Object> stack, Object candidate) {
+        if (candidate != null && !isPrimitive(candidate) && !writeOptions.isNonReferenceableClass(candidate.getClass())) {
+            stack.addFirst(candidate);
         }
     }
 

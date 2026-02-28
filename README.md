@@ -45,6 +45,7 @@ json-io is a powerful and lightweight Java library that simplifies **JSON5**, **
 - [Installation](#installation)
   - [Spring Boot Integration](#spring-boot-integration)
 - [Quick Start](#quick-start)
+- [TOON Format](#toon-format)
 - [Supported Types](#supported-types-60-built-in)
 - [Documentation](#documentation)
 - [Release](#release-)
@@ -85,12 +86,15 @@ json-io is a powerful and lightweight Java library that simplifies **JSON5**, **
 
 ### vs JToon (TOON)
 
-| Capability | json-io                  | JToon |
-|------------|--------------------------|-------|
-| Built-in types | 60+                      | ~15 |
-| Map key types | Any serializable type    | Strings only |
-| EnumSet support | Yes                      | No |
-| Dependencies | java-util only           | Jackson |
+| Capability | json-io | JToon |
+|---|---|---|
+| Built-in types | 60+ | ~15 |
+| Map key types | Any serializable type | Strings only |
+| EnumSet support | Yes | No |
+| Full Java serialization | Yes — any object graph | Limited to supported types |
+| Cycle support (`$id`/`$ref`) | Yes (opt-in) | No |
+| Annotation support | `@Io*` + Jackson (reflective) | None |
+| Dependencies | java-util only | Jackson |
 | Status | Stable, production-ready | Beta (v1.x.x) |
 
 json-io's TOON implementation offers comprehensive Java type coverage while JToon focuses on basic types with Jackson integration.
@@ -195,6 +199,46 @@ Request TOON format for LLM applications: `Accept: application/vnd.toon`
 **Also supports WebFlux and WebClient** for reactive applications.
 
 See the [Spring Integration Guide](/user-guide-spring.md) for configuration options, WebFlux usage, customizers, and Jackson coexistence modes.
+
+## TOON Format
+
+[TOON](https://toonformat.dev/) (Token-Oriented Object Notation) is an indentation-based format that produces **~40-50% fewer tokens** than JSON — ideal for LLM applications where token count directly impacts cost and context window usage.
+
+- **No braces, brackets, or commas** — structure is expressed through indentation
+- **No quoting** for most keys and values — quotes only when the value contains special characters
+- **Compact arrays** — inline `[N]: a,b,c` or list format with `- ` prefixed elements
+- **Tabular format** — arrays of uniform objects as CSV-like rows with column headers
+- **Key folding** — nested keys like `address.city: Denver` flatten one level of nesting
+- **Full fidelity** — most data requires no extra metadata at all. When type hints are needed for correct deserialization (e.g., polymorphic fields), you can use json-io's `@Io*` annotations, Jackson annotations, or explicit `$type` markers. For object graphs with cycles, enable `cycleSupport(true)` to emit `$id`/`$ref` pairs
+
+**JSON:**
+```json
+{"team":"Rockets","players":[{"name":"John","age":30,"position":"guard"},{"name":"Sue","age":27,"position":"forward"},{"name":"Mike","age":32,"position":"center"}]}
+```
+
+**TOON (same data, ~45% fewer tokens):**
+```yaml
+team: Rockets
+players:
+  name, age, position
+  John, 30, guard
+  Sue, 27, forward
+  Mike, 32, center
+```
+
+When an array contains uniform objects, TOON automatically uses **tabular format** — a compact CSV-like layout with column headers. Mixed or nested objects use indented format instead.
+
+**Write / Read:**
+```java
+// Write TOON
+String toon = JsonIo.toToon(myObject);
+
+// Read TOON back to typed Java object
+Person p = JsonIo.fromToon(toon).asClass(Person.class);
+
+// Read TOON to Maps (no class needed)
+Map map = JsonIo.fromToon(toon).asMap();
+```
 
 ## Supported Types (60+ built-in)
 

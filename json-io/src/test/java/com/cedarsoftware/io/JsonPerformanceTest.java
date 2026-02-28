@@ -96,6 +96,10 @@ public class JsonPerformanceTest {
             TestData obj = JsonIo.toJava(json, readOptions).asClass(TestData.class);
             String json2 = JsonIo.toJson(testData, writeOptionsNoCycles);
             TestData obj2 = JsonIo.toJava(json2, readOptions).asClass(TestData.class);
+            String toon = JsonIo.toToon(testData, writeOptions);
+            TestData toonObj = JsonIo.fromToon(toon, readOptions).asClass(TestData.class);
+            String toon2 = JsonIo.toToon(testData, writeOptionsNoCycles);
+            TestData toonObj2 = JsonIo.fromToon(toon2, readOptions).asClass(TestData.class);
             String jJson = jacksonMapper.writeValueAsString(testData);
             TestData jObj = jacksonMapper.readValue(jJson, TestData.class);
         }
@@ -112,6 +116,16 @@ public class JsonPerformanceTest {
         long jsonIoWriteTime = System.nanoTime() - start;
         LOG.info("JsonIo Write (cycleSupport=true) complete.");
 
+        // Test TOON Write with cycle support (default)
+        LOG.info("Testing Toon Write (cycleSupport=true) with " + TEST_ITERATIONS + " iterations...");
+        start = System.nanoTime();
+        for (int i = 0; i < TEST_ITERATIONS; i++) {
+            dummy = JsonIo.toToon(testData, writeOptions);
+            if (dummy.length() == 0) { /* no-op */ }
+        }
+        long toonWriteTime = System.nanoTime() - start;
+        LOG.info("Toon Write (cycleSupport=true) complete.");
+
         // Test Write without cycle support (faster for acyclic data)
         LOG.info("Testing JsonIo Write (cycleSupport=false) with " + TEST_ITERATIONS + " iterations...");
         start = System.nanoTime();
@@ -121,6 +135,15 @@ public class JsonPerformanceTest {
         }
         long jsonIoWriteTimeNoCycles = System.nanoTime() - start;
         LOG.info("JsonIo Write (cycleSupport=false) complete.");
+
+        LOG.info("Testing Toon Write (cycleSupport=false) with " + TEST_ITERATIONS + " iterations...");
+        start = System.nanoTime();
+        for (int i = 0; i < TEST_ITERATIONS; i++) {
+            dummy = JsonIo.toToon(testData, writeOptionsNoCycles);
+            if (dummy.length() == 0) { /* no-op */ }
+        }
+        long toonWriteTimeNoCycles = System.nanoTime() - start;
+        LOG.info("Toon Write (cycleSupport=false) complete.");
 
         LOG.info("Testing Jackson Write with " + TEST_ITERATIONS + " iterations...");
         start = System.nanoTime();
@@ -133,6 +156,7 @@ public class JsonPerformanceTest {
 
         // Prepare JSON strings for reading tests
         String jsonIoJson = JsonIo.toJson(testData, writeOptions);
+        String toon = JsonIo.toToon(testData, writeOptions);
         String jacksonJson = jacksonMapper.writeValueAsString(testData);
 
         // Test Read (full Java resolution)
@@ -144,6 +168,14 @@ public class JsonPerformanceTest {
         }
         long jsonIoReadTime = System.nanoTime() - start;
         LOG.info("JsonIo Read complete.");
+
+        LOG.info("Testing Toon Read (fromToon) with " + TEST_ITERATIONS + " iterations...");
+        start = System.nanoTime();
+        for (int i = 0; i < TEST_ITERATIONS; i++) {
+            result = JsonIo.fromToon(toon, readOptions).asClass(TestData.class);
+        }
+        long toonReadTime = System.nanoTime() - start;
+        LOG.info("Toon Read complete.");
 
         LOG.info("Testing Jackson Read with " + TEST_ITERATIONS + " iterations...");
         start = System.nanoTime();
@@ -157,14 +189,21 @@ public class JsonPerformanceTest {
         LOG.info("--- Full Java Resolution Results ---");
         LOG.info("Iterations: " + TEST_ITERATIONS);
         LOG.info("JsonIo Write Time (cycleSupport=true):  " + (jsonIoWriteTime / 1_000_000.0) + " ms");
+        LOG.info("Toon Write Time (cycleSupport=true):    " + (toonWriteTime / 1_000_000.0) + " ms");
         LOG.info("JsonIo Write Time (cycleSupport=false): " + (jsonIoWriteTimeNoCycles / 1_000_000.0) + " ms");
+        LOG.info("Toon Write Time (cycleSupport=false):   " + (toonWriteTimeNoCycles / 1_000_000.0) + " ms");
         LOG.info("Jackson Write Time: " + (jacksonWriteTime / 1_000_000.0) + " ms");
         LOG.info("Write Speedup (cycleSupport=false vs true): " + String.format("%.2fx", (double) jsonIoWriteTime / jsonIoWriteTimeNoCycles));
+        LOG.info("TOON Write Speedup (cycleSupport=false vs true): " + String.format("%.2fx", (double) toonWriteTime / toonWriteTimeNoCycles));
         LOG.info("Write Ratio (JsonIo cycleSupport=true / Jackson): " + String.format("%.2fx", (double) jsonIoWriteTime / jacksonWriteTime));
         LOG.info("Write Ratio (JsonIo cycleSupport=false / Jackson): " + String.format("%.2fx", (double) jsonIoWriteTimeNoCycles / jacksonWriteTime));
+        LOG.info("Write Ratio (Toon cycleSupport=true / Jackson): " + String.format("%.2fx", (double) toonWriteTime / jacksonWriteTime));
+        LOG.info("Write Ratio (Toon cycleSupport=false / Jackson): " + String.format("%.2fx", (double) toonWriteTimeNoCycles / jacksonWriteTime));
         LOG.info("JsonIo Read Time: " + (jsonIoReadTime / 1_000_000.0) + " ms");
+        LOG.info("Toon Read Time: " + (toonReadTime / 1_000_000.0) + " ms");
         LOG.info("Jackson Read Time: " + (jacksonReadTime / 1_000_000.0) + " ms");
         LOG.info("Read Ratio (JsonIo/Jackson): " + String.format("%.2fx", (double) jsonIoReadTime / jacksonReadTime));
+        LOG.info("Read Ratio (Toon/Jackson): " + String.format("%.2fx", (double) toonReadTime / jacksonReadTime));
     }
 
     /**
@@ -187,6 +226,10 @@ public class JsonPerformanceTest {
             Map map = JsonIo.toMaps(json, readOptions).asClass(Map.class);
             String json2 = JsonIo.toJson(testData, writeOptionsNoCycles);
             Map map2 = JsonIo.toMaps(json2, readOptions).asClass(Map.class);
+            String toon = JsonIo.toToon(testData, writeOptions);
+            Map toonMap = JsonIo.fromToonToMaps(toon, readOptions).asClass(Map.class);
+            String toon2 = JsonIo.toToon(testData, writeOptionsNoCycles);
+            Map toonMap2 = JsonIo.fromToonToMaps(toon2, readOptions).asClass(Map.class);
             String jJson = jacksonMapper.writeValueAsString(testData);
             Map<String, Object> jMap = jacksonMapper.readValue(jJson, Map.class);
         }
@@ -203,6 +246,15 @@ public class JsonPerformanceTest {
         long jsonIoWriteTime = System.nanoTime() - start;
         LOG.info("JsonIo Write (cycleSupport=true) complete.");
 
+        LOG.info("Testing Toon Write (cycleSupport=true) with " + TEST_ITERATIONS + " iterations...");
+        start = System.nanoTime();
+        for (int i = 0; i < TEST_ITERATIONS; i++) {
+            dummy = JsonIo.toToon(testData, writeOptions);
+            if (dummy.length() == 0) { /* no-op */ }
+        }
+        long toonWriteTime = System.nanoTime() - start;
+        LOG.info("Toon Write (cycleSupport=true) complete.");
+
         // Test Write without cycle support (faster for acyclic data)
         LOG.info("Testing JsonIo Write (cycleSupport=false) with " + TEST_ITERATIONS + " iterations...");
         start = System.nanoTime();
@@ -212,6 +264,15 @@ public class JsonPerformanceTest {
         }
         long jsonIoWriteTimeNoCycles = System.nanoTime() - start;
         LOG.info("JsonIo Write (cycleSupport=false) complete.");
+
+        LOG.info("Testing Toon Write (cycleSupport=false) with " + TEST_ITERATIONS + " iterations...");
+        start = System.nanoTime();
+        for (int i = 0; i < TEST_ITERATIONS; i++) {
+            dummy = JsonIo.toToon(testData, writeOptionsNoCycles);
+            if (dummy.length() == 0) { /* no-op */ }
+        }
+        long toonWriteTimeNoCycles = System.nanoTime() - start;
+        LOG.info("Toon Write (cycleSupport=false) complete.");
 
         LOG.info("Testing Jackson Write with " + TEST_ITERATIONS + " iterations...");
         start = System.nanoTime();
@@ -224,6 +285,7 @@ public class JsonPerformanceTest {
 
         // Prepare JSON strings for reading tests
         String jsonIoJson = JsonIo.toJson(testData, writeOptions);
+        String toon = JsonIo.toToon(testData, writeOptions);
         String jacksonJson = jacksonMapper.writeValueAsString(testData);
 
         // Test Read (Maps only - no Java resolution)
@@ -235,6 +297,14 @@ public class JsonPerformanceTest {
         }
         long jsonIoReadTime = System.nanoTime() - start;
         LOG.info("JsonIo Read complete.");
+
+        LOG.info("Testing Toon Read (fromToonToMaps) with " + TEST_ITERATIONS + " iterations...");
+        start = System.nanoTime();
+        for (int i = 0; i < TEST_ITERATIONS; i++) {
+            mapResult = JsonIo.fromToonToMaps(toon, readOptions).asClass(Map.class);
+        }
+        long toonReadTime = System.nanoTime() - start;
+        LOG.info("Toon Read complete.");
 
         LOG.info("Testing Jackson Read (to Map) with " + TEST_ITERATIONS + " iterations...");
         start = System.nanoTime();
@@ -248,14 +318,21 @@ public class JsonPerformanceTest {
         LOG.info("--- Maps Only Results ---");
         LOG.info("Iterations: " + TEST_ITERATIONS);
         LOG.info("JsonIo Write Time (cycleSupport=true):  " + (jsonIoWriteTime / 1_000_000.0) + " ms");
+        LOG.info("Toon Write Time (cycleSupport=true):    " + (toonWriteTime / 1_000_000.0) + " ms");
         LOG.info("JsonIo Write Time (cycleSupport=false): " + (jsonIoWriteTimeNoCycles / 1_000_000.0) + " ms");
+        LOG.info("Toon Write Time (cycleSupport=false):   " + (toonWriteTimeNoCycles / 1_000_000.0) + " ms");
         LOG.info("Jackson Write Time: " + (jacksonWriteTime / 1_000_000.0) + " ms");
         LOG.info("Write Speedup (cycleSupport=false vs true): " + String.format("%.2fx", (double) jsonIoWriteTime / jsonIoWriteTimeNoCycles));
+        LOG.info("TOON Write Speedup (cycleSupport=false vs true): " + String.format("%.2fx", (double) toonWriteTime / toonWriteTimeNoCycles));
         LOG.info("Write Ratio (JsonIo cycleSupport=true / Jackson): " + String.format("%.2fx", (double) jsonIoWriteTime / jacksonWriteTime));
         LOG.info("Write Ratio (JsonIo cycleSupport=false / Jackson): " + String.format("%.2fx", (double) jsonIoWriteTimeNoCycles / jacksonWriteTime));
+        LOG.info("Write Ratio (Toon cycleSupport=true / Jackson): " + String.format("%.2fx", (double) toonWriteTime / jacksonWriteTime));
+        LOG.info("Write Ratio (Toon cycleSupport=false / Jackson): " + String.format("%.2fx", (double) toonWriteTimeNoCycles / jacksonWriteTime));
         LOG.info("JsonIo Read Time: " + (jsonIoReadTime / 1_000_000.0) + " ms");
+        LOG.info("Toon Read Time: " + (toonReadTime / 1_000_000.0) + " ms");
         LOG.info("Jackson Read Time: " + (jacksonReadTime / 1_000_000.0) + " ms");
         LOG.info("Read Ratio (JsonIo/Jackson): " + String.format("%.2fx", (double) jsonIoReadTime / jacksonReadTime));
+        LOG.info("Read Ratio (Toon/Jackson): " + String.format("%.2fx", (double) toonReadTime / jacksonReadTime));
     }
 
     private static TestData createTestData() {

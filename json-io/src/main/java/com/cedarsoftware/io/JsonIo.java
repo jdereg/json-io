@@ -477,14 +477,25 @@ public class JsonIo {
         if (writeOptions == null) {
             writeOptions = new WriteOptionsBuilder().showTypeInfoNever().build();
         }
-        FastByteArrayOutputStream out = new FastByteArrayOutputStream(8192);
-        try (ToonWriter writer = new ToonWriter(out, writeOptions)) {
+        BufferRecycler recycler = BUFFER_RECYCLER.get();
+        byte[] byteBuffer = recycler.borrowByteBuffer(DEFAULT_BYTE_BUFFER_SIZE);
+        char[] writerBuffer = recycler.borrowWriterCharBuffer(DEFAULT_CHAR_BUFFER_SIZE);
+
+        FastByteArrayOutputStream out = new FastByteArrayOutputStream(byteBuffer);
+        ToonWriter writer = null;
+        try {
+            Writer utf8 = new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8), writerBuffer);
+            writer = new ToonWriter(utf8, writeOptions);
             writer.write(srcObject);
-            return out.toString();
+            return new String(out.getInternalBuffer(), 0, out.getCount(), StandardCharsets.UTF_8);
         } catch (JsonIoException je) {
             throw je;
         } catch (Exception e) {
             throw new JsonIoException("Unable to convert object to TOON", e);
+        } finally {
+            IOUtilities.close(writer);
+            recycler.releaseByteBuffer(out.getInternalBuffer());
+            recycler.releaseWriterCharBuffer();
         }
     }
 

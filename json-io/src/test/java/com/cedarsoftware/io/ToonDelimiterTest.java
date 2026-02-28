@@ -167,6 +167,21 @@ class ToonDelimiterTest {
         assertTrue(toon.contains("\"A|B\""), "Pipe in value should be quoted with pipe delimiter: " + toon);
     }
 
+    @Test
+    void testQuoteDecisionCacheRespectsActiveDelimiter() {
+        List<Map<String, Object>> data = Arrays.asList(
+                makeMap("name", "A|B", "age", 30)
+        );
+
+        WriteOptions comma = new WriteOptionsBuilder().toonDelimiter(',').build();
+        String commaToon = JsonIo.toToon(data, comma);
+        assertTrue(commaToon.contains("A|B,30"), "Pipe should not be quoted with comma delimiter: " + commaToon);
+
+        WriteOptions pipe = new WriteOptionsBuilder().toonDelimiter('|').build();
+        String pipeToon = JsonIo.toToon(data, pipe);
+        assertTrue(pipeToon.contains("\"A|B\"|30"), "Pipe must be quoted with pipe delimiter: " + pipeToon);
+    }
+
     // ==================== Nested Structures ====================
 
     @Test

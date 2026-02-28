@@ -1538,6 +1538,18 @@ class ToonWriterTest {
     }
 
     @Test
+    void testWriterNumberOutput_NoExponentForCommonValues() {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("small", 0.000001d);
+        map.put("whole", 1000000.0d);
+
+        String toon = JsonIo.toToon(map, null);
+        assertTrue(toon.contains("small: 0.000001"), "Expected plain decimal output for small number: " + toon);
+        assertTrue(toon.contains("whole: 1000000"), "Expected whole number without .0: " + toon);
+        assertFalse(toon.contains("1.0E-6"), "Writer should avoid exponent notation for common values: " + toon);
+    }
+
+    @Test
     void testEmptyObjectInListArray_RoundTrip() {
         // Test that an empty map in a list-format array can round-trip.
         // Writer: produces "- {}" for empty map in list context
