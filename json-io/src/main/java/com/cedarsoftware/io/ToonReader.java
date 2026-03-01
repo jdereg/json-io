@@ -128,20 +128,16 @@ public class ToonReader {
         if (len == 0) return "";
         if (len > MAX_CACHED_STRING_LENGTH) return s;
         int slot = s.hashCode() & STRING_CACHE_MASK;
-        String cached = stringCache[slot];
+        String[] cache = stringCache;
+        String cached = cache[slot];
         if (s.equals(cached)) return cached;
-        return stringCache[slot] = s;
+        cache[slot] = s;
+        return s;
     }
 
     private String cacheSubstring(String source, int start, int end) {
-        int len = end - start;
-        if (len == 0) return "";
-        String s = (start == 0 && end == source.length()) ? source : source.substring(start, end);
-        if (len > MAX_CACHED_STRING_LENGTH) return s;
-        int slot = s.hashCode() & STRING_CACHE_MASK;
-        String cached = stringCache[slot];
-        if (s.equals(cached)) return cached;
-        return stringCache[slot] = s;
+        if (start == end) return "";
+        return cacheString((start == 0 && end == source.length()) ? source : source.substring(start, end));
     }
 
     private static String trimAscii(String text) {
@@ -162,7 +158,8 @@ public class ToonReader {
 
     private static String trimAscii(StringBuilder text) {
         int start = 0;
-        int end = text.length();
+        int textLen = text.length();
+        int end = textLen;
         if (start < end && text.charAt(start) > ' ' && text.charAt(end - 1) > ' ') {
             return text.toString();
         }
@@ -172,7 +169,7 @@ public class ToonReader {
         while (end > start && text.charAt(end - 1) <= ' ') {
             end--;
         }
-        if (start == 0 && end == text.length()) {
+        if (start == 0 && end == textLen) {
             return text.toString();
         }
         return text.substring(start, end);
@@ -762,20 +759,21 @@ public class ToonReader {
 
             // Check for combined field+array notation: fieldName[N]: or fieldName[N]{cols}:
             // Also handles folded keys: data.items[N]:
-            if (key.contains("[")) {
-                int bracketStart = key.indexOf('[');
+            int bracketStart = key.indexOf('[');
+            if (bracketStart >= 0) {
                 String realKey = key.substring(0, bracketStart);
-                String arraySyntax = key.substring(bracketStart) + ":";
+                StringBuilder sb = new StringBuilder(key.length() - bracketStart + 2 + valuePart.length());
+                sb.append(key, bracketStart, key.length()).append(':');
                 if (!valuePart.isEmpty()) {
-                    arraySyntax += " " + valuePart;
+                    sb.append(' ').append(valuePart);
                 }
-                boolean wasQuoted = realKey.startsWith("\"");
+                boolean wasQuoted = realKey.length() > 0 && realKey.charAt(0) == '"';
                 if (wasQuoted) {
                     realKey = unquoteString(realKey);
                 }
-                putValue(jsonObj, realKey, parseArrayFromLine(arraySyntax), wasQuoted);
+                putValue(jsonObj, realKey, parseArrayFromLine(sb.toString()), wasQuoted);
             } else {
-                boolean wasQuoted = key.startsWith("\"");
+                boolean wasQuoted = key.length() > 0 && key.charAt(0) == '"';
                 key = unquoteString(key);
                 if (valuePart.isEmpty()) {
                     // Check for nested structure on next line
@@ -806,8 +804,7 @@ public class ToonReader {
         int fieldIndent = hyphenIndent + 1;
 
         while (true) {
-            String line = peekLine();
-            if (line == null) {
+            if (peekLine() == null) {
                 break;  // EOF
             }
 
@@ -842,22 +839,26 @@ public class ToonReader {
 
             // Check for combined field+array notation
             // Also handles folded keys: data.items[N]:
-            if (key.endsWith("]") && key.contains("[")) {
+            int keyLen = key.length();
+            if (keyLen > 0 && key.charAt(keyLen - 1) == ']') {
                 int bracketStart = key.lastIndexOf('[');
-                String realKey = key.substring(0, bracketStart);
-                String arraySyntax = key.substring(bracketStart) + ":";
-                if (!valuePart.isEmpty()) {
-                    arraySyntax += " " + valuePart;
+                if (bracketStart >= 0) {
+                    String realKey = key.substring(0, bracketStart);
+                    StringBuilder sb = new StringBuilder(keyLen - bracketStart + 2 + valuePart.length());
+                    sb.append(key, bracketStart, keyLen).append(':');
+                    if (!valuePart.isEmpty()) {
+                        sb.append(' ').append(valuePart);
+                    }
+                    boolean wasQuoted = realKey.length() > 0 && realKey.charAt(0) == '"';
+                    if (wasQuoted) {
+                        realKey = unquoteString(realKey);
+                    }
+                    putValue(jsonObj, realKey, parseArrayFromLine(sb.toString()), wasQuoted);
+                    continue;
                 }
-                boolean wasQuoted = realKey.startsWith("\"");
-                if (wasQuoted) {
-                    realKey = unquoteString(realKey);
-                }
-                putValue(jsonObj, realKey, parseArrayFromLine(arraySyntax), wasQuoted);
-                continue;
             }
 
-            boolean wasQuoted = key.startsWith("\"");
+            boolean wasQuoted = keyLen > 0 && key.charAt(0) == '"';
             key = unquoteString(key);
 
             if (valuePart.isEmpty()) {
