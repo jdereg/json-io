@@ -12,6 +12,7 @@
     <modules>
         <module>json-io</module>
         <module>json-io-spring</module>
+        <module>json-io-spring-ai</module>
     </modules>
 
     <developers>
