@@ -44,6 +44,7 @@ json-io is a powerful and lightweight Java library that simplifies **JSON5**, **
   - [Annotation Support](#annotation-support)
 - [Installation](#installation)
   - [Spring Boot Integration](#spring-boot-integration)
+  - [Spring AI Integration](#spring-ai-integration)
 - [Quick Start](#quick-start)
 - [TOON Format](#toon-format)
 - [Supported Types](#supported-types-60-built-in)
@@ -181,6 +182,32 @@ public class ApiController {
     }
 }
 ```
+
+### Spring AI Integration
+
+json-io provides a Spring AI module that reduces LLM token usage by ~40-50% using TOON format for tool call results and structured output parsing.
+
+**Add the dependency:**
+
+```xml
+<dependency>
+  <groupId>com.cedarsoftware</groupId>
+  <artifactId>json-io-spring-ai-toon</artifactId>
+  <version>LATEST_VERSION</version>
+</dependency>
+```
+
+Auto-configured: tool call results are serialized to TOON automatically. For structured output, use `ToonBeanOutputConverter<T>`:
+
+```java
+ToonBeanOutputConverter<Person> converter = new ToonBeanOutputConverter<>(Person.class);
+Person person = chatClient.prompt()
+    .user("Get info about John")
+    .call()
+    .entity(converter);
+```
+
+See the [Spring Integration Guide](/user-guide-spring.md#spring-ai-integration) for full details.
 
 ## Quick Start
 

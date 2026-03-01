@@ -14,6 +14,7 @@ This guide covers integrating json-io with Spring Boot applications, providing a
 - [Jackson Coexistence Modes](#jackson-coexistence-modes)
 - [WebFlux and WebClient](#webflux-and-webclient)
 - [Media Types](#media-types)
+- [Spring AI Integration](#spring-ai-integration)
 - [Examples](#examples)
 - [Troubleshooting](#troubleshooting)
 
@@ -21,7 +22,7 @@ This guide covers integrating json-io with Spring Boot applications, providing a
 
 Add the Spring Boot starter to your project.
 
-Replace LATEST_VERSION with the versuin show here: [![Maven Central](https://img.shields.io/maven-central/v/com.cedarsoftware/java-util)](https://central.sonatype.com/artifact/com.cedarsoftware/java-util)
+Replace LATEST_VERSION with the version shown here: [![Maven Central](https://img.shields.io/maven-central/v/com.cedarsoftware/java-util)](https://central.sonatype.com/artifact/com.cedarsoftware/java-util)
 
 **Maven**
 ```xml
@@ -410,6 +411,125 @@ import com.cedarsoftware.io.spring.JsonIoMediaTypes;
 @GetMapping(value = "/data", produces = JsonIoMediaTypes.APPLICATION_TOON_VALUE)
 public MyData getToonData() {
     return myData;  // Always returns TOON format
+}
+```
+
+## Spring AI Integration
+
+json-io provides a separate module for [Spring AI](https://spring.io/projects/spring-ai) that uses TOON format to reduce LLM token usage by ~40-50% on tool call results and structured output parsing.
+
+> **Note:** This module is separate from the `json-io-spring-boot-starter` above. The Spring Boot starter handles REST API serialization (MVC/WebFlux), while this module integrates with Spring AI's LLM tool calling and output conversion interfaces. You can use either or both.
+
+### Installation
+
+**Maven**
+```xml
+<dependency>
+    <groupId>com.cedarsoftware</groupId>
+    <artifactId>json-io-spring-ai-toon</artifactId>
+    <version>LATEST_VERSION</version>
+</dependency>
+```
+
+**Gradle**
+```groovy
+implementation 'com.cedarsoftware:json-io-spring-ai-toon:LATEST_VERSION'
+```
+
+**Requirements:**
+- Spring Boot 3.5+ (Java 17+)
+- Spring AI 1.1+ (your project supplies it)
+
+### Auto-Configuration
+
+Just adding the dependency registers a `ToonToolCallResultConverter` bean. All tool call results are automatically serialized to TOON instead of JSON, reducing the tokens sent back to the LLM on every tool call.
+
+### Tool Call Result Conversion
+
+Use `ToonToolCallResultConverter` to serialize tool results as TOON. There are two ways to use it:
+
+**Per-tool opt-in via `@Tool`:**
+```java
+@Tool(description = "Get customer by ID", resultConverter = ToonToolCallResultConverter.class)
+Customer getCustomer(Long id) {
+    return customerRepository.findById(id);
+}
+```
+
+**Global default (auto-configured):**
+
+Just add the dependency — the auto-configuration registers `ToonToolCallResultConverter` as the default for all tools.
+
+**Programmatic with `FunctionToolCallback`:**
+```java
+FunctionToolCallback.builder("getCustomer", this::getCustomer)
+    .description("Get customer by ID")
+    .toolCallResultConverter(new ToonToolCallResultConverter())
+    .build();
+```
+
+### Structured Output Parsing
+
+`ToonBeanOutputConverter<T>` instructs the LLM to respond in TOON format and parses the response back to a typed Java object. It implements Spring AI's `StructuredOutputConverter<T>`.
+
+**Simple types:**
+```java
+ToonBeanOutputConverter<Person> converter = new ToonBeanOutputConverter<>(Person.class);
+Person person = chatClient.prompt()
+    .user("Get info about John Smith")
+    .call()
+    .entity(converter);
+```
+
+**Generic types via `TypeHolder`:**
+```java
+ToonBeanOutputConverter<List<Person>> converter =
+    new ToonBeanOutputConverter<>(new TypeHolder<List<Person>>() {});
+List<Person> people = chatClient.prompt()
+    .user("List the top 5 employees")
+    .call()
+    .entity(converter);
+```
+
+**Custom `ReadOptions`:**
+```java
+ReadOptions strictOptions = new ReadOptionsBuilder()
+    .strictToon(true)
+    .build();
+ToonBeanOutputConverter<Person> converter =
+    new ToonBeanOutputConverter<>(Person.class, strictOptions);
+```
+
+### Configuration Properties
+
+```yaml
+spring:
+  json-io:
+    ai:
+      tool-call:
+        # Enable TOON key folding for compact tabular arrays (default: true)
+        key-folding: true
+      output:
+        # Enable strict TOON parsing for LLM responses (default: false — permissive)
+        strict-toon: false
+```
+
+### Custom Bean Override
+
+The auto-configured beans use `@ConditionalOnMissingBean`, so you can provide your own:
+
+```java
+@Configuration
+public class MyToonConfig {
+
+    @Bean
+    public ToonToolCallResultConverter toonToolCallResultConverter() {
+        WriteOptions custom = new WriteOptionsBuilder()
+            .showTypeInfoNever()
+            .toonKeyFolding(false)  // disable key folding
+            .build();
+        return new ToonToolCallResultConverter(custom);
+    }
 }
 ```
 
