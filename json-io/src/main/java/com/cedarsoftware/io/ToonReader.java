@@ -128,33 +128,12 @@ public class ToonReader {
         int slot = s.hashCode() & STRING_CACHE_MASK;
         String cached = stringCache[slot];
         if (s.equals(cached)) return cached;
-        stringCache[slot] = s;
-        return s;
+        return stringCache[slot] = s;
     }
 
     private String cacheSubstring(String source, int start, int end) {
-        int len = end - start;
-        if (len == 0) return "";
-        if (len > MAX_CACHED_STRING_LENGTH) return source.substring(start, end);
-        int hash = 0;
-        for (int i = start; i < end; i++) {
-            hash = 31 * hash + source.charAt(i);
-        }
-        int slot = hash & STRING_CACHE_MASK;
-        String cached = stringCache[slot];
-        if (cached != null && cached.length() == len && cached.hashCode() == hash) {
-            boolean match = true;
-            for (int i = 0; i < len; i++) {
-                if (cached.charAt(i) != source.charAt(start + i)) {
-                    match = false;
-                    break;
-                }
-            }
-            if (match) return cached;
-        }
-        String s = source.substring(start, end);
-        stringCache[slot] = s;
-        return s;
+        if (start == 0 && end == source.length()) return cacheString(source);
+        return cacheString(source.substring(start, end));
     }
 
     private static String trimAscii(String text) {
@@ -235,7 +214,7 @@ public class ToonReader {
                 }
 
                 if (isArrayStart(trimmed)) {
-                    return readArray(0, suggestedType);
+                    return readArray();
                 }
 
                 int colonPos = findColonPosition(trimmed);
@@ -260,7 +239,7 @@ public class ToonReader {
      * @param suggestedType type hint for the Resolver
      * @return JsonObject containing the parsed fields
      */
-    JsonObject readObject(int baseIndent, Type suggestedType) throws IOException {
+    private JsonObject readObject(int baseIndent, Type suggestedType) throws IOException {
         JsonObject jsonObj = new JsonObject();
         if (suggestedType != null) {
             jsonObj.setType(suggestedType);
@@ -337,7 +316,7 @@ public class ToonReader {
                 if (nextLine != null && peekIndent() > baseIndent) {
                     String nextTrimmed = peekTrimmed();
                     if (isArrayStart(nextTrimmed)) {
-                        putValue(jsonObj, key, readArray(baseIndent + 1, null), wasQuoted);
+                        putValue(jsonObj, key, readArray(), wasQuoted);
                     } else {
                         putValue(jsonObj, key, readObject(baseIndent + 1, null), wasQuoted);
                     }
@@ -381,7 +360,7 @@ public class ToonReader {
      * Read an array starting at the given indentation level.
      * Returns ArrayList instead of Object[] for better Java interoperability.
      */
-    List<Object> readArray(int baseIndent, Type suggestedType) throws IOException {
+    private List<Object> readArray() throws IOException {
         String line = peekLine();
         if (line == null) {
             return new ArrayList<>();
@@ -573,7 +552,7 @@ public class ToonReader {
                 throw new JsonIoException("Tabular array count mismatch at line " + lineNumber +
                         ", expected " + count + " rows, got " + elements.size());
             }
-            if (elements.size() == count && hasAdditionalTabularRows(baseIndent, delimiter)) {
+            if (hasAdditionalTabularRows(baseIndent, delimiter)) {
                 throw new JsonIoException("Tabular array has more rows than declared count " + count +
                         " at line " + lineNumber);
             }
@@ -599,26 +578,18 @@ public class ToonReader {
     }
 
     /**
-     * Read an inline array: [N]: elem1,elem2,elem3
-     * Returns ArrayList instead of Object[] for better Java interoperability.
-     * Uses the default comma delimiter.
-     */
-    List<Object> readInlineArray(String content, int count) {
-        return readInlineArray(content, count, DELIMITER);
-    }
-
-    /**
      * Read an inline array with a specific delimiter.
      * Returns ArrayList instead of Object[] for better Java interoperability.
      */
-    List<Object> readInlineArray(String content, int count, char delimiter) {
+    private List<Object> readInlineArray(String content, int count, char delimiter) {
         List<Object> elements = new ArrayList<>(count);
         inlineBuf.setLength(0);
         final StringBuilder current = inlineBuf;
         boolean inQuotes = false;
         boolean escaped = false;
-
-        for (int i = 0; i < content.length(); i++) {
+        int len = content.length();
+        
+        for (int i = 0; i < len; i++) {
             char c = content.charAt(i);
 
             if (escaped) {
@@ -664,7 +635,7 @@ public class ToonReader {
      * Read a list format array with - element lines.
      * Returns ArrayList instead of Object[] for better Java interoperability.
      */
-    List<Object> readListArray(int count) throws IOException {
+    private List<Object> readListArray(int count) throws IOException {
         List<Object> elements = new ArrayList<>(count);
         int baseIndent = -1;
 
@@ -708,7 +679,7 @@ public class ToonReader {
                     int nextIndent = peekIndent();
                     if (nextIndent > indent) {
                         if (isArrayStart(nextTrimmed)) {
-                            elements.add(readArray(nextIndent, null));
+                            elements.add(readArray());
                         } else if (findColonPosition(nextTrimmed) > 0) {
                             elements.add(readObject(nextIndent, null));
                         } else {
@@ -741,7 +712,7 @@ public class ToonReader {
                 throw new JsonIoException("List array count mismatch at line " + lineNumber +
                         ", expected " + count + " elements, got " + elements.size());
             }
-            if (elements.size() == count && hasAdditionalListElements(baseIndent)) {
+            if (hasAdditionalListElements(baseIndent)) {
                 throw new JsonIoException("List array has more elements than declared count " + count +
                         " at line " + lineNumber);
             }
@@ -803,7 +774,7 @@ public class ToonReader {
                     if (nextLine != null && peekIndent() > hyphenIndent) {
                         String nextTrimmed = peekTrimmed();
                         if (isArrayStart(nextTrimmed)) {
-                            putValue(jsonObj, key, readArray(hyphenIndent + 1, null), wasQuoted);
+                            putValue(jsonObj, key, readArray(), wasQuoted);
                         } else {
                             putValue(jsonObj, key, readObject(hyphenIndent + 1, null), wasQuoted);
                         }
@@ -885,7 +856,7 @@ public class ToonReader {
                 if (nextLine != null && peekIndent() > fieldIndent) {
                     String nextTrimmed = peekTrimmed();
                     if (isArrayStart(nextTrimmed)) {
-                        putValue(jsonObj, key, readArray(fieldIndent + 1, null), wasQuoted);
+                        putValue(jsonObj, key, readArray(), wasQuoted);
                     } else {
                         putValue(jsonObj, key, readObject(fieldIndent + 1, null), wasQuoted);
                     }
@@ -909,7 +880,7 @@ public class ToonReader {
     /**
      * Parse a scalar value (null, boolean, number, or string).
      */
-    Object readScalar(String text) {
+    private Object readScalar(String text) {
         if (text == null || text.isEmpty()) {
             return null;
         }
@@ -962,7 +933,7 @@ public class ToonReader {
      * Parse a quoted string, handling escape sequences.
      * Only 5 valid escapes: \\, \", \n, \r, \t
      */
-    String parseQuotedString(String text) {
+    private String parseQuotedString(String text) {
         int len = text.length();
 
         // Fast path: no escape sequences — use cache to deduplicate
@@ -1010,7 +981,7 @@ public class ToonReader {
      * decimals with <= 16 mantissa digits, BigDecimal for high-precision decimals.
      * Returns null if text is not a valid number.
      */
-    Number parseNumber(String text) {
+    private Number parseNumber(String text) {
         if (text.isEmpty()) {
             return null;
         }
@@ -1125,7 +1096,7 @@ public class ToonReader {
      * Computes indent level and trimmed content directly from the raw lineBuf,
      * creating only a single String (the trimmed line) instead of two.
      */
-    String peekLine() throws IOException {
+    private String peekLine() throws IOException {
         if (lineConsumed) {
             int lineLen = readLineRaw();
             lineConsumed = false;
@@ -1169,47 +1140,19 @@ public class ToonReader {
         return currentLine;
     }
 
-    int peekIndent() {
+    private int peekIndent() {
         return currentIndent;
     }
 
-    String peekTrimmed() {
+    private String peekTrimmed() {
         return currentTrimmed;
     }
 
     /**
      * Consume the current line (move to next).
      */
-    void consumeLine() {
+    private void consumeLine() {
         lineConsumed = true;
-    }
-
-    /**
-     * Get the indentation level of a line (number of leading spaces / 2).
-     */
-    int getIndentLevel(String line) {
-        if (line == null) {
-            return 0;
-        }
-        int spaces = 0;
-        for (int i = 0; i < line.length(); i++) {
-            char c = line.charAt(i);
-            if (c == ' ') {
-                spaces++;
-            } else if (c == '\t') {
-                if (strictToon) {
-                    throw new JsonIoException("Tabs are not allowed in indentation at line " + lineNumber);
-                }
-                break;
-            } else {
-                break;
-            }
-        }
-        if (strictToon && spaces % INDENT_SIZE != 0) {
-            throw new JsonIoException("Indentation must be a multiple of " + INDENT_SIZE +
-                    " spaces at line " + lineNumber);
-        }
-        return spaces / INDENT_SIZE;
     }
 
     /**
@@ -1279,11 +1222,6 @@ public class ToonReader {
     // ========== Key Folding Support ==========
 
     /**
-     * Check if a key is a folded dotted key that should be expanded.
-     * A key is foldable if it contains dots and all segments match the safe identifier pattern.
-     * Quoted keys (starting with ") are NOT expanded.
-     */
-    /**
      * Validate all segments of a dotted key and cache the split result.
      * Called only when key is known to contain '.' and not start with '"'.
      * Uses manual dot-splitting to avoid regex compilation overhead.
@@ -1350,7 +1288,7 @@ public class ToonReader {
                 }
             }
             // Folded key check: only non-quoted keys with '.' can be folded
-            if (first != '"' && key.indexOf('.') >= 0 && validateAndCacheFoldedKey(key)) {
+            if (key.indexOf('.') >= 0 && validateAndCacheFoldedKey(key)) {
                 putWithKeyExpansion(target, key, value);
                 return;
             }
@@ -1523,8 +1461,7 @@ public class ToonReader {
     }
 
     private void mergeJsonObjects(JsonObject target, JsonObject source) {
-        for (Object entryObj : source.entrySet()) {
-            java.util.Map.Entry<?, ?> entry = (java.util.Map.Entry<?, ?>) entryObj;
+        for (Map.Entry<?, ?> entry : source.entrySet()) {
             String key = String.valueOf(entry.getKey());
             Object sourceVal = entry.getValue();
             Object targetVal = target.get(key);
