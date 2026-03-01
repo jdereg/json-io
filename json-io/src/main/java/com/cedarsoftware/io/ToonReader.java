@@ -80,6 +80,7 @@ public class ToonReader {
     private final ReferenceTracker references;
     private final long maxIdValue;
     private final boolean strictToon;
+    private final ClassLoader classLoader;
 
     // Line management - supports peek/consume pattern
     private String currentLine = null;
@@ -119,6 +120,7 @@ public class ToonReader {
         this.references = references;
         this.maxIdValue = this.readOptions.getMaxIdValue();
         this.strictToon = this.readOptions.isStrictToon();
+        this.classLoader = this.readOptions.getClassLoader();
     }
 
     private String cacheString(String s) {
@@ -132,13 +134,20 @@ public class ToonReader {
     }
 
     private String cacheSubstring(String source, int start, int end) {
-        if (start == 0 && end == source.length()) return cacheString(source);
-        return cacheString(source.substring(start, end));
+        int len = end - start;
+        if (len == 0) return "";
+        String s = (start == 0 && end == source.length()) ? source : source.substring(start, end);
+        if (len > MAX_CACHED_STRING_LENGTH) return s;
+        int slot = s.hashCode() & STRING_CACHE_MASK;
+        String cached = stringCache[slot];
+        if (s.equals(cached)) return cached;
+        return stringCache[slot] = s;
     }
 
     private static String trimAscii(String text) {
         int start = 0;
-        int end = text.length();
+        int len = text.length();
+        int end = len;
         if (start < end && text.charAt(start) > ' ' && text.charAt(end - 1) > ' ') {
             return text;
         }
@@ -148,7 +157,7 @@ public class ToonReader {
         while (end > start && text.charAt(end - 1) <= ' ') {
             end--;
         }
-        return (start == 0 && end == text.length()) ? text : text.substring(start, end);
+        return (start == 0 && end == len) ? text : text.substring(start, end);
     }
 
     private static String trimAscii(StringBuilder text) {
@@ -1026,14 +1035,12 @@ public class ToonReader {
 
             if (integerOnly) {
                 if (!overflow) {
-                    long value = negative ? result : -result;
                     numberCacheKeys[slot] = text;
-                    return numberCacheValues[slot] = value;
+                    return numberCacheValues[slot] = negative ? result : -result;
                 }
                 try {
-                    Number parsed = new BigInteger(text);
                     numberCacheKeys[slot] = text;
-                    return numberCacheValues[slot] = parsed;
+                    return numberCacheValues[slot] = new BigInteger(text);
                 } catch (NumberFormatException ignored) {
                     return null;
                 }
@@ -1101,13 +1108,14 @@ public class ToonReader {
             lineConsumed = false;
             if (lineLen >= 0) {
                 lineNumber++;
+                final char[] buf = lineBuf;  // localize after readLineRaw (which may resize)
 
-                // Compute indent directly from lineBuf — no intermediate String needed
+                // Compute indent directly from buf — no intermediate String needed
                 int spaces = 0;
-                while (spaces < lineLen && lineBuf[spaces] == ' ') {
+                while (spaces < lineLen && buf[spaces] == ' ') {
                     spaces++;
                 }
-                if (spaces < lineLen && lineBuf[spaces] == '\t' && strictToon) {
+                if (spaces < lineLen && buf[spaces] == '\t' && strictToon) {
                     throw new JsonIoException("Tabs are not allowed in indentation at line " + lineNumber);
                 }
                 if (strictToon && spaces % INDENT_SIZE != 0) {
@@ -1116,20 +1124,21 @@ public class ToonReader {
                 }
                 currentIndent = spaces / INDENT_SIZE;
 
-                // Compute trim-end directly from lineBuf
+                // Compute trim-end directly from buf
                 int trimEnd = lineLen;
-                while (trimEnd > spaces && lineBuf[trimEnd - 1] <= ' ') {
+                while (trimEnd > spaces && buf[trimEnd - 1] <= ' ') {
                     trimEnd--;
                 }
 
                 // Create ONE String: the trimmed content only
+                String trimmed;
                 if (spaces == 0 && trimEnd == lineLen) {
-                    // No leading/trailing whitespace — single String serves both roles
-                    currentTrimmed = new String(lineBuf, 0, lineLen);
+                    trimmed = new String(buf, 0, lineLen);
                 } else {
-                    currentTrimmed = (spaces < trimEnd) ? new String(lineBuf, spaces, trimEnd - spaces) : "";
+                    trimmed = (spaces < trimEnd) ? new String(buf, spaces, trimEnd - spaces) : "";
                 }
-                currentLine = currentTrimmed;
+                currentTrimmed = trimmed;
+                currentLine = trimmed;
             } else {
                 currentLine = null;
                 currentIndent = 0;
@@ -1339,7 +1348,7 @@ public class ToonReader {
             resolvedName = typeName;
         }
 
-        Class<?> typeClass = ClassUtilities.forName(resolvedName, readOptions.getClassLoader());
+        Class<?> typeClass = ClassUtilities.forName(resolvedName, classLoader);
         if (typeClass == null) {
             if (readOptions.isFailOnUnknownType()) {
                 throw new JsonIoException("Unknown type (class) '" + typeName + "' at line " + lineNumber);
