@@ -1026,10 +1026,10 @@ public class ToonReader {
 
             if (integerOnly) {
                 if (!overflow) {
-                    Number parsed = negative ? result : -result;
+                    long value = negative ? result : -result;
                     numberCacheKeys[slot] = text;
-                    numberCacheValues[slot] = parsed;
-                    return parsed;
+                    numberCacheValues[slot] = value;
+                    return value;
                 }
                 try {
                     Number parsed = new BigInteger(text);
