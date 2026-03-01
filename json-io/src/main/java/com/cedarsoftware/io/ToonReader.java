@@ -1086,9 +1086,10 @@ public class ToonReader {
     /**
      * Read a line from the FastReader into the reusable lineBuf.
      * Handles \n, \r, and \r\n line endings.
-     * Returns the line as a String, or null on EOF.
+     * Returns the number of characters read into lineBuf, or -1 on EOF.
+     * The line data is available in lineBuf[0..returnValue-1].
      */
-    private String readLineFromReader() throws IOException {
+    private int readLineRaw() throws IOException {
         int total = 0;
         while (true) {
             if (total >= lineBuf.length) {
@@ -1096,7 +1097,7 @@ public class ToonReader {
             }
             int count = reader.readUntil(lineBuf, total, lineBuf.length - total, '\n', '\r');
             if (count < 0) {
-                return total > 0 ? new String(lineBuf, 0, total) : null;
+                return total > 0 ? total : -1;
             }
             total += count;
             int c = reader.read();
@@ -1116,21 +1117,51 @@ public class ToonReader {
             }
             lineBuf[total++] = (char) c;
         }
-        return new String(lineBuf, 0, total);
+        return total;
     }
 
     /**
      * Peek at the next line without consuming it.
+     * Computes indent level and trimmed content directly from the raw lineBuf,
+     * creating only a single String (the trimmed line) instead of two.
      */
     String peekLine() throws IOException {
         if (lineConsumed) {
-            currentLine = readLineFromReader();
+            int lineLen = readLineRaw();
             lineConsumed = false;
-            if (currentLine != null) {
+            if (lineLen >= 0) {
                 lineNumber++;
-                currentIndent = getIndentLevel(currentLine);
-                currentTrimmed = trimAscii(currentLine);
+
+                // Compute indent directly from lineBuf — no intermediate String needed
+                int spaces = 0;
+                while (spaces < lineLen && lineBuf[spaces] == ' ') {
+                    spaces++;
+                }
+                if (spaces < lineLen && lineBuf[spaces] == '\t' && strictToon) {
+                    throw new JsonIoException("Tabs are not allowed in indentation at line " + lineNumber);
+                }
+                if (strictToon && spaces % INDENT_SIZE != 0) {
+                    throw new JsonIoException("Indentation must be a multiple of " + INDENT_SIZE +
+                            " spaces at line " + lineNumber);
+                }
+                currentIndent = spaces / INDENT_SIZE;
+
+                // Compute trim-end directly from lineBuf
+                int trimEnd = lineLen;
+                while (trimEnd > spaces && lineBuf[trimEnd - 1] <= ' ') {
+                    trimEnd--;
+                }
+
+                // Create ONE String: the trimmed content only
+                if (spaces == 0 && trimEnd == lineLen) {
+                    // No leading/trailing whitespace — single String serves both roles
+                    currentTrimmed = new String(lineBuf, 0, lineLen);
+                } else {
+                    currentTrimmed = (spaces < trimEnd) ? new String(lineBuf, spaces, trimEnd - spaces) : "";
+                }
+                currentLine = currentTrimmed;
             } else {
+                currentLine = null;
                 currentIndent = 0;
                 currentTrimmed = "";
             }
