@@ -303,20 +303,14 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
      * <p>
      * JSON object keys are overwhelmingly unique in practice, so this method skips duplicate-key
      * search and appends directly to avoid per-field {@code indexOf()} churn during parse.
-     * If a hash index already exists (larger objects), it is still updated for O(1) lookups.
+     * The hash index is NOT maintained here — it is built lazily on first lookup via {@code indexOf()}.
      */
     public void appendFieldForParser(Object key, Object value) {
         hash = null;
+        index = null;
         ensureCapacity(size + 1);
         keys[size] = key;
         values[size] = value;
-
-        if (index != null) {
-            index.put(key, size);
-        } else if (size == INDEX_THRESHOLD) {
-            buildIndex();
-            index.put(key, size);
-        }
         size++;
     }
 

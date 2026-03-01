@@ -1028,14 +1028,12 @@ public class ToonReader {
                 if (!overflow) {
                     long value = negative ? result : -result;
                     numberCacheKeys[slot] = text;
-                    numberCacheValues[slot] = value;
-                    return value;
+                    return numberCacheValues[slot] = value;
                 }
                 try {
                     Number parsed = new BigInteger(text);
                     numberCacheKeys[slot] = text;
-                    numberCacheValues[slot] = parsed;
-                    return parsed;
+                    return numberCacheValues[slot] = parsed;
                 } catch (NumberFormatException ignored) {
                     return null;
                 }
@@ -1061,12 +1059,13 @@ public class ToonReader {
      * The line data is available in lineBuf[0..returnValue-1].
      */
     private int readLineRaw() throws IOException {
+        char[] buf = lineBuf;
         int total = 0;
         while (true) {
-            if (total >= lineBuf.length) {
-                lineBuf = Arrays.copyOf(lineBuf, lineBuf.length * 2);
+            if (total >= buf.length) {
+                buf = lineBuf = Arrays.copyOf(buf, buf.length * 2);
             }
-            int count = reader.readUntil(lineBuf, total, lineBuf.length - total, '\n', '\r');
+            int count = reader.readUntil(buf, total, buf.length - total, '\n', '\r');
             if (count < 0) {
                 return total > 0 ? total : -1;
             }
@@ -1083,10 +1082,10 @@ public class ToonReader {
                 break;
             }
             // Buffer was full, char is content — store and continue
-            if (total >= lineBuf.length) {
-                lineBuf = Arrays.copyOf(lineBuf, lineBuf.length * 2);
+            if (total >= buf.length) {
+                buf = lineBuf = Arrays.copyOf(buf, buf.length * 2);
             }
-            lineBuf[total++] = (char) c;
+            buf[total++] = (char) c;
         }
         return total;
     }
@@ -1173,8 +1172,9 @@ public class ToonReader {
 
         boolean inQuotes = false;
         boolean escaped = false;
+        int len = text.length();
 
-        for (int i = 0; i < text.length(); i++) {
+        for (int i = 0; i < len; i++) {
             char c = text.charAt(i);
 
             if (escaped) {
