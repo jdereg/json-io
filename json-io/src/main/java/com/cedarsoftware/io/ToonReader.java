@@ -54,6 +54,18 @@ public class ToonReader {
     private static final char DELIMITER = ','; // Default delimiter (matches ToonWriter)
     private static final int STRING_CACHE_MASK = 2047;
     private static final int MAX_CACHED_STRING_LENGTH = 64;
+    private static final int NUMBER_CACHE_MASK = 1023;
+
+    // Thread-local reusable buffers — eliminates per-parse array allocation.
+    // Stale entries from previous parses are harmless (cache misses or warm hits).
+    private static final ThreadLocal<String[]> TL_STRING_CACHE =
+            ThreadLocal.withInitial(() -> new String[STRING_CACHE_MASK + 1]);
+    private static final ThreadLocal<String[]> TL_NUMBER_KEYS =
+            ThreadLocal.withInitial(() -> new String[NUMBER_CACHE_MASK + 1]);
+    private static final ThreadLocal<Number[]> TL_NUMBER_VALUES =
+            ThreadLocal.withInitial(() -> new Number[NUMBER_CACHE_MASK + 1]);
+    private static final ThreadLocal<char[]> TL_LINE_BUF =
+            ThreadLocal.withInitial(() -> new char[4096]);
 
     private static final Map<String, String> META_KEY_MAP = new HashMap<>(32);
     static {
@@ -91,11 +103,10 @@ public class ToonReader {
     private final StringBuilder quoteBuf = new StringBuilder(64);
     private final StringBuilder inlineBuf = new StringBuilder(64);
     private String[] cachedFoldSegments;
-    private char[] lineBuf = new char[4096];
-    private final String[] stringCache = new String[STRING_CACHE_MASK + 1];
-    private static final int NUMBER_CACHE_MASK = 1023;
-    private final String[] numberCacheKeys = new String[NUMBER_CACHE_MASK + 1];
-    private final Number[] numberCacheValues = new Number[NUMBER_CACHE_MASK + 1];
+    private char[] lineBuf;
+    private final String[] stringCache;
+    private final String[] numberCacheKeys;
+    private final Number[] numberCacheValues;
 
     /**
      * Create a ToonReader that reads from a Reader.
@@ -121,6 +132,10 @@ public class ToonReader {
         this.maxIdValue = this.readOptions.getMaxIdValue();
         this.strictToon = this.readOptions.isStrictToon();
         this.classLoader = this.readOptions.getClassLoader();
+        this.lineBuf = TL_LINE_BUF.get();
+        this.stringCache = TL_STRING_CACHE.get();
+        this.numberCacheKeys = TL_NUMBER_KEYS.get();
+        this.numberCacheValues = TL_NUMBER_VALUES.get();
     }
 
     private String cacheString(String s) {
