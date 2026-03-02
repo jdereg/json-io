@@ -555,16 +555,18 @@ public class ToonReader {
 
             // Parse the row into an object
             JsonObject rowObj = new JsonObject();
-            List<Object> values = readInlineArray(trimmed, columnHeaders.size(), delimiter);
-            if (strictToon && values.size() != columnHeaders.size()) {
+            int colHeadersSize = columnHeaders.size();
+            List<Object> values = readInlineArray(trimmed, colHeadersSize, delimiter);
+            int valuesSize = values.size();
+            if (strictToon && valuesSize != colHeadersSize) {
                 throw new JsonIoException("Tabular row width mismatch at line " + lineNumber +
-                        ", expected " + columnHeaders.size() + " values, got " + values.size());
+                        ", expected " + colHeadersSize + " values, got " + valuesSize);
             }
 
-            for (int i = 0; i < columnHeaders.size() && i < values.size(); i++) {
+            for (int i = 0; i < colHeadersSize && i < valuesSize; i++) {
                 String header = columnHeaders.get(i);
                 Object value = values.get(i);
-                String metaKey = canonicalMetaKey(header);
+                String metaKey = META_KEY_MAP.get(header);
                 if (metaKey != null) {
                     loadMetaField(rowObj, metaKey, value);
                 } else {
@@ -789,13 +791,13 @@ public class ToonReader {
                 if (!valuePart.isEmpty()) {
                     sb.append(' ').append(valuePart);
                 }
-                boolean wasQuoted = realKey.length() > 0 && realKey.charAt(0) == '"';
+                boolean wasQuoted = !realKey.isEmpty() && realKey.charAt(0) == '"';
                 if (wasQuoted) {
                     realKey = unquoteString(realKey);
                 }
                 putValue(jsonObj, realKey, parseArrayFromLine(sb.toString()), wasQuoted);
             } else {
-                boolean wasQuoted = key.length() > 0 && key.charAt(0) == '"';
+                boolean wasQuoted = !key.isEmpty() && key.charAt(0) == '"';
                 key = unquoteString(key);
                 if (valuePart.isEmpty()) {
                     // Check for nested structure on next line
@@ -871,7 +873,7 @@ public class ToonReader {
                     if (!valuePart.isEmpty()) {
                         sb.append(' ').append(valuePart);
                     }
-                    boolean wasQuoted = realKey.length() > 0 && realKey.charAt(0) == '"';
+                    boolean wasQuoted = !realKey.isEmpty() && realKey.charAt(0) == '"';
                     if (wasQuoted) {
                         realKey = unquoteString(realKey);
                     }
@@ -1018,9 +1020,11 @@ public class ToonReader {
             return null;
         }
 
+        String[] numKeys = numberCacheKeys;
+        Number[] numVals = numberCacheValues;
         int slot = text.hashCode() & NUMBER_CACHE_MASK;
-        if (text.equals(numberCacheKeys[slot])) {
-            return numberCacheValues[slot];
+        if (text.equals(numKeys[slot])) {
+            return numVals[slot];
         }
 
         int len = text.length();
@@ -1058,12 +1062,16 @@ public class ToonReader {
 
             if (integerOnly) {
                 if (!overflow) {
-                    numberCacheKeys[slot] = text;
-                    return numberCacheValues[slot] = negative ? result : -result;
+                    Number boxed = Long.valueOf(negative ? result : -result);
+                    numKeys[slot] = text;
+                    numVals[slot] = boxed;
+                    return boxed;
                 }
                 try {
-                    numberCacheKeys[slot] = text;
-                    return numberCacheValues[slot] = new BigInteger(text);
+                    Number big = new BigInteger(text);
+                    numKeys[slot] = text;
+                    numVals[slot] = big;
+                    return big;
                 } catch (NumberFormatException ignored) {
                     return null;
                 }
@@ -1072,8 +1080,8 @@ public class ToonReader {
 
         try {
             Number parsed = MathUtilities.parseToMinimalNumericType(text);
-            numberCacheKeys[slot] = text;
-            numberCacheValues[slot] = parsed;
+            numKeys[slot] = text;
+            numVals[slot] = parsed;
             return parsed;
         } catch (NumberFormatException e) {
             return null;  // Not a valid number
@@ -1088,7 +1096,7 @@ public class ToonReader {
      * Returns the number of characters read into lineBuf, or -1 on EOF.
      * The line data is available in lineBuf[0..returnValue-1].
      */
-    private int readLineRaw() throws IOException {
+    private int readLineRaw() {
         char[] buf = lineBuf;
         int total = 0;
         while (true) {
@@ -1313,7 +1321,7 @@ public class ToonReader {
             char first = key.charAt(0);
             // Meta key fast path: only @/$ prefixed keys can be meta
             if (first == '@' || first == '$') {
-                String meta = canonicalMetaKey(key);
+                String meta = META_KEY_MAP.get(key);
                 if (meta != null) {
                     loadMetaField(target, meta, value);
                     return;
@@ -1336,10 +1344,6 @@ public class ToonReader {
             }
         }
         target.appendFieldForParser(key, value);
-    }
-
-    private String canonicalMetaKey(String key) {
-        return META_KEY_MAP.get(key);
     }
 
     private void loadMetaField(JsonObject target, String metaKey, Object value) {
