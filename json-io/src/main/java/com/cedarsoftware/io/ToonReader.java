@@ -832,12 +832,8 @@ public class ToonReader {
                 break;  // EOF
             }
 
-            int indent = peekIndent();
-            if (indent < fieldIndent) {
-                break;  // Back to parent level
-            }
-            if (indent > fieldIndent) {
-                break;  // This belongs to a nested structure
+            if (peekIndent() != fieldIndent) {
+                break;  // Not at our indent level
             }
 
             String trimmed = peekTrimmed();
