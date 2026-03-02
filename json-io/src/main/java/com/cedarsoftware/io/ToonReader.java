@@ -191,6 +191,13 @@ public class ToonReader {
     }
 
     private String trimAsciiRange(String text, int start, int end) {
+        // Fast path: no trimming needed and range spans full string
+        if (start < end && text.charAt(start) > ' ' && text.charAt(end - 1) > ' ') {
+            if (start == 0 && end == text.length()) {
+                return text;
+            }
+            return cacheSubstring(text, start, end);
+        }
         while (start < end && text.charAt(start) <= ' ') {
             start++;
         }
