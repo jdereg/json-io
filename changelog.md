@@ -1,5 +1,17 @@
 ### Revision History
 
+#### 4.97.0 (Unreleased)
+* **PERFORMANCE**: `ToonReader.peekLine()` now avoids materializing a `String` for blank, comment, and indent-only lines, reducing per-line `String` allocations by ~50%.
+* **PERFORMANCE**: `ToonReader.cacheSubstring()` simplified to reduce code complexity and improve maintainability of the string caching layer.
+* **PERFORMANCE**: `ToonReader.parseNumber()` integer fast path now avoids autoboxing by returning primitive values directly.
+* **PERFORMANCE**: `JsonObject` index build is now deferred to the first lookup instead of construction time; `ToonReader.lineBuf` localized to reduce field access overhead.
+* **PERFORMANCE**: `ToonReader.cacheSubstring()` inlined at hot call sites; frequently accessed fields (`stringCache`, `classLoader`) localized to reduce field dereference cost.
+* **PERFORMANCE**: `ToonReader.readInlineObject()` char comparisons optimized; `stringCache` array localized to a local variable in hot parsing methods.
+* **PERFORMANCE**: `ToonReader` cache arrays (`stringCache`, `numberCacheKeys`, `numberCacheValues`) now reused across parse calls via `ThreadLocal`, eliminating per-parse array allocation.
+* **PERFORMANCE**: `ToonReader.trimAsciiRange()` now includes a fast path that skips trim logic when the input range is already trimmed.
+* **PERFORMANCE**: `ToonReader.parseNumber()` number cache arrays localized to reduce field access in the hot number-parsing loop.
+* **PERFORMANCE**: `ToonReader.readInlineObject()` two separate indent checks merged into a single `!=` comparison.
+
 #### 4.96.0 - 2026-02-28
 * **FEATURE**: Spring Boot starter — expanded YAML configuration properties. All commonly used `WriteOptions` and `ReadOptions` settings are now configurable via `application.yml` without writing Java code. New write properties: `force-map-output-as-two-arrays`, `write-enum-as-json-object`, `cycle-support`, `json5`, `date-format`, `indentation-size`, `show-root-type-info`, `meta-prefix`, `toon-delimiter`. New read properties: `use-unsafe`, `floating-point`, `integer-type`. Advanced/internal tuning settings remain available through `ReadOptionsCustomizer`/`WriteOptionsCustomizer` beans.
 * **IMPROVEMENT**: `@type` elimination on write now considers `@IoDeserialize(as=X)` and `@IoTypeInfo(X)` annotations. When the runtime type of a field matches the annotation-specified type, `@type` is omitted from JSON output because the reader can infer the correct type from the annotation. This produces smaller JSON without sacrificing round-trip fidelity.
