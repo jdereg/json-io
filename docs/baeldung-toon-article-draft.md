@@ -170,20 +170,20 @@ name: Acme Corp
 founded: 2010
 departments[3]:
   - name: Engineering
-    members[3]{name,age}:
-      Alice,28
-      Bob,34
-      Charlie,22
+    members[3]{name,age,department}:
+      Alice,28,Engineering
+      Bob,34,Engineering
+      Charlie,22,Engineering
   - name: Marketing
-    members[3]{name,age}:
-      Eve,29
-      Frank,45
-      Grace,27
+    members[3]{name,age,department}:
+      Eve,29,Marketing
+      Frank,45,Marketing
+      Grace,27,Marketing
   - name: Sales
-    members[3]{name,age}:
-      Hank,38
-      Iris,33
-      Jack,41
+    members[3]{name,age,department}:
+      Hank,38,Sales
+      Iris,33,Sales
+      Jack,41,Sales
 ```
 
 Notice that the inner `members` arrays use tabular format automatically. The outer `departments` array uses the expanded format because each department contains nested structured data, while the inner `members` arrays qualify for tabular format since their fields are all scalar values.
