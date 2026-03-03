@@ -1,6 +1,6 @@
 ### Revision History
 
-#### 4.97.0 (Unreleased)
+#### 4.97.0 - 2026-01-03
 * **PERFORMANCE**: `ToonReader.peekLine()` now avoids materializing a `String` for blank, comment, and indent-only lines, reducing per-line `String` allocations by ~50%.
 * **PERFORMANCE**: `ToonReader.cacheSubstring()` simplified to reduce code complexity and improve maintainability of the string caching layer.
 * **PERFORMANCE**: `ToonReader.parseNumber()` integer fast path now avoids autoboxing by returning primitive values directly.
@@ -11,6 +11,7 @@
 * **PERFORMANCE**: `ToonReader.trimAsciiRange()` now includes a fast path that skips trim logic when the input range is already trimmed.
 * **PERFORMANCE**: `ToonReader.parseNumber()` number cache arrays localized to reduce field access in the hot number-parsing loop.
 * **PERFORMANCE**: `ToonReader.readInlineObject()` two separate indent checks merged into a single `!=` comparison.
+* **MAINTENANCE**: Update Jackson test dependency from 2.19.4 to 2.21.1; remove redundant `jackson-core` and `jackson-annotations` declarations (pulled transitively via `jackson-databind`).
 
 #### 4.96.0 - 2026-02-28
 * **FEATURE**: Spring Boot starter — expanded YAML configuration properties. All commonly used `WriteOptions` and `ReadOptions` settings are now configurable via `application.yml` without writing Java code. New write properties: `force-map-output-as-two-arrays`, `write-enum-as-json-object`, `cycle-support`, `json5`, `date-format`, `indentation-size`, `show-root-type-info`, `meta-prefix`, `toon-delimiter`. New read properties: `use-unsafe`, `floating-point`, `integer-type`. Advanced/internal tuning settings remain available through `ReadOptionsCustomizer`/`WriteOptionsCustomizer` beans.
