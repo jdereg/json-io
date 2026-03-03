@@ -1,5 +1,7 @@
 ### Revision History
 
+#### 4.98.0 (Unreleased)
+
 #### 4.97.0 - 2026-03-03
 * **PERFORMANCE**: `ToonReader.peekLine()` now avoids materializing a `String` for blank, comment, and indent-only lines, reducing per-line `String` allocations by ~50%.
 * **PERFORMANCE**: `ToonReader.cacheSubstring()` simplified to reduce code complexity and improve maintainability of the string caching layer.
