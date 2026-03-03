@@ -39,7 +39,7 @@
         <version.mockito-junit-jupiter>4.11.0</version.mockito-junit-jupiter>   <!-- can't update until they have JDK support -->
         <version.assertj-core>3.27.7</version.assertj-core>
         <version.gson>2.13.2</version.gson>
-        <version.jackson-core>2.19.4</version.jackson-core>
+        <version.jackson-databind>2.21.1</version.jackson-databind>
         <version.jtokkit>1.1.0</version.jtokkit>
 
         <!-- Build maven-***-plugins-->
@@ -212,20 +212,8 @@
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-core</artifactId>
-                <version>${version.jackson-core}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-annotations</artifactId>
-                <version>${version.jackson-core}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
-                <version>${version.jackson-core}</version>
+                <version>${version.jackson-databind}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
