@@ -1044,7 +1044,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private boolean isReferenceTrackable(Object obj) {
-        return obj != null && !writeOptions.isNonReferenceableClass(obj.getClass());
+        if (obj == null) {
+            return false;
+        }
+        // When cycleSupport is off, skip the NonReferenceableClass lookup — it's only needed
+        // for $id/$ref decisions. Cycle detection via activePath doesn't need it since
+        // non-referenceable types (temporals, BigInteger, UUID, etc.) are leaf values that can't form cycles.
+        return !cycleSupport || !writeOptions.isNonReferenceableClass(obj.getClass());
     }
 
     private JsonIoException cycleDetected(Object obj) {

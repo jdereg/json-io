@@ -331,11 +331,12 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     private boolean isReferenceable(Object value) {
-        if (value == null) {
+        if (value == null || isPrimitive(value)) {
             return false;
         }
-        Class<?> clazz = value.getClass();
-        return !isPrimitive(value) && !writeOptions.isNonReferenceableClass(clazz);
+        // When cycleSupport is off, skip the NonReferenceableClass lookup — it's only needed
+        // for $id/$ref decisions. Cycle detection via activePath only needs the isPrimitive() filter.
+        return !cycleSupport || !writeOptions.isNonReferenceableClass(value.getClass());
     }
 
     private boolean isReferenceContainer(Object value) {
