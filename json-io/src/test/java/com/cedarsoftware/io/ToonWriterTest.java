@@ -624,7 +624,8 @@ class ToonWriterTest {
         b.next = a;  // Cycle!
 
         // Should not hang or infinite loop and should preserve identity with $id/$ref.
-        String toon = JsonIo.toToon(a, null);
+        WriteOptions options = new WriteOptionsBuilder().cycleSupport(true).build();
+        String toon = JsonIo.toToon(a, options);
         assertNotNull(toon);
         assertTrue(toon.contains("alpha"));
         assertTrue(toon.contains("beta"));
@@ -638,7 +639,8 @@ class ToonWriterTest {
         self.next = self;  // Self-cycle!
 
         // Should not hang or infinite loop and should use $id/$ref.
-        String toon = JsonIo.toToon(self, null);
+        WriteOptions options = new WriteOptionsBuilder().cycleSupport(true).build();
+        String toon = JsonIo.toToon(self, options);
         assertNotNull(toon);
         assertTrue(toon.contains("self"));
         assertTrue(toon.contains("$id"));
@@ -650,7 +652,8 @@ class ToonWriterTest {
         Map<String, Object> selfMap = new LinkedHashMap<>();
         selfMap.put("self", selfMap);
 
-        String toon = assertTimeoutPreemptively(Duration.ofSeconds(5), () -> JsonIo.toToon(selfMap, null));
+        WriteOptions options = new WriteOptionsBuilder().cycleSupport(true).build();
+        String toon = assertTimeoutPreemptively(Duration.ofSeconds(5), () -> JsonIo.toToon(selfMap, options));
         assertTrue(toon.contains("$id"));
         assertTrue(toon.contains("$ref"));
 
@@ -664,7 +667,8 @@ class ToonWriterTest {
         selfList.add("x");
         selfList.add(selfList);
 
-        String toon = assertTimeoutPreemptively(Duration.ofSeconds(5), () -> JsonIo.toToon(selfList, null));
+        WriteOptions options = new WriteOptionsBuilder().cycleSupport(true).build();
+        String toon = assertTimeoutPreemptively(Duration.ofSeconds(5), () -> JsonIo.toToon(selfList, options));
         assertTrue(toon.contains("[2]"));
         assertTrue(toon.contains("$id"));
         assertTrue(toon.contains("$ref"));
@@ -722,7 +726,8 @@ class ToonWriterTest {
         root.put("left", shared);
         root.put("right", shared);
 
-        String toon = JsonIo.toToon(root, null);
+        WriteOptions options = new WriteOptionsBuilder().cycleSupport(true).build();
+        String toon = JsonIo.toToon(root, options);
         assertTrue(toon.contains("$id"));
         assertTrue(toon.contains("$ref"));
 
@@ -767,7 +772,8 @@ class ToonWriterTest {
         root.put("mapValueCycle", mapValueCycle);
         root.put("collectionCycle", collectionCycle);
 
-        String toon = JsonIo.toToon(root, null);
+        WriteOptions options = new WriteOptionsBuilder().cycleSupport(true).build();
+        String toon = JsonIo.toToon(root, options);
         assertTrue(toon.contains("$id"));
         assertTrue(toon.contains("$ref"));
         assertTrue(toon.contains("$keys"));

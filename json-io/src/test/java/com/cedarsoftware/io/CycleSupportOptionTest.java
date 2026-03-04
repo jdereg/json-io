@@ -156,4 +156,56 @@ public class CycleSupportOptionTest {
         // Should contain "shared" at least once
         assertTrue(json.contains("shared"));
     }
+
+    // --- TOON default cycleSupport(false) tests ---
+
+    @Test
+    public void testToonDefaultsTo_cycleSupportFalse() {
+        // When null WriteOptions passed to toToon(), cycleSupport should be false (no @id/@ref overhead)
+        Node alpha = new Node("alpha");
+        Node beta = new Node("beta");
+        alpha.next = beta;
+
+        String toon = JsonIo.toToon(alpha, null);
+
+        // Should NOT contain $id or $ref (cycleSupport is off by default for TOON)
+        assertFalse(toon.contains("$id"));
+        assertFalse(toon.contains("$ref"));
+        assertFalse(toon.contains("@id"));
+        assertFalse(toon.contains("@ref"));
+
+        // Should still contain the data
+        assertTrue(toon.contains("alpha"));
+        assertTrue(toon.contains("beta"));
+    }
+
+    @Test
+    public void testToonDefaultCycleSupportFalse_throwsOnCycle() {
+        // When null WriteOptions and data has a cycle, toToon() should throw with guidance
+        Node alpha = new Node("alpha");
+        Node beta = new Node("beta");
+        alpha.next = beta;
+        beta.next = alpha;  // Cycle!
+
+        JsonIoException ex = assertThrows(JsonIoException.class, () -> JsonIo.toToon(alpha, null));
+        assertTrue(ex.getMessage().contains("cycleSupport(true)"));
+    }
+
+    @Test
+    public void testToonExplicitCycleSupportTrue_handlesCycles() {
+        // When explicit cycleSupport(true) is passed, TOON should handle cycles
+        Node alpha = new Node("alpha");
+        Node beta = new Node("beta");
+        alpha.next = beta;
+        beta.next = alpha;
+
+        WriteOptions options = new WriteOptionsBuilder().cycleSupport(true).build();
+        String toon = JsonIo.toToon(alpha, options);
+
+        // Should contain the data without error
+        assertTrue(toon.contains("alpha"));
+        assertTrue(toon.contains("beta"));
+        // Should contain reference markers for cycle handling
+        assertTrue(toon.contains("$id") || toon.contains("@id"));
+    }
 }

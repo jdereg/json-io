@@ -48,12 +48,14 @@ By default, `json-io` performs a two-pass serialization: first tracing reference
 If your data is **acyclic** (no circular references) and you don't need shared-reference preservation, you can disable cycle support for significant performance improvement (~35-40% faster writes).
 
 >#### `boolean` isCycleSupport()
->- [ ] Returns `true` if cycle support is enabled (default). When `true`, the writer traces all references before writing to detect multi-referenced objects, emitting `@id` on first occurrence and `@ref` on subsequent occurrences.
+>- [ ] Returns `true` if cycle support is enabled. When `true`, the writer traces all references before writing to detect multi-referenced objects, emitting `@id` on first occurrence and `@ref` on subsequent occurrences.
 
 >#### `WriteOptionsBuilder` cycleSupport(`boolean enable`)
 >- [ ] Controls whether the `traceReferences()` pre-pass runs before serialization.
->- [ ] `true` (default): Full cycle support - `@id`/`@ref` emitted for multi-referenced objects, cycles handled correctly
->- [ ] `false`: Skip traceReferences for performance - identity is not preserved and true cycles throw `JsonIoException` with guidance to enable `cycleSupport(true)`
+>- [ ] `true` (default for JSON): Full cycle support - `@id`/`@ref` emitted for multi-referenced objects, cycles handled correctly
+>- [ ] `false` (default for TOON): Skip traceReferences for performance - identity is not preserved and true cycles throw `JsonIoException` with guidance to enable `cycleSupport(true)`
+
+**Note:** When `null` is passed for `WriteOptions` to `JsonIo.toToon()`, the default is `cycleSupport(false)` since TOON targets LLM communication where data is typically acyclic.
 
 #### Behavior Comparison
 

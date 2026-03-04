@@ -468,14 +468,14 @@ public class JsonIo {
      * @param srcObject the Java object to convert to TOON; can be any object including primitives,
      *                  collections, custom classes, or a Map
      * @param writeOptions configuration options for controlling the output format;
-     *                     if null, default options will be used
+     *                     if null, defaults to showTypeInfoNever() and cycleSupport(false)
      * @return a TOON string representation of the source object
      * @throws JsonIoException if an error occurs during the serialization process
      * @see <a href="https://toonformat.dev/">TOON Format Specification</a>
      */
     public static String toToon(Object srcObject, WriteOptions writeOptions) {
         if (writeOptions == null) {
-            writeOptions = new WriteOptionsBuilder().showTypeInfoNever().build();
+            writeOptions = new WriteOptionsBuilder().showTypeInfoNever().cycleSupport(false).build();
         }
         BufferRecycler recycler = BUFFER_RECYCLER.get();
         byte[] byteBuffer = recycler.borrowByteBuffer(DEFAULT_BYTE_BUFFER_SIZE);
@@ -509,7 +509,7 @@ public class JsonIo {
      * @param out the output stream where the TOON will be written; must not be null
      * @param source the Java object to convert to TOON
      * @param writeOptions configuration options controlling the TOON output format;
-     *                     if null, default options will be used
+     *                     if null, defaults to showTypeInfoNever() and cycleSupport(false)
      * @throws JsonIoException if an error occurs during serialization
      * @throws IllegalArgumentException if the output stream is null
      * @see <a href="https://toonformat.dev/">TOON Format Specification</a>
@@ -517,7 +517,7 @@ public class JsonIo {
     public static void toToon(OutputStream out, Object source, WriteOptions writeOptions) {
         Convention.throwIfNull(out, "OutputStream cannot be null");
         if (writeOptions == null) {
-            writeOptions = new WriteOptionsBuilder().showTypeInfoNever().build();
+            writeOptions = new WriteOptionsBuilder().showTypeInfoNever().cycleSupport(false).build();
         }
         ToonWriter writer = null;
         try {
