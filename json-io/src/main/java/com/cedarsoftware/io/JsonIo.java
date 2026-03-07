@@ -1340,16 +1340,25 @@ public class JsonIo {
          * @throws JsonIoException if an error occurs during parsing or conversion
          */
         public <T> T asType(TypeHolder<T> typeHolder) {
+            BufferRecycler recycler = BUFFER_RECYCLER.get();
             StringReader stringReader = new StringReader(toon);
-            return parseAndResolve(
-                    readOptions,
-                    typeHolder.getType(),
-                    resolver -> {
-                        ToonReader parser = new ToonReader(stringReader, readOptions, resolver.getReferences());
-                        return parser.readValue(typeHolder.getType());
-                    },
-                    "Error parsing TOON value",
-                    null);
+            FastReader input = new FastReader(
+                    stringReader,
+                    recycler.borrowReaderCharBuffer(DEFAULT_READER_BUFFER_SIZE),
+                    recycler.borrowPushbackBuffer(DEFAULT_PUSHBACK_BUFFER_SIZE));
+            try {
+                return parseAndResolve(
+                        readOptions,
+                        typeHolder.getType(),
+                        resolver -> {
+                            ToonReader parser = new ToonReader(input, readOptions, resolver.getReferences());
+                            return parser.readValue(typeHolder.getType());
+                        },
+                        "Error parsing TOON value",
+                        null);
+            } finally {
+                recycler.releaseReaderBuffers();
+            }
         }
     }
 
@@ -1390,16 +1399,25 @@ public class JsonIo {
          * @throws JsonIoException if an error occurs during parsing or conversion
          */
         public <T> T asType(TypeHolder<T> typeHolder) {
+            BufferRecycler recycler = BUFFER_RECYCLER.get();
             InputStreamReader streamReader = new InputStreamReader(in, StandardCharsets.UTF_8);
-            return parseAndResolve(
-                    readOptions,
-                    typeHolder.getType(),
-                    resolver -> {
-                        ToonReader parser = new ToonReader(streamReader, readOptions, resolver.getReferences());
-                        return parser.readValue(typeHolder.getType());
-                    },
-                    "Error parsing TOON value",
-                    streamReader);
+            FastReader input = new FastReader(
+                    streamReader,
+                    recycler.borrowReaderCharBuffer(DEFAULT_READER_BUFFER_SIZE),
+                    recycler.borrowPushbackBuffer(DEFAULT_PUSHBACK_BUFFER_SIZE));
+            try {
+                return parseAndResolve(
+                        readOptions,
+                        typeHolder.getType(),
+                        resolver -> {
+                            ToonReader parser = new ToonReader(input, readOptions, resolver.getReferences());
+                            return parser.readValue(typeHolder.getType());
+                        },
+                        "Error parsing TOON value",
+                        streamReader);
+            } finally {
+                recycler.releaseReaderBuffers();
+            }
         }
     }
 
