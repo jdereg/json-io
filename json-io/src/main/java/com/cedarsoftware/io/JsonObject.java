@@ -52,6 +52,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     // Map storage: parallel arrays for map entries (POJOs, maps with String keys)
     private Object[] keys;
     private Object[] values;
+    private Object[] effectiveValues;  // points to values[] or items[] depending on storage mode
     private int size;
 
     // Separate storage for @items content (arrays, collections, map values for @keys format)
@@ -60,9 +61,12 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     // Lazy index for O(1) lookup on large objects
     private transient Map<Object, Integer> index;
 
-    // Flags to track how data was populated
-    private boolean itemsWereSet;   // setItems() was called
-    private boolean keysWereSet;    // setKeys() was called (vs put())
+    // Storage mode: bit 0 = items were set, bit 1 = keys were set
+    private static final byte MODE_POJO = 0;        // keys[]/values[] via put()/appendFieldForParser()
+    private static final byte MODE_ITEMS = 1;        // items[] only (arrays, collections)
+    private static final byte MODE_KEYS_ONLY = 2;    // keys[] set, items[] pending (transient during parse)
+    private static final byte MODE_KEYS_ITEMS = 3;   // keys[] + items[] (@keys/@items format maps)
+    private byte storageMode;
 
     // Cached values
     private Integer hash;
@@ -85,6 +89,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     public JsonObject() {
         keys = EMPTY;
         values = EMPTY;
+        effectiveValues = EMPTY;
         size = 0;
     }
 
@@ -94,6 +99,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         }
         keys = new Object[initialCapacity];
         values = new Object[initialCapacity];
+        effectiveValues = values;
         size = 0;
     }
 
@@ -138,7 +144,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         if (isMap()) {
             return false;
         }
-        if (itemsWereSet && !keysWereSet) {
+        if (storageMode == MODE_ITEMS) {
             Class<?> rawType = getRawType();
             return rawType != null && !rawType.isArray();
         }
@@ -152,7 +158,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         if (type != null) {
             return getRawType().isArray();
         }
-        return itemsWereSet && !keysWereSet;
+        return storageMode == MODE_ITEMS;
     }
 
     // ========== Items/Keys Access ==========
@@ -173,7 +179,10 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
             throw new JsonIoException("Argument array cannot be null");
         }
         this.items = array;
-        this.itemsWereSet = true;
+        this.storageMode |= MODE_ITEMS;
+        if (storageMode == MODE_KEYS_ITEMS) {
+            effectiveValues = items;
+        }
         this.hash = null;
         this.jsonTypeCache = 0;
     }
@@ -183,7 +192,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
      * Returns null if setKeys() was never called.
      */
     public Object[] getKeys() {
-        return keysWereSet ? keys : null;
+        return storageMode >= MODE_KEYS_ONLY ? keys : null;
     }
 
     /**
@@ -194,7 +203,10 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
             throw new JsonIoException("Argument keys cannot be null");
         }
         this.keys = keyArray;
-        this.keysWereSet = true;
+        this.storageMode |= MODE_KEYS_ONLY;
+        if (storageMode == MODE_KEYS_ITEMS) {
+            effectiveValues = items;
+        }
         this.hash = null;
         this.jsonTypeCache = 0;
         this.index = null;
@@ -254,9 +266,9 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
      */
     @Override
     public int size() {
-        if (keysWereSet) {
+        if (storageMode >= MODE_KEYS_ONLY) {
             // @keys format - only show size if @items is also set
-            return itemsWereSet ? Math.min(keys.length, items.length) : 0;
+            return storageMode == MODE_KEYS_ITEMS ? Math.min(keys.length, items.length) : 0;
         }
         return size;
     }
@@ -275,8 +287,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     public Object get(Object key) {
         int idx = indexOf(key);
         if (idx < 0) return null;
-        // For @keys/@items format, values are in items array
-        return (keysWereSet && itemsWereSet) ? items[idx] : values[idx];
+        return effectiveValues[idx];
     }
 
     @Override
@@ -329,10 +340,9 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
 
     @Override
     public boolean containsValue(Object value) {
-        Object[] vals = (keysWereSet && itemsWereSet) ? items : values;
         int len = size();
         for (int i = 0; i < len; i++) {
-            if (Objects.equals(value, vals[i])) {
+            if (Objects.equals(value, effectiveValues[i])) {
                 return true;
             }
         }
@@ -342,7 +352,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     @Override
     public Object remove(Object key) {
         // Don't support remove for @keys/@items format
-        if (keysWereSet) return null;
+        if (storageMode >= MODE_KEYS_ONLY) return null;
 
         int idx = indexOf(key);
         if (idx < 0) return null;
@@ -381,12 +391,12 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         Arrays.fill(values, 0, size, null);
         size = 0;
         items = null;
+        effectiveValues = values;
         itemElementType = null;
         mapKeyType = null;
         hash = null;
         index = null;
-        itemsWereSet = false;
-        keysWereSet = false;
+        storageMode = MODE_POJO;
         jsonTypeCache = 0;
     }
 
@@ -408,8 +418,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
 
     private int indexOf(Object key) {
         // For @keys format, only search if @items is also set
-        if (keysWereSet) {
-            if (!itemsWereSet) return -1;  // Incomplete @keys/@items format
+        if (storageMode >= MODE_KEYS_ONLY) {
+            if (storageMode == MODE_KEYS_ONLY) return -1;  // Incomplete @keys/@items format
             int len = keys.length;
             for (int i = 0; i < len; i++) {
                 if (Objects.equals(key, keys[i])) {
@@ -453,6 +463,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         int newCapacity = Math.max(Math.max(keys.length * 2, minCapacity), INITIAL_CAPACITY);
         keys = Arrays.copyOf(keys, newCapacity);
         values = Arrays.copyOf(values, newCapacity);
+        effectiveValues = values;
     }
 
     // ========== View Classes ==========
@@ -483,7 +494,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     }
 
     Object fastValueAt(int index) {
-        return (keysWereSet && itemsWereSet) ? items[index] : values[index];
+        return effectiveValues[index];
     }
 
     private class KeySet extends AbstractSet<Object> {
@@ -541,7 +552,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         @Override
         public Iterator<Object> iterator() {
             return new Iterator<Object>() {
-                private final Object[] vals = (keysWereSet && itemsWereSet) ? items : values;
+                private final Object[] vals = effectiveValues;
                 private final int len = JsonObject.this.size();
                 private int idx = 0;
 
@@ -581,13 +592,12 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
             Map.Entry<?, ?> entry = (Map.Entry<?, ?>) o;
             int idx = indexOf(entry.getKey());
             if (idx < 0) return false;
-            Object[] vals = (keysWereSet && itemsWereSet) ? items : values;
-            return Objects.equals(vals[idx], entry.getValue());
+            return Objects.equals(effectiveValues[idx], entry.getValue());
         }
     }
 
     private class EntryIterator implements Iterator<Entry<Object, Object>> {
-        private final Object[] vals = (keysWereSet && itemsWereSet) ? items : values;
+        private final Object[] vals = effectiveValues;
         private final int len = JsonObject.this.size();
         private int idx = 0;
         private final ReusableEntry entry = new ReusableEntry();
@@ -649,13 +659,12 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     public int hashCode() {
         if (hash == null) {
             int result = 1;
-            Object[] vals = (keysWereSet && itemsWereSet) ? items : values;
             int len = size();
             for (int i = 0; i < len; i++) {
                 result = 31 * result + (keys[i] == null ? 0 : keys[i].hashCode());
-                result = 31 * result + hashCodeSafe(vals[i]);
+                result = 31 * result + hashCodeSafe(effectiveValues[i]);
             }
-            if (items != null && !keysWereSet) {
+            if (items != null && storageMode < MODE_KEYS_ONLY) {
                 // Include items in hash for arrays/collections
                 result = 31 * result + Arrays.hashCode(items);
             }
@@ -697,16 +706,13 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         int len = size();
         if (len != other.size()) return false;
 
-        Object[] vals = (keysWereSet && itemsWereSet) ? items : values;
-        Object[] otherVals = (other.keysWereSet && other.itemsWereSet) ? other.items : other.values;
-
         for (int i = 0; i < len; i++) {
             if (!Objects.equals(keys[i], other.keys[i])) return false;
-            if (!Objects.equals(vals[i], otherVals[i])) return false;
+            if (!Objects.equals(effectiveValues[i], other.effectiveValues[i])) return false;
         }
 
         // Compare items for arrays/collections
-        if (!keysWereSet && !other.keysWereSet) {
+        if (storageMode < MODE_KEYS_ONLY && other.storageMode < MODE_KEYS_ONLY) {
             return Arrays.equals(items, other.items);
         }
 
@@ -716,17 +722,17 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     // ========== Resolution Support ==========
 
     Map.Entry<Object[], Object[]> asTwoArrays() {
-        if (keysWereSet && itemsWereSet) {
+        if (storageMode == MODE_KEYS_ITEMS) {
             if (keys.length != items.length) {
                 throw new JsonIoException("@keys and @items must be same length");
             }
             return new AbstractMap.SimpleImmutableEntry<>(keys, items);
         }
 
-        if (keysWereSet) {
+        if (storageMode == MODE_KEYS_ONLY) {
             throw new JsonIoException("@keys cannot be set without @items");
         }
-        if (itemsWereSet && isMap()) {
+        if (storageMode == MODE_ITEMS && isMap()) {
             throw new JsonIoException("Map with @items must also have @keys");
         }
 
@@ -743,8 +749,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         // For @keys/@items format: use keys array with items array
         // For POJOs: use keys/values arrays with size
         Object[] k = keys;
-        Object[] v = (keysWereSet && itemsWereSet) ? items : values;
-        int len = keysWereSet ? keys.length : size;
+        Object[] v = effectiveValues;
+        int len = storageMode >= MODE_KEYS_ONLY ? keys.length : size;
 
         if (len == 0) return;
 
