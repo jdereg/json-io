@@ -328,15 +328,18 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private final WriteOptionsBuilder.DefaultWriteOptions defaultWriteOptions;
     // Lightweight identity-based maps for reference tracking (faster than IdentityHashMap<Object, Long>)
     // Uses primitive int values and open addressing - no boxing, no Entry objects
-    private final IdentityIntMap objVisited = new IdentityIntMap(256);
-    private final IdentityIntMap objsReferenced = new IdentityIntMap(256);
-    private final Map<Object, Boolean> activePath = new IdentityHashMap<>();
+    // Only allocated when cycleSupport=true (lazy init avoids ~6KB wasted per writer when false)
+    private IdentityIntMap objVisited;
+    private IdentityIntMap objsReferenced;
+    // Active path tracking for cycle detection when cycleSupport=false
+    private Map<Object, Boolean> activePath;
     private final Writer out;
     private int identity = 1;  // int is sufficient - max 2.1 billion unique objects
     private int depth = 0;
 
     // Primitive depth tracking for traceReferences (avoids Integer autoboxing)
-    private int[] traceDepths = new int[256];
+    // Only allocated when cycleSupport=true
+    private int[] traceDepths;
     private int traceDepthIndex;
 
     // Element type context: when writing Collection/Map fields, this tracks the declared element type
@@ -561,6 +564,15 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         this.longPrimitiveWriter = this.writeOptions.getCustomWriter(long.class);
         this.doubleWriter = this.writeOptions.getCustomWriter(Double.class);
         this.floatWriter = this.writeOptions.getCustomWriter(Float.class);
+
+        // Allocate tracking structures only for the active mode
+        if (this.cycleSupport) {
+            this.objVisited = new IdentityIntMap(256);
+            this.objsReferenced = new IdentityIntMap(256);
+            this.traceDepths = new int[256];
+        } else {
+            this.activePath = new IdentityHashMap<>();
+        }
     }
 
     public WriteOptions getWriteOptions() {
@@ -850,9 +862,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         } catch (Exception e) {
             throw new JsonIoException("Error writing object to JSON:", e);
         } finally {
-            objVisited.clear();
-            objsReferenced.clear();
-            activePath.clear();
+            if (objVisited != null) { objVisited.clear(); }
+            if (objsReferenced != null) { objsReferenced.clear(); }
+            if (activePath != null) { activePath.clear(); }
         }
     }
 
