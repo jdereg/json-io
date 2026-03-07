@@ -1378,7 +1378,15 @@ public class ToonWriter implements Closeable, Flushable {
             writeValue(element);
         } else if (element instanceof Map) {
             // Nested map - first field on hyphen line per TOON spec
-            writeMapInline((Map<?, ?>) element);
+            Map<?, ?> mapElement = (Map<?, ?>) element;
+            if (hasComplexKeys(mapElement)) {
+                out.write(NEW_LINE);
+                depth++;
+                writeMap(mapElement);
+                depth--;
+            } else {
+                writeMapInline(mapElement);
+            }
         } else if (element instanceof Collection) {
             // Nested collection
             if (shouldWrapArrayOrCollectionValue(element)) {
@@ -1637,16 +1645,7 @@ public class ToonWriter implements Closeable, Flushable {
                 return;
             }
 
-            // Check if any key is a complex object that needs special handling
-            boolean hasComplexKeys = false;
-            for (Object key : map.keySet()) {
-                if (key != null && !isSimpleKeyType(key)) {
-                    hasComplexKeys = true;
-                    break;
-                }
-            }
-
-            if (hasComplexKeys) {
+            if (hasComplexKeys(map)) {
                 if (includeId || includeType) {
                     writeReferencedComplexMap(map, includeId, includeType);
                 } else {
@@ -1674,6 +1673,18 @@ public class ToonWriter implements Closeable, Flushable {
                 exitActivePath(map);
             }
         }
+    }
+
+    /**
+     * Check if any key in the map is a complex object that needs special handling.
+     */
+    private boolean hasComplexKeys(Map<?, ?> map) {
+        for (Object key : map.keySet()) {
+            if (key != null && !isSimpleKeyType(key)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
