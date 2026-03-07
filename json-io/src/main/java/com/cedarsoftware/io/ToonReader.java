@@ -95,11 +95,13 @@ public class ToonReader {
     private final ClassLoader classLoader;
 
     // Line management - supports peek/consume pattern
-    private String currentLine = null;
+    private boolean currentHasLine = false;
     private boolean lineConsumed = true;
     private int lineNumber = 0;
     private int currentIndent = 0;
-    private String currentTrimmed = "";
+    private int currentTrimStart = 0;
+    private int currentTrimEnd = 0;
+    private String currentTrimmed = null;
     private final StringBuilder quoteBuf = new StringBuilder(64);
     private final StringBuilder inlineBuf = new StringBuilder(64);
     private String[] cachedFoldSegments;
@@ -152,7 +154,30 @@ public class ToonReader {
 
     private String cacheSubstring(String source, int start, int end) {
         if (start == end) return "";
-        return cacheString((start == 0 && end == source.length()) ? source : source.substring(start, end));
+        if (start == 0 && end == source.length()) {
+            return cacheString(source);
+        }
+
+        int len = end - start;
+        if (len > MAX_CACHED_STRING_LENGTH) {
+            return source.substring(start, end);
+        }
+
+        int hash = 0;
+        for (int i = start; i < end; i++) {
+            hash = 31 * hash + source.charAt(i);
+        }
+
+        String[] cache = stringCache;
+        int slot = hash & STRING_CACHE_MASK;
+        String cached = cache[slot];
+        if (cached != null && cached.length() == len && source.regionMatches(start, cached, 0, len)) {
+            return cached;
+        }
+
+        String substring = source.substring(start, end);
+        cache[slot] = substring;
+        return substring;
     }
 
     private static String trimAscii(String text) {
@@ -217,8 +242,7 @@ public class ToonReader {
     public Object readValue(Type suggestedType) {
         try {
             while (true) {
-                String line = peekLine();
-                if (line == null) {
+                if (!hasLine()) {
                     JsonObject emptyMap = new JsonObject();
                     if (suggestedType != null) {
                         emptyMap.setType(suggestedType);
@@ -226,13 +250,12 @@ public class ToonReader {
                     return emptyMap;
                 }
 
-                String trimmed = peekTrimmed();
-                if (trimmed.isEmpty()) {
+                if (isTrimmedEmpty()) {
                     consumeLine();
                     continue;  // Skip empty lines
                 }
 
-                if ("{}".equals(trimmed)) {
+                if (isEmptyObjectInBuf()) {
                     consumeLine();
                     JsonObject emptyMap = new JsonObject();
                     if (suggestedType != null) {
@@ -241,15 +264,15 @@ public class ToonReader {
                     return emptyMap;
                 }
 
-                if (isArrayStart(trimmed)) {
+                if (isArrayStartInBuf()) {
                     return readArray();
                 }
 
-                int colonPos = findColonPosition(trimmed);
-                if (colonPos > 0) {
+                if (findColonInBuf() > 0) {
                     return readObject(0, suggestedType);
                 }
 
+                String trimmed = peekTrimmed();
                 consumeLine();
                 return readScalar(trimmed);
             }
@@ -274,8 +297,7 @@ public class ToonReader {
         }
 
         while (true) {
-            String line = peekLine();
-            if (line == null) {
+            if (!hasLine()) {
                 break;  // EOF
             }
 
@@ -284,8 +306,7 @@ public class ToonReader {
                 break;  // Back to parent level
             }
 
-            String trimmed = peekTrimmed();
-            if (trimmed.isEmpty()) {
+            if (isTrimmedEmpty()) {
                 consumeLine();
                 continue;  // Skip empty lines
             }
@@ -295,21 +316,22 @@ public class ToonReader {
                 break;  // This line belongs to a nested structure
             }
 
-            // Parse key: value
-            int colonPos = findColonPosition(trimmed);
+            // Parse key: value — find colon directly in the line buffer
+            int colonPos = findColonInBuf();
             if (colonPos <= 0) {
                 break;  // Not a key: value pair
             }
 
+            // Extract key and value directly from buffer (avoids full-line String creation)
+            int trimStart = currentTrimStart;
+            int trimEnd = currentTrimEnd;
             consumeLine();
-            String key = trimAsciiRange(trimmed, 0, colonPos);
-            // Optimize value extraction: skip colon and optional single space directly
-            int valueStart = colonPos + 1;
-            int valueEnd = trimmed.length();
-            if (valueStart < valueEnd && trimmed.charAt(valueStart) == ' ') {
+            String key = trimAsciiRangeBuf(trimStart, trimStart + colonPos);
+            int valueStart = trimStart + colonPos + 1;
+            if (valueStart < trimEnd && lineBuf[valueStart] == ' ') {
                 valueStart++;
             }
-            String valuePart = (valueStart >= valueEnd) ? "" : trimAsciiRange(trimmed, valueStart, valueEnd);
+            String valuePart = (valueStart >= trimEnd) ? "" : trimAsciiRangeBuf(valueStart, trimEnd);
 
             // Check for combined field+array notation: fieldName[N]: or fieldName[N]{cols}:
             // Also handles folded keys with array: data.items[N]:
@@ -340,10 +362,8 @@ public class ToonReader {
 
             // Check for nested structure (value is empty, next line is indented more)
             if (valuePart.isEmpty()) {
-                String nextLine = peekLine();
-                if (nextLine != null && peekIndent() > baseIndent) {
-                    String nextTrimmed = peekTrimmed();
-                    if (isArrayStart(nextTrimmed)) {
+                if (hasLine() && peekIndent() > baseIndent) {
+                    if (isArrayStartInBuf()) {
                         putValue(jsonObj, key, readArray(), wasQuoted);
                     } else {
                         putValue(jsonObj, key, readObject(baseIndent + 1, null), wasQuoted);
@@ -389,8 +409,7 @@ public class ToonReader {
      * Returns ArrayList instead of Object[] for better Java interoperability.
      */
     private List<Object> readArray() throws IOException {
-        String line = peekLine();
-        if (line == null) {
+        if (!hasLine()) {
             return new ArrayList<>();
         }
 
@@ -518,15 +537,14 @@ public class ToonReader {
     private List<Object> readTabularArray(int count, List<String> columnHeaders, char delimiter) throws IOException {
         List<Object> elements = new ArrayList<>(count);
         int baseIndent = -1;
+        int colHeadersSize = columnHeaders.size();
 
         while (elements.size() < count) {
-            String line = peekLine();
-            if (line == null) {
+            if (!hasLine()) {
                 break;  // EOF
             }
 
-            String trimmed = peekTrimmed();
-            if (trimmed.isEmpty()) {
+            if (isTrimmedEmpty()) {
                 if (strictToon) {
                     throw new JsonIoException("Blank lines are not allowed inside tabular arrays at line " + lineNumber);
                 }
@@ -545,33 +563,23 @@ public class ToonReader {
             }
 
             // Skip lines that look like key: value (they belong to parent object)
-            // Check delimiter first (cheap char indexOf) before expensive findColonPosition.
+            // Check delimiter first (cheap char indexOf) before expensive findColonInBuf.
             // Data rows contain the delimiter, so this short-circuits on the common case.
-            if (trimmed.indexOf(delimiter) < 0 && findColonPosition(trimmed) > 0) {
+            if (indexOfCharInBuf(delimiter) < 0 && findColonInBuf() > 0) {
                 break;
             }
 
+            int trimStart = currentTrimStart;
+            int trimEnd = currentTrimEnd;
             consumeLine();
 
-            // Parse the row into an object
-            JsonObject rowObj = new JsonObject();
-            int colHeadersSize = columnHeaders.size();
-            List<Object> values = readInlineArray(trimmed, colHeadersSize, delimiter);
-            int valuesSize = values.size();
-            if (strictToon && valuesSize != colHeadersSize) {
+            // Parse the row directly into a pre-sized object (no intermediate List)
+            JsonObject rowObj = new JsonObject(colHeadersSize);
+            String rowContent = trimAsciiRangeBuf(trimStart, trimEnd);
+            int valuesCount = parseRowIntoObject(rowContent, columnHeaders, delimiter, rowObj);
+            if (strictToon && valuesCount != colHeadersSize) {
                 throw new JsonIoException("Tabular row width mismatch at line " + lineNumber +
-                        ", expected " + colHeadersSize + " values, got " + valuesSize);
-            }
-
-            for (int i = 0; i < colHeadersSize && i < valuesSize; i++) {
-                String header = columnHeaders.get(i);
-                Object value = values.get(i);
-                String metaKey = META_KEY_MAP.get(header);
-                if (metaKey != null) {
-                    loadMetaField(rowObj, metaKey, value);
-                } else {
-                    rowObj.appendFieldForParser(header, value);
-                }
+                        ", expected " + colHeadersSize + " values, got " + valuesCount);
             }
 
             elements.add(rowObj);
@@ -592,33 +600,56 @@ public class ToonReader {
     }
 
     private boolean hasAdditionalTabularRows(int baseIndent, char delimiter) throws IOException {
-        String line = peekLine();
-        if (line == null) {
+        if (!hasLine()) {
             return false;
         }
-        String trimmed = peekTrimmed();
-        if (trimmed.isEmpty()) {
+        if (isTrimmedEmpty()) {
             return false;
         }
         int indent = peekIndent();
         if (indent < baseIndent) {
             return false;
         }
-        return trimmed.indexOf(delimiter) >= 0 || findColonPosition(trimmed) <= 0;
+        return indexOfCharInBuf(delimiter) >= 0 || findColonInBuf() <= 0;
     }
 
     /**
-     * Read an inline array with a specific delimiter.
-     * Returns ArrayList instead of Object[] for better Java interoperability.
+     * Parse a delimiter-separated row directly into a JsonObject using column headers.
+     * Avoids the intermediate List that readInlineArray() would create for tabular rows.
+     * Returns the number of values parsed (for strict-mode validation).
      */
-    private List<Object> readInlineArray(String content, int count, char delimiter) {
-        List<Object> elements = new ArrayList<>(count);
+    private int parseRowIntoObject(String content, List<String> columnHeaders, char delimiter, JsonObject target) {
+        int len = content.length();
+        int colIndex = 0;
+        int colHeadersSize = columnHeaders.size();
+
+        // Fast path: no quotes or escapes — parse directly from string ranges
+        if (content.indexOf('"') < 0 && content.indexOf('\\') < 0) {
+            int tokenStart = 0;
+            for (int i = 0; i < len; i++) {
+                if (content.charAt(i) == delimiter) {
+                    if (colIndex < colHeadersSize) {
+                        appendColumn(target, columnHeaders.get(colIndex), readScalar(trimAsciiRange(content, tokenStart, i)));
+                    }
+                    colIndex++;
+                    tokenStart = i + 1;
+                }
+            }
+            if (tokenStart < len || colIndex < colHeadersSize) {
+                if (colIndex < colHeadersSize) {
+                    appendColumn(target, columnHeaders.get(colIndex), readScalar(trimAsciiRange(content, tokenStart, len)));
+                }
+                colIndex++;
+            }
+            return colIndex;
+        }
+
+        // Slow path: handle quotes and escapes via StringBuilder
         inlineBuf.setLength(0);
         final StringBuilder current = inlineBuf;
         boolean inQuotes = false;
         boolean escaped = false;
-        int len = content.length();
-        
+
         for (int i = 0; i < len; i++) {
             char c = content.charAt(i);
 
@@ -641,16 +672,96 @@ public class ToonReader {
             }
 
             if (c == delimiter && !inQuotes) {
-                elements.add(readScalar(trimAscii(current)));
+                if (colIndex < colHeadersSize) {
+                    appendColumn(target, columnHeaders.get(colIndex), readScalar(trimAscii(current)));
+                }
+                colIndex++;
                 current.setLength(0);
             } else {
                 current.append(c);
             }
         }
 
-        // Add last element
-        if (current.length() > 0 || elements.size() < count) {
-            elements.add(readScalar(trimAscii(current)));
+        // Last element
+        if (current.length() > 0 || colIndex < colHeadersSize) {
+            if (colIndex < colHeadersSize) {
+                appendColumn(target, columnHeaders.get(colIndex), readScalar(trimAscii(current)));
+            }
+            colIndex++;
+        }
+
+        return colIndex;
+    }
+
+    private void appendColumn(JsonObject target, String header, Object value) {
+        String metaKey = META_KEY_MAP.get(header);
+        if (metaKey != null) {
+            loadMetaField(target, metaKey, value);
+        } else {
+            target.appendFieldForParser(header, value);
+        }
+    }
+
+    /**
+     * Read an inline array with a specific delimiter.
+     * Returns ArrayList instead of Object[] for better Java interoperability.
+     */
+    private List<Object> readInlineArray(String content, int count, char delimiter) {
+        List<Object> elements = new ArrayList<>(count);
+        int len = content.length();
+
+        // Fast path: no quotes or escapes — parse directly from string ranges
+        if (content.indexOf('"') < 0 && content.indexOf('\\') < 0) {
+            int tokenStart = 0;
+            for (int i = 0; i < len; i++) {
+                if (content.charAt(i) == delimiter) {
+                    elements.add(readScalar(trimAsciiRange(content, tokenStart, i)));
+                    tokenStart = i + 1;
+                }
+            }
+            if (tokenStart < len || elements.size() < count) {
+                elements.add(readScalar(trimAsciiRange(content, tokenStart, len)));
+            }
+        } else {
+            // Slow path: handle quotes and escapes via StringBuilder
+            inlineBuf.setLength(0);
+            final StringBuilder current = inlineBuf;
+            boolean inQuotes = false;
+            boolean escaped = false;
+
+            for (int i = 0; i < len; i++) {
+                char c = content.charAt(i);
+
+                if (escaped) {
+                    current.append(c);
+                    escaped = false;
+                    continue;
+                }
+
+                if (c == '\\') {
+                    escaped = true;
+                    current.append(c);
+                    continue;
+                }
+
+                if (c == '"') {
+                    inQuotes = !inQuotes;
+                    current.append(c);
+                    continue;
+                }
+
+                if (c == delimiter && !inQuotes) {
+                    elements.add(readScalar(trimAscii(current)));
+                    current.setLength(0);
+                } else {
+                    current.append(c);
+                }
+            }
+
+            // Add last element
+            if (current.length() > 0 || elements.size() < count) {
+                elements.add(readScalar(trimAscii(current)));
+            }
         }
 
         if (strictToon && elements.size() != count) {
@@ -670,13 +781,11 @@ public class ToonReader {
         int baseIndent = -1;
 
         while (elements.size() < count) {
-            String line = peekLine();
-            if (line == null) {
+            if (!hasLine()) {
                 break;  // EOF
             }
 
-            String trimmed = peekTrimmed();
-            if (trimmed.isEmpty()) {
+            if (isTrimmedEmpty()) {
                 if (strictToon) {
                     throw new JsonIoException("Blank lines are not allowed inside list arrays at line " + lineNumber);
                 }
@@ -694,23 +803,23 @@ public class ToonReader {
             }
 
             // Must start with -
-            if (!trimmed.startsWith("-")) {
+            if (!startsWithDashInBuf()) {
                 break;  // Not a list element
             }
 
+            int trimStart = currentTrimStart;
+            int trimEnd = currentTrimEnd;
             consumeLine();
-            String elementContent = trimAsciiRange(trimmed, 1, trimmed.length());
+            String elementContent = trimAsciiRangeBuf(trimStart + 1, trimEnd);
 
             if (elementContent.isEmpty()) {
                 // Nested object/array on next lines
-                String nextLine = peekLine();
-                if (nextLine != null) {
-                    String nextTrimmed = peekTrimmed();
+                if (hasLine()) {
                     int nextIndent = peekIndent();
                     if (nextIndent > indent) {
-                        if (isArrayStart(nextTrimmed)) {
+                        if (isArrayStartInBuf()) {
                             elements.add(readArray());
-                        } else if (findColonPosition(nextTrimmed) > 0) {
+                        } else if (findColonInBuf() > 0) {
                             elements.add(readObject(nextIndent, null));
                         } else {
                             elements.add(null);
@@ -752,16 +861,14 @@ public class ToonReader {
     }
 
     private boolean hasAdditionalListElements(int baseIndent) throws IOException {
-        String line = peekLine();
-        if (line == null) {
+        if (!hasLine()) {
             return false;
         }
-        String trimmed = peekTrimmed();
-        if (trimmed.isEmpty()) {
+        if (isTrimmedEmpty()) {
             return false;
         }
         int indent = peekIndent();
-        return indent >= baseIndent && trimmed.startsWith("-");
+        return indent >= baseIndent && startsWithDashInBuf();
     }
 
     /**
@@ -801,10 +908,8 @@ public class ToonReader {
                 key = unquoteString(key);
                 if (valuePart.isEmpty()) {
                     // Check for nested structure on next line
-                    String nextLine = peekLine();
-                    if (nextLine != null && peekIndent() > hyphenIndent) {
-                        String nextTrimmed = peekTrimmed();
-                        if (isArrayStart(nextTrimmed)) {
+                    if (hasLine() && peekIndent() > hyphenIndent) {
+                        if (isArrayStartInBuf()) {
                             putValue(jsonObj, key, readArray(), wasQuoted);
                         } else {
                             putValue(jsonObj, key, readObject(hyphenIndent + 1, null), wasQuoted);
@@ -828,7 +933,7 @@ public class ToonReader {
         int fieldIndent = hyphenIndent + 1;
 
         while (true) {
-            if (peekLine() == null) {
+            if (!hasLine()) {
                 break;  // EOF
             }
 
@@ -836,26 +941,26 @@ public class ToonReader {
                 break;  // Not at our indent level
             }
 
-            String trimmed = peekTrimmed();
-            if (trimmed.isEmpty()) {
+            if (isTrimmedEmpty()) {
                 consumeLine();
                 continue;
             }
 
-            // Must be a key: value at our indent level
-            colonPos = findColonPosition(trimmed);
-            if (colonPos <= 0) {
+            // Find colon directly in the line buffer
+            int bufColonPos = findColonInBuf();
+            if (bufColonPos <= 0) {
                 break;  // Not a key: value pair
             }
 
+            int trimStart = currentTrimStart;
+            int trimEnd = currentTrimEnd;
             consumeLine();
-            String key = trimAsciiRange(trimmed, 0, colonPos);
-            int valueStart2 = colonPos + 1;
-            int valueEnd2 = trimmed.length();
-            if (valueStart2 < valueEnd2 && trimmed.charAt(valueStart2) == ' ') {
+            String key = trimAsciiRangeBuf(trimStart, trimStart + bufColonPos);
+            int valueStart2 = trimStart + bufColonPos + 1;
+            if (valueStart2 < trimEnd && lineBuf[valueStart2] == ' ') {
                 valueStart2++;
             }
-            String valuePart = (valueStart2 >= valueEnd2) ? "" : trimAsciiRange(trimmed, valueStart2, valueEnd2);
+            String valuePart = (valueStart2 >= trimEnd) ? "" : trimAsciiRangeBuf(valueStart2, trimEnd);
 
             // Check for combined field+array notation
             // Also handles folded keys: data.items[N]:
@@ -882,10 +987,8 @@ public class ToonReader {
             key = unquoteString(key);
 
             if (valuePart.isEmpty()) {
-                String nextLine = peekLine();
-                if (nextLine != null && peekIndent() > fieldIndent) {
-                    String nextTrimmed = peekTrimmed();
-                    if (isArrayStart(nextTrimmed)) {
+                if (hasLine() && peekIndent() > fieldIndent) {
+                    if (isArrayStartInBuf()) {
                         putValue(jsonObj, key, readArray(), wasQuoted);
                     } else {
                         putValue(jsonObj, key, readObject(fieldIndent + 1, null), wasQuoted);
@@ -1125,11 +1228,9 @@ public class ToonReader {
     }
 
     /**
-     * Peek at the next line without consuming it.
-     * Computes indent level and trimmed content directly from the raw lineBuf,
-     * creating only a single String (the trimmed line) instead of two.
+     * Ensure the next line is loaded without materializing a trimmed String unless requested.
      */
-    private String peekLine() throws IOException {
+    private boolean hasLine() throws IOException {
         if (lineConsumed) {
             int lineLen = readLineRaw();
             lineConsumed = false;
@@ -1156,23 +1257,19 @@ public class ToonReader {
                 while (trimEnd > spaces && buf[trimEnd - 1] <= ' ') {
                     trimEnd--;
                 }
-
-                // Create ONE String: the trimmed content only
-                String trimmed;
-                if (spaces == 0 && trimEnd == lineLen) {
-                    trimmed = new String(buf, 0, lineLen);
-                } else {
-                    trimmed = (spaces < trimEnd) ? new String(buf, spaces, trimEnd - spaces) : "";
-                }
-                currentTrimmed = trimmed;
-                currentLine = trimmed;
+                currentTrimStart = spaces;
+                currentTrimEnd = trimEnd;
+                currentTrimmed = spaces < trimEnd ? null : "";
+                currentHasLine = true;
             } else {
-                currentLine = null;
+                currentHasLine = false;
                 currentIndent = 0;
+                currentTrimStart = 0;
+                currentTrimEnd = 0;
                 currentTrimmed = "";
             }
         }
-        return currentLine;
+        return currentHasLine;
     }
 
     private int peekIndent() {
@@ -1180,7 +1277,46 @@ public class ToonReader {
     }
 
     private String peekTrimmed() {
+        if (currentTrimmed == null) {
+            currentTrimmed = new String(lineBuf, currentTrimStart, currentTrimEnd - currentTrimStart);
+        }
         return currentTrimmed;
+    }
+
+    private boolean isTrimmedEmpty() {
+        return currentTrimStart >= currentTrimEnd;
+    }
+
+    private boolean isArrayStartInBuf() {
+        int start = currentTrimStart;
+        int end = currentTrimEnd;
+        if (start >= end) return false;
+        char[] buf = lineBuf;
+        if (buf[start] != '[') return false;
+        for (int i = start + 1; i < end; i++) {
+            if (buf[i] == ']') {
+                return i + 1 < end && (buf[i + 1] == ':' || buf[i + 1] == '{');
+            }
+        }
+        return false;
+    }
+
+    private boolean isEmptyObjectInBuf() {
+        return (currentTrimEnd - currentTrimStart) == 2
+                && lineBuf[currentTrimStart] == '{'
+                && lineBuf[currentTrimStart + 1] == '}';
+    }
+
+    private boolean startsWithDashInBuf() {
+        return currentTrimStart < currentTrimEnd && lineBuf[currentTrimStart] == '-';
+    }
+
+    private int indexOfCharInBuf(char c) {
+        char[] buf = lineBuf;
+        for (int i = currentTrimStart; i < currentTrimEnd; i++) {
+            if (buf[i] == c) return i - currentTrimStart;
+        }
+        return -1;
     }
 
     /**
@@ -1188,6 +1324,98 @@ public class ToonReader {
      */
     private void consumeLine() {
         lineConsumed = true;
+    }
+
+    // ========== Buffer-direct helpers ==========
+
+    /**
+     * Find colon position in the current line buffer (within trimmed range).
+     * Returns offset relative to currentTrimStart, or -1 if no valid colon found.
+     */
+    private int findColonInBuf() {
+        int start = currentTrimStart;
+        int end = currentTrimEnd;
+        char[] buf = lineBuf;
+
+        // Find first colon
+        int colonPos = -1;
+        for (int i = start; i < end; i++) {
+            if (buf[i] == ':') {
+                colonPos = i;
+                break;
+            }
+        }
+        if (colonPos < 0) return -1;
+
+        // Fast path: no quote before the colon — colon is valid
+        boolean hasQuoteBefore = false;
+        for (int i = start; i < colonPos; i++) {
+            if (buf[i] == '"') {
+                hasQuoteBefore = true;
+                break;
+            }
+        }
+        if (!hasQuoteBefore) return colonPos - start;
+
+        // Slow path: scan for unquoted colon
+        boolean inQuotes = false;
+        boolean escaped = false;
+        for (int i = start; i < end; i++) {
+            char c = buf[i];
+            if (escaped) { escaped = false; continue; }
+            if (c == '\\') { escaped = true; continue; }
+            if (c == '"') { inQuotes = !inQuotes; continue; }
+            if (c == ':' && !inQuotes) return i - start;
+        }
+        return -1;
+    }
+
+    /**
+     * Create a String from lineBuf range, probing the string cache first.
+     */
+    private String cacheSubstringFromBuf(char[] buf, int start, int end) {
+        int len = end - start;
+        if (len == 0) return "";
+        if (len > MAX_CACHED_STRING_LENGTH) {
+            return new String(buf, start, len);
+        }
+
+        int hash = 0;
+        for (int i = start; i < end; i++) {
+            hash = 31 * hash + buf[i];
+        }
+
+        String[] cache = stringCache;
+        int slot = hash & STRING_CACHE_MASK;
+        String cached = cache[slot];
+        if (cached != null && cached.length() == len) {
+            boolean match = true;
+            for (int j = 0; j < len; j++) {
+                if (buf[start + j] != cached.charAt(j)) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) return cached;
+        }
+
+        String s = new String(buf, start, len);
+        cache[slot] = s;
+        return s;
+    }
+
+    /**
+     * Trim whitespace and extract a cached String from lineBuf.
+     */
+    private String trimAsciiRangeBuf(int start, int end) {
+        char[] buf = lineBuf;
+        if (start < end && buf[start] > ' ' && buf[end - 1] > ' ') {
+            return cacheSubstringFromBuf(buf, start, end);
+        }
+        while (start < end && buf[start] <= ' ') start++;
+        while (end > start && buf[end - 1] <= ' ') end--;
+        if (start >= end) return "";
+        return cacheSubstringFromBuf(buf, start, end);
     }
 
     /**
@@ -1267,6 +1495,7 @@ public class ToonReader {
         int segStart = 0;
         int segCount = 0;
 
+        // Count segments (validation pass)
         for (int i = 0; i <= len; i++) {
             if (i == len || key.charAt(i) == '.') {
                 int segEnd = i;
@@ -1294,13 +1523,12 @@ public class ToonReader {
 
         if (segCount < 2) return false;
 
-        // Manual dot-split (no regex) — only done after validation passes
+        // Split in one pass, reusing the validated segment count
         String[] segments = new String[segCount];
         segStart = 0;
-        int idx = 0;
-        for (int i = 0; i <= len; i++) {
+        for (int i = 0, idx = 0; i <= len; i++) {
             if (i == len || key.charAt(i) == '.') {
-                segments[idx++] = key.substring(segStart, i);
+                segments[idx++] = cacheSubstring(key, segStart, i);
                 segStart = i + 1;
             }
         }

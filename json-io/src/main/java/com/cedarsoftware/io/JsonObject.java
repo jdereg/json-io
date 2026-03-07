@@ -87,6 +87,15 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         size = 0;
     }
 
+    public JsonObject(int initialCapacity) {
+        if (initialCapacity < 1) {
+            initialCapacity = 1;
+        }
+        keys = new Object[initialCapacity];
+        values = new Object[initialCapacity];
+        size = 0;
+    }
+
     // ========== Type Classification ==========
 
     public JsonType getJsonType() {

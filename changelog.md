@@ -2,6 +2,8 @@
 
 #### 4.98.0 (Unreleased)
 * **PERFORMANCE**: `JsonIo.toToon()` now defaults to `cycleSupport(false)` when `null` is passed for `WriteOptions`, skipping the `traceReferences()` pre-pass for ~35-40% faster TOON serialization. TOON targets LLM communication where data is typically acyclic; if a cycle is encountered, a clear `JsonIoException` is thrown with guidance to enable `cycleSupport(true)`.
+* **PERFORMANCE**: `ToonReader.cacheSubstring()` now probes its string cache by source range before materializing a substring, eliminating allocation on cache hits in hot key/value parsing paths.
+* **PERFORMANCE**: `ToonReader` now loads line metadata without eagerly materializing trimmed line strings; `peekTrimmed()` creates them lazily only when the caller needs line text.
 
 #### 4.97.0 - 2026-03-03
 * **PERFORMANCE**: `ToonReader.peekLine()` now avoids materializing a `String` for blank, comment, and indent-only lines, reducing per-line `String` allocations by ~50%.
