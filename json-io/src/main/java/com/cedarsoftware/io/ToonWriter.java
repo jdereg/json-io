@@ -143,6 +143,8 @@ public class ToonWriter implements Closeable, Flushable {
     private final Map<Object, Boolean> activePath = new IdentityHashMap<>();
     // Cache resolved output type names per class for this write operation.
     private final Map<Class<?>, String> typeNameCache = new IdentityHashMap<>(32);
+    // Reusable work deque for traceReferences() traversal
+    private final ArrayDeque<Object> traceStack = new ArrayDeque<>(256);
 
     private static String[] buildIndentCache() {
         String[] cache = new String[INDENT_CACHE_SIZE];
@@ -2229,7 +2231,8 @@ public class ToonWriter implements Closeable, Flushable {
         if (root == null || isPrimitive(root) || writeOptions.isNonReferenceableClass(root.getClass())) {
             return;
         }
-        final Deque<Object> stack = new ArrayDeque<>(256);
+        traceStack.clear();
+        final Deque<Object> stack = traceStack;
         stack.addFirst(root);
 
         while (!stack.isEmpty()) {
