@@ -10,6 +10,7 @@
 * **PERFORMANCE**: `JsonObject` default constructor now defers `keys[]`/`values[]` allocation using a shared empty sentinel, avoiding 256 bytes of wasted arrays for array/collection nodes that only use `items[]` storage.
 * **PERFORMANCE**: `JsonObject.appendFieldForParser()` no longer redundantly nulls `hash` and `index` fields that are already null during parsing.
 * **IMPROVEMENT**: `JsonObject` internal storage mode consolidated from two boolean flags (`keysWereSet`/`itemsWereSet`) into a single byte with four named states (`MODE_POJO`, `MODE_ITEMS`, `MODE_KEYS_ONLY`, `MODE_KEYS_ITEMS`), and a cached `effectiveValues` reference eliminates repeated conditional dispatch across 10 hot-path methods.
+* **PERFORMANCE**: `ToonWriter` tabular POJO detection now validates uniformity directly via `WriteFieldPlan` accessors instead of creating a `LinkedHashMap` per element via `getObjectFields()`. Row values are streamed from accessors during the write phase, eliminating N intermediate map allocations per tabular array.
 
 #### 4.97.0 - 2026-03-03
 * **PERFORMANCE**: `ToonReader.peekLine()` now avoids materializing a `String` for blank, comment, and indent-only lines, reducing per-line `String` allocations by ~50%.

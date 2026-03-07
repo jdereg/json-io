@@ -882,7 +882,7 @@ public class ToonWriter implements Closeable, Flushable {
             UniformPojoArrayData uniformPOJO = getUniformPOJODataFromArray(array, length);
             if (uniformPOJO != null) {
                 writeTabularHeader(uniformPOJO.keys);
-                writeTabularPOJORows(uniformPOJO);
+                writeTabularPOJORowsFromArray(uniformPOJO, array, length);
             } else {
                 // Mixed/complex array - use list format with hyphens
                 out.write(":");
@@ -994,7 +994,7 @@ public class ToonWriter implements Closeable, Flushable {
                 UniformPojoArrayData uniformPOJO = getUniformPOJODataFromCollection(collection);
                 if (uniformPOJO != null) {
                     writeTabularHeader(uniformPOJO.keys);
-                    writeTabularPOJORows(uniformPOJO);
+                    writeTabularPOJORows(uniformPOJO, collection);
                 } else {
                     // Non-uniform or mixed - use list format with hyphens
                     out.write(":");
@@ -1118,7 +1118,9 @@ public class ToonWriter implements Closeable, Flushable {
     /**
      * Check if a collection contains uniform POJOs (all non-Map objects with identical
      * field names and primitive field values).
-     * Returns keys plus precomputed row field maps if uniform, null otherwise.
+     * Returns keys plus active WriteFieldPlans if uniform, null otherwise.
+     * Avoids intermediate LinkedHashMap allocations — field values are read directly
+     * from accessors during the write phase.
      * <p>
      * POJOs qualify for tabular format when:
      * <ul>
@@ -1129,7 +1131,8 @@ public class ToonWriter implements Closeable, Flushable {
      */
     private UniformPojoArrayData getUniformPOJODataFromCollection(Collection<?> collection) {
         List<String> keys = null;
-        List<Map<String, Object>> rows = new ArrayList<>(collection.size());
+        List<WriteOptionsBuilder.WriteFieldPlan> activePlans = null;
+        List<WriteOptionsBuilder.WriteFieldPlan> allPlans = null;
         Class<?> elementClass = null;
 
         for (Object element : collection) {
@@ -1153,29 +1156,33 @@ public class ToonWriter implements Closeable, Flushable {
             // All elements must be the same concrete class for tabular format
             if (elementClass == null) {
                 elementClass = element.getClass();
-            } else if (elementClass != element.getClass()) {
-                return null;
-            }
 
-            // Get the object's field names and values
-            Map<String, Object> fields = getObjectFields(element);
-            if (fields.isEmpty()) {
-                return null;  // Empty objects break tabular format
-            }
-
-            // All field values must be primitive for tabular format
-            for (Object value : fields.values()) {
-                if (value != null && !isPrimitive(value)) {
+                // Bail out if @IoAnyGetter (extra dynamic fields could vary)
+                if (AnnotationResolver.getMetadata(elementClass).getAnyGetterMethod() != null) {
                     return null;
                 }
-            }
 
-            if (keys == null) {
-                keys = new ArrayList<>(fields.keySet());
-            } else if (!hasSameKeyOrder(fields, keys)) {
-                return null;  // Different fields break uniformity
+                allPlans = WriteOptionsBuilder.getWriteFieldPlans(writeOptions, elementClass);
+                activePlans = new ArrayList<>(allPlans.size());
+                keys = new ArrayList<>(allPlans.size());
+
+                for (WriteOptionsBuilder.WriteFieldPlan plan : allPlans) {
+                    if (plan.enumPublicOnlySkipCandidate() && enumPublicFieldsOnly) continue;
+                    Object value = plan.accessor().retrieve(element);
+                    if ((skipNullFields || plan.skipIfNull()) && value == null) continue;
+                    if (value != null && !isPrimitive(value)) return null;
+                    activePlans.add(plan);
+                    keys.add(plan.accessor().getUniqueFieldName());
+                }
+                if (keys.isEmpty()) {
+                    return null;  // Empty objects break tabular format
+                }
+            } else if (elementClass != element.getClass()) {
+                return null;
+            } else {
+                // Verify same active plan pattern and all values primitive
+                if (!verifyActivePlans(element, allPlans, activePlans)) return null;
             }
-            rows.add(fields);
         }
 
         if (keys == null) {
@@ -1183,24 +1190,25 @@ public class ToonWriter implements Closeable, Flushable {
         }
 
         // Inject @type as the first column when type metadata is needed
+        String typeName = null;
         if (shouldWriteTypeMetadata(elementClass)) {
-            String typeName = getTypeNameForOutput(elementClass);
+            typeName = getTypeNameForOutput(elementClass);
             keys.add(0, typeKey);
-            for (Map<String, Object> row : rows) {
-                row.put(typeKey, typeName);
-            }
         }
 
-        return new UniformPojoArrayData(keys, rows);
+        return new UniformPojoArrayData(keys, activePlans, typeName);
     }
 
     /**
-     * Check if an array contains uniform POJOs eligible for tabular format, and
-     * capture field maps so they can be reused when writing rows.
+     * Check if an array contains uniform POJOs eligible for tabular format.
+     * Returns keys plus active WriteFieldPlans if uniform, null otherwise.
+     * Avoids intermediate LinkedHashMap allocations — field values are read directly
+     * from accessors during the write phase.
      */
     private UniformPojoArrayData getUniformPOJODataFromArray(Object array, int length) {
         List<String> keys = null;
-        List<Map<String, Object>> rows = new ArrayList<>(length);
+        List<WriteOptionsBuilder.WriteFieldPlan> activePlans = null;
+        List<WriteOptionsBuilder.WriteFieldPlan> allPlans = null;
         Class<?> elementClass = null;
 
         for (int i = 0; i < length; i++) {
@@ -1221,26 +1229,33 @@ public class ToonWriter implements Closeable, Flushable {
             // All elements must be the same concrete class for tabular format
             if (elementClass == null) {
                 elementClass = element.getClass();
-            } else if (elementClass != element.getClass()) {
-                return null;
-            }
 
-            Map<String, Object> fields = getObjectFields(element);
-            if (fields.isEmpty()) {
-                return null;
-            }
-            for (Object value : fields.values()) {
-                if (value != null && !isPrimitive(value)) {
+                // Bail out if @IoAnyGetter (extra dynamic fields could vary)
+                if (AnnotationResolver.getMetadata(elementClass).getAnyGetterMethod() != null) {
                     return null;
                 }
-            }
 
-            if (keys == null) {
-                keys = new ArrayList<>(fields.keySet());
-            } else if (!hasSameKeyOrder(fields, keys)) {
+                allPlans = WriteOptionsBuilder.getWriteFieldPlans(writeOptions, elementClass);
+                activePlans = new ArrayList<>(allPlans.size());
+                keys = new ArrayList<>(allPlans.size());
+
+                for (WriteOptionsBuilder.WriteFieldPlan plan : allPlans) {
+                    if (plan.enumPublicOnlySkipCandidate() && enumPublicFieldsOnly) continue;
+                    Object value = plan.accessor().retrieve(element);
+                    if ((skipNullFields || plan.skipIfNull()) && value == null) continue;
+                    if (value != null && !isPrimitive(value)) return null;
+                    activePlans.add(plan);
+                    keys.add(plan.accessor().getUniqueFieldName());
+                }
+                if (keys.isEmpty()) {
+                    return null;
+                }
+            } else if (elementClass != element.getClass()) {
                 return null;
+            } else {
+                // Verify same active plan pattern and all values primitive
+                if (!verifyActivePlans(element, allPlans, activePlans)) return null;
             }
-            rows.add(fields);
         }
 
         if (keys == null) {
@@ -1248,15 +1263,13 @@ public class ToonWriter implements Closeable, Flushable {
         }
 
         // Inject @type as the first column when type metadata is needed
+        String typeName = null;
         if (shouldWriteTypeMetadata(elementClass)) {
-            String typeName = getTypeNameForOutput(elementClass);
+            typeName = getTypeNameForOutput(elementClass);
             keys.add(0, typeKey);
-            for (Map<String, Object> row : rows) {
-                row.put(typeKey, typeName);
-            }
         }
 
-        return new UniformPojoArrayData(keys, rows);
+        return new UniformPojoArrayData(keys, activePlans, typeName);
     }
 
     private boolean hasSameKeyOrder(Map<String, Object> fields, List<String> keys) {
@@ -1274,25 +1287,85 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
-     * Write tabular rows for a collection/array of uniform POJOs (CSV-like format).
-     * Uses precomputed rows to avoid re-reading fields.
+     * Verify that a subsequent element has the same active field pattern as the first element.
+     * Walks through allPlans and checks that the same plans are active (not skipped) and
+     * all values are primitive.
      */
-    private void writeTabularPOJORows(UniformPojoArrayData uniformPOJO) throws IOException {
+    private boolean verifyActivePlans(Object element,
+                                      List<WriteOptionsBuilder.WriteFieldPlan> allPlans,
+                                      List<WriteOptionsBuilder.WriteFieldPlan> activePlans) {
+        int activeIdx = 0;
+        for (int i = 0, len = allPlans.size(); i < len; i++) {
+            WriteOptionsBuilder.WriteFieldPlan plan = allPlans.get(i);
+            if (plan.enumPublicOnlySkipCandidate() && enumPublicFieldsOnly) continue;
+            Object value = plan.accessor().retrieve(element);
+            if ((skipNullFields || plan.skipIfNull()) && value == null) {
+                // Skipped — check it wasn't active in first element
+                if (activeIdx < activePlans.size() && activePlans.get(activeIdx) == plan) {
+                    return false;
+                }
+                continue;
+            }
+            if (value != null && !isPrimitive(value)) return false;
+            if (activeIdx >= activePlans.size() || activePlans.get(activeIdx) != plan) {
+                return false;
+            }
+            activeIdx++;
+        }
+        return activeIdx == activePlans.size();
+    }
+
+    /**
+     * Write tabular rows for a collection of uniform POJOs (CSV-like format).
+     * Streams field values directly from accessors — no intermediate map allocation.
+     */
+    private void writeTabularPOJORows(UniformPojoArrayData data, Collection<?> collection) throws IOException {
         depth++;
-        for (Map<String, Object> fields : uniformPOJO.rows) {
+        for (Object element : collection) {
             out.write(NEW_LINE);
             writeIndent();
-
-            boolean first = true;
-            for (String key : uniformPOJO.keys) {
-                if (!first) {
-                    out.write(delimiter);
-                }
-                first = false;
-                writeInlineValue(fields.get(key));
-            }
+            writeTabularPOJORow(data, element);
         }
         depth--;
+    }
+
+    /**
+     * Write tabular rows for an array of uniform POJOs (CSV-like format).
+     * Streams field values directly from accessors — no intermediate map allocation.
+     */
+    private void writeTabularPOJORowsFromArray(UniformPojoArrayData data, Object array, int length) throws IOException {
+        depth++;
+        for (int i = 0; i < length; i++) {
+            Object element = getArrayElement(array, i);
+            out.write(NEW_LINE);
+            writeIndent();
+            writeTabularPOJORow(data, element);
+        }
+        depth--;
+    }
+
+    /**
+     * Write a single tabular POJO row using active WriteFieldPlans.
+     */
+    private void writeTabularPOJORow(UniformPojoArrayData data, Object element) throws IOException {
+        boolean first = true;
+        if (data.typeName != null) {
+            writeInlineValue(data.typeName);
+            first = false;
+        }
+        for (int i = 0, len = data.activePlans.size(); i < len; i++) {
+            if (!first) {
+                out.write(delimiter);
+            }
+            first = false;
+            WriteOptionsBuilder.WriteFieldPlan plan = data.activePlans.get(i);
+            Object value = plan.accessor().retrieve(element);
+            String formatPattern = plan.formatPattern();
+            if (formatPattern != null && value != null) {
+                value = applyFormatPattern(value, formatPattern);
+            }
+            writeInlineValue(value);
+        }
     }
 
     /**
@@ -2386,11 +2459,13 @@ public class ToonWriter implements Closeable, Flushable {
 
     private static class UniformPojoArrayData {
         final List<String> keys;
-        final List<Map<String, Object>> rows;
+        final List<WriteOptionsBuilder.WriteFieldPlan> activePlans;
+        final String typeName; // null if no type metadata needed
 
-        UniformPojoArrayData(List<String> keys, List<Map<String, Object>> rows) {
+        UniformPojoArrayData(List<String> keys, List<WriteOptionsBuilder.WriteFieldPlan> activePlans, String typeName) {
             this.keys = keys;
-            this.rows = rows;
+            this.activePlans = activePlans;
+            this.typeName = typeName;
         }
     }
 
