@@ -44,6 +44,7 @@ import java.util.Set;
  */
 public class JsonObject extends JsonValue implements Map<Object, Object>, Serializable {
     private static final int INITIAL_CAPACITY = 16;
+    private static final Object[] EMPTY = new Object[0];
     // Threshold for switching from linear search to HashMap index.
     // Lower values reduce O(n²) cost of building objects with many fields.
     private static volatile int INDEX_THRESHOLD = 4;
@@ -82,8 +83,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     public enum JsonType { ARRAY, COLLECTION, MAP, OBJECT }
 
     public JsonObject() {
-        keys = new Object[INITIAL_CAPACITY];
-        values = new Object[INITIAL_CAPACITY];
+        keys = EMPTY;
+        values = EMPTY;
         size = 0;
     }
 
@@ -315,8 +316,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
      * The hash index is NOT maintained here — it is built lazily on first lookup via {@code indexOf()}.
      */
     public void appendFieldForParser(Object key, Object value) {
-        hash = null;
-        index = null;
         ensureCapacity(size + 1);
         keys[size] = key;
         values[size] = value;
@@ -451,7 +450,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     private void ensureCapacity(int minCapacity) {
         if (keys.length >= minCapacity) return;
 
-        int newCapacity = Math.max(keys.length * 2, minCapacity);
+        int newCapacity = Math.max(Math.max(keys.length * 2, minCapacity), INITIAL_CAPACITY);
         keys = Arrays.copyOf(keys, newCapacity);
         values = Arrays.copyOf(values, newCapacity);
     }
