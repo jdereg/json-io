@@ -331,8 +331,6 @@ public class ToonReader {
             if (valueStart < trimEnd && lineBuf[valueStart] == ' ') {
                 valueStart++;
             }
-            String valuePart = (valueStart >= trimEnd) ? "" : trimAsciiRangeBuf(valueStart, trimEnd);
-
             // Check for combined field+array notation: fieldName[N]: or fieldName[N]{cols}:
             // Also handles folded keys with array: data.items[N]:
             // Per TOON spec, this means 'fieldName' contains an array of N elements
@@ -341,8 +339,8 @@ public class ToonReader {
                 int bracketStart = key.indexOf('[');
                 String realKey = key.substring(0, bracketStart);
                 String arraySyntax = key.substring(bracketStart) + ":";
-                if (!valuePart.isEmpty()) {
-                    arraySyntax += " " + valuePart;
+                if (!isTrimmedEmpty(lineBuf, valueStart, trimEnd)) {
+                    arraySyntax += " " + trimAsciiRangeBuf(valueStart, trimEnd);
                 }
                 // Check if key was quoted - quoted keys are NOT expanded
                 boolean wasQuoted = realKey.startsWith("\"");
@@ -361,7 +359,7 @@ public class ToonReader {
             key = unquoteString(key);
 
             // Check for nested structure (value is empty, next line is indented more)
-            if (valuePart.isEmpty()) {
+            if (isTrimmedEmpty(lineBuf, valueStart, trimEnd)) {
                 if (hasLine() && peekIndent() > baseIndent) {
                     if (isArrayStartInBuf()) {
                         putValue(jsonObj, key, readArray(), wasQuoted);
@@ -371,15 +369,15 @@ public class ToonReader {
                 } else {
                     putValue(jsonObj, key, null, wasQuoted);  // Empty value
                 }
-            } else if (isArrayStart(valuePart)) {
+            } else if (isArrayStart(lineBuf, valueStart, trimEnd)) {
                 // Inline array on same line as key
-                putValue(jsonObj, key, parseArrayFromLine(valuePart), wasQuoted);
-            } else if ("{}".equals(valuePart)) {
+                putValue(jsonObj, key, parseArrayFromLine(trimAsciiRangeBuf(valueStart, trimEnd)), wasQuoted);
+            } else if (isEmptyObject(lineBuf, valueStart, trimEnd)) {
                 // Empty map as value
                 putValue(jsonObj, key, new JsonObject(), wasQuoted);
             } else {
                 // Scalar value
-                putValue(jsonObj, key, readScalar(valuePart), wasQuoted);
+                putValue(jsonObj, key, readScalar(lineBuf, valueStart, trimEnd), wasQuoted);
             }
         }
 
@@ -629,7 +627,7 @@ public class ToonReader {
             for (int i = 0; i < len; i++) {
                 if (content.charAt(i) == delimiter) {
                     if (colIndex < colHeadersSize) {
-                        appendColumn(target, columnHeaders.get(colIndex), readScalar(trimAsciiRange(content, tokenStart, i)));
+                        appendColumn(target, columnHeaders.get(colIndex), readScalar(content, tokenStart, i));
                     }
                     colIndex++;
                     tokenStart = i + 1;
@@ -637,7 +635,7 @@ public class ToonReader {
             }
             if (tokenStart < len || colIndex < colHeadersSize) {
                 if (colIndex < colHeadersSize) {
-                    appendColumn(target, columnHeaders.get(colIndex), readScalar(trimAsciiRange(content, tokenStart, len)));
+                    appendColumn(target, columnHeaders.get(colIndex), readScalar(content, tokenStart, len));
                 }
                 colIndex++;
             }
@@ -715,12 +713,12 @@ public class ToonReader {
             int tokenStart = 0;
             for (int i = 0; i < len; i++) {
                 if (content.charAt(i) == delimiter) {
-                    elements.add(readScalar(trimAsciiRange(content, tokenStart, i)));
+                    elements.add(readScalar(content, tokenStart, i));
                     tokenStart = i + 1;
                 }
             }
             if (tokenStart < len || elements.size() < count) {
-                elements.add(readScalar(trimAsciiRange(content, tokenStart, len)));
+                elements.add(readScalar(content, tokenStart, len));
             }
         } else {
             // Slow path: handle quotes and escapes via StringBuilder
@@ -810,9 +808,12 @@ public class ToonReader {
             int trimStart = currentTrimStart;
             int trimEnd = currentTrimEnd;
             consumeLine();
-            String elementContent = trimAsciiRangeBuf(trimStart + 1, trimEnd);
+            int elementStart = trimStart + 1;
+            while (elementStart < trimEnd && lineBuf[elementStart] <= ' ') {
+                elementStart++;
+            }
 
-            if (elementContent.isEmpty()) {
+            if (elementStart >= trimEnd) {
                 // Nested object/array on next lines
                 if (hasLine()) {
                     int nextIndent = peekIndent();
@@ -830,19 +831,22 @@ public class ToonReader {
                 } else {
                     elements.add(null);
                 }
-            } else if ("{}".equals(elementContent)) {
+            } else if (isEmptyObject(lineBuf, elementStart, trimEnd)) {
                 // Empty object: - {}
                 elements.add(new JsonObject());
-            } else if (isArrayStart(elementContent)) {
-                elements.add(parseArrayFromLine(elementContent));
-            } else if (findColonPosition(elementContent) > 0 && !elementContent.startsWith("\"")) {
-                // Per TOON spec: first field of object is on hyphen line
-                // e.g., "- name: John" followed by "  age: 30" on next line
-                // This is an inline object - read it with subsequent fields
-                JsonObject inlineObj = readInlineObject(elementContent, indent);
-                elements.add(inlineObj);
+            } else if (isArrayStart(lineBuf, elementStart, trimEnd)) {
+                elements.add(parseArrayFromLine(trimAsciiRangeBuf(elementStart, trimEnd)));
             } else {
-                elements.add(readScalar(elementContent));
+                String elementContent = trimAsciiRangeBuf(elementStart, trimEnd);
+                if (findColonPosition(elementContent) > 0 && !elementContent.startsWith("\"")) {
+                    // Per TOON spec: first field of object is on hyphen line
+                    // e.g., "- name: John" followed by "  age: 30" on next line
+                    // This is an inline object - read it with subsequent fields
+                    JsonObject inlineObj = readInlineObject(elementContent, indent);
+                    elements.add(inlineObj);
+                } else {
+                    elements.add(readScalar(lineBuf, elementStart, trimEnd));
+                }
             }
         }
 
@@ -960,8 +964,6 @@ public class ToonReader {
             if (valueStart2 < trimEnd && lineBuf[valueStart2] == ' ') {
                 valueStart2++;
             }
-            String valuePart = (valueStart2 >= trimEnd) ? "" : trimAsciiRangeBuf(valueStart2, trimEnd);
-
             // Check for combined field+array notation
             // Also handles folded keys: data.items[N]:
             int keyLen = key.length();
@@ -969,6 +971,7 @@ public class ToonReader {
                 int bracketStart = key.lastIndexOf('[');
                 if (bracketStart >= 0) {
                     String realKey = key.substring(0, bracketStart);
+                    String valuePart = trimAsciiRangeBuf(valueStart2, trimEnd);
                     StringBuilder sb = new StringBuilder(keyLen - bracketStart + 2 + valuePart.length());
                     sb.append(key, bracketStart, keyLen).append(':');
                     if (!valuePart.isEmpty()) {
@@ -986,7 +989,7 @@ public class ToonReader {
             boolean wasQuoted = keyLen > 0 && key.charAt(0) == '"';
             key = unquoteString(key);
 
-            if (valuePart.isEmpty()) {
+            if (isTrimmedEmpty(lineBuf, valueStart2, trimEnd)) {
                 if (hasLine() && peekIndent() > fieldIndent) {
                     if (isArrayStartInBuf()) {
                         putValue(jsonObj, key, readArray(), wasQuoted);
@@ -996,12 +999,12 @@ public class ToonReader {
                 } else {
                     putValue(jsonObj, key, null, wasQuoted);
                 }
-            } else if (isArrayStart(valuePart)) {
-                putValue(jsonObj, key, parseArrayFromLine(valuePart), wasQuoted);
-            } else if ("{}".equals(valuePart)) {
+            } else if (isArrayStart(lineBuf, valueStart2, trimEnd)) {
+                putValue(jsonObj, key, parseArrayFromLine(trimAsciiRangeBuf(valueStart2, trimEnd)), wasQuoted);
+            } else if (isEmptyObject(lineBuf, valueStart2, trimEnd)) {
                 putValue(jsonObj, key, new JsonObject(), wasQuoted);
             } else {
-                putValue(jsonObj, key, readScalar(valuePart), wasQuoted);
+                putValue(jsonObj, key, readScalar(lineBuf, valueStart2, trimEnd), wasQuoted);
             }
         }
 
@@ -1017,10 +1020,23 @@ public class ToonReader {
         if (text == null || text.isEmpty()) {
             return null;
         }
+        return readScalar(text, 0, text.length());
+    }
 
-        int len = text.length();
-        char firstChar = text.charAt(0);
-        char lastChar = text.charAt(len - 1);
+    private Object readScalar(String text, int start, int end) {
+        while (start < end && text.charAt(start) <= ' ') {
+            start++;
+        }
+        while (end > start && text.charAt(end - 1) <= ' ') {
+            end--;
+        }
+        if (start >= end) {
+            return null;
+        }
+
+        int len = end - start;
+        char firstChar = text.charAt(start);
+        char lastChar = text.charAt(end - 1);
 
         if (strictToon) {
             boolean startsQuote = firstChar == '"';
@@ -1030,36 +1046,81 @@ public class ToonReader {
             }
         }
 
-        // Fast path for null / booleans based on first char and length.
         if (len == 4) {
-            if (firstChar == 'n' && "null".equals(text)) {
+            if (matchesLiteral(text, start, "null")) {
                 return null;
             }
-            if (firstChar == 't' && "true".equals(text)) {
+            if (matchesLiteral(text, start, "true")) {
                 return Boolean.TRUE;
             }
-        } else if (len == 5 && firstChar == 'f' && "false".equals(text)) {
+        } else if (len == 5 && matchesLiteral(text, start, "false")) {
             return Boolean.FALSE;
         }
 
-        // Handle quoted strings
         if (len >= 2 && firstChar == '"' && lastChar == '"') {
-            return parseQuotedString(text);
+            return parseQuotedString(text, start, end);
         }
 
-        // Avoid number parser for clearly non-numeric tokens.
-        if (!(firstChar >= '0' && firstChar <= '9') && firstChar != '-' && firstChar != '+' && firstChar != '.') {
-            return text;
+        if (!isLikelyNumberStart(firstChar)) {
+            return cacheSubstring(text, start, end);
         }
 
-        // Try to parse as number
-        Number num = parseNumber(text);
+        Number num = parseNumber(text, start, end);
         if (num != null) {
             return num;
         }
 
-        // Unquoted string
-        return text;
+        return cacheSubstring(text, start, end);
+    }
+
+    private Object readScalar(char[] buf, int start, int end) {
+        while (start < end && buf[start] <= ' ') {
+            start++;
+        }
+        while (end > start && buf[end - 1] <= ' ') {
+            end--;
+        }
+        if (start >= end) {
+            return null;
+        }
+
+        int len = end - start;
+        char firstChar = buf[start];
+        char lastChar = buf[end - 1];
+
+        if (strictToon) {
+            boolean startsQuote = firstChar == '"';
+            boolean endsQuote = lastChar == '"';
+            if (startsQuote != endsQuote) {
+                throw new JsonIoException("Unclosed quoted string at line " + lineNumber);
+            }
+        }
+
+        if (len == 4) {
+            if (matchesLiteral(buf, start, "null")) {
+                return null;
+            }
+            if (matchesLiteral(buf, start, "true")) {
+                return Boolean.TRUE;
+            }
+        } else if (len == 5 && matchesLiteral(buf, start, "false")) {
+            return Boolean.FALSE;
+        }
+
+        if (len >= 2 && firstChar == '"' && lastChar == '"') {
+            return parseQuotedString(buf, start, end);
+        }
+
+        if (!isLikelyNumberStart(firstChar)) {
+            return cacheSubstringFromBuf(buf, start, end);
+        }
+
+        Number num = parseNumber(buf, start, end);
+        if (num != null) {
+            return num;
+        }
+
+        return cacheSubstringFromBuf(buf, start, end);
     }
 
     /**
@@ -1067,19 +1128,64 @@ public class ToonReader {
      * Only 5 valid escapes: \\, \", \n, \r, \t
      */
     private String parseQuotedString(String text) {
-        int len = text.length();
+        return parseQuotedString(text, 0, text.length());
+    }
 
-        // Fast path: no escape sequences — use cache to deduplicate
-        if (text.indexOf('\\', 1) < 0) {
-            return cacheSubstring(text, 1, len - 1);
+    private String parseQuotedString(String text, int start, int end) {
+        int escapePos = text.indexOf('\\', start + 1);
+        if (escapePos < 0 || escapePos >= end - 1) {
+            return cacheSubstring(text, start + 1, end - 1);
         }
 
-        // Slow path: process escape sequences with reusable StringBuilder
         quoteBuf.setLength(0);
-        for (int i = 1; i < len - 1; i++) {
+        for (int i = start + 1; i < end - 1; i++) {
             char c = text.charAt(i);
-            if (c == '\\' && i + 1 < len - 1) {
+            if (c == '\\' && i + 1 < end - 1) {
                 char next = text.charAt(++i);
+                switch (next) {
+                    case '\\':
+                        quoteBuf.append('\\');
+                        break;
+                    case '"':
+                        quoteBuf.append('"');
+                        break;
+                    case 'n':
+                        quoteBuf.append('\n');
+                        break;
+                    case 'r':
+                        quoteBuf.append('\r');
+                        break;
+                    case 't':
+                        quoteBuf.append('\t');
+                        break;
+                    default:
+                        throw new JsonIoException("Invalid escape sequence: \\" + next + " at line " + lineNumber);
+                }
+            } else {
+                quoteBuf.append(c);
+            }
+        }
+
+        return cacheString(quoteBuf.toString());
+    }
+
+    private String parseQuotedString(char[] buf, int start, int end) {
+        int escapePos = -1;
+        for (int i = start + 1; i < end - 1; i++) {
+            if (buf[i] == '\\') {
+                escapePos = i;
+                break;
+            }
+        }
+        if (escapePos < 0) {
+            return cacheSubstringFromBuf(buf, start + 1, end - 1);
+        }
+
+        quoteBuf.setLength(0);
+        for (int i = start + 1; i < end - 1; i++) {
+            char c = buf[i];
+            if (c == '\\' && i + 1 < end - 1) {
+                char next = buf[++i];
                 switch (next) {
                     case '\\':
                         quoteBuf.append('\\');
@@ -1118,18 +1224,30 @@ public class ToonReader {
         if (text.isEmpty()) {
             return null;
         }
+        return parseNumber(text, 0, text.length());
+    }
+
+    private Number parseNumber(String text, int start, int end) {
+        if (start >= end) {
+            return null;
+        }
 
         String[] numKeys = numberCacheKeys;
         Number[] numVals = numberCacheValues;
-        int slot = text.hashCode() & NUMBER_CACHE_MASK;
-        if (text.equals(numKeys[slot])) {
+        int len = end - start;
+        int hash = 0;
+        for (int i = start; i < end; i++) {
+            hash = 31 * hash + text.charAt(i);
+        }
+        int slot = hash & NUMBER_CACHE_MASK;
+        String cachedKey = numKeys[slot];
+        if (cachedKey != null && cachedKey.length() == len && text.regionMatches(start, cachedKey, 0, len)) {
             return numVals[slot];
         }
 
-        int len = text.length();
-        char first = text.charAt(0);
-        int start = (first == '-' || first == '+') ? 1 : 0;
-        if (start < len) {
+        char first = text.charAt(start);
+        int digitStart = (first == '-' || first == '+') ? start + 1 : start;
+        if (digitStart < end) {
             boolean negative = first == '-';
             long limit = negative ? Long.MIN_VALUE : -Long.MAX_VALUE;
             long multmin = limit / 10;
@@ -1137,7 +1255,7 @@ public class ToonReader {
             boolean integerOnly = true;
             boolean overflow = false;
 
-            for (int i = start; i < len; i++) {
+            for (int i = digitStart; i < end; i++) {
                 char c = text.charAt(i);
                 if (c < '0' || c > '9') {
                     integerOnly = false;
@@ -1160,15 +1278,16 @@ public class ToonReader {
             }
 
             if (integerOnly) {
+                String key = cacheSubstring(text, start, end);
                 if (!overflow) {
                     Number boxed = Long.valueOf(negative ? result : -result);
-                    numKeys[slot] = text;
+                    numKeys[slot] = key;
                     numVals[slot] = boxed;
                     return boxed;
                 }
                 try {
-                    Number big = new BigInteger(text);
-                    numKeys[slot] = text;
+                    Number big = new BigInteger(key);
+                    numKeys[slot] = key;
                     numVals[slot] = big;
                     return big;
                 } catch (NumberFormatException ignored) {
@@ -1178,12 +1297,102 @@ public class ToonReader {
         }
 
         try {
-            Number parsed = MathUtilities.parseToMinimalNumericType(text);
-            numKeys[slot] = text;
+            String key = cacheSubstring(text, start, end);
+            Number parsed = MathUtilities.parseToMinimalNumericType(key);
+            numKeys[slot] = key;
             numVals[slot] = parsed;
             return parsed;
         } catch (NumberFormatException e) {
-            return null;  // Not a valid number
+            return null;
+        }
+    }
+
+    private Number parseNumber(char[] buf, int start, int end) {
+        if (start >= end) {
+            return null;
+        }
+
+        String[] numKeys = numberCacheKeys;
+        Number[] numVals = numberCacheValues;
+        int len = end - start;
+        int hash = 0;
+        for (int i = start; i < end; i++) {
+            hash = 31 * hash + buf[i];
+        }
+        int slot = hash & NUMBER_CACHE_MASK;
+        String cachedKey = numKeys[slot];
+        if (cachedKey != null && cachedKey.length() == len) {
+            boolean match = true;
+            for (int i = 0; i < len; i++) {
+                if (buf[start + i] != cachedKey.charAt(i)) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) {
+                return numVals[slot];
+            }
+        }
+
+        char first = buf[start];
+        int digitStart = (first == '-' || first == '+') ? start + 1 : start;
+        if (digitStart < end) {
+            boolean negative = first == '-';
+            long limit = negative ? Long.MIN_VALUE : -Long.MAX_VALUE;
+            long multmin = limit / 10;
+            long result = 0;
+            boolean integerOnly = true;
+            boolean overflow = false;
+
+            for (int i = digitStart; i < end; i++) {
+                char c = buf[i];
+                if (c < '0' || c > '9') {
+                    integerOnly = false;
+                    break;
+                }
+
+                if (!overflow) {
+                    int digit = c - '0';
+                    if (result < multmin) {
+                        overflow = true;
+                    } else {
+                        result *= 10;
+                        if (result < limit + digit) {
+                            overflow = true;
+                        } else {
+                            result -= digit;
+                        }
+                    }
+                }
+            }
+
+            if (integerOnly) {
+                String key = cacheSubstringFromBuf(buf, start, end);
+                if (!overflow) {
+                    Number boxed = Long.valueOf(negative ? result : -result);
+                    numKeys[slot] = key;
+                    numVals[slot] = boxed;
+                    return boxed;
+                }
+                try {
+                    Number big = new BigInteger(key);
+                    numKeys[slot] = key;
+                    numVals[slot] = big;
+                    return big;
+                } catch (NumberFormatException ignored) {
+                    return null;
+                }
+            }
+        }
+
+        try {
+            String key = cacheSubstringFromBuf(buf, start, end);
+            Number parsed = MathUtilities.parseToMinimalNumericType(key);
+            numKeys[slot] = key;
+            numVals[slot] = parsed;
+            return parsed;
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 
@@ -1416,6 +1625,67 @@ public class ToonReader {
         while (end > start && buf[end - 1] <= ' ') end--;
         if (start >= end) return "";
         return cacheSubstringFromBuf(buf, start, end);
+    }
+
+    private boolean isTrimmedEmpty(char[] buf, int start, int end) {
+        while (start < end && buf[start] <= ' ') {
+            start++;
+        }
+        while (end > start && buf[end - 1] <= ' ') {
+            end--;
+        }
+        return start >= end;
+    }
+
+    private boolean isArrayStart(char[] buf, int start, int end) {
+        while (start < end && buf[start] <= ' ') {
+            start++;
+        }
+        while (end > start && buf[end - 1] <= ' ') {
+            end--;
+        }
+        if (start >= end || buf[start] != '[') {
+            return false;
+        }
+        int bracketEnd = -1;
+        for (int i = start + 1; i < end; i++) {
+            if (buf[i] == ']') {
+                bracketEnd = i;
+                break;
+            }
+        }
+        if (bracketEnd < 0 || bracketEnd + 1 >= end) {
+            return false;
+        }
+        char next = buf[bracketEnd + 1];
+        return next == ':' || next == '{';
+    }
+
+    private boolean isEmptyObject(char[] buf, int start, int end) {
+        while (start < end && buf[start] <= ' ') {
+            start++;
+        }
+        while (end > start && buf[end - 1] <= ' ') {
+            end--;
+        }
+        return end - start == 2 && buf[start] == '{' && buf[start + 1] == '}';
+    }
+
+    private boolean isLikelyNumberStart(char firstChar) {
+        return (firstChar >= '0' && firstChar <= '9') || firstChar == '-' || firstChar == '+' || firstChar == '.';
+    }
+
+    private boolean matchesLiteral(String text, int start, String literal) {
+        return text.regionMatches(start, literal, 0, literal.length());
+    }
+
+    private boolean matchesLiteral(char[] buf, int start, String literal) {
+        for (int i = 0; i < literal.length(); i++) {
+            if (buf[start + i] != literal.charAt(i)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
