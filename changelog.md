@@ -6,6 +6,7 @@
 * **PERFORMANCE**: `ToonReader` now loads line metadata without eagerly materializing trimmed line strings; `peekTrimmed()` creates them lazily only when the caller needs line text.
 * **PERFORMANCE**: TOON string/input-stream reads now reuse the main `FastReader` character buffer via `JsonIo`'s scoped buffer recycler, reducing per-parse reader-buffer allocation without sharing mutable buffers across live parsers.
 * **PERFORMANCE**: `ToonReader` now parses common unquoted scalar values directly from source ranges in object, list, inline-array, and tabular read paths, avoiding intermediate `String` creation before boolean/number classification.
+* **PERFORMANCE**: `ToonReader` now parses combined `field[N]...` array headers directly from existing key/value slices instead of rebuilding synthetic array strings, reducing TOON maps-read overhead for inline and tabular object fields.
 
 #### 4.97.0 - 2026-03-03
 * **PERFORMANCE**: `ToonReader.peekLine()` now avoids materializing a `String` for blank, comment, and indent-only lines, reducing per-line `String` allocations by ~50%.

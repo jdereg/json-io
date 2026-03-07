@@ -49,6 +49,17 @@ import com.cedarsoftware.util.MathUtilities;
  *         limitations under the License.
  */
 public class ToonReader {
+    private static final class ArrayHeader {
+        private final int count;
+        private final char delimiter;
+        private final List<String> columnHeaders;
+
+        private ArrayHeader(int count, char delimiter, List<String> columnHeaders) {
+            this.count = count;
+            this.delimiter = delimiter;
+            this.columnHeaders = columnHeaders;
+        }
+    }
 
     private static final int INDENT_SIZE = 2;  // 2 spaces per indent level (matches ToonWriter)
     private static final char DELIMITER = ','; // Default delimiter (matches ToonWriter)
@@ -335,20 +346,16 @@ public class ToonReader {
             // Also handles folded keys with array: data.items[N]:
             // Per TOON spec, this means 'fieldName' contains an array of N elements
             // Tabular format: fieldName[N]{col1,col2,...}: followed by CSV rows
-            if (key.contains("[")) {
-                int bracketStart = key.indexOf('[');
-                String realKey = key.substring(0, bracketStart);
-                String arraySyntax = key.substring(bracketStart) + ":";
-                if (!isTrimmedEmpty(lineBuf, valueStart, trimEnd)) {
-                    arraySyntax += " " + trimAsciiRangeBuf(valueStart, trimEnd);
-                }
+            int bracketStart = findUnquotedBracketPosition(key);
+            if (bracketStart >= 0) {
+                String realKey = cacheSubstring(key, 0, bracketStart);
                 // Check if key was quoted - quoted keys are NOT expanded
                 boolean wasQuoted = realKey.startsWith("\"");
                 if (wasQuoted) {
                     realKey = unquoteString(realKey);
                 }
                 // parseArrayFromLine handles inline, list-format, and tabular arrays
-                putValue(jsonObj, realKey, parseArrayFromLine(arraySyntax), wasQuoted);
+                putValue(jsonObj, realKey, parseCombinedArrayField(key, bracketStart, lineBuf, valueStart, trimEnd), wasQuoted);
                 continue;
             }
 
@@ -489,6 +496,104 @@ public class ToonReader {
             // List format array: [N]: followed by - elem lines
             return readListArray(count);
         }
+    }
+
+    private List<Object> parseCombinedArrayField(String key, int bracketStart, String valuePart) throws IOException {
+        ArrayHeader header = parseCombinedArrayHeader(key, bracketStart);
+        if (header == null) {
+            return parseArrayFromLine(buildCombinedArraySyntax(key, bracketStart, valuePart));
+        }
+        if (header.count == 0) {
+            return new ArrayList<>();
+        }
+        if (header.columnHeaders != null) {
+            return readTabularArray(header.count, header.columnHeaders, header.delimiter);
+        }
+        if (!valuePart.isEmpty()) {
+            return readInlineArray(valuePart, header.count, header.delimiter);
+        }
+        return readListArray(header.count);
+    }
+
+    private List<Object> parseCombinedArrayField(String key, int bracketStart, char[] valueBuf, int valueStart, int valueEnd)
+            throws IOException {
+        ArrayHeader header = parseCombinedArrayHeader(key, bracketStart);
+        if (header == null) {
+            return parseArrayFromLine(buildCombinedArraySyntax(
+                    key,
+                    bracketStart,
+                    isTrimmedEmpty(valueBuf, valueStart, valueEnd) ? "" : trimAsciiRangeBuf(valueStart, valueEnd)));
+        }
+        if (header.count == 0) {
+            return new ArrayList<>();
+        }
+        if (header.columnHeaders != null) {
+            return readTabularArray(header.count, header.columnHeaders, header.delimiter);
+        }
+        if (!isTrimmedEmpty(valueBuf, valueStart, valueEnd)) {
+            return readInlineArray(valueBuf, valueStart, valueEnd, header.count, header.delimiter);
+        }
+        return readListArray(header.count);
+    }
+
+    private ArrayHeader parseCombinedArrayHeader(String key, int bracketStart) {
+        int keyLen = key.length();
+        int bracketEnd = key.indexOf(']', bracketStart);
+        if (bracketEnd < 0) {
+            throw new JsonIoException("Malformed array syntax at line " + lineNumber + ": " + key.substring(bracketStart));
+        }
+
+        String countStr = key.substring(bracketStart + 1, bracketEnd);
+        char delimiter = DELIMITER;
+        if (!countStr.isEmpty()) {
+            char lastChar = countStr.charAt(countStr.length() - 1);
+            if (lastChar == '\t') {
+                delimiter = '\t';
+                countStr = countStr.substring(0, countStr.length() - 1);
+            } else if (lastChar == '|') {
+                delimiter = '|';
+                countStr = countStr.substring(0, countStr.length() - 1);
+            }
+        }
+
+        int count;
+        try {
+            count = Integer.parseInt(trimAscii(countStr));
+        } catch (NumberFormatException e) {
+            throw new JsonIoException("Invalid array count at line " + lineNumber + ": " + countStr);
+        }
+
+        int afterBracket = bracketEnd + 1;
+        List<String> columnHeaders = null;
+        if (afterBracket < keyLen) {
+            if (key.charAt(afterBracket) != '{') {
+                return null;
+            }
+            int braceEnd = key.indexOf('}', afterBracket);
+            if (braceEnd > afterBracket) {
+                String headerStr = key.substring(afterBracket + 1, braceEnd);
+                validateFieldDelimiterConsistency(headerStr, delimiter);
+                columnHeaders = parseColumnHeaders(headerStr, delimiter);
+                afterBracket = braceEnd + 1;
+            } else if (strictToon) {
+                throw new JsonIoException("Malformed array syntax (missing closing brace) at line " + lineNumber);
+            } else {
+                return null;
+            }
+        }
+        if (afterBracket != keyLen) {
+            return null;
+        }
+        return new ArrayHeader(count, delimiter, columnHeaders);
+    }
+
+    private String buildCombinedArraySyntax(String key, int bracketStart, String valuePart) {
+        StringBuilder sb = new StringBuilder(key.length() - bracketStart + 2 + valuePart.length());
+        sb.append(key, bracketStart, key.length()).append(':');
+        if (!valuePart.isEmpty()) {
+            sb.append(' ').append(valuePart);
+        }
+        return sb.toString();
     }
 
     /**
@@ -770,6 +875,76 @@ public class ToonReader {
         return elements;
     }
 
+    private List<Object> readInlineArray(char[] buf, int start, int end, int count, char delimiter) {
+        List<Object> elements = new ArrayList<>(count);
+        boolean hasQuotesOrEscapes = false;
+        for (int i = start; i < end; i++) {
+            char c = buf[i];
+            if (c == '"' || c == '\\') {
+                hasQuotesOrEscapes = true;
+                break;
+            }
+        }
+
+        if (!hasQuotesOrEscapes) {
+            int tokenStart = start;
+            for (int i = start; i < end; i++) {
+                if (buf[i] == delimiter) {
+                    elements.add(readScalar(buf, tokenStart, i));
+                    tokenStart = i + 1;
+                }
+            }
+            if (tokenStart < end || elements.size() < count) {
+                elements.add(readScalar(buf, tokenStart, end));
+            }
+        } else {
+            inlineBuf.setLength(0);
+            final StringBuilder current = inlineBuf;
+            boolean inQuotes = false;
+            boolean escaped = false;
+
+            for (int i = start; i < end; i++) {
+                char c = buf[i];
+
+                if (escaped) {
+                    current.append(c);
+                    escaped = false;
+                    continue;
+                }
+
+                if (c == '\\') {
+                    escaped = true;
+                    current.append(c);
+                    continue;
+                }
+
+                if (c == '"') {
+                    inQuotes = !inQuotes;
+                    current.append(c);
+                    continue;
+                }
+
+                if (c == delimiter && !inQuotes) {
+                    elements.add(readScalar(trimAscii(current)));
+                    current.setLength(0);
+                } else {
+                    current.append(c);
+                }
+            }
+
+            if (current.length() > 0 || elements.size() < count) {
+                elements.add(readScalar(trimAscii(current)));
+            }
+        }
+
+        if (strictToon && elements.size() != count) {
+            throw new JsonIoException("Inline array count mismatch at line " + lineNumber +
+                    ", expected " + count + " values, got " + elements.size());
+        }
+
+        return elements;
+    }
+
     /**
      * Read a list format array with - element lines.
      * Returns ArrayList instead of Object[] for better Java interoperability.
@@ -894,19 +1069,14 @@ public class ToonReader {
 
             // Check for combined field+array notation: fieldName[N]: or fieldName[N]{cols}:
             // Also handles folded keys: data.items[N]:
-            int bracketStart = key.indexOf('[');
+            int bracketStart = findUnquotedBracketPosition(key);
             if (bracketStart >= 0) {
-                String realKey = key.substring(0, bracketStart);
-                StringBuilder sb = new StringBuilder(key.length() - bracketStart + 2 + valuePart.length());
-                sb.append(key, bracketStart, key.length()).append(':');
-                if (!valuePart.isEmpty()) {
-                    sb.append(' ').append(valuePart);
-                }
+                String realKey = cacheSubstring(key, 0, bracketStart);
                 boolean wasQuoted = !realKey.isEmpty() && realKey.charAt(0) == '"';
                 if (wasQuoted) {
                     realKey = unquoteString(realKey);
                 }
-                putValue(jsonObj, realKey, parseArrayFromLine(sb.toString()), wasQuoted);
+                putValue(jsonObj, realKey, parseCombinedArrayField(key, bracketStart, valuePart), wasQuoted);
             } else {
                 boolean wasQuoted = !key.isEmpty() && key.charAt(0) == '"';
                 key = unquoteString(key);
@@ -967,23 +1137,15 @@ public class ToonReader {
             // Check for combined field+array notation
             // Also handles folded keys: data.items[N]:
             int keyLen = key.length();
-            if (keyLen > 0 && key.charAt(keyLen - 1) == ']') {
-                int bracketStart = key.lastIndexOf('[');
-                if (bracketStart >= 0) {
-                    String realKey = key.substring(0, bracketStart);
-                    String valuePart = trimAsciiRangeBuf(valueStart2, trimEnd);
-                    StringBuilder sb = new StringBuilder(keyLen - bracketStart + 2 + valuePart.length());
-                    sb.append(key, bracketStart, keyLen).append(':');
-                    if (!valuePart.isEmpty()) {
-                        sb.append(' ').append(valuePart);
-                    }
-                    boolean wasQuoted = !realKey.isEmpty() && realKey.charAt(0) == '"';
-                    if (wasQuoted) {
-                        realKey = unquoteString(realKey);
-                    }
-                    putValue(jsonObj, realKey, parseArrayFromLine(sb.toString()), wasQuoted);
-                    continue;
+            int bracketStart = findUnquotedBracketPosition(key);
+            if (bracketStart >= 0) {
+                String realKey = cacheSubstring(key, 0, bracketStart);
+                boolean wasQuoted = !realKey.isEmpty() && realKey.charAt(0) == '"';
+                if (wasQuoted) {
+                    realKey = unquoteString(realKey);
                 }
+                putValue(jsonObj, realKey, parseCombinedArrayField(key, bracketStart, lineBuf, valueStart2, trimEnd), wasQuoted);
+                continue;
             }
 
             boolean wasQuoted = keyLen > 0 && key.charAt(0) == '"';
@@ -1727,6 +1889,46 @@ public class ToonReader {
             }
 
             if (c == ':' && !inQuotes) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private int findUnquotedBracketPosition(String text) {
+        int bracket = text.indexOf('[');
+        if (bracket < 0) {
+            return -1;
+        }
+        int quote = text.indexOf('"');
+        if (quote < 0 || quote > bracket) {
+            return bracket;
+        }
+
+        boolean inQuotes = false;
+        boolean escaped = false;
+        int len = text.length();
+
+        for (int i = 0; i < len; i++) {
+            char c = text.charAt(i);
+
+            if (escaped) {
+                escaped = false;
+                continue;
+            }
+
+            if (c == '\\') {
+                escaped = true;
+                continue;
+            }
+
+            if (c == '"') {
+                inQuotes = !inQuotes;
+                continue;
+            }
+
+            if (c == '[' && !inQuotes) {
                 return i;
             }
         }

@@ -3153,6 +3153,46 @@ class ToonReaderTest {
     }
 
     @Test
+    void testFromToonToMaps_InlineObjectFirstFieldCombinedArray() {
+        String toon = "[1]:\n  - nums[3]: 10,20,30\n    name: demo";
+        Object[] arr = JsonIo.fromToonToMaps(toon, null).asClass(Object[].class);
+        assertEquals(1, arr.length);
+        Map<?, ?> obj = (Map<?, ?>) arr[0];
+        assertEquals("demo", obj.get("name"));
+        List<?> nums = (List<?>) obj.get("nums");
+        assertEquals(3, nums.size());
+        assertEquals(10L, nums.get(0));
+        assertEquals(30L, nums.get(2));
+    }
+
+    @Test
+    void testFromToonToMaps_InlineObjectLaterFieldCombinedTabularArray() {
+        String toon = "[1]:\n  - name: demo\n    data[2]{id,val}:\n      1,alpha\n      2,beta";
+        Object[] arr = JsonIo.fromToonToMaps(toon, null).asClass(Object[].class);
+        assertEquals(1, arr.length);
+        Map<?, ?> obj = (Map<?, ?>) arr[0];
+        assertEquals("demo", obj.get("name"));
+        List<?> data = (List<?>) obj.get("data");
+        assertEquals(2, data.size());
+        Map<?, ?> row1 = (Map<?, ?>) data.get(0);
+        Map<?, ?> row2 = (Map<?, ?>) data.get(1);
+        assertEquals(1L, row1.get("id"));
+        assertEquals("alpha", row1.get("val"));
+        assertEquals(2L, row2.get("id"));
+        assertEquals("beta", row2.get("val"));
+    }
+
+    @Test
+    void testFromToonToMaps_InlineObjectLaterFieldQuotedKeyWithBracket() {
+        String toon = "[1]:\n  - name: demo\n    \"a[0]b\": value";
+        Object[] arr = JsonIo.fromToonToMaps(toon, null).asClass(Object[].class);
+        assertEquals(1, arr.length);
+        Map<?, ?> obj = (Map<?, ?>) arr[0];
+        assertEquals("demo", obj.get("name"));
+        assertEquals("value", obj.get("a[0]b"));
+    }
+
+    @Test
     void testFromToonToMaps_EmptyMap() {
         // Empty map through toMaps path
         String toon = "{}";
