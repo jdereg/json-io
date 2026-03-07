@@ -819,6 +819,13 @@ public class ToonWriter implements Closeable, Flushable {
      * Write an array value (standalone, not as a field value).
      */
     private void writeArray(Object array) throws IOException {
+        // char[] is written as a plain string value, not as an array.
+        // Converter handles String → char[] on read.
+        if (array instanceof char[]) {
+            writeString(new String((char[]) array));
+            return;
+        }
+
         if (cycleSupport) {
             if (writeReferenceIfSeen(array)) {
                 return;
@@ -1736,7 +1743,12 @@ public class ToonWriter implements Closeable, Flushable {
             }
         }
 
-        if (value != null && value.getClass().isArray()) {
+        if (value instanceof char[]) {
+            // char[] is written as a plain string value (Converter handles String → char[] on read)
+            writeKeyString(keyStr);
+            out.write(": ");
+            writeString(new String((char[]) value));
+        } else if (value != null && value.getClass().isArray()) {
             if (shouldWrapArrayOrCollectionValue(value)) {
                 writeKeyString(keyStr);
                 out.write(":");
@@ -1800,7 +1812,11 @@ public class ToonWriter implements Closeable, Flushable {
      * Caller is responsible for indentation and newlines.
      */
     private void writeFieldEntryInline(String keyStr, Object value) throws IOException {
-        if (value != null && value.getClass().isArray()) {
+        if (value instanceof char[]) {
+            writeKeyString(keyStr);
+            out.write(": ");
+            writeString(new String((char[]) value));
+        } else if (value != null && value.getClass().isArray()) {
             if (shouldWrapArrayOrCollectionValue(value)) {
                 writeKeyString(keyStr);
                 out.write(":");
@@ -1857,7 +1873,11 @@ public class ToonWriter implements Closeable, Flushable {
      * Write a folded entry (key path and value).
      */
     private void writeFoldedEntry(String path, Object value) throws IOException {
-        if (value != null && value.getClass().isArray()) {
+        if (value instanceof char[]) {
+            writeString(path);
+            out.write(": ");
+            writeString(new String((char[]) value));
+        } else if (value != null && value.getClass().isArray()) {
             if (shouldWrapArrayOrCollectionValue(value)) {
                 writeString(path);
                 out.write(":");
