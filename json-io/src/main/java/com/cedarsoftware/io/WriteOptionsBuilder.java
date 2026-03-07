@@ -1057,22 +1057,21 @@ public class WriteOptionsBuilder {
     // ========== Cycle Support Options ==========
 
     /**
-     * Enable or disable cycle support. When enabled (default), the writer performs a preliminary
+     * Enable or disable cycle support. When enabled, the writer performs a preliminary
      * pass to trace references and identify objects that appear multiple times in the graph.
      * These objects are assigned @id values, and subsequent references use @ref.
      * <p>
-     * When disabled, the traceReferences pass is skipped for better performance. Cycles are
-     * still detected during writing to prevent infinite loops - duplicate references are
-     * silently skipped (not written to the output). This is useful when:
+     * When disabled (default), the traceReferences pass is skipped for better performance.
+     * Cycles are still detected during writing to prevent infinite loops — if a cycle is
+     * encountered, a {@code JsonIoException} is thrown with a hint to enable
+     * {@code cycleSupport(true)}. This is useful when:
      * <ul>
      *   <li>The object graph is known to be acyclic</li>
      *   <li>Performance is critical and the traceReferences overhead is unacceptable</li>
      *   <li>Cycle information (@id/@ref) is not needed in the output</li>
      * </ul>
-     * <b>Warning:</b> When disabled, if the graph contains cycles, the output will be
-     * incomplete (cyclic references will be omitted).
-     * @param enable true to enable full cycle support with @id/@ref (default),
-     *               false to skip traceReferences and silently skip duplicate references
+     * @param enable true to enable full cycle support with @id/@ref,
+     *               false to skip traceReferences and throw on cycles (default)
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder cycleSupport(boolean enable) {
@@ -1945,9 +1944,10 @@ public class WriteOptionsBuilder {
         // ========== Cycle Support Option Getter ==========
 
         /**
-         * @return boolean true if cycle support is enabled (default). When true, the writer will trace
-         * references before writing. When false, traceReferences is skipped and cycles are detected
-         * during writing - duplicate references are silently skipped.
+         * @return boolean true if cycle support is enabled. When true, the writer will trace
+         * references before writing. When false (default), traceReferences is skipped and cycles
+         * are detected during writing — a {@code JsonIoException} is thrown with a hint to enable
+         * {@code cycleSupport(true)}.
          */
         public boolean isCycleSupport() {
             return cycleSupport;
