@@ -76,7 +76,6 @@ public class ToonWriter implements Closeable, Flushable {
     private static final int INDENT_CACHE_SIZE = 32;
     private static final String[] INDENT_CACHE = buildIndentCache();
     private static final int VISITED = 1;
-    private static final int KEY_QUOTE_CACHE_MAX = 1024;
     private static final int QUOTE_DECISION_CACHE_MAX = 4096;
     private static final int DECIMAL_FORMAT_CACHE_MAX = 4096;
     private static final int SMALL_LONG_CACHE_LOW = -128;
@@ -144,8 +143,6 @@ public class ToonWriter implements Closeable, Flushable {
     private final Map<Object, Boolean> activePath = new IdentityHashMap<>();
     // Cache resolved output type names per class for this write operation.
     private final Map<Class<?>, String> typeNameCache = new IdentityHashMap<>(32);
-    // Cache key quote decisions for this write operation.
-    private final Map<String, Boolean> keyQuoteDecisionCache = new LinkedHashMap<>(64);
 
     private static String[] buildIndentCache() {
         String[] cache = new String[INDENT_CACHE_SIZE];
@@ -259,7 +256,6 @@ public class ToonWriter implements Closeable, Flushable {
             objVisited.clear();
             objsReferenced.clear();
             activePath.clear();
-            keyQuoteDecisionCache.clear();
             nextIdentity = 1;
             if (cycleSupport) {
                 traceReferences(obj);
@@ -273,7 +269,6 @@ public class ToonWriter implements Closeable, Flushable {
             objVisited.clear();
             objsReferenced.clear();
             activePath.clear();
-            keyQuoteDecisionCache.clear();
             nextIdentity = 1;
         }
     }
@@ -456,32 +451,13 @@ public class ToonWriter implements Closeable, Flushable {
             return;
         }
 
-        Boolean quote = keyQuoteDecisionCache.get(key);
-        if (quote != null) {
-            if (quote) {
-                writeQuotedString(key);
-            } else {
-                out.write(key);
-            }
+        // When key folding is OFF, dots in keys must be quoted to prevent expansion on read
+        if (!toonKeyFolding && key.indexOf('.') >= 0) {
+            writeQuotedString(key);
             return;
         }
 
-        if ((toonKeyFolding || key.indexOf('.') < 0)
-                && !isReservedScalarLiteral(key)
-                && isSimpleUnquotedAsciiToken(key)) {
-            if (keyQuoteDecisionCache.size() < KEY_QUOTE_CACHE_MAX) {
-                keyQuoteDecisionCache.put(key, Boolean.FALSE);
-            }
-            out.write(key);
-            return;
-        }
-
-        quote = (!toonKeyFolding && key.indexOf('.') >= 0) || needsQuoting(key);
-        if (keyQuoteDecisionCache.size() < KEY_QUOTE_CACHE_MAX) {
-            keyQuoteDecisionCache.put(key, quote);
-        }
-
-        if (quote) {
+        if (needsQuoting(key)) {
             writeQuotedString(key);
         } else {
             out.write(key);
