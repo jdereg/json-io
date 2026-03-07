@@ -2263,6 +2263,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             writePrimitive(o, writeLongsAsStrings);
         } else if (o instanceof String) {   // Never do an @ref to a String (they are treated as logical primitives and intern'ed on read)
             writeStringValue((String) o);
+        } else if (o instanceof Integer || o instanceof Float || o instanceof Short || o instanceof Byte) {
+            // Fast path for remaining numeric wrappers when @type is not needed.
+            // These bypass the writeImpl() → writeCustom() dispatch chain.
+            if (!shouldShowTypeForElement(o.getClass())) {
+                writePrimitive(o, false);
+            } else {
+                writeImpl(o, true);
+            }
         } else if (neverShowingType && ClassUtilities.isPrimitive(o.getClass())) {   // If neverShowType, then force primitives (and primitive wrappers)
             // to be output with toString() - prevents {"value":6} for example
             writePrimitive(o, false);
