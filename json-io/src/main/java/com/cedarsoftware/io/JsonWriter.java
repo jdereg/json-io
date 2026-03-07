@@ -55,6 +55,7 @@ import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Queue;
+import java.util.RandomAccess;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
@@ -1595,9 +1596,21 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         beginCollection(showType, referenced);
-        Iterator<?> i = col.iterator();
 
-        writeElements(output, i);
+        if (col instanceof List && col instanceof RandomAccess) {
+            // Indexed loop avoids Iterator allocation for ArrayList and similar
+            List<?> list = (List<?>) col;
+            int size = list.size();
+            for (int idx = 0; idx < size; idx++) {
+                if (idx > 0) {
+                    output.write(',');
+                    newLine();
+                }
+                writeCollectionElement(list.get(idx));
+            }
+        } else {
+            writeElements(output, col.iterator());
+        }
 
         tabOut();
         output.write(']');
@@ -2414,8 +2427,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                     // Write the enum as a JSON object with its fields
                     out.write('{');
                     boolean firstInEntry = true;
-                    for (WriteFieldPlan plan : mapOfFields) {
-                        firstInEntry = writeField(e, firstInEntry, plan);
+                    for (int p = 0, pLen = mapOfFields.size(); p < pLen; p++) {
+                        firstInEntry = writeField(e, firstInEntry, mapOfFields.get(p));
                     }
                     out.write('}');
                 }
@@ -2468,8 +2481,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         List<WriteFieldPlan> accessors = WriteOptionsBuilder.getWriteFieldPlans(writeOptions, obj.getClass());
-        for (WriteFieldPlan plan : accessors) {
-            first = writeField(obj, first, plan);
+        for (int i = 0, len = accessors.size(); i < len; i++) {
+            first = writeField(obj, first, accessors.get(i));
         }
 
         // @IoAnyGetter — write extra fields from annotated method
