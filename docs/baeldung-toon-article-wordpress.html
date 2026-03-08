@@ -1,0 +1,300 @@
+<h2>1. Overview</h2>
+
+<a href="https://www.baeldung.com/java-json">JSON</a> is the standard format for exchanging structured data between systems. But when we send JSON to <a href="https://www.baeldung.com/cs/llm-cost">large language models (LLMs)</a>, a surprising amount of the token budget goes toward syntax, including braces, brackets, quotes, and repeated key names rather than actual data.
+
+TOON (Token-Optimized Object Notation) is a compact, human-readable format that encodes the same data model as JSON while using significantly fewer tokens. It replaces JSON's punctuation-heavy syntax with indentation and, for uniform collections, a tabular layout that states field names once and streams values row by row.
+
+In this tutorial, we'll survey the available Java TOON libraries, use <em>json-io</em> for working examples of serializing and deserializing TOON, compare token counts between the formats, and discuss where TOON delivers the most value.
+
+<h2>2. What Is TOON?</h2>
+
+TOON encodes the same primitives, objects, and arrays as JSON. The differences are syntactic:
+
+<ul>
+<li><strong>Objects</strong> use <code>key: value</code> pairs separated by newlines and indentation, not braces</li>
+<li><strong>Arrays</strong> use <code>[N]:</code> length-prefixed lists instead of brackets</li>
+<li><strong>Tabular arrays</strong> declare field names once in a header row, then list values in CSV-like rows</li>
+<li><strong>Quoting</strong> is minimal — strings only need quotes when they contain structural characters</li>
+</ul>
+
+Here is the same data in JSON and TOON:
+
+<strong>JSON:</strong>
+<pre><code class="language-json">[
+  {"name": "Alice", "age": 28, "department": "Engineering"},
+  {"name": "Bob", "age": 34, "department": "Marketing"},
+  {"name": "Charlie", "age": 22, "department": "Sales"}
+]</code></pre>
+
+<strong>TOON (tabular):</strong>
+<pre><code>[3]{name,age,department}:
+  Alice,28,Engineering
+  Bob,34,Marketing
+  Charlie,22,Sales</code></pre>
+
+The tabular format states <code>name</code>, <code>age</code>, and <code>department</code> once in the header. Each subsequent row contains only the values. As the number of rows grows, the savings accumulate because JSON repeats every key name on every object.
+
+For a single object, TOON uses a <a href="https://www.baeldung.com/java-snake-yaml">YAML-like</a> key-value layout:
+
+<pre><code>name: Alice
+age: 28
+department: Engineering</code></pre>
+
+The full specification lives at <a href="https://toonformat.dev">toonformat.dev</a>.
+
+<h2>3. Java Libraries for TOON</h2>
+
+The <a href="https://toonformat.dev/ecosystem/implementations">TOON ecosystem</a> includes implementations in over 25 languages. For Java, there are two libraries available today:
+
+<table>
+<thead>
+<tr><th>Library</th><th>Maven Coordinates</th><th>Java Version</th><th>Status</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><a href="https://github.com/toon-format/toon-java">JToon</a></td><td><code>dev.toonformat:jtoon:1.0.8</code></td><td>Java 17+</td><td>Beta</td><td>Official community implementation. <a href="https://www.baeldung.com/jackson">Jackson</a> annotation support. Focused on spec compliance.</td></tr>
+<tr><td><a href="https://github.com/jdereg/json-io">json-io</a></td><td><code>com.cedarsoftware:json-io:4.97.0</code></td><td>Java 8+</td><td>Stable</td><td>Mature JSON library with TOON read/write. Jackson annotation support. Single runtime dependency (<em>java-util</em>).</td></tr>
+</tbody>
+</table>
+
+Both libraries support TOON encoding and decoding with tabular arrays. JToon is the official community Java implementation, built specifically for TOON with Jackson integration. <em>json-io</em> is a mature JSON serialization library that added TOON as an additional output format alongside JSON.
+
+We can find the latest version of <a href="https://mvnrepository.com/artifact/com.cedarsoftware/json-io"><em>json-io</em> on Maven Central</a>. For the examples in this tutorial, we'll use <em>json-io</em> because it supports Java 8 through 24, allowing the widest range of projects to follow along:
+
+<pre><code class="language-xml">&lt;dependency&gt;
+    &lt;groupId&gt;com.cedarsoftware&lt;/groupId&gt;
+    &lt;artifactId&gt;json-io&lt;/artifactId&gt;
+    &lt;version&gt;4.97.0&lt;/version&gt;
+&lt;/dependency&gt;</code></pre>
+
+<h2>4. Writing Java Objects to TOON</h2>
+
+<h3>4.1. Single Objects</h3>
+
+We can convert any Java object to TOON with <em>JsonIo.toToon()</em>:
+
+<pre><code class="language-java">Person person = new Person("Alice", 28, "Engineering");
+
+String toon = JsonIo.toToon(person, null);</code></pre>
+
+This produces:
+
+<pre><code>name: Alice
+age: 28
+department: Engineering</code></pre>
+
+The second parameter accepts a <em>WriteOptions</em> instance for controlling output. Passing <code>null</code> uses defaults.
+
+<h3>4.2. Collections: The Tabular Format</h3>
+
+The tabular format is where TOON delivers its biggest advantage. When we serialize a <a href="https://www.baeldung.com/java-arrays-aslist-vs-list-of">list</a> of objects that share the same fields, <em>json-io</em> automatically uses the compact row-per-object layout:
+
+<pre><code class="language-java">List&lt;Employee&gt; employees = Arrays.asList(
+    new Employee("Alice Johnson", 28, "Engineering", 95000),
+    new Employee("Bob Smith", 34, "Marketing", 78000),
+    new Employee("Charlie Brown", 22, "Engineering", 72000)
+);
+
+String toon = JsonIo.toToon(employees, null);</code></pre>
+
+Output:
+
+<pre><code>[3]{name,age,department,salary}:
+  Alice Johnson,28,Engineering,95000
+  Bob Smith,34,Marketing,78000
+  Charlie Brown,22,Engineering,72000</code></pre>
+
+The <code>[3]</code> declares the array length. The <code>{name,age,department,salary}</code> header names the columns. Each row contains only comma-separated values. The key names <code>name</code>, <code>age</code>, <code>department</code>, and <code>salary</code> appear once rather than three times.
+
+If we prefer the expanded list format, one key-value pair per line, we can enable <em>prettyPrint</em> using the <a href="https://www.baeldung.com/java-builder-pattern">builder pattern</a>:
+
+<pre><code class="language-java">WriteOptions options = new WriteOptionsBuilder().prettyPrint(true).build();
+String toon = JsonIo.toToon(employees, options);</code></pre>
+
+This produces the verbose form:
+
+<pre><code>[3]:
+  - name: Alice Johnson
+    age: 28
+    department: Engineering
+    salary: 95000
+  - name: Bob Smith
+    age: 34
+    department: Marketing
+    salary: 78000
+  - name: Charlie Brown
+    age: 22
+    department: Engineering
+    salary: 72000</code></pre>
+
+The default tabular layout is preferred for LLM interactions because it minimizes tokens. The expanded <em>prettyPrint</em> form repeats every key name on every object, so <strong>it uses roughly the same number of tokens as JSON</strong> and the savings disappear.
+
+<h3>4.3. Nested Structures</h3>
+
+TOON handles nesting naturally through indentation. Here, a company contains departments stored in a <a href="https://www.baeldung.com/java-linked-hashmap"><em>LinkedHashMap</em></a>, each with a list of members:
+
+<pre><code class="language-java">Map&lt;String, Object&gt; eng = new LinkedHashMap&lt;&gt;();
+eng.put("name", "Engineering");
+eng.put("members", Arrays.asList(
+    new Person("Alice", 28, "Engineering"),
+    new Person("Bob", 34, "Engineering"),
+    new Person("Charlie", 22, "Engineering")));
+
+Map&lt;String, Object&gt; company = new LinkedHashMap&lt;&gt;();
+company.put("name", "Acme Corp");
+company.put("founded", 2010);
+company.put("departments", Arrays.asList(eng, marketing, sales));  // marketing and sales built similarly
+
+String toon = JsonIo.toToon(company, null);</code></pre>
+
+Output:
+
+<pre><code>name: Acme Corp
+founded: 2010
+departments[3]:
+  - name: Engineering
+    members[3]{name,age,department}:
+      Alice,28,Engineering
+      Bob,34,Engineering
+      Charlie,22,Engineering
+  - name: Marketing
+    members[3]{name,age,department}:
+      Eve,29,Marketing
+      Frank,45,Marketing
+      Grace,27,Marketing
+  - name: Sales
+    members[3]{name,age,department}:
+      Hank,38,Sales
+      Iris,33,Sales
+      Jack,41,Sales</code></pre>
+
+Notice that the inner <code>members</code> arrays use tabular format automatically. The outer <code>departments</code> array uses the expanded format because each department contains nested structured data, while the inner <code>members</code> arrays qualify for tabular format since their fields are all scalar values.
+
+<em>json-io</em> applies this optimization at every level of the document: any array whose elements contain only scalar fields is automatically rendered in tabular format, regardless of nesting depth. In this example, each of the three <code>members</code> arrays gets its own column header and compact rows. This mix of key-value pairs and tabular rows within a single document is something CSV cannot express.
+
+<h2>5. Reading TOON Back to Java</h2>
+
+Parsing TOON is the mirror of writing it. We can deserialize to typed Java objects:
+
+<pre><code class="language-java">String toon = "name: Alice\nage: 28\ndepartment: Engineering";
+
+Person person = JsonIo.fromToon(toon, null).asClass(Person.class);
+
+assertEquals("Alice", person.getName());
+assertEquals(28, person.getAge());
+assertEquals("Engineering", person.getDepartment());</code></pre>
+
+For generic collection types, we use <em>TypeHolder</em> to work around <a href="https://www.baeldung.com/java-super-type-tokens">type erasure</a>:
+
+<pre><code class="language-java">String toon = "[2]{name,age,department}:\n  Alice,28,Engineering\n  Bob,34,Marketing";
+
+List&lt;Person&gt; people = JsonIo.fromToon(toon, null)
+    .asType(new TypeHolder&lt;List&lt;Person&gt;&gt;(){});
+
+assertEquals(2, people.size());
+assertEquals("Alice", people.get(0).getName());
+assertEquals("Engineering", people.get(0).getDepartment());</code></pre>
+
+When we don't have Java classes available, for example in middleware or log processing, we can parse to <a href="https://www.baeldung.com/java-hashmap">Maps</a>:
+
+<pre><code class="language-java">Map&lt;String, Object&gt; map = JsonIo.fromToonToMaps(toon).asClass(Map.class);</code></pre>
+
+<h2>6. Token Efficiency: Measuring the Difference</h2>
+
+The motivation behind TOON is reducing token consumption when structured data is sent to LLMs. Rather than comparing character counts, which would be misleading since the formats have fundamentally different syntax density, we measure actual <a href="https://www.baeldung.com/cs/gpt-tokenization">BPE (Byte Pair Encoding)</a> tokens using the same tokenizer that GPT-4 uses.
+
+We use <em>jtokkit</em>, a Java implementation of OpenAI's tokenizer, with the <code>cl100k_base</code> encoding:
+
+<pre><code class="language-java">EncodingRegistry registry = Encodings.newDefaultEncodingRegistry();
+Encoding encoding = registry.getEncoding(EncodingType.CL100K_BASE);
+
+int jsonTokens = encoding.countTokens(jsonString);
+int toonTokens = encoding.countTokens(toonString);</code></pre>
+
+Here are the results across several dataset sizes, serializing uniform lists of <em>Employee</em> objects (name, age, department, salary):
+
+<table>
+<thead>
+<tr><th>Dataset</th><th>JSON Tokens</th><th>TOON Tokens</th><th>Savings</th></tr>
+</thead>
+<tbody>
+<tr><td>3 items</td><td>46</td><td>35</td><td>24%</td></tr>
+<tr><td>10 items</td><td>206</td><td>121</td><td>41%</td></tr>
+<tr><td>20 items</td><td>413</td><td>231</td><td>44%</td></tr>
+<tr><td>25 items (products, 5 fields)</td><td>680</td><td>459</td><td>33%</td></tr>
+</tbody>
+</table>
+
+The savings grow with collection size because JSON repeats every key name on every object, while TOON states them once. At 20 items with 4 fields, we save 44% of the tokens.
+
+For a single object, the savings are modest (about 5%) since there is no key repetition to eliminate. For nested structures with small embedded arrays, the savings are also modest (about 3-5%) but the inner arrays still benefit from tabular format.
+
+<h3>6.1. How Does TOON Compare to CSV?</h3>
+
+A fair question: if we're sending flat tabular data, why not just use <a href="https://www.baeldung.com/java-csv">CSV</a>?
+
+For purely flat data, CSV uses slightly fewer tokens than TOON: about 6% fewer in our benchmarks. The overhead comes from TOON's <code>[N]{fields}:</code> header and two-space indentation on each row.
+
+But CSV cannot represent nested data. When we tried encoding the company-with-departments structure as CSV, we had to denormalize, repeating "Acme Corp" and "2010" on every row, which used <em>more</em> tokens than both TOON and JSON.
+
+<table>
+<thead>
+<tr><th>Format</th><th>Flat Data (20 rows)</th><th>Nested Data</th></tr>
+</thead>
+<tbody>
+<tr><td>JSON</td><td>413 tokens</td><td>148 tokens</td></tr>
+<tr><td>TOON</td><td>231 tokens</td><td>140 tokens</td></tr>
+<tr><td>CSV</td><td>218 tokens</td><td>167 tokens (denormalized)</td></tr>
+</tbody>
+</table>
+
+TOON occupies a practical middle ground: within 6% of CSV's token efficiency for flat data, but it also handles the nesting and mixed structures that real-world APIs produce.
+
+In agentic and tool-calling workflows, structured data often accounts for the majority of input tokens. A 30-40% reduction on that portion means <strong>lower API costs</strong> (providers charge per token) and a <strong>more effective context window</strong>, fitting more data into the same 128K or 200K window without truncation. A Java application using <em>json-io</em> can switch from <em>JsonIo.toJson()</em> to <em>JsonIo.toToon()</em> without any infrastructure changes.
+
+<h2>7. Spring AI Integration</h2>
+
+For projects using Spring AI, <em>json-io</em> provides a separate starter that automatically converts tool call results to TOON before they reach the LLM. We add one dependency:
+
+<pre><code class="language-xml">&lt;dependency&gt;
+    &lt;groupId&gt;com.cedarsoftware&lt;/groupId&gt;
+    &lt;artifactId&gt;json-io-spring-ai-toon&lt;/artifactId&gt;
+    &lt;version&gt;4.97.0&lt;/version&gt;
+&lt;/dependency&gt;</code></pre>
+
+Then we annotate any tool method with the <em>ToonToolCallResultConverter</em>:
+
+<pre><code class="language-java">@Tool(description = "Look up employees by department",
+      resultConverter = ToonToolCallResultConverter.class)
+List&lt;Employee&gt; findByDepartment(String department) {
+    return employeeRepository.findByDepartment(department);
+}</code></pre>
+
+When Spring AI calls this tool and passes the result back to the LLM, the converter serializes the employee list to TOON's tabular format, the same compact layout we saw in Section 4.2. The LLM receives fewer tokens without any changes to the tool's business logic.
+
+<h2>8. When to Use TOON</h2>
+
+TOON isn't a universal replacement for JSON. Here's where it fits:
+
+<strong>Use TOON when:</strong>
+<ul>
+<li>Sending structured data to LLMs (tool results, RAG payloads, data analysis contexts)</li>
+<li>Working with collections of uniform objects (the tabular format's sweet spot)</li>
+<li>Token cost or context window pressure is a concern</li>
+<li>Data has a mix of flat and nested structure</li>
+</ul>
+
+<strong>Stick with JSON when:</strong>
+<ul>
+<li>Communicating between services (REST APIs, message queues) where every consumer expects JSON</li>
+<li>The data consumer is not an LLM</li>
+<li>Schema validation or JSON Schema tooling is required</li>
+<li>The data is purely flat with no nesting. CSV may be even more efficient.</li>
+</ul>
+
+TOON encodes the same data model as JSON, and <em>json-io</em> can write any object graph to either format. JSON's advantage is its ecosystem: virtually every language, framework, and tool speaks JSON natively, and standards like JSON Schema provide validation infrastructure that TOON does not yet have. Where that ecosystem matters, REST APIs, message queues, configuration files, JSON is the natural choice. Where token efficiency matters: LLM tool results, RAG payloads, agentic workflows, TOON delivers measurable savings with no loss of expressiveness.
+
+<h2>9. Conclusion</h2>
+
+In this article, we surveyed the Java TOON libraries available today: JToon and <em>json-io</em>, and used <em>json-io</em> to serialize Java objects to TOON, measure the token savings against JSON using OpenAI's BPE tokenizer, and integrate TOON into Spring AI tool calls. For collections of uniform objects, TOON's tabular format delivers 30-44% fewer tokens compared to clean JSON. It achieves near-CSV efficiency for flat data while also handling the nested structures that CSV cannot represent.
+
+The complete code examples from this article are available <a href="https://github.com/eugenp/tutorials">over on GitHub</a>.

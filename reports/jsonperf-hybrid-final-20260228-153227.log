@@ -1,0 +1,81 @@
+[0.153s][info][jfr,startup] Started recording 1. No limit specified, using maxsize=250MB as default.
+[0.153s][info][jfr,startup] 
+[0.153s][info][jfr,startup] Use jcmd 82744 JFR.dump name=1 to copy recording data to file.
+Feb 28, 2026 3:32:28 PM com.cedarsoftware.io.JsonPerformanceTest testFullJavaResolution
+INFO: === TEST: Full Java Resolution (toJava) ===
+[INFO] Starting warmup with 10000 iterations...
+[INFO] Warmup complete.
+[INFO] Testing JsonIo Write (cycleSupport=true) with 100000 iterations...
+[INFO] JsonIo Write (cycleSupport=true) complete.
+[INFO] Testing Toon Write (cycleSupport=true) with 100000 iterations...
+[INFO] Toon Write (cycleSupport=true) complete.
+[INFO] Testing JsonIo Write (cycleSupport=false) with 100000 iterations...
+[INFO] JsonIo Write (cycleSupport=false) complete.
+[INFO] Testing Toon Write (cycleSupport=false) with 100000 iterations...
+[INFO] Toon Write (cycleSupport=false) complete.
+[INFO] Testing Jackson Write with 100000 iterations...
+[INFO] Jackson Write complete.
+[INFO] Testing JsonIo Read (toJava) with 100000 iterations...
+[INFO] JsonIo Read complete.
+[INFO] Testing Toon Read (fromToon) with 100000 iterations...
+[INFO] Toon Read complete.
+[INFO] Testing Jackson Read with 100000 iterations...
+[INFO] Jackson Read complete.
+[INFO] --- Full Java Resolution Results ---
+[INFO] Iterations: 100000
+[INFO] JsonIo Write Time (cycleSupport=true):  3048.750875 ms
+[INFO] Toon Write Time (cycleSupport=true):    3072.828833 ms
+[INFO] JsonIo Write Time (cycleSupport=false): 2325.119417 ms
+[INFO] Toon Write Time (cycleSupport=false):   3485.936 ms
+[INFO] Jackson Write Time: 916.888125 ms
+[INFO] Write Speedup (cycleSupport=false vs true): 1.31x
+[INFO] TOON Write Speedup (cycleSupport=false vs true): 0.88x
+[INFO] Write Ratio (JsonIo cycleSupport=true / Jackson): 3.33x
+[INFO] Write Ratio (JsonIo cycleSupport=false / Jackson): 2.54x
+[INFO] Write Ratio (Toon cycleSupport=true / Jackson): 3.35x
+[INFO] Write Ratio (Toon cycleSupport=false / Jackson): 3.80x
+[INFO] JsonIo Read Time: 5287.494125 ms
+[INFO] Toon Read Time: 6981.832167 ms
+[INFO] Jackson Read Time: 1904.464917 ms
+[INFO] Read Ratio (JsonIo/Jackson): 2.78x
+[INFO] Read Ratio (Toon/Jackson): 3.67x
+[INFO] 
+[INFO] ========================================
+[INFO] 
+[INFO] === TEST: Maps Only (toMaps) ===
+[INFO] Starting warmup with 10000 iterations...
+[INFO] Warmup complete.
+[INFO] Testing JsonIo Write (cycleSupport=true) with 100000 iterations...
+[INFO] JsonIo Write (cycleSupport=true) complete.
+[INFO] Testing Toon Write (cycleSupport=true) with 100000 iterations...
+[INFO] Toon Write (cycleSupport=true) complete.
+[INFO] Testing JsonIo Write (cycleSupport=false) with 100000 iterations...
+[INFO] JsonIo Write (cycleSupport=false) complete.
+[INFO] Testing Toon Write (cycleSupport=false) with 100000 iterations...
+[INFO] Toon Write (cycleSupport=false) complete.
+[INFO] Testing Jackson Write with 100000 iterations...
+[INFO] Jackson Write complete.
+[INFO] Testing JsonIo Read (toMaps) with 100000 iterations...
+[INFO] JsonIo Read complete.
+[INFO] Testing Toon Read (fromToonToMaps) with 100000 iterations...
+[INFO] Toon Read complete.
+[INFO] Testing Jackson Read (to Map) with 100000 iterations...
+[INFO] Jackson Read complete.
+[INFO] --- Maps Only Results ---
+[INFO] Iterations: 100000
+[INFO] JsonIo Write Time (cycleSupport=true):  3073.107583 ms
+[INFO] Toon Write Time (cycleSupport=true):    3116.939875 ms
+[INFO] JsonIo Write Time (cycleSupport=false): 2208.729833 ms
+[INFO] Toon Write Time (cycleSupport=false):   2642.816583 ms
+[INFO] Jackson Write Time: 920.925833 ms
+[INFO] Write Speedup (cycleSupport=false vs true): 1.39x
+[INFO] TOON Write Speedup (cycleSupport=false vs true): 1.18x
+[INFO] Write Ratio (JsonIo cycleSupport=true / Jackson): 3.34x
+[INFO] Write Ratio (JsonIo cycleSupport=false / Jackson): 2.40x
+[INFO] Write Ratio (Toon cycleSupport=true / Jackson): 3.38x
+[INFO] Write Ratio (Toon cycleSupport=false / Jackson): 2.87x
+[INFO] JsonIo Read Time: 3428.658791 ms
+[INFO] Toon Read Time: 5335.389042 ms
+[INFO] Jackson Read Time: 2079.914041 ms
+[INFO] Read Ratio (JsonIo/Jackson): 1.65x
+[INFO] Read Ratio (Toon/Jackson): 2.57x
