@@ -1396,7 +1396,10 @@ public class ToonWriter implements Closeable, Flushable {
             }
         } else if (element instanceof Collection) {
             // Nested collection
-            if (shouldWrapArrayOrCollectionValue(element)) {
+            if (shouldWrapArrayOrCollectionValue(element)
+                    || shouldWriteTypeMetadata(element.getClass())) {
+                // When type metadata is present, wrapping ensures $type and $items
+                // are properly indented relative to the parent hyphen.
                 out.write(NEW_LINE);
                 depth++;
                 writeIndent();
@@ -1408,7 +1411,8 @@ public class ToonWriter implements Closeable, Flushable {
             }
         } else if (element.getClass().isArray()) {
             // Nested array
-            if (shouldWrapArrayOrCollectionValue(element)) {
+            if (shouldWrapArrayOrCollectionValue(element)
+                    || shouldWriteTypeMetadata(element.getClass())) {
                 out.write(NEW_LINE);
                 depth++;
                 writeIndent();
@@ -1765,7 +1769,9 @@ public class ToonWriter implements Closeable, Flushable {
                 writeArrayElements(value, length);
             }
         } else if (value instanceof Collection) {
-            if (shouldWrapArrayOrCollectionValue(value)) {
+            if (shouldWrapArrayOrCollectionValue(value)
+                    || shouldWriteTypeMetadata(value.getClass())) {
+                // When type metadata is needed, use writeCollection (which emits $type/$items).
                 writeKeyString(keyStr);
                 out.write(":");
                 out.write(NEW_LINE);
@@ -1780,6 +1786,16 @@ public class ToonWriter implements Closeable, Flushable {
                 out.write(countMarker(coll.size()));
                 writeCollectionElementsWithHeader(coll);
             }
+        } else if (value != null && value.getClass().isArray()
+                && shouldWriteTypeMetadata(value.getClass())) {
+            // Array with type metadata — use writeArray (which emits $type/$items).
+            writeKeyString(keyStr);
+            out.write(":");
+            out.write(NEW_LINE);
+            depth++;
+            writeIndent();
+            writeArray(value);
+            depth--;
         } else {
             writeKeyString(keyStr);
             out.write(":");
@@ -1832,7 +1848,8 @@ public class ToonWriter implements Closeable, Flushable {
                 writeArrayElements(value, length);
             }
         } else if (value instanceof Collection) {
-            if (shouldWrapArrayOrCollectionValue(value)) {
+            if (shouldWrapArrayOrCollectionValue(value)
+                    || shouldWriteTypeMetadata(value.getClass())) {
                 writeKeyString(keyStr);
                 out.write(":");
                 out.write(NEW_LINE);
@@ -1848,6 +1865,15 @@ public class ToonWriter implements Closeable, Flushable {
                 writeCollectionElementsWithHeader(coll);
                 depth--;
             }
+        } else if (value != null && value.getClass().isArray()
+                && shouldWriteTypeMetadata(value.getClass())) {
+            writeKeyString(keyStr);
+            out.write(":");
+            out.write(NEW_LINE);
+            depth += 2;
+            writeIndent();
+            writeArray(value);
+            depth -= 2;
         } else {
             writeKeyString(keyStr);
             out.write(":");
@@ -1893,7 +1919,8 @@ public class ToonWriter implements Closeable, Flushable {
                 writeArrayElements(value, length);
             }
         } else if (value instanceof Collection) {
-            if (shouldWrapArrayOrCollectionValue(value)) {
+            if (shouldWrapArrayOrCollectionValue(value)
+                    || shouldWriteTypeMetadata(value.getClass())) {
                 writeString(path);
                 out.write(":");
                 out.write(NEW_LINE);
@@ -1941,6 +1968,7 @@ public class ToonWriter implements Closeable, Flushable {
      */
     private void writeMapWithComplexKeys(Map<?, ?> map) throws IOException {
         // Write as array of entries
+        writeIndent();
         out.write(countMarker(map.size()) + ":");
 
         for (Map.Entry<?, ?> entry : map.entrySet()) {

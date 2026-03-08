@@ -148,8 +148,9 @@ public class TestUtil {
             totalToonWrite += toonTestInfo.nanos;
         }
 
-        // Store TOON output for read-side testing
+        // Store TOON output and corresponding JSON for read-side testing
         lastToon = toonTestInfo.json;
+        lastToonSourceJson = jsonIoTestInfo.json;
 
         if (jsonIoTestInfo.t != null) {
             try {
@@ -280,10 +281,12 @@ public class TestUtil {
             TestInfo gsonTestInfo = readGson(json);
             TestInfo jacksonTestInfo = readJackson(json);
 
-            // TOON round-trip: read back the TOON produced by toJson()
+            // TOON round-trip: read back the TOON produced by the paired toJson() call
             String toon = lastToon;
+            String toonSource = lastToonSourceJson;
             lastToon = null;
-            if (toon != null) {
+            lastToonSourceJson = null;
+            if (toon != null && json == toonSource) {
                 TestInfo toonTestInfo = readToon(toon, readOptions, root);
                 if (toonTestInfo.t != null) {
                     toonReadFails++;
@@ -331,10 +334,12 @@ public class TestUtil {
             TestInfo gsonTestInfo = readGson(json);
             TestInfo jacksonTestInfo = readJackson(json);
 
-            // TOON round-trip: read back the TOON produced by toJson()
+            // TOON round-trip: read back the TOON produced by the paired toJson() call
             String toon = lastToon;
+            String toonSource = lastToonSourceJson;
             lastToon = null;
-            if (toon != null) {
+            lastToonSourceJson = null;
+            if (toon != null && json == toonSource) {
                 TestInfo toonTestInfo = readToonAsType(toon, readOptions, typeHolder);
                 if (toonTestInfo.t != null) {
                     toonReadFails++;
@@ -455,6 +460,7 @@ public class TestUtil {
     private static long totalReads;
     private static long totalWrites;
     private static String lastToon;
+    private static String lastToonSourceJson;
     private static final boolean debug = false;
 
 }

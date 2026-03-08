@@ -103,6 +103,9 @@ class EnumSetContainerTest {
 
     @Test
     void testEnumSet_asClassFieldEmptyLegacyWritten() {
+        // Legacy format: RegularEnumSet with no @items.
+        // When the field's generic type provides the enum class (EnumSet<TestEnum>),
+        // the factory can now create an empty EnumSet instead of returning null.
         String json = "{" +
                 "  \"@type\" : \"com.cedarsoftware.io.EnumSetContainerTest$EnumSetContainer\"," +
                 "  \"set1\" : {" +
@@ -118,9 +121,9 @@ class EnumSetContainerTest {
 
         EnumSetContainer target = TestUtil.toJava(json, null).asClass(null);
 
-        assertThat(target.set1).isNull();
-        assertThat(target.set2).isNull();
-        assertThat(target.nullSet).isNull();
+        assertThat(target.set1).isEmpty();
+        assertThat(target.set2).isEmpty();
+        assertThat(target.nullSet).isEmpty();
     }
 
     @Test

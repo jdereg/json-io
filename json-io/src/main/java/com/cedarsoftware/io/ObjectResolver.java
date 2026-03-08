@@ -198,7 +198,10 @@ public class ObjectResolver extends Resolver
         // Preserve explicit type metadata when present and resolved.
         // Priority: @type in JSON > @IoDeserialize > @IoTypeInfo > declared field type
         Type explicitType = jsRhs.getType();
-        if (explicitType == null || TypeUtilities.hasUnresolvedType(explicitType)) {
+        // Also check @IoTypeInfo when the type was inferred from the field declaration
+        // (typeString == null means no @type in JSON), not from explicit @type metadata
+        if (explicitType == null || TypeUtilities.hasUnresolvedType(explicitType)
+                || jsRhs.getTypeString() == null) {
             AnnotationResolver.ClassAnnotationMetadata parentMeta = AnnotationResolver.getMetadata(target.getClass());
             Class<?> deserializeAs = parentMeta.getFieldDeserializeOverride(injector.getName());
             if (deserializeAs != null) {

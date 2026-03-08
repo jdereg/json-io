@@ -32,6 +32,14 @@ public class EnumSetFactory implements ClassFactory {
         Class<?> enumClass = ClassUtilities.getClassIfEnum(jObj.getRawType());
         Object[] items = jObj.getItems();
 
+        // Try the element type from the field's generic declaration (e.g., EnumSet<Color> → Color)
+        if (enumClass == null) {
+            java.lang.reflect.Type elementType = jObj.getItemElementType();
+            if (elementType instanceof Class) {
+                enumClass = ClassUtilities.getClassIfEnum((Class<?>) elementType);
+            }
+        }
+
         // If enumClass is null or not an enum, try to get it from the first item in @items
         if (enumClass == null) {
             if (items == null) {

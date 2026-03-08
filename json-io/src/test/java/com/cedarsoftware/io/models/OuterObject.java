@@ -1,5 +1,7 @@
 package com.cedarsoftware.io.models;
 
+import com.cedarsoftware.io.annotation.IoTypeInfo;
+
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
  *         <br>
@@ -20,7 +22,9 @@ package com.cedarsoftware.io.models;
 public class OuterObject {
     private int x;
     private int y;
+    @IoTypeInfo(OuterObject.MessageOneHolder.class)
     private MessageHolder message1Holder;
+    @IoTypeInfo(MessageTwoHolder.class)
     private MessageHolder message2Holder;
 
     public static OuterObject of(int x, int y, String message1, String message2) {
