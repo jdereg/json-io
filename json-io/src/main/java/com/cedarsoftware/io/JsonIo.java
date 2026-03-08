@@ -948,7 +948,7 @@ public class JsonIo {
             return null;
         }
 
-        writeOptions = new WriteOptionsBuilder(writeOptions).showTypeInfoMinimal().shortMetaKeys(true).json5().build();
+        writeOptions = new WriteOptionsBuilder(writeOptions).json5().showTypeInfoMinimal().shortMetaKeys(true).cycleSupport(true).build();
         if (readOptions == null) {
             readOptions = ReadOptionsBuilder.getDefaultReadOptions();
         }

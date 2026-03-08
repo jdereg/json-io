@@ -39,6 +39,7 @@ import com.cedarsoftware.io.annotation.IoNotCustomReader;
 import com.cedarsoftware.io.annotation.IoNotCustomWritten;
 import com.cedarsoftware.io.annotation.IoProperty;
 import com.cedarsoftware.io.annotation.IoSetter;
+import com.cedarsoftware.io.annotation.IoShowType;
 import com.cedarsoftware.io.annotation.IoTypeInfo;
 import com.cedarsoftware.io.annotation.IoTypeName;
 import com.cedarsoftware.io.annotation.IoValue;
@@ -320,6 +321,7 @@ public class AnnotationResolver {
             null,
             null,
             null,
+            null,
             null);
 
     /**
@@ -375,6 +377,7 @@ public class AnnotationResolver {
         Map<String, Class<?>> fieldTypeInfoDefaults = null;
         Map<String, Class<?>> fieldDeserializeOverrides = null;
         Map<String, String> fieldFormatPatterns = null;
+        Set<String> forceShowTypeFields = null;
         String[] order = null;
 
         // 1. Class-level annotations
@@ -570,6 +573,21 @@ public class AnnotationResolver {
                         }
                     }
                 }
+
+                // @IoShowType — force @type emission for this field (or Jackson @JsonTypeInfo as fallback)
+                if (field.isAnnotationPresent(IoShowType.class)) {
+                    if (forceShowTypeFields == null) {
+                        forceShowTypeFields = new LinkedHashSet<>();
+                    }
+                    forceShowTypeFields.add(fieldName);
+                } else if (externalAvailable && EXT_TYPE_INFO != null
+                        && field.isAnnotationPresent(EXT_TYPE_INFO)) {
+                    // Jackson @JsonTypeInfo on a field means "emit type discriminator here"
+                    if (forceShowTypeFields == null) {
+                        forceShowTypeFields = new LinkedHashSet<>();
+                    }
+                    forceShowTypeFields.add(fieldName);
+                }
             }
             curr = curr.getSuperclass();
         }
@@ -613,6 +631,7 @@ public class AnnotationResolver {
                 && !nonReferenceable && !notCustomRead && !notCustomWrite
                 && customWriter == null && customReader == null
                 && typeName == null && fieldFormatPatterns == null
+                && forceShowTypeFields == null
                 && anySetterMethod == null && anyGetterMethod == null) {
             return EMPTY;
         }
@@ -639,6 +658,7 @@ public class AnnotationResolver {
                 customReader,
                 typeName,
                 fieldFormatPatterns != null ? Collections.unmodifiableMap(fieldFormatPatterns) : null,
+                forceShowTypeFields != null ? Collections.unmodifiableSet(forceShowTypeFields) : null,
                 anySetterMethod,
                 anyGetterMethod);
     }
@@ -1191,6 +1211,7 @@ public class AnnotationResolver {
         private final Class<? extends JsonClassReader> customReader;
         private final String typeName;
         private final Map<String, String> fieldFormatPatterns;
+        private final Set<String> forceShowTypeFields;
         private final Method anySetterMethod;
         private final Method anyGetterMethod;
 
@@ -1215,6 +1236,7 @@ public class AnnotationResolver {
                                 Class<? extends JsonClassReader> customReader,
                                 String typeName,
                                 Map<String, String> fieldFormatPatterns,
+                                Set<String> forceShowTypeFields,
                                 Method anySetterMethod,
                                 Method anyGetterMethod) {
             this.renamedFields = renamedFields;
@@ -1238,6 +1260,7 @@ public class AnnotationResolver {
             this.customReader = customReader;
             this.typeName = typeName;
             this.fieldFormatPatterns = fieldFormatPatterns;
+            this.forceShowTypeFields = forceShowTypeFields;
             this.anySetterMethod = anySetterMethod;
             this.anyGetterMethod = anyGetterMethod;
         }
@@ -1422,6 +1445,16 @@ public class AnnotationResolver {
         }
 
         /**
+         * Check if a field has @IoShowType (or Jackson @JsonTypeInfo as fallback),
+         * which forces @type emission regardless of global showTypeInfo settings.
+         * @param fieldName the Java field name
+         * @return true if @type should be forced for this field
+         */
+        public boolean isForceShowType(String fieldName) {
+            return forceShowTypeFields != null && forceShowTypeFields.contains(fieldName);
+        }
+
+        /**
          * Get the @IoAnySetter method for handling unrecognized fields during deserialization, or null if not specified.
          * @return the annotated Method, or null
          */
@@ -1451,6 +1484,7 @@ public class AnnotationResolver {
                     && !nonReferenceable && !notCustomRead && !notCustomWrite
                     && customWriter == null && customReader == null
                     && typeName == null && fieldFormatPatterns == null
+                    && forceShowTypeFields == null
                     && anySetterMethod == null && anyGetterMethod == null;
         }
     }

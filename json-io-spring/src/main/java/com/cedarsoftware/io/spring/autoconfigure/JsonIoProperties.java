@@ -19,7 +19,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *       allow-nan-and-infinity: false
  *       force-map-output-as-two-arrays: false
  *       write-enum-as-json-object: false
- *       cycle-support: true
+ *       cycle-support: true    # applies to JSON only; TOON/JSON5 default to false
  *       json5: false
  *       date-format: ISO
  *       indentation-size: 2

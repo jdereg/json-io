@@ -10,6 +10,7 @@ import com.cedarsoftware.io.spring.http.converter.Json5HttpMessageConverter;
 import com.cedarsoftware.io.spring.http.converter.JsonIoHttpMessageConverter;
 import com.cedarsoftware.io.spring.http.converter.ToonHttpMessageConverter;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -50,13 +51,16 @@ public class JsonIoWebMvcAutoConfiguration {
     private final JsonIoProperties properties;
     private final ReadOptions readOptions;
     private final WriteOptions writeOptions;
+    private final WriteOptions toonWriteOptions;
 
     public JsonIoWebMvcAutoConfiguration(JsonIoProperties properties,
                                           ReadOptions readOptions,
-                                          WriteOptions writeOptions) {
+                                          WriteOptions writeOptions,
+                                          @Qualifier("toonWriteOptions") WriteOptions toonWriteOptions) {
         this.properties = properties;
         this.readOptions = readOptions;
         this.writeOptions = writeOptions;
+        this.toonWriteOptions = toonWriteOptions;
     }
 
     /**
@@ -70,18 +74,21 @@ public class JsonIoWebMvcAutoConfiguration {
 
     /**
      * Create the JSON5 HttpMessageConverter.
+     * Uses toonWriteOptions with cycleSupport(false) — JSON5 targets the same
+     * LLM/AI use cases as TOON where data is typically acyclic.
      */
     @Bean
     public Json5HttpMessageConverter json5HttpMessageConverter() {
-        return new Json5HttpMessageConverter(readOptions, writeOptions);
+        return new Json5HttpMessageConverter(readOptions, toonWriteOptions);
     }
 
     /**
      * Create the TOON HttpMessageConverter.
+     * Uses toonWriteOptions with cycleSupport(false) for faster serialization.
      */
     @Bean
     public ToonHttpMessageConverter toonHttpMessageConverter() {
-        return new ToonHttpMessageConverter(readOptions, writeOptions);
+        return new ToonHttpMessageConverter(readOptions, toonWriteOptions);
     }
 
     /**

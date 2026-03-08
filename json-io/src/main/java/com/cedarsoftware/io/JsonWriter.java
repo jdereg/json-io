@@ -349,6 +349,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     // For Maps with non-String keys written as @keys/@items arrays, declaredKeyType tracks the key type.
     private Class<?> declaredElementType = null;
     private Class<?> declaredKeyType = null;
+    // Per-field @IoShowType — forces @type emission on elements within a container field
+    private boolean forceElementShowType = false;
     // Per-field format pattern from @IoFormat / @JsonFormat — set during writeField(), cleared after
     private String fieldFormatPattern = null;
 
@@ -681,7 +683,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         Class<?> c = o.getClass();
 
         try {
-            return writeCustom(c, o, !neverShowingType && showType, output);
+            return writeCustom(c, o, (!neverShowingType || forceElementShowType) && showType, output);
         } catch (Exception e) {
             throw new JsonIoException("Unable to write custom formatted object:", e);
         }
@@ -776,7 +778,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (closestWriter == null) {
             return false;
         }
-        if (neverShowingType) {
+        if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
 
@@ -841,7 +843,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             // When cycleSupport=false, trace pass is skipped (no @id/@ref pre-tracing).
             boolean showType = writeOptions.isShowingRootTypeInfo();
             if (obj != null) {
-                if (neverShowingType) {
+                if (neverShowingType && !forceElementShowType) {
                     showType = false;
                 } else if (!alwaysShowingType) {
                     com.cedarsoftware.io.JsonClassWriter writer = writeOptions.getCustomWriter(obj.getClass());
@@ -1127,7 +1129,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             return;
         }
 
-        if (neverShowingType) {
+        if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
 
@@ -1332,7 +1334,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     // Optimized writeType method
     private void writeType(String name, Writer output) throws IOException {
-        if (neverShowingType) {
+        if (neverShowingType && !forceElementShowType) {
             return;
         }
         output.write(typePrefix);
@@ -1342,7 +1344,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private void writePrimitive(final Object obj, boolean showType) throws IOException {
-        if (neverShowingType) {
+        if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
         final Writer output = this.out;
@@ -1368,7 +1370,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private void writeObjectArray(final Object[] array, final Class<?> arrayType, boolean showType) throws IOException {
-        if (neverShowingType) {
+        if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
         final int len = array.length;  // Direct access - no reflection needed
@@ -1444,7 +1446,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private void writePrimitiveArray(final Object array, final Class<?> arrayType, boolean showType) throws IOException {
-        if (neverShowingType) {
+        if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
         final int len = ArrayUtilities.getLength(array);
@@ -1569,7 +1571,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private void writeCollection(Collection<?> col, boolean showType) throws IOException {
-        if (neverShowingType) {
+        if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
         final Writer output = this.out;
@@ -1664,7 +1666,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private void writeIdAndTypeIfNeeded(Object col, boolean showType, boolean referenced) throws IOException {
-        if (neverShowingType) {
+        if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
         if (referenced) {
@@ -1694,7 +1696,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private void writeJsonObjectArray(JsonObject jObj, boolean showType) throws IOException {
-        if (neverShowingType) {
+        if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
         Object[] items = jObj.getItems();
@@ -1789,7 +1791,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private void writeJsonObjectCollection(JsonObject jObj, boolean showType) throws IOException {
-        if (neverShowingType) {
+        if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
         Class<?> colClass = jObj.getRawType();
@@ -1846,7 +1848,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private void writeJsonObjectMap(JsonObject jObj, boolean showType) throws IOException {
-        if (neverShowingType) {
+        if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
         final Writer output = this.out;
@@ -1867,7 +1869,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private boolean writeJsonObjectMapWithStringKeys(JsonObject jObj, boolean showType) throws IOException {
-        if (neverShowingType) {
+        if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
 
@@ -1920,7 +1922,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * Write fields of an Object (JsonObject)
      */
     private void writeJsonObjectObject(JsonObject jObj, boolean showType) throws IOException {
-        if (neverShowingType) {
+        if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
         final Writer output = this.out;
@@ -2019,7 +2021,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private void writeMap(Map map, boolean showType) throws IOException {
-        if (neverShowingType) {
+        if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
         final Writer output = this.out;
@@ -2085,7 +2087,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private boolean writeMapWithStringKeys(Map map, boolean showType) throws IOException {
-        if (neverShowingType) {
+        if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
         final boolean keysKnownString = declaredKeyType == String.class;
@@ -2284,7 +2286,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             } else {
                 writeImpl(o, true);
             }
-        } else if (neverShowingType && ClassUtilities.isPrimitive(o.getClass())) {   // If neverShowType, then force primitives (and primitive wrappers)
+        } else if (neverShowingType && !forceElementShowType && ClassUtilities.isPrimitive(o.getClass())) {   // If neverShowType, then force primitives (and primitive wrappers)
             // to be output with toString() - prevents {"value":6} for example
             writePrimitive(o, false);
         } else {
@@ -2308,6 +2310,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * @return true if @type should be written, false if it can be omitted
      */
     private boolean shouldShowTypeForElement(Class<?> elementClass) {
+        // @IoShowType on the field forces type emission for all elements (unless primitive/native JSON type)
+        if (forceElementShowType) {
+            return !Primitives.isNativeJsonType(elementClass);
+        }
         // If no declared element type context (raw collection), treat numeric primitives as safe to omit @type
         // in NEVER and MINIMAL_PLUS modes since they round-trip as Long/Double.
         if (declaredElementType == null) {
@@ -2453,7 +2459,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * @throws IOException if an error occurs writing to the output stream.
      */
     public void writeObject(final Object obj, boolean showType, boolean bodyOnly) throws IOException {
-        if (neverShowingType) {
+        if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
         final Writer output = this.out;
@@ -2562,17 +2568,25 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         Class<?> type = plan.effectiveDeclaredType();
         Class<?> savedElementType = declaredElementType;
         Class<?> savedKeyType = declaredKeyType;
+        boolean savedForceElementShowType = forceElementShowType;
         String savedFormatPattern = fieldFormatPattern;
         try {
             if (plan.applyDeclaredContainerTypes() && (o instanceof Collection || o instanceof Map)) {
                 declaredKeyType = plan.declaredKeyType();
                 declaredElementType = plan.declaredElementType();
             }
+            // @IoShowType forces type emission: on the value itself for plain fields,
+            // on each element for containers (Collection, Map, array)
+            if (plan.forceShowType()) {
+                forceElementShowType = true;
+            }
             fieldFormatPattern = plan.formatPattern();
-            writeImpl(o, isForceType(o.getClass(), type));
+            boolean showType = plan.forceShowType() ? true : isForceType(o.getClass(), type);
+            writeImpl(o, showType);
         } finally {
             declaredElementType = savedElementType;
             declaredKeyType = savedKeyType;
+            forceElementShowType = savedForceElementShowType;
             fieldFormatPattern = savedFormatPattern;
         }
         return false;
@@ -2629,7 +2643,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             return false;
         }
 
-        if (neverShowingType && Primitives.isPrimitive(objectClass) && !objectClassIsLongWrittenAsString) {
+        if (neverShowingType && !forceElementShowType && Primitives.isPrimitive(objectClass) && !objectClassIsLongWrittenAsString) {
             return false;
         }
 
@@ -2649,7 +2663,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // Numeric primitives (Byte/Short/Integer/Float) write as plain JSON numbers when declared type is Object.
         // They round-trip as Long (for integers) or Double (for floats).
         // This applies to NEVER and MINIMAL_PLUS modes (not MINIMAL or ALWAYS).
-        if ((minimalPlusFormat || neverShowingType) && declaredType == Object.class && NUMERIC_PRIMITIVES_FOR_COMPACT.contains(objectClass)) {
+        if ((minimalPlusFormat || neverShowingType) && !forceElementShowType && declaredType == Object.class && NUMERIC_PRIMITIVES_FOR_COMPACT.contains(objectClass)) {
             return false;
         }
 

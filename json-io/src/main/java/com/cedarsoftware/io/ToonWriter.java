@@ -126,6 +126,8 @@ public class ToonWriter implements Closeable, Flushable {
     private final boolean skipNullFields;
     private final boolean toonKeyFolding;
     private final boolean enumPublicFieldsOnly;
+    // Per-field @IoShowType — forces $type emission for the field value and its elements
+    private boolean forceShowType = false;
     private final String idKey;
     private final String refKey;
     private final String itemsKey;
@@ -361,7 +363,7 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     private boolean shouldWriteTypeMetadata(Class<?> clazz) {
-        return typeMetadataEnabled && clazz != null && !isPrimitiveClass(clazz);
+        return (typeMetadataEnabled || forceShowType) && clazz != null && !isPrimitiveClass(clazz);
     }
 
     private boolean isPrimitiveClass(Class<?> clazz) {
@@ -1576,7 +1578,10 @@ public class ToonWriter implements Closeable, Flushable {
                     writeIndent();
                     depth--;
                 }
+                boolean savedForceShowType = forceShowType;
+                forceShowType = plan.forceShowType();
                 writeFieldEntryInline(key, value);
+                forceShowType = savedForceShowType;
             }
 
             if (first) {
@@ -2162,7 +2167,10 @@ public class ToonWriter implements Closeable, Flushable {
             }
             wroteField = true;
             writeIndent();
+            boolean savedForceShowType = forceShowType;
+            forceShowType = plan.forceShowType();
             writeFieldEntry(key, value);
+            forceShowType = savedForceShowType;
         }
 
         if (!wroteField) {

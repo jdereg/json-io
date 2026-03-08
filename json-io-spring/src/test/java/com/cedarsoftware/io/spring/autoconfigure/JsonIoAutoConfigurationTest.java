@@ -23,7 +23,9 @@ class JsonIoAutoConfigurationTest {
     void defaultBeansAreCreated() {
         contextRunner.run(context -> {
             assertThat(context).hasSingleBean(ReadOptions.class);
-            assertThat(context).hasSingleBean(WriteOptions.class);
+            // Two WriteOptions beans: jsonIoWriteOptions (primary, for JSON) and toonWriteOptions (for TOON/JSON5)
+            assertThat(context).hasBean("jsonIoWriteOptions");
+            assertThat(context).hasBean("toonWriteOptions");
         });
     }
 
@@ -131,9 +133,19 @@ class JsonIoAutoConfigurationTest {
         contextRunner
                 .withPropertyValues("spring.json-io.write.cycle-support=false")
                 .run(context -> {
-                    WriteOptions writeOptions = context.getBean(WriteOptions.class);
-                    assertThat(writeOptions.isCycleSupport()).isFalse();
+                    WriteOptions jsonOptions = context.getBean("jsonIoWriteOptions", WriteOptions.class);
+                    assertThat(jsonOptions.isCycleSupport()).isFalse();
                 });
+    }
+
+    @Test
+    void cycleSupportDefaultsCorrectlyPerFormat() {
+        contextRunner.run(context -> {
+            WriteOptions jsonOptions = context.getBean("jsonIoWriteOptions", WriteOptions.class);
+            WriteOptions toonOptions = context.getBean("toonWriteOptions", WriteOptions.class);
+            assertThat(jsonOptions.isCycleSupport()).isTrue();
+            assertThat(toonOptions.isCycleSupport()).isFalse();
+        });
     }
 
     @Test

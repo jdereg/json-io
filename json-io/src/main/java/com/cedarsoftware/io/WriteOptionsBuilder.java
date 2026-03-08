@@ -1088,7 +1088,12 @@ public class WriteOptionsBuilder {
      *   <li>Unquoted keys - Object keys that are valid identifiers are written without quotes</li>
      *   <li>Smart quotes - Strings use single quotes when they contain double quotes but no single quotes</li>
      *   <li>Infinity/NaN literals - Writes Infinity, -Infinity, NaN instead of null</li>
+     *   <li>No type info - Type metadata is not written (Jackson-style); use annotations if needed</li>
+     *   <li>No cycle support - Cycle detection disabled for performance; enable with cycleSupport(true) if needed</li>
      * </ul>
+     * These defaults match the TOON format defaults, following the Jackson convention where type
+     * information is controlled via annotations rather than embedded metadata.
+     * <p>
      * Note: Trailing commas are NOT enabled by this method. Use json5TrailingCommas(true) separately if needed.
      * @return WriteOptionsBuilder for chained access.
      */
@@ -1096,6 +1101,8 @@ public class WriteOptionsBuilder {
         options.json5UnquotedKeys = true;
         options.json5SmartQuotes = true;
         options.json5InfinityNaN = true;
+        options.showTypeInfo = WriteOptions.ShowType.NEVER;
+        options.cycleSupport = false;
         return this;
     }
 
@@ -2457,12 +2464,13 @@ public class WriteOptionsBuilder {
         private final boolean skipIfNull;
         private final String formatPattern;
         private final Class<?> effectiveDeclaredType;
+        private final boolean forceShowType;
 
         private WriteFieldPlan(Accessor accessor, String fieldName, String serializedKey, Class<?> declaredFieldType,
                                Class<?> declaredElementType, Class<?> declaredKeyType,
                                boolean enumPublicOnlySkipCandidate, boolean applyDeclaredContainerTypes,
                                boolean skipReferenceTrace, boolean skipIfNull, String formatPattern,
-                               Class<?> effectiveDeclaredType) {
+                               Class<?> effectiveDeclaredType, boolean forceShowType) {
             this.accessor = accessor;
             this.fieldName = fieldName;
             this.serializedKey = serializedKey;
@@ -2475,6 +2483,7 @@ public class WriteOptionsBuilder {
             this.skipIfNull = skipIfNull;
             this.formatPattern = formatPattern;
             this.effectiveDeclaredType = effectiveDeclaredType;
+            this.forceShowType = forceShowType;
         }
 
         static WriteFieldPlan create(Accessor accessor, WriteOptions options) {
@@ -2529,8 +2538,11 @@ public class WriteOptionsBuilder {
                 }
             }
 
+            // Pre-compute @IoShowType flag (or Jackson @JsonTypeInfo on field as fallback)
+            boolean forceType = annMeta.isForceShowType(actualFieldName);
+
             return new WriteFieldPlan(accessor, fieldName, keyLiteral, fieldType, elementType, keyType,
-                    enumSkip, applyContainerTypes, skipTrace, nullSkip, formatPat, effectiveType);
+                    enumSkip, applyContainerTypes, skipTrace, nullSkip, formatPat, effectiveType, forceType);
         }
 
         private static String buildKeyLiteral(String fieldName, WriteOptions options) {
@@ -2613,6 +2625,10 @@ public class WriteOptionsBuilder {
 
         Class<?> effectiveDeclaredType() {
             return effectiveDeclaredType;
+        }
+
+        boolean forceShowType() {
+            return forceShowType;
         }
     }
 }

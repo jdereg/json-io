@@ -11,6 +11,7 @@ import com.cedarsoftware.io.spring.http.codec.JsonIoEncoder;
 import com.cedarsoftware.io.spring.http.codec.ToonDecoder;
 import com.cedarsoftware.io.spring.http.codec.ToonEncoder;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -52,13 +53,16 @@ public class JsonIoWebFluxAutoConfiguration {
     private final JsonIoProperties properties;
     private final ReadOptions readOptions;
     private final WriteOptions writeOptions;
+    private final WriteOptions toonWriteOptions;
 
     public JsonIoWebFluxAutoConfiguration(JsonIoProperties properties,
                                            ReadOptions readOptions,
-                                           WriteOptions writeOptions) {
+                                           WriteOptions writeOptions,
+                                           @Qualifier("toonWriteOptions") WriteOptions toonWriteOptions) {
         this.properties = properties;
         this.readOptions = readOptions;
         this.writeOptions = writeOptions;
+        this.toonWriteOptions = toonWriteOptions;
     }
 
     /**
@@ -71,15 +75,15 @@ public class JsonIoWebFluxAutoConfiguration {
 
             CodecConfigurer.CustomCodecs customCodecs = configurer.customCodecs();
 
-            // Always register JSON5 and TOON codecs
-            customCodecs.register(new Json5Encoder(writeOptions));
+            // Always register JSON5 and TOON codecs (cycleSupport=false)
+            customCodecs.register(new Json5Encoder(toonWriteOptions));
             customCodecs.register(new Json5Decoder(readOptions));
-            customCodecs.register(new ToonEncoder(writeOptions));
+            customCodecs.register(new ToonEncoder(toonWriteOptions));
             customCodecs.register(new ToonDecoder(readOptions));
 
             // Handle JSON codec based on Jackson mode
             if (jacksonMode == JacksonMode.REPLACE) {
-                // Register json-io JSON codec (will be used instead of Jackson)
+                // Register json-io JSON codec (cycleSupport=true)
                 customCodecs.register(new JsonIoEncoder(writeOptions));
                 customCodecs.register(new JsonIoDecoder(readOptions));
 

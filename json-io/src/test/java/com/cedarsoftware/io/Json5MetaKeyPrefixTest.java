@@ -29,6 +29,7 @@ class Json5MetaKeyPrefixTest {
     void testJson5WriteUsesDollarPrefixForType() {
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .json5()
+                .showTypeInfoMinimal()
                 .build();
 
         TestObject obj = new TestObject("test", 42);
@@ -43,6 +44,7 @@ class Json5MetaKeyPrefixTest {
     void testJson5WriteUsesDollarPrefixForId() {
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .json5()
+                .cycleSupport(true)
                 .build();
 
         // Create a self-referencing object to force @id/@ref usage
@@ -60,6 +62,7 @@ class Json5MetaKeyPrefixTest {
     void testJson5WriteUsesDollarPrefixForRef() {
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .json5()
+                .cycleSupport(true)
                 .build();
 
         // Create a self-referencing object to force @ref usage
@@ -77,6 +80,7 @@ class Json5MetaKeyPrefixTest {
     void testJson5WriteUsesDollarPrefixForItemsAndKeys() {
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .json5()
+                .showTypeInfoMinimal()
                 .build();
 
         // Create a Map with non-String keys to force @keys/@items usage
@@ -216,6 +220,7 @@ class Json5MetaKeyPrefixTest {
     void testJson5RoundTripWithType() {
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .json5()
+                .showTypeInfoMinimal()
                 .build();
 
         TestObject original = new TestObject("round-trip", 123);
@@ -234,6 +239,7 @@ class Json5MetaKeyPrefixTest {
     void testJson5RoundTripWithReferences() {
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .json5()
+                .cycleSupport(true)
                 .build();
 
         SelfRefObject original = new SelfRefObject();
@@ -254,6 +260,7 @@ class Json5MetaKeyPrefixTest {
     void testJson5RoundTripWithNonStringKeyMap() {
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .json5()
+                .showTypeInfoMinimal()
                 .build();
 
         Map<Integer, String> original = new LinkedHashMap<>();
@@ -313,6 +320,7 @@ class Json5MetaKeyPrefixTest {
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .json5()
                 .shortMetaKeys(true)
+                .showTypeInfoMinimal()
                 .build();
 
         TestObject obj = new TestObject("test", 42);
@@ -330,6 +338,7 @@ class Json5MetaKeyPrefixTest {
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .json5()
                 .shortMetaKeys(true)
+                .cycleSupport(true)
                 .build();
 
         // Create a self-referencing object to force @id/@ref usage
@@ -352,6 +361,7 @@ class Json5MetaKeyPrefixTest {
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .json5()
                 .shortMetaKeys(true)
+                .showTypeInfoMinimal()
                 .build();
 
         // Create a Map with non-String keys to force @keys/@items usage
@@ -418,6 +428,7 @@ class Json5MetaKeyPrefixTest {
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .json5()
                 .shortMetaKeys(true)
+                .showTypeInfoMinimal()
                 .build();
 
         TestObject original = new TestObject("round-trip-short", 999);
@@ -438,6 +449,7 @@ class Json5MetaKeyPrefixTest {
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .json5()
                 .shortMetaKeys(true)
+                .cycleSupport(true)
                 .build();
 
         SelfRefObject original = new SelfRefObject();
@@ -459,6 +471,7 @@ class Json5MetaKeyPrefixTest {
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .json5()
                 .shortMetaKeys(true)
+                .showTypeInfoMinimal()
                 .build();
 
         Map<Integer, String> original = new LinkedHashMap<>();
@@ -497,12 +510,12 @@ class Json5MetaKeyPrefixTest {
         assertTrue(jsonStandardShort.contains("\"@t\":"), "Standard short should use \"@t\":");
 
         // JSON5 long: $type:
-        WriteOptions json5Long = new WriteOptionsBuilder().json5().build();
+        WriteOptions json5Long = new WriteOptionsBuilder().json5().showTypeInfoMinimal().build();
         String jsonJson5Long = JsonIo.toJson(obj, json5Long);
         assertTrue(jsonJson5Long.contains("$type:"), "JSON5 long should use $type:");
 
         // JSON5 short: $t:
-        WriteOptions json5Short = new WriteOptionsBuilder().json5().shortMetaKeys(true).build();
+        WriteOptions json5Short = new WriteOptionsBuilder().json5().shortMetaKeys(true).showTypeInfoMinimal().build();
         String jsonJson5Short = JsonIo.toJson(obj, json5Short);
         assertTrue(jsonJson5Short.contains("$t:"), "JSON5 short should use $t:");
 
@@ -707,6 +720,7 @@ class Json5MetaKeyPrefixTest {
         // JSON5 mode but force @ prefix
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .json5()
+                .showTypeInfoMinimal()
                 .useMetaPrefixAt()  // Force @ prefix even in JSON5 mode
                 .build();
 
@@ -724,6 +738,7 @@ class Json5MetaKeyPrefixTest {
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .json5()
                 .shortMetaKeys(true)
+                .showTypeInfoMinimal()
                 .useMetaPrefixAt()  // Force @ prefix
                 .build();
 
@@ -740,6 +755,7 @@ class Json5MetaKeyPrefixTest {
         // JSON5 mode but force @ prefix for id/ref
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .json5()
+                .cycleSupport(true)
                 .useMetaPrefixAt()
                 .build();
 
@@ -830,6 +846,7 @@ class Json5MetaKeyPrefixTest {
         // JSON5 mode but force @ prefix for keys/items
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .json5()
+                .showTypeInfoMinimal()
                 .useMetaPrefixAt()
                 .build();
 
@@ -866,6 +883,7 @@ class Json5MetaKeyPrefixTest {
         // Round-trip: write with forced @ in JSON5, read back
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .json5()
+                .showTypeInfoMinimal()
                 .useMetaPrefixAt()
                 .build();
 

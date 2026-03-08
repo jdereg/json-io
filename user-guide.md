@@ -662,7 +662,7 @@ String toon = JsonIo.toToon(cyclicObject, options);
 
 ## Annotations
 
-json-io provides 25 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization. In addition, json-io **reflectively honors Jackson annotations** when the Jackson JAR is on the classpath — with zero compile-time dependency on Jackson.
+json-io provides 26 annotations in the `com.cedarsoftware.io.annotation` package for controlling serialization and deserialization. In addition, json-io **reflectively honors Jackson annotations** when the Jackson JAR is on the classpath — with zero compile-time dependency on Jackson.
 
 ### Annotation Precedence
 
@@ -1147,6 +1147,45 @@ public class Label {
 
 All formatted values are written as **quoted JSON strings** and parsed back correctly on read. Round-trip precision depends on the pattern — for example, `"%.2f"` on `3.14159` writes `"3.14"` and reads back as `3.14`.
 
+#### `@IoShowType` — Force Type Emission
+
+Field-level annotation that forces `$type` (or `@type`) to be written for the annotated field's value and its elements, regardless of the global `showTypeInfo` setting. This is essential for polymorphic fields when using `showTypeInfoNever()` or TOON/JSON5 mode (which defaults to never showing type), ensuring that concrete types survive round-trip serialization.
+
+```java
+static class Fleet {
+    @IoShowType
+    List<Vehicle> vehicles;       // Each element gets @type even with showTypeInfoNever()
+
+    @IoShowType
+    Vehicle primary;              // The value gets @type even with showTypeInfoNever()
+
+    @IoShowType
+    Vehicle[] spares;             // Each array element gets @type
+
+    @IoShowType
+    Map<String, Vehicle> named;   // Each map value gets @type
+
+    String name;                  // No annotation — follows global showTypeInfo setting
+}
+```
+
+**When to use:** Place `@IoShowType` on fields declared as an interface or abstract/parent class that hold polymorphic values (subclass instances). Without this annotation, `showTypeInfoNever()` would strip all type metadata, making it impossible to reconstruct the correct concrete types on read.
+
+**Supported field types:**
+- **Plain fields** — the field value gets `@type`
+- **Collections** (`List`, `Set`, etc.) — each element gets `@type`
+- **Arrays** (`Vehicle[]`) — each element gets `@type`
+- **Maps** — each map value gets `@type`
+
+**Interaction with showTypeInfo modes:**
+- `showTypeInfoNever()` — `@IoShowType` overrides, forcing type emission
+- `showTypeInfoMinimal()` / `showTypeInfoMinimalPlus()` — `@IoShowType` is redundant but harmless (type is already shown for polymorphic mismatches)
+- `showTypeInfoAlways()` — `@IoShowType` is redundant (type is always shown)
+- JSON5 mode — `@IoShowType` overrides the default `showTypeInfoNever()` behavior
+- TOON format — `@IoShowType` forces `$type` emission even when type metadata is disabled
+
+**Jackson fallback:** If `@IoShowType` is not present, json-io checks for Jackson's `@JsonTypeInfo` on the field as a synonym. No additional Jackson configuration is needed — the mere presence of `@JsonTypeInfo` on a field triggers forced type emission.
+
 #### `@IoAnySetter` / `@IoAnyGetter` — Extra Field Handling
 
 These annotations allow a class to absorb unrecognized JSON fields during deserialization and emit extra fields during serialization — without requiring a global `MissingFieldHandler`.
@@ -1240,25 +1279,26 @@ public class UserProfile {
 
 If your classes already use Jackson annotations, json-io will honor them automatically — no code changes needed. The following Jackson annotations are supported:
 
-| Jackson Annotation | json-io Equivalent | Effect |
-|---|---|---|
-| `@JsonProperty("name")` | `@IoProperty("name")` | Renames field in JSON |
-| `@JsonIgnore` | `@IoIgnore` | Excludes field |
-| `@JsonIgnoreProperties({"a","b"})` | `@IoIgnoreProperties({"a","b"})` | Class-level field exclusion |
-| `@JsonIncludeProperties({"a","b"})` | `@IoIncludeProperties({"a","b"})` | Class-level field whitelist |
-| `@JsonAlias({"alt1","alt2"})` | `@IoAlias({"alt1","alt2"})` | Accept alternate names on read |
-| `@JsonPropertyOrder({"x","y"})` | `@IoPropertyOrder({"x","y"})` | Control field order on write |
-| `@JsonInclude(Include.NON_NULL)` | `@IoInclude(Include.NON_NULL)` | Per-field null skipping |
-| `@JsonCreator` | `@IoCreator` | Custom deserialization constructor/factory |
-| `@JsonValue` | `@IoValue` | Single-value serialization |
-| `@JsonNaming(SnakeCaseStrategy.class)` | `@IoNaming(Strategy.SNAKE_CASE)` | Class-level naming strategy |
-| `@JsonIgnoreType` | `@IoIgnoreType` | Exclude all fields of this type |
-| `@JsonTypeInfo(defaultImpl=...)` | `@IoTypeInfo(...)` | Default concrete type hint |
-| `@JsonDeserialize(as=...)` | `@IoDeserialize(as=...)` | Forced deserialization type override |
-| `@JsonGetter("fieldName")` | `@IoGetter("fieldName")` | Custom getter method for serialization |
-| `@JsonSetter("fieldName")` | `@IoSetter("fieldName")` | Custom setter method for deserialization |
-| `@JsonTypeName("ShortName")` | `@IoTypeName("ShortName")` | Type alias for `@type` in JSON |
+| Jackson Annotation | json-io Equivalent | Effect                                                                                                  |
+|---|---|---------------------------------------------------------------------------------------------------------|
+| `@JsonProperty("name")` | `@IoProperty("name")` | Renames field in JSON                                                                                   |
+| `@JsonIgnore` | `@IoIgnore` | Excludes field                                                                                          |
+| `@JsonIgnoreProperties({"a","b"})` | `@IoIgnoreProperties({"a","b"})` | Class-level field exclusion                                                                             |
+| `@JsonIncludeProperties({"a","b"})` | `@IoIncludeProperties({"a","b"})` | Class-level field whitelist                                                                             |
+| `@JsonAlias({"alt1","alt2"})` | `@IoAlias({"alt1","alt2"})` | Accept alternate names on read                                                                          |
+| `@JsonPropertyOrder({"x","y"})` | `@IoPropertyOrder({"x","y"})` | Control field order on write                                                                            |
+| `@JsonInclude(Include.NON_NULL)` | `@IoInclude(Include.NON_NULL)` | Per-field null skipping                                                                                 |
+| `@JsonCreator` | `@IoCreator` | Custom deserialization constructor/factory                                                              |
+| `@JsonValue` | `@IoValue` | Single-value serialization                                                                              |
+| `@JsonNaming(SnakeCaseStrategy.class)` | `@IoNaming(Strategy.SNAKE_CASE)` | Class-level naming strategy                                                                             |
+| `@JsonIgnoreType` | `@IoIgnoreType` | Exclude all fields of this type                                                                         |
+| `@JsonTypeInfo(defaultImpl=...)` | `@IoTypeInfo(...)` | Default concrete type hint                                                                              |
+| `@JsonDeserialize(as=...)` | `@IoDeserialize(as=...)` | Forced deserialization type override                                                                    |
+| `@JsonGetter("fieldName")` | `@IoGetter("fieldName")` | Custom getter method for serialization                                                                  |
+| `@JsonSetter("fieldName")` | `@IoSetter("fieldName")` | Custom setter method for deserialization                                                                |
+| `@JsonTypeName("ShortName")` | `@IoTypeName("ShortName")` | Type alias for `@type` in JSON                                                                          |
 | `@JsonFormat(pattern="...")` | `@IoFormat("pattern")` | Per-field format pattern (`String.format`, `DecimalFormat`, `DateTimeFormatter`, or `SimpleDateFormat`) |
+| `@JsonTypeInfo` (on field) | `@IoShowType` | Force `$type` (or `@type`) emission on field regardless of global showTypeInfo setting                  |
 
 Jackson's `jackson-annotations` JAR (~75KB) is commonly already on the classpath in Spring applications. json-io detects annotations via `Class.forName()` at startup — there is no compile-time dependency. Some annotations (`@JsonNaming`, `@JsonDeserialize`) live in `jackson-databind` and are detected independently.
 

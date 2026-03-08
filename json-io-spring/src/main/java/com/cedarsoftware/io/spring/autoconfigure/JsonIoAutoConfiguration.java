@@ -19,6 +19,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
@@ -110,11 +111,27 @@ public class JsonIoAutoConfiguration {
     }
 
     /**
-     * Create WriteOptions bean based on properties and customizers.
+     * Create WriteOptions bean for JSON format.
+     * Uses cycleSupport from properties (default: true).
      */
     @Bean
+    @Primary
     @ConditionalOnMissingBean
     public WriteOptions jsonIoWriteOptions(ObjectProvider<WriteOptionsCustomizer> customizers) {
+        return buildWriteOptions(customizers, properties.getWrite().isCycleSupport());
+    }
+
+    /**
+     * Create WriteOptions bean for TOON and JSON5 formats.
+     * Defaults to cycleSupport(false) since these formats target LLM/AI communication
+     * where data is typically acyclic. Users can still override via properties.
+     */
+    @Bean
+    public WriteOptions toonWriteOptions(ObjectProvider<WriteOptionsCustomizer> customizers) {
+        return buildWriteOptions(customizers, false);
+    }
+
+    private WriteOptions buildWriteOptions(ObjectProvider<WriteOptionsCustomizer> customizers, boolean cycleSupport) {
         WriteOptionsBuilder builder = new WriteOptionsBuilder()
                 .closeStream(false)  // Spring manages stream lifecycle
                 .prettyPrint(properties.getWrite().isPrettyPrint())
@@ -124,7 +141,7 @@ public class JsonIoAutoConfiguration {
                 .allowNanAndInfinity(properties.getWrite().isAllowNanAndInfinity())
                 .forceMapOutputAsTwoArrays(properties.getWrite().isForceMapOutputAsTwoArrays())
                 .writeEnumAsJsonObject(properties.getWrite().isWriteEnumAsJsonObject())
-                .cycleSupport(properties.getWrite().isCycleSupport())
+                .cycleSupport(cycleSupport)
                 .indentationSize(properties.getWrite().getIndentationSize());
 
         // Configure root type info
