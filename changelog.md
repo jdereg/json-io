@@ -1,5 +1,7 @@
 ### Revision History
 
+#### 4.99.0
+
 #### 4.98.0 - 2026-03-08
 * **BUG FIX**: `ToonWriter` — nested collections and arrays with type metadata (`showTypeInfoAlways()`) now emit properly indented `$type`/`$items` blocks. Previously, the compact `fieldName[N]:` path bypassed `writeCollection()`/`writeArray()` entirely, and the inline list-element path wrote `$type`/`$items` at incorrect indentation levels. Fixed in `writeFieldEntry()`, `writeFieldEntryInline()`, `writeFoldedEntry()`, and `writeListElement()`.
 * **BUG FIX**: `ToonWriter` — `char[]` fields now serialize as a plain string value instead of comma-separated characters, matching the Converter's `String → char[]` read path for correct round-trips.
