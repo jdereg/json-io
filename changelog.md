@@ -20,7 +20,10 @@
 * **PERFORMANCE**: `JsonWriter` tracking structures (`objVisited`, `objsReferenced`, `traceDepths` vs `activePath`) are now allocated lazily based on `cycleSupport` mode, avoiding ~6 KB of wasted allocations per writer when cycle support is disabled.
 * **PERFORMANCE**: `JsonWriter.writeCollectionElement()` now fast-paths `Integer`, `Float`, `Short`, and `Byte` directly to `writePrimitive()`, bypassing the `writeImpl()` → `writeCustom()` dispatch chain when `@type` is not needed.
 * **PERFORMANCE**: `JsonWriter.writeCollection()` uses indexed `list.get(i)` for `RandomAccess` lists (e.g., `ArrayList`) instead of allocating an `Iterator`. `writeObject()` and enum field loops also use indexed iteration to avoid implicit `Iterator` allocation.
-* **TESTING**: Added TOON as 4th serialization path in `TestUtil`, enabling all existing round-trip tests to automatically cover TOON format.
+* **FEATURE**: `@IoShowType` — new field-level annotation (26th annotation) that forces `@type`/`$type` emission on the annotated field's value and its elements (Collections, Maps, arrays), regardless of the global `showTypeInfo` setting. Essential for polymorphic fields when using `showTypeInfoNever()`, JSON5 mode, or TOON format. Jackson's `@JsonTypeInfo` on a field is honored as a fallback synonym.
+* **IMPROVEMENT**: `.json5()` on `WriteOptionsBuilder` now sets `showTypeInfoNever()` and `cycleSupport(false)` as defaults, aligning JSON5 with TOON conventions where type information is controlled via annotations rather than embedded metadata. Individual settings can still be overridden after calling `.json5()`.
+* **IMPROVEMENT**: Spring auto-configuration now provides a separate `toonWriteOptions` bean with `cycleSupport(false)` for TOON/JSON5 formats, in addition to the primary `jsonIoWriteOptions` bean.
+* **TESTING**: Added TOON as 4th and JSON5 as 5th serialization path in `TestUtil`, enabling all existing round-trip tests to automatically cover both formats. JSON5 write: 1 fail (same custom writer edge case as json-io), JSON5 read: 0 fails.
 
 #### 4.97.0 - 2026-03-03
 * **PERFORMANCE**: `ToonReader.peekLine()` now avoids materializing a `String` for blank, comment, and indent-only lines, reducing per-line `String` allocations by ~50%.

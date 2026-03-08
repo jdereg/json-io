@@ -103,6 +103,25 @@ public class TestUtil {
         return testInfo;
     }
 
+    private static TestInfo writeJson5(Object obj, WriteOptions writeOptions) {
+        TestInfo testInfo = new TestInfo();
+        try {
+            // Add JSON5 formatting features without overriding the test's showTypeInfo or cycleSupport.
+            // This mirrors how TOON passes through the test's writeOptions unchanged.
+            WriteOptions json5Options = new WriteOptionsBuilder(writeOptions)
+                    .json5UnquotedKeys(true)
+                    .json5SmartQuotes(true)
+                    .json5InfinityNaN(true)
+                    .build();
+            long start = System.nanoTime();
+            testInfo.json = JsonIo.toJson(obj, json5Options);
+            testInfo.nanos = System.nanoTime() - start;
+        } catch (Throwable t) {
+            testInfo.t = t;
+        }
+        return testInfo;
+    }
+
     /**
      * Write JSON using default options. Creates a new WriteOptionsBuilder to pick up current permanent aliases.
      */
@@ -121,6 +140,7 @@ public class TestUtil {
         TestInfo gsonTestInfo = writeGSON(obj);
         TestInfo jacksonTestInfo = writeJackson(obj);
         TestInfo toonTestInfo = writeToon(obj, writeOptions);
+        TestInfo json5TestInfo = writeJson5(obj, writeOptions);
 
         if (jsonIoTestInfo.json != null) {
             printLine(jsonIoTestInfo.json);
@@ -148,8 +168,15 @@ public class TestUtil {
             totalToonWrite += toonTestInfo.nanos;
         }
 
-        // Store TOON output and corresponding JSON for read-side testing
+        if (json5TestInfo.t != null) {
+            json5WriteFails++;
+        } else {
+            totalJson5Write += json5TestInfo.nanos;
+        }
+
+        // Store TOON and JSON5 output and corresponding JSON for read-side testing
         lastToon = toonTestInfo.json;
+        lastJson5 = json5TestInfo.json;
         lastToonSourceJson = jsonIoTestInfo.json;
 
         if (jsonIoTestInfo.t != null) {
@@ -226,6 +253,32 @@ public class TestUtil {
         return testInfo;
     }
 
+    private static TestInfo readJson5(String json5, ReadOptions options, Class<?> root) {
+        TestInfo testInfo = new TestInfo();
+        try {
+            ReadOptions json5ReadOptions = new ReadOptionsBuilder(options).allowNanAndInfinity(true).build();
+            long start = System.nanoTime();
+            testInfo.obj = JsonIo.toJava(json5, json5ReadOptions).asClass(root);
+            testInfo.nanos = System.nanoTime() - start;
+        } catch (Exception e) {
+            testInfo.t = e;
+        }
+        return testInfo;
+    }
+
+    private static <T> TestInfo readJson5AsType(String json5, ReadOptions options, TypeHolder<T> typeHolder) {
+        TestInfo testInfo = new TestInfo();
+        try {
+            ReadOptions json5ReadOptions = new ReadOptionsBuilder(options).allowNanAndInfinity(true).build();
+            long start = System.nanoTime();
+            testInfo.obj = JsonIo.toJava(json5, json5ReadOptions).asType(typeHolder);
+            testInfo.nanos = System.nanoTime() - start;
+        } catch (Exception e) {
+            testInfo.t = e;
+        }
+        return testInfo;
+    }
+
 
     public static void printLine(String s) {
         if (debug) {
@@ -237,21 +290,25 @@ public class TestUtil {
         logger.info("Write JSON");
         logger.info("  json-io: " + (totalJsonWrite / 1_000_000.0) + " ms");
         logger.info("  TOON: " + (totalToonWrite / 1_000_000.0) + " ms");
+        logger.info("  JSON5: " + (totalJson5Write / 1_000_000.0) + " ms");
         logger.info("  GSON: " + (totalGsonWrite / 1_000_000.0) + " ms");
         logger.info("  Jackson: " + (totalJacksonWrite / 1_000_000.0) + " ms");
         logger.info("Read JSON");
         logger.info("  json-io: " + (totalJsonRead / 1_000_000.0) + " ms");
         logger.info("  TOON: " + (totalToonRead / 1_000_000.0) + " ms");
+        logger.info("  JSON5: " + (totalJson5Read / 1_000_000.0) + " ms");
         logger.info("  GSON: " + (totalGsonRead / 1_000_000.0) + " ms");
         logger.info("  Jackson: " + (totalJacksonRead / 1_000_000.0) + " ms");
         logger.info("Write Fails:");
         logger.info("  json-io: " + jsonIoWriteFails + " / " + totalWrites);
         logger.info("  TOON: " + toonWriteFails + " / " + totalWrites);
+        logger.info("  JSON5: " + json5WriteFails + " / " + totalWrites);
         logger.info("  GSON: " + gsonWriteFails + " / " + totalWrites);
         logger.info("  Jackson: " + jacksonWriteFails + " / " + totalWrites);
         logger.info("Read Fails");
         logger.info("  json-io: " + jsonIoReadFails + " / " + totalReads);
         logger.info("  TOON: " + toonReadFails + " / " + totalReads);
+        logger.info("  JSON5: " + json5ReadFails + " / " + totalReads);
         logger.info("  GSON: " + gsonReadFails + " / " + totalReads);
         logger.info("  Jackson: " + jacksonReadFails + " / " + totalReads);
     }
@@ -283,8 +340,10 @@ public class TestUtil {
 
             // TOON round-trip: read back the TOON produced by the paired toJson() call
             String toon = lastToon;
+            String json5 = lastJson5;
             String toonSource = lastToonSourceJson;
             lastToon = null;
+            lastJson5 = null;
             lastToonSourceJson = null;
             if (toon != null && json == toonSource) {
                 TestInfo toonTestInfo = readToon(toon, readOptions, root);
@@ -292,6 +351,16 @@ public class TestUtil {
                     toonReadFails++;
                 } else {
                     totalToonRead += toonTestInfo.nanos;
+                }
+            }
+
+            // JSON5 round-trip: read back the JSON5 produced by the paired toJson() call
+            if (json5 != null && json == toonSource) {
+                TestInfo json5ReadInfo = readJson5(json5, readOptions, root);
+                if (json5ReadInfo.t != null) {
+                    json5ReadFails++;
+                } else {
+                    totalJson5Read += json5ReadInfo.nanos;
                 }
             }
 
@@ -336,8 +405,10 @@ public class TestUtil {
 
             // TOON round-trip: read back the TOON produced by the paired toJson() call
             String toon = lastToon;
+            String json5 = lastJson5;
             String toonSource = lastToonSourceJson;
             lastToon = null;
+            lastJson5 = null;
             lastToonSourceJson = null;
             if (toon != null && json == toonSource) {
                 TestInfo toonTestInfo = readToonAsType(toon, readOptions, typeHolder);
@@ -345,6 +416,16 @@ public class TestUtil {
                     toonReadFails++;
                 } else {
                     totalToonRead += toonTestInfo.nanos;
+                }
+            }
+
+            // JSON5 round-trip: read back the JSON5 produced by the paired toJson() call
+            if (json5 != null && json == toonSource) {
+                TestInfo json5ReadInfo = readJson5AsType(json5, readOptions, typeHolder);
+                if (json5ReadInfo.t != null) {
+                    json5ReadFails++;
+                } else {
+                    totalJson5Read += json5ReadInfo.nanos;
                 }
             }
 
@@ -443,23 +524,28 @@ public class TestUtil {
 
     private static long totalJsonWrite;
     private static long totalToonWrite;
+    private static long totalJson5Write;
     private static long totalGsonWrite;
     private static long totalJacksonWrite;
     private static long totalJsonRead;
     private static long totalToonRead;
+    private static long totalJson5Read;
     private static long totalGsonRead;
     private static long totalJacksonRead;
     private static long jsonIoWriteFails;
     private static long toonWriteFails;
+    private static long json5WriteFails;
     private static long gsonWriteFails;
     private static long jacksonWriteFails;
     private static long jsonIoReadFails;
     private static long toonReadFails;
+    private static long json5ReadFails;
     private static long gsonReadFails;
     private static long jacksonReadFails;
     private static long totalReads;
     private static long totalWrites;
     private static String lastToon;
+    private static String lastJson5;
     private static String lastToonSourceJson;
     private static final boolean debug = false;
 
