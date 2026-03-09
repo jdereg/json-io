@@ -1,6 +1,7 @@
 ### Revision History
 
 #### 4.99.0
+* **PERFORMANCE**: `JsonWriter.writeObjectArray()` now fast-paths `Boolean`, `Double`, `Long`, `Integer`, `Float`, `Short`, `Byte`, and `String` elements directly to `writePrimitive()`/`writeStringValue()`, bypassing the `writeImpl()` → `writeCustom()` dispatch chain when `@type` is not needed. Mirrors the existing `writeCollectionElement()` optimization. JFR shows `writeArrayElementIfMatching` dropped from 62 samples to 0.
 
 #### 4.98.0 - 2026-03-08
 * **BUG FIX**: `ToonWriter` — nested collections and arrays with type metadata (`showTypeInfoAlways()`) now emit properly indented `$type`/`$items` blocks. Previously, the compact `fieldName[N]:` path bypassed `writeCollection()`/`writeArray()` entirely, and the inline list-element path wrote `$type`/`$items` at incorrect indentation levels. Fixed in `writeFieldEntry()`, `writeFieldEntryInline()`, `writeFoldedEntry()`, and `writeListElement()`.
