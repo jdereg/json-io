@@ -1424,6 +1424,16 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
             if (value == null) {
                 output.write("null");
+            } else if ((value instanceof Boolean || value instanceof Double ||
+                         value instanceof Integer || value instanceof Float ||
+                         value instanceof Short || value instanceof Byte) &&
+                        !isForceType(value.getClass(), componentClass)) {
+                // Fast path for primitive wrappers — bypasses writeImpl() → writeCustom() dispatch chain
+                writePrimitive(value, false);
+            } else if (value instanceof Long && !isForceType(Long.class, componentClass)) {
+                writePrimitive(value, writeLongsAsStrings);
+            } else if (value instanceof String && !isForceType(String.class, componentClass)) {
+                writeStringValue((String) value);
             } else {
                 final boolean forceType = isForceType(value.getClass(), componentClass);
                 if (!writeArrayElementIfMatching(componentClass, value, forceType, output)) {
