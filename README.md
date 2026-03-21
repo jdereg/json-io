@@ -69,6 +69,7 @@ json-io is a powerful and lightweight Java library that simplifies **JSON5**, **
 - Two modes: typed Java objects (`toJava()`) or class-independent Maps (`toMaps()`)
 - Parse JSON with unknown class references into a Map-of-Maps representation without requiring classes on classpath
 - Featured on [json.org](http://json.org)
+- Featured on [Baeldung: JSON, TOON, and Java Format Libraries](https://www.baeldung.com/java-json-toon-format-libraries)
 
 ## Why json-io?
 
@@ -291,6 +292,9 @@ See the [complete type comparison](/user-guide.md#toon-supported-types) showing 
 - [ReadOptions Reference](/user-guide-readOptions.md)
 - [Spring Integration Guide](/user-guide-spring.md)
 - [Revision History](/changelog.md)
+
+**Articles & Tutorials**
+- [JSON, TOON, and Java Format Libraries](https://www.baeldung.com/java-json-toon-format-libraries) — Baeldung tutorial covering JSON, JSON5, and TOON serialization with json-io
 
 ## Release [![Maven Central](https://img.shields.io/maven-central/v/com.cedarsoftware/json-io)](https://central.sonatype.com/artifact/com.cedarsoftware/json-io)
 

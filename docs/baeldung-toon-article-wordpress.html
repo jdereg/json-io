@@ -202,10 +202,10 @@ When we don't have Java classes available, for example in middleware or log proc
 
 The motivation behind TOON is reducing token consumption when structured data is sent to LLMs. Rather than comparing character counts, which would be misleading since the formats have fundamentally different syntax density, we measure actual <a href="https://www.baeldung.com/cs/gpt-tokenization">BPE (Byte Pair Encoding)</a> tokens using the same tokenizer that GPT-4 uses.
 
-We use <em>jtokkit</em>, a Java implementation of OpenAI's tokenizer, with the <code>cl100k_base</code> encoding:
+We use <em>jtokkit</em>, a Java implementation of OpenAI's tokenizer, with the <code>o200k_base</code> encoding:
 
 <pre><code class="language-java">EncodingRegistry registry = Encodings.newDefaultEncodingRegistry();
-Encoding encoding = registry.getEncoding(EncodingType.CL100K_BASE);
+Encoding encoding = registry.getEncoding(EncodingType.O200K_BASE);
 
 int jsonTokens = encoding.countTokens(jsonString);
 int toonTokens = encoding.countTokens(toonString);</code></pre>

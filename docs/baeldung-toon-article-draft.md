@@ -227,11 +227,11 @@ Map<String, Object> map = JsonIo.fromToonToMaps(toon).asClass(Map.class);
 
 The motivation behind TOON is reducing token consumption when structured data is sent to LLMs. Rather than comparing character counts, which would be misleading since the formats have fundamentally different syntax density, we measure actual [BPE (Byte Pair Encoding)](https://www.baeldung.com/cs/gpt-tokenization) tokens using the same tokenizer that GPT-4 uses.
 
-We use *jtokkit*, a Java implementation of OpenAI's tokenizer, with the `cl100k_base` encoding:
+We use *jtokkit*, a Java implementation of OpenAI's tokenizer, with the `o200k_base` encoding:
 
 ```java
 EncodingRegistry registry = Encodings.newDefaultEncodingRegistry();
-Encoding encoding = registry.getEncoding(EncodingType.CL100K_BASE);
+Encoding encoding = registry.getEncoding(EncodingType.O200K_BASE);
 
 int jsonTokens = encoding.countTokens(jsonString);
 int toonTokens = encoding.countTokens(toonString);

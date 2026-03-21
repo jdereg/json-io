@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Compares BPE token counts between JSON and TOON output formats
- * using OpenAI's cl100k_base tokenizer (GPT-4 / ChatGPT) via jtokkit.
+ * using OpenAI's o100k_base tokenizer (GPT-5 / ChatGPT) via jtokkit.
  *
  * This test provides quantitative evidence of TOON's token efficiency
  * for LLM consumption — a key selling point for the Baeldung article.
@@ -32,7 +32,7 @@ class ToonTokenComparisonTest {
     @BeforeAll
     static void initTokenizer() {
         EncodingRegistry registry = Encodings.newDefaultEncodingRegistry();
-        encoding = registry.getEncoding(EncodingType.CL100K_BASE);
+        encoding = registry.getEncoding(EncodingType.O200K_BASE);
     }
 
     // ==================== POJOs ====================
@@ -444,7 +444,7 @@ class ToonTokenComparisonTest {
 
         StringBuilder table = new StringBuilder();
         table.append("╔══════════════════════════════════════════════════════════════╗\n");
-        table.append("║     TOKEN COMPARISON SUMMARY (cl100k_base / GPT-4)          ║\n");
+        table.append("║     TOKEN COMPARISON SUMMARY (o200k_base / GPT-4)          ║\n");
         table.append("╠══════════════════════════════════════════════════════════════╣\n");
         table.append(String.format("║ %-18s │ %8s │ %8s │ %8s ║%n", "Format", "Tokens", "vs JSON", "vs CSV"));
         table.append("╠══════════════════════════════════════════════════════════════╣\n");
