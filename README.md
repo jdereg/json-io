@@ -33,24 +33,155 @@
   </p>
 </div>
 
-json-io is a powerful and lightweight Java library that simplifies **JSON5**, **JSON**, and **TOON** serialization and deserialization while handling complex object graphs with ease. Unlike basic JSON parsers, json-io preserves object references, handles polymorphic types, and maintains cyclic relationships in your data structures.
+LLM applications waste 40-50% of their token budget on JSON syntax overhead — braces, brackets, quotes, and commas that carry zero semantic information. **json-io** is a Java serialization library that reads and writes **JSON**, **JSON5**, and **[TOON](https://toonformat.dev/)** (Token-Oriented Object Notation) — a format that strips that overhead while preserving full data fidelity. It also handles what Jackson/Gson cannot: cyclic object graphs, automatic polymorphic types, and zero-config serialization of 60+ built-in Java types.
+
+Featured on [json.org](http://json.org) and [Baeldung](https://www.baeldung.com/java-json-toon-format-libraries).
 
 ## Table of Contents
 
+- [TOON Format](#toon-format)
+- [Quick Start](#quick-start)
+- [Installation](#installation)
+  - [Spring Boot Integration](#spring-boot-integration)
+  - [Spring AI Integration](#spring-ai-integration)
 - [Key Features](#key-features)
 - [Why json-io?](#why-json-io)
   - [vs Jackson/Gson](#vs-jacksongson-json)
   - [vs JToon](#vs-jtoon-toon)
   - [Annotation Support](#annotation-support)
-- [Installation](#installation)
-  - [Spring Boot Integration](#spring-boot-integration)
-  - [Spring AI Integration](#spring-ai-integration)
-- [Quick Start](#quick-start)
-- [TOON Format](#toon-format)
 - [Supported Types](#supported-types-60-built-in)
 - [Documentation](#documentation)
 - [Release](#release-)
   - [Logging](#logging)
+
+## TOON Format
+
+[TOON](https://toonformat.dev/) (Token-Oriented Object Notation) is an indentation-based format that produces **~40-50% fewer tokens** than JSON — ideal for LLM applications where token count directly impacts cost and context window usage.
+
+- **No braces, brackets, or commas** — structure is expressed through indentation
+- **No quoting** for most keys and values — quotes only when the value contains special characters
+- **Compact arrays** — inline `[N]: a,b,c` or list format with `- ` prefixed elements
+- **Tabular format** — arrays of uniform objects as CSV-like rows with column headers
+- **Key folding** — nested keys like `address.city: Denver` flatten one level of nesting
+- **Full fidelity** — most data requires no extra metadata at all. When type hints are needed for correct deserialization (e.g., polymorphic fields), you can use json-io's `@Io*` annotations, Jackson annotations, or explicit `$type` markers. For object graphs with cycles, enable `cycleSupport(true)` to emit `$id`/`$ref` pairs
+
+**JSON:**
+```json
+{"team":"Rockets","players":[{"name":"John","age":30,"position":"guard"},{"name":"Sue","age":27,"position":"forward"},{"name":"Mike","age":32,"position":"center"}]}
+```
+
+**TOON (same data, ~45% fewer tokens):**
+```yaml
+team: Rockets
+players:
+  name, age, position
+  John, 30, guard
+  Sue, 27, forward
+  Mike, 32, center
+```
+
+When an array contains uniform objects, TOON automatically uses **tabular format** — a compact CSV-like layout with column headers. Mixed or nested objects use indented format instead.
+
+**Write / Read:**
+```java
+// Write TOON
+String toon = JsonIo.toToon(myObject);
+
+// Read TOON back to typed Java object
+Person p = JsonIo.fromToon(toon).asClass(Person.class);
+
+// Read TOON to Maps (no class needed)
+Map map = JsonIo.fromToon(toon).asMap();
+```
+
+## Quick Start
+
+```java
+// JSON
+String json = JsonIo.toJson(myObject);
+MyClass obj = JsonIo.toJava(json).asClass(MyClass.class);
+
+// TOON (~40% fewer tokens than JSON)
+String toon = JsonIo.toToon(myObject, writeOptions);
+MyClass obj = JsonIo.fromToon(toon, readOptions).asClass(MyClass.class);
+```
+
+Request TOON format for LLM applications: `Accept: application/vnd.toon`
+
+**Also supports WebFlux and WebClient** for reactive applications.
+
+See the [Spring Integration Guide](/user-guide-spring.md) for configuration options, WebFlux usage, customizers, and Jackson coexistence modes.
+
+## Installation
+To include in your project:
+
+**Gradle**
+```groovy
+implementation 'com.cedarsoftware:json-io:4.98.0'
+```
+
+**Maven**
+```xml
+<dependency>
+  <groupId>com.cedarsoftware</groupId>
+  <artifactId>json-io</artifactId>
+  <version>4.98.0</version>
+</dependency>
+```
+
+Latest version: [![Maven Central](https://img.shields.io/maven-central/v/com.cedarsoftware/json-io)](https://central.sonatype.com/artifact/com.cedarsoftware/json-io)
+
+### Spring Boot Integration
+
+json-io provides a Spring Boot starter for seamless integration with Spring MVC and WebFlux applications.
+
+**Add the dependency:**
+
+```xml
+<dependency>
+  <groupId>com.cedarsoftware</groupId>
+  <artifactId>json-io-spring-boot-starter</artifactId>
+  <version>4.98.0</version>
+</dependency>
+```
+
+Your REST controllers now support JSON, JSON5, and TOON formats via content negotiation:
+
+```java
+@RestController
+public class ApiController {
+    @GetMapping("/data")
+    public MyData getData() {
+        return myData;  // Returns JSON, JSON5, or TOON based on Accept header
+    }
+}
+```
+
+### Spring AI Integration
+
+json-io provides a Spring AI module that reduces LLM token usage by ~40-50% using TOON format for tool call results and structured output parsing.
+
+**Add the dependency:**
+
+```xml
+<dependency>
+  <groupId>com.cedarsoftware</groupId>
+  <artifactId>json-io-spring-ai-toon</artifactId>
+  <version>4.98.0</version>
+</dependency>
+```
+
+Auto-configured: tool call results are serialized to TOON automatically. For structured output, use `ToonBeanOutputConverter<T>`:
+
+```java
+ToonBeanOutputConverter<Person> converter = new ToonBeanOutputConverter<>(Person.class);
+Person person = chatClient.prompt()
+    .user("Get info about John")
+    .call()
+    .entity(converter);
+```
+
+See the [Spring Integration Guide](/user-guide-spring.md#spring-ai-integration) for full details.
 
 ## Key Features
 
@@ -68,8 +199,6 @@ json-io is a powerful and lightweight Java library that simplifies **JSON5**, **
 - Extensive configuration options via `ReadOptionsBuilder` and `WriteOptionsBuilder`
 - Two modes: typed Java objects (`toJava()`) or class-independent Maps (`toMaps()`)
 - Parse JSON with unknown class references into a Map-of-Maps representation without requiring classes on classpath
-- Featured on [json.org](http://json.org)
-- Featured on [Baeldung: JSON, TOON, and Java Format Libraries](https://www.baeldung.com/java-json-toon-format-libraries)
 
 ## Why json-io?
 
@@ -138,135 +267,6 @@ Additionally, json-io **reflectively honors Jackson annotations** when they are 
 **Precedence:** Programmatic API > json-io annotations > Jackson annotations.
 
 See the [Annotations section of the User Guide](/user-guide.md#annotations) for full details and examples.
-
-## Installation
-To include in your project:
-> Replace `LATEST_VERSION` with the version shown here:
-[![Maven Central](https://img.shields.io/maven-central/v/com.cedarsoftware/json-io)](https://central.sonatype.com/artifact/com.cedarsoftware/json-io)
-
-**Gradle**
-```groovy
-implementation 'com.cedarsoftware:json-io:LATEST_VERSION'
-```
-
-**Maven**
-```xml
-<dependency>
-  <groupId>com.cedarsoftware</groupId>
-  <artifactId>json-io</artifactId>
-  <version>LATEST_VERSION</version>
-</dependency>
-```
-
-### Spring Boot Integration
-
-json-io provides a Spring Boot starter for seamless integration with Spring MVC and WebFlux applications.
-
-**Add the dependency:**
-
-```xml
-<dependency>
-  <groupId>com.cedarsoftware</groupId>
-  <artifactId>json-io-spring-boot-starter</artifactId>
-  <version>LATEST_VERSION</version>
-</dependency>
-```
-
-Your REST controllers now support JSON, JSON5, and TOON formats via content negotiation:
-
-```java
-@RestController
-public class ApiController {
-    @GetMapping("/data")
-    public MyData getData() {
-        return myData;  // Returns JSON, JSON5, or TOON based on Accept header
-    }
-}
-```
-
-### Spring AI Integration
-
-json-io provides a Spring AI module that reduces LLM token usage by ~40-50% using TOON format for tool call results and structured output parsing.
-
-**Add the dependency:**
-
-```xml
-<dependency>
-  <groupId>com.cedarsoftware</groupId>
-  <artifactId>json-io-spring-ai-toon</artifactId>
-  <version>LATEST_VERSION</version>
-</dependency>
-```
-
-Auto-configured: tool call results are serialized to TOON automatically. For structured output, use `ToonBeanOutputConverter<T>`:
-
-```java
-ToonBeanOutputConverter<Person> converter = new ToonBeanOutputConverter<>(Person.class);
-Person person = chatClient.prompt()
-    .user("Get info about John")
-    .call()
-    .entity(converter);
-```
-
-See the [Spring Integration Guide](/user-guide-spring.md#spring-ai-integration) for full details.
-
-## Quick Start
-
-```java
-// JSON
-String json = JsonIo.toJson(myObject);
-MyClass obj = JsonIo.toJava(json).asClass(MyClass.class);
-
-// TOON (~40% fewer tokens than JSON)
-String toon = JsonIo.toToon(myObject, writeOptions);
-MyClass obj = JsonIo.fromToon(toon, readOptions).asClass(MyClass.class);
-```
-
-Request TOON format for LLM applications: `Accept: application/vnd.toon`
-
-**Also supports WebFlux and WebClient** for reactive applications.
-
-See the [Spring Integration Guide](/user-guide-spring.md) for configuration options, WebFlux usage, customizers, and Jackson coexistence modes.
-
-## TOON Format
-
-[TOON](https://toonformat.dev/) (Token-Oriented Object Notation) is an indentation-based format that produces **~40-50% fewer tokens** than JSON — ideal for LLM applications where token count directly impacts cost and context window usage.
-
-- **No braces, brackets, or commas** — structure is expressed through indentation
-- **No quoting** for most keys and values — quotes only when the value contains special characters
-- **Compact arrays** — inline `[N]: a,b,c` or list format with `- ` prefixed elements
-- **Tabular format** — arrays of uniform objects as CSV-like rows with column headers
-- **Key folding** — nested keys like `address.city: Denver` flatten one level of nesting
-- **Full fidelity** — most data requires no extra metadata at all. When type hints are needed for correct deserialization (e.g., polymorphic fields), you can use json-io's `@Io*` annotations, Jackson annotations, or explicit `$type` markers. For object graphs with cycles, enable `cycleSupport(true)` to emit `$id`/`$ref` pairs
-
-**JSON:**
-```json
-{"team":"Rockets","players":[{"name":"John","age":30,"position":"guard"},{"name":"Sue","age":27,"position":"forward"},{"name":"Mike","age":32,"position":"center"}]}
-```
-
-**TOON (same data, ~45% fewer tokens):**
-```yaml
-team: Rockets
-players:
-  name, age, position
-  John, 30, guard
-  Sue, 27, forward
-  Mike, 32, center
-```
-
-When an array contains uniform objects, TOON automatically uses **tabular format** — a compact CSV-like layout with column headers. Mixed or nested objects use indented format instead.
-
-**Write / Read:**
-```java
-// Write TOON
-String toon = JsonIo.toToon(myObject);
-
-// Read TOON back to typed Java object
-Person p = JsonIo.fromToon(toon).asClass(Person.class);
-
-// Read TOON to Maps (no class needed)
-Map map = JsonIo.fromToon(toon).asMap();
-```
 
 ## Supported Types (60+ built-in)
 
