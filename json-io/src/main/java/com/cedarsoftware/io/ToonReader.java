@@ -1565,6 +1565,9 @@ public class ToonReader {
      * Handles \n, \r, and \r\n line endings.
      * Returns the number of characters read into lineBuf, or -1 on EOF.
      * The line data is available in lineBuf[0..returnValue-1].
+     * <p>
+     * Uses FastReader.readLine() which combines scanning, copying, and line-ending
+     * consumption into a single optimized call with a {@code c <= '\r'} range guard.
      */
     private int readLineRaw() {
         char[] buf = lineBuf;
@@ -1573,27 +1576,16 @@ public class ToonReader {
             if (total >= buf.length) {
                 buf = lineBuf = Arrays.copyOf(buf, buf.length * 2);
             }
-            int count = reader.readUntil(buf, total, buf.length - total, '\n', '\r');
+            int count = reader.readLine(buf, total, buf.length - total);
             if (count < 0) {
                 return total > 0 ? total : -1;
             }
             total += count;
-            int c = reader.read();
-            if (c == '\n' || c < 0) {
+            if (count < buf.length - total + count) {
+                // readLine returned fewer chars than maxLen — line ending was found and consumed
                 break;
             }
-            if (c == '\r') {
-                int peek = reader.read();
-                if (peek != '\n' && peek >= 0) {
-                    reader.pushback((char) peek);
-                }
-                break;
-            }
-            // Buffer was full, char is content — store and continue
-            if (total >= buf.length) {
-                buf = lineBuf = Arrays.copyOf(buf, buf.length * 2);
-            }
-            buf[total++] = (char) c;
+            // maxLen reached without finding line ending — grow buffer and continue
         }
         return total;
     }

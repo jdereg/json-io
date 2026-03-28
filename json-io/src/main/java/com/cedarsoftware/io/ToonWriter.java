@@ -87,6 +87,28 @@ public class ToonWriter implements Closeable, Flushable {
     private static final AtomicInteger SHARED_QUOTE_DECISION_CACHE_SIZE_COMMA = new AtomicInteger();
     private static final AtomicInteger SHARED_QUOTE_DECISION_CACHE_SIZE_TAB = new AtomicInteger();
     private static final AtomicInteger SHARED_QUOTE_DECISION_CACHE_SIZE_PIPE = new AtomicInteger();
+
+    // Per-delimiter lookup tables: true at index c means char c requires quoting.
+    // Merges control-char check (c < 32) and special-char branches into a single array access.
+    private static final boolean[] MUST_QUOTE_COMMA = buildMustQuoteTable(',');
+    private static final boolean[] MUST_QUOTE_TAB = buildMustQuoteTable('\t');
+    private static final boolean[] MUST_QUOTE_PIPE = buildMustQuoteTable('|');
+
+    private static boolean[] buildMustQuoteTable(char delim) {
+        boolean[] table = new boolean[128];
+        for (int i = 0; i < 32; i++) {
+            table[i] = true;   // control chars (covers \n, \r, \t, etc.)
+        }
+        table[':'] = true;
+        table['"'] = true;
+        table['\\'] = true;
+        table['['] = true;
+        table[']'] = true;
+        table['{'] = true;
+        table['}'] = true;
+        table[delim] = true;
+        return table;
+    }
     private static final Map<Long, String> SHARED_DOUBLE_FORMAT_CACHE = new ConcurrentHashMap<>(1024);
     private static final Map<Integer, String> SHARED_FLOAT_FORMAT_CACHE = new ConcurrentHashMap<>(512);
     private static final int COUNT_MARKER_CACHE_SIZE = 256;
@@ -122,6 +144,7 @@ public class ToonWriter implements Closeable, Flushable {
     private final char delimiter;  // Default comma, configurable to pipe or tab
     private final Map<String, Boolean> quoteDecisionCache;
     private final AtomicInteger quoteDecisionCacheSize;
+    private final boolean[] mustQuoteChar;  // Per-delimiter lookup table for single-pass quoting scan
     private final boolean cycleSupport;
     private final boolean skipNullFields;
     private final boolean toonKeyFolding;
@@ -199,12 +222,15 @@ public class ToonWriter implements Closeable, Flushable {
         if (delimiter == '\t') {
             this.quoteDecisionCache = SHARED_QUOTE_DECISION_CACHE_TAB;
             this.quoteDecisionCacheSize = SHARED_QUOTE_DECISION_CACHE_SIZE_TAB;
+            this.mustQuoteChar = MUST_QUOTE_TAB;
         } else if (delimiter == '|') {
             this.quoteDecisionCache = SHARED_QUOTE_DECISION_CACHE_PIPE;
             this.quoteDecisionCacheSize = SHARED_QUOTE_DECISION_CACHE_SIZE_PIPE;
+            this.mustQuoteChar = MUST_QUOTE_PIPE;
         } else {
             this.quoteDecisionCache = SHARED_QUOTE_DECISION_CACHE_COMMA;
             this.quoteDecisionCacheSize = SHARED_QUOTE_DECISION_CACHE_SIZE_COMMA;
+            this.mustQuoteChar = MUST_QUOTE_COMMA;
         }
         this.cycleSupport = this.writeOptions.isCycleSupport();
         this.skipNullFields = this.writeOptions.isSkipNullFields();
@@ -501,9 +527,15 @@ public class ToonWriter implements Closeable, Flushable {
 
     /**
      * Determine if a string needs quoting in TOON format.
+     * Uses a lookup-table-based single-pass scan for cache misses,
+     * merging reserved-literal, control-char, and special-char checks.
      */
     private boolean needsQuoting(String str) {
-        if (str == null || str.isEmpty()) {
+        if (str == null) {
+            return true;
+        }
+        int len = str.length();
+        if (len == 0) {
             return true;  // Empty strings must be quoted
         }
 
@@ -513,21 +545,54 @@ public class ToonWriter implements Closeable, Flushable {
             return cached;
         }
 
-        // Reserved literals must stay quoted to preserve scalar-vs-string semantics.
-        if (isReservedScalarLiteral(str)) {
-            cacheQuoteDecision(str, Boolean.TRUE);
+        boolean result = scanNeedsQuoting(str, len);
+        cacheQuoteDecision(str, result ? Boolean.TRUE : Boolean.FALSE);
+        return result;
+    }
+
+    /**
+     * Single-pass quoting decision. Replaces the former isReservedScalarLiteral(),
+     * isSimpleUnquotedAsciiToken(), and computeNeedsQuoting() multi-method chain.
+     * Uses a pre-built boolean[128] lookup table (mustQuoteChar) so the inner loop
+     * performs one array access per character instead of 8+ branch comparisons.
+     */
+    private boolean scanNeedsQuoting(String str, int len) {
+        char first = str.charAt(0);
+
+        // Leading whitespace or hyphen
+        if (first <= ' ' || first == '-') {
             return true;
         }
 
-        // Fast path for common identifier-like tokens (field names, enum names, etc.).
-        if (isSimpleUnquotedAsciiToken(str)) {
-            cacheQuoteDecision(str, Boolean.FALSE);
-            return false;
+        // Trailing whitespace
+        if (str.charAt(len - 1) <= ' ') {
+            return true;
         }
 
-        boolean quote = computeNeedsQuoting(str);
-        cacheQuoteDecision(str, quote);
-        return quote;
+        // Reserved literals — length-gated and first-char-gated for near-zero cost on non-matching strings
+        if (len <= 5) {
+            switch (first) {
+                case 't': if (len == 4 && "true".equals(str)) return true; break;
+                case 'f': if (len == 5 && "false".equals(str)) return true; break;
+                case 'n': if (len == 4 && "null".equals(str)) return true; break;
+            }
+        }
+
+        // Single-pass scan: control chars + special chars + delimiter via lookup table
+        boolean[] mq = mustQuoteChar;
+        for (int i = 0; i < len; i++) {
+            char c = str.charAt(i);
+            if (c < 128 ? mq[c] : false) {
+                return true;
+            }
+        }
+
+        // Number check — only when the first char makes it plausible (digit, '+', '.')
+        if ((first >= '0' && first <= '9') || first == '+' || first == '.') {
+            return looksLikeNumber(str);
+        }
+
+        return false;
     }
 
     private void cacheQuoteDecision(String str, Boolean decision) {
@@ -537,71 +602,6 @@ public class ToonWriter implements Closeable, Flushable {
                 quoteDecisionCacheSize.incrementAndGet();
             }
         }
-    }
-
-    private static boolean isReservedScalarLiteral(String str) {
-        return "true".equals(str) || "false".equals(str) || "null".equals(str);
-    }
-
-    private boolean isSimpleUnquotedAsciiToken(String str) {
-        char first = str.charAt(0);
-        if (!((first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z') || first == '_')) {
-            return false;
-        }
-
-        int len = str.length();
-        for (int i = 1; i < len; i++) {
-            char c = str.charAt(i);
-            if (c == delimiter) {
-                return false;
-            }
-            if (!((c >= 'a' && c <= 'z')
-                    || (c >= 'A' && c <= 'Z')
-                    || (c >= '0' && c <= '9')
-                    || c == '_'
-                    || c == '-')) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean computeNeedsQuoting(String str) {
-        // Check for leading/trailing whitespace
-        char first = str.charAt(0);
-        char last = str.charAt(str.length() - 1);
-        if (Character.isWhitespace(first) || Character.isWhitespace(last)) {
-            return true;
-        }
-
-        // Note: reserved literals (true/false/null) are already handled by needsQuoting() before this call.
-
-        // Check if it looks like a number
-        if (looksLikeNumber(str)) {
-            return true;
-        }
-
-        // Check for hyphen at start
-        if (first == '-') {
-            return true;
-        }
-
-        // Check for special characters and control characters
-        int len = str.length();
-        for (int i = 0; i < len; i++) {
-            char c = str.charAt(i);
-            // Control characters (ASCII 0-31) require quoting
-            // Note: \n (10), \r (13), \t (9) are control chars that need escaping
-            if (c < 32) {
-                return true;
-            }
-            if (c == ':' || c == '"' || c == '\\' || c == '[' || c == ']' ||
-                c == '{' || c == '}' || c == delimiter) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**
@@ -1281,20 +1281,6 @@ public class ToonWriter implements Closeable, Flushable {
         return new UniformPojoArrayData(keys, activePlans, typeName);
     }
 
-    private boolean hasSameKeyOrder(Map<String, Object> fields, List<String> keys) {
-        if (fields.size() != keys.size()) {
-            return false;
-        }
-        int i = 0;
-        for (String fieldKey : fields.keySet()) {
-            if (!fieldKey.equals(keys.get(i))) {
-                return false;
-            }
-            i++;
-        }
-        return true;
-    }
-
     /**
      * Verify that a subsequent element has the same active field pattern as the first element.
      * Walks through allPlans and checks that the same plans are active (not skipped) and
@@ -1791,16 +1777,6 @@ public class ToonWriter implements Closeable, Flushable {
                 out.write(countMarker(coll.size()));
                 writeCollectionElementsWithHeader(coll);
             }
-        } else if (value != null && value.getClass().isArray()
-                && shouldWriteTypeMetadata(value.getClass())) {
-            // Array with type metadata — use writeArray (which emits $type/$items).
-            writeKeyString(keyStr);
-            out.write(":");
-            out.write(NEW_LINE);
-            depth++;
-            writeIndent();
-            writeArray(value);
-            depth--;
         } else {
             writeKeyString(keyStr);
             out.write(":");
@@ -1870,15 +1846,6 @@ public class ToonWriter implements Closeable, Flushable {
                 writeCollectionElementsWithHeader(coll);
                 depth--;
             }
-        } else if (value != null && value.getClass().isArray()
-                && shouldWriteTypeMetadata(value.getClass())) {
-            writeKeyString(keyStr);
-            out.write(":");
-            out.write(NEW_LINE);
-            depth += 2;
-            writeIndent();
-            writeArray(value);
-            depth -= 2;
         } else {
             writeKeyString(keyStr);
             out.write(":");
@@ -2211,8 +2178,9 @@ public class ToonWriter implements Closeable, Flushable {
 
     /**
      * Get object fields as a map using the same WriteFieldPlan / Accessor abstraction as JsonWriter.
-     * This ensures all write-side annotations are respected: @IoGetter, @IoFormat, @IoAnyGetter,
-     * @IoProperty, @IoPropertyOrder, @IoNaming, @IoInclude(NON_NULL), etc.
+     * This ensures all write-side annotations are respected: {@code @IoGetter}, {@code @IoFormat},
+     * {@code @IoAnyGetter}, {@code @IoProperty}, {@code @IoPropertyOrder}, {@code @IoNaming},
+     * {@code @IoInclude(NON_NULL)}, etc.
      */
     private Map<String, Object> getObjectFields(Object obj) {
         Class<?> clazz = obj.getClass();
