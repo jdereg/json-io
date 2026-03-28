@@ -160,16 +160,14 @@ public class ToonWriter implements Closeable, Flushable {
     private int depth = 0;
     private int nextIdentity = 1;
 
-    // Track objects written during cycleSupport=true pass
-    private final IdentityIntMap objVisited = new IdentityIntMap(256);
-    // Track objects that require @id emission (shared references/cycles)
-    private final IdentityIntMap objsReferenced = new IdentityIntMap(256);
-    // Track active traversal path when cycleSupport=false
-    private final Map<Object, Boolean> activePath = new IdentityHashMap<>();
+    // Allocated lazily based on cycleSupport mode to avoid ~6 KB of wasted arrays
+    // when cycle support is disabled (the default for TOON).
+    private IdentityIntMap objVisited;       // cycleSupport=true: track visited objects
+    private IdentityIntMap objsReferenced;   // cycleSupport=true: track shared references
+    private Map<Object, Boolean> activePath; // cycleSupport=false: detect cycles via active path
+    private ArrayDeque<Object> traceStack;   // cycleSupport=true: work deque for traceReferences()
     // Cache resolved output type names per class for this write operation.
     private final Map<Class<?>, String> typeNameCache = new IdentityHashMap<>(32);
-    // Reusable work deque for traceReferences() traversal
-    private final ArrayDeque<Object> traceStack = new ArrayDeque<>(256);
 
     private static String[] buildIndentCache() {
         String[] cache = new String[INDENT_CACHE_SIZE];
@@ -283,22 +281,35 @@ public class ToonWriter implements Closeable, Flushable {
     public void write(Object obj) {
         try {
             depth = 0;
-            objVisited.clear();
-            objsReferenced.clear();
-            activePath.clear();
             nextIdentity = 1;
             if (cycleSupport) {
+                // Lazy-init cycle-support structures
+                if (objVisited == null) {
+                    objVisited = new IdentityIntMap(256);
+                    objsReferenced = new IdentityIntMap(256);
+                    traceStack = new ArrayDeque<>(256);
+                } else {
+                    objVisited.clear();
+                    objsReferenced.clear();
+                }
                 traceReferences(obj);
                 objVisited.clear();
+            } else {
+                // Lazy-init acyclic path tracker
+                if (activePath == null) {
+                    activePath = new IdentityHashMap<>();
+                } else {
+                    activePath.clear();
+                }
             }
             writeValue(obj);
             out.flush();
         } catch (IOException e) {
             throw new JsonIoException("Error writing TOON output", e);
         } finally {
-            objVisited.clear();
-            objsReferenced.clear();
-            activePath.clear();
+            if (objVisited != null) objVisited.clear();
+            if (objsReferenced != null) objsReferenced.clear();
+            if (activePath != null) activePath.clear();
             nextIdentity = 1;
         }
     }
