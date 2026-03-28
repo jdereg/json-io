@@ -1696,32 +1696,35 @@ public class ToonReader {
      * Find colon position in the current line buffer (within trimmed range).
      * Returns offset relative to currentTrimStart, or -1 if no valid colon found.
      */
+    /**
+     * Find the key:value colon in the current line buffer.
+     * Single-pass scan replaces the former three-loop approach (find colon, check quotes, slow path).
+     * Uses a {@code c <= ':'} range guard so letters and underscores (the vast majority of
+     * key characters) need only one comparison per character.
+     */
     private int findColonInBuf() {
         int start = currentTrimStart;
         int end = currentTrimEnd;
         char[] buf = lineBuf;
 
-        // Find first colon
-        int colonPos = -1;
+        // Single pass: find ':' while watching for '"'.
+        // Letters (a-z = 97-122, A-Z = 65-90) and underscore (95) are all > ':' (58),
+        // so the range guard skips them with one comparison.
         for (int i = start; i < end; i++) {
-            if (buf[i] == ':') {
-                colonPos = i;
-                break;
+            char c = buf[i];
+            if (c <= ':') {
+                if (c == ':') return i - start;
+                if (c == '"') {
+                    // Quoted key — fall to quote-aware scan from the beginning
+                    return findColonQuoteAware(buf, start, end);
+                }
             }
         }
-        if (colonPos < 0) return -1;
+        return -1;
+    }
 
-        // Fast path: no quote before the colon — colon is valid
-        boolean hasQuoteBefore = false;
-        for (int i = start; i < colonPos; i++) {
-            if (buf[i] == '"') {
-                hasQuoteBefore = true;
-                break;
-            }
-        }
-        if (!hasQuoteBefore) return colonPos - start;
-
-        // Slow path: scan for unquoted colon
+    /** Scan for the first unquoted colon, handling escape sequences within quoted strings. */
+    private static int findColonQuoteAware(char[] buf, int start, int end) {
         boolean inQuotes = false;
         boolean escaped = false;
         for (int i = start; i < end; i++) {
