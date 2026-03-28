@@ -173,6 +173,21 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     // null = character doesn't need escaping, non-null = the escape sequence to write
     private static final String[] ESCAPE_STRINGS = new String[128];
     private static final String[] CONTROL_UNICODE_ESCAPES = new String[32];
+
+    // Cached int→String for common small integers, avoiding Integer.toString() allocation.
+    // Covers -128 to 16384 (same range as ToonWriter's SMALL_LONG_STRINGS).
+    private static final int SMALL_INT_LOW = -128;
+    private static final int SMALL_INT_HIGH = 16384;
+    private static final String[] SMALL_INT_STRINGS = buildSmallIntCache();
+
+    private static String[] buildSmallIntCache() {
+        int size = SMALL_INT_HIGH - SMALL_INT_LOW + 1;
+        String[] cache = new String[size];
+        for (int i = 0; i < size; i++) {
+            cache[i] = Integer.toString(i + SMALL_INT_LOW);
+        }
+        return cache;
+    }
     private static final char[] HEX_DIGITS = "0123456789abcdef".toCharArray();
 
     private static String toUnicodeEscape(int codePoint) {
@@ -1365,6 +1380,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         } else if (!isNanInfinityAllowed() && obj instanceof Float && (Float.isNaN((Float) obj) || Float.isInfinite((Float) obj))) {
             output.write("null");
         } else {
+            // Fast path: cached String for small integers avoids Integer.toString() allocation
+            if (obj instanceof Integer) {
+                int val = (Integer) obj;
+                if (val >= SMALL_INT_LOW && val <= SMALL_INT_HIGH) {
+                    output.write(SMALL_INT_STRINGS[val - SMALL_INT_LOW]);
+                    return;
+                }
+            }
             output.write(obj.toString());
         }
     }
