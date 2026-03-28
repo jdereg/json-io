@@ -151,11 +151,22 @@ public class ToonReader {
         this.numberCacheValues = TL_NUMBER_VALUES.get();
     }
 
+    /**
+     * O(1) hash shared by all string/number cache methods.
+     * Samples first, middle, and last chars + length instead of hashing all chars.
+     * All cache methods (cacheString, cacheSubstring, cacheSubstringFromBuf, parseNumber)
+     * must use this same formula so cross-lookups find each other's entries.
+     * Caller applies the appropriate mask (STRING_CACHE_MASK or NUMBER_CACHE_MASK).
+     */
+    private static int cacheHash(char first, char mid, char last, int len) {
+        return (first * 31 + mid) * 31 + last + len;
+    }
+
     private String cacheString(String s) {
         int len = s.length();
         if (len == 0) return "";
         if (len > MAX_CACHED_STRING_LENGTH) return s;
-        int slot = s.hashCode() & STRING_CACHE_MASK;
+        int slot = cacheHash(s.charAt(0), s.charAt(len >> 1), s.charAt(len - 1), len) & STRING_CACHE_MASK;
         String[] cache = stringCache;
         String cached = cache[slot];
         if (s.equals(cached)) return cached;
@@ -174,13 +185,8 @@ public class ToonReader {
             return source.substring(start, end);
         }
 
-        int hash = 0;
-        for (int i = start; i < end; i++) {
-            hash = 31 * hash + source.charAt(i);
-        }
-
+        int slot = cacheHash(source.charAt(start), source.charAt(start + (len >> 1)), source.charAt(end - 1), len) & STRING_CACHE_MASK;
         String[] cache = stringCache;
-        int slot = hash & STRING_CACHE_MASK;
         String cached = cache[slot];
         if (cached != null && cached.length() == len && source.regionMatches(start, cached, 0, len)) {
             return cached;
@@ -1477,21 +1483,16 @@ public class ToonReader {
         String[] numKeys = numberCacheKeys;
         Number[] numVals = numberCacheValues;
         int len = end - start;
-        int hash = 0;
-        for (int i = start; i < end; i++) {
-            hash = 31 * hash + buf[i];
-        }
-        int slot = hash & NUMBER_CACHE_MASK;
+        int slot = cacheHash(buf[start], buf[start + (len >> 1)], buf[end - 1], len) & NUMBER_CACHE_MASK;
         String cachedKey = numKeys[slot];
         if (cachedKey != null && cachedKey.length() == len) {
-            boolean match = true;
             for (int i = 0; i < len; i++) {
                 if (buf[start + i] != cachedKey.charAt(i)) {
-                    match = false;
+                    cachedKey = null;
                     break;
                 }
             }
-            if (match) {
+            if (cachedKey != null) {
                 return numVals[slot];
             }
         }
@@ -1734,7 +1735,10 @@ public class ToonReader {
     }
 
     /**
-     * Create a String from lineBuf range, probing the string cache first.
+     * Create a String from a char[] range, probing the string cache first.
+     * Uses the shared O(1) slot computation (first + middle + last + length)
+     * instead of an O(n) polynomial hash, eliminating the hash loop that
+     * dominated JFR profiles for this method.
      */
     private String cacheSubstringFromBuf(char[] buf, int start, int end) {
         int len = end - start;
@@ -1743,23 +1747,19 @@ public class ToonReader {
             return new String(buf, start, len);
         }
 
-        int hash = 0;
-        for (int i = start; i < end; i++) {
-            hash = 31 * hash + buf[i];
-        }
-
+        int slot = cacheHash(buf[start], buf[start + (len >> 1)], buf[end - 1], len) & STRING_CACHE_MASK;
         String[] cache = stringCache;
-        int slot = hash & STRING_CACHE_MASK;
         String cached = cache[slot];
+
         if (cached != null && cached.length() == len) {
-            boolean match = true;
             for (int j = 0; j < len; j++) {
                 if (buf[start + j] != cached.charAt(j)) {
-                    match = false;
-                    break;
+                    String s = new String(buf, start, len);
+                    cache[slot] = s;
+                    return s;
                 }
             }
-            if (match) return cached;
+            return cached;
         }
 
         String s = new String(buf, start, len);
