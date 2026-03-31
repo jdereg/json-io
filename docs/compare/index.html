@@ -401,6 +401,14 @@ List&lt;Employee&gt; <span class="method">findByDept</span>(String dept) { ... }
       <div class="viz-controls">
         <button class="viz-btn" :class="{active: activeViz==='furnace'}" @click="setViz('furnace')">A: The Furnace</button>
         <button class="viz-btn" :class="{active: activeViz==='mirror'}" @click="setViz('mirror')">B: The Mirror</button>
+        <div style="flex:1;"></div>
+        <div class="nav-arrows">
+          <button class="nav-btn" @click="prevSample">&#8592;</button>
+          <button class="nav-btn" @click="nextSample">&#8594;</button>
+        </div>
+        <select class="sample-select" v-model="selectedIndex">
+          <option v-for="(s,i) in samples" :key="i" :value="i">{{ (i+1)+'. '+s.name }}</option>
+        </select>
       </div>
       <div class="viz-container" id="viz-container"></div>
     </div>
@@ -1093,6 +1101,13 @@ createApp({
         nextTick(() => VizManager.init(activeViz.value, extra));
       }
     });
+    // Re-init viz when sample changes while on viz tab
+    watch(selectedIndex, () => {
+      if (activeTab.value === 'viz') {
+        const extra = activeViz.value === 'mirror' ? { json: jsonText.value, toon: toonText.value, name: currentSample.value.name } : null;
+        nextTick(() => VizManager.init(activeViz.value, extra));
+      }
+    });
     function nextSlide() { if (slideIndex.value < totalSlides - 1) slideIndex.value++; }
     function prevSlide() { if (slideIndex.value > 0) slideIndex.value--; }
     const currentSample = computed(() => SAMPLES[selectedIndex.value]);
@@ -1108,8 +1123,8 @@ createApp({
     function nextSample() { selectedIndex.value = (selectedIndex.value + 1) % SAMPLES.length; }
     function prevSample() { selectedIndex.value = (selectedIndex.value - 1 + SAMPLES.length) % SAMPLES.length; }
     function handleKeydown(e) {
-      if (e.key === 'ArrowRight') { if (activeTab.value === 'slides') nextSlide(); else nextSample(); }
-      else if (e.key === 'ArrowLeft') { if (activeTab.value === 'slides') prevSlide(); else prevSample(); }
+      if (e.key === 'ArrowRight') { if (activeTab.value === 'slides') nextSlide(); else if (activeTab.value === 'compare' || activeTab.value === 'viz') nextSample(); }
+      else if (e.key === 'ArrowLeft') { if (activeTab.value === 'slides') prevSlide(); else if (activeTab.value === 'compare' || activeTab.value === 'viz') prevSample(); }
     }
     onMounted(() => window.addEventListener('keydown', handleKeydown));
     onUnmounted(() => { window.removeEventListener('keydown', handleKeydown); VizManager.destroy(); });
