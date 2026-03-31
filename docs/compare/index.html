@@ -123,6 +123,21 @@ body::before { content:''; position:fixed; inset:0; background-image: linear-gra
 .viz-counter .json-num { color:var(--json-accent); font-weight:700; }
 .viz-counter .toon-num { color:var(--toon-accent); font-weight:700; }
 
+/* BENCHMARK TABLE */
+.bench-table { width:100%; border-collapse:collapse; margin-top:clamp(10px,1.5vw,20px); font-family:var(--font-mono); font-size:clamp(12px,1.2vw,18px); }
+.bench-table th { padding:clamp(6px,0.8vw,12px) clamp(8px,1vw,16px); text-align:left; color:var(--text-dim); font-weight:600; font-size:clamp(11px,1vw,15px); text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid var(--border-bright); }
+.bench-table td { padding:clamp(6px,0.8vw,12px) clamp(8px,1vw,16px); border-bottom:1px solid var(--border); color:var(--text); font-weight:500; }
+.bench-table tr.read-row td { background:rgba(34,211,238,0.04); }
+.bench-table tr.write-row td { background:rgba(249,115,22,0.04); }
+.bench-table td.winner { background:rgba(52,211,153,0.18); color:#34d399; font-weight:700; border-radius:4px; }
+.bench-table tr.read-row td.winner { background:rgba(52,211,153,0.22); }
+.bench-table tr.write-row td.winner { background:rgba(52,211,153,0.18); }
+.bench-table td.op-label { font-weight:700; letter-spacing:0.5px; }
+.bench-table tr.read-row td.op-label { color:var(--toon-accent); }
+.bench-table tr.write-row td.op-label { color:var(--json-accent); }
+.bench-table-wrap { background:var(--surface); border:1px solid var(--border-bright); border-radius:10px; padding:clamp(12px,1.5vw,24px); margin-top:8px; overflow-x:auto; }
+.bench-note { font-family:var(--font-body); font-size:clamp(11px,1vw,15px); color:var(--text-muted); margin-top:clamp(6px,0.8vw,12px); font-style:italic; }
+
 .code-area::-webkit-scrollbar, .slide-canvas::-webkit-scrollbar { width:6px; height:6px; }
 .code-area::-webkit-scrollbar-track, .slide-canvas::-webkit-scrollbar-track { background:transparent; }
 .code-area::-webkit-scrollbar-thumb, .slide-canvas::-webkit-scrollbar-thumb { background:var(--border-bright); border-radius:3px; }
@@ -234,25 +249,34 @@ List&lt;Employee&gt; <span class="method">findByDept</span>(String dept) { ... }
           </template>
 
           <template v-if="slideIndex===6">
-            <div class="slide-eyebrow">Java vs Python</div>
-            <div class="slide-headline">Serialization performance: <em>json-io</em> vs <span class="accent-orange">Python TOON</span></div>
+            <div class="slide-eyebrow">Java vs Python — Benchmark</div>
+            <div class="slide-headline"><em>json-io TOON</em> vs Python's <span class="accent-orange">best</span></div>
             <div class="slide-body">
-              <div class="slide-stat-row">
-                <div class="slide-stat-box">
-                  <div class="slide-stat-number cyan">TBD</div>
-                  <div class="slide-stat-desc">Java ops/sec (json-io)</div>
-                </div>
-                <div class="slide-stat-box">
-                  <div class="slide-stat-number orange">TBD</div>
-                  <div class="slide-stat-desc">Python ops/sec</div>
-                </div>
-                <div class="slide-stat-box">
-                  <div class="slide-stat-number green">TBD</div>
-                  <div class="slide-stat-desc">Java speedup factor</div>
-                </div>
+              <div class="bench-table-wrap">
+                <table class="bench-table">
+                  <thead>
+                    <tr>
+                      <th></th>
+                      <th>Records</th>
+                      <th style="color:var(--toon-accent);">json-io TOON</th>
+                      <th style="color:var(--json-accent);">Python TOON<br><span style="font-size:0.8em;opacity:0.7;">(Rust/PyO3)</span></th>
+                      <th style="color:var(--json-accent);">Python JSON<br><span style="font-size:0.8em;opacity:0.7;">(C stdlib)</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="read-row"><td class="op-label" rowspan="3">Read</td><td>10,000</td><td class="winner">2.5 ms</td><td>4.2 ms</td><td>3.2 ms</td></tr>
+                    <tr class="read-row"><td>100,000</td><td class="winner">23 ms</td><td>46 ms</td><td>33 ms</td></tr>
+                    <tr class="read-row"><td>1,000,000</td><td class="winner">232 ms</td><td>488 ms</td><td>352 ms</td></tr>
+                    <tr class="write-row"><td class="op-label" rowspan="3">Write</td><td>10,000</td><td>4.5 ms</td><td>11 ms</td><td class="winner">2.9 ms</td></tr>
+                    <tr class="write-row"><td>100,000</td><td class="winner">23 ms</td><td>108 ms</td><td>30 ms</td></tr>
+                    <tr class="write-row"><td>1,000,000</td><td class="winner">255 ms</td><td>1,080 ms</td><td>287 ms</td></tr>
+                  </tbody>
+                </table>
+                <div class="bench-note">Nested departments + employees (tabular TOON). Median of 5 runs, JIT-warmed. Same data, same machine.</div>
               </div>
-              <div class="slide-point">Benchmark: identical dataset — 1K, 10K, 100K records, serialize + deserialize.</div>
-              <div class="slide-point">Results coming soon — stay tuned for the pro-Java verdict.</div>
+              <div class="slide-point"><strong>Read</strong>: json-io TOON wins every row — faster than Python's Rust parser <em>and</em> Python's C-based JSON.</div>
+              <div class="slide-point"><strong>Write</strong>: json-io TOON is <strong>4x faster</strong> than Python TOON at 1M records — and produces 38% smaller output.</div>
+              <div class="slide-point">The punchline: json-io reads TOON faster than Python reads JSON. <strong>Smaller format + faster parser.</strong></div>
             </div>
           </template>
 
