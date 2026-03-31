@@ -266,17 +266,17 @@ List&lt;Employee&gt; <span class="method">findByDept</span>(String dept) { ... }
                   </thead>
                   <tbody>
                     <tr class="read-row"><td class="op-label" rowspan="3">Read</td><td>10,000</td><td class="winner">2.5 ms</td><td>4.2 ms</td><td>3.2 ms</td></tr>
-                    <tr class="read-row"><td>100,000</td><td class="winner">23 ms</td><td>46 ms</td><td>33 ms</td></tr>
-                    <tr class="read-row"><td>1,000,000</td><td class="winner">232 ms</td><td>488 ms</td><td>352 ms</td></tr>
-                    <tr class="write-row"><td class="op-label" rowspan="3">Write</td><td>10,000</td><td>4.5 ms</td><td>11 ms</td><td class="winner">2.9 ms</td></tr>
-                    <tr class="write-row"><td>100,000</td><td class="winner">23 ms</td><td>108 ms</td><td>30 ms</td></tr>
-                    <tr class="write-row"><td>1,000,000</td><td class="winner">255 ms</td><td>1,080 ms</td><td>287 ms</td></tr>
+                    <tr class="read-row"><td>100,000</td><td class="winner">22 ms</td><td>46 ms</td><td>33 ms</td></tr>
+                    <tr class="read-row"><td>1,000,000</td><td class="winner">218 ms</td><td>488 ms</td><td>352 ms</td></tr>
+                    <tr class="write-row"><td class="op-label" rowspan="3">Write</td><td>10,000</td><td class="winner">2.3 ms</td><td>11 ms</td><td>2.9 ms</td></tr>
+                    <tr class="write-row"><td>100,000</td><td class="winner">26 ms</td><td>108 ms</td><td>30 ms</td></tr>
+                    <tr class="write-row"><td>1,000,000</td><td class="winner">284 ms</td><td>1,080 ms</td><td>287 ms</td></tr>
                   </tbody>
                 </table>
                 <div class="bench-note">Nested departments + employees (tabular TOON). Median of 5 runs, JIT-warmed. Same data, same machine.</div>
               </div>
               <div class="slide-point"><strong>Read</strong>: json-io TOON wins every row — faster than Python's Rust parser <em>and</em> Python's C-based JSON.</div>
-              <div class="slide-point"><strong>Write</strong>: json-io TOON is <strong>4x faster</strong> than Python TOON at 1M records — and produces 38% smaller output.</div>
+              <div class="slide-point"><strong>Write</strong>: json-io TOON is <strong>4x faster</strong> than Python TOON at 1M records, matches Python's C-based JSON writer — and produces 38% smaller output.</div>
               <div class="slide-point">The punchline: json-io reads TOON faster than Python reads JSON. <strong>Smaller format + faster parser.</strong></div>
             </div>
           </template>
