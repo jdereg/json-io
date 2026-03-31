@@ -35,7 +35,7 @@
 
 LLM applications waste 40-50% of their token budget on JSON syntax overhead — braces, brackets, quotes, and commas that carry zero semantic information. **json-io** is a Java serialization library that reads and writes **JSON**, **JSON5**, and **[TOON](https://toonformat.dev/)** (Token-Oriented Object Notation) — a format that strips that overhead while preserving full data fidelity. It also handles what Jackson/Gson cannot: cyclic object graphs, automatic polymorphic types, and zero-config serialization of 60+ built-in Java types.
 
-Featured on [json.org](http://json.org) and [Baeldung](https://www.baeldung.com/java-json-toon-format-libraries).
+Featured on [json.org](http://json.org) and [Baeldung](https://www.baeldung.com/java-json-toon-format-libraries). See the [interactive JSON vs TOON comparison](https://jdereg.github.io/json-io/compare/).
 
 ## Table of Contents
 
