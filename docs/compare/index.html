@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TOON vs JSON — Token Comparison</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700;800&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0a0e17; --surface: #111827; --surface-2: #1a2236;
+  --border: #1e2d4a; --border-bright: #2a3f6b;
+  --text: #e2e8f0; --text-dim: #7a8ba8; --text-muted: #4a5b78;
+  --json-accent: #f97316; --json-glow: rgba(249,115,22,0.15); --json-bg: rgba(249,115,22,0.05);
+  --toon-accent: #22d3ee; --toon-glow: rgba(34,211,238,0.15); --toon-bg: rgba(34,211,238,0.05);
+  --savings-green: #34d399; --savings-glow: rgba(52,211,153,0.25);
+  --font-mono: 'JetBrains Mono','Fira Code',monospace;
+  --font-body: 'DM Sans',-apple-system,sans-serif;
+  --font-display: 'DM Serif Display',Georgia,serif;
+}
+html, body { height: 100%; }
+body { font-family: var(--font-body); background: var(--bg); color: var(--text); overflow-x: hidden; }
+body::before { content:''; position:fixed; inset:0; background-image: linear-gradient(rgba(30,45,74,0.3) 1px,transparent 1px), linear-gradient(90deg,rgba(30,45,74,0.3) 1px,transparent 1px); background-size:60px 60px; pointer-events:none; z-index:0; }
+#app { position:relative; z-index:1; min-height:100vh; display:flex; flex-direction:column; }
+
+.header { padding:20px 40px 0; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.header-left { display:flex; align-items:center; gap:20px; }
+.logo-mark { width:44px; height:44px; border-radius:10px; background:linear-gradient(135deg,var(--json-accent),var(--toon-accent)); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-weight:700; font-size:15px; color:var(--bg); box-shadow:0 0 30px rgba(34,211,238,0.2),0 0 60px rgba(249,115,22,0.1); }
+.header-title { font-family:var(--font-display); font-size:24px; color:var(--text); }
+.header-title span { color:var(--text-dim); font-weight:400; }
+
+.tab-bar { display:flex; gap:0; padding:16px 40px 0; border-bottom:1px solid var(--border); flex-shrink:0; }
+.tab-btn { padding:10px 28px; font-family:var(--font-body); font-size:14px; font-weight:600; color:var(--text-muted); background:none; border:1px solid transparent; border-bottom:none; border-radius:8px 8px 0 0; cursor:pointer; transition:all 0.15s; position:relative; bottom:-1px; }
+.tab-btn:hover { color:var(--text-dim); }
+.tab-btn.active { color:var(--toon-accent); background:var(--bg); border-color:var(--border); }
+
+.compare-controls { padding:12px 40px; display:flex; align-items:center; justify-content:flex-end; gap:12px; border-bottom:1px solid var(--border); flex-shrink:0; }
+.sample-select { appearance:none; background:var(--surface); border:1px solid var(--border-bright); color:var(--text); font-family:var(--font-body); font-size:14px; font-weight:500; padding:10px 36px 10px 14px; border-radius:8px; cursor:pointer; outline:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5l5 5 5-5' stroke='%237a8ba8' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; transition:border-color 0.2s; min-width:320px; }
+.sample-select:hover { border-color:var(--toon-accent); }
+.sample-select:focus { border-color:var(--toon-accent); box-shadow:0 0 0 2px rgba(34,211,238,0.15); }
+
+.nav-arrows { display:flex; gap:6px; }
+.nav-btn { width:36px; height:36px; border:1px solid var(--border-bright); background:var(--surface); color:var(--text-dim); border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; transition:all 0.15s; }
+.nav-btn:hover { border-color:var(--toon-accent); color:var(--text); }
+
+.stats-bar { display:flex; align-items:stretch; gap:1px; padding:0 40px; background:var(--border); border-bottom:1px solid var(--border); flex-shrink:0; }
+.stat-card { flex:1; background:var(--surface); padding:14px 20px; display:flex; flex-direction:column; gap:3px; }
+.stat-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.8px; color:var(--text-muted); }
+.stat-value { font-family:var(--font-mono); font-size:26px; font-weight:700; letter-spacing:-1px; }
+.stat-value.json-color { color:var(--json-accent); }
+.stat-value.toon-color { color:var(--toon-accent); }
+.stat-value.savings-color { color:var(--savings-green); text-shadow:0 0 20px var(--savings-glow); }
+.stat-sub { font-size:12px; color:var(--text-dim); font-weight:500; }
+
+.panels-container { flex:1; display:flex; gap:1px; background:var(--border); min-height:0; }
+.panel { flex:1; display:flex; flex-direction:column; background:var(--bg); min-width:0; }
+.panel-header { padding:12px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.panel-label { font-family:var(--font-mono); font-size:13px; font-weight:600; letter-spacing:1px; text-transform:uppercase; }
+.panel-label.json { color:var(--json-accent); }
+.panel-label.toon { color:var(--toon-accent); }
+.panel-meta { font-family:var(--font-mono); font-size:12px; color:var(--text-muted); }
+.code-area { flex:1; overflow:auto; padding:20px 24px; min-height:0; }
+.code-area pre { font-family:var(--font-mono); font-size:13px; line-height:1.7; white-space:pre; color:var(--text); margin:0; tab-size:2; }
+.panel:first-child .code-area { background:var(--json-bg); }
+.panel:last-child .code-area { background:var(--toon-bg); }
+
+/* SLIDES */
+.slide-view { flex:1; display:flex; flex-direction:column; min-height:0; }
+.slide-canvas { flex:1; display:flex; align-items:center; justify-content:center; padding:clamp(20px,4vh,60px) clamp(32px,6vw,120px); min-height:0; overflow:auto; }
+.slide { width:100%; max-width:90vw; min-height:400px; display:flex; flex-direction:column; justify-content:center; }
+.slide-eyebrow { font-family:var(--font-mono); font-size:clamp(11px,1vw,16px); font-weight:600; text-transform:uppercase; letter-spacing:2px; color:var(--toon-accent); margin-bottom:clamp(12px,1.5vw,24px); }
+.slide-headline { font-family:var(--font-display); font-size:clamp(28px,3.6vw,72px); line-height:1.15; letter-spacing:-1px; color:var(--text); margin-bottom:clamp(18px,2.5vw,40px); }
+.slide-headline em { font-style:normal; color:var(--toon-accent); }
+.slide-headline .accent-orange { color:var(--json-accent); }
+.slide-headline .accent-green { color:var(--savings-green); }
+.slide-body { display:flex; flex-direction:column; gap:clamp(10px,1.2vw,20px); }
+.slide-point { font-size:clamp(15px,1.6vw,28px); line-height:1.5; color:var(--text-dim); padding-left:clamp(16px,1.8vw,30px); position:relative; }
+.slide-point::before { content:'\203A'; position:absolute; left:0; color:var(--toon-accent); font-weight:700; font-size:clamp(16px,1.8vw,30px); }
+.slide-point strong { color:var(--text); font-weight:600; }
+.slide-point code { font-family:var(--font-mono); font-size:clamp(13px,1.3vw,22px); background:var(--surface-2); padding:2px 8px; border-radius:4px; color:var(--toon-accent); border:1px solid var(--border); }
+.slide-code-block { background:var(--surface); border:1px solid var(--border-bright); border-radius:10px; padding:clamp(14px,2vw,32px) clamp(16px,2.2vw,36px); margin-top:8px; overflow-x:auto; }
+.slide-code-block pre { font-family:var(--font-mono); font-size:clamp(13px,1.3vw,22px); line-height:1.6; color:var(--text); margin:0; white-space:pre; }
+.slide-code-block .comment { color:var(--text-muted); }
+.slide-code-block .keyword { color:var(--json-accent); }
+.slide-code-block .string { color:var(--savings-green); }
+.slide-code-block .method { color:var(--toon-accent); }
+.slide-stat-row { display:flex; gap:clamp(16px,2.5vw,40px); margin-top:12px; }
+.slide-stat-box { flex:1; background:var(--surface); border:1px solid var(--border-bright); border-radius:10px; padding:clamp(14px,2vw,32px); text-align:center; }
+.slide-stat-number { font-family:var(--font-mono); font-size:clamp(28px,3.2vw,56px); font-weight:700; letter-spacing:-2px; }
+.slide-stat-number.orange { color:var(--json-accent); }
+.slide-stat-number.cyan { color:var(--toon-accent); }
+.slide-stat-number.green { color:var(--savings-green); text-shadow:0 0 30px var(--savings-glow); }
+.slide-stat-desc { font-size:clamp(12px,1.1vw,18px); color:var(--text-dim); margin-top:6px; font-weight:500; }
+
+.slide-nav { padding:14px 40px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--surface); flex-shrink:0; }
+.slide-counter { font-family:var(--font-mono); font-size:14px; color:var(--text-dim); font-weight:600; min-width:100px; }
+.slide-progress-track { flex:1; max-width:400px; height:3px; background:var(--border); border-radius:2px; margin:0 24px; overflow:hidden; }
+.slide-progress-fill { height:100%; background:var(--toon-accent); border-radius:2px; transition:width 0.3s ease; }
+.slide-nav-buttons { display:flex; gap:8px; }
+
+.footer { padding:10px 40px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--surface); flex-shrink:0; }
+.footer-text { font-size:12px; color:var(--text-muted); font-weight:500; }
+.footer-link { font-size:12px; color:var(--toon-accent); text-decoration:none; font-weight:600; }
+
+/* VIZ TAB */
+.viz-view { flex:1; display:flex; flex-direction:column; min-height:0; }
+.viz-controls { padding:12px 40px; display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--border); flex-shrink:0; }
+.viz-btn { padding:8px 20px; font-family:var(--font-body); font-size:13px; font-weight:600; color:var(--text-muted); background:var(--surface); border:1px solid var(--border-bright); border-radius:6px; cursor:pointer; transition:all 0.15s; }
+.viz-btn:hover { color:var(--text-dim); border-color:var(--toon-accent); }
+.viz-btn.active { color:var(--toon-accent); background:var(--toon-bg); border-color:var(--toon-accent); }
+.viz-container { flex:1; position:relative; min-height:0; overflow:hidden; }
+.viz-container canvas { display:block; width:100%!important; height:100%!important; }
+.viz-overlay { position:absolute; bottom:32px; left:50%; transform:translateX(-50%); display:flex; gap:16px; align-items:center; z-index:10; }
+.viz-action-btn { padding:12px 32px; font-family:var(--font-mono); font-size:14px; font-weight:700; color:var(--bg); background:var(--toon-accent); border:none; border-radius:8px; cursor:pointer; letter-spacing:0.5px; transition:all 0.2s; box-shadow:0 0 30px var(--toon-glow); }
+.viz-action-btn:hover { transform:scale(1.05); box-shadow:0 0 50px var(--toon-glow); }
+.viz-label { position:absolute; top:24px; left:50%; transform:translateX(-50%); font-family:var(--font-display); font-size:clamp(20px,2.5vw,42px); color:var(--text); text-align:center; z-index:10; pointer-events:none; text-shadow:0 2px 20px rgba(0,0,0,0.8); }
+.viz-label em { font-style:normal; color:var(--toon-accent); }
+.viz-label .accent-orange { color:var(--json-accent); }
+.viz-counter { position:absolute; top:80px; left:50%; transform:translateX(-50%); font-family:var(--font-mono); font-size:clamp(14px,1.4vw,22px); color:var(--text-dim); z-index:10; pointer-events:none; text-shadow:0 2px 10px rgba(0,0,0,0.8); display:flex; gap:32px; }
+.viz-counter span { display:flex; align-items:center; gap:8px; }
+.viz-counter .json-num { color:var(--json-accent); font-weight:700; }
+.viz-counter .toon-num { color:var(--toon-accent); font-weight:700; }
+
+.code-area::-webkit-scrollbar, .slide-canvas::-webkit-scrollbar { width:6px; height:6px; }
+.code-area::-webkit-scrollbar-track, .slide-canvas::-webkit-scrollbar-track { background:transparent; }
+.code-area::-webkit-scrollbar-thumb, .slide-canvas::-webkit-scrollbar-thumb { background:var(--border-bright); border-radius:3px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-mark">{T}</div>
+      <div class="header-title">TOON <span>— Token-Oriented Object Notation</span></div>
+    </div>
+    <div style="display:flex;gap:16px;align-items:center;">
+      <a class="footer-link" href="https://github.com/jdereg/json-io" target="_blank" style="font-size:14px;">GitHub: json-io</a>
+      <a class="footer-link" href="https://toonformat.dev/" target="_blank" style="font-size:14px;">toonformat.dev</a>
+    </div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn" :class="{active: activeTab==='slides'}" @click="activeTab='slides'">&#9654; Slides</button>
+    <button class="tab-btn" :class="{active: activeTab==='compare'}" @click="activeTab='compare'">&#8652; Compare</button>
+    <button class="tab-btn" :class="{active: activeTab==='viz'}" @click="activeTab='viz'">&#10026; Visualize</button>
+  </div>
+
+  <!-- SLIDES -->
+  <template v-if="activeTab==='slides'">
+    <div class="slide-view">
+      <div class="slide-canvas" :key="slideIndex">
+        <div class="slide">
+
+          <template v-if="slideIndex===0">
+            <div class="slide-eyebrow">The 40% Tax</div>
+            <div class="slide-headline">Every time we talk to an LLM, <em>40% of the tokens</em> are punctuation and repeated key names.</div>
+            <div class="slide-body">
+              <div class="slide-point">A production RAG pipeline spent <strong>$1,940 in one weekend</strong> on token costs. The same data in TOON? <strong>$760.</strong></div>
+              <div class="slide-point">Same model. Same answers. Same latency. <strong>61% fewer tokens.</strong></div>
+              <div class="slide-point">We're paying for curly braces. It's time to stop.</div>
+            </div>
+          </template>
+
+          <template v-if="slideIndex===1">
+            <div class="slide-eyebrow">The Problem</div>
+            <div class="slide-headline">JSON was built for <span class="accent-orange">browsers</span>, not for <em>language models</em>.</div>
+            <div class="slide-body">
+              <div class="slide-point">JSON was designed in 2001 for human-readable data exchange between web clients and servers.</div>
+              <div class="slide-point">Every <code>{</code> <code>}</code> <code>"</code> <code>,</code> <code>:</code> and every <strong>repeated key name</strong> consumes a token.</div>
+              <div class="slide-point">For a 20-row table with 4 fields: <strong>JSON ~172 tokens. TOON ~71.</strong></div>
+              <div class="slide-point">The gap widens with every row you add.</div>
+            </div>
+          </template>
+
+          <template v-if="slideIndex===2">
+            <div class="slide-eyebrow">What Is TOON?</div>
+            <div class="slide-headline">Think of it as <em>CSV meets YAML</em> — for the same data model as JSON.</div>
+            <div class="slide-body">
+              <div class="slide-point"><strong>Objects</strong> use key: value pairs with indentation — no braces.</div>
+              <div class="slide-point"><strong>Arrays</strong> declare field names once in a header, then stream values row by row — like CSV.</div>
+              <div class="slide-point"><strong>Nesting</strong> is handled through indentation — sub-arrays get their own tabular headers.</div>
+              <div class="slide-point">Full spec at <a href="https://toonformat.dev/" target="_blank" style="color:var(--toon-accent);font-weight:600;">toonformat.dev</a> — implementations in 25+ languages.</div>
+            </div>
+          </template>
+
+          <template v-if="slideIndex===3">
+            <div class="slide-eyebrow">Live Demo</div>
+            <div class="slide-headline">See it side-by-side. <em>Click the Compare tab</em> above.</div>
+            <div class="slide-body">
+              <div class="slide-point"><strong>10 preloaded samples</strong> — from a single object to nested tabular to cyclic graphs.</div>
+              <div class="slide-point">Watch the token count drop as you step through increasingly complex payloads.</div>
+              <div class="slide-point">Pay attention to <strong>Sample 4</strong> — P&amp;C insurance claims data, a real-world enterprise payload.</div>
+              <div class="slide-point">Arrow keys <code>←</code> <code>→</code> navigate samples when in Compare view.</div>
+            </div>
+          </template>
+
+          <template v-if="slideIndex===4">
+            <div class="slide-eyebrow">The Java API</div>
+            <div class="slide-headline">Two lines of code. <em>Zero infrastructure changes.</em></div>
+            <div class="slide-body">
+              <div class="slide-code-block"><pre><span class="comment">// Before — JSON</span>
+String json = <span class="method">JsonIo.toJson</span>(employees);
+
+<span class="comment">// After — TOON (40% fewer tokens)</span>
+String toon = <span class="method">JsonIo.toToon</span>(employees, <span class="keyword">null</span>);
+
+<span class="comment">// Round-trip back to Java</span>
+List&lt;Employee&gt; list = <span class="method">JsonIo.fromToon</span>(toon, <span class="keyword">null</span>)
+    .asType(<span class="keyword">new</span> TypeHolder&lt;List&lt;Employee&gt;&gt;(){});</pre></div>
+              <div class="slide-point">Same library handles JSON and TOON. Supports Records, generics, Maps.</div>
+              <div class="slide-point">Honors <strong>Jackson annotations reflectively</strong> — zero compile dependency on Jackson.</div>
+            </div>
+          </template>
+
+          <template v-if="slideIndex===5">
+            <div class="slide-eyebrow">Spring AI Integration</div>
+            <div class="slide-headline">One dependency. <em>One annotation.</em> Token savings for free.</div>
+            <div class="slide-body">
+              <div class="slide-code-block"><pre><span class="comment">// Add to pom.xml</span>
+&lt;dependency&gt;
+  &lt;groupId&gt;com.cedarsoftware&lt;/groupId&gt;
+  &lt;artifactId&gt;<span class="string">json-io-spring-ai-toon</span>&lt;/artifactId&gt;
+&lt;/dependency&gt;
+
+<span class="comment">// Annotate your tool method</span>
+<span class="method">@Tool</span>(description = <span class="string">"Look up employees"</span>,
+      resultConverter = <span class="method">ToonToolCallResultConverter</span>.class)
+List&lt;Employee&gt; <span class="method">findByDept</span>(String dept) { ... }</pre></div>
+              <div class="slide-point">Tool results are automatically serialized to TOON before reaching the LLM.</div>
+              <div class="slide-point">Your existing Spring AI tools get token savings with <strong>no code changes</strong>.</div>
+            </div>
+          </template>
+
+          <template v-if="slideIndex===6">
+            <div class="slide-eyebrow">Java vs Python</div>
+            <div class="slide-headline">Serialization performance: <em>json-io</em> vs <span class="accent-orange">Python TOON</span></div>
+            <div class="slide-body">
+              <div class="slide-stat-row">
+                <div class="slide-stat-box">
+                  <div class="slide-stat-number cyan">TBD</div>
+                  <div class="slide-stat-desc">Java ops/sec (json-io)</div>
+                </div>
+                <div class="slide-stat-box">
+                  <div class="slide-stat-number orange">TBD</div>
+                  <div class="slide-stat-desc">Python ops/sec</div>
+                </div>
+                <div class="slide-stat-box">
+                  <div class="slide-stat-number green">TBD</div>
+                  <div class="slide-stat-desc">Java speedup factor</div>
+                </div>
+              </div>
+              <div class="slide-point">Benchmark: identical dataset — 1K, 10K, 100K records, serialize + deserialize.</div>
+              <div class="slide-point">Results coming soon — stay tuned for the pro-Java verdict.</div>
+            </div>
+          </template>
+
+          <template v-if="slideIndex===7">
+            <div class="slide-eyebrow">Cycle Support</div>
+            <div class="slide-headline"><em>$id / $ref</em> — optional, off by default.</div>
+            <div class="slide-body">
+              <div class="slide-point">Real domain models have <strong>parent pointers</strong> — departments reference their company, employees reference their department.</div>
+              <div class="slide-point">json-io assigns <code>$id</code> on first encounter, <code>$ref</code> on subsequent references.</div>
+              <div class="slide-point">Without this, cyclic graphs either <strong>blow up</strong> (StackOverflow) or <strong>silently duplicate</strong> data.</div>
+              <div class="slide-point">Most LLM payloads are acyclic — you'll never see this unless you need it.</div>
+            </div>
+          </template>
+
+          <template v-if="slideIndex===8">
+            <div class="slide-eyebrow">Type Handling</div>
+            <div class="slide-headline">Polymorphism support — <em>like Jackson</em>, but more flexible.</div>
+            <div class="slide-body">
+              <div class="slide-point"><code>$type</code> can be embedded in TOON output for polymorphic deserialization.</div>
+              <div class="slide-point"><strong>Three annotation layers</strong> — Programmatic API, json-io annotations, or Jackson annotations.</div>
+              <div class="slide-point">Precedence: <strong>Programmatic &gt; json-io &gt; Jackson</strong>. Jackson support is reflective — zero compile dependency.</div>
+              <div class="slide-point">For LLM payloads, you usually don't need type info. For persistence or RPC, turn it on.</div>
+            </div>
+          </template>
+
+          <template v-if="slideIndex===9">
+            <div class="slide-eyebrow">Engineering Economics</div>
+            <div class="slide-headline">Stop paying to process <span class="accent-orange">punctuation</span>.</div>
+            <div class="slide-body">
+              <div class="slide-point">The AI industry processes <strong>billions of tokens per day</strong>. If 40% is structural overhead, that's enormous compute spent on curly braces.</div>
+              <div class="slide-point">At enterprise scale — thousands of LLM calls across departments, workflows, and agent pipelines — <strong>30-40% token reduction compounds fast</strong>.</div>
+              <div class="slide-point">This is a <strong>dollars-and-cents</strong> argument: less compute per request = lower cost, lower latency, lower energy consumption.</div>
+              <div class="slide-point">Not asking you to hug a tree. Asking you to <strong>stop subsidizing syntax</strong>.</div>
+            </div>
+          </template>
+
+          <template v-if="slideIndex===10">
+            <div class="slide-eyebrow">Not Just Cheaper — Better</div>
+            <div class="slide-headline"><em>Higher accuracy</em> and <span class="accent-green">more context</span> in the same window.</div>
+            <div class="slide-body">
+              <div class="slide-stat-row">
+                <div class="slide-stat-box">
+                  <div class="slide-stat-number cyan">76.4%</div>
+                  <div class="slide-stat-desc">TOON accuracy (209 questions, 4 models)</div>
+                </div>
+                <div class="slide-stat-box">
+                  <div class="slide-stat-number orange">75.0%</div>
+                  <div class="slide-stat-desc">JSON accuracy (same benchmark)</div>
+                </div>
+              </div>
+              <div class="slide-point">Less syntactic noise = <strong>better signal-to-noise ratio</strong> for the model.</div>
+              <div class="slide-point">40% fewer tokens means you can fit <strong>40% more actual data</strong> in the same context window.</div>
+              <div class="slide-point">For RAG: the difference between retrieving <strong>5 documents and 8</strong>. More context = better answers.</div>
+            </div>
+          </template>
+
+          <template v-if="slideIndex===11">
+            <div class="slide-eyebrow">Honest Edges</div>
+            <div class="slide-headline">Where TOON is <span class="accent-orange">not</span> the right choice.</div>
+            <div class="slide-body">
+              <div class="slide-point"><strong>Single objects:</strong> ~5% savings. The win comes from collections.</div>
+              <div class="slide-point"><strong>Deeply irregular structures:</strong> non-uniform nesting yields minimal gains.</div>
+              <div class="slide-point"><strong>Pure flat data:</strong> CSV is actually ~6% smaller — but CSV can't nest.</div>
+              <div class="slide-point"><strong>REST APIs, config files, message queues:</strong> JSON is still king. TOON's sweet spot is <strong>LLM input</strong> — tool results, RAG payloads, agentic workflows.</div>
+            </div>
+          </template>
+
+          <template v-if="slideIndex===12">
+            <div class="slide-eyebrow">Call to Action</div>
+            <div class="slide-headline">One dependency. Two lines of code. <em>Real savings today.</em></div>
+            <div class="slide-body">
+              <div class="slide-point">JSON has been the lingua franca of the web for 25 years. It's brilliant at what it was built for.</div>
+              <div class="slide-point">But in the AI era, we're feeding LLMs structured data at a scale <strong>Doug Crockford never imagined</strong>.</div>
+              <div class="slide-point">TOON isn't replacing JSON everywhere — it's eliminating the <strong>40% tax</strong> every time we talk to a model.</div>
+              <div class="slide-point"><a href="https://www.baeldung.com/java-json-toon-format-libraries" target="_blank" style="color:var(--toon-accent);">Baeldung article</a> is live. <a href="https://github.com/jdereg/json-io" target="_blank" style="color:var(--toon-accent);">json-io on GitHub</a>. <a href="https://toonformat.dev/" target="_blank" style="color:var(--toon-accent);">toonformat.dev</a> for the spec.</div>
+            </div>
+          </template>
+
+        </div>
+      </div>
+      <div class="slide-nav">
+        <div class="slide-counter">{{ slideIndex + 1 }} / {{ totalSlides }}</div>
+        <div class="slide-progress-track"><div class="slide-progress-fill" :style="{width: ((slideIndex+1)/totalSlides*100)+'%'}"></div></div>
+        <div class="slide-nav-buttons">
+          <button class="nav-btn" @click="prevSlide" :style="{opacity: slideIndex===0?0.3:1}">&#8592;</button>
+          <button class="nav-btn" @click="nextSlide" :style="{opacity: slideIndex===totalSlides-1?0.3:1}">&#8594;</button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- COMPARE -->
+  <template v-if="activeTab==='compare'">
+    <div class="compare-controls">
+      <div class="nav-arrows">
+        <button class="nav-btn" @click="prevSample">&#8592;</button>
+        <button class="nav-btn" @click="nextSample">&#8594;</button>
+      </div>
+      <select class="sample-select" v-model="selectedIndex">
+        <option v-for="(s,i) in samples" :key="i" :value="i">{{ (i+1)+'. '+s.name }}</option>
+      </select>
+    </div>
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="stat-label">JSON Tokens</div>
+        <div class="stat-value json-color">{{ jsonTokens.toLocaleString() }}</div>
+        <div class="stat-sub">{{ jsonChars.toLocaleString() }} chars</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">TOON Tokens</div>
+        <div class="stat-value toon-color">{{ toonTokens.toLocaleString() }}</div>
+        <div class="stat-sub">{{ toonChars.toLocaleString() }} chars</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Token Savings</div>
+        <div class="stat-value savings-color">{{ savingsPercent }}%</div>
+        <div class="stat-sub">{{ (jsonTokens-toonTokens).toLocaleString() }} fewer tokens</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Scenario</div>
+        <div class="stat-value" style="font-size:15px;color:var(--text);letter-spacing:0;">{{ currentSample.category }}</div>
+        <div class="stat-sub">{{ currentSample.description }}</div>
+      </div>
+    </div>
+    <div class="panels-container">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-label json">&#9679; JSON</span>
+          <span class="panel-meta">application/json</span>
+        </div>
+        <div class="code-area"><pre>{{ jsonText }}</pre></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-label toon">&#9679; TOON</span>
+          <span class="panel-meta">application/vnd.toon</span>
+        </div>
+        <div class="code-area"><pre>{{ toonText }}</pre></div>
+      </div>
+    </div>
+  </template>
+
+  <!-- VISUALIZE -->
+  <template v-if="activeTab==='viz'">
+    <div class="viz-view">
+      <div class="viz-controls">
+        <button class="viz-btn" :class="{active: activeViz==='compression'}" @click="setViz('compression')">A: The Compression</button>
+        <button class="viz-btn" :class="{active: activeViz==='furnace'}" @click="setViz('furnace')">B: The Furnace</button>
+        <button class="viz-btn" :class="{active: activeViz==='worlds'}" @click="setViz('worlds')">C: Two Worlds</button>
+        <button class="viz-btn" :class="{active: activeViz==='mirror'}" @click="setViz('mirror')">D: The Mirror</button>
+      </div>
+      <div class="viz-container" id="viz-container"></div>
+    </div>
+  </template>
+
+  <div class="footer">
+    <div class="footer-text" style="display:flex;align-items:center;gap:8px;">
+      <template v-if="activeTab==='slides'">
+        <button class="nav-btn" style="width:30px;height:30px;font-size:13px;" @click="prevSlide()">&#8592;</button>
+        <button class="nav-btn" style="width:30px;height:30px;font-size:13px;" @click="nextSlide()">&#8594;</button>
+      </template>
+      <span>toonformat.dev — {{ todayDate }}</span>
+    </div>
+    <div style="display:flex;gap:16px;">
+      <a class="footer-link" href="https://github.com/jdereg/json-io" target="_blank">json-io</a>
+      <a class="footer-link" href="https://toonformat.dev/" target="_blank">toonformat.dev</a>
+      <a class="footer-link" href="https://www.baeldung.com/java-json-toon-format-libraries" target="_blank">Baeldung Article</a>
+    </div>
+  </div>
+</div>
+
+<script>
+const { createApp, ref, computed, onMounted, onUnmounted, watch, nextTick } = Vue;
+
+// ─── Three.js Visualization Manager ───
+const VizManager = {
+  renderer: null,
+  scene: null,
+  camera: null,
+  animId: null,
+  cleanup: null,
+
+  destroy() {
+    if (this.animId) cancelAnimationFrame(this.animId);
+    if (this.cleanup) this.cleanup();
+    if (this.renderer) {
+      this.renderer.dispose();
+      this.renderer.domElement.remove();
+    }
+    const container = document.getElementById('viz-container');
+    if (container) { while (container.firstChild) container.removeChild(container.firstChild); }
+    this.renderer = null; this.scene = null; this.camera = null; this.animId = null; this.cleanup = null;
+  },
+
+  init(type, extraData) {
+    this.destroy();
+    const container = document.getElementById('viz-container');
+    if (!container) return;
+    const w = container.clientWidth, h = container.clientHeight;
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(w, h);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x0a0e17, 1);
+    container.appendChild(renderer.domElement);
+    this.renderer = renderer;
+
+    if (type === 'compression') this.initCompression(w, h, container);
+    else if (type === 'furnace') this.initFurnace(w, h, container);
+    else if (type === 'worlds') this.initWorlds(w, h, container);
+    else if (type === 'mirror') this.initMirror(w, h, container, extraData);
+
+    const onResize = () => {
+      const nw = container.clientWidth, nh = container.clientHeight;
+      this.camera.aspect = nw / nh;
+      this.camera.updateProjectionMatrix();
+      renderer.setSize(nw, nh);
+    };
+    window.addEventListener('resize', onResize);
+    const origCleanup = this.cleanup;
+    this.cleanup = () => { window.removeEventListener('resize', onResize); if (origCleanup) origCleanup(); };
+  },
+
+  // ═══ CONCEPT A: THE COMPRESSION ═══
+  initCompression(w, h, container) {
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, w / h, 0.1, 1000);
+    camera.position.set(0, 0, 50);
+    this.scene = scene; this.camera = camera;
+
+    // Ambient + point lights
+    scene.add(new THREE.AmbientLight(0x334466, 0.5));
+    const pLight = new THREE.PointLight(0xf97316, 2, 100);
+    pLight.position.set(10, 15, 20);
+    scene.add(pLight);
+
+    const TOTAL = 500;
+    const SURVIVE = 300;
+    const positions = new Float32Array(TOTAL * 3);
+    const colors = new Float32Array(TOTAL * 3);
+    const sizes = new Float32Array(TOTAL);
+    const targetPos = new Float32Array(TOTAL * 3);
+    const targetColors = new Float32Array(TOTAL * 3);
+    const targetSizes = new Float32Array(TOTAL);
+    const startPos = new Float32Array(TOTAL * 3);
+    const startColors = new Float32Array(TOTAL * 3);
+    const startSizes = new Float32Array(TOTAL);
+
+    // Initial: random sphere distribution, orange
+    for (let i = 0; i < TOTAL; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const r = 15 + Math.random() * 12;
+      positions[i*3] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+      positions[i*3+2] = r * Math.cos(phi);
+      // Orange with variation
+      colors[i*3] = 0.9 + Math.random() * 0.1;
+      colors[i*3+1] = 0.3 + Math.random() * 0.2;
+      colors[i*3+2] = 0.05 + Math.random() * 0.1;
+      sizes[i] = 2.5 + Math.random() * 2;
+    }
+
+    // Target: first SURVIVE form a grid, rest vanish
+    const gridCols = Math.ceil(Math.sqrt(SURVIVE));
+    const gridRows = Math.ceil(SURVIVE / gridCols);
+    const spacing = 1.6;
+    for (let i = 0; i < TOTAL; i++) {
+      if (i < SURVIVE) {
+        const row = Math.floor(i / gridCols);
+        const col = i % gridCols;
+        targetPos[i*3] = (col - gridCols/2) * spacing;
+        targetPos[i*3+1] = (row - gridRows/2) * spacing;
+        targetPos[i*3+2] = 0;
+        // Cyan
+        targetColors[i*3] = 0.13;
+        targetColors[i*3+1] = 0.78 + Math.random() * 0.1;
+        targetColors[i*3+2] = 0.88 + Math.random() * 0.1;
+        targetSizes[i] = 2.2;
+      } else {
+        targetPos[i*3] = positions[i*3];
+        targetPos[i*3+1] = positions[i*3+1];
+        targetPos[i*3+2] = positions[i*3+2];
+        targetColors[i*3] = 0.1; targetColors[i*3+1] = 0.1; targetColors[i*3+2] = 0.1;
+        targetSizes[i] = 0;
+      }
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const vertShader = `
+      attribute float size;
+      varying vec3 vColor;
+      void main() {
+        vColor = color;
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = size * (300.0 / -mvPosition.z);
+        gl_Position = projectionMatrix * mvPosition;
+      }
+    `;
+    const fragShader = `
+      varying vec3 vColor;
+      void main() {
+        float d = length(gl_PointCoord - vec2(0.5));
+        if (d > 0.5) discard;
+        float alpha = 1.0 - smoothstep(0.3, 0.5, d);
+        float glow = exp(-d * 4.0) * 0.6;
+        gl_FragColor = vec4(vColor + glow, alpha);
+      }
+    `;
+
+    const sizeAttr = new THREE.BufferAttribute(sizes, 1);
+    geo.setAttribute('size', sizeAttr);
+
+    const mat = new THREE.ShaderMaterial({
+      vertexShader: vertShader,
+      fragmentShader: fragShader,
+      vertexColors: true,
+      transparent: true,
+      depthWrite: false,
+    });
+
+    const points = new THREE.Points(geo, mat);
+    scene.add(points);
+
+    let compressed = false;
+    let animProgress = -1; // -1 = not animating
+    const ANIM_DURATION = 2.5;
+
+    // Overlay
+    const label = document.createElement('div');
+    label.className = 'viz-label';
+    label.innerHTML = '<span class="accent-orange">500 tokens</span> of JSON — click to compress';
+    container.appendChild(label);
+
+    const btn = document.createElement('button');
+    btn.className = 'viz-action-btn';
+    btn.textContent = 'COMPRESS → TOON';
+    const overlay = document.createElement('div');
+    overlay.className = 'viz-overlay';
+    overlay.appendChild(btn);
+    container.appendChild(overlay);
+
+    // state: 'ready' | 'compressing' | 'done'
+    let state = 'ready';
+
+    function resetParticles() {
+      for (let i = 0; i < TOTAL; i++) {
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        const r = 15 + Math.random() * 12;
+        positions[i*3] = r * Math.sin(phi) * Math.cos(theta);
+        positions[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+        positions[i*3+2] = r * Math.cos(phi);
+        colors[i*3] = 0.9 + Math.random() * 0.1;
+        colors[i*3+1] = 0.3 + Math.random() * 0.2;
+        colors[i*3+2] = 0.05 + Math.random() * 0.1;
+        sizes[i] = 2.5 + Math.random() * 2;
+      }
+      geo.attributes.position.needsUpdate = true;
+      geo.attributes.color.needsUpdate = true;
+      sizeAttr.needsUpdate = true;
+      pLight.color.setRGB(0.9, 0.45, 0.09);
+    }
+
+    btn.addEventListener('click', () => {
+      if (state === 'ready') {
+        for (let i = 0; i < TOTAL * 3; i++) { startPos[i] = positions[i]; startColors[i] = colors[i]; }
+        for (let i = 0; i < TOTAL; i++) startSizes[i] = sizes[i];
+        animProgress = 0;
+        compressed = true;
+        state = 'compressing';
+        btn.textContent = 'COMPRESSING...';
+        btn.style.pointerEvents = 'none';
+        label.innerHTML = 'Removing the <span class="accent-orange">syntax tax</span>...';
+      } else if (state === 'done') {
+        compressed = false;
+        animProgress = -1;
+        state = 'ready';
+        resetParticles();
+        btn.textContent = 'COMPRESS → TOON';
+        label.innerHTML = '<span class="accent-orange">500 tokens</span> of JSON — click to compress';
+      }
+    });
+
+    // Slow rotation + animation
+    let time = 0;
+    const animate = () => {
+      this.animId = requestAnimationFrame(animate);
+      time += 0.003;
+
+      if (!compressed) {
+        // Idle: gentle float
+        for (let i = 0; i < TOTAL; i++) {
+          const base = i * 3;
+          positions[base+1] += Math.sin(time * 2 + i) * 0.003;
+        }
+        geo.attributes.position.needsUpdate = true;
+        points.rotation.y = time * 0.3;
+      }
+
+      if (animProgress >= 0 && animProgress <= 1) {
+        animProgress += 1 / (60 * ANIM_DURATION);
+        const t = animProgress;
+        const ease = t < 0.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2; // easeInOutCubic
+        for (let i = 0; i < TOTAL; i++) {
+          const b = i * 3;
+          positions[b]   = startPos[b]   + (targetPos[b]   - startPos[b]) * ease;
+          positions[b+1] = startPos[b+1] + (targetPos[b+1] - startPos[b+1]) * ease;
+          positions[b+2] = startPos[b+2] + (targetPos[b+2] - startPos[b+2]) * ease;
+          colors[b]   = startColors[b]   + (targetColors[b]   - startColors[b]) * ease;
+          colors[b+1] = startColors[b+1] + (targetColors[b+1] - startColors[b+1]) * ease;
+          colors[b+2] = startColors[b+2] + (targetColors[b+2] - startColors[b+2]) * ease;
+          sizes[i] = startSizes[i] + (targetSizes[i] - startSizes[i]) * ease;
+        }
+        geo.attributes.position.needsUpdate = true;
+        geo.attributes.color.needsUpdate = true;
+        sizeAttr.needsUpdate = true;
+        pLight.color.setRGB(0.9 - ease * 0.77, 0.45 + ease * 0.35, 0.09 + ease * 0.8);
+        points.rotation.y = time * 0.3;
+
+        if (animProgress > 1) {
+          animProgress = 2; // done
+          state = 'done';
+          btn.textContent = 'RESET';
+          btn.style.pointerEvents = 'auto';
+          label.innerHTML = '<em>300 tokens</em> — same data, <em>40% gone</em>';
+        }
+      }
+
+      this.renderer.render(scene, camera);
+    };
+    animate();
+  },
+
+  // ═══ CONCEPT B: THE FURNACE ═══
+  initFurnace(w, h, container) {
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, w / h, 0.1, 1000);
+    camera.position.set(0, 8, 40);
+    camera.lookAt(0, 0, 0);
+    this.scene = scene; this.camera = camera;
+
+    scene.add(new THREE.AmbientLight(0x223344, 0.6));
+    const forgeLight = new THREE.PointLight(0xff6600, 3, 40);
+    forgeLight.position.set(0, 2, 0);
+    scene.add(forgeLight);
+    const cyanLight = new THREE.PointLight(0x22d3ee, 2, 40);
+    cyanLight.position.set(20, 3, 0);
+    scene.add(cyanLight);
+
+    // Forge geometry - glowing torus
+    const torusGeo = new THREE.TorusGeometry(3, 1.2, 16, 40);
+    const forgeMat = new THREE.MeshStandardMaterial({ color: 0xff4400, emissive: 0xff6600, emissiveIntensity: 0.8, metalness: 0.9, roughness: 0.3, wireframe: false });
+    const forge = new THREE.Mesh(torusGeo, forgeMat);
+    forge.rotation.y = Math.PI / 2;
+    scene.add(forge);
+
+    // Inner glow sphere
+    const glowGeo = new THREE.SphereGeometry(1.8, 16, 16);
+    const glowMat = new THREE.MeshBasicMaterial({ color: 0xffaa33, transparent: true, opacity: 0.4 });
+    const glow = new THREE.Mesh(glowGeo, glowMat);
+    scene.add(glow);
+
+    // Ground plane
+    const groundGeo = new THREE.PlaneGeometry(100, 30);
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x0a0e17, metalness: 0.8, roughness: 0.6 });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -4;
+    scene.add(ground);
+
+    // Particle system
+    const MAX_P = 600;
+    const pPositions = new Float32Array(MAX_P * 3);
+    const pColors = new Float32Array(MAX_P * 3);
+    const pSizes = new Float32Array(MAX_P);
+    const pVelocities = new Float32Array(MAX_P);
+    const pAlive = new Uint8Array(MAX_P);
+    const pPhase = new Float32Array(MAX_P); // 0=pre-forge, 1=post-forge, 2=dead
+
+    for (let i = 0; i < MAX_P; i++) { pAlive[i] = 0; pSizes[i] = 0; }
+
+    const pGeo = new THREE.BufferGeometry();
+    pGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+    pGeo.setAttribute('color', new THREE.BufferAttribute(pColors, 3));
+    const pSizeAttr = new THREE.BufferAttribute(pSizes, 1);
+    pGeo.setAttribute('size', pSizeAttr);
+
+    const pMat = new THREE.ShaderMaterial({
+      vertexShader: `
+        attribute float size;
+        varying vec3 vColor;
+        void main() {
+          vColor = color;
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = size * (200.0 / -mv.z);
+          gl_Position = projectionMatrix * mv;
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vColor;
+        void main() {
+          float d = length(gl_PointCoord - vec2(0.5));
+          if (d > 0.5) discard;
+          float a = 1.0 - smoothstep(0.2, 0.5, d);
+          gl_FragColor = vec4(vColor + exp(-d*5.0)*0.3, a);
+        }
+      `,
+      vertexColors: true,
+      transparent: true,
+      depthWrite: false,
+    });
+
+    const particles = new THREE.Points(pGeo, pMat);
+    scene.add(particles);
+
+    let spawnTimer = 0;
+    let spawnIndex = 0;
+    let time = 0;
+
+    // Label
+    const label = document.createElement('div');
+    label.className = 'viz-label';
+    label.innerHTML = 'The Furnace — <span class="accent-orange">JSON</span> in, <em>TOON</em> out';
+    container.appendChild(label);
+
+    const counter = document.createElement('div');
+    counter.className = 'viz-counter';
+    counter.innerHTML = '<span>Tokens in: <span class="json-num">0</span></span><span>Tokens out: <span class="toon-num">0</span></span><span>Burned: <span style="color:#ef4444;font-weight:700">0</span></span>';
+    container.appendChild(counter);
+
+    let tokensIn = 0, tokensOut = 0, tokensBurned = 0;
+
+    const animate = () => {
+      this.animId = requestAnimationFrame(animate);
+      time += 0.016;
+
+      // Spawn particles from left
+      spawnTimer += 0.016;
+      if (spawnTimer > 0.04) {
+        spawnTimer = 0;
+        for (let s = 0; s < 3; s++) {
+          const idx = spawnIndex % MAX_P;
+          spawnIndex++;
+          pPositions[idx*3] = -35;
+          pPositions[idx*3+1] = (Math.random() - 0.5) * 6;
+          pPositions[idx*3+2] = (Math.random() - 0.5) * 6;
+          pColors[idx*3] = 0.95; pColors[idx*3+1] = 0.4 + Math.random()*0.15; pColors[idx*3+2] = 0.08;
+          pSizes[idx] = 2 + Math.random() * 1.5;
+          pVelocities[idx] = 0.25 + Math.random() * 0.15;
+          pAlive[idx] = 1;
+          pPhase[idx] = 0;
+          tokensIn++;
+        }
+      }
+
+      // Update particles
+      for (let i = 0; i < MAX_P; i++) {
+        if (!pAlive[i]) continue;
+        pPositions[i*3] += pVelocities[i];
+        pPositions[i*3+1] += Math.sin(time * 3 + i) * 0.02;
+
+        // Reaching forge
+        if (pPhase[i] === 0 && pPositions[i*3] > -2) {
+          if (Math.random() < 0.4) {
+            // Dies in forge
+            pPhase[i] = 2;
+            tokensBurned++;
+          } else {
+            // Survives — becomes cyan
+            pPhase[i] = 1;
+            pColors[i*3] = 0.13; pColors[i*3+1] = 0.82; pColors[i*3+2] = 0.93;
+            pVelocities[i] *= 1.3;
+            pSizes[i] *= 0.85;
+            tokensOut++;
+          }
+        }
+
+        if (pPhase[i] === 2) {
+          pSizes[i] *= 0.9;
+          pColors[i*3] *= 0.95; pColors[i*3+1] *= 0.9;
+          if (pSizes[i] < 0.1) { pAlive[i] = 0; pSizes[i] = 0; }
+        }
+
+        if (pPositions[i*3] > 40) { pAlive[i] = 0; pSizes[i] = 0; }
+      }
+
+      pGeo.attributes.position.needsUpdate = true;
+      pGeo.attributes.color.needsUpdate = true;
+      pSizeAttr.needsUpdate = true;
+
+      // Update counter
+      if (Math.floor(time * 10) % 3 === 0) {
+        counter.innerHTML = `<span>Tokens in: <span class="json-num">${tokensIn}</span></span><span>Tokens out: <span class="toon-num">${tokensOut}</span></span><span>Burned: <span style="color:#ef4444;font-weight:700">${tokensBurned}</span></span>`;
+      }
+
+      // Animate forge
+      forge.rotation.x = time * 0.5;
+      forge.rotation.z = Math.sin(time * 0.7) * 0.2;
+      glow.scale.setScalar(1 + Math.sin(time * 3) * 0.15);
+      forgeLight.intensity = 3 + Math.sin(time * 4) * 0.8;
+
+      this.renderer.render(scene, camera);
+    };
+    animate();
+  },
+
+  // ═══ CONCEPT C: TWO WORLDS (mouse-interactive) ═══
+  initWorlds(w, h, container) {
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x0a0e17, 0.012);
+    const camera = new THREE.PerspectiveCamera(55, w / h, 0.1, 200);
+    this.scene = scene; this.camera = camera;
+
+    scene.add(new THREE.AmbientLight(0x445566, 0.4));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    dirLight.position.set(10, 30, 20);
+    scene.add(dirLight);
+
+    // Ground
+    const groundGeo = new THREE.PlaneGeometry(120, 80);
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x0d1220, metalness: 0.7, roughness: 0.8 });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    scene.add(ground);
+
+    // Divider
+    const divGeo = new THREE.PlaneGeometry(0.15, 60);
+    const divMat = new THREE.MeshBasicMaterial({ color: 0x2a3f6b, transparent: true, opacity: 0.6 });
+    const divider = new THREE.Mesh(divGeo, divMat);
+    divider.position.set(0, 15, 0);
+    scene.add(divider);
+
+    const jsonLight = new THREE.PointLight(0xf97316, 1.5, 60);
+    jsonLight.position.set(-18, 20, 10);
+    scene.add(jsonLight);
+    const toonLight = new THREE.PointLight(0x22d3ee, 1.5, 60);
+    toonLight.position.set(18, 15, 10);
+    scene.add(toonLight);
+
+    // ── Window texture generator ──
+    function makeWindowTex(faceW, faceH, baseColor, windowColor, seed) {
+      const res = 4; // pixels per unit
+      const cw = Math.max(16, Math.round(faceW * res));
+      const ch = Math.max(16, Math.round(faceH * res));
+      const c = document.createElement('canvas');
+      c.width = cw; c.height = ch;
+      const cx = c.getContext('2d');
+      // Base color
+      cx.fillStyle = baseColor;
+      cx.fillRect(0, 0, cw, ch);
+      // Windows
+      const wCols = Math.max(1, Math.round(faceW / 1.0));
+      const wRows = Math.max(1, Math.round(faceH / 2.2));
+      const padX = 2, padY = 3;
+      const gapX = 1, gapY = 1;
+      const ww = Math.max(1, (cw - padX * 2 - (wCols - 1) * gapX) / wCols);
+      const wh = Math.max(1, (ch - padY * 2 - (wRows - 1) * gapY) / wRows);
+      let s = seed;
+      for (let r = 0; r < wRows; r++) {
+        for (let cc = 0; cc < wCols; cc++) {
+          s = (s * 1103515245 + 12345) & 0x7fffffff;
+          const lit = (s % 100) < 55;
+          const wx = padX + cc * (ww + gapX);
+          const wy = padY + r * (wh + gapY);
+          if (lit) {
+            cx.fillStyle = windowColor;
+            cx.globalAlpha = 0.5 + (s % 50) / 100;
+          } else {
+            cx.fillStyle = '#050810';
+            cx.globalAlpha = 0.7;
+          }
+          cx.fillRect(wx, wy, ww, wh);
+        }
+      }
+      cx.globalAlpha = 1;
+      const tex = new THREE.CanvasTexture(c);
+      tex.minFilter = THREE.LinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      return tex;
+    }
+
+    function makeWindowedBuilding(bw, bh, bd, hue, sat, lit, windowHex, seed) {
+      const col = new THREE.Color().setHSL(hue, sat, lit);
+      const baseHex = '#' + col.getHexString();
+      const darkHex = '#' + new THREE.Color().setHSL(hue, sat, lit * 0.5).getHexString();
+      // 6 faces: +x, -x, +y (roof), -y (bottom), +z, -z
+      const mats = [
+        new THREE.MeshStandardMaterial({ map: makeWindowTex(bd, bh, baseHex, windowHex, seed), metalness:0.4, roughness:0.6 }),
+        new THREE.MeshStandardMaterial({ map: makeWindowTex(bd, bh, baseHex, windowHex, seed+1), metalness:0.4, roughness:0.6 }),
+        new THREE.MeshStandardMaterial({ color: col, metalness:0.5, roughness:0.5 }), // roof
+        new THREE.MeshStandardMaterial({ color: col, metalness:0.5, roughness:0.5 }), // bottom
+        new THREE.MeshStandardMaterial({ map: makeWindowTex(bw, bh, baseHex, windowHex, seed+2), metalness:0.4, roughness:0.6 }),
+        new THREE.MeshStandardMaterial({ map: makeWindowTex(bw, bh, baseHex, windowHex, seed+3), metalness:0.4, roughness:0.6 }),
+      ];
+      return new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), mats);
+    }
+
+    // JSON City
+    const jsonBuildings = [];
+    for (let i = 0; i < 55; i++) {
+      const bw = 1.2 + Math.random() * 2, bd = 1.2 + Math.random() * 2, bh = 4 + Math.random() * 22;
+      const mesh = makeWindowedBuilding(bw, bh, bd, 0.06+Math.random()*0.04, 0.7+Math.random()*0.3, 0.3+Math.random()*0.25, '#ffaa44', i*4);
+      mesh.position.set(-5-Math.random()*28, bh/2, -18+Math.random()*36);
+      scene.add(mesh); jsonBuildings.push(mesh);
+    }
+
+    // TOON Village
+    const toonBuildings = [];
+    for (let i = 0; i < 33; i++) {
+      const bw = 1.8+Math.random()*2.5, bd = 1.8+Math.random()*2.5, bh = 2+Math.random()*10;
+      const mesh = makeWindowedBuilding(bw, bh, bd, 0.5+Math.random()*0.05, 0.6+Math.random()*0.3, 0.35+Math.random()*0.2, '#66eeff', 1000+i*4);
+      mesh.position.set(5+Math.random()*28, bh/2, -16+Math.random()*32);
+      scene.add(mesh); toonBuildings.push(mesh);
+    }
+
+    // Labels
+    const label = document.createElement('div');
+    label.className = 'viz-label';
+    label.innerHTML = '<span class="accent-orange">JSON City</span> vs <em>TOON Village</em> — drag to orbit, scroll to zoom, shift+drag to pan';
+    container.appendChild(label);
+    const leftLabel = document.createElement('div');
+    leftLabel.style.cssText = 'position:absolute;bottom:60px;left:15%;font-family:var(--font-mono);font-size:clamp(14px,1.4vw,22px);color:#f97316;font-weight:700;z-index:10;text-shadow:0 2px 10px rgba(0,0,0,0.8);';
+    leftLabel.textContent = 'JSON — 500 tokens';
+    container.appendChild(leftLabel);
+    const rightLabel = document.createElement('div');
+    rightLabel.style.cssText = 'position:absolute;bottom:60px;right:15%;font-family:var(--font-mono);font-size:clamp(14px,1.4vw,22px);color:#22d3ee;font-weight:700;z-index:10;text-shadow:0 2px 10px rgba(0,0,0,0.8);';
+    rightLabel.textContent = 'TOON — 300 tokens';
+    container.appendChild(rightLabel);
+
+    // ── Mouse orbit controls — starts static ──
+    let orbitAngle = 0;
+    let orbitPitch = 0.35;
+    let orbitDist = 55;
+    let velAngle = 0;
+    let velPitch = 0;
+    let panX = 0, panY = 0; // translation offset
+    let isDragging = false;
+    let lastX = 0, lastY = 0;
+    const FRICTION = 0.96;
+    const SENSITIVITY = 0.004;
+    const PAN_SENSITIVITY = 0.08;
+    const CENTER = new THREE.Vector3(0, 6, 0);
+    const lookTarget = new THREE.Vector3(0, 6, 0);
+
+    const canvas = this.renderer.domElement;
+
+    const onMouseDown = (e) => { isDragging = true; lastX = e.clientX; lastY = e.clientY; canvas.style.cursor = 'grabbing'; };
+    const onMouseMove = (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - lastX, dy = e.clientY - lastY;
+      if (e.shiftKey) {
+        // Pan: translate in camera-local XY
+        const right = new THREE.Vector3();
+        const up = new THREE.Vector3();
+        camera.getWorldDirection(new THREE.Vector3());
+        right.crossVectors(camera.up, new THREE.Vector3().subVectors(lookTarget, camera.position).normalize()).normalize();
+        up.copy(camera.up);
+        panX -= dx * PAN_SENSITIVITY * orbitDist * 0.01;
+        panY += dy * PAN_SENSITIVITY * orbitDist * 0.01;
+      } else {
+        velAngle = -dx * SENSITIVITY;
+        velPitch = dy * SENSITIVITY * 0.5;
+      }
+      lastX = e.clientX; lastY = e.clientY;
+    };
+    const onMouseUp = () => { isDragging = false; canvas.style.cursor = 'grab'; };
+    const onWheel = (e) => { e.preventDefault(); orbitDist = Math.max(20, Math.min(120, orbitDist + e.deltaY * 0.05)); };
+
+    canvas.style.cursor = 'grab';
+    canvas.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+
+    const origCleanup = this.cleanup;
+    this.cleanup = () => {
+      canvas.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      canvas.removeEventListener('wheel', onWheel);
+      if (origCleanup) origCleanup();
+    };
+
+    let time = 0;
+    const animate = () => {
+      this.animId = requestAnimationFrame(animate);
+      time += 0.002;
+
+      orbitAngle += velAngle;
+      orbitPitch += velPitch;
+      orbitPitch = Math.max(0.05, Math.min(1.2, orbitPitch));
+
+      if (!isDragging) {
+        velAngle *= FRICTION;
+        velPitch *= FRICTION;
+      }
+
+      lookTarget.set(CENTER.x + panX, CENTER.y + panY, CENTER.z);
+      camera.position.x = Math.sin(orbitAngle) * Math.cos(orbitPitch) * orbitDist + panX;
+      camera.position.z = Math.cos(orbitAngle) * Math.cos(orbitPitch) * orbitDist;
+      camera.position.y = Math.sin(orbitPitch) * orbitDist + 5 + panY;
+      camera.lookAt(lookTarget);
+
+      this.renderer.render(scene, camera);
+    };
+    animate();
+  },
+
+  // ═══ CONCEPT D: THE MIRROR ═══
+  initMirror(w, h, container, extraData) {
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 300);
+    this.scene = scene; this.camera = camera;
+
+    scene.add(new THREE.AmbientLight(0x334466, 0.6));
+    const spotL = new THREE.PointLight(0xf97316, 1.5, 80);
+    spotL.position.set(-30, 15, 20);
+    scene.add(spotL);
+    const spotR = new THREE.PointLight(0x22d3ee, 1.5, 80);
+    spotR.position.set(30, 15, 20);
+    scene.add(spotR);
+
+    const jsonStr = (extraData && extraData.json) || '{\n  "name": "Alice",\n  "age": 28\n}';
+    const toonStr = (extraData && extraData.toon) || 'name: Alice\nage: 28';
+    const sampleName = (extraData && extraData.name) || 'Sample';
+
+    const jsonLines = jsonStr.split('\n');
+    const toonLines = toonStr.split('\n');
+
+    // Font sizing based on longest text
+    const allLineCount = Math.max(jsonLines.length, toonLines.length);
+    const fontSize = allLineCount > 35 ? 13 : allLineCount > 25 ? 14 : allLineCount > 18 ? 16 : 18;
+    const lineHeight = fontSize * 1.45;
+    const padding = 30;
+
+    // "Glass" shows this many lines; overflow spills below
+    const GLASS_LINES = 28;
+    const jsonGlassLines = Math.min(jsonLines.length, GLASS_LINES);
+    const toonGlassLines = Math.min(toonLines.length, GLASS_LINES);
+    const jsonOverflowLines = Math.max(0, jsonLines.length - GLASS_LINES);
+    const toonOverflowLines = Math.max(0, toonLines.length - GLASS_LINES);
+
+    // Measure max width across BOTH texts
+    const mCanvas = document.createElement('canvas');
+    const mCtx = mCanvas.getContext('2d');
+    mCtx.font = `${fontSize}px "JetBrains Mono", monospace`;
+    let maxW = 0;
+    for (const line of jsonLines) { const m = mCtx.measureText(line); if (m.width > maxW) maxW = m.width; }
+    for (const line of toonLines) { const m = mCtx.measureText(line); if (m.width > maxW) maxW = m.width; }
+
+    const canvasW = Math.min(Math.max(maxW + padding * 2, 400), 1000);
+    const glassCanvasH = GLASS_LINES * lineHeight + padding * 2;
+
+    // ── Canvas builders ──
+    function makeCanvas(h, color, hasBorder, bgOpacity) {
+      const c = document.createElement('canvas');
+      c.width = canvasW; c.height = h;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = `rgba(10, 14, 23, ${bgOpacity !== undefined ? bgOpacity : 0.92})`;
+      ctx.fillRect(0, 0, canvasW, h);
+      if (hasBorder) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(4, 4, canvasW - 8, h - 8);
+      }
+      return { canvas: c, ctx };
+    }
+
+    function drawLine(canvasObj, text, lineIdx, color, yOffset) {
+      const ctx = canvasObj.ctx;
+      ctx.font = `${fontSize}px "JetBrains Mono", monospace`;
+      ctx.fillStyle = color;
+      ctx.textBaseline = 'top';
+      ctx.fillText(text, padding, yOffset + lineIdx * lineHeight);
+    }
+
+    // Glass canvases (bordered, full brightness)
+    const jsonGlass = makeCanvas(glassCanvasH, '#f97316', true);
+    const toonGlass = makeCanvas(glassCanvasH, '#22d3ee', true);
+
+    const jsonGlassTex = new THREE.CanvasTexture(jsonGlass.canvas);
+    jsonGlassTex.minFilter = THREE.LinearFilter;
+    const toonGlassTex = new THREE.CanvasTexture(toonGlass.canvas);
+    toonGlassTex.minFilter = THREE.LinearFilter;
+
+    // Overflow canvases (no border, will be rendered darker)
+    let jsonOverflowTex = null, toonOverflowTex = null;
+    let jsonOverflow = null, toonOverflow = null;
+    const overflowMaxLines = 80;
+
+    if (jsonOverflowLines > 0) {
+      const oLines = Math.min(jsonOverflowLines, overflowMaxLines);
+      const oH = oLines * lineHeight + padding;
+      jsonOverflow = makeCanvas(oH, '#f97316', false, 0.3);
+      jsonOverflowTex = new THREE.CanvasTexture(jsonOverflow.canvas);
+      jsonOverflowTex.minFilter = THREE.LinearFilter;
+    }
+    if (toonOverflowLines > 0) {
+      const oLines = Math.min(toonOverflowLines, overflowMaxLines);
+      const oH = oLines * lineHeight + padding;
+      toonOverflow = makeCanvas(oH, '#22d3ee', false, 0.3);
+      toonOverflowTex = new THREE.CanvasTexture(toonOverflow.canvas);
+      toonOverflowTex.minFilter = THREE.LinearFilter;
+    }
+
+    // ── 3D panel dimensions ──
+    const panelH = 24;
+    const panelW = panelH * (canvasW / glassCanvasH);
+    const GAP = 14; // distance between panels
+
+    // Panels face each other: rotation ~1.25 rad (~72°)
+    const FACE_ANGLE = 1.25;
+
+    // JSON glass panel — left
+    const jsonPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(panelW, panelH),
+      new THREE.MeshBasicMaterial({ map: jsonGlassTex, transparent: true, side: THREE.DoubleSide })
+    );
+    jsonPlane.position.set(-GAP, panelH / 2 + 1, 0);
+    jsonPlane.rotation.y = FACE_ANGLE;
+    scene.add(jsonPlane);
+
+    // TOON glass panel — right
+    const toonPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(panelW, panelH),
+      new THREE.MeshBasicMaterial({ map: toonGlassTex, transparent: true, side: THREE.DoubleSide })
+    );
+    toonPlane.position.set(GAP, panelH / 2 + 1, 0);
+    toonPlane.rotation.y = -FACE_ANGLE;
+    scene.add(toonPlane);
+
+    // Overflow panels — positioned just below the glass, faded
+    let jsonOverflowPlane = null, toonOverflowPlane = null;
+    if (jsonOverflowTex) {
+      const oLines = Math.min(jsonOverflowLines, overflowMaxLines);
+      const oH = panelH * (oLines * lineHeight + padding) / glassCanvasH;
+      jsonOverflowPlane = new THREE.Mesh(
+        new THREE.PlaneGeometry(panelW, oH),
+        new THREE.MeshBasicMaterial({ map: jsonOverflowTex, transparent: true, opacity: 0.45, side: THREE.DoubleSide })
+      );
+      jsonOverflowPlane.position.set(-GAP, 1 - oH / 2, 0);
+      jsonOverflowPlane.rotation.y = FACE_ANGLE;
+      scene.add(jsonOverflowPlane);
+    }
+    if (toonOverflowTex) {
+      const oLines = Math.min(toonOverflowLines, overflowMaxLines);
+      const oH = panelH * (oLines * lineHeight + padding) / glassCanvasH;
+      toonOverflowPlane = new THREE.Mesh(
+        new THREE.PlaneGeometry(panelW, oH),
+        new THREE.MeshBasicMaterial({ map: toonOverflowTex, transparent: true, opacity: 0.45, side: THREE.DoubleSide })
+      );
+      toonOverflowPlane.position.set(GAP, 1 - oH / 2, 0);
+      toonOverflowPlane.rotation.y = -FACE_ANGLE;
+      scene.add(toonOverflowPlane);
+    }
+
+    // Floor
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(80, 40),
+      new THREE.MeshStandardMaterial({ color: 0x0a0e17, metalness: 0.9, roughness: 0.3 })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    scene.add(floor);
+
+    const glowL = new THREE.PointLight(0xf97316, 0.8, 30);
+    glowL.position.set(-12, 1, 5);
+    scene.add(glowL);
+    const glowR = new THREE.PointLight(0x22d3ee, 0.8, 30);
+    glowR.position.set(12, 1, 5);
+    scene.add(glowR);
+
+    // Labels
+    const label = document.createElement('div');
+    label.className = 'viz-label';
+    label.innerHTML = `The Mirror — <span class="accent-orange">JSON</span> ↔ <em>TOON</em>`;
+    container.appendChild(label);
+    const subLabel = document.createElement('div');
+    subLabel.className = 'viz-counter';
+    subLabel.innerHTML = `<span style="opacity:0.7">Showing: ${sampleName} — drag to orbit, scroll to zoom, shift+drag to pan</span>`;
+    container.appendChild(subLabel);
+    const lL = document.createElement('div');
+    lL.style.cssText = 'position:absolute;bottom:40px;left:12%;font-family:var(--font-mono);font-size:clamp(13px,1.2vw,20px);color:#f97316;font-weight:700;z-index:10;text-shadow:0 2px 10px rgba(0,0,0,0.8);';
+    lL.textContent = 'JSON (original)';
+    container.appendChild(lL);
+    const lR = document.createElement('div');
+    lR.style.cssText = 'position:absolute;bottom:40px;right:12%;font-family:var(--font-mono);font-size:clamp(13px,1.2vw,20px);color:#22d3ee;font-weight:700;z-index:10;text-shadow:0 2px 10px rgba(0,0,0,0.8);';
+    lR.textContent = 'TOON (reflection)';
+    container.appendChild(lR);
+
+    // ── Typewriter state ──
+    let jsonLineIdx = 0, toonLineIdx = 0;
+    let typeTimer = 0;
+    const LINES_PER_SEC = 12;
+    let jsonDone = false, toonDone = false;
+
+    // ── Mouse orbit — starts STATIC, angled to see both panels ──
+    const INIT_ANGLE = -0.4;
+    let orbitAngle = INIT_ANGLE, orbitPitch = 0.3, orbitDist = 48;
+    let velAngle = 0, velPitch = 0;
+    let panX = 0, panY = 0;
+    let isDragging = false, lastX = 0, lastY = 0;
+    const FRICTION = 0.96, SENSITIVITY = 0.004, PAN_SENSITIVITY = 0.08;
+    const canvas = this.renderer.domElement;
+
+    const onMD = (e) => { isDragging = true; lastX = e.clientX; lastY = e.clientY; canvas.style.cursor = 'grabbing'; };
+    const onMM = (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - lastX, dy = e.clientY - lastY;
+      if (e.shiftKey) {
+        panX -= dx * PAN_SENSITIVITY * orbitDist * 0.01;
+        panY += dy * PAN_SENSITIVITY * orbitDist * 0.01;
+      } else {
+        velAngle = -dx * SENSITIVITY;
+        velPitch = dy * SENSITIVITY * 0.5;
+      }
+      lastX = e.clientX; lastY = e.clientY;
+    };
+    const onMU = () => { isDragging = false; canvas.style.cursor = 'grab'; };
+    const onWh = (e) => { e.preventDefault(); orbitDist = Math.max(15, Math.min(100, orbitDist + e.deltaY*0.05)); };
+
+    canvas.style.cursor = 'grab';
+    canvas.addEventListener('mousedown', onMD);
+    window.addEventListener('mousemove', onMM);
+    window.addEventListener('mouseup', onMU);
+    canvas.addEventListener('wheel', onWh, { passive: false });
+
+    const origCleanup = this.cleanup;
+    this.cleanup = () => {
+      canvas.removeEventListener('mousedown', onMD);
+      window.removeEventListener('mousemove', onMM);
+      window.removeEventListener('mouseup', onMU);
+      canvas.removeEventListener('wheel', onWh);
+      if (origCleanup) origCleanup();
+    };
+
+    const CENTER_Y = panelH / 2 + 1;
+    const lookTarget2 = new THREE.Vector3(0, CENTER_Y, 0);
+    camera.position.set(
+      Math.sin(INIT_ANGLE) * Math.cos(0.3) * orbitDist,
+      Math.sin(0.3) * orbitDist + CENTER_Y,
+      Math.cos(INIT_ANGLE) * Math.cos(0.3) * orbitDist
+    );
+    camera.lookAt(lookTarget2);
+
+    const animate = () => {
+      this.animId = requestAnimationFrame(animate);
+
+      // ── Typewriter ──
+      typeTimer += 1/60;
+      const linesToShow = Math.floor(typeTimer * LINES_PER_SEC);
+
+      // JSON glass lines
+      while (jsonLineIdx < jsonGlassLines && jsonLineIdx <= linesToShow) {
+        drawLine(jsonGlass, jsonLines[jsonLineIdx], jsonLineIdx, '#f97316', padding);
+        jsonLineIdx++;
+        jsonGlassTex.needsUpdate = true;
+      }
+      // JSON overflow lines — continue below the glass
+      while (jsonOverflow && jsonLineIdx >= GLASS_LINES && jsonLineIdx < GLASS_LINES + Math.min(jsonOverflowLines, overflowMaxLines) && jsonLineIdx <= linesToShow) {
+        const oi = jsonLineIdx - GLASS_LINES;
+        drawLine(jsonOverflow, jsonLines[jsonLineIdx], oi, '#f97316', padding / 2);
+        jsonLineIdx++;
+        jsonOverflowTex.needsUpdate = true;
+      }
+      if (jsonLineIdx >= jsonLines.length && !jsonDone) jsonDone = true;
+
+      // TOON glass lines
+      while (toonLineIdx < toonGlassLines && toonLineIdx <= linesToShow) {
+        drawLine(toonGlass, toonLines[toonLineIdx], toonLineIdx, '#22d3ee', padding);
+        toonLineIdx++;
+        toonGlassTex.needsUpdate = true;
+      }
+      // TOON overflow
+      while (toonOverflow && toonLineIdx >= GLASS_LINES && toonLineIdx < GLASS_LINES + Math.min(toonOverflowLines, overflowMaxLines) && toonLineIdx <= linesToShow) {
+        const oi = toonLineIdx - GLASS_LINES;
+        drawLine(toonOverflow, toonLines[toonLineIdx], oi, '#22d3ee', padding / 2);
+        toonLineIdx++;
+        toonOverflowTex.needsUpdate = true;
+      }
+      if (toonLineIdx >= toonLines.length && !toonDone) {
+        toonDone = true;
+        if (!jsonDone) lR.textContent = 'TOON ✓ done';
+      }
+      if (jsonDone && toonDone && lR.textContent.includes('done')) lR.textContent = 'TOON (reflection)';
+
+      // ── Orbit ──
+      orbitAngle += velAngle;
+      orbitPitch += velPitch;
+      orbitPitch = Math.max(-0.3, Math.min(0.8, orbitPitch));
+      if (!isDragging) { velAngle *= FRICTION; velPitch *= FRICTION; }
+
+      lookTarget2.set(panX, CENTER_Y + panY, 0);
+      camera.position.x = Math.sin(orbitAngle) * Math.cos(orbitPitch) * orbitDist + panX;
+      camera.position.z = Math.cos(orbitAngle) * Math.cos(orbitPitch) * orbitDist;
+      camera.position.y = Math.sin(orbitPitch) * orbitDist + CENTER_Y + panY;
+      camera.lookAt(lookTarget2);
+
+      this.renderer.render(scene, camera);
+    };
+    animate();
+  }
+};
+
+function countTokens(text) {
+  if (!text) return 0;
+  const pattern = /(?:'s|'t|'re|'ve|'m|'ll|'d)|[a-zA-Z_][a-zA-Z0-9_]*|[0-9]{1,3}|[ \t]+|\n|[{}()\[\]:,"\\]|[^\s\w]/g;
+  const matches = text.match(pattern);
+  if (!matches) return 0;
+  let count = 0;
+  for (const m of matches) {
+    if (/^[ \t]+$/.test(m)) count += Math.max(1, Math.ceil(m.length / 4));
+    else if (/^[a-zA-Z_]/.test(m)) { if (m.length <= 6) count += 1; else if (m.length <= 12) count += 2; else count += Math.ceil(m.length / 5); }
+    else count += 1;
+  }
+  return count;
+}
+
+function jsonToToon(data, indent = 0) {
+  const pad = '  '.repeat(indent);
+  if (data === null) return pad + 'null';
+  if (data === undefined) return pad + 'null';
+  if (typeof data === 'boolean') return pad + String(data);
+  if (typeof data === 'number') return pad + String(data);
+  if (typeof data === 'string') {
+    if (/[,\n\r{}\[\]:]/.test(data) || data.trim() === '' || data === '') return pad + '"' + data.replace(/"/g, '\\"') + '"';
+    return pad + data;
+  }
+  if (Array.isArray(data)) {
+    if (data.length === 0) return pad + '[0]:';
+    const allObjects = data.every(item => item && typeof item === 'object' && !Array.isArray(item));
+    if (allObjects && data.length > 0) {
+      const keys0 = Object.keys(data[0]);
+      const uniform = data.every(item => { const k = Object.keys(item); return k.length === keys0.length && k.every((key, i) => key === keys0[i]); });
+      if (uniform && keys0.length > 0) {
+        const allFlat = data.every(item => Object.values(item).every(v => v === null || typeof v !== 'object'));
+        if (allFlat) {
+          let result = pad + '[' + data.length + ']{' + keys0.join(',') + '}:\n';
+          for (const item of data) { const vals = keys0.map(k => { const v = item[k]; if (v === null) return 'null'; if (typeof v === 'string') { if (/[,\n\r{}\[\]:]/.test(v)) return '"' + v.replace(/"/g, '\\"') + '"'; return v; } return String(v); }); result += pad + '  ' + vals.join(',') + '\n'; }
+          return result.trimEnd();
+        }
+      }
+    }
+    const allPrimitive = data.every(item => item === null || typeof item !== 'object');
+    if (allPrimitive) { let result = pad + '[' + data.length + ']:\n'; for (const item of data) { result += pad + '  ' + formatPrimitive(item) + '\n'; } return result.trimEnd(); }
+    let result = pad + '[' + data.length + ']:\n';
+    for (const item of data) {
+      if (item && typeof item === 'object' && !Array.isArray(item)) { result += pad + '  -\n'; for (const [k, v] of Object.entries(item)) { if (v && typeof v === 'object') { result += pad + '    ' + k + ':\n'; result += jsonToToon(v, indent + 3) + '\n'; } else { result += pad + '    ' + k + ': ' + formatPrimitive(v) + '\n'; } } }
+      else { result += jsonToToon(item, indent + 1) + '\n'; }
+    }
+    return result.trimEnd();
+  }
+  if (typeof data === 'object') { let result = ''; for (const [k, v] of Object.entries(data)) { if (v && typeof v === 'object') { result += pad + k + ':\n'; result += jsonToToon(v, indent + 1) + '\n'; } else { result += pad + k + ': ' + formatPrimitive(v) + '\n'; } } return result.trimEnd(); }
+  return pad + String(data);
+}
+
+function formatPrimitive(v) {
+  if (v === null || v === undefined) return 'null';
+  if (typeof v === 'string') { if (/[,\n\r{}\[\]:]/.test(v) || v.trim() === '' || v === '') return '"' + v.replace(/"/g, '\\"') + '"'; return v; }
+  return String(v);
+}
+
+const SAMPLES = [
+  { name:'Single Employee Object', category:'Single Object', description:'Minimal savings — no repeated keys to eliminate', data:{ name:"Alice Johnson", age:28, department:"Engineering", salary:95000 } },
+  { name:'Employee List (5 records)', category:'Uniform Array', description:'Tabular format kicks in — keys stated once', data:[
+    { name:"Alice Johnson", age:28, department:"Engineering", salary:95000 }, { name:"Bob Smith", age:34, department:"Marketing", salary:78000 }, { name:"Charlie Brown", age:22, department:"Engineering", salary:72000 }, { name:"Diana Prince", age:31, department:"Sales", salary:85000 }, { name:"Edward Kim", age:45, department:"Executive", salary:140000 }
+  ]},
+  { name:'Employee List (20 records)', category:'Uniform Array (Large)', description:'Savings compound as row count grows', data:Array.from({length:20},(_,i)=>({
+    name:["Alice Johnson","Bob Smith","Charlie Brown","Diana Prince","Edward Kim","Fiona Garcia","George Lee","Hannah Chen","Isaac Wright","Julia Patel","Kevin Moore","Laura Davis","Marcus Hall","Nina Torres","Oscar White","Patricia Adams","Quinn Murphy","Rachel Foster","Samuel Reed","Tina Brooks"][i],
+    age:[28,34,22,31,45,27,39,33,41,26,37,29,44,32,38,35,30,43,25,36][i],
+    department:["Engineering","Marketing","Engineering","Sales","Executive","Engineering","Operations","Engineering","Finance","Engineering","Sales","Marketing","Operations","Engineering","Finance","Sales","Engineering","Operations","Marketing","Engineering"][i],
+    salary:[95000,78000,72000,85000,140000,88000,91000,96000,102000,76000,82000,79000,94000,98000,105000,84000,90000,93000,75000,87000][i]
+  }))},
+  { name:'P&C Claims Data', category:'Insurance Domain', description:'Real-world P&C claims — typical enterprise payload', data:[
+    { claimId:"CLM-2025-00142", policyNumber:"POL-GL-9981234", lossDate:"2025-02-15", reportDate:"2025-02-16", claimant:"Apex Manufacturing LLC", lossType:"Property Damage", status:"Open", reserveAmount:45000, paidAmount:12500, adjuster:"Martinez, R." },
+    { claimId:"CLM-2025-00143", policyNumber:"POL-WC-7765432", lossDate:"2025-02-14", reportDate:"2025-02-14", claimant:"Johnson, Michael T.", lossType:"Workers Comp", status:"Under Review", reserveAmount:28000, paidAmount:0, adjuster:"Thompson, K." },
+    { claimId:"CLM-2025-00144", policyNumber:"POL-GL-9984567", lossDate:"2025-02-12", reportDate:"2025-02-15", claimant:"Riverdale Construction Co.", lossType:"Bodily Injury", status:"Open", reserveAmount:125000, paidAmount:35000, adjuster:"Chen, L." },
+    { claimId:"CLM-2025-00145", policyNumber:"POL-CP-3321098", lossDate:"2025-02-10", reportDate:"2025-02-11", claimant:"Brighton Hotel Group", lossType:"Business Interruption", status:"Closed", reserveAmount:67500, paidAmount:67500, adjuster:"Martinez, R." },
+    { claimId:"CLM-2025-00146", policyNumber:"POL-IM-5543210", lossDate:"2025-02-09", reportDate:"2025-02-10", claimant:"Pacific Freight Services", lossType:"Cargo Loss", status:"Open", reserveAmount:89000, paidAmount:22000, adjuster:"Williams, D." },
+    { claimId:"CLM-2025-00147", policyNumber:"POL-PL-8876543", lossDate:"2025-02-08", reportDate:"2025-02-12", claimant:"Oakwood Financial Advisors", lossType:"E&O Liability", status:"Under Review", reserveAmount:250000, paidAmount:0, adjuster:"Chen, L." }
+  ]},
+  { name:'Departments + Employees (Nested Tabular)', category:'Nested CSV', description:'Parent rows with child arrays — like nested CSVs', data:[
+    { department:"Engineering", floor:3, budget:2400000, employees:[{name:"Alice Johnson",role:"Senior Developer",salary:95000},{name:"Bob Smith",role:"Junior Developer",salary:72000},{name:"Carol White",role:"Tech Lead",salary:115000}] },
+    { department:"Marketing", floor:2, budget:950000, employees:[{name:"Diana Prince",role:"Campaign Manager",salary:78000},{name:"Edward Kim",role:"Content Writer",salary:65000}] },
+    { department:"Sales", floor:1, budget:1100000, employees:[{name:"Frank Lee",role:"Account Executive",salary:82000},{name:"Grace Chen",role:"Sales Director",salary:120000},{name:"Henry Park",role:"Sales Associate",salary:58000},{name:"Iris Moon",role:"Business Development",salary:75000}] }
+  ],
+  rawToon: `[3]:
+  - department: Engineering
+    floor: 3
+    budget: 2400000
+    employees[3]{name,role,salary}:
+      Alice Johnson,Senior Developer,95000
+      Bob Smith,Junior Developer,72000
+      Carol White,Tech Lead,115000
+  - department: Marketing
+    floor: 2
+    budget: 950000
+    employees[2]{name,role,salary}:
+      Diana Prince,Campaign Manager,78000
+      Edward Kim,Content Writer,65000
+  - department: Sales
+    floor: 1
+    budget: 1100000
+    employees[4]{name,role,salary}:
+      Frank Lee,Account Executive,82000
+      Grace Chen,Sales Director,120000
+      Henry Park,Sales Associate,58000
+      Iris Moon,Business Development,75000`
+  },
+  { name:'Company + Departments (Nested)', category:'Nested Structure', description:'Mixed nesting — hierarchy via indentation', data:{ company:"Acme Corp", founded:2010, departments:[{name:"Engineering",headCount:45,budget:2400000,lead:"Sarah Connor"},{name:"Marketing",headCount:18,budget:950000,lead:"John Reese"},{name:"Operations",headCount:22,budget:1100000,lead:"Root Admin"}] } },
+  { name:'RAG Context Payload', category:'AI / RAG Pipeline', description:'Typical retrieval results fed into LLM context', data:[
+    { docId:"KB-4521", title:"Umbrella Policy Endorsement Guidelines", section:"Coverage Extensions", relevanceScore:0.94, snippet:"Umbrella policies extend coverage beyond underlying limits for GL, auto, and employers liability" },
+    { docId:"KB-3187", title:"Excess Liability Underwriting Manual", section:"Risk Assessment", relevanceScore:0.89, snippet:"Evaluate underlying policy terms for adequate self-insured retention levels before binding" },
+    { docId:"KB-5602", title:"Claims Handling Best Practices", section:"Reservation of Rights", relevanceScore:0.87, snippet:"Issue ROR letter within 15 business days of coverage question identification" },
+    { docId:"KB-2291", title:"Premium Audit Procedures", section:"Classification Codes", relevanceScore:0.82, snippet:"Verify NAICS and SIC codes against actual operations during physical audit" },
+    { docId:"KB-6834", title:"Subrogation Recovery Protocols", section:"Third Party Recovery", relevanceScore:0.79, snippet:"Initiate subrogation investigation when liability indicators exceed 60% probability threshold" }
+  ]},
+  { name:'Agent Tool Results', category:'Agentic Workflow', description:'Tool call response in an AI agent pipeline', data:{ toolName:"policy_lookup", executionTime:"142ms", results:[
+    { policyId:"POL-GL-9981234", insured:"Apex Manufacturing LLC", effectiveDate:"2025-01-01", expirationDate:"2026-01-01", premium:34500, line:"General Liability", status:"Active" },
+    { policyId:"POL-WC-7765432", insured:"Apex Manufacturing LLC", effectiveDate:"2025-03-01", expirationDate:"2026-03-01", premium:52000, line:"Workers Compensation", status:"Active" },
+    { policyId:"POL-CP-3321098", insured:"Apex Manufacturing LLC", effectiveDate:"2024-07-01", expirationDate:"2025-07-01", premium:18750, line:"Commercial Property", status:"Active" }
+  ]}},
+  { name:'Spring AI Tool Call (Before/After)', category:'Spring AI Integration', description:'What ToonToolCallResultConverter does automatically', data:[
+    { employeeId:"EMP-1001", name:"Alice Johnson", department:"Engineering", title:"Senior Developer", yearsOfService:6, performanceRating:4.5 },
+    { employeeId:"EMP-1002", name:"Bob Smith", department:"Marketing", title:"Campaign Manager", yearsOfService:3, performanceRating:4.2 },
+    { employeeId:"EMP-1003", name:"Charlie Brown", department:"Engineering", title:"Staff Architect", yearsOfService:12, performanceRating:4.8 },
+    { employeeId:"EMP-1004", name:"Diana Prince", department:"Sales", title:"Account Executive", yearsOfService:2, performanceRating:4.0 },
+    { employeeId:"EMP-1005", name:"Edward Kim", department:"Executive", title:"VP Engineering", yearsOfService:15, performanceRating:4.9 }
+  ]},
+  { name:'Cyclic Graph — $id/$ref (json-io)', category:'Cycle Support', description:'Parent pointers & shared refs — opt-in, off by default', data:null,
+    rawJson:'{\n  "@id":1,\n  "name":"Pinnacle Holdings Corp",\n  "founded":1872,\n  "ceo":{\n    "@id":2,\n    "name":"Alice Johnson",\n    "title":"CEO",\n    "salary":210000\n  },\n  "departments":[\n    {\n      "name":"Engineering",\n      "headCount":45,\n      "budget":2400000.0,\n      "company":{"@ref":1},\n      "manager":{"@ref":2},\n      "employees":[\n        {\n          "name":"Bob Smith",\n          "title":"Senior Developer",\n          "salary":95000\n        },\n        {\n          "name":"Charlie Davis",\n          "title":"Developer",\n          "salary":85000\n        },\n        {\n          "name":"Diana Lee",\n          "title":"QA Engineer",\n          "salary":82000\n        },\n        {\n          "name":"Eve Park",\n          "title":"DevOps Lead",\n          "salary":91000\n        }\n      ]\n    },\n    {\n      "name":"Claims",\n      "headCount":60,\n      "budget":1800000.0,\n      "company":{"@ref":1},\n      "manager":{\n        "name":"Carol White",\n        "title":"Claims Director",\n        "salary":130000\n      },\n      "employees":[\n        {\n          "name":"Frank Wilson",\n          "title":"Senior Adjuster",\n          "salary":78000\n        },\n        {\n          "name":"Grace Kim",\n          "title":"Claims Analyst",\n          "salary":75000\n        },\n        {\n          "name":"Henry Chen",\n          "title":"Claims Processor",\n          "salary":68000\n        }\n      ]\n    },\n    {\n      "name":"Underwriting",\n      "headCount":35,\n      "budget":1500000.0,\n      "company":{"@ref":1},\n      "manager":{\n        "name":"James Rivera",\n        "title":"Chief Underwriter",\n        "salary":140000\n      },\n      "employees":[\n        {\n          "name":"Karen Liu",\n          "title":"Senior Underwriter",\n          "salary":88000\n        },\n        {\n          "name":"Leo Nguyen",\n          "title":"Risk Analyst",\n          "salary":79000\n        },\n        {\n          "name":"Maria Santos",\n          "title":"Underwriter",\n          "salary":76000\n        }\n      ]\n    }\n  ]\n}',
+    rawToon:'$id: 1\nname: Pinnacle Holdings Corp\nfounded: 1872\nceo:\n  $id: 2\n  name: Alice Johnson\n  title: CEO\n  salary: 210000\ndepartments[3]:\n  - name: Engineering\n    headCount: 45\n    budget: 2400000\n    company:\n      $ref: 1\n    manager:\n      $ref: 2\n    employees[4]{name,title,salary}:\n      Bob Smith,Senior Developer,95000\n      Charlie Davis,Developer,85000\n      Diana Lee,QA Engineer,82000\n      Eve Park,DevOps Lead,91000\n  - name: Claims\n    headCount: 60\n    budget: 1800000\n    company:\n      $ref: 1\n    manager:\n      name: Carol White\n      title: Claims Director\n      salary: 130000\n    employees[3]{name,title,salary}:\n      Frank Wilson,Senior Adjuster,78000\n      Grace Kim,Claims Analyst,75000\n      Henry Chen,Claims Processor,68000\n  - name: Underwriting\n    headCount: 35\n    budget: 1500000\n    company:\n      $ref: 1\n    manager:\n      name: James Rivera\n      title: Chief Underwriter\n      salary: 140000\n    employees[3]{name,title,salary}:\n      Karen Liu,Senior Underwriter,88000\n      Leo Nguyen,Risk Analyst,79000\n      Maria Santos,Underwriter,76000' }
+];
+
+const TOTAL_SLIDES = 13;
+
+createApp({
+  setup() {
+    const activeTab = ref('slides');
+    const slideIndex = ref(0);
+    const selectedIndex = ref(0);
+    const activeViz = ref('compression');
+    const totalSlides = TOTAL_SLIDES;
+
+    function setViz(type) {
+      activeViz.value = type;
+      const extra = type === 'mirror' ? { json: jsonText.value, toon: toonText.value, name: currentSample.value.name } : null;
+      nextTick(() => VizManager.init(type, extra));
+    }
+
+    // Watch tab changes to init/destroy viz
+    watch(activeTab, (newTab, oldTab) => {
+      if (oldTab === 'viz') VizManager.destroy();
+      if (newTab === 'viz') {
+        const extra = activeViz.value === 'mirror' ? { json: jsonText.value, toon: toonText.value, name: currentSample.value.name } : null;
+        nextTick(() => VizManager.init(activeViz.value, extra));
+      }
+    });
+    function nextSlide() { if (slideIndex.value < totalSlides - 1) slideIndex.value++; }
+    function prevSlide() { if (slideIndex.value > 0) slideIndex.value--; }
+    const currentSample = computed(() => SAMPLES[selectedIndex.value]);
+    const jsonText = computed(() => currentSample.value.rawJson || JSON.stringify(currentSample.value.data, null, 2));
+    const toonText = computed(() => currentSample.value.rawToon || jsonToToon(currentSample.value.data));
+    const jsonTokens = computed(() => countTokens(jsonText.value));
+    const toonTokens = computed(() => countTokens(toonText.value));
+    const jsonChars = computed(() => jsonText.value.length);
+    const toonChars = computed(() => toonText.value.length);
+    const savingsPercent = computed(() => { if (jsonTokens.value === 0) return 0; return Math.round((1 - toonTokens.value / jsonTokens.value) * 100); });
+    const toonBarWidth = computed(() => { if (jsonTokens.value === 0) return '0%'; return Math.round((toonTokens.value / jsonTokens.value) * 100) + '%'; });
+    const todayDate = new Date().toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+    function nextSample() { selectedIndex.value = (selectedIndex.value + 1) % SAMPLES.length; }
+    function prevSample() { selectedIndex.value = (selectedIndex.value - 1 + SAMPLES.length) % SAMPLES.length; }
+    function handleKeydown(e) {
+      if (e.key === 'ArrowRight') { if (activeTab.value === 'slides') nextSlide(); else nextSample(); }
+      else if (e.key === 'ArrowLeft') { if (activeTab.value === 'slides') prevSlide(); else prevSample(); }
+    }
+    onMounted(() => window.addEventListener('keydown', handleKeydown));
+    onUnmounted(() => { window.removeEventListener('keydown', handleKeydown); VizManager.destroy(); });
+    return { activeTab, slideIndex, totalSlides, nextSlide, prevSlide, samples:SAMPLES, selectedIndex, currentSample, jsonText, toonText, jsonTokens, toonTokens, jsonChars, toonChars, savingsPercent, toonBarWidth, todayDate, nextSample, prevSample, activeViz, setViz };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
