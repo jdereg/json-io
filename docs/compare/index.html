@@ -726,11 +726,11 @@ const VizManager = {
     const glassCanvasH = GLASS_LINES * lineHeight + padding * 2;
 
     // ── Canvas builders ──
-    function makeCanvas(h, color, hasBorder, bgOpacity) {
+    function makeCanvas(h, color, hasBorder) {
       const c = document.createElement('canvas');
       c.width = canvasW; c.height = h;
-      const ctx = c.getContext('2d');
-      ctx.fillStyle = `rgba(10, 14, 23, ${bgOpacity !== undefined ? bgOpacity : 0.92})`;
+      const ctx = c.getContext('2d', { alpha: false });
+      ctx.fillStyle = '#1e2637';
       ctx.fillRect(0, 0, canvasW, h);
       if (hasBorder) {
         ctx.strokeStyle = color;
@@ -765,14 +765,14 @@ const VizManager = {
     if (jsonOverflowLines > 0) {
       const oLines = Math.min(jsonOverflowLines, overflowMaxLines);
       const oH = oLines * lineHeight + padding;
-      jsonOverflow = makeCanvas(oH, '#f97316', false, 0.3);
+      jsonOverflow = makeCanvas(oH, '#f97316', false);
       jsonOverflowTex = new THREE.CanvasTexture(jsonOverflow.canvas);
       jsonOverflowTex.minFilter = THREE.LinearFilter;
     }
     if (toonOverflowLines > 0) {
       const oLines = Math.min(toonOverflowLines, overflowMaxLines);
       const oH = oLines * lineHeight + padding;
-      toonOverflow = makeCanvas(oH, '#22d3ee', false, 0.3);
+      toonOverflow = makeCanvas(oH, '#22d3ee', false);
       toonOverflowTex = new THREE.CanvasTexture(toonOverflow.canvas);
       toonOverflowTex.minFilter = THREE.LinearFilter;
     }
@@ -788,7 +788,7 @@ const VizManager = {
     // JSON glass panel — left
     const jsonPlane = new THREE.Mesh(
       new THREE.PlaneGeometry(panelW, panelH),
-      new THREE.MeshBasicMaterial({ map: jsonGlassTex, transparent: true, side: THREE.DoubleSide })
+      new THREE.MeshBasicMaterial({ map: jsonGlassTex, side: THREE.DoubleSide })
     );
     jsonPlane.position.set(-GAP, panelH / 2 + 1, 0);
     jsonPlane.rotation.y = FACE_ANGLE;
@@ -797,7 +797,7 @@ const VizManager = {
     // TOON glass panel — right
     const toonPlane = new THREE.Mesh(
       new THREE.PlaneGeometry(panelW, panelH),
-      new THREE.MeshBasicMaterial({ map: toonGlassTex, transparent: true, side: THREE.DoubleSide })
+      new THREE.MeshBasicMaterial({ map: toonGlassTex, side: THREE.DoubleSide })
     );
     toonPlane.position.set(GAP, panelH / 2 + 1, 0);
     toonPlane.rotation.y = -FACE_ANGLE;
@@ -810,7 +810,7 @@ const VizManager = {
       const oH = panelH * (oLines * lineHeight + padding) / glassCanvasH;
       jsonOverflowPlane = new THREE.Mesh(
         new THREE.PlaneGeometry(panelW, oH),
-        new THREE.MeshBasicMaterial({ map: jsonOverflowTex, transparent: true, opacity: 0.45, side: THREE.DoubleSide })
+        new THREE.MeshBasicMaterial({ map: jsonOverflowTex, side: THREE.DoubleSide })
       );
       jsonOverflowPlane.position.set(-GAP, 1 - oH / 2, 0);
       jsonOverflowPlane.rotation.y = FACE_ANGLE;
@@ -821,17 +821,52 @@ const VizManager = {
       const oH = panelH * (oLines * lineHeight + padding) / glassCanvasH;
       toonOverflowPlane = new THREE.Mesh(
         new THREE.PlaneGeometry(panelW, oH),
-        new THREE.MeshBasicMaterial({ map: toonOverflowTex, transparent: true, opacity: 0.45, side: THREE.DoubleSide })
+        new THREE.MeshBasicMaterial({ map: toonOverflowTex, side: THREE.DoubleSide })
       );
       toonOverflowPlane.position.set(GAP, 1 - oH / 2, 0);
       toonOverflowPlane.rotation.y = -FACE_ANGLE;
       scene.add(toonOverflowPlane);
     }
 
-    // Floor
+    // Floor with title printed on surface
+    const floorCanvas = document.createElement('canvas');
+    floorCanvas.width = 1024; floorCanvas.height = 512;
+    const fCtx = floorCanvas.getContext('2d', { alpha: false });
+    fCtx.fillStyle = '#0a0e17';
+    fCtx.fillRect(0, 0, 1024, 512);
+    // Title line
+    fCtx.font = 'bold 42px "DM Serif Display", Georgia, serif';
+    fCtx.textAlign = 'center';
+    fCtx.fillStyle = 'rgba(226,232,240,0.25)';
+    fCtx.fillText('The Mirror', 512, 200);
+    // Subtitle
+    fCtx.font = '500 24px "DM Sans", sans-serif';
+    fCtx.fillStyle = 'rgba(122,139,168,0.3)';
+    fCtx.fillText(sampleName + ' — drag to orbit, scroll to zoom', 512, 250);
+    // JSON / TOON labels with token counts
+    const jTok = (extraData && extraData.jsonTokens) || 0;
+    const tTok = (extraData && extraData.toonTokens) || 0;
+    const sPct = (extraData && extraData.savingsPercent) || 0;
+    fCtx.font = 'bold 28px "JetBrains Mono", monospace';
+    fCtx.fillStyle = 'rgba(249,115,22,0.3)';
+    fCtx.fillText('JSON', 300, 310);
+    fCtx.fillStyle = 'rgba(34,211,238,0.3)';
+    fCtx.fillText('TOON', 724, 310);
+    // Token counts
+    fCtx.font = '500 22px "JetBrains Mono", monospace';
+    fCtx.fillStyle = 'rgba(249,115,22,0.25)';
+    fCtx.fillText(jTok.toLocaleString() + ' tokens', 300, 345);
+    fCtx.fillStyle = 'rgba(34,211,238,0.25)';
+    fCtx.fillText(tTok.toLocaleString() + ' tokens', 724, 345);
+    // Savings
+    fCtx.font = 'bold 30px "JetBrains Mono", monospace';
+    fCtx.fillStyle = 'rgba(52,211,153,0.3)';
+    fCtx.fillText(sPct + '% fewer tokens with TOON', 512, 400);
+    const floorTex = new THREE.CanvasTexture(floorCanvas);
+    floorTex.minFilter = THREE.LinearFilter;
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(80, 40),
-      new THREE.MeshStandardMaterial({ color: 0x0a0e17, metalness: 0.9, roughness: 0.3 })
+      new THREE.MeshStandardMaterial({ map: floorTex, metalness: 0.7, roughness: 0.4, side: THREE.DoubleSide })
     );
     floor.rotation.x = -Math.PI / 2;
     scene.add(floor);
@@ -843,23 +878,8 @@ const VizManager = {
     glowR.position.set(12, 1, 5);
     scene.add(glowR);
 
-    // Labels
-    const label = document.createElement('div');
-    label.className = 'viz-label';
-    label.innerHTML = `The Mirror — <span class="accent-orange">JSON</span> ↔ <em>TOON</em>`;
-    container.appendChild(label);
-    const subLabel = document.createElement('div');
-    subLabel.className = 'viz-counter';
-    subLabel.innerHTML = `<span style="opacity:0.7">Showing: ${sampleName} — drag to orbit, scroll to zoom, shift+drag to pan</span>`;
-    container.appendChild(subLabel);
-    const lL = document.createElement('div');
-    lL.style.cssText = 'position:absolute;bottom:40px;left:12%;font-family:var(--font-mono);font-size:clamp(13px,1.2vw,20px);color:#f97316;font-weight:700;z-index:10;text-shadow:0 2px 10px rgba(0,0,0,0.8);';
-    lL.textContent = 'JSON (original)';
-    container.appendChild(lL);
-    const lR = document.createElement('div');
-    lR.style.cssText = 'position:absolute;bottom:40px;right:12%;font-family:var(--font-mono);font-size:clamp(13px,1.2vw,20px);color:#22d3ee;font-weight:700;z-index:10;text-shadow:0 2px 10px rgba(0,0,0,0.8);';
-    lR.textContent = 'TOON (reflection)';
-    container.appendChild(lR);
+    // Status tracking (no longer rendered as DOM overlays)
+    const lR = { textContent: '' };
 
     // ── Typewriter state ──
     let jsonLineIdx = 0, toonLineIdx = 0;
@@ -960,7 +980,7 @@ const VizManager = {
       // ── Orbit ──
       orbitAngle += velAngle;
       orbitPitch += velPitch;
-      orbitPitch = Math.max(-0.3, Math.min(0.8, orbitPitch));
+      orbitPitch = Math.max(-1.2, Math.min(1.2, orbitPitch));
       if (!isDragging) { velAngle *= FRICTION; velPitch *= FRICTION; }
 
       lookTarget2.set(panX, CENTER_Y + panY, 0);
@@ -1111,7 +1131,7 @@ createApp({
     const totalSlides = TOTAL_SLIDES;
 
     function vizExtra() {
-      return { json: jsonText.value, toon: toonText.value, name: currentSample.value.name, savingsRatio: jsonTokens.value > 0 ? 1 - toonTokens.value / jsonTokens.value : 0.4 };
+      return { json: jsonText.value, toon: toonText.value, name: currentSample.value.name, savingsRatio: jsonTokens.value > 0 ? 1 - toonTokens.value / jsonTokens.value : 0.4, jsonTokens: jsonTokens.value, toonTokens: toonTokens.value, savingsPercent: savingsPercent.value };
     }
 
     function setViz(type) {
