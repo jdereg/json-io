@@ -148,62 +148,78 @@ public class MetaUtils {
      * @param readOptions ReadOptions containing configurable security limits.
      */
     public static Map<String, String> loadMapDefinition(String resName, ReadOptions readOptions) {
+        return loadMapDefinitionCore(resName, readOptions.getMaxFileContentSize(), readOptions.getMaxLineCount(), readOptions.getMaxLineLength());
+    }
+
+    /**
+     * Load in a Map-style properties file. Expects key and value to be separated by a = (whitespace ignored).
+     * Ignores lines beginning with a # and it also ignores blank lines.
+     * Uses hardcoded default security limits to avoid circular class initialization.
+     *
+     * @param resName String name of the resource file.
+     */
+    public static Map<String, String> loadMapDefinition(String resName) {
+        // Hardcoded defaults (matching ReadOptionsBuilder BASE_MAX_* values) to avoid circular
+        // class initialization. ReadOptionsBuilder/WriteOptionsBuilder static initializers call
+        // this method, so creating a ReadOptionsBuilder here would cause potential deadlock when
+        // two threads concurrently trigger class loading of ReadOptionsBuilder and WriteOptionsBuilder.
+        return loadMapDefinitionCore(resName, 1048576, 10000, 8192);
+    }
+
+    private static Map<String, String> loadMapDefinitionCore(String resName, int maxFileContentSize, int maxLineCount, int maxLineLength) {
         // Security: Validate resource name to prevent directory traversal attacks
         if (resName == null || resName.trim().isEmpty()) {
             throw new JsonIoException("Resource name cannot be null or empty");
         }
-        
+
         // Security: Prevent directory traversal attacks
         if (resName.contains("..") || resName.contains("\\") || resName.startsWith("/")) {
             throw new JsonIoException("Invalid resource name: " + resName + ". Resource names cannot contain '..' or path separators.");
         }
-        
+
         Map<String, String> map = new LinkedHashMap<>();
         Scanner scanner = null;
         try {
             String contents = ClassUtilities.loadResourceAsString(resName);
-            
-            // Security: Validate content size to prevent memory exhaustion using configurable limit
-            int maxFileContentSize = readOptions.getMaxFileContentSize();
+
+            // Security: Validate content size to prevent memory exhaustion
             if (contents.length() > maxFileContentSize) {
                 throw new JsonIoException("Resource file too large: " + resName + " (" + contents.length() + " bytes). Maximum allowed: " + maxFileContentSize + " bytes");
             }
-            
+
             scanner = new Scanner(contents);
             int lineCount = 0;
-            int maxLineCount = readOptions.getMaxLineCount();
-            int maxLineLength = readOptions.getMaxLineLength();
-            
+
             while (scanner.hasNextLine()) {
-                // Security: Prevent unbounded line processing using configurable limit
+                // Security: Prevent unbounded line processing
                 if (++lineCount > maxLineCount) {
                     throw new JsonIoException("Resource file has too many lines: " + resName + " (" + lineCount + " lines). Maximum allowed: " + maxLineCount);
                 }
-                
+
                 String line = scanner.nextLine();
-                
-                // Security: Validate line length to prevent memory issues using configurable limit
+
+                // Security: Validate line length to prevent memory issues
                 if (line.length() > maxLineLength) {
                     throw new JsonIoException("Line too long in resource file: " + resName + " (line " + lineCount + ", " + line.length() + " chars). Maximum allowed: " + maxLineLength + " chars per line");
                 }
-                
+
                 String trimmedLine = line.trim();
                 if (!trimmedLine.startsWith("#") && !trimmedLine.isEmpty()) {
                     String[] parts = line.split("=", 2); // Limit to 2 parts to handle values with '='
-                    
+
                     // Security: Validate that we have exactly 2 parts
                     if (parts.length != 2) {
                         throw new JsonIoException("Invalid format in resource file: " + resName + " at line " + lineCount + ". Expected format: key=value");
                     }
-                    
+
                     String key = parts[0].trim();
                     String value = parts[1].trim();
-                    
+
                     // Security: Validate key and value are not empty
                     if (key.isEmpty()) {
                         throw new JsonIoException("Empty key found in resource file: " + resName + " at line " + lineCount);
                     }
-                    
+
                     map.put(key, value);
                 }
             }
@@ -221,19 +237,6 @@ public class MetaUtils {
     }
 
     /**
-     * Load in a Map-style properties file. Expects key and value to be separated by a = (whitespace ignored).
-     * Ignores lines beginning with a # and it also ignores blank lines.
-     * Uses default security limits for backward compatibility.
-     *
-     * @param resName String name of the resource file.
-     */
-    public static Map<String, String> loadMapDefinition(String resName) {
-        // Use default ReadOptions for backward compatibility
-        ReadOptions defaultOptions = new ReadOptionsBuilder().build();
-        return loadMapDefinition(resName, defaultOptions);
-    }
-
-    /**
      * Load in a Set-style simple file of values with configurable security limits from ReadOptions.
      * Expects values to be one per line. Ignores lines beginning with a # and it also ignores blank lines.
      *
@@ -242,45 +245,60 @@ public class MetaUtils {
      * @return the set of strings
      */
     public static Set<String> loadSetDefinition(String resName, ReadOptions readOptions) {
+        return loadSetDefinitionCore(resName, readOptions.getMaxFileContentSize(), readOptions.getMaxLineCount(), readOptions.getMaxLineLength());
+    }
+
+    /**
+     * Load in a Set-style simple file of values. Expects values to be one per line. Ignores lines beginning with a #
+     * and it also ignores blank lines.
+     * Uses hardcoded default security limits to avoid circular class initialization.
+     *
+     * @param resName String name of the resource file.
+     * @return the set of strings
+     */
+    public static Set<String> loadSetDefinition(String resName) {
+        // Hardcoded defaults (matching ReadOptionsBuilder BASE_MAX_* values) to avoid circular
+        // class initialization. See loadMapDefinition(String) for full explanation.
+        return loadSetDefinitionCore(resName, 1048576, 10000, 8192);
+    }
+
+    private static Set<String> loadSetDefinitionCore(String resName, int maxFileContentSize, int maxLineCount, int maxLineLength) {
         // Security: Validate resource name to prevent directory traversal attacks
         if (resName == null || resName.trim().isEmpty()) {
             throw new JsonIoException("Resource name cannot be null or empty");
         }
-        
+
         // Security: Prevent directory traversal attacks
         if (resName.contains("..") || resName.contains("\\") || resName.startsWith("/")) {
             throw new JsonIoException("Invalid resource name: " + resName + ". Resource names cannot contain '..' or path separators.");
         }
-        
+
         Set<String> set = new LinkedHashSet<>();
         Scanner scanner = null;
         try {
             String contents = ClassUtilities.loadResourceAsString(resName);
-            
-            // Security: Validate content size to prevent memory exhaustion using configurable limit
-            int maxFileContentSize = readOptions.getMaxFileContentSize();
+
+            // Security: Validate content size to prevent memory exhaustion
             if (contents.length() > maxFileContentSize) {
                 throw new JsonIoException("Resource file too large: " + resName + " (" + contents.length() + " bytes). Maximum allowed: " + maxFileContentSize + " bytes");
             }
-            
+
             scanner = new Scanner(contents);
             int lineCount = 0;
-            int maxLineCount = readOptions.getMaxLineCount();
-            int maxLineLength = readOptions.getMaxLineLength();
-            
+
             while (scanner.hasNextLine()) {
-                // Security: Prevent unbounded line processing using configurable limit
+                // Security: Prevent unbounded line processing
                 if (++lineCount > maxLineCount) {
                     throw new JsonIoException("Resource file has too many lines: " + resName + " (" + lineCount + " lines). Maximum allowed: " + maxLineCount);
                 }
-                
+
                 String line = scanner.nextLine();
-                
-                // Security: Validate line length to prevent memory issues using configurable limit
+
+                // Security: Validate line length to prevent memory issues
                 if (line.length() > maxLineLength) {
                     throw new JsonIoException("Line too long in resource file: " + resName + " (line " + lineCount + ", " + line.length() + " chars). Maximum allowed: " + maxLineLength + " chars per line");
                 }
-                
+
                 String trimmedLine = line.trim();
                 if (!trimmedLine.startsWith("#") && !trimmedLine.isEmpty()) {
                     set.add(trimmedLine);
@@ -297,20 +315,6 @@ public class MetaUtils {
             }
         }
         return set;
-    }
-
-    /**
-     * Load in a Set-style simple file of values. Expects values to be one per line. Ignores lines beginning with a #
-     * and it also ignores blank lines.
-     * Uses default security limits for backward compatibility.
-     *
-     * @param resName String name of the resource file.
-     * @return the set of strings
-     */
-    public static Set<String> loadSetDefinition(String resName) {
-        // Use default ReadOptions for backward compatibility
-        ReadOptions defaultOptions = new ReadOptionsBuilder().build();
-        return loadSetDefinition(resName, defaultOptions);
     }
 
 

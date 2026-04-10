@@ -85,6 +85,7 @@ public class ReadOptionsBuilder {
     private static final Map<Class<? extends JsonClassReader>, JsonClassReader> annotationReaderCache = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_SETTERS = new ClassValueMap<>();
     private static final Map<Class<?>, Set<String>> BASE_NOT_IMPORTED_FIELDS = new ClassValueMap<>();
+    private static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ClassValueMap<>();
     
     // Base permanent security limits - default to unlimited for backward compatibility
     private static volatile int BASE_MAX_UNRESOLVED_REFERENCES = Integer.MAX_VALUE;
@@ -141,6 +142,7 @@ public class ReadOptionsBuilder {
         loadBaseNotCustomReadClasses();
         loadBaseFieldsNotImported();
         loadBaseNonStandardSetters();
+        loadBaseExcludedFields();
 
         defReadOptions = new ReadOptionsBuilder().build();
     }
@@ -174,7 +176,7 @@ public class ReadOptionsBuilder {
         options.classFactoryMap.putAll(BASE_CLASS_FACTORIES);
         options.nonRefClasses.addAll(BASE_NON_REFS);
         options.notCustomReadClasses.addAll(BASE_NOT_CUSTOM_READ);
-        options.excludedFieldNames.putAll(WriteOptionsBuilder.BASE_EXCLUDED_FIELD_NAMES);
+        options.excludedFieldNames.putAll(BASE_EXCLUDED_FIELD_NAMES);
         options.fieldsNotImported.putAll(BASE_NOT_IMPORTED_FIELDS);
         
         // Copy base permanent security limits
@@ -2380,6 +2382,23 @@ public class ReadOptionsBuilder {
             Map<String, String> nonStandardSetters = entry.getValue();
             for (Map.Entry<String, String> stringEntry : nonStandardSetters.entrySet()) {
                 addPermanentNonStandardSetter(clazz, stringEntry.getKey(), stringEntry.getValue());
+            }
+        }
+    }
+
+    /**
+     * Load the base excluded field names from config/fieldsNotExported.txt.
+     * This is loaded independently (rather than reading from WriteOptionsBuilder) to avoid
+     * circular static initialization between ReadOptionsBuilder and WriteOptionsBuilder,
+     * which can cause deadlock when two threads concurrently trigger class loading.
+     */
+    private static void loadBaseExcludedFields() {
+        Map<Class<?>, Set<String>> allExcludedFields = loadClassToSetOfStrings("config/fieldsNotExported.txt");
+        for (Map.Entry<Class<?>, Set<String>> entry : allExcludedFields.entrySet()) {
+            Class<?> clazz = entry.getKey();
+            Set<String> excludedFields = entry.getValue();
+            for (String fieldName : excludedFields) {
+                BASE_EXCLUDED_FIELD_NAMES.computeIfAbsent(clazz, k -> ConcurrentHashMap.newKeySet()).add(fieldName);
             }
         }
     }

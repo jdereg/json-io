@@ -1,5 +1,8 @@
 ### Revision History
 
+#### 4.100.0 (Unreleased)
+* **BUG FIX**: Fixed deadlock caused by circular static initialization between `ReadOptionsBuilder` and `WriteOptionsBuilder`. When two threads concurrently triggered class loading (e.g., one calling `JsonIo.toJson()` and another calling `JsonIo.toJava()`), the JVM's class initialization locks would deadlock. Broke the cycle by having each builder load its configuration independently and by removing the circular dependency through `MetaUtils` bootstrap methods.
+
 #### 4.99.0 - 2026-03-28
 * **PERFORMANCE**: `ToonWriter.needsQuoting()` — replaced multi-method dispatch chain (`isReservedScalarLiteral()` + `isSimpleUnquotedAsciiToken()` + `computeNeedsQuoting()`) with a single-pass `scanNeedsQuoting()` method. Uses a pre-built `boolean[128]` lookup table per delimiter, reducing the inner character scan from 8 branch comparisons to 1 array access per character. Reserved-literal check merged inline with `switch(first)` + length gate. `looksLikeNumber()` now guarded by first-char check — only called for strings starting with `0-9`, `+`, or `.` (~90% of calls eliminated). `Character.isWhitespace()` replaced with `<= ' '`. JFR shows `needsQuoting` dropped from 383 samples (#1 hotspot) to 25 samples — a **93.5% reduction**.
 * **PERFORMANCE**: `ToonReader.readLineRaw()` — now uses `FastReader.readLine()` instead of `readUntil()` + separate `read()` + pushback for line-ending handling. Eliminates per-line method call overhead and the `\r\n` pushback round-trip. JFR shows TOON line-reading improved 28%, and `FastReader.read()` calls halved.
