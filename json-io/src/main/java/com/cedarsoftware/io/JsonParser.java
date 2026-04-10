@@ -291,8 +291,15 @@ class JsonParser {
 
         while (true) {
             CharSequence field = readFieldName();
-            // Performance: Use getOrDefault to avoid double lookup
-            field = substitutes.getOrDefault(field, field);
+            // Performance: Only check substitutes for fields starting with '@' or '$'.
+            // Standard field names (letters, digits) never match any substitute key,
+            // so the HashMap lookup is pure overhead for the 99% common case.
+            if (field.length() > 0) {
+                char firstCh = field.charAt(0);
+                if (firstCh == '@' || firstCh == '$') {
+                    field = substitutes.getOrDefault(field, field);
+                }
+            }
 
             // For each field, look up the injector.
             Injector injector = injectors.get(field);
