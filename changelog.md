@@ -1,6 +1,6 @@
 ### Revision History
 
-#### 4.100.0 (Unreleased)
+#### 4.100.0 - 2026-04-10
 * **BUG FIX**: Fixed deadlock caused by circular static initialization between `ReadOptionsBuilder` and `WriteOptionsBuilder`. When two threads concurrently triggered class loading (e.g., one calling `JsonIo.toJson()` and another calling `JsonIo.toJava()`), the JVM's class initialization locks would deadlock. Broke the cycle by having each builder load its configuration independently and by removing the circular dependency through `MetaUtils` bootstrap methods.
 
 #### 4.99.0 - 2026-03-28
