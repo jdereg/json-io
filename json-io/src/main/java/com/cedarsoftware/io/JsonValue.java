@@ -146,6 +146,14 @@ public abstract class JsonValue {
             return;
         }
 
+        // Performance: Fast path for simple Class types — they cannot contain unresolved
+        // type variables (no generics), so we skip the ConcurrentHashMap validation cache
+        // entirely. This eliminates per-object CHM operations for the 95%+ common case.
+        if (type instanceof Class) {
+            this.type = type;
+            return;
+        }
+
         // Fix race condition - use computeIfAbsent for atomic check-and-put
         Boolean isResolved = typeResolvedCache.computeIfAbsent(type, t -> !hasUnresolvedType(t));
 
