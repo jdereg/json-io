@@ -34,12 +34,12 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <version.java-util>4.100.0</version.java-util>
         <!-- testing only -->
-        <version.junit-jupiter-api>5.14.2</version.junit-jupiter-api>
-        <version.junit-jupiter-params>5.14.2</version.junit-jupiter-params>
+        <version.junit-jupiter-api>5.14.3</version.junit-jupiter-api>
+        <version.junit-jupiter-params>5.14.3</version.junit-jupiter-params>
         <version.mockito-junit-jupiter>4.11.0</version.mockito-junit-jupiter>   <!-- can't update until they have JDK support -->
         <version.assertj-core>3.27.7</version.assertj-core>
         <version.gson>2.13.2</version.gson>
-        <version.jackson-databind>2.21.1</version.jackson-databind>
+        <version.jackson-databind>2.21.2</version.jackson-databind>
         <version.jtokkit>1.1.0</version.jtokkit>
 
         <!-- Build maven-***-plugins-->
