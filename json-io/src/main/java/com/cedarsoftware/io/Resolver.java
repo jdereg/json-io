@@ -1977,7 +1977,9 @@ public abstract class Resolver {
      */
     public static class DefaultReferenceTracker implements ReferenceTracker {
 
-        final Map<Long, JsonObject> references = new HashMap<>();
+        // Performance: Lazy allocation — most JSON has no @id/@ref, so the HashMap
+        // is only created when put() is first called. Saves ~64 bytes per parse.
+        private Map<Long, JsonObject> references;
         // Performance: Hoisted ReadOptions constants to avoid repeated method calls
         private final int maxObjectReferences;
         private final int maxReferenceChainDepth;
@@ -1988,6 +1990,9 @@ public abstract class Resolver {
         }
 
         public JsonObject put(Long l, JsonObject o) {
+            if (references == null) {
+                references = new HashMap<>();
+            }
             // Security: Prevent unbounded memory growth via reference tracking
             if (references.size() >= maxObjectReferences) {
                 throw new JsonIoException("Security limit exceeded: Maximum number of object references (" + maxObjectReferences + ") reached. Possible DoS attack.");
@@ -1996,11 +2001,13 @@ public abstract class Resolver {
         }
 
         public void clear() {
-            this.references.clear();
+            if (references != null) {
+                this.references.clear();
+            }
         }
 
         public int size() {
-            return this.references.size();
+            return references == null ? 0 : this.references.size();
         }
 
         public JsonObject getOrThrow(Long id) {
@@ -2012,6 +2019,9 @@ public abstract class Resolver {
         }
 
         public JsonObject get(Long id) {
+            if (references == null) {
+                return null;
+            }
             JsonObject target = references.get(id);
             if (target == null) {
                 return null;

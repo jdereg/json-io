@@ -797,19 +797,62 @@ class JsonParser {
      * @throws IOException for stream errors or parsing errors.
      */
     private CharSequence readString(char quoteChar) throws IOException {
-        // Reuse StringBuilder for better performance
-        final StringBuilder str = strBuf;
-        str.setLength(0);
         final FastReader in = input;
         final char[] buf = readBuf;
 
-        // Lookup tables for character handling
-        final char[] ESCAPE_CHARS = ESCAPE_CHAR_MAP;
-        final int[] HEX_VALUES = HEX_VALUE_MAP;
+        // Fast path: attempt to read the entire string in one bulk read.
+        // Most JSON strings are short (< 256 chars) and have no escape sequences.
+        // This path avoids StringBuilder entirely — goes straight from char[] to cache.
+        int charsRead = in.readUntil(buf, 0, buf.length, quoteChar, '\\');
+        if (charsRead >= 0 && charsRead < buf.length) {
+            int c = in.read();
+            if (c == -1) {
+                error("EOF reached while reading JSON string");
+            }
+            if (c == quoteChar) {
+                // Common case: short string, no escapes — bypass StringBuilder
+                if (curParseDepth == 0) {
+                    c = skipWhitespaceRead(false);
+                    if (c != -1) {
+                        throw new JsonIoException("EOF expected, content found after string");
+                    }
+                }
+                return cacheStringFromChars(buf, charsRead);
+            }
+            // Delimiter was backslash — read the escape character and handle it
+            int escapeChar = in.read();
+            if (escapeChar == -1) {
+                error("EOF reached while reading escape sequence");
+            }
+            final StringBuilder str = strBuf;
+            str.setLength(0);
+            if (charsRead > 0) {
+                str.append(buf, 0, charsRead);
+            }
+            return readStringWithEscapes(str, escapeChar, quoteChar);
+        }
 
-        // Main loop - bulk read until delimiter, then handle delimiter
+        // String exceeds buffer or EOF — use StringBuilder slow path
+        final StringBuilder str = strBuf;
+        str.setLength(0);
+        if (charsRead == -1) {
+            error("EOF reached while reading JSON string");
+        }
+        if (charsRead > 0) {
+            str.append(buf, 0, charsRead);
+        }
+        return readStringSlowPath(str, quoteChar);
+    }
+
+    /**
+     * Slow path for strings that exceed the read buffer (> 256 chars).
+     * Continues reading chunks into StringBuilder until the closing quote.
+     */
+    private CharSequence readStringSlowPath(StringBuilder str, char quoteChar) throws IOException {
+        final FastReader in = input;
+        final char[] buf = readBuf;
+
         while (true) {
-            // Bulk read characters until we hit quote or backslash
             int charsRead = in.readUntil(buf, 0, buf.length, quoteChar, '\\');
             if (charsRead == -1) {
                 error("EOF reached while reading JSON string");
@@ -817,21 +860,15 @@ class JsonParser {
             if (charsRead > 0) {
                 str.append(buf, 0, charsRead);
             }
-
-            // If buffer was filled completely, we may not have hit a delimiter yet - continue reading
             if (charsRead == buf.length) {
                 continue;
             }
 
-            // Read the delimiter character (we know it's quote or backslash)
             int c = in.read();
             if (c == -1) {
                 error("EOF reached while reading JSON string");
             }
-
-            // Handle string termination
             if (c == quoteChar) {
-                // Check root level validation
                 if (curParseDepth == 0) {
                     c = skipWhitespaceRead(false);
                     if (c != -1) {
@@ -840,9 +877,27 @@ class JsonParser {
                 }
                 break;
             }
+            // Must be backslash — handle escapes
+            return readStringWithEscapes(str, c, quoteChar);
+        }
+        return cacheString(str);
+    }
 
-            // Must be an escape sequence (c == '\\')
-            c = in.read();
+    /**
+     * Handle escape sequences in a string. Called when a backslash delimiter is encountered.
+     * The backslash has been consumed; 'delimChar' is the character after it (first escape char).
+     */
+    private CharSequence readStringWithEscapes(StringBuilder str, int delimChar, char quoteChar) throws IOException {
+        final FastReader in = input;
+        final char[] buf = readBuf;
+        final char[] ESCAPE_CHARS = ESCAPE_CHAR_MAP;
+        final int[] HEX_VALUES = HEX_VALUE_MAP;
+
+        // Process the first escape that brought us here
+        int c = delimChar;
+        // Jump into the escape handling
+        while (true) {
+            // c is the character after '\\'
             if (c == -1) {
                 error("EOF reached while reading escape sequence");
             }
@@ -852,108 +907,104 @@ class JsonParser {
                 char escaped = ESCAPE_CHARS[c];
                 if (escaped != '\0') {
                     str.append(escaped);
-                    continue;
+                } else if (c == 'u') {
+                    handleUnicodeEscape(str, HEX_VALUES);
+                } else if (c == '\n') {
+                    if (strictJson) { error("Multi-line strings not allowed in strict JSON mode"); }
+                } else if (c == '\r') {
+                    if (strictJson) { error("Multi-line strings not allowed in strict JSON mode"); }
+                    int next = in.read();
+                    if (next != '\n' && next != -1) { in.pushback((char) next); }
+                } else {
+                    error("Invalid character escape sequence specified: " + (char) c);
                 }
+            } else {
+                error("Invalid character escape sequence specified: " + (char) c);
             }
 
-            // Special handling for Unicode escape
-            if (c == 'u') {
-                // Optimized hex parsing using lookup table
-                int value = 0;
-                for (int i = 0; i < 4; i++) {
-                    c = in.read();
-                    if (c == -1) {
-                        error("EOF reached while reading Unicode escape sequence");
-                    }
-
-                    int digit = (c < 128) ? HEX_VALUES[c] : -1;
-                    if (digit < 0) {
-                        error("Expected hexadecimal digit, got: " + (char)c);
-                    }
-                    value = (value << 4) | digit;
+            // Continue reading the rest of the string
+            while (true) {
+                int charsRead = in.readUntil(buf, 0, buf.length, quoteChar, '\\');
+                if (charsRead == -1) {
+                    error("EOF reached while reading JSON string");
                 }
-
-                // Fast path for BMP characters (most common case)
-                // Surrogates are in range 0xD800-0xDFFF, so anything outside is a simple BMP char
-                if (value < 0xD800 || value > 0xDFFF) {
-                    str.append((char) value);
+                if (charsRead > 0) {
+                    str.append(buf, 0, charsRead);
+                }
+                if (charsRead == buf.length) {
                     continue;
                 }
 
-                // Handle surrogate pairs (high surrogate: 0xD800-0xDBFF)
-                if (value <= 0xDBFF) {
-                    // Look for a low surrogate
-                    int next = in.read();
-                    if (next == '\\') {
-                        next = in.read();
-                        if (next == 'u') {
-                            // Parse the potential low surrogate
-                            int lowSurrogate = 0;
-                            for (int i = 0; i < 4; i++) {
-                                c = in.read();
-                                if (c == -1) {
-                                    error("EOF reached while reading Unicode escape sequence");
-                                }
-
-                                int digit = (c < 128) ? HEX_VALUES[c] : -1;
-                                if (digit < 0) {
-                                    error("Expected hexadecimal digit, got: " + (char)c);
-                                }
-                                lowSurrogate = (lowSurrogate << 4) | digit;
-                            }
-
-                            // Check if valid surrogate pair
-                            if (lowSurrogate >= 0xDC00 && lowSurrogate <= 0xDFFF) {
-                                // Valid pair - append as code point
-                                int codePoint = 0x10000 + ((value - 0xD800) << 10) + (lowSurrogate - 0xDC00);
-                                str.appendCodePoint(codePoint);
-                                continue;
-                            } else {
-                                // Not a valid pair - append separately
-                                str.append((char)value);
-                                str.append((char)lowSurrogate);
-                                continue;
-                            }
-                        } else {
-                            // Not a \\u sequence - push back and append high surrogate
-                            in.pushback((char)next);
-                            in.pushback('\\');
-                        }
-                    } else {
-                        // Not a backslash - push back and append high surrogate
-                        if (next != -1) {
-                            in.pushback((char)next);
+                c = in.read();
+                if (c == -1) {
+                    error("EOF reached while reading JSON string");
+                }
+                if (c == quoteChar) {
+                    if (curParseDepth == 0) {
+                        c = skipWhitespaceRead(false);
+                        if (c != -1) {
+                            throw new JsonIoException("EOF expected, content found after string");
                         }
                     }
+                    return cacheString(str);
                 }
-
-                // Orphan surrogate (high without valid low, or lone low surrogate)
-                str.append((char)value);
-            } else if (c == '\n') {
-                // JSON5 multi-line string: backslash followed by newline
-                // The backslash and newline are removed, string continues on next line
-                if (strictJson) {
-                    error("Multi-line strings not allowed in strict JSON mode");
-                }
-                // Just skip the newline, string continues
-            } else if (c == '\r') {
-                // JSON5 multi-line string: backslash followed by carriage return
-                if (strictJson) {
-                    error("Multi-line strings not allowed in strict JSON mode");
-                }
-                // Check for \r\n (Windows line ending)
-                int next = in.read();
-                if (next != '\n' && next != -1) {
-                    in.pushback((char) next);
-                }
-                // Skip the line terminator(s), string continues
-            } else {
-                error("Invalid character escape sequence specified: " + (char)c);
+                // Another backslash — read escape char and loop back
+                c = in.read();
+                break; // break inner loop, continue outer escape-handling loop
             }
         }
+    }
 
-        // Use optimized string caching for the result
-        return cacheString(str);
+    /**
+     * Handle \\uXXXX Unicode escape sequences, including surrogate pairs.
+     */
+    private void handleUnicodeEscape(StringBuilder str, int[] HEX_VALUES) {
+        final FastReader in = input;
+
+        int value = 0;
+        for (int i = 0; i < 4; i++) {
+            int c = in.read();
+            if (c == -1) { error("EOF reached while reading Unicode escape sequence"); }
+            int digit = (c < 128) ? HEX_VALUES[c] : -1;
+            if (digit < 0) { error("Expected hexadecimal digit, got: " + (char) c); }
+            value = (value << 4) | digit;
+        }
+
+        if (value < 0xD800 || value > 0xDFFF) {
+            str.append((char) value);
+            return;
+        }
+
+        // Handle surrogate pairs (high surrogate: 0xD800-0xDBFF)
+        if (value <= 0xDBFF) {
+            int next = in.read();
+            if (next == '\\') {
+                next = in.read();
+                if (next == 'u') {
+                    int lowSurrogate = 0;
+                    for (int i = 0; i < 4; i++) {
+                        int c = in.read();
+                        if (c == -1) { error("EOF reached while reading Unicode escape sequence"); }
+                        int digit = (c < 128) ? HEX_VALUES[c] : -1;
+                        if (digit < 0) { error("Expected hexadecimal digit, got: " + (char) c); }
+                        lowSurrogate = (lowSurrogate << 4) | digit;
+                    }
+                    if (lowSurrogate >= 0xDC00 && lowSurrogate <= 0xDFFF) {
+                        int codePoint = 0x10000 + ((value - 0xD800) << 10) + (lowSurrogate - 0xDC00);
+                        str.appendCodePoint(codePoint);
+                        return;
+                    }
+                    str.append((char) value);
+                    str.append((char) lowSurrogate);
+                    return;
+                }
+                in.pushback((char) next);
+                in.pushback('\\');
+            } else if (next != -1) {
+                in.pushback((char) next);
+            }
+        }
+        str.append((char) value);
     }
 
     /**
@@ -992,6 +1043,50 @@ class JsonParser {
 
         // Cache miss - create String and cache it
         final String s = str.toString();
+        stringCacheArray[slot] = s;
+        return s;
+    }
+
+    /**
+     * Cache a string directly from a char[] buffer, bypassing StringBuilder entirely.
+     * Used by the readString fast path for short strings without escape sequences.
+     * Computes the same hash as String.hashCode() for cache slot compatibility.
+     */
+    private CharSequence cacheStringFromChars(char[] buf, int len) {
+        if (len == 0) {
+            return "";
+        }
+
+        if (len > MAX_CACHED_STRING_LENGTH) {
+            return new String(buf, 0, len);
+        }
+
+        // Compute hashCode from char[] (same algorithm as String.hashCode())
+        int hash = 0;
+        for (int i = 0; i < len; i++) {
+            hash = 31 * hash + buf[i];
+        }
+
+        final int slot = hash & STRING_CACHE_MASK;
+        final String cached = stringCacheArray[slot];
+
+        // Check cache: hash match first (O(1) rejection), then content equality
+        if (cached != null && cached.hashCode() == hash && cached.length() == len) {
+            // Verify content matches the char[] buffer
+            boolean match = true;
+            for (int i = 0; i < len; i++) {
+                if (cached.charAt(i) != buf[i]) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) {
+                return cached;  // Cache hit - no String allocation!
+            }
+        }
+
+        // Cache miss - create String from char[] and cache it
+        final String s = new String(buf, 0, len);
         stringCacheArray[slot] = s;
         return s;
     }
