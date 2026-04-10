@@ -531,6 +531,37 @@ class JsonParser {
      * to be represented as well.
      */
     private Number readNumber(int c) {
+        // Fast path: simple positive integers (1-9 followed by digits).
+        // This is the most common case in JSON (ids, counts, indices, timestamps).
+        // Accumulates directly into a long — no StringBuilder, no String allocation.
+        if (c >= '1' && c <= '9' && !integerTypeBigInteger) {
+            final FastReader in = input;
+            long n = c - '0';
+            int digitCount = 1;
+
+            while (true) {
+                int d = in.read();
+                if (d >= '0' && d <= '9') {
+                    if (++digitCount > 18) {
+                        // Overflow risk — fall back to general path with accumulated prefix
+                        in.pushback((char) d);
+                        return readNumberContinuation(n, false);
+                    }
+                    n = n * 10 + (d - '0');
+                } else if (d == '.' || d == 'e' || d == 'E') {
+                    // Float — fall back to general path with integer prefix
+                    in.pushback((char) d);
+                    return readNumberContinuation(n, true);
+                } else {
+                    // End of number — push back terminator and return
+                    if (d != -1) {
+                        in.pushback((char) d);
+                    }
+                    return n;
+                }
+            }
+        }
+
         // Handle NaN and Infinity (non-standard JSON extension)
         if (allowNanAndInfinity && (c == '-' || c == 'N' || c == 'I')) {
             final boolean isNeg = (c == '-');
@@ -553,6 +584,59 @@ class JsonParser {
 
         // All numbers go through the general path with direct StringBuilder parsing
         return readNumberGeneral(c);
+    }
+
+    /**
+     * Continue number parsing after the fast integer path has accumulated a prefix.
+     * Writes the accumulated long to StringBuilder, then continues reading remaining
+     * digits, decimal points, or exponents from the stream.
+     */
+    private Number readNumberContinuation(long prefix, boolean expectFloat) {
+        final FastReader in = input;
+        StringBuilder number = numBuf;
+        number.setLength(0);
+        number.append(prefix);
+
+        boolean isFloat = false;
+        boolean seenDot = false;
+        boolean seenExp = false;
+        boolean seenDigitAfterExp = false;
+
+        while (true) {
+            int c = in.read();
+            if (c >= '0' && c <= '9') {
+                number.append((char) c);
+                if (seenExp) seenDigitAfterExp = true;
+            } else if (c == '.') {
+                if (seenDot || seenExp) return (Number) error("Invalid number: " + number + ".");
+                number.append((char) c);
+                isFloat = true;
+                seenDot = true;
+            } else if (c == 'e' || c == 'E') {
+                if (seenExp) return (Number) error("Invalid number: " + number + (char) c);
+                number.append((char) c);
+                isFloat = true;
+                seenExp = true;
+                int next = in.read();
+                if (next == '+' || next == '-') { number.append((char) next); next = in.read(); }
+                if (next < '0' || next > '9') {
+                    if (next != -1) in.pushback((char) next);
+                    return (Number) error("Invalid exponent in number: " + number);
+                }
+                number.append((char) next);
+                seenDigitAfterExp = true;
+            } else {
+                if (c != -1) in.pushback((char) c);
+                break;
+            }
+        }
+
+        try {
+            if (isFloat) return readFloatingPoint(number);
+            return readInteger(number);
+        } catch (Exception e) {
+            return (Number) error("Invalid number: " + number, e);
+        }
     }
 
     /**

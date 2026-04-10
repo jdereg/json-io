@@ -2,6 +2,7 @@
 
 #### 4.101.0 - unreleased
 * **PERFORMANCE**: `JsonParser.readString()` — added fast path for the common case of short strings (< 256 chars) without escape sequences. Bypasses `StringBuilder` entirely: bulk-reads into a reusable `char[]` via `readUntil()`, then caches directly from the char array via new `cacheStringFromChars()` method. Eliminates `StringBuilder.setLength(0)` + `append()` + `toString()` overhead for every non-escaped string. Escape sequences and long strings fall through to the original `StringBuilder`-based slow path. Read ratio (JsonIo/Jackson) improved from **2.37x to 2.25x** for `toJava` and from **1.48x to 1.35x** for `toMaps`.
+* **PERFORMANCE**: `JsonParser.readNumber()` — added fast path for simple positive integers (1-9 followed by digits). Accumulates directly into a `long` from the stream — no `StringBuilder`, no `numBuf.append()` per digit, no `readInteger()` re-parse. Falls back to `StringBuilder` path for negative numbers, floats, hex, or 19+ digit integers. Combined with readString optimization, toJava read ratio improved from **2.33x to 2.17x** vs Jackson.
 * **PERFORMANCE**: `Resolver.DefaultReferenceTracker` — `HashMap` for `@id`/`@ref` tracking is now allocated lazily on first `put()` call. Most JSON has no object references, so the `HashMap` is never created, eliminating per-parse allocation overhead.
 
 #### 4.100.0 - 2026-04-10
