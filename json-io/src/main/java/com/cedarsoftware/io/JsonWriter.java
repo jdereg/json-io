@@ -1148,6 +1148,34 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             showType = false;
         }
 
+        // Fast path: common primitive wrappers when no @type is needed and no per-field format
+        // pattern is active. Bypasses writeUsingCustomWriter -> writeCustom -> PrimitiveValueWriter
+        // .writePrimitiveForm dispatch chain, the activePath tracking setup, and the Integer.toString()
+        // / Long.toString() String allocation. Only applies when !showType && !forceElementShowType
+        // (the overwhelmingly common case) and fieldFormatPattern is null (the slow path handles
+        // @IoFormat / @JsonFormat C-style patterns like %,d and %s). Runtime class must match exactly
+        // (getClass() ==) so subclasses still route through the slow path.
+        if (!showType && !forceElementShowType && fieldFormatPattern == null) {
+            final Class<?> c = obj.getClass();
+            if (c == Integer.class) {
+                int val = (Integer) obj;
+                if (val >= SMALL_INT_LOW && val <= SMALL_INT_HIGH) {
+                    out.write(SMALL_INT_STRINGS[val - SMALL_INT_LOW]);
+                } else {
+                    writeIntDirect(val);
+                }
+                return;
+            }
+            if (c == Long.class && !writeLongsAsStrings) {
+                writeLongDirect((Long) obj);
+                return;
+            }
+            if (c == Boolean.class) {
+                out.write(((Boolean) obj) ? "true" : "false");
+                return;
+            }
+        }
+
         boolean enteredActivePath = !cycleSupport && isReferenceTrackable(obj) && !activePath.containsKey(obj);
         try {
             // Custom writers and references are checked first to preserve type information
@@ -1284,10 +1312,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             value = -value;  // Work with negative to handle Long.MIN_VALUE
         }
 
-        // Extract digits two at a time using lookup tables
+        // Extract digits two at a time using lookup tables. The quotient must remain `long`
+        // throughout — casting to int here silently truncates for values outside Integer range
+        // (e.g., writing Long.MIN_VALUE produced -206158430208 before the cast was fixed).
         while (value <= -100) {
-            int q = (int) (value / 100);
-            int r = (int) ((q * 100) - value);  // remainder 0-99
+            long q = value / 100;
+            int r = (int) ((q * 100) - value);  // remainder 0-99 always fits in int
             value = q;
             longBuffer[--idx] = DIGIT_ONES[r];
             longBuffer[--idx] = DIGIT_TENS[r];
