@@ -353,25 +353,25 @@ public class JsonIo {
      * @throws JsonIoException if an error occurs during the serialization process
      */
     public static String toJson(Object srcObject, WriteOptions writeOptions) {
-        BufferRecycler recycler = BUFFER_RECYCLER.get();
-        byte[] byteBuffer = recycler.borrowByteBuffer(DEFAULT_BYTE_BUFFER_SIZE);
-        char[] writerBuffer = recycler.borrowWriterCharBuffer(DEFAULT_CHAR_BUFFER_SIZE);
-
-        FastByteArrayOutputStream out = new FastByteArrayOutputStream(byteBuffer);
+        // Direct char-based pipeline: skips OutputStreamWriter + UTF-8 encoder + FastByteArrayOutputStream
+        // and the final new String(bytes, UTF-8) decode. JFR profiling of JsonPerformanceTest showed
+        // roughly half of JSON write time was spent in sun.nio.cs.UTF_8$Encoder.encodeArrayLoopSlow,
+        // StringLatin1.getChars, Preconditions.checkFromIndexSize, and String.getChars — all driven by
+        // the char->byte->char round-trip that this path does not need when returning a String.
+        // StringBuilder stays in compact Latin-1 storage for pure-ASCII JSON, so the returned String's
+        // internal byte[] can be produced with a single copy, not a UTF-8 decode pass.
+        StringBuilder sb = new StringBuilder(DEFAULT_CHAR_BUFFER_SIZE);
         JsonWriter writer = null;
         try {
-            Writer utf8 = new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8), writerBuffer);
-            writer = new JsonWriter(utf8, writeOptions);
+            writer = new JsonWriter(new StringBuilderWriter(sb), writeOptions);
             writer.write(srcObject);
-            return new String(out.getInternalBuffer(), 0, out.getCount(), StandardCharsets.UTF_8);
+            return sb.toString();
         } catch (JsonIoException je) {
             throw je;
         } catch (Exception e) {
             throw new JsonIoException("Unable to convert object to JSON", e);
         } finally {
             IOUtilities.close(writer);
-            recycler.releaseByteBuffer(out.getInternalBuffer());
-            recycler.releaseWriterCharBuffer();
         }
     }
 
