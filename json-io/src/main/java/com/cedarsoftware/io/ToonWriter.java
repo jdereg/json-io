@@ -325,13 +325,24 @@ public class ToonWriter implements Closeable, Flushable {
         }
 
         // Fast path: common primitive wrappers detected via cheap instanceof, skipping the
-        // ClassValue (writeTypeCache) lookup entirely. JFR showed the ClassValue dispatch
-        // chain (loadFromCache + match) was ~6.6% of ToonWriter samples post-Iter1, most of
-        // it driven by String/Number/Boolean field values. These short-circuits cover the
-        // common POJO-field case without disturbing the slow path for CONVERTER_SUPPORTED /
-        // POJO / VALUE_METHOD types.
+        // ClassValue (writeTypeCache) lookup entirely. Integer/Long go directly to
+        // toCachedLongString without the writeNumber method call and its 6-wide instanceof
+        // chain (Double/Float/BigDecimal/BigInteger/AtomicInteger/AtomicLong all miss
+        // before the common case). JFR previously showed the ClassValue dispatch was ~6.6%
+        // of ToonWriter samples, and writeNumber's per-call dispatch contributed additional
+        // samples for every int/long field. These short-circuits cover the common POJO-field
+        // case without disturbing the slow path for CONVERTER_SUPPORTED / POJO / VALUE_METHOD
+        // types.
         if (value instanceof String) {
             writeString((String) value);
+            return;
+        }
+        if (value instanceof Integer) {
+            out.write(toCachedLongString((Integer) value));
+            return;
+        }
+        if (value instanceof Long) {
+            out.write(toCachedLongString((Long) value));
             return;
         }
         if (value instanceof Number) {
@@ -719,6 +730,14 @@ public class ToonWriter implements Closeable, Flushable {
      * TOON spec: Numbers normalize to non-exponential decimal form with no trailing zeros.
      */
     private void writeNumber(Number num) throws IOException {
+        // Integer and Long fast paths are handled in writeValue; this method is called for
+        // the less-common Number subtypes (Double/Float/BigDecimal/BigInteger/Atomic*/Short/Byte).
+        // Integer/Long/Short/Byte are still checked first here in case writeNumber is reached
+        // from a path that did not go through writeValue (e.g. nested field dispatch).
+        if (num instanceof Integer || num instanceof Long || num instanceof Short || num instanceof Byte) {
+            out.write(toCachedLongString(num.longValue()));
+            return;
+        }
         if (num instanceof Double) {
             double d = num.doubleValue();
             if (Double.isNaN(d) || Double.isInfinite(d)) {
@@ -728,7 +747,9 @@ public class ToonWriter implements Closeable, Flushable {
             } else {
                 out.write(formatDecimalNumber(d));
             }
-        } else if (num instanceof Float) {
+            return;
+        }
+        if (num instanceof Float) {
             float f = num.floatValue();
             if (Float.isNaN(f) || Float.isInfinite(f)) {
                 out.write("null");
@@ -737,21 +758,23 @@ public class ToonWriter implements Closeable, Flushable {
             } else {
                 out.write(formatDecimalNumber(f));
             }
-        } else if (num instanceof BigDecimal) {
+            return;
+        }
+        if (num instanceof BigDecimal) {
             BigDecimal bd = (BigDecimal) num;
             out.write(formatBigDecimal(bd));
-        } else if (num instanceof BigInteger) {
-            out.write(num.toString());
-        } else if (num instanceof AtomicInteger || num instanceof AtomicLong) {
-            out.write(toCachedLongString(num.longValue()));
-        } else {
-            // Integer, Long, Short, Byte
-            if (num instanceof Integer || num instanceof Long || num instanceof Short || num instanceof Byte) {
-                out.write(toCachedLongString(num.longValue()));
-            } else {
-                out.write(num.toString());
-            }
+            return;
         }
+        if (num instanceof BigInteger) {
+            out.write(num.toString());
+            return;
+        }
+        if (num instanceof AtomicInteger || num instanceof AtomicLong) {
+            out.write(toCachedLongString(num.longValue()));
+            return;
+        }
+        // Fallback for unknown Number subclasses
+        out.write(num.toString());
     }
 
     /**
