@@ -217,6 +217,12 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-jsr310</artifactId>
+                <version>${version.jackson-databind}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
                 <groupId>com.knuddels</groupId>
                 <artifactId>jtokkit</artifactId>
                 <version>${version.jtokkit}</version>
