@@ -339,6 +339,37 @@ public class ObjectResolver extends Resolver
      */
     private void assignField(final JsonObject jsonObj, final Injector injector, final Object rhs) {
         final Object target = jsonObj.getTarget();
+
+        // Fast path: primitive numeric fields with Long/Double values (the hottest case).
+        // Uses a pre-computed fastPath tag on the Injector so we don't traverse the
+        // full 5-case dispatch chain for every primitive field. Covers the majority
+        // of POJO field assignments (int/long/double/float/short/byte fields).
+        if (rhs != null) {
+            final byte fp = injector.getFastPath();
+            if (fp == Injector.FAST_PATH_PRIMITIVE_NUMERIC) {
+                final Class<?> rhsCls = rhs.getClass();
+                if (rhsCls == Long.class) {
+                    if (injector.injectLong(target, (Long) rhs)) {
+                        return;
+                    }
+                } else if (rhsCls == Double.class) {
+                    if (injector.injectDouble(target, (Double) rhs)) {
+                        return;
+                    }
+                }
+                // Non-Long/Double for a numeric field — fall through to generic path
+                // (handles String parsing, BigDecimal, etc.)
+            } else if (fp == Injector.FAST_PATH_STRING && rhs.getClass() == String.class) {
+                // String field receiving a String value — direct assign, no conversion needed
+                injector.inject(target, rhs);
+                return;
+            } else if (fp == Injector.FAST_PATH_BOOLEAN && rhs.getClass() == Boolean.class) {
+                // Boolean field receiving a Boolean value — direct assign
+                injector.inject(target, rhs);
+                return;
+            }
+        }
+
         final Type fieldType = injector.getGenericType();
         Type effectiveFieldType = fieldType;
 

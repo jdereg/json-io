@@ -129,6 +129,14 @@ public class Injector {
     private static final int NUM_SHORT = 5;
     private static final int NUM_LONG = 6;
 
+    // Pre-computed fast-path tag for ObjectResolver.assignField dispatch.
+    // Eliminates per-field instanceof / class checks by knowing the field's shape at plan-build time.
+    public static final byte FAST_PATH_GENERIC = 0;           // Fall through to full dispatch
+    public static final byte FAST_PATH_PRIMITIVE_NUMERIC = 1; // int/long/short/byte/float/double
+    public static final byte FAST_PATH_BOOLEAN = 2;           // boolean / Boolean
+    public static final byte FAST_PATH_STRING = 3;            // String
+    private final byte fastPath;
+
     // O(1) ClassValueMap lookups for type categorization (replaces sequential class == chains)
     private static final ClassValueMap<Integer> NUMERIC_KINDS = new ClassValueMap<>();
     private static final ClassValueMap<Class<?>> PRIM_TO_WRAPPER = new ClassValueMap<>();
@@ -156,6 +164,26 @@ public class Injector {
         PRIM_TO_WRAPPER.put(double.class, Double.class);
     }
 
+    /**
+     * Compute a fast-path dispatch tag at plan-build time, so ObjectResolver.assignField
+     * can skip the 5-case dispatch chain for common field shapes.
+     */
+    private static byte computeFastPath(Class<?> fieldType) {
+        if (fieldType.isPrimitive()) {
+            if (fieldType == boolean.class) {
+                return FAST_PATH_BOOLEAN;
+            }
+            if (fieldType == char.class) {
+                return FAST_PATH_GENERIC; // char has special handling, skip fast path
+            }
+            return FAST_PATH_PRIMITIVE_NUMERIC; // int, long, short, byte, float, double
+        }
+        if (fieldType == String.class) {
+            return FAST_PATH_STRING;
+        }
+        return FAST_PATH_GENERIC;
+    }
+
     // Constructor for MethodHandle injection
     private Injector(Field field, MethodHandle handle, String uniqueFieldName, String displayName) {
         this.field = field;
@@ -169,6 +197,7 @@ public class Injector {
         this.assignmentType = this.fieldType.isPrimitive() ? primitiveWrapper(this.fieldType) : this.fieldType;
         this.fieldNumericKind = numericKind(this.fieldType);
         this.fieldName = field.getName();
+        this.fastPath = computeFastPath(this.fieldType);
     }
 
     // Constructor for Field.set() fallback injection
@@ -183,6 +212,7 @@ public class Injector {
         this.assignmentType = this.fieldType.isPrimitive() ? primitiveWrapper(this.fieldType) : this.fieldType;
         this.fieldNumericKind = numericKind(this.fieldType);
         this.fieldName = field.getName();
+        this.fastPath = computeFastPath(this.fieldType);
     }
 
     // Constructor for VarHandle-based injection (JDK 17+)
@@ -198,6 +228,7 @@ public class Injector {
         this.assignmentType = this.fieldType.isPrimitive() ? primitiveWrapper(this.fieldType) : this.fieldType;
         this.fieldNumericKind = numericKind(this.fieldType);
         this.fieldName = field.getName();
+        this.fastPath = computeFastPath(this.fieldType);
     }
 
     // Constructor for LambdaMetafactory-accelerated injection
@@ -214,6 +245,15 @@ public class Injector {
         this.assignmentType = this.fieldType.isPrimitive() ? primitiveWrapper(this.fieldType) : this.fieldType;
         this.fieldNumericKind = numericKind(this.fieldType);
         this.fieldName = field.getName();
+        this.fastPath = computeFastPath(this.fieldType);
+    }
+
+    /**
+     * Returns the pre-computed fast-path dispatch tag.
+     * See FAST_PATH_* constants.
+     */
+    public byte getFastPath() {
+        return fastPath;
     }
 
     /**
