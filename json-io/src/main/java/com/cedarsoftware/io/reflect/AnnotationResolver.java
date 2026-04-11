@@ -1445,6 +1445,17 @@ public class AnnotationResolver {
         }
 
         /**
+         * Fast check whether this class declares any field format patterns at all.
+         * Used by hot-path hierarchy walks to skip per-field lookups on classes
+         * without any @IoFormat or @JsonFormat annotations.
+         *
+         * @return true if at least one field has a format pattern, false otherwise
+         */
+        public boolean hasAnyFieldFormatPattern() {
+            return fieldFormatPatterns != null;
+        }
+
+        /**
          * Check if a field has @IoShowType (or Jackson @JsonTypeInfo as fallback),
          * which forces @type emission regardless of global showTypeInfo settings.
          * @param fieldName the Java field name
