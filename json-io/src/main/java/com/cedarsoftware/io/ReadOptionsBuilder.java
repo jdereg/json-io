@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -2077,7 +2078,10 @@ public class ReadOptionsBuilder {
 
         private Map<String, Injector> buildInjectors(Class<?> c) {
             final Map<String, Field> fields = getDeepDeclaredFields(c);
-            final Map<String, Injector> injectors = new LinkedHashMap<>(fields.size());
+            // Performance: HashMap is strictly faster than LinkedHashMap for get() — no
+            // linked-list pointer maintenance. Nothing in the read/parse path iterates
+            // this map (all callers use .get(fieldName)), so insertion order is not needed.
+            final Map<String, Injector> injectors = new HashMap<>(fields.size() * 2);
             final AnnotationResolver.ClassAnnotationMetadata annMeta = AnnotationResolver.getMetadata(c);
 
             for (final Map.Entry<String, Field> entry : fields.entrySet()) {
