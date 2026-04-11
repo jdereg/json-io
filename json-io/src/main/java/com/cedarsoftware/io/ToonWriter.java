@@ -324,6 +324,29 @@ public class ToonWriter implements Closeable, Flushable {
             return;
         }
 
+        // Fast path: common primitive wrappers detected via cheap instanceof, skipping the
+        // ClassValue (writeTypeCache) lookup entirely. JFR showed the ClassValue dispatch
+        // chain (loadFromCache + match) was ~6.6% of ToonWriter samples post-Iter1, most of
+        // it driven by String/Number/Boolean field values. These short-circuits cover the
+        // common POJO-field case without disturbing the slow path for CONVERTER_SUPPORTED /
+        // POJO / VALUE_METHOD types.
+        if (value instanceof String) {
+            writeString((String) value);
+            return;
+        }
+        if (value instanceof Number) {
+            writeNumber((Number) value);
+            return;
+        }
+        if (value instanceof Boolean) {
+            out.write(((Boolean) value) ? "true" : "false");
+            return;
+        }
+        if (value instanceof Character) {
+            writeString(String.valueOf(value));
+            return;
+        }
+
         Class<?> clazz = value.getClass();
 
         switch (writeTypeCache.get(clazz)) {
@@ -2314,6 +2337,14 @@ public class ToonWriter implements Closeable, Flushable {
      */
     private boolean isPrimitive(Object value) {
         if (value == null) {
+            return true;
+        }
+        // Fast path: common primitive wrappers detected via cheap instanceof, skipping the
+        // ClassValue (writeTypeCache) lookup. Mirrors the fast path in writeValue().
+        if (value instanceof String
+                || value instanceof Number
+                || value instanceof Boolean
+                || value instanceof Character) {
             return true;
         }
         switch (writeTypeCache.get(value.getClass())) {
