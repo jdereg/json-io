@@ -1464,6 +1464,12 @@ public class ToonReader {
             }
         }
 
+        // Pre-validate: reject tokens with non-numeric characters to avoid expensive
+        // NumberFormatException + fillInStackTrace inside MathUtilities / Double.parseDouble.
+        if (!isValidNumberToken(text, start, end)) {
+            return null;
+        }
+
         try {
             String key = cacheSubstring(text, start, end);
             Number parsed = MathUtilities.parseToMinimalNumericType(key);
@@ -1580,6 +1586,16 @@ public class ToonReader {
                     return null;
                 }
             }
+        }
+
+        // Pre-validate: reject tokens that contain characters impossible in a number.
+        // Avoids the expensive NumberFormatException + Throwable.fillInStackTrace path
+        // inside MathUtilities.parseToMinimalNumericType / Double.parseDouble / BigInteger
+        // for tokens like "2024-03-15" or "10:30:00" that start with a digit but are
+        // dates, times, or other non-numeric content. JFR showed fillInStackTrace as
+        // the #1 leaf in TOON Read (291 samples) before this guard was added.
+        if (!isValidNumberToken(buf, start, end)) {
+            return null;
         }
 
         try {
@@ -1864,6 +1880,39 @@ public class ToonReader {
 
     private boolean isLikelyNumberStart(char firstChar) {
         return (firstChar >= '0' && firstChar <= '9') || firstChar == '-' || firstChar == '+' || firstChar == '.';
+    }
+
+    /**
+     * Quick validation that every character in the token is plausible for a numeric literal.
+     * Valid characters: digits, '.', 'e'/'E', and '+'/'-' (only at position 0 or after 'e'/'E').
+     * Rejects tokens like "2024-03-15" (date), "10:30:00" (time), or UUID segments that
+     * start with a digit but contain characters impossible in any numeric format.
+     * <p>
+     * This guard prevents the expensive {@code NumberFormatException + fillInStackTrace}
+     * path inside {@code MathUtilities.parseToMinimalNumericType} / {@code Double.parseDouble}
+     * for non-numeric tokens. JFR showed {@code Throwable.fillInStackTrace} as the #1 leaf
+     * in TOON Read (291 samples) before this guard was added.
+     */
+    private static boolean isValidNumberToken(char[] buf, int start, int end) {
+        for (int i = start; i < end; i++) {
+            char c = buf[i];
+            if (c >= '0' && c <= '9') continue;
+            if (c == '.' || c == 'e' || c == 'E') continue;
+            if ((c == '-' || c == '+') && (i == start || buf[i - 1] == 'e' || buf[i - 1] == 'E')) continue;
+            return false;
+        }
+        return true;
+    }
+
+    private static boolean isValidNumberToken(String text, int start, int end) {
+        for (int i = start; i < end; i++) {
+            char c = text.charAt(i);
+            if (c >= '0' && c <= '9') continue;
+            if (c == '.' || c == 'e' || c == 'E') continue;
+            if ((c == '-' || c == '+') && (i == start || text.charAt(i - 1) == 'e' || text.charAt(i - 1) == 'E')) continue;
+            return false;
+        }
+        return true;
     }
 
     private boolean matchesLiteral(String text, int start, String literal) {
