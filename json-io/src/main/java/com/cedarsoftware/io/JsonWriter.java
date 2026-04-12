@@ -2641,8 +2641,47 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             return false;
         }
 
-        // check to see if type needs to be written.
-        // Uses annotation-aware type: @IoDeserialize(as=X) > @IoTypeInfo(X) > Field.getType()
+        // Fast path for primitive/String field values: when no @IoShowType, no @IoFormat,
+        // and the value type doesn't need @type (isForceType returns false), write the value
+        // directly without going through writeImpl's full dispatch chain (security checks,
+        // activePath tracking, custom writer lookup, @IoValue check, writeTypeCache switch).
+        // These types are not reference-trackable, so activePath is a no-op; they have no
+        // custom writers or @IoValue methods; and they are never containers, so the
+        // declaredElementType/declaredKeyType state save/restore is unnecessary.
+        if (!plan.forceShowType() && !forceElementShowType && plan.formatPattern() == null) {
+            Class<?> oClass = o.getClass();
+            if (oClass == String.class) {
+                writeStringValue((String) o);
+                return false;
+            }
+            if (!isForceType(oClass, plan.effectiveDeclaredType())) {
+                if (oClass == Integer.class) {
+                    int val = (Integer) o;
+                    if (val >= SMALL_INT_LOW && val <= SMALL_INT_HIGH) {
+                        output.write(SMALL_INT_STRINGS[val - SMALL_INT_LOW]);
+                    } else {
+                        writeIntDirect(val);
+                    }
+                    return false;
+                }
+                if (oClass == Long.class && !writeLongsAsStrings) {
+                    writeLongDirect((Long) o);
+                    return false;
+                }
+                if (oClass == Boolean.class) {
+                    output.write(((Boolean) o) ? "true" : "false");
+                    return false;
+                }
+                if (oClass == Double.class) {
+                    writePrimitive(o, false);
+                    return false;
+                }
+            }
+        }
+
+        // Slow path: save/restore container state, call writeImpl for full dispatch.
+        // Handles containers (Collection, Map), POJOs, arrays, custom-written types,
+        // @IoValue, @IoFormat, @IoShowType, and cycle-tracking.
         Class<?> type = plan.effectiveDeclaredType();
         Class<?> savedElementType = declaredElementType;
         Class<?> savedKeyType = declaredKeyType;
