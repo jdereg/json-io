@@ -1480,6 +1480,40 @@ public class ToonReader {
             return null;
         }
 
+        // Fast path: positive unsigned integer (digits-only, no overflow).
+        // Skips the number cache entirely — no hash, no charAt-loop miss check,
+        // no cacheSubstringFromBuf key materialization, no store. For this shape
+        // of token, the integer parse loop itself is cheaper than the cache
+        // infrastructure around it, and test workloads with large int[] / Long
+        // fields exercise this path heavily. Falls through to the full path for
+        // signed integers, decimals, BigInteger, and anything requiring
+        // MathUtilities parsing.
+        char firstChar = buf[start];
+        if (firstChar >= '0' && firstChar <= '9') {
+            long result = 0;
+            boolean integerOnly = true;
+            for (int i = start; i < end; i++) {
+                char c = buf[i];
+                if (c < '0' || c > '9') {
+                    integerOnly = false;
+                    break;
+                }
+                int digit = c - '0';
+                // Overflow guard: (Long.MAX_VALUE - digit) / 10 is the largest
+                // value that can be multiplied by 10 and have `digit` added
+                // without exceeding Long.MAX_VALUE.
+                if (result > (Long.MAX_VALUE - digit) / 10) {
+                    integerOnly = false;
+                    break;
+                }
+                result = result * 10 + digit;
+            }
+            if (integerOnly) {
+                return Long.valueOf(result);
+            }
+            // Fall through to full path
+        }
+
         String[] numKeys = numberCacheKeys;
         Number[] numVals = numberCacheValues;
         int len = end - start;
