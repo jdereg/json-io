@@ -2356,7 +2356,22 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             // Use declaredElementType to determine if @type is needed - eliminates redundant @type
             // when element instance type == declared element type from field generic info
             boolean showType = shouldShowTypeForElement(o.getClass());
-            writeImpl(o, showType);
+
+            // Short-circuit for POJO elements when cycleSupport is off: skip writeImpl's
+            // null/security/primitive checks, activePath tracking, and try/finally overhead
+            // and dispatch to writeObject directly. Custom writers and @IoValue annotations
+            // are checked first to preserve correctness. This flattens the call stack from
+            // writeCollectionElement → writeImpl → writeTypeCache → writeObject (4 levels)
+            // to writeCollectionElement → writeObject (2 levels), giving the JIT better
+            // inlining budget for the inner write loop.
+            if (!cycleSupport && writeTypeCache.get(o.getClass()) == WriteType.POJO
+                    && AnnotationResolver.getMetadata(o.getClass()).getValueMethod() == null) {
+                if (!writeUsingCustomWriter(o, showType, out)) {
+                    writeObject(o, showType, false);
+                }
+            } else {
+                writeImpl(o, showType);
+            }
         }
     }
 
