@@ -1783,6 +1783,44 @@ public class ToonWriter implements Closeable, Flushable {
      * nested objects, and primitives. Caller is responsible for indentation and newlines.
      */
     private void writeFieldEntry(String keyStr, Object value) throws IOException {
+        // Fast path: null and primitive/String field values are the most common field types
+        // in a POJO. Writing them directly avoids falling through the container checks
+        // (char[], array, Collection, Map) that all miss for leaf values.
+        if (value == null) {
+            writeKeyString(keyStr);
+            out.write(": null");
+            return;
+        }
+        if (value instanceof String) {
+            writeKeyString(keyStr);
+            out.write(": ");
+            writeString((String) value);
+            return;
+        }
+        if (value instanceof Integer) {
+            writeKeyString(keyStr);
+            out.write(": ");
+            out.write(toCachedLongString((Integer) value));
+            return;
+        }
+        if (value instanceof Long) {
+            writeKeyString(keyStr);
+            out.write(": ");
+            out.write(toCachedLongString((Long) value));
+            return;
+        }
+        if (value instanceof Boolean) {
+            writeKeyString(keyStr);
+            out.write(((Boolean) value) ? ": true" : ": false");
+            return;
+        }
+        if (value instanceof Double) {
+            writeKeyString(keyStr);
+            out.write(": ");
+            writeNumber((Number) value);
+            return;
+        }
+
         // Check for key folding: collapse single-key map chains into dotted notation
         if (toonKeyFolding
                 && value instanceof Map
@@ -1866,6 +1904,42 @@ public class ToonWriter implements Closeable, Flushable {
      * Caller is responsible for indentation and newlines.
      */
     private void writeFieldEntryInline(String keyStr, Object value) throws IOException {
+        // Fast path: null and primitive/String field values — same as writeFieldEntry
+        if (value == null) {
+            writeKeyString(keyStr);
+            out.write(": null");
+            return;
+        }
+        if (value instanceof String) {
+            writeKeyString(keyStr);
+            out.write(": ");
+            writeString((String) value);
+            return;
+        }
+        if (value instanceof Integer) {
+            writeKeyString(keyStr);
+            out.write(": ");
+            out.write(toCachedLongString((Integer) value));
+            return;
+        }
+        if (value instanceof Long) {
+            writeKeyString(keyStr);
+            out.write(": ");
+            out.write(toCachedLongString((Long) value));
+            return;
+        }
+        if (value instanceof Boolean) {
+            writeKeyString(keyStr);
+            out.write(((Boolean) value) ? ": true" : ": false");
+            return;
+        }
+        if (value instanceof Double) {
+            writeKeyString(keyStr);
+            out.write(": ");
+            writeNumber((Number) value);
+            return;
+        }
+
         if (value instanceof char[]) {
             writeKeyString(keyStr);
             out.write(": ");
