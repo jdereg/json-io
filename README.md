@@ -131,7 +131,7 @@ This sets: `showTypeInfoNever`, `cycleSupport(false)`, `stringifyMapKeys(true)`,
 | Capability | json-io | Jackson | Gson |
 |------------|---------|---------|------|
 | Standard JSON output | `.standardJson()` — identical to Jackson | Default | Default |
-| JSON5 support | Full read/write | None | None (Lenient mode is partial) |
+| JSON5 support | Full read/write (native) | Partial read (opt-in per feature); no write | None (Lenient mode is partial) |
 | TOON support | Full read/write (~40-50% fewer tokens) | None | None |
 | Configuration | Zero-config; optional `@Io*` annotations | Annotation-heavy (`@Json*` required for advanced features) | Moderate (annotations + builders) |
 | Jackson annotations | Recognized reflectively (zero compile-time dependency) | Native | Not supported |
