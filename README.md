@@ -37,63 +37,6 @@ LLM applications waste 40-50% of their token budget on JSON syntax overhead — 
 
 Featured on [json.org](http://json.org) and [Baeldung](https://www.baeldung.com/java-json-toon-format-libraries). See the [interactive JSON vs TOON comparison](https://jdereg.github.io/json-io/compare/).
 
-## Table of Contents
-
-- [TOON Format](#toon-format)
-- [Quick Start](#quick-start)
-- [Installation](#installation)
-  - [Spring Boot Integration](#spring-boot-integration)
-  - [Spring AI Integration](#spring-ai-integration)
-- [Key Features](#key-features)
-- [Why json-io?](#why-json-io)
-  - [vs Jackson/Gson](#vs-jacksongson-json)
-  - [vs JToon](#vs-jtoon-toon)
-  - [Annotation Support](#annotation-support)
-- [Supported Types](#supported-types-60-built-in)
-- [Documentation](#documentation)
-- [Release](#release-)
-  - [Logging](#logging)
-
-## TOON Format
-
-[TOON](https://toonformat.dev/) (Token-Oriented Object Notation) is an indentation-based format that produces **~40-50% fewer tokens** than JSON — ideal for LLM applications where token count directly impacts cost and context window usage.
-
-- **No braces, brackets, or commas** — structure is expressed through indentation
-- **No quoting** for most keys and values — quotes only when the value contains special characters
-- **Compact arrays** — inline `[N]: a,b,c` or list format with `- ` prefixed elements
-- **Tabular format** — arrays of uniform objects as CSV-like rows with column headers
-- **Key folding** — nested keys like `address.city: Denver` flatten one level of nesting
-- **Full fidelity** — most data requires no extra metadata at all. When type hints are needed for correct deserialization (e.g., polymorphic fields), you can use json-io's `@Io*` annotations, Jackson annotations, or explicit `$type` markers. For object graphs with cycles, enable `cycleSupport(true)` to emit `$id`/`$ref` pairs
-
-**JSON:**
-```json
-{"team":"Rockets","players":[{"name":"John","age":30,"position":"guard"},{"name":"Sue","age":27,"position":"forward"},{"name":"Mike","age":32,"position":"center"}]}
-```
-
-**TOON (same data, ~45% fewer tokens):**
-```yaml
-team: Rockets
-players:
-  name, age, position
-  John, 30, guard
-  Sue, 27, forward
-  Mike, 32, center
-```
-
-When an array contains uniform objects, TOON automatically uses **tabular format** — a compact CSV-like layout with column headers. Mixed or nested objects use indented format instead.
-
-**Write / Read:**
-```java
-// Write TOON
-String toon = JsonIo.toToon(myObject);
-
-// Read TOON back to typed Java object
-Person p = JsonIo.fromToon(toon).asClass(Person.class);
-
-// Read TOON to Maps (no class needed)
-Map map = JsonIo.fromToon(toon).asMap();
-```
-
 ## Quick Start
 
 ```java
@@ -101,19 +44,18 @@ Map map = JsonIo.fromToon(toon).asMap();
 String json = JsonIo.toJson(myObject);
 MyClass obj = JsonIo.toJava(json).asClass(MyClass.class);
 
-// TOON (~40% fewer tokens than JSON)
-String toon = JsonIo.toToon(myObject, writeOptions);
-MyClass obj = JsonIo.fromToon(toon, readOptions).asClass(MyClass.class);
+// JSON5
+String json5 = JsonIo.toJson(myObject, new WriteOptionsBuilder().json5().build());
+
+// TOON (~40-50% fewer tokens than JSON)
+String toon = JsonIo.toToon(myObject);
+MyClass obj = JsonIo.fromToon(toon).asClass(MyClass.class);
+
+// Standard JSON (Jackson-compatible output — no @type, no @id/@ref, stringified map keys)
+String json = JsonIo.toJson(myObject, new WriteOptionsBuilder().standardJson().build());
 ```
 
-Request TOON format for LLM applications: `Accept: application/vnd.toon`
-
-**Also supports WebFlux and WebClient** for reactive applications.
-
-See the [Spring Integration Guide](/user-guide-spring.md) for configuration options, WebFlux usage, customizers, and Jackson coexistence modes.
-
 ## Installation
-To include in your project:
 
 **Gradle**
 ```groovy
@@ -131,11 +73,165 @@ implementation 'com.cedarsoftware:json-io:4.101.0'
 
 Latest version: [![Maven Central](https://img.shields.io/maven-central/v/com.cedarsoftware/json-io)](https://central.sonatype.com/artifact/com.cedarsoftware/json-io)
 
-### Spring Boot Integration
+---
+
+<details>
+<summary><h2>JSON</h2></summary>
+
+### Usage
+
+```java
+// Write JSON
+String json = JsonIo.toJson(myObject);
+JsonIo.toJson(outputStream, myObject, writeOptions);
+
+// Read JSON to typed Java objects
+Employee emp = JsonIo.toJava(json).asClass(Employee.class);
+Employee emp = JsonIo.toJava(inputStream, readOptions).asClass(Employee.class);
+
+// Read JSON to Maps (no classes needed)
+Map map = JsonIo.toMaps(json).asMap();
+
+// Generic types
+List<Employee> list = JsonIo.toJava(json).asType(new TypeHolder<List<Employee>>(){});
+```
+
+### Standard JSON Mode
+
+Use `standardJson()` to produce output identical to Jackson — no proprietary metadata:
+
+```java
+WriteOptions opts = new WriteOptionsBuilder().standardJson().build();
+String json = JsonIo.toJson(myObject, opts);
+```
+
+This sets: `showTypeInfoNever`, `cycleSupport(false)`, `stringifyMapKeys(true)`, and `useMetaPrefixDollar()`. These will become the defaults in json-io 5.0.0.
+
+### json-io vs Jackson vs Gson
+
+| Capability | json-io | Jackson | Gson |
+|------------|---------|---------|------|
+| Cyclic object graphs | Automatic (`$id`/`$ref`) | Requires `@JsonIdentityInfo` | `StackOverflowError` |
+| Polymorphic types | Automatic (`$type` when needed) | Requires `@JsonTypeInfo` | Requires `TypeAdapter` |
+| Non-String map keys | `stringifyMapKeys` or `$keys`/`$items` | `toString()` (often broken for POJOs) | `enableComplexMapKeySerialization()` |
+| Standard JSON output | `.standardJson()` — identical to Jackson | Default | Default |
+| Configuration | Zero-config default; optional annotations | Annotation-heavy | Moderate |
+| Dependencies | java-util (~1MB total) | Multiple JARs (~2.5MB+) | Single JAR (~300KB) |
+| JSON5 support | Full read/write | None | None |
+| TOON support | Full read/write | None | None |
+| Performance | 1.5-2x slower than Jackson | Fastest | ~1.3x slower than Jackson |
+
+**On performance:** Jackson is faster for simple DTOs. However, in real-world applications, serialization is typically <1% of total request time (the rest is network, database, business logic). json-io's additional capabilities — cycles, polymorphism, zero-config, JSON5/TOON — often matter more than raw throughput.
+
+**Performance tip:** Use `cycleSupport(false)` for ~35-40% faster writes when your data is acyclic (DTOs, POJOs, tree-shaped data).
+
+### Key Features
+
+- Two modes: typed Java objects (`toJava()`) or class-independent Maps (`toMaps()`)
+- Preserves object references and handles cyclic relationships via `$id`/`$ref`
+- Supports polymorphic types and complex object graphs
+- Zero external dependencies (other than java-util)
+- Stringify-able map keys: `Map<Long, V>` writes `{"100": value}` with `stringifyMapKeys(true)`
+- Extensive configuration via `ReadOptionsBuilder` and `WriteOptionsBuilder`
+- Parse JSON with unknown `$type` references into a Map-of-Maps without requiring classes on classpath
+
+</details>
+
+<details>
+<summary><h2>JSON5</h2></summary>
+
+[JSON5](https://json5.org/) is an extension to JSON that makes it more human-friendly. json-io provides **complete JSON5 support** for both reading and writing — the only major Java JSON library to do so natively.
+
+### Reading JSON5
+
+json-io accepts all JSON5 extensions by default — no configuration needed:
+
+```java
+String json5 = "{ name: 'John', age: 30, /* comment */ }";
+Person p = JsonIo.toJava(json5).asClass(Person.class);
+```
+
+Supported: single-line (`//`) and multi-line (`/* */`) comments, single-quoted strings, unquoted keys, trailing commas, hex integers, `Infinity`/`NaN`/`-Infinity`, and more.
+
+### Writing JSON5
+
+```java
+WriteOptions opts = new WriteOptionsBuilder().json5().build();
+String json5 = JsonIo.toJson(myObject, opts);
+```
+
+The `json5()` umbrella enables:
+- **Unquoted keys** — object keys that are valid identifiers are written without quotes
+- **Smart quotes** — strings containing `"` (but not `'`) use single quotes
+- **Infinity/NaN literals** — special float/double values as literals instead of `null`
+- **Stringify map keys** — `Map<Long, V>` writes `{100: value}` instead of `$keys`/`$items`
+- **No type info** — `showTypeInfoNever()` + `cycleSupport(false)` for clean output
+
+Individual features can be enabled separately. See the [User Guide](/user-guide.md#json5-support) for details.
+
+</details>
+
+<details>
+<summary><h2>TOON</h2></summary>
+
+[TOON](https://toonformat.dev/) (Token-Oriented Object Notation) is an indentation-based format that produces **~40-50% fewer tokens** than JSON — ideal for LLM applications where token count directly impacts cost and context window usage.
+
+- **No braces, brackets, or commas** — structure is expressed through indentation
+- **No quoting** for most keys and values — quotes only when needed
+- **Compact arrays** — inline `[N]: a,b,c` or list format with `- ` prefixed elements
+- **Tabular format** — arrays of uniform objects as CSV-like rows with column headers
+- **Key folding** — nested keys like `address.city: Denver` flatten one level of nesting
+- **Full fidelity** — most data requires no extra metadata at all
+
+**JSON:**
+```json
+{"team":"Rockets","players":[{"name":"John","age":30,"position":"guard"},{"name":"Sue","age":27,"position":"forward"},{"name":"Mike","age":32,"position":"center"}]}
+```
+
+**TOON (same data, ~45% fewer tokens):**
+```yaml
+team: Rockets
+players:
+  name, age, position
+  John, 30, guard
+  Sue, 27, forward
+  Mike, 32, center
+```
+
+### Usage
+
+```java
+// Write TOON
+String toon = JsonIo.toToon(myObject);
+
+// Read TOON back to typed Java object
+Person p = JsonIo.fromToon(toon).asClass(Person.class);
+
+// Read TOON to Maps (no class needed)
+Map map = JsonIo.fromToon(toon).asMap();
+```
+
+Request TOON format for LLM applications: `Accept: application/vnd.toon`
+
+### vs JToon
+
+| Capability | json-io | JToon |
+|---|---|---|
+| Built-in types | 60+ | ~15 |
+| Map key types | Any serializable type | Strings only |
+| EnumSet support | Yes | No |
+| Full Java serialization | Yes — any object graph | Limited to supported types |
+| Cycle support (`$id`/`$ref`) | Yes (opt-in) | No |
+| Annotation support | `@Io*` + Jackson (reflective) | None |
+| Dependencies | java-util only | Jackson |
+| Status | Stable, production-ready | Beta (v1.x.x) |
+
+</details>
+
+<details>
+<summary><h2>Spring Boot Integration</h2></summary>
 
 json-io provides a Spring Boot starter for seamless integration with Spring MVC and WebFlux applications.
-
-**Add the dependency:**
 
 ```xml
 <dependency>
@@ -161,8 +257,6 @@ public class ApiController {
 
 json-io provides a Spring AI module that reduces LLM token usage by ~40-50% using TOON format for tool call results and structured output parsing.
 
-**Add the dependency:**
-
 ```xml
 <dependency>
   <groupId>com.cedarsoftware</groupId>
@@ -181,54 +275,14 @@ Person person = chatClient.prompt()
     .entity(converter);
 ```
 
-See the [Spring Integration Guide](/user-guide-spring.md#spring-ai-integration) for full details.
+**Also supports WebFlux and WebClient** for reactive applications.
 
-## Key Features
+See the [Spring Integration Guide](/user-guide-spring.md) for configuration options, WebFlux usage, customizers, and Jackson coexistence modes.
 
-- Full **JSON5** support including single-line and multi-line comments, single-quoted strings, unquoted object keys, trailing commas, and more — while remaining fully backward compatible with standard JSON (RFC 8259)
-- **TOON read/write** — [Token-Oriented Object Notation](https://toonformat.dev/) for LLM-optimized serialization (~40-50% fewer tokens than JSON)
-- Preserves object references and handles cyclic relationships (use `cycleSupport(false)` for ~35-40% faster writes on acyclic data) - for `JSON/JSON5`.
-- Supports polymorphic types and complex object graphs
-- Zero external dependencies (other than java-util)
-- Fully compatible with both JPMS and OSGi environments
-- Lightweight (`json-io.jar` is ~330K, `java-util` is ~700K)
-- Compatible with JDK 1.8 through JDK 24
-- The library is built with the `-parameters` compiler flag. Parameter names are now retained for tasks such as constructor discovery.
-- Optional unsafe mode for deserializing package-private classes, inner classes, and classes without accessible constructors (opt-in for security)
-- **Annotation support** — json-io's own `@Io*` annotations plus automatic recognition of Jackson annotations (no compile-time dependency)
-- Extensive configuration options via `ReadOptionsBuilder` and `WriteOptionsBuilder`
-- Two modes: typed Java objects (`toJava()`) or class-independent Maps (`toMaps()`)
-- Parse JSON with unknown class references into a Map-of-Maps representation without requiring classes on classpath
+</details>
 
-## Why json-io?
-
-### vs Jackson/Gson (JSON)
-
-| Capability | json-io | Jackson/Gson |
-|------------|---------|--------------|
-| Object graph cycles | Full support (`@id`/`@ref`) | None |
-| Polymorphic types | Automatic (`@type` when needed) | Requires annotations |
-| Configuration | Zero-config default; optional annotations | Annotation-heavy |
-| Dependencies | java-util (~1MB total) | Multiple JARs (~2.5MB+) |
-
-**Trade-off**: json-io prioritizes **correctness over speed**. It preserves graph shape and Java type semantics—handling cycles, references, and polymorphism that break other serializers. Jackson/Gson are faster for simple DTOs, but json-io handles what they cannot.
-
-**Performance tip**: Use `cycleSupport(false)` for ~35-40% faster writes when you know your object graph is acyclic.
-
-### vs JToon (TOON)
-
-| Capability | json-io | JToon |
-|---|---|---|
-| Built-in types | 60+ | ~15 |
-| Map key types | Any serializable type | Strings only |
-| EnumSet support | Yes | No |
-| Full Java serialization | Yes — any object graph | Limited to supported types |
-| Cycle support (`$id`/`$ref`) | Yes (opt-in) | No |
-| Annotation support | `@Io*` + Jackson (reflective) | None |
-| Dependencies | java-util only | Jackson |
-| Status | Stable, production-ready | Beta (v1.x.x) |
-
-json-io's TOON implementation offers comprehensive Java type coverage while JToon focuses on basic types with Jackson integration.
+<details>
+<summary><h2>Annotations, Types &amp; Configuration</h2></summary>
 
 ### Annotation Support
 
@@ -247,17 +301,17 @@ json-io provides 25 annotations in the `com.cedarsoftware.io.annotation` package
 | `@IoNaming(Strategy.SNAKE_CASE)` | Class | Naming strategy for all fields |
 | `@IoIncludeProperties({"a","b"})` | Class | Whitelist of included fields |
 | `@IoIgnoreType` | Class | Exclude all fields of this type everywhere |
-| `@IoTypeInfo(LinkedList.class)` | Field | Default concrete type when `@type` absent; also eliminates `@type` on write when runtime type matches |
-| `@IoDeserialize(as=LinkedList.class)` | Field/Class | Force type override during deserialization; also eliminates `@type` on write when runtime type matches |
+| `@IoTypeInfo(LinkedList.class)` | Field | Default concrete type when `$type` absent; also eliminates `$type` on write when runtime type matches |
+| `@IoDeserialize(as=LinkedList.class)` | Field/Class | Force type override during deserialization; also eliminates `$type` on write when runtime type matches |
 | `@IoClassFactory(MyFactory.class)` | Class | Specify a ClassFactory for deserialization |
 | `@IoGetter("fieldName")` | Method | Custom getter method for serialization |
 | `@IoSetter("fieldName")` | Method | Custom setter method for deserialization |
-| `@IoNonReferenceable` | Class | Suppress `@id`/`@ref` for instances of this type |
+| `@IoNonReferenceable` | Class | Suppress `$id`/`$ref` for instances of this type |
 | `@IoNotCustomReader` | Class | Suppress custom reader (use standard deserialization) |
 | `@IoNotCustomWritten` | Class | Suppress custom writer (use standard serialization) |
 | `@IoCustomWriter(MyWriter.class)` | Class | Specify custom `JsonClassWriter` for serialization |
 | `@IoCustomReader(MyReader.class)` | Class | Specify custom `JsonClassReader` for deserialization |
-| `@IoTypeName("ShortName")` | Class | Alias for `@type` in JSON (replaces FQCN) |
+| `@IoTypeName("ShortName")` | Class | Alias for `$type` in JSON (replaces FQCN) |
 | `@IoAnySetter` | Method | Receive unrecognized JSON fields during deserialization |
 | `@IoAnyGetter` | Method | Provide extra fields during serialization |
 | `@IoFormat("pattern")` | Field | Per-field format pattern (`String.format`, `DecimalFormat`, `DateTimeFormatter`, or `SimpleDateFormat`) |
@@ -268,7 +322,7 @@ Additionally, json-io **reflectively honors Jackson annotations** when they are 
 
 See the [Annotations section of the User Guide](/user-guide.md#annotations) for full details and examples.
 
-## Supported Types (60+ built-in)
+### Supported Types (60+ built-in)
 
 json-io handles your **business objects, DTOs, and Records** automatically—no annotations required. It also provides optimized handling for these built-in types:
 
@@ -284,6 +338,18 @@ json-io handles your **business objects, DTOs, and Records** automatically—no 
 | Other | `Enum` (any), `Throwable`, all `Collection`, `Map`, `EnumSet`, and array types |
 
 See the [complete type comparison](/user-guide.md#toon-supported-types) showing json-io's comprehensive support vs other TOON implementations.
+
+### Key Features
+
+- Fully compatible with both JPMS and OSGi environments
+- Zero external dependencies (other than java-util)
+- Lightweight (`json-io.jar` is ~330K, `java-util` is ~700K)
+- Compatible with JDK 1.8 through JDK 24
+- The library is built with the `-parameters` compiler flag. Parameter names are now retained for tasks such as constructor discovery.
+- Optional unsafe mode for deserializing package-private classes, inner classes, and classes without accessible constructors (opt-in for security)
+- Extensive configuration options via `ReadOptionsBuilder` and `WriteOptionsBuilder`
+
+</details>
 
 ## Documentation
 
