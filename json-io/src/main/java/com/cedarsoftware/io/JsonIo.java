@@ -624,6 +624,21 @@ public class JsonIo {
      * @param in the input stream containing TOON; must not be null
      * @param readOptions configuration options for controlling how the TOON is parsed;
      *                    if null, default options will be used
+     * @param in the InputStream containing TOON to parse
+     * @return a builder to complete the conversion by specifying the target type
+     * @throws IllegalArgumentException if the input stream is null
+     * @see <a href="https://toonformat.dev/">TOON Format Specification</a>
+     */
+    public static ToonStreamBuilder fromToon(InputStream in) {
+        return fromToon(in, null);
+    }
+
+    /**
+     * Parse TOON from an InputStream into Java objects with the specified read options.
+     *
+     * @param in the InputStream containing TOON to parse
+     * @param readOptions configuration options for controlling how the TOON is parsed;
+     *                    if null, default options will be used
      * @return a builder to complete the conversion by specifying the target type
      * @throws IllegalArgumentException if the input stream is null
      * @see <a href="https://toonformat.dev/">TOON Format Specification</a>
@@ -873,6 +888,18 @@ public class JsonIo {
      * }</pre>
      *
      * @param in the input stream containing JSON; must not be null
+     * @param in the InputStream containing JSON to parse
+     * @return a builder to complete the conversion by specifying the target type
+     * @throws IllegalArgumentException if the input stream is null
+     */
+    public static JavaStreamBuilder toJava(InputStream in) {
+        return toJava(in, null);
+    }
+
+    /**
+     * Parse JSON from an InputStream into Java objects with the specified read options.
+     *
+     * @param in the InputStream containing JSON to parse
      * @param readOptions configuration options for controlling how the JSON is parsed;
      *                    if null, default options will be used
      * @return a builder to complete the conversion by specifying the target type

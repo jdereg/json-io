@@ -72,6 +72,12 @@ class StringKeyConversionTest {
         public Map<Character, String> map;
     }
 
+    public enum Color { RED, GREEN, BLUE }
+
+    public static class EnumKeyHolder {
+        public Map<Color, String> map;
+    }
+
     // ========== Tests ==========
 
     @Test
@@ -249,6 +255,21 @@ class StringKeyConversionTest {
         }
     }
 
+    @Test
+    void testEnumKeysFromStringJson() {
+        String json = "{\"@type\":\"" + EnumKeyHolder.class.getName() + "\",\"map\":{\"RED\":\"stop\",\"GREEN\":\"go\",\"BLUE\":\"sky\"}}";
+
+        EnumKeyHolder holder = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(EnumKeyHolder.class);
+
+        assertThat(holder.map).hasSize(3);
+        assertThat(holder.map.get(Color.RED)).isEqualTo("stop");
+        assertThat(holder.map.get(Color.GREEN)).isEqualTo("go");
+        assertThat(holder.map.get(Color.BLUE)).isEqualTo("sky");
+        for (Object key : holder.map.keySet()) {
+            assertThat(key).isInstanceOf(Color.class);
+        }
+    }
+
     // ========== Edge case: keys alongside @keys/@items backward compat ==========
 
     @Test
@@ -376,6 +397,46 @@ class StringKeyConversionTest {
         assertThat(json).contains("\"A\"");
         assertThat(json).contains("\"Z\"");
         assertThat(json).doesNotContain("@keys");
+    }
+
+    @Test
+    void testWriteEnumKeysStringified() {
+        Map<Color, String> map = new LinkedHashMap<>();
+        map.put(Color.RED, "stop");
+        map.put(Color.GREEN, "go");
+        map.put(Color.BLUE, "sky");
+
+        String json = JsonIo.toJson(map, STRINGIFY_ON);
+
+        assertThat(json).contains("\"RED\"");
+        assertThat(json).contains("\"GREEN\"");
+        assertThat(json).contains("\"BLUE\"");
+        assertThat(json).doesNotContain("@keys");
+    }
+
+    @Test
+    void testRoundTripEnumKeysStringified() {
+        EnumKeyHolder original = new EnumKeyHolder();
+        original.map = new LinkedHashMap<>();
+        original.map.put(Color.RED, "stop");
+        original.map.put(Color.GREEN, "go");
+        original.map.put(Color.BLUE, "sky");
+
+        WriteOptions writeOpts = new WriteOptionsBuilder()
+                .stringifyMapKeys(true)
+                .build();
+        String json = JsonIo.toJson(original, writeOpts);
+        assertThat(json).doesNotContain("@keys");
+
+        EnumKeyHolder restored = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(EnumKeyHolder.class);
+
+        assertThat(restored.map).hasSize(3);
+        assertThat(restored.map.get(Color.RED)).isEqualTo("stop");
+        assertThat(restored.map.get(Color.GREEN)).isEqualTo("go");
+        assertThat(restored.map.get(Color.BLUE)).isEqualTo("sky");
+        for (Object key : restored.map.keySet()) {
+            assertThat(key).isInstanceOf(Color.class);
+        }
     }
 
     @Test
