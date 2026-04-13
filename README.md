@@ -76,7 +76,7 @@ Latest version: [![Maven Central](https://img.shields.io/maven-central/v/com.ced
 ---
 
 <details>
-<summary><h2>JSON</h2></summary>
+<summary><strong style="font-size:1.4em">JSON</strong></summary>
 
 ### Usage
 
@@ -109,19 +109,43 @@ This sets: `showTypeInfoNever`, `cycleSupport(false)`, `stringifyMapKeys(true)`,
 
 ### json-io vs Jackson vs Gson
 
+**Object graph handling**
+
 | Capability | json-io | Jackson | Gson |
 |------------|---------|---------|------|
-| Cyclic object graphs | Automatic (`$id`/`$ref`) | Requires `@JsonIdentityInfo` | `StackOverflowError` |
-| Polymorphic types | Automatic (`$type` when needed) | Requires `@JsonTypeInfo` | Requires `TypeAdapter` |
-| Non-String map keys | `stringifyMapKeys` or `$keys`/`$items` | `toString()` (often broken for POJOs) | `enableComplexMapKeySerialization()` |
-| Standard JSON output | `.standardJson()` — identical to Jackson | Default | Default |
-| Configuration | Zero-config default; optional annotations | Annotation-heavy | Moderate |
-| Dependencies | java-util (~1MB total) | Multiple JARs (~2.5MB+) | Single JAR (~300KB) |
-| JSON5 support | Full read/write | None | None |
-| TOON support | Full read/write | None | None |
-| Performance | 1.5-2x slower than Jackson | Fastest | ~1.3x slower than Jackson |
+| Cyclic object graphs | Automatic (`$id`/`$ref`) | Requires `@JsonIdentityInfo` per class | `StackOverflowError` |
+| Shared object references | Preserved automatically | Requires `@JsonIdentityInfo` per class | Duplicated (no identity) |
+| Polymorphic types | Automatic (`$type` when needed) | Requires `@JsonTypeInfo` per hierarchy | Requires custom `TypeAdapter` |
+| Unknown `$type` values | Graceful fallback to `Map` | Exception | Exception |
 
-**On performance:** Jackson is faster for simple DTOs. However, in real-world applications, serialization is typically <1% of total request time (the rest is network, database, business logic). json-io's additional capabilities — cycles, polymorphism, zero-config, JSON5/TOON — often matter more than raw throughput.
+**Map handling**
+
+| Capability | json-io | Jackson | Gson |
+|------------|---------|---------|------|
+| `Map<String, V>` | Standard JSON object | Same | Same |
+| `Map<Long, V>`, `Map<UUID, V>`, etc. | Stringified keys (`stringifyMapKeys`) or `$keys`/`$items` fallback | `toString()` on keys (broken for POJOs without override) | `enableComplexMapKeySerialization()` |
+| `Map<POJO, V>` (complex keys) | Full object preservation via `$keys`/`$items` | `toString()` (lossy) | JSON array of key-value pairs |
+
+**Format & configuration**
+
+| Capability | json-io | Jackson | Gson |
+|------------|---------|---------|------|
+| Standard JSON output | `.standardJson()` — identical to Jackson | Default | Default |
+| JSON5 support | Full read/write | None | None (Lenient mode is partial) |
+| TOON support | Full read/write (~40-50% fewer tokens) | None | None |
+| Configuration | Zero-config; optional `@Io*` annotations | Annotation-heavy (`@Json*` required for advanced features) | Moderate (annotations + builders) |
+| Jackson annotations | Recognized reflectively (zero compile-time dependency) | Native | Not supported |
+| Two parse modes | `toJava()` (typed) + `toMaps()` (schema-free) | Typed only (or manual `JsonNode` tree) | Typed only (or manual `JsonElement` tree) |
+
+**Runtime**
+
+| Capability | json-io | Jackson | Gson |
+|------------|---------|---------|------|
+| Performance (simple DTOs) | 1.5-2x slower than Jackson | Fastest | ~1.3x slower than Jackson |
+| Dependencies | java-util only (~1MB total) | Multiple JARs (~2.5MB+) | Single JAR (~300KB) |
+| Java version | JDK 8 - 24 | JDK 8+ | JDK 8+ |
+
+**On performance:** Jackson is faster for simple DTOs. In real-world applications, serialization is typically <1% of total request time — the rest is network I/O, database queries, and business logic. json-io's additional capabilities (cycles, polymorphism, zero-config, JSON5, TOON) often matter more than raw serialization throughput.
 
 **Performance tip:** Use `cycleSupport(false)` for ~35-40% faster writes when your data is acyclic (DTOs, POJOs, tree-shaped data).
 
@@ -138,7 +162,7 @@ This sets: `showTypeInfoNever`, `cycleSupport(false)`, `stringifyMapKeys(true)`,
 </details>
 
 <details>
-<summary><h2>JSON5</h2></summary>
+<summary><strong style="font-size:1.4em">JSON5</strong></summary>
 
 [JSON5](https://json5.org/) is an extension to JSON that makes it more human-friendly. json-io provides **complete JSON5 support** for both reading and writing — the only major Java JSON library to do so natively.
 
@@ -172,7 +196,7 @@ Individual features can be enabled separately. See the [User Guide](/user-guide.
 </details>
 
 <details>
-<summary><h2>TOON</h2></summary>
+<summary><strong style="font-size:1.4em">TOON</strong></summary>
 
 [TOON](https://toonformat.dev/) (Token-Oriented Object Notation) is an indentation-based format that produces **~40-50% fewer tokens** than JSON — ideal for LLM applications where token count directly impacts cost and context window usage.
 
@@ -229,7 +253,7 @@ Request TOON format for LLM applications: `Accept: application/vnd.toon`
 </details>
 
 <details>
-<summary><h2>Spring Boot Integration</h2></summary>
+<summary><strong style="font-size:1.4em">Spring Boot Integration</strong></summary>
 
 json-io provides a Spring Boot starter for seamless integration with Spring MVC and WebFlux applications.
 
@@ -282,7 +306,7 @@ See the [Spring Integration Guide](/user-guide-spring.md) for configuration opti
 </details>
 
 <details>
-<summary><h2>Annotations, Types &amp; Configuration</h2></summary>
+<summary><strong style="font-size:1.4em">Annotations, Types &amp; Configuration</strong></summary>
 
 ### Annotation Support
 
