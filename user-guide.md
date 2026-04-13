@@ -156,6 +156,27 @@ Map<String, List<Department<Employee>>> orgMap = JsonIo.toJava(json, readOptions
                                 .asType(new TypeHolder<Map<String, List<Department<Employee>>>>(){});
 ```
 
+## Standard JSON Output
+
+json-io can produce standard JSON output identical to Jackson and other mainstream libraries — no
+proprietary metadata, no `@type`, no `@id`/`@ref`, and Maps with numeric/UUID/Enum keys written
+as regular JSON objects. Use the `standardJson()` convenience method:
+
+```java
+WriteOptions options = new WriteOptionsBuilder()
+        .standardJson()    // Produces Jackson-compatible output
+        .build();
+
+String json = JsonIo.toJson(myObject, options);
+```
+
+This sets: `showTypeInfoNever`, `showRootTypeInfo(false)`, `cycleSupport(false)`, `stringifyMapKeys(true)`,
+and `useMetaPrefixDollar()`. These will become the defaults in json-io 5.0.0. Individual settings can be
+overridden after the call (e.g., `.standardJson().cycleSupport(true)`).
+
+See [WriteOptions reference](/user-guide-writeOptions.md#standard-json-output--standardjson) for details.
+
+---
 ## JSON5 Support
 
 [JSON5](https://json5.org/) is an extension to JSON that makes it more human-friendly by adding features
@@ -257,6 +278,7 @@ The `json5()` umbrella enables:
 - **Unquoted keys** — object keys that are valid identifiers are written without quotes
 - **Smart quotes** — strings containing `"` (but not `'`) use single quotes for cleaner output
 - **Infinity/NaN literals** — special float/double values written as literals instead of `null`
+- **Stringify map keys** — `Map<Long, V>` writes `{100: value}` instead of `$keys`/`$items`
 
 > **Note:** Trailing commas are **not** enabled by `json5()` — they require explicit opt-in since they
 > provide no semantic benefit and some tools still don't accept them.

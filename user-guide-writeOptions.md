@@ -41,6 +41,39 @@ appropriate class types are used based on the class names specified in the optio
 >#### `WriteOptionsBuilder` classLoader(`ClassLoader loader`)
 >- [ ] Sets the ClassLoader to resolve String class names.
 
+### Standard JSON Output — `standardJson()`
+
+The `standardJson()` convenience method configures json-io to produce standard JSON output that is interoperable
+with Jackson and other mainstream JSON libraries. It sets the planned json-io 5.0.0 defaults in a single call:
+
+```java
+WriteOptions options = new WriteOptionsBuilder()
+        .standardJson()
+        .build();
+```
+
+This enables:
+- **`showTypeInfoNever()`** — no `@type` metadata in output
+- **`showRootTypeInfo(false)`** — no `@type` on the root object
+- **`cycleSupport(false)`** — no `@id`/`@ref` cycle tracking (~35-40% faster)
+- **`stringifyMapKeys(true)`** — `Map<Long, V>` writes `{"100": value}` instead of `@keys`/`@items`
+- **`useMetaPrefixDollar()`** — uses `$` prefix for any remaining metadata (e.g., `$keys` for POJO key fallback)
+
+The resulting JSON is identical to what Jackson produces for the same objects (POJOs, Lists, Maps with
+String/numeric/UUID/Enum keys). Individual settings can be overridden after the call:
+
+```java
+// standardJson() defaults, but keep cycle support on
+WriteOptions options = new WriteOptionsBuilder()
+        .standardJson()
+        .cycleSupport(true)    // override just this one setting
+        .build();
+```
+
+>#### `WriteOptionsBuilder` standardJson()
+>- [ ] Configures all settings to produce standard, interoperable JSON output. These will become the defaults in json-io 5.0.0. Chainable — individual settings can be overridden after this call.
+
+---
 ### Cycle Support - Controlling @id/@ref Generation
 
 By default, `json-io` performs a two-pass serialization: first tracing references to identify objects that appear multiple times, then writing the JSON with `@id`/`@ref` markers. This enables full cycle and shared-reference support but has some overhead.
@@ -329,16 +362,45 @@ To exclude `null` values from the JSON output, you need to activate this setting
   keys and values separately. The keys are placed in an array under an `@keys` tag, and the corresponding values are
   listed in an `@values` array. This ensures that the structure and associations within the `Map` are preserved.
 
-#### Configuration Option
+#### Stringify Map Keys
+
+When enabled, non-String map keys that have a **bidirectional** String conversion via `Converter` are written as
+stringified keys in a standard JSON object instead of the `@keys`/`@items` parallel-array format. This produces
+output identical to Jackson and other mainstream JSON libraries.
+
+Supported key types include `Long`, `Integer`, `Double`, `Boolean`, `BigDecimal`, `BigInteger`, `UUID`, `Date`,
+`ZonedDateTime`, `Enum`, `Character`, `AtomicLong`, and any type with a registered bidirectional Converter to/from
+`String`. Complex POJO keys that lack a bidirectional String conversion still use `@keys`/`@items` as a fallback.
+
+**Example:**
+```java
+// Without stringifyMapKeys (default for JSON):
+// {"@keys":[100,200], "@items":["alpha","beta"]}
+
+// With stringifyMapKeys:
+// {"100":"alpha","200":"beta"}
+```
+
+>#### `boolean` isStringifyMapKeys()
+>- [ ] Returns `true` if non-String map keys with bidirectional String conversions will be stringified and written as regular JSON object keys. Default is `false` for JSON, `true` for JSON5.
+
+>#### `WriteOptionsBuilder` stringifyMapKeys(`boolean stringifyMapKeys`)
+>- [ ] When `true`, non-String map keys that can be converted to/from String via `Converter` are written as stringified keys in standard JSON object format. When `false`, non-String keys use `@keys`/`@items`. `forceMapOutputAsTwoArrays(true)` overrides this setting.
+
+**Note:** The read side automatically handles both formats. When the declared field type provides generic type info
+(e.g., `Map<Long, String>`), string keys like `"100"` are converted to the declared key type via `Converter`. This
+capability has been available since json-io 4.94.0.
+
+#### Force Two-Array Format
 If you prefer a consistent format for all `Map` instances, regardless of the key types, you can enable a setting to
-always serialize `Maps` using the `@keys:[], @values:[]` format. This option eliminates the special treatment for
-`Maps` with string-only keys:
+always serialize `Maps` using the `@keys:[], @values:[]` format. This option overrides both the default String-key
+handling and `stringifyMapKeys`:
 
 >#### `boolean` isForceMapOutputAsTwoArrays()
 >- [ ] Returns `true` if set to force Java Maps to be written out as two parallel arrays, once for keys, one array for values. The default is `false.`
 
 >#### `WriteOptionsBuilder` forceMapOutputAsTwoArrays(`boolean forceMapOutputAsTwoArrays`)
->- [ ] Sets the boolean 'forceMapOutputAsTwoArrays' setting. If Map's have String keys they are written as normal JSON objects. With this setting enabled, Maps are written as two parallel arrays.
+>- [ ] Sets the boolean 'forceMapOutputAsTwoArrays' setting. If Map's have String keys they are written as normal JSON objects. With this setting enabled, Maps are written as two parallel arrays. This overrides `stringifyMapKeys`.
 
 ### Floating Point Options
 
@@ -1249,8 +1311,12 @@ Sets the permanent skip null fields setting for all new `WriteOptions` instances
 >#### WriteOptionsBuilder.addPermanentSkipNullFields(`boolean skipNullFields`)
 
 ### addPermanentForceMapOutputAsTwoArrays
-Sets the permanent force map output as two arrays setting for all new `WriteOptions` instances. When enabled, all Maps are written as `@keys` and `@values` arrays regardless of key types.
+Sets the permanent force map output as two arrays setting for all new `WriteOptions` instances. When enabled, all Maps are written as `@keys` and `@values` arrays regardless of key types. This overrides `stringifyMapKeys`.
 >#### WriteOptionsBuilder.addPermanentForceMapOutputAsTwoArrays(`boolean forceMapOutputAsTwoArrays`)
+
+### addPermanentStringifyMapKeys
+Sets the permanent stringify map keys setting for all new `WriteOptions` instances. When enabled, non-String map keys with bidirectional String conversions (Long, Integer, UUID, Enum, BigDecimal, Date, etc.) are written as stringified keys in standard JSON object format instead of `@keys`/`@items`. Default is `false`.
+>#### WriteOptionsBuilder.addPermanentStringifyMapKeys(`boolean stringifyMapKeys`)
 
 ### addPermanentAllowNanAndInfinity
 Sets the permanent allow NaN and Infinity setting for all new `WriteOptions` instances. When enabled, Double and Float NaN and Infinity values are serialized as-is rather than converted to null.
