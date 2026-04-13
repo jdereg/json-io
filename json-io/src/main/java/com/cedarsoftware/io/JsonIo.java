@@ -3,10 +3,8 @@ package com.cedarsoftware.io;
 import java.io.Closeable;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.OutputStream;
 import java.io.StringReader;
-import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,9 +13,7 @@ import java.util.logging.Logger;
 import com.cedarsoftware.io.prettyprint.JsonPrettyPrinter;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
-import com.cedarsoftware.util.FastByteArrayOutputStream;
 import com.cedarsoftware.util.FastReader;
-import com.cedarsoftware.util.FastWriter;
 import com.cedarsoftware.util.IOUtilities;
 import com.cedarsoftware.util.LoggingConfig;
 import com.cedarsoftware.util.convert.Converter;
@@ -352,6 +348,20 @@ public class JsonIo {
      * @return a JSON string representation of the source object
      * @throws JsonIoException if an error occurs during the serialization process
      */
+    public static String toJson(Object srcObject) {
+        return toJson(srcObject, null);
+    }
+
+    /**
+     * Convert a Java object to a JSON string with the specified write options.
+     *
+     * @param srcObject the Java object to convert to JSON; can be any object including primitives,
+     *                  collections, custom classes, or a JsonObject/Map
+     * @param writeOptions configuration options for controlling the JSON output format;
+     *                     if null, default options will be used
+     * @return a JSON string representation of the source object
+     * @throws JsonIoException if an error occurs during the serialization process
+     */
     public static String toJson(Object srcObject, WriteOptions writeOptions) {
         // Direct char-based pipeline: skips OutputStreamWriter + UTF-8 encoder + FastByteArrayOutputStream
         // and the final new String(bytes, UTF-8) decode. JFR profiling of JsonPerformanceTest showed
@@ -467,6 +477,19 @@ public class JsonIo {
      *
      * @param srcObject the Java object to convert to TOON; can be any object including primitives,
      *                  collections, custom classes, or a Map
+     * @return a TOON string representation of the source object
+     * @throws JsonIoException if an error occurs during the serialization process
+     * @see <a href="https://toonformat.dev/">TOON Format Specification</a>
+     */
+    public static String toToon(Object srcObject) {
+        return toToon(srcObject, null);
+    }
+
+    /**
+     * Convert a Java object to a TOON string with the specified write options.
+     *
+     * @param srcObject the Java object to convert to TOON; can be any object including primitives,
+     *                  collections, custom classes, or a Map
      * @param writeOptions configuration options for controlling the output format;
      *                     if null, defaults to showTypeInfoNever() and cycleSupport(false)
      * @return a TOON string representation of the source object
@@ -561,6 +584,17 @@ public class JsonIo {
      * List<Person> people = JsonIo.fromToon(toonString, options)
      *                               .asType(new TypeHolder<List<Person>>(){});
      * }</pre>
+     *
+     * @param toon the TOON string to parse; if null, an empty string will be used
+     * @return a builder to complete the conversion by specifying the target type
+     * @see <a href="https://toonformat.dev/">TOON Format Specification</a>
+     */
+    public static ToonStringBuilder fromToon(String toon) {
+        return fromToon(toon, null);
+    }
+
+    /**
+     * Parse a TOON string into Java objects with the specified read options.
      *
      * @param toon the TOON string to parse; if null, an empty string will be used
      * @param readOptions configuration options for controlling how the TOON is parsed;
@@ -792,6 +826,16 @@ public class JsonIo {
      *   <li>With {@code ReadOptions.returnAsJsonObjects()}, the result will be the intermediate Map
      *       representation (JsonObjects) that can later be manipulated or converted.</li>
      * </ul>
+     *
+     * @param json the JSON string to parse; if null, an empty string will be used
+     * @return a builder to complete the conversion by specifying the target type
+     */
+    public static JavaStringBuilder toJava(String json) {
+        return toJava(json, null);
+    }
+
+    /**
+     * Parse a JSON string into Java objects with the specified read options.
      *
      * @param json the JSON string to parse; if null, an empty string will be used
      * @param readOptions configuration options for controlling how the JSON is parsed;
