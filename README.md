@@ -115,7 +115,7 @@ This sets: `showTypeInfoNever`, `cycleSupport(false)`, `stringifyMapKeys(true)`,
 |------------|---------|---------|------|
 | Cyclic object graphs | Automatic (`$id`/`$ref`) | Requires `@JsonIdentityInfo` per class | `StackOverflowError` |
 | Shared object references | Preserved automatically | Requires `@JsonIdentityInfo` per class | Duplicated (no identity) |
-| Polymorphic types | Automatic (`$type` when needed) | Requires `@JsonTypeInfo` per hierarchy | Requires custom `TypeAdapter` |
+| Polymorphic types | Automatic with `showTypeInfoMinimal()` — no annotations needed; also supports `@IoTypeInfo` / `@JsonTypeInfo` annotations | Requires `@JsonTypeInfo` per hierarchy | Requires custom `TypeAdapter` |
 | Unknown `$type` values | Graceful fallback to `Map` | Exception | Exception |
 
 **Map handling**
@@ -143,7 +143,7 @@ This sets: `showTypeInfoNever`, `cycleSupport(false)`, `stringifyMapKeys(true)`,
 |------------|---------|---------|------|
 | Performance (simple DTOs) | 1.5-2x slower than Jackson | Fastest | ~1.3x slower than Jackson |
 | Dependencies | java-util only (~1MB total) | Multiple JARs (~2.5MB+) | Single JAR (~300KB) |
-| Java version | JDK 8 - 24 | JDK 8+ | JDK 8+ |
+| Java version | JDK 8+ | JDK 8+ | JDK 8+ |
 
 **On performance:** Jackson is faster for simple DTOs. In real-world applications, serialization is typically <1% of total request time — the rest is network I/O, database queries, and business logic. json-io's additional capabilities (cycles, polymorphism, zero-config, JSON5, TOON) often matter more than raw serialization throughput.
 
