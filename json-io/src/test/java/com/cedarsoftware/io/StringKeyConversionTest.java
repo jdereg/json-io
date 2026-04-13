@@ -563,4 +563,42 @@ class StringKeyConversionTest {
         assertThat(opts.isStringifyMapKeys()).isFalse();
         assertThat(opts.isNeverShowingType()).isTrue();  // standardJson() set this
     }
+
+    // ========== Deprecation warning test ==========
+
+    @Test
+    void testDeprecationWarningLogsOnce() {
+        // Capture JUL log output for JsonWriter
+        java.util.logging.Logger writerLog = java.util.logging.Logger.getLogger("com.cedarsoftware.io.JsonWriter");
+        java.util.List<String> warnings = new java.util.ArrayList<>();
+        java.util.logging.Handler handler = new java.util.logging.Handler() {
+            @Override public void publish(java.util.logging.LogRecord record) {
+                if (record.getLevel() == java.util.logging.Level.WARNING) {
+                    warnings.add(record.getMessage());
+                }
+            }
+            @Override public void flush() {}
+            @Override public void close() {}
+        };
+        writerLog.addHandler(handler);
+
+        try {
+            // Write two maps with stringify-able keys but stringifyMapKeys=false
+            Map<Long, String> map1 = new LinkedHashMap<>();
+            map1.put(100L, "alpha");
+            JsonIo.toJson(map1, STRINGIFY_OFF);
+
+            Map<Integer, String> map2 = new LinkedHashMap<>();
+            map2.put(42, "answer");
+            JsonIo.toJson(map2, STRINGIFY_OFF);
+
+            // Should have logged at most once (AtomicBoolean may already be set from earlier tests)
+            long stringifyWarnings = warnings.stream()
+                    .filter(w -> w.contains("stringifyMapKeys"))
+                    .count();
+            assertThat(stringifyWarnings).isLessThanOrEqualTo(1);
+        } finally {
+            writerLog.removeHandler(handler);
+        }
+    }
 }

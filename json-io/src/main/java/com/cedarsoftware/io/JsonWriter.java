@@ -170,6 +170,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private static final String ITEMS_DOLLAR_SHORT_QUOTED = "\"$e\":";
     private static final String KEYS_DOLLAR_SHORT_QUOTED = "\"$k\":";
 
+    // One-time deprecation warning for stringify-able map keys written as @keys/@items
+    private static final AtomicBoolean stringifyMapKeysWarned = new AtomicBoolean(false);
+
     // Pre-computed escape strings for ASCII characters
     // null = character doesn't need escaping, non-null = the escape sequence to write
     private static final String[] ESCAPE_STRINGS = new String[128];
@@ -2176,6 +2179,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         final boolean canStringify = !keysAreStrings && stringifyMapKeys && canStringifyMapKeys(map);
 
         if (!keysAreStrings && !canStringify) {
+            // Log a one-time deprecation warning if the keys COULD be stringified but the option is off
+            if (!stringifyMapKeys && !map.isEmpty() && canStringifyMapKeys(map)
+                    && stringifyMapKeysWarned.compareAndSet(false, true)) {
+                LOG.warning("json-io: Map with non-String keys (e.g., " + map.keySet().iterator().next().getClass().getSimpleName()
+                        + ") written using @keys/@items format. Use WriteOptionsBuilder.stringifyMapKeys(true) or .standardJson() "
+                        + "to write as standard JSON (e.g., {\"100\": value}). This will become the default in json-io 5.0.");
+            }
             return false;  // Fall back to @keys/@items
         }
 
