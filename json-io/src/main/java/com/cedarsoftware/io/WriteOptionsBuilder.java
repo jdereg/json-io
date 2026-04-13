@@ -2455,6 +2455,7 @@ public class WriteOptionsBuilder {
         private final Accessor accessor;
         private final String fieldName;
         private final String serializedKey;
+        private final String toonKeyLiteral;
         private final Class<?> declaredFieldType;
         private final Class<?> declaredElementType;
         private final Class<?> declaredKeyType;
@@ -2474,6 +2475,7 @@ public class WriteOptionsBuilder {
             this.accessor = accessor;
             this.fieldName = fieldName;
             this.serializedKey = serializedKey;
+            this.toonKeyLiteral = buildToonKeyLiteral(fieldName);
             this.declaredFieldType = declaredFieldType;
             this.declaredElementType = declaredElementType;
             this.declaredKeyType = declaredKeyType;
@@ -2583,12 +2585,72 @@ public class WriteOptionsBuilder {
             return isIdentifierStart(c) || (c >= '0' && c <= '9');
         }
 
+        /**
+         * Pre-compute the TOON key literal for a field name. Java POJO field names are
+         * identifiers ([A-Za-z_$][A-Za-z0-9_$]*) which virtually never need TOON quoting.
+         * Returns "fieldName: " for safe keys, or "\"fieldName\": " for the rare key
+         * that needs quoting (reserved literals, special characters).
+         */
+        private static String buildToonKeyLiteral(String fieldName) {
+            if (fieldName.isEmpty()) {
+                return "\"\": ";
+            }
+            if (isSafeToonKey(fieldName)) {
+                return fieldName + ": ";
+            }
+            // Rare path: build quoted key with TOON escape rules (only \ and " need escaping)
+            StringBuilder sb = new StringBuilder(fieldName.length() + 6);
+            sb.append('"');
+            for (int i = 0, len = fieldName.length(); i < len; i++) {
+                char c = fieldName.charAt(i);
+                if (c == '"') { sb.append("\\\""); }
+                else if (c == '\\') { sb.append("\\\\"); }
+                else { sb.append(c); }
+            }
+            sb.append("\": ");
+            return sb.toString();
+        }
+
+        /**
+         * Check if a field name is safe to write unquoted in TOON format.
+         * Java identifiers are safe unless they match a reserved literal.
+         */
+        private static boolean isSafeToonKey(String name) {
+            char first = name.charAt(0);
+            // Must start with letter or underscore (not digit, not hyphen, not whitespace)
+            if (first != '_' && !Character.isLetter(first)) {
+                return false;
+            }
+            // All chars must be identifier-safe (no whitespace, colons, quotes, brackets, etc.)
+            for (int i = 1, len = name.length(); i < len; i++) {
+                char c = name.charAt(i);
+                if (c != '_' && !Character.isLetterOrDigit(c)) {
+                    return false;
+                }
+            }
+            // Reserved TOON literals must be quoted
+            int len = name.length();
+            if (len == 4 && ("true".equals(name) || "null".equals(name))) return false;
+            if (len == 5 && "false".equals(name)) return false;
+            return true;
+        }
+
         Accessor accessor() {
             return accessor;
         }
 
         String serializedKey() {
             return serializedKey;
+        }
+
+        /**
+         * Pre-computed TOON key literal for primitive/String field fast path.
+         * For safe identifiers: {@code "fieldName: "} (unquoted key + colon + space).
+         * For keys needing quoting: {@code "\"fieldName\": "} (quoted + colon + space).
+         * Computed once at plan-build time, reused across all ToonWriter calls.
+         */
+        String toonKeyLiteral() {
+            return toonKeyLiteral;
         }
 
         Class<?> declaredFieldType() {
