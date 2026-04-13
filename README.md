@@ -237,6 +237,8 @@ Map map = JsonIo.fromToon(toon).asMap();
 
 Request TOON format for LLM applications: `Accept: application/vnd.toon`
 
+See the [Baeldung tutorial](https://www.baeldung.com/java-json-toon-format-libraries) for a walkthrough of JSON, JSON5, and TOON serialization with json-io, and the [interactive JSON vs TOON comparison](https://jdereg.github.io/json-io/compare/).
+
 ### vs JToon
 
 | Capability | json-io | JToon |
