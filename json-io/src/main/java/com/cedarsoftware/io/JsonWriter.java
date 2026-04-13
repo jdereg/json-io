@@ -73,6 +73,7 @@ import com.cedarsoftware.io.reflect.Accessor;
 import com.cedarsoftware.io.reflect.AnnotationResolver;
 import com.cedarsoftware.io.WriteOptionsBuilder.WriteFieldPlan;
 import com.cedarsoftware.util.ArrayUtilities;
+import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.ClassValueMap;
 import com.cedarsoftware.util.CompactMap;
@@ -383,6 +384,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private final int indentationSize;
     private final boolean cycleSupport;
     private final boolean minimalPlusFormat;
+    private final boolean stringifyMapKeys;
 
     // Pre-fetched custom writers for primitive array hot paths (avoids per-array lookup)
     private final com.cedarsoftware.io.JsonClassWriter longBoxedWriter;
@@ -576,6 +578,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         this.indentationSize = this.writeOptions.getIndentationSize();
         this.cycleSupport = this.writeOptions.isCycleSupport();
         this.minimalPlusFormat = this.writeOptions.isMinimalPlusShowingType();
+        this.stringifyMapKeys = this.writeOptions.isStringifyMapKeys();
 
         // Pre-fetch custom writers for primitive array hot paths
         this.longBoxedWriter = this.writeOptions.getCustomWriter(Long.class);
@@ -1936,7 +1939,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             showType = false;
         }
 
-        if (writeOptions.isForceMapOutputAsTwoArrays() || !ensureJsonPrimitiveKeys(jObj)) {
+        if (writeOptions.isForceMapOutputAsTwoArrays()) {
+            return false;
+        }
+
+        boolean keysAreStrings = ensureJsonPrimitiveKeys(jObj);
+        boolean canStringify = !keysAreStrings && stringifyMapKeys && canStringifyMapKeys(jObj);
+
+        if (!keysAreStrings && !canStringify) {
             return false;
         }
 
@@ -1954,6 +1964,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             newLine();
         }
 
+        if (canStringify) {
+            return writeStringifiedMapBody(jObj.entrySet().iterator());
+        }
         return writeMapBody(jObj);
     }
 
@@ -2153,9 +2166,17 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
-        final boolean keysKnownString = declaredKeyType == String.class;
-        if (writeOptions.isForceMapOutputAsTwoArrays() || (!keysKnownString && !ensureJsonPrimitiveKeys(map))) {
+        if (writeOptions.isForceMapOutputAsTwoArrays()) {
             return false;
+        }
+
+        // Determine if keys can be written as JSON object keys (strings)
+        final boolean keysKnownString = declaredKeyType == String.class;
+        final boolean keysAreStrings = keysKnownString || ensureJsonPrimitiveKeys(map);
+        final boolean canStringify = !keysAreStrings && stringifyMapKeys && canStringifyMapKeys(map);
+
+        if (!keysAreStrings && !canStringify) {
+            return false;  // Fall back to @keys/@items
         }
 
         boolean referenced = cycleSupport && this.objsReferenced.containsKey(map);
@@ -2175,6 +2196,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             newLine();
         }
 
+        if (canStringify) {
+            return writeStringifiedMapBody(map.entrySet().iterator());
+        }
         return writeMapBody(map.entrySet().iterator());
     }
 
@@ -2323,6 +2347,67 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 return false;
             }
         }
+        return true;
+    }
+
+    /**
+     * Check if all keys in the Map can be stringified via Converter (bidirectional String conversion).
+     * This requires both key→String and String→key conversions to be supported, ensuring round-trip fidelity.
+     * Null keys cause this to return false (fall back to @keys/@items to avoid "null" ambiguity).
+     */
+    private boolean canStringifyMapKeys(Map map) {
+        if (declaredKeyType != null && declaredKeyType != Object.class) {
+            // Known declared key type — check it once
+            return Converter.isConversionSupportedFor(declaredKeyType, String.class)
+                    && Converter.isConversionSupportedFor(String.class, declaredKeyType);
+        }
+        // Unknown declared type — check each actual key
+        for (Object key : map.keySet()) {
+            if (key == null) {
+                return false;
+            }
+            Class<?> keyClass = key.getClass();
+            if (!(Converter.isConversionSupportedFor(keyClass, String.class)
+                    && Converter.isConversionSupportedFor(String.class, keyClass))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Write map entries with non-String keys converted to Strings via Converter.
+     * Same structure as writeMapBody() but keys are stringified instead of cast to String.
+     */
+    private boolean writeStringifiedMapBody(final Iterator i) throws IOException {
+        final Writer output = out;
+        final boolean skipNulls = skipNullFields;
+        final int maxLen = maxStringLength;
+        boolean wroteEntry = false;
+
+        while (i.hasNext()) {
+            Entry att2value = (Entry) i.next();
+            Object value = att2value.getValue();
+
+            if (skipNulls && value == null) {
+                continue;
+            }
+
+            if (wroteEntry) {
+                output.write(',');
+                newLine();
+            }
+
+            Object key = att2value.getKey();
+            String keyStr = (key == null) ? "null" : Converter.convert(key, String.class);
+            writeJsonUtf8String(output, keyStr, maxLen);
+            output.write(':');
+            writeCollectionElement(value);
+            wroteEntry = true;
+        }
+
+        tabOut();
+        output.write('}');
         return true;
     }
 

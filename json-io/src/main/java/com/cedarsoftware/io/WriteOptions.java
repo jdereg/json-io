@@ -78,6 +78,17 @@ public interface WriteOptions {
     boolean isForceMapOutputAsTwoArrays();
 
     /**
+     * @return boolean true indicates that non-String map keys that have a bidirectional String conversion
+     * (via Converter) will be written as stringified keys in a regular JSON object (e.g., {"100": "value"})
+     * instead of the @keys/@items parallel-array format.  This produces standard JSON output that matches
+     * what Jackson and other libraries produce.  Supported key types include Long, Integer, Double, Boolean,
+     * BigDecimal, BigInteger, UUID, Date, Enum, Character, and any type with a registered bidirectional
+     * Converter to/from String.  Complex POJO keys that lack a bidirectional String conversion still use
+     * @keys/@items.  Default is false for JSON (backward compatibility), true for JSON5.
+     */
+    boolean isStringifyMapKeys();
+
+    /**
      * @return boolean will return true if NAN and Infinity are allowed to be written out for
      * Doubles and Floats, else null will be written out. Default is false.
      */

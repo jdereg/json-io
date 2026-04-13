@@ -81,6 +81,7 @@ class Json5MetaKeyPrefixTest {
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .json5()
                 .showTypeInfoMinimal()
+                .stringifyMapKeys(false)  // disable stringify to test $keys/$items prefix
                 .build();
 
         // Create a Map with non-String keys to force @keys/@items usage
@@ -261,6 +262,7 @@ class Json5MetaKeyPrefixTest {
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .json5()
                 .showTypeInfoMinimal()
+                .stringifyMapKeys(false)  // disable stringify to test $keys/$items round-trip
                 .build();
 
         Map<Integer, String> original = new LinkedHashMap<>();
@@ -362,6 +364,7 @@ class Json5MetaKeyPrefixTest {
                 .json5()
                 .shortMetaKeys(true)
                 .showTypeInfoMinimal()
+                .stringifyMapKeys(false)  // disable stringify to test $k/$e prefix
                 .build();
 
         // Create a Map with non-String keys to force @keys/@items usage
@@ -472,6 +475,7 @@ class Json5MetaKeyPrefixTest {
                 .json5()
                 .shortMetaKeys(true)
                 .showTypeInfoMinimal()
+                .stringifyMapKeys(false)  // disable stringify to test $k/$e round-trip
                 .build();
 
         Map<Integer, String> original = new LinkedHashMap<>();
@@ -848,6 +852,7 @@ class Json5MetaKeyPrefixTest {
                 .json5()
                 .showTypeInfoMinimal()
                 .useMetaPrefixAt()
+                .stringifyMapKeys(false)  // disable stringify to test @keys/@items prefix
                 .build();
 
         Map<Integer, String> map = new LinkedHashMap<>();

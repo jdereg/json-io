@@ -110,6 +110,7 @@ public class WriteOptionsBuilder {
     private static volatile boolean BASE_WRITE_LONGS_AS_STRINGS = false;
     private static volatile boolean BASE_SKIP_NULL_FIELDS = false;
     private static volatile boolean BASE_FORCE_MAP_OUTPUT_AS_TWO_ARRAYS = false;
+    private static volatile boolean BASE_STRINGIFY_MAP_KEYS = false;
     private static volatile boolean BASE_ALLOW_NAN_AND_INFINITY = false;
     private static volatile boolean BASE_ENUM_PUBLIC_FIELDS_ONLY = false;
     private static volatile boolean BASE_ENUM_SET_WRITTEN_OLD_WAY = true;
@@ -195,6 +196,7 @@ public class WriteOptionsBuilder {
         options.writeLongsAsStrings = BASE_WRITE_LONGS_AS_STRINGS;
         options.skipNullFields = BASE_SKIP_NULL_FIELDS;
         options.forceMapOutputAsTwoArrays = BASE_FORCE_MAP_OUTPUT_AS_TWO_ARRAYS;
+        options.stringifyMapKeys = BASE_STRINGIFY_MAP_KEYS;
         options.allowNanAndInfinity = BASE_ALLOW_NAN_AND_INFINITY;
         options.enumPublicFieldsOnly = BASE_ENUM_PUBLIC_FIELDS_ONLY;
         options.enumSetWrittenOldWay = BASE_ENUM_SET_WRITTEN_OLD_WAY;
@@ -228,6 +230,7 @@ public class WriteOptionsBuilder {
             options.enumPublicFieldsOnly = other.enumPublicFieldsOnly;
             options.enumSetWrittenOldWay = other.enumSetWrittenOldWay;
             options.forceMapOutputAsTwoArrays = other.forceMapOutputAsTwoArrays;
+            options.stringifyMapKeys = other.stringifyMapKeys;
             options.prettyPrint = other.prettyPrint;
             options.lruSize = other.lruSize;
             options.shortMetaKeys = other.shortMetaKeys;
@@ -656,6 +659,18 @@ public class WriteOptionsBuilder {
     }
 
     /**
+     * Call this method to set a permanent (JVM lifetime) stringify map keys setting.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     *
+     * @param stringifyMapKeys boolean true will convert non-String map keys that have a bidirectional
+     *                         String conversion (via Converter) to stringified keys in standard JSON
+     *                         object format. Default is false.
+     */
+    public static void addPermanentStringifyMapKeys(boolean stringifyMapKeys) {
+        BASE_STRINGIFY_MAP_KEYS = stringifyMapKeys;
+    }
+
+    /**
      * Call this method to set a permanent (JVM lifetime) allow NaN and Infinity setting.
      * All WriteOptions instances will be initialized with this value unless explicitly overridden.
      * 
@@ -939,6 +954,20 @@ public class WriteOptionsBuilder {
     }
 
     /**
+     * @param stringifyMapKeys boolean true will convert non-String map keys that have a bidirectional
+     *                         String conversion (via Converter) to stringified keys in standard JSON
+     *                         object format (e.g., {"100": "value"} for Map&lt;Long, String&gt;).
+     *                         Complex POJO keys without a bidirectional String conversion still use
+     *                         @keys/@items.  forceMapOutputAsTwoArrays(true) overrides this setting.
+     *                         Default is false for JSON, true for JSON5.
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder stringifyMapKeys(boolean stringifyMapKeys) {
+        options.stringifyMapKeys = stringifyMapKeys;
+        return this;
+    }
+
+    /**
      * @param allowNanAndInfinity boolean 'allowNanAndInfinity' setting.  true will allow
      *                            Double and Floats to be output as NAN and INFINITY, false
      *                            and these values will come across as null.
@@ -1103,6 +1132,7 @@ public class WriteOptionsBuilder {
         options.json5InfinityNaN = true;
         options.showTypeInfo = WriteOptions.ShowType.NEVER;
         options.cycleSupport = false;
+        options.stringifyMapKeys = true;
         return this;
     }
 
@@ -1632,6 +1662,7 @@ public class WriteOptionsBuilder {
         private boolean writeLongsAsStrings = false;
         private boolean skipNullFields = false;
         private boolean forceMapOutputAsTwoArrays = false;
+        private boolean stringifyMapKeys = false;
         private boolean allowNanAndInfinity = false;
         private boolean enumPublicFieldsOnly = false;
         private boolean enumSetWrittenOldWay = true;
@@ -1899,6 +1930,14 @@ public class WriteOptionsBuilder {
          */
         public boolean isForceMapOutputAsTwoArrays() {
             return forceMapOutputAsTwoArrays;
+        }
+
+        /**
+         * @return boolean true indicates that non-String map keys with bidirectional String conversions
+         * will be stringified and written as regular JSON object keys. Default is false for JSON, true for JSON5.
+         */
+        public boolean isStringifyMapKeys() {
+            return stringifyMapKeys;
         }
 
         /**

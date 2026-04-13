@@ -275,4 +275,242 @@ class StringKeyConversionTest {
         assertThat(holder.map).isNotNull();
         assertThat(holder.map).isEmpty();
     }
+
+    // ========== WRITE-SIDE TESTS: stringifyMapKeys option ==========
+
+    private static final WriteOptions STRINGIFY_ON = new WriteOptionsBuilder()
+            .showTypeInfoNever()
+            .stringifyMapKeys(true)
+            .build();
+
+    private static final WriteOptions STRINGIFY_OFF = new WriteOptionsBuilder()
+            .showTypeInfoNever()
+            .stringifyMapKeys(false)
+            .build();
+
+    @Test
+    void testWriteLongKeysStringified() {
+        Map<Long, String> map = new LinkedHashMap<>();
+        map.put(100L, "alpha");
+        map.put(200L, "beta");
+
+        String json = JsonIo.toJson(map, STRINGIFY_ON);
+
+        // Should be standard JSON object, not @keys/@items
+        assertThat(json).contains("\"100\"");
+        assertThat(json).contains("\"200\"");
+        assertThat(json).doesNotContain("@keys");
+        assertThat(json).doesNotContain("@items");
+    }
+
+    @Test
+    void testWriteLongKeysDefaultOff() {
+        Map<Long, String> map = new LinkedHashMap<>();
+        map.put(100L, "alpha");
+        map.put(200L, "beta");
+
+        String json = JsonIo.toJson(map, STRINGIFY_OFF);
+
+        // Default off — should use @keys/@items
+        assertThat(json).contains("@keys");
+        assertThat(json).contains("@items");
+    }
+
+    @Test
+    void testWriteIntegerKeysStringified() {
+        Map<Integer, String> map = new LinkedHashMap<>();
+        map.put(42, "answer");
+        map.put(7, "lucky");
+
+        String json = JsonIo.toJson(map, STRINGIFY_ON);
+
+        assertThat(json).contains("\"42\"");
+        assertThat(json).contains("\"7\"");
+        assertThat(json).doesNotContain("@keys");
+    }
+
+    @Test
+    void testWriteUUIDKeysStringified() {
+        UUID uuid1 = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
+        Map<UUID, String> map = new LinkedHashMap<>();
+        map.put(uuid1, "first");
+
+        String json = JsonIo.toJson(map, STRINGIFY_ON);
+
+        assertThat(json).contains("\"550e8400-e29b-41d4-a716-446655440000\"");
+        assertThat(json).doesNotContain("@keys");
+    }
+
+    @Test
+    void testWriteBooleanKeysStringified() {
+        Map<Boolean, String> map = new LinkedHashMap<>();
+        map.put(true, "yes");
+        map.put(false, "no");
+
+        String json = JsonIo.toJson(map, STRINGIFY_ON);
+
+        assertThat(json).contains("\"true\"");
+        assertThat(json).contains("\"false\"");
+        assertThat(json).doesNotContain("@keys");
+    }
+
+    @Test
+    void testWriteBigDecimalKeysStringified() {
+        Map<BigDecimal, String> map = new LinkedHashMap<>();
+        map.put(new BigDecimal("123.456"), "a");
+
+        String json = JsonIo.toJson(map, STRINGIFY_ON);
+
+        assertThat(json).contains("\"123.456\"");
+        assertThat(json).doesNotContain("@keys");
+    }
+
+    @Test
+    void testWriteCharacterKeysStringified() {
+        Map<Character, String> map = new LinkedHashMap<>();
+        map.put('A', "alpha");
+        map.put('Z', "zulu");
+
+        String json = JsonIo.toJson(map, STRINGIFY_ON);
+
+        assertThat(json).contains("\"A\"");
+        assertThat(json).contains("\"Z\"");
+        assertThat(json).doesNotContain("@keys");
+    }
+
+    @Test
+    void testWriteStringKeysUnaffected() {
+        // String-keyed maps should work the same regardless of stringifyMapKeys setting
+        Map<String, String> map = new LinkedHashMap<>();
+        map.put("hello", "world");
+
+        String jsonOn = JsonIo.toJson(map, STRINGIFY_ON);
+        String jsonOff = JsonIo.toJson(map, STRINGIFY_OFF);
+
+        assertThat(jsonOn).contains("\"hello\"");
+        assertThat(jsonOff).contains("\"hello\"");
+        assertThat(jsonOn).doesNotContain("@keys");
+        assertThat(jsonOff).doesNotContain("@keys");
+    }
+
+    @Test
+    void testForceMapOutputOverridesStringify() {
+        // forceMapOutputAsTwoArrays should override stringifyMapKeys
+        WriteOptions forceArrays = new WriteOptionsBuilder()
+                .showTypeInfoNever()
+                .stringifyMapKeys(true)
+                .forceMapOutputAsTwoArrays(true)
+                .build();
+
+        Map<Long, String> map = new LinkedHashMap<>();
+        map.put(100L, "alpha");
+
+        String json = JsonIo.toJson(map, forceArrays);
+
+        assertThat(json).contains("@keys");
+        assertThat(json).contains("@items");
+    }
+
+    @Test
+    void testJson5DefaultsStringifyOn() {
+        // JSON5 mode should default stringifyMapKeys to true
+        WriteOptions json5Options = new WriteOptionsBuilder()
+                .json5()
+                .build();
+
+        Map<Long, String> map = new LinkedHashMap<>();
+        map.put(100L, "alpha");
+        map.put(200L, "beta");
+
+        String json = JsonIo.toJson(map, json5Options);
+
+        assertThat(json).doesNotContain("@keys");
+        assertThat(json).doesNotContain("$keys");
+    }
+
+    @Test
+    void testRoundTripLongKeysStringified() {
+        // Full round-trip: write with stringify → read back → verify typed keys
+        LongKeyHolder original = new LongKeyHolder();
+        original.map = new LinkedHashMap<>();
+        original.map.put(100L, "alpha");
+        original.map.put(200L, "beta");
+        original.map.put(-50L, "negative");
+
+        WriteOptions writeOpts = new WriteOptionsBuilder()
+                .stringifyMapKeys(true)
+                .build();
+        String json = JsonIo.toJson(original, writeOpts);
+
+        // Verify it's standard JSON format (no @keys/@items)
+        assertThat(json).doesNotContain("@keys");
+
+        LongKeyHolder restored = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(LongKeyHolder.class);
+
+        assertThat(restored.map).hasSize(3);
+        assertThat(restored.map.get(100L)).isEqualTo("alpha");
+        assertThat(restored.map.get(200L)).isEqualTo("beta");
+        assertThat(restored.map.get(-50L)).isEqualTo("negative");
+        for (Object key : restored.map.keySet()) {
+            assertThat(key).isInstanceOf(Long.class);
+        }
+    }
+
+    @Test
+    void testRoundTripUUIDKeysStringified() {
+        UUID uuid1 = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
+        UUID uuid2 = UUID.fromString("6ba7b810-9dad-11d1-80b4-00c04fd430c8");
+
+        UUIDKeyHolder original = new UUIDKeyHolder();
+        original.map = new LinkedHashMap<>();
+        original.map.put(uuid1, "first");
+        original.map.put(uuid2, "second");
+
+        WriteOptions writeOpts = new WriteOptionsBuilder()
+                .stringifyMapKeys(true)
+                .build();
+        String json = JsonIo.toJson(original, writeOpts);
+        assertThat(json).doesNotContain("@keys");
+
+        UUIDKeyHolder restored = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(UUIDKeyHolder.class);
+
+        assertThat(restored.map).hasSize(2);
+        assertThat(restored.map.get(uuid1)).isEqualTo("first");
+        assertThat(restored.map.get(uuid2)).isEqualTo("second");
+    }
+
+    @Test
+    void testRoundTripIntegerKeysStringified() {
+        IntegerKeyHolder original = new IntegerKeyHolder();
+        original.map = new LinkedHashMap<>();
+        original.map.put(42, "answer");
+        original.map.put(0, "zero");
+        original.map.put(-1, "minus");
+
+        WriteOptions writeOpts = new WriteOptionsBuilder()
+                .stringifyMapKeys(true)
+                .build();
+        String json = JsonIo.toJson(original, writeOpts);
+        assertThat(json).doesNotContain("@keys");
+
+        IntegerKeyHolder restored = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(IntegerKeyHolder.class);
+
+        assertThat(restored.map).hasSize(3);
+        assertThat(restored.map.get(42)).isEqualTo("answer");
+        assertThat(restored.map.get(0)).isEqualTo("zero");
+        assertThat(restored.map.get(-1)).isEqualTo("minus");
+        for (Object key : restored.map.keySet()) {
+            assertThat(key).isInstanceOf(Integer.class);
+        }
+    }
+
+    @Test
+    void testEmptyMapStringified() {
+        Map<Long, String> map = new LinkedHashMap<>();
+
+        String json = JsonIo.toJson(map, STRINGIFY_ON);
+
+        assertThat(json).doesNotContain("@keys");
+        assertThat(json).contains("{}");
+    }
 }
