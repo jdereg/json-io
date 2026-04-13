@@ -513,4 +513,54 @@ class StringKeyConversionTest {
         assertThat(json).doesNotContain("@keys");
         assertThat(json).contains("{}");
     }
+
+    // ========== standardJson() convenience method tests ==========
+
+    @Test
+    void testStandardJsonProducesNoMetadata() {
+        LongKeyHolder original = new LongKeyHolder();
+        original.map = new LinkedHashMap<>();
+        original.map.put(100L, "alpha");
+        original.map.put(200L, "beta");
+
+        WriteOptions opts = new WriteOptionsBuilder().standardJson().build();
+        String json = JsonIo.toJson(original, opts);
+
+        // No proprietary metadata
+        assertThat(json).doesNotContain("@type");
+        assertThat(json).doesNotContain("@keys");
+        assertThat(json).doesNotContain("@items");
+        assertThat(json).doesNotContain("@id");
+        // Stringified Long keys
+        assertThat(json).contains("\"100\"");
+        assertThat(json).contains("\"200\"");
+    }
+
+    @Test
+    void testStandardJsonRoundTrip() {
+        LongKeyHolder original = new LongKeyHolder();
+        original.map = new LinkedHashMap<>();
+        original.map.put(100L, "alpha");
+
+        WriteOptions writeOpts = new WriteOptionsBuilder().standardJson().build();
+        String json = JsonIo.toJson(original, writeOpts);
+
+        // Read back with type info (need @type on the wire or explicit target class)
+        LongKeyHolder restored = JsonIo.toJava(json, new ReadOptionsBuilder().build()).asClass(LongKeyHolder.class);
+
+        assertThat(restored.map).hasSize(1);
+        assertThat(restored.map.get(100L)).isEqualTo("alpha");
+    }
+
+    @Test
+    void testStandardJsonChainableOverride() {
+        // standardJson() then override one setting
+        WriteOptions opts = new WriteOptionsBuilder()
+                .standardJson()
+                .stringifyMapKeys(false)  // override just this one
+                .build();
+
+        assertThat(opts.isStringifyMapKeys()).isFalse();
+        assertThat(opts.isNeverShowingType()).isTrue();  // standardJson() set this
+    }
 }
