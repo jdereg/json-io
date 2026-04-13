@@ -1117,6 +1117,7 @@ public class WriteOptionsBuilder {
      *   <li>showRootTypeInfo(false) - No @type on the root object either</li>
      *   <li>cycleSupport(false) - No @id/@ref cycle tracking</li>
      *   <li>stringifyMapKeys(true) - Map&lt;Long, V&gt; writes {"100": value} not @keys/@items</li>
+     *   <li>useMetaPrefixDollar - Uses $ prefix for any remaining metadata ($type, $keys, etc.)</li>
      * </ul>
      * The resulting JSON is identical to what Jackson produces for the same objects (POJOs, Lists,
      * Maps with String/numeric/UUID/Enum keys). Individual settings can be overridden after this call.
@@ -1130,6 +1131,7 @@ public class WriteOptionsBuilder {
         options.showRootTypeInfo = false;
         options.cycleSupport = false;
         options.stringifyMapKeys = true;
+        options.metaPrefixOverride = '$';
         return this;
     }
 
