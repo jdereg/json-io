@@ -2259,7 +2259,6 @@ public class ToonWriter implements Closeable, Flushable {
                 value = applyFormatPattern(value, formatPattern);
             }
             String key = plan.accessor().getUniqueFieldName();
-            String toonKey = plan.toonKeyLiteral();
 
             if (wroteField) {
                 out.write(NEW_LINE);
@@ -2268,32 +2267,7 @@ public class ToonWriter implements Closeable, Flushable {
             writeIndent();
             boolean savedForceShowType = forceShowType;
             forceShowType = plan.forceShowType();
-
-            // Fast path: primitive/String values with pre-computed TOON key literal.
-            // Bypasses writeFieldEntry's container-type checks and writeKeyString's
-            // needsQuoting cache lookup. The toonKey is pre-computed once at plan-build
-            // time as "fieldName: " (or "\"fieldName\": " for the rare key needing quoting).
-            if (value == null) {
-                out.write(toonKey);
-                out.write("null");
-            } else if (value instanceof String) {
-                out.write(toonKey);
-                writeString((String) value);
-            } else if (value instanceof Integer) {
-                out.write(toonKey);
-                out.write(toCachedLongString((Integer) value));
-            } else if (value instanceof Long) {
-                out.write(toonKey);
-                out.write(toCachedLongString((Long) value));
-            } else if (value instanceof Boolean) {
-                out.write(toonKey);
-                out.write(((Boolean) value) ? "true" : "false");
-            } else if (value instanceof Double) {
-                out.write(toonKey);
-                writeNumber((Number) value);
-            } else {
-                writeFieldEntry(key, value);
-            }
+            writeFieldEntry(key, value);
             forceShowType = savedForceShowType;
         }
 
