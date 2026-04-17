@@ -171,8 +171,23 @@ String json = JsonIo.toJson(myObject, options);
 ```
 
 This sets: `showTypeInfoNever`, `showRootTypeInfo(false)`, `cycleSupport(false)`, `stringifyMapKeys(true)`,
-and `useMetaPrefixDollar()`. These will become the defaults in json-io 5.0.0. Individual settings can be
-overridden after the call (e.g., `.standardJson().cycleSupport(true)`).
+`writeOptionalAsObject(false)`, and `useMetaPrefixDollar()`. These will become the defaults in json-io 5.0.0.
+Individual settings can be overridden after the call (e.g., `.standardJson().cycleSupport(true)`).
+
+### `Optional` Serialization
+
+As of json-io 4.101.0, `Optional`, `OptionalInt`, `OptionalLong`, and `OptionalDouble` values are
+serialized in Jackson/Gson-compatible primitive form by default for JSON, JSON5, and TOON:
+
+- `Optional.empty()` → `null`
+- `Optional.of("hello")` → `"hello"` (bare value)
+- `OptionalInt.of(42)` → `42` (bare number)
+
+Reading accepts both the primitive form and the legacy json-io object form
+`{"present":true,"value":X}` so JSON produced by older json-io versions still deserializes correctly.
+When interoperating with **pre-4.101.0** json-io readers (that cannot parse the primitive form), call
+`writeOptionalAsObject(true)` on the WriteOptionsBuilder. `standardJson()` always resets this toggle to
+`false` for maximum interoperability.
 
 See [WriteOptions reference](/user-guide-writeOptions.md#standard-json-output--standardjson) for details.
 

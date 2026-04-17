@@ -358,6 +358,46 @@ public class ToonWriter implements Closeable, Flushable {
             return;
         }
 
+        // Optional / OptionalInt / OptionalLong / OptionalDouble — always write
+        // Jackson-compatible primitive form (bare value or null). TOON does not
+        // support the legacy object form since it's too new to need backward-compat.
+        if (value instanceof java.util.Optional) {
+            java.util.Optional<?> opt = (java.util.Optional<?>) value;
+            if (opt.isPresent()) {
+                writeValue(opt.get());
+            } else {
+                out.write("null");
+            }
+            return;
+        }
+        if (value instanceof java.util.OptionalInt) {
+            java.util.OptionalInt opt = (java.util.OptionalInt) value;
+            if (opt.isPresent()) {
+                out.write(toCachedLongString(opt.getAsInt()));
+            } else {
+                out.write("null");
+            }
+            return;
+        }
+        if (value instanceof java.util.OptionalLong) {
+            java.util.OptionalLong opt = (java.util.OptionalLong) value;
+            if (opt.isPresent()) {
+                out.write(toCachedLongString(opt.getAsLong()));
+            } else {
+                out.write("null");
+            }
+            return;
+        }
+        if (value instanceof java.util.OptionalDouble) {
+            java.util.OptionalDouble opt = (java.util.OptionalDouble) value;
+            if (opt.isPresent()) {
+                writeNumber(opt.getAsDouble());
+            } else {
+                out.write("null");
+            }
+            return;
+        }
+
         Class<?> clazz = value.getClass();
 
         switch (writeTypeCache.get(clazz)) {
@@ -1791,6 +1831,17 @@ public class ToonWriter implements Closeable, Flushable {
             out.write(": null");
             return;
         }
+        // Optional types — unwrap and write the bare value or null (Jackson-style).
+        // TOON is new enough that there is no legacy object form to preserve.
+        if (value instanceof java.util.Optional
+                || value instanceof java.util.OptionalInt
+                || value instanceof java.util.OptionalLong
+                || value instanceof java.util.OptionalDouble) {
+            writeKeyString(keyStr);
+            out.write(": ");
+            writeValue(value);
+            return;
+        }
         if (value instanceof String) {
             writeKeyString(keyStr);
             out.write(": ");
@@ -1908,6 +1959,16 @@ public class ToonWriter implements Closeable, Flushable {
         if (value == null) {
             writeKeyString(keyStr);
             out.write(": null");
+            return;
+        }
+        // Optional types — unwrap (Jackson-style) before falling into the primitive paths.
+        if (value instanceof java.util.Optional
+                || value instanceof java.util.OptionalInt
+                || value instanceof java.util.OptionalLong
+                || value instanceof java.util.OptionalDouble) {
+            writeKeyString(keyStr);
+            out.write(": ");
+            writeValue(value);
             return;
         }
         if (value instanceof String) {

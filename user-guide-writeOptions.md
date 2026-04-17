@@ -415,6 +415,60 @@ Handling special floating point values such as NaN (Not a Number) and Infinity (
 >- [ ] true will allow `doubles` and `floats` to be output as `NaN` and `INFINITY,` `false` and these values will come across
    as `null.`
 
+### `Optional`, `OptionalInt`, `OptionalLong`, `OptionalDouble` Output
+
+By default, `json-io` writes `java.util.Optional` values (and the three primitive
+variants `OptionalInt`, `OptionalLong`, `OptionalDouble`) in the same primitive
+form that Jackson (with `Jdk8Module`) and other mainstream JSON libraries use:
+
+- `Optional.empty()` → `null`
+- `Optional.of(value)` → the bare `value` (no `{...}` wrapping)
+- `OptionalInt.of(42)` → `42`
+- `OptionalDouble.of(3.14)` → `3.14`
+
+This produces standard JSON that any other JSON library can consume. The same
+behavior is used for JSON5 and TOON output — they never emitted the legacy
+form, so no toggle applies there.
+
+On the read side, json-io accepts **both** the primitive form (for
+interoperability with Jackson/Gson and for JSON produced by json-io 4.101.0+)
+**and** the legacy object form `{"present":true,"value":X}` (for JSON produced
+by older json-io versions). Field-type-aware coercion wraps scalars and nulls
+into the appropriate Optional variant based on the declared field type.
+
+#### Legacy Object Form
+
+If you need to interoperate with **pre-4.101.0** json-io readers that do not
+understand the primitive form, enable `writeOptionalAsObject(true)`. json-io
+will then emit the legacy form:
+
+- `Optional.empty()` → `{"present":false}`
+- `Optional.of("hello")` → `{"present":true,"value":"hello"}`
+
+>#### `boolean` isWriteOptionalAsObject()
+>- [ ] Returns `true` if `Optional*` values are written in the legacy object form,
+      `false` (default) if they are written in Jackson-compatible primitive form.
+
+>#### `WriteOptionsBuilder` writeOptionalAsObject(`boolean writeOptionalAsObject`)
+>- [ ] `true` emits the legacy `{"present":X,"value":Y}` form. `false` (default)
+      emits Jackson-compatible primitive form. `standardJson()` always resets this
+      to `false`.
+
+Example:
+```java
+// Default — Jackson-compatible primitive form:
+WriteOptions opts = new WriteOptionsBuilder().build();
+String json = JsonIo.toJson(pojoWithOptionalFields, opts);
+// → {"name":"Alice","middleName":null,"age":30}
+
+// Legacy form — only needed for pre-4.101.0 readers:
+WriteOptions legacyOpts = new WriteOptionsBuilder()
+        .writeOptionalAsObject(true)
+        .build();
+String json2 = JsonIo.toJson(pojoWithOptionalFields, legacyOpts);
+// → {"name":{"present":true,"value":"Alice"},"middleName":{"present":false},...}
+```
+
 ### Enum Options in `json-io`
 
 Enums in Java are commonly used as a discrete list of values, but there are instances where additional fields are added to these enums. These fields can be either public or private, depending on the design requirements.
@@ -1317,6 +1371,10 @@ Sets the permanent force map output as two arrays setting for all new `WriteOpti
 ### addPermanentStringifyMapKeys
 Sets the permanent stringify map keys setting for all new `WriteOptions` instances. When enabled, non-String map keys with bidirectional String conversions (Long, Integer, UUID, Enum, BigDecimal, Date, etc.) are written as stringified keys in standard JSON object format instead of `@keys`/`@items`. Default is `false`.
 >#### WriteOptionsBuilder.addPermanentStringifyMapKeys(`boolean stringifyMapKeys`)
+
+### addPermanentWriteOptionalAsObject
+Sets the permanent writeOptionalAsObject setting for all new `WriteOptions` instances. When enabled, `Optional`, `OptionalInt`, `OptionalLong`, and `OptionalDouble` values are written in the legacy json-io object form (`{"present":X,"value":Y}`) instead of Jackson-compatible primitive form (bare value or `null`). Default is `false`.
+>#### WriteOptionsBuilder.addPermanentWriteOptionalAsObject(`boolean writeOptionalAsObject`)
 
 ### addPermanentAllowNanAndInfinity
 Sets the permanent allow NaN and Infinity setting for all new `WriteOptions` instances. When enabled, Double and Float NaN and Infinity values are serialized as-is rather than converted to null.

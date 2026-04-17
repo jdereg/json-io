@@ -698,15 +698,54 @@ public abstract class Resolver {
      * Checks type compatibility and converts if necessary.
      */
     private Object convertToType(Object value, Type targetType) {
-        if (targetType == null || value == null) {
+        if (targetType == null) {
             return value;
         }
 
         Class<?> targetClass = TypeUtilities.getRawClass(targetType);
 
+        // Null + Optional target → the empty variant (Jackson convention).
+        if (value == null) {
+            if (targetClass == java.util.Optional.class) return java.util.Optional.empty();
+            if (targetClass == java.util.OptionalInt.class) return java.util.OptionalInt.empty();
+            if (targetClass == java.util.OptionalLong.class) return java.util.OptionalLong.empty();
+            if (targetClass == java.util.OptionalDouble.class) return java.util.OptionalDouble.empty();
+            return value;
+        }
+
         // 1. Already the right type (exact or subtype match)
         if (targetClass.isInstance(value)) {
             return value;
+        }
+
+        // 1b. Target is an Optional type — wrap the value in Jackson-compatible primitive form.
+        //     null is handled at method top; here value is non-null.
+        if (targetClass == java.util.OptionalInt.class) {
+            return java.util.OptionalInt.of(converter.convert(value, int.class));
+        }
+        if (targetClass == java.util.OptionalLong.class) {
+            return java.util.OptionalLong.of(converter.convert(value, long.class));
+        }
+        if (targetClass == java.util.OptionalDouble.class) {
+            return java.util.OptionalDouble.of(converter.convert(value, double.class));
+        }
+        if (targetClass == java.util.Optional.class) {
+            Class<?> innerRaw = Object.class;
+            if (targetType instanceof java.lang.reflect.ParameterizedType) {
+                java.lang.reflect.Type[] args =
+                        ((java.lang.reflect.ParameterizedType) targetType).getActualTypeArguments();
+                if (args.length > 0) {
+                    Class<?> t = TypeUtilities.getRawClass(args[0]);
+                    if (t != null) {
+                        innerRaw = t;
+                    }
+                }
+            }
+            if (innerRaw != Object.class && !innerRaw.isInstance(value)
+                    && converter.isConversionSupportedFor(value.getClass(), innerRaw)) {
+                return java.util.Optional.of(converter.convert(value, innerRaw));
+            }
+            return java.util.Optional.of(value);
         }
 
         // 2. Collection interface compatibility (for Sealable types)

@@ -89,6 +89,18 @@ public interface WriteOptions {
     boolean isStringifyMapKeys();
 
     /**
+     * @return boolean true indicates that {@code Optional}, {@code OptionalInt},
+     * {@code OptionalLong}, and {@code OptionalDouble} values should be written in the
+     * legacy json-io object form (e.g. {@code {"present":true,"value":"hello"}}) rather
+     * than the Jackson/Gson-compatible primitive form (bare value for present, {@code null}
+     * for empty). Default is {@code false} — Optional values are written in the
+     * Jackson-compatible primitive form. Set this to {@code true} only when interoperating
+     * with pre-4.101.0 json-io readers that do not understand the primitive form.
+     * {@code standardJson()} always resets this to {@code false}.
+     */
+    boolean isWriteOptionalAsObject();
+
+    /**
      * @return boolean will return true if NAN and Infinity are allowed to be written out for
      * Doubles and Floats, else null will be written out. Default is false.
      */

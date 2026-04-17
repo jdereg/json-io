@@ -111,6 +111,7 @@ public class WriteOptionsBuilder {
     private static volatile boolean BASE_SKIP_NULL_FIELDS = false;
     private static volatile boolean BASE_FORCE_MAP_OUTPUT_AS_TWO_ARRAYS = false;
     private static volatile boolean BASE_STRINGIFY_MAP_KEYS = false;
+    private static volatile boolean BASE_WRITE_OPTIONAL_AS_OBJECT = false;
     private static volatile boolean BASE_ALLOW_NAN_AND_INFINITY = false;
     private static volatile boolean BASE_ENUM_PUBLIC_FIELDS_ONLY = false;
     private static volatile boolean BASE_ENUM_SET_WRITTEN_OLD_WAY = true;
@@ -197,6 +198,7 @@ public class WriteOptionsBuilder {
         options.skipNullFields = BASE_SKIP_NULL_FIELDS;
         options.forceMapOutputAsTwoArrays = BASE_FORCE_MAP_OUTPUT_AS_TWO_ARRAYS;
         options.stringifyMapKeys = BASE_STRINGIFY_MAP_KEYS;
+        options.writeOptionalAsObject = BASE_WRITE_OPTIONAL_AS_OBJECT;
         options.allowNanAndInfinity = BASE_ALLOW_NAN_AND_INFINITY;
         options.enumPublicFieldsOnly = BASE_ENUM_PUBLIC_FIELDS_ONLY;
         options.enumSetWrittenOldWay = BASE_ENUM_SET_WRITTEN_OLD_WAY;
@@ -231,6 +233,7 @@ public class WriteOptionsBuilder {
             options.enumSetWrittenOldWay = other.enumSetWrittenOldWay;
             options.forceMapOutputAsTwoArrays = other.forceMapOutputAsTwoArrays;
             options.stringifyMapKeys = other.stringifyMapKeys;
+            options.writeOptionalAsObject = other.writeOptionalAsObject;
             options.prettyPrint = other.prettyPrint;
             options.lruSize = other.lruSize;
             options.shortMetaKeys = other.shortMetaKeys;
@@ -671,6 +674,19 @@ public class WriteOptionsBuilder {
     }
 
     /**
+     * Call this method to set a permanent (JVM lifetime) writeOptionalAsObject setting.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     *
+     * @param writeOptionalAsObject boolean {@code true} forces {@code Optional*} types to be
+     *                              written in the legacy object form ({@code {"present":X,"value":Y}});
+     *                              {@code false} (default) writes them in Jackson-compatible primitive
+     *                              form (bare value or {@code null}).
+     */
+    public static void addPermanentWriteOptionalAsObject(boolean writeOptionalAsObject) {
+        BASE_WRITE_OPTIONAL_AS_OBJECT = writeOptionalAsObject;
+    }
+
+    /**
      * Call this method to set a permanent (JVM lifetime) allow NaN and Infinity setting.
      * All WriteOptions instances will be initialized with this value unless explicitly overridden.
      * 
@@ -968,6 +984,28 @@ public class WriteOptionsBuilder {
     }
 
     /**
+     * Controls the serialization format for {@link java.util.Optional}, {@link java.util.OptionalInt},
+     * {@link java.util.OptionalLong}, and {@link java.util.OptionalDouble}.
+     * <p>
+     * When {@code false} (default), Optional values are written in Jackson/Gson-compatible primitive form:
+     * empty becomes {@code null} and present becomes the bare value (e.g. {@code "hello"}, {@code 42}).
+     * <p>
+     * When {@code true}, Optional values are written in the legacy json-io object form:
+     * {@code {"present":true,"value":X}} or {@code {"present":false}}. Enable this flag only when
+     * interoperating with pre-4.101.0 json-io readers that do not understand the primitive form.
+     * <p>
+     * Note: {@link #standardJson()} always resets this to {@code false}.
+     *
+     * @param writeOptionalAsObject {@code true} to use the legacy object form; {@code false} (default)
+     *                              for Jackson-compatible primitive form.
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder writeOptionalAsObject(boolean writeOptionalAsObject) {
+        options.writeOptionalAsObject = writeOptionalAsObject;
+        return this;
+    }
+
+    /**
      * @param allowNanAndInfinity boolean 'allowNanAndInfinity' setting.  true will allow
      *                            Double and Floats to be output as NAN and INFINITY, false
      *                            and these values will come across as null.
@@ -1117,10 +1155,13 @@ public class WriteOptionsBuilder {
      *   <li>showRootTypeInfo(false) - No @type on the root object either</li>
      *   <li>cycleSupport(false) - No @id/@ref cycle tracking</li>
      *   <li>stringifyMapKeys(true) - Map&lt;Long, V&gt; writes {"100": value} not @keys/@items</li>
+     *   <li>writeOptionalAsObject(false) - Optional values write as bare value / null (Jackson-compatible)</li>
      *   <li>useMetaPrefixDollar - Uses $ prefix for any remaining metadata ($type, $keys, etc.)</li>
      * </ul>
      * The resulting JSON is identical to what Jackson produces for the same objects (POJOs, Lists,
-     * Maps with String/numeric/UUID/Enum keys). Individual settings can be overridden after this call.
+     * Maps with String/numeric/UUID/Enum keys, Optional values). Individual settings can be overridden
+     * after this call (for example, call {@code .writeOptionalAsObject(true)} to re-enable the legacy
+     * Optional object form).
      * <p>
      * In json-io 5.0.0, these will become the defaults. This method allows 4.x users to opt in early
      * and ensures interoperability with systems using Jackson or other standard JSON libraries.
@@ -1131,6 +1172,7 @@ public class WriteOptionsBuilder {
         options.showRootTypeInfo = false;
         options.cycleSupport = false;
         options.stringifyMapKeys = true;
+        options.writeOptionalAsObject = false;
         options.metaPrefixOverride = '$';
         return this;
     }
@@ -1160,6 +1202,7 @@ public class WriteOptionsBuilder {
         options.showTypeInfo = WriteOptions.ShowType.NEVER;
         options.cycleSupport = false;
         options.stringifyMapKeys = true;
+        options.writeOptionalAsObject = false;
         return this;
     }
 
@@ -1690,6 +1733,7 @@ public class WriteOptionsBuilder {
         private boolean skipNullFields = false;
         private boolean forceMapOutputAsTwoArrays = false;
         private boolean stringifyMapKeys = false;
+        private boolean writeOptionalAsObject = false;
         private boolean allowNanAndInfinity = false;
         private boolean enumPublicFieldsOnly = false;
         private boolean enumSetWrittenOldWay = true;
@@ -1965,6 +2009,10 @@ public class WriteOptionsBuilder {
          */
         public boolean isStringifyMapKeys() {
             return stringifyMapKeys;
+        }
+
+        public boolean isWriteOptionalAsObject() {
+            return writeOptionalAsObject;
         }
 
         /**

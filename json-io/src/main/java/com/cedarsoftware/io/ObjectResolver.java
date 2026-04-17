@@ -23,6 +23,10 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import com.cedarsoftware.io.reflect.AnnotationResolver;
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
@@ -383,6 +387,22 @@ public class ObjectResolver extends Resolver
             if (typeInfoDefault != null) {
                 effectiveFieldType = typeInfoDefault;
             }
+        }
+
+        // 0. OPTIONAL WRAPPING - intercept for Optional / OptionalInt / OptionalLong / OptionalDouble
+        //    fields. The Jackson-compatible primitive form of Optional is a bare value or `null`;
+        //    legacy json-io used {"present":X, "value":Y} which arrives as a JsonObject and is
+        //    still handled by OptionalFactory further down.
+        Class<?> preCheckRaw = TypeUtilities.getRawClass(effectiveFieldType);
+        if (preCheckRaw != null
+                && (preCheckRaw == Optional.class
+                    || preCheckRaw == OptionalInt.class
+                    || preCheckRaw == OptionalLong.class
+                    || preCheckRaw == OptionalDouble.class)
+                && !isLegacyOptionalJsonObject(rhs)
+                && !isOptionalInstance(rhs)) {
+            injector.inject(target, wrapAsOptional(preCheckRaw, effectiveFieldType, rhs));
+            return;
         }
 
         // 1. NULL - fastest check
@@ -1556,6 +1576,88 @@ public class ObjectResolver extends Resolver
     private static boolean isNumericPrimitive(Class<?> type) {
         return type == int.class || type == long.class || type == double.class ||
                 type == float.class || type == short.class || type == byte.class;
+    }
+
+    /**
+     * Returns true if the value is already an instance of one of the four Optional types.
+     * Used to avoid double-wrapping in assignField.
+     */
+    private static boolean isOptionalInstance(Object value) {
+        return value instanceof Optional
+                || value instanceof OptionalInt
+                || value instanceof OptionalLong
+                || value instanceof OptionalDouble;
+    }
+
+    /**
+     * Returns true if the value is a JsonObject in the legacy Optional form
+     * (contains "present" or "value" keys, or has @type=Optional). Such objects
+     * should be routed to OptionalFactory rather than wrapped as bare values.
+     */
+    private static boolean isLegacyOptionalJsonObject(Object value) {
+        if (!(value instanceof JsonObject)) {
+            return false;
+        }
+        JsonObject jObj = (JsonObject) value;
+        if (jObj.containsKey("present") || jObj.containsKey("value")) {
+            return true;
+        }
+        Class<?> t = jObj.getRawType();
+        return t == Optional.class || t == OptionalInt.class
+                || t == OptionalLong.class || t == OptionalDouble.class;
+    }
+
+    /**
+     * Wrap a raw value into the correct Optional variant, converting the inner value
+     * to the Optional's type argument when possible.
+     *
+     * @param rawType the Optional type class (Optional/OptionalInt/Long/Double.class)
+     * @param fieldType the full generic type (may be ParameterizedType for Optional&lt;T&gt;)
+     * @param rhs the scalar, null, or JsonObject value to wrap
+     * @return the wrapped Optional-ish instance
+     */
+    private Object wrapAsOptional(Class<?> rawType, Type fieldType, Object rhs) {
+        if (rawType == OptionalInt.class) {
+            if (rhs == null) return OptionalInt.empty();
+            return OptionalInt.of(converter.convert(rhs, int.class));
+        }
+        if (rawType == OptionalLong.class) {
+            if (rhs == null) return OptionalLong.empty();
+            return OptionalLong.of(converter.convert(rhs, long.class));
+        }
+        if (rawType == OptionalDouble.class) {
+            if (rhs == null) return OptionalDouble.empty();
+            return OptionalDouble.of(converter.convert(rhs, double.class));
+        }
+        // Optional<T>
+        if (rhs == null) return Optional.empty();
+
+        // Extract T from Optional<T> if present, otherwise Object.class
+        Class<?> innerType = Object.class;
+        if (fieldType instanceof ParameterizedType) {
+            Type[] args = ((ParameterizedType) fieldType).getActualTypeArguments();
+            if (args.length > 0) {
+                Class<?> t = TypeUtilities.getRawClass(args[0]);
+                if (t != null) {
+                    innerType = t;
+                }
+            }
+        }
+
+        Object innerValue;
+        if (rhs instanceof JsonObject) {
+            // Jackson-compat form: bare pojo inside Optional<Pojo>.
+            // Resolve the JsonObject through the full resolver using the inferred inner type.
+            innerValue = toJava(fieldType instanceof ParameterizedType
+                    ? ((ParameterizedType) fieldType).getActualTypeArguments()[0]
+                    : innerType, rhs);
+        } else if (innerType != Object.class && !innerType.isInstance(rhs)
+                && converter.isConversionSupportedFor(rhs.getClass(), innerType)) {
+            innerValue = converter.convert(rhs, innerType);
+        } else {
+            innerValue = rhs;
+        }
+        return Optional.ofNullable(innerValue);
     }
 
 }

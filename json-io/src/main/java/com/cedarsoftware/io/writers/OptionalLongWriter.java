@@ -2,7 +2,7 @@ package com.cedarsoftware.io.writers;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Optional;
+import java.util.OptionalLong;
 
 import com.cedarsoftware.io.JsonClassWriter;
 import com.cedarsoftware.io.JsonWriter;
@@ -10,14 +10,12 @@ import com.cedarsoftware.io.WriteOptions;
 import com.cedarsoftware.io.WriterContext;
 
 /**
- * Custom writer for {@link Optional}.
+ * Custom writer for {@link OptionalLong}.
  * <p>
- * By default, writes Optional values in Jackson/Gson-compatible primitive form:
- * {@code Optional.empty()} becomes {@code null} and {@code Optional.of(value)} becomes
- * the bare {@code value}. When {@link WriteOptions#isWriteOptionalAsObject()} is true,
- * the legacy json-io object form is used instead ({@code {"present":true,"value":X}} or
- * {@code {"present":false}}). The legacy form is also emitted whenever type info must be
- * shown for polymorphic context or when the framework has attached an {@code @id} marker.
+ * By default writes Jackson/Gson-compatible primitive form: empty → {@code null},
+ * present → the bare long value. Legacy object form is used when
+ * {@link WriteOptions#isWriteOptionalAsObject()} is true, or when the framework
+ * needs to attach type/id metadata.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -35,13 +33,11 @@ import com.cedarsoftware.io.WriterContext;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class OptionalWriter implements JsonClassWriter {
+public class OptionalLongWriter implements JsonClassWriter {
 
     @Override
     public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
-        // The framework wraps this output in { ... } and has already emitted @type if showType is true.
-        // Our job is to emit the body: valid JSON key:value pairs.
-        Optional<?> opt = (Optional<?>) obj;
+        OptionalLong opt = (OptionalLong) obj;
 
         JsonWriter.writeBasicString(output, "present");
         output.write(':');
@@ -51,26 +47,21 @@ public class OptionalWriter implements JsonClassWriter {
             output.write(',');
             JsonWriter.writeBasicString(output, "value");
             output.write(':');
-            context.writeImpl(opt.get(), true);
+            output.write(Long.toString(opt.getAsLong()));
         }
     }
 
     @Override
     public boolean hasPrimitiveForm(WriterContext context) {
-        // Primitive form is used by the framework only when !referenced && !showType.
-        // When the user has explicitly opted into the legacy object form, return false
-        // so the framework always wraps in { ... } and calls write() for the object body.
         WriteOptions wo = context.getWriteOptions();
         return wo == null || !wo.isWriteOptionalAsObject();
     }
 
     @Override
     public void writePrimitiveForm(Object obj, Writer output, WriterContext context) throws IOException {
-        Optional<?> opt = (Optional<?>) obj;
+        OptionalLong opt = (OptionalLong) obj;
         if (opt.isPresent()) {
-            // Recurse to write the contained value using the full dispatch chain
-            // (honors custom writers, cycle tracking, etc.)
-            context.writeImpl(opt.get(), true);
+            output.write(Long.toString(opt.getAsLong()));
         } else {
             output.write("null");
         }

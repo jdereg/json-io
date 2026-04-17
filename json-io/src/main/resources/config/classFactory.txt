@@ -20,6 +20,9 @@ java.util.concurrent.CountDownLatch = com.cedarsoftware.io.factory.CountDownLatc
 
 # java.util - Optional
 java.util.Optional = com.cedarsoftware.io.factory.OptionalFactory
+java.util.OptionalInt = com.cedarsoftware.io.factory.OptionalIntFactory
+java.util.OptionalLong = com.cedarsoftware.io.factory.OptionalLongFactory
+java.util.OptionalDouble = com.cedarsoftware.io.factory.OptionalDoubleFactory
 
 # java.util - BitSet
 java.util.BitSet = com.cedarsoftware.io.factory.BitSetFactory
