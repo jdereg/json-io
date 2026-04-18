@@ -123,7 +123,7 @@ every affected class), turn cycle support back on after `standardJson()`:
 ```java
 WriteOptions opts = new WriteOptionsBuilder()
         .standardJson()
-        .cycleSupport(true)    // Jackson-compatible output, but @id/@ref are emitted when shared refs exist
+        .cycleSupport(true)    // Jackson-compatible output, but $id/$ref are emitted when shared refs exist
         .build();
 ```
 
