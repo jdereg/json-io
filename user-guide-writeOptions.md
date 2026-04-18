@@ -469,6 +469,76 @@ String json2 = JsonIo.toJson(pojoWithOptionalFields, legacyOpts);
 // → {"name":{"present":true,"value":"Alice"},"middleName":{"present":false},...}
 ```
 
+### Leaf-Container Identity — `preserveLeafContainerIdentity` (4.101.0)
+
+**What it controls:** whether json-io traces shared-identity for containers whose
+declared element types are all non-referenceable leaves — `List<String>`,
+`Map<UUID, Date>`, `byte[]`, `String[]`, `Map<Long, BigDecimal>`, `List<MyEnum>`, etc.
+
+**Default (`false`)** — each reference to a leaf-element container is serialized
+independently. Two fields pointing to the same `List<String>` become two
+independent copies on the wire and on read-back. Matches Jackson's default
+identity semantics and aligns with json-io's convergence toward standard JSON
+output.
+
+**Opt-in (`true`)** — json-io emits `@id`/`@ref` for leaf-element containers that
+are shared across fields. Matches json-io's pre-4.101.0 behavior.
+
+Containers holding **POJO elements** (`List<Foo>`, `Map<String, Foo>`, `Foo[]`)
+always have identity traced regardless of this flag. This option only governs
+leaf-element containers, and only affects writes with `cycleSupport=true` — when
+cycle support is off, reference tracing does not run.
+
+>#### `boolean` isPreserveLeafContainerIdentity()
+>- [ ] Returns `true` if shared identity is preserved for leaf-element containers,
+      `false` (default as of 4.101.0) if each reference is serialized independently.
+
+>#### `WriteOptionsBuilder` preserveLeafContainerIdentity(`boolean preserveLeafContainerIdentity`)
+>- [ ] `true` emits `@id`/`@ref` for shared `List<String>`, `Map<UUID, Date>`, `byte[]`,
+      etc. `false` (default) writes each reference as an independent copy.
+      `standardJson()` always resets this to `false`.
+
+>#### `static void` addPermanentPreserveLeafContainerIdentity(`boolean preserveLeafContainerIdentity`)
+>- [ ] Set a process-wide default. All `WriteOptions` instances created afterwards
+      will initialize with this value unless explicitly overridden. Useful for apps
+      that must interoperate with pre-4.101.0 readers and want the legacy behavior
+      without annotating every call site.
+
+Example:
+```java
+// Default (Jackson-aligned): shared List<String> serialized as two copies
+class Foo {
+    List<String> list1;
+    List<String> list2;
+}
+Foo f = new Foo();
+List<String> shared = Arrays.asList("a", "b");
+f.list1 = shared;
+f.list2 = shared;
+
+String json = JsonIo.toJson(f);
+// → {"@type":"Foo","list1":["a","b"],"list2":["a","b"]}
+// On read-back: f.list1 != f.list2 (different instances, same content)
+
+// Opt-in: preserve shared identity (legacy behavior)
+WriteOptions opts = new WriteOptionsBuilder()
+        .preserveLeafContainerIdentity(true)
+        .build();
+String json2 = JsonIo.toJson(f, opts);
+// → {"@type":"Foo","list1":{"@id":1,"@items":["a","b"]},"list2":{"@ref":1}}
+// On read-back: f.list1 == f.list2 (shared instance preserved)
+```
+
+**When to opt in:**
+- Round-trip fidelity with pre-4.101.0 json-io JSON where shared leaf-element containers carried `@id`/`@ref`
+- Application code relies on `list1 == list2` after deserialization of primitive-element containers
+- Shared leaf-containers hold significant memory and copy-duplication is undesirable
+
+**Why it's off by default:**
+- Standard JSON interop — Jackson, Gson, and other parsers don't track this identity
+- Simpler output (less `@id`/`@ref` noise) and faster writes (~10-25% on `cycleSupport=true` write paths, concentrated on Map-heavy payloads)
+- Aligns with json-io's 5.0 direction to minimize proprietary metadata
+
 ### Enum Options in `json-io`
 
 Enums in Java are commonly used as a discrete list of values, but there are instances where additional fields are added to these enums. These fields can be either public or private, depending on the design requirements.
@@ -1375,6 +1445,10 @@ Sets the permanent stringify map keys setting for all new `WriteOptions` instanc
 ### addPermanentWriteOptionalAsObject
 Sets the permanent writeOptionalAsObject setting for all new `WriteOptions` instances. When enabled, `Optional`, `OptionalInt`, `OptionalLong`, and `OptionalDouble` values are written in the legacy json-io object form (`{"present":X,"value":Y}`) instead of Jackson-compatible primitive form (bare value or `null`). Default is `false`.
 >#### WriteOptionsBuilder.addPermanentWriteOptionalAsObject(`boolean writeOptionalAsObject`)
+
+### addPermanentPreserveLeafContainerIdentity
+Sets the permanent preserveLeafContainerIdentity setting for all new `WriteOptions` instances. When enabled, `List<String>`, `Map<UUID, Date>`, `byte[]`, `String[]`, and other non-referenceable-element containers are traced for shared identity (`@id`/`@ref` emitted when the same container is referenced by multiple fields). Default is `false` (new in 4.101.0) — each reference is serialized as an independent copy, matching Jackson's default identity semantics. POJO-holding containers (`List<Foo>`, `Map<String, Foo>`, `Foo[]`) always have identity traced regardless of this flag. Only affects `cycleSupport=true` writes.
+>#### WriteOptionsBuilder.addPermanentPreserveLeafContainerIdentity(`boolean preserveLeafContainerIdentity`)
 
 ### addPermanentAllowNanAndInfinity
 Sets the permanent allow NaN and Infinity setting for all new `WriteOptions` instances. When enabled, Double and Float NaN and Infinity values are serialized as-is rather than converted to null.

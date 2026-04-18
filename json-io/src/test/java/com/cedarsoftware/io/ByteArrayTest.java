@@ -116,6 +116,29 @@ class ByteArrayTest extends SerializationDeserializationMinimumTests<byte[]>
         return new NestedByteArray(t1, t1);
     }
 
+    /**
+     * Override the shared template to opt into leaf-container identity preservation.
+     * The inherited template uses default WriteOptions, which as of 4.101.0 write
+     * primitive-element arrays ({@code byte[]}, {@code String[]}, etc.) as values
+     * rather than tracking {@code @id}/{@code @ref}. This test is specifically about
+     * asserting referential integrity survives across round trip, so we opt into the
+     * preserveLeafContainerIdentity(true) behavior to exercise that code path.
+     */
+    @org.junit.jupiter.api.Test
+    @Override
+    protected void testNestedInObject_withDuplicates_andFieldTypeMatchesObjectType() {
+        Object expected = provideNestedInObject_withDuplicates_andFieldTypeMatchesObjectType();
+        WriteOptions opts = new WriteOptionsBuilder().preserveLeafContainerIdentity(true).build();
+        String json = TestUtil.toJson(expected, opts);
+
+        org.assertj.core.api.Assertions.assertThat(json)
+                .contains("\"@id\"")
+                .contains("\"@ref\"");
+
+        Object actual = TestUtil.toJava(json, null).asClass(null);
+        assertNestedInObject_withDuplicates_andFieldTypeMatchesObjectType(expected, actual);
+    }
+
     @Override
     protected void assertT1_serializedWithoutType_parsedAsJsonTypes(byte[] expected, Object actual) {
         // not typed information so comes in as Object[] of longs.

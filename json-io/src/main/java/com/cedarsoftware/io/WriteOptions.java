@@ -101,6 +101,20 @@ public interface WriteOptions {
     boolean isWriteOptionalAsObject();
 
     /**
+     * @return boolean {@code true} if json-io should trace identity for containers
+     * (Collection, Map, Array) whose declared element types are all non-referenceable
+     * leaf types (String, Long, UUID, Date, Enum, BigDecimal, etc.). When {@code true},
+     * two fields pointing to the same {@code List<String>} round-trip as one shared
+     * list via {@code @id}/{@code @ref}. When {@code false} (default as of 4.101.0),
+     * such leaf-element containers are written as values — two fields pointing to the
+     * same {@code List<String>} are serialized as two independent copies, matching
+     * Jackson's default identity semantics. Containers holding POJO elements
+     * ({@code List<Foo>}, {@code Map<String, Foo>}) always have identity traced
+     * regardless of this flag. Only affects {@code cycleSupport=true} writes.
+     */
+    boolean isPreserveLeafContainerIdentity();
+
+    /**
      * @return boolean will return true if NAN and Infinity are allowed to be written out for
      * Doubles and Floats, else null will be written out. Default is false.
      */

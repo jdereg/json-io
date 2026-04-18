@@ -66,7 +66,13 @@ public class FieldsTest
     {
         ManyFields obj = new ManyFields();
         obj.init();
-        String jsonOut = TestUtil.toJson(obj);
+        // Asserts shared-identity preservation for String[] fields (e.g.
+        // _stringArray_3 == _stringArray_4). Under the default
+        // preserveLeafContainerIdentity=false semantics, non-referenceable-element
+        // containers are written as values, so round-trip yields separate instances.
+        // Opt into the legacy behavior to exercise the opt-in path.
+        WriteOptions opts = new WriteOptionsBuilder().preserveLeafContainerIdentity(true).build();
+        String jsonOut = TestUtil.toJson(obj, opts);
         TestUtil.printLine(jsonOut);
 
         ManyFields root = TestUtil.toJava(jsonOut, null).asClass(null);
@@ -217,10 +223,14 @@ public class FieldsTest
     {
         ManyFields testFields = new ManyFields();
         testFields.init();
-        String json0 = TestUtil.toJson(testFields);
+        // Asserts shared-identity preservation for String[] fields across a
+        // toJson → toMaps → toJson → toJava round trip. Requires
+        // preserveLeafContainerIdentity(true) under the 4.101.0 default.
+        WriteOptions opts = new WriteOptionsBuilder().preserveLeafContainerIdentity(true).build();
+        String json0 = TestUtil.toJson(testFields, opts);
         Map testFields2 = TestUtil.toMaps(json0, null).asClass(null);
 
-        String json1 = TestUtil.toJson(testFields2);
+        String json1 = TestUtil.toJson(testFields2, opts);
         TestUtil.printLine("json1=" + json1);
 
         ManyFields testFields3 = TestUtil.toJava(json1, null).asClass(null);

@@ -171,8 +171,20 @@ String json = JsonIo.toJson(myObject, options);
 ```
 
 This sets: `showTypeInfoNever`, `showRootTypeInfo(false)`, `cycleSupport(false)`, `stringifyMapKeys(true)`,
-`writeOptionalAsObject(false)`, and `useMetaPrefixDollar()`. These will become the defaults in json-io 5.0.0.
-Individual settings can be overridden after the call (e.g., `.standardJson().cycleSupport(true)`).
+`writeOptionalAsObject(false)`, `preserveLeafContainerIdentity(false)`, and `useMetaPrefixDollar()`. These
+will become the defaults in json-io 5.0.0. Individual settings can be overridden after the call
+(e.g., `.standardJson().cycleSupport(true)`).
+
+### Leaf-Container Identity (4.101.0 default change)
+
+As of 4.101.0, when writing with `cycleSupport=true`, shared-identity tracking for containers whose
+declared element types are all non-referenceable leaves (`List<String>`, `Map<UUID, Date>`, `byte[]`,
+`String[]`, etc.) is **off by default** — each reference to such a container is serialized
+independently, matching Jackson's default behavior. POJO-holding containers (`List<Foo>`, `Map<String, Foo>`)
+still have identity traced. If you need the legacy behavior — shared `@id`/`@ref` for leaf-element
+containers — use `preserveLeafContainerIdentity(true)`. See
+[user-guide-writeOptions.md](user-guide-writeOptions.md#leaf-container-identity--preserveleafcontaineridentity-4101-0)
+for details.
 
 ### `Optional` Serialization
 

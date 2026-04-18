@@ -999,11 +999,16 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     private void processArray(Object[] array, Deque<Object> objectStack, int depth) {
         final Class<?> componentType = array.getClass().getComponentType();
-        if (!writeOptions.isNonReferenceableClass(componentType)) {
-            // Iterate directly over Object[] - primitive arrays are filtered out by isNonReferenceableClass check
-            for (final Object element : array) {
-                traceVisit(element, objectStack, depth);
-            }
+        // Short-circuit iteration for arrays with non-referenceable components (String[], UUID[]
+        // etc.), UNLESS preserveLeafContainerIdentity=true — in which case the caller explicitly
+        // wants identity tracking for leaf-element containers, so we must iterate to catch
+        // sharing of this array's non-ref elements that happen to appear elsewhere.
+        if (writeOptions.isNonReferenceableClass(componentType)
+                && !writeOptions.isPreserveLeafContainerIdentity()) {
+            return;
+        }
+        for (final Object element : array) {
+            traceVisit(element, objectStack, depth);
         }
     }
 
@@ -1064,8 +1069,55 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             if (fieldPlan.skipReferenceTrace()) {
                 continue;
             }
+            if (canSkipContainerTrace(fieldPlan)) {
+                // Field is a Collection/Map/Array whose element(s) cannot hold references —
+                // skip pushing it entirely. Consistent with Jackson's default identity semantics
+                // for primitive-element containers: two fields pointing to the same
+                // List<String>/Map<String,String>/String[] are written as two copies on the
+                // wire (no @id/@ref), matching how Jackson deserializes them.
+                continue;
+            }
             traceVisit(fieldPlan.accessor().retrieve(obj), objectStack, depth);
         }
+    }
+
+    /**
+     * Returns true if {@code plan}'s field is a Collection, Map, or Array whose
+     * declared element types are all non-referenceable leaves (String, primitive
+     * wrappers, temporals, UUID, etc.) — meaning no element could ever hold a
+     * reference-typed object. For such fields, traceReferences doesn't need to
+     * visit the container or its elements: no cycles are possible, no shared
+     * references among elements are possible, and we treat the container itself
+     * as value-shaped (two field pointers to the same primitive-element container
+     * are serialized as two copies, matching Jackson's default).
+     *
+     * For Map specifically, we require BOTH key and value types to be non-referenceable —
+     * a Map&lt;String, Foo&gt; still needs Foo values traced for sharing detection.
+     */
+    private boolean canSkipContainerTrace(WriteFieldPlan plan) {
+        if (writeOptions.isPreserveLeafContainerIdentity()) {
+            return false;
+        }
+        Class<?> fieldType = plan.declaredFieldType();
+        if (fieldType == null) {
+            return false;
+        }
+        if (Map.class.isAssignableFrom(fieldType)) {
+            Class<?> keyType = plan.declaredKeyType();
+            Class<?> valType = plan.declaredElementType();
+            return keyType != null && valType != null
+                    && writeOptions.isNonReferenceableClass(keyType)
+                    && writeOptions.isNonReferenceableClass(valType);
+        }
+        if (Collection.class.isAssignableFrom(fieldType)) {
+            Class<?> elemType = plan.declaredElementType();
+            return elemType != null && writeOptions.isNonReferenceableClass(elemType);
+        }
+        if (fieldType.isArray()) {
+            Class<?> compType = fieldType.getComponentType();
+            return compType != null && writeOptions.isNonReferenceableClass(compType);
+        }
+        return false;
     }
 
     private boolean isReferenceTrackable(Object obj) {

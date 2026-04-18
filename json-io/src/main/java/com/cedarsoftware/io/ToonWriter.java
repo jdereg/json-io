@@ -2657,9 +2657,41 @@ public class ToonWriter implements Closeable, Flushable {
             if (plan.skipReferenceTrace()) {
                 continue;
             }
+            if (canSkipContainerTrace(plan)) {
+                // Field is a Collection/Map/Array of non-referenceable leaves — skip tracing.
+                // See JsonWriter.canSkipContainerTrace for rationale and the
+                // preserveLeafContainerIdentity flag governing this behavior.
+                continue;
+            }
             Object value = plan.accessor().retrieve(current);
             pushReferenceCandidate(stack, value);
         }
+    }
+
+    private boolean canSkipContainerTrace(WriteOptionsBuilder.WriteFieldPlan plan) {
+        if (writeOptions.isPreserveLeafContainerIdentity()) {
+            return false;
+        }
+        Class<?> fieldType = plan.declaredFieldType();
+        if (fieldType == null) {
+            return false;
+        }
+        if (Map.class.isAssignableFrom(fieldType)) {
+            Class<?> keyType = plan.declaredKeyType();
+            Class<?> valType = plan.declaredElementType();
+            return keyType != null && valType != null
+                    && writeOptions.isNonReferenceableClass(keyType)
+                    && writeOptions.isNonReferenceableClass(valType);
+        }
+        if (Collection.class.isAssignableFrom(fieldType)) {
+            Class<?> elemType = plan.declaredElementType();
+            return elemType != null && writeOptions.isNonReferenceableClass(elemType);
+        }
+        if (fieldType.isArray()) {
+            Class<?> compType = fieldType.getComponentType();
+            return compType != null && writeOptions.isNonReferenceableClass(compType);
+        }
+        return false;
     }
 
     private void pushReferenceCandidate(Deque<Object> stack, Object candidate) {

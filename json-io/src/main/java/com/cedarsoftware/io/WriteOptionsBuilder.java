@@ -112,6 +112,7 @@ public class WriteOptionsBuilder {
     private static volatile boolean BASE_FORCE_MAP_OUTPUT_AS_TWO_ARRAYS = false;
     private static volatile boolean BASE_STRINGIFY_MAP_KEYS = false;
     private static volatile boolean BASE_WRITE_OPTIONAL_AS_OBJECT = false;
+    private static volatile boolean BASE_PRESERVE_LEAF_CONTAINER_IDENTITY = false;
     private static volatile boolean BASE_ALLOW_NAN_AND_INFINITY = false;
     private static volatile boolean BASE_ENUM_PUBLIC_FIELDS_ONLY = false;
     private static volatile boolean BASE_ENUM_SET_WRITTEN_OLD_WAY = true;
@@ -199,6 +200,7 @@ public class WriteOptionsBuilder {
         options.forceMapOutputAsTwoArrays = BASE_FORCE_MAP_OUTPUT_AS_TWO_ARRAYS;
         options.stringifyMapKeys = BASE_STRINGIFY_MAP_KEYS;
         options.writeOptionalAsObject = BASE_WRITE_OPTIONAL_AS_OBJECT;
+        options.preserveLeafContainerIdentity = BASE_PRESERVE_LEAF_CONTAINER_IDENTITY;
         options.allowNanAndInfinity = BASE_ALLOW_NAN_AND_INFINITY;
         options.enumPublicFieldsOnly = BASE_ENUM_PUBLIC_FIELDS_ONLY;
         options.enumSetWrittenOldWay = BASE_ENUM_SET_WRITTEN_OLD_WAY;
@@ -234,6 +236,7 @@ public class WriteOptionsBuilder {
             options.forceMapOutputAsTwoArrays = other.forceMapOutputAsTwoArrays;
             options.stringifyMapKeys = other.stringifyMapKeys;
             options.writeOptionalAsObject = other.writeOptionalAsObject;
+            options.preserveLeafContainerIdentity = other.preserveLeafContainerIdentity;
             options.prettyPrint = other.prettyPrint;
             options.lruSize = other.lruSize;
             options.shortMetaKeys = other.shortMetaKeys;
@@ -687,6 +690,21 @@ public class WriteOptionsBuilder {
     }
 
     /**
+     * Call this method to set a permanent (JVM lifetime) preserveLeafContainerIdentity setting.
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     *
+     * @param preserveLeafContainerIdentity boolean {@code true} traces identity for containers whose
+     *                                      declared element types are all non-referenceable leaves
+     *                                      (Collections, Maps, Arrays of String/Long/UUID/Date/etc.);
+     *                                      {@code false} (default as of 4.101.0) writes each such
+     *                                      container as a value, matching Jackson's identity semantics.
+     *                                      Only affects {@code cycleSupport=true} writes.
+     */
+    public static void addPermanentPreserveLeafContainerIdentity(boolean preserveLeafContainerIdentity) {
+        BASE_PRESERVE_LEAF_CONTAINER_IDENTITY = preserveLeafContainerIdentity;
+    }
+
+    /**
      * Call this method to set a permanent (JVM lifetime) allow NaN and Infinity setting.
      * All WriteOptions instances will be initialized with this value unless explicitly overridden.
      * 
@@ -1006,6 +1024,37 @@ public class WriteOptionsBuilder {
     }
 
     /**
+     * Controls whether json-io preserves shared-identity of containers whose declared element
+     * types are all non-referenceable leaves — {@code List<String>}, {@code Map<UUID, Date>},
+     * {@code byte[]}, etc.
+     * <p>
+     * When {@code true}: if two fields point to the same {@code List<String>} instance, the
+     * wire emits {@code @id}/{@code @ref} and a read-back produces one shared list with
+     * {@code f.list1 == f.list2}. Matches json-io's pre-4.101.0 behavior.
+     * <p>
+     * When {@code false} (default as of 4.101.0): each reference is serialized independently;
+     * a read-back produces two separate list instances with equal content but
+     * {@code f.list1 != f.list2}. Matches Jackson's default identity semantics and aligns with
+     * json-io's convergence toward standard JSON output.
+     * <p>
+     * Containers holding POJO elements ({@code List<Foo>}, {@code Map<String, Foo>}) always
+     * have identity traced regardless of this flag — this option governs leaf-element
+     * containers only. This option only affects writes with {@code cycleSupport=true};
+     * when cycle support is off, reference tracing doesn't run at all.
+     * <p>
+     * Note: {@link #standardJson()} always resets this to {@code false}.
+     *
+     * @param preserveLeafContainerIdentity {@code true} to preserve shared-identity across
+     *                                      round-trip for leaf-element containers; {@code false}
+     *                                      (default) to serialize each reference independently.
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder preserveLeafContainerIdentity(boolean preserveLeafContainerIdentity) {
+        options.preserveLeafContainerIdentity = preserveLeafContainerIdentity;
+        return this;
+    }
+
+    /**
      * @param allowNanAndInfinity boolean 'allowNanAndInfinity' setting.  true will allow
      *                            Double and Floats to be output as NAN and INFINITY, false
      *                            and these values will come across as null.
@@ -1173,6 +1222,7 @@ public class WriteOptionsBuilder {
         options.cycleSupport = false;
         options.stringifyMapKeys = true;
         options.writeOptionalAsObject = false;
+        options.preserveLeafContainerIdentity = false;
         options.metaPrefixOverride = '$';
         return this;
     }
@@ -1203,6 +1253,7 @@ public class WriteOptionsBuilder {
         options.cycleSupport = false;
         options.stringifyMapKeys = true;
         options.writeOptionalAsObject = false;
+        options.preserveLeafContainerIdentity = false;
         return this;
     }
 
@@ -1734,6 +1785,7 @@ public class WriteOptionsBuilder {
         private boolean forceMapOutputAsTwoArrays = false;
         private boolean stringifyMapKeys = false;
         private boolean writeOptionalAsObject = false;
+        private boolean preserveLeafContainerIdentity = false;
         private boolean allowNanAndInfinity = false;
         private boolean enumPublicFieldsOnly = false;
         private boolean enumSetWrittenOldWay = true;
@@ -2013,6 +2065,10 @@ public class WriteOptionsBuilder {
 
         public boolean isWriteOptionalAsObject() {
             return writeOptionalAsObject;
+        }
+
+        public boolean isPreserveLeafContainerIdentity() {
+            return preserveLeafContainerIdentity;
         }
 
         /**
