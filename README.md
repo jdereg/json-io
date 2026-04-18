@@ -103,7 +103,9 @@ byte-compatible with what Jackson (with `JavaTimeModule` and the Spring Boot def
 `WRITE_DATES_AS_TIMESTAMPS=false`) produces:
 
 ```java
-WriteOptions opts = new WriteOptionsBuilder().standardJson().build();
+WriteOptions opts = new WriteOptionsBuilder()
+        .standardJson()    // will be the default in 5.0.0 — this call becomes optional
+        .build();
 String json = JsonIo.toJson(myObject, opts);
 ```
 
