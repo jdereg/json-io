@@ -504,23 +504,6 @@ public class ToonReader {
         }
     }
 
-    private List<Object> parseCombinedArrayField(String key, int bracketStart, String valuePart) throws IOException {
-        ArrayHeader header = parseCombinedArrayHeader(key, bracketStart);
-        if (header == null) {
-            return parseArrayFromLine(buildCombinedArraySyntax(key, bracketStart, valuePart));
-        }
-        if (header.count == 0) {
-            return new ArrayList<>();
-        }
-        if (header.columnHeaders != null) {
-            return readTabularArray(header.count, header.columnHeaders, header.delimiter);
-        }
-        if (!valuePart.isEmpty()) {
-            return readInlineArray(valuePart, header.count, header.delimiter);
-        }
-        return readListArray(header.count);
-    }
-
     private List<Object> parseCombinedArrayField(String key, int bracketStart, char[] valueBuf, int valueStart, int valueEnd)
             throws IOException {
         ArrayHeader header = parseCombinedArrayHeader(key, bracketStart);
@@ -1018,12 +1001,14 @@ public class ToonReader {
             } else if (isArrayStart(lineBuf, elementStart, trimEnd)) {
                 elements.add(parseArrayFromLine(trimAsciiRangeBuf(elementStart, trimEnd)));
             } else {
-                String elementContent = trimAsciiRangeBuf(elementStart, trimEnd);
-                if (findColonPosition(elementContent) > 0 && !elementContent.startsWith("\"")) {
+                // Pre-check whether the hyphen-line slice contains an unquoted colon
+                // (indicating an inline object like "- name: John"). Work directly on
+                // lineBuf — no String materialization — since lineBuf[elementStart..trimEnd)
+                // still holds the hyphen line until the first hasLine() inside readInlineObject.
+                if (lineBuf[elementStart] != '"' && findColonInBuf(elementStart, trimEnd) > 0) {
                     // Per TOON spec: first field of object is on hyphen line
                     // e.g., "- name: John" followed by "  age: 30" on next line
-                    // This is an inline object - read it with subsequent fields
-                    JsonObject inlineObj = readInlineObject(elementContent, indent);
+                    JsonObject inlineObj = readInlineObject(elementStart, trimEnd, indent);
                     elements.add(inlineObj);
                 } else {
                     elements.add(readScalar(lineBuf, elementStart, trimEnd));
@@ -1064,14 +1049,27 @@ public class ToonReader {
      * @param hyphenIndent the indent level of the hyphen that preceded this
      * @return JsonObject with all fields
      */
-    private JsonObject readInlineObject(String firstFieldLine, int hyphenIndent) throws IOException {
+    private JsonObject readInlineObject(int firstFieldStart, int firstFieldEnd, int hyphenIndent) throws IOException {
         JsonObject jsonObj = new JsonObject();
 
-        // Parse first field from the provided line
-        int colonPos = findColonPosition(firstFieldLine);
-        if (colonPos > 0) {
-            String key = trimAsciiRange(firstFieldLine, 0, colonPos);
-            String valuePart = trimAsciiRange(firstFieldLine, colonPos + 1, firstFieldLine.length());
+        // Parse first field directly from lineBuf[firstFieldStart..firstFieldEnd).
+        // Safe to use lineBuf here because the hyphen-line contents persist in the
+        // buffer until the first hasLine() call below (consumeLine() just marks the
+        // line; the next line isn't fetched until hasLine() triggers readLineRaw()).
+        int relColon = findColonInBuf(firstFieldStart, firstFieldEnd);
+        if (relColon > 0) {
+            int colonAbs = firstFieldStart + relColon;
+            String key = trimAsciiRangeBuf(firstFieldStart, colonAbs);
+            int valueStart = colonAbs + 1;
+            while (valueStart < firstFieldEnd && lineBuf[valueStart] == ' ') {
+                valueStart++;
+            }
+            int valueEnd = firstFieldEnd;
+            // Trim trailing ASCII whitespace within the value slice
+            while (valueEnd > valueStart && lineBuf[valueEnd - 1] <= ' ') {
+                valueEnd--;
+            }
+            boolean valueEmpty = valueStart >= valueEnd;
 
             // Check for combined field+array notation: fieldName[N]: or fieldName[N]{cols}:
             // Also handles folded keys: data.items[N]:
@@ -1082,11 +1080,11 @@ public class ToonReader {
                 if (wasQuoted) {
                     realKey = unquoteString(realKey);
                 }
-                putValue(jsonObj, realKey, parseCombinedArrayField(key, bracketStart, valuePart), wasQuoted);
+                putValue(jsonObj, realKey, parseCombinedArrayField(key, bracketStart, lineBuf, valueStart, valueEnd), wasQuoted);
             } else {
                 boolean wasQuoted = !key.isEmpty() && key.charAt(0) == '"';
                 key = unquoteString(key);
-                if (valuePart.isEmpty()) {
+                if (valueEmpty) {
                     // Check for nested structure on next line
                     if (hasLine() && peekIndent() > hyphenIndent) {
                         if (isArrayStartInBuf()) {
@@ -1097,12 +1095,13 @@ public class ToonReader {
                     } else {
                         putValue(jsonObj, key, null, wasQuoted);
                     }
-                } else if (isArrayStart(valuePart)) {
-                    putValue(jsonObj, key, parseArrayFromLine(valuePart), wasQuoted);
-                } else if ("{}".equals(valuePart)) {
+                } else if (isArrayStart(lineBuf, valueStart, valueEnd)) {
+                    // parseArrayFromLine expects a String; materialize only this branch
+                    putValue(jsonObj, key, parseArrayFromLine(trimAsciiRangeBuf(valueStart, valueEnd)), wasQuoted);
+                } else if (isEmptyObject(lineBuf, valueStart, valueEnd)) {
                     putValue(jsonObj, key, new JsonObject(), wasQuoted);
                 } else {
-                    putValue(jsonObj, key, readScalar(valuePart), wasQuoted);
+                    putValue(jsonObj, key, readScalar(lineBuf, valueStart, valueEnd), wasQuoted);
                 }
             }
         }
@@ -1753,8 +1752,16 @@ public class ToonReader {
      * key characters) need only one comparison per character.
      */
     private int findColonInBuf() {
-        int start = currentTrimStart;
-        int end = currentTrimEnd;
+        return findColonInBuf(currentTrimStart, currentTrimEnd);
+    }
+
+    /**
+     * Ranged variant of {@link #findColonInBuf()}. Returns the colon offset RELATIVE to
+     * {@code start} (i.e., {@code absoluteIndex - start}), or {@code -1} if not found.
+     * Used when parsing a first-field slice from within {@code lineBuf} without
+     * materializing it as a String.
+     */
+    private int findColonInBuf(int start, int end) {
         char[] buf = lineBuf;
 
         // Single pass: find ':' while watching for '"'.
@@ -1926,52 +1933,6 @@ public class ToonReader {
             }
         }
         return true;
-    }
-
-    /**
-     * Find the position of the colon in a key: value pair.
-     * Returns -1 if no valid colon found (ignores colons inside quoted strings).
-     */
-    private int findColonPosition(String text) {
-        int colon = text.indexOf(':');
-        if (colon < 0) {
-            return -1;
-        }
-        // Fast path: if no quote exists, or the first quote is after the first colon,
-        // the colon is definitely unquoted - skip the expensive char-by-char scan.
-        int quote = text.indexOf('"');
-        if (quote < 0 || quote > colon) {
-            return colon;
-        }
-
-        boolean inQuotes = false;
-        boolean escaped = false;
-        int len = text.length();
-
-        for (int i = 0; i < len; i++) {
-            char c = text.charAt(i);
-
-            if (escaped) {
-                escaped = false;
-                continue;
-            }
-
-            if (c == '\\') {
-                escaped = true;
-                continue;
-            }
-
-            if (c == '"') {
-                inQuotes = !inQuotes;
-                continue;
-            }
-
-            if (c == ':' && !inQuotes) {
-                return i;
-            }
-        }
-
-        return -1;
     }
 
     private int findUnquotedBracketPosition(String text) {
