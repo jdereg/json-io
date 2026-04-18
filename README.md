@@ -166,11 +166,27 @@ automatic shared-reference and cycle preservation. No class annotations required
 
 | Capability | json-io | Jackson | Gson |
 |------------|---------|---------|------|
-| Performance (simple DTOs) | 1.5-1.9x vs Jackson | Fastest | ~1.3x vs Jackson |
+| Performance (simple DTOs) | 1.3–2.0x vs Jackson (all paths under 2x) | Fastest | ~1.3x vs Jackson |
 | Dependencies | java-util only (~1MB) | Multiple JARs (~2.5MB+) | Single JAR (~300KB) |
 | Java version | JDK 8+ | JDK 8+ | JDK 8+ |
 
-**On performance:** Jackson is faster for simple DTOs. In real-world applications, serialization is typically <1% of total request time — the rest is network I/O, database queries, and business logic. json-io's additional capabilities (cycles, polymorphism, zero-config, JSON5, TOON) often matter more than raw serialization throughput.
+**On performance:** Jackson is faster for simple DTOs, but json-io stays **under 2x Jackson on every read/write mode** on the `JsonPerformanceTest` benchmark (100,000 iterations, diverse POJO workload — nested collections, floats, `BigDecimal`, `java.time.*`, UUIDs, nullable fields). In real-world applications, serialization is typically <1% of total request time — the rest is network I/O, database queries, and business logic. json-io's additional capabilities (cycles, polymorphism, zero-config, JSON5, TOON) often matter more than raw serialization throughput.
+
+<details>
+<summary>Measured ratios vs Jackson (lower is faster; 1.0 = Jackson parity)</summary>
+
+| Mode | JsonIo | TOON |
+|---|---|---|
+| Read `toJava` (typed) | 1.92x | 1.97x |
+| Read `toMaps` (class-independent) | 1.32x | 1.73x |
+| Write `cycleSupport=true` (default) | 1.75x | 1.78x |
+| Write `cycleSupport=false` (DTOs/acyclic) | 1.60x | 1.66x |
+| Write `toMaps` `cycleSupport=true` | 1.83x | 1.84x |
+| Write `toMaps` `cycleSupport=false` | 1.57x | 1.68x |
+
+Measured on JDK 21, `json-io 4.101.0` vs `jackson-databind 2.21.2`. Reproduce with `mvn -q -pl json-io -DskipTests test-compile exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.cedarsoftware.io.JsonPerformanceTest` (100k iterations after 10k warmup; expect ±3% run-to-run noise from thermal / GC). Jackson is configured with `JavaTimeModule` and `WRITE_DATES_AS_TIMESTAMPS=false` to match what Spring Boot emits by default.
+
+</details>
 
 **Performance tip:** Use `cycleSupport(false)` for ~35-40% faster writes when your data is acyclic (DTOs, POJOs, tree-shaped data).
 
