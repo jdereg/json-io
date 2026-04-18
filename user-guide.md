@@ -156,6 +156,43 @@ Map<String, List<Department<Employee>>> orgMap = JsonIo.toJava(json, readOptions
                                 .asType(new TypeHolder<Map<String, List<Department<Employee>>>>(){});
 ```
 
+## Jackson Compatibility
+
+**json-io is Jackson-compatible — just call `.standardJson()` on your `WriteOptionsBuilder`.**
+
+Out-of-the-box, json-io writes its own flexible format with optional `@type`/`@id`/`@ref` metadata
+for perfect round-trip fidelity across any Java object graph. One flag — `.standardJson()` — flips
+every default to match what Jackson (with `JavaTimeModule` and the Spring Boot default of
+`WRITE_DATES_AS_TIMESTAMPS=false`) produces for the same data. No proprietary metadata, ISO-8601
+dates, stringified Map keys, Jackson-style Optional handling.
+
+| Feature | Jackson (Spring Boot default) | json-io with `.standardJson()` |
+|---|---|---|
+| POJO fields | `{"name":"Alice","age":30}` | `{"name":"Alice","age":30}` ✓ identical |
+| `java.util.Date` | `"2026-04-18T10:30:00.000+00:00"` (ISO-8601) | `"2026-04-18T10:30:00Z"` (ISO-8601) ✓ |
+| `java.time.*` types | ISO-8601 strings | ISO-8601 strings ✓ |
+| `Map<Long, V>` / `Map<UUID, V>` | `{"100":v,"200":v}` | `{"100":v,"200":v}` ✓ |
+| `Optional.of("x")` | `"x"` | `"x"` ✓ |
+| `Optional.empty()` | `null` | `null` ✓ |
+| Shared `List<String>` across two fields | two independent copies | two independent copies ✓ |
+| Type metadata | none (controlled by annotations) | none ✓ |
+| Cycle tracking | none (throws `StackOverflowError`) | none (throws `JsonIoException` with clear hint) |
+
+```java
+// Jackson-compatible output:
+WriteOptions opts = new WriteOptionsBuilder().standardJson().build();
+String json = JsonIo.toJson(myObject, opts);
+```
+
+json-io also offers **JSON5** output (relaxed JSON with unquoted keys, single quotes, trailing commas)
+and **TOON** — a token-oriented format that uses 40-50% fewer tokens than equivalent JSON, ideal for
+LLM prompts and agent workflows. Both formats default to Jackson-aligned semantics (no `@id`/`@ref`,
+no proprietary metadata) without needing `.standardJson()`.
+
+Need the full json-io feature set (cycle preservation, polymorphic `@type` metadata, `@id`/`@ref`
+reference tracking)? Simply don't call `.standardJson()`, or override specific flags after calling
+it (e.g., `.standardJson().cycleSupport(true)` to turn reference tracking back on).
+
 ## Standard JSON Output
 
 json-io can produce standard JSON output identical to Jackson and other mainstream libraries — no

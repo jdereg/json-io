@@ -57,10 +57,16 @@ This enables:
 - **`showRootTypeInfo(false)`** — no `@type` on the root object
 - **`cycleSupport(false)`** — no `@id`/`@ref` cycle tracking (~35-40% faster)
 - **`stringifyMapKeys(true)`** — `Map<Long, V>` writes `{"100": value}` instead of `@keys`/`@items`
+- **`writeOptionalAsObject(false)`** — `Optional.of(x)` writes as bare `x`; `Optional.empty()` writes as `null` (Jackson-compatible primitive form)
+- **`preserveLeafContainerIdentity(false)`** — `List<String>` / `Map<UUID, Date>` / `byte[]` etc. written as values, not tracked with `@id`/`@ref` (Jackson-aligned)
+- **`isoDateFormat()`** — `java.util.Date` / `java.sql.Date` written as ISO-8601 strings instead of epoch-millis longs (matches Spring Boot's Jackson default)
 - **`useMetaPrefixDollar()`** — uses `$` prefix for any remaining metadata (e.g., `$keys` for POJO key fallback)
 
-The resulting JSON is identical to what Jackson produces for the same objects (POJOs, Lists, Maps with
-String/numeric/UUID/Enum keys). Individual settings can be overridden after the call:
+The resulting JSON is byte-compatible with what Jackson (with `JavaTimeModule` and the Spring Boot
+default of `WRITE_DATES_AS_TIMESTAMPS=false`) produces for the same objects — POJOs, Lists, Maps
+with String/numeric/UUID/Enum keys, `Optional` values, and dates. `java.time.*` types
+(`Instant`, `LocalDate`, `LocalDateTime`, `ZonedDateTime`, `OffsetDateTime`) are already ISO-8601
+by default regardless of this flag. Individual settings can be overridden after the call:
 
 ```java
 // standardJson() defaults, but keep cycle support on

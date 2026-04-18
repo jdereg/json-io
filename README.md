@@ -96,16 +96,25 @@ Map map = JsonIo.toMaps(json).asMap();
 List<Employee> list = JsonIo.toJava(json).asType(new TypeHolder<List<Employee>>(){});
 ```
 
-### Standard JSON Mode
+### Standard JSON Mode — Jackson Compatible
 
-Use `standardJson()` to produce output identical to Jackson — no proprietary metadata:
+**One flag flips json-io's output to match Jackson.** Use `standardJson()` to produce output
+byte-compatible with what Jackson (with `JavaTimeModule` and the Spring Boot default of
+`WRITE_DATES_AS_TIMESTAMPS=false`) produces:
 
 ```java
 WriteOptions opts = new WriteOptionsBuilder().standardJson().build();
 String json = JsonIo.toJson(myObject, opts);
 ```
 
-This sets: `showTypeInfoNever`, `cycleSupport(false)`, `stringifyMapKeys(true)`, and `useMetaPrefixDollar()`. These will become the defaults in json-io 5.0.0.
+This configures: `showTypeInfoNever`, `showRootTypeInfo(false)`, `cycleSupport(false)`,
+`stringifyMapKeys(true)`, `writeOptionalAsObject(false)`, `preserveLeafContainerIdentity(false)`,
+`isoDateFormat()` (ISO-8601 dates for `java.util.Date` — `java.time.*` are already ISO-8601),
+and `useMetaPrefixDollar()`. These will become the defaults in json-io 5.0.0.
+
+**Use json-io anywhere you'd use Jackson** for standard JSON output, and get the full json-io
+feature set whenever you need it: cyclic graph preservation, polymorphic `@type` auto-detection,
+and first-class **JSON5** + **TOON** output — all from the same builder.
 
 ### json-io vs Jackson vs Gson
 

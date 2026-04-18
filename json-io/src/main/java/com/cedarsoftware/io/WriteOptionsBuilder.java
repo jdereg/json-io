@@ -1198,19 +1198,31 @@ public class WriteOptionsBuilder {
     /**
      * Configure json-io to produce standard JSON output that is interoperable with Jackson and other
      * mainstream JSON libraries. This sets the "5.0 defaults" — no proprietary metadata, no cycle
-     * tracking, and stringify-able map keys written as regular JSON object keys.
+     * tracking, stringify-able map keys written as regular JSON object keys, and dates in ISO-8601
+     * string form (matching Spring Boot's default Jackson configuration, which is what ~90% of real
+     * Java webapps actually emit).
      * <ul>
      *   <li>showTypeInfoNever - No @type metadata in the output</li>
      *   <li>showRootTypeInfo(false) - No @type on the root object either</li>
      *   <li>cycleSupport(false) - No @id/@ref cycle tracking</li>
      *   <li>stringifyMapKeys(true) - Map&lt;Long, V&gt; writes {"100": value} not @keys/@items</li>
      *   <li>writeOptionalAsObject(false) - Optional values write as bare value / null (Jackson-compatible)</li>
+     *   <li>preserveLeafContainerIdentity(false) - List&lt;String&gt;/Map&lt;UUID,Date&gt;/byte[] etc. are
+     *       serialized as values (no @id/@ref for leaf-element containers), matching Jackson's
+     *       default identity semantics</li>
+     *   <li>isoDateFormat - {@code java.util.Date} and {@code java.sql.Date} written as ISO-8601
+     *       strings (e.g. {@code "2026-04-18T10:30:00.000Z"}) instead of the library's default
+     *       epoch-millis long format. Matches Spring Boot's Jackson default
+     *       ({@code WRITE_DATES_AS_TIMESTAMPS=false}). {@code java.time.*} types are already
+     *       ISO-8601 regardless of this flag.</li>
      *   <li>useMetaPrefixDollar - Uses $ prefix for any remaining metadata ($type, $keys, etc.)</li>
      * </ul>
-     * The resulting JSON is identical to what Jackson produces for the same objects (POJOs, Lists,
-     * Maps with String/numeric/UUID/Enum keys, Optional values). Individual settings can be overridden
-     * after this call (for example, call {@code .writeOptionalAsObject(true)} to re-enable the legacy
-     * Optional object form).
+     * The resulting JSON is byte-compatible with what Jackson (with {@code JavaTimeModule} and the
+     * Spring Boot default of {@code WRITE_DATES_AS_TIMESTAMPS=false}) produces for the same objects —
+     * POJOs, Lists, Maps with String/numeric/UUID/Enum keys, Optional values, and dates. Individual
+     * settings can be overridden after this call (for example, call {@code .longDateFormat()} to
+     * re-enable the legacy epoch-millis date form, or {@code .writeOptionalAsObject(true)} to
+     * re-enable the legacy Optional object form).
      * <p>
      * In json-io 5.0.0, these will become the defaults. This method allows 4.x users to opt in early
      * and ensures interoperability with systems using Jackson or other standard JSON libraries.
@@ -1224,6 +1236,7 @@ public class WriteOptionsBuilder {
         options.writeOptionalAsObject = false;
         options.preserveLeafContainerIdentity = false;
         options.metaPrefixOverride = '$';
+        isoDateFormat();  // java.util.Date / java.sql.Date → ISO-8601 (matches Spring Boot default)
         return this;
     }
 
@@ -1254,6 +1267,7 @@ public class WriteOptionsBuilder {
         options.stringifyMapKeys = true;
         options.writeOptionalAsObject = false;
         options.preserveLeafContainerIdentity = false;
+        isoDateFormat();  // java.util.Date / java.sql.Date → ISO-8601 (matches Spring Boot default)
         return this;
     }
 
