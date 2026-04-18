@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.cedarsoftware.io.annotation.IoNaming;
 import com.cedarsoftware.io.reflect.Accessor;
 import com.cedarsoftware.util.convert.ConverterOptions;
 
@@ -113,6 +114,18 @@ public interface WriteOptions {
      * regardless of this flag. Only affects {@code cycleSupport=true} writes.
      */
     boolean isPreserveLeafContainerIdentity();
+
+    /**
+     * @return the global naming strategy applied to all classes that lack a per-class
+     * {@code @IoNaming}/{@code @JsonNaming} annotation and fields that lack a per-field
+     * {@code @IoProperty}/{@code @JsonProperty} annotation, or {@code null} if no
+     * global strategy is configured (the default). Priority at field-name resolution
+     * time: per-field {@code @IoProperty}/{@code @JsonProperty} > per-class
+     * {@code @IoNaming}/{@code @JsonNaming} > this global strategy > Java field name
+     * as-is. Intended to help Jackson users migrate from
+     * {@code ObjectMapper.setPropertyNamingStrategy(...)} without annotating every DTO.
+     */
+    IoNaming.Strategy getNamingStrategy();
 
     /**
      * @return boolean will return true if NAN and Infinity are allowed to be written out for

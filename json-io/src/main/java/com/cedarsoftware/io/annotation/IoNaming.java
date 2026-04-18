@@ -49,11 +49,15 @@ public @interface IoNaming {
     enum Strategy {
         /** Convert camelCase to snake_case: {@code firstName → first_name} */
         SNAKE_CASE,
+        /** Convert camelCase to UPPER_SNAKE_CASE: {@code firstName → FIRST_NAME} */
+        UPPER_SNAKE_CASE,
         /** Convert camelCase to kebab-case: {@code firstName → first-name} */
         KEBAB_CASE,
         /** Convert camelCase to UpperCamelCase: {@code firstName → FirstName} */
         UPPER_CAMEL_CASE,
         /** Convert camelCase to lower.dot.case: {@code firstName → first.name} */
-        LOWER_DOT_CASE
+        LOWER_DOT_CASE,
+        /** Convert any case to lowercase with no separators: {@code firstName → firstname} */
+        LOWER_CASE
     }
 }

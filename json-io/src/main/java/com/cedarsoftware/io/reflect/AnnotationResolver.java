@@ -776,12 +776,16 @@ public class AnnotationResolver {
         switch (name) {
             case "SnakeCaseStrategy":
                 return IoNaming.Strategy.SNAKE_CASE;
+            case "UpperSnakeCaseStrategy":
+                return IoNaming.Strategy.UPPER_SNAKE_CASE;
             case "KebabCaseStrategy":
                 return IoNaming.Strategy.KEBAB_CASE;
             case "UpperCamelCaseStrategy":
                 return IoNaming.Strategy.UPPER_CAMEL_CASE;
             case "LowerDotCaseStrategy":
                 return IoNaming.Strategy.LOWER_DOT_CASE;
+            case "LowerCaseStrategy":
+                return IoNaming.Strategy.LOWER_CASE;
             default:
                 return null;
         }
@@ -789,21 +793,25 @@ public class AnnotationResolver {
 
     /**
      * Apply a naming strategy to transform a Java field name.
-     * Returns null if the field name would not change (e.g., single-word lowercase).
+     * Returns null if the strategy is unrecognized or the input is empty.
      */
-    static String applyNamingStrategy(String fieldName, IoNaming.Strategy strategy) {
-        if (fieldName == null || fieldName.isEmpty()) {
+    public static String applyNamingStrategy(String fieldName, IoNaming.Strategy strategy) {
+        if (fieldName == null || fieldName.isEmpty() || strategy == null) {
             return null;
         }
         switch (strategy) {
             case SNAKE_CASE:
                 return camelToSeparated(fieldName, '_');
+            case UPPER_SNAKE_CASE:
+                return camelToSeparated(fieldName, '_').toUpperCase(java.util.Locale.ROOT);
             case KEBAB_CASE:
                 return camelToSeparated(fieldName, '-');
             case LOWER_DOT_CASE:
                 return camelToSeparated(fieldName, '.');
             case UPPER_CAMEL_CASE:
                 return Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
+            case LOWER_CASE:
+                return fieldName.toLowerCase(java.util.Locale.ROOT);
             default:
                 return null;
         }

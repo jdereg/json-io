@@ -80,6 +80,66 @@ WriteOptions options = new WriteOptionsBuilder()
 >- [ ] Configures all settings to produce standard, interoperable JSON output. These will become the defaults in json-io 5.0.0. Chainable — individual settings can be overridden after this call.
 
 ---
+### Global Naming Strategy
+
+When migrating a Jackson codebase that uses `ObjectMapper.setPropertyNamingStrategy(...)`, you want a single setting that retargets every DTO to snake_case / kebab-case / UpperCamelCase / etc. without touching any classes. `WriteOptionsBuilder.namingStrategy(...)` is the direct equivalent.
+
+**Priority at field-name resolution time (most specific wins):**
+
+1. Per-field `@IoProperty("custom")` / `@JsonProperty("custom")`
+2. Per-class `@IoNaming(...)` / `@JsonNaming(...)`
+3. **Global `namingStrategy(...)` (this option)**
+4. Java field name as-is (default — `firstName` → `"firstName"`)
+
+Existing annotations are always honored — turning on a global strategy never overrides a class or field that is already explicit about its output name.
+
+**Available strategies (`IoNaming.Strategy`):**
+
+| Strategy | `firstName` → | `parseXMLDocument` → |
+|---|---|---|
+| `SNAKE_CASE` | `first_name` | `parse_xml_document` |
+| `UPPER_SNAKE_CASE` | `FIRST_NAME` | `PARSE_XML_DOCUMENT` |
+| `KEBAB_CASE` | `first-name` | `parse-xml-document` |
+| `UPPER_CAMEL_CASE` | `FirstName` | `ParseXMLDocument` |
+| `LOWER_DOT_CASE` | `first.name` | `parse.xml.document` |
+| `LOWER_CASE` | `firstname` | `parsexmldocument` |
+
+These mirror Jackson's `PropertyNamingStrategies` so a Jackson DTO annotated `@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)` keeps working unchanged under json-io, and a Jackson caller that just sets `setPropertyNamingStrategy(SnakeCaseStrategy.INSTANCE)` globally can use `WriteOptionsBuilder.namingStrategy(IoNaming.Strategy.SNAKE_CASE)` instead.
+
+>#### `IoNaming.Strategy` getNamingStrategy()
+>- [ ] Returns the configured global strategy, or `null` if no global strategy is set (the default).
+
+>#### `WriteOptionsBuilder` namingStrategy(`IoNaming.Strategy strategy`)
+>- [ ] Sets the global naming strategy. Pass `null` to clear it.
+
+>#### `static void` WriteOptionsBuilder.addPermanentNamingStrategy(`IoNaming.Strategy strategy`)
+>- [ ] Sets a JVM-lifetime default so all `WriteOptions` created after this call inherit the strategy unless they override it via `namingStrategy(...)`.
+
+**Note:** Neither `standardJson()` nor `json5()` sets a strategy. Jackson's own default is LowerCamelCase (which matches Java field names and json-io's default), so forcing a strategy into those presets would impose a user-specific choice.
+
+**Example:**
+
+```java
+WriteOptions wo = new WriteOptionsBuilder()
+        .showTypeInfoNever()
+        .namingStrategy(IoNaming.Strategy.SNAKE_CASE)
+        .build();
+
+class Profile {
+    String firstName = "Alice";
+    int loginCount = 42;
+
+    @IoProperty("uid")
+    String userId = "u-1";    // @IoProperty wins: still "uid"
+}
+
+// {"first_name":"Alice","login_count":42,"uid":"u-1"}
+String json = JsonIo.toJson(new Profile(), wo);
+```
+
+**Round-tripping Jackson-style snake_case back into a typed POJO** works with either a per-class `@IoNaming(IoNaming.Strategy.SNAKE_CASE)` annotation (the reader then accepts both forms as aliases) or explicit `@IoAlias("first_name")` / `@JsonAlias("first_name")` on each field. The global write-side strategy does not register read-side aliases on its own.
+
+---
 ### Cycle Support - Controlling @id/@ref Generation
 
 By default, `json-io` performs a two-pass serialization: first tracing references to identify objects that appear multiple times, then writing the JSON with `@id`/`@ref` markers. This enables full cycle and shared-reference support but has some overhead.

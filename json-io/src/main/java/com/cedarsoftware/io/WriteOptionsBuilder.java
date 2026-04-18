@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
+import com.cedarsoftware.io.annotation.IoNaming;
 import com.cedarsoftware.io.reflect.Accessor;
 import com.cedarsoftware.io.reflect.AccessorFactory;
 import com.cedarsoftware.io.reflect.AnnotationResolver;
@@ -113,6 +114,7 @@ public class WriteOptionsBuilder {
     private static volatile boolean BASE_STRINGIFY_MAP_KEYS = false;
     private static volatile boolean BASE_WRITE_OPTIONAL_AS_OBJECT = false;
     private static volatile boolean BASE_PRESERVE_LEAF_CONTAINER_IDENTITY = false;
+    private static volatile IoNaming.Strategy BASE_NAMING_STRATEGY = null;
     private static volatile boolean BASE_ALLOW_NAN_AND_INFINITY = false;
     private static volatile boolean BASE_ENUM_PUBLIC_FIELDS_ONLY = false;
     private static volatile boolean BASE_ENUM_SET_WRITTEN_OLD_WAY = true;
@@ -201,6 +203,7 @@ public class WriteOptionsBuilder {
         options.stringifyMapKeys = BASE_STRINGIFY_MAP_KEYS;
         options.writeOptionalAsObject = BASE_WRITE_OPTIONAL_AS_OBJECT;
         options.preserveLeafContainerIdentity = BASE_PRESERVE_LEAF_CONTAINER_IDENTITY;
+        options.namingStrategy = BASE_NAMING_STRATEGY;
         options.allowNanAndInfinity = BASE_ALLOW_NAN_AND_INFINITY;
         options.enumPublicFieldsOnly = BASE_ENUM_PUBLIC_FIELDS_ONLY;
         options.enumSetWrittenOldWay = BASE_ENUM_SET_WRITTEN_OLD_WAY;
@@ -237,6 +240,7 @@ public class WriteOptionsBuilder {
             options.stringifyMapKeys = other.stringifyMapKeys;
             options.writeOptionalAsObject = other.writeOptionalAsObject;
             options.preserveLeafContainerIdentity = other.preserveLeafContainerIdentity;
+            options.namingStrategy = other.namingStrategy;
             options.prettyPrint = other.prettyPrint;
             options.lruSize = other.lruSize;
             options.shortMetaKeys = other.shortMetaKeys;
@@ -705,6 +709,23 @@ public class WriteOptionsBuilder {
     }
 
     /**
+     * Call this method to set a permanent (JVM lifetime) global naming strategy. All
+     * {@link WriteOptions} instances created after this call will inherit the strategy
+     * unless explicitly overridden via {@link #namingStrategy(IoNaming.Strategy)}. This
+     * is the global counterpart to per-class {@code @IoNaming} / {@code @JsonNaming}
+     * annotations — it applies to all classes that lack a per-class naming annotation,
+     * and is overridden by per-field {@code @IoProperty} / {@code @JsonProperty}
+     * renames. Intended to help Jackson users migrate from
+     * {@code ObjectMapper.setPropertyNamingStrategy(...)} without annotating every DTO.
+     *
+     * @param strategy the {@link IoNaming.Strategy} to apply globally, or {@code null}
+     *                 to clear the permanent strategy (per-class annotations still honored).
+     */
+    public static void addPermanentNamingStrategy(IoNaming.Strategy strategy) {
+        BASE_NAMING_STRATEGY = strategy;
+    }
+
+    /**
      * Call this method to set a permanent (JVM lifetime) allow NaN and Infinity setting.
      * All WriteOptions instances will be initialized with this value unless explicitly overridden.
      * 
@@ -1051,6 +1072,35 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder preserveLeafContainerIdentity(boolean preserveLeafContainerIdentity) {
         options.preserveLeafContainerIdentity = preserveLeafContainerIdentity;
+        return this;
+    }
+
+    /**
+     * Set a global naming strategy that transforms all Java field names when writing,
+     * unless overridden by a per-class {@code @IoNaming} / {@code @JsonNaming} annotation
+     * or a per-field {@code @IoProperty} / {@code @JsonProperty} rename.
+     * <p>
+     * Priority at field-name resolution time:
+     * <ol>
+     *   <li>per-field {@code @IoProperty("custom")} / {@code @JsonProperty("custom")}</li>
+     *   <li>per-class {@code @IoNaming(...)} / {@code @JsonNaming(...)}</li>
+     *   <li>this global strategy</li>
+     *   <li>Java field name as-is (default: {@code firstName} → {@code "firstName"})</li>
+     * </ol>
+     * <p>
+     * This is the opt-in equivalent of Jackson's
+     * {@code ObjectMapper.setPropertyNamingStrategy(...)} — existing annotations are
+     * always honored, so migrating a Jackson codebase only requires this one setting.
+     * Default is {@code null} (no global strategy; per-class annotations still win).
+     * Neither {@link #standardJson()} nor {@link #json5()} set a strategy — Jackson's
+     * default is LowerCamelCase (Java field names), matching json-io's default.
+     *
+     * @param strategy the {@link IoNaming.Strategy} to apply globally, or {@code null}
+     *                 to clear the global strategy on this builder.
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder namingStrategy(IoNaming.Strategy strategy) {
+        options.namingStrategy = strategy;
         return this;
     }
 
@@ -1800,6 +1850,7 @@ public class WriteOptionsBuilder {
         private boolean stringifyMapKeys = false;
         private boolean writeOptionalAsObject = false;
         private boolean preserveLeafContainerIdentity = false;
+        private IoNaming.Strategy namingStrategy = null;
         private boolean allowNanAndInfinity = false;
         private boolean enumPublicFieldsOnly = false;
         private boolean enumSetWrittenOldWay = true;
@@ -2083,6 +2134,10 @@ public class WriteOptionsBuilder {
 
         public boolean isPreserveLeafContainerIdentity() {
             return preserveLeafContainerIdentity;
+        }
+
+        public IoNaming.Strategy getNamingStrategy() {
+            return namingStrategy;
         }
 
         /**
@@ -2377,11 +2432,20 @@ public class WriteOptionsBuilder {
             final List<Accessor> accessors = new ArrayList<>(fields.size());
             final AnnotationResolver.ClassAnnotationMetadata annMeta = AnnotationResolver.getMetadata(clazz);
 
+            final IoNaming.Strategy globalNaming = this.namingStrategy;
             for (final Map.Entry<String, Field> entry : fields.entrySet()) {
 
                 final Field field = entry.getValue();
-                // Apply @IoProperty rename if present; otherwise use the original field name
-                final String serializedName = annMeta.getSerializedName(field.getName());
+                // Priority: per-field @IoProperty/@JsonProperty or per-class @IoNaming/@JsonNaming
+                // (both already folded into annMeta.getSerializedName) > global namingStrategy
+                // > original field name.
+                String serializedName = annMeta.getSerializedName(field.getName());
+                if (serializedName == null && globalNaming != null) {
+                    String transformed = AnnotationResolver.applyNamingStrategy(field.getName(), globalNaming);
+                    if (transformed != null && !transformed.equals(field.getName())) {
+                        serializedName = transformed;
+                    }
+                }
                 final String uniqueFieldName = serializedName != null ? serializedName : entry.getKey();
 
                 Accessor accessor = null;

@@ -193,6 +193,14 @@ Need the full json-io feature set (cycle preservation, polymorphic `@type` metad
 reference tracking)? Simply don't call `.standardJson()`, or override specific flags after calling
 it (e.g., `.standardJson().cycleSupport(true)` to turn reference tracking back on).
 
+**Migrating Jackson's `setPropertyNamingStrategy(...)`** — if your Jackson code configures a global
+naming strategy (snake_case, kebab-case, UpperCamel, etc.) on the `ObjectMapper`, json-io has a
+direct equivalent: `WriteOptionsBuilder.namingStrategy(IoNaming.Strategy.SNAKE_CASE)`. All six
+Jackson strategies are supported (`SNAKE_CASE`, `UPPER_SNAKE_CASE`, `KEBAB_CASE`, `UPPER_CAMEL_CASE`,
+`LOWER_DOT_CASE`, `LOWER_CASE`). Per-class `@IoNaming` / `@JsonNaming` and per-field `@IoProperty`
+/ `@JsonProperty` still win. See
+[user-guide-writeOptions.md](user-guide-writeOptions.md#global-naming-strategy) for details.
+
 ## Standard JSON Output
 
 json-io can produce standard JSON output identical to Jackson and other mainstream libraries — no
