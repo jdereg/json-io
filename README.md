@@ -138,7 +138,7 @@ automatic shared-reference and cycle preservation. No class annotations required
 |------------|---------|---------|------|
 | Cyclic object graphs | Automatic (`$id`/`$ref`) | Requires `@JsonIdentityInfo` | `StackOverflowError` |
 | Shared object references | Preserved automatically | Requires `@JsonIdentityInfo` | Duplicated (no identity) |
-| Polymorphic types | Automatic; `@IoTypeInfo`/`@JsonTypeInfo` respected | Requires `@JsonTypeInfo` | Requires `TypeAdapter` |
+| Polymorphic types | Automatic -or- use `@IoTypeInfo`/`@JsonTypeInfo` | Requires `@JsonTypeInfo` | Requires `TypeAdapter` |
 | Unknown `$type` values | Graceful fallback to `Map` | Exception | Exception |
 
 **Map handling**
