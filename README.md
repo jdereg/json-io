@@ -176,7 +176,7 @@ automatic shared-reference and cycle preservation. No class annotations required
 
 ### Key Features
 
-- **Jackson-compatible standard JSON** with a single flag — `WriteOptionsBuilder.standardJson()` produces output byte-compatible with Spring Boot's default Jackson configuration (ISO-8601 dates, stringified Map keys, no proprietary metadata). Use json-io anywhere you'd use Jackson.
+- **Jackson-compatible standard JSON** — `.standardJson()` matches Spring Boot's default Jackson output (ISO-8601 dates, stringified Map keys, no proprietary metadata). Drop-in for Jackson.
 - Two modes: typed Java objects (`toJava()`) or class-independent Maps (`toMaps()`)
 - Preserves object references and handles cyclic relationships via `$id`/`$ref` — zero annotations required (Jackson needs `@JsonIdentityInfo` on every class)
 - Supports polymorphic types and complex object graphs
