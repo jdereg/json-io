@@ -116,6 +116,20 @@ and `useMetaPrefixDollar()`. These will become the defaults in json-io 5.0.0.
 feature set whenever you need it: cyclic graph preservation, polymorphic `@type` auto-detection,
 and first-class **JSON5** + **TOON** output — all from the same builder.
 
+**Need Jackson-style output *plus* graph fidelity?** If your data has shared references or cycles
+and you want them preserved (something Jackson only does with `@JsonIdentityInfo` annotated on
+every affected class), turn cycle support back on after `standardJson()`:
+
+```java
+WriteOptions opts = new WriteOptionsBuilder()
+        .standardJson()
+        .cycleSupport(true)    // Jackson-compatible output, but @id/@ref are emitted when shared refs exist
+        .build();
+```
+
+You get Jackson-compatible field names, ISO-8601 dates, and stringified Map keys — **plus** json-io's
+automatic shared-reference and cycle preservation. No class annotations required.
+
 ### json-io vs Jackson vs Gson
 
 **Object graph handling**
@@ -160,8 +174,9 @@ and first-class **JSON5** + **TOON** output — all from the same builder.
 
 ### Key Features
 
+- **Jackson-compatible standard JSON** with a single flag — `WriteOptionsBuilder.standardJson()` produces output byte-compatible with Spring Boot's default Jackson configuration (ISO-8601 dates, stringified Map keys, no proprietary metadata). Use json-io anywhere you'd use Jackson.
 - Two modes: typed Java objects (`toJava()`) or class-independent Maps (`toMaps()`)
-- Preserves object references and handles cyclic relationships via `$id`/`$ref`
+- Preserves object references and handles cyclic relationships via `$id`/`$ref` — zero annotations required (Jackson needs `@JsonIdentityInfo` on every class)
 - Supports polymorphic types and complex object graphs
 - Zero external dependencies (other than java-util)
 - Stringify-able map keys: `Map<Long, V>` writes `{"100": value}` with `stringifyMapKeys(true)`
