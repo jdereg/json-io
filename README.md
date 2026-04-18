@@ -110,7 +110,9 @@ String json = JsonIo.toJson(myObject, opts);
 This configures: `showTypeInfoNever`, `showRootTypeInfo(false)`, `cycleSupport(false)`,
 `stringifyMapKeys(true)`, `writeOptionalAsObject(false)`, `preserveLeafContainerIdentity(false)`,
 `isoDateFormat()` (ISO-8601 dates for `java.util.Date` — `java.time.*` are already ISO-8601),
-and `useMetaPrefixDollar()`. These will become the defaults in json-io 5.0.0.
+and `useMetaPrefixDollar()`.
+
+*These will become the defaults in json-io 5.0.0.*
 
 **Use json-io anywhere you'd use Jackson** for standard JSON output, and get the full json-io
 feature set whenever you need it: cyclic graph preservation, polymorphic `@type` auto-detection,
