@@ -361,6 +361,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     // Only allocated when cycleSupport=true
     private int[] traceDepths;
     private int traceDepthIndex;
+    // DOS guardrails, read at push-site by traceVisit(). Initialized in traceReferences.
+    private int traceProcessedCount;
+    private int traceMaxObjects;
+    private int traceMaxDepth;
 
     // Element type context: when writing Collection/Map fields, this tracks the declared element type
     // from the field's generic type (e.g., List<NestedData> -> NestedData). Used to eliminate
@@ -908,8 +912,15 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // Use object stack with parallel primitive int[] for depths (avoids Integer autoboxing)
         final Deque<Object> objectStack = new ArrayDeque<>(256);
         traceDepthIndex = 0;  // Reset depth index
-        objectStack.addFirst(root);
-        pushDepth(0);
+
+        // Snapshot DOS guardrails so traceVisit() can enforce them at push-time,
+        // counting non-referenceable leaves toward the limits even though they
+        // never land on the stack.
+        traceProcessedCount = 0;
+        traceMaxDepth = writeOptions.getMaxObjectGraphDepth();
+        traceMaxObjects = writeOptions.getMaxObjectCount();
+
+        traceVisit(root, objectStack, 0);
 
         final IdentityIntMap visited = objVisited;
         final IdentityIntMap referenced = objsReferenced;
@@ -917,41 +928,22 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // Marker value: -1 means "seen but no ID assigned yet", 0 means "not in map", >0 is the assigned ID
         final int FIRST_SEEN = -1;
 
-        // Fix memory leak - prevent stack overflow and unbounded memory growth using configurable limits
-        final int MAX_DEPTH = writeOptions.getMaxObjectGraphDepth();
-        final int MAX_OBJECTS = writeOptions.getMaxObjectCount();
-        int processedCount = 0;
-
         while (!objectStack.isEmpty()) {
-            if (processedCount >= MAX_OBJECTS) {
-                throw new JsonIoException("Object graph too large (>" + MAX_OBJECTS + " objects). This may indicate excessive nesting or a memory leak.");
-            }
             final Object obj = objectStack.removeFirst();
             final int currentDepth = traceDepths[--traceDepthIndex];
-            processedCount++;
 
-            // Check actual depth, not stack size
-            if (currentDepth > MAX_DEPTH) {
-                throw new JsonIoException("Object graph too deep (>" + MAX_DEPTH + " levels). This may indicate a circular reference or excessively nested structure.");
-            }
-
-            // Cache class once - avoid duplicate getClass() calls (performance optimization)
-            final Class<?> clazz = obj.getClass();
-            final boolean isNonReferenceable = writeOptions.isNonReferenceableClass(clazz);
-
-            if (!isNonReferenceable) {
-                int id = visited.get(obj);
-                if (id != 0) {   // Object has been seen before (0 = NOT_FOUND)
-                    if (id == FIRST_SEEN) {
-                        id = identity++;
-                        visited.put(obj, id);
-                        referenced.put(obj, id);
-                    }
-                    continue;
-                } else {
-                    visited.put(obj, FIRST_SEEN);
+            // Everything on the stack was pre-filtered by traceVisit, so obj is
+            // guaranteed non-null and referenceable. No duplicate checks needed.
+            int id = visited.get(obj);
+            if (id != 0) {   // Object has been seen before (0 = NOT_FOUND)
+                if (id == FIRST_SEEN) {
+                    id = identity++;
+                    visited.put(obj, id);
+                    referenced.put(obj, id);
                 }
+                continue;
             }
+            visited.put(obj, FIRST_SEEN);
 
             final int nextDepth = currentDepth + 1;
 
@@ -964,12 +956,35 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 processMap((Map<?, ?>) obj, objectStack, nextDepth);
             } else if (obj instanceof Collection) {
                 processCollection((Collection<?>) obj, objectStack, nextDepth);
-            } else if (!isNonReferenceable) {
-                // Reuse cached isNonReferenceable result
+            } else {
                 processFields(objectStack, obj, nextDepth);
             }
         }
+    }
 
+    /**
+     * Enforce DOS limits and push {@code o} onto the trace stack only if it can
+     * actually participate in reference cycles. Non-referenceable leaves (Strings,
+     * primitive wrappers, temporals, UUID, etc.) are counted toward the object-count
+     * limit and depth-checked so that DOS semantics are preserved, but they never
+     * land on the stack — saving a deque push + pop + isNonReferenceable re-check
+     * per leaf. Mirrors ToonWriter's pushReferenceCandidate pre-filter.
+     */
+    private void traceVisit(Object o, Deque<Object> stack, int depth) {
+        if (o == null) {
+            return;
+        }
+        if (traceProcessedCount >= traceMaxObjects) {
+            throw new JsonIoException("Object graph too large (>" + traceMaxObjects + " objects). This may indicate excessive nesting or a memory leak.");
+        }
+        if (depth > traceMaxDepth) {
+            throw new JsonIoException("Object graph too deep (>" + traceMaxDepth + " levels). This may indicate a circular reference or excessively nested structure.");
+        }
+        traceProcessedCount++;
+        if (!writeOptions.isNonReferenceableClass(o.getClass())) {
+            stack.addFirst(o);
+            pushDepth(depth);
+        }
     }
 
     /**
@@ -987,10 +1002,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (!writeOptions.isNonReferenceableClass(componentType)) {
             // Iterate directly over Object[] - primitive arrays are filtered out by isNonReferenceableClass check
             for (final Object element : array) {
-                if (element != null) {
-                    objectStack.addFirst(element);
-                    pushDepth(depth);
-                }
+                traceVisit(element, objectStack, depth);
             }
         }
     }
@@ -1018,39 +1030,20 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             JsonObject jsonObject = (JsonObject) map;
             int len = jsonObject.fastEntryCount();
             for (int i = 0; i < len; i++) {
-                Object key = jsonObject.fastKeyAt(i);
-                Object value = jsonObject.fastValueAt(i);
-                if (key != null) {
-                    objectStack.addFirst(key);
-                    pushDepth(depth);
-                }
-                if (value != null) {
-                    objectStack.addFirst(value);
-                    pushDepth(depth);
-                }
+                traceVisit(jsonObject.fastKeyAt(i), objectStack, depth);
+                traceVisit(jsonObject.fastValueAt(i), objectStack, depth);
             }
             return;
         }
         for (Map.Entry<?, ?> entry : map.entrySet()) {
-            Object key = entry.getKey();
-            Object value = entry.getValue();
-            if (key != null) {
-                objectStack.addFirst(key);
-                pushDepth(depth);
-            }
-            if (value != null) {
-                objectStack.addFirst(value);
-                pushDepth(depth);
-            }
+            traceVisit(entry.getKey(), objectStack, depth);
+            traceVisit(entry.getValue(), objectStack, depth);
         }
     }
 
     private void processCollection(Collection<?> collection, Deque<Object> objectStack, int depth) {
         for (Object item : collection) {
-            if (item != null) {
-                objectStack.addFirst(item);
-                pushDepth(depth);
-            }
+            traceVisit(item, objectStack, depth);
         }
     }
 
@@ -1071,11 +1064,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             if (fieldPlan.skipReferenceTrace()) {
                 continue;
             }
-            final Object o = fieldPlan.accessor().retrieve(obj);
-            if (o != null) {   // Trace through objects that can reference other objects
-                objectStack.addFirst(o);
-                pushDepth(depth);
-            }
+            traceVisit(fieldPlan.accessor().retrieve(obj), objectStack, depth);
         }
     }
 
