@@ -136,8 +136,8 @@ automatic shared-reference and cycle preservation. No class annotations required
 
 | Capability | json-io | Jackson | Gson |
 |------------|---------|---------|------|
-| Cyclic object graphs | Automatic (`$id`/`$ref`) | Requires `@JsonIdentityInfo` | `StackOverflowError` |
-| Shared object references | Preserved automatically | Requires `@JsonIdentityInfo` | Duplicated (no identity) |
+| Cyclic object graphs | Automatic (`$id`/`$ref`) -or- `JsonIoException` with `cycleSupport(false)` | Requires `@JsonIdentityInfo` | `StackOverflowError` |
+| Shared object references | Preserved (`$id`/`$ref`) -or- duplicated with `cycleSupport(false)` | Requires `@JsonIdentityInfo` | Duplicated (no identity) |
 | Polymorphic types | Automatic -or- use `@IoTypeInfo`/`@JsonTypeInfo` | Requires `@JsonTypeInfo` | Requires `TypeAdapter` |
 | Unknown `$type` values | Graceful fallback to `Map` | Exception | Exception |
 
