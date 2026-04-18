@@ -109,6 +109,49 @@ public class ToonWriter implements Closeable, Flushable {
         table[delim] = true;
         return table;
     }
+
+    /**
+     * Compute whether a POJO field key needs TOON quoting, given the target WriteOptions.
+     * Called once at {@link WriteOptionsBuilder.WriteFieldPlan} build time so the runtime
+     * write path can read a precomputed boolean instead of probing the shared
+     * quoteDecisionCache (a {@link ConcurrentHashMap}) on every field. Captures the complete
+     * decision: empty check, dot-in-key check (when keyFolding is off), reserved-literal
+     * check, and the single-pass quote scan against the delimiter-appropriate lookup table.
+     */
+    static boolean computeKeyNeedsQuoting(String key, WriteOptions options) {
+        if (key == null || key.isEmpty()) {
+            return true;
+        }
+        if (!options.isToonKeyFolding() && key.indexOf('.') >= 0) {
+            return true;
+        }
+        int len = key.length();
+        char first = key.charAt(0);
+        if (first <= ' ' || first == '-') {
+            return true;
+        }
+        if (key.charAt(len - 1) <= ' ') {
+            return true;
+        }
+        if (len <= 5) {
+            switch (first) {
+                case 't': if (len == 4 && "true".equals(key)) return true; break;
+                case 'f': if (len == 5 && "false".equals(key)) return true; break;
+                case 'n': if (len == 4 && "null".equals(key)) return true; break;
+            }
+        }
+        char delim = options.getToonDelimiter();
+        boolean[] mq = (delim == '\t') ? MUST_QUOTE_TAB
+                     : (delim == '|')  ? MUST_QUOTE_PIPE
+                     :                    MUST_QUOTE_COMMA;
+        for (int i = 0; i < len; i++) {
+            char c = key.charAt(i);
+            if (c < 128 ? mq[c] : true) {
+                return true;
+            }
+        }
+        return false;
+    }
     private static final Map<Long, String> SHARED_DOUBLE_FORMAT_CACHE = new ConcurrentHashMap<>(1024);
     private static final Map<Integer, String> SHARED_FLOAT_FORMAT_CACHE = new ConcurrentHashMap<>(512);
     private static final int COUNT_MARKER_CACHE_SIZE = 256;
@@ -560,23 +603,35 @@ public class ToonWriter implements Closeable, Flushable {
      * Write a key string, handling dots appropriately based on key folding setting.
      * When key folding is OFF, dots in keys must be quoted to prevent expansion on read.
      */
-    private void writeKeyString(String key) throws IOException {
-        if (key.isEmpty()) {
-            writeQuotedString(key);
-            return;
-        }
-
-        // When key folding is OFF, dots in keys must be quoted to prevent expansion on read
-        if (!toonKeyFolding && key.indexOf('.') >= 0) {
-            writeQuotedString(key);
-            return;
-        }
-
-        if (needsQuoting(key)) {
+    /**
+     * Write a TOON key. {@code needsQuote} is precomputed — either at
+     * {@link WriteOptionsBuilder.WriteFieldPlan} build time for POJO field names
+     * (via {@link #computeKeyNeedsQuoting}) or at the call site for dynamic Map
+     * keys (via {@link #needsQuotingForMapKey}). This moves the quoting decision
+     * off the hot write path; a prior static ConcurrentHashMap lookup was showing
+     * as ~11.7% of ToonWriter samples in JFR.
+     */
+    private void writeKeyStringKnown(String key, boolean needsQuote) throws IOException {
+        if (needsQuote) {
             writeQuotedString(key);
         } else {
             out.write(key);
         }
+    }
+
+    /**
+     * Compute the quoting decision for a dynamic Map key (no WriteFieldPlan available).
+     * Mirrors the preflight checks in the original writeKeyString so callers can pass
+     * the full decision to writeFieldEntry/writeFieldEntryInline uniformly.
+     */
+    private boolean needsQuotingForMapKey(String key) {
+        if (key.isEmpty()) {
+            return true;
+        }
+        if (!toonKeyFolding && key.indexOf('.') >= 0) {
+            return true;
+        }
+        return needsQuoting(key);
     }
 
     /**
@@ -1574,7 +1629,7 @@ public class ToonWriter implements Closeable, Flushable {
 
                 Object key = entry.getKey();
                 String keyStr = (key == null) ? "null" : key.toString();
-                writeFieldEntryInline(keyStr, entry.getValue());
+                writeFieldEntryInline(keyStr, entry.getValue(), needsQuotingForMapKey(keyStr));
             }
         } finally {
             if (!cycleSupport) {
@@ -1663,7 +1718,7 @@ public class ToonWriter implements Closeable, Flushable {
                 }
                 boolean savedForceShowType = forceShowType;
                 forceShowType = plan.forceShowType();
-                writeFieldEntryInline(key, value);
+                writeFieldEntryInline(key, value, plan.toonKeyNeedsQuoting());
                 forceShowType = savedForceShowType;
             }
 
@@ -1814,7 +1869,7 @@ public class ToonWriter implements Closeable, Flushable {
 
             Object key = entry.getKey();
             String keyStr = (key == null) ? "null" : key.toString();
-            writeFieldEntry(keyStr, entry.getValue());
+            writeFieldEntry(keyStr, entry.getValue(), needsQuotingForMapKey(keyStr));
         }
     }
 
@@ -1822,12 +1877,12 @@ public class ToonWriter implements Closeable, Flushable {
      * Write a single key: value field entry. Handles arrays, collections, key folding,
      * nested objects, and primitives. Caller is responsible for indentation and newlines.
      */
-    private void writeFieldEntry(String keyStr, Object value) throws IOException {
+    private void writeFieldEntry(String keyStr, Object value, boolean keyNeedsQuoting) throws IOException {
         // Fast path: null and primitive/String field values are the most common field types
         // in a POJO. Writing them directly avoids falling through the container checks
         // (char[], array, Collection, Map) that all miss for leaf values.
         if (value == null) {
-            writeKeyString(keyStr);
+            writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(": null");
             return;
         }
@@ -1837,36 +1892,36 @@ public class ToonWriter implements Closeable, Flushable {
                 || value instanceof java.util.OptionalInt
                 || value instanceof java.util.OptionalLong
                 || value instanceof java.util.OptionalDouble) {
-            writeKeyString(keyStr);
+            writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(": ");
             writeValue(value);
             return;
         }
         if (value instanceof String) {
-            writeKeyString(keyStr);
+            writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(": ");
             writeString((String) value);
             return;
         }
         if (value instanceof Integer) {
-            writeKeyString(keyStr);
+            writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(": ");
             out.write(toCachedLongString((Integer) value));
             return;
         }
         if (value instanceof Long) {
-            writeKeyString(keyStr);
+            writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(": ");
             out.write(toCachedLongString((Long) value));
             return;
         }
         if (value instanceof Boolean) {
-            writeKeyString(keyStr);
+            writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(((Boolean) value) ? ": true" : ": false");
             return;
         }
         if (value instanceof Double) {
-            writeKeyString(keyStr);
+            writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(": ");
             writeNumber((Number) value);
             return;
@@ -1886,12 +1941,12 @@ public class ToonWriter implements Closeable, Flushable {
 
         if (value instanceof char[]) {
             // char[] is written as a plain string value (Converter handles String → char[] on read)
-            writeKeyString(keyStr);
+            writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(": ");
             writeString(new String((char[]) value));
         } else if (value != null && value.getClass().isArray()) {
             if (shouldWrapArrayOrCollectionValue(value)) {
-                writeKeyString(keyStr);
+                writeKeyStringKnown(keyStr, keyNeedsQuoting);
                 out.write(":");
                 out.write(NEW_LINE);
                 depth++;
@@ -1901,7 +1956,7 @@ public class ToonWriter implements Closeable, Flushable {
             } else {
                 // Combine key with array size: fieldName[N]:
                 int length = ArrayUtilities.getLength(value);
-                writeKeyString(keyStr);
+                writeKeyStringKnown(keyStr, keyNeedsQuoting);
                 out.write(countMarker(length));
                 writeArrayElements(value, length);
             }
@@ -1909,7 +1964,7 @@ public class ToonWriter implements Closeable, Flushable {
             if (shouldWrapArrayOrCollectionValue(value)
                     || shouldWriteTypeMetadata(value.getClass())) {
                 // When type metadata is needed, use writeCollection (which emits $type/$items).
-                writeKeyString(keyStr);
+                writeKeyStringKnown(keyStr, keyNeedsQuoting);
                 out.write(":");
                 out.write(NEW_LINE);
                 depth++;
@@ -1919,12 +1974,12 @@ public class ToonWriter implements Closeable, Flushable {
             } else {
                 // Combine key with collection size: fieldName[N]: or fieldName[N]{cols}:
                 Collection<?> coll = (Collection<?>) value;
-                writeKeyString(keyStr);
+                writeKeyStringKnown(keyStr, keyNeedsQuoting);
                 out.write(countMarker(coll.size()));
                 writeCollectionElementsWithHeader(coll);
             }
         } else {
-            writeKeyString(keyStr);
+            writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(":");
             if (value instanceof Map && ((Map<?, ?>) value).isEmpty()) {
                 // Empty map - write inline as "key: {}"
@@ -1954,10 +2009,10 @@ public class ToonWriter implements Closeable, Flushable {
      * Uses depth+2 for nested structures (instead of depth+1 in regular context).
      * Caller is responsible for indentation and newlines.
      */
-    private void writeFieldEntryInline(String keyStr, Object value) throws IOException {
+    private void writeFieldEntryInline(String keyStr, Object value, boolean keyNeedsQuoting) throws IOException {
         // Fast path: null and primitive/String field values — same as writeFieldEntry
         if (value == null) {
-            writeKeyString(keyStr);
+            writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(": null");
             return;
         }
@@ -1966,48 +2021,48 @@ public class ToonWriter implements Closeable, Flushable {
                 || value instanceof java.util.OptionalInt
                 || value instanceof java.util.OptionalLong
                 || value instanceof java.util.OptionalDouble) {
-            writeKeyString(keyStr);
+            writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(": ");
             writeValue(value);
             return;
         }
         if (value instanceof String) {
-            writeKeyString(keyStr);
+            writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(": ");
             writeString((String) value);
             return;
         }
         if (value instanceof Integer) {
-            writeKeyString(keyStr);
+            writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(": ");
             out.write(toCachedLongString((Integer) value));
             return;
         }
         if (value instanceof Long) {
-            writeKeyString(keyStr);
+            writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(": ");
             out.write(toCachedLongString((Long) value));
             return;
         }
         if (value instanceof Boolean) {
-            writeKeyString(keyStr);
+            writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(((Boolean) value) ? ": true" : ": false");
             return;
         }
         if (value instanceof Double) {
-            writeKeyString(keyStr);
+            writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(": ");
             writeNumber((Number) value);
             return;
         }
 
         if (value instanceof char[]) {
-            writeKeyString(keyStr);
+            writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(": ");
             writeString(new String((char[]) value));
         } else if (value != null && value.getClass().isArray()) {
             if (shouldWrapArrayOrCollectionValue(value)) {
-                writeKeyString(keyStr);
+                writeKeyStringKnown(keyStr, keyNeedsQuoting);
                 out.write(":");
                 out.write(NEW_LINE);
                 depth += 2;
@@ -2016,14 +2071,14 @@ public class ToonWriter implements Closeable, Flushable {
                 depth -= 2;
             } else {
                 int length = ArrayUtilities.getLength(value);
-                writeKeyString(keyStr);
+                writeKeyStringKnown(keyStr, keyNeedsQuoting);
                 out.write(countMarker(length));
                 writeArrayElements(value, length);
             }
         } else if (value instanceof Collection) {
             if (shouldWrapArrayOrCollectionValue(value)
                     || shouldWriteTypeMetadata(value.getClass())) {
-                writeKeyString(keyStr);
+                writeKeyStringKnown(keyStr, keyNeedsQuoting);
                 out.write(":");
                 out.write(NEW_LINE);
                 depth += 2;
@@ -2032,14 +2087,14 @@ public class ToonWriter implements Closeable, Flushable {
                 depth -= 2;
             } else {
                 Collection<?> coll = (Collection<?>) value;
-                writeKeyString(keyStr);
+                writeKeyStringKnown(keyStr, keyNeedsQuoting);
                 out.write(countMarker(coll.size()));
                 depth++;
                 writeCollectionElementsWithHeader(coll);
                 depth--;
             }
         } else {
-            writeKeyString(keyStr);
+            writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(":");
             if (value instanceof Map && ((Map<?, ?>) value).isEmpty()) {
                 out.write(" {}");
@@ -2328,7 +2383,7 @@ public class ToonWriter implements Closeable, Flushable {
             writeIndent();
             boolean savedForceShowType = forceShowType;
             forceShowType = plan.forceShowType();
-            writeFieldEntry(key, value);
+            writeFieldEntry(key, value, plan.toonKeyNeedsQuoting());
             forceShowType = savedForceShowType;
         }
 

@@ -2579,12 +2579,14 @@ public class WriteOptionsBuilder {
         private final String formatPattern;
         private final Class<?> effectiveDeclaredType;
         private final boolean forceShowType;
+        private final boolean toonKeyNeedsQuoting;
 
         private WriteFieldPlan(Accessor accessor, String fieldName, String serializedKey, Class<?> declaredFieldType,
                                Class<?> declaredElementType, Class<?> declaredKeyType,
                                boolean enumPublicOnlySkipCandidate, boolean applyDeclaredContainerTypes,
                                boolean skipReferenceTrace, boolean skipIfNull, String formatPattern,
-                               Class<?> effectiveDeclaredType, boolean forceShowType) {
+                               Class<?> effectiveDeclaredType, boolean forceShowType,
+                               boolean toonKeyNeedsQuoting) {
             this.accessor = accessor;
             this.fieldName = fieldName;
             this.serializedKey = serializedKey;
@@ -2598,6 +2600,7 @@ public class WriteOptionsBuilder {
             this.formatPattern = formatPattern;
             this.effectiveDeclaredType = effectiveDeclaredType;
             this.forceShowType = forceShowType;
+            this.toonKeyNeedsQuoting = toonKeyNeedsQuoting;
         }
 
         static WriteFieldPlan create(Accessor accessor, WriteOptions options) {
@@ -2655,8 +2658,11 @@ public class WriteOptionsBuilder {
             // Pre-compute @IoShowType flag (or Jackson @JsonTypeInfo on field as fallback)
             boolean forceType = annMeta.isForceShowType(actualFieldName);
 
+            boolean toonKeyQuote = ToonWriter.computeKeyNeedsQuoting(fieldName, options);
+
             return new WriteFieldPlan(accessor, fieldName, keyLiteral, fieldType, elementType, keyType,
-                    enumSkip, applyContainerTypes, skipTrace, nullSkip, formatPat, effectiveType, forceType);
+                    enumSkip, applyContainerTypes, skipTrace, nullSkip, formatPat, effectiveType, forceType,
+                    toonKeyQuote);
         }
 
         private static String buildKeyLiteral(String fieldName, WriteOptions options) {
@@ -2743,6 +2749,10 @@ public class WriteOptionsBuilder {
 
         boolean forceShowType() {
             return forceShowType;
+        }
+
+        boolean toonKeyNeedsQuoting() {
+            return toonKeyNeedsQuoting;
         }
     }
 }
