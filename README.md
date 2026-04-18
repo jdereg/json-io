@@ -136,9 +136,9 @@ automatic shared-reference and cycle preservation. No class annotations required
 
 | Capability | json-io | Jackson | Gson |
 |------------|---------|---------|------|
-| Cyclic object graphs | Automatic (`$id`/`$ref`) | Requires `@JsonIdentityInfo` per class | `StackOverflowError` |
-| Shared object references | Preserved automatically | Requires `@JsonIdentityInfo` per class | Duplicated (no identity) |
-| Polymorphic types | Automatic with `showTypeInfoMinimal()` — no annotations needed; also supports `@IoTypeInfo` / `@JsonTypeInfo` annotations | Requires `@JsonTypeInfo` per hierarchy | Requires custom `TypeAdapter` |
+| Cyclic object graphs | Automatic (`$id`/`$ref`) | Requires `@JsonIdentityInfo` | `StackOverflowError` |
+| Shared object references | Preserved automatically | Requires `@JsonIdentityInfo` | Duplicated (no identity) |
+| Polymorphic types | Automatic; `@IoTypeInfo`/`@JsonTypeInfo` respected | Requires `@JsonTypeInfo` | Requires `TypeAdapter` |
 | Unknown `$type` values | Graceful fallback to `Map` | Exception | Exception |
 
 **Map handling**
@@ -146,26 +146,26 @@ automatic shared-reference and cycle preservation. No class annotations required
 | Capability | json-io | Jackson | Gson |
 |------------|---------|---------|------|
 | `Map<String, V>` | Standard JSON object | Same | Same |
-| `Map<Long, V>`, `Map<UUID, V>`, etc. | Stringified keys (`stringifyMapKeys`) or `$keys`/`$items` fallback | `toString()` on keys (broken for POJOs without override) | `enableComplexMapKeySerialization()` |
-| `Map<POJO, V>` (complex keys) | Full object preservation via `$keys`/`$items` | `toString()` (lossy) | JSON array of key-value pairs |
+| `Map<Long, V>`, `Map<UUID, V>` | `stringifyMapKeys` → `{"100": v}` | `toString()` (fragile) | `enableComplexMapKeySerialization()` |
+| `Map<POJO, V>` (complex keys) | Full fidelity via `$keys`/`$items` | `toString()` (lossy) | Array of key-value pairs |
 
 **Format & configuration**
 
 | Capability | json-io | Jackson | Gson |
 |------------|---------|---------|------|
-| Standard JSON output | `.standardJson()` — identical to Jackson | Default | Default |
-| JSON5 support | Full read/write (native) | Partial read (opt-in per feature); no write | None (Lenient mode is partial) |
-| TOON support | Full read/write (~40-50% fewer tokens) | None | None |
-| Configuration | Zero-config; optional `@Io*` annotations | Annotation-heavy (`@Json*` required for advanced features) | Moderate (annotations + builders) |
-| Jackson annotations | Recognized reflectively (zero compile-time dependency) | Native | Not supported |
-| Two parse modes | `toJava()` (typed) + `toMaps()` (schema-free) | Typed only (or manual `JsonNode` tree) | Typed only (or manual `JsonElement` tree) |
+| Standard JSON output | `.standardJson()` — Jackson-compatible | Default | Default |
+| JSON5 support | Full read/write (native) | Partial read only | None |
+| TOON support | Full read/write (40-50% fewer tokens) | None | None |
+| Configuration | Zero-config; optional `@Io*` | Annotation-heavy (`@Json*`) | Annotations + builders |
+| Jackson annotations | Recognized reflectively | Native | Not supported |
+| Two parse modes | `toJava()` (typed) + `toMaps()` | Typed only | Typed only |
 
 **Runtime**
 
 | Capability | json-io | Jackson | Gson |
 |------------|---------|---------|------|
-| Performance (simple DTOs) | 1.5-2x slower than Jackson | Fastest | ~1.3x slower than Jackson |
-| Dependencies | java-util only (~1MB total) | Multiple JARs (~2.5MB+) | Single JAR (~300KB) |
+| Performance (simple DTOs) | 1.5-1.9x vs Jackson | Fastest | ~1.3x vs Jackson |
+| Dependencies | java-util only (~1MB) | Multiple JARs (~2.5MB+) | Single JAR (~300KB) |
 | Java version | JDK 8+ | JDK 8+ | JDK 8+ |
 
 **On performance:** Jackson is faster for simple DTOs. In real-world applications, serialization is typically <1% of total request time — the rest is network I/O, database queries, and business logic. json-io's additional capabilities (cycles, polymorphism, zero-config, JSON5, TOON) often matter more than raw serialization throughput.
