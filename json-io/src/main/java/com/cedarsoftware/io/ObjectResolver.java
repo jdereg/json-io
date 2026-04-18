@@ -196,7 +196,8 @@ public class ObjectResolver extends Resolver
      * Handles nested objects, Maps, and custom classes.
      */
     private void assignJsonObjectField(final JsonObject jsonObj, final Injector injector,
-                                        final JsonObject jsRhs, final Type fieldType, final Object target) {
+                                        final JsonObject jsRhs, final Type fieldType, final Object target,
+                                        final AnnotationResolver.ClassAnnotationMetadata parentMeta) {
         final Type resolvedFieldType = TypeUtilities.resolveTypeUsingInstance(target, fieldType);
 
         // Preserve explicit type metadata when present and resolved.
@@ -206,7 +207,8 @@ public class ObjectResolver extends Resolver
         // (typeString == null means no @type in JSON), not from explicit @type metadata
         if (explicitType == null || TypeUtilities.hasUnresolvedType(explicitType)
                 || jsRhs.getTypeString() == null) {
-            AnnotationResolver.ClassAnnotationMetadata parentMeta = AnnotationResolver.getMetadata(target.getClass());
+            // parentMeta is hoisted in from traverseFields → assignField → here; same class,
+            // same metadata, looked up only once per object rather than per field.
             Class<?> deserializeAs = parentMeta.getFieldDeserializeOverride(injector.getName());
             if (deserializeAs != null) {
                 jsRhs.setType(deserializeAs);
@@ -313,8 +315,12 @@ public class ObjectResolver extends Resolver
 
         final Object javaMate = jsonObj.getTarget();
         final ReadOptionsBuilder.InjectorPlan injectorPlan = ReadOptionsBuilder.getInjectorPlan(readOptions, javaMate.getClass());
-        // Cache @IoAnySetter lookup (O(1) via ClassValueMap) — hoisted outside loop
-        final Method anySetter = AnnotationResolver.getMetadata(javaMate.getClass()).getAnySetterMethod();
+        // Cache annotation metadata (O(1) via ClassValueMap) once for this object — it does not
+        // vary by field. Reused in assignField for field-level type override lookups and in
+        // assignJsonObjectField for the same reason, eliminating N per-field getMetadata calls.
+        final AnnotationResolver.ClassAnnotationMetadata parentMeta =
+                AnnotationResolver.getMetadata(javaMate.getClass());
+        final Method anySetter = parentMeta.getAnySetterMethod();
 
         // Enhanced for-loop is more efficient than iterator for EntrySet
         // Uses cached missingFieldHandler from parent Resolver for performance
@@ -323,7 +329,7 @@ public class ObjectResolver extends Resolver
             final Injector injector = injectorPlan.get(key);
             Object rhs = entry.getValue();
             if (injector != null) {
-                assignField(jsonObj, injector, rhs);
+                assignField(jsonObj, injector, rhs, parentMeta);
             } else if (anySetter != null) {
                 invokeAnySetter(javaMate, anySetter, key, rhs);
             } else if (missingFieldHandler != null) {
@@ -341,7 +347,8 @@ public class ObjectResolver extends Resolver
      * @param injector an instance of Injector used for setting values on the target object.
      * @param rhs      the JSON value that will be converted and stored in the field on the associated Java target object.
      */
-    private void assignField(final JsonObject jsonObj, final Injector injector, final Object rhs) {
+    private void assignField(final JsonObject jsonObj, final Injector injector, final Object rhs,
+                             final AnnotationResolver.ClassAnnotationMetadata parentMeta) {
         final Object target = jsonObj.getTarget();
 
         // Fast path: primitive numeric fields with Long/Double values (the hottest case).
@@ -378,7 +385,8 @@ public class ObjectResolver extends Resolver
         Type effectiveFieldType = fieldType;
 
         // Resolve @IoDeserialize > @IoTypeInfo field-level type overrides once for this assignment.
-        AnnotationResolver.ClassAnnotationMetadata parentMeta = AnnotationResolver.getMetadata(target.getClass());
+        // parentMeta is hoisted in from traverseFields so all fields on this object reuse the same
+        // ClassAnnotationMetadata lookup.
         Class<?> deserializeAs = parentMeta.getFieldDeserializeOverride(injector.getName());
         if (deserializeAs != null) {
             effectiveFieldType = deserializeAs;
@@ -495,7 +503,7 @@ public class ObjectResolver extends Resolver
         }
 
         // 6. JSONOBJECT (non-reference, already checked above)
-        assignJsonObjectField(jsonObj, injector, (JsonObject) rhs, fieldType, target);
+        assignJsonObjectField(jsonObj, injector, (JsonObject) rhs, fieldType, target, parentMeta);
     }
 
     /**
