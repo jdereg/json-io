@@ -1648,6 +1648,39 @@ public class ReadOptionsBuilder {
         // Runtime cache (not feature options)
         private final Map<Class<?>, JsonClassReader> readerCache = new ClassValueMap<>();
         private final Map<Class<?>, InjectorPlan> injectorPlanCache = new ClassValueMap<>();
+
+        /**
+         * Per-(ReadOptions-instance) memoization of {@link #isNonReferenceableClass(Class)}.
+         * Mirrors the write-side {@code DefaultWriteOptions.nonRefCache}. Previously each
+         * call executed the full chain (set contains + 3 {@code isAssignableFrom} + enum
+         * check + {@code AnnotationResolver.getMetadata}); JFR showed the chain as a
+         * top hot spot in the Resolver path. ClassValue gives identity-based
+         * constant-time reads after the first touch.
+         */
+        private final ClassValue<Boolean> nonRefCache = new ClassValue<Boolean>() {
+            @Override
+            protected Boolean computeValue(Class<?> type) {
+                return nonRefClasses.contains(type) ||
+                        Number.class.isAssignableFrom(type) ||
+                        Date.class.isAssignableFrom(type) ||
+                        String.class.isAssignableFrom(type) ||
+                        type.isEnum() ||
+                        AnnotationResolver.getMetadata(type).isNonReferenceable();
+            }
+        };
+
+        /**
+         * Per-(ReadOptions-instance) memoization of {@link #isNotCustomReaderClass(Class)}.
+         * Same rationale as {@link #nonRefCache}.
+         */
+        private final ClassValue<Boolean> notCustomReadCache = new ClassValue<Boolean>() {
+            @Override
+            protected Boolean computeValue(Class<?> type) {
+                return notCustomReadClasses.contains(type) ||
+                        AnnotationResolver.getMetadata(type).isNotCustomRead();
+            }
+        };
+
         private final ClassFactory throwableFactory = new ThrowableFactory();
         private final ClassFactory enumFactory = new EnumClassFactory();
         private static final ClassFactory recordFactory = new RecordFactory();
@@ -1878,12 +1911,7 @@ public class ReadOptionsBuilder {
          * @return boolean true if the passed in class is considered a non-referenceable class.
          */
         public boolean isNonReferenceableClass(Class<?> clazz) {
-            return nonRefClasses.contains(clazz) ||     // Covers primitives, primitive wrappers, Atomic*, Big*, String
-                    Number.class.isAssignableFrom(clazz) ||
-                    Date.class.isAssignableFrom(clazz) ||
-                    String.class.isAssignableFrom(clazz) ||
-                    clazz.isEnum() ||
-                    AnnotationResolver.getMetadata(clazz).isNonReferenceable();
+            return clazz != null && nonRefCache.get(clazz);
         }
 
         /**
@@ -1893,8 +1921,7 @@ public class ReadOptionsBuilder {
          * @return boolean true if the passed in class is on the not-customized list, false otherwise.
          */
         public boolean isNotCustomReaderClass(Class<?> clazz) {
-            return notCustomReadClasses.contains(clazz) ||
-                    AnnotationResolver.getMetadata(clazz).isNotCustomRead();
+            return clazz != null && notCustomReadCache.get(clazz);
         }
 
         /**
