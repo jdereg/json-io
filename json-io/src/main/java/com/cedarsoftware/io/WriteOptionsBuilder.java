@@ -2636,13 +2636,14 @@ public class WriteOptionsBuilder {
         private final Class<?> effectiveDeclaredType;
         private final boolean forceShowType;
         private final boolean toonKeyNeedsQuoting;
+        private final boolean mapKeyTypeIsSimple;
 
         private WriteFieldPlan(Accessor accessor, String fieldName, String serializedKey, Class<?> declaredFieldType,
                                Class<?> declaredElementType, Class<?> declaredKeyType,
                                boolean enumPublicOnlySkipCandidate, boolean applyDeclaredContainerTypes,
                                boolean skipReferenceTrace, boolean skipIfNull, String formatPattern,
                                Class<?> effectiveDeclaredType, boolean forceShowType,
-                               boolean toonKeyNeedsQuoting) {
+                               boolean toonKeyNeedsQuoting, boolean mapKeyTypeIsSimple) {
             this.accessor = accessor;
             this.fieldName = fieldName;
             this.serializedKey = serializedKey;
@@ -2657,6 +2658,7 @@ public class WriteOptionsBuilder {
             this.effectiveDeclaredType = effectiveDeclaredType;
             this.forceShowType = forceShowType;
             this.toonKeyNeedsQuoting = toonKeyNeedsQuoting;
+            this.mapKeyTypeIsSimple = mapKeyTypeIsSimple;
         }
 
         static WriteFieldPlan create(Accessor accessor, WriteOptions options) {
@@ -2716,9 +2718,18 @@ public class WriteOptionsBuilder {
 
             boolean toonKeyQuote = ToonWriter.computeKeyNeedsQuoting(fieldName, options);
 
+            // Pre-compute whether this field's declared Map key type is a "simple" type
+            // (i.e., one that Converter knows how to stringify — String, Long, UUID, Date,
+            // Enum, BigDecimal, Instant, etc.). When true, the write-time hasComplexKeys
+            // iteration over the map's keys is unnecessary: we know all keys will serialize
+            // through the simple key format because the declared type compels it.
+            boolean simpleKeys = keyType != null
+                    && Map.class.isAssignableFrom(fieldType)
+                    && com.cedarsoftware.util.Converter.isSimpleTypeConversionSupported(keyType, String.class);
+
             return new WriteFieldPlan(accessor, fieldName, keyLiteral, fieldType, elementType, keyType,
                     enumSkip, applyContainerTypes, skipTrace, nullSkip, formatPat, effectiveType, forceType,
-                    toonKeyQuote);
+                    toonKeyQuote, simpleKeys);
         }
 
         private static String buildKeyLiteral(String fieldName, WriteOptions options) {
@@ -2809,6 +2820,10 @@ public class WriteOptionsBuilder {
 
         boolean toonKeyNeedsQuoting() {
             return toonKeyNeedsQuoting;
+        }
+
+        boolean mapKeyTypeIsSimple() {
+            return mapKeyTypeIsSimple;
         }
     }
 }

@@ -208,6 +208,13 @@ public class ToonWriter implements Closeable, Flushable {
     private IdentityIntMap objVisited;       // cycleSupport=true: track visited objects
     private IdentityIntMap objsReferenced;   // cycleSupport=true: track shared references
     private Map<Object, Boolean> activePath; // cycleSupport=false: detect cycles via active path
+
+    // Set by plan-aware callers (writeObjectFields, writeObjectInline) before dispatching
+    // a Map field value; read by writeMap to skip the hasComplexKeys() iteration when the
+    // field's declared key type is known "simple" (Converter-stringifiable). Cleared after
+    // the call. Non-plan paths (e.g., Map as a direct root, or nested inside Collection/Array
+    // element iteration) leave this false, preserving the hasComplexKeys scan.
+    private boolean currentMapHasSimpleKeyTypeHint = false;
     private ArrayDeque<Object> traceStack;   // cycleSupport=true: work deque for traceReferences()
     // Cache resolved output type names per class for this write operation.
     private final Map<Class<?>, String> typeNameCache = new IdentityHashMap<>(32);
@@ -1718,7 +1725,10 @@ public class ToonWriter implements Closeable, Flushable {
                 }
                 boolean savedForceShowType = forceShowType;
                 forceShowType = plan.forceShowType();
+                boolean savedMapSimpleKey = currentMapHasSimpleKeyTypeHint;
+                currentMapHasSimpleKeyTypeHint = plan.mapKeyTypeIsSimple();
                 writeFieldEntryInline(key, value, plan.toonKeyNeedsQuoting());
+                currentMapHasSimpleKeyTypeHint = savedMapSimpleKey;
                 forceShowType = savedForceShowType;
             }
 
@@ -1799,7 +1809,14 @@ public class ToonWriter implements Closeable, Flushable {
                 return;
             }
 
-            if (hasComplexKeys(map)) {
+            // Skip the hasComplexKeys() iteration when the enclosing field's plan told us
+            // the Map's declared key type is Converter-stringifiable (String, Long, UUID,
+            // Date, Enum, BigDecimal, etc.). Consumed once per writeMap — nested Maps get
+            // their own dispatch with their own hint. The field flag is restored by the
+            // caller after the dispatch returns.
+            boolean knownSimpleKeyType = currentMapHasSimpleKeyTypeHint;
+            currentMapHasSimpleKeyTypeHint = false;  // don't propagate into nested children
+            if (!knownSimpleKeyType && hasComplexKeys(map)) {
                 if (includeId || includeType) {
                     writeReferencedComplexMap(map, includeId, includeType);
                 } else {
@@ -2383,7 +2400,10 @@ public class ToonWriter implements Closeable, Flushable {
             writeIndent();
             boolean savedForceShowType = forceShowType;
             forceShowType = plan.forceShowType();
+            boolean savedMapSimpleKey = currentMapHasSimpleKeyTypeHint;
+            currentMapHasSimpleKeyTypeHint = plan.mapKeyTypeIsSimple();
             writeFieldEntry(key, value, plan.toonKeyNeedsQuoting());
+            currentMapHasSimpleKeyTypeHint = savedMapSimpleKey;
             forceShowType = savedForceShowType;
         }
 
