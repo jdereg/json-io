@@ -742,10 +742,15 @@ public class ReadOptionsBuilder {
         
         options.aliasTypeNames = Collections.unmodifiableMap(options.aliasTypeNames);
         options.coercedTypes = ((ClassValueMap<Class<?>>)options.coercedTypes).unmodifiableView();
-        options.notCustomReadClasses = ((ClassValueSet)options.notCustomReadClasses).unmodifiableView();
+        // Capture typed fast-path refs before the unmodifiableView reassignment so that
+        // hot-path ClassValue computeValue lookups can call containsClass(Class) directly,
+        // skipping the instanceof-Class guard that contains(Object) must perform.
+        options.notCustomReadClassesFast = (ClassValueSet) options.notCustomReadClasses;
+        options.nonRefClassesFast = (ClassValueSet) options.nonRefClasses;
+        options.notCustomReadClasses = options.notCustomReadClassesFast.unmodifiableView();
         options.customReaderClasses = ((ClassValueMap<JsonClassReader>)options.customReaderClasses).unmodifiableView();
         options.classFactoryMap = ((ClassValueMap<ClassFactory>)options.classFactoryMap).unmodifiableView();
-        options.nonRefClasses = ((ClassValueSet)options.nonRefClasses).unmodifiableView();
+        options.nonRefClasses = options.nonRefClassesFast.unmodifiableView();
         options.converterOptions.converterOverrides = Collections.unmodifiableMap(options.converterOptions.converterOverrides);
         options.converterOptions.customOptions = Collections.unmodifiableMap(options.converterOptions.customOptions);
         options.excludedFieldNames = ((ClassValueMap<Set<String>>)options.excludedFieldNames).unmodifiableView();
@@ -1639,6 +1644,11 @@ public class ReadOptionsBuilder {
         private Map<Class<?>, JsonClassReader> customReaderClasses = new ClassValueMap<>();
         private Map<Class<?>, ClassFactory> classFactoryMap = new ClassValueMap<>();
         private Set<Class<?>> nonRefClasses = new ClassValueSet();
+        // Typed fast-path references captured at build() time (same ClassValueSet instance as
+        // notCustomReadClasses / nonRefClasses before they're reassigned to an unmodifiable view).
+        // Used by ClassValue computeValue chains to skip the instanceof-Class guard.
+        private ClassValueSet notCustomReadClassesFast;
+        private ClassValueSet nonRefClassesFast;
         private Map<Class<?>, Set<String>> excludedFieldNames = new ClassValueMap<>();
         private Map<Class<?>, Set<String>> fieldsNotImported = new ClassValueMap<>();
         private List<FieldFilter> fieldFilters = new ArrayList<>();
@@ -1660,7 +1670,9 @@ public class ReadOptionsBuilder {
         private final ClassValue<Boolean> nonRefCache = new ClassValue<Boolean>() {
             @Override
             protected Boolean computeValue(Class<?> type) {
-                return nonRefClasses.contains(type) ||
+                ClassValueSet fast = nonRefClassesFast;
+                boolean inSet = (fast != null) ? fast.containsClass(type) : nonRefClasses.contains(type);
+                return inSet ||
                         Number.class.isAssignableFrom(type) ||
                         Date.class.isAssignableFrom(type) ||
                         String.class.isAssignableFrom(type) ||
@@ -1676,8 +1688,9 @@ public class ReadOptionsBuilder {
         private final ClassValue<Boolean> notCustomReadCache = new ClassValue<Boolean>() {
             @Override
             protected Boolean computeValue(Class<?> type) {
-                return notCustomReadClasses.contains(type) ||
-                        AnnotationResolver.getMetadata(type).isNotCustomRead();
+                ClassValueSet fast = notCustomReadClassesFast;
+                boolean inSet = (fast != null) ? fast.containsClass(type) : notCustomReadClasses.contains(type);
+                return inSet || AnnotationResolver.getMetadata(type).isNotCustomRead();
             }
         };
 

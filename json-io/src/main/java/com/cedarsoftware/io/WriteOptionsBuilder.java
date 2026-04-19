@@ -1784,8 +1784,13 @@ public class WriteOptionsBuilder {
         options.includedFieldNames = ((ClassValueMap<Set<String>>)options.includedFieldNames).unmodifiableView();
         options.nonStandardGetters = ((ClassValueMap<Map<String, String>>)options.nonStandardGetters).unmodifiableView();
         options.aliasTypeNames = Collections.unmodifiableMap(options.aliasTypeNames);
-        options.notCustomWrittenClasses = ((ClassValueSet)options.notCustomWrittenClasses).unmodifiableView();
-        options.nonRefClasses = ((ClassValueSet)options.nonRefClasses).unmodifiableView();
+        // Capture typed fast-path refs before the unmodifiableView reassignment so that
+        // hot-path ClassValue computeValue lookups can call containsClass(Class) directly,
+        // skipping the instanceof-Class guard that contains(Object) must perform.
+        options.nonRefClassesFast = (ClassValueSet) options.nonRefClasses;
+        options.notCustomWrittenClassesFast = (ClassValueSet) options.notCustomWrittenClasses;
+        options.notCustomWrittenClasses = options.notCustomWrittenClassesFast.unmodifiableView();
+        options.nonRefClasses = options.nonRefClassesFast.unmodifiableView();
         options.excludedFieldNames = ((ClassValueMap<Set<String>>)options.excludedFieldNames).unmodifiableView();
         options.fieldFilters = Collections.unmodifiableMap(options.fieldFilters);
         options.methodFilters = Collections.unmodifiableMap(options.methodFilters);
@@ -1881,6 +1886,11 @@ public class WriteOptionsBuilder {
         private Map<String, String> aliasTypeNames = new LinkedHashMap<>(32);
         private Set<Class<?>> notCustomWrittenClasses = new ClassValueSet();
         private Set<Class<?>> nonRefClasses = new ClassValueSet();
+        // Typed fast-path references captured at build() time (same ClassValueSet instance as
+        // notCustomWrittenClasses / nonRefClasses before they're reassigned to an unmodifiable view).
+        // Used by ClassValue computeValue chains to skip the instanceof-Class guard.
+        private ClassValueSet notCustomWrittenClassesFast;
+        private ClassValueSet nonRefClassesFast;
         private Map<Class<?>, Set<String>> excludedFieldNames = new ClassValueMap<>();
         private Map<String, FieldFilter> fieldFilters = new LinkedHashMap<>(16);
         private Map<String, MethodFilter> methodFilters = new LinkedHashMap<>(16);
@@ -1914,7 +1924,9 @@ public class WriteOptionsBuilder {
         private final ClassValue<Boolean> nonRefCache = new ClassValue<Boolean>() {
             @Override
             protected Boolean computeValue(Class<?> type) {
-                return nonRefClasses.contains(type) ||
+                ClassValueSet fast = nonRefClassesFast;
+                boolean inSet = (fast != null) ? fast.containsClass(type) : nonRefClasses.contains(type);
+                return inSet ||
                         Number.class.isAssignableFrom(type) ||
                         Date.class.isAssignableFrom(type) ||
                         String.class.isAssignableFrom(type) ||
@@ -2016,8 +2028,9 @@ public class WriteOptionsBuilder {
          * @return boolean true if the passed in class is on the not-customized list, false otherwise.
          */
         public boolean isNotCustomWrittenClass(Class<?> clazz) {
-            return notCustomWrittenClasses.contains(clazz) ||
-                    AnnotationResolver.getMetadata(clazz).isNotCustomWrite();
+            ClassValueSet fast = notCustomWrittenClassesFast;
+            boolean inSet = (fast != null) ? fast.containsClass(clazz) : notCustomWrittenClasses.contains(clazz);
+            return inSet || AnnotationResolver.getMetadata(clazz).isNotCustomWrite();
         }
 
         public List<Accessor> getAccessorsForClass(final Class<?> c) {
