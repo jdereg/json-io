@@ -805,16 +805,10 @@ public class ToonWriter implements Closeable, Flushable {
      */
     private void writeEscapedString(String str) throws IOException {
         int len = str.length();
-        // Bulk-copy to a local buffer via the JDK's SIMD-intrinsic getChars so the
-        // scan loop does straight-line array access instead of charAt coder+bounds
-        // overhead per iteration. A local char[] (rather than a shared ThreadLocal)
-        // keeps this reentrancy-safe against the user-supplied Writer.
-        char[] buf = new char[len];
-        str.getChars(0, len, buf, 0);
         int last = 0;
         for (int i = 0; i < len; i++) {
             String escape;
-            switch (buf[i]) {
+            switch (str.charAt(i)) {
                 case '\\': escape = "\\\\"; break;
                 case '"':  escape = "\\\""; break;
                 case '\n': escape = "\\n"; break;
