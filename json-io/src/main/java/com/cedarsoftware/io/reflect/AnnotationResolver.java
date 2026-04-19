@@ -85,42 +85,25 @@ public class AnnotationResolver {
     private static final boolean externalAvailable;
     // @JsonNaming and @JsonDeserialize live in jackson-databind (separate jar), detected independently
     private static final boolean extNamingAvailable;
-    @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_NAMING;
     private static final Method EXT_NAMING_VALUE;
     private static final boolean extDeserializeAvailable;
-    @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_DESERIALIZE;
     private static final Method EXT_DESERIALIZE_AS;
-    @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_CREATOR;
-    @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_VALUE;
-    @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_PROPERTY;
-    @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_IGNORE;
-    @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_IGNORE_PROPERTIES;
-    @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_ALIAS;
-    @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_PROPERTY_ORDER;
-    @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_INCLUDE;
-    @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_INCLUDE_PROPERTIES;
-    @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_IGNORE_TYPE;
-    @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_TYPE_INFO;
-    @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_GETTER;
-    @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_SETTER;
-    @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_TYPE_NAME;
-    @SuppressWarnings("unchecked")
     private static final Class<? extends Annotation> EXT_FORMAT;
     private static final Class<? extends Annotation> EXT_ANY_SETTER;
     private static final Class<? extends Annotation> EXT_ANY_GETTER;
@@ -299,11 +282,11 @@ public class AnnotationResolver {
     // ThreadLocal to track classes currently being scanned (prevents recursive stack overflow)
     private static final ThreadLocal<Set<Class<?>>> SCANNING = ThreadLocal.withInitial(LinkedHashSet::new);
     private static final ClassAnnotationMetadata EMPTY = new ClassAnnotationMetadata(
-            Collections.<String, String>emptyMap(),
-            Collections.<String>emptySet(),
-            Collections.<String, String>emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptySet(),
+            Collections.emptyMap(),
             null,
-            Collections.<String>emptySet(),
+            Collections.emptySet(),
             null,
             null,
             null,
@@ -338,33 +321,39 @@ public class AnnotationResolver {
      * Get annotation metadata for a class. Scans once, caches forever.
      * Thread-safe via ClassValueMap. Recursive calls during scanning
      * (e.g., @IoIgnoreType check on field types) return EMPTY to prevent stack overflow.
+     * <p>
+     * The hot path (cache hit) is kept tiny and free of try/finally so HotSpot can
+     * inline it aggressively at every call site. The cold path — cycle guard +
+     * {@code scan()} + cache population — lives in {@link #scanAndCache(Class)},
+     * which only runs on the first encounter of each class per JVM lifetime.
      */
     public static ClassAnnotationMetadata getMetadata(Class<?> clazz) {
         if (clazz == null) {
             return EMPTY;
         }
         ClassAnnotationMetadata meta = cache.get(clazz);
-        if (meta == null) {
-            Set<Class<?>> scanning = SCANNING.get();
-            if (!scanning.add(clazz)) {
-                // Already scanning this class on this thread — return EMPTY to break cycle
-                return EMPTY;
-            }
-            try {
-                meta = scan(clazz);
-                cache.put(clazz, meta);
-            } finally {
-                scanning.remove(clazz);
-            }
-        }
-        return meta;
+        return meta != null ? meta : scanAndCache(clazz);
     }
 
     /**
-     * @return true if external annotation support is available on the classpath
+     * Cold-path helper: scans a class once, caches the result, and handles the
+     * per-thread cycle guard that prevents infinite recursion when a class's
+     * field type references back into the class being scanned. Invoked only on
+     * the first {@link #getMetadata(Class)} miss for a given class.
      */
-    public static boolean isExternalAnnotationAvailable() {
-        return externalAvailable;
+    private static ClassAnnotationMetadata scanAndCache(Class<?> clazz) {
+        Set<Class<?>> scanning = SCANNING.get();
+        if (!scanning.add(clazz)) {
+            // Already scanning this class on this thread — return EMPTY to break cycle.
+            return EMPTY;
+        }
+        try {
+            ClassAnnotationMetadata meta = scan(clazz);
+            cache.put(clazz, meta);
+            return meta;
+        } finally {
+            scanning.remove(clazz);
+        }
     }
 
     // ======================== Scanning ========================
@@ -378,10 +367,9 @@ public class AnnotationResolver {
         Map<String, Class<?>> fieldDeserializeOverrides = null;
         Map<String, String> fieldFormatPatterns = null;
         Set<String> forceShowTypeFields = null;
-        String[] order = null;
 
         // 1. Class-level annotations
-        order = scanClassLevelAnnotations(clazz, ignored);
+        String[] order = scanClassLevelAnnotations(clazz, ignored);
 
         // 1b. @IoIncludeProperties — class-level whitelist
         Set<String> includedFields = scanIncludeProperties(clazz);
@@ -1450,17 +1438,6 @@ public class AnnotationResolver {
          */
         public String getFieldFormatPattern(String fieldName) {
             return fieldFormatPatterns == null ? null : fieldFormatPatterns.get(fieldName);
-        }
-
-        /**
-         * Fast check whether this class declares any field format patterns at all.
-         * Used by hot-path hierarchy walks to skip per-field lookups on classes
-         * without any @IoFormat or @JsonFormat annotations.
-         *
-         * @return true if at least one field has a format pattern, false otherwise
-         */
-        public boolean hasAnyFieldFormatPattern() {
-            return fieldFormatPatterns != null;
         }
 
         /**
