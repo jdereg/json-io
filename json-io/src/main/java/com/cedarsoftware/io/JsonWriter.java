@@ -3051,9 +3051,19 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         output.write('"');
         int last = 0;
 
+        // Bulk-copy the string's chars into a local buffer via the JDK's SIMD-intrinsic
+        // getChars. The inner loop then does straight-line array access per iteration
+        // instead of the charAt coder+bounds overhead. A local char[] (not the
+        // StringUtilities ThreadLocal) is used deliberately: the scan loop calls
+        // output.write(...) on each escape, and output is a user-supplied Writer whose
+        // implementation cannot be bounded in terms of what it may touch. A local
+        // buffer is reentrancy-safe by construction.
+        char[] buf = new char[len];
+        s.getChars(0, len, buf, 0);
+
         // GSON-style loop: single array lookup determines both "needs escape?" and "what is escape?"
         for (int i = 0; i < len; i++) {
-            char ch = s.charAt(i);
+            char ch = buf[i];
             String escape;
 
             if (ch < 128) {
@@ -3143,10 +3153,17 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             throw new JsonIoException("String too large for JSON serialization: " + len + " characters. Maximum allowed: " + maxStringLength);
         }
 
+        // Bulk-copy to a local buffer (same rationale as writeJsonUtf8String above —
+        // SIMD getChars + straight-line buf[i] reads, reentrancy-safe against
+        // user-provided Writer implementations). Character.codePointAt(char[], int)
+        // handles surrogate pairs identically to String.codePointAt(int).
+        char[] buf = new char[len];
+        s.getChars(0, len, buf, 0);
+
         int start = 0;
 
         for (int i = 0; i < len; ) {
-            char ch = s.charAt(i);
+            char ch = buf[i];
 
             // Fast path: ASCII characters that don't need escaping (for single-quoted strings)
             if (ch < 128 && !NEEDS_ESCAPE_SINGLE_QUOTE[ch]) {
@@ -3159,7 +3176,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 output.write(s, start, i - start);
             }
 
-            int codePoint = s.codePointAt(i);
+            int codePoint = Character.codePointAt(buf, i);
 
             if (codePoint < 0x20 || codePoint == 0x7F) {
                 // Control characters
