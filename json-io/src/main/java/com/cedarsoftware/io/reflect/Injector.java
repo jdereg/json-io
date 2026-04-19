@@ -652,12 +652,12 @@ public class Injector {
     }
 
     private static int numericKind(Class<?> type) {
-        Integer kind = NUMERIC_KINDS.get(type);
+        Integer kind = NUMERIC_KINDS.getByClass(type);
         return kind != null ? kind : NUM_NONE;
     }
 
     private static Class<?> primitiveWrapper(Class<?> primitiveType) {
-        Class<?> w = PRIM_TO_WRAPPER.get(primitiveType);
+        Class<?> w = PRIM_TO_WRAPPER.getByClass(primitiveType);
         return w != null ? w : Void.class;
     }
 

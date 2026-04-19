@@ -1902,12 +1902,12 @@ public class WriteOptionsBuilder {
 
         // Runtime caches (not feature options), since looking up writers can be expensive
         // when one does not exist, we cache the writer or a nullWriter if one does not exist.
-        private final Map<Class<?>, JsonClassWriter> writerCache = new ClassValueMap<>();
-        private final Map<Class<?>, CustomWriterGate> customWriterGateCache = new ClassValueMap<>();
+        private final ClassValueMap<JsonClassWriter> writerCache = new ClassValueMap<>();
+        private final ClassValueMap<CustomWriterGate> customWriterGateCache = new ClassValueMap<>();
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
         private Map<Class<?>, List<Accessor>> accessorsCache = new ClassValueMap<>();
-        private Map<Class<?>, List<WriteFieldPlan>> writeFieldPlanCache = new ClassValueMap<>();
+        private ClassValueMap<List<WriteFieldPlan>> writeFieldPlanCache = new ClassValueMap<>();
         private Map<Class<?>, Map<String, Field>> classMetaCache = new ClassValueMap<>();
 
         // Cache for isNonReferenceableClass() result - avoids repeated hierarchy checks for POJOs
@@ -2031,7 +2031,7 @@ public class WriteOptionsBuilder {
         }
 
         List<WriteFieldPlan> getWriteFieldPlansForClass(final Class<?> c) {
-            List<WriteFieldPlan> plans = writeFieldPlanCache.get(c);
+            List<WriteFieldPlan> plans = writeFieldPlanCache.getByClass(c);
             if (plans == null) {
                 plans = buildWriteFieldPlans(c);
                 writeFieldPlanCache.put(c, plans);
@@ -2270,7 +2270,7 @@ public class WriteOptionsBuilder {
          */
         public JsonClassWriter getCustomWriter(Class<?> c) {
             // Avoid computeIfAbsent with method reference - creates lambda on every call
-            JsonClassWriter writer = writerCache.get(c);
+            JsonClassWriter writer = writerCache.getByClass(c);
             if (writer == null) {
                 writer = findCustomWriter(c);
                 writerCache.put(c, writer);
@@ -2279,7 +2279,7 @@ public class WriteOptionsBuilder {
         }
 
         CustomWriterGate getCustomWriterGate(Class<?> declaredType) {
-            CustomWriterGate gate = customWriterGateCache.get(declaredType);
+            CustomWriterGate gate = customWriterGateCache.getByClass(declaredType);
             if (gate == null) {
                 gate = new CustomWriterGate(
                         isNotCustomWrittenClass(declaredType),

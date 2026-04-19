@@ -84,7 +84,7 @@ public class ReadOptionsBuilder {
     private static final Set<Class<?>> BASE_NON_REFS = new ClassValueSet();
     private static final Set<Class<?>> BASE_NOT_CUSTOM_READ = new ClassValueSet();
     private static final Map<Class<? extends JsonClassReader>, JsonClassReader> annotationReaderCache = new ConcurrentHashMap<>();
-    private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_SETTERS = new ClassValueMap<>();
+    private static final ClassValueMap<Map<String, String>> BASE_NONSTANDARD_SETTERS = new ClassValueMap<>();
     private static final Map<Class<?>, Set<String>> BASE_NOT_IMPORTED_FIELDS = new ClassValueMap<>();
     private static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ClassValueMap<>();
     
@@ -127,8 +127,8 @@ public class ReadOptionsBuilder {
     private static volatile boolean BASE_CLOSE_STREAM = true;                // true close stream after parsing
     
     // Cache of fields used for accessors. Controlled by ignoredFields
-    private static final Map<Class<?>, Map<String, Field>> classMetaCache = new ClassValueMap<>();
-    private static final Map<Class<?>, Map<String, Injector>> injectorsCache = new ClassValueMap<>();
+    private static final ClassValueMap<Map<String, Field>> classMetaCache = new ClassValueMap<>();
+    private static final ClassValueMap<Map<String, Injector>> injectorsCache = new ClassValueMap<>();
 
     private final static ReadOptions defReadOptions;
     private final DefaultReadOptions options;
@@ -1646,8 +1646,8 @@ public class ReadOptionsBuilder {
         private Map<String, Object> customOptions = new LinkedHashMap<>();
 
         // Runtime cache (not feature options)
-        private final Map<Class<?>, JsonClassReader> readerCache = new ClassValueMap<>();
-        private final Map<Class<?>, InjectorPlan> injectorPlanCache = new ClassValueMap<>();
+        private final ClassValueMap<JsonClassReader> readerCache = new ClassValueMap<>();
+        private final ClassValueMap<InjectorPlan> injectorPlanCache = new ClassValueMap<>();
 
         /**
          * Per-(ReadOptions-instance) memoization of {@link #isNonReferenceableClass(Class)}.
@@ -2078,7 +2078,7 @@ public class ReadOptionsBuilder {
                 return Collections.emptyMap();
             }
             // Avoid computeIfAbsent with method reference - creates lambda on every call
-            Map<String, Injector> injectors = injectorsCache.get(classToTraverse);
+            Map<String, Injector> injectors = injectorsCache.getByClass(classToTraverse);
             if (injectors == null) {
                 injectors = buildInjectors(classToTraverse);
                 injectorsCache.put(classToTraverse, injectors);
@@ -2090,7 +2090,7 @@ public class ReadOptionsBuilder {
             if (classToTraverse == null) {
                 return InjectorPlan.EMPTY;
             }
-            InjectorPlan plan = injectorPlanCache.get(classToTraverse);
+            InjectorPlan plan = injectorPlanCache.getByClass(classToTraverse);
             if (plan == null) {
                 plan = new InjectorPlan(getDeepInjectorMap(classToTraverse));
                 injectorPlanCache.put(classToTraverse, plan);
@@ -2120,7 +2120,7 @@ public class ReadOptionsBuilder {
                 // Check @IoSetter/@JsonSetter annotation — but only if no programmatic override exists
                 String annotationSetter = annMeta.getSetterMethod(field.getName());
                 if (annotationSetter != null) {
-                    Map<String, String> classSetters = BASE_NONSTANDARD_SETTERS.get(field.getDeclaringClass());
+                    Map<String, String> classSetters = BASE_NONSTANDARD_SETTERS.getByClass(field.getDeclaringClass());
                     if (classSetters == null || !classSetters.containsKey(field.getName())) {
                         try {
                             injector = Injector.create(field, annotationSetter, fieldName);
@@ -2197,7 +2197,7 @@ public class ReadOptionsBuilder {
          */
         public Map<String, Field> getDeepDeclaredFields(final Class<?> c) {
             // Avoid computeIfAbsent with method reference - creates lambda on every call
-            Map<String, Field> fields = classMetaCache.get(c);
+            Map<String, Field> fields = classMetaCache.getByClass(c);
             if (fields == null) {
                 fields = buildDeepFieldMap(c);
                 classMetaCache.put(c, fields);

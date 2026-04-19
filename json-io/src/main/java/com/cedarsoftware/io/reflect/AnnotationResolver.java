@@ -331,7 +331,7 @@ public class AnnotationResolver {
         if (clazz == null) {
             return EMPTY;
         }
-        ClassAnnotationMetadata meta = cache.get(clazz);
+        ClassAnnotationMetadata meta = cache.getByClass(clazz);
         return meta != null ? meta : scanAndCache(clazz);
     }
 

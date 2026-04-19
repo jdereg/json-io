@@ -1604,7 +1604,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         final int lenMinus1 = len - 1;
 
         // Handle each primitive array type via ClassValueMap dispatch
-        PrimitiveArrayHandler handler = PRIM_ARRAY_WRITERS.get(arrayType);
+        PrimitiveArrayHandler handler = PRIM_ARRAY_WRITERS.getByClass(arrayType);
         if (handler != null) {
             handler.write(this, array, lenMinus1);
         }

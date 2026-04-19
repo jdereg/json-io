@@ -1310,7 +1310,7 @@ public abstract class Resolver {
         Class<?> targetType = resolveTargetType(jsonObj);
 
         // Check if we have a direct instantiator for this class
-        Function<JsonObject, Object> instantiator = DEFAULT_INSTANTIATORS.get(targetType);
+        Function<JsonObject, Object> instantiator = DEFAULT_INSTANTIATORS.getByClass(targetType);
         if (instantiator != null) {
             Object instance = instantiator.apply(jsonObj);
             if (instance != null) {
@@ -1778,7 +1778,7 @@ public abstract class Resolver {
      * Categorize a target type into a compact scalar kind for hot conversion paths.
      */
     protected static int scalarTargetKind(Class<?> targetType) {
-        Integer kind = SCALAR_KINDS.get(targetType);
+        Integer kind = SCALAR_KINDS.getByClass(targetType);
         return kind != null ? kind : TARGET_OTHER;
     }
 
