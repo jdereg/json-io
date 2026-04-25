@@ -59,7 +59,7 @@ String json = JsonIo.toJson(myObject, new WriteOptionsBuilder().standardJson().b
 
 **Gradle**
 ```groovy
-implementation 'com.cedarsoftware:json-io:4.101.0'
+implementation 'com.cedarsoftware:json-io:4.102.0'
 ```
 
 **Maven**
@@ -67,7 +67,7 @@ implementation 'com.cedarsoftware:json-io:4.101.0'
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>4.101.0</version>
+  <version>4.102.0</version>
 </dependency>
 ```
 
@@ -305,7 +305,7 @@ json-io provides a Spring Boot starter for seamless integration with Spring MVC 
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io-spring-boot-starter</artifactId>
-  <version>4.101.0</version>
+  <version>4.102.0</version>
 </dependency>
 ```
 
@@ -329,7 +329,7 @@ json-io provides a Spring AI module that reduces LLM token usage by ~40-50% usin
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io-spring-ai-toon</artifactId>
-  <version>4.101.0</version>
+  <version>4.102.0</version>
 </dependency>
 ```
 
