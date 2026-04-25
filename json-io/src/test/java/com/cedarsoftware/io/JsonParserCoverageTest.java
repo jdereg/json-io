@@ -74,6 +74,40 @@ class JsonParserCoverageTest {
     }
 
     @Test
+    void testBorrowedRootStringSurvivesTrailingWhitespaceRefill() {
+        final int readerBufferSize = 65536;
+        StringBuilder json = new StringBuilder(readerBufferSize * 2);
+        for (int i = 0; i < readerBufferSize - 5; i++) {
+            json.append(' ');
+        }
+        json.append("\"ab\"");
+        for (int i = 0; i < readerBufferSize + 8; i++) {
+            json.append(' ');
+        }
+
+        Object result = JsonIo.toJava(json.toString()).asClass(Object.class);
+
+        assertThat(result).isEqualTo("ab");
+    }
+
+    @Test
+    void testBorrowedEscapedRootStringSurvivesEscapeRefill() {
+        final int readerBufferSize = 65536;
+        StringBuilder json = new StringBuilder(readerBufferSize * 2);
+        for (int i = 0; i < readerBufferSize - 3; i++) {
+            json.append(' ');
+        }
+        json.append("\"a\\n\"");
+        for (int i = 0; i < readerBufferSize + 8; i++) {
+            json.append(' ');
+        }
+
+        Object result = JsonIo.toJava(json.toString()).asClass(Object.class);
+
+        assertThat(result).isEqualTo("a\n");
+    }
+
+    @Test
     void testHexNumberInPermissive() {
         // 0x1F — JSON5 only (line 676)
         String json = "{\"n\": 0x1F}";

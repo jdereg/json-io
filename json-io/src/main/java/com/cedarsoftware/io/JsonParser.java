@@ -899,15 +899,63 @@ class JsonParser {
         int charsRead = in.readUntilBorrowed(slice, buf.length, quoteChar, '\\');
         char[] chars;
         int offset;
+        boolean borrowed = false;
         if (charsRead == FastReader.COPY_REQUIRED) {
             charsRead = in.readUntil(buf, 0, buf.length, quoteChar, '\\');
             chars = buf;
             offset = 0;
-        } else {
+        } else if (charsRead >= 0) {
+            borrowed = true;
             chars = slice.getBuffer();
             offset = slice.getOffset();
+        } else {
+            chars = buf;
+            offset = 0;
         }
         if (charsRead >= 0 && charsRead < buf.length) {
+            if (borrowed) {
+                int delimiter = chars[offset + charsRead];
+                if (delimiter == quoteChar) {
+                    CharSequence value = cacheStringFromChars(chars, offset, charsRead);
+                    slice.release();
+
+                    int c = in.read();
+                    if (c == -1) {
+                        error("EOF reached while reading JSON string");
+                    }
+                    if (c != quoteChar) {
+                        error("Expected closing quote while reading JSON string");
+                    }
+                    if (curParseDepth == 0) {
+                        c = skipWhitespaceRead(false);
+                        if (c != -1) {
+                            throw new JsonIoException("EOF expected, content found after string");
+                        }
+                    }
+                    return value;
+                }
+
+                final StringBuilder str = strBuf;
+                str.setLength(0);
+                if (charsRead > 0) {
+                    str.append(chars, offset, charsRead);
+                }
+                slice.release();
+
+                int c = in.read();
+                if (c == -1) {
+                    error("EOF reached while reading JSON string");
+                }
+                if (c != '\\') {
+                    error("Expected escape delimiter while reading JSON string");
+                }
+                int escapeChar = in.read();
+                if (escapeChar == -1) {
+                    error("EOF reached while reading escape sequence");
+                }
+                return readStringWithEscapes(str, escapeChar, quoteChar);
+            }
+
             int c = in.read();
             if (c == -1) {
                 error("EOF reached while reading JSON string");
@@ -943,6 +991,9 @@ class JsonParser {
         }
         if (charsRead > 0) {
             str.append(chars, offset, charsRead);
+        }
+        if (borrowed) {
+            slice.release();
         }
         return readStringSlowPath(str, quoteChar);
     }

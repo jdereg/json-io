@@ -299,6 +299,8 @@ public class ToonReader {
             }
         } catch (IOException e) {
             throw new JsonIoException("Error reading TOON input at line " + lineNumber, e);
+        } finally {
+            lineSlice.release();
         }
     }
 
@@ -1621,6 +1623,7 @@ public class ToonReader {
      * The line data is available in lineBuf[lineStart..lineStart+returnValue-1].
      */
     private int readLineRaw() {
+        lineSlice.release();
         int borrowed = reader.readLineBorrowed(lineSlice);
         if (borrowed != FastReader.COPY_REQUIRED) {
             if (borrowed >= 0) {
