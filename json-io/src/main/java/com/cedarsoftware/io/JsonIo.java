@@ -160,7 +160,8 @@ public class JsonIo {
 
         private boolean byteBufferInUse;
         private boolean writerBufferInUse;
-        private boolean readerBuffersInUse;
+        private boolean readerCharBufferInUse;
+        private boolean pushbackBufferInUse;
 
         byte[] borrowByteBuffer(int minSize) {
             if (byteBufferInUse) {
@@ -199,10 +200,10 @@ public class JsonIo {
         }
 
         char[] borrowReaderCharBuffer(int minSize) {
-            if (readerBuffersInUse) {
+            if (readerCharBufferInUse) {
                 return new char[Math.max(minSize, DEFAULT_READER_BUFFER_SIZE)];
             }
-            readerBuffersInUse = true;
+            readerCharBufferInUse = true;
             if (readerCharBuffer.length < minSize) {
                 readerCharBuffer = new char[minSize];
             }
@@ -210,10 +211,10 @@ public class JsonIo {
         }
 
         char[] borrowPushbackBuffer(int minSize) {
-            if (readerBuffersInUse) {
+            if (pushbackBufferInUse) {
                 return new char[Math.max(minSize, DEFAULT_PUSHBACK_BUFFER_SIZE)];
             }
-            readerBuffersInUse = true;
+            pushbackBufferInUse = true;
             if (pushbackCharBuffer.length < minSize) {
                 pushbackCharBuffer = new char[minSize];
             }
@@ -221,7 +222,8 @@ public class JsonIo {
         }
 
         void releaseReaderBuffers() {
-            readerBuffersInUse = false;
+            readerCharBufferInUse = false;
+            pushbackBufferInUse = false;
         }
     }
 

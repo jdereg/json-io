@@ -1,5 +1,8 @@
 ### Revision History
 
+#### 4.102.0 - 2026-04-25
+* **PERFORMANCE**: `JsonIo.BufferRecycler` now tracks reader char buffer and pushback buffer usage independently. Previously borrowing the reader buffer marked all reader buffers in use, causing the immediately-following pushback buffer borrow to allocate a fresh 16-char array on every String-based parse. The pushback buffer is now reused as intended for JSON/TOON String input paths, reducing small per-parse allocation churn.
+
 #### 4.101.0 - 2026-04-19
 * **FEATURE**: Added `WriteOptionsBuilder.standardJson()` convenience method. Sets `showTypeInfoNever()`, `showRootTypeInfo(false)`, `cycleSupport(false)`, `stringifyMapKeys(true)`, `useMetaPrefixDollar()`, and ISO-8601 date formatting in one call — producing standard JSON output identical to Jackson for normal usage. Any remaining metadata uses `$` prefix (e.g., `$type`). These will become the defaults in json-io 5.0.0. Chainable.
 * **FEATURE**: New `WriteOptionsBuilder.namingStrategy(IoNaming.Strategy)` — a global naming strategy applied when classes/fields lack per-class `@IoNaming`/`@JsonNaming` or per-field `@IoProperty`/`@JsonProperty` annotations. Opt-in equivalent of Jackson's `ObjectMapper.setPropertyNamingStrategy(...)`. Two new enum values (`UPPER_SNAKE_CASE`, `LOWER_CASE`) complete the Jackson-compatible set. Default is `null` (unchanged behavior). Also adds `addPermanentNamingStrategy(...)` and `WriteOptions.getNamingStrategy()`. 13 new tests.
