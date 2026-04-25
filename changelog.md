@@ -1,6 +1,7 @@
 ### Revision History
 
-#### 4.102.0 - 2026-04-25
+#### 4.102.0 - (Unreleased)
+* **PERFORMANCE**: `JsonParser.readString()` and `ToonReader.readLineRaw()` now use `FastReader` borrowed-slice APIs on the contiguous-buffer fast path. JSON string parsing can cache short unescaped strings directly from `FastReader`'s internal buffer, and TOON line parsing can point at the borrowed line slice instead of copying every line into an owned scratch buffer. Both paths retain the previous copying fallback for buffer-boundary, pushback, long-string, and spanning-line cases. Latest `~/IdeaSnapshots` JFR comparison (`JsonPerformanceTest_2026_04_25_161536.jfr` vs `...114052.jfr`, skipping `...144908.jfr`) showed improved read-side ratios: toJava TOON/Jackson 2.042x→1.986x, toMaps TOON/Jackson 1.750x→1.680x, toJava TOON/JsonIo 1.010x→0.984x, and toMaps TOON/JsonIo 1.258x→1.240x. The former `FastReader.readUntil()` and `readLine()` copy hotspots were replaced by the borrowed scan methods, while `ToonReader.hasLine()` and `readLineRaw()` stack samples also dropped.
 * **PERFORMANCE**: `JsonIo.BufferRecycler` now tracks reader char buffer and pushback buffer usage independently. Previously borrowing the reader buffer marked all reader buffers in use, causing the immediately-following pushback buffer borrow to allocate a fresh 16-char array on every String-based parse. The pushback buffer is now reused as intended for JSON/TOON String input paths, reducing small per-parse allocation churn.
 
 #### 4.101.0 - 2026-04-19

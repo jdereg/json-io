@@ -79,6 +79,7 @@ class JsonParser {
     private final FastReader input;
     private final StringBuilder strBuf;
     private final char[] readBuf = new char[256];  // Reusable buffer for bulk string reading
+    private final FastReader.BufferSlice readSlice = new FastReader.BufferSlice();
     private final StringBuilder numBuf = new StringBuilder();
     private int curParseDepth = 0;
     private final boolean allowNanAndInfinity;
@@ -894,7 +895,18 @@ class JsonParser {
         // Fast path: attempt to read the entire string in one bulk read.
         // Most JSON strings are short (< 256 chars) and have no escape sequences.
         // This path avoids StringBuilder entirely — goes straight from char[] to cache.
-        int charsRead = in.readUntil(buf, 0, buf.length, quoteChar, '\\');
+        final FastReader.BufferSlice slice = readSlice;
+        int charsRead = in.readUntilBorrowed(slice, buf.length, quoteChar, '\\');
+        char[] chars;
+        int offset;
+        if (charsRead == FastReader.COPY_REQUIRED) {
+            charsRead = in.readUntil(buf, 0, buf.length, quoteChar, '\\');
+            chars = buf;
+            offset = 0;
+        } else {
+            chars = slice.getBuffer();
+            offset = slice.getOffset();
+        }
         if (charsRead >= 0 && charsRead < buf.length) {
             int c = in.read();
             if (c == -1) {
@@ -908,7 +920,7 @@ class JsonParser {
                         throw new JsonIoException("EOF expected, content found after string");
                     }
                 }
-                return cacheStringFromChars(buf, charsRead);
+                return cacheStringFromChars(chars, offset, charsRead);
             }
             // Delimiter was backslash — read the escape character and handle it
             int escapeChar = in.read();
@@ -918,7 +930,7 @@ class JsonParser {
             final StringBuilder str = strBuf;
             str.setLength(0);
             if (charsRead > 0) {
-                str.append(buf, 0, charsRead);
+                str.append(chars, offset, charsRead);
             }
             return readStringWithEscapes(str, escapeChar, quoteChar);
         }
@@ -930,7 +942,7 @@ class JsonParser {
             error("EOF reached while reading JSON string");
         }
         if (charsRead > 0) {
-            str.append(buf, 0, charsRead);
+            str.append(chars, offset, charsRead);
         }
         return readStringSlowPath(str, quoteChar);
     }
@@ -1139,22 +1151,23 @@ class JsonParser {
     }
 
     /**
-     * Cache a string directly from a char[] buffer, bypassing StringBuilder entirely.
+     * Cache a string directly from a char[] range, bypassing StringBuilder entirely.
      * Used by the readString fast path for short strings without escape sequences.
      * Computes the same hash as String.hashCode() for cache slot compatibility.
      */
-    private CharSequence cacheStringFromChars(char[] buf, int len) {
+    private CharSequence cacheStringFromChars(char[] buf, int offset, int len) {
         if (len == 0) {
             return "";
         }
 
         if (len > MAX_CACHED_STRING_LENGTH) {
-            return new String(buf, 0, len);
+            return new String(buf, offset, len);
         }
 
         // Compute hashCode from char[] (same algorithm as String.hashCode())
         int hash = 0;
-        for (int i = 0; i < len; i++) {
+        int end = offset + len;
+        for (int i = offset; i < end; i++) {
             hash = 31 * hash + buf[i];
         }
 
@@ -1166,7 +1179,7 @@ class JsonParser {
             // Verify content matches the char[] buffer
             boolean match = true;
             for (int i = 0; i < len; i++) {
-                if (cached.charAt(i) != buf[i]) {
+                if (cached.charAt(i) != buf[offset + i]) {
                     match = false;
                     break;
                 }
@@ -1177,7 +1190,7 @@ class JsonParser {
         }
 
         // Cache miss - create String from char[] and cache it
-        final String s = new String(buf, 0, len);
+        final String s = new String(buf, offset, len);
         stringCacheArray[slot] = s;
         return s;
     }

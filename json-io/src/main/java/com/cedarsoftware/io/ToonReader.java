@@ -116,7 +116,10 @@ public class ToonReader {
     private final StringBuilder quoteBuf = new StringBuilder(64);
     private final StringBuilder inlineBuf = new StringBuilder(64);
     private String[] cachedFoldSegments;
+    private char[] ownedLineBuf;
     private char[] lineBuf;
+    private int lineStart = 0;
+    private final FastReader.BufferSlice lineSlice = new FastReader.BufferSlice();
     private final String[] stringCache;
     private final String[] numberCacheKeys;
     private final Number[] numberCacheValues;
@@ -145,7 +148,8 @@ public class ToonReader {
         this.maxIdValue = this.readOptions.getMaxIdValue();
         this.strictToon = this.readOptions.isStrictToon();
         this.classLoader = this.readOptions.getClassLoader();
-        this.lineBuf = TL_LINE_BUF.get();
+        this.ownedLineBuf = TL_LINE_BUF.get();
+        this.lineBuf = ownedLineBuf;
         this.stringCache = TL_STRING_CACHE.get();
         this.numberCacheKeys = TL_NUMBER_KEYS.get();
         this.numberCacheValues = TL_NUMBER_VALUES.get();
@@ -1611,20 +1615,28 @@ public class ToonReader {
     // ========== Line Management ==========
 
     /**
-     * Read a line from the FastReader into the reusable lineBuf.
+     * Read a line from the FastReader into lineBuf.
      * Handles \n, \r, and \r\n line endings.
-     * Returns the number of characters read into lineBuf, or -1 on EOF.
-     * The line data is available in lineBuf[0..returnValue-1].
-     * <p>
-     * Uses FastReader.readLine() which combines scanning, copying, and line-ending
-     * consumption into a single optimized call with a {@code c <= '\r'} range guard.
+     * Returns the number of characters read, or -1 on EOF.
+     * The line data is available in lineBuf[lineStart..lineStart+returnValue-1].
      */
     private int readLineRaw() {
-        char[] buf = lineBuf;
+        int borrowed = reader.readLineBorrowed(lineSlice);
+        if (borrowed != FastReader.COPY_REQUIRED) {
+            if (borrowed >= 0) {
+                lineBuf = lineSlice.getBuffer();
+                lineStart = lineSlice.getOffset();
+            }
+            return borrowed;
+        }
+
+        lineStart = 0;
+        char[] buf = ownedLineBuf;
+        lineBuf = buf;
         int total = 0;
         while (true) {
             if (total >= buf.length) {
-                buf = lineBuf = Arrays.copyOf(buf, buf.length * 2);
+                buf = ownedLineBuf = lineBuf = Arrays.copyOf(buf, buf.length * 2);
             }
             int count = reader.readLine(buf, total, buf.length - total);
             if (count < 0) {
@@ -1649,14 +1661,15 @@ public class ToonReader {
             lineConsumed = false;
             if (lineLen >= 0) {
                 lineNumber++;
-                final char[] buf = lineBuf;  // localize after readLineRaw (which may resize)
+                final char[] buf = lineBuf;  // localize after readLineRaw (which may resize/borrow)
+                final int start = lineStart;
 
                 // Compute indent directly from buf — no intermediate String needed
                 int spaces = 0;
-                while (spaces < lineLen && buf[spaces] == ' ') {
+                while (spaces < lineLen && buf[start + spaces] == ' ') {
                     spaces++;
                 }
-                if (spaces < lineLen && buf[spaces] == '\t' && strictToon) {
+                if (spaces < lineLen && buf[start + spaces] == '\t' && strictToon) {
                     throw new JsonIoException("Tabs are not allowed in indentation at line " + lineNumber);
                 }
                 if (strictToon && spaces % INDENT_SIZE != 0) {
@@ -1666,17 +1679,19 @@ public class ToonReader {
                 currentIndent = spaces / INDENT_SIZE;
 
                 // Compute trim-end directly from buf
-                int trimEnd = lineLen;
-                while (trimEnd > spaces && buf[trimEnd - 1] <= ' ') {
+                int trimStart = start + spaces;
+                int trimEnd = start + lineLen;
+                while (trimEnd > trimStart && buf[trimEnd - 1] <= ' ') {
                     trimEnd--;
                 }
-                currentTrimStart = spaces;
+                currentTrimStart = trimStart;
                 currentTrimEnd = trimEnd;
-                currentTrimmed = spaces < trimEnd ? null : "";
+                currentTrimmed = trimStart < trimEnd ? null : "";
                 currentHasLine = true;
             } else {
                 currentHasLine = false;
                 currentIndent = 0;
+                lineStart = 0;
                 currentTrimStart = 0;
                 currentTrimEnd = 0;
                 currentTrimmed = "";
