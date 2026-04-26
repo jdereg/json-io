@@ -2457,6 +2457,7 @@ public class ReadOptionsBuilder {
         if (options instanceof DefaultReadOptions) {
             return ((DefaultReadOptions) options).getInjectorPlan(clazz);
         }
+        // Custom ReadOptions implementations do not have DefaultReadOptions' ClassValue-backed plan cache.
         return new InjectorPlan(options.getDeepInjectorMap(clazz));
     }
 
@@ -2475,6 +2476,10 @@ public class ReadOptionsBuilder {
 
         FieldAssignmentPlan getAssignmentPlan(Object fieldName) {
             return assignmentPlansByName.get(fieldName);
+        }
+
+        boolean isEmpty() {
+            return assignmentPlansByName.isEmpty();
         }
 
         private static Map<String, FieldAssignmentPlan> buildAssignmentPlans(Map<String, Injector> injectorsByName) {

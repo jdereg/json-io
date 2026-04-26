@@ -270,6 +270,16 @@ class JsonParserCoverageTest {
         assertThat(m.get("v")).isEqualTo("\u4e16\u754c");
     }
 
+    @Test
+    void testSampledStringCacheCollisionVerifiesContent() {
+        // Same sampled cache slot: first char 'a', middle char 'x', last char 'e', length 5.
+        String json = "[\"abxde\", \"acxde\", \"abxde\"]";
+
+        Object[] values = JsonIo.toJava(json).asClass(Object[].class);
+
+        assertThat(values).containsExactly("abxde", "acxde", "abxde");
+    }
+
     // ========== Empty/nested ==========
 
     @Test

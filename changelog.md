@@ -1,6 +1,7 @@
 ### Revision History
 
 #### 4.102.0 - (Unreleased)
+* **TESTING**: Added sampled string-cache collision coverage for JSON parsing.
 * **PERFORMANCE**: JSON string caching now uses sampled slot hashing with full content verification, reducing cache-probe work for short strings.
 * **PERFORMANCE**: JSON object parsing now resolves field generic types only for nested object/array values, avoiding unnecessary scalar field lookups.
 * **PERFORMANCE**: Read-side injector planning now caches field assignment metadata used by `JsonParser` and `ObjectResolver`, reducing repeated type checks while preserving field-level type overrides.

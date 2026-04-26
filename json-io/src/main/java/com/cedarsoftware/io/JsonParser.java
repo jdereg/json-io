@@ -306,7 +306,7 @@ class JsonParser {
 
             int valueStart = skipWhitespaceRead(true);
             Type fieldGenericType = null;
-            if ((valueStart == '{' || valueStart == '[') && injectorPlan != ReadOptionsBuilder.InjectorPlan.EMPTY) {
+            if ((valueStart == '{' || valueStart == '[') && !injectorPlan.isEmpty()) {
                 // Field type hints are only consumed by nested object/array parsing. Scalar conversion happens later.
                 ReadOptionsBuilder.FieldAssignmentPlan assignmentPlan = injectorPlan.getAssignmentPlan(field);
                 fieldGenericType = assignmentPlan == null ? null : assignmentPlan.fieldType;
