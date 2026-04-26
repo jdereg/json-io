@@ -50,6 +50,15 @@ public class Accessor {
     private static final Method PRIVATE_LOOKUP_IN_METHOD;
     private static final Method FIND_VAR_HANDLE_METHOD;
     private static final MethodHandle VAR_HANDLE_GET_METHOD;
+    private static final byte PRIMITIVE_NONE = 0;
+    private static final byte PRIMITIVE_BOOLEAN = 1;
+    private static final byte PRIMITIVE_BYTE = 2;
+    private static final byte PRIMITIVE_CHAR = 3;
+    private static final byte PRIMITIVE_SHORT = 4;
+    private static final byte PRIMITIVE_INT = 5;
+    private static final byte PRIMITIVE_LONG = 6;
+    private static final byte PRIMITIVE_FLOAT = 7;
+    private static final byte PRIMITIVE_DOUBLE = 8;
 
     static {
         int javaVersion = SystemUtilities.currentJdkMajorVersion();
@@ -99,43 +108,95 @@ public class Accessor {
     private final MethodHandle methodHandle;
     private final Object varHandle;  // For JDK 17+ VarHandle-based access
     private final boolean isPublic;
+    private final byte primitiveKind;
+    private final Object primitiveFunction;
     private Function<Object, Object> function;  // LambdaMetafactory-generated fast getter (JIT-inlinable)
+    private volatile boolean primitiveFunctionFailed;
     private volatile boolean functionFailed;
     private volatile boolean varHandleFailed;
     private volatile boolean methodHandleFailed;
 
+    /** Primitive boolean getter used by the LambdaMetafactory fast path. */
+    @FunctionalInterface
+    public interface BooleanGetter {
+        boolean get(Object target);
+    }
+
+    /** Primitive byte getter used by the LambdaMetafactory fast path. */
+    @FunctionalInterface
+    public interface ByteGetter {
+        byte get(Object target);
+    }
+
+    /** Primitive char getter used by the LambdaMetafactory fast path. */
+    @FunctionalInterface
+    public interface CharGetter {
+        char get(Object target);
+    }
+
+    /** Primitive short getter used by the LambdaMetafactory fast path. */
+    @FunctionalInterface
+    public interface ShortGetter {
+        short get(Object target);
+    }
+
+    /** Primitive int getter used by the LambdaMetafactory fast path. */
+    @FunctionalInterface
+    public interface IntGetter {
+        int get(Object target);
+    }
+
+    /** Primitive long getter used by the LambdaMetafactory fast path. */
+    @FunctionalInterface
+    public interface LongGetter {
+        long get(Object target);
+    }
+
+    /** Primitive float getter used by the LambdaMetafactory fast path. */
+    @FunctionalInterface
+    public interface FloatGetter {
+        float get(Object target);
+    }
+
+    /** Primitive double getter used by the LambdaMetafactory fast path. */
+    @FunctionalInterface
+    public interface DoubleGetter {
+        double get(Object target);
+    }
+
     // Private constructor for MethodHandle-based access
     private Accessor(Field field, MethodHandle methodHandle, String uniqueFieldName, String fieldOrMethodName, boolean isPublic, boolean isMethod) {
-        this.field = field;
-        this.methodHandle = methodHandle;
-        this.varHandle = null;
-        this.uniqueFieldName = uniqueFieldName;
-        this.fieldOrMethodName = fieldOrMethodName;
-        this.isPublic = isPublic;
-        this.isMethod = isMethod;
+        this(field, methodHandle, null, uniqueFieldName, fieldOrMethodName, isPublic, isMethod, null, null);
     }
 
     // Private constructor for VarHandle-based access (JDK 17+)
     private Accessor(Field field, Object varHandle, String uniqueFieldName, String fieldOrMethodName, boolean isPublic) {
-        this.field = field;
-        this.methodHandle = null;
-        this.varHandle = varHandle;
-        this.uniqueFieldName = uniqueFieldName;
-        this.fieldOrMethodName = fieldOrMethodName;
-        this.isPublic = isPublic;
-        this.isMethod = false;
+        this(field, null, varHandle, uniqueFieldName, fieldOrMethodName, isPublic, false, null, null);
     }
 
     // Private constructor for LambdaMetafactory-accelerated access
     private Accessor(Field field, MethodHandle methodHandle, String uniqueFieldName, String fieldOrMethodName,
                      boolean isPublic, boolean isMethod, Function<Object, Object> function) {
+        this(field, methodHandle, null, uniqueFieldName, fieldOrMethodName, isPublic, isMethod, function, null);
+    }
+
+    // Private constructor for primitive LambdaMetafactory-accelerated access
+    private Accessor(Field field, MethodHandle methodHandle, String uniqueFieldName, String fieldOrMethodName,
+                     boolean isPublic, boolean isMethod, Object primitiveFunction) {
+        this(field, methodHandle, null, uniqueFieldName, fieldOrMethodName, isPublic, isMethod, null, primitiveFunction);
+    }
+
+    private Accessor(Field field, MethodHandle methodHandle, Object varHandle, String uniqueFieldName, String fieldOrMethodName,
+                     boolean isPublic, boolean isMethod, Function<Object, Object> function, Object primitiveFunction) {
         this.field = field;
         this.methodHandle = methodHandle;
-        this.varHandle = null;
+        this.varHandle = varHandle;
         this.uniqueFieldName = uniqueFieldName;
         this.fieldOrMethodName = fieldOrMethodName;
         this.isPublic = isPublic;
         this.isMethod = isMethod;
+        this.primitiveKind = primitiveKind(field.getType());
+        this.primitiveFunction = primitiveFunction;
         this.function = function;
     }
 
@@ -168,6 +229,100 @@ public class Accessor {
         } catch (Throwable t) {
             return null;  // Fall back to existing mechanisms
         }
+    }
+
+    /**
+     * Attempt to create a LambdaMetafactory-generated primitive getter for primitive fields/getters.
+     * Returns null if creation fails or the getter does not return a primitive type.
+     */
+    private static Object createPrimitiveLambdaAccessor(MethodHandles.Lookup lookup, MethodHandle getter) {
+        byte primitiveKind = primitiveKind(getter.type().returnType());
+        if (primitiveKind == PRIMITIVE_NONE) {
+            return null;
+        }
+
+        try {
+            Class<?> targetClass = getter.type().parameterType(0);
+            MethodHandles.Lookup lambdaLookup = tryPrivateLookup(targetClass, lookup);
+
+            // If we couldn't get a private lookup and the target class is not public,
+            // the generated lambda would fail at runtime with IllegalAccessError
+            if (lambdaLookup == lookup && !Modifier.isPublic(targetClass.getModifiers())) {
+                return null;
+            }
+
+            switch (primitiveKind) {
+                case PRIMITIVE_BOOLEAN:
+                    return createPrimitiveLambda(lambdaLookup, getter, BooleanGetter.class,
+                            MethodType.methodType(boolean.class, Object.class));
+                case PRIMITIVE_BYTE:
+                    return createPrimitiveLambda(lambdaLookup, getter, ByteGetter.class,
+                            MethodType.methodType(byte.class, Object.class));
+                case PRIMITIVE_CHAR:
+                    return createPrimitiveLambda(lambdaLookup, getter, CharGetter.class,
+                            MethodType.methodType(char.class, Object.class));
+                case PRIMITIVE_SHORT:
+                    return createPrimitiveLambda(lambdaLookup, getter, ShortGetter.class,
+                            MethodType.methodType(short.class, Object.class));
+                case PRIMITIVE_INT:
+                    return createPrimitiveLambda(lambdaLookup, getter, IntGetter.class,
+                            MethodType.methodType(int.class, Object.class));
+                case PRIMITIVE_LONG:
+                    return createPrimitiveLambda(lambdaLookup, getter, LongGetter.class,
+                            MethodType.methodType(long.class, Object.class));
+                case PRIMITIVE_FLOAT:
+                    return createPrimitiveLambda(lambdaLookup, getter, FloatGetter.class,
+                            MethodType.methodType(float.class, Object.class));
+                case PRIMITIVE_DOUBLE:
+                    return createPrimitiveLambda(lambdaLookup, getter, DoubleGetter.class,
+                            MethodType.methodType(double.class, Object.class));
+                default:
+                    return null;
+            }
+        } catch (Throwable t) {
+            return null;  // Fall back to existing mechanisms
+        }
+    }
+
+    private static Object createPrimitiveLambda(MethodHandles.Lookup lambdaLookup, MethodHandle getter,
+                                                Class<?> getterInterface, MethodType samType) throws Throwable {
+        CallSite callSite = LambdaMetafactory.metafactory(
+                lambdaLookup,
+                "get",
+                MethodType.methodType(getterInterface),
+                samType,
+                getter,
+                getter.type()
+        );
+        return callSite.getTarget().invoke();
+    }
+
+    private static byte primitiveKind(Class<?> type) {
+        if (type == boolean.class) {
+            return PRIMITIVE_BOOLEAN;
+        }
+        if (type == byte.class) {
+            return PRIMITIVE_BYTE;
+        }
+        if (type == char.class) {
+            return PRIMITIVE_CHAR;
+        }
+        if (type == short.class) {
+            return PRIMITIVE_SHORT;
+        }
+        if (type == int.class) {
+            return PRIMITIVE_INT;
+        }
+        if (type == long.class) {
+            return PRIMITIVE_LONG;
+        }
+        if (type == float.class) {
+            return PRIMITIVE_FLOAT;
+        }
+        if (type == double.class) {
+            return PRIMITIVE_DOUBLE;
+        }
+        return PRIMITIVE_NONE;
     }
 
     /**
@@ -209,6 +364,10 @@ public class Accessor {
         try {
             MethodHandles.Lookup fieldLookup = MethodHandles.lookup();
             MethodHandle handle = fieldLookup.unreflectGetter(field);
+            Object primitiveLambda = createPrimitiveLambdaAccessor(fieldLookup, handle);
+            if (primitiveLambda != null) {
+                return new Accessor(field, handle, uniqueFieldName, field.getName(), Modifier.isPublic(field.getModifiers()), false, primitiveLambda);
+            }
             Function<Object, Object> lambda = createLambdaAccessor(fieldLookup, handle);
             if (lambda != null) {
                 return new Accessor(field, handle, uniqueFieldName, field.getName(), Modifier.isPublic(field.getModifiers()), false, lambda);
@@ -238,6 +397,10 @@ public class Accessor {
                 MethodHandles.Lookup privateLookup = (MethodHandles.Lookup) privateLookupObj;
                 try {
                     MethodHandle handle = privateLookup.unreflectGetter(field);
+                    Object primitiveLambda = createPrimitiveLambdaAccessor(privateLookup, handle);
+                    if (primitiveLambda != null) {
+                        return new Accessor(field, handle, uniqueFieldName, field.getName(), Modifier.isPublic(field.getModifiers()), false, primitiveLambda);
+                    }
                     Function<Object, Object> lambda = createLambdaAccessor(privateLookup, handle);
                     if (lambda != null) {
                         return new Accessor(field, handle, uniqueFieldName, field.getName(), Modifier.isPublic(field.getModifiers()), false, lambda);
@@ -267,6 +430,10 @@ public class Accessor {
             MethodHandles.Lookup methodLookup = MethodHandles.publicLookup();
             MethodType type = MethodType.methodType(field.getType());
             MethodHandle handle = methodLookup.findVirtual(field.getDeclaringClass(), methodName, type);
+            Object primitiveLambda = createPrimitiveLambdaAccessor(methodLookup, handle);
+            if (primitiveLambda != null) {
+                return new Accessor(field, handle, uniqueFieldName, methodName, true, true, primitiveLambda);
+            }
             Function<Object, Object> lambda = createLambdaAccessor(methodLookup, handle);
             if (lambda != null) {
                 return new Accessor(field, handle, uniqueFieldName, methodName, true, true, lambda);
@@ -283,6 +450,15 @@ public class Accessor {
         }
 
         try {
+            // Primitive LambdaMetafactory path; retrieve() boxes for compatibility.
+            if (primitiveFunction != null && !primitiveFunctionFailed) {
+                try {
+                    return retrievePrimitive(o);
+                } catch (Throwable t) {
+                    primitiveFunctionFailed = true;
+                }
+            }
+
             // LambdaMetafactory path: JIT-inlinable, near-direct field access speed
             if (function != null && !functionFailed) {
                 try {
@@ -321,6 +497,215 @@ public class Accessor {
         } catch (Throwable t) {
             throw new JsonIoException("Failed to retrieve field value: " + getActualFieldName() + " in class: " + field.getDeclaringClass().getName(), t);
         }
+    }
+
+    /**
+     * Return this accessor's value as a primitive boolean.
+     * Intended for callers that already know the underlying field/getter type is boolean.
+     */
+    public boolean getBoolean(Object o) {
+        ensureTarget(o);
+        try {
+            if (primitiveKind == PRIMITIVE_BOOLEAN && primitiveFunction != null && !primitiveFunctionFailed) {
+                try {
+                    return ((BooleanGetter) primitiveFunction).get(o);
+                } catch (Throwable t) {
+                    primitiveFunctionFailed = true;
+                }
+            }
+            return (Boolean) retrieve(o);
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Throwable t) {
+            throw retrievalException(t);
+        }
+    }
+
+    /**
+     * Return this accessor's value as a primitive byte.
+     * Intended for callers that already know the underlying field/getter type is byte.
+     */
+    public byte getByte(Object o) {
+        ensureTarget(o);
+        try {
+            if (primitiveKind == PRIMITIVE_BYTE && primitiveFunction != null && !primitiveFunctionFailed) {
+                try {
+                    return ((ByteGetter) primitiveFunction).get(o);
+                } catch (Throwable t) {
+                    primitiveFunctionFailed = true;
+                }
+            }
+            return ((Number) retrieve(o)).byteValue();
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Throwable t) {
+            throw retrievalException(t);
+        }
+    }
+
+    /**
+     * Return this accessor's value as a primitive char.
+     * Intended for callers that already know the underlying field/getter type is char.
+     */
+    public char getChar(Object o) {
+        ensureTarget(o);
+        try {
+            if (primitiveKind == PRIMITIVE_CHAR && primitiveFunction != null && !primitiveFunctionFailed) {
+                try {
+                    return ((CharGetter) primitiveFunction).get(o);
+                } catch (Throwable t) {
+                    primitiveFunctionFailed = true;
+                }
+            }
+            return (Character) retrieve(o);
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Throwable t) {
+            throw retrievalException(t);
+        }
+    }
+
+    /**
+     * Return this accessor's value as a primitive short.
+     * Intended for callers that already know the underlying field/getter type is short.
+     */
+    public short getShort(Object o) {
+        ensureTarget(o);
+        try {
+            if (primitiveKind == PRIMITIVE_SHORT && primitiveFunction != null && !primitiveFunctionFailed) {
+                try {
+                    return ((ShortGetter) primitiveFunction).get(o);
+                } catch (Throwable t) {
+                    primitiveFunctionFailed = true;
+                }
+            }
+            return ((Number) retrieve(o)).shortValue();
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Throwable t) {
+            throw retrievalException(t);
+        }
+    }
+
+    /**
+     * Return this accessor's value as a primitive int.
+     * Intended for callers that already know the underlying field/getter type is int.
+     */
+    public int getInt(Object o) {
+        ensureTarget(o);
+        try {
+            if (primitiveKind == PRIMITIVE_INT && primitiveFunction != null && !primitiveFunctionFailed) {
+                try {
+                    return ((IntGetter) primitiveFunction).get(o);
+                } catch (Throwable t) {
+                    primitiveFunctionFailed = true;
+                }
+            }
+            return ((Number) retrieve(o)).intValue();
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Throwable t) {
+            throw retrievalException(t);
+        }
+    }
+
+    /**
+     * Return this accessor's value as a primitive long.
+     * Intended for callers that already know the underlying field/getter type is long.
+     */
+    public long getLong(Object o) {
+        ensureTarget(o);
+        try {
+            if (primitiveKind == PRIMITIVE_LONG && primitiveFunction != null && !primitiveFunctionFailed) {
+                try {
+                    return ((LongGetter) primitiveFunction).get(o);
+                } catch (Throwable t) {
+                    primitiveFunctionFailed = true;
+                }
+            }
+            return ((Number) retrieve(o)).longValue();
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Throwable t) {
+            throw retrievalException(t);
+        }
+    }
+
+    /**
+     * Return this accessor's value as a primitive float.
+     * Intended for callers that already know the underlying field/getter type is float.
+     */
+    public float getFloat(Object o) {
+        ensureTarget(o);
+        try {
+            if (primitiveKind == PRIMITIVE_FLOAT && primitiveFunction != null && !primitiveFunctionFailed) {
+                try {
+                    return ((FloatGetter) primitiveFunction).get(o);
+                } catch (Throwable t) {
+                    primitiveFunctionFailed = true;
+                }
+            }
+            return ((Number) retrieve(o)).floatValue();
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Throwable t) {
+            throw retrievalException(t);
+        }
+    }
+
+    /**
+     * Return this accessor's value as a primitive double.
+     * Intended for callers that already know the underlying field/getter type is double.
+     */
+    public double getDouble(Object o) {
+        ensureTarget(o);
+        try {
+            if (primitiveKind == PRIMITIVE_DOUBLE && primitiveFunction != null && !primitiveFunctionFailed) {
+                try {
+                    return ((DoubleGetter) primitiveFunction).get(o);
+                } catch (Throwable t) {
+                    primitiveFunctionFailed = true;
+                }
+            }
+            return ((Number) retrieve(o)).doubleValue();
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Throwable t) {
+            throw retrievalException(t);
+        }
+    }
+
+    private void ensureTarget(Object o) {
+        if (o == null) {
+            throw new JsonIoException("Cannot retrieve field value from null object for field: " + getActualFieldName());
+        }
+    }
+
+    private Object retrievePrimitive(Object o) {
+        switch (primitiveKind) {
+            case PRIMITIVE_BOOLEAN:
+                return ((BooleanGetter) primitiveFunction).get(o);
+            case PRIMITIVE_BYTE:
+                return ((ByteGetter) primitiveFunction).get(o);
+            case PRIMITIVE_CHAR:
+                return ((CharGetter) primitiveFunction).get(o);
+            case PRIMITIVE_SHORT:
+                return ((ShortGetter) primitiveFunction).get(o);
+            case PRIMITIVE_INT:
+                return ((IntGetter) primitiveFunction).get(o);
+            case PRIMITIVE_LONG:
+                return ((LongGetter) primitiveFunction).get(o);
+            case PRIMITIVE_FLOAT:
+                return ((FloatGetter) primitiveFunction).get(o);
+            case PRIMITIVE_DOUBLE:
+                return ((DoubleGetter) primitiveFunction).get(o);
+            default:
+                throw new IllegalStateException("No primitive getter for field: " + getActualFieldName());
+        }
+    }
+
+    private JsonIoException retrievalException(Throwable t) {
+        return new JsonIoException("Failed to retrieve field value: " + getActualFieldName() + " in class: " + field.getDeclaringClass().getName(), t);
     }
 
     public MethodHandle getMethodHandle() {

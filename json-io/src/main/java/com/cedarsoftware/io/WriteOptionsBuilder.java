@@ -2713,6 +2713,16 @@ public class WriteOptionsBuilder {
     }
 
     static final class WriteFieldPlan {
+        static final byte PRIMITIVE_NONE = 0;
+        static final byte PRIMITIVE_BOOLEAN = 1;
+        static final byte PRIMITIVE_BYTE = 2;
+        static final byte PRIMITIVE_CHAR = 3;
+        static final byte PRIMITIVE_SHORT = 4;
+        static final byte PRIMITIVE_INT = 5;
+        static final byte PRIMITIVE_LONG = 6;
+        static final byte PRIMITIVE_FLOAT = 7;
+        static final byte PRIMITIVE_DOUBLE = 8;
+
         private final Accessor accessor;
         private final String fieldName;
         private final String serializedKey;
@@ -2728,13 +2738,14 @@ public class WriteOptionsBuilder {
         private final boolean forceShowType;
         private final boolean toonKeyNeedsQuoting;
         private final boolean mapKeyTypeIsSimple;
+        private final byte primitiveWriteKind;
 
         private WriteFieldPlan(Accessor accessor, String fieldName, String serializedKey, Class<?> declaredFieldType,
                                Class<?> declaredElementType, Class<?> declaredKeyType,
                                boolean enumPublicOnlySkipCandidate, boolean applyDeclaredContainerTypes,
                                boolean skipReferenceTrace, boolean skipIfNull, String formatPattern,
                                Class<?> effectiveDeclaredType, boolean forceShowType,
-                               boolean toonKeyNeedsQuoting, boolean mapKeyTypeIsSimple) {
+                               boolean toonKeyNeedsQuoting, boolean mapKeyTypeIsSimple, byte primitiveWriteKind) {
             this.accessor = accessor;
             this.fieldName = fieldName;
             this.serializedKey = serializedKey;
@@ -2750,6 +2761,7 @@ public class WriteOptionsBuilder {
             this.forceShowType = forceShowType;
             this.toonKeyNeedsQuoting = toonKeyNeedsQuoting;
             this.mapKeyTypeIsSimple = mapKeyTypeIsSimple;
+            this.primitiveWriteKind = primitiveWriteKind;
         }
 
         static WriteFieldPlan create(Accessor accessor, WriteOptions options) {
@@ -2820,7 +2832,35 @@ public class WriteOptionsBuilder {
 
             return new WriteFieldPlan(accessor, fieldName, keyLiteral, fieldType, elementType, keyType,
                     enumSkip, applyContainerTypes, skipTrace, nullSkip, formatPat, effectiveType, forceType,
-                    toonKeyQuote, simpleKeys);
+                    toonKeyQuote, simpleKeys, primitiveWriteKind(fieldType));
+        }
+
+        private static byte primitiveWriteKind(Class<?> type) {
+            if (type == boolean.class) {
+                return PRIMITIVE_BOOLEAN;
+            }
+            if (type == byte.class) {
+                return PRIMITIVE_BYTE;
+            }
+            if (type == char.class) {
+                return PRIMITIVE_CHAR;
+            }
+            if (type == short.class) {
+                return PRIMITIVE_SHORT;
+            }
+            if (type == int.class) {
+                return PRIMITIVE_INT;
+            }
+            if (type == long.class) {
+                return PRIMITIVE_LONG;
+            }
+            if (type == float.class) {
+                return PRIMITIVE_FLOAT;
+            }
+            if (type == double.class) {
+                return PRIMITIVE_DOUBLE;
+            }
+            return PRIMITIVE_NONE;
         }
 
         private static String buildKeyLiteral(String fieldName, WriteOptions options) {
@@ -2915,6 +2955,10 @@ public class WriteOptionsBuilder {
 
         boolean mapKeyTypeIsSimple() {
             return mapKeyTypeIsSimple;
+        }
+
+        byte primitiveWriteKind() {
+            return primitiveWriteKind;
         }
     }
 }

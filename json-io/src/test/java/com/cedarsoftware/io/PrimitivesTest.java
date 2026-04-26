@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -125,6 +126,35 @@ class PrimitivesTest
         assertThatThrownBy(() -> TestUtil.toJava(json8, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("convert from Map to 'String' the map must include: [value] or [_v] as key with associated value");
+    }
+
+    @Test
+    void primitiveFieldsWriteThroughJsonAndToonFastPaths()
+    {
+        PrimitiveWriteHolder holder = new PrimitiveWriteHolder();
+        WriteOptions options = new WriteOptionsBuilder().standardJson().build();
+
+        String json = JsonIo.toJson(holder, options);
+        assertThat(json)
+                .contains("\"booleanValue\":true")
+                .contains("\"byteValue\":12")
+                .contains("\"charValue\":\"J\"")
+                .contains("\"shortValue\":32000")
+                .contains("\"intValue\":123456789")
+                .contains("\"longValue\":9876543210")
+                .contains("\"floatValue\":3.25")
+                .contains("\"doubleValue\":6.5");
+
+        String toon = JsonIo.toToon(holder, options);
+        assertThat(toon)
+                .contains("booleanValue: true")
+                .contains("byteValue: 12")
+                .contains("charValue: J")
+                .contains("shortValue: 32000")
+                .contains("intValue: 123456789")
+                .contains("longValue: 9876543210")
+                .contains("floatValue: 3.25")
+                .contains("doubleValue: 6.5");
     }
 
     @Test
@@ -451,6 +481,18 @@ class PrimitivesTest
         private Long ll;
         private short s;
         private Short ss;
+    }
+
+    public static class PrimitiveWriteHolder
+    {
+        public boolean booleanValue = true;
+        public byte byteValue = 12;
+        public char charValue = 'J';
+        public short shortValue = 32000;
+        public int intValue = 123456789;
+        public long longValue = 9876543210L;
+        public float floatValue = 3.25f;
+        public double doubleValue = 6.5d;
     }
 
     public class TestStringField

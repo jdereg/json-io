@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import java.lang.reflect.Method;
 
+import com.cedarsoftware.io.reflect.Accessor;
 import com.cedarsoftware.io.reflect.AnnotationResolver;
 import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.Converter;
@@ -1513,6 +1514,10 @@ public class ToonWriter implements Closeable, Flushable {
             }
             first = false;
             WriteOptionsBuilder.WriteFieldPlan plan = data.activePlans.get(i);
+            if (canWritePrimitiveFieldDirect(plan)) {
+                writePrimitiveFieldValue(element, plan);
+                continue;
+            }
             Object value = plan.accessor().retrieve(element);
             String formatPattern = plan.formatPattern();
             if (formatPattern != null && value != null) {
@@ -1702,6 +1707,19 @@ public class ToonWriter implements Closeable, Flushable {
             for (int i = 0, len = plans.size(); i < len; i++) {
                 WriteOptionsBuilder.WriteFieldPlan plan = plans.get(i);
                 if (plan.enumPublicOnlySkipCandidate() && enumPublicFieldsOnly) {
+                    continue;
+                }
+                if (canWritePrimitiveFieldDirect(plan)) {
+                    if (first) {
+                        out.write(" ");
+                        first = false;
+                    } else {
+                        out.write(NEW_LINE);
+                        depth++;
+                        writeIndent();
+                        depth--;
+                    }
+                    writePrimitiveFieldEntry(obj, plan);
                     continue;
                 }
                 Object value = plan.accessor().retrieve(obj);
@@ -2383,6 +2401,15 @@ public class ToonWriter implements Closeable, Flushable {
             if (plan.enumPublicOnlySkipCandidate() && enumPublicFieldsOnly) {
                 continue;
             }
+            if (canWritePrimitiveFieldDirect(plan)) {
+                if (wroteField) {
+                    out.write(NEW_LINE);
+                }
+                wroteField = true;
+                writeIndent();
+                writePrimitiveFieldEntry(obj, plan);
+                continue;
+            }
             Object value = plan.accessor().retrieve(obj);
             if ((skipNullFields || plan.skipIfNull()) && value == null) {
                 continue;
@@ -2409,6 +2436,69 @@ public class ToonWriter implements Closeable, Flushable {
 
         if (!wroteField) {
             out.write("{}");
+        }
+    }
+
+    private boolean canWritePrimitiveFieldDirect(WriteOptionsBuilder.WriteFieldPlan plan) {
+        return plan.primitiveWriteKind() != WriteOptionsBuilder.WriteFieldPlan.PRIMITIVE_NONE
+                && plan.formatPattern() == null;
+    }
+
+    private void writePrimitiveFieldEntry(Object obj, WriteOptionsBuilder.WriteFieldPlan plan) throws IOException {
+        writeKeyStringKnown(plan.accessor().getUniqueFieldName(), plan.toonKeyNeedsQuoting());
+        out.write(": ");
+        writePrimitiveFieldValue(obj, plan);
+    }
+
+    private void writePrimitiveFieldValue(Object obj, WriteOptionsBuilder.WriteFieldPlan plan) throws IOException {
+        Accessor accessor = plan.accessor();
+        switch (plan.primitiveWriteKind()) {
+            case WriteOptionsBuilder.WriteFieldPlan.PRIMITIVE_BOOLEAN:
+                out.write(accessor.getBoolean(obj) ? "true" : "false");
+                break;
+            case WriteOptionsBuilder.WriteFieldPlan.PRIMITIVE_BYTE:
+                out.write(toCachedLongString(accessor.getByte(obj)));
+                break;
+            case WriteOptionsBuilder.WriteFieldPlan.PRIMITIVE_CHAR:
+                writeString(String.valueOf(accessor.getChar(obj)));
+                break;
+            case WriteOptionsBuilder.WriteFieldPlan.PRIMITIVE_SHORT:
+                out.write(toCachedLongString(accessor.getShort(obj)));
+                break;
+            case WriteOptionsBuilder.WriteFieldPlan.PRIMITIVE_INT:
+                out.write(toCachedLongString(accessor.getInt(obj)));
+                break;
+            case WriteOptionsBuilder.WriteFieldPlan.PRIMITIVE_LONG:
+                out.write(toCachedLongString(accessor.getLong(obj)));
+                break;
+            case WriteOptionsBuilder.WriteFieldPlan.PRIMITIVE_FLOAT:
+                writeFloatPrimitive(accessor.getFloat(obj));
+                break;
+            case WriteOptionsBuilder.WriteFieldPlan.PRIMITIVE_DOUBLE:
+                writeDoublePrimitive(accessor.getDouble(obj));
+                break;
+            default:
+                throw new JsonIoException("Unsupported primitive field kind: " + plan.primitiveWriteKind());
+        }
+    }
+
+    private void writeFloatPrimitive(float value) throws IOException {
+        if (Float.isNaN(value) || Float.isInfinite(value)) {
+            out.write("null");
+        } else if (value == -0.0f) {
+            out.write("0");
+        } else {
+            out.write(formatDecimalNumber(value));
+        }
+    }
+
+    private void writeDoublePrimitive(double value) throws IOException {
+        if (Double.isNaN(value) || Double.isInfinite(value)) {
+            out.write("null");
+        } else if (value == -0.0d) {
+            out.write("0");
+        } else {
+            out.write(formatDecimalNumber(value));
         }
     }
 

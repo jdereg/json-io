@@ -2758,6 +2758,18 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (plan.enumPublicOnlySkipCandidate() && writeOptions.isEnumPublicFieldsOnly()) {
             return first;
         }
+
+        if (canWritePrimitiveFieldDirect(plan)) {
+            final Writer output = this.out;
+            if (!first) {
+                output.write(',');
+                newLine();
+            }
+            output.write(plan.serializedKey());
+            writePrimitiveFieldDirect(obj, plan);
+            return false;
+        }
+
         Object o = accessor.retrieve(obj);
 
         if ((skipNullFields || plan.skipIfNull()) && o == null) {   // If skip null (global or per-field annotation), skip field
@@ -2843,6 +2855,62 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             fieldFormatPattern = savedFormatPattern;
         }
         return false;
+    }
+
+    private boolean canWritePrimitiveFieldDirect(WriteFieldPlan plan) {
+        byte primitiveKind = plan.primitiveWriteKind();
+        return primitiveKind != WriteFieldPlan.PRIMITIVE_NONE
+                && !plan.forceShowType()
+                && !forceElementShowType
+                && plan.formatPattern() == null
+                && (primitiveKind != WriteFieldPlan.PRIMITIVE_LONG || !writeLongsAsStrings);
+    }
+
+    private void writePrimitiveFieldDirect(Object obj, WriteFieldPlan plan) throws IOException {
+        Accessor accessor = plan.accessor();
+        switch (plan.primitiveWriteKind()) {
+            case WriteFieldPlan.PRIMITIVE_BOOLEAN:
+                out.write(accessor.getBoolean(obj) ? "true" : "false");
+                break;
+            case WriteFieldPlan.PRIMITIVE_BYTE:
+                writeIntDirect(accessor.getByte(obj));
+                break;
+            case WriteFieldPlan.PRIMITIVE_CHAR:
+                writeStringValue(String.valueOf(accessor.getChar(obj)));
+                break;
+            case WriteFieldPlan.PRIMITIVE_SHORT:
+                writeIntDirect(accessor.getShort(obj));
+                break;
+            case WriteFieldPlan.PRIMITIVE_INT:
+                int intVal = accessor.getInt(obj);
+                if (intVal >= SMALL_INT_LOW && intVal <= SMALL_INT_HIGH) {
+                    out.write(SMALL_INT_STRINGS[intVal - SMALL_INT_LOW]);
+                } else {
+                    writeIntDirect(intVal);
+                }
+                break;
+            case WriteFieldPlan.PRIMITIVE_LONG:
+                writeLongDirect(accessor.getLong(obj));
+                break;
+            case WriteFieldPlan.PRIMITIVE_FLOAT:
+                float floatVal = accessor.getFloat(obj);
+                if (!isNanInfinityAllowed() && (Float.isNaN(floatVal) || Float.isInfinite(floatVal))) {
+                    out.write("null");
+                } else {
+                    out.write(Float.toString(floatVal));
+                }
+                break;
+            case WriteFieldPlan.PRIMITIVE_DOUBLE:
+                double doubleVal = accessor.getDouble(obj);
+                if (!isNanInfinityAllowed() && (Double.isNaN(doubleVal) || Double.isInfinite(doubleVal))) {
+                    out.write("null");
+                } else {
+                    out.write(Double.toString(doubleVal));
+                }
+                break;
+            default:
+                throw new JsonIoException("Unsupported primitive field kind: " + plan.primitiveWriteKind());
+        }
     }
 
     /**
