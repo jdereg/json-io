@@ -1337,6 +1337,11 @@ public class ToonWriter implements Closeable, Flushable {
 
                 for (WriteOptionsBuilder.WriteFieldPlan plan : allPlans) {
                     if (plan.enumPublicOnlySkipCandidate() && enumPublicFieldsOnly) continue;
+                    if (isPrimitiveFieldPlan(plan)) {
+                        activePlans.add(plan);
+                        keys.add(plan.accessor().getUniqueFieldName());
+                        continue;
+                    }
                     Object value = plan.accessor().retrieve(element);
                     if ((skipNullFields || plan.skipIfNull()) && value == null) continue;
                     if (value != null && !isPrimitive(value)) return null;
@@ -1410,6 +1415,11 @@ public class ToonWriter implements Closeable, Flushable {
 
                 for (WriteOptionsBuilder.WriteFieldPlan plan : allPlans) {
                     if (plan.enumPublicOnlySkipCandidate() && enumPublicFieldsOnly) continue;
+                    if (isPrimitiveFieldPlan(plan)) {
+                        activePlans.add(plan);
+                        keys.add(plan.accessor().getUniqueFieldName());
+                        continue;
+                    }
                     Object value = plan.accessor().retrieve(element);
                     if ((skipNullFields || plan.skipIfNull()) && value == null) continue;
                     if (value != null && !isPrimitive(value)) return null;
@@ -1453,6 +1463,13 @@ public class ToonWriter implements Closeable, Flushable {
         for (int i = 0, len = allPlans.size(); i < len; i++) {
             WriteOptionsBuilder.WriteFieldPlan plan = allPlans.get(i);
             if (plan.enumPublicOnlySkipCandidate() && enumPublicFieldsOnly) continue;
+            if (isPrimitiveFieldPlan(plan)) {
+                if (activeIdx >= activePlans.size() || activePlans.get(activeIdx) != plan) {
+                    return false;
+                }
+                activeIdx++;
+                continue;
+            }
             Object value = plan.accessor().retrieve(element);
             if ((skipNullFields || plan.skipIfNull()) && value == null) {
                 // Skipped — check it wasn't active in first element
@@ -1468,6 +1485,10 @@ public class ToonWriter implements Closeable, Flushable {
             activeIdx++;
         }
         return activeIdx == activePlans.size();
+    }
+
+    private boolean isPrimitiveFieldPlan(WriteOptionsBuilder.WriteFieldPlan plan) {
+        return plan.primitiveWriteKind() != WriteOptionsBuilder.WriteFieldPlan.PRIMITIVE_NONE;
     }
 
     /**
@@ -2440,6 +2461,10 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     private boolean canWritePrimitiveFieldDirect(WriteOptionsBuilder.WriteFieldPlan plan) {
+        // TOON primitive fields never emit per-field type metadata, and TOON has no
+        // writeLongsAsStrings equivalent. Existing primitive wrapper field fast paths
+        // also ignore forceShowType, so @IoFormat is the only primitive direct-write
+        // disqualifier here.
         return plan.primitiveWriteKind() != WriteOptionsBuilder.WriteFieldPlan.PRIMITIVE_NONE
                 && plan.formatPattern() == null;
     }

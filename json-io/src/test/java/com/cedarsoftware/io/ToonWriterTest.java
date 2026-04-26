@@ -1711,6 +1711,36 @@ class ToonWriterTest {
     }
 
     @Test
+    void testPrimitivePojoList_TabularPrepassSkipsPrimitiveGetterReads() {
+        CountingPrimitivePojo.resetGetterCalls();
+        List<CountingPrimitivePojo> rows = Arrays.asList(
+                new CountingPrimitivePojo(true, (byte) 12, 'J', (short) 32000, 123456789, 9876543210L, 3.25f, 6.5d),
+                new CountingPrimitivePojo(false, (byte) 7, 'K', (short) 12345, 42, 123456789L, 1.5f, 2.75d)
+        );
+
+        String toon = JsonIo.toToon(rows, null);
+
+        assertPrimitivePojoTabularOutput(toon);
+        assertEquals(16, CountingPrimitivePojo.getGetterCalls(),
+                "Primitive getters should be invoked only during row writing, not during tabular uniformity detection");
+    }
+
+    @Test
+    void testPrimitivePojoArray_TabularPrepassSkipsPrimitiveGetterReads() {
+        CountingPrimitivePojo.resetGetterCalls();
+        CountingPrimitivePojo[] rows = {
+                new CountingPrimitivePojo(true, (byte) 12, 'J', (short) 32000, 123456789, 9876543210L, 3.25f, 6.5d),
+                new CountingPrimitivePojo(false, (byte) 7, 'K', (short) 12345, 42, 123456789L, 1.5f, 2.75d)
+        };
+
+        String toon = JsonIo.toToon(rows, null);
+
+        assertPrimitivePojoTabularOutput(toon);
+        assertEquals(16, CountingPrimitivePojo.getGetterCalls(),
+                "Primitive getters should be invoked only during row writing, not during tabular uniformity detection");
+    }
+
+    @Test
     void testPojoArray_PrettyPrintWritesListFormat() {
         // Object[] array with prettyPrint should use list format
         Person[] people = {
@@ -1791,5 +1821,91 @@ class ToonWriterTest {
             "Mixed POJO types should use list format: " + toon);
         assertFalse(toon.contains("{name,age"),
             "Mixed types should NOT produce tabular header: " + toon);
+    }
+
+    private static void assertPrimitivePojoTabularOutput(String toon) {
+        assertTrue(toon.contains("{booleanValue,byteValue,charValue,shortValue,intValue,longValue,floatValue,doubleValue}:"),
+                "Primitive-only POJOs should use tabular format: " + toon);
+        assertTrue(toon.contains("true,12,J,32000,123456789,9876543210,3.25,6.5"),
+                "First primitive row should be written inline: " + toon);
+        assertTrue(toon.contains("false,7,K,12345,42,123456789,1.5,2.75"),
+                "Second primitive row should be written inline: " + toon);
+    }
+
+    public static class CountingPrimitivePojo {
+        private static transient int getterCalls;
+
+        private final boolean booleanValue;
+        private final byte byteValue;
+        private final char charValue;
+        private final short shortValue;
+        private final int intValue;
+        private final long longValue;
+        private final float floatValue;
+        private final double doubleValue;
+
+        public CountingPrimitivePojo() {
+            this(false, (byte) 0, '\0', (short) 0, 0, 0L, 0.0f, 0.0d);
+        }
+
+        CountingPrimitivePojo(boolean booleanValue, byte byteValue, char charValue, short shortValue,
+                              int intValue, long longValue, float floatValue, double doubleValue) {
+            this.booleanValue = booleanValue;
+            this.byteValue = byteValue;
+            this.charValue = charValue;
+            this.shortValue = shortValue;
+            this.intValue = intValue;
+            this.longValue = longValue;
+            this.floatValue = floatValue;
+            this.doubleValue = doubleValue;
+        }
+
+        static void resetGetterCalls() {
+            getterCalls = 0;
+        }
+
+        static int getGetterCalls() {
+            return getterCalls;
+        }
+
+        public boolean getBooleanValue() {
+            getterCalls++;
+            return booleanValue;
+        }
+
+        public byte getByteValue() {
+            getterCalls++;
+            return byteValue;
+        }
+
+        public char getCharValue() {
+            getterCalls++;
+            return charValue;
+        }
+
+        public short getShortValue() {
+            getterCalls++;
+            return shortValue;
+        }
+
+        public int getIntValue() {
+            getterCalls++;
+            return intValue;
+        }
+
+        public long getLongValue() {
+            getterCalls++;
+            return longValue;
+        }
+
+        public float getFloatValue() {
+            getterCalls++;
+            return floatValue;
+        }
+
+        public double getDoubleValue() {
+            getterCalls++;
+            return doubleValue;
+        }
     }
 }
