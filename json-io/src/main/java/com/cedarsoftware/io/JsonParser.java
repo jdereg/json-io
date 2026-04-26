@@ -188,7 +188,10 @@ class JsonParser {
         }
 
         int c = skipWhitespaceRead(true);
+        return readValue(c, suggestedType);
+    }
 
+    private Object readValue(int c, Type suggestedType) throws IOException {
         // Fast path for objects and arrays (most common cases)
         if (c == '{') {
             JsonObject jObj = readJsonObject(suggestedType);
@@ -301,16 +304,20 @@ class JsonParser {
                 }
             }
 
-            // For each field, look up the injector.
-            ReadOptionsBuilder.FieldAssignmentPlan assignmentPlan = injectorPlan.getAssignmentPlan(field);
-            Type fieldGenericType = assignmentPlan == null ? null : assignmentPlan.fieldType;
+            int valueStart = skipWhitespaceRead(true);
+            Type fieldGenericType = null;
+            if ((valueStart == '{' || valueStart == '[') && injectorPlan != ReadOptionsBuilder.InjectorPlan.EMPTY) {
+                // Field type hints are only consumed by nested object/array parsing. Scalar conversion happens later.
+                ReadOptionsBuilder.FieldAssignmentPlan assignmentPlan = injectorPlan.getAssignmentPlan(field);
+                fieldGenericType = assignmentPlan == null ? null : assignmentPlan.fieldType;
 
-            // If a field generic type is provided, resolve it using the parent's (i.e. jObj's) resolved type.
-            if (fieldGenericType != null) {
-                // Use the parent's type (which has been resolved) as context to resolve the field type.
-                fieldGenericType = TypeUtilities.resolveType(suggestedType, fieldGenericType);
+                // If a field generic type is provided, resolve it using the parent's (i.e. jObj's) resolved type.
+                if (fieldGenericType != null) {
+                    // Use the parent's type (which has been resolved) as context to resolve the field type.
+                    fieldGenericType = TypeUtilities.resolveType(suggestedType, fieldGenericType);
+                }
             }
-            Object value = readValue(fieldGenericType);
+            Object value = readValue(valueStart, fieldGenericType);
 
             // Fast path for regular fields (95%+ of fields don't start with '@')
             // Note: length check MUST come first for short-circuit evaluation (empty field names are valid JSON)

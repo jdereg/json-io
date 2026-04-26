@@ -1,6 +1,7 @@
 ### Revision History
 
 #### 4.102.0 - (Unreleased)
+* **PERFORMANCE**: JSON object parsing now resolves field generic types only for nested object/array values, avoiding unnecessary scalar field lookups.
 * **PERFORMANCE**: Read-side injector planning now caches field assignment metadata used by `JsonParser` and `ObjectResolver`, reducing repeated type checks while preserving field-level type overrides.
 * **PERFORMANCE**: TOON uniform-POJO tabular detection skips primitive field reads during the prepass; row writing still uses primitive `Accessor` getters.
 * **PERFORMANCE**: `Accessor` now supports primitive getters for all eight Java primitive types, and JSON/TOON writers use them to avoid boxing primitive POJO fields.
