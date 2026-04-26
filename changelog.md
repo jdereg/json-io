@@ -1,6 +1,7 @@
 ### Revision History
 
 #### 4.102.0 - (Unreleased)
+* **DOCUMENTATION**: Refreshed README performance ratios from median run-mode benchmark results.
 * **TESTING**: Added sampled string-cache collision coverage for JSON parsing.
 * **PERFORMANCE**: JSON string caching now uses sampled slot hashing with full content verification, reducing cache-probe work for short strings.
 * **PERFORMANCE**: JSON object parsing now resolves field generic types only for nested object/array values, avoiding unnecessary scalar field lookups.
