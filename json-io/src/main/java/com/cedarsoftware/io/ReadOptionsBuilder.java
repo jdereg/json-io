@@ -3,6 +3,7 @@ package com.cedarsoftware.io;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
@@ -16,6 +17,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
@@ -39,6 +44,7 @@ import com.cedarsoftware.util.RegexUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.ReflectionUtils;
 import com.cedarsoftware.util.StringUtilities;
+import com.cedarsoftware.util.TypeUtilities;
 import com.cedarsoftware.util.convert.CommonValues;
 import com.cedarsoftware.util.convert.Convert;
 import com.cedarsoftware.util.convert.Converter;
@@ -2455,15 +2461,58 @@ public class ReadOptionsBuilder {
     }
 
     static final class InjectorPlan {
-        private static final InjectorPlan EMPTY = new InjectorPlan(Collections.emptyMap());
-        private final Map<String, Injector> injectorsByName;
+        static final InjectorPlan EMPTY = new InjectorPlan(Collections.emptyMap());
+        private final Map<String, FieldAssignmentPlan> assignmentPlansByName;
 
         InjectorPlan(Map<String, Injector> injectorsByName) {
-            this.injectorsByName = injectorsByName;
+            this.assignmentPlansByName = buildAssignmentPlans(injectorsByName);
         }
 
-        Injector get(String fieldName) {
-            return injectorsByName.get(fieldName);
+        Injector get(Object fieldName) {
+            FieldAssignmentPlan plan = assignmentPlansByName.get(fieldName);
+            return plan == null ? null : plan.injector;
+        }
+
+        FieldAssignmentPlan getAssignmentPlan(Object fieldName) {
+            return assignmentPlansByName.get(fieldName);
+        }
+
+        private static Map<String, FieldAssignmentPlan> buildAssignmentPlans(Map<String, Injector> injectorsByName) {
+            if (injectorsByName.isEmpty()) {
+                return Collections.emptyMap();
+            }
+
+            Map<String, FieldAssignmentPlan> plans = new HashMap<>(injectorsByName.size());
+            for (Map.Entry<String, Injector> entry : injectorsByName.entrySet()) {
+                plans.put(entry.getKey(), new FieldAssignmentPlan(entry.getValue()));
+            }
+            return plans;
+        }
+
+    }
+
+    static final class FieldAssignmentPlan {
+        final Injector injector;
+        final Type fieldType;
+        final Class<?> rawType;
+        final byte fastPath;
+        final boolean optionalType;
+        final boolean pseudoPrimitive;
+
+        FieldAssignmentPlan(Injector injector) {
+            this.injector = injector;
+            this.fieldType = injector.getGenericType();
+            this.rawType = TypeUtilities.getRawClass(fieldType);
+            this.fastPath = injector.getFastPath();
+            this.optionalType = isOptionalRawType(rawType);
+            this.pseudoPrimitive = Resolver.isPseudoPrimitive(rawType);
+        }
+
+        private static boolean isOptionalRawType(Class<?> rawType) {
+            return rawType == Optional.class
+                    || rawType == OptionalInt.class
+                    || rawType == OptionalLong.class
+                    || rawType == OptionalDouble.class;
         }
 
     }

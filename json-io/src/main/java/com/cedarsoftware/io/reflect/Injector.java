@@ -117,6 +117,7 @@ public class Injector {
 
     // Cached values for performance - computed once at construction
     private final Class<?> fieldType;
+    private final Type genericType;
     private final Class<?> assignmentType;
     private final String fieldName;
     private final int fieldNumericKind;
@@ -194,6 +195,7 @@ public class Injector {
 
         // Cache values for performance
         this.fieldType = field.getType();
+        this.genericType = field.getGenericType();
         this.assignmentType = this.fieldType.isPrimitive() ? primitiveWrapper(this.fieldType) : this.fieldType;
         this.fieldNumericKind = numericKind(this.fieldType);
         this.fieldName = field.getName();
@@ -209,6 +211,7 @@ public class Injector {
 
         // Cache values for performance
         this.fieldType = field.getType();
+        this.genericType = field.getGenericType();
         this.assignmentType = this.fieldType.isPrimitive() ? primitiveWrapper(this.fieldType) : this.fieldType;
         this.fieldNumericKind = numericKind(this.fieldType);
         this.fieldName = field.getName();
@@ -225,6 +228,7 @@ public class Injector {
 
         // Cache values for performance
         this.fieldType = field.getType();
+        this.genericType = field.getGenericType();
         this.assignmentType = this.fieldType.isPrimitive() ? primitiveWrapper(this.fieldType) : this.fieldType;
         this.fieldNumericKind = numericKind(this.fieldType);
         this.fieldName = field.getName();
@@ -242,6 +246,7 @@ public class Injector {
 
         // Cache values for performance
         this.fieldType = field.getType();
+        this.genericType = field.getGenericType();
         this.assignmentType = this.fieldType.isPrimitive() ? primitiveWrapper(this.fieldType) : this.fieldType;
         this.fieldNumericKind = numericKind(this.fieldType);
         this.fieldName = field.getName();
@@ -682,15 +687,15 @@ public class Injector {
     }
 
     public Class<?> getType() {
-        return field.getType();
+        return fieldType;
     }
 
     public String getName() {
-        return field.getName();
+        return fieldName;
     }
 
     public Type getGenericType() {
-        return field.getGenericType();
+        return genericType;
     }
 
     public String getDisplayName() {

@@ -1352,12 +1352,26 @@ public class AnnotationResolver {
         }
 
         /**
+         * @return true when at least one field has an @IoTypeInfo default concrete type.
+         */
+        public boolean hasFieldTypeInfoDefaults() {
+            return fieldTypeInfoDefaults != null && !fieldTypeInfoDefaults.isEmpty();
+        }
+
+        /**
          * Get the @IoDeserialize override class for a field, or null if not specified.
          * @param fieldName the Java field name
          * @return the override class, or null
          */
         public Class<?> getFieldDeserializeOverride(String fieldName) {
             return fieldDeserializeOverrides == null ? null : fieldDeserializeOverrides.get(fieldName);
+        }
+
+        /**
+         * @return true when at least one field has an @IoDeserialize override.
+         */
+        public boolean hasFieldDeserializeOverrides() {
+            return fieldDeserializeOverrides != null && !fieldDeserializeOverrides.isEmpty();
         }
 
         /**

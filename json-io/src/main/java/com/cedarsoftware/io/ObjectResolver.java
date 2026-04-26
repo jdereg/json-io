@@ -326,10 +326,10 @@ public class ObjectResolver extends Resolver
         // Uses cached missingFieldHandler from parent Resolver for performance
         for (Map.Entry<Object, Object> entry : jsonObj.entrySet()) {
             String key = (String) entry.getKey();
-            final Injector injector = injectorPlan.get(key);
+            final ReadOptionsBuilder.FieldAssignmentPlan assignmentPlan = injectorPlan.getAssignmentPlan(key);
             Object rhs = entry.getValue();
-            if (injector != null) {
-                assignField(jsonObj, injector, rhs, parentMeta);
+            if (assignmentPlan != null) {
+                assignField(jsonObj, assignmentPlan, rhs, parentMeta);
             } else if (anySetter != null) {
                 invokeAnySetter(javaMate, anySetter, key, rhs);
             } else if (missingFieldHandler != null) {
@@ -347,16 +347,18 @@ public class ObjectResolver extends Resolver
      * @param injector an instance of Injector used for setting values on the target object.
      * @param rhs      the JSON value that will be converted and stored in the field on the associated Java target object.
      */
-    private void assignField(final JsonObject jsonObj, final Injector injector, final Object rhs,
+    private void assignField(final JsonObject jsonObj, final ReadOptionsBuilder.FieldAssignmentPlan assignmentPlan,
+                             final Object rhs,
                              final AnnotationResolver.ClassAnnotationMetadata parentMeta) {
         final Object target = jsonObj.getTarget();
+        final Injector injector = assignmentPlan.injector;
 
         // Fast path: primitive numeric fields with Long/Double values (the hottest case).
         // Uses a pre-computed fastPath tag on the Injector so we don't traverse the
         // full 5-case dispatch chain for every primitive field. Covers the majority
         // of POJO field assignments (int/long/double/float/short/byte fields).
         if (rhs != null) {
-            final byte fp = injector.getFastPath();
+            final byte fp = assignmentPlan.fastPath;
             if (fp == Injector.FAST_PATH_PRIMITIVE_NUMERIC) {
                 final Class<?> rhsCls = rhs.getClass();
                 if (rhsCls == Long.class) {
@@ -381,19 +383,30 @@ public class ObjectResolver extends Resolver
             }
         }
 
-        final Type fieldType = injector.getGenericType();
+        final Type fieldType = assignmentPlan.fieldType;
         Type effectiveFieldType = fieldType;
+        Class<?> rawType = assignmentPlan.rawType;
 
         // Resolve @IoDeserialize > @IoTypeInfo field-level type overrides once for this assignment.
         // parentMeta is hoisted in from traverseFields so all fields on this object reuse the same
         // ClassAnnotationMetadata lookup.
-        Class<?> deserializeAs = parentMeta.getFieldDeserializeOverride(injector.getName());
-        if (deserializeAs != null) {
-            effectiveFieldType = deserializeAs;
-        } else {
+        if (parentMeta.hasFieldDeserializeOverrides()) {
+            Class<?> deserializeAs = parentMeta.getFieldDeserializeOverride(injector.getName());
+            if (deserializeAs != null) {
+                effectiveFieldType = deserializeAs;
+                rawType = deserializeAs;
+            } else if (parentMeta.hasFieldTypeInfoDefaults()) {
+                Class<?> typeInfoDefault = parentMeta.getFieldTypeInfoDefault(injector.getName());
+                if (typeInfoDefault != null) {
+                    effectiveFieldType = typeInfoDefault;
+                    rawType = typeInfoDefault;
+                }
+            }
+        } else if (parentMeta.hasFieldTypeInfoDefaults()) {
             Class<?> typeInfoDefault = parentMeta.getFieldTypeInfoDefault(injector.getName());
             if (typeInfoDefault != null) {
                 effectiveFieldType = typeInfoDefault;
+                rawType = typeInfoDefault;
             }
         }
 
@@ -401,21 +414,17 @@ public class ObjectResolver extends Resolver
         //    fields. The Jackson-compatible primitive form of Optional is a bare value or `null`;
         //    legacy json-io used {"present":X, "value":Y} which arrives as a JsonObject and is
         //    still handled by OptionalFactory further down.
-        Class<?> preCheckRaw = TypeUtilities.getRawClass(effectiveFieldType);
-        if (preCheckRaw != null
-                && (preCheckRaw == Optional.class
-                    || preCheckRaw == OptionalInt.class
-                    || preCheckRaw == OptionalLong.class
-                    || preCheckRaw == OptionalDouble.class)
+        final boolean fieldTypeUnchanged = effectiveFieldType == fieldType;
+        if (rawType != null
+                && (fieldTypeUnchanged ? assignmentPlan.optionalType : isOptionalRawType(rawType))
                 && !isLegacyOptionalJsonObject(rhs)
                 && !isOptionalInstance(rhs)) {
-            injector.inject(target, wrapAsOptional(preCheckRaw, effectiveFieldType, rhs));
+            injector.inject(target, wrapAsOptional(rawType, effectiveFieldType, rhs));
             return;
         }
 
         // 1. NULL - fastest check
         if (rhs == null) {
-            Class<?> rawType = TypeUtilities.getRawClass(effectiveFieldType);
             injector.inject(target, rawType.isPrimitive() ? converter.convert(null, rawType) : null);
             return;
         }
@@ -437,7 +446,6 @@ public class ObjectResolver extends Resolver
 
         // Scalar values (not JsonObject, not Object[]) - try direct assign or converter
         if (!(rhs instanceof JsonObject) && !(rhs instanceof Object[])) {
-            final Class<?> rawType = TypeUtilities.getRawClass(effectiveFieldType);
             final Class<?> rhsClass = rhs.getClass();
             if (rawType != null) {
                 // Collection values from TOON list notation should flow through array/collection traversal so
@@ -477,7 +485,9 @@ public class ObjectResolver extends Resolver
                     }
                 }
                 // 4. CONVERTER - scalar-to-scalar conversion for simple types
-                if (isPseudoPrimitive(rawType) && converter.isConversionSupportedFor(rhsClass, rawType)) {
+                final boolean pseudoPrimitive =
+                        fieldTypeUnchanged ? assignmentPlan.pseudoPrimitive : isPseudoPrimitive(rawType);
+                if (pseudoPrimitive && converter.isConversionSupportedFor(rhsClass, rawType)) {
                     injector.inject(target, converter.convert(rhs, rawType));
                     return;
                 }
@@ -1595,6 +1605,13 @@ public class ObjectResolver extends Resolver
                 || value instanceof OptionalInt
                 || value instanceof OptionalLong
                 || value instanceof OptionalDouble;
+    }
+
+    private static boolean isOptionalRawType(Class<?> rawType) {
+        return rawType == Optional.class
+                || rawType == OptionalInt.class
+                || rawType == OptionalLong.class
+                || rawType == OptionalDouble.class;
     }
 
     /**

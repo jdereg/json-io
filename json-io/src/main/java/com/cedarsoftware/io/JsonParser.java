@@ -12,7 +12,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.FastReader;
@@ -282,12 +281,12 @@ class JsonParser {
 
         // Performance: Skip injector resolution when there's no meaningful type context
         Class<?> rawClass = TypeUtilities.getRawClass(suggestedType);
-        Map<String, Injector> injectors;
+        ReadOptionsBuilder.InjectorPlan injectorPlan;
         if (suggestedType == null || rawClass == Object.class || rawClass == null) {
             // No type context - skip expensive injector work
-            injectors = java.util.Collections.emptyMap();
+            injectorPlan = ReadOptionsBuilder.InjectorPlan.EMPTY;
         } else {
-            injectors = readOptions.getDeepInjectorMap(rawClass);
+            injectorPlan = ReadOptionsBuilder.getInjectorPlan(readOptions, rawClass);
         }
 
         while (true) {
@@ -303,8 +302,8 @@ class JsonParser {
             }
 
             // For each field, look up the injector.
-            Injector injector = injectors.get(field);
-            Type fieldGenericType = injector == null ? null : injector.getGenericType();
+            ReadOptionsBuilder.FieldAssignmentPlan assignmentPlan = injectorPlan.getAssignmentPlan(field);
+            Type fieldGenericType = assignmentPlan == null ? null : assignmentPlan.fieldType;
 
             // If a field generic type is provided, resolve it using the parent's (i.e. jObj's) resolved type.
             if (fieldGenericType != null) {
