@@ -1167,11 +1167,13 @@ class JsonParser {
         str.append((char) value);
     }
 
+    private static int cacheHash(char first, char mid, char last, int len) {
+        return (first * 31 + mid) * 31 + last + len;
+    }
+
     /**
      * Convert CharSequence to String, using array-based cache for string deduplication.
-     * This implementation computes hashCode directly from the CharSequence, avoiding
-     * String allocation on cache hits. Only creates a new String on cache misses.
-     * Uses simple hash-indexed slots with last-write-wins collision handling.
+     * Uses a sampled slot hash and verifies full content on hits, creating a String only on misses.
      */
     private CharSequence cacheString(CharSequence str) {
         final int len = str.length();
@@ -1184,20 +1186,10 @@ class JsonParser {
             return str.toString();
         }
 
-        // Compute hashCode directly from CharSequence (same algorithm as String.hashCode())
-        // This avoids String allocation just to compute the hash
-        int hash = 0;
-        for (int i = 0; i < len; i++) {
-            hash = 31 * hash + str.charAt(i);
-        }
-
-        // Look up in array-based cache using computed hash
-        final int slot = hash & STRING_CACHE_MASK;
+        final int slot = cacheHash(str.charAt(0), str.charAt(len >> 1), str.charAt(len - 1), len) & STRING_CACHE_MASK;
         final String cached = stringCacheArray[slot];
 
-        // Check if cached String matches our CharSequence (by hash first, then content)
-        // String.hashCode() is cached, so this is a fast check
-        if (cached != null && cached.hashCode() == hash && cached.contentEquals(str)) {
+        if (cached != null && cached.length() == len && cached.contentEquals(str)) {
             return cached;  // Cache hit - no String allocation!
         }
 
@@ -1210,7 +1202,6 @@ class JsonParser {
     /**
      * Cache a string directly from a char[] range, bypassing StringBuilder entirely.
      * Used by the readString fast path for short strings without escape sequences.
-     * Computes the same hash as String.hashCode() for cache slot compatibility.
      */
     private CharSequence cacheStringFromChars(char[] buf, int offset, int len) {
         if (len == 0) {
@@ -1221,18 +1212,10 @@ class JsonParser {
             return new String(buf, offset, len);
         }
 
-        // Compute hashCode from char[] (same algorithm as String.hashCode())
-        int hash = 0;
-        int end = offset + len;
-        for (int i = offset; i < end; i++) {
-            hash = 31 * hash + buf[i];
-        }
-
-        final int slot = hash & STRING_CACHE_MASK;
+        final int slot = cacheHash(buf[offset], buf[offset + (len >> 1)], buf[offset + len - 1], len) & STRING_CACHE_MASK;
         final String cached = stringCacheArray[slot];
 
-        // Check cache: hash match first (O(1) rejection), then content equality
-        if (cached != null && cached.hashCode() == hash && cached.length() == len) {
+        if (cached != null && cached.length() == len) {
             // Verify content matches the char[] buffer
             boolean match = true;
             for (int i = 0; i < len; i++) {
