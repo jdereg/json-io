@@ -93,6 +93,11 @@ public class JsonPerformanceTest {
         public UUID uuid;
         public List<UUID> uuids;
 
+        // Pseudo-primitive temporal lists — realistic real-world shape (event logs, billing dates).
+        // Mirror the existing List<UUID>/List<BigDecimal> shape for fair coverage of temporals.
+        public List<Instant> eventTimestamps;
+        public List<LocalDate> billingDates;
+
         // Enum names as plain strings (avoids cross-library enum serialization mismatches
         // while still exercising string paths that would be used for enum values in practice)
         public String statusName;
@@ -588,6 +593,16 @@ public class JsonPerformanceTest {
         data.uuids = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
             data.uuids.add(new UUID(i, i * 1000L));
+        }
+
+        // Pseudo-primitive temporal lists (10 each — same shape as uuids/prices)
+        data.eventTimestamps = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            data.eventTimestamps.add(Instant.ofEpochSecond(1700000000L + i * 3600L));
+        }
+        data.billingDates = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            data.billingDates.add(LocalDate.of(2026, 1, 1).plusDays(i * 30L));
         }
 
         // Enum names (as strings)
