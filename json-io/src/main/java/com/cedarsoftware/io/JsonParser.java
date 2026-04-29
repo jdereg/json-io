@@ -546,7 +546,6 @@ class JsonParser {
      */
     private CharSequence readFieldName(int c) throws IOException {
         CharSequence field;
-        boolean colonConsumed = false;
 
         if (c == '"') {
             // Standard double-quoted field name
@@ -562,18 +561,15 @@ class JsonParser {
             if (strictJson) {
                 error("Unquoted field names not allowed in strict JSON mode");
             }
-            field = readUnquotedFieldName(c);
-            colonConsumed = true;
+            field = readUnquotedIdentifier(c);
         } else {
             error("Expected quote before field name");
             return null; // Unreachable, but satisfies compiler
         }
 
-        if (!colonConsumed) {
-            c = skipWhitespaceRead(true);
-            if (c != ':') {
-                error("Expected ':' between field and value, instead found '" + (char) c + "'");
-            }
+        c = skipWhitespaceRead(true);
+        if (c != ':') {
+            error("Expected ':' between field and value, instead found '" + (char) c + "'");
         }
         return field;
     }
@@ -600,23 +596,22 @@ class JsonParser {
      * @param firstChar the first character of the identifier (already read)
      * @return the complete identifier string
      */
-    private String readUnquotedFieldName(int firstChar) throws IOException {
+    private String readUnquotedIdentifier(int firstChar) {
         strBuf.setLength(0);
         strBuf.append((char) firstChar);
 
-        int c;
         while (true) {
-            c = input.read();
+            int c = input.read();
             if (c == -1 || !isIdentifierPart(c)) {
+                // Put back the non-identifier character
+                if (c != -1) {
+                    input.pushback((char) c);
+                }
                 break;
             }
             strBuf.append((char) c);
         }
 
-        c = skipWhitespaceRead(c, true);
-        if (c != ':') {
-            error("Expected ':' between field and value, instead found '" + (char) c + "'");
-        }
         return strBuf.toString();
     }
 
@@ -1357,16 +1352,13 @@ class JsonParser {
      * @throws IOException for stream errors or parsing errors.
      */
     private int skipWhitespaceRead(boolean throwOnEof) throws IOException {
-        return skipWhitespaceRead(input.read(), throwOnEof);
-    }
-
-    private int skipWhitespaceRead(int c, boolean throwOnEof) throws IOException {
         final Reader in = input;
+        int c;
         // Strict mode has no comments, so use a tighter whitespace-only loop.
         if (strictJson) {
             while (true) {
+                c = in.read();
                 if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
-                    c = in.read();
                     continue;
                 }
                 if (c == '/') {
@@ -1390,9 +1382,10 @@ class JsonParser {
         // Performance: Direct character comparison is faster than array bounds check + lookup.
         // JSON whitespace is defined as: space (0x20), tab (0x09), newline (0x0A), carriage return (0x0D)
         while (true) {
+            c = in.read();
+
             // Skip standard whitespace
             if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
-                c = in.read();
                 continue;
             }
 
@@ -1402,12 +1395,10 @@ class JsonParser {
                 if (next == '/') {
                     // Single-line comment: skip until end of line
                     skipSingleLineComment();
-                    c = in.read();
                     continue;
                 } else if (next == '*') {
                     // Block comment: skip until */
                     skipBlockComment();
-                    c = in.read();
                     continue;
                 } else {
                     // Not a comment, push back and return '/'
