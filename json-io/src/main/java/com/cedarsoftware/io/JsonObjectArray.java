@@ -31,8 +31,7 @@ import java.util.Objects;
 class JsonObjectArray extends JsonObject {
 
     // Shape-specific storage. Holds the @items payload for array/collection-shaped
-    // JSON intermediate values. Canonical storage lives here; parent's itemsRef field
-    // is unused on JsonObjectArray instances and is removed in commit 4a-ii.
+    // JSON intermediate values.
     private Object[] itemsRef;
 
     JsonObjectArray() {

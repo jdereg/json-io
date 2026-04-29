@@ -65,17 +65,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     // Lazy index for O(1) lookup on large objects
     private transient Map<Object, Integer> index;
 
-    // Storage mode: bit 0 = items were set, bit 1 = keys were set.
-    // Lite JsonObject only ever sits in MODE_POJO now — setItems/setKeys throw on parent
-    // since @items lives on JsonObjectArray and @keys lives on JsonObjectMap. The constants
-    // and field remain (defended-dead in parent) so subclasses sharing the same package can
-    // touch storageMode for their own legacy bookkeeping; they will be removed in 4b.
-    static final byte MODE_POJO = 0;
-    static final byte MODE_ITEMS = 1;
-    static final byte MODE_KEYS_ONLY = 2;
-    static final byte MODE_KEYS_ITEMS = 3;
-    byte storageMode;
-
     // Cached values — package-private so subclasses can invalidate after their own mutations.
     Integer hash;
     private String typeString;
@@ -131,8 +120,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
      * Parent metadata (id, type, typeString, itemElementType, mapKeyType, refId) is copied to
      * the promoted instance. Any prior {@code keys[]}/{@code data[]} POJO fields on {@code lite}
      * are NOT carried over — by definition, the arriving {@code @items} payload reclassifies
-     * the JSON object as array-shaped, so any preceding non-meta fields are discarded
-     * (matches the pre-refactor behavior where {@code storageMode |= MODE_ITEMS} masked them).
+     * the JSON object as array-shaped, so any preceding non-meta fields are discarded.
      * <p>
      * If {@code references} is non-null and {@code lite} has an id, the references map entry
      * for that id is updated to point at the promoted instance so any forward {@code @ref} to
@@ -467,7 +455,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         mapKeyType = null;
         hash = null;
         index = null;
-        storageMode = MODE_POJO;
         jsonTypeCache = 0;
     }
 

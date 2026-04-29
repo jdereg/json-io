@@ -39,9 +39,8 @@ import java.util.Set;
 class JsonObjectMap extends JsonObject {
 
     // Shape-specific storage. For complex-keyed maps, the parser produces a (@keys, @items)
-    // pair; keysRef holds the keys side, valuesRef holds the values side. Canonical storage
-    // lives here; parent's keys[]/itemsRef/mapKeyType are unused on JsonObjectMap instances
-    // and are removed in commit 4a-ii.
+    // pair; keysRef holds the keys side, valuesRef holds the values side. Parent's keys[]/data[]
+    // remain unused on JsonObjectMap instances; they are inherited but never populated here.
     private Object[] keysRef;
     private Object[] valuesRef;
     private java.lang.reflect.Type mapKeyType;
