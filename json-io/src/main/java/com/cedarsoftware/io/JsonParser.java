@@ -82,6 +82,7 @@ class JsonParser {
     private final char[] readBuf = new char[256];  // Reusable buffer for bulk string reading
     private final FastReader.BufferSlice readSlice = new FastReader.BufferSlice();
     private final StringBuilder numBuf = new StringBuilder();
+    private int curParseDepth = 0;
     private final boolean allowNanAndInfinity;
     private final int maxParseDepth;
     private final Resolver resolver;
@@ -185,33 +186,33 @@ class JsonParser {
      * @param suggestedType JsonValue Owning entity.
      */
     Object readValue(Type suggestedType) throws IOException {
-        return readValue(skipWhitespaceRead(true), suggestedType, 0);
+        return readValue(skipWhitespaceRead(true), suggestedType);
     }
 
-    private Object readValue(int c, Type suggestedType, int parseDepth) throws IOException {
-        if (parseDepth > maxParseDepth) {
+    private Object readValue(int c, Type suggestedType) throws IOException {
+        if (curParseDepth > maxParseDepth) {
             error("Maximum parsing depth exceeded");
         }
         // Fast path for objects and arrays (most common cases)
         if (c == '{') {
-            JsonObject jObj = readJsonObject(suggestedType, parseDepth);
+            JsonObject jObj = readJsonObject(suggestedType);
             return jObj;
         }
         if (c == '[') {
             Type elementType = TypeUtilities.extractArrayComponentType(suggestedType);
-            return readArray(elementType, parseDepth);
+            return readArray(elementType);
         }
 
         // Handle less common value types
         switch (c) {
             case '"':
-                return readString('"', parseDepth == 0);
+                return readString('"');
             case '\'':
                 // JSON5 single-quoted strings
                 if (strictJson) {
                     error("Single-quoted strings not allowed in strict JSON mode");
                 }
-                return readString('\'', parseDepth == 0);
+                return readString('\'');
             case 'f':
             case 'F':
                 readToken("false");
@@ -256,7 +257,7 @@ class JsonParser {
      * from a @type field, containing field type, or containing array type, then the javaType will be set on the
      * JsonObject.
      */
-    private JsonObject readJsonObject(Type suggestedType, int parseDepth) throws IOException {
+    private JsonObject readJsonObject(Type suggestedType) throws IOException {
         // The '{' has already been consumed by readValue()
         // Read the first char of the next field at the top of every loop iteration; the
         // trailing-comma branch then hands the char straight to readFieldName instead of
@@ -287,7 +288,7 @@ class JsonParser {
         Class<?> pendingType = null;
         String pendingTypeString = null;
 
-        final int childDepth = parseDepth + 1;
+        ++curParseDepth;
 
         while (true) {
             CharSequence field = readFieldName(c);
@@ -314,7 +315,7 @@ class JsonParser {
                     fieldGenericType = TypeUtilities.resolveType(suggestedType, fieldGenericType);
                 }
             }
-            Object value = readValue(valueStart, fieldGenericType, childDepth);
+            Object value = readValue(valueStart, fieldGenericType);
 
             if (preAlloc) {
                 // Pre-allocation phase: classify field. Buffer pure metadata, otherwise pick
@@ -426,6 +427,7 @@ class JsonParser {
             applyPendingMetadata(jObj, suggestedType, pendingType, pendingTypeString, pendingId, pendingRefId);
         }
 
+        --curParseDepth;
         return jObj;
     }
 
@@ -485,16 +487,17 @@ class JsonParser {
     /**
      * Read a JSON array
      */
-    private Object readArray(Type suggestedType, int parseDepth) throws IOException {
+    private Object readArray(Type suggestedType) throws IOException {
         // Performance: Pre-size ArrayList to reduce resizing. Size of 64 eliminates
         // 1-2 resize operations for typical JSON arrays while adding only ~200 bytes overhead.
         final List<Object> list = new ArrayList<>(64);
-        final int childDepth = parseDepth + 1;
+        ++curParseDepth;
 
         // Peek for an empty array first so readValue never has to handle ']' as a value-start
         // (that case used to pushback ']' and return an EMPTY_ARRAY sentinel — both gone now).
         int c = skipWhitespaceRead(true);
         if (c == ']') {
+            --curParseDepth;
             return resolver.resolveArray(suggestedType, list);
         }
         // Read the first char of the next value at the top of every iteration; after the
@@ -502,7 +505,7 @@ class JsonParser {
         // pushing it back and re-reading it.
         while (true) {
             // Pass along the full Type to readValue so that any generic information is preserved.
-            list.add(readValue(c, suggestedType, childDepth));
+            list.add(readValue(c, suggestedType));
 
             c = skipWhitespaceRead(true);
 
@@ -523,6 +526,7 @@ class JsonParser {
             // c is now the first char of the next value — loop back and reuse it.
         }
 
+        --curParseDepth;
         return resolver.resolveArray(suggestedType, list);
     }
 
@@ -546,13 +550,13 @@ class JsonParser {
 
         if (c == '"') {
             // Standard double-quoted field name
-            field = readString('"', false);
+            field = readString('"');
         } else if (c == '\'') {
             // JSON5 single-quoted field name
             if (strictJson) {
                 error("Single-quoted strings not allowed in strict JSON mode");
             }
-            field = readString('\'', false);
+            field = readString('\'');
         } else if (isIdentifierStart(c)) {
             // JSON5 unquoted field name
             if (strictJson) {
@@ -739,12 +743,10 @@ class JsonParser {
         boolean isFloat = false;
         boolean seenDot = false;
         boolean seenExp = false;
-        boolean seenDigitAfterExp = false;
 
         while (true) {
             if (c >= '0' && c <= '9') {
                 number.append((char) c);
-                if (seenExp) seenDigitAfterExp = true;
             } else if (c == '.') {
                 if (seenDot || seenExp) return (Number) error("Invalid number: " + number + ".");
                 number.append((char) c);
@@ -762,7 +764,6 @@ class JsonParser {
                     return (Number) error("Invalid exponent in number: " + number);
                 }
                 number.append((char) next);
-                seenDigitAfterExp = true;
             } else {
                 if (c != -1) in.pushback((char) c);
                 break;
@@ -1007,7 +1008,7 @@ class JsonParser {
      * @return CharSequence read from JSON input stream.
      * @throws IOException for stream errors or parsing errors.
      */
-    private CharSequence readString(char quoteChar, boolean rootString) throws IOException {
+    private CharSequence readString(char quoteChar) throws IOException {
         final FastReader in = input;
         final char[] buf = readBuf;
 
@@ -1045,7 +1046,7 @@ class JsonParser {
                     if (c != quoteChar) {
                         error("Expected closing quote while reading JSON string");
                     }
-                    if (rootString) {
+                    if (curParseDepth == 0) {
                         c = skipWhitespaceRead(false);
                         if (c != -1) {
                             throw new JsonIoException("EOF expected, content found after string");
@@ -1072,7 +1073,7 @@ class JsonParser {
                 if (escapeChar == -1) {
                     error("EOF reached while reading escape sequence");
                 }
-                return readStringWithEscapes(str, escapeChar, quoteChar, rootString);
+                return readStringWithEscapes(str, escapeChar, quoteChar);
             }
 
             int c = in.read();
@@ -1081,7 +1082,7 @@ class JsonParser {
             }
             if (c == quoteChar) {
                 // Common case: short string, no escapes — bypass StringBuilder
-                if (rootString) {
+                if (curParseDepth == 0) {
                     c = skipWhitespaceRead(false);
                     if (c != -1) {
                         throw new JsonIoException("EOF expected, content found after string");
@@ -1099,7 +1100,7 @@ class JsonParser {
             if (charsRead > 0) {
                 str.append(chars, offset, charsRead);
             }
-            return readStringWithEscapes(str, escapeChar, quoteChar, rootString);
+            return readStringWithEscapes(str, escapeChar, quoteChar);
         }
 
         // String exceeds buffer or EOF — use StringBuilder slow path
@@ -1114,14 +1115,14 @@ class JsonParser {
         if (borrowed) {
             slice.release();
         }
-        return readStringSlowPath(str, quoteChar, rootString);
+        return readStringSlowPath(str, quoteChar);
     }
 
     /**
      * Slow path for strings that exceed the read buffer (> 256 chars).
      * Continues reading chunks into StringBuilder until the closing quote.
      */
-    private CharSequence readStringSlowPath(StringBuilder str, char quoteChar, boolean rootString) throws IOException {
+    private CharSequence readStringSlowPath(StringBuilder str, char quoteChar) throws IOException {
         final FastReader in = input;
         final char[] buf = readBuf;
 
@@ -1142,7 +1143,7 @@ class JsonParser {
                 error("EOF reached while reading JSON string");
             }
             if (c == quoteChar) {
-                if (rootString) {
+                if (curParseDepth == 0) {
                     c = skipWhitespaceRead(false);
                     if (c != -1) {
                         throw new JsonIoException("EOF expected, content found after string");
@@ -1151,7 +1152,7 @@ class JsonParser {
                 break;
             }
             // Must be backslash — handle escapes
-            return readStringWithEscapes(str, c, quoteChar, rootString);
+            return readStringWithEscapes(str, c, quoteChar);
         }
         return cacheString(str);
     }
@@ -1160,7 +1161,7 @@ class JsonParser {
      * Handle escape sequences in a string. Called when a backslash delimiter is encountered.
      * The backslash has been consumed; 'delimChar' is the character after it (first escape char).
      */
-    private CharSequence readStringWithEscapes(StringBuilder str, int delimChar, char quoteChar, boolean rootString) throws IOException {
+    private CharSequence readStringWithEscapes(StringBuilder str, int delimChar, char quoteChar) throws IOException {
         final FastReader in = input;
         final char[] buf = readBuf;
         final char[] ESCAPE_CHARS = ESCAPE_CHAR_MAP;
@@ -1213,7 +1214,7 @@ class JsonParser {
                     error("EOF reached while reading JSON string");
                 }
                 if (c == quoteChar) {
-                    if (rootString) {
+                    if (curParseDepth == 0) {
                         c = skipWhitespaceRead(false);
                         if (c != -1) {
                             throw new JsonIoException("EOF expected, content found after string");
