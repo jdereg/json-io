@@ -77,7 +77,6 @@ import static com.cedarsoftware.util.MathUtilities.parseToMinimalNumericType;
  *         limitations under the License.
  */
 class JsonParser {
-    private static final JsonObject EMPTY_ARRAY = new JsonObject();  // compared with ==
     private final FastReader input;
     private final StringBuilder strBuf;
     private final char[] readBuf = new char[256];  // Reusable buffer for bulk string reading
@@ -213,9 +212,6 @@ class JsonParser {
                     error("Single-quoted strings not allowed in strict JSON mode");
                 }
                 return readString('\'');
-            case ']':   // empty array
-                input.pushback(']');
-                return EMPTY_ARRAY;
             case 'f':
             case 'F':
                 readToken("false");
@@ -496,16 +492,19 @@ class JsonParser {
         final List<Object> list = new ArrayList<>(64);
         ++curParseDepth;
 
+        // Peek for an empty array first so readValue never has to handle ']' as a value-start
+        // (that case used to pushback ']' and return an EMPTY_ARRAY sentinel — both gone now).
+        int c = skipWhitespaceRead(true);
+        if (c == ']') {
+            --curParseDepth;
+            return resolver.resolveArray(suggestedType, list);
+        }
         // Read the first char of the next value at the top of every iteration; after the
         // trailing-comma branch this lets us hand the char straight to readValue rather than
         // pushing it back and re-reading it.
-        int c = skipWhitespaceRead(true);
         while (true) {
             // Pass along the full Type to readValue so that any generic information is preserved.
-            Object value = readValue(c, suggestedType);
-            if (value != EMPTY_ARRAY) {
-                list.add(value);
-            }
+            list.add(readValue(c, suggestedType));
 
             c = skipWhitespaceRead(true);
 
