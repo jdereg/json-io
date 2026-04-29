@@ -1,5 +1,7 @@
 package com.cedarsoftware.io;
 
+import java.util.Map;
+
 /**
  * Specialization of {@link JsonObject} for complex-keyed map-shaped JSON values
  * (those carried as the {@code @keys} + {@code @items} pair in the json-io intermediate form,
@@ -28,11 +30,73 @@ package com.cedarsoftware.io;
  *         limitations under the License.
  */
 class JsonObjectMap extends JsonObject {
+
+    // Shape-specific storage. For complex-keyed maps, the parser produces a (@keys, @items)
+    // pair; keysRef holds the keys side, valuesRef holds the values side. The parent
+    // JsonObject still has its own keys[] and itemsRef fields at this stage (commit 4a
+    // removes the redundancy); during this transitional state both sides are populated via
+    // super.setKeys/super.setItems, but only these are canonical (parent's getKeys/getItems
+    // are overridden below to read from here).
+    private Object[] keysRef;
+    private Object[] valuesRef;
+    private java.lang.reflect.Type mapKeyType;
+
     JsonObjectMap() {
         super();
     }
 
     JsonObjectMap(int initialCapacity) {
         super(initialCapacity);
+    }
+
+    @Override
+    public Object[] getKeys() {
+        return keysRef;
+    }
+
+    @Override
+    void setKeys(Object[] keyArray) {
+        super.setKeys(keyArray);
+        this.keysRef = keyArray;
+    }
+
+    @Override
+    public Object[] getItems() {
+        return valuesRef;
+    }
+
+    @Override
+    public void setItems(Object[] array) {
+        super.setItems(array);
+        this.valuesRef = array;
+    }
+
+    @Override
+    public java.lang.reflect.Type getMapKeyType() {
+        return mapKeyType;
+    }
+
+    @Override
+    public void setMapKeyType(java.lang.reflect.Type keyType) {
+        this.mapKeyType = keyType;
+    }
+
+    @Override
+    public void clear() {
+        super.clear();
+        this.keysRef = null;
+        this.valuesRef = null;
+        this.mapKeyType = null;
+    }
+
+    @Override
+    public boolean isMap() {
+        if (target != null) {
+            return target instanceof Map;
+        }
+        if (type != null) {
+            return Map.class.isAssignableFrom(getRawType());
+        }
+        return true;
     }
 }
