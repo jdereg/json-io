@@ -260,17 +260,6 @@ class JsonParser {
      * JsonObject.
      */
     private JsonObject readJsonObject(Type suggestedType) throws IOException {
-        JsonObject jObj = new JsonObject();
-
-        // Set the refined type on the JsonObject.
-        // Performance: Skip type resolution for null or simple Class types (most common case).
-        // Only ParameterizedType and other complex types need resolution against themselves.
-        if (suggestedType == null || suggestedType instanceof Class) {
-            jObj.setType(suggestedType);
-        } else {
-            jObj.setType(TypeUtilities.resolveType(suggestedType, suggestedType));
-        }
-
         final FastReader in = input;
 
         // The '{' has already been consumed by readValue()
@@ -280,7 +269,6 @@ class JsonParser {
             return new JsonObject();
         }
         in.pushback((char) c);
-        ++curParseDepth;
 
         // Performance: Skip injector resolution when there's no meaningful type context
         Class<?> rawClass = TypeUtilities.getRawClass(suggestedType);
@@ -291,6 +279,18 @@ class JsonParser {
         } else {
             injectorPlan = ReadOptionsBuilder.getInjectorPlan(readOptions, rawClass);
         }
+
+        // Peek-through-metadata: defer JsonObject allocation until we know which subclass to
+        // instantiate (lite/Array/Map). Buffer @id/@type/@ref while scanning until we encounter
+        // either @items/@keys (heavy shape determined) or a non-metadata field (lite shape).
+        JsonObject jObj = null;
+        boolean preAlloc = true;
+        Long pendingId = null;
+        long pendingRefId = 0;
+        Class<?> pendingType = null;
+        String pendingTypeString = null;
+
+        ++curParseDepth;
 
         while (true) {
             CharSequence field = readFieldName();
@@ -319,33 +319,81 @@ class JsonParser {
             }
             Object value = readValue(valueStart, fieldGenericType);
 
-            // Fast path for regular fields (95%+ of fields don't start with '@')
-            // Note: length check MUST come first for short-circuit evaluation (empty field names are valid JSON)
-            if (field.length() == 0 || field.charAt(0) != '@') {
-                jObj.appendFieldForParser(field, value);
-            } else {
-                // Process special meta fields (@type, @id, @ref, etc.)
-                // Use StringUtilities.equals() for CharSequence comparison with String constants
-                if (StringUtilities.equals(field, TYPE)) {
-                    Class<?> type = loadType(value);
-                    jObj.setTypeString((String) value);
-                    jObj.setType(type);
-                } else if (StringUtilities.equals(field, ID)) {
-                    loadId(value, jObj);
-                } else if (StringUtilities.equals(field, REF)) {
-                    loadRef(value, jObj);
+            if (preAlloc) {
+                // Pre-allocation phase: classify field. Buffer pure metadata, otherwise pick
+                // the right subclass and process the trigger field.
+                boolean isMetadata = field.length() > 0 && field.charAt(0) == '@';
+
+                if (!isMetadata) {
+                    // Non-metadata field → lite shape
+                    jObj = new JsonObject();
+                    applyPendingMetadata(jObj, suggestedType, pendingType, pendingTypeString, pendingId, pendingRefId);
+                    jObj.appendFieldForParser(field, value);
+                    preAlloc = false;
                 } else if (StringUtilities.equals(field, ITEMS)) {
                     if (value != null && !value.getClass().isArray()) {
                         error("Expected @items to have an array [], but found: " + value.getClass().getName());
                     }
-                    loadItems((Object[])value, jObj);
+                    jObj = new JsonObjectArray();
+                    applyPendingMetadata(jObj, suggestedType, pendingType, pendingTypeString, pendingId, pendingRefId);
+                    loadItems((Object[]) value, jObj);
+                    preAlloc = false;
                 } else if (StringUtilities.equals(field, KEYS)) {
+                    jObj = new JsonObjectMap();
+                    applyPendingMetadata(jObj, suggestedType, pendingType, pendingTypeString, pendingId, pendingRefId);
                     loadKeys(value, jObj);
+                    preAlloc = false;
+                } else if (StringUtilities.equals(field, TYPE)) {
+                    pendingType = loadType(value);
+                    pendingTypeString = (String) value;
+                } else if (StringUtilities.equals(field, ID)) {
+                    pendingId = validateAndExtractIdValue(value, ID);
+                } else if (StringUtilities.equals(field, REF)) {
+                    pendingRefId = validateAndExtractIdValue(value, REF);
                 } else if (StringUtilities.equals(field, ENUM)) {
-                    // Legacy support (@enum was used to indicate EnumSet in prior versions)
+                    // @enum sets type and (if items not yet present) marks empty items — array-shaped
+                    jObj = new JsonObjectArray();
+                    applyPendingMetadata(jObj, suggestedType, pendingType, pendingTypeString, pendingId, pendingRefId);
                     loadEnum(value, jObj);
+                    preAlloc = false;
                 } else {
-                    jObj.appendFieldForParser(field, value); // Store unrecognized @-prefixed fields
+                    // Unknown @-prefixed field → treat as lite, preserve the field
+                    jObj = new JsonObject();
+                    applyPendingMetadata(jObj, suggestedType, pendingType, pendingTypeString, pendingId, pendingRefId);
+                    jObj.appendFieldForParser(field, value);
+                    preAlloc = false;
+                }
+            } else {
+                // Post-allocation phase: standard field handling
+
+                // Fast path for regular fields (95%+ of fields don't start with '@')
+                // Note: length check MUST come first for short-circuit evaluation (empty field names are valid JSON)
+                if (field.length() == 0 || field.charAt(0) != '@') {
+                    jObj.appendFieldForParser(field, value);
+                } else {
+                    // Process special meta fields (@type, @id, @ref, etc.)
+                    // Use StringUtilities.equals() for CharSequence comparison with String constants
+                    if (StringUtilities.equals(field, TYPE)) {
+                        Class<?> type = loadType(value);
+                        jObj.setTypeString((String) value);
+                        jObj.setType(type);
+                    } else if (StringUtilities.equals(field, ID)) {
+                        loadId(value, jObj);
+                    } else if (StringUtilities.equals(field, REF)) {
+                        loadRef(value, jObj);
+                    } else if (StringUtilities.equals(field, ITEMS)) {
+                        if (value != null && !value.getClass().isArray()) {
+                            error("Expected @items to have an array [], but found: " + value.getClass().getName());
+                        }
+                        loadItems((Object[])value, jObj);
+                    } else if (StringUtilities.equals(field, KEYS)) {
+                        loadKeys(value, jObj);
+                    } else if (StringUtilities.equals(field, ENUM)) {
+                        // Legacy support (@enum was used to indicate EnumSet in prior versions)
+                        loadEnum(value, jObj);
+                    } else {
+                        jObj.appendFieldForParser(field, value); // Store unrecognized @-prefixed fields
+                    }
                 }
             }
 
@@ -367,8 +415,68 @@ class JsonParser {
             input.pushback((char) c);
         }
 
+        // Metadata-only object (e.g., {"@type":"Foo","@id":1} with no shape determiner): allocate
+        // lite JsonObject now and apply buffered metadata.
+        if (preAlloc) {
+            jObj = new JsonObject();
+            applyPendingMetadata(jObj, suggestedType, pendingType, pendingTypeString, pendingId, pendingRefId);
+        }
+
         --curParseDepth;
         return jObj;
+    }
+
+    /**
+     * Apply buffered metadata accumulated during the pre-allocation peek-through phase to the
+     * freshly allocated JsonObject. Mirrors today's order: suggestedType first, then any explicit
+     * {@code @type} (which may override), then {@code @id} (with reference-tracker registration),
+     * then {@code @ref}.
+     */
+    private void applyPendingMetadata(JsonObject jObj, Type suggestedType,
+                                      Class<?> pendingType, String pendingTypeString,
+                                      Long pendingId, long pendingRefId) {
+        // Set the refined type on the JsonObject.
+        // Performance: Skip type resolution for null or simple Class types (most common case).
+        // Only ParameterizedType and other complex types need resolution against themselves.
+        if (suggestedType == null || suggestedType instanceof Class) {
+            jObj.setType(suggestedType);
+        } else {
+            jObj.setType(TypeUtilities.resolveType(suggestedType, suggestedType));
+        }
+        if (pendingType != null) {
+            jObj.setTypeString(pendingTypeString);
+            jObj.setType(pendingType);
+        }
+        if (pendingId != null) {
+            references.put(pendingId, jObj);
+            jObj.setId(pendingId);
+        }
+        if (pendingRefId != 0) {
+            jObj.setReferenceId(pendingRefId);
+        }
+    }
+
+    /**
+     * Validate an {@code @id} or {@code @ref} value during the pre-allocation peek-through phase
+     * and return the validated long value. Mirrors the validation logic in
+     * {@link #loadId(Object, JsonObject)} / {@link #loadRef(Object, JsonValue)} so error ordering
+     * matches today's behavior (validation occurs as soon as the field is read, not deferred to
+     * post-allocation).
+     */
+    private long validateAndExtractIdValue(Object value, String fieldName) {
+        if (value == null) {
+            error("Null value provided for " + fieldName + " field - expected a number");
+        }
+        if (!(value instanceof Number)) {
+            error("Expected a number for " + fieldName + ", instead got: " + value.getClass().getSimpleName());
+        }
+        long id = ((Number) value).longValue();
+        if (id < -maxIdValue || id > maxIdValue) {
+            String label = ID.equals(fieldName) ? "ID" : "Reference ID";
+            String idLabel = ID.equals(fieldName) ? "IDs" : "reference IDs";
+            error(label + " value out of safe range: " + id + " - " + idLabel + " must be between -" + maxIdValue + " and +" + maxIdValue);
+        }
+        return id;
     }
 
     /**
