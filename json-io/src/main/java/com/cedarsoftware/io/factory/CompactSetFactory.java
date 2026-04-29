@@ -49,8 +49,6 @@ public class CompactSetFactory implements ClassFactory {
         jObj.remove("config");
         jObj.remove("data");
 
-        jObj.setItems(data);
-        
         // Parse config string: CS|CI/S{size}/{order}
         String[] parts = configStr.split("/");
 
@@ -103,11 +101,17 @@ public class CompactSetFactory implements ClassFactory {
 
         CompactSet<Object> cset = builder.build();
 
-        // Set the target early to establish identity
-        jObj.setTarget(cset);
+        // Use a JsonObjectArray as a transient @items vessel for traversal. The original
+        // jObj remains the identity in the references map (its target is set to cset by
+        // the Resolver after newInstance returns); arr only carries the element array
+        // long enough for traverseCollection to populate cset.
+        JsonObject arr = JsonObject.newArrayInstance();
+        arr.setType(jObj.getType());
+        arr.setItemElementType(jObj.getItemElementType());
+        arr.setItems(data);
+        arr.setTarget(cset);
 
-        // Resolve the collection elements using Resolver directly
-        resolver.toJava(null, jObj);
+        resolver.toJava(null, arr);
         return cset;
     }
 }

@@ -123,6 +123,18 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         size = 0;
     }
 
+    /**
+     * Allocate a new JsonObject sized to hold {@code @items} (array/collection) shape data.
+     * Returned instance is guaranteed to support {@link #setItems(Object[])} natively.
+     * <p>
+     * Use this from external factories (e.g., a {@link ClassFactory} that needs to feed an
+     * {@code @items} payload to {@link Resolver#toJava(java.lang.reflect.Type, Object)} for
+     * downstream array/collection resolution) instead of mutating a lite {@link JsonObject}.
+     */
+    public static JsonObject newArrayInstance() {
+        return new JsonObjectArray();
+    }
+
     // ========== Type Classification ==========
 
     public JsonType getJsonType() {
