@@ -30,6 +30,7 @@ import java.util.OptionalLong;
 import com.cedarsoftware.io.reflect.AnnotationResolver;
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
+import com.cedarsoftware.util.MathUtilities;
 import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.TypeUtilities;
 import com.cedarsoftware.util.convert.Converter;
@@ -1580,12 +1581,12 @@ public class ObjectResolver extends Resolver
         if (cleaned.isEmpty()) { return null; }
         if (targetType == int.class || targetType == Integer.class) { return Integer.parseInt(cleaned); }
         if (targetType == long.class || targetType == Long.class) { return Long.parseLong(cleaned); }
-        if (targetType == double.class || targetType == Double.class) { return Double.parseDouble(cleaned); }
-        if (targetType == float.class || targetType == Float.class) { return Float.parseFloat(cleaned); }
+        if (targetType == double.class || targetType == Double.class) { return MathUtilities.parseDouble(cleaned); }
+        if (targetType == float.class || targetType == Float.class) { return MathUtilities.parseFloat(cleaned); }
         if (targetType == short.class || targetType == Short.class) { return Short.parseShort(cleaned); }
         if (targetType == byte.class || targetType == Byte.class) { return Byte.parseByte(cleaned); }
-        if (targetType == BigDecimal.class) { return new BigDecimal(cleaned); }
-        if (targetType == BigInteger.class) { return new BigInteger(cleaned); }
+        if (targetType == BigDecimal.class) { return MathUtilities.parseBigDecimal(cleaned); }
+        if (targetType == BigInteger.class) { return MathUtilities.parseBigInteger(cleaned); }
         if (AtomicInteger.class.isAssignableFrom(targetType)) { return new AtomicInteger(Integer.parseInt(cleaned)); }
         if (AtomicLong.class.isAssignableFrom(targetType)) { return new AtomicLong(Long.parseLong(cleaned)); }
         return null;

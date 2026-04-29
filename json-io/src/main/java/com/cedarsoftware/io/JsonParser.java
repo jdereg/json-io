@@ -39,6 +39,9 @@ import static com.cedarsoftware.io.JsonValue.JSON5_SHORT_KEYS;
 import static com.cedarsoftware.io.JsonValue.JSON5_SHORT_REF;
 import static com.cedarsoftware.io.JsonValue.JSON5_SHORT_TYPE;
 import static com.cedarsoftware.io.JsonValue.JSON5_TYPE;
+import static com.cedarsoftware.util.MathUtilities.parseBigDecimal;
+import static com.cedarsoftware.util.MathUtilities.parseBigInteger;
+import static com.cedarsoftware.util.MathUtilities.parseDouble;
 import static com.cedarsoftware.util.MathUtilities.parseToMinimalNumericType;
 
 /**
@@ -909,9 +912,9 @@ class JsonParser {
      * creating a String object for most integer values.
      */
     private Number readInteger(CharSequence number) {
-        // BigInteger mode - must use String
+        // BigInteger mode - use fast parser, accepts CharSequence directly
         if (integerTypeBigInteger) {
-            return new BigInteger(number.toString());
+            return parseBigInteger(number);
         }
 
         int len = number.length();
@@ -937,7 +940,7 @@ class JsonParser {
         try {
             return Long.parseLong(numStr);
         } catch (Exception e) {
-            BigInteger bigInt = new BigInteger(numStr);
+            BigInteger bigInt = parseBigInteger(numStr);
             if (integerTypeBoth) {
                 return bigInt;
             } else {
@@ -950,15 +953,16 @@ class JsonParser {
 
     private Number readFloatingPoint(CharSequence numStr) {
         if (floatingPointBigDecimal) {
-            return new BigDecimal(numStr.toString());
+            return parseBigDecimal(numStr);
         }
 
         // Hot path: default mode is DOUBLE, so bypass minimal-type analysis.
+        // CharSequence overload avoids the .toString() materialization the JDK parser forced.
         if (!floatingPointBoth) {
-            return Double.parseDouble(numStr.toString());
+            return parseDouble(numStr);
         }
 
-        return parseToMinimalNumericType(numStr.toString());
+        return parseToMinimalNumericType(numStr);
     }
 
     /**

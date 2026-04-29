@@ -1571,7 +1571,7 @@ public class ToonReader {
                     return boxed;
                 }
                 try {
-                    Number big = new BigInteger(key);
+                    Number big = MathUtilities.parseBigInteger(key);
                     numKeys[slot] = key;
                     numVals[slot] = big;
                     return big;
@@ -1695,7 +1695,7 @@ public class ToonReader {
                     return boxed;
                 }
                 try {
-                    Number big = new BigInteger(key);
+                    Number big = MathUtilities.parseBigInteger(key);
                     numKeys[slot] = key;
                     numVals[slot] = big;
                     return big;
