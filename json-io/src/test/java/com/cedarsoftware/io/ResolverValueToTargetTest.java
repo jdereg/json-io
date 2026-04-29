@@ -79,7 +79,7 @@ class ResolverValueToTargetTest {
         nested.setType(int.class);
         nested.setValue("3");
 
-        JsonObject arrayObj = new JsonObject();
+        JsonObject arrayObj = JsonObject.newArrayInstance();
         arrayObj.setType(int[].class);
         arrayObj.setItems(new Object[]{1, "2", nested});
 
@@ -90,7 +90,7 @@ class ResolverValueToTargetTest {
 
     @Test
     void conversionFailureWrapsException() {
-        JsonObject arrayObj = new JsonObject();
+        JsonObject arrayObj = JsonObject.newArrayInstance();
         arrayObj.setType(int[].class);
         arrayObj.setItems(new Object[]{"bad"});
 
@@ -100,7 +100,7 @@ class ResolverValueToTargetTest {
 
     @Test
     void conversionFailurePreservesCause() {
-        JsonObject arrayObj = new JsonObject();
+        JsonObject arrayObj = JsonObject.newArrayInstance();
         arrayObj.setType(int[].class);
         arrayObj.setItems(new Object[]{"bad"});
 
@@ -225,7 +225,7 @@ class ResolverValueToTargetTest {
      */
     @Test
     void valueToTarget_convertsNonPrimitiveArray() {
-        JsonObject arrayObj = new JsonObject();
+        JsonObject arrayObj = JsonObject.newArrayInstance();
         arrayObj.setType(String[].class);
         arrayObj.setItems(new Object[]{"hello", "world", "test"});
 

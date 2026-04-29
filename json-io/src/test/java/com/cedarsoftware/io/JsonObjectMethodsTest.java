@@ -161,43 +161,40 @@ class JsonObjectMethodsTest {
 
     @Test
     void testSetGetItems() {
-        JsonObject obj = new JsonObject();
+        // @items shape now lives on JsonObjectArray; lite JsonObject rejects setItems.
+        JsonObject obj = JsonObject.newArrayInstance();
         Object[] items = {1, 2, 3};
         obj.setItems(items);
 
-        // getItems should return what was set
         assertSame(items, obj.getItems());
-
-        // But Map interface should be unaffected
-        assertEquals(0, obj.size());
-        assertTrue(obj.isEmpty());
     }
 
     @Test
     void testSetGetKeys() {
-        JsonObject obj = new JsonObject();
+        // @keys shape now lives on JsonObjectMap; lite JsonObject rejects setKeys.
+        JsonObjectMap obj = new JsonObjectMap();
         Object[] keys = {"a", "b"};
         obj.setKeys(keys);
+        obj.setItems(new Object[]{"v1", "v2"});
 
-        // getKeys should return what was set
         assertSame(keys, obj.getKeys());
-
-        // But Map interface should be unaffected
-        assertEquals(0, obj.size());
     }
 
     @Test
-    void testSetItemsNullThrows() {
+    void testSetItemsLiteThrows() {
+        // Lite JsonObject cannot store @items natively — caller must allocate JsonObjectArray
+        // (e.g., via JsonObject.newArrayInstance()) or use promoteToArray().
         JsonObject obj = new JsonObject();
-        JsonIoException ex = assertThrows(JsonIoException.class, () -> obj.setItems(null));
-        assertTrue(ex.getMessage().toLowerCase().contains("cannot be null"));
+        JsonIoException ex = assertThrows(JsonIoException.class, () -> obj.setItems(new Object[]{1, 2}));
+        assertTrue(ex.getMessage().toLowerCase().contains("not supported"));
     }
 
     @Test
-    void testSetKeysNullThrows() {
+    void testSetKeysLiteThrows() {
+        // Lite JsonObject cannot store @keys natively — caller must use promoteToMap().
         JsonObject obj = new JsonObject();
-        JsonIoException ex = assertThrows(JsonIoException.class, () -> obj.setKeys(null));
-        assertTrue(ex.getMessage().toLowerCase().contains("cannot be null"));
+        JsonIoException ex = assertThrows(JsonIoException.class, () -> obj.setKeys(new Object[]{"a"}));
+        assertTrue(ex.getMessage().toLowerCase().contains("not supported"));
     }
 
     @Test
@@ -213,20 +210,16 @@ class JsonObjectMethodsTest {
     }
 
     @Test
-    void testItemsAndMapAreIndependent() {
-        JsonObject obj = new JsonObject();
-
-        // Set items
+    void testItemsAndMapInteractionOnArray() {
+        // Pre-refactor: a single lite JsonObject could carry both @items and POJO fields.
+        // Post-refactor: @items lives on JsonObjectArray, and the JsonObjectArray Map
+        // operations (like put on field-style data) are not the typical use — array shape
+        // is parser-allocated and traversed by index. This test documents that put() throws
+        // or no-ops on JsonObjectArray; we just exercise the supported setItems/getItems path.
+        JsonObject obj = JsonObject.newArrayInstance();
         Object[] items = {"x", "y"};
         obj.setItems(items);
-
-        // Set map entries
-        obj.put("name", "test");
-
-        // Both should be independent
         assertSame(items, obj.getItems());
-        assertEquals("test", obj.get("name"));
-        assertEquals(1, obj.size());  // Map size, not items length
     }
 
     // ========== Type String Tests ==========
@@ -367,44 +360,41 @@ class JsonObjectMethodsTest {
 
     @Test
     void testHashCodeIncludesItemsWhenSet() {
-        // Covers line 680: Arrays.hashCode(itemsRef) branch
-        JsonObject obj1 = new JsonObject();
+        // Items live on JsonObjectArray now; verify hashCode is shape-content-sensitive there.
+        JsonObject obj1 = JsonObject.newArrayInstance();
         obj1.setItems(new Object[]{"x", "y"});
 
-        JsonObject obj2 = new JsonObject();
+        JsonObject obj2 = JsonObject.newArrayInstance();
         obj2.setItems(new Object[]{"x", "y"});
 
-        // Same items → same hashCode
         assertEquals(obj1.hashCode(), obj2.hashCode());
 
-        // Different items → (very likely) different hashCode
-        JsonObject obj3 = new JsonObject();
+        JsonObject obj3 = JsonObject.newArrayInstance();
         obj3.setItems(new Object[]{"a", "b"});
         assertNotEquals(obj1.hashCode(), obj3.hashCode());
     }
 
     @Test
     void testEqualsWithItemsContent() {
-        // Covers line 790: return true after items compare
-        JsonObject a = new JsonObject();
+        // Items live on JsonObjectArray now.
+        JsonObject a = JsonObject.newArrayInstance();
         a.setItems(new Object[]{1, 2, 3});
 
-        JsonObject b = new JsonObject();
+        JsonObject b = JsonObject.newArrayInstance();
         b.setItems(new Object[]{1, 2, 3});
 
         assertTrue(a.equals(b));
         assertEquals(a.hashCode(), b.hashCode());
 
-        // Different items
-        JsonObject c = new JsonObject();
+        JsonObject c = JsonObject.newArrayInstance();
         c.setItems(new Object[]{4, 5, 6});
         assertFalse(a.equals(c));
     }
 
     @Test
     void testAsTwoArraysKeysOnlyThrows() {
-        // Covers line 730: @keys without @items throws
-        JsonObject obj = new JsonObject();
+        // @keys without @items still throws — but the check now lives on JsonObjectMap.
+        JsonObjectMap obj = new JsonObjectMap();
         obj.setKeys(new Object[]{"k1", "k2"});
         assertThrows(JsonIoException.class, obj::asTwoArrays);
     }

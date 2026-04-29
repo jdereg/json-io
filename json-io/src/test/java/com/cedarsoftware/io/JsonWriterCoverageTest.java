@@ -106,7 +106,7 @@ class JsonWriterCoverageTest {
     @Test
     void testWriteJsonObjectAsArray() {
         // Build a JsonObject manually and write it
-        JsonObject jObj = new JsonObject();
+        JsonObject jObj = JsonObject.newArrayInstance();
         jObj.setType(Object[].class);
         jObj.setItems(new Object[]{"a", "b", "c"});
 
@@ -118,7 +118,7 @@ class JsonWriterCoverageTest {
 
     @Test
     void testWriteJsonObjectEmptyArray() {
-        JsonObject jObj = new JsonObject();
+        JsonObject jObj = JsonObject.newArrayInstance();
         jObj.setType(Object[].class);
         jObj.setItems(new Object[0]);
 

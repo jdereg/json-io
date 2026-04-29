@@ -744,7 +744,7 @@ class CollectionTests {
         // Create a JsonObject representing a collection with Integer elements
         // Integer is NOT a directly addable JSON value (Long is, but not Integer)
         // but the Converter supports identity conversion
-        JsonObject jsonObj = new JsonObject();
+        JsonObject jsonObj = JsonObject.newArrayInstance();
         jsonObj.setType(ArrayList.class);
         jsonObj.setItems(new Object[]{Integer.valueOf(1), Integer.valueOf(2), Integer.valueOf(3)});
 
@@ -772,7 +772,7 @@ class CollectionTests {
 
         // Create a JsonObject representing a collection with these pre-resolved objects
         // SimplePoint has no custom reader/factory, so readWithFactoryIfExists returns null
-        JsonObject jsonObj = new JsonObject();
+        JsonObject jsonObj = JsonObject.newArrayInstance();
         jsonObj.setType(ArrayList.class);
         jsonObj.setItems(new Object[]{p1, p2});
 
@@ -792,7 +792,7 @@ class CollectionTests {
      */
     @Test
     void testCollectionWithPreResolvedShortElements() {
-        JsonObject jsonObj = new JsonObject();
+        JsonObject jsonObj = JsonObject.newArrayInstance();
         jsonObj.setType(ArrayList.class);
         jsonObj.setItems(new Object[]{Short.valueOf((short) 100), Short.valueOf((short) 200)});
 
@@ -813,7 +813,7 @@ class CollectionTests {
     void testCollectionWithMixedPreResolvedElements() {
         SimplePoint point = new SimplePoint(5, 10);
 
-        JsonObject jsonObj = new JsonObject();
+        JsonObject jsonObj = JsonObject.newArrayInstance();
         jsonObj.setType(ArrayList.class);
         // Mix of: Integer (convertible), Float (convertible), SimplePoint (not convertible)
         jsonObj.setItems(new Object[]{Integer.valueOf(42), Float.valueOf(3.14f), point});

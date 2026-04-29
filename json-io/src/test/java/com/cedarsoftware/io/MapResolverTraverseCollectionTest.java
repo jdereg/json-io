@@ -25,7 +25,7 @@ class MapResolverTraverseCollectionTest {
         ReferenceTracker refs = new Resolver.DefaultReferenceTracker(readOptions);
         MapResolver resolver = newResolver(options, refs);
 
-        JsonObject json = new JsonObject();
+        JsonObject json = JsonObject.newArrayInstance();
         json.setItems(new Object[]{"x"});
         List<Object> list = new ArrayList<>();
         json.setTarget(list);
@@ -48,7 +48,7 @@ class MapResolverTraverseCollectionTest {
         Resolver.DefaultReferenceTracker refs = new Resolver.DefaultReferenceTracker(readOptions2);
         MapResolver resolver = newResolver(options, refs);
 
-        JsonObject json = new JsonObject();
+        JsonObject json = JsonObject.newArrayInstance();
         List<Object> list = new ArrayList<>();
         json.setTarget(list);
 
@@ -111,7 +111,7 @@ class MapResolverTraverseCollectionTest {
         ReferenceTracker refs = new Resolver.DefaultReferenceTracker(readOptions);
         MapResolver resolver = newResolver(options, refs);
 
-        JsonObject json = new JsonObject();
+        JsonObject json = JsonObject.newArrayInstance();
         EnumSet<TestEnum> set = EnumSet.noneOf(TestEnum.class);
         json.setTarget(set);
         JsonObject element = new JsonObject();
@@ -130,7 +130,7 @@ class MapResolverTraverseCollectionTest {
         ReferenceTracker refs = new Resolver.DefaultReferenceTracker(readOptions);
         MapResolver resolver = newResolver(options, refs);
 
-        JsonObject json = new JsonObject();
+        JsonObject json = JsonObject.newArrayInstance();
         json.setType(ArrayList.class);
         json.setItems(new Object[]{"a"});
 

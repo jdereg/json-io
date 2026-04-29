@@ -256,15 +256,16 @@ class JsonObjectTest
     @Test
     public void testAsArray()
     {
-        JsonObject jObj = new JsonObject();
-        assert !jObj.isArray();
+        // newArrayInstance() returns a JsonObjectArray; isArray() reports true by definition.
+        JsonObject jObj = JsonObject.newArrayInstance();
+        assert jObj.isArray();
         assert !jObj.isCollection();
         assert !jObj.isMap();
         jObj.setItems(new Object[] {"hello", "goodbye"});
         assert jObj.isArray();
         assert !jObj.isCollection();
         assert !jObj.isMap();
-        JsonObject jObj2 = new JsonObject();
+        JsonObject jObj2 = JsonObject.newArrayInstance();
         jObj2.setItems(new Object[] {"hello", "goodbye"});
         assert DeepEquals.deepEquals(jObj, jObj2);
     }

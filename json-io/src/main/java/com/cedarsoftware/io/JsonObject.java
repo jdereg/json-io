@@ -62,22 +62,18 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     private Object[] data;
     private int size;
 
-    // Externally-provided items array. Set via setItems() for @items format (arrays, collections,
-    // and the value half of @keys/@items complex-key maps). Kept separate from data[] because
-    // items are supplied as a complete array by the parser, while data[] is grown incrementally.
-    // getItems() returns this field; rehashMaps() and asTwoArrays() use it for MODE_KEYS_ITEMS.
-    private Object[] itemsRef;
-
     // Lazy index for O(1) lookup on large objects
     private transient Map<Object, Integer> index;
 
-    // Storage mode: bit 0 = items were set, bit 1 = keys were set
-    static final byte MODE_POJO = 0;        // keys[]/data[] via put()/appendFieldForParser()
-    static final byte MODE_ITEMS = 1;        // itemsRef[] set (arrays, collections)
-    static final byte MODE_KEYS_ONLY = 2;    // keys[] set, items pending (transient during parse)
-    static final byte MODE_KEYS_ITEMS = 3;   // keys[] + itemsRef[] (@keys/@items format maps)
-    // Package-private so subclasses (JsonObjectArray, JsonObjectMap) in the same package can
-    // perform their own setItems/setKeys bookkeeping without delegating to super.
+    // Storage mode: bit 0 = items were set, bit 1 = keys were set.
+    // Lite JsonObject only ever sits in MODE_POJO now — setItems/setKeys throw on parent
+    // since @items lives on JsonObjectArray and @keys lives on JsonObjectMap. The constants
+    // and field remain (defended-dead in parent) so subclasses sharing the same package can
+    // touch storageMode for their own legacy bookkeeping; they will be removed in 4b.
+    static final byte MODE_POJO = 0;
+    static final byte MODE_ITEMS = 1;
+    static final byte MODE_KEYS_ONLY = 2;
+    static final byte MODE_KEYS_ITEMS = 3;
     byte storageMode;
 
     // Cached values — package-private so subclasses can invalidate after their own mutations.
@@ -97,16 +93,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
      * Type classification for optimized dispatch in Resolver.
      */
     public enum JsonType { ARRAY, COLLECTION, MAP, OBJECT }
-
-    /**
-     * Returns the array that holds the "value" side for Map operations.
-     * For @keys/@items format (MODE_KEYS_ITEMS), values live in {@link #itemsRef}.
-     * For all other modes, values live in {@link #data}.
-     * This replaces the former {@code effectiveValues} field pointer.
-     */
-    private Object[] valueArray() {
-        return storageMode == MODE_KEYS_ITEMS ? itemsRef : data;
-    }
 
     public JsonObject() {
         keys = EMPTY;
@@ -250,10 +236,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         if (isMap()) {
             return false;
         }
-        if (storageMode == MODE_ITEMS) {
-            Class<?> rawType = getRawType();
-            return rawType != null && !rawType.isArray();
-        }
+        // Lite JsonObject has no @items signal — only target/type can mark it as a collection.
+        // (JsonObjectArray overrides isCollection to handle the array/collection distinction.)
         return false;
     }
 
@@ -264,52 +248,48 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         if (type != null) {
             return getRawType().isArray();
         }
-        return storageMode == MODE_ITEMS;
+        return false;  // No @items signal on lite JsonObject — JsonObjectArray.isArray() handles that case.
     }
 
     // ========== Items/Keys Access ==========
 
     /**
-     * Get items array for arrays/collections or @items format.
-     * Returns null if setItems() was never called.
+     * Get items array — always {@code null} on lite {@link JsonObject}. Array/collection
+     * shape data lives on {@link JsonObjectArray#getItems()}; complex-key map values live
+     * on {@link JsonObjectMap#getItems()} (the values half of @keys/@items).
      */
     public Object[] getItems() {
-        return itemsRef;
+        return null;
     }
 
     /**
-     * Set items directly - for @items format (arrays, collections, maps with @keys).
+     * Lite {@link JsonObject} cannot store {@code @items} natively. Allocate a
+     * {@link JsonObjectArray} via {@link #newArrayInstance()} or use
+     * {@link #promoteToArray(JsonObject, ReferenceTracker)} to reshape an existing lite
+     * instance.
      */
     public void setItems(Object[] array) {
-        if (array == null) {
-            throw new JsonIoException("Argument array cannot be null");
-        }
-        this.itemsRef = array;
-        this.storageMode |= MODE_ITEMS;
-        this.hash = null;
-        this.jsonTypeCache = 0;
+        throw new JsonIoException("setItems is not supported on lite JsonObject; "
+                + "use JsonObject.newArrayInstance() or promoteToArray() to obtain a JsonObjectArray.");
     }
 
     /**
-     * Get keys array for @keys format (maps with non-String keys).
-     * Returns null if setKeys() was never called.
+     * Get keys array for {@code @keys} format — always {@code null} on lite {@link JsonObject}.
+     * Complex-key data lives on {@link JsonObjectMap#getKeys()}.
      */
     public Object[] getKeys() {
-        return storageMode >= MODE_KEYS_ONLY ? keys : null;
+        return null;
     }
 
     /**
-     * Set keys directly - for @keys format (maps with non-String keys).
+     * Lite {@link JsonObject} cannot store {@code @keys} natively (its {@code keys[]} array
+     * holds POJO field names; reusing it for complex-key data would clobber those fields).
+     * Use {@link #promoteToMap(JsonObject, ReferenceTracker)} to reshape into a
+     * {@link JsonObjectMap}.
      */
     void setKeys(Object[] keyArray) {
-        if (keyArray == null) {
-            throw new JsonIoException("Argument keys cannot be null");
-        }
-        this.keys = keyArray;
-        this.storageMode |= MODE_KEYS_ONLY;
-        this.hash = null;
-        this.jsonTypeCache = 0;
-        this.index = null;
+        throw new JsonIoException("setKeys is not supported on lite JsonObject; "
+                + "use JsonObject.promoteToMap() to obtain a JsonObjectMap.");
     }
 
     public String getTypeString() {
@@ -366,10 +346,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
      */
     @Override
     public int size() {
-        if (storageMode >= MODE_KEYS_ONLY) {
-            // @keys format - only show size if @items is also set
-            return storageMode == MODE_KEYS_ITEMS ? Math.min(keys.length, itemsRef.length) : 0;
-        }
+        // Lite JsonObject only ever holds POJO field entries via keys[]/data[].
         return size;
     }
 
@@ -387,7 +364,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     public Object get(Object key) {
         int idx = indexOf(key);
         if (idx < 0) return null;
-        return valueArray()[idx];
+        return data[idx];
     }
 
     @Override
@@ -440,10 +417,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
 
     @Override
     public boolean containsValue(Object value) {
-        Object[] vals = valueArray();
-        int len = size();
-        for (int i = 0; i < len; i++) {
-            if (Objects.equals(value, vals[i])) {
+        for (int i = 0; i < size; i++) {
+            if (Objects.equals(value, data[i])) {
                 return true;
             }
         }
@@ -452,9 +427,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
 
     @Override
     public Object remove(Object key) {
-        // Don't support remove for @keys/@items format
-        if (storageMode >= MODE_KEYS_ONLY) return null;
-
         int idx = indexOf(key);
         if (idx < 0) return null;
 
@@ -491,7 +463,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         Arrays.fill(keys, 0, size, null);
         Arrays.fill(data, 0, size, null);
         size = 0;
-        itemsRef = null;
         itemElementType = null;
         mapKeyType = null;
         hash = null;
@@ -517,19 +488,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     // ========== Index Management ==========
 
     private int indexOf(Object key) {
-        // For @keys format, only search if @items is also set
-        if (storageMode >= MODE_KEYS_ONLY) {
-            if (storageMode == MODE_KEYS_ONLY) return -1;  // Incomplete @keys/@items format
-            int len = keys.length;
-            for (int i = 0; i < len; i++) {
-                if (Objects.equals(key, keys[i])) {
-                    return i;
-                }
-            }
-            return -1;
-        }
-
-        // For POJOs
+        // Lite JsonObject only ever holds POJO field entries via keys[]/data[].
         if (size == 0) return -1;
 
         if (size <= INDEX_THRESHOLD) {
@@ -593,7 +552,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     }
 
     Object fastValueAt(int index) {
-        return valueArray()[index];
+        return data[index];
     }
 
     private class KeySet extends AbstractSet<Object> {
@@ -651,7 +610,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         @Override
         public Iterator<Object> iterator() {
             return new Iterator<Object>() {
-                private final Object[] vals = valueArray();
+                private final Object[] vals = data;
                 private final int len = JsonObject.this.size();
                 private int idx = 0;
 
@@ -691,12 +650,12 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
             Map.Entry<?, ?> entry = (Map.Entry<?, ?>) o;
             int idx = indexOf(entry.getKey());
             if (idx < 0) return false;
-            return Objects.equals(valueArray()[idx], entry.getValue());
+            return Objects.equals(data[idx], entry.getValue());
         }
     }
 
     private class EntryIterator implements Iterator<Entry<Object, Object>> {
-        private final Object[] vals = valueArray();
+        private final Object[] vals = data;
         private final int len = JsonObject.this.size();
         private int idx = 0;
         private final ReusableEntry entry = new ReusableEntry();
@@ -761,14 +720,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
             int len = size();
             for (int i = 0; i < len; i++) {
                 result = 31 * result + (keys[i] == null ? 0 : keys[i].hashCode());
-                result = 31 * result + hashCodeSafe(valueArray()[i]);
-            }
-            // For arrays/collections, the items content lives separately from keys[]/data[]
-            // (size()==0 for those shapes, so the loop above didn't cover them). Virtual
-            // dispatch lets JsonObjectArray contribute its own items to the hash.
-            Object[] items = getItems();
-            if (items != null && storageMode < MODE_KEYS_ONLY) {
-                result = 31 * result + Arrays.hashCode(items);
+                result = 31 * result + hashCodeSafe(data[i]);
             }
             hash = result;
         }
@@ -806,9 +758,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         if (this == obj) return true;
         if (!(obj instanceof JsonObject)) return false;
         // Cross-shape comparison returns false. Different subclasses store their data
-        // in different fields; comparing across them would require defensive virtual
-        // dispatch on every field access. Each subclass overrides equals to handle
-        // its own shape; this base implementation handles lite POJO/string-map only.
+        // in different fields; each overrides equals to handle its own shape. This base
+        // implementation handles only lite POJO/string-keyed-map data via keys[]/data[].
         if (this.getClass() != obj.getClass()) return false;
         JsonObject other = (JsonObject) obj;
 
@@ -817,39 +768,18 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
 
         for (int i = 0; i < len; i++) {
             if (!Objects.equals(keys[i], other.keys[i])) return false;
-            if (!Objects.equals(valueArray()[i], other.valueArray()[i])) return false;
+            if (!Objects.equals(data[i], other.data[i])) return false;
         }
-
-        // For arrays/collections, items content is held separately from keys[]/data[].
-        // Virtual dispatch lets JsonObjectArray contribute its own items to the comparison.
-        if (storageMode < MODE_KEYS_ONLY && other.storageMode < MODE_KEYS_ONLY) {
-            return Arrays.equals(getItems(), other.getItems());
-        }
-
         return true;
     }
 
     // ========== Resolution Support ==========
 
     Map.Entry<Object[], Object[]> asTwoArrays() {
-        if (storageMode == MODE_KEYS_ITEMS) {
-            if (keys.length != itemsRef.length) {
-                throw new JsonIoException("@keys and @items must be same length");
-            }
-            // For @keys/@items format, values are in itemsRef (set via setItems)
-            return new AbstractMap.SimpleImmutableEntry<>(keys, itemsRef);
-        }
-
-        if (storageMode == MODE_KEYS_ONLY) {
-            throw new JsonIoException("@keys cannot be set without @items");
-        }
-        if (storageMode == MODE_ITEMS && isMap()) {
-            throw new JsonIoException("Map with @items must also have @keys");
-        }
-
-        // For POJO / String-keyed maps: return original arrays.
-        // IMPORTANT: Do NOT copy arrays here! Reference patching during traversal
-        // modifies the arrays in place, and rehashMaps() needs to see those patches.
+        // Lite JsonObject only ever holds POJO/String-keyed-map data via parallel keys[]/data[].
+        // Complex-key (@keys/@items) maps are JsonObjectMap and override this.
+        // IMPORTANT: Do NOT copy arrays here! Reference patching during traversal modifies the
+        // arrays in place, and rehashMaps() needs to see those patches.
         return new AbstractMap.SimpleImmutableEntry<>(keys, data);
     }
 
@@ -857,11 +787,11 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     void rehashMaps() {
         if (!(target instanceof Map)) return;
 
-        // For @keys/@items format: use keys[] with itemsRef[] (set via setItems)
-        // For POJO / String-keyed maps: use keys[]/data[] with size
+        // Lite JsonObject only ever uses parallel keys[]/data[] for POJO/String-keyed-map data;
+        // length is bounded by `size`, not the array's allocated capacity.
         Object[] k = keys;
-        Object[] v = storageMode >= MODE_KEYS_ONLY ? itemsRef : data;
-        int len = storageMode >= MODE_KEYS_ONLY ? keys.length : size;
+        Object[] v = data;
+        int len = size;
 
         if (len == 0) return;
 

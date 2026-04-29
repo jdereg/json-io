@@ -1781,7 +1781,7 @@ class ArrayTest
 
         // Create a JsonObject manually with Object[] items containing actual Object[] arrays
         // This ensures elements are real arrays, not JsonObjects
-        JsonObject jsonObj = new JsonObject();
+        JsonObject jsonObj = JsonObject.newArrayInstance();
         jsonObj.setType(char[][].class);
         jsonObj.setTarget(targetArray);
 
@@ -1827,7 +1827,7 @@ class ArrayTest
         holder3.value = 3;
 
         // Create a JsonObject manually with items containing raw Strings
-        JsonObject jsonObj = new JsonObject();
+        JsonObject jsonObj = JsonObject.newArrayInstance();
         jsonObj.setType(SimpleHolder[].class);
         jsonObj.setTarget(targetArray);
 
@@ -1869,7 +1869,7 @@ class ArrayTest
         holder1.value = 10;
 
         // Create a JsonObject manually with items containing raw Strings
-        JsonObject jsonObj = new JsonObject();
+        JsonObject jsonObj = JsonObject.newArrayInstance();
         jsonObj.setType(SimpleHolder[].class);
         jsonObj.setTarget(targetArray);
 
@@ -1941,7 +1941,7 @@ class ArrayTest
         elem2.put("name", "VALUE_B");
 
         // Create the array JsonObject
-        JsonObject arrayObj = new JsonObject();
+        JsonObject arrayObj = JsonObject.newArrayInstance();
         arrayObj.setType(TestEnum[].class);
         arrayObj.setItems(new Object[]{elem1, elem2});
 
@@ -1963,7 +1963,7 @@ class ArrayTest
     @Test
     void testEnumArrayFromJsonObject_withStringElements() {
         // Create a JsonObject representing an enum array with String items
-        JsonObject jsonObj = new JsonObject();
+        JsonObject jsonObj = JsonObject.newArrayInstance();
         jsonObj.setType(Thread.State[].class);
         jsonObj.setItems(new Object[]{"NEW", "RUNNABLE", "WAITING"});
 
@@ -1988,7 +1988,7 @@ class ArrayTest
         String[] targetArray = new String[3];
 
         // Create JsonObject with target set but NO type
-        JsonObject jsonObj = new JsonObject();
+        JsonObject jsonObj = JsonObject.newArrayInstance();
         jsonObj.setTarget(targetArray);  // This sets target but we'll clear type
         // Note: setTarget sets type automatically, so we need to work around this
 

@@ -1,6 +1,8 @@
 package com.cedarsoftware.io;
 
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Objects;
 
 /**
  * Specialization of {@link JsonObject} for array-shaped JSON values (those carried as
@@ -84,5 +86,34 @@ class JsonObjectArray extends JsonObject {
         }
         Class<?> rawType = getRawType();
         return rawType != null && !rawType.isArray();
+    }
+
+    // ========== Hash and Equals ==========
+    // Items live on JsonObjectArray; equality must include the @items payload
+    // in addition to any map-shape POJO data the parent already compares.
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof JsonObjectArray)) {
+            return false;
+        }
+        if (!super.equals(obj)) {
+            return false;
+        }
+        JsonObjectArray other = (JsonObjectArray) obj;
+        return Objects.deepEquals(this.itemsRef, other.itemsRef);
+    }
+
+    @Override
+    public int hashCode() {
+        if (hash == null) {
+            int result = super.hashCode();
+            result = 31 * result + (itemsRef == null ? 0 : Arrays.deepHashCode(itemsRef));
+            hash = result;
+        }
+        return hash;
     }
 }
