@@ -186,15 +186,13 @@ class JsonParser {
      * @param suggestedType JsonValue Owning entity.
      */
     Object readValue(Type suggestedType) throws IOException {
-        if (curParseDepth > maxParseDepth) {
-            error("Maximum parsing depth exceeded");
-        }
-
-        int c = skipWhitespaceRead(true);
-        return readValue(c, suggestedType);
+        return readValue(skipWhitespaceRead(true), suggestedType);
     }
 
     private Object readValue(int c, Type suggestedType) throws IOException {
+        if (curParseDepth > maxParseDepth) {
+            error("Maximum parsing depth exceeded");
+        }
         // Fast path for objects and arrays (most common cases)
         if (c == '{') {
             JsonObject jObj = readJsonObject(suggestedType);
@@ -263,15 +261,15 @@ class JsonParser {
      * JsonObject.
      */
     private JsonObject readJsonObject(Type suggestedType) throws IOException {
-        final FastReader in = input;
-
         // The '{' has already been consumed by readValue()
+        // Read the first char of the next field at the top of every loop iteration; the
+        // trailing-comma branch then hands the char straight to readFieldName instead of
+        // pushing it back and re-reading it.
         int c = skipWhitespaceRead(true);
         if (c == '}') {    // empty object
             // Return a new, empty JsonObject (prevents @id/@ref from interfering)
             return new JsonObject();
         }
-        in.pushback((char) c);
 
         // Performance: Skip injector resolution when there's no meaningful type context
         Class<?> rawClass = TypeUtilities.getRawClass(suggestedType);
@@ -296,7 +294,7 @@ class JsonParser {
         ++curParseDepth;
 
         while (true) {
-            CharSequence field = readFieldName();
+            CharSequence field = readFieldName(c);
             // Performance: Only check substitutes for fields starting with '@' or '$'.
             // Standard field names (letters, digits) never match any substitute key,
             // so the HashMap lookup is pure overhead for the 99% common case.
@@ -422,7 +420,7 @@ class JsonParser {
                 }
                 break;
             }
-            input.pushback((char) c);
+            // c is now the first char of the next field name — loop back and reuse it.
         }
 
         // Metadata-only object (e.g., {"@type":"Foo","@id":1} with no shape determiner): allocate
@@ -498,14 +496,18 @@ class JsonParser {
         final List<Object> list = new ArrayList<>(64);
         ++curParseDepth;
 
+        // Read the first char of the next value at the top of every iteration; after the
+        // trailing-comma branch this lets us hand the char straight to readValue rather than
+        // pushing it back and re-reading it.
+        int c = skipWhitespaceRead(true);
         while (true) {
             // Pass along the full Type to readValue so that any generic information is preserved.
-            Object value = readValue(suggestedType);
+            Object value = readValue(c, suggestedType);
             if (value != EMPTY_ARRAY) {
                 list.add(value);
             }
 
-            int c = skipWhitespaceRead(true);
+            c = skipWhitespaceRead(true);
 
             if (c == ']') {
                 break;
@@ -521,7 +523,7 @@ class JsonParser {
                 }
                 break;
             }
-            input.pushback((char) c);
+            // c is now the first char of the next value — loop back and reuse it.
         }
 
         --curParseDepth;
@@ -535,7 +537,14 @@ class JsonParser {
      * @return CharSequence field name.
      */
     private CharSequence readFieldName() throws IOException {
-        int c = skipWhitespaceRead(true);
+        return readFieldName(skipWhitespaceRead(true));
+    }
+
+    /**
+     * Read a field name when the caller has already consumed the first non-whitespace
+     * character (e.g. when peeking past a comma or open-brace).
+     */
+    private CharSequence readFieldName(int c) throws IOException {
         CharSequence field;
 
         if (c == '"') {
