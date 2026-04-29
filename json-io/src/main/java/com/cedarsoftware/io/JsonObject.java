@@ -135,6 +135,80 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         return new JsonObjectArray();
     }
 
+    /**
+     * Lazy-promote a lite JsonObject to a JsonObjectArray when an {@code @items} payload
+     * arrives after the object has already committed to lite shape (e.g., a non-metadata
+     * field appeared first). Returns {@code lite} unchanged if it is already a JsonObjectArray
+     * <em>or</em> a JsonObjectMap — both subclasses store @items natively (JsonObjectMap uses
+     * @items as the values half of the @keys/@items pair).
+     * <p>
+     * Parent metadata (id, type, typeString, itemElementType, mapKeyType, refId) is copied to
+     * the promoted instance. Any prior {@code keys[]}/{@code data[]} POJO fields on {@code lite}
+     * are NOT carried over — by definition, the arriving {@code @items} payload reclassifies
+     * the JSON object as array-shaped, so any preceding non-meta fields are discarded
+     * (matches the pre-refactor behavior where {@code storageMode |= MODE_ITEMS} masked them).
+     * <p>
+     * If {@code references} is non-null and {@code lite} has an id, the references map entry
+     * for that id is updated to point at the promoted instance so any forward {@code @ref} to
+     * the same id resolves to the correct (now array-shaped) object.
+     */
+    static JsonObject promoteToArray(JsonObject lite, ReferenceTracker references) {
+        if (lite instanceof JsonObjectArray || lite instanceof JsonObjectMap) {
+            // Both subclasses store @items natively; no promotion needed.
+            return lite;
+        }
+        JsonObjectArray promoted = new JsonObjectArray();
+        promoted.copyMetadataFrom(lite);
+        if (references != null && lite.hasId()) {
+            references.put(lite.getId(), promoted);
+        }
+        return promoted;
+    }
+
+    /**
+     * Lazy-promote a lite JsonObject to a JsonObjectMap when an {@code @keys} payload arrives
+     * after the object has already committed to lite shape. Returns {@code lite} unchanged if
+     * it is already a JsonObjectMap. A JsonObjectArray with arriving {@code @keys} is a malformed
+     * input — the parser flags this elsewhere.
+     */
+    static JsonObject promoteToMap(JsonObject lite, ReferenceTracker references) {
+        if (lite instanceof JsonObjectMap) {
+            return lite;
+        }
+        JsonObjectMap promoted = new JsonObjectMap();
+        promoted.copyMetadataFrom(lite);
+        if (references != null && lite.hasId()) {
+            references.put(lite.getId(), promoted);
+        }
+        return promoted;
+    }
+
+    /**
+     * Copy parent-level metadata from {@code src} into this JsonObject. Used by promote helpers
+     * when reshaping a lite JsonObject into a JsonObjectArray/JsonObjectMap mid-parse.
+     * Package-private so the static promote helpers can invoke this on subclass instances.
+     */
+    void copyMetadataFrom(JsonObject src) {
+        if (src.getType() != null) {
+            setType(src.getType());
+        }
+        if (src.getTypeString() != null) {
+            setTypeString(src.getTypeString());
+        }
+        if (src.getItemElementType() != null) {
+            setItemElementType(src.getItemElementType());
+        }
+        if (src.getMapKeyType() != null) {
+            setMapKeyType(src.getMapKeyType());
+        }
+        if (src.hasId()) {
+            setId(src.getId());
+        }
+        if (src.isReference()) {
+            setReferenceId(src.getReferenceId());
+        }
+    }
+
     // ========== Type Classification ==========
 
     public JsonType getJsonType() {

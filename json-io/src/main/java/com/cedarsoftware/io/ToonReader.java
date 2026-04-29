@@ -436,20 +436,17 @@ public class ToonReader {
             if (JsonValue.ITEMS.equals(meta)) {
                 jsonObj = new JsonObjectArray();
                 applyPendingMetadata(jsonObj, suggestedType, pending);
-                loadItems(fieldValue, jsonObj);
-                return jsonObj;
+                return loadItems(fieldValue, jsonObj);
             }
             if (JsonValue.KEYS.equals(meta)) {
                 jsonObj = new JsonObjectMap();
                 applyPendingMetadata(jsonObj, suggestedType, pending);
-                loadKeys(fieldValue, jsonObj);
-                return jsonObj;
+                return loadKeys(fieldValue, jsonObj);
             }
             if (JsonValue.ENUM.equals(meta)) {
                 jsonObj = new JsonObjectArray();
                 applyPendingMetadata(jsonObj, suggestedType, pending);
-                loadEnum(fieldValue, jsonObj);
-                return jsonObj;
+                return loadEnum(fieldValue, jsonObj);
             }
             if (JsonValue.TYPE.equals(meta)) {
                 pending.type = resolveBufferedType(fieldValue);
@@ -470,8 +467,9 @@ public class ToonReader {
             applyPendingMetadata(jsonObj, suggestedType, pending);
         }
 
-        putValue(jsonObj, fieldKey, fieldValue, fieldWasQuoted);
-        return jsonObj;
+        // Post-allocation: putValue may itself lazy-promote (e.g., @items field on a lite
+        // jsonObj that was committed via a non-meta first field).
+        return putValue(jsonObj, fieldKey, fieldValue, fieldWasQuoted);
     }
 
     /**
@@ -2182,22 +2180,24 @@ public class ToonReader {
     /**
      * Put a value into a JsonObject, optionally expanding dotted keys.
      * If wasQuoted is true, the key is treated as a literal (no expansion).
+     * <p>
+     * Returns the (possibly promoted) target — meta fields like {@code @items}/{@code @keys}
+     * may lazy-promote a lite JsonObject to JsonObjectArray/JsonObjectMap.
      */
-    private void putValue(JsonObject target, String key, Object value, boolean wasQuoted) {
+    private JsonObject putValue(JsonObject target, String key, Object value, boolean wasQuoted) {
         if (!wasQuoted) {
             char first = key.charAt(0);
             // Meta key fast path: only @/$ prefixed keys can be meta
             if (first == '@' || first == '$') {
                 String meta = META_KEY_MAP.get(key);
                 if (meta != null) {
-                    loadMetaField(target, meta, value);
-                    return;
+                    return loadMetaField(target, meta, value);
                 }
             }
             // Folded key check: only non-quoted keys with '.' can be folded
             if (key.indexOf('.') >= 0 && validateAndCacheFoldedKey(key)) {
                 putWithKeyExpansion(target, key, value);
-                return;
+                return target;
             }
         }
         if (strictToon) {
@@ -2211,9 +2211,16 @@ public class ToonReader {
             }
         }
         target.appendFieldForParser(key, value);
+        return target;
     }
 
-    private void loadMetaField(JsonObject target, String metaKey, Object value) {
+    /**
+     * Process a meta field. Returns the (possibly promoted) target — for {@code @items}/
+     * {@code @keys}/{@code @enum} the lite JsonObject is replaced with the right subclass
+     * via {@link JsonObject#promoteToArray}/{@link JsonObject#promoteToMap}. Callers must
+     * use the returned reference from this point on.
+     */
+    private JsonObject loadMetaField(JsonObject target, String metaKey, Object value) {
         if (JsonValue.TYPE.equals(metaKey)) {
             loadType(value, target);
         } else if (JsonValue.ID.equals(metaKey)) {
@@ -2221,12 +2228,13 @@ public class ToonReader {
         } else if (JsonValue.REF.equals(metaKey)) {
             loadRef(value, target);
         } else if (JsonValue.ITEMS.equals(metaKey)) {
-            loadItems(value, target);
+            return loadItems(value, target);
         } else if (JsonValue.KEYS.equals(metaKey)) {
-            loadKeys(value, target);
+            return loadKeys(value, target);
         } else if (JsonValue.ENUM.equals(metaKey)) {
-            loadEnum(value, target);
+            return loadEnum(value, target);
         }
+        return target;
     }
 
     private void loadType(Object value, JsonObject target) {
@@ -2280,28 +2288,46 @@ public class ToonReader {
         target.setReferenceId(refId);
     }
 
-    private void loadItems(Object value, JsonObject target) {
+    /**
+     * Process an {@code @items} payload. May lazy-promote {@code target} from a lite
+     * {@link JsonObject} to a {@link JsonObjectArray}; callers must use the returned reference.
+     */
+    private JsonObject loadItems(Object value, JsonObject target) {
         Object[] items = toObjectArray(value, JsonValue.ITEMS);
         if (items != null) {
+            target = JsonObject.promoteToArray(target, references);
             target.setItems(items);
         }
+        return target;
     }
 
-    private void loadKeys(Object value, JsonObject target) {
+    /**
+     * Process an {@code @keys} payload. May lazy-promote {@code target} from a lite
+     * {@link JsonObject} to a {@link JsonObjectMap}; callers must use the returned reference.
+     */
+    private JsonObject loadKeys(Object value, JsonObject target) {
         Object[] keys = toObjectArray(value, JsonValue.KEYS);
         if (keys != null) {
+            target = JsonObject.promoteToMap(target, references);
             target.setKeys(keys);
         }
+        return target;
     }
 
-    private void loadEnum(Object value, JsonObject target) {
+    /**
+     * Process a legacy {@code @enum} marker (used for EnumSet detection). May lazy-promote
+     * {@code target} to a {@link JsonObjectArray} if items haven't been set yet.
+     */
+    private JsonObject loadEnum(Object value, JsonObject target) {
         if (!(value instanceof String)) {
             throw new JsonIoException("Expected a String for " + JsonValue.ENUM + " at line " + lineNumber);
         }
         loadType(value, target);
         if (target.getItems() == null) {
+            target = JsonObject.promoteToArray(target, references);
             target.setItems(ArrayUtilities.EMPTY_OBJECT_ARRAY);
         }
+        return target;
     }
 
     private Object[] toObjectArray(Object value, String metaKey) {

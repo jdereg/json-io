@@ -385,11 +385,18 @@ class JsonParser {
                         if (value != null && !value.getClass().isArray()) {
                             error("Expected @items to have an array [], but found: " + value.getClass().getName());
                         }
+                        // Lazy-promote: if a non-metadata field appeared first, jObj is lite.
+                        // The arriving @items reclassifies the JSON object as array-shaped.
+                        jObj = JsonObject.promoteToArray(jObj, references);
                         loadItems((Object[])value, jObj);
                     } else if (StringUtilities.equals(field, KEYS)) {
+                        // Lazy-promote: arriving @keys reclassifies as complex-key map shape.
+                        jObj = JsonObject.promoteToMap(jObj, references);
                         loadKeys(value, jObj);
                     } else if (StringUtilities.equals(field, ENUM)) {
-                        // Legacy support (@enum was used to indicate EnumSet in prior versions)
+                        // Legacy support (@enum was used to indicate EnumSet in prior versions).
+                        // Treated as array shape (loadEnum sets items for EnumSet detection).
+                        jObj = JsonObject.promoteToArray(jObj, references);
                         loadEnum(value, jObj);
                     } else {
                         jObj.appendFieldForParser(field, value); // Store unrecognized @-prefixed fields
