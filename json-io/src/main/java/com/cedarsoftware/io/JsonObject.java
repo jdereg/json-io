@@ -674,10 +674,12 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
                 result = 31 * result + (keys[i] == null ? 0 : keys[i].hashCode());
                 result = 31 * result + hashCodeSafe(valueArray()[i]);
             }
-            // For arrays/collections, the items content lives in itemsRef
-            // (not in data[]) and size()==0, so the loop above didn't cover it.
-            if (itemsRef != null && storageMode < MODE_KEYS_ONLY) {
-                result = 31 * result + Arrays.hashCode(itemsRef);
+            // For arrays/collections, the items content lives separately from keys[]/data[]
+            // (size()==0 for those shapes, so the loop above didn't cover them). Virtual
+            // dispatch lets JsonObjectArray contribute its own items to the hash.
+            Object[] items = getItems();
+            if (items != null && storageMode < MODE_KEYS_ONLY) {
+                result = 31 * result + Arrays.hashCode(items);
             }
             hash = result;
         }
@@ -722,9 +724,10 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
             if (!Objects.equals(valueArray()[i], other.valueArray()[i])) return false;
         }
 
-        // For arrays/collections, items content is in itemsRef (not data[]).
+        // For arrays/collections, items content is held separately from keys[]/data[].
+        // Virtual dispatch lets JsonObjectArray contribute its own items to the comparison.
         if (storageMode < MODE_KEYS_ONLY && other.storageMode < MODE_KEYS_ONLY) {
-            return Arrays.equals(itemsRef, other.itemsRef);
+            return Arrays.equals(getItems(), other.getItems());
         }
 
         return true;

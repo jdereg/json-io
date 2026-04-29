@@ -1,5 +1,7 @@
 package com.cedarsoftware.io;
 
+import java.util.Collection;
+
 /**
  * Specialization of {@link JsonObject} for array-shaped JSON values (those carried as
  * {@code @items} in the json-io intermediate form, including both Java arrays and
@@ -25,11 +27,62 @@ package com.cedarsoftware.io;
  *         limitations under the License.
  */
 class JsonObjectArray extends JsonObject {
+
+    // Shape-specific storage. Holds the @items payload for array/collection-shaped
+    // JSON intermediate values. The parent JsonObject still has its own itemsRef
+    // field at this stage (commit 2c removes it); during this transitional state
+    // both fields receive the value via super.setItems(), but only this one is
+    // canonical (parent's getItems is overridden below to read from here).
+    private Object[] itemsRef;
+
     JsonObjectArray() {
         super();
     }
 
     JsonObjectArray(int initialCapacity) {
         super(initialCapacity);
+    }
+
+    @Override
+    public Object[] getItems() {
+        return itemsRef;
+    }
+
+    @Override
+    public void setItems(Object[] array) {
+        // Delegate to parent for storageMode bookkeeping, hash invalidation, and
+        // jsonTypeCache reset. Parent stores the array in its own itemsRef as well
+        // during this transitional commit; we then store the canonical reference here.
+        super.setItems(array);
+        this.itemsRef = array;
+    }
+
+    @Override
+    public void clear() {
+        super.clear();
+        this.itemsRef = null;
+    }
+
+    @Override
+    public boolean isArray() {
+        if (target != null) {
+            return target.getClass().isArray();
+        }
+        if (type != null) {
+            return getRawType().isArray();
+        }
+        return true;
+    }
+
+    @Override
+    public boolean isCollection() {
+        if (target instanceof Collection) {
+            return true;
+        }
+        if (isMap()) {
+            return false;
+        }
+        Class<?> rawType = getRawType();
+        return rawType != null && !rawType.isArray();
     }
 }
