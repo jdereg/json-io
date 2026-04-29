@@ -120,6 +120,13 @@ class Json5CommentsTest {
     }
 
     @Test
+    void testBlockCommentBetweenUnquotedFieldNameAndColon() {
+        String json = "{name /* field separator comment */ : \"John\"}";
+        Map<String, Object> result = parseJson(json);
+        assertEquals("John", result.get("name"));
+    }
+
+    @Test
     void testBlockCommentBetweenFields() {
         String json = "{\"a\":1, /* comment */ \"b\":2}";
         Map<String, Object> result = parseJson(json);

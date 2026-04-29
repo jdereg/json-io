@@ -82,7 +82,6 @@ class JsonParser {
     private final char[] readBuf = new char[256];  // Reusable buffer for bulk string reading
     private final FastReader.BufferSlice readSlice = new FastReader.BufferSlice();
     private final StringBuilder numBuf = new StringBuilder();
-    private int curParseDepth = 0;
     private final boolean allowNanAndInfinity;
     private final int maxParseDepth;
     private final Resolver resolver;
@@ -93,6 +92,7 @@ class JsonParser {
     // Uses simple hash-indexed slots with last-write-wins collision handling
     private static final int STRING_CACHE_MASK = 2047;  // 2048 slots (power of 2 - 1)
     private static final int MAX_CACHED_STRING_LENGTH = 64;
+    private static final int NO_PREFETCH = -2;
     private final String[] stringCacheArray = new String[STRING_CACHE_MASK + 1];
     // Performance: Hoisted ReadOptions constants to avoid repeated method calls
     private final long maxIdValue;
@@ -185,33 +185,33 @@ class JsonParser {
      * @param suggestedType JsonValue Owning entity.
      */
     Object readValue(Type suggestedType) throws IOException {
-        return readValue(skipWhitespaceRead(true), suggestedType);
+        return readValue(skipWhitespaceRead(true), suggestedType, 0);
     }
 
-    private Object readValue(int c, Type suggestedType) throws IOException {
-        if (curParseDepth > maxParseDepth) {
+    private Object readValue(int c, Type suggestedType, int parseDepth) throws IOException {
+        if (parseDepth > maxParseDepth) {
             error("Maximum parsing depth exceeded");
         }
         // Fast path for objects and arrays (most common cases)
         if (c == '{') {
-            JsonObject jObj = readJsonObject(suggestedType);
+            JsonObject jObj = readJsonObject(suggestedType, parseDepth);
             return jObj;
         }
         if (c == '[') {
             Type elementType = TypeUtilities.extractArrayComponentType(suggestedType);
-            return readArray(elementType);
+            return readArray(elementType, parseDepth);
         }
 
         // Handle less common value types
         switch (c) {
             case '"':
-                return readString('"');
+                return readString('"', parseDepth == 0);
             case '\'':
                 // JSON5 single-quoted strings
                 if (strictJson) {
                     error("Single-quoted strings not allowed in strict JSON mode");
                 }
-                return readString('\'');
+                return readString('\'', parseDepth == 0);
             case 'f':
             case 'F':
                 readToken("false");
@@ -256,7 +256,7 @@ class JsonParser {
      * from a @type field, containing field type, or containing array type, then the javaType will be set on the
      * JsonObject.
      */
-    private JsonObject readJsonObject(Type suggestedType) throws IOException {
+    private JsonObject readJsonObject(Type suggestedType, int parseDepth) throws IOException {
         // The '{' has already been consumed by readValue()
         // Read the first char of the next field at the top of every loop iteration; the
         // trailing-comma branch then hands the char straight to readFieldName instead of
@@ -287,7 +287,7 @@ class JsonParser {
         Class<?> pendingType = null;
         String pendingTypeString = null;
 
-        ++curParseDepth;
+        final int childDepth = parseDepth + 1;
 
         while (true) {
             CharSequence field = readFieldName(c);
@@ -314,7 +314,7 @@ class JsonParser {
                     fieldGenericType = TypeUtilities.resolveType(suggestedType, fieldGenericType);
                 }
             }
-            Object value = readValue(valueStart, fieldGenericType);
+            Object value = readValue(valueStart, fieldGenericType, childDepth);
 
             if (preAlloc) {
                 // Pre-allocation phase: classify field. Buffer pure metadata, otherwise pick
@@ -426,7 +426,6 @@ class JsonParser {
             applyPendingMetadata(jObj, suggestedType, pendingType, pendingTypeString, pendingId, pendingRefId);
         }
 
-        --curParseDepth;
         return jObj;
     }
 
@@ -486,17 +485,16 @@ class JsonParser {
     /**
      * Read a JSON array
      */
-    private Object readArray(Type suggestedType) throws IOException {
+    private Object readArray(Type suggestedType, int parseDepth) throws IOException {
         // Performance: Pre-size ArrayList to reduce resizing. Size of 64 eliminates
         // 1-2 resize operations for typical JSON arrays while adding only ~200 bytes overhead.
         final List<Object> list = new ArrayList<>(64);
-        ++curParseDepth;
+        final int childDepth = parseDepth + 1;
 
         // Peek for an empty array first so readValue never has to handle ']' as a value-start
         // (that case used to pushback ']' and return an EMPTY_ARRAY sentinel — both gone now).
         int c = skipWhitespaceRead(true);
         if (c == ']') {
-            --curParseDepth;
             return resolver.resolveArray(suggestedType, list);
         }
         // Read the first char of the next value at the top of every iteration; after the
@@ -504,7 +502,7 @@ class JsonParser {
         // pushing it back and re-reading it.
         while (true) {
             // Pass along the full Type to readValue so that any generic information is preserved.
-            list.add(readValue(c, suggestedType));
+            list.add(readValue(c, suggestedType, childDepth));
 
             c = skipWhitespaceRead(true);
 
@@ -525,7 +523,6 @@ class JsonParser {
             // c is now the first char of the next value — loop back and reuse it.
         }
 
-        --curParseDepth;
         return resolver.resolveArray(suggestedType, list);
     }
 
@@ -545,30 +542,34 @@ class JsonParser {
      */
     private CharSequence readFieldName(int c) throws IOException {
         CharSequence field;
+        boolean colonConsumed = false;
 
         if (c == '"') {
             // Standard double-quoted field name
-            field = readString('"');
+            field = readString('"', false);
         } else if (c == '\'') {
             // JSON5 single-quoted field name
             if (strictJson) {
                 error("Single-quoted strings not allowed in strict JSON mode");
             }
-            field = readString('\'');
+            field = readString('\'', false);
         } else if (isIdentifierStart(c)) {
             // JSON5 unquoted field name
             if (strictJson) {
                 error("Unquoted field names not allowed in strict JSON mode");
             }
-            field = readUnquotedIdentifier(c);
+            field = readUnquotedFieldName(c);
+            colonConsumed = true;
         } else {
             error("Expected quote before field name");
             return null; // Unreachable, but satisfies compiler
         }
 
-        c = skipWhitespaceRead(true);
-        if (c != ':') {
-            error("Expected ':' between field and value, instead found '" + (char) c + "'");
+        if (!colonConsumed) {
+            c = skipWhitespaceRead(true);
+            if (c != ':') {
+                error("Expected ':' between field and value, instead found '" + (char) c + "'");
+            }
         }
         return field;
     }
@@ -595,22 +596,23 @@ class JsonParser {
      * @param firstChar the first character of the identifier (already read)
      * @return the complete identifier string
      */
-    private String readUnquotedIdentifier(int firstChar) {
+    private String readUnquotedFieldName(int firstChar) throws IOException {
         strBuf.setLength(0);
         strBuf.append((char) firstChar);
 
+        int c;
         while (true) {
-            int c = input.read();
+            c = input.read();
             if (c == -1 || !isIdentifierPart(c)) {
-                // Put back the non-identifier character
-                if (c != -1) {
-                    input.pushback((char) c);
-                }
                 break;
             }
             strBuf.append((char) c);
         }
 
+        c = skipWhitespaceRead(c, true);
+        if (c != ':') {
+            error("Expected ':' between field and value, instead found '" + (char) c + "'");
+        }
         return strBuf.toString();
     }
 
@@ -684,14 +686,12 @@ class JsonParser {
                 if (d >= '0' && d <= '9') {
                     if (++digitCount > 18) {
                         // Overflow risk — fall back to general path with accumulated prefix
-                        in.pushback((char) d);
-                        return readNumberContinuation(n, false);
+                        return readNumberContinuation(n, d);
                     }
                     n = n * 10 + (d - '0');
                 } else if (d == '.' || d == 'e' || d == 'E') {
                     // Float — fall back to general path with integer prefix
-                    in.pushback((char) d);
-                    return readNumberContinuation(n, true);
+                    return readNumberContinuation(n, d);
                 } else {
                     // End of number — push back terminator and return
                     if (d != -1) {
@@ -717,8 +717,7 @@ class JsonParser {
                 return Double.NaN;
             } else {
                 // Number like "-2", not "-Infinity" - continue to normal processing
-                input.pushback((char) c);
-                c = '-';
+                return readNumberGeneral('-', c);
             }
         }
 
@@ -731,7 +730,7 @@ class JsonParser {
      * Writes the accumulated long to StringBuilder, then continues reading remaining
      * digits, decimal points, or exponents from the stream.
      */
-    private Number readNumberContinuation(long prefix, boolean expectFloat) {
+    private Number readNumberContinuation(long prefix, int c) {
         final FastReader in = input;
         StringBuilder number = numBuf;
         number.setLength(0);
@@ -743,7 +742,6 @@ class JsonParser {
         boolean seenDigitAfterExp = false;
 
         while (true) {
-            int c = in.read();
             if (c >= '0' && c <= '9') {
                 number.append((char) c);
                 if (seenExp) seenDigitAfterExp = true;
@@ -769,6 +767,7 @@ class JsonParser {
                 if (c != -1) in.pushback((char) c);
                 break;
             }
+            c = in.read();
         }
 
         try {
@@ -786,6 +785,10 @@ class JsonParser {
      * Supports JSON5 hexadecimal numbers (0xFF) in permissive mode.
      */
     private Number readNumberGeneral(int firstChar) {
+        return readNumberGeneral(firstChar, NO_PREFETCH);
+    }
+
+    private Number readNumberGeneral(int firstChar, int prefetchedAfterSign) {
         final FastReader in = input;
         boolean isFloat = false;
         boolean isNegative = (firstChar == '-');
@@ -795,13 +798,13 @@ class JsonParser {
         boolean seenDigit = false;
         boolean seenDigitAfterExp = false;
 
-        // Check for hex number (JSON5 feature): 0x or 0X
-        int startChar = firstChar;
+        int firstNumberChar = firstChar;
         if (isNegative || isPositive) {
-            startChar = in.read();
+            firstNumberChar = prefetchedAfterSign == NO_PREFETCH ? in.read() : prefetchedAfterSign;
         }
 
-        if (startChar == '0') {
+        int pendingChar = NO_PREFETCH;
+        if (firstNumberChar == '0') {
             int next = in.read();
             if (next == 'x' || next == 'X') {
                 // JSON5 hexadecimal number
@@ -809,52 +812,35 @@ class JsonParser {
                     error("Hexadecimal numbers not allowed in strict JSON mode");
                 }
                 return readHexNumber(isNegative);
-            } else if (next != -1) {
-                in.pushback((char) next);
             }
-        }
-
-        // If we read ahead for hex check, we need to reconstruct
-        // Don't pushback EOF (-1) as (char)-1 becomes \uFFFF which corrupts the stream
-        if ((isNegative || isPositive) && startChar != firstChar && startChar != -1) {
-            in.pushback((char) startChar);
+            pendingChar = next;
         }
 
         // We are sure we have a positive or negative number, so we read char by char.
         StringBuilder number = numBuf;
         number.setLength(0);
-        // For '+', skip the sign character (don't include in number string)
-        if (isPositive) {
-            // Read the first digit after the '+' sign
-            int c = in.read();
-            if (c == -1) {
-                return (Number) error("Unexpected end of input after '+'");
-            }
-            firstChar = c;
-        } else if (firstChar == '-') {
+        if (isNegative) {
             number.append((char) firstChar);
-            // Read the first numeric character after the negative sign.
-            int c = in.read();
-            if (c == -1) {
-                return (Number) error("Invalid number: -");
-            }
-            firstChar = c;
+        }
+        if ((isPositive || isNegative) && firstNumberChar == -1) {
+            return (Number) error(isPositive ? "Unexpected end of input after '+'" : "Invalid number: -");
         }
 
         // Process the first numeric character after any optional sign.
-        if (firstChar >= '0' && firstChar <= '9') {
-            number.append((char) firstChar);
+        if (firstNumberChar >= '0' && firstNumberChar <= '9') {
+            number.append((char) firstNumberChar);
             seenDigit = true;
-        } else if (firstChar == '.') {
-            number.append((char) firstChar);
+        } else if (firstNumberChar == '.') {
+            number.append((char) firstNumberChar);
             isFloat = true;
             seenDot = true;
         } else {
-            return (Number) error("Invalid number: " + (isPositive ? "+" : "") + number + (char) firstChar);
+            return (Number) error("Invalid number: " + (isPositive ? "+" : "") + number + (char) firstNumberChar);
         }
 
         while (true) {
-            int c = in.read();
+            int c = pendingChar == NO_PREFETCH ? in.read() : pendingChar;
+            pendingChar = NO_PREFETCH;
             if (c >= '0' && c <= '9') {
                 number.append((char) c);
                 seenDigit = true;
@@ -1021,7 +1007,7 @@ class JsonParser {
      * @return CharSequence read from JSON input stream.
      * @throws IOException for stream errors or parsing errors.
      */
-    private CharSequence readString(char quoteChar) throws IOException {
+    private CharSequence readString(char quoteChar, boolean rootString) throws IOException {
         final FastReader in = input;
         final char[] buf = readBuf;
 
@@ -1059,7 +1045,7 @@ class JsonParser {
                     if (c != quoteChar) {
                         error("Expected closing quote while reading JSON string");
                     }
-                    if (curParseDepth == 0) {
+                    if (rootString) {
                         c = skipWhitespaceRead(false);
                         if (c != -1) {
                             throw new JsonIoException("EOF expected, content found after string");
@@ -1086,7 +1072,7 @@ class JsonParser {
                 if (escapeChar == -1) {
                     error("EOF reached while reading escape sequence");
                 }
-                return readStringWithEscapes(str, escapeChar, quoteChar);
+                return readStringWithEscapes(str, escapeChar, quoteChar, rootString);
             }
 
             int c = in.read();
@@ -1095,7 +1081,7 @@ class JsonParser {
             }
             if (c == quoteChar) {
                 // Common case: short string, no escapes — bypass StringBuilder
-                if (curParseDepth == 0) {
+                if (rootString) {
                     c = skipWhitespaceRead(false);
                     if (c != -1) {
                         throw new JsonIoException("EOF expected, content found after string");
@@ -1113,7 +1099,7 @@ class JsonParser {
             if (charsRead > 0) {
                 str.append(chars, offset, charsRead);
             }
-            return readStringWithEscapes(str, escapeChar, quoteChar);
+            return readStringWithEscapes(str, escapeChar, quoteChar, rootString);
         }
 
         // String exceeds buffer or EOF — use StringBuilder slow path
@@ -1128,14 +1114,14 @@ class JsonParser {
         if (borrowed) {
             slice.release();
         }
-        return readStringSlowPath(str, quoteChar);
+        return readStringSlowPath(str, quoteChar, rootString);
     }
 
     /**
      * Slow path for strings that exceed the read buffer (> 256 chars).
      * Continues reading chunks into StringBuilder until the closing quote.
      */
-    private CharSequence readStringSlowPath(StringBuilder str, char quoteChar) throws IOException {
+    private CharSequence readStringSlowPath(StringBuilder str, char quoteChar, boolean rootString) throws IOException {
         final FastReader in = input;
         final char[] buf = readBuf;
 
@@ -1156,7 +1142,7 @@ class JsonParser {
                 error("EOF reached while reading JSON string");
             }
             if (c == quoteChar) {
-                if (curParseDepth == 0) {
+                if (rootString) {
                     c = skipWhitespaceRead(false);
                     if (c != -1) {
                         throw new JsonIoException("EOF expected, content found after string");
@@ -1165,7 +1151,7 @@ class JsonParser {
                 break;
             }
             // Must be backslash — handle escapes
-            return readStringWithEscapes(str, c, quoteChar);
+            return readStringWithEscapes(str, c, quoteChar, rootString);
         }
         return cacheString(str);
     }
@@ -1174,7 +1160,7 @@ class JsonParser {
      * Handle escape sequences in a string. Called when a backslash delimiter is encountered.
      * The backslash has been consumed; 'delimChar' is the character after it (first escape char).
      */
-    private CharSequence readStringWithEscapes(StringBuilder str, int delimChar, char quoteChar) throws IOException {
+    private CharSequence readStringWithEscapes(StringBuilder str, int delimChar, char quoteChar, boolean rootString) throws IOException {
         final FastReader in = input;
         final char[] buf = readBuf;
         final char[] ESCAPE_CHARS = ESCAPE_CHAR_MAP;
@@ -1227,7 +1213,7 @@ class JsonParser {
                     error("EOF reached while reading JSON string");
                 }
                 if (c == quoteChar) {
-                    if (curParseDepth == 0) {
+                    if (rootString) {
                         c = skipWhitespaceRead(false);
                         if (c != -1) {
                             throw new JsonIoException("EOF expected, content found after string");
@@ -1370,13 +1356,16 @@ class JsonParser {
      * @throws IOException for stream errors or parsing errors.
      */
     private int skipWhitespaceRead(boolean throwOnEof) throws IOException {
+        return skipWhitespaceRead(input.read(), throwOnEof);
+    }
+
+    private int skipWhitespaceRead(int c, boolean throwOnEof) throws IOException {
         final Reader in = input;
-        int c;
         // Strict mode has no comments, so use a tighter whitespace-only loop.
         if (strictJson) {
             while (true) {
-                c = in.read();
                 if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+                    c = in.read();
                     continue;
                 }
                 if (c == '/') {
@@ -1400,10 +1389,9 @@ class JsonParser {
         // Performance: Direct character comparison is faster than array bounds check + lookup.
         // JSON whitespace is defined as: space (0x20), tab (0x09), newline (0x0A), carriage return (0x0D)
         while (true) {
-            c = in.read();
-
             // Skip standard whitespace
             if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+                c = in.read();
                 continue;
             }
 
@@ -1413,10 +1401,12 @@ class JsonParser {
                 if (next == '/') {
                     // Single-line comment: skip until end of line
                     skipSingleLineComment();
+                    c = in.read();
                     continue;
                 } else if (next == '*') {
                     // Block comment: skip until */
                     skipBlockComment();
+                    c = in.read();
                     continue;
                 } else {
                     // Not a comment, push back and return '/'
@@ -1463,18 +1453,13 @@ class JsonParser {
      * The leading slash-star has already been consumed.
      */
     private void skipBlockComment() {
+        boolean sawStar = false;
         int c;
         while ((c = input.read()) != -1) {
-            if (c == '*') {
-                int next = input.read();
-                if (next == '/') {
-                    // End of block comment
-                    return;
-                } else if (next != -1) {
-                    // Not end of comment, push back and continue
-                    input.pushback((char) next);
-                }
+            if (sawStar && c == '/') {
+                return;
             }
+            sawStar = c == '*';
         }
         // EOF reached without closing comment
         error("Unterminated block comment");
