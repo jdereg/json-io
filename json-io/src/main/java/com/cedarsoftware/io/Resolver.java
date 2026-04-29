@@ -451,7 +451,7 @@ public abstract class Resolver {
                 }
                 return value;
             }
-            jsonObj = new JsonObject();
+            jsonObj = new JsonObjectArray();
             jsonObj.setType(type);
             jsonObj.setTarget(value);
             jsonObj.setItems((Object[]) value);
@@ -1747,7 +1747,7 @@ public abstract class Resolver {
      * @param col the collection to add the created array instance to
      */
     protected void wrapArrayAndAddToCollection(Object[] arrayElement, Type componentType, Collection<Object> col) {
-        JsonObject jObj = new JsonObject();
+        JsonObject jObj = new JsonObjectArray();
         jObj.setType(componentType);
         jObj.setItems(arrayElement);
         createInstance(jObj);

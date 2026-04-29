@@ -432,7 +432,7 @@ public class MapResolver extends Resolver {
         if (element instanceof JsonObject && ((JsonObject) element).isArray()) {
             jsonObject = (JsonObject) element;
         } else if (element instanceof Object[]) {
-            jsonObject = new JsonObject();
+            jsonObject = new JsonObjectArray();
             jsonObject.setItems((Object[])element);
         }
 
@@ -671,7 +671,7 @@ public class MapResolver extends Resolver {
             return list.toArray();
         }
 
-        JsonObject jsonArray = new JsonObject();
+        JsonObject jsonArray = new JsonObjectArray();
 
         // Store the full, refined type (which may include generics) in the JsonObject.
         jsonArray.setType(suggestedType);

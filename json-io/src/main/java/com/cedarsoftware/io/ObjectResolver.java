@@ -169,7 +169,7 @@ public class ObjectResolver extends Resolver
         }
 
         // Slow path: wrap in JsonObject and queue for traversal
-        JsonObject jsonArray = new JsonObject();
+        JsonObject jsonArray = new JsonObjectArray();
         jsonArray.setType(fieldType);
         jsonArray.setItems(elements);
 
@@ -835,7 +835,7 @@ public class ObjectResolver extends Resolver
      */
     private void processMapKeysValues(Object[] keys, Object[] items, Type keyType, Type valueType, boolean valueIsCollection) {
         // Process keys
-        JsonObject keysWrapper = new JsonObject();
+        JsonObject keysWrapper = new JsonObjectArray();
         keysWrapper.setItems(keys);
         keysWrapper.setTarget(keys);
         keysWrapper.setItemElementType(keyType);
@@ -855,7 +855,7 @@ public class ObjectResolver extends Resolver
             for (int i = 0; i < items.length; i++) {
                 Object value = items[i];
                 if (value instanceof Object[] && !(value instanceof JsonObject)) {
-                    JsonObject wrapper = new JsonObject();
+                    JsonObject wrapper = new JsonObjectArray();
                     wrapper.setType(valueType);
                     wrapper.setItems((Object[]) value);
                     // Preserve element type for traverseCollection
@@ -884,7 +884,7 @@ public class ObjectResolver extends Resolver
                 }
             }
         } else {
-            JsonObject itemsWrapper = new JsonObject();
+            JsonObject itemsWrapper = new JsonObjectArray();
             itemsWrapper.setItems(items);
             itemsWrapper.setTarget(items);
             // Set element type for Map values so traverseArray can convert them (e.g., String -> ZonedDateTime)
@@ -915,7 +915,7 @@ public class ObjectResolver extends Resolver
                 Object value = items[i];
                 if (value instanceof Object[] && !(value instanceof JsonObject)) {
                     // Wrap raw array in JsonObject with collection type
-                    JsonObject wrapper = new JsonObject();
+                    JsonObject wrapper = new JsonObjectArray();
                     wrapper.setType(valueType);
                     wrapper.setItems((Object[]) value);
                     // Preserve element type for traverseCollection
@@ -945,7 +945,7 @@ public class ObjectResolver extends Resolver
             }
 
             // Still need to push wrappers for keys for traversal
-            JsonObject keysWrapper = new JsonObject();
+            JsonObject keysWrapper = new JsonObjectArray();
             keysWrapper.setItems(keys);
             keysWrapper.setTarget(keys);
             keysWrapper.setItemElementType(keyType);
@@ -953,13 +953,13 @@ public class ObjectResolver extends Resolver
         } else {
             // Use default behavior - wrap and push arrays for traversal.
             // IMPORTANT: Must use the original arrays (not copies) because rehashMaps() modifies them in place.
-            JsonObject keysWrapper = new JsonObject();
+            JsonObject keysWrapper = new JsonObjectArray();
             keysWrapper.setItems(keys);
             keysWrapper.setTarget(keys);
             keysWrapper.setItemElementType(keyType);
             push(keysWrapper);
 
-            JsonObject itemsWrapper = new JsonObject();
+            JsonObject itemsWrapper = new JsonObjectArray();
             itemsWrapper.setItems(items);
             itemsWrapper.setTarget(items);
             // Set element type for Map values so traverseArray can convert them (e.g., String -> ZonedDateTime)
@@ -1298,7 +1298,7 @@ public class ObjectResolver extends Resolver
         // Create JsonObject wrapper and let traverseArray() handle element resolution.
         // This defers all the complex element processing (nested arrays, Collections,
         // forward references, type conversion) to the standard traversal path.
-        JsonObject jsonArray = new JsonObject();
+        JsonObject jsonArray = new JsonObjectArray();
         jsonArray.setType(suggestedType);
         jsonArray.setTarget(Array.newInstance(rawType, list.size()));
         jsonArray.setItems(list.toArray());
@@ -1367,7 +1367,7 @@ public class ObjectResolver extends Resolver
      * @return The created array instance
      */
     private Object handleNestedArrayElement(Object[] arrayElement, Type componentType) {
-        JsonObject jsonArray = new JsonObject();
+        JsonObject jsonArray = new JsonObjectArray();
         jsonArray.setItems(arrayElement);
         jsonArray.setType(componentType);
         Object instance = createInstance(jsonArray);
@@ -1396,7 +1396,7 @@ public class ObjectResolver extends Resolver
      */
     @Override
     protected void wrapArrayAndAddToCollection(Object[] arrayElement, Type componentType, Collection<Object> col) {
-        JsonObject jObj = new JsonObject();
+        JsonObject jObj = new JsonObjectArray();
         jObj.setType(componentType);
         jObj.setItems(arrayElement);
 
