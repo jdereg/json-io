@@ -49,7 +49,8 @@ import java.util.Set;
  */
 public class JsonObject extends JsonValue implements Map<Object, Object>, Serializable {
     private static final int INITIAL_CAPACITY = 16;
-    private static final Object[] EMPTY = new Object[0];
+    // Package-private so subclasses (JsonObjectMap.asTwoArrays) can return canonical empty arrays.
+    static final Object[] EMPTY = new Object[0];
     // Threshold for switching from linear search to HashMap index.
     // Lower values reduce O(n²) cost of building objects with many fields.
     private static volatile int INDEX_THRESHOLD = 4;
@@ -71,16 +72,18 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     private transient Map<Object, Integer> index;
 
     // Storage mode: bit 0 = items were set, bit 1 = keys were set
-    private static final byte MODE_POJO = 0;        // keys[]/data[] via put()/appendFieldForParser()
-    private static final byte MODE_ITEMS = 1;        // itemsRef[] set (arrays, collections)
-    private static final byte MODE_KEYS_ONLY = 2;    // keys[] set, items pending (transient during parse)
-    private static final byte MODE_KEYS_ITEMS = 3;   // keys[] + itemsRef[] (@keys/@items format maps)
-    private byte storageMode;
+    static final byte MODE_POJO = 0;        // keys[]/data[] via put()/appendFieldForParser()
+    static final byte MODE_ITEMS = 1;        // itemsRef[] set (arrays, collections)
+    static final byte MODE_KEYS_ONLY = 2;    // keys[] set, items pending (transient during parse)
+    static final byte MODE_KEYS_ITEMS = 3;   // keys[] + itemsRef[] (@keys/@items format maps)
+    // Package-private so subclasses (JsonObjectArray, JsonObjectMap) in the same package can
+    // perform their own setItems/setKeys bookkeeping without delegating to super.
+    byte storageMode;
 
-    // Cached values
-    private Integer hash;
+    // Cached values — package-private so subclasses can invalidate after their own mutations.
+    Integer hash;
     private String typeString;
-    private byte jsonTypeCache;
+    byte jsonTypeCache;
 
     // Stored element type for collections/arrays (or value type for maps).
     // Used to preserve generic type information that would otherwise be lost
@@ -686,7 +689,9 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         return hash;
     }
 
-    private int hashCodeSafe(Object obj) {
+    // Package-private so subclasses (JsonObjectArray, JsonObjectMap) can reuse for
+    // their own hashCode overrides.
+    int hashCodeSafe(Object obj) {
         if (obj == null) return 0;
         if (!obj.getClass().isArray()) return obj.hashCode();
         return arrayHashCode(obj, new IdentityHashMap<>());
@@ -714,6 +719,11 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     public boolean equals(Object obj) {
         if (this == obj) return true;
         if (!(obj instanceof JsonObject)) return false;
+        // Cross-shape comparison returns false. Different subclasses store their data
+        // in different fields; comparing across them would require defensive virtual
+        // dispatch on every field access. Each subclass overrides equals to handle
+        // its own shape; this base implementation handles lite POJO/string-map only.
+        if (this.getClass() != obj.getClass()) return false;
         JsonObject other = (JsonObject) obj;
 
         int len = size();

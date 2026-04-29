@@ -29,10 +29,8 @@ import java.util.Collection;
 class JsonObjectArray extends JsonObject {
 
     // Shape-specific storage. Holds the @items payload for array/collection-shaped
-    // JSON intermediate values. The parent JsonObject still has its own itemsRef
-    // field at this stage (commit 2c removes it); during this transitional state
-    // both fields receive the value via super.setItems(), but only this one is
-    // canonical (parent's getItems is overridden below to read from here).
+    // JSON intermediate values. Canonical storage lives here; parent's itemsRef field
+    // is unused on JsonObjectArray instances and is removed in commit 4a-ii.
     private Object[] itemsRef;
 
     JsonObjectArray() {
@@ -50,11 +48,13 @@ class JsonObjectArray extends JsonObject {
 
     @Override
     public void setItems(Object[] array) {
-        // Delegate to parent for storageMode bookkeeping, hash invalidation, and
-        // jsonTypeCache reset. Parent stores the array in its own itemsRef as well
-        // during this transitional commit; we then store the canonical reference here.
-        super.setItems(array);
+        if (array == null) {
+            throw new JsonIoException("Argument array cannot be null");
+        }
         this.itemsRef = array;
+        // Invalidate cached state on parent (package-private access).
+        this.hash = null;
+        this.jsonTypeCache = 0;
     }
 
     @Override
