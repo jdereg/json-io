@@ -43,7 +43,6 @@ class JsonObjectMap extends JsonObject {
     // remain unused on JsonObjectMap instances; they are inherited but never populated here.
     private Object[] keysRef;
     private Object[] valuesRef;
-    private java.lang.reflect.Type mapKeyType;
 
     JsonObjectMap() {
         super();
@@ -85,21 +84,10 @@ class JsonObjectMap extends JsonObject {
     }
 
     @Override
-    public java.lang.reflect.Type getMapKeyType() {
-        return mapKeyType;
-    }
-
-    @Override
-    public void setMapKeyType(java.lang.reflect.Type keyType) {
-        this.mapKeyType = keyType;
-    }
-
-    @Override
     public void clear() {
         super.clear();
         this.keysRef = null;
         this.valuesRef = null;
-        this.mapKeyType = null;
     }
 
     @Override
