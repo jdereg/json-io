@@ -14,22 +14,42 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * This class holds a JSON object using parallel arrays for memory efficiency
- * and insertion-order preservation. Instances of this class hold a Map-of-Map
- * representation of a Java object, read from the JSON input stream.
+ * Intermediate-form representation of a JSON object as parsed from the wire and
+ * before resolution into a Java object graph. Implements {@link Map}{@code <Object,Object>}
+ * over parallel arrays for memory efficiency and insertion-order preservation.
  *
- * <p>Storage design:</p>
+ * <p><strong>Hierarchy.</strong> The class is the lite, common case: a POJO or
+ * String-keyed Map represented as parallel {@code keys[]} / {@code data[]} arrays.
+ * Two package-private specializations cover the array-shaped and complex-keyed-map
+ * cases:</p>
  * <ul>
- *   <li>Parallel arrays ({@code keys[]} + {@code data[]}) for all modes.</li>
- *   <li>For POJOs / String-keyed maps: entries are appended to {@code keys[]}
- *       and {@code data[]} via {@link #put} / {@link #appendFieldForParser}.</li>
- *   <li>For arrays / collections ({@code @items}): {@code data[]} is replaced
- *       wholesale by {@link #setItems}.</li>
- *   <li>For complex-keyed maps ({@code @keys/@items}): both {@code keys[]} and
- *       {@code data[]} are replaced wholesale by {@link #setKeys} and
- *       {@link #setItems}.</li>
- *   <li>Lazy HashMap index built only when needed for O(1) lookup on large objects.</li>
+ *   <li>{@code JsonObjectArray} — array / collection ({@code @items}) shape; stores
+ *       its items in a separate {@code Object[]} and overrides {@link #isArray} /
+ *       {@link #isCollection} / {@link #getItems} accordingly.</li>
+ *   <li>{@code JsonObjectMap} — complex-keyed Map ({@code @keys}/{@code @items}) shape;
+ *       stores keys and values in separate parallel arrays and overrides the
+ *       {@link Map} surface ({@link #size}, {@link #get}, {@link #entrySet}, &hellip;)
+ *       to read from those.</li>
  * </ul>
+ *
+ * <p>External callers only ever hold {@link JsonObject} references &mdash; subclass
+ * identity is an internal dispatch and storage detail. The parser and TOON reader
+ * peek through metadata fields ({@code @id}, {@code @type}, {@code @ref}, &hellip;)
+ * and allocate the right specialization on first sight of a shape determiner; a lite
+ * instance that has already committed to POJO shape is reshaped via
+ * {@link #promoteToArray} / {@link #promoteToMap} when an {@code @items} or
+ * {@code @keys} payload arrives later.</p>
+ *
+ * <p><strong>Lite storage design.</strong> POJO field entries and String-keyed Map
+ * entries are appended in insertion order to parallel {@code keys[]} / {@code data[]}
+ * arrays via {@link #put} or {@link #appendFieldForParser} (the parser-only fast path
+ * that skips duplicate-key detection). Lookup is linear up to {@link #getLinearSearchThreshold},
+ * after which a lazy {@code HashMap} index is built for O(1) lookup. Calling
+ * {@link #setItems} or {@link #setKeys} on a lite instance throws &mdash; those methods
+ * are only valid on {@code JsonObjectArray} / {@code JsonObjectMap}.</p>
+ *
+ * <p>For the {@code @items}-shape and complex-keyed-map storage details, see the
+ * package-private subclasses.</p>
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
