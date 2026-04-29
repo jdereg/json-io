@@ -315,14 +315,11 @@ public class ToonReader {
      */
     private JsonObject readObject(int baseIndent, Type suggestedType) throws IOException {
         // Peek-through-metadata: defer JsonObject allocation until we know which subclass to
-        // instantiate. Buffer @id/@type/@ref while scanning until we encounter @items (→ array
-        // shape), @keys (→ complex-key map shape), or a non-metadata field (→ lite shape).
+        // instantiate. Buffer @id/@type/@ref in PendingMeta while scanning until we encounter
+        // @items (→ array shape), @keys (→ complex-key map shape), or a non-metadata field
+        // (→ lite shape).
         JsonObject jsonObj = null;
-        boolean preAlloc = true;
-        Class<?> pendingType = null;
-        String pendingTypeString = null;
-        Long pendingId = null;
-        long pendingRefId = 0;
+        PendingMeta pending = new PendingMeta();
 
         while (true) {
             if (!hasLine()) {
@@ -360,98 +357,134 @@ public class ToonReader {
                 valueStart++;
             }
 
-            // Resolve key, value, and wasQuoted into a uniform shape so the dispatch below
-            // treats combined-array-notation fields (e.g., "@items[3]:") and standard fields
-            // (e.g., "@type: HashMap") the same way.
-            String fieldKey;
-            Object fieldValue;
-            boolean fieldWasQuoted;
-            int bracketStart = findUnquotedBracketPosition(key);
-            if (bracketStart >= 0) {
-                fieldKey = cacheSubstring(key, 0, bracketStart);
-                fieldWasQuoted = fieldKey.startsWith("\"");
-                if (fieldWasQuoted) {
-                    fieldKey = unquoteString(fieldKey);
-                }
-                fieldValue = parseCombinedArrayField(key, bracketStart, lineBuf, valueStart, trimEnd);
-            } else {
-                fieldWasQuoted = key.startsWith("\"");
-                fieldKey = unquoteString(key);
-                if (isTrimmedEmpty(lineBuf, valueStart, trimEnd)) {
-                    if (hasLine() && peekIndent() > baseIndent) {
-                        if (isArrayStartInBuf()) {
-                            fieldValue = readArray();
-                        } else {
-                            fieldValue = readObject(baseIndent + 1, null);
-                        }
-                    } else {
-                        fieldValue = null;
-                    }
-                } else if (isArrayStart(lineBuf, valueStart, trimEnd)) {
-                    fieldValue = parseArrayFromLine(trimAsciiRangeBuf(valueStart, trimEnd));
-                } else if (isEmptyObject(lineBuf, valueStart, trimEnd)) {
-                    fieldValue = new JsonObject();
-                } else {
-                    fieldValue = readScalar(lineBuf, valueStart, trimEnd);
-                }
-            }
-
-            // Pre-allocation phase: classify field. Buffer pure metadata; otherwise pick
-            // the right subclass and process the trigger field.
-            if (preAlloc) {
-                String meta = metaKeyFor(fieldKey, fieldWasQuoted);
-                if (JsonValue.ITEMS.equals(meta)) {
-                    jsonObj = new JsonObjectArray();
-                    applyPendingMetadata(jsonObj, suggestedType, pendingType, pendingTypeString, pendingId, pendingRefId);
-                    loadItems(fieldValue, jsonObj);
-                    preAlloc = false;
-                    continue;
-                }
-                if (JsonValue.KEYS.equals(meta)) {
-                    jsonObj = new JsonObjectMap();
-                    applyPendingMetadata(jsonObj, suggestedType, pendingType, pendingTypeString, pendingId, pendingRefId);
-                    loadKeys(fieldValue, jsonObj);
-                    preAlloc = false;
-                    continue;
-                }
-                if (JsonValue.ENUM.equals(meta)) {
-                    jsonObj = new JsonObjectArray();
-                    applyPendingMetadata(jsonObj, suggestedType, pendingType, pendingTypeString, pendingId, pendingRefId);
-                    loadEnum(fieldValue, jsonObj);
-                    preAlloc = false;
-                    continue;
-                }
-                if (JsonValue.TYPE.equals(meta)) {
-                    pendingType = resolveBufferedType(fieldValue);
-                    pendingTypeString = (String) fieldValue;
-                    continue;
-                }
-                if (JsonValue.ID.equals(meta)) {
-                    pendingId = validateBufferedIdValue(fieldValue, JsonValue.ID);
-                    continue;
-                }
-                if (JsonValue.REF.equals(meta)) {
-                    pendingRefId = validateBufferedIdValue(fieldValue, JsonValue.REF);
-                    continue;
-                }
-
-                // Non-metadata (or unrecognized @-prefixed) field → commit to lite shape.
-                jsonObj = new JsonObject();
-                applyPendingMetadata(jsonObj, suggestedType, pendingType, pendingTypeString, pendingId, pendingRefId);
-                preAlloc = false;
-            }
-
-            putValue(jsonObj, fieldKey, fieldValue, fieldWasQuoted);
+            jsonObj = readAndDispatchField(jsonObj, suggestedType, pending,
+                    key, valueStart, trimEnd, baseIndent);
         }
 
         // Metadata-only object (e.g., {"@type":"Foo","@id":1} with no shape determiner): allocate
         // lite JsonObject now and apply buffered metadata.
-        if (preAlloc) {
+        if (jsonObj == null) {
             jsonObj = new JsonObject();
-            applyPendingMetadata(jsonObj, suggestedType, pendingType, pendingTypeString, pendingId, pendingRefId);
+            applyPendingMetadata(jsonObj, suggestedType, pending);
         }
 
         return jsonObj;
+    }
+
+    /**
+     * Resolve {@code key}, parse the value, and dispatch the field through the peek-through
+     * pipeline. {@code jsonObj} may be {@code null} when still in pre-allocation phase; the
+     * returned value is the freshly-allocated JsonObject (subclass picked by shape) or the
+     * still-{@code null} sentinel if this field was buffered as pure metadata.
+     */
+    private JsonObject readAndDispatchField(JsonObject jsonObj, Type suggestedType, PendingMeta pending,
+                                            String key, int valueStart, int trimEnd, int baseIndent)
+            throws IOException {
+        // Resolve key, value, and wasQuoted into a uniform shape so the dispatch below
+        // treats combined-array-notation fields (e.g., "@items[3]:") and standard fields
+        // (e.g., "@type: HashMap") the same way.
+        String fieldKey;
+        Object fieldValue;
+        boolean fieldWasQuoted;
+        int bracketStart = findUnquotedBracketPosition(key);
+        if (bracketStart >= 0) {
+            fieldKey = cacheSubstring(key, 0, bracketStart);
+            fieldWasQuoted = fieldKey.startsWith("\"");
+            if (fieldWasQuoted) {
+                fieldKey = unquoteString(fieldKey);
+            }
+            fieldValue = parseCombinedArrayField(key, bracketStart, lineBuf, valueStart, trimEnd);
+        } else {
+            fieldWasQuoted = key.startsWith("\"");
+            fieldKey = unquoteString(key);
+            if (isTrimmedEmpty(lineBuf, valueStart, trimEnd)) {
+                if (hasLine() && peekIndent() > baseIndent) {
+                    if (isArrayStartInBuf()) {
+                        fieldValue = readArray();
+                    } else {
+                        fieldValue = readObject(baseIndent + 1, null);
+                    }
+                } else {
+                    fieldValue = null;
+                }
+            } else if (isArrayStart(lineBuf, valueStart, trimEnd)) {
+                fieldValue = parseArrayFromLine(trimAsciiRangeBuf(valueStart, trimEnd));
+            } else if (isEmptyObject(lineBuf, valueStart, trimEnd)) {
+                fieldValue = new JsonObject();
+            } else {
+                fieldValue = readScalar(lineBuf, valueStart, trimEnd);
+            }
+        }
+
+        return dispatchField(jsonObj, suggestedType, pending, fieldKey, fieldValue, fieldWasQuoted);
+    }
+
+    /**
+     * Dispatch a parsed (key, value) field through the peek-through pipeline.
+     * <ul>
+     *   <li>If {@code jsonObj} is {@code null} (pre-allocation phase), classify the field:
+     *       a shape-determining meta key ({@code @items}/{@code @keys}/{@code @enum}) allocates
+     *       the appropriate subclass; pure meta keys ({@code @type}/{@code @id}/{@code @ref})
+     *       are buffered into {@code pending}; anything else commits to lite {@link JsonObject}.</li>
+     *   <li>Once allocated, fields are stored via {@link #putValue}.</li>
+     * </ul>
+     */
+    private JsonObject dispatchField(JsonObject jsonObj, Type suggestedType, PendingMeta pending,
+                                     String fieldKey, Object fieldValue, boolean fieldWasQuoted) {
+        if (jsonObj == null) {
+            String meta = metaKeyFor(fieldKey, fieldWasQuoted);
+            if (JsonValue.ITEMS.equals(meta)) {
+                jsonObj = new JsonObjectArray();
+                applyPendingMetadata(jsonObj, suggestedType, pending);
+                loadItems(fieldValue, jsonObj);
+                return jsonObj;
+            }
+            if (JsonValue.KEYS.equals(meta)) {
+                jsonObj = new JsonObjectMap();
+                applyPendingMetadata(jsonObj, suggestedType, pending);
+                loadKeys(fieldValue, jsonObj);
+                return jsonObj;
+            }
+            if (JsonValue.ENUM.equals(meta)) {
+                jsonObj = new JsonObjectArray();
+                applyPendingMetadata(jsonObj, suggestedType, pending);
+                loadEnum(fieldValue, jsonObj);
+                return jsonObj;
+            }
+            if (JsonValue.TYPE.equals(meta)) {
+                pending.type = resolveBufferedType(fieldValue);
+                pending.typeString = (String) fieldValue;
+                return null;
+            }
+            if (JsonValue.ID.equals(meta)) {
+                pending.id = validateBufferedIdValue(fieldValue, JsonValue.ID);
+                return null;
+            }
+            if (JsonValue.REF.equals(meta)) {
+                pending.refId = validateBufferedIdValue(fieldValue, JsonValue.REF);
+                return null;
+            }
+
+            // Non-metadata (or unrecognized @-prefixed) field → commit to lite shape.
+            jsonObj = new JsonObject();
+            applyPendingMetadata(jsonObj, suggestedType, pending);
+        }
+
+        putValue(jsonObj, fieldKey, fieldValue, fieldWasQuoted);
+        return jsonObj;
+    }
+
+    /**
+     * Holder for buffered pre-allocation metadata. {@code id} is boxed because {@code 0} is a
+     * valid id (we need to distinguish "id was set to 0" from "id was never set"); {@code refId}
+     * uses {@code 0} as the unset sentinel because it follows the existing isReference()
+     * convention on JsonValue.
+     */
+    private static final class PendingMeta {
+        Class<?> type;
+        String typeString;
+        Long id;
+        long refId;
     }
 
     /**
@@ -475,24 +508,22 @@ public class ToonReader {
      * JsonParser.applyPendingMetadata: suggestedType first, then explicit @type override, then
      * @id (with reference-tracker registration), then @ref.
      */
-    private void applyPendingMetadata(JsonObject jObj, Type suggestedType,
-                                      Class<?> pendingType, String pendingTypeString,
-                                      Long pendingId, long pendingRefId) {
+    private void applyPendingMetadata(JsonObject jObj, Type suggestedType, PendingMeta pending) {
         if (suggestedType != null) {
             jObj.setType(suggestedType);
         }
-        if (pendingType != null) {
-            jObj.setTypeString(pendingTypeString);
-            jObj.setType(pendingType);
+        if (pending.type != null) {
+            jObj.setTypeString(pending.typeString);
+            jObj.setType(pending.type);
         }
-        if (pendingId != null) {
-            jObj.setId(pendingId);
+        if (pending.id != null) {
+            jObj.setId(pending.id);
             if (references != null) {
-                references.put(pendingId, jObj);
+                references.put(pending.id, jObj);
             }
         }
-        if (pendingRefId != 0) {
-            jObj.setReferenceId(pendingRefId);
+        if (pending.refId != 0) {
+            jObj.setReferenceId(pending.refId);
         }
     }
 
@@ -1192,7 +1223,11 @@ public class ToonReader {
      * @return JsonObject with all fields
      */
     private JsonObject readInlineObject(int firstFieldStart, int firstFieldEnd, int hyphenIndent) throws IOException {
-        JsonObject jsonObj = new JsonObject();
+        // Peek-through-metadata: same allocation strategy as readObject. Buffer @id/@type/@ref
+        // through the first-field handling and the subsequent-field loop until the shape is
+        // determined.
+        JsonObject jsonObj = null;
+        PendingMeta pending = new PendingMeta();
 
         // Parse first field directly from lineBuf[firstFieldStart..firstFieldEnd).
         // Safe to use lineBuf here because the hyphen-line contents persist in the
@@ -1211,41 +1246,9 @@ public class ToonReader {
             while (valueEnd > valueStart && lineBuf[valueEnd - 1] <= ' ') {
                 valueEnd--;
             }
-            boolean valueEmpty = valueStart >= valueEnd;
 
-            // Check for combined field+array notation: fieldName[N]: or fieldName[N]{cols}:
-            // Also handles folded keys: data.items[N]:
-            int bracketStart = findUnquotedBracketPosition(key);
-            if (bracketStart >= 0) {
-                String realKey = cacheSubstring(key, 0, bracketStart);
-                boolean wasQuoted = !realKey.isEmpty() && realKey.charAt(0) == '"';
-                if (wasQuoted) {
-                    realKey = unquoteString(realKey);
-                }
-                putValue(jsonObj, realKey, parseCombinedArrayField(key, bracketStart, lineBuf, valueStart, valueEnd), wasQuoted);
-            } else {
-                boolean wasQuoted = !key.isEmpty() && key.charAt(0) == '"';
-                key = unquoteString(key);
-                if (valueEmpty) {
-                    // Check for nested structure on next line
-                    if (hasLine() && peekIndent() > hyphenIndent) {
-                        if (isArrayStartInBuf()) {
-                            putValue(jsonObj, key, readArray(), wasQuoted);
-                        } else {
-                            putValue(jsonObj, key, readObject(hyphenIndent + 1, null), wasQuoted);
-                        }
-                    } else {
-                        putValue(jsonObj, key, null, wasQuoted);
-                    }
-                } else if (isArrayStart(lineBuf, valueStart, valueEnd)) {
-                    // parseArrayFromLine expects a String; materialize only this branch
-                    putValue(jsonObj, key, parseArrayFromLine(trimAsciiRangeBuf(valueStart, valueEnd)), wasQuoted);
-                } else if (isEmptyObject(lineBuf, valueStart, valueEnd)) {
-                    putValue(jsonObj, key, new JsonObject(), wasQuoted);
-                } else {
-                    putValue(jsonObj, key, readScalar(lineBuf, valueStart, valueEnd), wasQuoted);
-                }
-            }
+            jsonObj = readAndDispatchField(jsonObj, null, pending,
+                    key, valueStart, valueEnd, hyphenIndent);
         }
 
         // Read subsequent fields at the same indent level as the first field's content
@@ -1281,40 +1284,15 @@ public class ToonReader {
             if (valueStart2 < trimEnd && lineBuf[valueStart2] == ' ') {
                 valueStart2++;
             }
-            // Check for combined field+array notation
-            // Also handles folded keys: data.items[N]:
-            int keyLen = key.length();
-            int bracketStart = findUnquotedBracketPosition(key);
-            if (bracketStart >= 0) {
-                String realKey = cacheSubstring(key, 0, bracketStart);
-                boolean wasQuoted = !realKey.isEmpty() && realKey.charAt(0) == '"';
-                if (wasQuoted) {
-                    realKey = unquoteString(realKey);
-                }
-                putValue(jsonObj, realKey, parseCombinedArrayField(key, bracketStart, lineBuf, valueStart2, trimEnd), wasQuoted);
-                continue;
-            }
 
-            boolean wasQuoted = keyLen > 0 && key.charAt(0) == '"';
-            key = unquoteString(key);
+            jsonObj = readAndDispatchField(jsonObj, null, pending,
+                    key, valueStart2, trimEnd, fieldIndent);
+        }
 
-            if (isTrimmedEmpty(lineBuf, valueStart2, trimEnd)) {
-                if (hasLine() && peekIndent() > fieldIndent) {
-                    if (isArrayStartInBuf()) {
-                        putValue(jsonObj, key, readArray(), wasQuoted);
-                    } else {
-                        putValue(jsonObj, key, readObject(fieldIndent + 1, null), wasQuoted);
-                    }
-                } else {
-                    putValue(jsonObj, key, null, wasQuoted);
-                }
-            } else if (isArrayStart(lineBuf, valueStart2, trimEnd)) {
-                putValue(jsonObj, key, parseArrayFromLine(trimAsciiRangeBuf(valueStart2, trimEnd)), wasQuoted);
-            } else if (isEmptyObject(lineBuf, valueStart2, trimEnd)) {
-                putValue(jsonObj, key, new JsonObject(), wasQuoted);
-            } else {
-                putValue(jsonObj, key, readScalar(lineBuf, valueStart2, trimEnd), wasQuoted);
-            }
+        // Metadata-only or empty inline object → allocate lite now and apply buffered metadata.
+        if (jsonObj == null) {
+            jsonObj = new JsonObject();
+            applyPendingMetadata(jsonObj, null, pending);
         }
 
         return jsonObj;
