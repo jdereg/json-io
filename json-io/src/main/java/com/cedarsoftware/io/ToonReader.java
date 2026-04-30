@@ -801,6 +801,7 @@ public class ToonReader {
         List<Object> elements = new ArrayList<>(count);
         int baseIndent = -1;
         int colHeadersSize = columnHeaders.size();
+        String[] columnMetaKeys = buildColumnMetaKeys(columnHeaders);
 
         while (elements.size() < count) {
             if (!hasLine()) {
@@ -838,8 +839,8 @@ public class ToonReader {
 
             // Parse the row directly into a pre-sized object (no intermediate List)
             JsonObject rowObj = new JsonObject(colHeadersSize);
-            String rowContent = trimAsciiRangeBuf(trimStart, trimEnd);
-            int valuesCount = parseRowIntoObject(rowContent, columnHeaders, delimiter, rowObj);
+            int valuesCount = parseRowIntoObject(lineBuf, trimStart, trimEnd, columnHeaders, columnMetaKeys, delimiter,
+                    rowObj);
             if (strictToon && valuesCount != colHeadersSize) {
                 throw new JsonIoException("Tabular row width mismatch at line " + lineNumber +
                         ", expected " + colHeadersSize + " values, got " + valuesCount);
@@ -881,40 +882,74 @@ public class ToonReader {
      * Avoids the intermediate List that readInlineArray() would create for tabular rows.
      * Returns the number of values parsed (for strict-mode validation).
      */
-    private int parseRowIntoObject(String content, List<String> columnHeaders, char delimiter, JsonObject target) {
-        int len = content.length();
+    private static String[] buildColumnMetaKeys(List<String> columnHeaders) {
+        int size = columnHeaders.size();
+        String[] metaKeys = null;
+        for (int i = 0; i < size; i++) {
+            String header = columnHeaders.get(i);
+            if (header.isEmpty()) {
+                continue;
+            }
+            char first = header.charAt(0);
+            if (first != '@' && first != '$') {
+                continue;
+            }
+            String metaKey = META_KEY_MAP.get(header);
+            if (metaKey != null) {
+                if (metaKeys == null) {
+                    metaKeys = new String[size];
+                }
+                metaKeys[i] = metaKey;
+            }
+        }
+        return metaKeys;
+    }
+
+    private int parseRowIntoObject(char[] buf, int start, int end, List<String> columnHeaders, String[] columnMetaKeys,
+                                   char delimiter, JsonObject target) {
+        while (start < end && buf[start] <= ' ') {
+            start++;
+        }
+        while (end > start && buf[end - 1] <= ' ') {
+            end--;
+        }
+
         int colIndex = 0;
         int colHeadersSize = columnHeaders.size();
 
-        // Fast path: no quotes or escapes — parse directly from string ranges
-        if (content.indexOf('"') < 0 && content.indexOf('\\') < 0) {
-            int tokenStart = 0;
-            for (int i = 0; i < len; i++) {
-                if (content.charAt(i) == delimiter) {
-                    if (colIndex < colHeadersSize) {
-                        appendColumn(target, columnHeaders.get(colIndex), readScalar(content, tokenStart, i));
-                    }
-                    colIndex++;
-                    tokenStart = i + 1;
-                }
-            }
-            if (tokenStart < len || colIndex < colHeadersSize) {
+        int tokenStart = start;
+        for (int i = start; i < end; i++) {
+            char c = buf[i];
+            if (c == delimiter) {
                 if (colIndex < colHeadersSize) {
-                    appendColumn(target, columnHeaders.get(colIndex), readScalar(content, tokenStart, len));
+                    appendColumn(target, columnHeaders, columnMetaKeys, colIndex, readScalar(buf, tokenStart, i));
                 }
                 colIndex++;
+                tokenStart = i + 1;
+            } else if (c == '"' || c == '\\') {
+                return parseQuotedRowRemainder(buf, tokenStart, end, columnHeaders, columnMetaKeys, delimiter, target,
+                        colIndex);
             }
-            return colIndex;
         }
+        if (tokenStart < end || colIndex < colHeadersSize) {
+            if (colIndex < colHeadersSize) {
+                appendColumn(target, columnHeaders, columnMetaKeys, colIndex, readScalar(buf, tokenStart, end));
+            }
+            colIndex++;
+        }
+        return colIndex;
+    }
 
-        // Slow path: handle quotes and escapes via StringBuilder
+    private int parseQuotedRowRemainder(char[] buf, int start, int end, List<String> columnHeaders,
+                                        String[] columnMetaKeys, char delimiter, JsonObject target, int colIndex) {
+        int colHeadersSize = columnHeaders.size();
         inlineBuf.setLength(0);
         final StringBuilder current = inlineBuf;
         boolean inQuotes = false;
         boolean escaped = false;
 
-        for (int i = 0; i < len; i++) {
-            char c = content.charAt(i);
+        for (int i = start; i < end; i++) {
+            char c = buf[i];
 
             if (escaped) {
                 current.append(c);
@@ -936,7 +971,7 @@ public class ToonReader {
 
             if (c == delimiter && !inQuotes) {
                 if (colIndex < colHeadersSize) {
-                    appendColumn(target, columnHeaders.get(colIndex), readScalar(trimAscii(current)));
+                    appendColumn(target, columnHeaders, columnMetaKeys, colIndex, readScalar(trimAscii(current)));
                 }
                 colIndex++;
                 current.setLength(0);
@@ -945,10 +980,9 @@ public class ToonReader {
             }
         }
 
-        // Last element
         if (current.length() > 0 || colIndex < colHeadersSize) {
             if (colIndex < colHeadersSize) {
-                appendColumn(target, columnHeaders.get(colIndex), readScalar(trimAscii(current)));
+                appendColumn(target, columnHeaders, columnMetaKeys, colIndex, readScalar(trimAscii(current)));
             }
             colIndex++;
         }
@@ -956,12 +990,13 @@ public class ToonReader {
         return colIndex;
     }
 
-    private void appendColumn(JsonObject target, String header, Object value) {
-        String metaKey = META_KEY_MAP.get(header);
+    private void appendColumn(JsonObject target, List<String> columnHeaders, String[] columnMetaKeys, int colIndex,
+                              Object value) {
+        String metaKey = columnMetaKeys == null ? null : columnMetaKeys[colIndex];
         if (metaKey != null) {
             loadMetaField(target, metaKey, value);
         } else {
-            target.appendFieldForParser(header, value);
+            target.appendFieldForParser(columnHeaders.get(colIndex), value);
         }
     }
 

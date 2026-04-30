@@ -182,6 +182,26 @@ class ToonReaderCoverageTest {
     }
 
     @Test
+    void testTabularArrayQuotedRemainderAfterFastColumns() {
+        String toon =
+                "rows[2]{id,name,note}:\n" +
+                "  1,\"Doe, Jane\",\"line\\none\"\n" +
+                "  2,Bob,plain";
+        Map<?, ?> result = JsonIo.fromToon(toon).asClass(Map.class);
+        @SuppressWarnings("unchecked")
+        List<Object> rows = (List<Object>) result.get("rows");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> first = (Map<String, Object>) rows.get(0);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> second = (Map<String, Object>) rows.get(1);
+
+        assertThat(first.get("id")).isEqualTo(1L);
+        assertThat(first.get("name")).isEqualTo("Doe, Jane");
+        assertThat(first.get("note")).isEqualTo("line\none");
+        assertThat(second.get("name")).isEqualTo("Bob");
+    }
+
+    @Test
     void testListArrayWithDashes() {
         String toon =
                 "items[3]:\n" +
