@@ -3,7 +3,6 @@ package com.cedarsoftware.io;
 import java.io.IOException;
 import java.io.Reader;
 import java.lang.reflect.Type;
-import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -528,16 +527,6 @@ class JsonParser {
 
         --curParseDepth;
         return resolver.resolveArray(suggestedType, list);
-    }
-
-    /**
-     * Read the field name of a JSON object.
-     * Supports both quoted strings (standard JSON) and unquoted identifiers (JSON5).
-     *
-     * @return CharSequence field name.
-     */
-    private CharSequence readFieldName() throws IOException {
-        return readFieldName(skipWhitespaceRead(true));
     }
 
     /**
