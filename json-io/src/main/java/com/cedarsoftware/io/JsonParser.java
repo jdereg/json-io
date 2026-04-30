@@ -792,7 +792,6 @@ class JsonParser {
         boolean seenDot = false;
         boolean seenExp = false;
         boolean seenDigit = false;
-        boolean seenDigitAfterExp = false;
 
         int firstNumberChar = firstChar;
         if (isNegative || isPositive) {
@@ -840,9 +839,6 @@ class JsonParser {
             if (c >= '0' && c <= '9') {
                 number.append((char) c);
                 seenDigit = true;
-                if (seenExp) {
-                    seenDigitAfterExp = true;
-                }
             } else if (c == '.') {
                 if (seenDot || seenExp) {
                     return (Number) error("Invalid number: " + number + ".");
@@ -870,8 +866,6 @@ class JsonParser {
                     return (Number) error("Invalid exponent in number: " + number);
                 }
                 number.append((char) next);
-                seenDigit = true;
-                seenDigitAfterExp = true;
             } else if (c == -1) {
                 break;
             } else {
@@ -880,7 +874,7 @@ class JsonParser {
             }
         }
 
-        if (!seenDigit || (seenExp && !seenDigitAfterExp)) {
+        if (!seenDigit) {
             return (Number) error("Invalid number: " + number);
         }
 
