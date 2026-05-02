@@ -55,3 +55,16 @@ The loop appends here on every iteration. Format:
 - Decision: **kept**
 - Commit: (this commit)
 - Raw measurement logs: `.claude/perf-loop/runs/cand1-{1,2,3}.log`
+
+### 2026-05-02 17:44 — Candidate 2: Cache getTypeNameAlias on JsonWriter — reverted
+- Primary target metric: JsonIo Write Time (cycleSupport=false), Full Java
+- Run medians (ms): Full primary 4397.944, Maps 4312.092
+- Prior baseline: Full primary 4249.810, Maps 4183.566
+- Delta vs prior on primary: Full **−3.49%** (regression), Maps **−3.07%** (regression) — far below the 0.5% bar
+- Watch metric JsonIo Read Time: Full +0.83% (within 1% bar), Maps **+3.83%** (above 1% bar)
+- Widespread environmental noise this run set: Jackson Read Time regressed +3.43% Full / +1.23% Maps despite Jackson being third-party code untouched by the candidate. Run-2 ran noticeably hotter than runs 1 and 3. Even applying a +2–3% noise correction, the primary doesn't clear the 0.5% bar.
+- Implementation theory for why the cache hurts: `WriteOptions.getTypeNameAlias` is itself a fast HashMap lookup; layering another per-instance HashMap on top adds allocation + lookup cost without saving meaningful work in this benchmark's narrow type set, especially since each `JsonWriter` is short-lived (one per `toJson` call) and the cache always starts cold.
+- Decision: **reverted**
+- Implementation changes stashed as `reverted-candidate-2` (git stash) for recoverability.
+- Commit: (this commit, baseline + candidates only — implementation reverted)
+- Raw measurement logs: `.claude/perf-loop/runs/cand2-{1,2,3}.log`

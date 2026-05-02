@@ -20,7 +20,7 @@ Source-of-truth ordering: don't reorder; just flip statuses.
 
 ## Candidate 2 — Cache `getTypeNameAlias` on `JsonWriter`
 
-- **Status:** pending
+- **Status:** reverted
 - **Primary target:** `JsonIo Write Time (cycleSupport=false)` (Full Java Resolution)
 - **Secondary watch:** `JsonIo Read Time` (should be neutral)
 - **Files:**
