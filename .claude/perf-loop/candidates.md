@@ -31,7 +31,7 @@ Source-of-truth ordering: don't reorder; just flip statuses.
 
 ## Candidate 3 — Pre-size + thread-local the write StringBuilder
 
-- **Status:** pending
+- **Status:** kept (sub-experiment a only — capacity raise from 8192 to 32768; sub-experiment b filed as Candidate 3b below)
 - **Primary target:** `Toon Write Time (cycleSupport=false)`
 - **Secondary watch:** `JsonIo Write Time (cycleSupport=false)` (should also gain), `Toon Read Time` (no regression)
 - **Files:**
@@ -40,6 +40,16 @@ Source-of-truth ordering: don't reorder; just flip statuses.
   - **(a)** Raise the initial capacity from `DEFAULT_CHAR_BUFFER_SIZE` (8192) to 32768 in both call sites. JFR shows 241 leaf samples in `ensureCapacityInternal` and 90 in `inflate`, virtually all from `StringBuilderWriter.write`. A larger initial buffer skips several doublings on typical payloads.
   - **(b)** If (a) clears the bar, also try a `ThreadLocal<StringBuilder>` pattern (mirror `TL_LINE_BUF` on the read side). After `sb.toString()`, call `sb.setLength(0)` to retain the capacity. Cap retained capacity at 1 MB by checking `sb.capacity()` and re-allocating if exceeded. Test (b) as a *separate* candidate with its own median run — file it as Candidate 3b in this list and commit if it clears the bar **on top of** (a)'s baseline.
 - **Risk:** capacity is only initial; `StringBuilder` still grows naturally. Thread-local retention can leak in long-lived threads — the 1 MB cap addresses that. (b) only after (a) is locked in.
+
+## Candidate 3b — Thread-local `StringBuilder` for write paths
+
+- **Status:** pending
+- **Primary target:** `Toon Write Time (cycleSupport=false)` (must clear 0.5% on top of Cand-3a's 32K-pre-size baseline)
+- **Secondary watch:** `JsonIo Write Time (cycleSupport=false)` (should also gain), `Toon Read Time` (no regression)
+- **Files:**
+  - `json-io/src/main/java/com/cedarsoftware/io/JsonIo.java:375` (`toJson`) and `:513` (`toToon`).
+- **Plan:** introduce a `ThreadLocal<StringBuilder>` shared by `toJson` and `toToon` (mirrors `TL_LINE_BUF` on the read side). On entry, retrieve the TL builder, call `setLength(0)` to retain the previously grown capacity. After `sb.toString()`, before exiting, cap retained capacity at 1 MB by checking `sb.capacity()` — if it exceeds the cap, replace the TL value with a fresh `new StringBuilder(32768)`. This avoids the 32 KB per-call allocation and keeps the buffer warm in JIT-compiled write loops, while bounding memory in long-lived threads.
+- **Risk:** TL retention can pin memory in pooled threads — the 1 MB cap addresses that. If 3-run median doesn't clear 0.5% on top of Cand-3a's baseline, revert. Don't ship the TL without the cap.
 
 ## Candidate 4 — Grow `STRING_CACHE_MASK` on ToonReader from 2047 to 4095
 

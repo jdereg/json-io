@@ -6,23 +6,23 @@ Each row is the **median of 3 runs** of `JsonPerformanceTest`. The loop updates 
 
 | Metric | Full Java Resolution | Maps Only |
 |---|---:|---:|
-| JsonIo Write Time (cycleSupport=true) | 4576.364 | 5000.579 |
-| JsonIo Write Time (cycleSupport=false) | 4249.810 | 4183.566 |
-| Toon Write Time (cycleSupport=true) | 4858.595 | 5069.451 |
-| Toon Write Time (cycleSupport=false) | 4524.498 | 4614.733 |
-| Jackson Write Time | 2757.456 | 2772.330 |
-| JsonIo Read Time | 9231.364 | 4753.505 |
-| Toon Read Time | 10360.692 | 7053.499 |
-| Jackson Read Time | 5164.828 | 4065.556 |
+| JsonIo Write Time (cycleSupport=true) | 4613.892 | 5091.749 |
+| JsonIo Write Time (cycleSupport=false) | 4223.209 | 4203.855 |
+| Toon Write Time (cycleSupport=true) | 4694.445 | 4911.380 |
+| Toon Write Time (cycleSupport=false) | 4429.957 | 4487.169 |
+| Jackson Write Time | 2770.324 | 2781.221 |
+| JsonIo Read Time | 9243.218 | 4757.052 |
+| Toon Read Time | 10362.016 | 7056.516 |
+| Jackson Read Time | 5173.636 | 4042.249 |
 
 ## Active Jackson ratios (lower is closer to / better than Jackson)
 
 | Ratio | Full Java | Maps Only |
 |---|---:|---:|
-| Read Ratio (Toon/Jackson) | 2.00 | 1.74 |
-| Read Ratio (JsonIo/Jackson) | 1.78 | 1.17 |
-| Write Ratio (Toon cycleSupport=false / Jackson) | 1.63 | 1.67 |
-| Write Ratio (JsonIo cycleSupport=false / Jackson) | 1.52 | 1.52 |
+| Read Ratio (Toon/Jackson) | 2.01 | 1.75 |
+| Read Ratio (JsonIo/Jackson) | 1.79 | 1.18 |
+| Write Ratio (Toon cycleSupport=false / Jackson) | 1.60 | 1.61 |
+| Write Ratio (JsonIo cycleSupport=false / Jackson) | 1.53 | 1.51 |
 
 ## Run log
 
@@ -68,3 +68,17 @@ The loop appends here on every iteration. Format:
 - Implementation changes stashed as `reverted-candidate-2` (git stash) for recoverability.
 - Commit: (this commit, baseline + candidates only — implementation reverted)
 - Raw measurement logs: `.claude/perf-loop/runs/cand2-{1,2,3}.log`
+
+### 2026-05-02 18:01 — Candidate 3a: pre-size write StringBuilder to 32K — kept
+- Primary target metric: Toon Write Time (cycleSupport=false), both sections
+- Run medians (ms): Full primary 4429.957, Maps primary 4487.169
+- Prior baseline: Full primary 4524.498, Maps primary 4614.733
+- Delta vs prior on primary: Full **+2.09%**, Maps **+2.76%** (both well over the 0.5% bar)
+- Watch metrics: JsonIo Write c=false Full −0.63% / Maps +0.48% (inside 1%); Toon Read Full +0.01% / Maps +0.04% (essentially flat)
+- Bonus wins: Toon Write c=true Full +3.38% / Maps +3.12%; JsonIo Write c=false Full +0.63% (improved). The pre-size change benefits *every* path that goes through `JsonIo.toJson` or `JsonIo.toToon`.
+- Sanity-rule blip: JsonIo Write c=true (Maps) +1.82% (above 1% sanity bar). Override accepted by user — that metric's run-range was 4.28% range/median (5091/5100/4882 ms), so the 1.82% delta sits inside its natural noise envelope; if the candidate genuinely hurt c=true paths the Full section would have shown it (it's at −0.82%, negligible). User also re-ran JsonPerformanceTest in non-profile mode independently and confirmed best results in a while.
+- Run-set environmental noise: back to baseline-quality, Jackson held flat (Read −0.17%/+0.57%, Write −0.47%/−0.32%) — much cleaner than cand2's run set.
+- Decision: **kept**
+- Sub-experiment (b) (ThreadLocal<StringBuilder>) filed as new Candidate 3b (pending) per the candidate plan: "Test (b) as a separate candidate with its own median run".
+- Commit: (this commit)
+- Raw measurement logs: `.claude/perf-loop/runs/cand3a-{1,2,3}.log`

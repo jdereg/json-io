@@ -372,7 +372,7 @@ public class JsonIo {
         // the char->byte->char round-trip that this path does not need when returning a String.
         // StringBuilder stays in compact Latin-1 storage for pure-ASCII JSON, so the returned String's
         // internal byte[] can be produced with a single copy, not a UTF-8 decode pass.
-        StringBuilder sb = new StringBuilder(DEFAULT_CHAR_BUFFER_SIZE);
+        StringBuilder sb = new StringBuilder(32768);
         JsonWriter writer = null;
         try {
             writer = new JsonWriter(new StringBuilderWriter(sb), writeOptions);
@@ -510,7 +510,7 @@ public class JsonIo {
         // String.getChars (7.1%), Preconditions.checkFromIndexSize (4.3%), FastWriter.write (~6%).
         // StringBuilder stays in compact Latin-1 storage for pure-ASCII TOON, so the returned
         // String is materialized with a single copy instead of a UTF-8 decode pass.
-        StringBuilder sb = new StringBuilder(DEFAULT_CHAR_BUFFER_SIZE);
+        StringBuilder sb = new StringBuilder(32768);
         ToonWriter writer = null;
         try {
             writer = new ToonWriter(new StringBuilderWriter(sb), writeOptions);
