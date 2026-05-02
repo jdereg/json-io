@@ -114,3 +114,15 @@ The loop appends here on every iteration. Format:
 - The candidate is more useful for *diverse-data* workloads (varying types per row, many rows per section, real-world streaming). JsonPerformanceTest is structurally incapable of validating it. Re-running this candidate would burn ~20 min of implementation + measurement work to confirm a near-certain regression that wouldn't carry signal for the candidate's actual use case.
 - Decision: **deferred** (recorded as `reverted` because the loop only has kept/reverted states). Revisit if/when a more diverse benchmark becomes available, or if a future iteration adds a high-cardinality tabular section to JsonPerformanceTest.
 - Commit: (this commit, candidates.md + baseline.md only — no source changes, no run logs)
+
+### 2026-05-02 19:00 — Candidate 6: bypass duplicate cache write in formatDecimalNumber integer fast path — reverted
+- Primary target metric: Toon Write Time (cycleSupport=false), Full Java
+- Run medians (ms): Full primary 4339.815, Maps 4459.019
+- Prior baseline: Full primary 4391.386, Maps 4490.903
+- Delta vs prior on primary: Full **+1.17%** (clears 0.5% bar), Maps +0.71% (bonus)
+- Bonus wins on every other write metric (JsonIo Write c=true Full +2.34% / Maps +1.19%, JsonIo Write c=false Full +0.44% / Maps +0.79%, Toon Write c=true Full +0.84% / Maps +0.20%) — the dead-code removal touches every integer-valued double/float that flows through `formatDecimalNumber`.
+- Sanity-rule blip: **Toon Read Time (Maps) +2.15%** (above 1% sanity bar). Note: the candidate only modified ToonWriter (removed dead-code cache writes in `formatDecimalNumber`'s integer fast path), touched zero read-path code. `SHARED_DOUBLE_FORMAT_CACHE` is write-side only. No causal mechanism for ToonReader regression. Cand 4's baseline median for Toon Read Maps was 6903.87 (run-range 6902-7037, sitting at the low end of its own variance) — Cand 6's [7080, 6987, 7053] occupies the same noise envelope as Cand 4's run-3 (7037). Looks like baseline drift / Cand 4's lucky-low median.
+- Decision: **reverted** by user despite primary win, on strict-spec adherence (1% sanity rule). Documented for future calibration.
+- Implementation changes stashed as `reverted-candidate-6` (git stash) for recoverability.
+- Commit: (this commit, baseline + candidates only — implementation reverted)
+- Raw measurement logs: `.claude/perf-loop/runs/cand6-{1,2,3}.log`

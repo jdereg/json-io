@@ -75,7 +75,7 @@ Source-of-truth ordering: don't reorder; just flip statuses.
 
 ## Candidate 6 — Bypass duplicate cache write in `formatDecimalNumber` integer fast path
 
-- **Status:** pending
+- **Status:** reverted
 - **Primary target:** `Toon Write Time (cycleSupport=false)` (Full Java Resolution — the data set has doubles)
 - **Files:**
   - `json-io/src/main/java/com/cedarsoftware/io/ToonWriter.java:889–905` (and the `float` mirror at `:924–953`).
