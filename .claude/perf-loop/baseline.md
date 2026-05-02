@@ -126,3 +126,16 @@ The loop appends here on every iteration. Format:
 - Implementation changes stashed as `reverted-candidate-6` (git stash) for recoverability.
 - Commit: (this commit, baseline + candidates only — implementation reverted)
 - Raw measurement logs: `.claude/perf-loop/runs/cand6-{1,2,3}.log`
+
+### 2026-05-02 19:25 — Candidate 7: cache parsed Long in parseNumber(char[]) fast path — reverted
+- Primary target metric: Toon Read Time, Full Java
+- Run medians (ms): Full primary 10397.725, Maps 7095.985
+- Prior baseline: Full primary 10327.982, Maps 6903.869
+- Delta vs prior on primary: Full **−0.68%** (regression — fails 0.5% bar), Maps −2.78% (also regresses)
+- Sanity blips: Jackson Write Full +1.74% (third-party, looks like noise), Toon Read Maps +2.78% (above 1% bar but consistent with the primary regression)
+- Toon Read Full's run-range was 0.74% range/median this run set — very clean — so the −0.68% delta is a *real* regression on a stable metric, not a noise blip.
+- **Likely root cause:** the added `if (result < SMALL_LONG_CACHE.length)` check adds a branch on the hot unsigned-fast-path. For values < 128 (already cached by JDK's `LongCache`, which the JIT intrinsifies), we now do an extra array-bounds-checked read instead of letting the JIT use its intrinsic. For values 128–1023, the saved `new Long(...)` allocation is likely already eliminated by JIT escape analysis when the boxed Long is consumed immediately at the call site. Net: extra branch overhead > savings.
+- Decision: **reverted**
+- Implementation changes stashed as `reverted-candidate-7` (git stash) for recoverability.
+- Commit: (this commit, baseline + candidates only — implementation reverted)
+- Raw measurement logs: `.claude/perf-loop/runs/cand7-{1,2,3}.log`

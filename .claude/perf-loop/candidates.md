@@ -84,7 +84,7 @@ Source-of-truth ordering: don't reorder; just flip statuses.
 
 ## Candidate 7 — Cache parsed Long in `parseNumber(char[])` fast path
 
-- **Status:** pending
+- **Status:** reverted
 - **Primary target:** `Toon Read Time` (Full Java Resolution — int arrays + Long fields)
 - **Files:**
   - `json-io/src/main/java/com/cedarsoftware/io/ToonReader.java:1649–1673` (the unsigned-fast-path that returns `Long.valueOf(result)` without writing to the number cache).
