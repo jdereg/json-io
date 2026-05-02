@@ -514,13 +514,13 @@ public class ToonWriter implements Closeable, Flushable {
 
     private void writeReferenceValue(int refId) throws IOException {
         out.write(refKey);
-        out.write(": ");
+        out.write(':'); out.write(' ');
         out.write(Integer.toString(refId));
     }
 
     private void writeIdField(Object value) throws IOException {
         out.write(idKey);
-        out.write(": ");
+        out.write(':'); out.write(' ');
         out.write(Integer.toString(getReferenceId(value)));
     }
 
@@ -553,7 +553,7 @@ public class ToonWriter implements Closeable, Flushable {
 
     private void writeTypeField(Class<?> clazz) throws IOException {
         out.write(typeKey);
-        out.write(": ");
+        out.write(':'); out.write(' ');
         writeString(getTypeNameForOutput(clazz));
     }
 
@@ -1007,14 +1007,14 @@ public class ToonWriter implements Closeable, Flushable {
             }
             if (includeType) {
                 if (wroteMeta) {
-                    out.write(NEW_LINE);
+                    out.write('\n');
                     writeIndent();
                 }
                 writeTypeField(array.getClass());
                 wroteMeta = true;
             }
             if (wroteMeta) {
-                out.write(NEW_LINE);
+                out.write('\n');
                 writeIndent();
                 out.write(itemsKey);
             }
@@ -1039,7 +1039,7 @@ public class ToonWriter implements Closeable, Flushable {
 
         // Check if all elements are primitives (can use inline format)
         if (isAllPrimitives(array, length)) {
-            out.write(": ");
+            out.write(':'); out.write(' ');
             for (int i = 0; i < length; i++) {
                 if (i > 0) {
                     out.write(delimiter);
@@ -1057,7 +1057,7 @@ public class ToonWriter implements Closeable, Flushable {
                 out.write(":");
                 depth++;
                 for (int i = 0; i < length; i++) {
-                    out.write(NEW_LINE);
+                    out.write('\n');
                     writeIndent();
                     out.write("-");
                     Object element = getArrayElement(array, i);
@@ -1070,7 +1070,7 @@ public class ToonWriter implements Closeable, Flushable {
             out.write(":");
             depth++;
             for (int i = 0; i < length; i++) {
-                out.write(NEW_LINE);
+                out.write('\n');
                 writeIndent();
                 out.write("-");
                 Object element = getArrayElement(array, i);
@@ -1102,14 +1102,14 @@ public class ToonWriter implements Closeable, Flushable {
             }
             if (includeType) {
                 if (wroteMeta) {
-                    out.write(NEW_LINE);
+                    out.write('\n');
                     writeIndent();
                 }
                 writeTypeField(collection.getClass());
                 wroteMeta = true;
             }
             if (wroteMeta) {
-                out.write(NEW_LINE);
+                out.write('\n');
                 writeIndent();
                 out.write(itemsKey);
             }
@@ -1142,7 +1142,7 @@ public class ToonWriter implements Closeable, Flushable {
         }
 
         if (allPrimitives) {
-            out.write(": ");
+            out.write(':'); out.write(' ');
             boolean first = true;
             for (Object element : collection) {
                 if (!first) {
@@ -1169,7 +1169,7 @@ public class ToonWriter implements Closeable, Flushable {
                     out.write(":");
                     depth++;
                     for (Object element : collection) {
-                        out.write(NEW_LINE);
+                        out.write('\n');
                         writeIndent();
                         out.write("-");
                         writeListElement(element);
@@ -1181,7 +1181,7 @@ public class ToonWriter implements Closeable, Flushable {
                 out.write(":");
                 depth++;
                 for (Object element : collection) {
-                    out.write(NEW_LINE);
+                    out.write('\n');
                     writeIndent();
                     out.write("-");
                     writeListElement(element);
@@ -1265,7 +1265,7 @@ public class ToonWriter implements Closeable, Flushable {
     private void writeTabularRows(Collection<?> collection, List<String> keys) throws IOException {
         depth++;
         for (Object element : collection) {
-            out.write(NEW_LINE);
+            out.write('\n');
             writeIndent();
 
             // Elements are guaranteed to be Maps by getUniformKeys check
@@ -1498,7 +1498,7 @@ public class ToonWriter implements Closeable, Flushable {
     private void writeTabularPOJORows(UniformPojoArrayData data, Collection<?> collection) throws IOException {
         depth++;
         for (Object element : collection) {
-            out.write(NEW_LINE);
+            out.write('\n');
             writeIndent();
             writeTabularPOJORow(data, element);
         }
@@ -1513,7 +1513,7 @@ public class ToonWriter implements Closeable, Flushable {
         depth++;
         for (int i = 0; i < length; i++) {
             Object element = getArrayElement(array, i);
-            out.write(NEW_LINE);
+            out.write('\n');
             writeIndent();
             writeTabularPOJORow(data, element);
         }
@@ -1560,7 +1560,7 @@ public class ToonWriter implements Closeable, Flushable {
             // Nested map - first field on hyphen line per TOON spec
             Map<?, ?> mapElement = (Map<?, ?>) element;
             if (hasComplexKeys(mapElement)) {
-                out.write(NEW_LINE);
+                out.write('\n');
                 depth++;
                 writeMap(mapElement);
                 depth--;
@@ -1573,7 +1573,7 @@ public class ToonWriter implements Closeable, Flushable {
                     || shouldWriteTypeMetadata(element.getClass())) {
                 // When type metadata is present, wrapping ensures $type and $items
                 // are properly indented relative to the parent hyphen.
-                out.write(NEW_LINE);
+                out.write('\n');
                 depth++;
                 writeIndent();
                 writeCollection((Collection<?>) element);
@@ -1586,7 +1586,7 @@ public class ToonWriter implements Closeable, Flushable {
             // Nested array
             if (shouldWrapArrayOrCollectionValue(element)
                     || shouldWriteTypeMetadata(element.getClass())) {
-                out.write(NEW_LINE);
+                out.write('\n');
                 depth++;
                 writeIndent();
                 writeArray(element);
@@ -1641,7 +1641,7 @@ public class ToonWriter implements Closeable, Flushable {
                     out.write(" ");
                     first = false;
                 } else {
-                    out.write(NEW_LINE);
+                    out.write('\n');
                     depth++;
                     writeIndent();
                     depth--;
@@ -1654,7 +1654,7 @@ public class ToonWriter implements Closeable, Flushable {
                     out.write(" ");
                     first = false;
                 } else {
-                    out.write(NEW_LINE);
+                    out.write('\n');
                     depth++;
                     writeIndent();
                     depth--;
@@ -1716,7 +1716,7 @@ public class ToonWriter implements Closeable, Flushable {
                     out.write(" ");
                     first = false;
                 } else {
-                    out.write(NEW_LINE);
+                    out.write('\n');
                     depth++;
                     writeIndent();
                     depth--;
@@ -1735,7 +1735,7 @@ public class ToonWriter implements Closeable, Flushable {
                         out.write(" ");
                         first = false;
                     } else {
-                        out.write(NEW_LINE);
+                        out.write('\n');
                         depth++;
                         writeIndent();
                         depth--;
@@ -1757,7 +1757,7 @@ public class ToonWriter implements Closeable, Flushable {
                     out.write(" ");
                     first = false;
                 } else {
-                    out.write(NEW_LINE);
+                    out.write('\n');
                     depth++;
                     writeIndent();
                     depth--;
@@ -1835,7 +1835,7 @@ public class ToonWriter implements Closeable, Flushable {
                         writeIndent();
                         writeIdField(map);
                         if (includeType) {
-                            out.write(NEW_LINE);
+                            out.write('\n');
                         }
                     }
                     if (includeType) {
@@ -1867,14 +1867,14 @@ public class ToonWriter implements Closeable, Flushable {
                         writeIndent();
                         writeIdField(map);
                         if (includeType) {
-                            out.write(NEW_LINE);
+                            out.write('\n');
                         }
                     }
                     if (includeType) {
                         writeIndent();
                         writeTypeField(map.getClass());
                     }
-                    out.write(NEW_LINE);
+                    out.write('\n');
                 }
                 writeMapWithSimpleKeys(map);
             }
@@ -1918,7 +1918,7 @@ public class ToonWriter implements Closeable, Flushable {
         boolean first = true;
         for (Map.Entry<?, ?> entry : map.entrySet()) {
             if (!first) {
-                out.write(NEW_LINE);
+                out.write('\n');
             }
             first = false;
             writeIndent();
@@ -1949,25 +1949,25 @@ public class ToonWriter implements Closeable, Flushable {
                 || value instanceof java.util.OptionalLong
                 || value instanceof java.util.OptionalDouble) {
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
-            out.write(": ");
+            out.write(':'); out.write(' ');
             writeValue(value);
             return;
         }
         if (value instanceof String) {
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
-            out.write(": ");
+            out.write(':'); out.write(' ');
             writeString((String) value);
             return;
         }
         if (value instanceof Integer) {
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
-            out.write(": ");
+            out.write(':'); out.write(' ');
             out.write(toCachedLongString((Integer) value));
             return;
         }
         if (value instanceof Long) {
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
-            out.write(": ");
+            out.write(':'); out.write(' ');
             out.write(toCachedLongString((Long) value));
             return;
         }
@@ -1978,7 +1978,7 @@ public class ToonWriter implements Closeable, Flushable {
         }
         if (value instanceof Double) {
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
-            out.write(": ");
+            out.write(':'); out.write(' ');
             writeNumber((Number) value);
             return;
         }
@@ -1998,13 +1998,13 @@ public class ToonWriter implements Closeable, Flushable {
         if (value instanceof char[]) {
             // char[] is written as a plain string value (Converter handles String → char[] on read)
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
-            out.write(": ");
+            out.write(':'); out.write(' ');
             writeString(new String((char[]) value));
         } else if (value != null && value.getClass().isArray()) {
             if (shouldWrapArrayOrCollectionValue(value)) {
                 writeKeyStringKnown(keyStr, keyNeedsQuoting);
                 out.write(":");
-                out.write(NEW_LINE);
+                out.write('\n');
                 depth++;
                 writeIndent();
                 writeArray(value);
@@ -2022,7 +2022,7 @@ public class ToonWriter implements Closeable, Flushable {
                 // When type metadata is needed, use writeCollection (which emits $type/$items).
                 writeKeyStringKnown(keyStr, keyNeedsQuoting);
                 out.write(":");
-                out.write(NEW_LINE);
+                out.write('\n');
                 depth++;
                 writeIndent();
                 writeCollection((Collection<?>) value);
@@ -2042,7 +2042,7 @@ public class ToonWriter implements Closeable, Flushable {
                 out.write(" {}");
             } else if (value != null && !isPrimitive(value)) {
                 // Nested object - newline, no trailing space after colon
-                out.write(NEW_LINE);
+                out.write('\n');
                 depth++;
                 if (value instanceof Map) {
                     // writeMap handles its own indentation per entry
@@ -2078,25 +2078,25 @@ public class ToonWriter implements Closeable, Flushable {
                 || value instanceof java.util.OptionalLong
                 || value instanceof java.util.OptionalDouble) {
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
-            out.write(": ");
+            out.write(':'); out.write(' ');
             writeValue(value);
             return;
         }
         if (value instanceof String) {
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
-            out.write(": ");
+            out.write(':'); out.write(' ');
             writeString((String) value);
             return;
         }
         if (value instanceof Integer) {
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
-            out.write(": ");
+            out.write(':'); out.write(' ');
             out.write(toCachedLongString((Integer) value));
             return;
         }
         if (value instanceof Long) {
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
-            out.write(": ");
+            out.write(':'); out.write(' ');
             out.write(toCachedLongString((Long) value));
             return;
         }
@@ -2107,20 +2107,20 @@ public class ToonWriter implements Closeable, Flushable {
         }
         if (value instanceof Double) {
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
-            out.write(": ");
+            out.write(':'); out.write(' ');
             writeNumber((Number) value);
             return;
         }
 
         if (value instanceof char[]) {
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
-            out.write(": ");
+            out.write(':'); out.write(' ');
             writeString(new String((char[]) value));
         } else if (value != null && value.getClass().isArray()) {
             if (shouldWrapArrayOrCollectionValue(value)) {
                 writeKeyStringKnown(keyStr, keyNeedsQuoting);
                 out.write(":");
-                out.write(NEW_LINE);
+                out.write('\n');
                 depth += 2;
                 writeIndent();
                 writeArray(value);
@@ -2136,7 +2136,7 @@ public class ToonWriter implements Closeable, Flushable {
                     || shouldWriteTypeMetadata(value.getClass())) {
                 writeKeyStringKnown(keyStr, keyNeedsQuoting);
                 out.write(":");
-                out.write(NEW_LINE);
+                out.write('\n');
                 depth += 2;
                 writeIndent();
                 writeCollection((Collection<?>) value);
@@ -2155,7 +2155,7 @@ public class ToonWriter implements Closeable, Flushable {
             if (value instanceof Map && ((Map<?, ?>) value).isEmpty()) {
                 out.write(" {}");
             } else if (value != null && !isPrimitive(value)) {
-                out.write(NEW_LINE);
+                out.write('\n');
                 depth += 2;
                 if (value instanceof Map) {
                     writeMap((Map<?, ?>) value);
@@ -2176,13 +2176,13 @@ public class ToonWriter implements Closeable, Flushable {
     private void writeFoldedEntry(String path, Object value) throws IOException {
         if (value instanceof char[]) {
             writeString(path);
-            out.write(": ");
+            out.write(':'); out.write(' ');
             writeString(new String((char[]) value));
         } else if (value != null && value.getClass().isArray()) {
             if (shouldWrapArrayOrCollectionValue(value)) {
                 writeString(path);
                 out.write(":");
-                out.write(NEW_LINE);
+                out.write('\n');
                 depth++;
                 writeIndent();
                 writeArray(value);
@@ -2198,7 +2198,7 @@ public class ToonWriter implements Closeable, Flushable {
                     || shouldWriteTypeMetadata(value.getClass())) {
                 writeString(path);
                 out.write(":");
-                out.write(NEW_LINE);
+                out.write('\n');
                 depth++;
                 writeIndent();
                 writeCollection((Collection<?>) value);
@@ -2213,7 +2213,7 @@ public class ToonWriter implements Closeable, Flushable {
             // Non-foldable map at the end of the chain
             writeString(path);
             out.write(":");
-            out.write(NEW_LINE);
+            out.write('\n');
             depth++;
             writeMap((Map<?, ?>) value);
             depth--;
@@ -2221,14 +2221,14 @@ public class ToonWriter implements Closeable, Flushable {
             // Object at end of chain
             writeString(path);
             out.write(":");
-            out.write(NEW_LINE);
+            out.write('\n');
             depth++;
             writeNestedObject(value);
             depth--;
         } else {
             // Primitive value
             writeString(path);
-            out.write(": ");
+            out.write(':'); out.write(' ');
             writeValue(value);
         }
     }
@@ -2247,10 +2247,10 @@ public class ToonWriter implements Closeable, Flushable {
         out.write(countMarker(map.size()) + ":");
 
         for (Map.Entry<?, ?> entry : map.entrySet()) {
-            out.write(NEW_LINE);
+            out.write('\n');
             writeIndent();
             out.write("- ");
-            out.write(NEW_LINE);
+            out.write('\n');
             depth++;
 
             // Write key (using $key to avoid collision with objects that have a "key" field)
@@ -2261,7 +2261,7 @@ public class ToonWriter implements Closeable, Flushable {
                 out.write(" ");
                 writeValue(key);
             } else {
-                out.write(NEW_LINE);
+                out.write('\n');
                 depth++;
                 if (key instanceof Map) {
                     writeMap((Map<?, ?>) key);
@@ -2278,7 +2278,7 @@ public class ToonWriter implements Closeable, Flushable {
             }
 
             // Write value (using $value to avoid collision with objects that have a "value" field)
-            out.write(NEW_LINE);
+            out.write('\n');
             writeIndent();
             out.write("$value:");
             Object value = entry.getValue();
@@ -2286,7 +2286,7 @@ public class ToonWriter implements Closeable, Flushable {
                 out.write(" ");
                 writeValue(value);
             } else {
-                out.write(NEW_LINE);
+                out.write('\n');
                 depth++;
                 if (value instanceof Map) {
                     writeMap((Map<?, ?>) value);
@@ -2310,20 +2310,20 @@ public class ToonWriter implements Closeable, Flushable {
         if (includeId) {
             writeIndent();
             out.write(idKey);
-            out.write(": ");
+            out.write(':'); out.write(' ');
             out.write(Integer.toString(getReferenceId(map)));
-            out.write(NEW_LINE);
+            out.write('\n');
         }
         if (includeType) {
             writeIndent();
             writeTypeField(map.getClass());
-            out.write(NEW_LINE);
+            out.write('\n');
         }
         writeIndent();
         out.write(keysKey);
         out.write(countMarker(map.size()));
         writeCollectionElementsWithHeader(map.keySet());
-        out.write(NEW_LINE);
+        out.write('\n');
         writeIndent();
         out.write(itemsKey);
         out.write(countMarker(map.size()));
@@ -2409,7 +2409,7 @@ public class ToonWriter implements Closeable, Flushable {
         }
         if (includeType) {
             if (wroteField) {
-                out.write(NEW_LINE);
+                out.write('\n');
             }
             writeIndent();
             writeTypeField(clazz);
@@ -2424,7 +2424,7 @@ public class ToonWriter implements Closeable, Flushable {
             }
             if (canWritePrimitiveFieldDirect(plan)) {
                 if (wroteField) {
-                    out.write(NEW_LINE);
+                    out.write('\n');
                 }
                 wroteField = true;
                 writeIndent();
@@ -2442,7 +2442,7 @@ public class ToonWriter implements Closeable, Flushable {
             String key = plan.accessor().getUniqueFieldName();
 
             if (wroteField) {
-                out.write(NEW_LINE);
+                out.write('\n');
             }
             wroteField = true;
             writeIndent();
@@ -2471,7 +2471,7 @@ public class ToonWriter implements Closeable, Flushable {
 
     private void writePrimitiveFieldEntry(Object obj, WriteOptionsBuilder.WriteFieldPlan plan) throws IOException {
         writeKeyStringKnown(plan.accessor().getUniqueFieldName(), plan.toonKeyNeedsQuoting());
-        out.write(": ");
+        out.write(':'); out.write(' ');
         writePrimitiveFieldValue(obj, plan);
     }
 
@@ -2542,13 +2542,13 @@ public class ToonWriter implements Closeable, Flushable {
             }
             if (includeType) {
                 if (includeId) {
-                    out.write(NEW_LINE);
+                    out.write('\n');
                 }
                 writeIndent();
                 writeTypeField(obj.getClass());
             }
             if (!fields.isEmpty()) {
-                out.write(NEW_LINE);
+                out.write('\n');
                 writeMapWithSimpleKeys(fields);
             }
         } else if (fields.isEmpty()) {

@@ -10,7 +10,7 @@ Source-of-truth ordering: don't reorder; just flip statuses.
 
 ## Candidate 1 — Eliminate `": "` and `NEW_LINE` String appends in TOON write
 
-- **Status:** pending
+- **Status:** kept
 - **Primary target:** `Toon Write Time (cycleSupport=false)` (Maps Only and Full Java)
 - **Secondary watch:** `Toon Read Time` (no regression)
 - **Files:**
