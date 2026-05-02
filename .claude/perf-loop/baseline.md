@@ -82,3 +82,16 @@ The loop appends here on every iteration. Format:
 - Sub-experiment (b) (ThreadLocal<StringBuilder>) filed as new Candidate 3b (pending) per the candidate plan: "Test (b) as a separate candidate with its own median run".
 - Commit: (this commit)
 - Raw measurement logs: `.claude/perf-loop/runs/cand3a-{1,2,3}.log`
+
+### 2026-05-02 18:14 — Candidate 3b: thread-local StringBuilder for write paths — reverted
+- Primary target metric: Toon Write Time (cycleSupport=false), both sections (must clear 0.5% on top of Cand-3a's baseline)
+- Run medians (ms): Full primary 4574.490, Maps primary 4609.712
+- Prior baseline (post-cand3a): Full primary 4429.957, Maps primary 4487.169
+- Delta vs prior on primary: Full **−3.26%** (regression), Maps **−2.73%** (regression) — fails 0.5% bar in both sections
+- Watch metric JsonIo Write c=false: Full **+8.84%**, Maps **+6.63%** (both far above 1% bar — major regression)
+- Run-set variance: write metrics 8–13% range/median across the 3 runs; read metrics clean (<1.2%). Variance concentrated entirely in the paths cand 3b modified.
+- **Likely root cause: TL pattern defeats JIT escape analysis.** Run 1 is dramatically slower than runs 2–3 across every write metric (classic JIT warmup signature). `new StringBuilder(32768)` (Cand 3a) lets the JIT stack-allocate or scalar-replace the SB since it only escapes through StringBuilderWriter. The borrow/release indirection through `BUFFER_RECYCLER.get()` + `borrowWriteStringBuilder()` + the `inUse` flag check + `setLength(0)` forces the SB to live on the heap. Even discarding run 1 as warmup, runs 2+3 medians still regress ~2% on the primary.
+- Decision: **reverted**
+- Implementation changes stashed as `reverted-candidate-3b` (git stash) for recoverability.
+- Commit: (this commit, baseline + candidates only — implementation reverted)
+- Raw measurement logs: `.claude/perf-loop/runs/cand3b-{1,2,3}.log`

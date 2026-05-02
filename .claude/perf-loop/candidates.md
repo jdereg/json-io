@@ -43,7 +43,7 @@ Source-of-truth ordering: don't reorder; just flip statuses.
 
 ## Candidate 3b — Thread-local `StringBuilder` for write paths
 
-- **Status:** pending
+- **Status:** reverted
 - **Primary target:** `Toon Write Time (cycleSupport=false)` (must clear 0.5% on top of Cand-3a's 32K-pre-size baseline)
 - **Secondary watch:** `JsonIo Write Time (cycleSupport=false)` (should also gain), `Toon Read Time` (no regression)
 - **Files:**
