@@ -107,3 +107,10 @@ The loop appends here on every iteration. Format:
 - Decision: **kept**
 - Commit: (this commit)
 - Raw measurement logs: `.claude/perf-loop/runs/cand4-{1,2,3}.log`
+
+### 2026-05-02 18:46 — Candidate 5: skip cacheSubstringFromBuf for high-cardinality tabular cells — reverted (deferred)
+- **No implementation attempted.** Skipped on workload-mismatch grounds before measurement.
+- Reasoning: the candidate's heuristic decides per-column "uncached" mode at probe count = 32 with hit rate < 10%. JsonPerformanceTest calls `fromToon(toonString)` 100,000 times on the **same** input; the per-thread `TL_STRING_CACHE` persists across iterations, so column hit rates after warmup are ~100%, never <10%. The heuristic would never switch any column to uncached. Additionally, `TestData.members[4]{name,age}` (the relevant tabular section) has only 4 rows, fitting entirely inside the 32-probe tracking window — every cell pays the per-call counter overhead with no compensating savings.
+- The candidate is more useful for *diverse-data* workloads (varying types per row, many rows per section, real-world streaming). JsonPerformanceTest is structurally incapable of validating it. Re-running this candidate would burn ~20 min of implementation + measurement work to confirm a near-certain regression that wouldn't carry signal for the candidate's actual use case.
+- Decision: **deferred** (recorded as `reverted` because the loop only has kept/reverted states). Revisit if/when a more diverse benchmark becomes available, or if a future iteration adds a high-cardinality tabular section to JsonPerformanceTest.
+- Commit: (this commit, candidates.md + baseline.md only — no source changes, no run logs)

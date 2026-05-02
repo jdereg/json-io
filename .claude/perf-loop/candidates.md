@@ -64,7 +64,7 @@ Source-of-truth ordering: don't reorder; just flip statuses.
 
 ## Candidate 5 — Skip `cacheSubstringFromBuf` for high-cardinality tabular cells
 
-- **Status:** pending
+- **Status:** reverted (deferred — no implementation tried; workload mismatch with JsonPerformanceTest)
 - **Primary target:** `Toon Read Time` (Full Java Resolution)
 - **Secondary watch:** small-table workloads must not regress
 - **Files:**
