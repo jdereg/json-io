@@ -53,7 +53,7 @@ Source-of-truth ordering: don't reorder; just flip statuses.
 
 ## Candidate 4 — Grow `STRING_CACHE_MASK` on ToonReader from 2047 to 4095
 
-- **Status:** pending
+- **Status:** kept
 - **Primary target:** `Toon Read Time` (Maps Only and Full Java)
 - **Secondary watch:** `JsonIo Read Time` (no regression — different cache)
 - **Files:**

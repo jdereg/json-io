@@ -6,23 +6,23 @@ Each row is the **median of 3 runs** of `JsonPerformanceTest`. The loop updates 
 
 | Metric | Full Java Resolution | Maps Only |
 |---|---:|---:|
-| JsonIo Write Time (cycleSupport=true) | 4613.892 | 5091.749 |
-| JsonIo Write Time (cycleSupport=false) | 4223.209 | 4203.855 |
-| Toon Write Time (cycleSupport=true) | 4694.445 | 4911.380 |
-| Toon Write Time (cycleSupport=false) | 4429.957 | 4487.169 |
-| Jackson Write Time | 2770.324 | 2781.221 |
-| JsonIo Read Time | 9243.218 | 4757.052 |
-| Toon Read Time | 10362.016 | 7056.516 |
-| Jackson Read Time | 5173.636 | 4042.249 |
+| JsonIo Write Time (cycleSupport=true) | 4740.073 | 5177.875 |
+| JsonIo Write Time (cycleSupport=false) | 4228.062 | 4251.564 |
+| Toon Write Time (cycleSupport=true) | 4747.966 | 4918.342 |
+| Toon Write Time (cycleSupport=false) | 4391.386 | 4490.903 |
+| Jackson Write Time | 2772.912 | 2784.051 |
+| JsonIo Read Time | 9231.962 | 4779.621 |
+| Toon Read Time | 10327.982 | 6903.869 |
+| Jackson Read Time | 5186.775 | 4073.596 |
 
 ## Active Jackson ratios (lower is closer to / better than Jackson)
 
 | Ratio | Full Java | Maps Only |
 |---|---:|---:|
-| Read Ratio (Toon/Jackson) | 2.01 | 1.75 |
+| Read Ratio (Toon/Jackson) | 1.99 | 1.69 |
 | Read Ratio (JsonIo/Jackson) | 1.79 | 1.18 |
-| Write Ratio (Toon cycleSupport=false / Jackson) | 1.60 | 1.61 |
-| Write Ratio (JsonIo cycleSupport=false / Jackson) | 1.53 | 1.51 |
+| Write Ratio (Toon cycleSupport=false / Jackson) | 1.58 | 1.62 |
+| Write Ratio (JsonIo cycleSupport=false / Jackson) | 1.52 | 1.51 |
 
 ## Run log
 
@@ -95,3 +95,15 @@ The loop appends here on every iteration. Format:
 - Implementation changes stashed as `reverted-candidate-3b` (git stash) for recoverability.
 - Commit: (this commit, baseline + candidates only — implementation reverted)
 - Raw measurement logs: `.claude/perf-loop/runs/cand3b-{1,2,3}.log`
+
+### 2026-05-02 18:31 — Candidate 4: grow STRING_CACHE_MASK 2047→4095 — kept
+- Primary target metric: Toon Read Time, both sections
+- Run medians (ms): Full primary 10327.982, Maps primary 6903.869
+- Prior baseline: Full primary 10362.016, Maps primary 7056.516
+- Delta vs prior on primary: Full **+0.33%** (essentially flat), Maps **+2.16%** (clears 0.5% bar)
+- Watch metric JsonIo Read Time: Full −0.12%, Maps +0.47% (both inside 1% bar — different cache, no contention)
+- Asymmetric primary outcome accepted by user. Plausible workload explanation: in Maps mode every parsed value becomes a String key/value (high pressure on the string cache → bigger cache helps). In Full Java mode many values resolve to typed primitives (int, long, etc.) without hitting the cache → 2K already fit Full Java's working set, only Maps mode pressures it.
+- Sanity-rule blips on WRITE metrics (JsonIo Write c=true Full +2.73% / Maps +1.69%, JsonIo Write c=false Maps +1.13%, Toon Write c=true Full +1.14%) are noise: the candidate only changes a read-side cache mask, no causal mechanism for write-path regression. JsonIo Write c=true Full's run-range was 7.43% range/median this set — same metric was 6.86% for Cand 3a, looks like an inherently noisy metric on this benchmark.
+- Decision: **kept**
+- Commit: (this commit)
+- Raw measurement logs: `.claude/perf-loop/runs/cand4-{1,2,3}.log`

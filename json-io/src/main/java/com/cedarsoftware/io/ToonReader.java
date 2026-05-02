@@ -63,7 +63,7 @@ public class ToonReader {
 
     private static final int INDENT_SIZE = 2;  // 2 spaces per indent level (matches ToonWriter)
     private static final char DELIMITER = ','; // Default delimiter (matches ToonWriter)
-    private static final int STRING_CACHE_MASK = 2047;
+    private static final int STRING_CACHE_MASK = 4095;
     private static final int MAX_CACHED_STRING_LENGTH = 64;
     private static final int NUMBER_CACHE_MASK = 1023;
 
