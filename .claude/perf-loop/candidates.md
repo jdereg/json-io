@@ -204,7 +204,9 @@ The 5/3 morning JFR (`~/IdeaSnapshots/JsonPerformanceTest_2026_05_03_084235.jfr`
 
 ## Candidate 18 — `JsonParser.readNumber` hotspot investigation (discovery candidate)
 
-- **Status:** pending
+- **Status:** reverted (deferred — investigation completed pre-loop; no actionable optimization within the 0.5% bar)
+- **Investigation finding (5/3 9:46 JFR call-tree analysis):** of 237 leaf samples in `JsonParser.readNumber`, the bulk are inside the method body's integer fast-path (lines 667–690) doing the actual digit-parse work. The fast path is structurally identical to `ToonReader.parseNumber`'s (tight char-range checks, direct `n = n * 10 + (d - '0')` accumulation, no per-digit boxing). Children: 29 leaves in `readFloatingPoint` (delegated for floats), 29 in `skipWhitespaceRead` (preceding whitespace), only 3 in `Long.valueOf` (confirming Cand 7's lesson — JIT intrinsifies small-Long boxing). No surprise hotspot underneath. The 2.5% leaf time represents necessary work, not bypassable overhead.
+- **The deeper opportunity** (out of scope for this loop): eliminate `Number` autoboxing across the `JsonParser → JsonObject → Resolver` pipeline by returning primitive `long` from `readNumber` and threading the primitive through the value path. Multi-file refactor with broad blast radius (touches `JsonObject`, the parser/resolver contract, every call site of `readValue`). File as a separate architectural initiative if pursued, not as a loop candidate.
 - **Primary target:** `JsonIo Read Time` (Maps Only and Full Java) — investigation result determines exact target
 - **Secondary watch:** `Toon Read Time` (no regression — `ToonReader.parseNumber` is the analogous TOON path, separate)
 - **Files:**

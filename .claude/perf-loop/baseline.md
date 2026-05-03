@@ -180,6 +180,14 @@ The loop appends here on every iteration. Format:
 - Decision: **deferred** (recorded as `reverted`). Revisit if a future iteration finds a different `parseNumber` fast-path optimization that does clear the 0.5% bar — at that point this candidate becomes "port that change to `JsonParser.readNumber`."
 - Commit: (this commit, candidates.md + baseline.md only — no source changes, no run logs)
 
+### 2026-05-03 09:55 — Candidate 18: JsonParser.readNumber hotspot investigation — reverted (deferred, investigation completed)
+- **No implementation attempted.** Discovery candidate; investigation completed in-session against the 5/3 9:46 JFR call-tree.
+- Finding: of 237 leaf samples in `JsonParser.readNumber`, the bulk are inside the method body's integer fast path (JsonParser.java:667-690) doing the actual digit-parse work. The fast path is structurally identical to `ToonReader.parseNumber`'s (tight char-range checks, direct `n = n * 10 + (d - '0')` accumulation, no per-digit boxing). Children: 29 leaves in `readFloatingPoint`, 29 in `skipWhitespaceRead`, only 3 in `Long.valueOf` (Cand 7's lesson holds: JIT intrinsifies small-Long boxing).
+- No surprise hotspot underneath. The 2.5% leaf time represents necessary work, not bypassable overhead.
+- Deeper opportunity (out of scope): eliminate `Number` autoboxing across the `JsonParser → JsonObject → Resolver` pipeline by returning primitive `long` from `readNumber`. Multi-file refactor outside loop scope.
+- Decision: **deferred** (recorded as `reverted`). Investigation preserved; no follow-up loop candidate filed.
+- Commit: (this commit, candidates.md + baseline.md only — no source changes, no run logs)
+
 ### 2026-05-02 21:38 — Candidate 12: writeJsonUtf8String slice via thread-local char[] — reverted (deferred)
 - **No implementation attempted.** Skipped on a combination of speculative gain and Cand 3b's negative finding about TL on write paths.
 - Reasoning:
