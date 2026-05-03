@@ -120,7 +120,7 @@ Source-of-truth ordering: don't reorder; just flip statuses.
 
 ## Candidate 11 — Port number-parse fast path to `JsonParser.readNumber`
 
-- **Status:** pending
+- **Status:** reverted (deferred — gated on Cand 7 being kept; Cand 7 reverted, so nothing to port)
 - **Primary target:** `JsonIo Read Time` (Full Java)
 - **Files:**
   - `json-io/src/main/java/com/cedarsoftware/io/JsonParser.java` — locate `readNumber` (it appears at high JFR sample count: 265 leaf samples).

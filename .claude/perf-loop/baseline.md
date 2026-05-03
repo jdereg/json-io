@@ -174,3 +174,8 @@ The loop appends here on every iteration. Format:
 - The remaining theoretical gain would require changing `fastScalarCoercion`'s signature to accept a primitive `long` instead of `Object value` + `Class<?> valueClass`, which would be a much larger refactor not covered by this candidate's scope. Plus, per Cand 7's lesson, manual extension of JDK's small-int caches tends to lose to the JIT's intrinsified path.
 - Decision: **deferred** (recorded as `reverted` because the loop only has kept/reverted states). No further action.
 - Commit: (this commit, candidates.md + baseline.md only — no source changes, no run logs)
+
+### 2026-05-02 21:36 — Candidate 11: port number-parse fast path to JsonParser.readNumber — reverted (deferred)
+- **No implementation attempted.** The candidate plan explicitly states "Only worth running if Candidate 7 was kept." Cand 7 reverted, so there is no fast-path implementation to port to `JsonParser.readNumber`.
+- Decision: **deferred** (recorded as `reverted`). Revisit if a future iteration finds a different `parseNumber` fast-path optimization that does clear the 0.5% bar — at that point this candidate becomes "port that change to `JsonParser.readNumber`."
+- Commit: (this commit, candidates.md + baseline.md only — no source changes, no run logs)
