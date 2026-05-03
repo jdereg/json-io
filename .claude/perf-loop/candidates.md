@@ -129,7 +129,7 @@ Source-of-truth ordering: don't reorder; just flip statuses.
 
 ## Candidate 12 — `writeJsonUtf8String` slice via thread-local char[]
 
-- **Status:** pending
+- **Status:** reverted (deferred — speculative gain + TL pattern conflicts with Cand 3b's findings)
 - **Primary target:** `JsonIo Write Time (cycleSupport=false)`
 - **Files:**
   - `json-io/src/main/java/com/cedarsoftware/io/JsonWriter.java:3105–3156` (`writeJsonUtf8String`)

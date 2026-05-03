@@ -179,3 +179,13 @@ The loop appends here on every iteration. Format:
 - **No implementation attempted.** The candidate plan explicitly states "Only worth running if Candidate 7 was kept." Cand 7 reverted, so there is no fast-path implementation to port to `JsonParser.readNumber`.
 - Decision: **deferred** (recorded as `reverted`). Revisit if a future iteration finds a different `parseNumber` fast-path optimization that does clear the 0.5% bar — at that point this candidate becomes "port that change to `JsonParser.readNumber`."
 - Commit: (this commit, candidates.md + baseline.md only — no source changes, no run logs)
+
+### 2026-05-02 21:38 — Candidate 12: writeJsonUtf8String slice via thread-local char[] — reverted (deferred)
+- **No implementation attempted.** Skipped on a combination of speculative gain and Cand 3b's negative finding about TL on write paths.
+- Reasoning:
+  - `StringBuilderWriter.write(String, off, len)` already calls `sb.append(s, off, off+len)`, which internally uses `String.getChars` — the same `getChars` work the candidate proposes routing through a TL scratch buffer manually.
+  - Net savings would only come from `sb.append(char[], 0, len)` being meaningfully faster than `sb.append(String, off, off+len)`. Modern JDK `StringBuilder` has both routes go through `putCharsAt` after the same Latin-1 vs UTF-16 dispatch.
+  - **Cand 3b precedent:** adding a ThreadLocal char[] at a hot write path defeats JIT escape analysis. Cand 3b's TL `StringBuilder` regressed Toon Write by ~3% even on a similar shape (per-call buffer that the JIT could otherwise stack-allocate). A TL scratch char[] in `writeJsonUtf8String` carries the same risk, with smaller expected upside.
+  - Implementation cost is non-trivial: TL detection (writer-instanceof check), bound management (grow vs chunk slices), and a non-StringBuilderWriter fallback path. ~30-45 min for an experiment with low expected ceiling.
+- Decision: **deferred** (recorded as `reverted`). If future profiling singles out the `sb.append(String,off,off+len)` charAt loop as a remaining bottleneck despite the JIT, revisit with a per-call (non-TL) buffer first to avoid the escape-analysis pitfall.
+- Commit: (this commit, candidates.md + baseline.md only — no source changes, no run logs)
