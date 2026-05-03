@@ -180,6 +180,17 @@ The loop appends here on every iteration. Format:
 - Decision: **deferred** (recorded as `reverted`). Revisit if a future iteration finds a different `parseNumber` fast-path optimization that does clear the 0.5% bar — at that point this candidate becomes "port that change to `JsonParser.readNumber`."
 - Commit: (this commit, candidates.md + baseline.md only — no source changes, no run logs)
 
+### 2026-05-03 11:50 — Candidate 17: eliminate ToonReader.PendingMeta per-object allocation — reverted (deferred)
+- **No implementation attempted.** Skipped on cost-vs-expected-gain analysis after reading the call sites.
+- Two complications surfaced during reading:
+  1. **Recursion at line 405.** `readObject` calls itself recursively when a field's value is a nested object. Each invocation currently has its own `PendingMeta` local. Moving state to ToonReader instance fields would require save/restore wrappers (4 reads + 4 writes at start, 4 writes in finally) at both `readObject` and `readInlineObject` entry points to prevent inner calls from clobbering outer state.
+  2. **Mutation across method boundaries.** `dispatchField` (line 432) mutates `PendingMeta` for @type/@id/@ref keys. The refactor would touch four methods: `readObject`, `readInlineObject`, `dispatchField`, and `applyPendingMetadata`.
+- **Expected gain math:** ~3M PendingMeta allocations per benchmark × ~40 bytes each. JVM TLAB serves these in ~10–20ns; total alloc time ~30–60 ms across a ~10s benchmark. The save/restore wrapper adds ~12 field ops per readObject call = approximately equivalent overhead to the eliminated allocation. Net expected gain near zero — same shape as Cand 16, which just confirmed that sub-noise theoretical wins don't surface as measurable improvements on this benchmark.
+- **Correctness risk:** manual state management across recursion (state leak via missed save/restore in some path) is a real-world bug class that all 3836 unit tests might not exercise.
+- The cost-benefit ledger: ~30 min of careful refactor + correctness risk for a likely-zero measurable gain. Compared to running the experiment empirically: same wall-clock, but the implementation effort and risk would be wasted on a near-certain revert.
+- Decision: **deferred** (recorded as `reverted`). If a future benchmark with denser nested-object parsing surfaces PendingMeta allocation as a measurable hotspot, revisit.
+- Commit: (this commit, candidates.md + baseline.md only — no source changes, no run logs)
+
 ### 2026-05-03 11:32 — Candidate 16: pre-cache scalar target kind on read-side field plans — reverted
 - Scope was narrowed at implementation: of 4 `scalarTargetKind` call sites, 3 were already amortized once-per-collection/array. Only **MapResolver.java:398** (per-field assignment in `toMaps()`) was per-call hot. So primary metric was revised to `JsonIo Read Time (Maps Only)`.
 - Implementation: added `private final int targetKind` field to `Injector` mirroring the existing `fieldNumericKind` / `fastPath` precompute pattern; promoted `Resolver.scalarTargetKind` from `protected static` to `public static`; replaced the per-call lookup at MapResolver:398 with `injector.getTargetKind()`. Three files touched: Injector.java, Resolver.java, MapResolver.java.

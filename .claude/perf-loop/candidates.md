@@ -202,7 +202,7 @@ The 5/3 morning JFR (`~/IdeaSnapshots/JsonPerformanceTest_2026_05_03_084235.jfr`
 
 ## Candidate 17 — Eliminate `ToonReader.PendingMeta` per-object allocation
 
-- **Status:** pending
+- **Status:** reverted (deferred — no implementation tried; expected gain at/below noise floor + non-trivial save/restore plumbing for recursion safety)
 - **Primary target:** `Toon Read Time` (Full Java Resolution — `PendingMeta` is for object metadata, exercised more in Java mode where every parsed object goes through this path)
 - **Secondary watch:** `Toon Read Time` (Maps) — should also gain (Maps mode also constructs PendingMeta per object), `JsonIo Read Time` (no regression — different parser)
 - **Files:**
