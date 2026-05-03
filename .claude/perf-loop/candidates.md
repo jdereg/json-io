@@ -168,7 +168,7 @@ The 5/3 morning JFR (`~/IdeaSnapshots/JsonPerformanceTest_2026_05_03_084235.jfr`
 
 ## Candidate 14 — `writeJsonUtf8String` no-escape fast path via `String.indexOf`
 
-- **Status:** pending
+- **Status:** kept (plan revised at implementation to "array-based scan via `StringUtilities.getChars`" — replaces `s.charAt(i)` dispatch with `buf[i]` raw array loads + routes slice writes through `sb.append(char[],...)` instead of `sb.append(String,...)`. +2.14% Full / +2.40% Maps on primary, with collateral +3.84%/+3.08% on JsonIo Write c=true. See baseline.md run-log for full details.)
 - **Primary target:** `JsonIo Write Time (cycleSupport=false)` (Full Java Resolution and Maps Only)
 - **Secondary watch:** `JsonIo Write Time (cycleSupport=true)` (should also gain — same path), `Toon Write Time` (no regression — ToonWriter uses its own escape path)
 - **Files:**

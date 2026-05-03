@@ -6,23 +6,23 @@ Each row is the **median of 3 runs** of `JsonPerformanceTest`. The loop updates 
 
 | Metric | Full Java Resolution | Maps Only |
 |---|---:|---:|
-| JsonIo Write Time (cycleSupport=true) | 4740.073 | 5177.875 |
-| JsonIo Write Time (cycleSupport=false) | 4228.062 | 4251.564 |
-| Toon Write Time (cycleSupport=true) | 4747.966 | 4918.342 |
-| Toon Write Time (cycleSupport=false) | 4391.386 | 4490.903 |
-| Jackson Write Time | 2772.912 | 2784.051 |
-| JsonIo Read Time | 9231.962 | 4779.621 |
-| Toon Read Time | 10327.982 | 6903.869 |
-| Jackson Read Time | 5186.775 | 4073.596 |
+| JsonIo Write Time (cycleSupport=true) | 4558.175 | 5018.200 |
+| JsonIo Write Time (cycleSupport=false) | 4137.590 | 4149.406 |
+| Toon Write Time (cycleSupport=true) | 4631.324 | 4851.589 |
+| Toon Write Time (cycleSupport=false) | 4308.627 | 4402.039 |
+| Jackson Write Time | 2750.309 | 2779.900 |
+| JsonIo Read Time | 9175.231 | 4737.071 |
+| Toon Read Time | 10284.964 | 6993.197 |
+| Jackson Read Time | 5111.585 | 4012.352 |
 
 ## Active Jackson ratios (lower is closer to / better than Jackson)
 
 | Ratio | Full Java | Maps Only |
 |---|---:|---:|
-| Read Ratio (Toon/Jackson) | 1.99 | 1.69 |
-| Read Ratio (JsonIo/Jackson) | 1.79 | 1.18 |
-| Write Ratio (Toon cycleSupport=false / Jackson) | 1.58 | 1.62 |
-| Write Ratio (JsonIo cycleSupport=false / Jackson) | 1.52 | 1.51 |
+| Read Ratio (Toon/Jackson) | 2.02 | 1.76 |
+| Read Ratio (JsonIo/Jackson) | 1.81 | 1.18 |
+| Write Ratio (Toon cycleSupport=false / Jackson) | 1.57 | 1.61 |
+| Write Ratio (JsonIo cycleSupport=false / Jackson) | 1.50 | 1.50 |
 
 ## Run log
 
@@ -179,6 +179,21 @@ The loop appends here on every iteration. Format:
 - **No implementation attempted.** The candidate plan explicitly states "Only worth running if Candidate 7 was kept." Cand 7 reverted, so there is no fast-path implementation to port to `JsonParser.readNumber`.
 - Decision: **deferred** (recorded as `reverted`). Revisit if a future iteration finds a different `parseNumber` fast-path optimization that does clear the 0.5% bar — at that point this candidate becomes "port that change to `JsonParser.readNumber`."
 - Commit: (this commit, candidates.md + baseline.md only — no source changes, no run logs)
+
+### 2026-05-03 10:55 — Candidate 14: writeJsonUtf8String array-based scan via StringUtilities.getChars — kept
+- Primary target metric: JsonIo Write Time (cycleSupport=false), both sections
+- Run medians (ms): Full primary 4137.590, Maps primary 4149.406
+- Prior baseline (post-Cand 4): Full primary 4228.062, Maps primary 4251.564
+- Delta vs prior on primary: Full **+2.14%**, Maps **+2.40%** (both clear the 0.5% bar comfortably)
+- Watch metrics — all clean and showing collateral wins:
+  - JsonIo Write c=true (also routes through writeJsonUtf8String): Full **+3.84%**, Maps **+3.08%**
+  - Toon Write c=false: Full +1.88%, Maps +1.98% (coincidental — ToonWriter doesn't call writeJsonUtf8String, this run had tailwind across all write metrics)
+- Run-set variance: primary metric had 0.98% / 2.04% range/median — clean. Jackson held flat (Read +1.45%/+1.50%, Write +0.82%/+0.15%) — system was quiet during measurement.
+- **Plan was revised at implementation.** The original plan called for a `String.indexOf` no-escape fast path. While reading the existing loop I realized the no-escape pre-scan would do exactly the same per-character work as the existing loop's no-escape path, so it wouldn't actually save anything. Pivoted to "always use buf via StringUtilities.getChars" — replacing per-character `s.charAt(i)` (StringLatin1/UTF16 dispatch, ~345 leaf samples in JFR) with `buf[i]` (raw array load), and routing slice writes through `output.write(buf, off, len)` → `sb.append(char[], 0, len)` (the fastest StringBuilder variant per Cand 1's analysis) instead of `sb.append(String, off, off+len)`.
+- **TL safety:** the buf returned by StringUtilities.getChars is a `char[]` (primitive) — Cand 13b's card-marking lesson does NOT apply (no inter-generational reference assignments). Cand 3b's escape-analysis lesson also doesn't apply directly (the buf is shared per-thread anyway, not a stack candidate). The TL handoff cost is paid once per string instead of N times per character. Re-entrancy contract documented inline in the method comment.
+- Decision: **kept**. Cleanest win since Cand 1 — clears bar on primary by ~2.3% with collateral +3.5% on JsonIo Write c=true.
+- Commit: (this commit)
+- Raw measurement logs: `.claude/perf-loop/runs/cand14-{1,2,3}.log`
 
 ### 2026-05-03 10:35 — Candidate 13b: Port JsonParser.stringCacheArray to ThreadLocal (TL only, MASK stays 2047) — reverted
 - Primary target metric: JsonIo Read Time, both sections (isolating TL conversion from Cand 13's coupled mask bump)

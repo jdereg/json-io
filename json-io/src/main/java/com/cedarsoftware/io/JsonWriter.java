@@ -77,6 +77,7 @@ import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.ClassValueMap;
 import com.cedarsoftware.util.CompactMap;
+import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.CompactSet;
 import com.cedarsoftware.util.FastWriter;
 import com.cedarsoftware.util.IOUtilities;
@@ -3117,40 +3118,57 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         output.write('"');
-        int last = 0;
 
-        // GSON-style loop: single array lookup determines both "needs escape?" and "what is escape?"
-        for (int i = 0; i < len; i++) {
-            char ch = s.charAt(i);
-            String escape;
+        if (len > 0) {
+            // Bulk-copy chars into a per-thread char[] via the SIMD-intrinsic getChars.
+            // Walking buf[i] is a raw array load; replacing per-character s.charAt(i) avoids
+            // the StringLatin1/UTF16 dispatch that JFR profiling showed at ~345 leaf samples
+            // combined inside this loop. Slice writes via output.write(buf, off, len) route
+            // through StringBuilder.append(char[],...) \u2014 the fastest variant on
+            // StringBuilderWriter \u2014 instead of append(String, off, off+len).
+            //
+            // Re-entrancy contract: the TL char[] is consumed synchronously by output.write
+            // calls (which copy bytes immediately into the underlying sink) before this
+            // method returns. Standard writers do not transitively invoke
+            // StringUtilities.getChars. Custom JsonClassWriter implementations that recurse
+            // back through this path would violate the contract; not exercised by json-io's
+            // internals. Cand 13b's card-marking lesson does not apply here \u2014 char[] is a
+            // primitive array, no inter-generational reference assignments.
+            char[] buf = StringUtilities.getChars(s, len);
 
-            if (ch < 128) {
-                // ASCII: use pre-computed escape table
-                escape = ESCAPE_STRINGS[ch];
-                if (escape == null) {
-                    continue;  // No escape needed - most common path
+            int last = 0;
+            for (int i = 0; i < len; i++) {
+                char ch = buf[i];
+                String escape;
+
+                if (ch < 128) {
+                    // ASCII: use pre-computed escape table
+                    escape = ESCAPE_STRINGS[ch];
+                    if (escape == null) {
+                        continue;  // No escape needed - most common path
+                    }
+                } else if (ch == '\u2028') {
+                    // Unicode line separator - escape for JavaScript compatibility
+                    escape = "\\u2028";
+                } else if (ch == '\u2029') {
+                    // Unicode paragraph separator - escape for JavaScript compatibility
+                    escape = "\\u2029";
+                } else {
+                    continue;  // Non-ASCII characters written as-is (UTF-8 handled by Writer)
                 }
-            } else if (ch == '\u2028') {
-                // Unicode line separator - escape for JavaScript compatibility
-                escape = "\\u2028";
-            } else if (ch == '\u2029') {
-                // Unicode paragraph separator - escape for JavaScript compatibility
-                escape = "\\u2029";
-            } else {
-                continue;  // Non-ASCII characters written as-is (UTF-8 handled by Writer)
+
+                // Write accumulated safe characters from buf, then the escape
+                if (last < i) {
+                    output.write(buf, last, i - last);
+                }
+                output.write(escape);
+                last = i + 1;
             }
 
-            // Write accumulated safe characters, then the escape
-            if (last < i) {
-                output.write(s, last, i - last);
+            // Write remaining safe characters from buf
+            if (last < len) {
+                output.write(buf, last, len - last);
             }
-            output.write(escape);
-            last = i + 1;
-        }
-
-        // Write remaining safe characters
-        if (last < len) {
-            output.write(s, last, len - last);
         }
         output.write('"');
     }
