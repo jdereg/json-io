@@ -413,7 +413,7 @@ See the [complete type comparison](/user-guide.md#toon-supported-types) showing 
 - Zero external dependencies (other than java-util)
 - Lightweight (`json-io.jar` is ~500K, `java-util` is ~850K — total ~1350K)
 - Compatible with JDK 1.8 through JDK 24
-- The library is built with the `-parameters` compiler flag. Parameter names are now retained for tasks such as constructor discovery.
+- Built with `-parameters` so reflection sees real parameter names (used for constructor discovery, etc.)
 - Optional unsafe mode for deserializing package-private classes, inner classes, and classes without accessible constructors (opt-in for security)
 - Extensive configuration options via `ReadOptionsBuilder` and `WriteOptionsBuilder`
 
