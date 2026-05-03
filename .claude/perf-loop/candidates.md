@@ -189,7 +189,7 @@ The 5/3 morning JFR (`~/IdeaSnapshots/JsonPerformanceTest_2026_05_03_084235.jfr`
 
 ## Candidate 16 — Pre-cache scalar target kind on read-side field/element plans
 
-- **Status:** pending
+- **Status:** reverted (primary Maps -0.36% — within noise floor; no measurable win)
 - **Primary target:** `JsonIo Read Time` and `Toon Read Time`, **Full Java Resolution** (Maps mode skips the Resolver scalar coercion path)
 - **Secondary watch:** `JsonIo Read Time` (Maps), `Toon Read Time` (Maps) — should be unaffected (Maps mode doesn't traverse field plans for primitive coercion)
 - **Files:**

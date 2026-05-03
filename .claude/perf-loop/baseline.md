@@ -180,6 +180,20 @@ The loop appends here on every iteration. Format:
 - Decision: **deferred** (recorded as `reverted`). Revisit if a future iteration finds a different `parseNumber` fast-path optimization that does clear the 0.5% bar — at that point this candidate becomes "port that change to `JsonParser.readNumber`."
 - Commit: (this commit, candidates.md + baseline.md only — no source changes, no run logs)
 
+### 2026-05-03 11:32 — Candidate 16: pre-cache scalar target kind on read-side field plans — reverted
+- Scope was narrowed at implementation: of 4 `scalarTargetKind` call sites, 3 were already amortized once-per-collection/array. Only **MapResolver.java:398** (per-field assignment in `toMaps()`) was per-call hot. So primary metric was revised to `JsonIo Read Time (Maps Only)`.
+- Implementation: added `private final int targetKind` field to `Injector` mirroring the existing `fieldNumericKind` / `fastPath` precompute pattern; promoted `Resolver.scalarTargetKind` from `protected static` to `public static`; replaced the per-call lookup at MapResolver:398 with `injector.getTargetKind()`. Three files touched: Injector.java, Resolver.java, MapResolver.java.
+- Run medians (ms): Maps primary 4753.944 (prior 4737.071, delta **−0.36%**, range/median 1.31%)
+- Delta vs prior on primary: Maps **−0.36%** (within noise floor — fails 0.5% bar)
+- Side observations:
+  - JsonIo Read Time (Full) regressed −1.50% (run-range 0.59% — clean signal). The candidate doesn't touch Full Java's code path, so this is either run-set noise (Jackson Read Full also drifted −1.03%) or a class-load / JIT-compilation timing interaction from the new Injector → Resolver class dependency.
+  - Sanity blips on JsonIo Write c=true Maps (+2.54%) and JsonIo Write c=false Full (+2.48%) are noise — JsonWriter doesn't use Injector instances.
+- **Why the win didn't materialize:** the math suggested ~30 ms saved across the benchmark (~30 fields × 100k iterations × ~10ns/lookup). On a 4.7s baseline that's borderline 0.5%. With ~1% run-set noise, the saved 30 ms gets buried.
+- Decision: **reverted**. The change is theoretically correct but the saving is below the benchmark's noise floor on this workload.
+- Implementation changes stashed as `reverted-candidate-16` (git stash, three files: Injector.java, Resolver.java, MapResolver.java) for recoverability.
+- Commit: (this commit, baseline + candidates only — implementation reverted)
+- Raw measurement logs: `.claude/perf-loop/runs/cand16-{1,2,3}.log`
+
 ### 2026-05-03 11:14 — Candidate 15: shrink JsonParser.readArray ArrayList(64) → adaptive — reverted
 - Variant tested: (a) `new ArrayList<>()` — default constructor, defers Object[] alloc to first add, then 10 → 15 → 22 → 33 → 49 → 73 → 109 (1.5x doubling)
 - Primary target metric: JsonIo Read Time, both sections
