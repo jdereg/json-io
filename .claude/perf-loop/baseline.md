@@ -150,3 +150,17 @@ The loop appends here on every iteration. Format:
 - Implementation effort would be 30–60 min (plumb `declaredElementType` through `writeArrayElements`/`writeCollection` to `writeListElement`) for an experiment the benchmark cannot reward.
 - Decision: **deferred** (recorded as `reverted` because the loop only has kept/reverted states). Revisit if a benchmark with `Collection<Map<...>>` shape becomes available.
 - Commit: (this commit, candidates.md + baseline.md only — no source changes, no run logs)
+
+### 2026-05-02 21:24 — Candidate 9: avoid entry.getKey().toString() for Number keys — reverted
+- Primary target metric: Toon Write Time (cycleSupport=false), Maps Only (`writeMapWithSimpleKeys` is the touched site, exercised more in Maps-only mode)
+- Run medians (ms): Maps primary 4547.614, Full 4461.806
+- Prior baseline: Maps primary 4490.903, Full 4391.386
+- Delta vs prior on primary: Maps **−1.26%** (regression, fails 0.5% bar). Full also regresses −1.60%.
+- Multiple sanity blips: JsonIo Write c=false Full +1.31%, Toon Write c=true Maps +1.67%, Toon Write c=false Full +1.60%, Toon Read Maps +1.99%.
+- **Confirmed prediction:** the `instanceof Long || Integer || Short || Byte` chain at the writeMapWithSimpleKeys site adds 4 instanceof checks per map entry on the **always-taken String-key path** (TestData has no Number-keyed maps). With ~50 entries × 10+ map fields × 100k iterations, the per-entry overhead aggregates into a measurable regression on every write metric. The optimization itself never fires because the workload has no Number keys.
+- Toon Read regressions are noise (Toon Read Full had 0.02% range/median this run set — very clean — but Toon Read Maps had 0.06%, also very clean, yet shows -1.99% drift; this is system-state drift between this run set and the Cand 4 baseline, not causal — the candidate touches no read code).
+- Decision: **reverted**
+- Useful negative finding documented: adding type-dispatch branches at hot map-write sites for **types not present in the workload** is pure overhead. For this codebase's benchmark mix, only optimize paths whose targeted shape appears in TestData.
+- Implementation changes stashed as `reverted-candidate-9` (git stash) for recoverability.
+- Commit: (this commit, baseline + candidates only — implementation reverted)
+- Raw measurement logs: `.claude/perf-loop/runs/cand9-{1,2,3}.log`

@@ -102,7 +102,7 @@ Source-of-truth ordering: don't reorder; just flip statuses.
 
 ## Candidate 9 — Avoid `entry.getKey().toString()` for Number keys
 
-- **Status:** pending
+- **Status:** reverted
 - **Primary target:** `Toon Write Time (cycleSupport=false)` (Maps Only — has the `counterMap` field)
 - **Files:**
   - `json-io/src/main/java/com/cedarsoftware/io/ToonWriter.java:1927`
