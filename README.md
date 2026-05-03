@@ -167,7 +167,7 @@ automatic shared-reference and cycle preservation. No class annotations required
 | Capability | json-io | Jackson | Gson |
 |------------|---------|---------|------|
 | Performance (simple DTOs) | 1.3–2.0x vs Jackson (all paths under 2x) | Fastest | ~1.3x vs Jackson |
-| Dependencies | java-util only (~1MB) | Multiple JARs (~2.5MB+) | Single JAR (~300KB) |
+| Dependencies | java-util only (~850K) | Multiple JARs (~2.5MB+) | Single JAR (~300KB) |
 | Java version | JDK 8+ | JDK 8+ | JDK 8+ |
 
 **On performance:** Jackson is faster for simple DTOs, but json-io stays **under 2x Jackson on every read/write mode** on the `JsonPerformanceTest` benchmark (100,000 iterations, diverse POJO workload — nested collections, floats, `BigDecimal`, `java.time.*`, UUIDs, nullable fields). In real-world applications, serialization is typically <1% of total request time — the rest is network I/O, database queries, and business logic. json-io's additional capabilities (cycles, polymorphism, zero-config, JSON5, TOON) often matter more than raw serialization throughput.
@@ -411,7 +411,7 @@ See the [complete type comparison](/user-guide.md#toon-supported-types) showing 
 
 - Fully compatible with both JPMS and OSGi environments
 - Zero external dependencies (other than java-util)
-- Lightweight (`json-io.jar` is ~330K, `java-util` is ~700K)
+- Lightweight (`json-io.jar` is ~500K, `java-util` is ~850K — total ~1350K)
 - Compatible with JDK 1.8 through JDK 24
 - The library is built with the `-parameters` compiler flag. Parameter names are now retained for tasks such as constructor discovery.
 - Optional unsafe mode for deserializing package-private classes, inner classes, and classes without accessible constructors (opt-in for security)
