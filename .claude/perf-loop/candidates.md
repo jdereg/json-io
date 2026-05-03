@@ -157,7 +157,7 @@ The 5/3 morning JFR (`~/IdeaSnapshots/JsonPerformanceTest_2026_05_03_084235.jfr`
 
 ## Candidate 13b — Port `JsonParser.stringCacheArray` to ThreadLocal (TL only, MASK stays 2047)
 
-- **Status:** pending
+- **Status:** reverted
 - **Primary target:** `JsonIo Read Time` (Maps Only and Full Java)
 - **Secondary watch:** `Toon Read Time` (no regression)
 - **Files:**

@@ -180,6 +180,21 @@ The loop appends here on every iteration. Format:
 - Decision: **deferred** (recorded as `reverted`). Revisit if a future iteration finds a different `parseNumber` fast-path optimization that does clear the 0.5% bar — at that point this candidate becomes "port that change to `JsonParser.readNumber`."
 - Commit: (this commit, candidates.md + baseline.md only — no source changes, no run logs)
 
+### 2026-05-03 10:35 — Candidate 13b: Port JsonParser.stringCacheArray to ThreadLocal (TL only, MASK stays 2047) — reverted
+- Primary target metric: JsonIo Read Time, both sections (isolating TL conversion from Cand 13's coupled mask bump)
+- Run medians (ms): Full primary 9458.928, Maps primary 4820.465
+- Prior baseline (post-Cand 4): Full primary 9231.962, Maps primary 4779.621
+- Delta vs prior on primary: Full **−2.46%** (regression, fails 0.5% bar; **worse than Cand 13's −1.42%**), Maps **−0.85%** (also fails)
+- Watch metric Toon Read Time: Full +0.70%, Maps +0.39% (both inside 1% bar)
+- Sanity blips on write metrics (JsonIo Write c=false Full +2.82%, Toon Write c=false Full +2.09%, etc.) — Jackson held flat (−0.09% / +0.21%) so the system isn't contaminated; the write blips look like normal per-metric variance with the median landing on the high side this run.
+- **Real regression on the primary:** JsonIo Read Time Full had **0.71% range/median** across 3 runs — clean signal. The −2.46% delta is bigger than Cand 13's −1.42%, which **overturns the L1-pressure theory.** If L1 spill on the 4096-slot array was the cause, the smaller 2048-slot TL cache would have helped, not hurt. It hurt more.
+- **Revised root cause: GC write-barrier (card marking) overhead on TL arrays.** Per-instance `String[]` is allocated per parse → lives in young-gen → assignments don't need card marking (no inter-generational reference). TL `String[]` survives many GCs → migrates to old-gen → every `cache[slot] = newString` triggers a card mark since the new String is young-gen. Card marks are cheap individually but accumulate over millions of cache writes per benchmark run. The per-instance pattern is "always young, never card-marked" — that's the real win we'd be giving up.
+- Different failure mode from Cand 3b (escape analysis on stack allocations). This is about generational GC interaction with TL arrays holding short-lived references. ToonReader's `TL_STRING_CACHE` presumably pays the same card-marking cost; TOON's working-set characteristics may simply absorb it where JSON's don't.
+- Decision: **reverted**. Both Cand 13 (TL + 4095) and Cand 13b (TL + 2047) regressed. The per-instance pattern is genuinely the right shape for `JsonParser.stringCacheArray`.
+- Implementation changes stashed as `reverted-candidate-13b` for recoverability.
+- Commit: (this commit, baseline + candidates only — implementation reverted)
+- Raw measurement logs: `.claude/perf-loop/runs/cand13b-{1,2,3}.log`
+
 ### 2026-05-03 10:08 — Candidate 13: Port JsonParser.stringCacheArray to ThreadLocal (mirror Cand 4) — reverted
 - Primary target metric: JsonIo Read Time, both sections
 - Run medians (ms): Full primary 9362.923, Maps primary 4827.858
