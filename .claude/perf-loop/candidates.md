@@ -179,7 +179,7 @@ The 5/3 morning JFR (`~/IdeaSnapshots/JsonPerformanceTest_2026_05_03_084235.jfr`
 
 ## Candidate 15 — Shrink `JsonParser.readArray` initial ArrayList capacity (64 → adaptive)
 
-- **Status:** pending
+- **Status:** reverted (variant (a) `new ArrayList<>()` regressed -1.63% Full / -0.96% Maps; variant (b) `new ArrayList<>(8)` skipped on prediction it would be structurally worse)
 - **Primary target:** `JsonIo Read Time` (Maps Only and Full Java)
 - **Secondary watch:** none (no read time metric is uniquely sensitive to ArrayList grow patterns)
 - **Files:**

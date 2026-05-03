@@ -180,6 +180,21 @@ The loop appends here on every iteration. Format:
 - Decision: **deferred** (recorded as `reverted`). Revisit if a future iteration finds a different `parseNumber` fast-path optimization that does clear the 0.5% bar — at that point this candidate becomes "port that change to `JsonParser.readNumber`."
 - Commit: (this commit, candidates.md + baseline.md only — no source changes, no run logs)
 
+### 2026-05-03 11:14 — Candidate 15: shrink JsonParser.readArray ArrayList(64) → adaptive — reverted
+- Variant tested: (a) `new ArrayList<>()` — default constructor, defers Object[] alloc to first add, then 10 → 15 → 22 → 33 → 49 → 73 → 109 (1.5x doubling)
+- Primary target metric: JsonIo Read Time, both sections
+- Run medians (ms): Full primary 9325.128, Maps primary 4782.368
+- Prior baseline (post-Cand 14): Full primary 9175.231, Maps primary 4737.071
+- Delta vs prior on primary: Full **−1.63%** (regression, fails 0.5% bar; **0.39% range/median** — extremely clean signal), Maps **−0.96%** (also fails; 0.59% range/median, also clean)
+- Run-set noise: Jackson Read Full also drifted −1.96% / Maps +0.11%, suggesting some system-wide noise (~1% across the board), but the primary's tight intra-run variance (0.39%/0.59%) means the −1.6%/−1.0% delta is well above the noise floor — a real causal regression.
+- **Confirmed prediction:** TestData arrays cluster in the 10–73 range, where the existing pre-size 64 hits the sweet spot (1 alloc, 0 grows for arrays ≤64). Default constructor on those arrays incurs 5–6 grow-and-arraycopy operations. The grow-doubling cost dominates over the per-array memory savings (~432 bytes wasted per oversized pre-alloc).
+- Variant (b) `new ArrayList<>(8)` skipped without measurement: pre-size 8 grows to 12 → 18 → 27 → 40 → 60 → 90, requiring an extra grow vs variant (a)'s starting-from-10 path. Structurally worse for arrays of 10+ elements (which dominate TestData). Not worth a 5-min experiment to confirm.
+- The pre-size 64 was apparently already tuned for this benchmark's array-size distribution — leave it alone. If a future benchmark with larger arrays comes along (>>100 elements per array), this could be reconsidered.
+- Decision: **reverted**
+- Implementation changes stashed as `reverted-candidate-15` (git stash) for recoverability.
+- Commit: (this commit, baseline + candidates only — implementation reverted)
+- Raw measurement logs: `.claude/perf-loop/runs/cand15-{1,2,3}.log`
+
 ### 2026-05-03 10:55 — Candidate 14: writeJsonUtf8String array-based scan via StringUtilities.getChars — kept
 - Primary target metric: JsonIo Write Time (cycleSupport=false), both sections
 - Run medians (ms): Full primary 4137.590, Maps primary 4149.406
