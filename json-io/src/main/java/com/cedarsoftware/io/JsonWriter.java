@@ -77,7 +77,7 @@ import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.ClassValueMap;
 import com.cedarsoftware.util.CompactMap;
-import com.cedarsoftware.util.StringUtilities;
+import com.cedarsoftware.util.internal.CharBufScratch;
 import com.cedarsoftware.util.CompactSet;
 import com.cedarsoftware.util.FastWriter;
 import com.cedarsoftware.util.IOUtilities;
@@ -3120,21 +3120,21 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         output.write('"');
 
         if (len > 0) {
-            // Bulk-copy chars into a per-thread char[] via the SIMD-intrinsic getChars.
-            // Walking buf[i] is a raw array load; replacing per-character s.charAt(i) avoids
-            // the StringLatin1/UTF16 dispatch that JFR profiling showed at ~345 leaf samples
-            // combined inside this loop. Slice writes via output.write(buf, off, len) route
-            // through StringBuilder.append(char[],...) \u2014 the fastest variant on
-            // StringBuilderWriter \u2014 instead of append(String, off, off+len).
+            // Bulk-copy chars into a per-thread char[] via the SIMD-intrinsic
+            // CharBufScratch.getChars. Walking buf[i] is a raw array load; replacing
+            // per-character s.charAt(i) avoids the StringLatin1/UTF16 dispatch that JFR
+            // profiling showed at ~345 leaf samples combined inside this loop. Slice writes
+            // via output.write(buf, off, len) route through StringBuilder.append(char[],...)
+            // \u2014 the fastest variant on StringBuilderWriter \u2014 instead of
+            // append(String, off, off+len).
             //
             // Re-entrancy contract: the TL char[] is consumed synchronously by output.write
             // calls (which copy bytes immediately into the underlying sink) before this
             // method returns. Standard writers do not transitively invoke
-            // StringUtilities.getChars. Custom JsonClassWriter implementations that recurse
+            // CharBufScratch.getChars. Custom JsonClassWriter implementations that recurse
             // back through this path would violate the contract; not exercised by json-io's
-            // internals. Cand 13b's card-marking lesson does not apply here \u2014 char[] is a
-            // primitive array, no inter-generational reference assignments.
-            char[] buf = StringUtilities.getChars(s, len);
+            // internals.
+            char[] buf = CharBufScratch.getChars(s, len);
 
             int last = 0;
             for (int i = 0; i < len; i++) {
