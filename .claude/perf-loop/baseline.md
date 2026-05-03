@@ -139,3 +139,14 @@ The loop appends here on every iteration. Format:
 - Implementation changes stashed as `reverted-candidate-7` (git stash) for recoverability.
 - Commit: (this commit, baseline + candidates only — implementation reverted)
 - Raw measurement logs: `.claude/perf-loop/runs/cand7-{1,2,3}.log`
+
+### 2026-05-02 19:30 — Candidate 8: skip hasComplexKeys for declared Map<String,…> — reverted (deferred)
+- **No implementation attempted.** Skipped on workload-mismatch grounds before measurement.
+- The candidate proposes propagating `currentMapHasSimpleKeyTypeHint` to maps reached via `Collection<Map<String,?>>` element iteration (writeArrayElements / writeCollection → writeListElement). Scanning TestData fields:
+  - `List<NestedData>`, `List<String>`, `List<Integer>`, `List<Double>`, `List<Boolean>`, `List<BigDecimal>`, `List<UUID>`, `List<Instant>`, `List<LocalDate>`, `List<SecondaryData>` — element types are not Maps.
+  - All `Map<String, ...>` fields (map, counterMap, concreteHashMap, concreteLinkedMap, nestedMap) are direct fields, already getting the hint via `writeFieldEntry`'s `plan.mapKeyTypeIsSimple()`.
+  - `NestedData.metadata` is also a Map field, also gets the hint.
+- There's **no `Collection<Map<...>>` shape** in TestData. The candidate's hint propagation has no path to fire on this workload. The JFR's 50 samples in `writeMap → entrySet` must come from the existing direct-Map-field paths where the hint is already being set — i.e., they're not addressable by extending hint propagation in this direction.
+- Implementation effort would be 30–60 min (plumb `declaredElementType` through `writeArrayElements`/`writeCollection` to `writeListElement`) for an experiment the benchmark cannot reward.
+- Decision: **deferred** (recorded as `reverted` because the loop only has kept/reverted states). Revisit if a benchmark with `Collection<Map<...>>` shape becomes available.
+- Commit: (this commit, candidates.md + baseline.md only — no source changes, no run logs)

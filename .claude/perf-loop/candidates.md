@@ -93,7 +93,7 @@ Source-of-truth ordering: don't reorder; just flip statuses.
 
 ## Candidate 8 — Skip `hasComplexKeys` for declared `Map<String,…>` in TOON write
 
-- **Status:** pending
+- **Status:** reverted (deferred — no implementation tried; workload mismatch with JsonPerformanceTest)
 - **Primary target:** `Toon Write Time (cycleSupport=false)`
 - **Files:**
   - `json-io/src/main/java/com/cedarsoftware/io/ToonWriter.java:1858, 1891` (`hasComplexKeys`), and the `currentMapHasSimpleKeyTypeHint` plumbing around line 213.
