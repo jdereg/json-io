@@ -145,7 +145,7 @@ The 5/3 morning JFR (`~/IdeaSnapshots/JsonPerformanceTest_2026_05_03_084235.jfr`
 
 ## Candidate 13 — Port `JsonParser.stringCacheArray` to ThreadLocal (mirror Cand 4)
 
-- **Status:** pending
+- **Status:** reverted
 - **Primary target:** `JsonIo Read Time` (Maps Only and Full Java)
 - **Secondary watch:** `Toon Read Time` (no regression — different cache, but shared TL infrastructure should have no contention)
 - **Files:**
@@ -154,6 +154,17 @@ The 5/3 morning JFR (`~/IdeaSnapshots/JsonPerformanceTest_2026_05_03_084235.jfr`
   - Reference pattern: `ToonReader.java:72-73` (`TL_STRING_CACHE` ThreadLocal) and Cand 4's mask raise to 4095
 - **Plan:** convert `stringCacheArray` from a per-instance `String[]` to a static `ThreadLocal<String[]>` mirroring `ToonReader.TL_STRING_CACHE`. JsonParser currently allocates a fresh 2048-slot `String[]` (~16 KB) on every `JsonIo.toJava()` / `JsonIo.toMaps()` call — 100k iterations × 16 KB = ~1.6 GB of cache-array allocation thrown away each run. The TL pattern (a) eliminates that allocation entirely and (b) preserves cache hits across parses on the same thread, so after warmup virtually every distinct string is cached. While we're at it, raise the mask to 4095 (4096 slots) on the same logic that won Cand 4: more headroom for high-cardinality string sets in the read working set, costs ~16 KB per thread (one-time).
 - **Risk:** ToonReader's TL pattern has been in production since before this loop and is proven safe (Cand 4 confirmed). Re-entrancy: a custom JsonClassReader that recursively calls `JsonIo.toJava` would share the TL cache; in the worst case this adds a few cache misses (the inner parse overwrites slots the outer was using), never causes corruption — the cache is read-on-hit, write-on-miss with consistent same-thread serial access. No structural risk.
+
+## Candidate 13b — Port `JsonParser.stringCacheArray` to ThreadLocal (TL only, MASK stays 2047)
+
+- **Status:** pending
+- **Primary target:** `JsonIo Read Time` (Maps Only and Full Java)
+- **Secondary watch:** `Toon Read Time` (no regression)
+- **Files:**
+  - `json-io/src/main/java/com/cedarsoftware/io/JsonParser.java:93` (`STRING_CACHE_MASK` — leave at 2047)
+  - `json-io/src/main/java/com/cedarsoftware/io/JsonParser.java:96` (`stringCacheArray` field — convert init to TL)
+- **Plan:** isolate the TL-conversion factor from Cand 13's coupled change. Cand 13 simultaneously (a) ported the per-instance cache to a `ThreadLocal<String[]>` AND (b) bumped `STRING_CACHE_MASK` from 2047 to 4095. The combined change regressed `JsonIo Read Time` by 1.4% Full / 1.0% Maps. Cand 13b keeps the array size at 2048 slots (16 KB — fits comfortably in L1 cache on x86) and only converts the initializer to `TL_STRING_CACHE.get()` so the per-thread array is reused across parses. This eliminates the ~16 KB allocation per `JsonIo.toJava()` call without changing memory pressure on L1.
+- **Risk:** if the regression was driven by cross-parse cache pollution rather than L1 spill, Cand 13b will also lose. In that case, the per-instance cache is genuinely the better shape for JsonParser's working set and we walk away. If 13b clears the bar, the L1-pressure theory is confirmed and we have an isolated TL win we can keep.
 
 ## Candidate 14 — `writeJsonUtf8String` no-escape fast path via `String.indexOf`
 

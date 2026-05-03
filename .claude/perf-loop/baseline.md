@@ -180,6 +180,23 @@ The loop appends here on every iteration. Format:
 - Decision: **deferred** (recorded as `reverted`). Revisit if a future iteration finds a different `parseNumber` fast-path optimization that does clear the 0.5% bar — at that point this candidate becomes "port that change to `JsonParser.readNumber`."
 - Commit: (this commit, candidates.md + baseline.md only — no source changes, no run logs)
 
+### 2026-05-03 10:08 — Candidate 13: Port JsonParser.stringCacheArray to ThreadLocal (mirror Cand 4) — reverted
+- Primary target metric: JsonIo Read Time, both sections
+- Run medians (ms): Full primary 9362.923, Maps primary 4827.858
+- Prior baseline (post-Cand 4): Full primary 9231.962, Maps primary 4779.621
+- Delta vs prior on primary: Full **−1.42%** (regression, fails 0.5% bar), Maps **−1.01%** (also fails)
+- Watch metric Toon Read Time: Full +0.84%, Maps +0.45% (both inside 1% bar)
+- Sanity blips on write metrics (JsonIo Write c=false Full +2.02%, Toon Write c=false Full +1.22%) are noise — JsonWriter doesn't share state with JsonParser. JsonIo Write c=true Full had 10.43% range/median this run set, exposed normal write-path noise.
+- **Real regression on the primary:** JsonIo Read Time Full had only **0.15% range/median** across 3 runs (9363 / 9353 / 9367 ms) — extremely tight. The −1.42% delta vs the 9232 baseline is not noise.
+- **Likely root causes** (the change coupled two factors):
+  1. **L1 cache pressure.** Bumping `STRING_CACHE_MASK` 2047 → 4095 doubled the array size from 16 KB to 32 KB. 32 KB sits at the edge of L1 cache size on most x86 cores (32-48 KB); probes may now spill to L2 (12-cycle vs 3-4-cycle hit latency). ToonReader's same growth in Cand 4 paid this cost too but the Maps working-set hit-rate gain hid it; Toon Read Full was essentially flat (+0.08%) post-Cand 4.
+  2. **Cross-parse cache pollution.** Per-instance cache starts cold every parse — first probe is always a null slot, write, done. TL cache contains strings from prior parses; new parses probe non-null slots that hash-collide with old strings, requiring length+charAt comparison before falling through to allocate. After warmup with identical TestData this should converge to high hit rate, but the fixed-data benchmark may not exercise the realistic hit case.
+- Decision: **reverted**
+- Filed Cand 13b to isolate factor (1) from (2): Cand 13b keeps MASK=2047 (16 KB, L1-friendly) and only does the TL conversion. If 13b also regresses, the per-instance cache is genuinely the better shape for JsonParser's working set; if 13b clears the bar, the L1-pressure theory is confirmed.
+- Implementation changes stashed as `reverted-candidate-13` (git stash) for recoverability.
+- Commit: (this commit, baseline + candidates only — implementation reverted)
+- Raw measurement logs: `.claude/perf-loop/runs/cand13-{1,2,3}.log`
+
 ### 2026-05-03 09:55 — Candidate 18: JsonParser.readNumber hotspot investigation — reverted (deferred, investigation completed)
 - **No implementation attempted.** Discovery candidate; investigation completed in-session against the 5/3 9:46 JFR call-tree.
 - Finding: of 237 leaf samples in `JsonParser.readNumber`, the bulk are inside the method body's integer fast path (JsonParser.java:667-690) doing the actual digit-parse work. The fast path is structurally identical to `ToonReader.parseNumber`'s (tight char-range checks, direct `n = n * 10 + (d - '0')` accumulation, no per-digit boxing). Children: 29 leaves in `readFloatingPoint`, 29 in `skipWhitespaceRead`, only 3 in `Long.valueOf` (Cand 7's lesson holds: JIT intrinsifies small-Long boxing).

@@ -1,0 +1,78 @@
+May 03, 2026 10:04:48 AM com.cedarsoftware.io.JsonPerformanceTest testFullJavaResolution
+INFO: === TEST: Full Java Resolution (toJava) ===
+[INFO] Starting warmup with 10000 iterations...
+[INFO] Warmup complete.
+[INFO] Testing JsonIo Write (cycleSupport=true) with 100000 iterations...
+[INFO] JsonIo Write (cycleSupport=true) complete.
+[INFO] Testing Toon Write (cycleSupport=true) with 100000 iterations...
+[INFO] Toon Write (cycleSupport=true) complete.
+[INFO] Testing JsonIo Write (cycleSupport=false) with 100000 iterations...
+[INFO] JsonIo Write (cycleSupport=false) complete.
+[INFO] Testing Toon Write (cycleSupport=false) with 100000 iterations...
+[INFO] Toon Write (cycleSupport=false) complete.
+[INFO] Testing Jackson Write with 100000 iterations...
+[INFO] Jackson Write complete.
+[INFO] Testing JsonIo Read (toJava) with 100000 iterations...
+[INFO] JsonIo Read complete.
+[INFO] Testing Toon Read (fromToon) with 100000 iterations...
+[INFO] Toon Read complete.
+[INFO] Testing Jackson Read with 100000 iterations...
+[INFO] Jackson Read complete.
+[INFO] --- Full Java Resolution Results ---
+[INFO] Iterations: 100000
+[INFO] JsonIo Write Time (cycleSupport=true):  4570.2035 ms
+[INFO] Toon Write Time (cycleSupport=true):    4863.704084 ms
+[INFO] JsonIo Write Time (cycleSupport=false): 4178.105875 ms
+[INFO] Toon Write Time (cycleSupport=false):   4360.727292 ms
+[INFO] Jackson Write Time: 2777.381875 ms
+[INFO] Write Speedup (cycleSupport=false vs true): 1.09x
+[INFO] TOON Write Speedup (cycleSupport=false vs true): 1.12x
+[INFO] Write Ratio (JsonIo cycleSupport=true / Jackson): 1.65x
+[INFO] Write Ratio (JsonIo cycleSupport=false / Jackson): 1.50x
+[INFO] Write Ratio (Toon cycleSupport=true / Jackson): 1.75x
+[INFO] Write Ratio (Toon cycleSupport=false / Jackson): 1.57x
+[INFO] JsonIo Read Time: 9367.277625 ms
+[INFO] Toon Read Time: 10419.120334 ms
+[INFO] Jackson Read Time: 5212.254875 ms
+[INFO] Read Ratio (JsonIo/Jackson): 1.80x
+[INFO] Read Ratio (Toon/Jackson): 2.00x
+[INFO] 
+[INFO] ========================================
+[INFO] 
+[INFO] === TEST: Maps Only (toMaps) ===
+[INFO] Starting warmup with 10000 iterations...
+[INFO] Warmup complete.
+[INFO] Testing JsonIo Write (cycleSupport=true) with 100000 iterations...
+[INFO] JsonIo Write (cycleSupport=true) complete.
+[INFO] Testing Toon Write (cycleSupport=true) with 100000 iterations...
+[INFO] Toon Write (cycleSupport=true) complete.
+[INFO] Testing JsonIo Write (cycleSupport=false) with 100000 iterations...
+[INFO] JsonIo Write (cycleSupport=false) complete.
+[INFO] Testing Toon Write (cycleSupport=false) with 100000 iterations...
+[INFO] Toon Write (cycleSupport=false) complete.
+[INFO] Testing Jackson Write with 100000 iterations...
+[INFO] Jackson Write complete.
+[INFO] Testing JsonIo Read (toMaps) with 100000 iterations...
+[INFO] JsonIo Read complete.
+[INFO] Testing Toon Read (fromToonToMaps) with 100000 iterations...
+[INFO] Toon Read complete.
+[INFO] Testing Jackson Read (to Map) with 100000 iterations...
+[INFO] Jackson Read complete.
+[INFO] --- Maps Only Results ---
+[INFO] Iterations: 100000
+[INFO] JsonIo Write Time (cycleSupport=true):  4896.463875 ms
+[INFO] Toon Write Time (cycleSupport=true):    4931.223208 ms
+[INFO] JsonIo Write Time (cycleSupport=false): 4128.907792 ms
+[INFO] Toon Write Time (cycleSupport=false):   4416.639625 ms
+[INFO] Jackson Write Time: 2776.711375 ms
+[INFO] Write Speedup (cycleSupport=false vs true): 1.19x
+[INFO] TOON Write Speedup (cycleSupport=false vs true): 1.12x
+[INFO] Write Ratio (JsonIo cycleSupport=true / Jackson): 1.76x
+[INFO] Write Ratio (JsonIo cycleSupport=false / Jackson): 1.49x
+[INFO] Write Ratio (Toon cycleSupport=true / Jackson): 1.78x
+[INFO] Write Ratio (Toon cycleSupport=false / Jackson): 1.59x
+[INFO] JsonIo Read Time: 4911.305417 ms
+[INFO] Toon Read Time: 7024.788542 ms
+[INFO] Jackson Read Time: 4029.693375 ms
+[INFO] Read Ratio (JsonIo/Jackson): 1.22x
+[INFO] Read Ratio (Toon/Jackson): 1.74x
