@@ -111,7 +111,7 @@ Source-of-truth ordering: don't reorder; just flip statuses.
 
 ## Candidate 10 — Inline `Long.valueOf` boxing avoidance in `Resolver.fastScalarCoercion`
 
-- **Status:** pending
+- **Status:** reverted (deferred — plan stale; optimization already applied; remaining changes would be no-ops)
 - **Primary target:** `Toon Read Time` and `JsonIo Read Time` (both routes)
 - **Files:**
   - `json-io/src/main/java/com/cedarsoftware/io/Resolver.java:1789–1832`

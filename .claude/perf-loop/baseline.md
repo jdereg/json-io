@@ -164,3 +164,13 @@ The loop appends here on every iteration. Format:
 - Implementation changes stashed as `reverted-candidate-9` (git stash) for recoverability.
 - Commit: (this commit, baseline + candidates only — implementation reverted)
 - Raw measurement logs: `.claude/perf-loop/runs/cand9-{1,2,3}.log`
+
+### 2026-05-02 21:35 — Candidate 10: inline Long.valueOf boxing avoidance in Resolver.fastScalarCoercion — reverted (deferred)
+- **No implementation attempted.** Plan is stale — the optimization has already been applied to the codebase.
+- The plan asks for three things, all already in place at Resolver.java:1789-1804:
+  1. "Pre-extract the long once outside the switch" — already done at line 1794: `long v = (Long) value;`.
+  2. "Route through JDK's small-Integer cache explicitly with `Integer.valueOf((int) v)`" — already happens via autoboxing when `return (int) v;` widens to `Object` return type. Replacing with explicit `Integer.valueOf((int) v)` produces identical bytecode.
+  3. "Remove the redundant `(Long) value` re-cast" — no redundant re-cast exists in current code (it was likely there in an earlier version when the plan was written).
+- The remaining theoretical gain would require changing `fastScalarCoercion`'s signature to accept a primitive `long` instead of `Object value` + `Class<?> valueClass`, which would be a much larger refactor not covered by this candidate's scope. Plus, per Cand 7's lesson, manual extension of JDK's small-int caches tends to lose to the JIT's intrinsified path.
+- Decision: **deferred** (recorded as `reverted` because the loop only has kept/reverted states). No further action.
+- Commit: (this commit, candidates.md + baseline.md only — no source changes, no run logs)
