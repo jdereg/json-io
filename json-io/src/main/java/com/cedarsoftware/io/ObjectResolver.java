@@ -79,6 +79,24 @@ import com.cedarsoftware.util.convert.Converter;
 @SuppressWarnings({ "rawtypes", "unchecked"})
 public class ObjectResolver extends Resolver
 {
+    // Adaptive shape cache for traverseFields. The per-field
+    // assignmentPlansByName.get(key) HashMap lookup is replaced with a
+    // position-indexed FieldAssignmentPlan[] *only after* SHAPE_CACHE_THRESHOLD
+    // consecutive same-shape calls. This warm-up gate avoids paying the cache
+    // setup cost on small homogeneous arrays where it would dominate (the
+    // R-6 always-on variant regressed USERS 1K/10K by 12%).
+    //
+    // Static volatile so the AdaptiveCacheBenchmark can sweep the threshold and
+    // pick an empirically optimal value; will be hardened to `private static
+    // final int` once tuned.
+    public static volatile int SHAPE_CACHE_THRESHOLD = 2;
+
+    // Per-Resolver cache state. Lifetime = one JsonIo.toJava call.
+    private Class<?> shapeClass;
+    private Object[] shapeKeys;
+    private ReadOptionsBuilder.FieldAssignmentPlan[] shapePlans;
+    private int sameShapeStreak;
+
     /**
      * Constructor
      * @param readOptions Options to use while reading.
@@ -315,28 +333,111 @@ public class ObjectResolver extends Resolver
         }
 
         final Object javaMate = jsonObj.getTarget();
-        final ReadOptionsBuilder.InjectorPlan injectorPlan = ReadOptionsBuilder.getInjectorPlan(readOptions, javaMate.getClass());
+        final Class<?> javaClass = javaMate.getClass();
+        final ReadOptionsBuilder.InjectorPlan injectorPlan = ReadOptionsBuilder.getInjectorPlan(readOptions, javaClass);
         // Cache annotation metadata (O(1) via ClassValueMap) once for this object — it does not
         // vary by field. Reused in assignField for field-level type override lookups and in
         // assignJsonObjectField for the same reason, eliminating N per-field getMetadata calls.
         final AnnotationResolver.ClassAnnotationMetadata parentMeta =
-                AnnotationResolver.getMetadata(javaMate.getClass());
+                AnnotationResolver.getMetadata(javaClass);
         final Method anySetter = parentMeta.getAnySetterMethod();
 
-        // Enhanced for-loop is more efficient than iterator for EntrySet
-        // Uses cached missingFieldHandler from parent Resolver for performance
-        for (Map.Entry<Object, Object> entry : jsonObj.entrySet()) {
-            String key = (String) entry.getKey();
-            final ReadOptionsBuilder.FieldAssignmentPlan assignmentPlan = injectorPlan.getAssignmentPlan(key);
-            Object rhs = entry.getValue();
-            if (assignmentPlan != null) {
-                assignField(jsonObj, assignmentPlan, rhs, parentMeta);
-            } else if (anySetter != null) {
-                invokeAnySetter(javaMate, anySetter, key, rhs);
-            } else if (missingFieldHandler != null) {
-                handleMissingField(jsonObj, rhs, key);
+        // Adaptive shape-cache decision. Returns the FieldAssignmentPlan[] to use
+        // for indexed iteration when warm; null while still in the "cold" warm-up
+        // window (or on shape changes) so we fall back to the per-field HashMap
+        // lookup path that has zero cache overhead.
+        final ReadOptionsBuilder.FieldAssignmentPlan[] cachedPlans =
+                advanceShapeCache(jsonObj, javaClass, injectorPlan);
+
+        if (cachedPlans != null) {
+            // HOT PATH: indexed iteration over cached plans.
+            final int n = cachedPlans.length;
+            for (int i = 0; i < n; i++) {
+                final ReadOptionsBuilder.FieldAssignmentPlan assignmentPlan = cachedPlans[i];
+                final Object rhs = jsonObj.fastValueAt(i);
+                if (assignmentPlan != null) {
+                    assignField(jsonObj, assignmentPlan, rhs, parentMeta);
+                } else if (anySetter != null) {
+                    invokeAnySetter(javaMate, anySetter, (String) jsonObj.fastKeyAt(i), rhs);
+                } else if (missingFieldHandler != null) {
+                    handleMissingField(jsonObj, rhs, (String) jsonObj.fastKeyAt(i));
+                }
+            }
+        } else {
+            // COLD PATH: original per-field HashMap lookup. Zero cache overhead so
+            // small / one-off / shape-changing workloads pay nothing.
+            for (Map.Entry<Object, Object> entry : jsonObj.entrySet()) {
+                String key = (String) entry.getKey();
+                final ReadOptionsBuilder.FieldAssignmentPlan assignmentPlan = injectorPlan.getAssignmentPlan(key);
+                Object rhs = entry.getValue();
+                if (assignmentPlan != null) {
+                    assignField(jsonObj, assignmentPlan, rhs, parentMeta);
+                } else if (anySetter != null) {
+                    invokeAnySetter(javaMate, anySetter, key, rhs);
+                } else if (missingFieldHandler != null) {
+                    handleMissingField(jsonObj, rhs, key);
+                }
             }
         }
+    }
+
+    /**
+     * Tracks whether the current JsonObject's shape (Class + JSON-key sequence)
+     * matches the previous call's. After SHAPE_CACHE_THRESHOLD consecutive
+     * matches, builds and returns a FieldAssignmentPlan[] indexed by JSON-key
+     * position; the caller then uses it instead of the per-field HashMap lookup.
+     * Returns null while still warming up or when the shape has just changed,
+     * so the caller falls back to the cold path with no cache overhead.
+     *
+     * Identity matching of keys is safe because the parser interns field-name
+     * Strings via STRING_CACHE; objects with the same JSON keys share the same
+     * String references.
+     */
+    private ReadOptionsBuilder.FieldAssignmentPlan[] advanceShapeCache(
+            final JsonObject jsonObj, final Class<?> javaClass,
+            final ReadOptionsBuilder.InjectorPlan injectorPlan) {
+        final int n = jsonObj.size();
+        // Detect same-shape vs not.
+        boolean sameShape = false;
+        if (javaClass == shapeClass) {
+            final Object[] k = shapeKeys;
+            if (k != null && k.length == n) {
+                sameShape = true;
+                for (int i = 0; i < n; i++) {
+                    if (k[i] != jsonObj.fastKeyAt(i)) {
+                        sameShape = false;
+                        break;
+                    }
+                }
+            }
+        }
+        if (!sameShape) {
+            // Reset on first call or shape change. Snapshot the new shape.
+            final Object[] newKeys = new Object[n];
+            for (int i = 0; i < n; i++) {
+                newKeys[i] = jsonObj.fastKeyAt(i);
+            }
+            shapeClass = javaClass;
+            shapeKeys = newKeys;
+            shapePlans = null;
+            sameShapeStreak = 1;
+            return null;
+        }
+        sameShapeStreak++;
+        // Below threshold → cold path (no cache).
+        if (sameShapeStreak < SHAPE_CACHE_THRESHOLD) {
+            return null;
+        }
+        // At/above threshold → ensure cache is built, then use it.
+        ReadOptionsBuilder.FieldAssignmentPlan[] plans = shapePlans;
+        if (plans == null) {
+            plans = new ReadOptionsBuilder.FieldAssignmentPlan[n];
+            for (int i = 0; i < n; i++) {
+                plans[i] = injectorPlan.getAssignmentPlan(jsonObj.fastKeyAt(i));
+            }
+            shapePlans = plans;
+        }
+        return plans;
     }
 
     /**
