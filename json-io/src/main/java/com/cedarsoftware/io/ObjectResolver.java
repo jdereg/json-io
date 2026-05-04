@@ -83,13 +83,17 @@ public class ObjectResolver extends Resolver
     // assignmentPlansByName.get(key) HashMap lookup is replaced with a
     // position-indexed FieldAssignmentPlan[] *only after* SHAPE_CACHE_THRESHOLD
     // consecutive same-shape calls. This warm-up gate avoids paying the cache
-    // setup cost on small homogeneous arrays where it would dominate (the
-    // R-6 always-on variant regressed USERS 1K/10K by 12%).
+    // setup cost on small payloads or shape-thrashing graphs where it would
+    // dominate.
     //
-    // Static volatile so the AdaptiveCacheBenchmark can sweep the threshold and
-    // pick an empirically optimal value; will be hardened to `private static
-    // final int` once tuned.
-    public static volatile int SHAPE_CACHE_THRESHOLD = 2;
+    // T=2 selected empirically: AdaptiveCacheBenchmark micro-sweep across
+    // sizes 5..5000 and thresholds 1..21 plus java-json-benchmark cross-
+    // threshold validation at USERS 10K/100K. T=2 wins or ties everywhere
+    // we measured. See changelog.md (4.102.0) and the perf-loop memory
+    // entries for the full tuning record. To re-tune in the future: relax
+    // this back to `public static volatile`, restore AdaptiveCacheBenchmark
+    // from git history, and sweep.
+    private static final int SHAPE_CACHE_THRESHOLD = 2;
 
     // Per-Resolver cache state. Lifetime = one JsonIo.toJava call.
     private Class<?> shapeClass;
