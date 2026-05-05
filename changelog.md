@@ -1,6 +1,7 @@
 ### Revision History
 
 #### 4.102.0 - (Unreleased)
+* **BUILD**: Test-scope dependency bumps — `gson` 2.13.2 → 2.14.0, `jackson-databind` 2.21.2 → 2.21.3. No runtime impact; both used only for benchmark-comparison tests.
 * **BUG FIX**: Borrowed `FastReader.BufferSlice` content is now materialized or released at safe points, preventing buffer-overwrite edge cases during JSON string and TOON line parsing.
 * **DOCUMENTATION**: Refreshed README performance ratios from median run-mode benchmark results.
 * **PERFORMANCE**: `JsonWriter.writeJsonUtf8String()` — bulk-copies the input string into a per-thread `char[]` via SIMD-intrinsic `StringUtilities.getChars()`, then walks `buf[i]` instead of `s.charAt(i)` (eliminates per-character `StringLatin1`/`UTF16` dispatch). Slice writes route through `output.write(buf, off, len)` → `sb.append(char[])` instead of `sb.append(String, off, off+len)`. JsonIo Write `cycleSupport=false` toJava **-2.14%**, toMaps **-2.40%**; collateral on `cycleSupport=true` toJava **-3.84%**, toMaps **-3.08%**.

@@ -38,8 +38,8 @@
         <version.junit-jupiter-params>5.14.3</version.junit-jupiter-params>
         <version.mockito-junit-jupiter>4.11.0</version.mockito-junit-jupiter>   <!-- can't update until they have JDK support -->
         <version.assertj-core>3.27.7</version.assertj-core>
-        <version.gson>2.13.2</version.gson>
-        <version.jackson-databind>2.21.2</version.jackson-databind>
+        <version.gson>2.14.0</version.gson>
+        <version.jackson-databind>2.21.3</version.jackson-databind>
         <version.jtokkit>1.1.0</version.jtokkit>
 
         <!-- Build maven-***-plugins-->
