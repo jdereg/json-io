@@ -1,6 +1,8 @@
 ### Revision History
 
-#### 4.102.0 - (Unreleased)
+#### 4.103.0 - (Unreleased)
+
+#### 4.102.0 - 2026-05-04
 * **BUILD**: Test-scope dependency bumps — `gson` 2.13.2 → 2.14.0, `jackson-databind` 2.21.2 → 2.21.3. No runtime impact; both used only for benchmark-comparison tests.
 * **BUG FIX**: Borrowed `FastReader.BufferSlice` content is now materialized or released at safe points, preventing buffer-overwrite edge cases during JSON string and TOON line parsing.
 * **DOCUMENTATION**: Refreshed README performance ratios from median run-mode benchmark results.
