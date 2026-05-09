@@ -134,11 +134,10 @@ final class CharStreamTokenizer extends JsonTokenizer {
         }
 
         if (contextDepth == 0) {
-            // Either the very first call, or the root value has been consumed.
-            if (currentToken != null) {
-                done = true;
-                return null;
-            }
+            // First call, OR called after a root value to detect trailing
+            // content. Skip whitespace+comments; null on clean EOF, otherwise
+            // emit the next token (Jackson-aligned behavior — caller decides
+            // whether trailing content is allowed).
             int c = skipWhitespaceRead(false);
             if (c == -1) {
                 done = true;
@@ -510,6 +509,16 @@ final class CharStreamTokenizer extends JsonTokenizer {
     @Override
     public JsonLocation getCurrentLocation() {
         return new JsonLocation(-1L, input.getLine(), input.getCol(), sourceRef);
+    }
+
+    @Override
+    boolean hasNonWhitespaceContent() throws IOException {
+        int c = skipWhitespaceRead(false);
+        if (c == -1) {
+            return false;
+        }
+        input.pushback((char) c);
+        return true;
     }
 
     @Override

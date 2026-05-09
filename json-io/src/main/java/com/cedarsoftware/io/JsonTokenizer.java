@@ -176,6 +176,20 @@ abstract class JsonTokenizer implements Closeable {
     public abstract JsonLocation getCurrentLocation();
 
     /**
+     * Scan past any remaining whitespace and JSON5 comments without
+     * tokenizing further. Returns {@code true} if a non-trivia character
+     * follows (and has been pushed back so the next {@link #nextToken()}
+     * call still sees it), or {@code false} if the input is exhausted
+     * (only trivia remains).
+     *
+     * <p>Used by {@link JsonParser} to implement today's depth-0
+     * trailing-content check on root-level string values without
+     * tokenizing the trailing content (which can be non-JSON, e.g. a stray
+     * {@code :}). Not part of the Jackson cursor API; specific to json-io.
+     */
+    abstract boolean hasNonWhitespaceContent() throws IOException;
+
+    /**
      * Structural nesting depth, where the document root is depth {@code 0}.
      * Each open object or array increments the depth; each close decrements.
      */

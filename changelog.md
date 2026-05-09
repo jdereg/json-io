@@ -1,6 +1,7 @@
 ### Revision History
 
 #### 4.103.0 - (Unreleased)
+* **REFACTOR**: Internal — extracted `JsonTokenizer` (Jackson-style cursor API) and concrete `CharStreamTokenizer` from `JsonParser`; the parser now drives parsing through `tokenizer.nextToken()` instead of inlining char-level scanning. JsonParser shrinks from ~1,590 to ~590 lines. Behavior unchanged; all 3,898 tests pass; JsonPerformanceTest medians within ±2% of baseline. New types are package-private and not yet user-visible — they are the prerequisite for Tier 2 eager-POJO-construction work in 4.104.0+.
 
 #### 4.102.0 - 2026-05-04
 * **BUILD**: Test-scope dependency bumps — `gson` 2.13.2 → 2.14.0, `jackson-databind` 2.21.2 → 2.21.3. No runtime impact; both used only for benchmark-comparison tests.
