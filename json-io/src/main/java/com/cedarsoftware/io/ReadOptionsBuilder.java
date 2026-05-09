@@ -4,6 +4,8 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Type;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
@@ -150,6 +152,15 @@ public class ReadOptionsBuilder {
         loadBaseFieldsNotImported();
         loadBaseNonStandardSetters();
         loadBaseExcludedFields();
+
+        // Low-level @type aliases (bigint, bigdec). These also live in
+        // WriteOptionsBuilder.<clinit> so they're registered regardless of
+        // which builder loads first; without the duplicate, read-only paths
+        // that never touch WriteOptionsBuilder fail to resolve "@type":"bigint".
+        ClassUtilities.addPermanentClassAlias(BigInteger.class, "bigint");
+        ClassUtilities.addPermanentClassAlias(BigInteger.class, "BigInt");
+        ClassUtilities.addPermanentClassAlias(BigDecimal.class, "bigdec");
+        ClassUtilities.addPermanentClassAlias(BigDecimal.class, "BigDec");
 
         defReadOptions = new ReadOptionsBuilder().build();
     }
