@@ -166,7 +166,11 @@ public final class ResolverInstrumentation {
         // @type value; applyPendingMetadata only sets type-string when @type
         // was emitted).
         if (jObj.getTypeString() != null) { s.flags[FLAG_TYPE]++; anyFlag = true; }
-        if (jObj.getId() != 0)            { s.flags[FLAG_ID]++; anyFlag = true; }
+        // hasId() — id field defaults to -1; is set by parser to a positive
+        // long ONLY when @id was actually present in the JSON. The earlier
+        // version of this code used `getId() != 0` which mis-counted the
+        // default -1 sentinel as "has @id" — every JsonObject was flagged.
+        if (jObj.hasId())                 { s.flags[FLAG_ID]++; anyFlag = true; }
         if (jObj.isReference())           { s.flags[FLAG_REF]++; anyFlag = true; }
         if (jObj instanceof JsonObjectArray || jObj instanceof JsonObjectMap) {
             s.flags[FLAG_ITEMS_KEYS]++;

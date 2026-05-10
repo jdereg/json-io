@@ -163,6 +163,10 @@ public class JsonPerformanceTest {
             case "maps":
                 testMapsOnly();
                 break;
+            case "nometa":
+            case "no-meta":
+                testNoMetadataResolution();
+                break;
             case "both":
             default:
                 testFullJavaResolution();
@@ -180,6 +184,49 @@ public class JsonPerformanceTest {
         if (ResolverInstrumentation.ENABLED) {
             ResolverInstrumentation.dump();
         }
+    }
+
+    /**
+     * Read benchmark variant that exercises the metadata-free workload pattern
+     * (no @type, no @id) — the shape of typical Jackson-style POJO JSON. Same
+     * TestData graph as {@link #testFullJavaResolution} but serialized with
+     * {@code showTypeInfoNever() + cycleSupport(false)} so the JSON contains
+     * no json-io metadata. The reader infers types from the caller-supplied
+     * target class; this is the optimization path eager construction was
+     * designed for.
+     */
+    public static void testNoMetadataResolution() throws IOException {
+        LOG.info("=== TEST: No-metadata Resolution (toJava, no @type, no @id) ===");
+
+        TestData testData = createTestData();
+        WriteOptions writeOptions = new WriteOptionsBuilder()
+                .showTypeInfoNever()
+                .cycleSupport(false)
+                .build();
+        ReadOptions readOptions = ReadOptionsBuilder.getDefaultReadOptions();
+
+        String json = JsonIo.toJson(testData, writeOptions);
+        LOG.info("Generated JSON size: " + json.length() + " chars");
+
+        // Warmup
+        LOG.info("Starting warmup with " + WARMUP_ITERATIONS + " iterations...");
+        for (int i = 0; i < WARMUP_ITERATIONS; i++) {
+            TestData warm = JsonIo.toJava(json, readOptions).asClass(TestData.class);
+            if (warm == null) throw new IllegalStateException("warmup result null");
+        }
+        LOG.info("Warmup complete.");
+
+        LOG.info("Testing JsonIo Read (no-metadata) with " + TEST_ITERATIONS + " iterations...");
+        long start = System.nanoTime();
+        TestData result = null;
+        for (int i = 0; i < TEST_ITERATIONS; i++) {
+            result = JsonIo.toJava(json, readOptions).asClass(TestData.class);
+        }
+        long elapsed = System.nanoTime() - start;
+        LOG.info("JsonIo Read complete. Final result hash: " + (result == null ? "null" : Integer.toHexString(System.identityHashCode(result))));
+        LOG.info("--- No-metadata Results ---");
+        LOG.info("Iterations: " + TEST_ITERATIONS);
+        LOG.info("JsonIo Read Time (no-metadata): " + (elapsed / 1_000_000.0) + " ms");
     }
 
     /**
