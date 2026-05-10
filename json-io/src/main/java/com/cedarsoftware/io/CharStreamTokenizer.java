@@ -684,7 +684,11 @@ final class CharStreamTokenizer extends JsonTokenizer {
             strBuf.append((char) c);
         }
 
-        return strBuf.toString();
+        // Route through the per-tokenizer string cache so repeated JSON5 field
+        // names ({foo: 1, foo: 2, foo: 3, ...}) intern to the same String. Same
+        // cache that quoted field names use; cap on length prevents pathological
+        // identifiers from blowing the cache.
+        return cacheString(strBuf);
     }
 
     private void readToken(String token) {

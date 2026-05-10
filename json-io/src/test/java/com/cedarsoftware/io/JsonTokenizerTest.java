@@ -561,6 +561,31 @@ class JsonTokenizerTest {
     }
 
     @Test
+    void unquotedFieldName_repeatedIdentifiersAreInterned() throws IOException {
+        // Repeated JSON5 unquoted identifiers should reuse the same cached
+        // String instance (same path that quoted strings use).
+        CharStreamTokenizer t = tokenizer("[{name: 1}, {name: 2}, {name: 3}]");
+        assertEquals(JsonToken.START_ARRAY, t.nextToken());
+
+        String first = null;
+        for (int i = 0; i < 3; i++) {
+            assertEquals(JsonToken.START_OBJECT, t.nextToken());
+            assertEquals(JsonToken.FIELD_NAME, t.nextToken());
+            String name = t.currentName();
+            assertEquals("name", name);
+            if (first == null) {
+                first = name;
+            } else {
+                // Identity-equal, not just content-equal — proving the cache hit.
+                assertThat(name).isSameAs(first);
+            }
+            assertEquals(JsonToken.VALUE_NUMBER_INT, t.nextToken());
+            assertEquals(JsonToken.END_OBJECT, t.nextToken());
+        }
+        assertEquals(JsonToken.END_ARRAY, t.nextToken());
+    }
+
+    @Test
     void singleLineComment() throws IOException {
         CharStreamTokenizer t = tokenizer("// leading comment\n{\"a\":1}");
         assertEquals(JsonToken.START_OBJECT, t.nextToken());
