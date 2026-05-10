@@ -14,9 +14,8 @@ import static com.cedarsoftware.util.MathUtilities.parseToMinimalNumericType;
 
 /**
  * Char-based concrete {@link JsonTokenizer} backed by a {@link FastReader}.
- * Implements the cursor API by copying the tokenization helpers currently
- * embedded in {@link JsonParser}; commit 3 of the Phase A extraction will
- * retire those copies and route JsonParser through this class.
+ * Implements the cursor API used by {@link JsonParser} to drive JSON parsing
+ * one token at a time.
  *
  * <p>The cursor state machine is a small explicit stack of {@code OBJECT} /
  * {@code ARRAY} contexts. {@link #nextToken()} consumes whatever lookahead
@@ -24,9 +23,9 @@ import static com.cedarsoftware.util.MathUtilities.parseToMinimalNumericType;
  * one token per call. EOF is signaled by returning {@code null}.
  *
  * <p>This tokenizer deliberately omits the depth-0 "no trailing content"
- * assertion that today's {@link JsonParser#readString(char)} performs at the
- * end of a top-level string value: that check is a tree-builder concern, not
- * a tokenization concern, and will be applied by the caller in commit 3.
+ * assertion that applies after a top-level string value: that check is a
+ * tree-builder concern, not a tokenization concern, and is enforced by
+ * {@link JsonParser} via {@link #hasNonWhitespaceContent()}.
  *
  * <p>Package-private until 4.104.0+.
  */
@@ -122,7 +121,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
     // -------------------------------------------------------------------
 
     @Override
-    public JsonToken nextToken() throws IOException {
+    public JsonToken nextToken() {
         if (done) {
             return null;
         }
@@ -154,7 +153,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return advanceWithinArray();
     }
 
-    private JsonToken advanceWithinObject() throws IOException {
+    private JsonToken advanceWithinObject() {
         int c;
         if (currentToken == JsonToken.START_OBJECT) {
             c = skipWhitespaceRead(true);
@@ -183,7 +182,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return readFieldNameAt(c);
     }
 
-    private JsonToken advanceWithinArray() throws IOException {
+    private JsonToken advanceWithinArray() {
         int c;
         if (currentToken == JsonToken.START_ARRAY) {
             c = skipWhitespaceRead(true);
@@ -212,7 +211,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return advanceToValue(c);
     }
 
-    private JsonToken advanceToValue(int c) throws IOException {
+    private JsonToken advanceToValue(int c) {
         // Mirrors JsonParser.readValue(int, Type) in dispatch but emits tokens.
         if (c == '{') {
             pushContext(CTX_OBJECT);
@@ -270,7 +269,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         }
     }
 
-    private JsonToken readFieldNameAt(int c) throws IOException {
+    private JsonToken readFieldNameAt(int c) {
         CharSequence name;
         if (c == '"') {
             name = readString('"');
@@ -434,7 +433,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     @Override
-    public int getIntValue() throws IOException {
+    public int getIntValue() {
         ensureNumberToken();
         if (numberType == NumberType.BIG_INTEGER) {
             return bigIntegerValue.intValueExact();
@@ -449,7 +448,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     @Override
-    public long getLongValue() throws IOException {
+    public long getLongValue() {
         ensureNumberToken();
         if (numberType == NumberType.BIG_INTEGER) {
             return bigIntegerValue.longValueExact();
@@ -464,7 +463,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     @Override
-    public float getFloatValue() throws IOException {
+    public float getFloatValue() {
         ensureNumberToken();
         if (numberType == NumberType.BIG_DECIMAL) {
             return bigDecimalValue.floatValue();
@@ -476,7 +475,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     @Override
-    public double getDoubleValue() throws IOException {
+    public double getDoubleValue() {
         ensureNumberToken();
         if (numberType == NumberType.BIG_DECIMAL) {
             return bigDecimalValue.doubleValue();
@@ -488,7 +487,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     @Override
-    public BigInteger getBigIntegerValue() throws IOException {
+    public BigInteger getBigIntegerValue() {
         ensureNumberToken();
         if (numberType == NumberType.BIG_INTEGER) {
             return bigIntegerValue;
@@ -503,7 +502,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     @Override
-    public BigDecimal getDecimalValue() throws IOException {
+    public BigDecimal getDecimalValue() {
         ensureNumberToken();
         if (numberType == NumberType.BIG_DECIMAL) {
             return bigDecimalValue;
@@ -529,7 +528,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     @Override
-    public void skipChildren() throws IOException {
+    public void skipChildren() {
         if (currentToken != JsonToken.START_OBJECT && currentToken != JsonToken.START_ARRAY) {
             return;
         }
@@ -548,7 +547,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     @Override
-    boolean hasNonWhitespaceContent() throws IOException {
+    boolean hasNonWhitespaceContent() {
         int c = skipWhitespaceRead(false);
         if (c == -1) {
             return false;
@@ -919,7 +918,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return isNegative ? -value : value;
     }
 
-    private CharSequence readString(char quoteChar) throws IOException {
+    private CharSequence readString(char quoteChar) {
         final FastReader in = input;
         final char[] buf = readBuf;
 
@@ -1012,7 +1011,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return readStringSlowPath(str, quoteChar);
     }
 
-    private CharSequence readStringSlowPath(StringBuilder str, char quoteChar) throws IOException {
+    private CharSequence readStringSlowPath(StringBuilder str, char quoteChar) {
         final FastReader in = input;
         final char[] buf = readBuf;
 
@@ -1040,7 +1039,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return cacheString(str);
     }
 
-    private CharSequence readStringWithEscapes(StringBuilder str, int delimChar, char quoteChar) throws IOException {
+    private CharSequence readStringWithEscapes(StringBuilder str, int delimChar, char quoteChar) {
         final FastReader in = input;
         final char[] buf = readBuf;
         final char[] ESCAPE_CHARS = ESCAPE_CHAR_MAP;
@@ -1200,7 +1199,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return s;
     }
 
-    private int skipWhitespaceRead(boolean throwOnEof) throws IOException {
+    private int skipWhitespaceRead(boolean throwOnEof) {
         final FastReader in = input;
         int c;
         if (strictJson) {

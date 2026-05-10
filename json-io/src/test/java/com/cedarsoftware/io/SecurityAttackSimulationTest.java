@@ -241,46 +241,61 @@ public class SecurityAttackSimulationTest {
     @Test
     @Timeout(value = 15, unit = TimeUnit.SECONDS)
     public void simulateTimingAttack() {
-        // Create JSON strings that should take similar time to process
-        // regardless of content to prevent timing-based attacks
+        // Same JSON shape, identical byte length — the inputs differ only in
+        // field-name and value content. Any timing-side-channel from looking up
+        // "valid" vs "invalid" vs "nonexistent" field names should manifest as
+        // a measurable variance across these otherwise-identical inputs. Inputs
+        // of different sizes would fail this test for size-related reasons that
+        // are not what this test is checking.
         String[] timingTestInputs = {
-            "{\"valid\":\"user\",\"password\":\"correct\"}",
-            "{\"invalid\":\"user\",\"password\":\"wrong\"}",
-            "{\"nonexistent\":\"user\",\"password\":\"test\"}",
-            "{\"empty\":\"\",\"password\":\"\"}",
-            "{\"long\":\"" + createRepeatedString("user", 100) + "\",\"password\":\"" + createRepeatedString("pass", 100) + "\"}"
+            "{\"username\":\"alice\",\"password\":\"correct\"}",
+            "{\"validkey\":\"alice\",\"password\":\"correct\"}",
+            "{\"username\":\"bobby\",\"password\":\"abcdefg\"}",
+            "{\"unknown1\":\"alice\",\"password\":\"correct\"}",
+            "{\"username\":\"xyzab\",\"password\":\"qrstuvw\"}"
         };
-        
+        // Sanity-check: identical byte length keeps this a content-only test.
+        int sharedLen = timingTestInputs[0].length();
+        for (String s : timingTestInputs) {
+            assertEquals(sharedLen, s.length(), "test inputs must have identical length");
+        }
+
         long[] processingTimes = new long[timingTestInputs.length];
-        
+
         // Warm up
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 1000; i++) {
             for (String input : timingTestInputs) {
                 JsonIo.toJava(input, SECURE_OPTIONS);
             }
         }
-        
-        // Measure timing
+
+        // Measure timing — best-of-3 per input to ride out one-off GC pauses.
         for (int i = 0; i < timingTestInputs.length; i++) {
-            long startTime = System.nanoTime();
-            for (int j = 0; j < 1000; j++) {
-                JsonIo.toJava(timingTestInputs[i], SECURE_OPTIONS);
+            long best = Long.MAX_VALUE;
+            for (int trial = 0; trial < 3; trial++) {
+                long startTime = System.nanoTime();
+                for (int j = 0; j < 5000; j++) {
+                    JsonIo.toJava(timingTestInputs[i], SECURE_OPTIONS);
+                }
+                long elapsed = System.nanoTime() - startTime;
+                if (elapsed < best) best = elapsed;
             }
-            long endTime = System.nanoTime();
-            processingTimes[i] = endTime - startTime;
+            processingTimes[i] = best;
         }
-        
-        // Verify timing consistency (should not vary by more than 50%)
+
         long minTime = Long.MAX_VALUE;
         long maxTime = Long.MIN_VALUE;
-        
         for (long time : processingTimes) {
             minTime = Math.min(minTime, time);
             maxTime = Math.max(maxTime, time);
         }
-        
-        double timingVariance = (double)(maxTime - minTime) / minTime;
-        assertTrue(timingVariance < 3.0, "Timing attack vulnerability detected - variance: " + (timingVariance * 100) + "%");
+
+        // With same-shape same-size inputs and best-of-3 trials, max should be
+        // well within 2x of min on a quiet machine. 100% variance is the smoke-
+        // test threshold; a real timing side-channel would diverge much more.
+        double timingVariance = (double) (maxTime - minTime) / minTime;
+        assertTrue(timingVariance < 1.0,
+                "Timing attack vulnerability detected - variance: " + (timingVariance * 100) + "%");
     }
 
     /**
