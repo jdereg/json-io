@@ -1,6 +1,7 @@
 ### Revision History
 
 #### 4.103.0 - (Unreleased)
+* **PERFORMANCE**: `CharStreamTokenizer.emitNumber()` no longer eagerly stringifies parsed numeric tokens into `currentText`. The JSON value path consults `getLongValue()` / `getDoubleValue()` / `getBigIntegerValue()` directly and never reads the text form, so the per-token `Long.toString` / `Double.toString` / `BigInteger.toString` / `BigDecimal.toString` allocations were pure waste. A new `ensureNumericText()` helper materializes `currentText` lazily on `getText()` / `getTextLength()` / the `getDecimalValue` DOUBLE/FLOAT branch, preserving observable behavior. Median-of-3 JsonPerformanceTest vs Jackson: Maps Read 2.13x → 1.99x (**-5.7%**, -638 ms); POJO Read 1.59x → 1.38x (**-16.3%**, -1100 ms). Writer paths unchanged (within ±2% noise).
 * **REFACTOR**: Internal — extracted `JsonTokenizer` (Jackson-style cursor API) and concrete `CharStreamTokenizer` from `JsonParser`; the parser now drives parsing through `tokenizer.nextToken()` instead of inlining char-level scanning. JsonParser shrinks from ~1,590 to ~590 lines. Behavior unchanged; all 3,898 tests pass; JsonPerformanceTest medians within ±2% of baseline. New types are package-private and not yet user-visible — they are the prerequisite for Tier 2 eager-POJO-construction work in 4.104.0+.
 
 #### 4.102.0 - 2026-05-04

@@ -312,6 +312,10 @@ final class CharStreamTokenizer extends JsonTokenizer {
 
     private JsonToken emitNumber(Number n) {
         // Categorize the parsed Number into a NumberType + typed-value cache.
+        // currentText is left null and materialized lazily by ensureNumericText()
+        // — JsonParser's value path never reads it, so the per-int Long.toString /
+        // per-double Double.toString allocations were pure waste on the hot path.
+        currentText = null;
         if (n instanceof Long) {
             long l = (Long) n;
             longValue = l;
@@ -320,7 +324,6 @@ final class CharStreamTokenizer extends JsonTokenizer {
             bigDecimalValue = null;
             numberType = (l >= Integer.MIN_VALUE && l <= Integer.MAX_VALUE)
                     ? NumberType.INT : NumberType.LONG;
-            currentText = Long.toString(l);
             currentToken = JsonToken.VALUE_NUMBER_INT;
         } else if (n instanceof Double) {
             double d = (Double) n;
@@ -329,7 +332,6 @@ final class CharStreamTokenizer extends JsonTokenizer {
             bigIntegerValue = null;
             bigDecimalValue = null;
             numberType = NumberType.DOUBLE;
-            currentText = Double.toString(d);
             currentToken = JsonToken.VALUE_NUMBER_FLOAT;
         } else if (n instanceof BigInteger) {
             BigInteger bi = (BigInteger) n;
@@ -338,7 +340,6 @@ final class CharStreamTokenizer extends JsonTokenizer {
             doubleValue = bi.doubleValue();
             bigDecimalValue = null;
             numberType = NumberType.BIG_INTEGER;
-            currentText = bi.toString();
             currentToken = JsonToken.VALUE_NUMBER_INT;
         } else if (n instanceof BigDecimal) {
             BigDecimal bd = (BigDecimal) n;
@@ -347,7 +348,6 @@ final class CharStreamTokenizer extends JsonTokenizer {
             longValue = bd.longValue();
             bigIntegerValue = null;
             numberType = NumberType.BIG_DECIMAL;
-            currentText = bd.toString();
             currentToken = JsonToken.VALUE_NUMBER_FLOAT;
         } else if (n instanceof Float) {
             float f = (Float) n;
@@ -356,7 +356,6 @@ final class CharStreamTokenizer extends JsonTokenizer {
             bigIntegerValue = null;
             bigDecimalValue = null;
             numberType = NumberType.FLOAT;
-            currentText = Float.toString(f);
             currentToken = JsonToken.VALUE_NUMBER_FLOAT;
         } else {
             // Integer / Short / Byte etc. — coerce to long.
@@ -366,10 +365,44 @@ final class CharStreamTokenizer extends JsonTokenizer {
             bigIntegerValue = null;
             bigDecimalValue = null;
             numberType = NumberType.INT;
-            currentText = Long.toString(l);
             currentToken = JsonToken.VALUE_NUMBER_INT;
         }
         return currentToken;
+    }
+
+    /**
+     * Lazily materialize {@code currentText} for numeric tokens. No-op when
+     * {@code currentText} is already populated or the current token is non-numeric.
+     */
+    private void ensureNumericText() {
+        if (currentText != null) {
+            return;
+        }
+        if (currentToken != JsonToken.VALUE_NUMBER_INT
+                && currentToken != JsonToken.VALUE_NUMBER_FLOAT) {
+            return;
+        }
+        switch (numberType) {
+            case INT:
+            case LONG:
+                currentText = Long.toString(longValue);
+                break;
+            case DOUBLE:
+                currentText = Double.toString(doubleValue);
+                break;
+            case FLOAT:
+                // doubleValue holds the widened float; (float) is lossless round-trip.
+                currentText = Float.toString((float) doubleValue);
+                break;
+            case BIG_INTEGER:
+                currentText = bigIntegerValue.toString();
+                break;
+            case BIG_DECIMAL:
+                currentText = bigDecimalValue.toString();
+                break;
+            default:
+                break;
+        }
     }
 
     @Override
@@ -384,11 +417,13 @@ final class CharStreamTokenizer extends JsonTokenizer {
 
     @Override
     public String getText() {
+        ensureNumericText();
         return currentText;
     }
 
     @Override
     public int getTextLength() {
+        ensureNumericText();
         return currentText == null ? 0 : currentText.length();
     }
 
@@ -477,6 +512,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
             return new BigDecimal(bigIntegerValue);
         }
         if (numberType == NumberType.DOUBLE || numberType == NumberType.FLOAT) {
+            ensureNumericText();
             return new BigDecimal(currentText);
         }
         return BigDecimal.valueOf(longValue);
