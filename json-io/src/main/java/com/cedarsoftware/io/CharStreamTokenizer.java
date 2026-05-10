@@ -238,7 +238,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
                 readToken("null");
                 return setToken(JsonToken.VALUE_NULL, "null");
             case 'N':
-                return emitNumber(readNumber(c));
+                return readNumber(c);
             case 't':
             case 'T':
                 readToken("true");
@@ -246,20 +246,20 @@ final class CharStreamTokenizer extends JsonTokenizer {
                 return setToken(JsonToken.VALUE_TRUE, "true");
             case '-':
             case 'I':
-                return emitNumber(readNumber(c));
+                return readNumber(c);
             case '.':
                 if (strictJson) {
                     error("Leading decimal point not allowed in strict JSON mode");
                 }
-                return emitNumber(readNumber(c));
+                return readNumber(c);
             case '+':
                 if (strictJson) {
                     error("Explicit positive sign not allowed in strict JSON mode");
                 }
-                return emitNumber(readNumber(c));
+                return readNumber(c);
             default:
                 if (c >= '0' && c <= '9') {
-                    return emitNumber(readNumber(c));
+                    return readNumber(c);
                 }
                 if (c == -1) {
                     error("EOF reached prematurely");
@@ -309,64 +309,83 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return JsonToken.VALUE_STRING;
     }
 
-    private JsonToken emitNumber(Number n) {
-        // Categorize the parsed Number into a NumberType + typed-value cache.
-        // currentText is left null and materialized lazily by ensureNumericText()
-        // — JsonParser's value path never reads it, so the per-int Long.toString /
-        // per-double Double.toString allocations were pure waste on the hot path.
+    // Direct field-population helpers. Avoid the box→unbox→re-box churn that
+    // would otherwise happen on every parsed number: the readNumber* chain
+    // wrote a Number, emitNumber unboxed and stored typed fields, then
+    // JsonParser.materializeNumber() boxed again to hand the value back.
+    // currentText is left null in all branches and materialized lazily by
+    // ensureNumericText() if anyone actually reads getText() on a number token.
+
+    private JsonToken setLongResult(long l) {
         currentText = null;
-        if (n instanceof Long) {
-            long l = (Long) n;
-            longValue = l;
-            doubleValue = (double) l;
-            bigIntegerValue = null;
-            bigDecimalValue = null;
-            numberType = (l >= Integer.MIN_VALUE && l <= Integer.MAX_VALUE)
-                    ? NumberType.INT : NumberType.LONG;
-            currentToken = JsonToken.VALUE_NUMBER_INT;
-        } else if (n instanceof Double) {
-            double d = (Double) n;
-            doubleValue = d;
-            longValue = (long) d;
-            bigIntegerValue = null;
-            bigDecimalValue = null;
-            numberType = NumberType.DOUBLE;
-            currentToken = JsonToken.VALUE_NUMBER_FLOAT;
-        } else if (n instanceof BigInteger) {
-            BigInteger bi = (BigInteger) n;
-            bigIntegerValue = bi;
-            longValue = bi.longValue();
-            doubleValue = bi.doubleValue();
-            bigDecimalValue = null;
-            numberType = NumberType.BIG_INTEGER;
-            currentToken = JsonToken.VALUE_NUMBER_INT;
-        } else if (n instanceof BigDecimal) {
-            BigDecimal bd = (BigDecimal) n;
-            bigDecimalValue = bd;
-            doubleValue = bd.doubleValue();
-            longValue = bd.longValue();
-            bigIntegerValue = null;
-            numberType = NumberType.BIG_DECIMAL;
-            currentToken = JsonToken.VALUE_NUMBER_FLOAT;
-        } else if (n instanceof Float) {
-            float f = (Float) n;
-            doubleValue = f;
-            longValue = (long) f;
-            bigIntegerValue = null;
-            bigDecimalValue = null;
-            numberType = NumberType.FLOAT;
-            currentToken = JsonToken.VALUE_NUMBER_FLOAT;
-        } else {
-            // Integer / Short / Byte etc. — coerce to long.
-            long l = n.longValue();
-            longValue = l;
-            doubleValue = (double) l;
-            bigIntegerValue = null;
-            bigDecimalValue = null;
-            numberType = NumberType.INT;
-            currentToken = JsonToken.VALUE_NUMBER_INT;
-        }
-        return currentToken;
+        longValue = l;
+        doubleValue = (double) l;
+        bigIntegerValue = null;
+        bigDecimalValue = null;
+        numberType = (l >= Integer.MIN_VALUE && l <= Integer.MAX_VALUE)
+                ? NumberType.INT : NumberType.LONG;
+        currentToken = JsonToken.VALUE_NUMBER_INT;
+        return JsonToken.VALUE_NUMBER_INT;
+    }
+
+    private JsonToken setDoubleResult(double d) {
+        currentText = null;
+        doubleValue = d;
+        longValue = (long) d;
+        bigIntegerValue = null;
+        bigDecimalValue = null;
+        numberType = NumberType.DOUBLE;
+        currentToken = JsonToken.VALUE_NUMBER_FLOAT;
+        return JsonToken.VALUE_NUMBER_FLOAT;
+    }
+
+    private JsonToken setFloatResult(float f) {
+        currentText = null;
+        doubleValue = f;
+        longValue = (long) f;
+        bigIntegerValue = null;
+        bigDecimalValue = null;
+        numberType = NumberType.FLOAT;
+        currentToken = JsonToken.VALUE_NUMBER_FLOAT;
+        return JsonToken.VALUE_NUMBER_FLOAT;
+    }
+
+    private JsonToken setBigIntegerResult(BigInteger bi) {
+        currentText = null;
+        bigIntegerValue = bi;
+        longValue = bi.longValue();
+        doubleValue = bi.doubleValue();
+        bigDecimalValue = null;
+        numberType = NumberType.BIG_INTEGER;
+        currentToken = JsonToken.VALUE_NUMBER_INT;
+        return JsonToken.VALUE_NUMBER_INT;
+    }
+
+    private JsonToken setBigDecimalResult(BigDecimal bd) {
+        currentText = null;
+        bigDecimalValue = bd;
+        doubleValue = bd.doubleValue();
+        longValue = bd.longValue();
+        bigIntegerValue = null;
+        numberType = NumberType.BIG_DECIMAL;
+        currentToken = JsonToken.VALUE_NUMBER_FLOAT;
+        return JsonToken.VALUE_NUMBER_FLOAT;
+    }
+
+    /**
+     * Fallback dispatcher for the rare path that genuinely produces a boxed
+     * {@link Number} (today only {@code parseToMinimalNumericType} when
+     * {@code floatingPointBoth} is set). Hot paths skip this and go through
+     * the direct {@code setXxxResult} helpers.
+     */
+    private JsonToken emitNumber(Number n) {
+        if (n instanceof Long) return setLongResult((Long) n);
+        if (n instanceof Double) return setDoubleResult((Double) n);
+        if (n instanceof BigInteger) return setBigIntegerResult((BigInteger) n);
+        if (n instanceof BigDecimal) return setBigDecimalResult((BigDecimal) n);
+        if (n instanceof Float) return setFloatResult((Float) n);
+        // Integer / Short / Byte etc. — coerce to long.
+        return setLongResult(n.longValue());
     }
 
     /**
@@ -653,7 +672,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         }
     }
 
-    private Number readNumber(int c) {
+    private JsonToken readNumber(int c) {
         // Fast path: simple positive integers (1-9 followed by digits).
         if (c >= '1' && c <= '9' && !integerTypeBigInteger) {
             final FastReader in = input;
@@ -673,7 +692,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
                     if (d != -1) {
                         in.pushback((char) d);
                     }
-                    return n;
+                    return setLongResult(n);
                 }
             }
         }
@@ -686,10 +705,10 @@ final class CharStreamTokenizer extends JsonTokenizer {
 
             if (c == 'I') {
                 readToken("infinity");
-                return isNeg ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY;
+                return setDoubleResult(isNeg ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY);
             } else if (c == 'N') {
                 readToken("nan");
-                return Double.NaN;
+                return setDoubleResult(Double.NaN);
             } else {
                 return readNumberGeneral('-', c);
             }
@@ -698,7 +717,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return readNumberGeneral(c);
     }
 
-    private Number readNumberContinuation(long prefix, int c) {
+    private JsonToken readNumberContinuation(long prefix, int c) {
         final FastReader in = input;
         StringBuilder number = numBuf;
         number.setLength(0);
@@ -712,12 +731,12 @@ final class CharStreamTokenizer extends JsonTokenizer {
             if (c >= '0' && c <= '9') {
                 number.append((char) c);
             } else if (c == '.') {
-                if (seenDot || seenExp) return (Number) error("Invalid number: " + number + ".");
+                if (seenDot || seenExp) return (JsonToken) error("Invalid number: " + number + ".");
                 number.append((char) c);
                 isFloat = true;
                 seenDot = true;
             } else if (c == 'e' || c == 'E') {
-                if (seenExp) return (Number) error("Invalid number: " + number + (char) c);
+                if (seenExp) return (JsonToken) error("Invalid number: " + number + (char) c);
                 number.append((char) c);
                 isFloat = true;
                 seenExp = true;
@@ -725,7 +744,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
                 if (next == '+' || next == '-') { number.append((char) next); next = in.read(); }
                 if (next < '0' || next > '9') {
                     if (next != -1) in.pushback((char) next);
-                    return (Number) error("Invalid exponent in number: " + number);
+                    return (JsonToken) error("Invalid exponent in number: " + number);
                 }
                 number.append((char) next);
             } else {
@@ -739,15 +758,15 @@ final class CharStreamTokenizer extends JsonTokenizer {
             if (isFloat) return readFloatingPoint(number);
             return readInteger(number);
         } catch (Exception e) {
-            return (Number) error("Invalid number: " + number, e);
+            return (JsonToken) error("Invalid number: " + number, e);
         }
     }
 
-    private Number readNumberGeneral(int firstChar) {
+    private JsonToken readNumberGeneral(int firstChar) {
         return readNumberGeneral(firstChar, NO_PREFETCH);
     }
 
-    private Number readNumberGeneral(int firstChar, int prefetchedAfterSign) {
+    private JsonToken readNumberGeneral(int firstChar, int prefetchedAfterSign) {
         final FastReader in = input;
         boolean isFloat = false;
         boolean isNegative = (firstChar == '-');
@@ -779,7 +798,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
             number.append((char) firstChar);
         }
         if ((isPositive || isNegative) && firstNumberChar == -1) {
-            return (Number) error(isPositive ? "Unexpected end of input after '+'" : "Invalid number: -");
+            return (JsonToken) error(isPositive ? "Unexpected end of input after '+'" : "Invalid number: -");
         }
 
         if (firstNumberChar >= '0' && firstNumberChar <= '9') {
@@ -790,7 +809,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
             isFloat = true;
             seenDot = true;
         } else {
-            return (Number) error("Invalid number: " + (isPositive ? "+" : "") + number + (char) firstNumberChar);
+            return (JsonToken) error("Invalid number: " + (isPositive ? "+" : "") + number + (char) firstNumberChar);
         }
 
         while (true) {
@@ -801,14 +820,14 @@ final class CharStreamTokenizer extends JsonTokenizer {
                 seenDigit = true;
             } else if (c == '.') {
                 if (seenDot || seenExp) {
-                    return (Number) error("Invalid number: " + number + ".");
+                    return (JsonToken) error("Invalid number: " + number + ".");
                 }
                 number.append((char) c);
                 isFloat = true;
                 seenDot = true;
             } else if (c == 'e' || c == 'E') {
                 if (seenExp || !seenDigit) {
-                    return (Number) error("Invalid number: " + number + (char) c);
+                    return (JsonToken) error("Invalid number: " + number + (char) c);
                 }
                 number.append((char) c);
                 isFloat = true;
@@ -823,7 +842,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
                     if (next != -1) {
                         in.pushback((char) next);
                     }
-                    return (Number) error("Invalid exponent in number: " + number);
+                    return (JsonToken) error("Invalid exponent in number: " + number);
                 }
                 number.append((char) next);
             } else if (c == -1) {
@@ -835,7 +854,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         }
 
         if (!seenDigit) {
-            return (Number) error("Invalid number: " + number);
+            return (JsonToken) error("Invalid number: " + number);
         }
 
         try {
@@ -844,13 +863,13 @@ final class CharStreamTokenizer extends JsonTokenizer {
             }
             return readInteger(number);
         } catch (Exception e) {
-            return (Number) error("Invalid number: " + number, e);
+            return (JsonToken) error("Invalid number: " + number, e);
         }
     }
 
-    private Number readInteger(CharSequence number) {
+    private JsonToken readInteger(CharSequence number) {
         if (integerTypeBigInteger) {
-            return parseBigInteger(number);
+            return setBigIntegerResult(parseBigInteger(number));
         }
 
         int len = number.length();
@@ -863,32 +882,33 @@ final class CharStreamTokenizer extends JsonTokenizer {
             for (int i = start; i < len; i++) {
                 n = n * 10 + (number.charAt(i) - '0');
             }
-            return isNeg ? -n : n;
+            return setLongResult(isNeg ? -n : n);
         }
 
         String numStr = number.toString();
         try {
-            return Long.parseLong(numStr);
+            return setLongResult(Long.parseLong(numStr));
         } catch (Exception e) {
             BigInteger bigInt = parseBigInteger(numStr);
             if (integerTypeBoth) {
-                return bigInt;
+                return setBigIntegerResult(bigInt);
             }
-            return bigInt.longValue();
+            return setLongResult(bigInt.longValue());
         }
     }
 
-    private Number readFloatingPoint(CharSequence numStr) {
+    private JsonToken readFloatingPoint(CharSequence numStr) {
         if (floatingPointBigDecimal) {
-            return parseBigDecimal(numStr);
+            return setBigDecimalResult(parseBigDecimal(numStr));
         }
         if (!floatingPointBoth) {
-            return parseDouble(numStr);
+            return setDoubleResult(parseDouble(numStr));
         }
-        return parseToMinimalNumericType(numStr);
+        // parseToMinimalNumericType returns Number; dispatch via emitNumber.
+        return emitNumber(parseToMinimalNumericType(numStr));
     }
 
-    private Number readHexNumber(boolean isNegative) {
+    private JsonToken readHexNumber(boolean isNegative) {
         final FastReader in = input;
         final int[] hexMap = HEX_VALUE_MAP;
         long value = 0;
@@ -915,7 +935,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
             error("Expected hexadecimal digit after 0x");
         }
 
-        return isNegative ? -value : value;
+        return setLongResult(isNegative ? -value : value);
     }
 
     private String readString(char quoteChar) {
