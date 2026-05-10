@@ -171,6 +171,59 @@ class JsonTokenizerTest {
     }
 
     // -------------------------------------------------------------------
+    // Strict-mode rejection of trailing-decimal numbers (RFC 8259 conformance)
+    // -------------------------------------------------------------------
+    // RFC 8259: frac = "." 1*DIGIT — a decimal point must be followed by at
+    // least one digit. Non-strict mode keeps the lenient behavior (1. -> 1.0
+    // like Double.parseDouble), strict mode now rejects.
+
+    @Test
+    void strictMode_rejectsTrailingDecimal() throws IOException {
+        CharStreamTokenizer t = strictTokenizer("1.");
+        assertThatThrownBy(t::nextToken)
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("digit required after decimal point");
+    }
+
+    @Test
+    void strictMode_rejectsTrailingDecimalBeforeExponent() throws IOException {
+        // "1.e2" — dot followed by exponent without intervening digit.
+        CharStreamTokenizer t = strictTokenizer("1.e2");
+        assertThatThrownBy(t::nextToken)
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("digit required after decimal point");
+    }
+
+    @Test
+    void strictMode_acceptsNormalDecimal() throws IOException {
+        CharStreamTokenizer t = strictTokenizer("1.5");
+        assertEquals(JsonToken.VALUE_NUMBER_FLOAT, t.nextToken());
+        assertThat(t.getDoubleValue()).isEqualTo(1.5);
+    }
+
+    @Test
+    void strictMode_acceptsIntegerWithoutDot() throws IOException {
+        CharStreamTokenizer t = strictTokenizer("42");
+        assertEquals(JsonToken.VALUE_NUMBER_INT, t.nextToken());
+        assertEquals(42L, t.getLongValue());
+    }
+
+    @Test
+    void strictMode_acceptsExponentWithoutDecimal() throws IOException {
+        CharStreamTokenizer t = strictTokenizer("1e2");
+        assertEquals(JsonToken.VALUE_NUMBER_FLOAT, t.nextToken());
+        assertThat(t.getDoubleValue()).isEqualTo(100.0);
+    }
+
+    @Test
+    void lenientMode_stillAcceptsTrailingDecimal() throws IOException {
+        // Non-strict (JSON5/lenient) keeps the existing permissive behavior.
+        CharStreamTokenizer t = tokenizer("1.");
+        assertEquals(JsonToken.VALUE_NUMBER_FLOAT, t.nextToken());
+        assertThat(t.getDoubleValue()).isEqualTo(1.0);
+    }
+
+    // -------------------------------------------------------------------
     // Token-type guards on getBooleanValue() / getNumberType()
     // -------------------------------------------------------------------
     // Previously both methods returned whatever the typed field happened to

@@ -782,10 +782,12 @@ final class CharStreamTokenizer extends JsonTokenizer {
         boolean isFloat = false;
         boolean seenDot = false;
         boolean seenExp = false;
+        boolean seenDigitAfterDot = false;
 
         while (true) {
             if (c >= '0' && c <= '9') {
                 number.append((char) c);
+                if (seenDot) seenDigitAfterDot = true;
             } else if (c == '.') {
                 if (seenDot || seenExp) return (JsonToken) error("Invalid number: " + number + ".");
                 number.append((char) c);
@@ -810,6 +812,13 @@ final class CharStreamTokenizer extends JsonTokenizer {
             c = in.read();
         }
 
+        // RFC 8259: frac = "." 1*DIGIT — strict mode requires at least one digit
+        // after the decimal point. Non-strict mode keeps the lenient behavior
+        // (`1.` parses to 1.0 like Java's Double.parseDouble).
+        if (strictJson && seenDot && !seenDigitAfterDot) {
+            return (JsonToken) error("Invalid number: " + number + " (digit required after decimal point in strict JSON mode)");
+        }
+
         try {
             if (isFloat) return readFloatingPoint(number);
             return readInteger(number);
@@ -830,6 +839,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         boolean seenDot = false;
         boolean seenExp = false;
         boolean seenDigit = false;
+        boolean seenDigitAfterDot = false;
 
         int firstNumberChar = firstChar;
         if (isNegative || isPositive) {
@@ -874,6 +884,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
             if (c >= '0' && c <= '9') {
                 number.append((char) c);
                 seenDigit = true;
+                if (seenDot) seenDigitAfterDot = true;
             } else if (c == '.') {
                 if (seenDot || seenExp) {
                     return (JsonToken) error("Invalid number: " + number + ".");
@@ -911,6 +922,12 @@ final class CharStreamTokenizer extends JsonTokenizer {
 
         if (!seenDigit) {
             return (JsonToken) error("Invalid number: " + number);
+        }
+
+        // RFC 8259: frac = "." 1*DIGIT — strict mode requires at least one
+        // digit after the decimal point. Non-strict keeps the lenient behavior.
+        if (strictJson && seenDot && !seenDigitAfterDot) {
+            return (JsonToken) error("Invalid number: " + number + " (digit required after decimal point in strict JSON mode)");
         }
 
         try {
