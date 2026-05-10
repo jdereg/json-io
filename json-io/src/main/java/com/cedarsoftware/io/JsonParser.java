@@ -79,9 +79,9 @@ class JsonParser {
     private final int maxParseDepth;
     private final long maxIdValue;
     private final ClassLoader classLoader;
-    private final Map<CharSequence, CharSequence> substitutes;
+    private final Map<String, String> substitutes;
 
-    private static final Map<CharSequence, CharSequence> SUBSTITUTES = new HashMap<>(16);
+    private static final Map<String, String> SUBSTITUTES = new HashMap<>(16);
 
     static {
         // Initialize substitutions for short meta keys (@t, @i, @r, @e, @k)
@@ -256,7 +256,7 @@ class JsonParser {
                 error("Expected field name in JSON object");
             }
 
-            CharSequence field = tokenizer.currentName();
+            String field = tokenizer.currentName();
             // Performance: Only check substitutes for fields starting with '@' or '$'.
             // Standard field names (letters, digits) never match any substitute key,
             // so the HashMap lookup is pure overhead for the 99% common case.

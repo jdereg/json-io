@@ -270,7 +270,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     private JsonToken readFieldNameAt(int c) {
-        CharSequence name;
+        String name;
         if (c == '"') {
             name = readString('"');
         } else if (c == '\'') {
@@ -291,7 +291,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         if (colon != ':') {
             error("Expected ':' between field and value, instead found '" + (char) colon + "'");
         }
-        currentName = name.toString();
+        currentName = name;
         currentText = currentName;
         currentToken = JsonToken.FIELD_NAME;
         return JsonToken.FIELD_NAME;
@@ -303,8 +303,8 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return token;
     }
 
-    private JsonToken emitString(CharSequence value) {
-        currentText = value.toString();
+    private JsonToken emitString(String value) {
+        currentText = value;
         currentToken = JsonToken.VALUE_STRING;
         return JsonToken.VALUE_STRING;
     }
@@ -620,7 +620,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return strBuf.toString();
     }
 
-    private void readToken(CharSequence token) {
+    private void readToken(String token) {
         final int len = token.length();
 
         if (len <= 5) {
@@ -918,7 +918,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return isNegative ? -value : value;
     }
 
-    private CharSequence readString(char quoteChar) {
+    private String readString(char quoteChar) {
         final FastReader in = input;
         final char[] buf = readBuf;
 
@@ -943,7 +943,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
             if (borrowed) {
                 int delimiter = chars[offset + charsRead];
                 if (delimiter == quoteChar) {
-                    CharSequence value = cacheStringFromChars(chars, offset, charsRead);
+                    String value = cacheStringFromChars(chars, offset, charsRead);
                     slice.release();
 
                     int c = in.read();
@@ -1011,7 +1011,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return readStringSlowPath(str, quoteChar);
     }
 
-    private CharSequence readStringSlowPath(StringBuilder str, char quoteChar) {
+    private String readStringSlowPath(StringBuilder str, char quoteChar) {
         final FastReader in = input;
         final char[] buf = readBuf;
 
@@ -1039,7 +1039,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return cacheString(str);
     }
 
-    private CharSequence readStringWithEscapes(StringBuilder str, int delimChar, char quoteChar) {
+    private String readStringWithEscapes(StringBuilder str, int delimChar, char quoteChar) {
         final FastReader in = input;
         final char[] buf = readBuf;
         final char[] ESCAPE_CHARS = ESCAPE_CHAR_MAP;
@@ -1147,7 +1147,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return (first * 31 + mid) * 31 + last + len;
     }
 
-    private CharSequence cacheString(CharSequence str) {
+    private String cacheString(CharSequence str) {
         final int len = str.length();
         if (len == 0) {
             return "";
@@ -1169,7 +1169,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return s;
     }
 
-    private CharSequence cacheStringFromChars(char[] buf, int offset, int len) {
+    private String cacheStringFromChars(char[] buf, int offset, int len) {
         if (len == 0) {
             return "";
         }
