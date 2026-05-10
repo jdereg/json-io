@@ -171,6 +171,41 @@ class JsonTokenizerTest {
     }
 
     // -------------------------------------------------------------------
+    // getText() returns canonical form for numerics (NOT the raw lexeme).
+    // -------------------------------------------------------------------
+    // Pinned intentionally: preserving the raw lexeme costs an extra String
+    // allocation per non-trivial number (~5% on JsonPerformanceTest); we
+    // ship canonical form and document the trade-off in JsonTokenizer.getText().
+
+    @Test
+    void getText_numericIsCanonicalNotLexeme_scientific() throws IOException {
+        CharStreamTokenizer t = tokenizer("1e2");
+        assertEquals(JsonToken.VALUE_NUMBER_FLOAT, t.nextToken());
+        assertEquals("100.0", t.getText());        // canonical, not "1e2"
+    }
+
+    @Test
+    void getText_numericIsCanonicalNotLexeme_trailingZeros() throws IOException {
+        CharStreamTokenizer t = tokenizer("1.2300");
+        assertEquals(JsonToken.VALUE_NUMBER_FLOAT, t.nextToken());
+        assertEquals("1.23", t.getText());          // canonical, not "1.2300"
+    }
+
+    @Test
+    void getText_numericIsCanonicalNotLexeme_hex() throws IOException {
+        CharStreamTokenizer t = tokenizer("0xFF");
+        assertEquals(JsonToken.VALUE_NUMBER_INT, t.nextToken());
+        assertEquals("255", t.getText());           // canonical decimal, not "0xFF"
+    }
+
+    @Test
+    void getText_numericIsCanonicalNotLexeme_positiveSign() throws IOException {
+        CharStreamTokenizer t = tokenizer("+7");
+        assertEquals(JsonToken.VALUE_NUMBER_INT, t.nextToken());
+        assertEquals("7", t.getText());             // canonical, not "+7"
+    }
+
+    // -------------------------------------------------------------------
     // getIntValue / getLongValue range-check behavior (Jackson-parity)
     // -------------------------------------------------------------------
     // Policy: throw on out-of-range / NaN / Infinity; silently truncate

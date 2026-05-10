@@ -82,8 +82,18 @@ abstract class JsonTokenizer implements Closeable {
      *   <li>{@link JsonToken#VALUE_STRING} — the string content (escapes
      *       processed)</li>
      *   <li>{@link JsonToken#VALUE_NUMBER_INT} /
-     *       {@link JsonToken#VALUE_NUMBER_FLOAT} — the original numeric
-     *       text</li>
+     *       {@link JsonToken#VALUE_NUMBER_FLOAT} — the <b>canonical</b> form
+     *       of the parsed value, not the raw source lexeme. Trailing zeros,
+     *       leading {@code +} signs, leading decimal points, hex prefixes,
+     *       and scientific notation are normalized via
+     *       {@link Long#toString(long)} / {@link Double#toString(double)} /
+     *       {@link java.math.BigInteger#toString()} /
+     *       {@link java.math.BigDecimal#toString()}. E.g. {@code 1e2} reads
+     *       back as {@code "100.0"}, {@code 1.2300} as {@code "1.23"},
+     *       {@code 0xFF} as {@code "255"}, {@code +7} as {@code "7"}.
+     *       Preserving the original lexeme would cost an extra String
+     *       allocation per non-trivial number; callers who need the raw
+     *       source should capture it externally.</li>
      *   <li>{@link JsonToken#VALUE_TRUE} / {@link JsonToken#VALUE_FALSE} /
      *       {@link JsonToken#VALUE_NULL} — the literal name</li>
      *   <li>Structural tokens — the punctuation character</li>
