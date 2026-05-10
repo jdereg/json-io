@@ -65,6 +65,39 @@ public final class ResolverInstrumentation {
      */
     public static final boolean ENABLED = Boolean.getBoolean("jsonio.instrumentResolver");
 
+    /**
+     * Optional file path to append the dump to at JVM shutdown. Useful for
+     * JMH-forked benchmark runs where stdout is captured per-fork and lost.
+     * When set AND {@link #ENABLED}, a shutdown hook dumps the per-class
+     * stats to this file (appended, with a timestamp + JVM-PID header so
+     * multi-fork runs are distinguishable). When unset, the user must call
+     * {@link #dump()} manually.
+     */
+    public static final String DUMP_FILE = System.getProperty("jsonio.instrumentResolverDumpFile");
+
+    static {
+        if (ENABLED && DUMP_FILE != null && !DUMP_FILE.isEmpty()) {
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                try (java.io.PrintStream ps = new java.io.PrintStream(
+                        new java.io.FileOutputStream(DUMP_FILE, true), true)) {
+                    ps.println();
+                    ps.println("==================================================================");
+                    // ManagementFactory.getRuntimeMXBean().getName() works on
+                    // Java 8+; ProcessHandle.current() is Java 9+.
+                    String runtimeName = java.lang.management.ManagementFactory
+                            .getRuntimeMXBean().getName(); // typically "pid@host"
+                    ps.println("=== ResolverInstrumentation dump @ " + java.time.Instant.now()
+                            + "  jvm=" + runtimeName + " ===");
+                    ps.println("==================================================================");
+                    dump(ps);
+                } catch (java.io.IOException e) {
+                    System.err.println("ResolverInstrumentation: failed to write " + DUMP_FILE
+                            + ": " + e.getMessage());
+                }
+            }, "jsonio-instrumentation-dump"));
+        }
+    }
+
     // --- Metadata flag indices ----------------------------------------------
     // Each flag tracked independently — a visit can match multiple flags
     // (e.g., @type AND @id together is common). The "plain" count
