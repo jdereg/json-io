@@ -257,12 +257,16 @@ class JsonParser {
             }
 
             String field = tokenizer.currentName();
-            // Performance: Only check substitutes for fields starting with '@' or '$'.
-            // Standard field names (letters, digits) never match any substitute key,
-            // so the HashMap lookup is pure overhead for the 99% common case.
+            // Performance: avoid the substitutes-map probe whenever it cannot match.
+            // Map keys are exactly: @x short forms (length 2: @i/@r/@e/@t/@k) and any
+            // $-prefixed form ($id/$ref/$items/$type/$keys plus their $x short forms).
+            // Full @-keys like @type/@id/@items/@keys/@ref/@enum are NOT in the map,
+            // so probing them always misses; skip the HashMap call entirely.
             if (field.length() > 0) {
                 char firstCh = field.charAt(0);
-                if (firstCh == '@' || firstCh == '$') {
+                if (firstCh == '$') {
+                    field = substitutes.getOrDefault(field, field);
+                } else if (firstCh == '@' && field.length() == 2) {
                     field = substitutes.getOrDefault(field, field);
                 }
             }
