@@ -138,6 +138,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
     @Override
     public JsonToken nextToken() {
         if (done) {
+            currentToken = null;
             return null;
         }
 
@@ -155,6 +156,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
             int c = skipWhitespaceRead(false);
             if (c == -1) {
                 done = true;
+                currentToken = null;
                 return null;
             }
             return advanceToValue(c);

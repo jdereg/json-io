@@ -96,6 +96,27 @@ class JsonTokenizerTest {
         assertNull(t.nextToken()); // sticky
     }
 
+    @Test
+    void currentToken_isNullAfterEof() throws IOException {
+        // Per JsonTokenizer.currentToken() contract: returns null if the cursor
+        // has not advanced yet OR is at EOF. The previous implementation left
+        // currentToken holding the last-emitted value after EOF was detected,
+        // which contradicted the contract.
+        CharStreamTokenizer t = tokenizer("42");
+        assertEquals(JsonToken.VALUE_NUMBER_INT, t.nextToken());
+        assertEquals(JsonToken.VALUE_NUMBER_INT, t.currentToken());
+        assertNull(t.nextToken());      // EOF
+        assertNull(t.currentToken());   // <- must be null per docs
+        assertNull(t.nextToken());      // sticky
+        assertNull(t.currentToken());
+    }
+
+    @Test
+    void currentToken_isNullBeforeFirstAdvance() throws IOException {
+        CharStreamTokenizer t = tokenizer("42");
+        assertNull(t.currentToken()); // not yet advanced
+    }
+
     // ------------------------------------------------------------------
     // Primitive root values
     // ------------------------------------------------------------------
