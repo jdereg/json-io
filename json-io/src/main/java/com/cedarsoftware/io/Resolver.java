@@ -1038,6 +1038,17 @@ public abstract class Resolver {
                 continue;
             }
 
+            // Diagnostic: record this visit. ENABLED is a static final boolean
+            // read at class init from a system property; when false, the
+            // entire branch is JIT-eliminated (zero cost in production).
+            if (ResolverInstrumentation.ENABLED) {
+                ResolverInstrumentation.recordVisit(
+                        jsonObj,
+                        readOptions,
+                        jsonObj == root ? ResolverInstrumentation.SRC_ROOT
+                                        : ResolverInstrumentation.SRC_NON_ROOT);
+            }
+
             // Performance: Use cached type classification instead of repeated isArray/isCollection/isMap checks
             switch (jsonObj.getJsonType()) {
                 case ARRAY:

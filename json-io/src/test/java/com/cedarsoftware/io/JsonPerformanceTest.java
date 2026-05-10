@@ -172,6 +172,14 @@ public class JsonPerformanceTest {
                 testMapsOnly();
                 break;
         }
+
+        // Diagnostic: dump per-class Resolver-traversal stats when the
+        // jsonio.instrumentResolver system property is true. Zero cost when
+        // the flag is off (ENABLED is a static final boolean — JIT folds the
+        // branch to a no-op).
+        if (ResolverInstrumentation.ENABLED) {
+            ResolverInstrumentation.dump();
+        }
     }
 
     /**
