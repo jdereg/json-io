@@ -121,6 +121,14 @@ abstract class JsonTokenizer implements Closeable {
 
     /**
      * @return the current number token's value as a {@code long}
+     * @throws IOException                      on I/O error
+     * @throws JsonIoException                  if the current token is not a
+     *                                          number, or the value is NaN/
+     *                                          Infinity, or its magnitude
+     *                                          does not fit in a {@code long}.
+     *                                          Fractional parts of in-range
+     *                                          doubles are truncated silently
+     *                                          (Jackson-parity behavior).
      */
     public abstract long getLongValue() throws IOException;
 

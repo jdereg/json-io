@@ -36,6 +36,21 @@ final class CharStreamTokenizer extends JsonTokenizer {
     private static final int MAX_CACHED_STRING_LENGTH = 64;
     private static final int NO_PREFETCH = -2;
 
+    // Numeric range bounds for getIntValue() / getLongValue() overflow checks.
+    // Mirror Jackson's ParserMinimalBase constants so port behavior matches.
+    private static final BigInteger BI_MIN_INT = BigInteger.valueOf(Integer.MIN_VALUE);
+    private static final BigInteger BI_MAX_INT = BigInteger.valueOf(Integer.MAX_VALUE);
+    private static final BigInteger BI_MIN_LONG = BigInteger.valueOf(Long.MIN_VALUE);
+    private static final BigInteger BI_MAX_LONG = BigInteger.valueOf(Long.MAX_VALUE);
+    private static final BigDecimal BD_MIN_INT = new BigDecimal(BI_MIN_INT);
+    private static final BigDecimal BD_MAX_INT = new BigDecimal(BI_MAX_INT);
+    private static final BigDecimal BD_MIN_LONG = new BigDecimal(BI_MIN_LONG);
+    private static final BigDecimal BD_MAX_LONG = new BigDecimal(BI_MAX_LONG);
+    private static final double MIN_INT_D = Integer.MIN_VALUE;
+    private static final double MAX_INT_D = Integer.MAX_VALUE;
+    private static final double MIN_LONG_D = Long.MIN_VALUE;
+    private static final double MAX_LONG_D = Long.MAX_VALUE;
+
     // Static lookup tables (mirror JsonParser).
     private static final char[] ESCAPE_CHAR_MAP = new char[128];
     private static final int[] HEX_VALUE_MAP = new int[128];
@@ -454,14 +469,31 @@ final class CharStreamTokenizer extends JsonTokenizer {
     @Override
     public int getIntValue() {
         ensureNumberToken();
+        // Jackson-parity: throw on out-of-range / NaN / Infinity, but silently
+        // truncate fractional parts for values that fit (e.g. 1.5 -> 1, like Java's
+        // (int) cast). Mirrors com.fasterxml.jackson.core.base.ParserBase.convertNumberToInt.
         if (numberType == NumberType.BIG_INTEGER) {
-            return bigIntegerValue.intValueExact();
+            if (BI_MIN_INT.compareTo(bigIntegerValue) > 0
+                    || BI_MAX_INT.compareTo(bigIntegerValue) < 0) {
+                error("Numeric value " + bigIntegerValue + " out of range of int");
+            }
+            return bigIntegerValue.intValue();
         }
         if (numberType == NumberType.BIG_DECIMAL) {
-            return bigDecimalValue.intValueExact();
+            if (BD_MIN_INT.compareTo(bigDecimalValue) > 0
+                    || BD_MAX_INT.compareTo(bigDecimalValue) < 0) {
+                error("Numeric value " + bigDecimalValue + " out of range of int");
+            }
+            return bigDecimalValue.intValue();
         }
         if (numberType == NumberType.DOUBLE || numberType == NumberType.FLOAT) {
+            if (Double.isNaN(doubleValue) || doubleValue < MIN_INT_D || doubleValue > MAX_INT_D) {
+                error("Numeric value " + doubleValue + " out of range of int");
+            }
             return (int) doubleValue;
+        }
+        if (longValue < Integer.MIN_VALUE || longValue > Integer.MAX_VALUE) {
+            error("Numeric value " + longValue + " out of range of int");
         }
         return (int) longValue;
     }
@@ -469,13 +501,27 @@ final class CharStreamTokenizer extends JsonTokenizer {
     @Override
     public long getLongValue() {
         ensureNumberToken();
+        // Jackson-parity: throw on out-of-range / NaN / Infinity, but silently
+        // truncate fractional parts for in-range doubles. Mirrors
+        // com.fasterxml.jackson.core.base.ParserBase.convertNumberToLong.
         if (numberType == NumberType.BIG_INTEGER) {
-            return bigIntegerValue.longValueExact();
+            if (BI_MIN_LONG.compareTo(bigIntegerValue) > 0
+                    || BI_MAX_LONG.compareTo(bigIntegerValue) < 0) {
+                error("Numeric value " + bigIntegerValue + " out of range of long");
+            }
+            return bigIntegerValue.longValue();
         }
         if (numberType == NumberType.BIG_DECIMAL) {
-            return bigDecimalValue.longValueExact();
+            if (BD_MIN_LONG.compareTo(bigDecimalValue) > 0
+                    || BD_MAX_LONG.compareTo(bigDecimalValue) < 0) {
+                error("Numeric value " + bigDecimalValue + " out of range of long");
+            }
+            return bigDecimalValue.longValue();
         }
         if (numberType == NumberType.DOUBLE || numberType == NumberType.FLOAT) {
+            if (Double.isNaN(doubleValue) || doubleValue < MIN_LONG_D || doubleValue > MAX_LONG_D) {
+                error("Numeric value " + doubleValue + " out of range of long");
+            }
             return (long) doubleValue;
         }
         return longValue;

@@ -149,6 +149,97 @@ class JsonTokenizerTest {
         assertThat(t.getDoubleValue()).isEqualTo(6.022e23);
     }
 
+    // -------------------------------------------------------------------
+    // getIntValue / getLongValue range-check behavior (Jackson-parity)
+    // -------------------------------------------------------------------
+    // Policy: throw on out-of-range / NaN / Infinity; silently truncate
+    // fractional parts of in-range doubles (1.5 -> 1) like Java's (int) cast.
+    // Mirrors com.fasterxml.jackson.core.base.ParserBase.convertNumberToInt.
+
+    @Test
+    void getIntValue_rejectsLongOutOfIntRange() throws IOException {
+        CharStreamTokenizer t = tokenizer("3000000000"); // > Integer.MAX_VALUE
+        assertEquals(JsonToken.VALUE_NUMBER_INT, t.nextToken());
+        assertThatThrownBy(t::getIntValue)
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("out of range of int");
+    }
+
+    @Test
+    void getIntValue_truncatesFractionalDouble() throws IOException {
+        // Jackson-parity: 1.5 -> 1 (silent truncation, NOT an error).
+        CharStreamTokenizer t = tokenizer("1.5");
+        assertEquals(JsonToken.VALUE_NUMBER_FLOAT, t.nextToken());
+        assertEquals(1, t.getIntValue());
+    }
+
+    @Test
+    void getIntValue_rejectsDoubleOutOfIntRange() throws IOException {
+        CharStreamTokenizer t = tokenizer("1e20");
+        assertEquals(JsonToken.VALUE_NUMBER_FLOAT, t.nextToken());
+        assertThatThrownBy(t::getIntValue)
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("out of range of int");
+    }
+
+    @Test
+    void getIntValue_rejectsNaN() throws IOException {
+        CharStreamTokenizer t = tokenizer("NaN");
+        assertEquals(JsonToken.VALUE_NUMBER_FLOAT, t.nextToken());
+        assertThatThrownBy(t::getIntValue)
+                .isInstanceOf(JsonIoException.class);
+    }
+
+    @Test
+    void getIntValue_rejectsInfinity() throws IOException {
+        CharStreamTokenizer t = tokenizer("Infinity");
+        assertEquals(JsonToken.VALUE_NUMBER_FLOAT, t.nextToken());
+        assertThatThrownBy(t::getIntValue)
+                .isInstanceOf(JsonIoException.class);
+    }
+
+    @Test
+    void getIntValue_acceptsExactIntegerValuedDouble() throws IOException {
+        CharStreamTokenizer t = tokenizer("42.0");
+        assertEquals(JsonToken.VALUE_NUMBER_FLOAT, t.nextToken());
+        assertEquals(42, t.getIntValue());
+    }
+
+    @Test
+    void getLongValue_rejectsBigIntegerOutOfLongRange() throws IOException {
+        String huge = "12345678901234567890123456789012345"; // 35 digits, > Long.MAX_VALUE
+        CharStreamTokenizer t = bigIntegerTokenizer(huge);
+        assertEquals(JsonToken.VALUE_NUMBER_INT, t.nextToken());
+        assertThatThrownBy(t::getLongValue)
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("out of range of long");
+    }
+
+    @Test
+    void getLongValue_truncatesFractionalDouble() throws IOException {
+        // Jackson-parity: 1.7 -> 1 (silent truncation).
+        CharStreamTokenizer t = tokenizer("1.7");
+        assertEquals(JsonToken.VALUE_NUMBER_FLOAT, t.nextToken());
+        assertEquals(1L, t.getLongValue());
+    }
+
+    @Test
+    void getLongValue_rejectsDoubleOutOfLongRange() throws IOException {
+        CharStreamTokenizer t = tokenizer("1e30");
+        assertEquals(JsonToken.VALUE_NUMBER_FLOAT, t.nextToken());
+        assertThatThrownBy(t::getLongValue)
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("out of range of long");
+    }
+
+    @Test
+    void getLongValue_rejectsNaN() throws IOException {
+        CharStreamTokenizer t = tokenizer("NaN");
+        assertEquals(JsonToken.VALUE_NUMBER_FLOAT, t.nextToken());
+        assertThatThrownBy(t::getLongValue)
+                .isInstanceOf(JsonIoException.class);
+    }
+
     @Test
     void rootBigIntegerOutsideLongRange() throws IOException {
         String huge = "12345678901234567890123456789012345"; // 35 digits
