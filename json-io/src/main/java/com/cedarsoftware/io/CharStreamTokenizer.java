@@ -586,11 +586,15 @@ final class CharStreamTokenizer extends JsonTokenizer {
 
     @Override
     public boolean getBooleanValue() {
+        if (currentToken != JsonToken.VALUE_TRUE && currentToken != JsonToken.VALUE_FALSE) {
+            error("Boolean value requested, but current token is " + currentToken);
+        }
         return booleanValue;
     }
 
     @Override
     public NumberType getNumberType() {
+        ensureNumberToken();
         return numberType;
     }
 

@@ -171,6 +171,59 @@ class JsonTokenizerTest {
     }
 
     // -------------------------------------------------------------------
+    // Token-type guards on getBooleanValue() / getNumberType()
+    // -------------------------------------------------------------------
+    // Previously both methods returned whatever the typed field happened to
+    // hold from a prior token, which is unsafe for callers that don't first
+    // check currentToken(). Now they throw when called on the wrong token.
+
+    @Test
+    void getBooleanValue_rejectsNumericToken() throws IOException {
+        CharStreamTokenizer t = tokenizer("42");
+        assertEquals(JsonToken.VALUE_NUMBER_INT, t.nextToken());
+        assertThatThrownBy(t::getBooleanValue)
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Boolean value requested");
+    }
+
+    @Test
+    void getBooleanValue_rejectsStringToken() throws IOException {
+        CharStreamTokenizer t = tokenizer("\"hello\"");
+        assertEquals(JsonToken.VALUE_STRING, t.nextToken());
+        assertThatThrownBy(t::getBooleanValue)
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Boolean value requested");
+    }
+
+    @Test
+    void getBooleanValue_acceptsTrueAndFalse() throws IOException {
+        CharStreamTokenizer t = tokenizer("[true, false]");
+        assertEquals(JsonToken.START_ARRAY, t.nextToken());
+        assertEquals(JsonToken.VALUE_TRUE, t.nextToken());
+        assertThat(t.getBooleanValue()).isTrue();
+        assertEquals(JsonToken.VALUE_FALSE, t.nextToken());
+        assertThat(t.getBooleanValue()).isFalse();
+    }
+
+    @Test
+    void getNumberType_rejectsNonNumericToken() throws IOException {
+        CharStreamTokenizer t = tokenizer("\"hello\"");
+        assertEquals(JsonToken.VALUE_STRING, t.nextToken());
+        assertThatThrownBy(t::getNumberType)
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Numeric value requested");
+    }
+
+    @Test
+    void getNumberType_rejectsBooleanToken() throws IOException {
+        CharStreamTokenizer t = tokenizer("true");
+        assertEquals(JsonToken.VALUE_TRUE, t.nextToken());
+        assertThatThrownBy(t::getNumberType)
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Numeric value requested");
+    }
+
+    // -------------------------------------------------------------------
     // getText() returns canonical form for numerics (NOT the raw lexeme).
     // -------------------------------------------------------------------
     // Pinned intentionally: preserving the raw lexeme costs an extra String

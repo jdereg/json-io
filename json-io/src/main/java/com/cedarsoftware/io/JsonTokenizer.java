@@ -165,13 +165,16 @@ abstract class JsonTokenizer implements Closeable {
     /**
      * @return {@code true} if the current token is {@link JsonToken#VALUE_TRUE},
      *         {@code false} if it is {@link JsonToken#VALUE_FALSE}
+     * @throws JsonIoException if the current token is neither
      */
     public abstract boolean getBooleanValue();
 
     /**
-     * Precise numeric type of the current token. Defined when
-     * {@link #currentToken()} is {@link JsonToken#VALUE_NUMBER_INT} or
-     * {@link JsonToken#VALUE_NUMBER_FLOAT}.
+     * Precise numeric type of the current token.
+     *
+     * @throws JsonIoException if the current token is not
+     *                         {@link JsonToken#VALUE_NUMBER_INT} or
+     *                         {@link JsonToken#VALUE_NUMBER_FLOAT}
      */
     public abstract NumberType getNumberType();
 
