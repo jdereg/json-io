@@ -177,18 +177,18 @@ automatic shared-reference and cycle preservation. No class annotations required
 
 | Mode | JsonIo | TOON |
 |---|---|---|
-| Read `toJava` (typed) | 1.82x | 1.97x |
-| Read `toMaps` (class-independent) | 1.20x | 1.68x |
-| Write `cycleSupport=true` (default) | 1.72x | 1.79x |
-| Write `cycleSupport=false` (DTOs/acyclic) | 1.57x | 1.67x |
-| Write `toMaps` `cycleSupport=true` | 1.84x | 1.90x |
-| Write `toMaps` `cycleSupport=false` | 1.58x | 1.74x |
+| Read `toJava` (typed) | 1.97x | 2.04x |
+| Read `toMaps` (class-independent) | 1.34x | 1.74x |
+| Write `cycleSupport=true` (default) | 1.70x | 1.73x |
+| Write `cycleSupport=false` (DTOs/acyclic) | 1.56x | 1.61x |
+| Write `toMaps` `cycleSupport=true` | 1.91x | 1.80x |
+| Write `toMaps` `cycleSupport=false` | 1.55x | 1.65x |
 
-Measured on JDK 21, `json-io 4.102.0` vs `jackson-databind 2.21.2` using the median of three run-mode executions. Reproduce with `mvn -q -pl json-io -DskipTests test-compile exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.cedarsoftware.io.JsonPerformanceTest` (100k iterations after 10k warmup; expect ±3% run-to-run noise from thermal / GC). Jackson is configured with `JavaTimeModule` and `WRITE_DATES_AS_TIMESTAMPS=false` to match what Spring Boot emits by default.
+Measured on JDK 21, `json-io 4.103.0` vs `jackson-databind 2.21.3` using the median of three run-mode executions. Reproduce with `mvn -q -pl json-io -DskipTests test-compile exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.cedarsoftware.io.JsonPerformanceTest` (100k iterations after 10k warmup; expect ±3% run-to-run noise from thermal / GC). Jackson is configured with `JavaTimeModule` and `WRITE_DATES_AS_TIMESTAMPS=false` to match what Spring Boot emits by default.
 
 </details>
 
-**Performance tip:** Use `cycleSupport(false)` for ~35-40% faster writes when your data is acyclic (DTOs, POJOs, tree-shaped data).
+**Performance tip:** Use `cycleSupport(false)` for ~10-25% faster writes when your data is acyclic (DTOs, POJOs, tree-shaped data) — the larger gain shows up in `toMaps` mode.
 
 ### Key Features
 
