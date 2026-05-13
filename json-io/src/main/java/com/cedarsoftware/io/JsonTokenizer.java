@@ -23,9 +23,16 @@ import com.cedarsoftware.util.FastReader;
  *       {@link #getTextSlice(FastReader.BufferSlice)} extension instead of
  *       Jackson's three-method {@code getTextCharacters / getTextOffset /
  *       getTextLength} pattern.</li>
- *   <li>No boxed {@code getNumberValue() / getNumberValueExact()} —
- *       typed accessors cover every case without forcing a {@code Number}
- *       allocation.</li>
+ *   <li>{@link #getNumberValue()} matches Jackson and returns the boxed
+ *       {@code Number} in the smallest applicable wrapper, so tree-building
+ *       callers can fetch the materialized value in a single virtual
+ *       dispatch instead of {@code getNumberType()} + per-type
+ *       {@code getXxxValue()}. We do not (yet) ship the lossless
+ *       {@code getNumberValueExact()} variant.</li>
+ *   <li>{@link #nextFieldName()} and {@link #nextTextValue()} match Jackson
+ *       and combine cursor advance + string fetch into one virtual dispatch,
+ *       skipping the {@code nextToken() + currentName() / getText()}
+ *       round-trip on the hot per-field path.</li>
  *   <li>No lenient cross-token coercion ({@code getValueAsString()} etc.) in
  *       v1; typed getters require the matching token type.</li>
  *   <li>No async/binary surface — sync-only, pure JSON.</li>
@@ -177,6 +184,50 @@ abstract class JsonTokenizer implements Closeable {
      *                         {@link JsonToken#VALUE_NUMBER_FLOAT}
      */
     public abstract NumberType getNumberType();
+
+    /**
+     * Materialize the current numeric token as a boxed {@link Number} in the
+     * smallest applicable wrapper ({@code Long} for INT/LONG, {@code Double}
+     * for DOUBLE, {@code Float} for FLOAT, {@code BigInteger} for BIG_INTEGER,
+     * {@code BigDecimal} for BIG_DECIMAL). Matches Jackson's
+     * {@code JsonParser.getNumberValue()} contract and lets tree-building
+     * callers avoid the {@code getNumberType()} + {@code getXxxValue()}
+     * two-dispatch sequence.
+     *
+     * @throws JsonIoException if the current token is not
+     *                         {@link JsonToken#VALUE_NUMBER_INT} or
+     *                         {@link JsonToken#VALUE_NUMBER_FLOAT}
+     */
+    public abstract Number getNumberValue() throws IOException;
+
+    /**
+     * Advance to the next token and, if it is {@link JsonToken#FIELD_NAME},
+     * return the field-name string; otherwise return {@code null}. The cursor
+     * is advanced in both cases — callers can inspect {@link #currentToken()}
+     * to disambiguate (e.g. {@link JsonToken#END_OBJECT}). Matches Jackson's
+     * {@code JsonParser.nextFieldName()}.
+     *
+     * <p>Default implementation delegates to {@link #nextToken()} and
+     * {@link #currentName()}; concrete tokenizers should override to fold the
+     * two calls into a single virtual dispatch.
+     */
+    public String nextFieldName() throws IOException {
+        return nextToken() == JsonToken.FIELD_NAME ? currentName() : null;
+    }
+
+    /**
+     * Advance to the next token and, if it is {@link JsonToken#VALUE_STRING},
+     * return the string value; otherwise return {@code null} (the cursor still
+     * advances — callers can inspect {@link #currentToken()} to handle the
+     * non-string case). Matches Jackson's {@code JsonParser.nextTextValue()}.
+     *
+     * <p>Default implementation delegates to {@link #nextToken()} and
+     * {@link #getText()}; concrete tokenizers should override to fold the two
+     * calls into a single virtual dispatch.
+     */
+    public String nextTextValue() throws IOException {
+        return nextToken() == JsonToken.VALUE_STRING ? getText() : null;
+    }
 
     // -------------------------------------------------------------------
     // Navigation

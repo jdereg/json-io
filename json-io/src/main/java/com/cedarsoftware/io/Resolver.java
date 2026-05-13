@@ -139,6 +139,11 @@ public abstract class Resolver {
     protected ReadOptions readOptions;
     protected ReferenceTracker references;
     protected final Converter converter;
+    // Per-Resolver InstantiationPlan cache. Each resolved targetType maps to the
+    // strategy createInstance should use (lambda / enum / factory / array / reflection).
+    // Mirrors the role of ReadOptionsBuilder.injectorPlanCache but keyed by the
+    // instantiation classification rather than field-injection metadata.
+    private final ClassValueMap<InstantiationPlan> instantiationPlanCache = new ClassValueMap<>();
     private SealedSupplier sealedSupplier = new SealedSupplier();
     
     // Performance: Hoisted ReadOptions constants to avoid repeated method calls
@@ -1318,40 +1323,166 @@ public abstract class Resolver {
         }
 
         // Use the refined Type (if available) to determine the target type.
+        // (Still per-call: this mutates jsonObj.setType and applies enum-coercion options.)
         Class<?> targetType = resolveTargetType(jsonObj);
 
-        // Check if we have a direct instantiator for this class
-        Function<JsonObject, Object> instantiator = DEFAULT_INSTANTIATORS.getByClass(targetType);
-        if (instantiator != null) {
+        // Look up (or build) the InstantiationPlan for this class. The plan
+        // collapses the 5-way branch ladder below into a single monomorphic
+        // dispatch — the per-class decision is fixed and cached.
+        InstantiationPlan plan = instantiationPlanCache.getByClass(targetType);
+        if (plan == null) {
+            plan = buildInstantiationPlan(targetType);
+            instantiationPlanCache.put(targetType, plan);
+        }
+        return plan.create(jsonObj, this, targetType);
+    }
+
+    /**
+     * Strategy for materializing a {@link JsonObject} into a Java instance.
+     * One plan is built per resolved {@code targetType} and cached; subsequent
+     * calls dispatch through {@link #create} without re-walking the
+     * isPseudoPrimitive / enum / DEFAULT_INSTANTIATORS / class-factory /
+     * array decision tree. Mirrors the role of {@link ReadOptionsBuilder.InjectorPlan}.
+     */
+    interface InstantiationPlan {
+        Object create(JsonObject jsonObj, Resolver resolver, Class<?> targetType);
+    }
+
+    /** Pseudo-primitives (BigInteger, BigDecimal, UUID, Date, ...) — go through Converter. */
+    private static final InstantiationPlan PSEUDO_PRIMITIVE_PLAN = (jsonObj, resolver, targetType) -> {
+        Object result = resolver.converter.convert(jsonObj, targetType);
+        return jsonObj.setFinishedTarget(result, true);
+    };
+
+    /** {@code targetType.isArray()} → allocate a typed array sized to {@code items}. */
+    private static final InstantiationPlan ARRAY_PLAN = (jsonObj, resolver, targetType) ->
+            jsonObj.setTarget(resolver.createArrayInstance(jsonObj, targetType));
+
+    /** {@code targetType == Object.class} — may need a synthetic Object[] when items are present. */
+    private static final InstantiationPlan OBJECT_DYNAMIC_PLAN = (jsonObj, resolver, targetType) -> {
+        if (resolver.shouldCreateArray(jsonObj, targetType)) {
+            return jsonObj.setTarget(resolver.createArrayInstance(jsonObj, targetType));
+        }
+        return resolver.createInstanceUsingType(jsonObj);
+    };
+
+    /** Fallback: plain POJO instantiation via {@link #createInstanceUsingType}. */
+    private static final InstantiationPlan REFLECTION_PLAN = (jsonObj, resolver, targetType) ->
+            resolver.createInstanceUsingType(jsonObj);
+
+    /** Class found in DEFAULT_INSTANTIATORS — apply the no-arg lambda; null result chains to {@code fallback}. */
+    private static final class DefaultLambdaPlan implements InstantiationPlan {
+        private final Function<JsonObject, Object> instantiator;
+        private final InstantiationPlan fallback;
+
+        DefaultLambdaPlan(Function<JsonObject, Object> instantiator, InstantiationPlan fallback) {
+            this.instantiator = instantiator;
+            this.fallback = fallback;
+        }
+
+        @Override
+        public Object create(JsonObject jsonObj, Resolver resolver, Class<?> targetType) {
             Object instance = instantiator.apply(jsonObj);
             if (instance != null) {
                 return jsonObj.setTarget(instance);
             }
+            return fallback.create(jsonObj, resolver, targetType);
+        }
+    }
+
+    /** Enum / EnumSet — dispatch type depends on whether the JsonObject carries items. */
+    private static final class EnumPlan implements InstantiationPlan {
+        private final Class<?> enumClass;
+
+        EnumPlan(Class<?> enumClass) {
+            this.enumClass = enumClass;
         }
 
-        // Knock out popular easy classes to instantiate and finish.
+        @Override
+        public Object create(JsonObject jsonObj, Resolver resolver, Class<?> targetType) {
+            Class<?> factoryType = jsonObj.getItems() != null ? EnumSet.class : enumClass;
+            Object mate = resolver.createInstanceUsingClassFactory(factoryType, jsonObj);
+            if (mate != NO_FACTORY) {
+                return mate;
+            }
+            return resolver.createInstanceUsingType(jsonObj);
+        }
+    }
+
+    /** Class with a registered (or @IoClassFactory-annotated) {@link ClassFactory}. */
+    private static final class FactoryPlan implements InstantiationPlan {
+        private final ClassFactory factory;
+
+        FactoryPlan(ClassFactory factory) {
+            this.factory = factory;
+        }
+
+        @Override
+        public Object create(JsonObject jsonObj, Resolver resolver, Class<?> targetType) {
+            Object instance = factory.newInstance(targetType, jsonObj, resolver);
+            if (factory.isObjectFinal()) {
+                return jsonObj.setFinishedTarget(instance, true);
+            }
+            return jsonObj.setTarget(instance);
+        }
+    }
+
+    /**
+     * Build the plan for a class. Runs once per (Resolver, targetType); result
+     * is memoized in {@link #instantiationPlanCache}. Ordered to match the
+     * legacy {@link #createInstance} decision sequence so semantics are
+     * preserved exactly.
+     */
+    private InstantiationPlan buildInstantiationPlan(Class<?> targetType) {
+        // 1. Default instantiator (HashMap, ArrayList, LinkedHashMap, ...).
+        //    For CompactMap/CompactSet the lambda may return null at runtime,
+        //    so we bind a precomputed fallback (factory if registered, else reflection).
+        Function<JsonObject, Object> instantiator = DEFAULT_INSTANTIATORS.getByClass(targetType);
+        if (instantiator != null) {
+            InstantiationPlan fallback = buildNonLambdaPlan(targetType);
+            return new DefaultLambdaPlan(instantiator, fallback);
+        }
+        return buildNonLambdaPlan(targetType);
+    }
+
+    /** Plan branches reachable when no default-instantiator lambda applies. */
+    private InstantiationPlan buildNonLambdaPlan(Class<?> targetType) {
+        // 2. Pseudo-primitives (Big*, UUID, Date, etc.) — Converter handles them.
         if (isPseudoPrimitive(targetType)) {
-            Object result = converter.convert(jsonObj, targetType);
-            return jsonObj.setFinishedTarget(result, true);
+            return PSEUDO_PRIMITIVE_PLAN;
         }
 
-        // Determine the factory type, considering enums and collections.
-        Class<?> factoryType = determineFactoryType(jsonObj, targetType);
-
-        // Try creating an instance using the class factory.
-        Object mate = createInstanceUsingClassFactory(factoryType, jsonObj);
-        if (mate != NO_FACTORY) {
-            return mate;
+        // 3. Enum / EnumSet — uses ClassFactory with a JsonObject-dependent factory key.
+        Class<?> enumClass = ClassUtilities.getClassIfEnum(targetType);
+        if (enumClass != null) {
+            return new EnumPlan(enumClass);
         }
 
-        // Handle array creation.
-        if (shouldCreateArray(jsonObj, targetType)) {
-            mate = createArrayInstance(jsonObj, targetType);
-            return jsonObj.setTarget(mate);
+        // 4. Registered ClassFactory (programmatic) or @IoClassFactory annotation.
+        ClassFactory factory = readOptions.getClassFactory(targetType);
+        if (factory == null) {
+            Class<? extends ClassFactory> factoryClass =
+                    AnnotationResolver.getMetadata(targetType).getClassFactory();
+            if (factoryClass != null) {
+                factory = getOrCreateAnnotationFactory(factoryClass);
+            }
+        }
+        if (factory != null) {
+            return new FactoryPlan(factory);
         }
 
-        // Fallback: create an instance using the type directly.
-        return createInstanceUsingType(jsonObj);
+        // 5. Array.
+        if (targetType.isArray()) {
+            return ARRAY_PLAN;
+        }
+
+        // 6. Object.class — runtime decision (Object[] vs reflection).
+        if (targetType == Object.class) {
+            return OBJECT_DYNAMIC_PLAN;
+        }
+
+        // 7. Fallback: plain POJO reflection.
+        return REFLECTION_PLAN;
     }
 
     // Resolve a target type with proper coercion and enum handling

@@ -328,8 +328,8 @@ final class CharStreamTokenizer extends JsonTokenizer {
 
     // Direct field-population helpers. Avoid the box→unbox→re-box churn that
     // would otherwise happen on every parsed number: the readNumber* chain
-    // wrote a Number, emitNumber unboxed and stored typed fields, then
-    // JsonParser.materializeNumber() boxed again to hand the value back.
+    // wrote a Number, emitNumber unboxed and stored typed fields, then the
+    // caller would box again via getNumberValue() to hand the value back.
     // currentText is left null in all branches and materialized lazily by
     // ensureNumericText() if anyone actually reads getText() on a number token.
 
@@ -596,6 +596,32 @@ final class CharStreamTokenizer extends JsonTokenizer {
     public NumberType getNumberType() {
         ensureNumberToken();
         return numberType;
+    }
+
+    @Override
+    public Number getNumberValue() {
+        ensureNumberToken();
+        switch (numberType) {
+            case INT:
+            case LONG:        return longValue;
+            case DOUBLE:      return doubleValue;
+            case FLOAT:       return (float) doubleValue;
+            case BIG_INTEGER: return bigIntegerValue;
+            case BIG_DECIMAL: return bigDecimalValue;
+            default:
+                error("Unknown numeric type: " + numberType);
+                return null;
+        }
+    }
+
+    @Override
+    public String nextFieldName() {
+        return nextToken() == JsonToken.FIELD_NAME ? currentName : null;
+    }
+
+    @Override
+    public String nextTextValue() {
+        return nextToken() == JsonToken.VALUE_STRING ? currentText : null;
     }
 
     @Override

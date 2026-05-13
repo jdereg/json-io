@@ -140,7 +140,7 @@ class JsonParser {
         if (first == null) {
             error("EOF reached prematurely");
         }
-        Object result = readValueOfCurrentToken(suggestedType);
+        Object result = readValueOfCurrentToken(first, suggestedType);
 
         // Preserve today's quirk: a top-level string value rejects any trailing
         // non-whitespace content. Today this lived inside readString at depth 0;
@@ -155,15 +155,15 @@ class JsonParser {
     }
 
     /**
-     * Dispatch on {@link JsonTokenizer#currentToken()}. Assumes the cursor has
-     * already been advanced to the value's start token. For container start
-     * tokens, drives the recursive container reader.
+     * Dispatch on the value token the caller just advanced to. {@code t} must
+     * be the result of the caller's preceding {@link JsonTokenizer#nextToken()}
+     * (we avoid re-fetching it from the tokenizer). For container start tokens,
+     * drives the recursive container reader.
      */
-    private Object readValueOfCurrentToken(Type suggestedType) throws IOException {
+    private Object readValueOfCurrentToken(JsonToken t, Type suggestedType) throws IOException {
         if (curParseDepth > maxParseDepth) {
             error("Maximum parsing depth exceeded");
         }
-        JsonToken t = tokenizer.currentToken();
         if (t == null) {
             return error("Unknown JSON value type");
         }
@@ -178,7 +178,7 @@ class JsonParser {
                 return tokenizer.getText();
             case VALUE_NUMBER_INT:
             case VALUE_NUMBER_FLOAT:
-                return materializeNumber();
+                return tokenizer.getNumberValue();
             case VALUE_TRUE:
                 return Boolean.TRUE;
             case VALUE_FALSE:
@@ -187,33 +187,6 @@ class JsonParser {
                 return null;
             default:
                 return error("Unknown JSON value type");
-        }
-    }
-
-    /**
-     * Materialize the current numeric token into a {@link Number} matching
-     * today's {@code readNumber} return-type contract: {@code Long} for integers
-     * (or {@code BigInteger} when forced via integerTypeBigInteger / very-large-with-Both),
-     * {@code Double} for decimals (or {@code BigDecimal} / {@code Float} when
-     * floatingPoint policy bends the type).
-     */
-    private Number materializeNumber() throws IOException {
-        NumberType nt = tokenizer.getNumberType();
-        switch (nt) {
-            case INT:
-            case LONG:
-                return tokenizer.getLongValue();
-            case BIG_INTEGER:
-                return tokenizer.getBigIntegerValue();
-            case DOUBLE:
-                return tokenizer.getDoubleValue();
-            case FLOAT:
-                return tokenizer.getFloatValue();
-            case BIG_DECIMAL:
-                return tokenizer.getDecimalValue();
-            default:
-                error("Unknown numeric type: " + nt);
-                return null;
         }
     }
 
@@ -248,15 +221,13 @@ class JsonParser {
         ++curParseDepth;
 
         while (true) {
-            JsonToken t = tokenizer.nextToken();
-            if (t == JsonToken.END_OBJECT) {
-                break;
-            }
-            if (t != JsonToken.FIELD_NAME) {
+            String field = tokenizer.nextFieldName();
+            if (field == null) {
+                if (tokenizer.currentToken() == JsonToken.END_OBJECT) {
+                    break;
+                }
                 error("Expected field name in JSON object");
             }
-
-            String field = tokenizer.currentName();
             // Performance: avoid the substitutes-map probe whenever it cannot match.
             // Map keys are exactly: @x short forms (length 2: @i/@r/@e/@t/@k) and any
             // $-prefixed form ($id/$ref/$items/$type/$keys plus their $x short forms).
@@ -287,7 +258,7 @@ class JsonParser {
                     fieldGenericType = TypeUtilities.resolveType(suggestedType, fieldGenericType);
                 }
             }
-            Object value = readValueOfCurrentToken(fieldGenericType);
+            Object value = readValueOfCurrentToken(valueTok, fieldGenericType);
 
             if (preAlloc) {
                 // Pre-allocation phase: classify field. Buffer pure metadata, otherwise pick
@@ -456,7 +427,7 @@ class JsonParser {
             if (t == null) {
                 error("EOF reached prematurely");
             }
-            list.add(readValueOfCurrentToken(suggestedType));
+            list.add(readValueOfCurrentToken(t, suggestedType));
         }
 
         --curParseDepth;
