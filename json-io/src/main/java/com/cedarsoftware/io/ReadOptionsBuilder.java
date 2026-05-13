@@ -1675,6 +1675,8 @@ public class ReadOptionsBuilder {
         // Runtime cache (not feature options)
         private final ClassValueMap<JsonClassReader> readerCache = new ClassValueMap<>();
         private final ClassValueMap<InjectorPlan> injectorPlanCache = new ClassValueMap<>();
+        // Plans amortize across all parses that share this ReadOptions; mirrors injectorPlanCache.
+        private final ClassValueMap<Resolver.InstantiationPlan> instantiationPlanCache = new ClassValueMap<>();
 
         /**
          * Per-(ReadOptions-instance) memoization of {@link #isNonReferenceableClass(Class)}.
@@ -2128,9 +2130,19 @@ public class ReadOptionsBuilder {
             return plan;
         }
 
+        Resolver.InstantiationPlan getInstantiationPlan(Class<?> targetType) {
+            Resolver.InstantiationPlan plan = instantiationPlanCache.getByClass(targetType);
+            if (plan == null) {
+                plan = Resolver.buildInstantiationPlan(targetType, this);
+                instantiationPlanCache.put(targetType, plan);
+            }
+            return plan;
+        }
+
         public void clearCaches() {
             injectorsCache.clear();
             injectorPlanCache.clear();
+            instantiationPlanCache.clear();
         }
 
         private Map<String, Injector> buildInjectors(Class<?> c) {

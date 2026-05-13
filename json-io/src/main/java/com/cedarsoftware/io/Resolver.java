@@ -139,11 +139,6 @@ public abstract class Resolver {
     protected ReadOptions readOptions;
     protected ReferenceTracker references;
     protected final Converter converter;
-    // Per-Resolver InstantiationPlan cache. Each resolved targetType maps to the
-    // strategy createInstance should use (lambda / enum / factory / array / reflection).
-    // Mirrors the role of ReadOptionsBuilder.injectorPlanCache but keyed by the
-    // instantiation classification rather than field-injection metadata.
-    private final ClassValueMap<InstantiationPlan> instantiationPlanCache = new ClassValueMap<>();
     private SealedSupplier sealedSupplier = new SealedSupplier();
     
     // Performance: Hoisted ReadOptions constants to avoid repeated method calls
@@ -1328,13 +1323,23 @@ public abstract class Resolver {
 
         // Look up (or build) the InstantiationPlan for this class. The plan
         // collapses the 5-way branch ladder below into a single monomorphic
-        // dispatch — the per-class decision is fixed and cached.
-        InstantiationPlan plan = instantiationPlanCache.getByClass(targetType);
-        if (plan == null) {
-            plan = buildInstantiationPlan(targetType);
-            instantiationPlanCache.put(targetType, plan);
-        }
+        // dispatch — the per-class decision is fixed and cached on the
+        // ReadOptions instance (mirrors injectorPlanCache), so plans build once
+        // and amortize across all parses sharing the same ReadOptions.
+        InstantiationPlan plan = getInstantiationPlan(readOptions, targetType);
         return plan.create(jsonObj, this, targetType);
+    }
+
+    /**
+     * Resolves the {@link InstantiationPlan} for {@code targetType}. For
+     * {@link ReadOptionsBuilder.DefaultReadOptions}, hits the per-ReadOptions
+     * cache; for foreign ReadOptions impls, builds fresh (uncached).
+     */
+    static InstantiationPlan getInstantiationPlan(ReadOptions options, Class<?> targetType) {
+        if (options instanceof ReadOptionsBuilder.DefaultReadOptions) {
+            return ((ReadOptionsBuilder.DefaultReadOptions) options).getInstantiationPlan(targetType);
+        }
+        return buildInstantiationPlan(targetType, options);
     }
 
     /**
@@ -1428,25 +1433,27 @@ public abstract class Resolver {
     }
 
     /**
-     * Build the plan for a class. Runs once per (Resolver, targetType); result
-     * is memoized in {@link #instantiationPlanCache}. Ordered to match the
-     * legacy {@link #createInstance} decision sequence so semantics are
-     * preserved exactly.
+     * Build the plan for a class. Called once per (ReadOptions, targetType);
+     * the cache lives on {@link ReadOptionsBuilder.DefaultReadOptions} (mirrors
+     * {@code injectorPlanCache}). Static so DefaultReadOptions can invoke it
+     * without a Resolver instance. Ordered to match the legacy
+     * {@link #createInstance} decision sequence so semantics are preserved
+     * exactly.
      */
-    private InstantiationPlan buildInstantiationPlan(Class<?> targetType) {
+    static InstantiationPlan buildInstantiationPlan(Class<?> targetType, ReadOptions readOptions) {
         // 1. Default instantiator (HashMap, ArrayList, LinkedHashMap, ...).
         //    For CompactMap/CompactSet the lambda may return null at runtime,
         //    so we bind a precomputed fallback (factory if registered, else reflection).
         Function<JsonObject, Object> instantiator = DEFAULT_INSTANTIATORS.getByClass(targetType);
         if (instantiator != null) {
-            InstantiationPlan fallback = buildNonLambdaPlan(targetType);
+            InstantiationPlan fallback = buildNonLambdaPlan(targetType, readOptions);
             return new DefaultLambdaPlan(instantiator, fallback);
         }
-        return buildNonLambdaPlan(targetType);
+        return buildNonLambdaPlan(targetType, readOptions);
     }
 
     /** Plan branches reachable when no default-instantiator lambda applies. */
-    private InstantiationPlan buildNonLambdaPlan(Class<?> targetType) {
+    private static InstantiationPlan buildNonLambdaPlan(Class<?> targetType, ReadOptions readOptions) {
         // 2. Pseudo-primitives (Big*, UUID, Date, etc.) — Converter handles them.
         if (isPseudoPrimitive(targetType)) {
             return PSEUDO_PRIMITIVE_PLAN;
