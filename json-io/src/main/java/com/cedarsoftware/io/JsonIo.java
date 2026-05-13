@@ -951,6 +951,107 @@ public class JsonIo {
     }
 
     /**
+     * Creates a streaming JSON tokenizer over the given JSON string. The returned
+     * {@link JsonTokenizer} exposes a Jackson-aligned cursor API
+     * ({@code nextToken()}, {@code currentName()}, {@code getIntValue()},
+     * {@code getText()}, {@code nextFieldName()}, {@code nextTextValue()},
+     * {@code getNumberValue()}, ...) so callers can implement hand-rolled
+     * streaming deserializers that bypass the tree-builder pipeline.
+     *
+     * <p>The tokenizer should be closed when finished (it implements
+     * {@link AutoCloseable}); use try-with-resources for safety.
+     *
+     * <h3>Example — hand-rolled streaming deserializer:</h3>
+     * <pre>{@code
+     * try (JsonTokenizer t = JsonIo.createTokenizer(jsonString)) {
+     *     while (t.nextToken() != JsonToken.END_OBJECT) {
+     *         String field = t.currentName();
+     *         switch (field) {
+     *             case "id":   t.nextToken(); id   = t.getIntValue();     break;
+     *             case "name": t.nextToken(); name = t.getText();          break;
+     *         }
+     *     }
+     * }
+     * }</pre>
+     *
+     * @param json the JSON to tokenize; if {@code null}, an empty document is used
+     * @return a fresh tokenizer positioned before the first token
+     */
+    public static JsonTokenizer createTokenizer(String json) {
+        return createTokenizer(json, null);
+    }
+
+    /**
+     * Creates a streaming JSON tokenizer with custom read options. Options
+     * honored: {@code strictJson}, {@code allowNanAndInfinity},
+     * {@code integerTypeBigInteger}, {@code integerTypeBoth},
+     * {@code floatingPointBigDecimal}, {@code floatingPointBoth},
+     * {@code stringBufferSize}. Tree-only options ({@code @id}/{@code @ref}
+     * tracking, {@code @type} handling, custom readers/factories) are not
+     * relevant at the tokenizer level and are ignored.
+     *
+     * @param json        the JSON to tokenize; if {@code null}, an empty document is used
+     * @param readOptions configuration; if {@code null}, defaults are used
+     * @return a fresh tokenizer positioned before the first token
+     */
+    public static JsonTokenizer createTokenizer(String json, ReadOptions readOptions) {
+        if (json == null) {
+            json = "";
+        }
+        return createTokenizerImpl(new StringReader(json), readOptions, null);
+    }
+
+    /**
+     * Creates a streaming JSON tokenizer over the given input stream. The
+     * stream is read as UTF-8. See {@link #createTokenizer(String)} for the
+     * full cursor-API contract.
+     *
+     * @param in input stream containing JSON; must not be {@code null}
+     * @return a fresh tokenizer positioned before the first token
+     * @throws IllegalArgumentException if {@code in} is null
+     */
+    public static JsonTokenizer createTokenizer(InputStream in) {
+        return createTokenizer(in, null);
+    }
+
+    /**
+     * Creates a streaming JSON tokenizer over the given input stream with
+     * custom read options. See {@link #createTokenizer(String, ReadOptions)}
+     * for which options are honored.
+     *
+     * @param in          input stream containing JSON; must not be {@code null}
+     * @param readOptions configuration; if {@code null}, defaults are used
+     * @return a fresh tokenizer positioned before the first token
+     * @throws IllegalArgumentException if {@code in} is null
+     */
+    public static JsonTokenizer createTokenizer(InputStream in, ReadOptions readOptions) {
+        if (in == null) {
+            throw new IllegalArgumentException("Input stream cannot be null");
+        }
+        return createTokenizerImpl(new InputStreamReader(in, StandardCharsets.UTF_8), readOptions, null);
+    }
+
+    private static JsonTokenizer createTokenizerImpl(java.io.Reader reader,
+                                                     ReadOptions readOptions,
+                                                     Object sourceRef) {
+        ReadOptions opts = readOptions != null ? readOptions : new ReadOptionsBuilder().build();
+        FastReader input = new FastReader(
+                reader,
+                new char[DEFAULT_READER_BUFFER_SIZE],
+                new char[DEFAULT_PUSHBACK_BUFFER_SIZE]);
+        return new CharStreamTokenizer(
+                input,
+                opts.isStrictJson(),
+                opts.isAllowNanAndInfinity(),
+                opts.isIntegerTypeBigInteger(),
+                opts.isIntegerTypeBoth(),
+                opts.isFloatingPointBigDecimal(),
+                opts.isFloatingPointBoth(),
+                opts.getStringBufferSize(),
+                sourceRef);
+    }
+
+    /**
      * Formats a JSON string with proper indentation and line breaks for readability.
      * <p>
      * This method takes a potentially minified or poorly formatted JSON string and converts it

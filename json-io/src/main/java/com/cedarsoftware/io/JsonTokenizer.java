@@ -8,10 +8,12 @@ import java.math.BigInteger;
 import com.cedarsoftware.util.FastReader;
 
 /**
- * Cursor-style JSON tokenizer. Splits the lexical layer of json-io's parser
- * out of {@link JsonParser} so the same scanner can drive multiple consumers:
- * the existing tree-builder, an eager POJO constructor (planned for 4.104.0+),
- * and an eventual public streaming API.
+ * Cursor-style JSON tokenizer — json-io's public streaming-parse API.
+ *
+ * <p>Create instances via {@link JsonIo#createTokenizer(String)},
+ * {@link JsonIo#createTokenizer(java.io.InputStream)}, or
+ * {@link JsonIo#createTokenizer(java.io.Reader)}; the same lexical core also
+ * drives {@link JsonParser} (tree-builder mode) internally.
  *
  * <p>The shape of this API mirrors Jackson's
  * {@code com.fasterxml.jackson.core.JsonParser} for porting friendliness.
@@ -46,9 +48,10 @@ import com.cedarsoftware.util.FastReader;
  * outside this class — the tokenizer exposes typed accessors and the caller
  * picks which one to use.
  *
- * <p>Package-private until 4.104.0+.
+ * <p>Concrete subclasses are package-private implementation details; callers
+ * always work through this abstract API.
  */
-abstract class JsonTokenizer implements Closeable {
+public abstract class JsonTokenizer implements Closeable {
 
     // -------------------------------------------------------------------
     // Cursor advancement

@@ -16,10 +16,8 @@ package com.cedarsoftware.io;
  *   <li>{@link #FLOAT}, {@link #DOUBLE}, {@link #BIG_DECIMAL} — for
  *       {@link JsonToken#VALUE_NUMBER_FLOAT} tokens.</li>
  * </ul>
- *
- * <p>Package-private until 4.104.0+.
  */
-enum NumberType {
+public enum NumberType {
     /** Fits in a Java {@code int}. */
     INT,
     /** Fits in a Java {@code long} but not an {@code int}. */

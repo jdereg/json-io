@@ -7,10 +7,8 @@ package com.cedarsoftware.io;
  *
  * <p>Instances are immutable. {@link JsonTokenizer#getCurrentLocation()}
  * returns one describing the position of the most-recently emitted token.
- *
- * <p>Package-private until 4.104.0+.
  */
-final class JsonLocation {
+public final class JsonLocation {
 
     private final long charOffset;
     private final int lineNr;

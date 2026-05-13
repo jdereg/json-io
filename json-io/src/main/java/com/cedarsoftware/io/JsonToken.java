@@ -18,11 +18,8 @@ package com.cedarsoftware.io;
  * {@link #VALUE_NUMBER_FLOAT}). The precise numeric type
  * ({@code int}, {@code long}, {@code BigInteger}, ...) is queried via
  * {@link JsonTokenizer#getNumberType()}.
- *
- * <p>Package-private until 4.104.0+; stays internal while the surrounding API
- * stabilizes.
  */
-enum JsonToken {
+public enum JsonToken {
     /** {@code '{'} — start of an object. */
     START_OBJECT,
     /** {@code '}'} — end of an object. */
