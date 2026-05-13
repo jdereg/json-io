@@ -106,6 +106,21 @@ final class CharStreamTokenizer extends JsonTokenizer {
     private boolean booleanValue;
     private boolean done;
 
+    // Optional callback invoked once by close(). Used by JsonIo.createTokenizer
+    // factories to release pooled FastReader buffers back to BUFFER_RECYCLER.
+    // null when not pool-managed (e.g. when constructed directly by JsonParser).
+    private Runnable closeHook;
+
+    /**
+     * Register a callback that runs once when this tokenizer is closed (after
+     * the underlying input is closed). Used by pool-managed creation paths to
+     * release borrowed buffers; package-private because the only legitimate
+     * caller is {@link JsonIo}'s factory methods.
+     */
+    void setCloseHook(Runnable hook) {
+        this.closeHook = hook;
+    }
+
     /**
      * Build a tokenizer over the given char input, with all tokenization-policy
      * flags supplied explicitly. Tests construct directly via this constructor
@@ -660,7 +675,15 @@ final class CharStreamTokenizer extends JsonTokenizer {
 
     @Override
     public void close() throws IOException {
-        input.close();
+        try {
+            input.close();
+        } finally {
+            Runnable hook = closeHook;
+            if (hook != null) {
+                closeHook = null;
+                hook.run();
+            }
+        }
     }
 
     private void ensureNumberToken() {

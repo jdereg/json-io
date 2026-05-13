@@ -1031,15 +1031,38 @@ public class JsonIo {
         return createTokenizerImpl(new InputStreamReader(in, StandardCharsets.UTF_8), readOptions, null);
     }
 
+    /**
+     * Lazily-initialized default ReadOptions for createTokenizer when the caller
+     * passes null. Building ReadOptions per call is non-trivial (loads aliases,
+     * builds ClassValueMaps); for the streaming-parse hot path where most users
+     * accept defaults, caching this saves the construction cost per parse.
+     */
+    private static volatile ReadOptions defaultTokenizerReadOptions;
+
+    private static ReadOptions defaultTokenizerReadOptions() {
+        ReadOptions o = defaultTokenizerReadOptions;
+        if (o == null) {
+            o = new ReadOptionsBuilder().build();
+            defaultTokenizerReadOptions = o;
+        }
+        return o;
+    }
+
     private static JsonTokenizer createTokenizerImpl(java.io.Reader reader,
                                                      ReadOptions readOptions,
                                                      Object sourceRef) {
-        ReadOptions opts = readOptions != null ? readOptions : new ReadOptionsBuilder().build();
+        ReadOptions opts = readOptions != null ? readOptions : defaultTokenizerReadOptions();
+        // Borrow FastReader buffers from the thread-local recycler. At 1KB-style
+        // payload sizes a fresh 65,536-char allocation per parse dominates
+        // total work; recycler reuse drops it to one allocation per thread for
+        // the warm path. Released back via the close-hook below when the user
+        // closes the tokenizer (try-with-resources is the documented pattern).
+        BufferRecycler recycler = BUFFER_RECYCLER.get();
         FastReader input = new FastReader(
                 reader,
-                new char[DEFAULT_READER_BUFFER_SIZE],
-                new char[DEFAULT_PUSHBACK_BUFFER_SIZE]);
-        return new CharStreamTokenizer(
+                recycler.borrowReaderCharBuffer(DEFAULT_READER_BUFFER_SIZE),
+                recycler.borrowPushbackBuffer(DEFAULT_PUSHBACK_BUFFER_SIZE));
+        CharStreamTokenizer tokenizer = new CharStreamTokenizer(
                 input,
                 opts.isStrictJson(),
                 opts.isAllowNanAndInfinity(),
@@ -1049,6 +1072,8 @@ public class JsonIo {
                 opts.isFloatingPointBoth(),
                 opts.getStringBufferSize(),
                 sourceRef);
+        tokenizer.setCloseHook(recycler::releaseReaderBuffers);
+        return tokenizer;
     }
 
     /**
