@@ -21,10 +21,59 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializer;
+
 public class JsonPerformanceTest {
     private static final Logger LOG = Logger.getLogger(JsonPerformanceTest.class.getName());
     private static final int WARMUP_ITERATIONS = 10000;
     private static final int TEST_ITERATIONS = 100000;
+
+    /**
+     * Opt-in flag: when set via {@code --with-gson} on the command line (or the
+     * {@code gson} mode shortcut), the test additionally measures Gson write/read
+     * throughput alongside the existing JsonIo/TOON/Jackson trio. Adds roughly
+     * 20-30 seconds to the full run; left off by default so the typical
+     * developer feedback loop stays snappy.
+     */
+    private static boolean runGson = false;
+
+    /**
+     * Cached Gson instance — built once, used across all iterations of all
+     * phases. Matches the same discipline Jackson uses (single {@code ObjectMapper}
+     * per test method). The custom type adapters serialize {@code java.time}
+     * values as ISO-8601 strings to align with Jackson's
+     * {@code JavaTimeModule + WRITE_DATES_AS_TIMESTAMPS=false} output, so all
+     * three libraries serialize comparable JSON.
+     */
+    private static final Gson GSON = buildGson();
+
+    private static Gson buildGson() {
+        GsonBuilder b = new GsonBuilder();
+        // ISO-8601 string round-trip for java.time types — matches the Jackson
+        // configuration above (registerModule(new JavaTimeModule()) +
+        // disable(WRITE_DATES_AS_TIMESTAMPS)).
+        b.registerTypeAdapter(Instant.class,
+                (JsonSerializer<Instant>) (src, type, ctx) -> new JsonPrimitive(src.toString()));
+        b.registerTypeAdapter(Instant.class,
+                (JsonDeserializer<Instant>) (json, type, ctx) -> Instant.parse(json.getAsString()));
+        b.registerTypeAdapter(LocalDate.class,
+                (JsonSerializer<LocalDate>) (src, type, ctx) -> new JsonPrimitive(src.toString()));
+        b.registerTypeAdapter(LocalDate.class,
+                (JsonDeserializer<LocalDate>) (json, type, ctx) -> LocalDate.parse(json.getAsString()));
+        b.registerTypeAdapter(LocalDateTime.class,
+                (JsonSerializer<LocalDateTime>) (src, type, ctx) -> new JsonPrimitive(src.toString()));
+        b.registerTypeAdapter(LocalDateTime.class,
+                (JsonDeserializer<LocalDateTime>) (json, type, ctx) -> LocalDateTime.parse(json.getAsString()));
+        b.registerTypeAdapter(ZonedDateTime.class,
+                (JsonSerializer<ZonedDateTime>) (src, type, ctx) -> new JsonPrimitive(src.toString()));
+        b.registerTypeAdapter(ZonedDateTime.class,
+                (JsonDeserializer<ZonedDateTime>) (json, type, ctx) -> ZonedDateTime.parse(json.getAsString()));
+        return b.create();
+    }
 
     // A sample POJO with a variety of fields to simulate complex JSON
     public static class TestData {
@@ -154,7 +203,27 @@ public class JsonPerformanceTest {
     }
 
     public static void main(String[] args) throws IOException {
-        String mode = args.length > 0 ? args[0].toLowerCase() : "both";
+        // Parse positional mode + optional --with-gson flag. Flag can appear
+        // anywhere; mode is the first non-flag arg (or defaults to "both").
+        // The `gson` mode shortcut is equivalent to `both --with-gson`.
+        String mode = "both";
+        boolean modeAssigned = false;
+        for (String arg : args) {
+            if (arg == null) continue;
+            if ("--with-gson".equalsIgnoreCase(arg)) {
+                runGson = true;
+            } else if (!modeAssigned) {
+                mode = arg.toLowerCase();
+                modeAssigned = true;
+            }
+        }
+        if ("gson".equals(mode)) {
+            mode = "both";
+            runGson = true;
+        }
+        if (runGson) {
+            LOG.info("Gson comparison enabled (--with-gson).");
+        }
 
         switch (mode) {
             case "java":
@@ -258,6 +327,10 @@ public class JsonPerformanceTest {
             TestData toonObj2 = JsonIo.fromToon(toon2, readOptions).asClass(TestData.class);
             String jJson = jacksonMapper.writeValueAsString(testData);
             TestData jObj = jacksonMapper.readValue(jJson, TestData.class);
+            if (runGson) {
+                String gJson = GSON.toJson(testData);
+                TestData gObj = GSON.fromJson(gJson, TestData.class);
+            }
         }
         LOG.info("Warmup complete.");
 
@@ -310,10 +383,25 @@ public class JsonPerformanceTest {
         long jacksonWriteTime = System.nanoTime() - start;
         LOG.info("Jackson Write complete.");
 
+        // Optional Gson Write (opt-in via --with-gson). Same single-cached-Gson
+        // discipline as the Jackson path above; type adapters are pre-registered.
+        long gsonWriteTime = -1;
+        if (runGson) {
+            LOG.info("Testing Gson Write with " + TEST_ITERATIONS + " iterations...");
+            start = System.nanoTime();
+            for (int i = 0; i < TEST_ITERATIONS; i++) {
+                dummy = GSON.toJson(testData);
+                if (dummy.length() == 0) { /* no-op */ }
+            }
+            gsonWriteTime = System.nanoTime() - start;
+            LOG.info("Gson Write complete.");
+        }
+
         // Prepare JSON strings for reading tests
         String jsonIoJson = JsonIo.toJson(testData, writeOptions);
         String toon = JsonIo.toToon(testData, writeOptions);
         String jacksonJson = jacksonMapper.writeValueAsString(testData);
+        String gsonJson = runGson ? GSON.toJson(testData) : null;
 
         // Test Read (full Java resolution)
         LOG.info("Testing JsonIo Read (toJava) with " + TEST_ITERATIONS + " iterations...");
@@ -341,6 +429,17 @@ public class JsonPerformanceTest {
         long jacksonReadTime = System.nanoTime() - start;
         LOG.info("Jackson Read complete.");
 
+        long gsonReadTime = -1;
+        if (runGson) {
+            LOG.info("Testing Gson Read with " + TEST_ITERATIONS + " iterations...");
+            start = System.nanoTime();
+            for (int i = 0; i < TEST_ITERATIONS; i++) {
+                result = GSON.fromJson(gsonJson, TestData.class);
+            }
+            gsonReadTime = System.nanoTime() - start;
+            LOG.info("Gson Read complete.");
+        }
+
         // Output results
         LOG.info("--- Full Java Resolution Results ---");
         LOG.info("Iterations: " + TEST_ITERATIONS);
@@ -349,17 +448,29 @@ public class JsonPerformanceTest {
         LOG.info("JsonIo Write Time (cycleSupport=false): " + (jsonIoWriteTimeNoCycles / 1_000_000.0) + " ms");
         LOG.info("Toon Write Time (cycleSupport=false):   " + (toonWriteTimeNoCycles / 1_000_000.0) + " ms");
         LOG.info("Jackson Write Time: " + (jacksonWriteTime / 1_000_000.0) + " ms");
+        if (runGson) {
+            LOG.info("Gson Write Time:    " + (gsonWriteTime / 1_000_000.0) + " ms");
+        }
         LOG.info("Write Speedup (cycleSupport=false vs true): " + String.format("%.2fx", (double) jsonIoWriteTime / jsonIoWriteTimeNoCycles));
         LOG.info("TOON Write Speedup (cycleSupport=false vs true): " + String.format("%.2fx", (double) toonWriteTime / toonWriteTimeNoCycles));
         LOG.info("Write Ratio (JsonIo cycleSupport=true / Jackson): " + String.format("%.2fx", (double) jsonIoWriteTime / jacksonWriteTime));
         LOG.info("Write Ratio (JsonIo cycleSupport=false / Jackson): " + String.format("%.2fx", (double) jsonIoWriteTimeNoCycles / jacksonWriteTime));
         LOG.info("Write Ratio (Toon cycleSupport=true / Jackson): " + String.format("%.2fx", (double) toonWriteTime / jacksonWriteTime));
         LOG.info("Write Ratio (Toon cycleSupport=false / Jackson): " + String.format("%.2fx", (double) toonWriteTimeNoCycles / jacksonWriteTime));
+        if (runGson) {
+            LOG.info("Write Ratio (Gson / Jackson): " + String.format("%.2fx", (double) gsonWriteTime / jacksonWriteTime));
+        }
         LOG.info("JsonIo Read Time: " + (jsonIoReadTime / 1_000_000.0) + " ms");
         LOG.info("Toon Read Time: " + (toonReadTime / 1_000_000.0) + " ms");
         LOG.info("Jackson Read Time: " + (jacksonReadTime / 1_000_000.0) + " ms");
+        if (runGson) {
+            LOG.info("Gson Read Time:    " + (gsonReadTime / 1_000_000.0) + " ms");
+        }
         LOG.info("Read Ratio (JsonIo/Jackson): " + String.format("%.2fx", (double) jsonIoReadTime / jacksonReadTime));
         LOG.info("Read Ratio (Toon/Jackson): " + String.format("%.2fx", (double) toonReadTime / jacksonReadTime));
+        if (runGson) {
+            LOG.info("Read Ratio (Gson / Jackson): " + String.format("%.2fx", (double) gsonReadTime / jacksonReadTime));
+        }
     }
 
     /**
@@ -391,6 +502,10 @@ public class JsonPerformanceTest {
             Map toonMap2 = JsonIo.fromToonToMaps(toon2, readOptions).asClass(Map.class);
             String jJson = jacksonMapper.writeValueAsString(testData);
             Map<String, Object> jMap = jacksonMapper.readValue(jJson, Map.class);
+            if (runGson) {
+                String gJson = GSON.toJson(testData);
+                Map gMap = GSON.fromJson(gJson, Map.class);
+            }
         }
         LOG.info("Warmup complete.");
 
@@ -442,10 +557,25 @@ public class JsonPerformanceTest {
         long jacksonWriteTime = System.nanoTime() - start;
         LOG.info("Jackson Write complete.");
 
+        // Optional Gson Write (opt-in via --with-gson). Same single-cached-Gson
+        // discipline as the Jackson path above.
+        long gsonWriteTime = -1;
+        if (runGson) {
+            LOG.info("Testing Gson Write with " + TEST_ITERATIONS + " iterations...");
+            start = System.nanoTime();
+            for (int i = 0; i < TEST_ITERATIONS; i++) {
+                dummy = GSON.toJson(testData);
+                if (dummy.length() == 0) { /* no-op */ }
+            }
+            gsonWriteTime = System.nanoTime() - start;
+            LOG.info("Gson Write complete.");
+        }
+
         // Prepare JSON strings for reading tests
         String jsonIoJson = JsonIo.toJson(testData, writeOptions);
         String toon = JsonIo.toToon(testData, writeOptions);
         String jacksonJson = jacksonMapper.writeValueAsString(testData);
+        String gsonJson = runGson ? GSON.toJson(testData) : null;
 
         // Test Read (Maps only - no Java resolution)
         LOG.info("Testing JsonIo Read (toMaps) with " + TEST_ITERATIONS + " iterations...");
@@ -473,6 +603,17 @@ public class JsonPerformanceTest {
         long jacksonReadTime = System.nanoTime() - start;
         LOG.info("Jackson Read complete.");
 
+        long gsonReadTime = -1;
+        if (runGson) {
+            LOG.info("Testing Gson Read (to Map) with " + TEST_ITERATIONS + " iterations...");
+            start = System.nanoTime();
+            for (int i = 0; i < TEST_ITERATIONS; i++) {
+                mapResult = GSON.fromJson(gsonJson, Map.class);
+            }
+            gsonReadTime = System.nanoTime() - start;
+            LOG.info("Gson Read complete.");
+        }
+
         // Output results
         LOG.info("--- Maps Only Results ---");
         LOG.info("Iterations: " + TEST_ITERATIONS);
@@ -481,17 +622,29 @@ public class JsonPerformanceTest {
         LOG.info("JsonIo Write Time (cycleSupport=false): " + (jsonIoWriteTimeNoCycles / 1_000_000.0) + " ms");
         LOG.info("Toon Write Time (cycleSupport=false):   " + (toonWriteTimeNoCycles / 1_000_000.0) + " ms");
         LOG.info("Jackson Write Time: " + (jacksonWriteTime / 1_000_000.0) + " ms");
+        if (runGson) {
+            LOG.info("Gson Write Time:    " + (gsonWriteTime / 1_000_000.0) + " ms");
+        }
         LOG.info("Write Speedup (cycleSupport=false vs true): " + String.format("%.2fx", (double) jsonIoWriteTime / jsonIoWriteTimeNoCycles));
         LOG.info("TOON Write Speedup (cycleSupport=false vs true): " + String.format("%.2fx", (double) toonWriteTime / toonWriteTimeNoCycles));
         LOG.info("Write Ratio (JsonIo cycleSupport=true / Jackson): " + String.format("%.2fx", (double) jsonIoWriteTime / jacksonWriteTime));
         LOG.info("Write Ratio (JsonIo cycleSupport=false / Jackson): " + String.format("%.2fx", (double) jsonIoWriteTimeNoCycles / jacksonWriteTime));
         LOG.info("Write Ratio (Toon cycleSupport=true / Jackson): " + String.format("%.2fx", (double) toonWriteTime / jacksonWriteTime));
         LOG.info("Write Ratio (Toon cycleSupport=false / Jackson): " + String.format("%.2fx", (double) toonWriteTimeNoCycles / jacksonWriteTime));
+        if (runGson) {
+            LOG.info("Write Ratio (Gson / Jackson): " + String.format("%.2fx", (double) gsonWriteTime / jacksonWriteTime));
+        }
         LOG.info("JsonIo Read Time: " + (jsonIoReadTime / 1_000_000.0) + " ms");
         LOG.info("Toon Read Time: " + (toonReadTime / 1_000_000.0) + " ms");
         LOG.info("Jackson Read Time: " + (jacksonReadTime / 1_000_000.0) + " ms");
+        if (runGson) {
+            LOG.info("Gson Read Time:    " + (gsonReadTime / 1_000_000.0) + " ms");
+        }
         LOG.info("Read Ratio (JsonIo/Jackson): " + String.format("%.2fx", (double) jsonIoReadTime / jacksonReadTime));
         LOG.info("Read Ratio (Toon/Jackson): " + String.format("%.2fx", (double) toonReadTime / jacksonReadTime));
+        if (runGson) {
+            LOG.info("Read Ratio (Gson / Jackson): " + String.format("%.2fx", (double) gsonReadTime / jacksonReadTime));
+        }
     }
 
     private static TestData createTestData() {
