@@ -10,6 +10,14 @@ and made read-only by calling the `.build()` method on the `WriteOptionsBuilder.
 instances for different scenarios, and safely re-use them once built (read-only). A `WriteOptions` instance can be
 created from another `WriteOptions` instance by using `new WriteOptionsBuilder(writeOptionsToCopyFrom).`
 
+### `WriteOptions` also drives the streaming-write API
+
+`WriteOptions` is consumed by both serialization surfaces:
+- `JsonIo.toJson(root, writeOptions)` — the tree-walking serializer (`JsonWriter`), which honors the **full** option set described in this guide (type-info policy, cycle support, custom writers, excluded fields, naming strategies, etc.).
+- `JsonIo.createGenerator(out, writeOptions)` — the [streaming-write cursor API](/user-guide.md#streaming-api-cursor-style-readwrite) (`JsonGenerator`), which honors only the **token-level** options that apply outside the context of walking a Java object graph: `prettyPrint`, `indentationSize`, `json5UnquotedKeys`, `json5SmartQuotes`, `allowNanAndInfinity`, and `maxStringLength`. Tree-only options (`showTypeInfo`, `cycleSupport`, custom writers, field filters, naming strategies, etc.) have no meaning at the streaming level and are ignored.
+
+Pass a `null` `WriteOptions` to either API to use cached library defaults — the streaming-generator factory in particular caches the default-options snapshot (lazy-init) for the hot-path zero-config use case.
+
 ---
 ### Constructors
 The `ClassLoader` in the `WriteOptionsBuilder` is utilized to convert `String` class names into `Class` instances.
@@ -347,6 +355,8 @@ To activate pretty printing, configure your serialization settings accordingly:
 >#### `WriteOptionsBuilder` prettyPrint(`boolean prettyPrint`)
 >- [ ] Sets the 'prettyPrint' setting, `true` to turn on, `false` will turn off. The default setting is `false.`
 
+Pretty-print is honored by both the tree writer (`JsonIo.toJson(...)`) and the [streaming-write API](/user-guide.md#streaming-api-cursor-style-readwrite) (`JsonIo.createGenerator(...)`). The generator emits a newline + `indentationSize × depth` spaces before each value-position and before each matching close-brace/bracket; empty containers (`{}`, `[]`) stay compact.
+
 ### lruSize - LRU Size [Cache of fields and filters]
 Set the maximum number of `Class` to `Field` mappings and `Class` to accessor mappings. This will allow infrequently used `Class's`
 to drop from the cache - they will be dynamically added back if not in the cache.  Reduces operational memory foot print.
@@ -668,6 +678,14 @@ new WriteOptionsBuilder().addCustomWrittenClass(MyCustomClass.class, new MyCusto
 ```
 This example shows a custom writer for MyCustomClass that selectively serializes only a specific field.
 This approach can be adapted to any class to meet your specific serialization needs.
+
+#### Custom writers vs `JsonGenerator`
+
+`JsonClassWriter` is invoked **from inside** the tree-walking serializer when it encounters an instance of the associated class. The custom writer receives a low-level `Writer` (for raw char emission) and a `WriterContext` (for field-write helpers). The `WriterContext` interface preserves a long-standing convention where some methods (notably `writeStringField`, `writeNumberField`, `writeArrayFieldStart`, etc.) emit a **leading comma**, so they are safe only for fields after the first inside an existing object body. See the [`WriterContext` Javadoc](/json-io/src/main/java/com/cedarsoftware/io/WriterContext.java) for the full method contract.
+
+For **standalone streaming serialization** — building JSON token-by-token without involving the tree walker at all (e.g., porting Jackson `JsonGenerator` code, large-document streaming, transform pipelines) — use the [`JsonGenerator` streaming-write API](/user-guide.md#streaming-api-cursor-style-readwrite). It exposes a Jackson-aligned auto-comma cursor where structural separators are inserted automatically; you don't need to know "is this the first field." `JsonGenerator` is **not** the API a `JsonClassWriter` uses — the two surfaces address different layers of the stack.
+
+If you want `JsonGenerator`-style auto-comma semantics inside a custom writer today, the cleanest pattern is to delegate to `JsonIo.toJson(value, opts)` and emit the result via the surrounding `Writer`, or to wrap fragments with the `WriteOptionsBuilder` helpers. A future json-io 5.0 release is the candidate moment to unify the two surfaces with a clean auto-comma `WriterContext` (binary-compat break, opt-out flag for the legacy leading-comma behavior).
 
 >#### `JsonClassWriter` getCustomWrittenClass( `Class` )
 >- [ ] Returns a `Map` of Class to custom JsonClassWriter's use to write JSON when the class is encountered during serialization.

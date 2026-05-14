@@ -3,6 +3,46 @@ package com.cedarsoftware.io;
 import java.io.IOException;
 
 /**
+ * Convenience surface passed to {@link JsonClassWriter} implementations during
+ * tree-walking serialization (via {@link JsonWriter}). Provides field-write
+ * primitives and access to the active {@link WriteOptions} so a custom writer
+ * can emit JSON fragments without re-implementing escape logic or option
+ * lookups.
+ *
+ * <h3>Relationship to {@link JsonGenerator}</h3>
+ *
+ * <p>{@code WriterContext} is the <b>tree-walker's</b> custom-writer hook —
+ * it exists so a {@code JsonClassWriter} can collaborate with the surrounding
+ * graph-serializer ({@code JsonWriter}) while writing a custom representation
+ * for one type. {@link JsonGenerator} is the <b>streaming-write API</b> for
+ * callers who are <i>not</i> walking a Java object graph at all — for example,
+ * emitting JSON token-by-token in a transform pipeline or porting Jackson
+ * {@code JsonGenerator} code. The two surfaces are deliberately separate:
+ *
+ * <ul>
+ *   <li>{@code WriterContext} methods carry over a long-standing convention
+ *       that some method names (notably {@code writeStringField} /
+ *       {@code writeObjectField} / {@code writeNumberField} /
+ *       {@code writeBooleanField} / {@code writeArrayFieldStart} /
+ *       {@code writeObjectFieldStart}) write a <b>leading comma</b>. This is
+ *       safe for fields after the first inside an existing object body but
+ *       requires the caller to know what they're doing. The convention exists
+ *       to preserve binary compatibility for the substantial body of existing
+ *       custom-writer code that depends on it.</li>
+ *   <li>{@link JsonGenerator} uses a Jackson-style auto-comma context machine
+ *       — callers emit a sequence of tokens and structural separators are
+ *       inserted (or rejected as misuse) automatically. New code outside the
+ *       custom-writer use case should prefer {@code JsonGenerator}.</li>
+ * </ul>
+ *
+ * <p>The two surfaces share the same low-level escape helpers
+ * ({@link JsonWriter#writeJsonUtf8String}, {@link JsonWriter#writeSingleQuotedString})
+ * and the same {@link WriteOptions} configuration. The "single source of truth
+ * for well-formed JSON output" question is resolved at the static-helper
+ * level today; a deeper unification (e.g. promoting {@code WriterContext} to
+ * a Jackson-style auto-comma surface as a subset of {@code JsonGenerator}) is
+ * a candidate for json-io 5.0 where a binary-compat break is acceptable.
+ *
  * @author Kenny Partlow (kpartlow@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
