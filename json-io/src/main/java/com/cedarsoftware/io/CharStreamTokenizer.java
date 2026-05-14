@@ -151,7 +151,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
     // -------------------------------------------------------------------
 
     @Override
-    public JsonToken nextToken() {
+    public JsonToken nextToken() throws JsonParseException {
         if (done) {
             currentToken = null;
             return null;
@@ -185,7 +185,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return advanceWithinArray();
     }
 
-    private JsonToken advanceWithinObject() {
+    private JsonToken advanceWithinObject() throws JsonParseException {
         int c;
         if (currentToken == JsonToken.START_OBJECT) {
             c = skipWhitespaceRead(true);
@@ -214,7 +214,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return readFieldNameAt(c);
     }
 
-    private JsonToken advanceWithinArray() {
+    private JsonToken advanceWithinArray() throws JsonParseException {
         int c;
         if (currentToken == JsonToken.START_ARRAY) {
             c = skipWhitespaceRead(true);
@@ -243,7 +243,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return advanceToValue(c);
     }
 
-    private JsonToken advanceToValue(int c) {
+    private JsonToken advanceToValue(int c) throws JsonParseException {
         // Mirrors JsonParser.readValue(int, Type) in dispatch but emits tokens.
         if (c == '{') {
             pushContext(CTX_OBJECT);
@@ -301,7 +301,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         }
     }
 
-    private JsonToken readFieldNameAt(int c) {
+    private JsonToken readFieldNameAt(int c) throws JsonParseException {
         String name;
         if (c == '"') {
             name = readString('"');
@@ -484,7 +484,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     @Override
-    public int getIntValue() {
+    public int getIntValue() throws JsonParseException {
         ensureNumberToken();
         // Jackson-parity: throw on out-of-range / NaN / Infinity, but silently
         // truncate fractional parts for values that fit (e.g. 1.5 -> 1, like Java's
@@ -516,7 +516,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     @Override
-    public long getLongValue() {
+    public long getLongValue() throws JsonParseException {
         ensureNumberToken();
         // Jackson-parity: throw on out-of-range / NaN / Infinity, but silently
         // truncate fractional parts for in-range doubles. Mirrors
@@ -545,7 +545,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     @Override
-    public float getFloatValue() {
+    public float getFloatValue() throws JsonParseException {
         ensureNumberToken();
         if (numberType == NumberType.BIG_DECIMAL) {
             return bigDecimalValue.floatValue();
@@ -557,7 +557,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     @Override
-    public double getDoubleValue() {
+    public double getDoubleValue() throws JsonParseException {
         ensureNumberToken();
         if (numberType == NumberType.BIG_DECIMAL) {
             return bigDecimalValue.doubleValue();
@@ -569,7 +569,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     @Override
-    public BigInteger getBigIntegerValue() {
+    public BigInteger getBigIntegerValue() throws JsonParseException {
         ensureNumberToken();
         if (numberType == NumberType.BIG_INTEGER) {
             return bigIntegerValue;
@@ -584,7 +584,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     @Override
-    public BigDecimal getDecimalValue() {
+    public BigDecimal getDecimalValue() throws JsonParseException {
         ensureNumberToken();
         if (numberType == NumberType.BIG_DECIMAL) {
             return bigDecimalValue;
@@ -600,7 +600,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     @Override
-    public boolean getBooleanValue() {
+    public boolean getBooleanValue() throws JsonParseException {
         if (currentToken != JsonToken.VALUE_TRUE && currentToken != JsonToken.VALUE_FALSE) {
             error("Boolean value requested, but current token is " + currentToken);
         }
@@ -608,13 +608,13 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     @Override
-    public NumberType getNumberType() {
+    public NumberType getNumberType() throws JsonParseException {
         ensureNumberToken();
         return numberType;
     }
 
     @Override
-    public Number getNumberValue() {
+    public Number getNumberValue() throws JsonParseException {
         ensureNumberToken();
         switch (numberType) {
             case INT:
@@ -630,17 +630,17 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     @Override
-    public String nextFieldName() {
+    public String nextFieldName() throws JsonParseException {
         return nextToken() == JsonToken.FIELD_NAME ? currentName : null;
     }
 
     @Override
-    public String nextTextValue() {
+    public String nextTextValue() throws JsonParseException {
         return nextToken() == JsonToken.VALUE_STRING ? currentText : null;
     }
 
     @Override
-    public void skipChildren() {
+    public void skipChildren() throws JsonParseException {
         if (currentToken != JsonToken.START_OBJECT && currentToken != JsonToken.START_ARRAY) {
             return;
         }
@@ -659,7 +659,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     @Override
-    boolean hasNonWhitespaceContent() {
+    boolean hasNonWhitespaceContent() throws JsonParseException {
         int c = skipWhitespaceRead(false);
         if (c == -1) {
             return false;
@@ -686,7 +686,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         }
     }
 
-    private void ensureNumberToken() {
+    private void ensureNumberToken() throws JsonParseException {
         if (currentToken != JsonToken.VALUE_NUMBER_INT
                 && currentToken != JsonToken.VALUE_NUMBER_FLOAT) {
             error("Numeric value requested, but current token is " + currentToken);
@@ -744,7 +744,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return cacheString(strBuf);
     }
 
-    private void readToken(String token) {
+    private void readToken(String token) throws JsonParseException {
         final int len = token.length();
 
         if (len <= 5) {
@@ -777,7 +777,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         }
     }
 
-    private JsonToken readNumber(int c) {
+    private JsonToken readNumber(int c) throws JsonParseException {
         // Fast path: simple positive integers (1-9 followed by digits).
         if (c >= '1' && c <= '9' && !integerTypeBigInteger) {
             final FastReader in = input;
@@ -822,7 +822,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return readNumberGeneral(c);
     }
 
-    private JsonToken readNumberContinuation(long prefix, int c) {
+    private JsonToken readNumberContinuation(long prefix, int c) throws JsonParseException {
         final FastReader in = input;
         StringBuilder number = numBuf;
         number.setLength(0);
@@ -876,11 +876,11 @@ final class CharStreamTokenizer extends JsonTokenizer {
         }
     }
 
-    private JsonToken readNumberGeneral(int firstChar) {
+    private JsonToken readNumberGeneral(int firstChar) throws JsonParseException {
         return readNumberGeneral(firstChar, NO_PREFETCH);
     }
 
-    private JsonToken readNumberGeneral(int firstChar, int prefetchedAfterSign) {
+    private JsonToken readNumberGeneral(int firstChar, int prefetchedAfterSign) throws JsonParseException {
         final FastReader in = input;
         boolean isFloat = false;
         boolean isNegative = (firstChar == '-');
@@ -1030,7 +1030,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return emitNumber(parseToMinimalNumericType(numStr));
     }
 
-    private JsonToken readHexNumber(boolean isNegative) {
+    private JsonToken readHexNumber(boolean isNegative) throws JsonParseException {
         final FastReader in = input;
         final int[] hexMap = HEX_VALUE_MAP;
         long value = 0;
@@ -1060,7 +1060,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return setLongResult(isNegative ? -value : value);
     }
 
-    private String readString(char quoteChar) {
+    private String readString(char quoteChar) throws JsonParseException {
         final FastReader in = input;
         final char[] buf = readBuf;
 
@@ -1153,7 +1153,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return readStringSlowPath(str, quoteChar);
     }
 
-    private String readStringSlowPath(StringBuilder str, char quoteChar) {
+    private String readStringSlowPath(StringBuilder str, char quoteChar) throws JsonParseException {
         final FastReader in = input;
         final char[] buf = readBuf;
 
@@ -1181,7 +1181,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return cacheString(str);
     }
 
-    private String readStringWithEscapes(StringBuilder str, int delimChar, char quoteChar) {
+    private String readStringWithEscapes(StringBuilder str, int delimChar, char quoteChar) throws JsonParseException {
         final FastReader in = input;
         final char[] buf = readBuf;
         final char[] ESCAPE_CHARS = ESCAPE_CHAR_MAP;
@@ -1237,7 +1237,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         }
     }
 
-    private void handleUnicodeEscape(StringBuilder str, int[] HEX_VALUES) {
+    private void handleUnicodeEscape(StringBuilder str, int[] HEX_VALUES) throws JsonParseException {
         final FastReader in = input;
 
         int value = 0;
@@ -1341,7 +1341,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return s;
     }
 
-    private int skipWhitespaceRead(boolean throwOnEof) {
+    private int skipWhitespaceRead(boolean throwOnEof) throws JsonParseException {
         final FastReader in = input;
         int c;
         if (strictJson) {
@@ -1412,7 +1412,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         }
     }
 
-    private void skipBlockComment() {
+    private void skipBlockComment() throws JsonParseException {
         boolean sawStar = false;
         int c;
         while ((c = input.read()) != -1) {
@@ -1424,12 +1424,12 @@ final class CharStreamTokenizer extends JsonTokenizer {
         error("Unterminated block comment");
     }
 
-    private Object error(String msg) {
-        throw new JsonIoException(getMessage(msg));
+    private Object error(String msg) throws JsonParseException {
+        throw new JsonParseException(getMessage(msg));
     }
 
-    private Object error(String msg, Exception e) {
-        throw new JsonIoException(getMessage(msg), e);
+    private Object error(String msg, Exception e) throws JsonParseException {
+        throw new JsonParseException(getMessage(msg), e);
     }
 
     private String getMessage(String msg) {

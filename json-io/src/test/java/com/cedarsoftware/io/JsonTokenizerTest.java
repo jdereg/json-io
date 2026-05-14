@@ -181,7 +181,7 @@ class JsonTokenizerTest {
     void strictMode_rejectsTrailingDecimal() throws IOException {
         CharStreamTokenizer t = strictTokenizer("1.");
         assertThatThrownBy(t::nextToken)
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(JsonParseException.class)
                 .hasMessageContaining("digit required after decimal point");
     }
 
@@ -190,7 +190,7 @@ class JsonTokenizerTest {
         // "1.e2" — dot followed by exponent without intervening digit.
         CharStreamTokenizer t = strictTokenizer("1.e2");
         assertThatThrownBy(t::nextToken)
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(JsonParseException.class)
                 .hasMessageContaining("digit required after decimal point");
     }
 
@@ -235,7 +235,7 @@ class JsonTokenizerTest {
         CharStreamTokenizer t = tokenizer("42");
         assertEquals(JsonToken.VALUE_NUMBER_INT, t.nextToken());
         assertThatThrownBy(t::getBooleanValue)
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(JsonParseException.class)
                 .hasMessageContaining("Boolean value requested");
     }
 
@@ -244,7 +244,7 @@ class JsonTokenizerTest {
         CharStreamTokenizer t = tokenizer("\"hello\"");
         assertEquals(JsonToken.VALUE_STRING, t.nextToken());
         assertThatThrownBy(t::getBooleanValue)
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(JsonParseException.class)
                 .hasMessageContaining("Boolean value requested");
     }
 
@@ -263,7 +263,7 @@ class JsonTokenizerTest {
         CharStreamTokenizer t = tokenizer("\"hello\"");
         assertEquals(JsonToken.VALUE_STRING, t.nextToken());
         assertThatThrownBy(t::getNumberType)
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(JsonParseException.class)
                 .hasMessageContaining("Numeric value requested");
     }
 
@@ -272,7 +272,7 @@ class JsonTokenizerTest {
         CharStreamTokenizer t = tokenizer("true");
         assertEquals(JsonToken.VALUE_TRUE, t.nextToken());
         assertThatThrownBy(t::getNumberType)
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(JsonParseException.class)
                 .hasMessageContaining("Numeric value requested");
     }
 
@@ -323,7 +323,7 @@ class JsonTokenizerTest {
         CharStreamTokenizer t = tokenizer("3000000000"); // > Integer.MAX_VALUE
         assertEquals(JsonToken.VALUE_NUMBER_INT, t.nextToken());
         assertThatThrownBy(t::getIntValue)
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(JsonParseException.class)
                 .hasMessageContaining("out of range of int");
     }
 
@@ -340,7 +340,7 @@ class JsonTokenizerTest {
         CharStreamTokenizer t = tokenizer("1e20");
         assertEquals(JsonToken.VALUE_NUMBER_FLOAT, t.nextToken());
         assertThatThrownBy(t::getIntValue)
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(JsonParseException.class)
                 .hasMessageContaining("out of range of int");
     }
 
@@ -349,7 +349,7 @@ class JsonTokenizerTest {
         CharStreamTokenizer t = tokenizer("NaN");
         assertEquals(JsonToken.VALUE_NUMBER_FLOAT, t.nextToken());
         assertThatThrownBy(t::getIntValue)
-                .isInstanceOf(JsonIoException.class);
+                .isInstanceOf(JsonParseException.class);
     }
 
     @Test
@@ -357,7 +357,7 @@ class JsonTokenizerTest {
         CharStreamTokenizer t = tokenizer("Infinity");
         assertEquals(JsonToken.VALUE_NUMBER_FLOAT, t.nextToken());
         assertThatThrownBy(t::getIntValue)
-                .isInstanceOf(JsonIoException.class);
+                .isInstanceOf(JsonParseException.class);
     }
 
     @Test
@@ -373,7 +373,7 @@ class JsonTokenizerTest {
         CharStreamTokenizer t = bigIntegerTokenizer(huge);
         assertEquals(JsonToken.VALUE_NUMBER_INT, t.nextToken());
         assertThatThrownBy(t::getLongValue)
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(JsonParseException.class)
                 .hasMessageContaining("out of range of long");
     }
 
@@ -390,7 +390,7 @@ class JsonTokenizerTest {
         CharStreamTokenizer t = tokenizer("1e30");
         assertEquals(JsonToken.VALUE_NUMBER_FLOAT, t.nextToken());
         assertThatThrownBy(t::getLongValue)
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(JsonParseException.class)
                 .hasMessageContaining("out of range of long");
     }
 
@@ -399,7 +399,7 @@ class JsonTokenizerTest {
         CharStreamTokenizer t = tokenizer("NaN");
         assertEquals(JsonToken.VALUE_NUMBER_FLOAT, t.nextToken());
         assertThatThrownBy(t::getLongValue)
-                .isInstanceOf(JsonIoException.class);
+                .isInstanceOf(JsonParseException.class);
     }
 
     @Test
@@ -782,7 +782,7 @@ class JsonTokenizerTest {
     void strictRejectsSingleQuotes() {
         CharStreamTokenizer t = strictTokenizer("'x'");
         assertThatThrownBy(t::nextToken)
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(JsonParseException.class)
                 .hasMessageContaining("Single-quoted");
     }
 
@@ -790,7 +790,7 @@ class JsonTokenizerTest {
     void strictRejectsComments() {
         CharStreamTokenizer t = strictTokenizer("// hi\n1");
         assertThatThrownBy(t::nextToken)
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(JsonParseException.class)
                 .hasMessageContaining("Comments not allowed");
     }
 
@@ -798,7 +798,7 @@ class JsonTokenizerTest {
     void strictRejectsUnquotedKey() {
         CharStreamTokenizer t = strictTokenizer("{key:1}");
         assertThatThrownBy(() -> { t.nextToken(); t.nextToken(); })
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(JsonParseException.class)
                 .hasMessageContaining("Unquoted field names");
     }
 
@@ -806,7 +806,7 @@ class JsonTokenizerTest {
     void strictRejectsHex() {
         CharStreamTokenizer t = strictTokenizer("0xFF");
         assertThatThrownBy(t::nextToken)
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(JsonParseException.class)
                 .hasMessageContaining("Hexadecimal");
     }
 
@@ -817,7 +817,7 @@ class JsonTokenizerTest {
             t.nextToken();
             t.nextToken();
             t.nextToken();
-        }).isInstanceOf(JsonIoException.class)
+        }).isInstanceOf(JsonParseException.class)
           .hasMessageContaining("Trailing commas");
     }
 
@@ -825,7 +825,7 @@ class JsonTokenizerTest {
     void strictRejectsLeadingDecimal() {
         CharStreamTokenizer t = strictTokenizer(".5");
         assertThatThrownBy(t::nextToken)
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(JsonParseException.class)
                 .hasMessageContaining("Leading decimal");
     }
 
@@ -833,7 +833,7 @@ class JsonTokenizerTest {
     void strictRejectsExplicitPositive() {
         CharStreamTokenizer t = strictTokenizer("+5");
         assertThatThrownBy(t::nextToken)
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(JsonParseException.class)
                 .hasMessageContaining("Explicit positive");
     }
 
@@ -845,7 +845,7 @@ class JsonTokenizerTest {
     void unterminatedString() {
         CharStreamTokenizer t = tokenizer("\"oops");
         assertThatThrownBy(t::nextToken)
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(JsonParseException.class)
                 .hasMessageContaining("EOF reached");
     }
 
@@ -853,7 +853,7 @@ class JsonTokenizerTest {
     void invalidEscape() {
         CharStreamTokenizer t = tokenizer("\"a\\zb\"");
         assertThatThrownBy(t::nextToken)
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(JsonParseException.class)
                 .hasMessageContaining("Invalid character escape");
     }
 
@@ -863,7 +863,7 @@ class JsonTokenizerTest {
         assertThatThrownBy(() -> {
             t.nextToken();
             t.nextToken();
-        }).isInstanceOf(JsonIoException.class)
+        }).isInstanceOf(JsonParseException.class)
           .hasMessageContaining("':'");
     }
 
@@ -875,7 +875,7 @@ class JsonTokenizerTest {
             t.nextToken();   // a
             t.nextToken();   // 1
             t.nextToken();   // expect , or } — error
-        }).isInstanceOf(JsonIoException.class)
+        }).isInstanceOf(JsonParseException.class)
           .hasMessageContaining("'}'");
     }
 
@@ -886,21 +886,21 @@ class JsonTokenizerTest {
             t.nextToken();
             t.nextToken();
             t.nextToken();
-        }).isInstanceOf(JsonIoException.class)
+        }).isInstanceOf(JsonParseException.class)
           .hasMessageContaining("','");
     }
 
     @Test
     void unknownLiteralAtRoot() {
         CharStreamTokenizer t = tokenizer("foo");
-        assertThatThrownBy(t::nextToken).isInstanceOf(JsonIoException.class);
+        assertThatThrownBy(t::nextToken).isInstanceOf(JsonParseException.class);
     }
 
     @Test
     void typedAccessorOnNonNumberThrows() {
         CharStreamTokenizer t = tokenizer("\"x\"");
         assertThatThrownBy(() -> { t.nextToken(); t.getIntValue(); })
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(JsonParseException.class)
                 .hasMessageContaining("Numeric value requested");
     }
 
@@ -908,7 +908,7 @@ class JsonTokenizerTest {
     void unterminatedBlockComment() {
         CharStreamTokenizer t = tokenizer("/* never ends");
         assertThatThrownBy(t::nextToken)
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(JsonParseException.class)
                 .hasMessageContaining("Unterminated block comment");
     }
 

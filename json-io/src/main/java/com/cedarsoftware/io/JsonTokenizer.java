@@ -133,7 +133,7 @@ public abstract class JsonTokenizer implements Closeable {
     /**
      * @return the current number token's value as an {@code int}
      * @throws IOException                      on I/O error
-     * @throws JsonIoException                  if the current token is not a
+     * @throws JsonParseException               if the current token is not a
      *                                          number, or the value does not
      *                                          fit in an {@code int}
      */
@@ -142,7 +142,7 @@ public abstract class JsonTokenizer implements Closeable {
     /**
      * @return the current number token's value as a {@code long}
      * @throws IOException                      on I/O error
-     * @throws JsonIoException                  if the current token is not a
+     * @throws JsonParseException               if the current token is not a
      *                                          number, or the value is NaN/
      *                                          Infinity, or its magnitude
      *                                          does not fit in a {@code long}.
@@ -175,18 +175,18 @@ public abstract class JsonTokenizer implements Closeable {
     /**
      * @return {@code true} if the current token is {@link JsonToken#VALUE_TRUE},
      *         {@code false} if it is {@link JsonToken#VALUE_FALSE}
-     * @throws JsonIoException if the current token is neither
+     * @throws JsonParseException if the current token is neither
      */
-    public abstract boolean getBooleanValue();
+    public abstract boolean getBooleanValue() throws JsonParseException;
 
     /**
      * Precise numeric type of the current token.
      *
-     * @throws JsonIoException if the current token is not
-     *                         {@link JsonToken#VALUE_NUMBER_INT} or
-     *                         {@link JsonToken#VALUE_NUMBER_FLOAT}
+     * @throws JsonParseException if the current token is not
+     *                            {@link JsonToken#VALUE_NUMBER_INT} or
+     *                            {@link JsonToken#VALUE_NUMBER_FLOAT}
      */
-    public abstract NumberType getNumberType();
+    public abstract NumberType getNumberType() throws JsonParseException;
 
     /**
      * Materialize the current numeric token as a boxed {@link Number} in the
@@ -197,7 +197,7 @@ public abstract class JsonTokenizer implements Closeable {
      * callers avoid the {@code getNumberType()} + {@code getXxxValue()}
      * two-dispatch sequence.
      *
-     * @throws JsonIoException if the current token is not
+     * @throws JsonParseException if the current token is not
      *                         {@link JsonToken#VALUE_NUMBER_INT} or
      *                         {@link JsonToken#VALUE_NUMBER_FLOAT}
      */

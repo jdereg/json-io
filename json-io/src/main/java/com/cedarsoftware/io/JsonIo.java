@@ -265,6 +265,11 @@ public class JsonIo {
             parsed = parseFunction.parse(resolver);
         } catch (JsonIoException e) {
             throw e;
+        } catch (JsonParseException e) {
+            // Streaming-API checked parse error from the tokenizer (Jackson convention).
+            // Preserve the original message so tree-API callers can see the underlying
+            // parse-error detail via the standard JsonIoException catch path.
+            throw new JsonIoException(e.getMessage(), e);
         } catch (Exception e) {
             throw new JsonIoException(parseErrorMessage, e);
         }

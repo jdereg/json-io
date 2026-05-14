@@ -1,0 +1,428 @@
+package com.cedarsoftware.io;
+
+import java.io.Closeable;
+import java.io.Flushable;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+
+/**
+ * Cursor-style JSON generator — json-io's public streaming-write API.
+ *
+ * <p>Create instances via {@link JsonIo#createGenerator(java.io.OutputStream)},
+ * {@link JsonIo#createGenerator(java.io.Writer)}, or their option-aware overloads.
+ * Counterpart to the streaming-read API ({@link JsonTokenizer}).
+ *
+ * <p>The shape of this API mirrors Jackson's
+ * {@code com.fasterxml.jackson.core.JsonGenerator} for porting friendliness.
+ * Differences from Jackson are deliberate and limited:
+ * <ul>
+ *   <li>No databind {@code writeObject(Object)} entry point — the streaming-write
+ *       API is intentionally low-level. For full graph serialization (cycles,
+ *       custom writers, {@code @type} policy) use {@link JsonIo#toJson} which
+ *       drives the existing {@link JsonWriter}. To embed a tree-serialized value
+ *       inside a hand-written stream, pre-serialize with {@link JsonIo#toJson}
+ *       and emit via {@link #writeRawValue(String)}.</li>
+ *   <li>No {@code writeBinary(byte[])} convenience in v1. Emit base64 yourself
+ *       via {@code writeString(Base64.getEncoder().encodeToString(bytes))}; the
+ *       read side returns it as a {@code String} (no automatic {@code byte[]}
+ *       reconstruction). The library's tree writer already handles
+ *       {@link java.nio.ByteBuffer} round-trip — prefer that for binary blobs
+ *       that must round-trip end-to-end.</li>
+ *   <li>{@link #writeNumber(BigDecimal)} emits the canonical form via
+ *       {@code stripTrailingZeros().toPlainString()} (matches
+ *       {@link com.cedarsoftware.util.Converter}'s canonical string form);
+ *       {@link #writeNumber(BigInteger)} emits {@code toString()}. Both are
+ *       <b>unquoted JSON number literals</b>. To force a quoted-string form
+ *       (the tree writer's policy for round-trip precision), call
+ *       {@link #writeString(String)} with the same canonical form yourself.</li>
+ *   <li>Structural misuse (e.g. {@code writeFieldName} outside an object,
+ *       mismatched {@code writeEndArray} over an object context, value without a
+ *       preceding field in an object) throws {@link JsonGenerationException},
+ *       a checked exception that extends {@link IOException}. Existing
+ *       {@code catch (IOException)} blocks around the generator call site
+ *       (Jackson convention) handle it transparently; callers wanting to
+ *       distinguish programmer mis-sequencing from underlying I/O failure may
+ *       catch {@code JsonGenerationException} specifically.</li>
+ *   <li>No async surface — sync-only, pure JSON.</li>
+ * </ul>
+ *
+ * <p>Implementations track structural context (open object / array / field-pending
+ * state) so commas and colons are inserted automatically. Callers do <i>not</i>
+ * manage punctuation; just emit the sequence of tokens that compose the desired
+ * JSON document.
+ *
+ * <p>Concrete subclasses are package-private implementation details; callers
+ * always work through this abstract API. Returned values from write methods are
+ * {@code this} for fluent chaining, mirroring Jackson.
+ *
+ * <h3>Example — hand-rolled streaming serializer</h3>
+ * <pre>{@code
+ * try (JsonGenerator g = JsonIo.createGenerator(out)) {
+ *     g.writeStartObject()
+ *         .writeStringField("id", "u-1")
+ *         .writeStringField("name", "Alice")
+ *         .writeArrayFieldStart("tags")
+ *             .writeString("admin")
+ *             .writeString("active")
+ *         .writeEndArray()
+ *         .writeNumberField("age", 30)
+ *      .writeEndObject();
+ * }
+ * }</pre>
+ *
+ * <h3>Example — splice streaming-read into streaming-write</h3>
+ * <pre>{@code
+ * try (JsonTokenizer t = JsonIo.createTokenizer(input);
+ *      JsonGenerator g = JsonIo.createGenerator(out)) {
+ *     while (t.nextToken() != null) {
+ *         g.copyCurrentEvent(t);
+ *     }
+ * }
+ * }</pre>
+ *
+ * @see JsonTokenizer
+ * @see JsonIo#createGenerator(java.io.OutputStream)
+ * @see JsonIo#createGenerator(java.io.Writer)
+ */
+public abstract class JsonGenerator implements Closeable, Flushable {
+
+    // -------------------------------------------------------------------
+    // Structural tokens
+    // -------------------------------------------------------------------
+
+    /**
+     * Emit {@code &#123;} and push a new object context. A trailing comma is
+     * written first if this object is a value in an enclosing array or object.
+     *
+     * @return this generator for chaining
+     * @throws IOException on underlying I/O failure
+     * @throws JsonGenerationException if a field name is pending without a value
+     *                         (i.e. {@code writeFieldName} was the last call)
+     */
+    public abstract JsonGenerator writeStartObject() throws IOException;
+
+    /**
+     * Emit {@code &#125;} and pop the current object context.
+     *
+     * @return this generator for chaining
+     * @throws IOException on underlying I/O failure
+     * @throws JsonGenerationException if the current context is not an object,
+     *                         or a field name was written without a matching value
+     */
+    public abstract JsonGenerator writeEndObject() throws IOException;
+
+    /**
+     * Emit {@code [} and push a new array context. A trailing comma is written
+     * first if this array is a value in an enclosing array or object.
+     *
+     * @return this generator for chaining
+     * @throws IOException on underlying I/O failure
+     */
+    public abstract JsonGenerator writeStartArray() throws IOException;
+
+    /**
+     * Emit {@code ]} and pop the current array context.
+     *
+     * @return this generator for chaining
+     * @throws IOException on underlying I/O failure
+     * @throws JsonGenerationException if the current context is not an array
+     */
+    public abstract JsonGenerator writeEndArray() throws IOException;
+
+    /**
+     * Emit a JSON field name (quoted and colon-terminated) inside an object
+     * context. The next write call must produce the field's value.
+     *
+     * @param name the field name; must not be {@code null}
+     * @return this generator for chaining
+     * @throws IOException on underlying I/O failure
+     * @throws JsonGenerationException if the current context is not an object, or a
+     *                         field name is already pending without a value
+     */
+    public abstract JsonGenerator writeFieldName(String name) throws IOException;
+
+    // -------------------------------------------------------------------
+    // Scalar values
+    // -------------------------------------------------------------------
+
+    /**
+     * Emit a JSON string value (quoted, with standard JSON escape handling).
+     * A {@code null} value is emitted as the JSON literal {@code null}.
+     *
+     * @return this generator for chaining
+     */
+    public abstract JsonGenerator writeString(String value) throws IOException;
+
+    /**
+     * Emit a JSON string value sourced from a char-array slice (zero-copy
+     * fast path). Standard JSON escaping is applied.
+     *
+     * @param text   the backing buffer
+     * @param offset starting index, inclusive
+     * @param length number of characters to write
+     * @return this generator for chaining
+     */
+    public abstract JsonGenerator writeString(char[] text, int offset, int length) throws IOException;
+
+    /** Emit a JSON number from an {@code int}. */
+    public abstract JsonGenerator writeNumber(int value) throws IOException;
+
+    /** Emit a JSON number from a {@code long}. */
+    public abstract JsonGenerator writeNumber(long value) throws IOException;
+
+    /**
+     * Emit a JSON number from a {@code float}. NaN / Infinity handling depends
+     * on the active {@link WriteOptions}: when {@code allowNanAndInfinity} is
+     * true these are emitted as bare {@code NaN} / {@code Infinity} (JSON5 /
+     * lenient form); when strict, a {@link JsonGenerationException} is thrown.
+     */
+    public abstract JsonGenerator writeNumber(float value) throws IOException;
+
+    /** Emit a JSON number from a {@code double}. See {@link #writeNumber(float)} for NaN/Infinity policy. */
+    public abstract JsonGenerator writeNumber(double value) throws IOException;
+
+    /**
+     * Emit a JSON number from a {@link BigInteger}. The value is rendered via
+     * {@link BigInteger#toString()} as an <b>unquoted JSON number literal</b>.
+     * A {@code null} value is emitted as the JSON literal {@code null}.
+     */
+    public abstract JsonGenerator writeNumber(BigInteger value) throws IOException;
+
+    /**
+     * Emit a JSON number from a {@link BigDecimal}. The value is rendered via
+     * {@code stripTrailingZeros().toPlainString()} (matching
+     * {@link com.cedarsoftware.util.Converter}'s canonical string form) as an
+     * <b>unquoted JSON number literal</b>. A {@code null} value is emitted as
+     * the JSON literal {@code null}.
+     */
+    public abstract JsonGenerator writeNumber(BigDecimal value) throws IOException;
+
+    /**
+     * Emit a pre-formatted number literal verbatim. The string is trusted —
+     * no validation is performed. Use this for arbitrary-precision or
+     * locale-specific formatting outside the standard overloads.
+     */
+    public abstract JsonGenerator writeNumber(String encodedValue) throws IOException;
+
+    /** Emit the JSON literal {@code true} or {@code false}. */
+    public abstract JsonGenerator writeBoolean(boolean value) throws IOException;
+
+    /** Emit the JSON literal {@code null}. */
+    public abstract JsonGenerator writeNull() throws IOException;
+
+    // -------------------------------------------------------------------
+    // Raw injection
+    // -------------------------------------------------------------------
+
+    /**
+     * Drop the given characters into the output stream verbatim, with no
+     * escaping and no effect on the structural context. Intended for advanced
+     * use (custom formatting, embedding pre-encoded fragments). Does <b>not</b>
+     * count as a value — the surrounding context's comma / field-pending state
+     * is unchanged.
+     *
+     * @return this generator for chaining
+     */
+    public abstract JsonGenerator writeRaw(String raw) throws IOException;
+
+    /** Single-char variant of {@link #writeRaw(String)}. */
+    public abstract JsonGenerator writeRaw(char raw) throws IOException;
+
+    /** Char-array slice variant of {@link #writeRaw(String)}. */
+    public abstract JsonGenerator writeRaw(char[] raw, int offset, int length) throws IOException;
+
+    /**
+     * Drop a pre-encoded JSON value into the output. Unlike {@link #writeRaw(String)},
+     * this call <b>counts as one value</b> — auto-commas fire, field-pending state
+     * resolves, and the value is treated as a structural emission. Useful for
+     * embedding output from a tree-serializer ({@code JsonIo.toJson(value)}) inside
+     * a hand-written streaming sequence.
+     *
+     * @param encodedValue a syntactically-valid JSON value (object / array / scalar);
+     *                     no validation is performed
+     * @return this generator for chaining
+     */
+    public abstract JsonGenerator writeRawValue(String encodedValue) throws IOException;
+
+    // -------------------------------------------------------------------
+    // Convenience: field-name + value in a single call
+    // -------------------------------------------------------------------
+
+    /** Equivalent to {@link #writeFieldName(String)} followed by {@link #writeString(String)}. */
+    public JsonGenerator writeStringField(String fieldName, String value) throws IOException {
+        writeFieldName(fieldName);
+        return writeString(value);
+    }
+
+    /** Equivalent to {@link #writeFieldName(String)} followed by {@link #writeNumber(int)}. */
+    public JsonGenerator writeNumberField(String fieldName, int value) throws IOException {
+        writeFieldName(fieldName);
+        return writeNumber(value);
+    }
+
+    /** Equivalent to {@link #writeFieldName(String)} followed by {@link #writeNumber(long)}. */
+    public JsonGenerator writeNumberField(String fieldName, long value) throws IOException {
+        writeFieldName(fieldName);
+        return writeNumber(value);
+    }
+
+    /** Equivalent to {@link #writeFieldName(String)} followed by {@link #writeNumber(double)}. */
+    public JsonGenerator writeNumberField(String fieldName, double value) throws IOException {
+        writeFieldName(fieldName);
+        return writeNumber(value);
+    }
+
+    /** Equivalent to {@link #writeFieldName(String)} followed by {@link #writeNumber(BigDecimal)}. */
+    public JsonGenerator writeNumberField(String fieldName, BigDecimal value) throws IOException {
+        writeFieldName(fieldName);
+        return writeNumber(value);
+    }
+
+    /** Equivalent to {@link #writeFieldName(String)} followed by {@link #writeBoolean(boolean)}. */
+    public JsonGenerator writeBooleanField(String fieldName, boolean value) throws IOException {
+        writeFieldName(fieldName);
+        return writeBoolean(value);
+    }
+
+    /** Equivalent to {@link #writeFieldName(String)} followed by {@link #writeNull()}. */
+    public JsonGenerator writeNullField(String fieldName) throws IOException {
+        writeFieldName(fieldName);
+        return writeNull();
+    }
+
+    /** Equivalent to {@link #writeFieldName(String)} followed by {@link #writeStartArray()}. */
+    public JsonGenerator writeArrayFieldStart(String fieldName) throws IOException {
+        writeFieldName(fieldName);
+        return writeStartArray();
+    }
+
+    /** Equivalent to {@link #writeFieldName(String)} followed by {@link #writeStartObject()}. */
+    public JsonGenerator writeObjectFieldStart(String fieldName) throws IOException {
+        writeFieldName(fieldName);
+        return writeStartObject();
+    }
+
+    // -------------------------------------------------------------------
+    // Bridge from streaming-read
+    // -------------------------------------------------------------------
+
+    /**
+     * Copy the current token from the given {@link JsonTokenizer} into this
+     * generator as a single equivalent write call. Useful for token-by-token
+     * transformation pipelines (parse → inspect/transform → emit).
+     *
+     * <p>The tokenizer's cursor is <b>not</b> advanced; the caller controls
+     * iteration via {@link JsonTokenizer#nextToken()}.
+     *
+     * @param source the tokenizer to read from; its {@code currentToken()}
+     *               determines what is written
+     * @return this generator for chaining
+     * @throws IOException on underlying I/O failure
+     * @throws JsonGenerationException if {@code source.currentToken()} is {@code null}
+     */
+    public JsonGenerator copyCurrentEvent(JsonTokenizer source) throws IOException {
+        JsonToken token = source.currentToken();
+        if (token == null) {
+            throw new JsonGenerationException("copyCurrentEvent: source has no current token");
+        }
+        switch (token) {
+            case START_OBJECT:
+                return writeStartObject();
+            case END_OBJECT:
+                return writeEndObject();
+            case START_ARRAY:
+                return writeStartArray();
+            case END_ARRAY:
+                return writeEndArray();
+            case FIELD_NAME:
+                return writeFieldName(source.currentName());
+            case VALUE_STRING:
+                return writeString(source.getText());
+            case VALUE_NUMBER_INT:
+            case VALUE_NUMBER_FLOAT: {
+                NumberType nt = source.getNumberType();
+                switch (nt) {
+                    case INT:
+                        return writeNumber(source.getIntValue());
+                    case LONG:
+                        return writeNumber(source.getLongValue());
+                    case BIG_INTEGER:
+                        return writeNumber(source.getBigIntegerValue());
+                    case FLOAT:
+                        return writeNumber(source.getFloatValue());
+                    case DOUBLE:
+                        return writeNumber(source.getDoubleValue());
+                    case BIG_DECIMAL:
+                        return writeNumber(source.getDecimalValue());
+                    default:
+                        throw new JsonGenerationException("copyCurrentEvent: unknown NumberType " + nt);
+                }
+            }
+            case VALUE_TRUE:
+                return writeBoolean(true);
+            case VALUE_FALSE:
+                return writeBoolean(false);
+            case VALUE_NULL:
+                return writeNull();
+            default:
+                throw new JsonGenerationException("copyCurrentEvent: unsupported token " + token);
+        }
+    }
+
+    /**
+     * Copy the current structural value from {@code source} (and all its
+     * children) into this generator. The tokenizer's cursor must be on a
+     * value token — a scalar emits a single token; {@link JsonToken#START_OBJECT}
+     * or {@link JsonToken#START_ARRAY} emits all tokens up to and including the
+     * matching close.
+     *
+     * <p>On entry, {@code source.currentToken()} is the value-start token.
+     * On return, {@code source.currentToken()} is the value-end token (the same
+     * scalar, or the matching {@code END_OBJECT}/{@code END_ARRAY}).
+     *
+     * @param source the tokenizer to read from
+     * @return this generator for chaining
+     * @throws IOException on underlying I/O failure
+     * @throws JsonGenerationException if {@code source.currentToken()} is {@code null}
+     */
+    public JsonGenerator copyCurrentStructure(JsonTokenizer source) throws IOException {
+        JsonToken token = source.currentToken();
+        if (token == null) {
+            throw new JsonGenerationException("copyCurrentStructure: source has no current token");
+        }
+        // Scalars: just copy the current event.
+        if (token != JsonToken.START_OBJECT && token != JsonToken.START_ARRAY) {
+            return copyCurrentEvent(source);
+        }
+        // Structures: copy the open token, then iterate until depth returns to zero relative to entry.
+        int startDepth = source.getDepth();
+        copyCurrentEvent(source);
+        while (true) {
+            JsonToken next = source.nextToken();
+            if (next == null) {
+                throw new JsonGenerationException("copyCurrentStructure: source exhausted before structure closed");
+            }
+            copyCurrentEvent(source);
+            if ((next == JsonToken.END_OBJECT || next == JsonToken.END_ARRAY)
+                    && source.getDepth() == startDepth) {
+                return this;
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------
+    // Lifecycle
+    // -------------------------------------------------------------------
+
+    /** Flush any buffered output to the underlying sink. */
+    @Override
+    public abstract void flush() throws IOException;
+
+    /**
+     * Flush and close the generator. Subclasses should release any
+     * pooled resources (recycler buffers, etc.) here. Idempotent.
+     */
+    @Override
+    public abstract void close() throws IOException;
+}
