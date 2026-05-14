@@ -500,7 +500,7 @@ public class JsonIo {
      */
     public static String toToon(Object srcObject, WriteOptions writeOptions) {
         if (writeOptions == null) {
-            writeOptions = new WriteOptionsBuilder().showTypeInfoNever().cycleSupport(false).build();
+            writeOptions = defaultToonWriteOptions();
         }
         // Direct char-based pipeline — mirrors the JsonIo.toJson(Object, WriteOptions) fix.
         // Skips OutputStreamWriter + UTF-8 encoder + FastByteArrayOutputStream and the final
@@ -543,7 +543,7 @@ public class JsonIo {
     public static void toToon(OutputStream out, Object source, WriteOptions writeOptions) {
         Convention.throwIfNull(out, "OutputStream cannot be null");
         if (writeOptions == null) {
-            writeOptions = new WriteOptionsBuilder().showTypeInfoNever().cycleSupport(false).build();
+            writeOptions = defaultToonWriteOptions();
         }
         ToonWriter writer = null;
         try {
@@ -1048,6 +1048,50 @@ public class JsonIo {
         return o;
     }
 
+    /**
+     * Lazily-initialized default WriteOptions for toToon() when the caller
+     * passes null. TOON's preferred default differs from the standard
+     * {@code WriteOptionsBuilder.getDefaultWriteOptions()} (no @type metadata
+     * and acyclic-graph optimization on); caching this specific configuration
+     * avoids rebuilding it on every invocation. Same reasoning as
+     * {@link #defaultTokenizerReadOptions} — WriteOptions are immutable
+     * and thread-safe, so the singleton is reusable.
+     */
+    private static volatile WriteOptions defaultToonWriteOptions;
+
+    private static WriteOptions defaultToonWriteOptions() {
+        WriteOptions o = defaultToonWriteOptions;
+        if (o == null) {
+            o = new WriteOptionsBuilder().showTypeInfoNever().cycleSupport(false).build();
+            defaultToonWriteOptions = o;
+        }
+        return o;
+    }
+
+    /**
+     * Lazily-initialized WriteOptions for {@link #deepCopy} when the caller
+     * passes null writeOptions. deepCopy's pipeline always wraps the user's
+     * options through {@code new WriteOptionsBuilder(writeOptions).json5()
+     * .showTypeInfoMinimal().shortMetaKeys(true).cycleSupport(true).build()};
+     * when writeOptions is null the result is configuration-stable, so we
+     * cache that single null-input output.
+     */
+    private static volatile WriteOptions defaultDeepCopyWriteOptions;
+
+    private static WriteOptions defaultDeepCopyWriteOptions() {
+        WriteOptions o = defaultDeepCopyWriteOptions;
+        if (o == null) {
+            o = new WriteOptionsBuilder()
+                    .json5()
+                    .showTypeInfoMinimal()
+                    .shortMetaKeys(true)
+                    .cycleSupport(true)
+                    .build();
+            defaultDeepCopyWriteOptions = o;
+        }
+        return o;
+    }
+
     private static JsonTokenizer createTokenizerImpl(java.io.Reader reader,
                                                      ReadOptions readOptions,
                                                      Object sourceRef) {
@@ -1148,7 +1192,17 @@ public class JsonIo {
             return null;
         }
 
-        writeOptions = new WriteOptionsBuilder(writeOptions).json5().showTypeInfoMinimal().shortMetaKeys(true).cycleSupport(true).build();
+        // Common case (no user-supplied writeOptions): use the cached singleton
+        // built from the same json5 + showTypeInfoMinimal + shortMetaKeys +
+        // cycleSupport(true) recipe. Avoids rebuilding the heavyweight options
+        // object every deepCopy call. When the user passes their own options,
+        // we still wrap them through the same recipe — each user-supplied
+        // options instance is distinct so caching that path doesn't apply.
+        if (writeOptions == null) {
+            writeOptions = defaultDeepCopyWriteOptions();
+        } else {
+            writeOptions = new WriteOptionsBuilder(writeOptions).json5().showTypeInfoMinimal().shortMetaKeys(true).cycleSupport(true).build();
+        }
         if (readOptions == null) {
             readOptions = ReadOptionsBuilder.getDefaultReadOptions();
         }
