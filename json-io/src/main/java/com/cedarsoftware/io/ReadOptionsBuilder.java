@@ -2281,7 +2281,7 @@ public class ReadOptionsBuilder {
 
                 for (Field field : fields) {
                     String name = field.getName();
-                    if (excludedFields.contains(name) || fieldIsFiltered(field) || annMeta.isIgnored(name)) {
+                    if (excludedFields.contains(name) || fieldIsFiltered(field) || annMeta.isIgnoredOnRead(name)) {
                         continue;
                     }
 

@@ -113,7 +113,12 @@ public class AnnotationResolver {
     private static final Method EXT_TYPE_NAME_VALUE;
     private static final Method EXT_FORMAT_PATTERN;
     private static final Method EXT_PROPERTY_VALUE;
+    private static final Method EXT_PROPERTY_ACCESS;
+    private static final Object EXT_PROPERTY_ACCESS_READ_ONLY;
+    private static final Object EXT_PROPERTY_ACCESS_WRITE_ONLY;
     private static final Method EXT_IGNORE_PROPERTIES_VALUE;
+    private static final Method EXT_IGNORE_PROPERTIES_ALLOW_GETTERS;
+    private static final Method EXT_IGNORE_PROPERTIES_ALLOW_SETTERS;
     private static final Method EXT_ALIAS_VALUE;
     private static final Method EXT_PROPERTY_ORDER_VALUE;
     private static final Method EXT_INCLUDE_VALUE;
@@ -144,7 +149,12 @@ public class AnnotationResolver {
         Method extSetterValue = null;
         Method extTypeNameValue = null;
         Method extPropertyValue = null;
+        Method extPropertyAccess = null;
+        Object extPropertyAccessReadOnly = null;
+        Object extPropertyAccessWriteOnly = null;
         Method extIgnorePropertiesValue = null;
+        Method extIgnorePropertiesAllowGetters = null;
+        Method extIgnorePropertiesAllowSetters = null;
         Method extAliasValue = null;
         Method extPropertyOrderValue = null;
         Method extIncludeValue = null;
@@ -185,6 +195,32 @@ public class AnnotationResolver {
             extPropertyValue = extProperty.getMethod("value");
             extIncludePropertiesValue = extIncludeProperties.getMethod("value");
             extIgnorePropertiesValue = extIgnoreProperties.getMethod("value");
+
+            // Jackson @JsonProperty.access() — directional access enum (READ_ONLY/WRITE_ONLY/READ_WRITE/AUTO)
+            try {
+                extPropertyAccess = extProperty.getMethod("access");
+                Class<?> accessEnum = ClassUtilities.forName("com.fasterxml.jackson.annotation.JsonProperty$Access", classLoader);
+                if (accessEnum != null) {
+                    for (Object enumConst : accessEnum.getEnumConstants()) {
+                        String name = ((Enum<?>) enumConst).name();
+                        if ("READ_ONLY".equals(name)) {
+                            extPropertyAccessReadOnly = enumConst;
+                        } else if ("WRITE_ONLY".equals(name)) {
+                            extPropertyAccessWriteOnly = enumConst;
+                        }
+                    }
+                }
+            } catch (NoSuchMethodException ignored) {
+                // Older Jackson without access() — leave null
+            }
+
+            // Jackson @JsonIgnoreProperties.allowGetters() / allowSetters()
+            try {
+                extIgnorePropertiesAllowGetters = extIgnoreProperties.getMethod("allowGetters");
+                extIgnorePropertiesAllowSetters = extIgnoreProperties.getMethod("allowSetters");
+            } catch (NoSuchMethodException ignored) {
+                // Older Jackson without these escapes — leave null
+            }
             extTypeInfoDefaultImpl = extTypeInfo.getMethod("defaultImpl");
             extAliasValue = extAlias.getMethod("value");
             extPropertyOrderValue = extPropertyOrder.getMethod("value");
@@ -229,8 +265,13 @@ public class AnnotationResolver {
         EXT_TYPE_NAME_VALUE = extTypeNameValue;
         EXT_FORMAT_PATTERN = extFormatPattern;
         EXT_PROPERTY_VALUE = extPropertyValue;
+        EXT_PROPERTY_ACCESS = extPropertyAccess;
+        EXT_PROPERTY_ACCESS_READ_ONLY = extPropertyAccessReadOnly;
+        EXT_PROPERTY_ACCESS_WRITE_ONLY = extPropertyAccessWriteOnly;
         EXT_INCLUDE_PROPERTIES_VALUE = extIncludePropertiesValue;
         EXT_IGNORE_PROPERTIES_VALUE = extIgnorePropertiesValue;
+        EXT_IGNORE_PROPERTIES_ALLOW_GETTERS = extIgnorePropertiesAllowGetters;
+        EXT_IGNORE_PROPERTIES_ALLOW_SETTERS = extIgnorePropertiesAllowSetters;
         EXT_ALIAS_VALUE = extAliasValue;
         EXT_PROPERTY_ORDER_VALUE = extPropertyOrderValue;
         EXT_INCLUDE_VALUE = extIncludeValue;
@@ -283,6 +324,8 @@ public class AnnotationResolver {
     private static final ThreadLocal<Set<Class<?>>> SCANNING = ThreadLocal.withInitial(LinkedHashSet::new);
     private static final ClassAnnotationMetadata EMPTY = new ClassAnnotationMetadata(
             Collections.emptyMap(),
+            Collections.emptySet(),
+            Collections.emptySet(),
             Collections.emptySet(),
             Collections.emptyMap(),
             null,
@@ -361,6 +404,8 @@ public class AnnotationResolver {
     private static ClassAnnotationMetadata scan(Class<?> clazz) {
         Map<String, String> renames = new LinkedHashMap<>();
         Set<String> ignored = new LinkedHashSet<>();
+        Set<String> ignoredOnRead = new LinkedHashSet<>();
+        Set<String> ignoredOnWrite = new LinkedHashSet<>();
         Map<String, String> aliases = new LinkedHashMap<>();
         Set<String> nonNullFields = new LinkedHashSet<>();
         Map<String, Class<?>> fieldTypeInfoDefaults = null;
@@ -369,7 +414,7 @@ public class AnnotationResolver {
         Set<String> forceShowTypeFields = null;
 
         // 1. Class-level annotations
-        String[] order = scanClassLevelAnnotations(clazz, ignored);
+        String[] order = scanClassLevelAnnotations(clazz, ignored, ignoredOnRead, ignoredOnWrite);
 
         // 1b. @IoIncludeProperties — class-level whitelist
         Set<String> includedFields = scanIncludeProperties(clazz);
@@ -462,7 +507,13 @@ public class AnnotationResolver {
                     continue;
                 }
 
-                // @IoProperty / external equivalent
+                // @IoProperty / external equivalent — rename + directional access
+                IoProperty.Access access = scanPropertyAccess(field);
+                if (access == IoProperty.Access.READ_ONLY) {
+                    ignoredOnRead.add(fieldName);
+                } else if (access == IoProperty.Access.WRITE_ONLY) {
+                    ignoredOnWrite.add(fieldName);
+                }
                 String rename = scanProperty(field);
                 if (rename != null) {
                     renames.put(fieldName, rename);
@@ -611,7 +662,9 @@ public class AnnotationResolver {
         Method anySetterMethod = anyMethods[0];
         Method anyGetterMethod = anyMethods[1];
 
-        if (renames.isEmpty() && ignored.isEmpty() && aliases.isEmpty()
+        if (renames.isEmpty() && ignored.isEmpty()
+                && ignoredOnRead.isEmpty() && ignoredOnWrite.isEmpty()
+                && aliases.isEmpty()
                 && order == null && nonNullFields.isEmpty() && creator == null
                 && valueMethod == null && includedFields == null && !ignoredType
                 && fieldTypeInfoDefaults == null && fieldDeserializeOverrides == null
@@ -627,6 +680,8 @@ public class AnnotationResolver {
         return new ClassAnnotationMetadata(
                 Collections.unmodifiableMap(renames),
                 Collections.unmodifiableSet(ignored),
+                Collections.unmodifiableSet(ignoredOnRead),
+                Collections.unmodifiableSet(ignoredOnWrite),
                 Collections.unmodifiableMap(aliases),
                 order,
                 Collections.unmodifiableSet(nonNullFields),
@@ -653,19 +708,34 @@ public class AnnotationResolver {
 
     // ---- Class-level scanners ----
 
-    private static String[] scanClassLevelAnnotations(Class<?> clazz, Set<String> ignored) {
+    private static String[] scanClassLevelAnnotations(Class<?> clazz, Set<String> ignored,
+                                                      Set<String> ignoredOnRead, Set<String> ignoredOnWrite) {
         String[] order = null;
 
-        // @IoIgnoreProperties
+        // @IoIgnoreProperties — with allowGetters / allowSetters directional escapes
         IoIgnoreProperties iip = clazz.getAnnotation(IoIgnoreProperties.class);
         if (iip != null) {
-            Collections.addAll(ignored, iip.value());
+            distributeIgnored(iip.value(), iip.allowGetters(), iip.allowSetters(),
+                    ignored, ignoredOnRead, ignoredOnWrite);
         } else if (externalAvailable) {
             Annotation extIgp = clazz.getAnnotation(EXT_IGNORE_PROPERTIES);
             if (extIgp != null) {
                 try {
                     String[] vals = (String[]) EXT_IGNORE_PROPERTIES_VALUE.invoke(extIgp);
-                    Collections.addAll(ignored, vals);
+                    boolean allowGetters = false;
+                    boolean allowSetters = false;
+                    if (EXT_IGNORE_PROPERTIES_ALLOW_GETTERS != null) {
+                        try {
+                            allowGetters = Boolean.TRUE.equals(EXT_IGNORE_PROPERTIES_ALLOW_GETTERS.invoke(extIgp));
+                        } catch (Exception ignoredEx) { /* leave false */ }
+                    }
+                    if (EXT_IGNORE_PROPERTIES_ALLOW_SETTERS != null) {
+                        try {
+                            allowSetters = Boolean.TRUE.equals(EXT_IGNORE_PROPERTIES_ALLOW_SETTERS.invoke(extIgp));
+                        } catch (Exception ignoredEx) { /* leave false */ }
+                    }
+                    distributeIgnored(vals, allowGetters, allowSetters,
+                            ignored, ignoredOnRead, ignoredOnWrite);
                 } catch (Exception e) {
                     // Ignore reflection failure
                 }
@@ -1122,6 +1192,69 @@ public class AnnotationResolver {
         return false;
     }
 
+    /**
+     * Inspect @IoProperty(access=...) and Jackson @JsonProperty(access=...) on a field.
+     * Returns the declared {@link IoProperty.Access}, or {@code null} if no directional
+     * access constraint applies (i.e. AUTO/READ_WRITE or no annotation).
+     */
+    private static IoProperty.Access scanPropertyAccess(Field field) {
+        IoProperty prop = field.getAnnotation(IoProperty.class);
+        if (prop != null) {
+            IoProperty.Access a = prop.access();
+            if (a == IoProperty.Access.READ_ONLY || a == IoProperty.Access.WRITE_ONLY) {
+                return a;
+            }
+        } else if (externalAvailable && EXT_PROPERTY != null && EXT_PROPERTY_ACCESS != null) {
+            Annotation extProp = field.getAnnotation(EXT_PROPERTY);
+            if (extProp != null) {
+                try {
+                    Object jacksonAccess = EXT_PROPERTY_ACCESS.invoke(extProp);
+                    if (jacksonAccess != null) {
+                        if (EXT_PROPERTY_ACCESS_READ_ONLY != null && EXT_PROPERTY_ACCESS_READ_ONLY.equals(jacksonAccess)) {
+                            return IoProperty.Access.READ_ONLY;
+                        }
+                        if (EXT_PROPERTY_ACCESS_WRITE_ONLY != null && EXT_PROPERTY_ACCESS_WRITE_ONLY.equals(jacksonAccess)) {
+                            return IoProperty.Access.WRITE_ONLY;
+                        }
+                    }
+                } catch (Exception e) {
+                    // Ignore reflection failure — treat as no constraint
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Distribute property names from {@link IoIgnoreProperties} (or Jackson
+     * {@code @JsonIgnoreProperties}) into the appropriate ignore-set based on
+     * {@code allowGetters} / {@code allowSetters} escapes.
+     * <ul>
+     *   <li>{@code allowGetters=false, allowSetters=false} (default): full both-sides ignore.</li>
+     *   <li>{@code allowGetters=true,  allowSetters=false}: serialize allowed, deserialize blocked
+     *       — i.e. add to read-side ignore only.</li>
+     *   <li>{@code allowGetters=false, allowSetters=true}: deserialize allowed, serialize blocked
+     *       — i.e. add to write-side ignore only.</li>
+     *   <li>{@code allowGetters=true,  allowSetters=true}: no exclusion (no-op for these fields).</li>
+     * </ul>
+     */
+    private static void distributeIgnored(String[] names, boolean allowGetters, boolean allowSetters,
+                                          Set<String> ignored, Set<String> ignoredOnRead, Set<String> ignoredOnWrite) {
+        if (names == null || names.length == 0) {
+            return;
+        }
+        if (!allowGetters && !allowSetters) {
+            Collections.addAll(ignored, names);
+        } else if (allowGetters && !allowSetters) {
+            // getters still invoked → serialize OK; setters blocked → block deserialize
+            Collections.addAll(ignoredOnRead, names);
+        } else if (!allowGetters && allowSetters) {
+            // setters still invoked → deserialize OK; getters blocked → block serialize
+            Collections.addAll(ignoredOnWrite, names);
+        }
+        // else (allowGetters && allowSetters) → both directions allowed, do not ignore at all
+    }
+
     private static String scanProperty(Field field) {
         IoProperty prop = field.getAnnotation(IoProperty.class);
         if (prop != null) {
@@ -1188,6 +1321,8 @@ public class AnnotationResolver {
     public static final class ClassAnnotationMetadata {
         private final Map<String, String> renamedFields;
         private final Set<String> ignoredFields;
+        private final Set<String> ignoredOnReadFields;
+        private final Set<String> ignoredOnWriteFields;
         private final Map<String, String> aliasToFieldName;
         private final String[] propertyOrder;
         private final Set<String> nonNullFields;
@@ -1213,6 +1348,8 @@ public class AnnotationResolver {
 
         ClassAnnotationMetadata(Map<String, String> renamedFields,
                                 Set<String> ignoredFields,
+                                Set<String> ignoredOnReadFields,
+                                Set<String> ignoredOnWriteFields,
                                 Map<String, String> aliasToFieldName,
                                 String[] propertyOrder,
                                 Set<String> nonNullFields,
@@ -1237,6 +1374,8 @@ public class AnnotationResolver {
                                 Method anyGetterMethod) {
             this.renamedFields = renamedFields;
             this.ignoredFields = ignoredFields;
+            this.ignoredOnReadFields = ignoredOnReadFields;
+            this.ignoredOnWriteFields = ignoredOnWriteFields;
             this.aliasToFieldName = aliasToFieldName;
             this.propertyOrder = propertyOrder;
             this.nonNullFields = nonNullFields;
@@ -1271,12 +1410,45 @@ public class AnnotationResolver {
         }
 
         /**
-         * Check if a field should be ignored (excluded from serialization/deserialization).
+         * Check if a field should be ignored on <b>either</b> serialization or deserialization
+         * (union of {@link #isIgnoredOnRead(String)} and {@link #isIgnoredOnWrite(String)}).
+         *
+         * <p>Retained for callers that don't need directional precision. New code should
+         * prefer {@link #isIgnoredOnRead(String)} / {@link #isIgnoredOnWrite(String)} so
+         * {@code @IoProperty(access=...)} and {@code @IoIgnoreProperties(allowGetters=,
+         * allowSetters=)} are honored correctly.
+         *
          * @param fieldName the Java field name
-         * @return true if the field should be ignored
+         * @return true if the field is excluded in at least one direction
          */
         public boolean isIgnored(String fieldName) {
-            return ignoredFields.contains(fieldName);
+            return ignoredFields.contains(fieldName)
+                    || ignoredOnReadFields.contains(fieldName)
+                    || ignoredOnWriteFields.contains(fieldName);
+        }
+
+        /**
+         * Check if a field should be excluded from <b>deserialization</b> (input JSON ignored).
+         * Returns {@code true} for both unconditional ignore and read-only (write-side-only)
+         * directional exclusions.
+         *
+         * @param fieldName the Java field name
+         * @return true if the field should be ignored on the read side
+         */
+        public boolean isIgnoredOnRead(String fieldName) {
+            return ignoredFields.contains(fieldName) || ignoredOnReadFields.contains(fieldName);
+        }
+
+        /**
+         * Check if a field should be excluded from <b>serialization</b> (omitted from JSON output).
+         * Returns {@code true} for both unconditional ignore and write-only (read-side-only)
+         * directional exclusions.
+         *
+         * @param fieldName the Java field name
+         * @return true if the field should be ignored on the write side
+         */
+        public boolean isIgnoredOnWrite(String fieldName) {
+            return ignoredFields.contains(fieldName) || ignoredOnWriteFields.contains(fieldName);
         }
 
         /**
@@ -1485,6 +1657,7 @@ public class AnnotationResolver {
          */
         public boolean isEmpty() {
             return renamedFields.isEmpty() && ignoredFields.isEmpty()
+                    && ignoredOnReadFields.isEmpty() && ignoredOnWriteFields.isEmpty()
                     && aliasToFieldName.isEmpty() && propertyOrder == null
                     && nonNullFields.isEmpty() && creator == null
                     && valueMethod == null && includedFields == null

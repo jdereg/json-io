@@ -1334,7 +1334,7 @@ the 'read' side.
 Call this method to add a permanent (JVM lifetime) excluded (not exported) field name of class.  All `WriteOptions` will
 automatically be created with the named field on the not-exported list.
 
-**Annotation Alternative:** Use `@IoIgnore` on individual fields or `@IoIgnoreProperties({"field1","field2"})` on the class. See [Annotations](/user-guide.md#annotations).
+**Annotation Alternative:** Use `@IoIgnore` on individual fields or `@IoIgnoreProperties({"field1","field2"})` on the class for full both-sides exclusion. For **write-only exclusion** (field still deserialized from JSON, only output suppressed — useful for secrets like `passwordHash`) use `@IoProperty(access = IoProperty.Access.WRITE_ONLY)` on the field, or `@IoIgnoreProperties(value = {...}, allowSetters = true)` at the class level. Mirrors Jackson's `@JsonProperty(access = WRITE_ONLY)` / `@JsonIgnoreProperties(allowSetters = true)`. See [Annotations](/user-guide.md#annotations).
 
 >#### WriteOptionsBuilder.addPermanentNotExportedField(`Class<?> clazz, String fieldName`)
 

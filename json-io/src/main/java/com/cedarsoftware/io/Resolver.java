@@ -1573,7 +1573,7 @@ public abstract class Resolver {
                     for (Object key : jsonObj.keySet()) {
                         if (key instanceof String) {
                             String fieldName = (String) key;
-                            boolean shouldRemove = annMeta.isIgnored(fieldName)
+                            boolean shouldRemove = annMeta.isIgnoredOnRead(fieldName)
                                     || (includedFields != null && !includedFields.contains(fieldName));
                             if (shouldRemove) {
                                 if (filtered == null) {

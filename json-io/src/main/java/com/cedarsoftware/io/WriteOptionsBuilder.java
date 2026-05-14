@@ -2567,7 +2567,7 @@ public class WriteOptionsBuilder {
                     }
 
                     // FieldFilter, 'Excluded listing', or annotation-based ignore eliminates field.
-                    if (isFieldFiltered(field) || excluded.contains(fieldName) || annMeta.isIgnored(fieldName)) {
+                    if (isFieldFiltered(field) || excluded.contains(fieldName) || annMeta.isIgnoredOnWrite(fieldName)) {
                         continue;
                     }
 

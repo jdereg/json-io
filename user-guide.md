@@ -773,7 +773,7 @@ For type-resolution annotations on fields, a more specific precedence applies:
 
 ### Available Annotations
 
-#### `@IoProperty("name")` — Field Rename
+#### `@IoProperty("name")` — Field Rename and/or Directional Access
 Renames a Java field in the serialized JSON output and accepts the renamed key during deserialization. Equivalent to Jackson's `@JsonProperty`.
 
 ```java
@@ -784,8 +784,28 @@ public class User {
 }
 ```
 
-#### `@IoIgnore` — Field Exclusion
-Excludes a field from both serialization and deserialization. Equivalent to Jackson's `@JsonIgnore`.
+The optional `access` attribute controls direction, mirroring Jackson's `@JsonProperty(access = ...)`:
+
+- `Access.WRITE_ONLY` — value is **deserialized** from JSON (set on Java side) but **never serialized** to output. Use for secrets (`passwordHash`).
+- `Access.READ_ONLY` — value is **serialized** to JSON but **never deserialized** (input is silently dropped). Use for computed/derived fields (`computedTotal`, `lastLoginEpoch`).
+- `Access.READ_WRITE` / `Access.AUTO` — no constraint (default).
+
+```java
+public class User {
+    private String name;
+
+    @IoProperty(access = IoProperty.Access.WRITE_ONLY)
+    private String passwordHash;     // accepted on input, never output
+
+    @IoProperty(access = IoProperty.Access.READ_ONLY)
+    private long lastLoginEpoch;     // written on output, ignored on input
+}
+```
+
+Rename and access can be combined: `@IoProperty(value = "pwd", access = Access.WRITE_ONLY)`.
+
+#### `@IoIgnore` — Field Exclusion (both directions)
+Excludes a field from both serialization and deserialization. Equivalent to Jackson's `@JsonIgnore`. For direction-specific exclusion, use `@IoProperty(access = ...)` instead.
 
 ```java
 public class Account {
@@ -796,14 +816,33 @@ public class Account {
 ```
 
 #### `@IoIgnoreProperties({"field1", "field2"})` — Class-Level Exclusion
-Excludes multiple fields by name at the class level. Equivalent to Jackson's `@JsonIgnoreProperties`.
+Excludes multiple fields by name at the class level. Equivalent to Jackson's `@JsonIgnoreProperties`. The directional escapes `allowGetters` and `allowSetters` (default `false`) mirror Jackson exactly:
 
+- `allowGetters = true` — listed properties remain in **output** JSON; only **input** is ignored (class-level equivalent of `@IoProperty(access = READ_ONLY)`).
+- `allowSetters = true` — listed properties may be supplied on **input**; only **output** suppresses them (class-level equivalent of `@IoProperty(access = WRITE_ONLY)`).
+- Both `true` — no exclusion (no-op for the listed fields).
+
+```java
+@IoIgnoreProperties(value = {"computedTotal"}, allowGetters = true)
+public class Cart {
+    private List<Item> items;
+    private BigDecimal computedTotal;   // written on output, ignored on input
+}
+
+@IoIgnoreProperties(value = {"passwordHash"}, allowSetters = true)
+public class Credentials {
+    private String username;
+    private String passwordHash;        // accepted on input, suppressed on output
+}
+```
+
+Default `allowGetters=false, allowSetters=false` preserves the long-standing "exclude on both sides" behavior:
 ```java
 @IoIgnoreProperties({"secret", "internal"})
 public class Config {
     private String name;
-    private String secret;     // Excluded
-    private String internal;   // Excluded
+    private String secret;     // Excluded on both sides
+    private String internal;   // Excluded on both sides
     private int value;
 }
 ```

@@ -730,7 +730,7 @@ The `addPermanentNotImportedField` method in `json-io` allows you to permanently
 
 This method enhances data handling efficiency and accuracy within your application by ensuring that only relevant and necessary data is processed during JSON deserialization, simplifying object models and reducing potential errors.
 
-**Annotation Alternative:** Use `@IoIgnore` on individual fields or `@IoIgnoreProperties({"field1","field2"})` on the class. See [Annotations](/user-guide.md#annotations).
+**Annotation Alternative:** Use `@IoIgnore` on individual fields or `@IoIgnoreProperties({"field1","field2"})` on the class for full both-sides exclusion. For **read-only exclusion** (field still serialized to JSON, only input ignored) use `@IoProperty(access = IoProperty.Access.READ_ONLY)` on the field, or `@IoIgnoreProperties(value = {...}, allowGetters = true)` at the class level. Mirrors Jackson's `@JsonProperty(access = READ_ONLY)` / `@JsonIgnoreProperties(allowGetters = true)`. See [Annotations](/user-guide.md#annotations).
 
 >#### ReadOptionsBuilder.addPermanentNotImportedField(`Class<?> clazz, String fieldName`)
 
