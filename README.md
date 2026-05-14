@@ -177,18 +177,35 @@ automatic shared-reference and cycle preservation. No class annotations required
 
 | Mode | JsonIo | TOON |
 |---|---|---|
-| Read `toJava` (typed) | 1.97x | 2.04x |
-| Read `toMaps` (class-independent) | 1.34x | 1.74x |
-| Write `cycleSupport=true` (default) | 1.70x | 1.73x |
-| Write `cycleSupport=false` (DTOs/acyclic) | 1.56x | 1.61x |
-| Write `toMaps` `cycleSupport=true` | 1.91x | 1.80x |
-| Write `toMaps` `cycleSupport=false` | 1.55x | 1.65x |
+| Read `toJava` (typed) | 1.83x | 1.94x |
+| Read `toMaps` (class-independent) | 1.32x | 1.69x |
+| Write `cycleSupport=true` (default) | 1.75x | 1.72x |
+| Write `cycleSupport=false` (DTOs/acyclic) | 1.58x | 1.60x |
+| Write `toMaps` `cycleSupport=true` | 1.96x | 1.82x |
+| Write `toMaps` `cycleSupport=false` | 1.57x | 1.67x |
 
 Measured on JDK 21, `json-io 4.103.0` vs `jackson-databind 2.21.3` using the median of three run-mode executions. Reproduce with `mvn -q -pl json-io -DskipTests test-compile exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.cedarsoftware.io.JsonPerformanceTest` (100k iterations after 10k warmup; expect ±3% run-to-run noise from thermal / GC). Jackson is configured with `JavaTimeModule` and `WRITE_DATES_AS_TIMESTAMPS=false` to match what Spring Boot emits by default.
 
 </details>
 
 **Performance tip:** Use `cycleSupport(false)` for ~10-25% faster writes when your data is acyclic (DTOs, POJOs, tree-shaped data) — the larger gain shows up in `toMaps` mode.
+
+**Performance tip — `ReadOptions` and `WriteOptions` are heavy and thread-safe.** `ReadOptionsBuilder.build()` and `WriteOptionsBuilder.build()` load type aliases, populate `ClassValueMap` caches, and allocate the immutable snapshot — it is not a cheap call. The returned options object is **immutable and thread-safe**: build it once per application (or per logical configuration), hold the reference, and share it freely across threads and across calls. The library already caches the common default singletons internally (`ReadOptionsBuilder.getDefaultReadOptions()`, `WriteOptionsBuilder.getDefaultWriteOptions()`), so passing `null` is fine; only custom-configured options need to be built and cached by you.
+
+```java
+// Build once at startup
+private static final WriteOptions WRITE_OPTS = new WriteOptionsBuilder()
+        .standardJson()
+        .cycleSupport(false)
+        .build();
+private static final ReadOptions READ_OPTS = new ReadOptionsBuilder()
+        .aliasTypeName("com.example.OldClass", "com.example.NewClass")
+        .build();
+
+// Reuse across every call — safe from any thread
+String json = JsonIo.toJson(obj, WRITE_OPTS);
+MyType result = JsonIo.toJava(json, READ_OPTS).asClass(MyType.class);
+```
 
 ### Key Features
 
