@@ -732,7 +732,14 @@ This method enhances data handling efficiency and accuracy within your applicati
 
 **Annotation Alternative:** Use `@IoIgnore` on individual fields or `@IoIgnoreProperties({"field1","field2"})` on the class for full both-sides exclusion. For **read-only exclusion** (field still serialized to JSON, only input ignored) use `@IoProperty(access = IoProperty.Access.READ_ONLY)` on the field, or `@IoIgnoreProperties(value = {...}, allowGetters = true)` at the class level. Mirrors Jackson's `@JsonProperty(access = READ_ONLY)` / `@JsonIgnoreProperties(allowGetters = true)`. See [Annotations](/user-guide.md#annotations).
 
+**Method Aliases:** `addPermanentNotImportedField` is also exposed as `addPermanentReadOnlyField` (Jackson-named — `READ_ONLY` from the Java-bean perspective: the bean's getter is invoked by the serializer but its setter is *not* invoked by the deserializer) and `addPermanentSerializeOnlyField` (unambiguous JSON-direction name). The per-instance equivalents on the builder are `addNotImportedField`, `addReadOnlyField`, and `addSerializeOnlyField` — all three delegate to the same internal map. Note: the per-instance variants share `ReadOptionsBuilder`'s static field-injector cache; for authoritative global exclusion call `addPermanent*` at application bootstrap.
+
 >#### ReadOptionsBuilder.addPermanentNotImportedField(`Class<?> clazz, String fieldName`)
+>#### ReadOptionsBuilder.addPermanentReadOnlyField(`Class<?> clazz, String fieldName`) — alias (Jackson-named)
+>#### ReadOptionsBuilder.addPermanentSerializeOnlyField(`Class<?> clazz, String fieldName`) — alias (unambiguous)
+>#### ReadOptionsBuilder.addNotImportedField(`Class<?> clazz, String fieldName`) — per-instance equivalent
+>#### ReadOptionsBuilder.addReadOnlyField(`Class<?> clazz, String fieldName`) — per-instance alias (Jackson-named)
+>#### ReadOptionsBuilder.addSerializeOnlyField(`Class<?> clazz, String fieldName`) — per-instance alias (unambiguous)
 
 ### Add Permanent Non-Standard Setter
 

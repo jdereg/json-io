@@ -337,14 +337,76 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * Call this method to add a permanent (JVM lifetime) excluded field name of class.  All WriteOptions will
-     * automatically be created this field field on the excluded list.
+     * Permanently (JVM-lifetime) exclude a field from <b>serialization</b>. The field will be
+     * omitted from JSON output; the field is still <b>deserialized</b> if present in JSON input,
+     * so this is the write-side-only half of directional ignore.
      *
-     * @param clazz Class that contains the named field.
-     * @param fieldName to be excluded.
+     * <h3>Java-bean perspective vs JSON perspective</h3>
+     * <ul>
+     *   <li><b>Java-bean perspective:</b> the field is <b>write-only</b> — the deserializer
+     *       invokes the setter when JSON comes in, but the serializer never invokes the getter.</li>
+     *   <li><b>JSON perspective:</b> the field is <b>input-only</b> — it can arrive via JSON input
+     *       but never appears in JSON output.</li>
+     * </ul>
+     *
+     * <h3>Equivalent declarative configuration</h3>
+     * <ul>
+     *   <li>Annotation on the field: {@code @IoProperty(access = IoProperty.Access.WRITE_ONLY)}
+     *       (or Jackson {@code @JsonProperty(access = WRITE_ONLY)}).</li>
+     *   <li>Annotation on the class: {@code @IoIgnoreProperties(value = {"field"}, allowSetters = true)}
+     *       (or Jackson {@code @JsonIgnoreProperties(value = {"field"}, allowSetters = true)}).</li>
+     *   <li>Configuration file: an entry in {@code config/fieldsNotExported.txt}.</li>
+     * </ul>
+     *
+     * <h3>Method aliases</h3>
+     * This method is also exposed as {@link #addPermanentWriteOnlyField(Class, String)} (Jackson-aligned
+     * name; {@code WRITE_ONLY} from the Java-bean perspective) and
+     * {@link #addPermanentDeserializeOnlyField(Class, String)} (unambiguous JSON-direction name) — both
+     * delegate to this implementation.
+     *
+     * <h3>Use case</h3>
+     * Secrets that may arrive on input but must never be echoed in output
+     * (e.g. {@code passwordHash}, {@code apiKey}, {@code refreshToken}).
+     *
+     * @param clazz Class on which the field will be excluded from serialization.
+     * @param fieldName Java field name to exclude on write.
      */
     public static void addPermanentExcludedField(Class<?> clazz, String fieldName) {
         BASE_EXCLUDED_FIELD_NAMES.computeIfAbsent(clazz, CONCURRENT_SET_FACTORY).add(fieldName);
+    }
+
+    /**
+     * Jackson-aligned alias for {@link #addPermanentExcludedField(Class, String)}. The name uses
+     * the Java-bean perspective — {@code WRITE_ONLY} means the bean's setter is invoked by the
+     * deserializer (the field is "written to" the Java object when JSON comes in) but its getter
+     * is <b>not</b> invoked by the serializer.
+     *
+     * <p>From the JSON perspective the field is <b>input-only</b>: it appears in JSON input but
+     * never in JSON output. Mirrors {@code @JsonProperty(access = WRITE_ONLY)}.
+     *
+     * <p>See {@link #addPermanentDeserializeOnlyField(Class, String)} for the same behavior under
+     * an unambiguous JSON-direction name.
+     *
+     * @param clazz Class on which the field is write-only (input-only in JSON).
+     * @param fieldName Java field name.
+     */
+    public static void addPermanentWriteOnlyField(Class<?> clazz, String fieldName) {
+        addPermanentExcludedField(clazz, fieldName);
+    }
+
+    /**
+     * Unambiguous alias for {@link #addPermanentExcludedField(Class, String)}: the field is
+     * <b>only deserialized</b> (read from JSON input), never serialized (omitted from JSON output).
+     *
+     * <p>Equivalent to {@link #addPermanentWriteOnlyField(Class, String)}, which uses Jackson's
+     * Java-bean-perspective naming. Pick whichever name reads more clearly at the call site —
+     * both delegate to the same implementation.
+     *
+     * @param clazz Class on which the field is deserialize-only.
+     * @param fieldName Java field name.
+     */
+    public static void addPermanentDeserializeOnlyField(Class<?> clazz, String fieldName) {
+        addPermanentExcludedField(clazz, fieldName);
     }
 
     /**
@@ -1497,13 +1559,83 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * @param clazz         Class to add a single field to be excluded.
-     * @param excludedFieldName String name of field to exclude from written JSON.
-     * @return WriteOptionsBuilder for chained access.
+     * Per-instance (non-permanent) exclusion of a single field from <b>serialization</b>. The
+     * named field will be omitted from JSON output on this builder only; deserialization is
+     * unaffected (input JSON containing this field still populates the Java instance).
+     *
+     * <h3>Java-bean perspective vs JSON perspective</h3>
+     * <ul>
+     *   <li><b>Java-bean perspective:</b> the field is <b>write-only</b> — deserializer invokes
+     *       the setter on input; serializer never invokes the getter on output.</li>
+     *   <li><b>JSON perspective:</b> <b>input-only</b> — accepted on input, suppressed on output.</li>
+     * </ul>
+     *
+     * <h3>Equivalent declarative configuration</h3>
+     * <ul>
+     *   <li>Annotation: {@code @IoProperty(access = IoProperty.Access.WRITE_ONLY)} (field) or
+     *       {@code @IoIgnoreProperties(value = {"field"}, allowSetters = true)} (class).</li>
+     *   <li>Configuration file: {@code config/fieldsNotExported.txt}.</li>
+     * </ul>
+     *
+     * <h3>Method aliases</h3>
+     * Also exposed as {@link #addWriteOnlyField(Class, String)} (Jackson-aligned) and
+     * {@link #addDeserializeOnlyField(Class, String)} (unambiguous JSON-direction). All three
+     * delegate to the same internal map.
+     *
+     * <h3>Scope caveat</h3>
+     * The field-accessor map is cached statically by class for performance. Once a class has
+     * been serialized with a given exclusion in effect, subsequent builders for the same class
+     * inherit the cached map. For authoritative global exclusion use
+     * {@link #addPermanentExcludedField(Class, String)} (or its aliases) at application
+     * bootstrap before any serialization runs.
+     *
+     * @param clazz Class containing the field.
+     * @param excludedFieldName Java field name to omit from JSON output.
+     * @return this builder for chaining.
      */
     public WriteOptionsBuilder addExcludedField(Class<?> clazz, String excludedFieldName) {
-        options.excludedFieldNames.computeIfAbsent(clazz, LINKED_HASH_SET_FACTORY).add(excludedFieldName);
+        // options.excludedFieldNames is initialized via a shallow putAll(BASE_EXCLUDED_FIELD_NAMES),
+        // so its Sets may alias the permanent-state Sets. compute() with a fresh Set guarantees
+        // the builder owns its own copy and never mutates BASE_EXCLUDED_FIELD_NAMES.
+        options.excludedFieldNames.compute(clazz, (k, existing) -> {
+            Set<String> result = LINKED_HASH_SET_FACTORY.apply(k);
+            if (existing != null) {
+                result.addAll(existing);
+            }
+            result.add(excludedFieldName);
+            return result;
+        });
         return this;
+    }
+
+    /**
+     * Jackson-aligned alias for {@link #addExcludedField(Class, String)}. {@code WRITE_ONLY} from
+     * the Java-bean perspective: deserializer invokes the setter (the field is "written to" Java
+     * when JSON comes in), serializer does not invoke the getter. From the JSON perspective the
+     * field is <b>input-only</b>. Mirrors {@code @JsonProperty(access = WRITE_ONLY)}.
+     *
+     * <p>See {@link #addDeserializeOnlyField(Class, String)} for the unambiguous JSON-direction name.
+     *
+     * @param clazz Class on which the field is write-only (input-only in JSON).
+     * @param fieldName Java field name.
+     * @return this builder for chaining.
+     */
+    public WriteOptionsBuilder addWriteOnlyField(Class<?> clazz, String fieldName) {
+        return addExcludedField(clazz, fieldName);
+    }
+
+    /**
+     * Unambiguous alias for {@link #addExcludedField(Class, String)}: the field is
+     * <b>only deserialized</b> (accepted from JSON input), never serialized (omitted from output).
+     * Equivalent to {@link #addWriteOnlyField(Class, String)}, which uses Jackson's
+     * Java-bean-perspective name.
+     *
+     * @param clazz Class on which the field is deserialize-only.
+     * @param fieldName Java field name.
+     * @return this builder for chaining.
+     */
+    public WriteOptionsBuilder addDeserializeOnlyField(Class<?> clazz, String fieldName) {
+        return addExcludedField(clazz, fieldName);
     }
 
     /**

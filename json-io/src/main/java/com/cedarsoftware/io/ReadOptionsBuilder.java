@@ -457,13 +457,155 @@ public class ReadOptionsBuilder {
     }
 
     /**
-     * Add a field to a class that should not be imported. Any class's field added here will be excluded when read from
-     * the JSON.  The value will not be set (injected) into the associated Java instance.
-     * @param clazz Class on which fields will be excluded.
-     * @param fieldName String field name to exclude for the given class.
+     * Permanently (JVM-lifetime) exclude a field from <b>deserialization</b>. The field value will
+     * not be injected into the resulting Java instance even if the JSON contains a matching key;
+     * the field is still <b>serialized</b> to JSON output, so this is the read-side-only half of
+     * directional ignore.
+     *
+     * <h3>Java-bean perspective vs JSON perspective</h3>
+     * <ul>
+     *   <li><b>Java-bean perspective:</b> the field is <b>read-only</b> — the deserializer never
+     *       invokes the setter, only the serializer reads the getter.</li>
+     *   <li><b>JSON perspective:</b> the field is <b>output-only</b> — it appears in JSON output
+     *       but is ignored if present in JSON input.</li>
+     * </ul>
+     *
+     * <h3>Equivalent declarative configuration</h3>
+     * <ul>
+     *   <li>Annotation on the field: {@code @IoProperty(access = IoProperty.Access.READ_ONLY)}
+     *       (or Jackson {@code @JsonProperty(access = READ_ONLY)}).</li>
+     *   <li>Annotation on the class: {@code @IoIgnoreProperties(value = {"field"}, allowGetters = true)}
+     *       (or Jackson {@code @JsonIgnoreProperties(value = {"field"}, allowGetters = true)}).</li>
+     *   <li>Configuration file: an entry in {@code config/fieldsNotImported.txt}.</li>
+     * </ul>
+     *
+     * <h3>Method aliases</h3>
+     * This method is also exposed as {@link #addPermanentReadOnlyField(Class, String)} (Jackson-aligned
+     * name; {@code READ_ONLY} from the Java-bean perspective) and
+     * {@link #addPermanentSerializeOnlyField(Class, String)} (unambiguous JSON-direction name) — both
+     * delegate to this implementation.
+     *
+     * <h3>Use case</h3>
+     * Computed/derived fields that should be surfaced to clients but never trusted from input
+     * (e.g. {@code computedTotal}, {@code lastLoginEpoch}, server-generated identifiers).
+     *
+     * @param clazz Class on which the field will be excluded from deserialization.
+     * @param fieldName Java field name to exclude on read.
      */
     public static void addPermanentNotImportedField(Class<?> clazz, String fieldName) {
         BASE_NOT_IMPORTED_FIELDS.computeIfAbsent(clazz, k -> ConcurrentHashMap.newKeySet()).add(fieldName);
+    }
+
+    /**
+     * Jackson-aligned alias for {@link #addPermanentNotImportedField(Class, String)}. The name
+     * uses the Java-bean perspective — {@code READ_ONLY} means the bean's getter is invoked by
+     * the serializer but its setter is <b>not</b> invoked by the deserializer.
+     *
+     * <p>From the JSON perspective the field is <b>output-only</b>: it appears in serialized JSON
+     * but is ignored if present in JSON input. Mirrors {@code @JsonProperty(access = READ_ONLY)}.
+     *
+     * <p>See {@link #addPermanentSerializeOnlyField(Class, String)} for the same behavior under
+     * an unambiguous JSON-direction name.
+     *
+     * @param clazz Class on which the field is read-only (output-only in JSON).
+     * @param fieldName Java field name.
+     */
+    public static void addPermanentReadOnlyField(Class<?> clazz, String fieldName) {
+        addPermanentNotImportedField(clazz, fieldName);
+    }
+
+    /**
+     * Unambiguous alias for {@link #addPermanentNotImportedField(Class, String)}: the field is
+     * <b>only serialized</b> (written to JSON output), never deserialized (input JSON for this
+     * field is silently dropped).
+     *
+     * <p>Equivalent to {@link #addPermanentReadOnlyField(Class, String)}, which uses Jackson's
+     * Java-bean-perspective naming. Pick whichever name reads more clearly at the call site —
+     * both delegate to the same implementation.
+     *
+     * @param clazz Class on which the field is serialize-only.
+     * @param fieldName Java field name.
+     */
+    public static void addPermanentSerializeOnlyField(Class<?> clazz, String fieldName) {
+        addPermanentNotImportedField(clazz, fieldName);
+    }
+
+    /**
+     * Per-instance (non-permanent) equivalent of {@link #addPermanentNotImportedField(Class, String)}.
+     * Excludes the named field from deserialization on this builder only.
+     *
+     * <h3>Java-bean perspective vs JSON perspective</h3>
+     * <ul>
+     *   <li><b>Java-bean perspective:</b> the field is <b>read-only</b> — deserializer skips the
+     *       setter; serializer still invokes the getter.</li>
+     *   <li><b>JSON perspective:</b> <b>output-only</b> — written to JSON, ignored on input.</li>
+     * </ul>
+     *
+     * <h3>Equivalent declarative configuration</h3>
+     * <ul>
+     *   <li>Annotation: {@code @IoProperty(access = IoProperty.Access.READ_ONLY)} (field) or
+     *       {@code @IoIgnoreProperties(value = {"field"}, allowGetters = true)} (class).</li>
+     *   <li>Configuration file: {@code config/fieldsNotImported.txt}.</li>
+     * </ul>
+     *
+     * <h3>Method aliases</h3>
+     * Also exposed as {@link #addReadOnlyField(Class, String)} (Jackson-aligned) and
+     * {@link #addSerializeOnlyField(Class, String)} (unambiguous JSON-direction). All three
+     * delegate to the same internal map.
+     *
+     * <h3>Scope caveat</h3>
+     * The field-injector map is cached statically by class for performance. Once a class has
+     * been deserialized with a given exclusion in effect, subsequent builders for the same
+     * class inherit the cached map. For authoritative global exclusion use
+     * {@link #addPermanentNotImportedField(Class, String)} (or its aliases) at application
+     * bootstrap before any deserialization runs.
+     *
+     * @param clazz Class on which to exclude the field for read.
+     * @param fieldName Java field name.
+     * @return this builder for chaining.
+     */
+    public ReadOptionsBuilder addNotImportedField(Class<?> clazz, String fieldName) {
+        // options.fieldsNotImported is initialized via a shallow putAll(BASE_NOT_IMPORTED_FIELDS),
+        // so its Sets may alias the permanent-state Sets. compute() with a fresh Set guarantees
+        // the builder owns its own copy and never mutates BASE_NOT_IMPORTED_FIELDS.
+        options.fieldsNotImported.compute(clazz, (k, existing) -> {
+            Set<String> result = ConcurrentHashMap.newKeySet();
+            if (existing != null) {
+                result.addAll(existing);
+            }
+            result.add(fieldName);
+            return result;
+        });
+        return this;
+    }
+
+    /**
+     * Jackson-aligned alias for {@link #addNotImportedField(Class, String)}. {@code READ_ONLY} from
+     * the Java-bean perspective: deserializer never invokes the setter, serializer still invokes
+     * the getter. From the JSON perspective the field is <b>output-only</b>.
+     * Mirrors {@code @JsonProperty(access = READ_ONLY)}.
+     *
+     * <p>See {@link #addSerializeOnlyField(Class, String)} for the unambiguous JSON-direction name.
+     *
+     * @param clazz Class on which the field is read-only (output-only in JSON).
+     * @param fieldName Java field name.
+     * @return this builder for chaining.
+     */
+    public ReadOptionsBuilder addReadOnlyField(Class<?> clazz, String fieldName) {
+        return addNotImportedField(clazz, fieldName);
+    }
+
+    /**
+     * Unambiguous alias for {@link #addNotImportedField(Class, String)}: the field is
+     * <b>only serialized</b>, never deserialized. Equivalent to
+     * {@link #addReadOnlyField(Class, String)}, which uses Jackson's Java-bean-perspective name.
+     *
+     * @param clazz Class on which the field is serialize-only.
+     * @param fieldName Java field name.
+     * @return this builder for chaining.
+     */
+    public ReadOptionsBuilder addSerializeOnlyField(Class<?> clazz, String fieldName) {
+        return addNotImportedField(clazz, fieldName);
     }
 
     /**

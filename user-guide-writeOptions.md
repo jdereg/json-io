@@ -1336,7 +1336,14 @@ automatically be created with the named field on the not-exported list.
 
 **Annotation Alternative:** Use `@IoIgnore` on individual fields or `@IoIgnoreProperties({"field1","field2"})` on the class for full both-sides exclusion. For **write-only exclusion** (field still deserialized from JSON, only output suppressed — useful for secrets like `passwordHash`) use `@IoProperty(access = IoProperty.Access.WRITE_ONLY)` on the field, or `@IoIgnoreProperties(value = {...}, allowSetters = true)` at the class level. Mirrors Jackson's `@JsonProperty(access = WRITE_ONLY)` / `@JsonIgnoreProperties(allowSetters = true)`. See [Annotations](/user-guide.md#annotations).
 
+**Method Aliases:** `addPermanentExcludedField` is also exposed as `addPermanentWriteOnlyField` (Jackson-named — `WRITE_ONLY` from the Java-bean perspective: the bean's setter is invoked by the deserializer when JSON comes in, but its getter is *not* invoked by the serializer) and `addPermanentDeserializeOnlyField` (unambiguous JSON-direction name). The per-instance equivalents on the builder are `addExcludedField`, `addWriteOnlyField`, and `addDeserializeOnlyField` — all three delegate to the same internal map. Note: the per-instance variants share `WriteOptionsBuilder`'s static field-accessor cache; for authoritative global exclusion call `addPermanent*` at application bootstrap.
+
 >#### WriteOptionsBuilder.addPermanentNotExportedField(`Class<?> clazz, String fieldName`)
+>#### WriteOptionsBuilder.addPermanentWriteOnlyField(`Class<?> clazz, String fieldName`) — alias (Jackson-named)
+>#### WriteOptionsBuilder.addPermanentDeserializeOnlyField(`Class<?> clazz, String fieldName`) — alias (unambiguous)
+>#### WriteOptionsBuilder.addExcludedField(`Class<?> clazz, String fieldName`) — per-instance equivalent
+>#### WriteOptionsBuilder.addWriteOnlyField(`Class<?> clazz, String fieldName`) — per-instance alias (Jackson-named)
+>#### WriteOptionsBuilder.addDeserializeOnlyField(`Class<?> clazz, String fieldName`) — per-instance alias (unambiguous)
 
 ### addPermanentNonRef
 
