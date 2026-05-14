@@ -1455,7 +1455,7 @@ try (JsonTokenizer t = JsonIo.createTokenizer(jsonString)) {
 }
 ```
 
-Factories: `createTokenizer(String)`, `createTokenizer(InputStream)`, plus `WriteOptions`-aware overloads. The tokenizer respects `strictJson`, `allowNanAndInfinity`, `integerTypeBigInteger`, `floatingPointBigDecimal`, and `stringBufferSize` from the supplied options.
+Factories: `createTokenizer(String)`, `createTokenizer(InputStream)`, plus `ReadOptions`-aware overloads. The tokenizer respects `strictJson`, `allowNanAndInfinity`, `integerTypeBigInteger`, `floatingPointBigDecimal`, and `stringBufferSize` from the supplied options.
 
 ### `JsonIo.createGenerator(...)` — streaming write
 
