@@ -1,0 +1,577 @@
+package com.cedarsoftware.io;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * End-to-end tests for {@link JsonGenerator} / {@link CharStreamGenerator} and
+ * the {@link JsonIo#createGenerator} factories. Validates the cursor-style
+ * streaming-write contract:
+ * <ul>
+ *   <li>Scalar emission (int/long/float/double/BigInteger/BigDecimal/boolean/null/string).</li>
+ *   <li>Auto-comma insertion across array elements and object fields.</li>
+ *   <li>Convenience field-name+value helpers and array/object-start helpers.</li>
+ *   <li>writeRaw vs writeRawValue (raw doesn't auto-comma; rawValue does).</li>
+ *   <li>Structural misuse throws {@link JsonGenerationException}.</li>
+ *   <li>Pretty-print, JSON5 unquoted keys, JSON5 single quotes, NaN/Infinity policy.</li>
+ *   <li>OutputStream/Writer factory parity; close() flushes and releases resources.</li>
+ *   <li>copyCurrentEvent / copyCurrentStructure round-trip through {@link JsonTokenizer}.</li>
+ * </ul>
+ */
+class JsonGeneratorTest {
+
+    // -------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------
+
+    /** Generate JSON to a string using the given write options (null = defaults). */
+    private static String emit(WriteOptions opts, Emit body) throws IOException {
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw, opts)) {
+            body.run(g);
+        }
+        return sw.toString();
+    }
+
+    /** Default-options helper. */
+    private static String emit(Emit body) throws IOException {
+        return emit(null, body);
+    }
+
+    @FunctionalInterface
+    interface Emit {
+        void run(JsonGenerator g) throws IOException;
+    }
+
+    // -------------------------------------------------------------------
+    // Scalars
+    // -------------------------------------------------------------------
+
+    @Test
+    void writeNumber_int() throws IOException {
+        assertEquals("42", emit(g -> g.writeNumber(42)));
+    }
+
+    @Test
+    void writeNumber_long() throws IOException {
+        assertEquals("9223372036854775807", emit(g -> g.writeNumber(Long.MAX_VALUE)));
+    }
+
+    @Test
+    void writeNumber_double() throws IOException {
+        assertEquals("1.5", emit(g -> g.writeNumber(1.5)));
+    }
+
+    @Test
+    void writeNumber_float() throws IOException {
+        assertEquals("1.5", emit(g -> g.writeNumber(1.5f)));
+    }
+
+    @Test
+    void writeNumber_bigInteger_unquoted() throws IOException {
+        BigInteger big = new BigInteger("123456789012345678901234567890");
+        assertEquals("123456789012345678901234567890",
+                emit(g -> g.writeNumber(big)));
+    }
+
+    @Test
+    void writeNumber_bigDecimal_stripTrailingZerosAndUnquoted() throws IOException {
+        // BigDecimal("1.2300") preserves scale=4; we emit canonical form 1.23.
+        assertEquals("1.23", emit(g -> g.writeNumber(new BigDecimal("1.2300"))));
+        // Plain integer value retains as plain form (no scientific).
+        assertEquals("100", emit(g -> g.writeNumber(new BigDecimal("100.00"))));
+    }
+
+    @Test
+    void writeNumber_string_passthroughVerbatim() throws IOException {
+        // Trusted pre-formatted form; library does not validate.
+        assertEquals("3.14e10", emit(g -> g.writeNumber("3.14e10")));
+    }
+
+    @Test
+    void writeBoolean() throws IOException {
+        assertEquals("true", emit(g -> g.writeBoolean(true)));
+        assertEquals("false", emit(g -> g.writeBoolean(false)));
+    }
+
+    @Test
+    void writeNull() throws IOException {
+        assertEquals("null", emit(JsonGenerator::writeNull));
+    }
+
+    @Test
+    void writeString_basic() throws IOException {
+        assertEquals("\"hello\"", emit(g -> g.writeString("hello")));
+    }
+
+    @Test
+    void writeString_withEscapes() throws IOException {
+        // Tab + quote + backslash should be escaped.
+        String out = emit(g -> g.writeString("a\t\"b\\c"));
+        assertEquals("\"a\\t\\\"b\\\\c\"", out);
+    }
+
+    @Test
+    void writeString_nullEmitsJsonNull() throws IOException {
+        assertEquals("null", emit(g -> g.writeString((String) null)));
+    }
+
+    @Test
+    void writeString_charArraySlice() throws IOException {
+        char[] buf = "_hello_".toCharArray();
+        assertEquals("\"hello\"", emit(g -> g.writeString(buf, 1, 5)));
+    }
+
+    @Test
+    void writeNumber_bigDecimalNull_emitsJsonNull() throws IOException {
+        assertEquals("null", emit(g -> g.writeNumber((BigDecimal) null)));
+    }
+
+    @Test
+    void writeNumber_bigIntegerNull_emitsJsonNull() throws IOException {
+        assertEquals("null", emit(g -> g.writeNumber((BigInteger) null)));
+    }
+
+    @Test
+    void writeNumber_stringNull_emitsJsonNull() throws IOException {
+        assertEquals("null", emit(g -> g.writeNumber((String) null)));
+    }
+
+    // -------------------------------------------------------------------
+    // Nested structures + auto-comma
+    // -------------------------------------------------------------------
+
+    @Test
+    void emptyObject() throws IOException {
+        assertEquals("{}", emit(g -> g.writeStartObject().writeEndObject()));
+    }
+
+    @Test
+    void emptyArray() throws IOException {
+        assertEquals("[]", emit(g -> g.writeStartArray().writeEndArray()));
+    }
+
+    @Test
+    void object_withTwoFields_autoCommaBetween() throws IOException {
+        String out = emit(g -> g.writeStartObject()
+                .writeFieldName("a").writeNumber(1)
+                .writeFieldName("b").writeNumber(2)
+                .writeEndObject());
+        assertEquals("{\"a\":1,\"b\":2}", out);
+    }
+
+    @Test
+    void array_withThreeScalars_autoCommaBetween() throws IOException {
+        String out = emit(g -> g.writeStartArray()
+                .writeNumber(1).writeNumber(2).writeNumber(3)
+                .writeEndArray());
+        assertEquals("[1,2,3]", out);
+    }
+
+    @Test
+    void nested_objectInsideArray() throws IOException {
+        String out = emit(g -> g.writeStartArray()
+                .writeStartObject().writeStringField("k", "v").writeEndObject()
+                .writeStartObject().writeStringField("k2", "v2").writeEndObject()
+                .writeEndArray());
+        assertEquals("[{\"k\":\"v\"},{\"k2\":\"v2\"}]", out);
+    }
+
+    @Test
+    void nested_arrayInsideObject() throws IOException {
+        String out = emit(g -> g.writeStartObject()
+                .writeArrayFieldStart("xs")
+                    .writeNumber(1).writeNumber(2)
+                .writeEndArray()
+                .writeEndObject());
+        assertEquals("{\"xs\":[1,2]}", out);
+    }
+
+    @Test
+    void deeplyNested_alternatingObjectAndArray() throws IOException {
+        String out = emit(g -> g.writeStartObject()
+                .writeObjectFieldStart("a")
+                    .writeArrayFieldStart("b")
+                        .writeStartObject().writeNumberField("c", 7).writeEndObject()
+                    .writeEndArray()
+                .writeEndObject()
+                .writeEndObject());
+        assertEquals("{\"a\":{\"b\":[{\"c\":7}]}}", out);
+    }
+
+    // -------------------------------------------------------------------
+    // Convenience field-combo helpers
+    // -------------------------------------------------------------------
+
+    @Test
+    void writeStringField() throws IOException {
+        String out = emit(g -> g.writeStartObject()
+                .writeStringField("name", "Alice")
+                .writeEndObject());
+        assertEquals("{\"name\":\"Alice\"}", out);
+    }
+
+    @Test
+    void writeNumberField_allOverloads() throws IOException {
+        String out = emit(g -> g.writeStartObject()
+                .writeNumberField("i", 1)
+                .writeNumberField("l", 2L)
+                .writeNumberField("d", 3.5)
+                .writeNumberField("bd", new BigDecimal("4.250"))
+                .writeEndObject());
+        assertEquals("{\"i\":1,\"l\":2,\"d\":3.5,\"bd\":4.25}", out);
+    }
+
+    @Test
+    void writeBooleanField_andNullField() throws IOException {
+        String out = emit(g -> g.writeStartObject()
+                .writeBooleanField("ok", true)
+                .writeNullField("note")
+                .writeEndObject());
+        assertEquals("{\"ok\":true,\"note\":null}", out);
+    }
+
+    // -------------------------------------------------------------------
+    // writeRaw vs writeRawValue
+    // -------------------------------------------------------------------
+
+    @Test
+    void writeRaw_doesNotAutoComma_doesNotMarkValue() throws IOException {
+        // writeRaw injects chars verbatim; the surrounding context is unchanged.
+        // Here we manually craft a JSON snippet using writeRaw.
+        String out = emit(g -> g.writeStartArray()
+                .writeRaw('1')
+                .writeRaw(',')
+                .writeRaw('2')
+                .writeEndArray());
+        assertEquals("[1,2]", out);
+    }
+
+    @Test
+    void writeRawValue_countsAsValue_autoCommas() throws IOException {
+        // writeRawValue is treated as a complete value — emits leading comma in array.
+        String out = emit(g -> g.writeStartArray()
+                .writeRawValue("{\"k\":1}")
+                .writeRawValue("[2]")
+                .writeEndArray());
+        assertEquals("[{\"k\":1},[2]]", out);
+    }
+
+    @Test
+    void writeRawValue_null_emitsJsonNull() throws IOException {
+        assertEquals("null", emit(g -> g.writeRawValue(null)));
+    }
+
+    @Test
+    void writeRaw_String_charArraySlice() throws IOException {
+        // writeRaw(char[], off, len) — drop slice verbatim.
+        String out = emit(g -> g.writeRaw("[".toCharArray(), 0, 1)
+                .writeRaw('1')
+                .writeRaw("]"));
+        assertEquals("[1]", out);
+    }
+
+    // -------------------------------------------------------------------
+    // Structural-misuse: JsonGenerationException
+    // -------------------------------------------------------------------
+
+    @Test
+    void error_fieldName_outsideObject() {
+        assertThatThrownBy(() -> emit(g -> g.writeStartArray().writeFieldName("x")))
+                .isInstanceOf(JsonGenerationException.class)
+                .hasMessageContaining("Cannot write field name outside an object context");
+    }
+
+    @Test
+    void error_endArray_overObject() {
+        assertThatThrownBy(() -> emit(g -> g.writeStartObject().writeEndArray()))
+                .isInstanceOf(JsonGenerationException.class)
+                .hasMessageContaining("Cannot end array");
+    }
+
+    @Test
+    void error_endObject_overArray() {
+        assertThatThrownBy(() -> emit(g -> g.writeStartArray().writeEndObject()))
+                .isInstanceOf(JsonGenerationException.class)
+                .hasMessageContaining("Cannot end object");
+    }
+
+    @Test
+    void error_doubleFieldName_withoutValue() {
+        assertThatThrownBy(() -> emit(g -> g.writeStartObject()
+                .writeFieldName("a").writeFieldName("b")))
+                .isInstanceOf(JsonGenerationException.class)
+                .hasMessageContaining("previous field name is still pending a value");
+    }
+
+    @Test
+    void error_endObject_withPendingFieldName() {
+        assertThatThrownBy(() -> emit(g -> g.writeStartObject()
+                .writeFieldName("a").writeEndObject()))
+                .isInstanceOf(JsonGenerationException.class)
+                .hasMessageContaining("field name written without a matching value");
+    }
+
+    @Test
+    void error_value_inObject_withoutFieldName() {
+        assertThatThrownBy(() -> emit(g -> g.writeStartObject().writeNumber(1)))
+                .isInstanceOf(JsonGenerationException.class)
+                .hasMessageContaining("without a preceding field name");
+    }
+
+    @Test
+    void error_twoRootValues() {
+        assertThatThrownBy(() -> emit(g -> g.writeNumber(1).writeNumber(2)))
+                .isInstanceOf(JsonGenerationException.class)
+                .hasMessageContaining("document already complete");
+    }
+
+    @Test
+    void error_writeFieldName_null() {
+        assertThatThrownBy(() -> emit(g -> g.writeStartObject().writeFieldName(null)))
+                .isInstanceOf(JsonGenerationException.class)
+                .hasMessageContaining("Field name must not be null");
+    }
+
+    // -------------------------------------------------------------------
+    // Pretty printing
+    // -------------------------------------------------------------------
+
+    @Test
+    void prettyPrint_objectWithFields() throws IOException {
+        WriteOptions opts = new WriteOptionsBuilder().prettyPrint(true).build();
+        String out = emit(opts, g -> g.writeStartObject()
+                .writeStringField("a", "x")
+                .writeNumberField("b", 1)
+                .writeEndObject());
+        // Standard pretty: newline + indent before each field, newline + indent before close.
+        assertThat(out).contains("\n").contains("\"a\"").contains("\"b\":");
+        assertThat(out).startsWith("{");
+        assertThat(out).endsWith("}");
+        // Ensures multi-line layout (more than one newline).
+        long newlineCount = out.chars().filter(c -> c == '\n').count();
+        assertTrue(newlineCount >= 3, "expected at least 3 newlines, got: " + newlineCount + " in " + out);
+    }
+
+    @Test
+    void prettyPrint_emptyContainers_noInternalNewline() throws IOException {
+        WriteOptions opts = new WriteOptionsBuilder().prettyPrint(true).build();
+        assertEquals("{}", emit(opts, g -> g.writeStartObject().writeEndObject()));
+        assertEquals("[]", emit(opts, g -> g.writeStartArray().writeEndArray()));
+    }
+
+    // -------------------------------------------------------------------
+    // JSON5 features
+    // -------------------------------------------------------------------
+
+    @Test
+    void json5UnquotedKeys_validIdentifier() throws IOException {
+        WriteOptions opts = new WriteOptionsBuilder().json5UnquotedKeys(true).build();
+        String out = emit(opts, g -> g.writeStartObject()
+                .writeStringField("name", "Alice")
+                .writeEndObject());
+        assertEquals("{name:\"Alice\"}", out);
+    }
+
+    @Test
+    void json5UnquotedKeys_invalidIdentifier_stillQuoted() throws IOException {
+        WriteOptions opts = new WriteOptionsBuilder().json5UnquotedKeys(true).build();
+        // A key starting with a digit is NOT a valid JSON5 identifier.
+        String out = emit(opts, g -> g.writeStartObject()
+                .writeStringField("1bad", "x")
+                .writeEndObject());
+        assertEquals("{\"1bad\":\"x\"}", out);
+    }
+
+    @Test
+    void json5SmartQuotes_singleQuotedStrings() throws IOException {
+        WriteOptions opts = new WriteOptionsBuilder().json5SmartQuotes(true).build();
+        String out = emit(opts, g -> g.writeString("hi"));
+        // Smart quotes emit single-quoted form for values.
+        assertEquals("'hi'", out);
+    }
+
+    // -------------------------------------------------------------------
+    // NaN/Infinity policy
+    // -------------------------------------------------------------------
+
+    @Test
+    void allowNanAndInfinity_emitsLiterals() throws IOException {
+        WriteOptions opts = new WriteOptionsBuilder().allowNanAndInfinity(true).build();
+        assertEquals("NaN", emit(opts, g -> g.writeNumber(Double.NaN)));
+        assertEquals("Infinity", emit(opts, g -> g.writeNumber(Double.POSITIVE_INFINITY)));
+        assertEquals("-Infinity", emit(opts, g -> g.writeNumber(Double.NEGATIVE_INFINITY)));
+    }
+
+    @Test
+    void allowNanAndInfinity_false_throws() {
+        WriteOptions opts = new WriteOptionsBuilder().allowNanAndInfinity(false).build();
+        assertThatThrownBy(() -> emit(opts, g -> g.writeNumber(Double.NaN)))
+                .isInstanceOf(JsonGenerationException.class)
+                .hasMessageContaining("non-finite double");
+    }
+
+    @Test
+    void allowNanAndInfinity_false_throws_float() {
+        WriteOptions opts = new WriteOptionsBuilder().allowNanAndInfinity(false).build();
+        assertThatThrownBy(() -> emit(opts, g -> g.writeNumber(Float.POSITIVE_INFINITY)))
+                .isInstanceOf(JsonGenerationException.class)
+                .hasMessageContaining("non-finite float");
+    }
+
+    // -------------------------------------------------------------------
+    // Factory parity: OutputStream vs Writer produce identical output
+    // -------------------------------------------------------------------
+
+    @Test
+    void factoryParity_outputStreamMatchesWriter() throws IOException {
+        StringWriter writerSink = new StringWriter();
+        ByteArrayOutputStream osSink = new ByteArrayOutputStream();
+
+        try (JsonGenerator g = JsonIo.createGenerator(writerSink)) {
+            g.writeStartObject().writeStringField("k", "v").writeEndObject();
+        }
+        try (JsonGenerator g = JsonIo.createGenerator(osSink)) {
+            g.writeStartObject().writeStringField("k", "v").writeEndObject();
+        }
+        assertEquals(writerSink.toString(), osSink.toString("UTF-8"));
+    }
+
+    @Test
+    void factory_nullOutputStream_throws() {
+        assertThatThrownBy(() -> JsonIo.createGenerator((java.io.OutputStream) null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void factory_nullWriter_throws() {
+        assertThatThrownBy(() -> JsonIo.createGenerator((java.io.Writer) null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    // -------------------------------------------------------------------
+    // close() flushes underlying writer
+    // -------------------------------------------------------------------
+
+    @Test
+    void close_flushesUnderlyingWriter() throws IOException {
+        // A custom sink that records flush.
+        final boolean[] flushed = {false};
+        StringWriter base = new StringWriter() {
+            @Override
+            public void flush() {
+                flushed[0] = true;
+                super.flush();
+            }
+        };
+        try (JsonGenerator g = JsonIo.createGenerator(base)) {
+            g.writeStartObject().writeStringField("k", "v").writeEndObject();
+        }
+        assertTrue(flushed[0], "underlying writer should have been flushed on close");
+    }
+
+    @Test
+    void close_isIdempotent() throws IOException {
+        StringWriter sw = new StringWriter();
+        JsonGenerator g = JsonIo.createGenerator(sw);
+        g.writeStartObject().writeEndObject();
+        g.close();
+        g.close(); // second close must not throw
+    }
+
+    // -------------------------------------------------------------------
+    // Bridge: copyCurrentEvent / copyCurrentStructure (tokenizer → generator)
+    // -------------------------------------------------------------------
+
+    @Test
+    void copyCurrentStructure_object() throws IOException {
+        String source = "{\"id\":\"u-1\",\"age\":30,\"flag\":true,\"empty\":null,\"tags\":[\"a\",\"b\"]}";
+        StringWriter sink = new StringWriter();
+        try (JsonTokenizer t = JsonIo.createTokenizer(source);
+             JsonGenerator g = JsonIo.createGenerator(sink)) {
+            t.nextToken(); // position on START_OBJECT
+            g.copyCurrentStructure(t);
+        }
+        assertEquals(source, sink.toString());
+    }
+
+    @Test
+    void copyCurrentStructure_arrayOfScalars() throws IOException {
+        String source = "[1,2,3,\"four\",true,null,1.5]";
+        StringWriter sink = new StringWriter();
+        try (JsonTokenizer t = JsonIo.createTokenizer(source);
+             JsonGenerator g = JsonIo.createGenerator(sink)) {
+            t.nextToken();
+            g.copyCurrentStructure(t);
+        }
+        assertEquals(source, sink.toString());
+    }
+
+    @Test
+    void copyCurrentStructure_nestedDeeplyMixed() throws IOException {
+        String source = "{\"a\":{\"b\":[{\"c\":7},{\"d\":[1,[2,3]]}]}}";
+        StringWriter sink = new StringWriter();
+        try (JsonTokenizer t = JsonIo.createTokenizer(source);
+             JsonGenerator g = JsonIo.createGenerator(sink)) {
+            t.nextToken();
+            g.copyCurrentStructure(t);
+        }
+        assertEquals(source, sink.toString());
+    }
+
+    @Test
+    void copyCurrentEvent_singleScalar() throws IOException {
+        StringWriter sink = new StringWriter();
+        try (JsonTokenizer t = JsonIo.createTokenizer("42");
+             JsonGenerator g = JsonIo.createGenerator(sink)) {
+            t.nextToken();
+            g.copyCurrentEvent(t);
+        }
+        assertEquals("42", sink.toString());
+    }
+
+    @Test
+    void copyCurrentEvent_nullSourceToken_throws() {
+        StringWriter sink = new StringWriter();
+        assertThatThrownBy(() -> {
+            try (JsonTokenizer t = JsonIo.createTokenizer("1");
+                 JsonGenerator g = JsonIo.createGenerator(sink)) {
+                // No t.nextToken() — currentToken() is null
+                g.copyCurrentEvent(t);
+            }
+        }).isInstanceOf(JsonGenerationException.class)
+          .hasMessageContaining("source has no current token");
+    }
+
+    // -------------------------------------------------------------------
+    // OutputStream variant uses UTF-8 encoding correctly
+    // -------------------------------------------------------------------
+
+    @Test
+    void outputStream_utf8RoundTrip_nonAscii() throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        try (JsonGenerator g = JsonIo.createGenerator(bos)) {
+            g.writeString("héllo★");
+        }
+        // Expected output reads back through UTF-8 cleanly.
+        String result = new String(bos.toByteArray(), StandardCharsets.UTF_8);
+        // Non-ASCII characters in JSON strings may be escaped depending on
+        // writer policy; either form is acceptable as long as the JSON
+        // round-trips to the same logical value.
+        try (JsonTokenizer t = JsonIo.createTokenizer(result)) {
+            t.nextToken();
+            assertEquals("héllo★", t.getText());
+        }
+    }
+}

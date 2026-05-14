@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.StringReader;
+import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,6 +15,7 @@ import com.cedarsoftware.io.prettyprint.JsonPrettyPrinter;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.FastReader;
+import com.cedarsoftware.util.FastWriter;
 import com.cedarsoftware.util.IOUtilities;
 import com.cedarsoftware.util.LoggingConfig;
 import com.cedarsoftware.util.convert.Converter;
@@ -1123,6 +1125,121 @@ public class JsonIo {
                 sourceRef);
         tokenizer.setCloseHook(recycler::releaseReaderBuffers);
         return tokenizer;
+    }
+
+    // -------------------------------------------------------------------
+    // Streaming-write API — createGenerator factories
+    // -------------------------------------------------------------------
+
+    /**
+     * Creates a streaming JSON generator that writes to the given {@link Writer}. The
+     * returned {@link JsonGenerator} exposes a Jackson-aligned cursor-style write API
+     * ({@code writeStartObject()}, {@code writeFieldName()}, {@code writeNumber()},
+     * {@code writeString()}, {@code copyCurrentEvent()}, ...) so callers can produce
+     * JSON token-by-token without invoking the tree-walking serializer.
+     *
+     * <p>The generator should be closed when finished (it implements
+     * {@link AutoCloseable}); use try-with-resources for safety. Closing flushes the
+     * underlying writer and releases pooled char-buffer state back to the thread-local
+     * recycler.
+     *
+     * <h3>Example — hand-rolled streaming serializer</h3>
+     * <pre>{@code
+     * try (Writer w = new FileWriter("out.json");
+     *      JsonGenerator g = JsonIo.createGenerator(w)) {
+     *     g.writeStartObject()
+     *         .writeStringField("id", "u-1")
+     *         .writeStringField("name", "Alice")
+     *         .writeNumberField("age", 30)
+     *      .writeEndObject();
+     * }
+     * }</pre>
+     *
+     * @param writer destination writer; must not be {@code null}
+     * @return a fresh generator positioned before the first token
+     * @throws IllegalArgumentException if {@code writer} is null
+     */
+    public static JsonGenerator createGenerator(Writer writer) {
+        return createGenerator(writer, null);
+    }
+
+    /**
+     * Creates a streaming JSON generator with custom write options. Options honored:
+     * {@code prettyPrint}, {@code indentationSize}, {@code json5UnquotedKeys},
+     * {@code json5SmartQuotes}, {@code allowNanAndInfinity}, {@code maxStringLength}.
+     * Tree-only options ({@code showTypeInfo}, {@code cycleSupport}, custom writers,
+     * field filters) are not relevant at the streaming level and are ignored.
+     *
+     * @param writer       destination writer; must not be {@code null}
+     * @param writeOptions configuration; if {@code null}, defaults are used
+     * @return a fresh generator positioned before the first token
+     * @throws IllegalArgumentException if {@code writer} is null
+     */
+    public static JsonGenerator createGenerator(Writer writer, WriteOptions writeOptions) {
+        if (writer == null) {
+            throw new IllegalArgumentException("Writer cannot be null");
+        }
+        return createGeneratorImpl(writer, writeOptions);
+    }
+
+    /**
+     * Creates a streaming JSON generator that writes to the given {@link OutputStream}.
+     * The stream is wrapped in a UTF-8 writer. See {@link #createGenerator(Writer)} for
+     * the full cursor-API contract.
+     *
+     * @param out destination output stream; must not be {@code null}
+     * @return a fresh generator positioned before the first token
+     * @throws IllegalArgumentException if {@code out} is null
+     */
+    public static JsonGenerator createGenerator(OutputStream out) {
+        return createGenerator(out, null);
+    }
+
+    /**
+     * Creates a streaming JSON generator over the given output stream with custom
+     * write options. See {@link #createGenerator(Writer, WriteOptions)} for which
+     * options are honored.
+     *
+     * @param out          destination output stream; must not be {@code null}
+     * @param writeOptions configuration; if {@code null}, defaults are used
+     * @return a fresh generator positioned before the first token
+     * @throws IllegalArgumentException if {@code out} is null
+     */
+    public static JsonGenerator createGenerator(OutputStream out, WriteOptions writeOptions) {
+        if (out == null) {
+            throw new IllegalArgumentException("Output stream cannot be null");
+        }
+        return createGeneratorImpl(new java.io.OutputStreamWriter(out, StandardCharsets.UTF_8), writeOptions);
+    }
+
+    /**
+     * Lazily-initialized default WriteOptions for createGenerator when the caller
+     * passes null. Mirrors the {@link #defaultTokenizerReadOptions} pattern — building
+     * WriteOptions per call is non-trivial; for streaming-serialize callers that
+     * accept defaults, caching this saves the construction cost per emit.
+     */
+    private static volatile WriteOptions defaultGeneratorWriteOptions;
+
+    private static WriteOptions defaultGeneratorWriteOptions() {
+        WriteOptions o = defaultGeneratorWriteOptions;
+        if (o == null) {
+            o = new WriteOptionsBuilder().build();
+            defaultGeneratorWriteOptions = o;
+        }
+        return o;
+    }
+
+    private static JsonGenerator createGeneratorImpl(Writer writer, WriteOptions writeOptions) {
+        WriteOptions opts = writeOptions != null ? writeOptions : defaultGeneratorWriteOptions();
+        // Borrow a FastWriter char buffer from the thread-local recycler so successive
+        // generator instances on the same thread share one heap allocation. Released
+        // back via the close-hook below when the user closes the generator.
+        BufferRecycler recycler = BUFFER_RECYCLER.get();
+        char[] bufferCharArr = recycler.borrowWriterCharBuffer(DEFAULT_CHAR_BUFFER_SIZE);
+        FastWriter fastOut = new FastWriter(writer, bufferCharArr);
+        CharStreamGenerator generator = new CharStreamGenerator(fastOut, opts);
+        generator.setCloseHook(recycler::releaseWriterCharBuffer);
+        return generator;
     }
 
     /**

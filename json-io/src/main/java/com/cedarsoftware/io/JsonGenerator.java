@@ -395,20 +395,25 @@ public abstract class JsonGenerator implements Closeable, Flushable {
         if (token != JsonToken.START_OBJECT && token != JsonToken.START_ARRAY) {
             return copyCurrentEvent(source);
         }
-        // Structures: copy the open token, then iterate until depth returns to zero relative to entry.
-        int startDepth = source.getDepth();
+        // Structures: emit the opener, then track unmatched START/END balance until
+        // the matching close is emitted. {@code JsonTokenizer.getDepth()} can't be
+        // compared directly across the END_* boundary since closes decrement before
+        // the token is observed; an explicit balance counter is simpler and correct.
+        int balance = 1; // we are inside one open structure
         copyCurrentEvent(source);
-        while (true) {
+        while (balance > 0) {
             JsonToken next = source.nextToken();
             if (next == null) {
                 throw new JsonGenerationException("copyCurrentStructure: source exhausted before structure closed");
             }
-            copyCurrentEvent(source);
-            if ((next == JsonToken.END_OBJECT || next == JsonToken.END_ARRAY)
-                    && source.getDepth() == startDepth) {
-                return this;
+            if (next == JsonToken.START_OBJECT || next == JsonToken.START_ARRAY) {
+                balance++;
+            } else if (next == JsonToken.END_OBJECT || next == JsonToken.END_ARRAY) {
+                balance--;
             }
+            copyCurrentEvent(source);
         }
+        return this;
     }
 
     // -------------------------------------------------------------------
