@@ -15,6 +15,7 @@ import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.FastReader;
 import com.cedarsoftware.util.MathUtilities;
+import com.cedarsoftware.util.internal.CharBufScratch;
 
 /**
  * Parse TOON (Token-Oriented Object Notation) format into JsonObject structures.
@@ -1977,8 +1978,17 @@ public class ToonReader {
         String cached = cache[slot];
 
         if (cached != null && cached.length() == len) {
+            // Bulk-extract cached's chars into a thread-local buffer (String.getChars is
+            // a HotSpot intrinsic with SIMD on supported HW), then compare char[] to
+            // char[] in a tight loop the JIT can auto-vectorize. Replaces per-char
+            // cached.charAt(j) — eliminates the LATIN1/UTF16 coder branch + bounds
+            // check + virtual dispatch on every character of the cache-verify step
+            // (the 1,340 ms hot spot in the prior JFR snapshot for this method).
+            // Safe re: CharBufScratch's re-entrancy contract: no callout in this loop
+            // can clobber the buffer before we're done.
+            char[] cachedChars = CharBufScratch.getChars(cached, len);
             for (int j = 0; j < len; j++) {
-                if (buf[start + j] != cached.charAt(j)) {
+                if (buf[start + j] != cachedChars[j]) {
                     String s = new String(buf, start, len);
                     cache[slot] = s;
                     return s;

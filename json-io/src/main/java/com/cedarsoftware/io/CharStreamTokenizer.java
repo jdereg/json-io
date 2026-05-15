@@ -6,6 +6,7 @@ import java.math.BigInteger;
 import java.util.Arrays;
 
 import com.cedarsoftware.util.FastReader;
+import com.cedarsoftware.util.internal.CharBufScratch;
 
 import static com.cedarsoftware.util.MathUtilities.parseBigDecimal;
 import static com.cedarsoftware.util.MathUtilities.parseBigInteger;
@@ -1324,9 +1325,18 @@ final class CharStreamTokenizer extends JsonTokenizer {
         final String cached = stringCacheArray[slot];
 
         if (cached != null && cached.length() == len) {
+            // Bulk-extract cached's chars via String.getChars (HotSpot intrinsic, SIMD
+            // on supported HW) into a thread-local buffer, then compare char[] to
+            // char[] in a tight JIT-vectorizable loop. Replaces per-char cached.charAt
+            // (the LATIN1/UTF16 coder branch + per-char bounds check + virtual
+            // dispatch). Mirrors the same optimization shipped in
+            // ToonReader.cacheSubstringFromBuf; both methods are the parallel
+            // cache-verify hot spot in JFR profiles. Safe re: CharBufScratch's
+            // re-entrancy contract — no callout in this loop can clobber the buffer.
+            final char[] cachedChars = CharBufScratch.getChars(cached, len);
             boolean match = true;
             for (int i = 0; i < len; i++) {
-                if (cached.charAt(i) != buf[offset + i]) {
+                if (cachedChars[i] != buf[offset + i]) {
                     match = false;
                     break;
                 }
