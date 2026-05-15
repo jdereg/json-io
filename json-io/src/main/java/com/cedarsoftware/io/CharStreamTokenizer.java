@@ -7,6 +7,7 @@ import java.util.Arrays;
 
 import com.cedarsoftware.util.FastReader;
 import com.cedarsoftware.util.internal.CharBufScratch;
+import com.cedarsoftware.util.internal.VectorizedArrays;
 
 import static com.cedarsoftware.util.MathUtilities.parseBigDecimal;
 import static com.cedarsoftware.util.MathUtilities.parseBigInteger;
@@ -1325,23 +1326,16 @@ final class CharStreamTokenizer extends JsonTokenizer {
         final String cached = stringCacheArray[slot];
 
         if (cached != null && cached.length() == len) {
-            // Bulk-extract cached's chars via String.getChars (HotSpot intrinsic, SIMD
-            // on supported HW) into a thread-local buffer, then compare char[] to
-            // char[] in a tight JIT-vectorizable loop. Replaces per-char cached.charAt
-            // (the LATIN1/UTF16 coder branch + per-char bounds check + virtual
-            // dispatch). Mirrors the same optimization shipped in
-            // ToonReader.cacheSubstringFromBuf; both methods are the parallel
-            // cache-verify hot spot in JFR profiles. Safe re: CharBufScratch's
-            // re-entrancy contract — no callout in this loop can clobber the buffer.
+            // Bulk-extract cached's chars via String.getChars (HotSpot intrinsic, SIMD)
+            // into a thread-local buffer, then compare char[] to char[] via
+            // VectorizedArrays.equalsRange — dispatches to JDK 9+'s SIMD-vectorized
+            // Arrays.equals(arr, int, int, arr, int, int) intrinsic at runtime, with
+            // a JDK 8 loop fallback. Mirrors the same optimization shipped in
+            // ToonReader.cacheSubstringFromBuf; both are the parallel cache-verify
+            // hot spots in JFR profiles. Safe re: CharBufScratch's re-entrancy
+            // contract — VectorizedArrays.equalsRange does no callouts.
             final char[] cachedChars = CharBufScratch.getChars(cached, len);
-            boolean match = true;
-            for (int i = 0; i < len; i++) {
-                if (cachedChars[i] != buf[offset + i]) {
-                    match = false;
-                    break;
-                }
-            }
-            if (match) {
+            if (VectorizedArrays.equalsRange(cachedChars, 0, len, buf, offset, offset + len)) {
                 return cached;
             }
         }

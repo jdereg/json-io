@@ -16,6 +16,7 @@ import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.FastReader;
 import com.cedarsoftware.util.MathUtilities;
 import com.cedarsoftware.util.internal.CharBufScratch;
+import com.cedarsoftware.util.internal.VectorizedArrays;
 
 /**
  * Parse TOON (Token-Oriented Object Notation) format into JsonObject structures.
@@ -1980,21 +1981,17 @@ public class ToonReader {
         if (cached != null && cached.length() == len) {
             // Bulk-extract cached's chars into a thread-local buffer (String.getChars is
             // a HotSpot intrinsic with SIMD on supported HW), then compare char[] to
-            // char[] in a tight loop the JIT can auto-vectorize. Replaces per-char
-            // cached.charAt(j) — eliminates the LATIN1/UTF16 coder branch + bounds
-            // check + virtual dispatch on every character of the cache-verify step
-            // (the 1,340 ms hot spot in the prior JFR snapshot for this method).
-            // Safe re: CharBufScratch's re-entrancy contract: no callout in this loop
-            // can clobber the buffer before we're done.
+            // char[] via VectorizedArrays.equalsRange, which dispatches to JDK 9+'s
+            // SIMD-vectorized Arrays.equals(arr, int, int, arr, int, int) intrinsic at
+            // runtime (with a JDK 8 loop fallback). Replaces per-char cached.charAt(j)
+            // — eliminates the LATIN1/UTF16 coder branch + per-char bounds check +
+            // virtual dispatch on every character of the cache-verify step. Safe re:
+            // CharBufScratch's re-entrancy contract: VectorizedArrays.equalsRange does
+            // not call back into any code that would clobber the scratch buffer.
             char[] cachedChars = CharBufScratch.getChars(cached, len);
-            for (int j = 0; j < len; j++) {
-                if (buf[start + j] != cachedChars[j]) {
-                    String s = new String(buf, start, len);
-                    cache[slot] = s;
-                    return s;
-                }
+            if (VectorizedArrays.equalsRange(buf, start, end, cachedChars, 0, len)) {
+                return cached;
             }
-            return cached;
         }
 
         String s = new String(buf, start, len);
