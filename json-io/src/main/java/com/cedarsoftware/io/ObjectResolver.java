@@ -618,6 +618,29 @@ public class ObjectResolver extends Resolver
             return;
         }
 
+        // 5b. CONVERTER for JsonObject → typed-target — wrapped-form support for types that
+        // Converter knows how to build from a Map (byte[], ByteBuffer, UUID, BitSet, etc.).
+        // Wrapped form is identified by the presence of a 'value' or '_v' key
+        // (e.g. {"@type":"byte[]","value":"<base64>"}). Routed BEFORE the recursive
+        // object-resolution path so primitive-array wrapped forms reach MapConversions
+        // instead of being instantiated as empty arrays via the generic class-factory path.
+        // The 'value'/'_v' key check distinguishes wrapped forms from the @items array
+        // form (which has neither key) so JSON number-array byte[] continues to work.
+        // When the JsonObject has @id, the converted result is registered as the
+        // JsonObject's target so subsequent @ref resolutions find the same instance
+        // (preserves identity across shared-reference graphs like
+        // {"one":{"@id":1,"@type":"byte[]","value":"..."}, "two":{"@ref":1}}).
+        if (rawType != null && rawType != Object.class) {
+            JsonObject jObj = (JsonObject) rhs;
+            if ((jObj.containsKey("value") || jObj.containsKey("_v"))
+                    && converter.isConversionSupportedFor(rhs.getClass(), rawType)) {
+                Object converted = converter.convert(rhs, rawType);
+                jObj.setTarget(converted);
+                injector.inject(target, converted);
+                return;
+            }
+        }
+
         // 6. JSONOBJECT (non-reference, already checked above)
         assignJsonObjectField(jsonObj, injector, (JsonObject) rhs, fieldType, target, parentMeta);
     }

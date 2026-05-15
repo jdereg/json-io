@@ -212,6 +212,70 @@ public abstract class JsonGenerator implements Closeable, Flushable {
     public abstract JsonGenerator writeNull() throws IOException;
 
     // -------------------------------------------------------------------
+    // Binary (base64)
+    // -------------------------------------------------------------------
+
+    /**
+     * Emit a {@code byte[]} as a binary value. The wire format is json-io's wrapped form,
+     * <code>{"@type":"byte[]","value":"&lt;base64&gt;"}</code>, which round-trips through
+     * the {@code Map → byte[]} converter in java-util's {@link com.cedarsoftware.util.convert.MapConversions}.
+     * A {@code null} input is emitted as the JSON literal {@code null}.
+     *
+     * <h3>Wire format choice</h3>
+     * The wrapped form is unambiguous (the {@code @type} tag tells any reader exactly how to
+     * decode the value) and round-trips cleanly through {@link JsonIo#toJava} into the
+     * original {@code byte[]}. The bare-base64-string form that Jackson emits is also
+     * decodable on the read side via java-util's smart {@code String → byte[]} detection
+     * (commit 4.103.0 of java-util), but for new code prefer {@code writeBinary} so the
+     * type information rides with the value.
+     *
+     * <h3>Streaming-context behaviour</h3>
+     * Counts as one value emit — auto-commas with the surrounding array/object context,
+     * satisfies a pending field name. Default implementation composes
+     * {@link #writeStartObject()} / {@link #writeStringField(String, String)} /
+     * {@link #writeEndObject()}; subclasses may override for a tighter inline emit.
+     *
+     * @param data the bytes to encode; may be {@code null}
+     * @return this generator for chaining
+     * @throws IOException on underlying I/O failure
+     * @throws JsonGenerationException on structural misuse
+     */
+    public JsonGenerator writeBinary(byte[] data) throws IOException {
+        if (data == null) {
+            return writeNull();
+        }
+        writeStartObject();
+        writeStringField("@type", "byte[]");
+        writeStringField("value", java.util.Base64.getEncoder().encodeToString(data));
+        return writeEndObject();
+    }
+
+    /**
+     * Slice variant of {@link #writeBinary(byte[])}. Encodes {@code length} bytes starting
+     * at {@code offset}.
+     *
+     * @param data   the source array; may be {@code null}
+     * @param offset starting index, inclusive
+     * @param length number of bytes to encode
+     * @return this generator for chaining
+     * @throws IOException on underlying I/O failure
+     * @throws IndexOutOfBoundsException if the slice is out of range
+     */
+    public JsonGenerator writeBinary(byte[] data, int offset, int length) throws IOException {
+        if (data == null) {
+            return writeNull();
+        }
+        if (offset < 0 || length < 0 || offset + length > data.length) {
+            throw new IndexOutOfBoundsException(
+                    "Invalid offset/length: offset=" + offset + ", length=" + length
+                            + ", data.length=" + data.length);
+        }
+        byte[] slice = new byte[length];
+        System.arraycopy(data, offset, slice, 0, length);
+        return writeBinary(slice);
+    }
+
+    // -------------------------------------------------------------------
     // Raw injection
     // -------------------------------------------------------------------
 
