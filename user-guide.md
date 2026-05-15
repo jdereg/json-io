@@ -1504,7 +1504,19 @@ Both are checked and transparently caught by the `catch (IOException e)` blocks 
 | Pass-through transform / re-emit pipelines | `copyCurrentEvent` / `copyCurrentStructure` |
 | Direct port from Jackson `JsonGenerator` / `JsonParser` code | Streaming API (method-for-method) |
 
-For binary payloads (`byte[]`): use `java.nio.ByteBuffer` if you need round-trip through json-io (the tree writer encodes it as `{"value":"<base64>"}` and the reader decodes automatically). For ad-hoc base64 in the streaming API, call `gen.writeString(Base64.getEncoder().encodeToString(bytes))` — the read side returns it as `String`, no automatic `byte[]` reconstruction.
+#### Binary payloads (`byte[]` / `ByteBuffer`)
+
+As of 4.103.0, json-io has a complete binary story:
+
+| Scenario | Recommended approach |
+|---|---|
+| Tree writer, `byte[]` field, **default** (interop-friendly) | `JsonIo.toJson(...)` emits `[1, 2, 3]` JSON number array; reader handles it transparently. Verbose for large blobs (≈ 4× expansion) but human-readable and language-agnostic. |
+| Streaming writer, `byte[]` value | `gen.writeBinary(bytes)` — emits the wrapped form `{"@type":"byte[]","value":"<base64>"}` (≈ 1.33× expansion). Round-trips through `JsonIo.toJava` into the original `byte[]`. Slice overload available: `gen.writeBinary(bytes, offset, length)`. |
+| Tree writer, `ByteBuffer` field | Default behaviour is already base64 — `JsonIo.toJson(...)` emits `{"value":"<base64>"}` and the reader decodes automatically. Recommended when wire-size matters and you can choose the field type. |
+| Consuming JSON from Jackson / foreign sources where `byte[]` arrives as a bare base64 string | Just works as of 4.103.0 — java-util's `Converter.convert(String, byte[].class)` performs smart format detection (Base64 standard + URL-safe + hex + spaced hex + stringified `[1,2,3]` JSON array + charset fallback) and the json-io resolver routes through it for typed `byte[]` fields. |
+| Shared `byte[]` instances across multiple fields | Use `WriteOptionsBuilder.preserveLeafContainerIdentity(true)` with the tree writer; emits `{"@id":N,"@items":[...]}` on the first occurrence and `{"@ref":N}` on subsequent ones. The reader preserves identity (`one == two` in Java). The wrapped form from `writeBinary` also supports `@id`/`@ref` sharing when hand-constructed. |
+
+The `writeBinary` wrapped form `{"@type":"byte[]","value":"<base64>"}` is the recommended emit when writing `byte[]` via the streaming API — it carries unambiguous type information, decodes cleanly via java-util's `MapConversions.toByteArray`, and preserves identity across `@id`/`@ref` references. The bare-base64 string form that Jackson's `writeBinary` produces is also decodable on the read side (via the smart Converter detection above), so json-io can consume Jackson output without configuration.
 
 ## Advanced Usage
 Sometimes you will run into a class that does not want to serialize.  On the read-side, this can be a class that does
