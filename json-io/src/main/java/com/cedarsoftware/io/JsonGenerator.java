@@ -3,6 +3,7 @@ package com.cedarsoftware.io;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
+import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
@@ -478,6 +479,71 @@ public abstract class JsonGenerator implements Closeable, Flushable {
             copyCurrentEvent(source);
         }
         return this;
+    }
+
+    // -------------------------------------------------------------------
+    // Bridge factories for the deprecated Writer-based JsonClassWriter API
+    // -------------------------------------------------------------------
+
+    /**
+     * Construct a "bridge" {@code JsonGenerator} that wraps an existing
+     * {@link Writer} mid-stream, positioned <b>inside an open object body</b>
+     * (the first call should be {@link #writeFieldName(String)}).
+     *
+     * <p><b>Intended only for migration scaffolding.</b> A {@link JsonClassWriter}
+     * that has migrated to the new {@code JsonGenerator}-based API needs to keep
+     * its deprecated {@code write(o, Writer, ctx)} override functional so that
+     * user subclasses written against the old API can still chain via
+     * {@code super.write(o, output, ctx)}. The conventional pattern is for the
+     * deprecated override to delegate to the new override via a bridge built by
+     * this method.
+     *
+     * <p>Application code outside of {@code JsonClassWriter} migration should
+     * use {@link JsonIo#createGenerator(Writer)} instead — that constructs a
+     * full-fledged generator with a root-empty context, suitable for hand-rolled
+     * streaming output.
+     *
+     * <p>The returned generator does <b>not</b> own {@code out} and must
+     * <b>not</b> be closed; doing so would close the underlying Writer that the
+     * caller (typically a {@code JsonWriter}) still owns. Pretty-print indent
+     * depth is initialized to zero; this means indents emitted by the bridge
+     * may not line up with the surrounding {@code JsonWriter}'s indent in deeply
+     * nested pretty-printed output, but the JSON itself remains valid. The
+     * common case (calling a migrated writer directly via the framework, no
+     * subclass override of the deprecated method) takes the new-method dispatch
+     * path and never constructs this bridge — pretty-print alignment is correct
+     * there.
+     *
+     * @param out          the Writer the deprecated override was handed; the
+     *                     bridge writes through directly to it
+     * @param writeOptions the active {@link WriteOptions} (typically obtained
+     *                     via {@code context.getWriteOptions()})
+     * @return a generator ready for {@link #writeFieldName(String)} as its
+     *         first emission
+     * @since 4.103.0
+     */
+    public static JsonGenerator deprecatedWriterBridge_insideObjectBody(Writer out, WriteOptions writeOptions) {
+        return CharStreamGenerator.bridgeInsideObjectBody(out, writeOptions, 0);
+    }
+
+    /**
+     * Construct a "bridge" {@code JsonGenerator} that wraps an existing
+     * {@link Writer} mid-stream, positioned at a <b>single value slot</b>
+     * (the first call should emit exactly one JSON value).
+     *
+     * <p>See {@link #deprecatedWriterBridge_insideObjectBody(Writer, WriteOptions)}
+     * for the design intent: this is the {@code writePrimitiveForm} counterpart,
+     * used by migrated writers whose deprecated
+     * {@code writePrimitiveForm(o, Writer, ctx)} override delegates to its new
+     * {@code writePrimitiveForm(o, JsonGenerator, ctx)} sibling.
+     *
+     * @param out          the Writer the deprecated override was handed
+     * @param writeOptions the active {@link WriteOptions}
+     * @return a generator ready to emit one value (scalar or one structure)
+     * @since 4.103.0
+     */
+    public static JsonGenerator deprecatedWriterBridge_atValueSlot(Writer out, WriteOptions writeOptions) {
+        return CharStreamGenerator.bridgeAtValueSlot(out, writeOptions);
     }
 
     // -------------------------------------------------------------------

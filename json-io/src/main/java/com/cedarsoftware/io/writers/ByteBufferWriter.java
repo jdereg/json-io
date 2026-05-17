@@ -6,9 +6,19 @@ import java.nio.ByteBuffer;
 import java.util.Base64;
 
 import com.cedarsoftware.io.JsonClassWriter;
+import com.cedarsoftware.io.JsonGenerator;
 import com.cedarsoftware.io.WriterContext;
 
 /**
+ * Custom writer for {@link ByteBuffer} — emits the buffer's remaining bytes as a single
+ * Base64-encoded {@code "value"} field inside json-io's standard {@code @type}-tagged object
+ * envelope.
+ *
+ * <p>Migrated to the new {@link JsonGenerator}-based {@link JsonClassWriter} API in
+ * json-io 4.103.0. The deprecated {@link Writer}-based override is retained as a thin
+ * delegate so that user subclasses written against the old API can still chain via
+ * {@code super.write(o, output, ctx)} without behaviour change.
+ *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
@@ -26,42 +36,52 @@ import com.cedarsoftware.io.WriterContext;
  *         limitations under the License.
  */
 public class ByteBufferWriter implements JsonClassWriter {
-    @Override
-    public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
-        ByteBuffer bytes = (ByteBuffer) obj;
 
-        // We'll store our final encoded string here
+    /**
+     * New {@link JsonGenerator}-based emission path. The framework dispatches here for
+     * writers (or user subclasses) that override this method; the deprecated
+     * {@link #write(Object, boolean, Writer, WriterContext)} override is retained
+     * only as a delegate for {@code super}-chaining compatibility.
+     */
+    @Override
+    public void write(Object obj, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
+        ByteBuffer bytes = (ByteBuffer) obj;
         String encoded;
 
         if (bytes.hasArray()) {
-            // If the buffer is array-backed, we can avoid a copy by using the array offset/length
+            // Array-backed buffer: copy exactly the [position, limit) slice without mutating the buffer.
             int offset = bytes.arrayOffset() + bytes.position();
             int length = bytes.remaining();
-
-            // Java 11+ supports an encodeToString overload with offset/length
-            // encoded = Base64.getEncoder().encodeToString(bytes.array(), offset, length);
-
-            // Make a minimal copy of exactly the slice
             byte[] slice = new byte[length];
             System.arraycopy(bytes.array(), offset, slice, 0, length);
-
             encoded = Base64.getEncoder().encodeToString(slice);
         } else {
-            // Otherwise, we have to copy
-            // Save the current position so we can restore it later
+            // Direct (non-heap) buffer: save/restore position so serialization has no side effects.
             int originalPosition = bytes.position();
             try {
                 byte[] tmp = new byte[bytes.remaining()];
                 bytes.get(tmp);
                 encoded = Base64.getEncoder().encodeToString(tmp);
             } finally {
-                // Restore the original position to avoid side-effects
                 bytes.position(originalPosition);
             }
         }
 
-        // Write "value":"<encoded>" using WriterContext API
-        context.writeFieldName("value");
-        context.writeValue(encoded);
+        gen.writeFieldName("value");
+        gen.writeString(encoded);
+    }
+
+    /**
+     * <b>Deprecated</b> bridge to the {@link JsonGenerator}-based override above.
+     * Kept so user subclasses written against the pre-4.103.0 API can still
+     * call {@code super.write(o, output, ctx)} and get the built-in behaviour.
+     * Scheduled for removal in 5.0.
+     */
+    @Override
+    @Deprecated
+    public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+        JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_insideObjectBody(
+                output, context.getWriteOptions());
+        write(obj, showType, bridge, context);
     }
 }
