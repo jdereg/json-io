@@ -5,9 +5,18 @@ import java.io.Writer;
 import java.nio.CharBuffer;
 
 import com.cedarsoftware.io.JsonClassWriter;
+import com.cedarsoftware.io.JsonGenerator;
 import com.cedarsoftware.io.WriterContext;
 
 /**
+ * Custom writer for {@link CharBuffer} — emits the buffer's remaining characters as a single
+ * {@code "value":"<text>"} field inside json-io's standard {@code @type}-tagged object envelope.
+ *
+ * <p>Migrated to the {@link JsonGenerator}-based {@link JsonClassWriter} API in
+ * json-io 4.103.0. The deprecated {@link Writer}-based override is retained as a thin
+ * delegate so user subclasses written against the old API can chain via
+ * {@code super.write(...)} unchanged.
+ *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
@@ -25,32 +34,36 @@ import com.cedarsoftware.io.WriterContext;
  *         limitations under the License.
  */
 public class CharBufferWriter implements JsonClassWriter {
-    @Override
-    public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
-        CharBuffer chars = (CharBuffer) obj;
 
-        // Extract the string content from CharBuffer
+    @Override
+    public void write(Object obj, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
+        CharBuffer chars = (CharBuffer) obj;
         String value;
         if (chars.hasArray()) {
-            // Use the backing array directly
+            // Array-backed: read the [position, limit) slice without mutating the buffer.
             int offset = chars.arrayOffset() + chars.position();
             int length = chars.remaining();
             value = new String(chars.array(), offset, length);
         } else {
-            // Save position and read into string
+            // Direct (non-heap) buffer: save/restore position so serialization is side-effect free.
             int originalPosition = chars.position();
             try {
                 char[] tmp = new char[chars.remaining()];
                 chars.get(tmp);
                 value = new String(tmp);
             } finally {
-                // Restore position to avoid side-effects
                 chars.position(originalPosition);
             }
         }
+        gen.writeFieldName("value");
+        gen.writeString(value);
+    }
 
-        // Write "value":"<string>" using WriterContext API (handles escaping)
-        context.writeFieldName("value");
-        context.writeValue(value);
+    @Override
+    @Deprecated
+    public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+        JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_insideObjectBody(
+                output, context.getWriteOptions());
+        write(obj, showType, bridge, context);
     }
 }
