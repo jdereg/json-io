@@ -5,11 +5,16 @@ import java.io.Writer;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.cedarsoftware.io.JsonClassWriter;
-import com.cedarsoftware.io.JsonWriter;
+import com.cedarsoftware.io.JsonGenerator;
 import com.cedarsoftware.io.WriterContext;
 
 /**
  * Custom writer for ReentrantReadWriteLock.
+ *
+ * <p>Migrated to the {@link JsonGenerator}-based {@link JsonClassWriter} API in
+ * json-io 4.103.0. The deprecated {@link Writer}-based overrides are retained
+ * as thin delegates so user subclasses written against the old API can chain
+ * via {@code super.write*()} unchanged.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -30,13 +35,24 @@ import com.cedarsoftware.io.WriterContext;
 public class ReentrantReadWriteLockWriter implements JsonClassWriter {
 
     @Override
-    public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+    public void write(Object obj, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
         ReentrantReadWriteLock lock = (ReentrantReadWriteLock) obj;
         if (showType) {
-            JsonWriter.writeBasicString(output, "fair");
-            output.write(':');
+            gen.writeFieldName("fair");
+            gen.writeBoolean(lock.isFair());
+        } else {
+            // Effectively unreachable: framework folds (referenced || originalShowType) into
+            // the showType param. Preserved for parity with the pre-migration behaviour.
+            gen.writeRaw(lock.isFair() ? "true" : "false");
         }
-        output.write(lock.isFair() ? "true" : "false");
+    }
+
+    @Override
+    @Deprecated
+    public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+        JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_insideObjectBody(
+                output, context.getWriteOptions());
+        write(obj, showType, bridge, context);
     }
 
     @Override
@@ -44,8 +60,17 @@ public class ReentrantReadWriteLockWriter implements JsonClassWriter {
         return true;
     }
 
-    public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+    @Override
+    public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
         ReentrantReadWriteLock lock = (ReentrantReadWriteLock) o;
-        output.write(lock.isFair() ? "true" : "false");
+        gen.writeBoolean(lock.isFair());
+    }
+
+    @Override
+    @Deprecated
+    public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+        JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(
+                output, context.getWriteOptions());
+        writePrimitiveForm(o, bridge, context);
     }
 }
