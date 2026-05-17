@@ -816,9 +816,17 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
             boolean referenced = cycleSupport && objsReferenced.containsKey(o);
 
+            // Dispatch decision: cached per writer class. See CustomWriterDispatch.
+            CustomWriterDispatch.Info dispatch = CustomWriterDispatch.forWriter(closestWriter);
+
             if (closestWriter.hasPrimitiveForm(this)) {
                 if ((!referenced && !showType) || closestWriter instanceof Writers.JsonStringWriter) {
-                    closestWriter.writePrimitiveForm(o, output, this);
+                    if (dispatch.useNewPrimitive) {
+                        CharStreamGenerator gen = CharStreamGenerator.bridgeAtValueSlot(output, writeOptions);
+                        closestWriter.writePrimitiveForm(o, gen, this);
+                    } else {
+                        closestWriter.writePrimitiveForm(o, output, this);
+                    }
                     return true;
                 }
             }
@@ -843,7 +851,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 newLine();
             }
 
-            closestWriter.write(o, showType || referenced, output, this);
+            if (dispatch.useNewWrite) {
+                CharStreamGenerator gen = CharStreamGenerator.bridgeInsideObjectBody(output, writeOptions, this.depth);
+                closestWriter.write(o, showType || referenced, gen, this);
+            } else {
+                closestWriter.write(o, showType || referenced, output, this);
+            }
 
             tabOut();
             output.write('}');

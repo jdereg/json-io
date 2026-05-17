@@ -53,6 +53,12 @@ final class CharStreamGenerator extends JsonGenerator {
     private boolean closed;
     private Runnable closeHook; // optional release-buffers callback wired by JsonIo factory
 
+    // Bridge-generator support: set to true to suppress the very next leading
+    // newline+indent emission. Used when the bridge is constructed inside an
+    // open object body where JsonWriter has already emitted the leading
+    // newline+indent for the writer's first emit. Auto-clears on use.
+    private boolean suppressNextIndent;
+
     CharStreamGenerator(Writer out, WriteOptions writeOptions) {
         this.out = out;
         // Capture all options up-front so the hot loops read finals — JIT-friendly
@@ -72,6 +78,66 @@ final class CharStreamGenerator extends JsonGenerator {
     /** Called by the {@code JsonIo.createGenerator(...)} factory to wire buffer recycling. */
     void setCloseHook(Runnable hook) {
         this.closeHook = hook;
+    }
+
+    // -------------------------------------------------------------------
+    // Bridge factory methods — for JsonWriter dispatching to custom writers
+    // that override the new JsonGenerator-based JsonClassWriter API.
+    //
+    // The bridge generator wraps JsonWriter's Writer mid-stream, seeded
+    // with the structural state that matches where JsonWriter has paused.
+    // The custom writer emits via this generator; JsonWriter resumes raw
+    // output afterward. The bridge MUST NOT be closed (would close
+    // JsonWriter's underlying Writer); the dispatch code lets it become
+    // garbage after the writer returns.
+    // -------------------------------------------------------------------
+
+    /**
+     * Build a bridge generator positioned inside an open object body, ready for the
+     * custom writer's first {@code writeFieldName(...)}. JsonWriter has already
+     * emitted the opening {@code &#123;}, any {@code @id}/{@code @type} prelude,
+     * and the leading newline+indent for the writer's first field; this generator
+     * suppresses its own leading indent on the first emit so output is not duplicated.
+     *
+     * @param out                    JsonWriter's underlying Writer
+     * @param writeOptions           same WriteOptions JsonWriter is using
+     * @param currentJsonWriterDepth JsonWriter's current indent depth (post-tabIn);
+     *                               used to align this generator's indent emissions
+     * @return a generator with stack-depth = currentJsonWriterDepth and top frame
+     *         FRAME_OBJECT_EMPTY, ready for {@code writeFieldName}
+     */
+    static CharStreamGenerator bridgeInsideObjectBody(Writer out, WriteOptions writeOptions,
+                                                      int currentJsonWriterDepth) {
+        CharStreamGenerator g = new CharStreamGenerator(out, writeOptions);
+        // Stack[0] is FRAME_ROOT_EMPTY from the constructor; flip to FRAME_ROOT_DONE
+        // because we're "inside" a root value already from JsonWriter's perspective.
+        g.contextStack[0] = FRAME_ROOT_DONE;
+        // Push placeholder frames so stack depth reaches the JsonWriter indent depth.
+        // Below-top frames are only consulted on writeEnd*; a well-behaved custom
+        // writer never pops below the entry frame, so the placeholder value doesn't
+        // matter functionally. Using FRAME_OBJECT_AFTER_VALUE is the safest neutral
+        // choice (any pop into it leaves the generator in a benign auto-comma state).
+        for (int i = 1; i < currentJsonWriterDepth; i++) {
+            g.push(FRAME_OBJECT_AFTER_VALUE);
+        }
+        g.push(FRAME_OBJECT_EMPTY);
+        // Suppress the very first leading newline+indent (JsonWriter already emitted it).
+        g.suppressNextIndent = true;
+        return g;
+    }
+
+    /**
+     * Build a bridge generator positioned at a single value slot, ready for the
+     * custom writer's {@code writePrimitiveForm} emission. The writer should call
+     * exactly one of {@code writeString/writeNumber/writeBoolean/writeNull} or one
+     * matched pair of {@code writeStart* / writeEnd*}.
+     *
+     * @param out          JsonWriter's underlying Writer
+     * @param writeOptions same WriteOptions JsonWriter is using
+     * @return a generator at depth 0 with top frame FRAME_ROOT_EMPTY
+     */
+    static CharStreamGenerator bridgeAtValueSlot(Writer out, WriteOptions writeOptions) {
+        return new CharStreamGenerator(out, writeOptions);
     }
 
     // -------------------------------------------------------------------
@@ -153,6 +219,13 @@ final class CharStreamGenerator extends JsonGenerator {
 
     private void emitIndentIfPretty() throws IOException {
         if (!prettyPrint) {
+            return;
+        }
+        // Bridge-generator entry: JsonWriter already emitted leading newline+indent
+        // before handing off to the custom writer. Suppress exactly one indent so
+        // the first writeFieldName/writeString call doesn't emit a duplicate.
+        if (suppressNextIndent) {
+            suppressNextIndent = false;
             return;
         }
         // At root depth and the first emission, no leading newline.
