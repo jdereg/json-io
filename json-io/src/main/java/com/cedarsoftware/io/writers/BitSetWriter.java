@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.BitSet;
 
+import com.cedarsoftware.io.JsonGenerator;
 import com.cedarsoftware.io.Writers;
 import com.cedarsoftware.io.WriterContext;
 
@@ -12,6 +13,11 @@ import com.cedarsoftware.io.WriterContext;
  * This produces compact JSON like: {"@type":"BitSet","value":"101010"}
  * where each character represents a bit (rightmost = bit 0).
  * Empty BitSets serialize as empty string "".
+ *
+ * <p>Migrated to the {@link JsonGenerator}-based {@link com.cedarsoftware.io.JsonClassWriter}
+ * API in json-io 4.103.0. The deprecated {@link Writer}-based override is retained as a thin
+ * delegate so user subclasses written against the old API can chain via
+ * {@code super.writePrimitiveForm(...)} unchanged.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -32,15 +38,22 @@ import com.cedarsoftware.io.WriterContext;
 public class BitSetWriter extends Writers.PrimitiveTypeWriter {
 
     @Override
-    public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+    public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
         BitSet bitSet = (BitSet) o;
         int length = bitSet.length(); // length() returns highest set bit + 1, or 0 if empty
-
-        output.write('"');
-        // Write bits from highest to lowest (MSB first, like normal binary notation)
+        StringBuilder sb = new StringBuilder(length);
+        // Bits highest to lowest (MSB first, like normal binary notation).
         for (int i = length - 1; i >= 0; i--) {
-            output.write(bitSet.get(i) ? '1' : '0');
+            sb.append(bitSet.get(i) ? '1' : '0');
         }
-        output.write('"');
+        gen.writeString(sb.toString());
+    }
+
+    @Override
+    @Deprecated
+    public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+        JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(
+                output, context.getWriteOptions());
+        writePrimitiveForm(o, bridge, context);
     }
 }

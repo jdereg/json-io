@@ -4,12 +4,18 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 
+import com.cedarsoftware.io.JsonGenerator;
 import com.cedarsoftware.io.Writers;
 import com.cedarsoftware.io.WriterContext;
 
 /**
  * Writer for AtomicIntegerArray that serializes as an array of integers.
  * This produces JSON like: {"@type":"AtomicIntegerArray","value":[1,2,3,4,5]}
+ *
+ * <p>Migrated to the {@link JsonGenerator}-based {@link com.cedarsoftware.io.JsonClassWriter}
+ * API in json-io 4.103.0. The deprecated {@link Writer}-based override is retained as a thin
+ * delegate so user subclasses written against the old API can chain via
+ * {@code super.writePrimitiveForm(...)} unchanged.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -30,17 +36,21 @@ import com.cedarsoftware.io.WriterContext;
 public class AtomicIntegerArrayWriter extends Writers.PrimitiveTypeWriter {
 
     @Override
-    public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+    public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
         AtomicIntegerArray array = (AtomicIntegerArray) o;
         int length = array.length();
-
-        output.write('[');
+        gen.writeStartArray();
         for (int i = 0; i < length; i++) {
-            if (i > 0) {
-                output.write(',');
-            }
-            output.write(Integer.toString(array.get(i)));
+            gen.writeNumber(array.get(i));
         }
-        output.write(']');
+        gen.writeEndArray();
+    }
+
+    @Override
+    @Deprecated
+    public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+        JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(
+                output, context.getWriteOptions());
+        writePrimitiveForm(o, bridge, context);
     }
 }

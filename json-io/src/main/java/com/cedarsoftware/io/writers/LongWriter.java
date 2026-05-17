@@ -3,10 +3,25 @@ package com.cedarsoftware.io.writers;
 import java.io.IOException;
 import java.io.Writer;
 
+import com.cedarsoftware.io.JsonGenerator;
 import com.cedarsoftware.io.WriterContext;
 import com.cedarsoftware.io.Writers;
 
 /**
+ * Custom writer for {@link Long}.
+ * <p>
+ * Honors the active {@link com.cedarsoftware.io.WriteOptions#isWriteLongsAsStrings()} switch:
+ * when {@code true} the long is emitted as a quoted JSON string (avoids the loss of precision
+ * downstream JavaScript clients can suffer at values beyond {@code 2^53}); when {@code false}
+ * (the default) it is emitted as a bare numeric literal. Also honors {@code @IoFormat}
+ * patterns when present via {@link Writers#writeWithStringFormat} /
+ * {@link Writers#writeNumericWithFieldFormat}.
+ *
+ * <p>Migrated to the {@link JsonGenerator}-based {@link com.cedarsoftware.io.JsonClassWriter}
+ * API in json-io 4.103.0. The deprecated {@link Writer}-based override is retained as a thin
+ * delegate so user subclasses written against the old API can chain via
+ * {@code super.writePrimitiveForm(...)} unchanged.
+ *
  * @author Kenny Partlow (kpartlow@gmail.com)
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -25,26 +40,25 @@ import com.cedarsoftware.io.Writers;
  *         limitations under the License.
  */
 public class LongWriter extends Writers.PrimitiveTypeWriter {
-    /**
-     * Writes the primitive form of a Long value.
-     * <p>
-     * Note: This is a callback method called by the framework where comma handling
-     * is already managed by the caller. Therefore, we write directly to output rather
-     * than using context.writeValue() which would add unwanted comma management.
-     * </p>
-     */
-    public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-        if (Writers.writeWithStringFormat(o, output, context)) { return; }
-        if (Writers.writeNumericWithFieldFormat(o, output, context)) { return; }
-        String value = o.toString();
+
+    @Override
+    public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
+        if (Writers.writeWithStringFormat(o, gen, context)) { return; }
+        if (Writers.writeNumericWithFieldFormat(o, gen, context)) { return; }
+        long value = ((Long) o).longValue();
         if (context.getWriteOptions().isWriteLongsAsStrings()) {
-            // Write long as quoted string for JavaScript compatibility
-            output.write('"');
-            output.write(value);
-            output.write('"');
+            // Quoted string form for JavaScript precision compatibility.
+            gen.writeString(Long.toString(value));
         } else {
-            // Write long as unquoted number
-            output.write(value);
+            gen.writeNumber(value);
         }
+    }
+
+    @Override
+    @Deprecated
+    public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+        JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(
+                output, context.getWriteOptions());
+        writePrimitiveForm(o, bridge, context);
     }
 }
