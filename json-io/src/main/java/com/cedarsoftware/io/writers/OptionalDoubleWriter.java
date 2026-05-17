@@ -5,7 +5,7 @@ import java.io.Writer;
 import java.util.OptionalDouble;
 
 import com.cedarsoftware.io.JsonClassWriter;
-import com.cedarsoftware.io.JsonWriter;
+import com.cedarsoftware.io.JsonGenerator;
 import com.cedarsoftware.io.WriteOptions;
 import com.cedarsoftware.io.WriterContext;
 
@@ -16,6 +16,15 @@ import com.cedarsoftware.io.WriterContext;
  * present → the bare double value. Legacy object form is used when
  * {@link WriteOptions#isWriteOptionalAsObject()} is true, or when the framework
  * needs to attach type/id metadata.
+ *
+ * <p>Migrated to the {@link JsonGenerator}-based {@link JsonClassWriter} API in
+ * json-io 4.103.0. The deprecated {@link Writer}-based overrides are retained as
+ * thin delegates so user subclasses written against the old API can chain via
+ * {@code super.write*()} unchanged. NaN / Infinity values now honour the active
+ * {@link WriteOptions#isAllowNanAndInfinity()} policy via the generator
+ * (previously these values would be emitted as bare {@code NaN}/{@code Infinity}
+ * tokens regardless of policy — a latent bug that produced invalid JSON in
+ * strict mode).
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -36,19 +45,22 @@ import com.cedarsoftware.io.WriterContext;
 public class OptionalDoubleWriter implements JsonClassWriter {
 
     @Override
-    public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+    public void write(Object obj, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
         OptionalDouble opt = (OptionalDouble) obj;
-
-        JsonWriter.writeBasicString(output, "present");
-        output.write(':');
-        output.write(opt.isPresent() ? "true" : "false");
-
+        gen.writeFieldName("present");
+        gen.writeBoolean(opt.isPresent());
         if (opt.isPresent()) {
-            output.write(',');
-            JsonWriter.writeBasicString(output, "value");
-            output.write(':');
-            output.write(Double.toString(opt.getAsDouble()));
+            gen.writeFieldName("value");
+            gen.writeNumber(opt.getAsDouble());
         }
+    }
+
+    @Override
+    @Deprecated
+    public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+        JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_insideObjectBody(
+                output, context.getWriteOptions());
+        write(obj, showType, bridge, context);
     }
 
     @Override
@@ -58,12 +70,20 @@ public class OptionalDoubleWriter implements JsonClassWriter {
     }
 
     @Override
-    public void writePrimitiveForm(Object obj, Writer output, WriterContext context) throws IOException {
+    public void writePrimitiveForm(Object obj, JsonGenerator gen, WriterContext context) throws IOException {
         OptionalDouble opt = (OptionalDouble) obj;
         if (opt.isPresent()) {
-            output.write(Double.toString(opt.getAsDouble()));
+            gen.writeNumber(opt.getAsDouble());
         } else {
-            output.write("null");
+            gen.writeNull();
         }
+    }
+
+    @Override
+    @Deprecated
+    public void writePrimitiveForm(Object obj, Writer output, WriterContext context) throws IOException {
+        JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(
+                output, context.getWriteOptions());
+        writePrimitiveForm(obj, bridge, context);
     }
 }

@@ -5,7 +5,7 @@ import java.io.Writer;
 import java.util.Optional;
 
 import com.cedarsoftware.io.JsonClassWriter;
-import com.cedarsoftware.io.JsonWriter;
+import com.cedarsoftware.io.JsonGenerator;
 import com.cedarsoftware.io.WriteOptions;
 import com.cedarsoftware.io.WriterContext;
 
@@ -18,6 +18,14 @@ import com.cedarsoftware.io.WriterContext;
  * the legacy json-io object form is used instead ({@code {"present":true,"value":X}} or
  * {@code {"present":false}}). The legacy form is also emitted whenever type info must be
  * shown for polymorphic context or when the framework has attached an {@code @id} marker.
+ *
+ * <p>Migrated to the {@link JsonGenerator}-based {@link JsonClassWriter} API in
+ * json-io 4.103.0. The deprecated {@link Writer}-based overrides are retained as
+ * thin delegates so user subclasses written against the old API can chain via
+ * {@code super.write*()} unchanged. The contained-value recursion still goes
+ * through {@link WriterContext#writeImpl(Object, boolean)} (the tree-walker
+ * callback) — that path writes to the underlying Writer directly, bypassing
+ * the bridge generator's structural state but producing the same bytes.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -38,21 +46,25 @@ import com.cedarsoftware.io.WriterContext;
 public class OptionalWriter implements JsonClassWriter {
 
     @Override
-    public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
-        // The framework wraps this output in { ... } and has already emitted @type if showType is true.
-        // Our job is to emit the body: valid JSON key:value pairs.
+    public void write(Object obj, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
         Optional<?> opt = (Optional<?>) obj;
-
-        JsonWriter.writeBasicString(output, "present");
-        output.write(':');
-        output.write(opt.isPresent() ? "true" : "false");
-
+        gen.writeFieldName("present");
+        gen.writeBoolean(opt.isPresent());
         if (opt.isPresent()) {
-            output.write(',');
-            JsonWriter.writeBasicString(output, "value");
-            output.write(':');
+            gen.writeFieldName("value");
+            // Recurse through the tree-walker so custom writers, cycle tracking, and @type
+            // policy apply uniformly. The tree-walker writes to the underlying Writer
+            // directly (the same stream the bridge generator wraps).
             context.writeImpl(opt.get(), true);
         }
+    }
+
+    @Override
+    @Deprecated
+    public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+        JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_insideObjectBody(
+                output, context.getWriteOptions());
+        write(obj, showType, bridge, context);
     }
 
     @Override
@@ -65,14 +77,22 @@ public class OptionalWriter implements JsonClassWriter {
     }
 
     @Override
-    public void writePrimitiveForm(Object obj, Writer output, WriterContext context) throws IOException {
+    public void writePrimitiveForm(Object obj, JsonGenerator gen, WriterContext context) throws IOException {
         Optional<?> opt = (Optional<?>) obj;
         if (opt.isPresent()) {
-            // Recurse to write the contained value using the full dispatch chain
-            // (honors custom writers, cycle tracking, etc.)
+            // Recurse to write the contained value via the tree-walker (honors custom
+            // writers, cycle tracking, etc.). Writes to the underlying Writer directly.
             context.writeImpl(opt.get(), true);
         } else {
-            output.write("null");
+            gen.writeNull();
         }
+    }
+
+    @Override
+    @Deprecated
+    public void writePrimitiveForm(Object obj, Writer output, WriterContext context) throws IOException {
+        JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(
+                output, context.getWriteOptions());
+        writePrimitiveForm(obj, bridge, context);
     }
 }
