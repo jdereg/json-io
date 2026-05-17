@@ -74,9 +74,11 @@ public class Writers {
     }
 
     /**
+     * <b>Deprecated</b> — use {@link #writeWithFieldFormat(Object, JsonGenerator, WriterContext)}.
      * If the WriterContext has a field format pattern and the value is a TemporalAccessor,
      * write it using the custom pattern and return true. Otherwise return false.
      */
+    @Deprecated
     static boolean writeWithFieldFormat(Object o, Writer output, WriterContext context) throws IOException {
         String pat = context.getFieldFormatPattern();
         if (pat != null && o instanceof TemporalAccessor) {
@@ -88,10 +90,29 @@ public class Writers {
     }
 
     /**
+     * {@link JsonGenerator}-based form of {@link #writeWithFieldFormat(Object, Writer, WriterContext)}.
+     * If the WriterContext has a field format pattern and the value is a TemporalAccessor,
+     * write it using the custom pattern and return true. Otherwise return false.
+     *
+     * @since 4.103.0
+     */
+    static boolean writeWithFieldFormat(Object o, JsonGenerator gen, WriterContext context) throws IOException {
+        String pat = context.getFieldFormatPattern();
+        if (pat != null && o instanceof TemporalAccessor) {
+            DateTimeFormatter fmt = getFormatter(pat);
+            gen.writeString(fmt.format((TemporalAccessor) o));
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * <b>Deprecated</b> — use {@link #writeWithStringFormat(Object, JsonGenerator, WriterContext)}.
      * If the WriterContext has a field format pattern containing '%' (C-style String.format),
      * format the value using String.format() and write as a quoted JSON string.
      * Returns true if handled, false otherwise.
      */
+    @Deprecated
     public static boolean writeWithStringFormat(Object o, Writer output, WriterContext context) throws IOException {
         String pat = context.getFieldFormatPattern();
         if (pat != null && pat.indexOf('%') >= 0) {
@@ -102,14 +123,50 @@ public class Writers {
     }
 
     /**
+     * {@link JsonGenerator}-based form of {@link #writeWithStringFormat(Object, Writer, WriterContext)}.
+     * If the WriterContext has a field format pattern containing '%' (C-style String.format),
+     * format the value using String.format() and write as a quoted JSON string.
+     * Returns true if handled, false otherwise.
+     *
+     * @since 4.103.0
+     */
+    public static boolean writeWithStringFormat(Object o, JsonGenerator gen, WriterContext context) throws IOException {
+        String pat = context.getFieldFormatPattern();
+        if (pat != null && pat.indexOf('%') >= 0) {
+            gen.writeString(String.format(pat, o));
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * <b>Deprecated</b> — use {@link #writeNumericWithFieldFormat(Object, JsonGenerator, WriterContext)}.
      * If the WriterContext has a field format pattern and the value is a Number,
      * format it using DecimalFormat and write as a quoted JSON string. Returns true if handled.
      */
+    @Deprecated
     public static boolean writeNumericWithFieldFormat(Object o, Writer output, WriterContext context) throws IOException {
         String pat = context.getFieldFormatPattern();
         if (pat != null && o instanceof Number) {
             DecimalFormat df = new DecimalFormat(pat);
             JsonWriter.writeBasicString(output, df.format(o));
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * {@link JsonGenerator}-based form of {@link #writeNumericWithFieldFormat(Object, Writer, WriterContext)}.
+     * If the WriterContext has a field format pattern and the value is a Number,
+     * format it using DecimalFormat and write as a quoted JSON string. Returns true if handled.
+     *
+     * @since 4.103.0
+     */
+    public static boolean writeNumericWithFieldFormat(Object o, JsonGenerator gen, WriterContext context) throws IOException {
+        String pat = context.getFieldFormatPattern();
+        if (pat != null && o instanceof Number) {
+            DecimalFormat df = new DecimalFormat(pat);
+            gen.writeString(df.format(o));
             return true;
         }
         return false;
