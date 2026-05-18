@@ -848,48 +848,100 @@ public class Writers {
     }
 
     public static class LocaleWriter extends PrimitiveTypeWriter {
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
             Locale locale = (Locale) o;
-            JsonWriter.writeJsonUtf8String(output, locale.toLanguageTag());
+            gen.writeString(locale.toLanguageTag());
+        }
+
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
         }
     }
 
     public static class BigIntegerWriter extends PrimitiveTypeWriter {
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            if (writeWithStringFormat(o, output, context)) { return; }
-            if (writeNumericWithFieldFormat(o, output, context)) { return; }
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, gen, context)) { return; }
+            if (writeNumericWithFieldFormat(o, gen, context)) { return; }
             BigInteger big = (BigInteger) o;
-            JsonWriter.writeBasicString(output, big.toString(10));
+            // Emit as a quoted JSON string (not a number literal) so JS / Jackson clients
+            // that store numbers as doubles do not lose precision on 19+ digit BigInteger.
+            gen.writeString(big.toString(10));
+        }
+
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
         }
     }
 
     public static class PatternWriter extends PrimitiveTypeWriter {
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
             Pattern pattern = (Pattern) o;
-            JsonWriter.writeJsonUtf8String(output, pattern.pattern());
+            gen.writeString(pattern.pattern());
+        }
+
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
         }
     }
 
     public static class CurrencyWriter extends PrimitiveTypeWriter {
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
             Currency currency = (Currency) o;
-            JsonWriter.writeJsonUtf8String(output, currency.getCurrencyCode());
+            gen.writeString(currency.getCurrencyCode());
+        }
+
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
         }
     }
 
     public static class BigDecimalWriter extends PrimitiveTypeWriter {
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            if (writeWithStringFormat(o, output, context)) { return; }
-            if (writeNumericWithFieldFormat(o, output, context)) { return; }
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, gen, context)) { return; }
+            if (writeNumericWithFieldFormat(o, gen, context)) { return; }
             BigDecimal big = (BigDecimal) o;
-            JsonWriter.writeBasicString(output, big.toPlainString());
+            // Emit as a quoted JSON string (not a number literal) so JS / Jackson clients
+            // that store numbers as doubles do not lose precision on arbitrary-scale BigDecimal.
+            gen.writeString(big.toPlainString());
+        }
+
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
         }
     }
 
     public static class UUIDWriter extends PrimitiveTypeWriter {
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
             UUID uuid = (UUID) o;
-            JsonWriter.writeBasicString(output, uuid.toString());
+            gen.writeString(uuid.toString());
+        }
+
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
         }
     }
 }
