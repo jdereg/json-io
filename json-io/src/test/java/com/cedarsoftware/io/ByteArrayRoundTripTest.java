@@ -354,4 +354,43 @@ class ByteArrayRoundTripTest {
         assertTrue(!json.contains("\"@type\":\"byte[]\""),
                 "should NOT contain @type tag under showTypeInfoNever(), got: " + json);
     }
+
+    @Test
+    void writeBinary_sideBySide_defaultVsShowTypeInfoNever_producesDistinctJson() throws IOException {
+        // Head-to-head: same payload, same emission code, only the WriteOptions
+        // policy differs. The resulting JSON MUST differ in the expected way —
+        // proves the policy is actually being read at writeBinary call time.
+        byte[] payload = "policy-honored".getBytes(StandardCharsets.UTF_8);
+        String base64 = java.util.Base64.getEncoder().encodeToString(payload);
+
+        // Run 1: default options (showTypeInfoMinimal) — expect wrapped form.
+        StringWriter defaultOut = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(defaultOut)) {
+            g.writeStartObject().writeFieldName("data");
+            g.writeBinary(payload);
+            g.writeEndObject();
+        }
+        String defaultJson = defaultOut.toString();
+
+        // Run 2: explicit showTypeInfoNever() — expect bare base64.
+        WriteOptions neverOpts = new WriteOptionsBuilder().showTypeInfoNever().build();
+        StringWriter neverOut = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(neverOut, neverOpts)) {
+            g.writeStartObject().writeFieldName("data");
+            g.writeBinary(payload);
+            g.writeEndObject();
+        }
+        String neverJson = neverOut.toString();
+
+        // The two outputs MUST be different — same input, same code, different policy.
+        assertTrue(!defaultJson.equals(neverJson),
+                "default and showTypeInfoNever() must produce different JSON; both were: " + defaultJson);
+
+        // Exact-shape pins so any future refactor that breaks the policy honoring
+        // fails this test loudly rather than producing subtly-wrong JSON.
+        assertEquals("{\"data\":{\"@type\":\"byte[]\",\"value\":\"" + base64 + "\"}}", defaultJson,
+                "default mode (showTypeInfoMinimal) should produce wrapped form");
+        assertEquals("{\"data\":\"" + base64 + "\"}", neverJson,
+                "showTypeInfoNever() mode should produce bare base64 string");
+    }
 }
