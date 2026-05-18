@@ -502,18 +502,21 @@ public class Writers {
             this(ZoneId.systemDefault());
         }
 
-        public void writePrimitiveForm(Object o, Writer output, WriterContext writerContext) throws IOException {
-            if (writeWithStringFormat(o, output, writerContext)) { return; }
-            if (writeWithFieldFormat(o, output, writerContext)) { return; }
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext writerContext) throws IOException {
+            if (writeWithStringFormat(o, gen, writerContext)) { return; }
+            if (writeWithFieldFormat(o, gen, writerContext)) { return; }
             LocalDate localDate = (LocalDate) o;
             ZonedDateTime zonedDateTime = localDate.atStartOfDay(zoneId);
-
-            // Convert LocalDateTime to Instant using UTC offset
             Instant instant = zonedDateTime.toInstant();
+            gen.writeNumber(instant.toEpochMilli());
+        }
 
-            // Get epoch milliseconds from the Instant
-            long epochMilli = instant.toEpochMilli();
-            output.write(Long.toString(epochMilli));
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext writerContext) throws IOException {
+            WriteOptions options = (writerContext != null) ? writerContext.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, writerContext);
         }
     }
 
@@ -526,11 +529,19 @@ public class Writers {
             return "localDate";
         }
 
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            if (writeWithStringFormat(o, output, context)) { return; }
-            if (writeWithFieldFormat(o, output, context)) { return; }
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, gen, context)) { return; }
+            if (writeWithFieldFormat(o, gen, context)) { return; }
             LocalDate ld = (LocalDate) o;
-            JsonWriter.writeJsonUtf8String(output, ld == null ? null : FORMATTER.format(ld));
+            gen.writeString(ld == null ? null : FORMATTER.format(ld));
+        }
+
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
         }
     }
 
@@ -543,11 +554,19 @@ public class Writers {
             return "localTime";
         }
 
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            if (writeWithStringFormat(o, output, context)) { return; }
-            if (writeWithFieldFormat(o, output, context)) { return; }
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, gen, context)) { return; }
+            if (writeWithFieldFormat(o, gen, context)) { return; }
             LocalTime lt = (LocalTime) o;
-            JsonWriter.writeJsonUtf8String(output, lt == null ? null : FORMATTER.format(lt));
+            gen.writeString(lt == null ? null : FORMATTER.format(lt));
+        }
+
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
         }
     }
 
@@ -560,11 +579,19 @@ public class Writers {
             return "localDateTime";
         }
 
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            if (writeWithStringFormat(o, output, context)) { return; }
-            if (writeWithFieldFormat(o, output, context)) { return; }
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, gen, context)) { return; }
+            if (writeWithFieldFormat(o, gen, context)) { return; }
             LocalDateTime ldt = (LocalDateTime) o;
-            JsonWriter.writeJsonUtf8String(output, ldt == null ? null : FORMATTER.format(ldt));
+            gen.writeString(ldt == null ? null : FORMATTER.format(ldt));
+        }
+
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
         }
     }
 
@@ -580,19 +607,27 @@ public class Writers {
             return "zonedDateTime";
         }
 
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            if (writeWithStringFormat(o, output, context)) { return; }
-            if (writeWithFieldFormat(o, output, context)) { return; }
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, gen, context)) { return; }
+            if (writeWithFieldFormat(o, gen, context)) { return; }
             ZonedDateTime zdt = (ZonedDateTime) o;
             if (zdt == null) {
-                JsonWriter.writeBasicString(output, null);
+                gen.writeString(null);
                 return;
             }
             // If it's UTC/Z, convert to explicit UTC zone
             if (zdt.getZone().equals(ZoneOffset.UTC) || zdt.getZone().getId().equals("Z")) {
                 zdt = zdt.withZoneSameInstant(ZoneId.of("UTC"));
             }
-            JsonWriter.writeJsonUtf8String(output, FORMATTER.format(zdt));
+            gen.writeString(FORMATTER.format(zdt));
+        }
+
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
         }
     }
 
@@ -607,9 +642,17 @@ public class Writers {
             return "yearMonth";
         }
 
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
             YearMonth ym = (YearMonth) o;
-            JsonWriter.writeJsonUtf8String(output, ym == null ? null : FORMATTER.format(ym));
+            gen.writeString(ym == null ? null : FORMATTER.format(ym));
+        }
+
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
         }
     }
 
@@ -618,9 +661,17 @@ public class Writers {
             return "monthDay";
         }
 
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
             MonthDay md = (MonthDay) o;
-            JsonWriter.writeJsonUtf8String(output, md == null ? null : md.toString());
+            gen.writeString(md == null ? null : md.toString());
+        }
+
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
         }
     }
 
@@ -633,11 +684,19 @@ public class Writers {
             return "offsetTime";
         }
 
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            if (writeWithStringFormat(o, output, context)) { return; }
-            if (writeWithFieldFormat(o, output, context)) { return; }
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, gen, context)) { return; }
+            if (writeWithFieldFormat(o, gen, context)) { return; }
             OffsetTime ot = (OffsetTime) o;
-            JsonWriter.writeJsonUtf8String(output, ot == null ? null : FORMATTER.format(ot));
+            gen.writeString(ot == null ? null : FORMATTER.format(ot));
+        }
+
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
         }
     }
 
@@ -650,11 +709,19 @@ public class Writers {
             return "offsetDateTime";
         }
 
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            if (writeWithStringFormat(o, output, context)) { return; }
-            if (writeWithFieldFormat(o, output, context)) { return; }
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, gen, context)) { return; }
+            if (writeWithFieldFormat(o, gen, context)) { return; }
             OffsetDateTime odt = (OffsetDateTime) o;
-            JsonWriter.writeJsonUtf8String(output, odt == null ? null : FORMATTER.format(odt));
+            gen.writeString(odt == null ? null : FORMATTER.format(odt));
+        }
+
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
         }
     }
 
@@ -663,16 +730,24 @@ public class Writers {
             return "instant";
         }
 
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            if (writeWithStringFormat(o, output, context)) { return; }
-            String pat = context.getFieldFormatPattern();
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, gen, context)) { return; }
+            String pat = (context != null) ? context.getFieldFormatPattern() : null;
             if (pat != null) {
                 DateTimeFormatter fmt = getFormatter(pat).withZone(ZoneOffset.UTC);
-                JsonWriter.writeJsonUtf8String(output, fmt.format((Instant) o));
+                gen.writeString(fmt.format((Instant) o));
                 return;
             }
             Instant instant = (Instant) o;
-            JsonWriter.writeJsonUtf8String(output, instant == null ? null : instant.toString());
+            gen.writeString(instant == null ? null : instant.toString());
+        }
+
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
         }
     }
 
@@ -681,9 +756,17 @@ public class Writers {
             return "zoneOffset";
         }
 
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
             ZoneOffset zo = (ZoneOffset) o;
-            JsonWriter.writeJsonUtf8String(output, zo == null ? null : zo.toString());
+            gen.writeString(zo == null ? null : zo.toString());
+        }
+
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
         }
     }
 
@@ -692,9 +775,17 @@ public class Writers {
             return "duration";
         }
 
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
             Duration d = (Duration) o;
-            JsonWriter.writeJsonUtf8String(output, d == null ? null : d.toString());
+            gen.writeString(d == null ? null : d.toString());
+        }
+
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
         }
     }
 
@@ -703,9 +794,17 @@ public class Writers {
             return "period";
         }
 
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
             Period p = (Period) o;
-            JsonWriter.writeJsonUtf8String(output, p == null ? null : p.toString());
+            gen.writeString(p == null ? null : p.toString());
+        }
+
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
         }
     }
 
@@ -714,9 +813,16 @@ public class Writers {
             return "year";
         }
 
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
+            gen.writeString(Converter.convert(o, String.class));
+        }
+
+        @Override
+        @Deprecated
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            String formatted = Converter.convert(o, String.class);
-            JsonWriter.writeJsonUtf8String(output, formatted);
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
         }
     }
 
@@ -725,9 +831,16 @@ public class Writers {
             return "timestamp";
         }
 
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
+            gen.writeString(Converter.convert(o, String.class));
+        }
+
+        @Override
+        @Deprecated
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            String formatted = Converter.convert(o, String.class);
-            JsonWriter.writeJsonUtf8String(output, formatted);
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
         }
     }
 
