@@ -5,12 +5,22 @@ import java.io.Writer;
 import java.util.Map;
 
 import com.cedarsoftware.io.JsonClassWriter;
+import com.cedarsoftware.io.JsonGenerator;
 import com.cedarsoftware.io.WriterContext;
 import com.cedarsoftware.util.CompactMap;
 import com.cedarsoftware.util.CompactSet;
 
 /**
  * Writer for CompactSet instances that produces a shortened configuration format.
+ *
+ * <p>Migrated to the {@link JsonGenerator}-based {@link JsonClassWriter} API in
+ * json-io 4.103.0. Field-level emission of {@code "config"} uses the generator;
+ * the {@code "data"} array is emitted through {@link WriterContext}'s semantic
+ * API so the tree-walker's {@link com.cedarsoftware.io.JsonWriter} contextStack
+ * tracks element commas during the recursive {@code writeValue(element)} loop.
+ * The deprecated {@link Writer}-based override is retained as a thin delegate
+ * so user subclasses written against the old API can chain via
+ * {@code super.write(...)} unchanged.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -29,24 +39,20 @@ import com.cedarsoftware.util.CompactSet;
  *         limitations under the License.
  */
 public class CompactSetWriter implements JsonClassWriter {
-    @Override
-    public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
-        CompactSet set = (CompactSet) obj;
 
-        // Get configuration directly from the set
+    @Override
+    public void write(Object obj, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
+        CompactSet set = (CompactSet) obj;
         Map<String, Object> config = set.getConfig();
 
-        // Extract configuration values
         boolean caseSensitive = (Boolean) config.get(CompactMap.CASE_SENSITIVE);
         int compactSize = (Integer) config.get(CompactMap.COMPACT_SIZE);
         String ordering = (String) config.get(CompactMap.ORDERING);
 
-        // Generate shortened config string: CS|CI/S{size}/{order}
         StringBuilder configStr = new StringBuilder();
         configStr.append(caseSensitive ? "CS" : "CI").append('/');
         configStr.append('S').append(compactSize).append('/');
 
-        // Map ordering codes to short form
         String orderCode;
         switch (ordering) {
             case CompactMap.SORTED:
@@ -63,19 +69,25 @@ public class CompactSetWriter implements JsonClassWriter {
         }
         configStr.append(orderCode);
 
-        // Write shortened config field using semantic API
-        context.writeFieldName("config");
-        context.writeValue(configStr.toString());
+        // "config" field via the JsonGenerator
+        gen.writeFieldName("config");
+        gen.writeString(configStr.toString());
 
-        // Write data array using semantic API (automatically handles comma before field name)
+        // "data" array via the tree-walker's semantic API — writeValue() handles
+        // element commas via JsonWriter's contextStack during recursion.
         context.writeArrayFieldStart("data");
-
-        // Write elements - writeValue() handles commas automatically!
         for (Object element : set) {
             context.writeValue(element);
         }
-
         context.writeEndArray();
+    }
+
+    @Override
+    @Deprecated
+    public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+        JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_insideObjectBody(
+                output, context.getWriteOptions());
+        write(obj, showType, bridge, context);
     }
 
     @Override

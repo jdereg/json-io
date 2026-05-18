@@ -6,12 +6,24 @@ import java.util.Map;
 import java.util.Set;
 
 import com.cedarsoftware.io.JsonClassWriter;
-import com.cedarsoftware.io.JsonWriter;
+import com.cedarsoftware.io.JsonGenerator;
 import com.cedarsoftware.io.WriterContext;
 import com.cedarsoftware.util.CompactMap;
 
 /**
  * Writer for CompactMap instances that produces a shortened configuration format.
+ *
+ * <p>Migrated to the {@link JsonGenerator}-based {@link JsonClassWriter} API in
+ * json-io 4.103.0. The {@code "config"} field is emitted via the generator; the
+ * {@code "data"} sub-object (whether emitted as a JSON object of string keys or
+ * as {@code @keys}/{@code @items} arrays) is emitted through the
+ * {@link WriterContext} semantic API so the tree-walker's
+ * {@link com.cedarsoftware.io.JsonWriter} contextStack handles all structural
+ * commas during the recursive {@code writeImpl} calls. Replaces the previous
+ * hand-rolled {@code output.write(...)} punctuation. The deprecated
+ * {@link Writer}-based override is retained as a thin delegate so user
+ * subclasses written against the old API can chain via {@code super.write(...)}
+ * unchanged.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -30,11 +42,11 @@ import com.cedarsoftware.util.CompactMap;
  *         limitations under the License.
  */
 public class CompactMapWriter implements JsonClassWriter {
-    @Override
-    public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
-        CompactMap map = (CompactMap) obj;
 
-        // Get configuration using public API
+    @Override
+    @SuppressWarnings("unchecked")
+    public void write(Object obj, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
+        CompactMap map = (CompactMap) obj;
         Map<String, Object> config = map.getConfig();
         boolean caseSensitive = (Boolean) config.get(CompactMap.CASE_SENSITIVE);
         int compactSize = (Integer) config.get(CompactMap.COMPACT_SIZE);
@@ -43,14 +55,12 @@ public class CompactMapWriter implements JsonClassWriter {
         Class<?> mapImplClass = (Class<?>) config.get(CompactMap.MAP_TYPE);
         String mapImplClassName = mapImplClass.getName();
 
-        // Generate shortened config string: mapClassFullName/CS|CI/S{size}/{singleKey}/{order}
         StringBuilder configStr = new StringBuilder();
         configStr.append(mapImplClassName).append('/');
         configStr.append(caseSensitive ? "CS" : "CI").append('/');
         configStr.append('S').append(compactSize).append('/');
         configStr.append(singleKey == null ? "-" : singleKey).append('/');
 
-        // Map ordering codes to short form
         String orderCode;
         switch (ordering) {
             case CompactMap.SORTED:
@@ -67,65 +77,53 @@ public class CompactMapWriter implements JsonClassWriter {
         }
         configStr.append(orderCode);
 
-        // Write shortened config
-        output.write("\"config\":\"" + configStr + "\",");
+        // "config" field via the JsonGenerator
+        gen.writeFieldName("config");
+        gen.writeString(configStr.toString());
 
-        // Write data section
-        output.write("\"data\":{");
-
-        // Check if all keys are strings and not forcing two arrays
-        boolean allStringKeys = true;
-        if (!context.getWriteOptions().isForceMapOutputAsTwoArrays()) {
-            Set<Map.Entry<Object, Object>> entries = ((Map<Object, Object>) map).entrySet();
+        // "data" sub-object via the tree-walker's semantic API — JsonWriter's
+        // contextStack will handle structural commas for the inner-object fields.
+        Set<Map.Entry<Object, Object>> entries = ((Map<Object, Object>) map).entrySet();
+        boolean allStringKeys = !context.getWriteOptions().isForceMapOutputAsTwoArrays();
+        if (allStringKeys) {
             for (Map.Entry<Object, Object> entry : entries) {
                 if (!(entry.getKey() instanceof String)) {
                     allStringKeys = false;
                     break;
                 }
             }
-        } else {
-            allStringKeys = false;  // Force array format if setting is enabled
         }
 
-        // Write entries in appropriate format
+        context.writeObjectFieldStart("data");
         if (allStringKeys) {
-            // Standard JSON object format for string keys
-            boolean first = true;
-            for (Map.Entry<Object, Object> entry : ((Map<Object, Object>) map).entrySet()) {
-                if (first) {
-                    first = false;
-                } else {
-                    output.write(',');
-                }
-                String key = (String) entry.getKey();
-                JsonWriter.writeJsonUtf8String(output, key);
-                output.write(':');
+            for (Map.Entry<Object, Object> entry : entries) {
+                context.writeFieldName((String) entry.getKey());
                 context.writeImpl(entry.getValue(), showType);
             }
         } else {
-            // Use json-io's standard @keys/@items format for non-string keys
-            Set<Map.Entry<Object, Object>> entries = ((Map<Object, Object>) map).entrySet();
             int size = entries.size();
             Object[] keys = new Object[size];
             Object[] values = new Object[size];
-
             int i = 0;
             for (Map.Entry<Object, Object> entry : entries) {
                 keys[i] = entry.getKey();
                 values[i] = entry.getValue();
                 i++;
             }
-
-            // Write @keys array
-            output.write("\"@keys\":");
+            context.writeFieldName("@keys");
             context.writeImpl(keys, showType);
-
-            // Write @items array
-            output.write(",\"@items\":");
+            context.writeFieldName("@items");
             context.writeImpl(values, showType);
         }
+        context.writeEndObject();
+    }
 
-        output.write("}");
+    @Override
+    @Deprecated
+    public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+        JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_insideObjectBody(
+                output, context.getWriteOptions());
+        write(obj, showType, bridge, context);
     }
 
     @Override

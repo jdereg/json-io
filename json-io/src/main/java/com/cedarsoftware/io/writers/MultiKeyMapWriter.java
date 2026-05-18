@@ -4,11 +4,23 @@ import java.io.IOException;
 import java.io.Writer;
 
 import com.cedarsoftware.io.JsonClassWriter;
+import com.cedarsoftware.io.JsonGenerator;
 import com.cedarsoftware.io.WriterContext;
 import com.cedarsoftware.util.MultiKeyMap;
 
 /**
  * Writer for MultiKeyMap instances that produces a shortened configuration format.
+ *
+ * <p>Migrated to the {@link JsonGenerator}-based {@link JsonClassWriter} API in
+ * json-io 4.103.0. The {@code "config"} field is emitted via the generator;
+ * the {@code "entries"} array (each element a {@code {"keys":...,"value":...}}
+ * sub-object containing arbitrary objects) is emitted through the
+ * {@link WriterContext} semantic API so the tree-walker's
+ * {@link com.cedarsoftware.io.JsonWriter} contextStack tracks structural
+ * state during the recursive {@code writeImpl} / {@code writeObjectField}
+ * calls. The deprecated {@link Writer}-based override is retained as a thin
+ * delegate so user subclasses written against the old API can chain via
+ * {@code super.write(...)} unchanged.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -27,11 +39,11 @@ import com.cedarsoftware.util.MultiKeyMap;
  *         limitations under the License.
  */
 public class MultiKeyMapWriter implements JsonClassWriter {
+
     @Override
-    public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+    public void write(Object obj, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
         MultiKeyMap<?> map = (MultiKeyMap<?>) obj;
 
-        // Get configuration values using public getters
         int capacity = map.getCapacity();
         float loadFactor = map.getLoadFactor();
         MultiKeyMap.CollectionKeyMode collectionKeyMode = map.getCollectionKeyMode();
@@ -40,12 +52,10 @@ public class MultiKeyMapWriter implements JsonClassWriter {
         boolean valueBasedEquality = map.getValueBasedEquality();
         boolean caseSensitive = map.getCaseSensitive();
 
-        // Generate shortened config string: capacity/loadFactor/collectionKeyMode/flattenDimensions/simpleKeysMode/valueBasedEquality/caseSensitive
         StringBuilder config = new StringBuilder();
         config.append(capacity).append('/');
         config.append(loadFactor).append('/');
 
-        // Map CollectionKeyMode to short form
         String modeCode;
         switch (collectionKeyMode) {
             case COLLECTIONS_EXPANDED:
@@ -55,7 +65,7 @@ public class MultiKeyMapWriter implements JsonClassWriter {
                 modeCode = "NOEXP";
                 break;
             default:
-                modeCode = "EXP";  // Default fallback
+                modeCode = "EXP";
         }
         config.append(modeCode).append('/');
         config.append(flattenDimensions ? "T" : "F").append('/');
@@ -63,30 +73,30 @@ public class MultiKeyMapWriter implements JsonClassWriter {
         config.append(valueBasedEquality ? "T" : "F").append('/');
         config.append(caseSensitive ? "T" : "F");
 
-        // Write shortened config field (no leading comma for first custom field)
-        context.writeFieldName("config");
-        context.writeValue(config.toString());
+        // "config" field via the JsonGenerator
+        gen.writeFieldName("config");
+        gen.writeString(config.toString());
 
-        // Write entries array field - combines comma + "entries":[ in one call!
+        // "entries" array via the tree-walker's semantic API — each element is a
+        // {"keys":...,"value":...} sub-object containing arbitrary objects.
+        // JsonWriter's contextStack handles all structural commas in the loop.
         context.writeArrayFieldStart("entries");
-
-        // Extract all entries using public API and write as array of {keys, value} objects
-        // Keys are now returned as native List (ordered), Set (unordered), or single items
         for (java.util.Map.Entry<Object, ?> entry : map.entrySet()) {
-            // Write each entry as {"keys":...,"value":...}
-            // Keys are already in native JSON-friendly format (List/Set/single)
-            // - Single keys: written as-is
-            // - Multi-keys (ordered): written as ArrayList with @type
-            // - Multi-keys (unordered): written as LinkedHashSet with @type
-            // The writeStartObject() automatically handles comma insertion based on context
             context.writeStartObject();
             context.writeFieldName("keys");
             context.writeImpl(entry.getKey(), showType);
             context.writeObjectField("value", entry.getValue());
             context.writeEndObject();
         }
-
         context.writeEndArray();
+    }
+
+    @Override
+    @Deprecated
+    public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+        JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_insideObjectBody(
+                output, context.getWriteOptions());
+        write(obj, showType, bridge, context);
     }
 
     @Override
