@@ -574,4 +574,158 @@ class JsonGeneratorTest {
             assertEquals("héllo★", t.getText());
         }
     }
+
+    // -------------------------------------------------------------------
+    // writeObject / writeObjectField — databind entry points for embedding
+    // arbitrary POJOs in a hand-rolled streaming sequence
+    // -------------------------------------------------------------------
+
+    public static class Person {
+        public String name;
+        public int age;
+
+        public Person() {
+        }
+
+        public Person(String name, int age) {
+            this.name = name;
+            this.age = age;
+        }
+    }
+
+    @Test
+    void writeObject_topLevelPojo_roundTripsViaJsonIo() throws IOException {
+        Person p = new Person("Alice", 30);
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw)) {
+            g.writeObject(p);
+        }
+        String json = sw.toString();
+        Person round = JsonIo.toJava(json, null).asClass(Person.class);
+        assertEquals("Alice", round.name);
+        assertEquals(30, round.age);
+    }
+
+    @Test
+    void writeObject_null_emitsJsonNull() throws IOException {
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw)) {
+            g.writeObject(null);
+        }
+        assertEquals("null", sw.toString());
+    }
+
+    @Test
+    void writeObject_insideObjectBody_afterFieldName_emitsAsValue() throws IOException {
+        Person p = new Person("Bob", 42);
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw)) {
+            g.writeStartObject()
+                .writeStringField("kind", "user")
+                .writeFieldName("person");
+            g.writeObject(p);
+            g.writeEndObject();
+        }
+        String json = sw.toString();
+        // The outer hand-rolled object frames the writeObject output as a field value.
+        assertTrue(json.startsWith("{"), "got: " + json);
+        assertTrue(json.endsWith("}"), "got: " + json);
+        assertTrue(json.contains("\"kind\":\"user\""), "got: " + json);
+        assertTrue(json.contains("\"person\":"), "got: " + json);
+        assertTrue(json.contains("\"name\":\"Bob\""), "got: " + json);
+        assertTrue(json.contains("\"age\":42"), "got: " + json);
+    }
+
+    @Test
+    void writeObject_insideArray_autocommasAcrossMultiplePojos() throws IOException {
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw)) {
+            g.writeStartArray();
+            g.writeObject(new Person("A", 1));
+            g.writeObject(new Person("B", 2));
+            g.writeObject(new Person("C", 3));
+            g.writeEndArray();
+        }
+        String json = sw.toString();
+        // Auto-comma between writeObject calls inside the array — no malformed JSON
+        assertTrue(json.startsWith("["), "got: " + json);
+        assertTrue(json.endsWith("]"), "got: " + json);
+        // At a minimum, two element-separator commas
+        long commaCount = json.chars().filter(c -> c == ',').count();
+        assertTrue(commaCount >= 2, "expected at least 2 separator commas, got: " + json);
+        // All three round-trip
+        Person[] round = JsonIo.toJava(json, null).asClass(Person[].class);
+        assertEquals(3, round.length);
+        assertEquals("A", round[0].name);
+        assertEquals("B", round[1].name);
+        assertEquals("C", round[2].name);
+    }
+
+    @Test
+    void writeObject_underShowTypeInfoNever_omitsTypeTag() throws IOException {
+        Person p = new Person("Carol", 50);
+        WriteOptions opts = new WriteOptionsBuilder().showTypeInfoNever().build();
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw, opts)) {
+            g.writeObject(p);
+        }
+        String json = sw.toString();
+        assertTrue(!json.contains("\"@type\""),
+                "showTypeInfoNever() should suppress @type, got: " + json);
+        assertTrue(json.contains("\"name\":\"Carol\""), "got: " + json);
+    }
+
+    @Test
+    void writeObjectField_combinesNameAndObject() throws IOException {
+        Person p = new Person("Dave", 25);
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw)) {
+            g.writeStartObject();
+            g.writeObjectField("person", p);
+            g.writeEndObject();
+        }
+        String json = sw.toString();
+        assertTrue(json.contains("\"person\":"), "got: " + json);
+        assertTrue(json.contains("\"name\":\"Dave\""), "got: " + json);
+        assertTrue(json.contains("\"age\":25"), "got: " + json);
+    }
+
+    @Test
+    void writeObjectField_null_emitsFieldWithJsonNull() throws IOException {
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw)) {
+            g.writeStartObject();
+            g.writeObjectField("missing", null);
+            g.writeEndObject();
+        }
+        assertEquals("{\"missing\":null}", sw.toString());
+    }
+
+    @Test
+    void writeObject_sideBySide_defaultVsShowTypeInfoNever_producesDistinctJson() throws IOException {
+        // Regression-anchor parallel to the writeBinary side-by-side test: same
+        // input, same emission code, only WriteOptions differs. Confirms writeObject
+        // is actually reading the ShowType policy through getWriteOptions().
+        Person p = new Person("Eve", 60);
+
+        StringWriter defaultOut = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(defaultOut)) {
+            g.writeObject(p);
+        }
+        String defaultJson = defaultOut.toString();
+
+        WriteOptions neverOpts = new WriteOptionsBuilder().showTypeInfoNever().build();
+        StringWriter neverOut = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(neverOut, neverOpts)) {
+            g.writeObject(p);
+        }
+        String neverJson = neverOut.toString();
+
+        // Both must contain the data
+        assertTrue(defaultJson.contains("\"name\":\"Eve\""), "default got: " + defaultJson);
+        assertTrue(neverJson.contains("\"name\":\"Eve\""), "never got: " + neverJson);
+        // Only the never variant omits @type — proves the policy was honored
+        assertTrue(!neverJson.contains("\"@type\""),
+                "showTypeInfoNever() should suppress @type, got: " + neverJson);
+    }
 }

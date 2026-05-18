@@ -18,12 +18,16 @@ import java.math.BigInteger;
  * {@code com.fasterxml.jackson.core.JsonGenerator} for porting friendliness.
  * Differences from Jackson are deliberate and limited:
  * <ul>
- *   <li>No databind {@code writeObject(Object)} entry point — the streaming-write
- *       API is intentionally low-level. For full graph serialization (cycles,
- *       custom writers, {@code @type} policy) use {@link JsonIo#toJson} which
- *       drives the existing {@link JsonWriter}. To embed a tree-serialized value
- *       inside a hand-written stream, pre-serialize with {@link JsonIo#toJson}
- *       and emit via {@link #writeRawValue(String)}.</li>
+ *   <li>{@link #writeObject(Object) writeObject(Object)} (and the matching
+ *       {@link #writeObjectField(String, Object) writeObjectField(String, Object)}
+ *       convenience inside object contexts) drives full graph serialization through
+ *       json-io's tree-walker — same code path as {@link JsonIo#toJson}, including
+ *       cycle tracking, custom-writer dispatch, and {@code @type} policy (honoring
+ *       the active {@code ShowType} setting). Use this to embed arbitrary POJOs
+ *       inside a hand-written streaming sequence. {@code Class}- and
+ *       {@code Type}-accepting overloads (the streaming-write mirror of
+ *       {@code asClass} / {@code asType} on the read side) are deferred to a
+ *       future release.</li>
  *   <li>{@link #writeBinary(byte[]) writeBinary(byte[])} (and the
  *       {@link #writeBinary(byte[], int, int) writeBinary(byte[], offset, length)}
  *       slice overload) honor the active {@link WriteOptions#isNeverShowingType()}
@@ -319,6 +323,57 @@ public abstract class JsonGenerator implements Closeable, Flushable {
     }
 
     // -------------------------------------------------------------------
+    // Databind / graph serialization
+    // -------------------------------------------------------------------
+
+    /**
+     * Serialize an arbitrary Java object into the JSON stream as a single value emit
+     * — the Jackson-aligned {@code writeObject} entry point that bridges the streaming
+     * surface to json-io's tree-walker.
+     *
+     * <p>Drives the same code path as {@link JsonIo#toJson(Object, WriteOptions)},
+     * including cycle tracking, {@code @id}/{@code @ref} identity preservation within
+     * the object graph, custom-writer dispatch (both the {@link JsonGenerator}-based
+     * and legacy {@link java.io.Writer}-based APIs), and {@code @type} emission policy
+     * (honors the active {@link WriteOptions#isAlwaysShowingType()} /
+     * {@link WriteOptions#isNeverShowingType()} /
+     * {@link WriteOptions#isMinimalShowingType()} /
+     * {@link WriteOptions#isMinimalPlusShowingType()} setting). A {@code null} input
+     * emits the JSON literal {@code null}.
+     *
+     * <p>Counts as one value emit — auto-commas with the surrounding array/object
+     * context, satisfies a pending field name. The emitted value may be a scalar,
+     * an object, or an array depending on the object's structure.
+     *
+     * <h3>Identity tracking limitation</h3>
+     * Identity tracking is currently per-call: two separate {@code writeObject} calls
+     * with the same instance serialize the instance twice rather than sharing an
+     * {@code @id}/{@code @ref}. The identity map lives inside the {@link JsonWriter}
+     * driven by each call. A future release will share the identity map across
+     * adjacent {@code writeObject} calls when the dog-food migration (JsonWriter
+     * driving JsonGenerator directly) lands.
+     *
+     * <h3>Declared-type overloads</h3>
+     * {@code Class}- and {@code Type}-accepting overloads (the streaming-write mirror
+     * of {@code JsonIo.toJava(...).asClass(...)} / {@code .asType(...)} on the read
+     * side) are not in 4.103.0; they require deeper plumbing into
+     * {@link JsonWriter}'s showType-decision logic and are deferred to a future
+     * release.
+     *
+     * @param o the Java object to serialize; may be {@code null}
+     * @return this generator for chaining
+     * @throws IOException on underlying I/O failure
+     * @throws JsonGenerationException on structural misuse
+     * @since 4.103.0
+     */
+    public JsonGenerator writeObject(Object o) throws IOException {
+        if (o == null) {
+            return writeNull();
+        }
+        return writeRawValue(JsonIo.toJson(o, getWriteOptions()));
+    }
+
+    // -------------------------------------------------------------------
     // Raw injection
     // -------------------------------------------------------------------
 
@@ -402,6 +457,18 @@ public abstract class JsonGenerator implements Closeable, Flushable {
     public JsonGenerator writeArrayFieldStart(String fieldName) throws IOException {
         writeFieldName(fieldName);
         return writeStartArray();
+    }
+
+    /**
+     * Equivalent to {@link #writeFieldName(String)} followed by
+     * {@link #writeObject(Object)}. Convenience for serializing a Java object as
+     * the value of a named field within an open object body.
+     *
+     * @since 4.103.0
+     */
+    public JsonGenerator writeObjectField(String fieldName, Object o) throws IOException {
+        writeFieldName(fieldName);
+        return writeObject(o);
     }
 
     /** Equivalent to {@link #writeFieldName(String)} followed by {@link #writeStartObject()}. */
