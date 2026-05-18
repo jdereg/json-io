@@ -205,12 +205,24 @@ public class Writers {
         }
 
         /**
-         * Writes out a basic value type, no quotes.  to write strings use PrimitiveUtf8StringWriter.
+         * Writes out a basic value type via the {@link JsonGenerator}, no quotes.
+         * To write strings use {@link PrimitiveUtf8StringWriter}.
+         * <p>
+         * Migrated in 4.103.0. The deprecated {@link Writer}-based override below
+         * delegates to this one via a value-slot bridge generator.
          */
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, gen, context)) { return; }
+            if (writeNumericWithFieldFormat(o, gen, context)) { return; }
+            gen.writeNumber(extractString(o));
+        }
+
+        @Override
+        @Deprecated
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            if (writeWithStringFormat(o, output, context)) { return; }
-            if (writeNumericWithFieldFormat(o, output, context)) { return; }
-            output.write(extractString(o));
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(
+                    output, context.getWriteOptions());
+            writePrimitiveForm(o, bridge, context);
         }
     }
 
@@ -220,19 +232,31 @@ public class Writers {
      */
     public abstract static class FloatingPointWriter<T> extends PrimitiveTypeWriter {
         /**
-         * Writes out Float point type.
+         * Writes out a floating-point type via the {@link JsonGenerator}, honoring
+         * the active NaN/Infinity policy.
+         * <p>
+         * Migrated in 4.103.0. The deprecated {@link Writer}-based override below
+         * delegates to this one via a value-slot bridge generator.
          */
         @SuppressWarnings("unchecked")
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            if (writeWithStringFormat(o, output, context)) { return; }
-            if (writeNumericWithFieldFormat(o, output, context)) { return; }
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, gen, context)) { return; }
+            if (writeNumericWithFieldFormat(o, gen, context)) { return; }
             WriteOptions options = context.getWriteOptions();
             boolean allowNanInfinity = options.isAllowNanAndInfinity() || options.isJson5InfinityNaN();
             if (allowNanInfinity || !isNanOrInfinity((T) o)) {
-                output.write(o.toString());
+                gen.writeNumber(o.toString());
             } else {
-                output.write("null");
+                gen.writeNull();
             }
+        }
+
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(
+                    output, context.getWriteOptions());
+            writePrimitiveForm(o, bridge, context);
         }
 
         abstract boolean isNanOrInfinity(T value);
@@ -273,10 +297,24 @@ public class Writers {
             return o == null ? null : o.toString();
         }
 
+        /**
+         * Writes the extracted string via the {@link JsonGenerator}, honoring the
+         * active JSON5 / escape policy through {@link JsonGenerator#writeString(String)}.
+         * <p>
+         * Migrated in 4.103.0. The deprecated {@link Writer}-based override below
+         * delegates to this one via a value-slot bridge generator.
+         */
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext writerContext) throws IOException {
+            if (writerContext != null && writeWithStringFormat(o, gen, writerContext)) { return; }
+            gen.writeString(extractString(o));
+        }
+
+        @Override
+        @Deprecated
         public void writePrimitiveForm(Object o, Writer output, WriterContext writerContext) throws IOException {
-            if (writerContext != null && writeWithStringFormat(o, output, writerContext)) { return; }
             WriteOptions options = writerContext != null ? writerContext.getWriteOptions() : null;
-            JsonWriter.writeJson5String(output, extractString(o), options);
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, writerContext);
         }
     }
 
@@ -285,8 +323,20 @@ public class Writers {
      * Uses default key of "value" and encodes the string.
      */
     public static class CharacterWriter extends PrimitiveTypeWriter {
+        /**
+         * Migrated in 4.103.0. The deprecated {@link Writer}-based override below
+         * delegates to this one via a value-slot bridge generator.
+         */
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
+            gen.writeString("" + (char) o);
+        }
+
+        @Override
+        @Deprecated
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            JsonWriter.writeJsonUtf8String(output, "" + (char) o);
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(
+                    output, context.getWriteOptions());
+            writePrimitiveForm(o, bridge, context);
         }
     }
 

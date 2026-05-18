@@ -632,6 +632,12 @@ public abstract class JsonGenerator implements Closeable, Flushable {
      * @since 4.103.0
      */
     public static JsonGenerator deprecatedWriterBridge_insideObjectBody(Writer out, WriteOptions writeOptions) {
+        if (writeOptions == null) {
+            // The legacy Writer-based custom-writer API tolerates a null WriterContext
+            // (and therefore null options). Preserve that contract by falling back to
+            // the framework's default options when the caller hasn't supplied any.
+            writeOptions = WriteOptionsBuilder.getDefaultWriteOptions();
+        }
         return CharStreamGenerator.bridgeInsideObjectBody(out, writeOptions, 0);
     }
 
@@ -652,6 +658,12 @@ public abstract class JsonGenerator implements Closeable, Flushable {
      * @since 4.103.0
      */
     public static JsonGenerator deprecatedWriterBridge_atValueSlot(Writer out, WriteOptions writeOptions) {
+        if (writeOptions == null) {
+            // The legacy Writer-based custom-writer API tolerates a null WriterContext
+            // (and therefore null options). Preserve that contract by falling back to
+            // the framework's default options when the caller hasn't supplied any.
+            writeOptions = WriteOptionsBuilder.getDefaultWriteOptions();
+        }
         return CharStreamGenerator.bridgeAtValueSlot(out, writeOptions);
     }
 
