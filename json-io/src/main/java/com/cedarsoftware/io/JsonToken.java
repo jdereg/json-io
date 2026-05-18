@@ -20,13 +20,13 @@ package com.cedarsoftware.io;
  * {@link JsonTokenizer#getNumberType()}.
  */
 public enum JsonToken {
-    /** {@code '{'} — start of an object. */
+    /** <code>'{'</code> — start of an object. */
     START_OBJECT,
-    /** {@code '}'} — end of an object. */
+    /** <code>'}'</code> — end of an object. */
     END_OBJECT,
-    /** {@code '['} — start of an array. */
+    /** <code>'['</code> — start of an array. */
     START_ARRAY,
-    /** {@code ']'} — end of an array. */
+    /** <code>']'</code> — end of an array. */
     END_ARRAY,
     /** Field name half of an object property. */
     FIELD_NAME,

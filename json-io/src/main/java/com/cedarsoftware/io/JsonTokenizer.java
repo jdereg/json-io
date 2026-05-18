@@ -10,10 +10,9 @@ import com.cedarsoftware.util.FastReader;
 /**
  * Cursor-style JSON tokenizer — json-io's public streaming-parse API.
  *
- * <p>Create instances via {@link JsonIo#createTokenizer(String)},
- * {@link JsonIo#createTokenizer(java.io.InputStream)}, or
- * {@link JsonIo#createTokenizer(java.io.Reader)}; the same lexical core also
- * drives {@link JsonParser} (tree-builder mode) internally.
+ * <p>Create instances via {@link JsonIo#createTokenizer(String)} or
+ * {@link JsonIo#createTokenizer(java.io.InputStream)}; the same lexical core
+ * also drives {@link JsonParser} (tree-builder mode) internally.
  *
  * <p>The shape of this API mirrors Jackson's
  * {@code com.fasterxml.jackson.core.JsonParser} for porting friendliness.

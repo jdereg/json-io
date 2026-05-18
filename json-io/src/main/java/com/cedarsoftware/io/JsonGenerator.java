@@ -24,12 +24,18 @@ import java.math.BigInteger;
  *       drives the existing {@link JsonWriter}. To embed a tree-serialized value
  *       inside a hand-written stream, pre-serialize with {@link JsonIo#toJson}
  *       and emit via {@link #writeRawValue(String)}.</li>
- *   <li>No {@code writeBinary(byte[])} convenience in v1. Emit base64 yourself
- *       via {@code writeString(Base64.getEncoder().encodeToString(bytes))}; the
- *       read side returns it as a {@code String} (no automatic {@code byte[]}
- *       reconstruction). The library's tree writer already handles
- *       {@link java.nio.ByteBuffer} round-trip — prefer that for binary blobs
- *       that must round-trip end-to-end.</li>
+ *   <li>{@link #writeBinary(byte[]) writeBinary(byte[])} (and the
+ *       {@link #writeBinary(byte[], int, int) writeBinary(byte[], offset, length)}
+ *       slice overload) emits json-io's wrapped form
+ *       {@code {"@type":"byte[]","value":"<base64>"}} rather than Jackson's
+ *       bare base64 string. The wrapped form round-trips cleanly through
+ *       {@link JsonIo#toJava} back into the original {@code byte[]}; if you
+ *       receive bare-base64 input (Jackson-style), java-util's smart
+ *       {@code String → byte[]} detection decodes that on the read side too.
+ *       A {@code null} input emits the JSON literal {@code null}. For
+ *       {@link java.nio.ByteBuffer} (position/limit-aware) round-trip,
+ *       continue to use the tree writer ({@link JsonIo#toJson}) which has a
+ *       dedicated {@code ByteBufferWriter} that preserves buffer state.</li>
  *   <li>{@link #writeNumber(BigDecimal)} emits the canonical form via
  *       {@code stripTrailingZeros().toPlainString()} (matches
  *       {@link com.cedarsoftware.util.Converter}'s canonical string form);
@@ -219,7 +225,7 @@ public abstract class JsonGenerator implements Closeable, Flushable {
     /**
      * Emit a {@code byte[]} as a binary value. The wire format is json-io's wrapped form,
      * <code>{"@type":"byte[]","value":"&lt;base64&gt;"}</code>, which round-trips through
-     * the {@code Map → byte[]} converter in java-util's {@link com.cedarsoftware.util.convert.MapConversions}.
+     * the {@code Map → byte[]} converter in java-util's {@code MapConversions}.
      * A {@code null} input is emitted as the JSON literal {@code null}.
      *
      * <h3>Wire format choice</h3>

@@ -352,8 +352,6 @@ public class JsonIo {
      *
      * @param srcObject the Java object to convert to JSON; can be any object including primitives,
      *                  collections, custom classes, or a JsonObject/Map
-     * @param writeOptions configuration options for controlling the JSON output format;
-     *                     if null, default options will be used
      * @return a JSON string representation of the source object
      * @throws JsonIoException if an error occurs during the serialization process
      */
@@ -630,10 +628,7 @@ public class JsonIo {
      * }
      * }</pre>
      *
-     * @param in the input stream containing TOON; must not be null
-     * @param readOptions configuration options for controlling how the TOON is parsed;
-     *                    if null, default options will be used
-     * @param in the InputStream containing TOON to parse
+     * @param in the InputStream containing TOON to parse; must not be null
      * @return a builder to complete the conversion by specifying the target type
      * @throws IllegalArgumentException if the input stream is null
      * @see <a href="https://toonformat.dev/">TOON Format Specification</a>
@@ -896,8 +891,7 @@ public class JsonIo {
      *                               .asType(new TypeHolder<List<Person>>(){});
      * }</pre>
      *
-     * @param in the input stream containing JSON; must not be null
-     * @param in the InputStream containing JSON to parse
+     * @param in the InputStream containing JSON to parse; must not be null
      * @return a builder to complete the conversion by specifying the target type
      * @throws IllegalArgumentException if the input stream is null
      */
