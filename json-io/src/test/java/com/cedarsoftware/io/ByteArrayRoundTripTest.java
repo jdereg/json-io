@@ -256,4 +256,102 @@ class ByteArrayRoundTripTest {
         round.buffer.duplicate().get(roundBytes);
         assertArrayEquals(originalBytes, roundBytes);
     }
+
+    // -------------------------------------------------------------------
+    // writeBinary honors WriteOptions.isNeverShowingType()
+    // -------------------------------------------------------------------
+
+    @Test
+    void writeBinary_underShowTypeInfoNever_emitsBareBase64() throws IOException {
+        byte[] payload = "Hello, World!".getBytes(StandardCharsets.UTF_8);
+        String expectedBase64 = java.util.Base64.getEncoder().encodeToString(payload);
+
+        WriteOptions opts = new WriteOptionsBuilder().showTypeInfoNever().build();
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw, opts)) {
+            g.writeStartObject()
+                .writeStringField("name", "alice")
+                .writeFieldName("data");
+            g.writeBinary(payload);
+            g.writeEndObject();
+        }
+        String json = sw.toString();
+
+        // Bare base64 string in the "data" slot — no @type wrapper, no nested object
+        assertTrue(json.contains("\"data\":\"" + expectedBase64 + "\""),
+                "expected bare base64 string in data field, got: " + json);
+        assertTrue(!json.contains("\"@type\":\"byte[]\""),
+                "should NOT contain @type tag under showTypeInfoNever(), got: " + json);
+    }
+
+    @Test
+    void writeBinary_underShowTypeInfoNever_roundTripsViaSmartDetection() throws IOException {
+        byte[] payload = "Round-trip me through bare base64".getBytes(StandardCharsets.UTF_8);
+
+        WriteOptions opts = new WriteOptionsBuilder().showTypeInfoNever().build();
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw, opts)) {
+            g.writeStartObject()
+                .writeStringField("name", "alice")
+                .writeFieldName("data");
+            g.writeBinary(payload);
+            g.writeEndObject();
+        }
+        String json = sw.toString();
+
+        // Read side: java-util's smart String→byte[] detection recovers the bytes
+        // from the bare base64 form (no @type to drive the decode).
+        BlobHolder round = JsonIo.toJava(json, null).asClass(BlobHolder.class);
+        assertEquals("alice", round.name);
+        assertNotNull(round.data);
+        assertArrayEquals(payload, round.data);
+    }
+
+    @Test
+    void writeBinary_defaultShowTypeInfoMinimal_stillEmitsWrappedForm() throws IOException {
+        // Regression-anchor: the default (showTypeInfoMinimal) behavior is unchanged.
+        byte[] payload = "default-mode".getBytes(StandardCharsets.UTF_8);
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw)) {
+            g.writeStartObject().writeFieldName("data");
+            g.writeBinary(payload);
+            g.writeEndObject();
+        }
+        String json = sw.toString();
+        assertTrue(json.contains("\"@type\":\"byte[]\""),
+                "default mode should emit wrapped form with @type, got: " + json);
+    }
+
+    @Test
+    void writeBinary_underShowTypeInfoNever_nullStillEmitsJsonNull() throws IOException {
+        WriteOptions opts = new WriteOptionsBuilder().showTypeInfoNever().build();
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw, opts)) {
+            g.writeStartObject().writeFieldName("data");
+            g.writeBinary((byte[]) null);
+            g.writeEndObject();
+        }
+        // null short-circuits BEFORE the ShowType check — same outcome in both modes
+        assertEquals("{\"data\":null}", sw.toString());
+    }
+
+    @Test
+    void writeBinary_underShowTypeInfoNever_sliceOverloadAlsoEmitsBareBase64() throws IOException {
+        byte[] full = "0123456789".getBytes(StandardCharsets.UTF_8);
+        byte[] expectedSlice = "23456".getBytes(StandardCharsets.UTF_8);
+        String expectedBase64 = java.util.Base64.getEncoder().encodeToString(expectedSlice);
+
+        WriteOptions opts = new WriteOptionsBuilder().showTypeInfoNever().build();
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw, opts)) {
+            g.writeStartObject().writeFieldName("data");
+            g.writeBinary(full, 2, 5);
+            g.writeEndObject();
+        }
+        String json = sw.toString();
+        assertTrue(json.contains("\"data\":\"" + expectedBase64 + "\""),
+                "expected bare base64 of slice [2..7), got: " + json);
+        assertTrue(!json.contains("\"@type\":\"byte[]\""),
+                "should NOT contain @type tag under showTypeInfoNever(), got: " + json);
+    }
 }

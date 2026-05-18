@@ -26,14 +26,17 @@ import java.math.BigInteger;
  *       and emit via {@link #writeRawValue(String)}.</li>
  *   <li>{@link #writeBinary(byte[]) writeBinary(byte[])} (and the
  *       {@link #writeBinary(byte[], int, int) writeBinary(byte[], offset, length)}
- *       slice overload) emits json-io's wrapped form
- *       {@code {"@type":"byte[]","value":"<base64>"}} rather than Jackson's
- *       bare base64 string. The wrapped form round-trips cleanly through
- *       {@link JsonIo#toJava} back into the original {@code byte[]}; if you
- *       receive bare-base64 input (Jackson-style), java-util's smart
- *       {@code String → byte[]} detection decodes that on the read side too.
- *       A {@code null} input emits the JSON literal {@code null}. For
- *       {@link java.nio.ByteBuffer} (position/limit-aware) round-trip,
+ *       slice overload) honor the active {@link WriteOptions#isNeverShowingType()}
+ *       policy. <b>By default</b> (and under {@code showTypeInfoMinimal/MinimalPlus/Always})
+ *       it emits json-io's wrapped form
+ *       {@code {"@type":"byte[]","value":"<base64>"}}, which round-trips cleanly
+ *       through {@link JsonIo#toJava} back into the original {@code byte[]}. Under
+ *       {@code showTypeInfoNever()} — the explicit Jackson-compatible mode — it
+ *       emits a <b>bare base64 string</b> ({@code "<base64>"}) instead, matching
+ *       Jackson's wire format. Bare-base64 input is still decodable on the read
+ *       side via java-util's smart {@code String → byte[]} detection. A
+ *       {@code null} input emits the JSON literal {@code null} in either mode.
+ *       For {@link java.nio.ByteBuffer} (position/limit-aware) round-trip,
  *       continue to use the tree writer ({@link JsonIo#toJson}) which has a
  *       dedicated {@code ByteBufferWriter} that preserves buffer state.</li>
  *   <li>{@link #writeNumber(BigDecimal)} emits the canonical form via
@@ -219,28 +222,57 @@ public abstract class JsonGenerator implements Closeable, Flushable {
     public abstract JsonGenerator writeNull() throws IOException;
 
     // -------------------------------------------------------------------
+    // Configuration access (for default methods that need to consult policy)
+    // -------------------------------------------------------------------
+
+    /**
+     * Returns the {@link WriteOptions} this generator is operating under, or
+     * {@code null} if the subclass does not provide one (degenerate or test
+     * subclasses). Concrete generators producing real JSON should override to
+     * return their effective options so that {@code default} methods such as
+     * {@link #writeBinary(byte[])} can consult policy fields like
+     * {@link WriteOptions#isNeverShowingType()}.
+     *
+     * <p>This accessor is intentionally protected and {@code null}-tolerant —
+     * existing call sites that construct a generator without {@code WriteOptions}
+     * continue to work, with the default methods falling back to their safe
+     * wrapped-form behaviour.
+     *
+     * @return the active {@link WriteOptions}, or {@code null}
+     * @since 4.103.0
+     */
+    protected WriteOptions getWriteOptions() {
+        return null;
+    }
+
+    // -------------------------------------------------------------------
     // Binary (base64)
     // -------------------------------------------------------------------
 
     /**
-     * Emit a {@code byte[]} as a binary value. The wire format is json-io's wrapped form,
-     * <code>{"@type":"byte[]","value":"&lt;base64&gt;"}</code>, which round-trips through
-     * the {@code Map → byte[]} converter in java-util's {@code MapConversions}.
-     * A {@code null} input is emitted as the JSON literal {@code null}.
-     *
-     * <h3>Wire format choice</h3>
-     * The wrapped form is unambiguous (the {@code @type} tag tells any reader exactly how to
-     * decode the value) and round-trips cleanly through {@link JsonIo#toJava} into the
-     * original {@code byte[]}. The bare-base64-string form that Jackson emits is also
-     * decodable on the read side via java-util's smart {@code String → byte[]} detection
-     * (commit 4.103.0 of java-util), but for new code prefer {@code writeBinary} so the
-     * type information rides with the value.
+     * Emit a {@code byte[]} as a binary value. The wire format depends on the
+     * generator's active {@link WriteOptions#isNeverShowingType()} policy:
+     * <ul>
+     *   <li><b>Default</b> ({@code MINIMAL} / {@code MINIMAL_PLUS} / {@code ALWAYS}
+     *       type-info modes): emits json-io's wrapped form
+     *       <code>{"@type":"byte[]","value":"&lt;base64&gt;"}</code>. The {@code @type}
+     *       tag tells any reader unambiguously how to decode the value; round-trips
+     *       cleanly through {@link JsonIo#toJava} back to the original {@code byte[]}.</li>
+     *   <li><b>{@code showTypeInfoNever()}</b>: emits the bare base64 string
+     *       <code>"&lt;base64&gt;"</code> (Jackson-compatible). The receiver must
+     *       know from external schema or declared Java type that this slot holds a
+     *       {@code byte[]}; json-io's reader can also recover the original bytes via
+     *       java-util's smart {@code String → byte[]} detection at the
+     *       {@link com.cedarsoftware.util.Converter} layer.</li>
+     * </ul>
+     * A {@code null} input is emitted as the JSON literal {@code null} in either mode.
      *
      * <h3>Streaming-context behaviour</h3>
      * Counts as one value emit — auto-commas with the surrounding array/object context,
      * satisfies a pending field name. Default implementation composes
      * {@link #writeStartObject()} / {@link #writeStringField(String, String)} /
-     * {@link #writeEndObject()}; subclasses may override for a tighter inline emit.
+     * {@link #writeEndObject()} (wrapped form) or {@link #writeString(String)} (bare
+     * form); subclasses may override for a tighter inline emit.
      *
      * @param data the bytes to encode; may be {@code null}
      * @return this generator for chaining
@@ -250,6 +282,10 @@ public abstract class JsonGenerator implements Closeable, Flushable {
     public JsonGenerator writeBinary(byte[] data) throws IOException {
         if (data == null) {
             return writeNull();
+        }
+        WriteOptions opts = getWriteOptions();
+        if (opts != null && opts.isNeverShowingType()) {
+            return writeString(java.util.Base64.getEncoder().encodeToString(data));
         }
         writeStartObject();
         writeStringField("@type", "byte[]");

@@ -43,6 +43,7 @@ final class CharStreamGenerator extends JsonGenerator {
     // -------------------------------------------------------------------
 
     private final Writer out;
+    private final WriteOptions writeOptions; // retained for cold-path policy lookups (e.g. writeBinary's ShowType check)
     private final boolean prettyPrint;
     private final int indentSize;
     private final boolean json5UnquotedKeys;
@@ -61,7 +62,8 @@ final class CharStreamGenerator extends JsonGenerator {
 
     CharStreamGenerator(Writer out, WriteOptions writeOptions) {
         this.out = out;
-        // Capture all options up-front so the hot loops read finals — JIT-friendly
+        this.writeOptions = writeOptions;
+        // Capture hot-path options up-front so the hot loops read finals — JIT-friendly
         // and avoids per-call virtual dispatch through the WriteOptions interface.
         this.prettyPrint = writeOptions.isPrettyPrint();
         this.indentSize = Math.max(0, writeOptions.getIndentationSize());
@@ -73,6 +75,11 @@ final class CharStreamGenerator extends JsonGenerator {
         this.contextStack = new byte[16];
         this.contextStack[0] = FRAME_ROOT_EMPTY;
         this.depth = 0;
+    }
+
+    @Override
+    protected WriteOptions getWriteOptions() {
+        return writeOptions;
     }
 
     /** Called by the {@code JsonIo.createGenerator(...)} factory to wire buffer recycling. */
