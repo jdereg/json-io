@@ -16,7 +16,7 @@
 
     <properties>
         <version.spring-boot>3.5.11</version.spring-boot>
-        <version.spring-ai>1.1.2</version.spring-ai>
+        <version.spring-ai>1.1.6</version.spring-ai>
     </properties>
 
     <dependencies>
