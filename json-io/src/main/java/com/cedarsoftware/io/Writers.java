@@ -363,18 +363,39 @@ public class Writers {
     }
 
     public static class CalendarWriter implements JsonClassWriter {
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            String formatted = Converter.convert(o, String.class);
-            JsonWriter.writeBasicString(output, formatted);
+        /**
+         * Migrated in 4.103.0. The deprecated {@link Writer}-based override below
+         * delegates via a value-slot bridge generator.
+         */
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
+            gen.writeString(Converter.convert(o, String.class));
         }
 
-        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
-            if (showType) {
-                JsonWriter.writeBasicString(output, "calendar");
-                output.write(':');
-            }
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
+        }
 
-            writePrimitiveForm(obj, output, context);
+        /**
+         * Migrated in 4.103.0. The deprecated {@link Writer}-based override below
+         * delegates via an inside-object-body bridge generator.
+         */
+        public void write(Object obj, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
+            if (showType) {
+                gen.writeFieldName("calendar");
+            }
+            writePrimitiveForm(obj, gen, context);
+        }
+
+        @Override
+        @Deprecated
+        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_insideObjectBody(output, options);
+            write(obj, showType, bridge, context);
         }
 
         public boolean hasPrimitiveForm(WriterContext context) {
@@ -383,32 +404,52 @@ public class Writers {
     }
 
     public static class DateWriter implements JsonClassWriter {
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            String pat = context.getFieldFormatPattern();
+        /**
+         * Migrated in 4.103.0. The deprecated {@link Writer}-based override below
+         * delegates via a value-slot bridge generator.
+         */
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
+            String pat = (context != null) ? context.getFieldFormatPattern() : null;
             if (pat != null) {
                 SimpleDateFormat sdf = new SimpleDateFormat(pat);
-                JsonWriter.writeBasicString(output, sdf.format((java.util.Date) o));
+                gen.writeString(sdf.format((java.util.Date) o));
                 return;
             }
             if (o instanceof java.sql.Date) {
                 // Write just the date portion - no time, no timezone
-                String formatted = ((java.sql.Date) o).toLocalDate().toString();
-                JsonWriter.writeBasicString(output, formatted);
+                gen.writeString(((java.sql.Date) o).toLocalDate().toString());
             } else {
                 // Regular Date uses the converter's string format
-                String formatted = Converter.convert(o, String.class);
-                JsonWriter.writeBasicString(output, formatted);
+                gen.writeString(Converter.convert(o, String.class));
             }
         }
 
-        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
+        }
+
+        /**
+         * Migrated in 4.103.0. The deprecated {@link Writer}-based override below
+         * delegates via an inside-object-body bridge generator.
+         */
+        public void write(Object obj, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
             if (showType) {
                 String key = (obj instanceof java.sql.Date) ? "sqlDate" : "date";
-                JsonWriter.writeBasicString(output, key);
-                output.write(':');
+                gen.writeFieldName(key);
             }
+            writePrimitiveForm(obj, gen, context);
+        }
 
-            writePrimitiveForm(obj, output, context);
+        @Override
+        @Deprecated
+        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_insideObjectBody(output, options);
+            write(obj, showType, bridge, context);
         }
 
         public boolean hasPrimitiveForm(WriterContext context) {
@@ -417,22 +458,36 @@ public class Writers {
     }
 
     public static class DateAsLongWriter extends DateWriter {
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            if (writeWithStringFormat(o, output, context)) { return; }
-            String pat = context.getFieldFormatPattern();
+        /**
+         * Migrated in 4.103.0. The deprecated {@link Writer}-based override below
+         * delegates via a value-slot bridge generator. The {@code java.util.Date}
+         * branch now emits the millisecond {@code long} as a JSON number literal
+         * (previously a bare {@code Long.toString(...)} written directly).
+         */
+        @Override
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
+            if (writeWithStringFormat(o, gen, context)) { return; }
+            String pat = (context != null) ? context.getFieldFormatPattern() : null;
             if (pat != null) {
                 SimpleDateFormat sdf = new SimpleDateFormat(pat);
-                JsonWriter.writeBasicString(output, sdf.format((java.util.Date) o));
+                gen.writeString(sdf.format((java.util.Date) o));
                 return;
             }
             if (o instanceof java.sql.Date) {
                 // Same pure date format for sql.Date in both writers
-                String formatted = ((java.sql.Date) o).toLocalDate().toString();
-                JsonWriter.writeBasicString(output, formatted);
+                gen.writeString(((java.sql.Date) o).toLocalDate().toString());
             } else {
                 // Regular Date uses milliseconds
-                output.write(Long.toString(((java.util.Date) o).getTime()));
+                gen.writeNumber(((java.util.Date) o).getTime());
             }
+        }
+
+        @Override
+        @Deprecated
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            writePrimitiveForm(o, bridge, context);
         }
     }
 
