@@ -181,32 +181,40 @@ public class Writers {
             return VALUE;
         }
 
-        // NOTE: write(...) is intentionally NOT migrated to the JsonGenerator API.
-        // Two distinct constraints make this migration non-trivial enough that it
-        // is deferred to a focused future commit:
-        //   1. JsonWriter calls write(value, showType=false, output, this) directly
-        //      from value-slot positions (writePrimitive longBoxedWriter case;
-        //      writeObjectArray primitive element writers at lines 1645 / 1654 /
-        //      1663). The legacy Writer-based call tolerates this because raw
-        //      output.write() is state-machine-free. A JsonGenerator-based version
-        //      would have to pick a bridge factory at runtime (insideObjectBody for
-        //      showType=true, atValueSlot for showType=false).
-        //   2. JsonGenerator.writeFieldName + JsonGenerator.writeXxx in pretty-print
-        //      mode emits "key": value (with a space after the colon and a newline+
-        //      indent before the value). The legacy PrimitiveTypeWriter.write()
-        //      and the legacy JsonIo.formatJson(...) both emit "key":value (no
-        //      space, single-line). PrettyPrintTest asserts formatJson(compact) ==
-        //      pretty-print direct, which depends on those two paths agreeing.
-        //      Migrating write() without first aligning formatJson would break the
-        //      assertion. The right fix touches both paths together — out of scope
-        //      for the 4.103.0 release.
-        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+        /**
+         * Migrated in 4.103.0. Every {@code PrimitiveTypeWriter} descendant now
+         * exposes a {@link JsonGenerator}-based {@code writePrimitiveForm(...)},
+         * so this method dispatches through the generator and benefits from
+         * auto-comma / structural state tracking instead of writing punctuation
+         * directly. The deprecated {@link Writer}-based override below delegates
+         * here via the appropriate bridge generator based on {@code showType}.
+         */
+        public void write(Object obj, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
             if (showType) {
-                JsonWriter.writeBasicString(output, getKey());
-                output.write(':');
+                gen.writeFieldName(getKey());
             }
+            writePrimitiveForm(obj, gen, context);
+        }
 
-            writePrimitiveForm(obj, output, context);
+        @Override
+        @Deprecated
+        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+            // Caller's structural position depends on showType:
+            //   * showType=true  → JsonWriter has opened a {...} envelope and emitted the
+            //     @type/@id prelude; we're inside an open object body and need to emit
+            //     "key":primitiveValue.
+            //   * showType=false → JsonWriter is calling us directly from a value slot
+            //     (e.g. writePrimitive's longBoxedWriter case for writeLongsAsStrings,
+            //     or the primitive-array element writers in writeObjectArray); we emit
+            //     just the bare primitive value at that value slot.
+            // The legacy Writer-based path tolerated both positions because raw
+            // output.write() is state-machine-free; the bridge generator is stricter,
+            // so pick the right factory.
+            WriteOptions options = (context != null) ? context.getWriteOptions() : null;
+            JsonGenerator bridge = showType
+                    ? JsonGenerator.deprecatedWriterBridge_insideObjectBody(output, options)
+                    : JsonGenerator.deprecatedWriterBridge_atValueSlot(output, options);
+            write(obj, showType, bridge, context);
         }
 
         public boolean hasPrimitiveForm(WriterContext writerContext) {

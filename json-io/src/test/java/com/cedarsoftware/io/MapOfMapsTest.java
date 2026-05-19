@@ -413,7 +413,7 @@ class MapOfMapsTest
     @Test
     void writeJsonObjectMapWithStringKeys()
     {
-        String json = "{\n  \"@type\":\"LinkedHashMap\",\n  \"age\":\"36\",\n  \"name\":\"chris\"\n}";
+        String json = "{\n  \"@type\": \"LinkedHashMap\",\n  \"age\": \"36\",\n  \"name\": \"chris\"\n}";
         Map<String, String> map1 = new LinkedHashMap<>(2);
         map1.put("age", "36");
         map1.put("name", "chris");

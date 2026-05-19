@@ -1,25 +1,25 @@
 {
-  "@type":"com.cedarsoftware.io.PrettyPrintTest$Nice",
-  "name":"Louie",
-  "items":{
-    "@type":"ArrayList",
-    "@items":[
+  "@type": "com.cedarsoftware.io.PrettyPrintTest$Nice",
+  "name": "Louie",
+  "items": {
+    "@type": "ArrayList",
+    "@items": [
       "One",
       1,
       {
-        "@type":"Integer",
-        "value":1
+        "@type": "Integer",
+        "value": 1
       },
       true
     ]
   },
-  "dictionary":{
-    "@type":"LinkedHashMap",
-    "grade":"A",
-    "price":100.0,
-    "bigdec":{
-      "@type":"BigDecimal",
-      "value":"3.141592653589793238462643383"
+  "dictionary": {
+    "@type": "LinkedHashMap",
+    "grade": "A",
+    "price": 100.0,
+    "bigdec": {
+      "@type": "BigDecimal",
+      "value": "3.141592653589793238462643383"
     }
   }
 }

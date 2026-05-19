@@ -4,8 +4,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 
-import com.cedarsoftware.io.prettyprint.JsonPrettyPrinter;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -213,7 +211,7 @@ public class FormattingLimitsTest {
         String jsonInput = "{\"key1\":\"value1\", \"key2\":\"value2\", \"key3\":\"value3\"}";
         
         assertDoesNotThrow(() -> {
-            String prettyJson = JsonPrettyPrinter.prettyPrint(jsonInput, writeOptions);
+            String prettyJson = JsonIo.formatJson(jsonInput, writeOptions);
             assertNotNull(prettyJson);
             assertTrue(prettyJson.contains("\"key1\""));
         });
@@ -267,7 +265,7 @@ public class FormattingLimitsTest {
                 .indentationSize(4)
                 .build();
         
-        String prettyJson4 = JsonPrettyPrinter.prettyPrint(jsonInput, fourSpaceOptions);
+        String prettyJson4 = JsonIo.formatJson(jsonInput, fourSpaceOptions);
         
         // Should contain 4 spaces for the first level of indentation
         assertTrue(prettyJson4.contains("    \"a\""), "Should use 4-space indentation");
@@ -277,7 +275,7 @@ public class FormattingLimitsTest {
                 .indentationSize(8)
                 .build();
         
-        String prettyJson8 = JsonPrettyPrinter.prettyPrint(jsonInput, eightSpaceOptions);
+        String prettyJson8 = JsonIo.formatJson(jsonInput, eightSpaceOptions);
         
         // Should contain 8 spaces for the first level of indentation
         assertTrue(prettyJson8.contains("        \"a\""), "Should use 8-space indentation");
@@ -298,13 +296,13 @@ public class FormattingLimitsTest {
                 .build();
         
         assertDoesNotThrow(() -> {
-            String prettyJson1 = JsonPrettyPrinter.prettyPrint(jsonInput, smallBufferOptions);
+            String prettyJson1 = JsonIo.formatJson(jsonInput, smallBufferOptions);
             assertNotNull(prettyJson1);
             assertTrue(prettyJson1.contains("\"key\""));
         });
         
         assertDoesNotThrow(() -> {
-            String prettyJson2 = JsonPrettyPrinter.prettyPrint(jsonInput, largeBufferOptions);
+            String prettyJson2 = JsonIo.formatJson(jsonInput, largeBufferOptions);
             assertNotNull(prettyJson2);
             assertTrue(prettyJson2.contains("\"key\""));
         });
@@ -377,12 +375,12 @@ public class FormattingLimitsTest {
         String testJson = "{\"test\":\"value\"}";
         
         assertDoesNotThrow(() -> {
-            String prettyJson1 = JsonPrettyPrinter.prettyPrint(testJson, minOptions);
+            String prettyJson1 = JsonIo.formatJson(testJson, minOptions);
             assertNotNull(prettyJson1);
         });
         
         assertDoesNotThrow(() -> {
-            String prettyJson2 = JsonPrettyPrinter.prettyPrint(testJson, maxOptions);
+            String prettyJson2 = JsonIo.formatJson(testJson, maxOptions);
             assertNotNull(prettyJson2);
         });
     }

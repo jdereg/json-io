@@ -1,17 +1,18 @@
 package com.cedarsoftware.io;
 
 import java.io.Closeable;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.StringReader;
+import java.io.StringWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
-import com.cedarsoftware.io.prettyprint.JsonPrettyPrinter;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.FastReader;
@@ -1266,7 +1267,53 @@ public class JsonIo {
      * @return a formatted, indented JSON string for improved readability
      */
     public static String formatJson(String json) {
-        return JsonPrettyPrinter.prettyPrint(json);
+        return formatJson(json, null);
+    }
+
+    /**
+     * Formats a JSON string with proper indentation and line breaks for readability,
+     * using the supplied {@link WriteOptions} to control indentation size and other
+     * pretty-print details.
+     *
+     * <p>The {@code writeOptions} argument's {@code prettyPrint} flag is forced to
+     * {@code true} regardless of how it was built — formatting that does <i>not</i>
+     * pretty-print would be a no-op. Other options (indent size, JSON5 flags, etc.)
+     * are honored as supplied.
+     *
+     * @param json the JSON string to format
+     * @param writeOptions the options to honor when formatting; may be {@code null}
+     *                     to use defaults
+     * @return a formatted, indented JSON string
+     * @since 4.103.0
+     */
+    public static String formatJson(String json, WriteOptions writeOptions) {
+        // Implemented as a parse-and-re-emit pipeline: JsonTokenizer streams tokens
+        // from the input; JsonGenerator (in pretty-print mode) re-emits each token to
+        // the output writer. This routes formatJson through the same emission path
+        // that JsonIo.toJson(..., prettyPrint=true) uses for primitive scalars,
+        // so the two paths produce identical output by construction.
+        //
+        // Replaces the previous JsonPrettyPrinter character-shuffling implementation
+        // (json-io 4.103.0) — see the JsonGenerator class-level Javadoc "splice
+        // streaming-read into streaming-write" example for the canonical pattern.
+        WriteOptions opts;
+        if (writeOptions == null) {
+            opts = new WriteOptionsBuilder().prettyPrint(true).build();
+        } else if (writeOptions.isPrettyPrint()) {
+            opts = writeOptions;
+        } else {
+            opts = new WriteOptionsBuilder(writeOptions).prettyPrint(true).build();
+        }
+        StringWriter sw = new StringWriter(Math.max(64, json.length() + 64));
+        try (JsonTokenizer t = createTokenizer(json);
+             JsonGenerator g = createGenerator(sw, opts)) {
+            while (t.nextToken() != null) {
+                g.copyCurrentEvent(t);
+            }
+        } catch (IOException e) {
+            throw new JsonIoException("Failed to format JSON", e);
+        }
+        return sw.toString();
     }
 
     /**

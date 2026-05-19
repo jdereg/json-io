@@ -184,9 +184,14 @@ final class CharStreamGenerator extends JsonGenerator {
     private void startValueContext() throws IOException {
         switch (top()) {
             case FRAME_ROOT_EMPTY:
-            case FRAME_OBJECT_AFTER_FIELD:
             case FRAME_ARRAY_EMPTY:
                 emitIndentIfPretty();
+                return;
+            case FRAME_OBJECT_AFTER_FIELD:
+                // After a field name in an object, the value goes on the SAME LINE
+                // as the key (Jackson convention, matches standard JSON pretty-print).
+                // writeFieldName already emitted "key": (with trailing space in pretty
+                // mode); we don't add a newline before the value here.
                 return;
             case FRAME_ARRAY_AFTER_VALUE:
                 out.write(',');
