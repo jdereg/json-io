@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.Arrays;
 
 /**
  * Concrete {@link JsonGenerator} implementation that writes JSON tokens to an
@@ -126,16 +127,24 @@ final class CharStreamGenerator extends JsonGenerator {
      * @since 4.104.0
      */
     void resetForBridgeInsideObjectBody(int currentJsonWriterDepth) {
-        contextStack[0] = FRAME_ROOT_DONE;
-        depth = 0;
-        // Push placeholder frames up to the JsonWriter indent depth (same rationale
-        // as bridgeInsideObjectBody): below-top frames are only consulted on
-        // writeEnd*, and a well-behaved custom writer never pops below its entry
-        // frame, so FRAME_OBJECT_AFTER_VALUE is a benign neutral placeholder.
-        for (int i = 1; i < currentJsonWriterDepth; i++) {
-            push(FRAME_OBJECT_AFTER_VALUE);
+        // Ensure the contextStack has enough room for the resulting depth (one
+        // FRAME_ROOT_DONE + (currentJsonWriterDepth-1) placeholders + one
+        // FRAME_OBJECT_EMPTY at top). Single-allocation grow path replaces the
+        // amortized per-push grow.
+        final int requiredLength = currentJsonWriterDepth + 1;
+        if (contextStack.length < requiredLength) {
+            contextStack = new byte[Math.max(contextStack.length * 2, requiredLength)];
         }
-        push(FRAME_OBJECT_EMPTY);
+        contextStack[0] = FRAME_ROOT_DONE;
+        // Below-top frames are only consulted on writeEnd*, and a well-behaved
+        // custom writer never pops below its entry frame — so FRAME_OBJECT_AFTER_VALUE
+        // is a benign neutral placeholder. Arrays.fill replaces the push-loop:
+        // single intrinsic-backed write vs. N method calls + N array stores.
+        if (currentJsonWriterDepth > 1) {
+            Arrays.fill(contextStack, 1, currentJsonWriterDepth, FRAME_OBJECT_AFTER_VALUE);
+        }
+        contextStack[currentJsonWriterDepth] = FRAME_OBJECT_EMPTY;
+        depth = currentJsonWriterDepth;
         // Suppress the very first leading newline+indent (JsonWriter has already
         // emitted it as part of the wrapper prelude).
         suppressNextIndent = true;

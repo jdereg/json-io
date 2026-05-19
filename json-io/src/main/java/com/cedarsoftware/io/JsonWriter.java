@@ -356,17 +356,20 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private Map<Object, Boolean> activePath;
     private final Writer out;
     /**
-     * Generator wrapping {@link #out} for the same {@link #writeOptions}. Reserved for the
-     * staged dog-food migration that converts JsonWriter's emission paths from direct
-     * {@code out.write(...)} calls to {@code gen.writeXxx(...)} calls (chunks D2+ of the
-     * 4.104.0+ migration plan). Currently unused by the emission code; constructed at
-     * JsonWriter creation time and exposed via {@link #getJsonGenerator()} so subsequent
-     * chunks can route emission through it incrementally. Lives for the JsonWriter's
-     * lifetime — no per-call bridge allocation.
+     * Generator wrapping {@link #out} for the same {@link #writeOptions}. Used by
+     * the dog-food migration that converts JsonWriter's emission paths from direct
+     * {@code out.write(...)} calls to {@code gen.writeXxx(...)} calls. Lives for
+     * the JsonWriter's lifetime — no per-call bridge allocation.
+     *
+     * <p>Typed as the concrete {@link CharStreamGenerator} (package-private) so the
+     * hot-path call sites can invoke the package-private {@code resetForBridge*}
+     * methods without a cast on every dispatch. The public-facing accessor
+     * {@link #getJsonGenerator()} returns it as {@link JsonGenerator} so external
+     * callers don't see the concrete type.
      *
      * @since 4.104.0 (infrastructure)
      */
-    private final JsonGenerator gen;
+    private final CharStreamGenerator gen;
     private int identity = 1;  // int is sufficient - max 2.1 billion unique objects
     private int depth = 0;
 
@@ -859,7 +862,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                         // generator per call (eliminates per-dispatch CharStreamGenerator +
                         // byte[16] contextStack allocations on a hot path). State-reset
                         // produces the same configuration bridgeAtValueSlot would have built.
-                        ((CharStreamGenerator) this.gen).resetForBridgeAtValueSlot();
+                        this.gen.resetForBridgeAtValueSlot();
                         closestWriter.writePrimitiveForm(o, this.gen, this);
                     } else {
                         closestWriter.writePrimitiveForm(o, output, this);
@@ -893,7 +896,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 // generator per call. State-reset produces the same configuration
                 // bridgeInsideObjectBody would have built (stack matching this.depth,
                 // FRAME_OBJECT_EMPTY at top, suppressNextIndent=true).
-                ((CharStreamGenerator) this.gen).resetForBridgeInsideObjectBody(this.depth);
+                this.gen.resetForBridgeInsideObjectBody(this.depth);
                 closestWriter.write(o, showType || referenced, this.gen, this);
             } else {
                 closestWriter.write(o, showType || referenced, output, this);
