@@ -855,8 +855,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             if (closestWriter.hasPrimitiveForm(this)) {
                 if ((!referenced && !showType) || closestWriter instanceof Writers.JsonStringWriter) {
                     if (dispatch.useNewPrimitive) {
-                        CharStreamGenerator gen = CharStreamGenerator.bridgeAtValueSlot(output, writeOptions);
-                        closestWriter.writePrimitiveForm(o, gen, this);
+                        // Reuse the long-lived this.gen instead of allocating a fresh bridge
+                        // generator per call (eliminates per-dispatch CharStreamGenerator +
+                        // byte[16] contextStack allocations on a hot path). State-reset
+                        // produces the same configuration bridgeAtValueSlot would have built.
+                        ((CharStreamGenerator) this.gen).resetForBridgeAtValueSlot();
+                        closestWriter.writePrimitiveForm(o, this.gen, this);
                     } else {
                         closestWriter.writePrimitiveForm(o, output, this);
                     }
@@ -885,8 +889,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
 
             if (dispatch.useNewWrite) {
-                CharStreamGenerator gen = CharStreamGenerator.bridgeInsideObjectBody(output, writeOptions, this.depth);
-                closestWriter.write(o, showType || referenced, gen, this);
+                // Reuse the long-lived this.gen instead of allocating a fresh bridge
+                // generator per call. State-reset produces the same configuration
+                // bridgeInsideObjectBody would have built (stack matching this.depth,
+                // FRAME_OBJECT_EMPTY at top, suppressNextIndent=true).
+                ((CharStreamGenerator) this.gen).resetForBridgeInsideObjectBody(this.depth);
+                closestWriter.write(o, showType || referenced, this.gen, this);
             } else {
                 closestWriter.write(o, showType || referenced, output, this);
             }

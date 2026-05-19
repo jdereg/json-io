@@ -88,6 +88,60 @@ final class CharStreamGenerator extends JsonGenerator {
     }
 
     // -------------------------------------------------------------------
+    // State-reset entry points — allow JsonWriter to reuse one long-lived
+    // CharStreamGenerator instance across many custom-writer dispatches
+    // without allocating a fresh bridge generator on each call. The state
+    // produced matches what bridgeAtValueSlot / bridgeInsideObjectBody
+    // would build for a freshly-allocated instance.
+    //
+    // Used by JsonWriter.writeCustom (4.104.0+ dog-food migration step).
+    // External callers / user custom writers should continue to use the
+    // bridgeAtValueSlot / bridgeInsideObjectBody factory methods on
+    // {@link JsonGenerator} — those still allocate fresh instances.
+    // -------------------------------------------------------------------
+
+    /**
+     * Reset this generator's structural state to "at a value slot, ready to emit one
+     * JSON value." Equivalent to a freshly constructed {@link CharStreamGenerator}
+     * with no emission history. After this call the next emit may be a scalar
+     * (writeString / writeNumber / writeBoolean / writeNull) or one matched
+     * writeStart* / writeEnd* pair.
+     *
+     * @since 4.104.0
+     */
+    void resetForBridgeAtValueSlot() {
+        contextStack[0] = FRAME_ROOT_EMPTY;
+        depth = 0;
+        suppressNextIndent = false;
+    }
+
+    /**
+     * Reset this generator's structural state to "inside an open object body at the
+     * given JsonWriter indent depth, ready for {@code writeFieldName}." Matches the
+     * state {@link #bridgeInsideObjectBody(Writer, WriteOptions, int)} produces for
+     * a freshly-allocated instance — same stack contents, same
+     * {@code suppressNextIndent} flag, same depth.
+     *
+     * @param currentJsonWriterDepth JsonWriter's current indent depth (post-tabIn)
+     * @since 4.104.0
+     */
+    void resetForBridgeInsideObjectBody(int currentJsonWriterDepth) {
+        contextStack[0] = FRAME_ROOT_DONE;
+        depth = 0;
+        // Push placeholder frames up to the JsonWriter indent depth (same rationale
+        // as bridgeInsideObjectBody): below-top frames are only consulted on
+        // writeEnd*, and a well-behaved custom writer never pops below its entry
+        // frame, so FRAME_OBJECT_AFTER_VALUE is a benign neutral placeholder.
+        for (int i = 1; i < currentJsonWriterDepth; i++) {
+            push(FRAME_OBJECT_AFTER_VALUE);
+        }
+        push(FRAME_OBJECT_EMPTY);
+        // Suppress the very first leading newline+indent (JsonWriter has already
+        // emitted it as part of the wrapper prelude).
+        suppressNextIndent = true;
+    }
+
+    // -------------------------------------------------------------------
     // Bridge factory methods — for JsonWriter dispatching to custom writers
     // that override the new JsonGenerator-based JsonClassWriter API.
     //
