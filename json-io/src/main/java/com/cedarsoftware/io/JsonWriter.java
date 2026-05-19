@@ -355,6 +355,18 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     // Active path tracking for cycle detection when cycleSupport=false
     private Map<Object, Boolean> activePath;
     private final Writer out;
+    /**
+     * Generator wrapping {@link #out} for the same {@link #writeOptions}. Reserved for the
+     * staged dog-food migration that converts JsonWriter's emission paths from direct
+     * {@code out.write(...)} calls to {@code gen.writeXxx(...)} calls (chunks D2+ of the
+     * 4.104.0+ migration plan). Currently unused by the emission code; constructed at
+     * JsonWriter creation time and exposed via {@link #getJsonGenerator()} so subsequent
+     * chunks can route emission through it incrementally. Lives for the JsonWriter's
+     * lifetime — no per-call bridge allocation.
+     *
+     * @since 4.104.0 (infrastructure)
+     */
+    private final JsonGenerator gen;
     private int identity = 1;  // int is sufficient - max 2.1 billion unique objects
     private int depth = 0;
 
@@ -602,6 +614,27 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         } else {
             this.activePath = new IdentityHashMap<>();
         }
+
+        // Dog-food infrastructure (chunks D2+): construct a CharStreamGenerator over
+        // the same Writer + WriteOptions this JsonWriter is using. Not yet wired into
+        // emission paths — declared here so subsequent chunks can route emissions
+        // through it incrementally. Constructor allocates the generator's context
+        // stack but emits nothing, so the byte stream is unchanged.
+        this.gen = new CharStreamGenerator(this.out, this.writeOptions);
+    }
+
+    /**
+     * Returns the {@link JsonGenerator} this writer holds for the dog-food migration in
+     * progress (chunks D2+). External callers should not use this — the generator's
+     * structural-state machine is currently <i>not</i> synchronized with JsonWriter's
+     * own {@code contextStack}, so the two emission paths must be considered
+     * incompatible until the migration completes. Exposed package-private so future
+     * chunks within {@code com.cedarsoftware.io} can drive emission through it.
+     *
+     * @since 4.104.0 (infrastructure)
+     */
+    JsonGenerator getJsonGenerator() {
+        return gen;
     }
 
     public WriteOptions getWriteOptions() {
