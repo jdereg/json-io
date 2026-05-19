@@ -181,6 +181,25 @@ public class Writers {
             return VALUE;
         }
 
+        // NOTE: write(...) is intentionally NOT migrated to the JsonGenerator API.
+        // Two distinct constraints make this migration non-trivial enough that it
+        // is deferred to a focused future commit:
+        //   1. JsonWriter calls write(value, showType=false, output, this) directly
+        //      from value-slot positions (writePrimitive longBoxedWriter case;
+        //      writeObjectArray primitive element writers at lines 1645 / 1654 /
+        //      1663). The legacy Writer-based call tolerates this because raw
+        //      output.write() is state-machine-free. A JsonGenerator-based version
+        //      would have to pick a bridge factory at runtime (insideObjectBody for
+        //      showType=true, atValueSlot for showType=false).
+        //   2. JsonGenerator.writeFieldName + JsonGenerator.writeXxx in pretty-print
+        //      mode emits "key": value (with a space after the colon and a newline+
+        //      indent before the value). The legacy PrimitiveTypeWriter.write()
+        //      and the legacy JsonIo.formatJson(...) both emit "key":value (no
+        //      space, single-line). PrettyPrintTest asserts formatJson(compact) ==
+        //      pretty-print direct, which depends on those two paths agreeing.
+        //      Migrating write() without first aligning formatJson would break the
+        //      assertion. The right fix touches both paths together — out of scope
+        //      for the 4.103.0 release.
         public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
             if (showType) {
                 JsonWriter.writeBasicString(output, getKey());
