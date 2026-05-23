@@ -83,7 +83,7 @@ public class Writers {
         String pat = context.getFieldFormatPattern();
         if (pat != null && o instanceof TemporalAccessor) {
             DateTimeFormatter fmt = getFormatter(pat);
-            JsonWriter.writeJsonUtf8String(output, fmt.format((TemporalAccessor) o));
+            CharStreamGenerator.writeJsonUtf8String(output, fmt.format((TemporalAccessor) o));
             return true;
         }
         return false;
@@ -116,7 +116,7 @@ public class Writers {
     public static boolean writeWithStringFormat(Object o, Writer output, WriterContext context) throws IOException {
         String pat = context.getFieldFormatPattern();
         if (pat != null && pat.indexOf('%') >= 0) {
-            JsonWriter.writeBasicString(output, String.format(pat, o));
+            CharStreamGenerator.writeBasicString(output, String.format(pat, o));
             return true;
         }
         return false;
@@ -149,7 +149,7 @@ public class Writers {
         String pat = context.getFieldFormatPattern();
         if (pat != null && o instanceof Number) {
             DecimalFormat df = new DecimalFormat(pat);
-            JsonWriter.writeBasicString(output, df.format(o));
+            CharStreamGenerator.writeBasicString(output, df.format(o));
             return true;
         }
         return false;

@@ -3001,7 +3001,7 @@ public class WriteOptionsBuilder {
             }
             try {
                 StringWriter sw = new StringWriter(fieldName.length() + 8);
-                JsonWriter.writeJsonUtf8String(sw, fieldName, options.getMaxStringLength());
+                CharStreamGenerator.writeJsonUtf8String(sw, fieldName, options.getMaxStringLength());
                 sw.write(':');
                 return sw.toString();
             } catch (IOException e) {

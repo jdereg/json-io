@@ -3028,36 +3028,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     /**
-     * Writes a string value with JSON5 smart quote selection when {@link WriteOptions#isJson5SmartQuotes}
-     * is enabled. Provided historically for custom writers that needed to respect the smart-quote
-     * setting; superseded by {@link CharStreamGenerator#writeString(String)} which applies the
-     * same selection internally.
-     *
-     * @param output The Writer to write to
-     * @param s The string value to write
-     * @param writeOptions WriteOptions to consult for smart-quote settings
-     * @throws IOException If an I/O error occurs
-     * @deprecated since 4.103.0; unused after the writeStringValue migration. Will be removed
-     *             in a future release. External callers should switch to
-     *             {@link JsonGenerator#writeString(String)} via {@link JsonIo#createGenerator},
-     *             which applies the same smart-quote logic automatically.
-     */
-    @Deprecated
-    public static void writeJson5String(final Writer output, String s, WriteOptions writeOptions) throws IOException {
-        if (writeOptions == null || !writeOptions.isJson5SmartQuotes()) {
-            CharStreamGenerator.writeJsonUtf8String(output, s,
-                    writeOptions != null ? writeOptions.getMaxStringLength() : 1000000);
-            return;
-        }
-        int maxLen = writeOptions.getMaxStringLength();
-        if (shouldUseSingleQuotedString(s)) {
-            CharStreamGenerator.writeSingleQuotedString(output, s, maxLen);
-        } else {
-            CharStreamGenerator.writeJsonUtf8String(output, s, maxLen);
-        }
-    }
-
-    /**
      * Writes a JSON string value, properly escaped per JSON specifications, with explicit
      * max-length cap.
      *
