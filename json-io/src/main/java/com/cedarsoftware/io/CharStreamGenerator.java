@@ -751,6 +751,39 @@ final class CharStreamGenerator extends JsonGenerator {
         out.write("null");
     }
 
+    /**
+     * Field-level fast path that mirrors {@link #writeStringField(String, String)} but skips
+     * the per-call escape scan on the value. The caller MUST guarantee the value contains
+     * no JSON-special characters (no embedded {@code "}, {@code \}, or control chars below
+     * {@code 0x20}); the value is emitted as {@code "value"} verbatim with double-quote
+     * delimiters. State machine stays fully engaged via {@link #writeFieldName(String)} for
+     * the key emission. Intended for intra-package callers emitting trusted strings like
+     * Java type aliases (e.g., {@code "java.lang.String"}, {@code "long"}) at
+     * {@code @type}-style field positions — counterpart to the {@code writeXxxRaw} family
+     * for scalars: public Jackson API stays safe and comprehensive, package-private fast
+     * path lets callers that can prove safety skip the unnecessary work. A {@code null}
+     * value emits the JSON {@code null} literal (no surrounding quotes), matching the
+     * public {@code writeStringField} contract.
+     *
+     * @param name  the field name (subject to gen's key-quoting / unquoted-identifier rules)
+     * @param value the value; MUST contain no JSON-special characters when non-null
+     * @throws IOException If an I/O error occurs
+     */
+    void writeStringFieldUnescaped(String name, String value) throws IOException {
+        writeFieldName(name);
+        // After writeFieldName, state is FRAME_OBJECT_AFTER_FIELD — startValueContext
+        // would be a no-op here (no separator needed after a field name), so skip it
+        // directly and emit the raw quoted value.
+        if (value == null) {
+            out.write("null");
+        } else {
+            out.write('"');
+            out.write(value);
+            out.write('"');
+        }
+        markValue();
+    }
+
     // -------------------------------------------------------------------
     // Raw injection
     // -------------------------------------------------------------------

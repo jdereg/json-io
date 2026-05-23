@@ -340,9 +340,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     // Key names (no quotes, no colon) for the dog-food path through gen.writeXxxField —
     // gen handles quoting decisions based on json5UnquotedKeys + isValidJson5Identifier(name),
-    // so @id/@i (not valid identifiers) always get quoted, $id/$i (valid identifiers) get
-    // unquoted under json5UnquotedKeys.
+    // so @id/@i/@type/@t (not valid identifiers) always get quoted, $id/$i/$type/$t (valid
+    // identifiers) get unquoted under json5UnquotedKeys.
     private final String idKey;
+    private final String typeKey;
     private final String itemsPrefix;
     private final String keysPrefix;
     private static final Object[] byteStrings = new Object[256];
@@ -600,12 +601,16 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // always valid).
         if (useDollarPrefix && isShort) {
             this.idKey = "$i";
+            this.typeKey = "$t";
         } else if (useDollarPrefix) {
             this.idKey = "$id";
+            this.typeKey = "$type";
         } else if (isShort) {
             this.idKey = "@i";
+            this.typeKey = "@t";
         } else {
             this.idKey = "@id";
+            this.typeKey = "@type";
         }
 
         // Pre-fetch frequently accessed WriteOptions for hot path performance
@@ -904,7 +909,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
             if (showType) {
                 String typeName = closestWriter.getTypeName(o);
-                writeType(typeName, output);
+                writeType(typeName);
             }
 
             if (referenced || showType) {
@@ -1319,7 +1324,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                     if (showType) {
                         out.write('{');
                         tabIn();
-                        writeType(objClass.getName(), out);
+                        writeType(objClass.getName());
                         out.write(',');
                         newLine();
                         writeBasicString(out, "value");
@@ -1402,15 +1407,27 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         gen.writeNumberField(idKey, id);
     }
 
-    // Optimized writeType method
-    private void writeType(String name, Writer output) throws IOException {
+    /**
+     * Emit the {@code @type} / {@code @t} / {@code $type} / {@code $t} field at an
+     * inside-open-object-body position. Dog-food path through {@link CharStreamGenerator}'s
+     * {@code writeStringFieldUnescaped} — the value is a Java type alias / class name
+     * that is trusted to be JSON-safe (no characters requiring escape), so the helper
+     * skips the per-call escape scan that {@code writeStringField} would otherwise
+     * perform. State-machine is still fully engaged via {@code writeFieldName} for the
+     * key emission. Pattern mirrors the {@code writeXxxRaw} family for scalars: public
+     * Jackson API stays safe and comprehensive, an intra-package fast-path skips the
+     * unnecessary work for callers that can guarantee a safe input.
+     * <p>
+     * Honors the {@code neverShowingType}/{@code forceElementShowType} policy gate by
+     * short-circuiting before any emission.
+     */
+    private void writeType(String name) throws IOException {
         if (neverShowingType && !forceElementShowType) {
             return;
         }
-        output.write(typePrefix);
         String alias = writeOptions.getTypeNameAlias(name);
-        output.write(alias);
-        output.write('"');
+        gen.resetForBridgeInsideObjectBody(this.depth);
+        gen.writeStringFieldUnescaped(typeKey, alias);
     }
 
     /**
@@ -1438,7 +1455,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             final Writer output = this.out;
             if (showType) {
                 output.write('{');
-                writeType("long", output);
+                writeType("long");
                 output.write(',');
             }
             longBoxedWriter.write(obj, showType, output, this);
@@ -1517,7 +1534,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         if (typeWritten) {
-            writeType(arrayType.getName(), output);
+            writeType(arrayType.getName());
             output.write(',');
             newLine();
         }
@@ -1603,7 +1620,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         if (typeWritten) {
-            writeType(arrayType.getName(), output);
+            writeType(arrayType.getName());
             output.write(',');
             newLine();
         }
@@ -1816,7 +1833,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 output.write(',');
                 newLine();
             }
-            writeType(getTypeNameForOutput(col), output);
+            writeType(getTypeNameForOutput(col));
         }
     }
 
@@ -1865,7 +1882,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         if (typeWritten) {
-            writeType(arrayClass.getName(), output);
+            writeType(arrayClass.getName());
             output.write(',');
             newLine();
         }
@@ -1952,7 +1969,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 newLine();
             }
 
-            writeType(colClass.getName(), output);
+            writeType(colClass.getName());
         }
 
         if (len == 0) {
@@ -2057,7 +2074,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
             String type = getTypeNameForOutput(jObj);
             if (type != null) {
-                writeType(type, output);
+                writeType(type);
             } else {   // type not displayed
                 showType = false;
             }
@@ -2088,7 +2105,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 output.write(',');
                 newLine();
             }
-            writeType(getTypeNameForOutput(jObj), output);
+            writeType(getTypeNameForOutput(jObj));
             type = jObj.getRawType();
         }
 
@@ -2185,7 +2202,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 output.write(',');
                 newLine();
             }
-            writeType(getTypeNameForOutput(map), output);
+            writeType(getTypeNameForOutput(map));
         }
 
         if (map.isEmpty()) {
@@ -2718,7 +2735,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
 
             if (showType) {
-                writeType(obj.getClass().getName(), output);
+                writeType(obj.getClass().getName());
             }
         }
 

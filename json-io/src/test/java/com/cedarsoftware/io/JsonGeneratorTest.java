@@ -473,6 +473,37 @@ class JsonGeneratorTest {
     }
 
     @Test
+    void writeStringFieldUnescaped_emitsRawValueSkippingEscapeScan() throws IOException {
+        // Package-private fast path used by JsonWriter for @type field emission where
+        // the value is a known-safe Java type alias / class name. The helper is on the
+        // concrete class — exercise it through JsonIo's createGenerator(...) so the
+        // test stays on the public surface, then cast to CharStreamGenerator (legal
+        // within the same package).
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw)) {
+            CharStreamGenerator concrete = (CharStreamGenerator) g;
+            concrete.writeStartObject();
+            concrete.writeStringFieldUnescaped("@type", "com.example.Foo");
+            concrete.writeStringFieldUnescaped("@id", "42");
+            concrete.writeEndObject();
+        }
+        // State machine engaged correctly: auto-comma between fields, structural close.
+        assertEquals("{\"@type\":\"com.example.Foo\",\"@id\":\"42\"}", sw.toString());
+    }
+
+    @Test
+    void writeStringFieldUnescaped_nullEmitsJsonNull() throws IOException {
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw)) {
+            CharStreamGenerator concrete = (CharStreamGenerator) g;
+            concrete.writeStartObject();
+            concrete.writeStringFieldUnescaped("k", null);
+            concrete.writeEndObject();
+        }
+        assertEquals("{\"k\":null}", sw.toString());
+    }
+
+    @Test
     void json5SmartQuotes_doesNotApplyToKeys() throws IOException {
         // Keys are double-quoted (or unquoted identifier), NEVER single-quoted, even when
         // json5SmartQuotes is on. Smart quoting applies to string values only — matches
