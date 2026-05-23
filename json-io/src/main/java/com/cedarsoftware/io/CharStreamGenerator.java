@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Arrays;
 
 import com.cedarsoftware.util.internal.CharBufScratch;
 
@@ -134,22 +133,25 @@ final class CharStreamGenerator extends JsonGenerator {
      * @since 4.104.0
      */
     void resetForBridgeInsideObjectBody(int currentJsonWriterDepth) {
-        // Ensure the contextStack has enough room for the resulting depth (one
-        // FRAME_ROOT_DONE + (currentJsonWriterDepth-1) placeholders + one
-        // FRAME_OBJECT_EMPTY at top). Single-allocation grow path replaces the
-        // amortized per-push grow.
+        // Ensure the contextStack has enough room for the resulting depth (one frame
+        // per indent level plus the top FRAME_OBJECT_EMPTY for the new body).
         final int requiredLength = currentJsonWriterDepth + 1;
         if (contextStack.length < requiredLength) {
-            contextStack = new byte[Math.max(contextStack.length * 2, requiredLength)];
+            // Preserve existing frame contents on grow -- they belong to the outer
+            // caller's structural context and must survive a nested reset.
+            byte[] grown = new byte[Math.max(contextStack.length * 2, requiredLength)];
+            System.arraycopy(contextStack, 0, grown, 0, contextStack.length);
+            contextStack = grown;
         }
-        contextStack[0] = FRAME_ROOT_DONE;
-        // Below-top frames are only consulted on writeEnd*, and a well-behaved
-        // custom writer never pops below its entry frame — so FRAME_OBJECT_AFTER_VALUE
-        // is a benign neutral placeholder. Arrays.fill replaces the push-loop:
-        // single intrinsic-backed write vs. N method calls + N array stores.
-        if (currentJsonWriterDepth > 1) {
-            Arrays.fill(contextStack, 1, currentJsonWriterDepth, FRAME_OBJECT_AFTER_VALUE);
-        }
+        // Lower frames (0 .. currentJsonWriterDepth-1) are PRESERVED -- they belong
+        // to the outer caller's structural context. Prior implementation used
+        // Arrays.fill to write placeholders here; that corrupted state when a custom
+        // writer's recursion through context.writeImpl triggered a NESTED reset,
+        // because the inner reset clobbered the outer caller's frames at depths the
+        // outer would later pop into. A well-behaved custom writer emits inside its
+        // own object body without popping below its entry frame — so FRAME_OBJECT_AFTER_VALUE
+        // is those lower frames are read-only from the inner
+        // writer's perspective.
         contextStack[currentJsonWriterDepth] = FRAME_OBJECT_EMPTY;
         depth = currentJsonWriterDepth;
         // Suppress the very first leading newline+indent (JsonWriter has already
@@ -250,8 +252,12 @@ final class CharStreamGenerator extends JsonGenerator {
      * <p>
      * Caller is responsible for invoking {@link #markValue()} <i>after</i>
      * emitting the actual value characters.
+     * <p>
+     * Package-private so {@link JsonWriter#writeValue(Object)} can emit the leading
+     * separator + indent for an array element before delegating to {@code writeImpl}
+     * (whose wrapper handles the post-emission state transition via markValue).
      */
-    private void startValueContext() throws IOException {
+    void startValueContext() throws IOException {
         switch (top()) {
             case FRAME_ROOT_EMPTY:
             case FRAME_ARRAY_EMPTY:
@@ -783,6 +789,74 @@ final class CharStreamGenerator extends JsonGenerator {
             out.write(value);
             out.write('"');
         }
+        markValue();
+    }
+
+    // Side-buffer arena for {@link #snapshotForExternalValue()} — captures the full
+    // {@code contextStack[0..depth]} per snapshot so a NESTED reset (from a custom
+    // writer's recursion through {@code writeCustom} -> {@code resetForBridgeInsideObjectBody})
+    // can't corrupt the outer caller's frames. Reused across calls; the snapshot/restore
+    // pairing is naturally LIFO (writeImpl recursion is a stack), so the arena pointer
+    // just advances on snapshot and rewinds on restore — no per-call allocation after
+    // the initial sizing.
+    private byte[] snapshotArena = new byte[64];
+    private int snapshotArenaPointer = 0;
+
+    /**
+     * Snapshot gen's current structural state for an upcoming external (non-gen-driven)
+     * value emission. Returns an opaque {@code int} token; the caller MUST pass this
+     * token to {@link #restoreAfterExternalValue(int)} after the external emission
+     * completes. Does NOT call {@link #startValueContext()} — the caller is responsible
+     * for any separator/indent emission via its own logic.
+     *
+     * <p>Used by {@link JsonWriter#writeImpl(Object, boolean)} to wrap its (potentially
+     * deep, recursive) serialization in a state-sync window. writeImpl may emit any
+     * shape via {@code out.write(...)} directly and may recurse through {@code writeCustom}
+     * which resets gen state at a deeper depth (potentially clobbering outer frames);
+     * the snapshot captures the entire current stack {@code contextStack[0..depth]} so
+     * {@code restoreAfterExternalValue} can recover the outer state byte-for-byte.
+     *
+     * @return opaque token to pass to {@link #restoreAfterExternalValue(int)}
+     */
+    int snapshotForExternalValue() {
+        final int currentDepth = depth;
+        final int bytesNeeded = 2 + currentDepth + 1; // 2-byte depth header + stack contents
+        if (snapshotArena.length < snapshotArenaPointer + bytesNeeded) {
+            int newLen = Math.max(snapshotArena.length * 2, snapshotArenaPointer + bytesNeeded);
+            byte[] grown = new byte[newLen];
+            System.arraycopy(snapshotArena, 0, grown, 0, snapshotArenaPointer);
+            snapshotArena = grown;
+        }
+        final int token = snapshotArenaPointer;
+        // Write depth as 2 bytes (big-endian); depth is bounded by contextStack.length
+        // which grows on demand but stays well under 65535 in practice.
+        snapshotArena[snapshotArenaPointer++] = (byte) (currentDepth >>> 8);
+        snapshotArena[snapshotArenaPointer++] = (byte) currentDepth;
+        System.arraycopy(contextStack, 0, snapshotArena, snapshotArenaPointer, currentDepth + 1);
+        snapshotArenaPointer += currentDepth + 1;
+        return token;
+    }
+
+    /**
+     * Restore gen's structural state from a {@link #snapshotForExternalValue()} token
+     * and transition to "value emitted" via {@link #markValue()}. Use after the external
+     * (non-gen-driven) value bytes have been emitted into the underlying writer.
+     *
+     * @param token the snapshot token from {@link #snapshotForExternalValue()}
+     */
+    void restoreAfterExternalValue(int token) {
+        final int savedDepth = ((snapshotArena[token] & 0xFF) << 8) | (snapshotArena[token + 1] & 0xFF);
+        if (contextStack.length < savedDepth + 1) {
+            // contextStack should never need to grow on restore (outer stack already
+            // grew when the snapshot was taken), but guard against a future code path.
+            byte[] grown = new byte[Math.max(contextStack.length * 2, savedDepth + 1)];
+            contextStack = grown;
+        }
+        System.arraycopy(snapshotArena, token + 2, contextStack, 0, savedDepth + 1);
+        depth = savedDepth;
+        // Release this snapshot's arena bytes — paired snapshot/restore is LIFO so the
+        // pointer just rewinds to the token's start position.
+        snapshotArenaPointer = token;
         markValue();
     }
 

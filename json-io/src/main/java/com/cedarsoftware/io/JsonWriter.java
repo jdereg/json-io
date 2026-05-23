@@ -362,20 +362,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private final com.cedarsoftware.io.JsonClassWriter doubleWriter;
     private final com.cedarsoftware.io.JsonClassWriter floatWriter;
 
-    // Context tracking for automatic comma management
-    private final Deque<WriteContext> contextStack = new ArrayDeque<>();
-
-    /**
-     * Tracks the current write context to enable automatic comma insertion.
-     * This eliminates the need for manual "boolean first" tracking in custom writers.
-     */
-    enum WriteContext {
-        ROOT,          // At document root
-        OBJECT_EMPTY,  // Inside object, no fields written yet
-        OBJECT_FIELD,  // Inside object, field(s) written
-        ARRAY_EMPTY,   // Inside array, no elements yet
-        ARRAY_ELEMENT  // Inside array, element(s) written
-    }
+    // (Previously: a parallel state machine — Deque<WriteContext> contextStack + WriteContext
+    // enum — tracked structural position for the public Jackson-style API. Removed in 4.103.0;
+    // gen's contextStack is now the single source of truth. The Jackson-style API methods
+    // below delegate to gen. The writeImpl wrapper handles state-sync across the
+    // potentially-recursive writeImplInternal body so callers that mix Jackson API with
+    // WriterContext.writeImpl see correct gen state on each return.)
 
     /**
      * Cached write type for type-indexed dispatch in writeImpl().
@@ -823,12 +815,17 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 newLine();
             }
 
+            // Reuse the long-lived this.gen instead of allocating a fresh bridge
+            // generator per call. State-reset produces the same configuration
+            // bridgeInsideObjectBody would have built (stack matching this.depth,
+            // FRAME_OBJECT_EMPTY at top, suppressNextIndent=true). Required for BOTH
+            // dispatch paths: the new gen-based custom writer obviously needs it, but
+            // the legacy Writer-based custom writer ALSO needs it now that JsonWriter's
+            // public Jackson-style WriterContext methods (writeFieldName, writeStringField,
+            // etc.) delegate to gen — those calls go through gen's state machine and
+            // need gen positioned at FRAME_OBJECT_EMPTY (first-field) to emit correctly.
+            this.gen.resetForBridgeInsideObjectBody(this.depth);
             if (dispatch.useNewWrite) {
-                // Reuse the long-lived this.gen instead of allocating a fresh bridge
-                // generator per call. State-reset produces the same configuration
-                // bridgeInsideObjectBody would have built (stack matching this.depth,
-                // FRAME_OBJECT_EMPTY at top, suppressNextIndent=true).
-                this.gen.resetForBridgeInsideObjectBody(this.depth);
                 closestWriter.write(o, showType || referenced, this.gen, this);
             } else {
                 closestWriter.write(o, showType || referenced, output, this);
@@ -1167,11 +1164,26 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * JsonObject, Map, Map of JsonObjects, Collection, Collection of JsonObject, any regular
      * object, or a JsonObject representing a regular object.
      *
+     * <p>Wraps the actual serialization in a {@link CharStreamGenerator} state-sync
+     * window via {@code snapshotForExternalValue} / {@code restoreAfterExternalValue}.
+     * The body of {@link #writeImplInternal} emits via {@code out.write(...)} directly
+     * and may recurse through {@code writeCustom} which resets gen state. The wrapper
+     * captures gen's pre-call state, lets writeImplInternal do anything, then restores
+     * state and transitions to "value emitted" — so subsequent gen-driven emission
+     * (from Jackson API calls, or from external custom writers using the WriterContext
+     * API) sees correct gen state.
+     *
      * @param obj      Object to be written
      * @param showType if set to true, the @type tag will be output.
      * @throws IOException if one occurs on the underlying output stream.
      */
     public void writeImpl(Object obj, boolean showType) throws IOException {
+        int snap = gen.snapshotForExternalValue();
+        writeImplInternal(obj, showType);
+        gen.restoreAfterExternalValue(snap);
+    }
+
+    private void writeImplInternal(Object obj, boolean showType) throws IOException {
         // For security - write instances of these classes out as null
         if (obj == null ||
                 obj instanceof ProcessBuilder ||
@@ -3091,249 +3103,132 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     // ======================== Context Stack Management ========================
 
-    /**
-     * Writes a comma if the current context requires it.
-     * This is called before writing array elements or object start/array start in array context.
-     *
-     * @throws IOException if an error occurs writing to the output stream
-     */
-    private void writeCommaIfNeeded() throws IOException {
-        WriteContext ctx = contextStack.peek();
-        if (ctx == WriteContext.OBJECT_FIELD || ctx == WriteContext.ARRAY_ELEMENT) {
-            out.write(',');
-        }
-    }
+    // ======================== Jackson-Style Semantic Write API ========================
+    //
+    // Every method in this section is a thin delegate to {@link CharStreamGenerator}.
+    // gen owns the structural state machine (auto-comma, indent in pretty mode, validation);
+    // JsonWriter is purely a facade so existing callers that drive JsonWriter directly as
+    // a Jackson-style writer keep working with the same method names + signatures.
+    //
+    // Migrated in 4.103.0 — the prior implementation maintained a parallel state machine
+    // (a separate Deque<WriteContext> contextStack with writeCommaIfNeeded /
+    // markObjectFieldWritten / markArrayElementWritten helpers). That parallel machine is
+    // gone; gen is the single source of truth.
+    //
+    // Behavior change: the legacy writeStringField / writeObjectField / writeNumberField /
+    // writeBooleanField / writeArrayFieldStart / writeObjectFieldStart documented "writes
+    // a LEADING comma" semantics — callers had to avoid them for the first field in an
+    // object. That deviation from Jackson is REMOVED — gen auto-decides comma based on
+    // structural position, matching Jackson's actual writeStringField semantics. Calls
+    // that followed the legacy convention (always for non-first fields) continue to produce
+    // identical output; calls for the first field that previously emitted invalid JSON
+    // (leading comma immediately after '{') now emit correct JSON.
+    //
+    // State-sync across writeImpl: writeImpl is wrapped with snapshotForExternalValue /
+    // restoreAfterExternalValue (see method-level Javadoc), so writeObjectField and
+    // writeValue(Object) — which transitively call writeImpl — see gen's state correctly
+    // restored on return. This preserves backward compatibility with custom writers
+    // (MultiKeyMapWriter, CompactMapWriter) that mix WriterContext.writeImpl with
+    // context.writeFieldName / writeObjectField in their write methods.
 
-    /**
-     * Updates the context after writing a value in an array.
-     * Transitions ARRAY_EMPTY to ARRAY_ELEMENT.
-     */
-    private void markArrayElementWritten() {
-        if (!contextStack.isEmpty()) {
-            WriteContext ctx = contextStack.peek();
-            if (ctx == WriteContext.ARRAY_EMPTY) {
-                contextStack.pop();
-                contextStack.push(WriteContext.ARRAY_ELEMENT);
-            }
-        }
-    }
-
-    /**
-     * Updates the context after writing a field in an object.
-     * Transitions OBJECT_EMPTY to OBJECT_FIELD.
-     */
-    private void markObjectFieldWritten() {
-        if (!contextStack.isEmpty()) {
-            WriteContext ctx = contextStack.peek();
-            if (ctx == WriteContext.OBJECT_EMPTY) {
-                contextStack.pop();
-                contextStack.push(WriteContext.OBJECT_FIELD);
-            }
-        }
-    }
-
-    // ======================== Semantic Write API Implementation ========================
-
-    /**
-     * Writes a JSON field name followed by a colon.
-     * Example: writeFieldName("name") produces "name":
-     * Automatically writes a comma before the field name if this is not the first field.
-     */
     @Override
     public void writeFieldName(String name) throws IOException {
-        WriteContext ctx = contextStack.peek();
-        if (ctx == WriteContext.OBJECT_FIELD) {
-            out.write(',');
-        }
-        writeKey(name);
-        markObjectFieldWritten();
+        gen.writeFieldName(name);
     }
 
-    /**
-     * Writes a complete JSON string field with automatic comma handling.
-     * Example: writeStringField("name", "John") produces ,"name":"John"
-     * <p>
-     * This method writes a LEADING comma, making it suitable for fields after the first field.
-     * For the first field in an object, either omit the comma manually or use writeFieldName()
-     * followed by the value.
-     */
     @Override
     public void writeStringField(String name, String value) throws IOException {
-        out.write(',');
-        writeKey(name);
-        if (value == null) {
-            out.write("null");
-        } else {
-            writeStringValue(value);
-        }
-        markObjectFieldWritten();
+        gen.writeStringField(name, value);
     }
 
-    /**
-     * Writes a complete JSON object field with automatic serialization and comma handling.
-     * Example: writeObjectField("address", addressObj) produces ,"address":{...}
-     * <p>
-     * This method writes a LEADING comma, making it suitable for fields after the first field.
-     * For the first field in an object, either omit the comma manually or use writeFieldName()
-     * followed by writeImpl().
-     */
     @Override
     public void writeObjectField(String name, Object value) throws IOException {
-        out.write(',');
-        writeKey(name);
+        gen.writeFieldName(name);
+        // writeFieldName left state at FRAME_OBJECT_AFTER_FIELD — startValueContext
+        // at that state is a no-op (no separator needed after a field name), so the
+        // writeImpl call below proceeds straight to the value emission. writeImpl's
+        // wrapper handles state transition to FRAME_OBJECT_AFTER_VALUE via markValue.
         writeImpl(value, true);
-        markObjectFieldWritten();
     }
 
-    /**
-     * Writes a JSON object opening brace.
-     * Automatically writes a comma if needed based on context.
-     */
     @Override
     public void writeStartObject() throws IOException {
-        writeCommaIfNeeded();
-        out.write('{');
-        markArrayElementWritten();
-        contextStack.push(WriteContext.OBJECT_EMPTY);
+        gen.writeStartObject();
     }
 
-    /**
-     * Writes a JSON object closing brace.
-     * Pops the object context from the stack.
-     */
     @Override
     public void writeEndObject() throws IOException {
-        out.write('}');
-        if (!contextStack.isEmpty()) {
-            contextStack.pop();
-        }
+        gen.writeEndObject();
     }
 
-    /**
-     * Writes a JSON array opening bracket.
-     * Automatically writes a comma if needed based on context.
-     */
     @Override
     public void writeStartArray() throws IOException {
-        writeCommaIfNeeded();
-        out.write('[');
-        markArrayElementWritten();
-        contextStack.push(WriteContext.ARRAY_EMPTY);
+        gen.writeStartArray();
     }
 
-    /**
-     * Writes a JSON array closing bracket.
-     * Pops the array context from the stack.
-     */
     @Override
     public void writeEndArray() throws IOException {
-        out.write(']');
-        if (!contextStack.isEmpty()) {
-            contextStack.pop();
-        }
+        gen.writeEndArray();
     }
 
-    /**
-     * Writes a JSON string value with proper quote escaping.
-     * Example: writeValue("Hello") produces "Hello"
-     * Automatically writes a comma if this is an array element and not the first element.
-     */
     @Override
     public void writeValue(String value) throws IOException {
-        writeCommaIfNeeded();
-        if (value == null) {
-            out.write("null");
-        } else {
-            writeStringValue(value);
-        }
-        markArrayElementWritten();
+        gen.writeString(value);
     }
 
-    /**
-     * Writes a JSON value by serializing the given object.
-     * Example: writeValue(myObject) produces the full JSON representation
-     * Automatically writes a comma if this is an array element and not the first element.
-     */
     @Override
     public void writeValue(Object value) throws IOException {
-        writeCommaIfNeeded();
+        // startValueContext emits the separator (comma for non-empty array, no-op for
+        // first element) + indent before writeImpl's value emission. writeImpl's
+        // wrapper handles the state transition via markValue.
+        gen.startValueContext();
         writeImpl(value, true);
-        markArrayElementWritten();
     }
 
-    /**
-     * Writes a complete JSON array field start with automatic comma handling.
-     * Example: writeArrayFieldStart("items") produces ,"items":[
-     * Manages context by marking the object field written and pushing array context.
-     */
     @Override
     public void writeArrayFieldStart(String name) throws IOException {
-        out.write(',');
-        writeKey(name);
-        out.write('[');
-        markObjectFieldWritten();
-        contextStack.push(WriteContext.ARRAY_EMPTY);
+        gen.writeArrayFieldStart(name);
     }
 
-    /**
-     * Writes a complete JSON object field start with automatic comma handling.
-     * Example: writeObjectFieldStart("config") produces ,"config":{
-     * Manages context by marking the object field written and pushing object context.
-     */
     @Override
     public void writeObjectFieldStart(String name) throws IOException {
-        out.write(',');
-        writeKey(name);
-        out.write('{');
-        markObjectFieldWritten();
-        contextStack.push(WriteContext.OBJECT_EMPTY);
+        gen.writeObjectFieldStart(name);
     }
 
-    /**
-     * Writes a complete JSON number field with automatic comma handling.
-     * Example: writeNumberField("count", 42) produces ,"count":42
-     */
     @Override
     public void writeNumberField(String name, Number value) throws IOException {
-        out.write(',');
-        writeKey(name);
         if (value == null) {
-            out.write("null");
-        } else {
-            out.write(value.toString());
+            gen.writeNullField(name);
+            return;
         }
-        markObjectFieldWritten();
+        gen.writeFieldName(name);
+        // Dispatch to the right typed gen.writeNumber overload for the runtime type, so
+        // each Number subtype gets its allocation-free digit-pair / canonical-form path.
+        if (value instanceof Integer || value instanceof Short || value instanceof Byte) {
+            gen.writeNumber(value.intValue());
+        } else if (value instanceof Long) {
+            gen.writeNumber(value.longValue());
+        } else if (value instanceof Float) {
+            gen.writeNumber(value.floatValue());
+        } else if (value instanceof Double) {
+            gen.writeNumber(value.doubleValue());
+        } else if (value instanceof BigInteger) {
+            gen.writeNumber((BigInteger) value);
+        } else if (value instanceof BigDecimal) {
+            gen.writeNumber((BigDecimal) value);
+        } else {
+            // AtomicInteger / AtomicLong / other Number subclasses — fall back to the
+            // string-passthrough overload (trusted canonical form via toString).
+            gen.writeNumber(value.toString());
+        }
     }
 
-    /**
-     * Writes a complete JSON boolean field with automatic comma handling.
-     * Example: writeBooleanField("active", true) produces ,"active":true
-     */
     @Override
     public void writeBooleanField(String name, boolean value) throws IOException {
-        out.write(',');
-        writeKey(name);
-        out.write(value ? "true" : "false");
-        markObjectFieldWritten();
+        gen.writeBooleanField(name, value);
     }
 
     // ======================== JSON5 Support Methods ========================
-
-    /**
-     * Writes a JSON object key, optionally without quotes if JSON5 unquoted keys are enabled
-     * and the key is a valid ECMAScript identifier.
-     * @param name the key name to write
-     */
-    private void writeKey(String name) throws IOException {
-        final Writer output = this.out;
-        if (json5UnquotedKeys && isValidJson5Identifier(name)) {
-            output.write(name);
-            output.write(':');
-        } else {
-            CharStreamGenerator.writeJsonUtf8String(output, name, maxStringLength);
-            output.write(':');
-        }
-    }
 
     /**
      * Check if a string is a valid ECMAScript identifier that can be used as an unquoted key in JSON5.
