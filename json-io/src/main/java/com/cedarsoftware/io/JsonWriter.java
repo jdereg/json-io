@@ -131,43 +131,29 @@ import static com.cedarsoftware.io.JsonValue.TYPE;
 public class JsonWriter implements WriterContext, Closeable, Flushable {
     private static final Logger LOG = Logger.getLogger(JsonWriter.class.getName());
 
-    // Standard meta key prefixes (@ prefix - quoted)
-    private static final String ID_SHORT = "\"@i\":";
-    private static final String ID_LONG = "\"@id\":";
-    private static final String TYPE_SHORT = "\"@t\":\"";
-    private static final String TYPE_LONG = "\"@type\":\"";
-    private static final String REF_SHORT = "\"@r\":";
-    private static final String REF_LONG = "\"@ref\":";
+    // Items / keys meta-key prefixes — precomputed key+colon strings used by the
+    // remaining legacy emission paths for the @items / @keys fields. Six variants
+    // cover the matrix of: short-vs-long key form × @-vs-$ prefix × quoted-vs-json5-
+    // unquoted-identifier. The @id / @type / @ref counterparts were removed when
+    // writeId / writeType / writeOptionalReference / writePrimitive's Long-wrap
+    // branch all migrated to drive emission through CharStreamGenerator's Jackson-
+    // style API; gen makes the key-quoting decision itself from the bare key name.
+
+    // Standard form: @ prefix, quoted keys
     private static final String ITEMS_SHORT = "\"@e\":";
     private static final String ITEMS_LONG = "\"@items\":";
     private static final String KEYS_SHORT = "\"@k\":";
     private static final String KEYS_LONG = "\"@keys\":";
 
-    // JSON5 meta key prefixes ($ prefix - unquoted, valid identifier)
-    private static final String ID_JSON5 = "$id:";
-    private static final String TYPE_JSON5 = "$type:\"";
-    private static final String REF_JSON5 = "$ref:";
+    // JSON5 form: $ prefix, unquoted-identifier keys (valid because $ identifier-start is legal)
     private static final String ITEMS_JSON5 = "$items:";
     private static final String KEYS_JSON5 = "$keys:";
-
-    // JSON5 short meta key prefixes ($ prefix, single character - unquoted)
-    private static final String ID_JSON5_SHORT = "$i:";
-    private static final String TYPE_JSON5_SHORT = "$t:\"";
-    private static final String REF_JSON5_SHORT = "$r:";
     private static final String ITEMS_JSON5_SHORT = "$e:";
     private static final String KEYS_JSON5_SHORT = "$k:";
 
     // $ prefix with quoted keys (for standard JSON mode with $ prefix override)
-    private static final String ID_DOLLAR_QUOTED = "\"$id\":";
-    private static final String TYPE_DOLLAR_QUOTED = "\"$type\":\"";
-    private static final String REF_DOLLAR_QUOTED = "\"$ref\":";
     private static final String ITEMS_DOLLAR_QUOTED = "\"$items\":";
     private static final String KEYS_DOLLAR_QUOTED = "\"$keys\":";
-
-    // $ prefix short with quoted keys (for standard JSON mode with $ prefix override)
-    private static final String ID_DOLLAR_SHORT_QUOTED = "\"$i\":";
-    private static final String TYPE_DOLLAR_SHORT_QUOTED = "\"$t\":\"";
-    private static final String REF_DOLLAR_SHORT_QUOTED = "\"$r\":";
     private static final String ITEMS_DOLLAR_SHORT_QUOTED = "\"$e\":";
     private static final String KEYS_DOLLAR_SHORT_QUOTED = "\"$k\":";
 
@@ -332,11 +318,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     // Cached Field for EnumSet.elementType (lazy-initialized, immutable once set)
     private static volatile Field enumSetElementTypeField;
     private static volatile boolean enumSetFieldResolved = false;
-
-    // Selected prefixes based on options
-    private final String idPrefix;
-    private final String typePrefix;
-    private final String refPrefix;
 
     // Key names (no quotes, no colon) for the dog-food path through gen.writeXxxField —
     // gen handles quoting decisions based on json5UnquotedKeys + isValidJson5Identifier(name),
@@ -552,45 +533,27 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         boolean canUseUnquotedKeys = isJson5UnquotedKeys && useDollarPrefix;
 
         if (useDollarPrefix && canUseUnquotedKeys && isShort) {
-            // JSON5 + $ prefix + short: $t, $i, $r, $e, $k (unquoted)
-            this.idPrefix = ID_JSON5_SHORT;
-            this.typePrefix = TYPE_JSON5_SHORT;
-            this.refPrefix = REF_JSON5_SHORT;
+            // JSON5 + $ prefix + short: $e, $k (unquoted)
             this.itemsPrefix = ITEMS_JSON5_SHORT;
             this.keysPrefix = KEYS_JSON5_SHORT;
         } else if (useDollarPrefix && canUseUnquotedKeys) {
-            // JSON5 + $ prefix + long: $type, $id, $ref, $items, $keys (unquoted)
-            this.idPrefix = ID_JSON5;
-            this.typePrefix = TYPE_JSON5;
-            this.refPrefix = REF_JSON5;
+            // JSON5 + $ prefix + long: $items, $keys (unquoted)
             this.itemsPrefix = ITEMS_JSON5;
             this.keysPrefix = KEYS_JSON5;
         } else if (useDollarPrefix && isShort) {
-            // $ prefix + short + quoted: "$t", "$i", "$r", "$e", "$k"
-            this.idPrefix = ID_DOLLAR_SHORT_QUOTED;
-            this.typePrefix = TYPE_DOLLAR_SHORT_QUOTED;
-            this.refPrefix = REF_DOLLAR_SHORT_QUOTED;
+            // $ prefix + short + quoted: "$e", "$k"
             this.itemsPrefix = ITEMS_DOLLAR_SHORT_QUOTED;
             this.keysPrefix = KEYS_DOLLAR_SHORT_QUOTED;
         } else if (useDollarPrefix) {
-            // $ prefix + long + quoted: "$type", "$id", "$ref", "$items", "$keys"
-            this.idPrefix = ID_DOLLAR_QUOTED;
-            this.typePrefix = TYPE_DOLLAR_QUOTED;
-            this.refPrefix = REF_DOLLAR_QUOTED;
+            // $ prefix + long + quoted: "$items", "$keys"
             this.itemsPrefix = ITEMS_DOLLAR_QUOTED;
             this.keysPrefix = KEYS_DOLLAR_QUOTED;
         } else if (isShort) {
-            // @ prefix + short + quoted: "@t", "@i", "@r", "@e", "@k"
-            this.idPrefix = ID_SHORT;
-            this.typePrefix = TYPE_SHORT;
-            this.refPrefix = REF_SHORT;
+            // @ prefix + short + quoted: "@e", "@k"
             this.itemsPrefix = ITEMS_SHORT;
             this.keysPrefix = KEYS_SHORT;
         } else {
-            // @ prefix + long + quoted: "@type", "@id", "@ref", "@items", "@keys"
-            this.idPrefix = ID_LONG;
-            this.typePrefix = TYPE_LONG;
-            this.refPrefix = REF_LONG;
+            // @ prefix + long + quoted: "@items", "@keys"
             this.itemsPrefix = ITEMS_LONG;
             this.keysPrefix = KEYS_LONG;
         }
