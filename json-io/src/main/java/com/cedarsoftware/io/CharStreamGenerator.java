@@ -603,11 +603,7 @@ final class CharStreamGenerator extends JsonGenerator {
     @Override
     public JsonGenerator writeNumber(float value) throws IOException {
         startValueContext();
-        if (Float.isNaN(value) || Float.isInfinite(value)) {
-            writeNonFiniteFloat(value);
-        } else {
-            out.write(Float.toString(value));
-        }
+        writeFloatRaw(value);
         markValue();
         return this;
     }
@@ -615,40 +611,66 @@ final class CharStreamGenerator extends JsonGenerator {
     @Override
     public JsonGenerator writeNumber(double value) throws IOException {
         startValueContext();
-        if (Double.isNaN(value) || Double.isInfinite(value)) {
-            writeNonFiniteDouble(value);
-        } else {
-            out.write(Double.toString(value));
-        }
+        writeDoubleRaw(value);
         markValue();
         return this;
     }
 
-    private void writeNonFiniteFloat(float value) throws IOException {
-        if (!allowNanAndInfinity) {
-            throw new JsonGenerationException(
-                    "Cannot serialize non-finite float (NaN/Infinity) when allowNanAndInfinity=false");
-        }
-        if (Float.isNaN(value)) {
-            out.write("NaN");
-        } else if (value == Float.POSITIVE_INFINITY) {
-            out.write("Infinity");
+    /**
+     * Emit a float value's canonical string form directly to the underlying writer.
+     * No state-machine interaction; the caller is responsible for surrounding
+     * structural context. Honors the {@code allowNanAndInfinity} policy: throws
+     * {@link JsonGenerationException} for NaN/Infinity when the flag is off,
+     * emits the literal otherwise. Counterpart to {@link #writeIntRaw(int)} /
+     * {@link #writeLongRaw(long)} for the float type.
+     *
+     * @param value the float value to emit
+     * @throws IOException If an I/O error occurs (or NaN/Inf when policy disallows)
+     */
+    void writeFloatRaw(float value) throws IOException {
+        if (Float.isNaN(value) || Float.isInfinite(value)) {
+            if (!allowNanAndInfinity) {
+                throw new JsonGenerationException(
+                        "Cannot serialize non-finite float (NaN/Infinity) when allowNanAndInfinity=false");
+            }
+            if (Float.isNaN(value)) {
+                out.write("NaN");
+            } else if (value == Float.POSITIVE_INFINITY) {
+                out.write("Infinity");
+            } else {
+                out.write("-Infinity");
+            }
         } else {
-            out.write("-Infinity");
+            out.write(Float.toString(value));
         }
     }
 
-    private void writeNonFiniteDouble(double value) throws IOException {
-        if (!allowNanAndInfinity) {
-            throw new JsonGenerationException(
-                    "Cannot serialize non-finite double (NaN/Infinity) when allowNanAndInfinity=false");
-        }
-        if (Double.isNaN(value)) {
-            out.write("NaN");
-        } else if (value == Double.POSITIVE_INFINITY) {
-            out.write("Infinity");
+    /**
+     * Emit a double value's canonical string form directly to the underlying writer.
+     * No state-machine interaction; the caller is responsible for surrounding
+     * structural context. Honors the {@code allowNanAndInfinity} policy: throws
+     * {@link JsonGenerationException} for NaN/Infinity when the flag is off,
+     * emits the literal otherwise. Counterpart to {@link #writeIntRaw(int)} /
+     * {@link #writeLongRaw(long)} for the double type.
+     *
+     * @param value the double value to emit
+     * @throws IOException If an I/O error occurs (or NaN/Inf when policy disallows)
+     */
+    void writeDoubleRaw(double value) throws IOException {
+        if (Double.isNaN(value) || Double.isInfinite(value)) {
+            if (!allowNanAndInfinity) {
+                throw new JsonGenerationException(
+                        "Cannot serialize non-finite double (NaN/Infinity) when allowNanAndInfinity=false");
+            }
+            if (Double.isNaN(value)) {
+                out.write("NaN");
+            } else if (value == Double.POSITIVE_INFINITY) {
+                out.write("Infinity");
+            } else {
+                out.write("-Infinity");
+            }
         } else {
-            out.write("-Infinity");
+            out.write(Double.toString(value));
         }
     }
 
@@ -690,7 +712,7 @@ final class CharStreamGenerator extends JsonGenerator {
     @Override
     public JsonGenerator writeBoolean(boolean value) throws IOException {
         startValueContext();
-        out.write(value ? "true" : "false");
+        writeBooleanRaw(value);
         markValue();
         return this;
     }
@@ -698,9 +720,32 @@ final class CharStreamGenerator extends JsonGenerator {
     @Override
     public JsonGenerator writeNull() throws IOException {
         startValueContext();
-        out.write("null");
+        writeNullRaw();
         markValue();
         return this;
+    }
+
+    /**
+     * Emit the JSON literal {@code true} or {@code false} directly to the underlying
+     * writer. No state-machine interaction; the caller is responsible for surrounding
+     * structural context.
+     *
+     * @param value the boolean value to emit
+     * @throws IOException If an I/O error occurs
+     */
+    void writeBooleanRaw(boolean value) throws IOException {
+        out.write(value ? "true" : "false");
+    }
+
+    /**
+     * Emit the JSON literal {@code null} directly to the underlying writer.
+     * No state-machine interaction; the caller is responsible for surrounding
+     * structural context.
+     *
+     * @throws IOException If an I/O error occurs
+     */
+    void writeNullRaw() throws IOException {
+        out.write("null");
     }
 
     // -------------------------------------------------------------------

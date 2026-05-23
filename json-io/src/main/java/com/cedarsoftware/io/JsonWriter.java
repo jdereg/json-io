@@ -1382,37 +1382,86 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         output.write('"');
     }
 
+    /**
+     * Emit a primitive-wrapper value at a value-slot position. Callers gate by runtime
+     * type (one of Boolean, Byte, Short, Integer, Long, Float, Double) before invoking;
+     * the dispatched branches below mirror that set. Non-Long-wrap paths route through
+     * {@link CharStreamGenerator}'s {@code writeXxxRaw} helpers — state-machine-free
+     * emission primitives that share the digit-pair / canonical-form logic with the
+     * public streaming-write API but skip the {@code startValueContext + markValue}
+     * bookkeeping JsonWriter doesn't need for these isolated single-value emissions.
+     * Second leaf of the JsonWriter dog-food migration; the Integer/Long paths drop the
+     * {@code Integer.toString} / {@code Long.toString} allocations the legacy path paid.
+     * The Long-wrap branch (showType + writeLongsAsStrings) remains on legacy
+     * {@code out.write} pending {@code @type} prefix alignment.
+     */
     private void writePrimitive(final Object obj, boolean showType) throws IOException {
         if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
-        final Writer output = this.out;
         if (obj instanceof Long && writeLongsAsStrings) {
+            // Long-wrap legacy path: emits {"@type":"long","value":"..."} which needs
+            // @type prefix alignment between JsonWriter's typePrefix constants and gen's
+            // writeFieldName decision logic. Same alignment problem as writeId/writeType
+            // — deferred until that alignment work lands.
+            final Writer output = this.out;
             if (showType) {
                 output.write('{');
                 writeType("long", output);
                 output.write(',');
             }
-
             longBoxedWriter.write(obj, showType, output, this);
-
             if (showType) {
                 output.write('}');
             }
-        } else if (!isNanInfinityAllowed() && obj instanceof Double && (Double.isNaN((Double) obj) || Double.isInfinite((Double) obj))) {
-            output.write("null");
-        } else if (!isNanInfinityAllowed() && obj instanceof Float && (Float.isNaN((Float) obj) || Float.isInfinite((Float) obj))) {
-            output.write("null");
-        } else {
-            // Fast path: cached String for small integers avoids Integer.toString() allocation
-            if (obj instanceof Integer) {
-                int val = (Integer) obj;
-                if (val >= SMALL_INT_LOW && val <= SMALL_INT_HIGH) {
-                    output.write(SMALL_INT_STRINGS[val - SMALL_INT_LOW]);
-                    return;
-                }
+            return;
+        }
+
+        if (obj instanceof Integer) {
+            int val = (Integer) obj;
+            // SMALL_INT_STRINGS fast path — precomputed cache, faster than the digit-pair
+            // algorithm for tiny Integer values. Also used by writeField + writePrimitiveFieldDirect.
+            if (val >= SMALL_INT_LOW && val <= SMALL_INT_HIGH) {
+                out.write(SMALL_INT_STRINGS[val - SMALL_INT_LOW]);
+            } else {
+                gen.writeIntRaw(val);  // non-small-int Integer — digit-pair, no allocation
             }
-            output.write(obj.toString());
+            return;
+        }
+
+        // NaN/Infinity policy gate — emits "null" when the writer disallows NaN/Inf
+        // literals, matching the legacy behavior at this branch.
+        if (!isNanInfinityAllowed()) {
+            if (obj instanceof Double && (Double.isNaN((Double) obj) || Double.isInfinite((Double) obj))) {
+                gen.writeNullRaw();
+                return;
+            }
+            if (obj instanceof Float && (Float.isNaN((Float) obj) || Float.isInfinite((Float) obj))) {
+                gen.writeNullRaw();
+                return;
+            }
+        }
+
+        // Dispatch on runtime type; each path goes through a state-machine-free raw
+        // emit helper on gen so per-call cost is identical to the legacy direct out.write
+        // path (and strictly better for Long where the legacy path allocated a String
+        // via Long.toString).
+        if (obj instanceof Long) {
+            gen.writeLongRaw((Long) obj);
+        } else if (obj instanceof Boolean) {
+            gen.writeBooleanRaw((Boolean) obj);
+        } else if (obj instanceof Double) {
+            gen.writeDoubleRaw((Double) obj);
+        } else if (obj instanceof Float) {
+            gen.writeFloatRaw((Float) obj);
+        } else if (obj instanceof Short) {
+            gen.writeIntRaw(((Short) obj).intValue());
+        } else if (obj instanceof Byte) {
+            gen.writeIntRaw(((Byte) obj).intValue());
+        } else {
+            // Safety net for any unexpected runtime type that slips past the callers'
+            // gating. Preserves legacy obj.toString() behavior.
+            out.write(obj.toString());
         }
     }
 
