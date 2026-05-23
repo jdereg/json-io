@@ -492,6 +492,29 @@ class JsonGeneratorTest {
     }
 
     @Test
+    void writeFieldNameRaw_emitsPreformattedKeyAndTransitionsState() throws IOException {
+        // Package-private fast path for caller-precomputed key+colon strings (used by
+        // JsonWriter for the @items / @keys meta-keys where the full key+colon is
+        // precomputed at construction with the right quoting/prefix variant). Skips
+        // gen's quote-decision + escape-scan. Does NOT emit a separator — the caller
+        // has emitted any leading comma manually before calling.
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw)) {
+            CharStreamGenerator concrete = (CharStreamGenerator) g;
+            concrete.writeStartObject();
+            concrete.writeFieldNameRaw("\"@id\":");
+            concrete.writeNumber(42);
+            // Subsequent field — caller emits the leading comma manually (matching
+            // the precomputed-prefix pattern), then the raw key, then the value.
+            concrete.writeRaw(",");
+            concrete.writeFieldNameRaw("\"@type\":");
+            concrete.writeString("Foo");
+            concrete.writeEndObject();
+        }
+        assertEquals("{\"@id\":42,\"@type\":\"Foo\"}", sw.toString());
+    }
+
+    @Test
     void writeStringFieldUnescaped_nullEmitsJsonNull() throws IOException {
         StringWriter sw = new StringWriter();
         try (JsonGenerator g = JsonIo.createGenerator(sw)) {

@@ -777,6 +777,32 @@ final class CharStreamGenerator extends JsonGenerator {
      * @param value the value; MUST contain no JSON-special characters when non-null
      * @throws IOException If an I/O error occurs
      */
+    /**
+     * Field-name emission fast path that takes an ALREADY-FORMATTED key-and-colon string
+     * (e.g., {@code "\"@id\":"}, {@code "$id:"}). Skips the per-call quoting decision +
+     * escape scan that {@link #writeFieldName(String)} would perform. Transitions state
+     * from {@code FRAME_OBJECT_EMPTY} / {@code FRAME_OBJECT_AFTER_VALUE} to
+     * {@code FRAME_OBJECT_AFTER_FIELD}. Does NOT emit a separator — the caller is
+     * responsible for any leading comma (matches the precomputed-prefix pattern where
+     * JsonWriter has historically emitted commas manually before the prefix).
+     *
+     * @param preformattedKeyAndColon the pre-quoted, colon-suffixed key string
+     * @throws IOException If an I/O error occurs (or {@link JsonGenerationException}
+     *         if the current state can't accept a field name)
+     */
+    void writeFieldNameRaw(String preformattedKeyAndColon) throws IOException {
+        byte t = top();
+        if (t != FRAME_OBJECT_EMPTY && t != FRAME_OBJECT_AFTER_VALUE) {
+            if (t == FRAME_OBJECT_AFTER_FIELD) {
+                throw new JsonGenerationException(
+                        "Cannot write field name: previous field name is still pending a value");
+            }
+            throw new JsonGenerationException("Cannot write field name outside an object context");
+        }
+        out.write(preformattedKeyAndColon);
+        setTop(FRAME_OBJECT_AFTER_FIELD);
+    }
+
     void writeStringFieldUnescaped(String name, String value) throws IOException {
         writeFieldName(name);
         // After writeFieldName, state is FRAME_OBJECT_AFTER_FIELD — startValueContext
