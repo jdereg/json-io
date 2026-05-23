@@ -423,7 +423,10 @@ final class CharStreamGenerator extends JsonGenerator {
         startValueContext();
         if (value == null) {
             out.write("null");
-        } else if (json5SingleQuotes) {
+        } else if (json5SingleQuotes && JsonWriter.shouldUseSingleQuotedString(value)) {
+            // json5SmartQuotes is on AND single quotes minimize escaping for this string —
+            // matches JsonWriter.writeStringValue's smart selection. Strings without
+            // double-quote characters use the default double-quoted form.
             JsonWriter.writeSingleQuotedString(out, value, maxStringLength);
         } else {
             JsonWriter.writeJsonUtf8String(out, value, maxStringLength);

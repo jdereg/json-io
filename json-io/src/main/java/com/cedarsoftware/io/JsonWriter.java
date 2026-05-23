@@ -3251,7 +3251,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
     }
 
-    private static boolean shouldUseSingleQuotedString(String s) {
+    // Package-private so {@link CharStreamGenerator#writeString(String)} can apply the same
+    // smart quote-style selection in json5SmartQuotes mode that {@link #writeStringValue(String)}
+    // applies — picks the quote style that minimizes escaping.
+    static boolean shouldUseSingleQuotedString(String s) {
         if (s == null || s.isEmpty()) {
             return false;
         }

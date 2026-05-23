@@ -395,11 +395,65 @@ class JsonGeneratorTest {
     }
 
     @Test
-    void json5SmartQuotes_singleQuotedStrings() throws IOException {
+    void json5SmartQuotes_plainString_usesDoubleQuotes() throws IOException {
+        // "Smart" quote selection: when the string contains no double-quote characters,
+        // double quotes are the default — no benefit from switching to single quotes.
         WriteOptions opts = new WriteOptionsBuilder().json5SmartQuotes(true).build();
-        String out = emit(opts, g -> g.writeString("hi"));
-        // Smart quotes emit single-quoted form for values.
-        assertEquals("'hi'", out);
+        assertEquals("\"hi\"", emit(opts, g -> g.writeString("hi")));
+    }
+
+    @Test
+    void json5SmartQuotes_stringWithDoubleQuotes_usesSingleQuotes() throws IOException {
+        // Single quotes minimize escaping when the string contains " but no '.
+        WriteOptions opts = new WriteOptionsBuilder().json5SmartQuotes(true).build();
+        assertEquals("'has \"x\" inside'", emit(opts, g -> g.writeString("has \"x\" inside")));
+    }
+
+    @Test
+    void json5SmartQuotes_stringWithSingleQuotes_usesDoubleQuotes() throws IOException {
+        // Double quotes minimize escaping when the string contains ' but no ".
+        WriteOptions opts = new WriteOptionsBuilder().json5SmartQuotes(true).build();
+        assertEquals("\"don't\"", emit(opts, g -> g.writeString("don't")));
+    }
+
+    @Test
+    void json5SmartQuotes_stringWithBothQuoteTypes_usesDoubleQuotes() throws IOException {
+        // Both styles require escaping — default to double quotes (standard form).
+        WriteOptions opts = new WriteOptionsBuilder().json5SmartQuotes(true).build();
+        assertEquals("\"can't say \\\"hi\\\"\"", emit(opts, g -> g.writeString("can't say \"hi\"")));
+    }
+
+    @Test
+    void json5SmartQuotes_emptyString_usesDoubleQuotes() throws IOException {
+        // Empty strings have nothing to escape — pick the default double-quote form.
+        WriteOptions opts = new WriteOptionsBuilder().json5SmartQuotes(true).build();
+        assertEquals("\"\"", emit(opts, g -> g.writeString("")));
+    }
+
+    @Test
+    void json5SmartQuotes_matchesJsonWriterWriteStringValue() throws IOException {
+        // The CharStreamGenerator's writeString smart selection MUST match
+        // JsonWriter.writeStringValue's behavior so the two emission paths
+        // produce identical json5SmartQuotes output. This is the foundational
+        // invariant for dog-fooding JsonWriter onto CharStreamGenerator.
+        WriteOptions opts = new WriteOptionsBuilder().json5SmartQuotes(true).build();
+        String[] samples = {
+                "hello",
+                "has \"x\" inside",
+                "don't",
+                "can't say \"hi\"",
+                "",
+                "tab\there",
+                "newline\nhere"
+        };
+        for (String s : samples) {
+            // gen path
+            String viaGen = emit(opts, g -> g.writeString(s));
+            // JsonIo.toJson path (uses JsonWriter.writeStringValue under the hood)
+            String viaJsonIo = JsonIo.toJson(s, opts);
+            assertEquals(viaJsonIo, viaGen,
+                    "json5SmartQuotes output diverged for sample: " + s);
+        }
     }
 
     // -------------------------------------------------------------------
