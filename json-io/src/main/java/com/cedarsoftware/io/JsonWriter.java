@@ -3231,24 +3231,20 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     /**
-     * Writes a string value with JSON5 smart quote selection if enabled.
-     * When json5SmartQuotes is enabled:
-     * - Uses single quotes if the string contains " but no '
-     * - Uses double quotes otherwise (standard behavior)
+     * Writes a string value at a value slot, delegating to {@link CharStreamGenerator#writeString(String)}
+     * via the bridge-reset hook. The generator applies the same smart quote-style selection in
+     * {@code json5SmartQuotes} mode that this method historically applied — picks single quotes only
+     * when the string contains {@code "} but not {@code '}, double quotes otherwise. Callers are
+     * responsible for surrounding separator/indent emission; this method emits only the quoted
+     * string content (or {@code null} if {@code s} is null). First leaf of the JsonWriter dog-food
+     * migration onto {@link CharStreamGenerator}.
      *
-     * @param s The string value to write
+     * @param s The string value to write (may be null)
      * @throws IOException If an I/O error occurs
      */
     private void writeStringValue(String s) throws IOException {
-        if (!json5SmartQuotes) {
-            writeJsonUtf8String(out, s, maxStringLength);
-            return;
-        }
-        if (shouldUseSingleQuotedString(s)) {
-            writeSingleQuotedString(out, s, maxStringLength);
-        } else {
-            writeJsonUtf8String(out, s, maxStringLength);
-        }
+        gen.resetForBridgeAtValueSlot();
+        gen.writeString(s);
     }
 
     // Package-private so {@link CharStreamGenerator#writeString(String)} can apply the same
