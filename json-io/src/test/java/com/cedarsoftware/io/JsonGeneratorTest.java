@@ -473,6 +473,23 @@ class JsonGeneratorTest {
     }
 
     @Test
+    void json5SmartQuotes_doesNotApplyToKeys() throws IOException {
+        // Keys are double-quoted (or unquoted identifier), NEVER single-quoted, even when
+        // json5SmartQuotes is on. Smart quoting applies to string values only — matches
+        // Jackson convention and JsonWriter.writeKey behavior. The "@id" key (used by
+        // json-io for object identity) is not a valid JSON5 identifier (starts with @),
+        // so it always gets double-quoted regardless of json5UnquotedKeys mode.
+        WriteOptions opts = new WriteOptionsBuilder()
+                .json5SmartQuotes(true)
+                .json5UnquotedKeys(true)
+                .build();
+        String out = emit(opts, g -> g.writeStartObject()
+                .writeStringField("@id", "v")
+                .writeEndObject());
+        assertEquals("{\"@id\":\"v\"}", out);
+    }
+
+    @Test
     void json5SmartQuotes_plainString_usesDoubleQuotes() throws IOException {
         // "Smart" quote selection: when the string contains no double-quote characters,
         // double quotes are the default — no benefit from switching to single quotes.

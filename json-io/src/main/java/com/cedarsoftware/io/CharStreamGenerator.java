@@ -406,10 +406,13 @@ final class CharStreamGenerator extends JsonGenerator {
     }
 
     private void writeKey(String name) throws IOException {
+        // Keys are always either an unquoted JSON5 identifier (when both eligible by the
+        // ECMAScript identifier rules AND the writer is in json5UnquotedKeys mode) or
+        // a double-quoted JSON UTF-8 string. Keys are NOT subject to json5SmartQuotes
+        // single-quoting: Jackson and json-io's own JsonWriter always double-quote keys,
+        // smart-quote logic applies to string values only.
         if (json5UnquotedKeys && isValidJson5Identifier(name)) {
             out.write(name);
-        } else if (json5SingleQuotes) {
-            JsonWriter.writeSingleQuotedString(out, name, maxStringLength);
         } else {
             JsonWriter.writeJsonUtf8String(out, name, maxStringLength);
         }
