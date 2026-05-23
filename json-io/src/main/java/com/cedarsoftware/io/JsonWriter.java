@@ -1456,19 +1456,21 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             showType = false;
         }
         if (obj instanceof Long && writeLongsAsStrings) {
-            // Long-wrap legacy path: emits {"@type":"long","value":"..."} which needs
-            // @type prefix alignment between JsonWriter's typePrefix constants and gen's
-            // writeFieldName decision logic. Same alignment problem as writeId/writeType
-            // — deferred until that alignment work lands.
-            final Writer output = this.out;
+            // Long-wrap path: emits {"@type":"long","value":"<long-as-string>"} when
+            // showType, else just "<long-as-string>" at the value slot. Dog-food path
+            // — the entire emission goes through gen: writeStartObject opens the
+            // wrapper, writeStringFieldUnescaped emits the @type field (alias "long"
+            // is JSON-safe), longBoxedWriter.write dispatches through gen for the
+            // "value" field (and the bare-value case when !showType), writeEndObject
+            // closes. State machine is engaged for the entire structure.
+            gen.resetForBridgeAtValueSlot();
             if (showType) {
-                output.write('{');
-                writeType("long");
-                output.write(',');
-            }
-            longBoxedWriter.write(obj, showType, output, this);
-            if (showType) {
-                output.write('}');
+                gen.writeStartObject();
+                gen.writeStringFieldUnescaped(typeKey, "long");
+                longBoxedWriter.write(obj, true, gen, this);
+                gen.writeEndObject();
+            } else {
+                longBoxedWriter.write(obj, false, gen, this);
             }
             return;
         }
