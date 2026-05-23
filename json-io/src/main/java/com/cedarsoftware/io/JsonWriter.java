@@ -337,6 +337,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private final String idPrefix;
     private final String typePrefix;
     private final String refPrefix;
+
+    // Key names (no quotes, no colon) for the dog-food path through gen.writeXxxField —
+    // gen handles quoting decisions based on json5UnquotedKeys + isValidJson5Identifier(name),
+    // so @id/@i (not valid identifiers) always get quoted, $id/$i (valid identifiers) get
+    // unquoted under json5UnquotedKeys.
+    private final String idKey;
     private final String itemsPrefix;
     private final String keysPrefix;
     private static final Object[] byteStrings = new Object[256];
@@ -585,6 +591,21 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             this.refPrefix = REF_LONG;
             this.itemsPrefix = ITEMS_LONG;
             this.keysPrefix = KEYS_LONG;
+        }
+
+        // Bare key name (no quotes, no colon) for the dog-food path. 4 variants
+        // collapse from the 6 prefix variants above: gen.writeFieldName(name) makes
+        // the quoting decision itself based on json5UnquotedKeys + whether name is
+        // a valid JSON5 identifier (@x starts with @, never valid; $x starts with $,
+        // always valid).
+        if (useDollarPrefix && isShort) {
+            this.idKey = "$i";
+        } else if (useDollarPrefix) {
+            this.idKey = "$id";
+        } else if (isShort) {
+            this.idKey = "@i";
+        } else {
+            this.idKey = "@id";
         }
 
         // Pre-fetch frequently accessed WriteOptions for hot path performance
@@ -1366,9 +1387,19 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
     }
 
+    /**
+     * Emit the {@code @id} / {@code @i} / {@code $id} / {@code $i} field at the first-field
+     * position of an open object body. Dog-food path through {@link CharStreamGenerator}'s
+     * Jackson-aligned {@code writeNumberField} — gen does the key emission (quoted-or-unquoted
+     * by {@code json5UnquotedKeys} policy) plus the digit-pair value emission in one call.
+     * {@code resetForBridgeInsideObjectBody} synchronizes gen's structural state to "inside
+     * open object body at JsonWriter's current depth, first field," so {@code writeNumberField}
+     * emits without a leading separator and skips the leading indent (JsonWriter has already
+     * emitted the {@code &#123;} + tabIn newline+indent).
+     */
     private void writeId(final int id) throws IOException {
-        out.write(idPrefix);
-        gen.writeLongRaw(id);  // int widened to long
+        gen.resetForBridgeInsideObjectBody(this.depth);
+        gen.writeNumberField(idKey, id);
     }
 
     // Optimized writeType method
