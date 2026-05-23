@@ -70,7 +70,12 @@ final class CharStreamGenerator extends JsonGenerator {
         this.indentSize = Math.max(0, writeOptions.getIndentationSize());
         this.json5UnquotedKeys = writeOptions.isJson5UnquotedKeys();
         this.json5SingleQuotes = writeOptions.isJson5SmartQuotes();
-        this.allowNanAndInfinity = writeOptions.isAllowNanAndInfinity();
+        // Union of both NaN/Infinity-permitting flags matches JsonWriter.isNanInfinityAllowed():
+        // - isAllowNanAndInfinity: non-standard JSON extension flag
+        // - isJson5InfinityNaN:    JSON5 spec natively allows the NaN/Infinity literals
+        // Treating them as equivalent for emission keeps gen consistent with the writer
+        // path so a caller setting either flag gets the literal emitted, not a throw.
+        this.allowNanAndInfinity = writeOptions.isAllowNanAndInfinity() || writeOptions.isJson5InfinityNaN();
         this.maxStringLength = writeOptions.getMaxStringLength();
 
         this.contextStack = new byte[16];

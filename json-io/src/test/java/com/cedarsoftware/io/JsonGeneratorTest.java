@@ -562,6 +562,38 @@ class JsonGeneratorTest {
                 .hasMessageContaining("non-finite float");
     }
 
+    @Test
+    void json5InfinityNaN_alone_emitsLiterals() throws IOException {
+        // json5InfinityNaN is the JSON5-spec flag for permitting NaN/Infinity literals.
+        // The generator must treat it as equivalent to allowNanAndInfinity so that a
+        // caller setting only the JSON5 flag still gets the literals emitted (matches
+        // JsonWriter.isNanInfinityAllowed() which is the union of both flags).
+        WriteOptions opts = new WriteOptionsBuilder().json5InfinityNaN(true).build();
+        assertEquals("NaN", emit(opts, g -> g.writeNumber(Double.NaN)));
+        assertEquals("Infinity", emit(opts, g -> g.writeNumber(Double.POSITIVE_INFINITY)));
+        assertEquals("-Infinity", emit(opts, g -> g.writeNumber(Double.NEGATIVE_INFINITY)));
+    }
+
+    @Test
+    void json5InfinityNaN_alone_emitsLiterals_float() throws IOException {
+        WriteOptions opts = new WriteOptionsBuilder().json5InfinityNaN(true).build();
+        assertEquals("NaN", emit(opts, g -> g.writeNumber(Float.NaN)));
+        assertEquals("Infinity", emit(opts, g -> g.writeNumber(Float.POSITIVE_INFINITY)));
+        assertEquals("-Infinity", emit(opts, g -> g.writeNumber(Float.NEGATIVE_INFINITY)));
+    }
+
+    @Test
+    void bothNanInfinityFlags_emitLiterals() throws IOException {
+        // Both flags set — emission still produces the literals (no double-negation
+        // or short-circuit weirdness).
+        WriteOptions opts = new WriteOptionsBuilder()
+                .allowNanAndInfinity(true)
+                .json5InfinityNaN(true)
+                .build();
+        assertEquals("NaN", emit(opts, g -> g.writeNumber(Double.NaN)));
+        assertEquals("Infinity", emit(opts, g -> g.writeNumber(Double.POSITIVE_INFINITY)));
+    }
+
     // -------------------------------------------------------------------
     // Factory parity: OutputStream vs Writer produce identical output
     // -------------------------------------------------------------------
