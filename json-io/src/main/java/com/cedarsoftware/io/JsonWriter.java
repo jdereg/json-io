@@ -160,11 +160,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     // One-time deprecation warning for stringify-able map keys written as @keys/@items
     private static final AtomicBoolean stringifyMapKeysWarned = new AtomicBoolean(false);
 
-    // Pre-computed escape strings for ASCII characters
-    // null = character doesn't need escaping, non-null = the escape sequence to write
-    private static final String[] ESCAPE_STRINGS = new String[128];
-    private static final String[] CONTROL_UNICODE_ESCAPES = new String[32];
-
     // Cached int→String for common small integers, avoiding Integer.toString() allocation.
     // Covers -128 to 16384 (same range as ToonWriter's SMALL_LONG_STRINGS).
     private static final int SMALL_INT_LOW = -128;
@@ -178,39 +173,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             cache[i] = Integer.toString(i + SMALL_INT_LOW);
         }
         return cache;
-    }
-    private static final char[] HEX_DIGITS = "0123456789abcdef".toCharArray();
-
-    private static String toUnicodeEscape(int codePoint) {
-        char[] chars = new char[6];
-        chars[0] = '\\';
-        chars[1] = 'u';
-        chars[2] = HEX_DIGITS[(codePoint >>> 12) & 0xF];
-        chars[3] = HEX_DIGITS[(codePoint >>> 8) & 0xF];
-        chars[4] = HEX_DIGITS[(codePoint >>> 4) & 0xF];
-        chars[5] = HEX_DIGITS[codePoint & 0xF];
-        return new String(chars);
-    }
-
-    static {
-        // Control characters (0x00-0x1F) need \\u00xx escaping
-        for (int i = 0; i <= 0x1F; i++) {
-            String unicodeEscape = toUnicodeEscape(i);
-            ESCAPE_STRINGS[i] = unicodeEscape;
-            CONTROL_UNICODE_ESCAPES[i] = unicodeEscape;
-        }
-        // Override with short escapes for common control characters
-        ESCAPE_STRINGS['\b'] = "\\b";
-        ESCAPE_STRINGS['\t'] = "\\t";
-        ESCAPE_STRINGS['\n'] = "\\n";
-        ESCAPE_STRINGS['\f'] = "\\f";
-        ESCAPE_STRINGS['\r'] = "\\r";
-        // Quote and backslash always need escaping
-        ESCAPE_STRINGS['"'] = "\\\"";
-        ESCAPE_STRINGS['\\'] = "\\\\";
-        // 0x20-0x7E are printable ASCII - leave as null (no escape needed)
-        // 0x7F (DEL) needs escaping
-        ESCAPE_STRINGS[0x7F] = "\\u007f";
     }
 
     // Natural default collection/map types: maps declared interface to the concrete type that CollectionFactory
@@ -330,10 +292,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private final String keysPrefix;
     private static final Object[] byteStrings = new Object[256];
     private static final String NEW_LINE = System.lineSeparator();
-    // Lookup table for fast ASCII escape detection (128 entries for chars 0-127)
-    private static final boolean[] NEEDS_ESCAPE = new boolean[128];
-    // Lookup table for single-quoted strings (JSON5) - escapes ' instead of "
-    private static final boolean[] NEEDS_ESCAPE_SINGLE_QUOTE = new boolean[128];
     private final WriteOptions writeOptions;
     private final WriteOptionsBuilder.DefaultWriteOptions defaultWriteOptions;
     // Lightweight identity-based maps for reference tracking (faster than IdentityHashMap<Object, Long>)
@@ -455,26 +413,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             char[] chars = Integer.toString(i).toCharArray();
             byteStrings[i + 128] = chars;
         }
-
-        // Initialize escape lookup table for fast ASCII escape detection
-        // Mark all control characters (0x00-0x1F) as needing escape
-        for (int i = 0; i < 0x20; i++) {
-            NEEDS_ESCAPE[i] = true;
-        }
-        // Mark specific characters that need escaping
-        NEEDS_ESCAPE['"'] = true;   // Quote
-        NEEDS_ESCAPE['\\'] = true;  // Backslash
-        NEEDS_ESCAPE[0x7F] = true;  // DEL control character
-
-        // Initialize escape lookup table for single-quoted strings (JSON5)
-        // Mark all control characters (0x00-0x1F) as needing escape
-        for (int i = 0; i < 0x20; i++) {
-            NEEDS_ESCAPE_SINGLE_QUOTE[i] = true;
-        }
-        // Mark specific characters that need escaping for single-quoted strings
-        NEEDS_ESCAPE_SINGLE_QUOTE['\''] = true;  // Single quote
-        NEEDS_ESCAPE_SINGLE_QUOTE['\\'] = true;  // Backslash
-        NEEDS_ESCAPE_SINGLE_QUOTE[0x7F] = true;  // DEL control character
     }
 
     /**
@@ -1298,7 +1236,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                         writeType(objClass.getName());
                         out.write(',');
                         newLine();
-                        writeBasicString(out, "value");
+                        CharStreamGenerator.writeBasicString(out, "value");
                         out.write(':');
                         writeImpl(val, false);
                         tabOut();
@@ -2113,7 +2051,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 output.write(fieldName);
                 output.write(':');
             } else {
-                writeJsonUtf8String(output, fieldName, maxStringLength);
+                CharStreamGenerator.writeJsonUtf8String(output, fieldName, maxStringLength);
                 output.write(':');
             }
             Object value = entry.getValue();
@@ -2294,7 +2232,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 if (unquotedKeys && isValidJson5Identifier(key)) {
                     output.write(key);
                 } else {
-                    writeJsonUtf8String(output, key, maxLen);
+                    CharStreamGenerator.writeJsonUtf8String(output, key, maxLen);
                 }
                 output.write(':');
                 writeCollectionElement(value);
@@ -2312,7 +2250,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 if (isValidJson5Identifier(key)) {
                     output.write(key);
                 } else {
-                    writeJsonUtf8String(output, key, maxLen);
+                    CharStreamGenerator.writeJsonUtf8String(output, key, maxLen);
                 }
                 output.write(':');
                 writeCollectionElement(att2value.getValue());
@@ -2325,7 +2263,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                     output.write(',');
                     newLine();
                 }
-                writeJsonUtf8String(output, (String) att2value.getKey(), maxLen);
+                CharStreamGenerator.writeJsonUtf8String(output, (String) att2value.getKey(), maxLen);
                 output.write(':');
                 writeCollectionElement(att2value.getValue());
                 wroteEntry = true;
@@ -2360,7 +2298,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 if (unquotedKeys && isValidJson5Identifier(key)) {
                     output.write(key);
                 } else {
-                    writeJsonUtf8String(output, key, maxLen);
+                    CharStreamGenerator.writeJsonUtf8String(output, key, maxLen);
                 }
                 output.write(':');
                 writeCollectionElement(value);
@@ -2376,7 +2314,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 if (isValidJson5Identifier(key)) {
                     output.write(key);
                 } else {
-                    writeJsonUtf8String(output, key, maxLen);
+                    CharStreamGenerator.writeJsonUtf8String(output, key, maxLen);
                 }
                 output.write(':');
                 writeCollectionElement(jObj.fastValueAt(idx));
@@ -2388,7 +2326,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                     output.write(',');
                     newLine();
                 }
-                writeJsonUtf8String(output, (String) jObj.fastKeyAt(idx), maxLen);
+                CharStreamGenerator.writeJsonUtf8String(output, (String) jObj.fastKeyAt(idx), maxLen);
                 output.write(':');
                 writeCollectionElement(jObj.fastValueAt(idx));
                 wroteEntry = true;
@@ -2468,7 +2406,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
             Object key = att2value.getKey();
             String keyStr = (key == null) ? "null" : Converter.convert(key, String.class);
-            writeJsonUtf8String(output, keyStr, maxLen);
+            CharStreamGenerator.writeJsonUtf8String(output, keyStr, maxLen);
             output.write(':');
             writeCollectionElement(value);
             wroteEntry = true;
@@ -2632,12 +2570,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         // Write the @type field with the actual enum class name
-        writeBasicString(out, enumClass.getName());
+        CharStreamGenerator.writeBasicString(out, enumClass.getName());
 
         // EnumSets are always written with an @items key
         out.write(",");
         newLine();
-        writeBasicString(out, ITEMS);
+        CharStreamGenerator.writeBasicString(out, ITEMS);
         out.write(":[");
         boolean hasItems = !enumSet.isEmpty();
 
@@ -2955,7 +2893,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 output.write(',');
                 newLine();
             }
-            writeBasicString(output, entry.getKey());
+            CharStreamGenerator.writeBasicString(output, entry.getKey());
             output.write(':');
             if (value == null) {
                 output.write("null");
@@ -3058,135 +2996,81 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     /**
-     * Writes out a string without special characters. Use for labels, etc. when you know you
-     * will not need extra formattting for UTF-8 or tabs, quotes and newlines in the string
+     * Writes a quoted string without escape-scanning the content. Use for labels and inputs
+     * known a-priori to be JSON-safe (no embedded {@code "}, {@code \\}, or control chars).
      *
-     * @param writer Writer to which the UTF-8 string will be written to
-     * @param s      String to be written in UTF-8 format on the output stream.
-     * @throws IOException if an error occurs writing to the output stream.
+     * @param writer Writer to which the quoted string is written
+     * @param s      String to write \u2014 must be JSON-safe
+     * @throws IOException if an error occurs writing to the output stream
+     * @deprecated since 4.103.0; the implementation moved to {@code CharStreamGenerator}.
+     *             Internal callers route there directly; external callers should switch to
+     *             {@link JsonGenerator#writeString(String)} via {@link JsonIo#createGenerator}
+     *             for the full state-machine-aware API, or accept the deprecation warning here.
      */
+    @Deprecated
     public static void writeBasicString(final Writer writer, String s) throws IOException {
-        writer.write('\"');
-        writer.write(s);
-        writer.write('\"');
+        CharStreamGenerator.writeBasicString(writer, s);
     }
 
     /**
-     * Writes a JSON string value to the output, properly escaped according to JSON specifications.
-     * Handles control characters, quotes, backslashes, and properly processes Unicode code points.
-     * Uses default string length limit for backward compatibility.
+     * Writes a JSON string value, properly escaped per JSON specifications. Uses the
+     * default 1MB string-length limit.
      *
      * @param output The Writer to write to
-     * @param s      The string to be written as a JSON string value
+     * @param s      The string to write as a JSON string value
      * @throws IOException If an I/O error occurs
+     * @deprecated since 4.103.0; the implementation moved to {@code CharStreamGenerator}.
+     *             See {@link #writeBasicString(Writer, String)} for migration notes.
      */
+    @Deprecated
     public static void writeJsonUtf8String(final Writer output, String s) throws IOException {
-        writeJsonUtf8String(output, s, 1000000); // Use default 1MB limit for backward compatibility
+        CharStreamGenerator.writeJsonUtf8String(output, s);
     }
 
     /**
-     * Writes a string value with JSON5 smart quote selection if enabled in WriteOptions.
-     * This static method is for use by custom writers that need to respect smart quote settings.
+     * Writes a string value with JSON5 smart quote selection when {@link WriteOptions#isJson5SmartQuotes}
+     * is enabled. Provided historically for custom writers that needed to respect the smart-quote
+     * setting; superseded by {@link CharStreamGenerator#writeString(String)} which applies the
+     * same selection internally.
      *
      * @param output The Writer to write to
      * @param s The string value to write
-     * @param writeOptions WriteOptions to check for smart quote settings
+     * @param writeOptions WriteOptions to consult for smart-quote settings
      * @throws IOException If an I/O error occurs
+     * @deprecated since 4.103.0; unused after the writeStringValue migration. Will be removed
+     *             in a future release. External callers should switch to
+     *             {@link JsonGenerator#writeString(String)} via {@link JsonIo#createGenerator},
+     *             which applies the same smart-quote logic automatically.
      */
+    @Deprecated
     public static void writeJson5String(final Writer output, String s, WriteOptions writeOptions) throws IOException {
         if (writeOptions == null || !writeOptions.isJson5SmartQuotes()) {
-            writeJsonUtf8String(output, s, writeOptions != null ? writeOptions.getMaxStringLength() : 1000000);
+            CharStreamGenerator.writeJsonUtf8String(output, s,
+                    writeOptions != null ? writeOptions.getMaxStringLength() : 1000000);
             return;
         }
-
         int maxLen = writeOptions.getMaxStringLength();
         if (shouldUseSingleQuotedString(s)) {
-            writeSingleQuotedString(output, s, maxLen);
+            CharStreamGenerator.writeSingleQuotedString(output, s, maxLen);
         } else {
-            writeJsonUtf8String(output, s, maxLen);
+            CharStreamGenerator.writeJsonUtf8String(output, s, maxLen);
         }
     }
 
     /**
-     * Writes a JSON string value to the output, properly escaped according to JSON specifications.
-     * Handles control characters, quotes, backslashes, and properly processes Unicode code points.
-     * <p>
-     * OPTIMIZED VERSION: Uses batch scanning to write runs of safe characters in one operation,
-     * significantly reducing write() calls and improving performance.
+     * Writes a JSON string value, properly escaped per JSON specifications, with explicit
+     * max-length cap.
      *
      * @param output          The Writer to write to
-     * @param s               The string to be written as a JSON string value
-     * @param maxStringLength Maximum allowed string length to prevent memory issues
+     * @param s               The string to write as a JSON string value
+     * @param maxStringLength Maximum allowed string length
      * @throws IOException If an I/O error occurs
+     * @deprecated since 4.103.0; the implementation moved to {@code CharStreamGenerator}.
+     *             See {@link #writeBasicString(Writer, String)} for migration notes.
      */
+    @Deprecated
     public static void writeJsonUtf8String(final Writer output, String s, int maxStringLength) throws IOException {
-        if (output == null) {
-            throw new JsonIoException("Output writer cannot be null");
-        }
-        if (s == null) {
-            output.write("null");
-            return;
-        }
-
-        final int len = s.length();
-        if (len > maxStringLength) {
-            throw new JsonIoException("String too large: " + len + " chars (max: " + maxStringLength + ")");
-        }
-
-        output.write('"');
-
-        if (len > 0) {
-            // Bulk-copy chars into a per-thread char[] via the SIMD-intrinsic
-            // CharBufScratch.getChars. Walking buf[i] is a raw array load; replacing
-            // per-character s.charAt(i) avoids the StringLatin1/UTF16 dispatch that JFR
-            // profiling showed at ~345 leaf samples combined inside this loop. Slice writes
-            // via output.write(buf, off, len) route through StringBuilder.append(char[],...)
-            // \u2014 the fastest variant on StringBuilderWriter \u2014 instead of
-            // append(String, off, off+len).
-            //
-            // Re-entrancy contract: the TL char[] is consumed synchronously by output.write
-            // calls (which copy bytes immediately into the underlying sink) before this
-            // method returns. Standard writers do not transitively invoke
-            // CharBufScratch.getChars. Custom JsonClassWriter implementations that recurse
-            // back through this path would violate the contract; not exercised by json-io's
-            // internals.
-            char[] buf = CharBufScratch.getChars(s, len);
-
-            int last = 0;
-            for (int i = 0; i < len; i++) {
-                char ch = buf[i];
-                String escape;
-
-                if (ch < 128) {
-                    // ASCII: use pre-computed escape table
-                    escape = ESCAPE_STRINGS[ch];
-                    if (escape == null) {
-                        continue;  // No escape needed - most common path
-                    }
-                } else if (ch == '\u2028') {
-                    // Unicode line separator - escape for JavaScript compatibility
-                    escape = "\\u2028";
-                } else if (ch == '\u2029') {
-                    // Unicode paragraph separator - escape for JavaScript compatibility
-                    escape = "\\u2029";
-                } else {
-                    continue;  // Non-ASCII characters written as-is (UTF-8 handled by Writer)
-                }
-
-                // Write accumulated safe characters from buf, then the escape
-                if (last < i) {
-                    output.write(buf, last, i - last);
-                }
-                output.write(escape);
-                last = i + 1;
-            }
-
-            // Write remaining safe characters from buf
-            if (last < len) {
-                output.write(buf, last, len - last);
-            }
-        }
-        output.write('"');
+        CharStreamGenerator.writeJsonUtf8String(output, s, maxStringLength);
     }
 
     /**
@@ -3219,89 +3103,20 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     /**
-     * Writes a JSON5 single-quoted string value to the output, properly escaped.
-     * In single-quoted strings, single quotes are escaped and double quotes are not.
+     * Writes a JSON5 single-quoted string value, properly escaped. In single-quoted form
+     * the single quote is escaped (as {@code \\'}) while the double quote is not — the
+     * inverse of JSON's standard double-quoted form.
      *
      * @param output          The Writer to write to
      * @param s               The string to be written
      * @param maxStringLength Maximum allowed string length
      * @throws IOException If an I/O error occurs
+     * @deprecated since 4.103.0; the implementation moved to {@code CharStreamGenerator}.
+     *             See {@link #writeBasicString(Writer, String)} for migration notes.
      */
+    @Deprecated
     public static void writeSingleQuotedString(final Writer output, String s, int maxStringLength) throws IOException {
-        if (output == null) {
-            throw new JsonIoException("Output writer cannot be null");
-        }
-
-        if (s == null) {
-            output.write("null");
-            return;
-        }
-
-        output.write('\'');
-        final int len = s.length();
-
-        if (len > maxStringLength) {
-            throw new JsonIoException("String too large for JSON serialization: " + len + " characters. Maximum allowed: " + maxStringLength);
-        }
-
-        int start = 0;
-
-        for (int i = 0; i < len; ) {
-            char ch = s.charAt(i);
-
-            // Fast path: ASCII characters that don't need escaping (for single-quoted strings)
-            if (ch < 128 && !NEEDS_ESCAPE_SINGLE_QUOTE[ch]) {
-                i++;
-                continue;
-            }
-
-            // Write any accumulated safe characters
-            if (i > start) {
-                output.write(s, start, i - start);
-            }
-
-            int codePoint = s.codePointAt(i);
-
-            if (codePoint < 0x20 || codePoint == 0x7F) {
-                // Control characters
-                switch (codePoint) {
-                    case '\b':
-                        output.write("\\b");
-                        break;
-                    case '\f':
-                        output.write("\\f");
-                        break;
-                    case '\n':
-                        output.write("\\n");
-                        break;
-                    case '\r':
-                        output.write("\\r");
-                        break;
-                    case '\t':
-                        output.write("\\t");
-                        break;
-                    default:
-                        output.write(CONTROL_UNICODE_ESCAPES[codePoint]);
-                }
-            } else if (codePoint == '\'') {
-                output.write("\\'");
-            } else if (codePoint == '\\') {
-                output.write("\\\\");
-            } else if (codePoint >= 0x80 && codePoint <= 0xFFFF) {
-                output.write(s, i, Character.charCount(codePoint));
-            } else if (codePoint > 0xFFFF) {
-                output.write(s, i, Character.charCount(codePoint));
-            }
-
-            i += Character.charCount(codePoint);
-            start = i;
-        }
-
-        if (start < len) {
-            output.write(s, start, len - start);
-        }
-
-        output.write('\'');
+        CharStreamGenerator.writeSingleQuotedString(output, s, maxStringLength);
     }
 
     // ======================== Context Stack Management ========================
@@ -3545,7 +3360,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             output.write(name);
             output.write(':');
         } else {
-            writeJsonUtf8String(output, name, maxStringLength);
+            CharStreamGenerator.writeJsonUtf8String(output, name, maxStringLength);
             output.write(':');
         }
     }

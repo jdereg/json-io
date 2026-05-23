@@ -6,6 +6,8 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
 
+import com.cedarsoftware.util.internal.CharBufScratch;
+
 /**
  * Concrete {@link JsonGenerator} implementation that writes JSON tokens to an
  * underlying {@link Writer}. Tracks structural context for auto-comma insertion
@@ -414,7 +416,7 @@ final class CharStreamGenerator extends JsonGenerator {
         if (json5UnquotedKeys && isValidJson5Identifier(name)) {
             out.write(name);
         } else {
-            JsonWriter.writeJsonUtf8String(out, name, maxStringLength);
+            writeJsonUtf8String(out, name, maxStringLength);
         }
         out.write(':');
         if (prettyPrint) {
@@ -435,9 +437,9 @@ final class CharStreamGenerator extends JsonGenerator {
             // json5SmartQuotes is on AND single quotes minimize escaping for this string —
             // matches JsonWriter.writeStringValue's smart selection. Strings without
             // double-quote characters use the default double-quoted form.
-            JsonWriter.writeSingleQuotedString(out, value, maxStringLength);
+            writeSingleQuotedString(out, value, maxStringLength);
         } else {
-            JsonWriter.writeJsonUtf8String(out, value, maxStringLength);
+            writeJsonUtf8String(out, value, maxStringLength);
         }
         markValue();
         return this;
@@ -782,6 +784,238 @@ final class CharStreamGenerator extends JsonGenerator {
             out.write('"');
         }
         markValue();
+    }
+
+    // -------------------------------------------------------------------
+    // Escape tables + string emission helpers
+    //
+    // Moved from JsonWriter in 4.103.0 as part of the dog-food migration —
+    // gen now owns the escape-scan and quoting logic for its own string
+    // emission. JsonWriter retains public static delegates marked
+    // {@code @Deprecated} (for {@code Writers.java} / {@code WriteOptionsBuilder.java}
+    // and any external callers); intra-package callers route here directly.
+    // -------------------------------------------------------------------
+
+    private static final char[] HEX_DIGITS = "0123456789abcdef".toCharArray();
+
+    // Pre-computed escape strings for ASCII characters used by JSON double-quoted strings.
+    // null = character doesn't need escaping; non-null = the escape sequence to write.
+    private static final String[] ESCAPE_STRINGS = new String[128];
+
+    // Pre-computed unicode-escape strings for control characters (0x00-0x1F).
+    // Used by the single-quoted string path to escape control chars that don't have
+    // dedicated short forms like \b / \t / \n / \f / \r.
+    private static final String[] CONTROL_UNICODE_ESCAPES = new String[32];
+
+    // Lookup table for single-quoted strings: which ASCII chars need to be escaped.
+    // Different from double-quoted: ' must be escaped (not "), " is left as-is.
+    private static final boolean[] NEEDS_ESCAPE_SINGLE_QUOTE = new boolean[128];
+
+    private static String toUnicodeEscape(int codePoint) {
+        char[] chars = new char[6];
+        chars[0] = '\\';
+        chars[1] = 'u';
+        chars[2] = HEX_DIGITS[(codePoint >>> 12) & 0xF];
+        chars[3] = HEX_DIGITS[(codePoint >>> 8) & 0xF];
+        chars[4] = HEX_DIGITS[(codePoint >>> 4) & 0xF];
+        chars[5] = HEX_DIGITS[codePoint & 0xF];
+        return new String(chars);
+    }
+
+    static {
+        // Control characters (0x00-0x1F) need backslash-uXXXX escaping by default
+        for (int i = 0; i <= 0x1F; i++) {
+            String unicodeEscape = toUnicodeEscape(i);
+            ESCAPE_STRINGS[i] = unicodeEscape;
+            CONTROL_UNICODE_ESCAPES[i] = unicodeEscape;
+        }
+        // Override common control chars with short escape forms
+        ESCAPE_STRINGS['\b'] = "\\b";
+        ESCAPE_STRINGS['\t'] = "\\t";
+        ESCAPE_STRINGS['\n'] = "\\n";
+        ESCAPE_STRINGS['\f'] = "\\f";
+        ESCAPE_STRINGS['\r'] = "\\r";
+        // Quote and backslash always need escaping in double-quoted strings
+        ESCAPE_STRINGS['"'] = "\\\"";
+        ESCAPE_STRINGS['\\'] = "\\\\";
+        // 0x20-0x7E are printable ASCII — leave as null (no escape needed)
+        // 0x7F (DEL) needs escaping
+        ESCAPE_STRINGS[0x7F] = "\\u007f";
+
+        // Single-quoted string escape rules (JSON5):
+        // All control chars need escaping; only ' (single quote) and \\ among printables.
+        for (int i = 0; i < 0x20; i++) {
+            NEEDS_ESCAPE_SINGLE_QUOTE[i] = true;
+        }
+        NEEDS_ESCAPE_SINGLE_QUOTE['\''] = true;
+        NEEDS_ESCAPE_SINGLE_QUOTE['\\'] = true;
+        NEEDS_ESCAPE_SINGLE_QUOTE[0x7F] = true;
+    }
+
+    /**
+     * Writes a string without scanning for special characters. Use for labels and other
+     * inputs you have a-priori guaranteed are JSON-safe (no embedded {@code "}, {@code \\},
+     * or control chars).
+     *
+     * @param writer Writer to which the quoted string is written
+     * @param s      String to write — must be JSON-safe
+     * @throws IOException if an error occurs writing to the output stream
+     */
+    static void writeBasicString(final Writer writer, String s) throws IOException {
+        writer.write('\"');
+        writer.write(s);
+        writer.write('\"');
+    }
+
+    /**
+     * Writes a JSON string value to the output, properly escaped per JSON specifications.
+     * Handles control characters, quotes, backslashes, and Unicode code points. Uses the
+     * default 1MB string-length limit.
+     *
+     * @param output The Writer to write to
+     * @param s      The string to write as a JSON string value
+     * @throws IOException If an I/O error occurs
+     */
+    static void writeJsonUtf8String(final Writer output, String s) throws IOException {
+        writeJsonUtf8String(output, s, 1000000);
+    }
+
+    /**
+     * Writes a JSON string value, properly escaped per JSON specifications, with explicit
+     * max-length cap. Uses batch scanning (run-of-safe-chars + escape + repeat) for
+     * minimal {@code Writer.write} calls. Per-thread {@code char[]} scratch buffer via
+     * {@code CharBufScratch.getChars} avoids per-call {@code StringLatin1}/{@code UTF16}
+     * dispatch on each character.
+     *
+     * @param output          The Writer to write to
+     * @param s               The string to write as a JSON string value
+     * @param maxStringLength Maximum allowed string length (memory-safety cap)
+     * @throws IOException If an I/O error occurs
+     */
+    static void writeJsonUtf8String(final Writer output, String s, int maxStringLength) throws IOException {
+        if (output == null) {
+            throw new JsonIoException("Output writer cannot be null");
+        }
+        if (s == null) {
+            output.write("null");
+            return;
+        }
+
+        final int len = s.length();
+        if (len > maxStringLength) {
+            throw new JsonIoException("String too large: " + len + " chars (max: " + maxStringLength + ")");
+        }
+
+        output.write('"');
+
+        if (len > 0) {
+            // Bulk-copy chars into a per-thread char[] via CharBufScratch.getChars — uses
+            // String.getChars (HotSpot intrinsic with SIMD on supported HW for compact-string
+            // byte[] -> char[]). Walking buf[i] is a raw array load; replaces per-character
+            // s.charAt(i) and avoids the StringLatin1/UTF16 dispatch that JFR showed at
+            // ~345 leaf samples combined inside this loop. Slice writes via
+            // output.write(buf, off, len) route through StringBuilder.append(char[], ...)
+            // — the fastest variant on StringBuilderWriter — instead of append(String, off,
+            // off+len). Re-entrancy contract: the TL char[] is consumed synchronously by
+            // output.write calls (bytes copied immediately into the underlying sink) before
+            // this method returns.
+            char[] buf = CharBufScratch.getChars(s, len);
+
+            int last = 0;
+            for (int i = 0; i < len; i++) {
+                char ch = buf[i];
+                String escape;
+
+                if (ch < 128) {
+                    escape = ESCAPE_STRINGS[ch];
+                    if (escape == null) {
+                        continue;  // No escape needed — most common path
+                    }
+                } else if (ch == 0x2028) {
+                    escape = "\\u2028";  // Line separator — escape for JavaScript compatibility
+                } else if (ch == 0x2029) {
+                    escape = "\\u2029";  // Paragraph separator — escape for JavaScript compatibility
+                } else {
+                    continue;  // Non-ASCII written as-is (UTF-8 handled by Writer)
+                }
+
+                if (last < i) {
+                    output.write(buf, last, i - last);
+                }
+                output.write(escape);
+                last = i + 1;
+            }
+
+            if (last < len) {
+                output.write(buf, last, len - last);
+            }
+        }
+        output.write('"');
+    }
+
+    /**
+     * Writes a JSON5 single-quoted string value, properly escaped. In single-quoted form
+     * the single quote is escaped (as {@code \\'}) while the double quote is not — the
+     * inverse of JSON's standard double-quoted form. Used by {@code gen.writeString} in
+     * JSON5 smart-quote mode when the value contains {@code "} but not {@code '} (the
+     * quote style that minimizes escaping).
+     *
+     * @param output          The Writer to write to
+     * @param s               The string to be written
+     * @param maxStringLength Maximum allowed string length
+     * @throws IOException If an I/O error occurs
+     */
+    static void writeSingleQuotedString(final Writer output, String s, int maxStringLength) throws IOException {
+        if (output == null) {
+            throw new JsonIoException("Output writer cannot be null");
+        }
+        if (s == null) {
+            output.write("null");
+            return;
+        }
+
+        output.write('\'');
+        final int len = s.length();
+        if (len > maxStringLength) {
+            throw new JsonIoException("String too large for JSON serialization: " + len
+                    + " characters. Maximum allowed: " + maxStringLength);
+        }
+
+        int start = 0;
+        for (int i = 0; i < len; ) {
+            char ch = s.charAt(i);
+            // Fast path: ASCII chars that don't need single-quote escaping
+            if (ch < 128 && !NEEDS_ESCAPE_SINGLE_QUOTE[ch]) {
+                i++;
+                continue;
+            }
+            if (i > start) {
+                output.write(s, start, i - start);
+            }
+            int codePoint = s.codePointAt(i);
+            if (codePoint < 0x20 || codePoint == 0x7F) {
+                switch (codePoint) {
+                    case '\b': output.write("\\b"); break;
+                    case '\f': output.write("\\f"); break;
+                    case '\n': output.write("\\n"); break;
+                    case '\r': output.write("\\r"); break;
+                    case '\t': output.write("\\t"); break;
+                    default:   output.write(CONTROL_UNICODE_ESCAPES[codePoint]);
+                }
+            } else if (codePoint == '\'') {
+                output.write("\\'");
+            } else if (codePoint == '\\') {
+                output.write("\\\\");
+            } else {
+                output.write(s, i, Character.charCount(codePoint));
+            }
+            i += Character.charCount(codePoint);
+            start = i;
+        }
+        if (start < len) {
+            output.write(s, start, len - start);
+        }
+        output.write('\'');
     }
 
     // -------------------------------------------------------------------
