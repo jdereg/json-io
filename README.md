@@ -177,12 +177,12 @@ automatic shared-reference and cycle preservation. No class annotations required
 
 | Mode | JsonIo | TOON | Gson |
 |---|---|---|---|
-| Read `toJava` (typed) | 1.81x | 1.94x | 1.45x |
-| Read `toMaps` (class-independent) | 1.30x | 1.67x | 1.39x |
-| Write `cycleSupport=true` (default) | 1.70x | 1.72x | 2.08x |
-| Write `cycleSupport=false` (DTOs/acyclic) | 1.57x | 1.60x | 2.08x |
-| Write `toMaps` `cycleSupport=true` | 1.93x | 1.82x | 2.11x |
-| Write `toMaps` `cycleSupport=false` | 1.58x | 1.68x | 2.11x |
+| Read `toJava` (typed) | 1.83x | 1.91x | 1.45x |
+| Read `toMaps` (class-independent) | 1.30x | 1.63x | 1.39x |
+| Write `cycleSupport=true` (default) | 1.74x | 1.66x | 2.08x |
+| Write `cycleSupport=false` (DTOs/acyclic) | 1.59x | 1.55x | 2.08x |
+| Write `toMaps` `cycleSupport=true` | 1.85x | 1.79x | 2.11x |
+| Write `toMaps` `cycleSupport=false` | 1.59x | 1.61x | 2.11x |
 
 Measured on JDK 21, `json-io 4.103.0` vs `jackson-databind 2.21.3` and `gson 2.14.0`, using the median of three run-mode executions. Reproduce with `mvn -q -pl json-io -DskipTests test-compile exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.cedarsoftware.io.JsonPerformanceTest -Dexec.args="--with-gson"` (100k iterations after 10k warmup; expect ±3% run-to-run noise from thermal / GC). All three libraries serialize comparable JSON: Jackson is configured with `JavaTimeModule` and `WRITE_DATES_AS_TIMESTAMPS=false` to match Spring Boot's default; Gson uses ISO-8601 `TypeAdapter`s for `Instant`, `LocalDate`, `LocalDateTime`, and `ZonedDateTime` to match. The `--with-gson` flag is opt-in so the default test run isn't slowed by the Gson loops; drop the flag for the two-way (jsonio vs Jackson) comparison.
 
