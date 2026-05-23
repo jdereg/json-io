@@ -446,7 +446,7 @@ final class CharStreamGenerator extends JsonGenerator {
     @Override
     public JsonGenerator writeNumber(int value) throws IOException {
         startValueContext();
-        out.write(Integer.toString(value));
+        writeIntRaw(value);
         markValue();
         return this;
     }
@@ -454,9 +454,145 @@ final class CharStreamGenerator extends JsonGenerator {
     @Override
     public JsonGenerator writeNumber(long value) throws IOException {
         startValueContext();
-        out.write(Long.toString(value));
+        writeLongRaw(value);
         markValue();
         return this;
+    }
+
+    // -------------------------------------------------------------------
+    // Raw integer digit emission (no state-machine interaction)
+    //
+    // Package-private fast-path helpers for JsonWriter and any other
+    // intra-package caller that has already arranged its surrounding
+    // structural context (key+colon, array separator, precomputed prefix,
+    // etc.) and just needs the decimal digits of an integer emitted to
+    // the underlying Writer. Avoids the Integer.toString / Long.toString
+    // allocation that {@link #writeNumber(int)} / {@link #writeNumber(long)}
+    // would otherwise pay -- shared lookup tables + per-instance scratch
+    // buffer + a tight digit-pair loop give us allocation-free integer
+    // emission for hot serialization paths (e.g. @id / @ref values,
+    // numeric field values, int[]/short[] elements).
+    // -------------------------------------------------------------------
+
+    // Pre-computed digit pairs for fast long-to-chars conversion (00-99)
+    private static final char[] DIGIT_TENS = {
+        '0', '0', '0', '0', '0', '0', '0', '0', '0', '0',
+        '1', '1', '1', '1', '1', '1', '1', '1', '1', '1',
+        '2', '2', '2', '2', '2', '2', '2', '2', '2', '2',
+        '3', '3', '3', '3', '3', '3', '3', '3', '3', '3',
+        '4', '4', '4', '4', '4', '4', '4', '4', '4', '4',
+        '5', '5', '5', '5', '5', '5', '5', '5', '5', '5',
+        '6', '6', '6', '6', '6', '6', '6', '6', '6', '6',
+        '7', '7', '7', '7', '7', '7', '7', '7', '7', '7',
+        '8', '8', '8', '8', '8', '8', '8', '8', '8', '8',
+        '9', '9', '9', '9', '9', '9', '9', '9', '9', '9'
+    };
+    private static final char[] DIGIT_ONES = {
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
+    };
+
+    // Scratch buffer for digit emission (max 20 chars for Long.MIN_VALUE with sign).
+    private final char[] longBuffer = new char[20];
+
+    /**
+     * Emit decimal digits of {@code value} directly to the underlying writer using
+     * a digit-pair lookup table. No state-machine interaction; the caller is
+     * responsible for surrounding structural context. Handles {@code Long.MIN_VALUE}
+     * correctly by working in negative space throughout the conversion.
+     *
+     * @param value the long value to emit
+     * @throws IOException If an I/O error occurs
+     */
+    void writeLongRaw(long value) throws IOException {
+        final Writer output = this.out;
+        if (value == 0) {
+            output.write('0');
+            return;
+        }
+
+        int idx = longBuffer.length;
+        boolean negative = value < 0;
+        if (!negative) {
+            value = -value;  // Work with negative to handle Long.MIN_VALUE
+        }
+
+        // Extract digits two at a time using lookup tables. The quotient must remain `long`
+        // throughout -- casting to int here silently truncates for values outside Integer range
+        // (e.g., writing Long.MIN_VALUE produced -206158430208 before the cast was fixed).
+        while (value <= -100) {
+            long q = value / 100;
+            int r = (int) ((q * 100) - value);  // remainder 0-99 always fits in int
+            value = q;
+            longBuffer[--idx] = DIGIT_ONES[r];
+            longBuffer[--idx] = DIGIT_TENS[r];
+        }
+
+        // Handle remaining 1-2 digits
+        int r = (int) -value;
+        longBuffer[--idx] = DIGIT_ONES[r];
+        if (r >= 10) {
+            longBuffer[--idx] = DIGIT_TENS[r];
+        }
+
+        if (negative) {
+            longBuffer[--idx] = '-';
+        }
+
+        output.write(longBuffer, idx, longBuffer.length - idx);
+    }
+
+    /**
+     * Emit decimal digits of {@code value} directly to the underlying writer using
+     * the digit-pair lookup tables. Int-typed variant of {@link #writeLongRaw(long)}
+     * for the small register-allocation win on the common int path. Handles
+     * {@code Integer.MIN_VALUE} correctly by working in negative space throughout.
+     *
+     * @param value the int value to emit
+     * @throws IOException If an I/O error occurs
+     */
+    void writeIntRaw(int value) throws IOException {
+        final Writer output = this.out;
+        if (value == 0) {
+            output.write('0');
+            return;
+        }
+
+        int idx = longBuffer.length;
+        boolean negative = value < 0;
+        if (!negative) {
+            value = -value;  // Work with negative to handle Integer.MIN_VALUE
+        }
+
+        // Extract digits two at a time using lookup tables
+        while (value <= -100) {
+            int q = value / 100;
+            int r = (q * 100) - value;  // remainder 0-99
+            value = q;
+            longBuffer[--idx] = DIGIT_ONES[r];
+            longBuffer[--idx] = DIGIT_TENS[r];
+        }
+
+        // Handle remaining 1-2 digits
+        int r = -value;
+        longBuffer[--idx] = DIGIT_ONES[r];
+        if (r >= 10) {
+            longBuffer[--idx] = DIGIT_TENS[r];
+        }
+
+        if (negative) {
+            longBuffer[--idx] = '-';
+        }
+
+        output.write(longBuffer, idx, longBuffer.length - idx);
     }
 
     @Override

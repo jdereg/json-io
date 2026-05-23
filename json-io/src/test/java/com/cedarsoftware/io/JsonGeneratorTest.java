@@ -68,6 +68,84 @@ class JsonGeneratorTest {
         assertEquals("9223372036854775807", emit(g -> g.writeNumber(Long.MAX_VALUE)));
     }
 
+    // -------------------------------------------------------------------
+    // Integer / long digit-pair emission edge cases (the writeIntRaw /
+    // writeLongRaw fast path used by gen.writeNumber(int/long) and by
+    // JsonWriter's internal @id/@ref/numeric-field emission). Exhaustive
+    // coverage of the algorithm's tricky points: zero, sign boundaries,
+    // MIN_VALUE (requires working in negative space throughout), digit-
+    // pair loop entry/exit, single-digit residues.
+    // -------------------------------------------------------------------
+
+    @Test
+    void writeNumber_int_zero() throws IOException {
+        assertEquals("0", emit(g -> g.writeNumber(0)));
+    }
+
+    @Test
+    void writeNumber_int_positiveOne() throws IOException {
+        assertEquals("1", emit(g -> g.writeNumber(1)));
+    }
+
+    @Test
+    void writeNumber_int_negativeOne() throws IOException {
+        assertEquals("-1", emit(g -> g.writeNumber(-1)));
+    }
+
+    @Test
+    void writeNumber_int_doubleDigit() throws IOException {
+        assertEquals("99", emit(g -> g.writeNumber(99)));
+    }
+
+    @Test
+    void writeNumber_int_tripleDigit() throws IOException {
+        // Crosses the digit-pair loop boundary (|value| >= 100 enters the loop).
+        assertEquals("100", emit(g -> g.writeNumber(100)));
+        assertEquals("101", emit(g -> g.writeNumber(101)));
+        assertEquals("-100", emit(g -> g.writeNumber(-100)));
+        assertEquals("-101", emit(g -> g.writeNumber(-101)));
+    }
+
+    @Test
+    void writeNumber_int_maxValue() throws IOException {
+        assertEquals("2147483647", emit(g -> g.writeNumber(Integer.MAX_VALUE)));
+    }
+
+    @Test
+    void writeNumber_int_minValue() throws IOException {
+        // MIN_VALUE has no positive counterpart; algorithm must work in negative
+        // space throughout to avoid overflow on the `value = -value` step.
+        assertEquals("-2147483648", emit(g -> g.writeNumber(Integer.MIN_VALUE)));
+    }
+
+    @Test
+    void writeNumber_long_zero() throws IOException {
+        assertEquals("0", emit(g -> g.writeNumber(0L)));
+    }
+
+    @Test
+    void writeNumber_long_negativeOne() throws IOException {
+        assertEquals("-1", emit(g -> g.writeNumber(-1L)));
+    }
+
+    @Test
+    void writeNumber_long_minValue() throws IOException {
+        // MIN_VALUE is the canonical test for the negative-space algorithm.
+        // Bug history: an earlier int-truncation of the q*100-value term produced
+        // -206158430208 instead of -9223372036854775808 -- regression-anchor here.
+        assertEquals("-9223372036854775808", emit(g -> g.writeNumber(Long.MIN_VALUE)));
+    }
+
+    @Test
+    void writeNumber_long_aroundDigitPairBoundary() throws IOException {
+        assertEquals("99", emit(g -> g.writeNumber(99L)));
+        assertEquals("100", emit(g -> g.writeNumber(100L)));
+        assertEquals("-99", emit(g -> g.writeNumber(-99L)));
+        assertEquals("-100", emit(g -> g.writeNumber(-100L)));
+        assertEquals("9999", emit(g -> g.writeNumber(9999L)));
+        assertEquals("10000", emit(g -> g.writeNumber(10000L)));
+    }
+
     @Test
     void writeNumber_double() throws IOException {
         assertEquals("1.5", emit(g -> g.writeNumber(1.5)));

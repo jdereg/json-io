@@ -1215,7 +1215,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
             output.write('{');
             output.write(refPrefix);
-            writeLongDirect(id);
+            gen.writeLongRaw(id);
             output.write('}');
             return true;
         }
@@ -1267,12 +1267,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 if (val >= SMALL_INT_LOW && val <= SMALL_INT_HIGH) {
                     out.write(SMALL_INT_STRINGS[val - SMALL_INT_LOW]);
                 } else {
-                    writeIntDirect(val);
+                    gen.writeIntRaw(val);
                 }
                 return;
             }
             if (c == Long.class && !writeLongsAsStrings) {
-                writeLongDirect((Long) obj);
+                gen.writeLongRaw((Long) obj);
                 return;
             }
             if (c == Boolean.class) {
@@ -1368,118 +1368,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     private void writeId(final int id) throws IOException {
         out.write(idPrefix);
-        writeLongDirect(id);  // int widened to long
-    }
-
-    // Pre-computed digit pairs for fast long-to-chars conversion (00-99)
-    private static final char[] DIGIT_TENS = {
-        '0', '0', '0', '0', '0', '0', '0', '0', '0', '0',
-        '1', '1', '1', '1', '1', '1', '1', '1', '1', '1',
-        '2', '2', '2', '2', '2', '2', '2', '2', '2', '2',
-        '3', '3', '3', '3', '3', '3', '3', '3', '3', '3',
-        '4', '4', '4', '4', '4', '4', '4', '4', '4', '4',
-        '5', '5', '5', '5', '5', '5', '5', '5', '5', '5',
-        '6', '6', '6', '6', '6', '6', '6', '6', '6', '6',
-        '7', '7', '7', '7', '7', '7', '7', '7', '7', '7',
-        '8', '8', '8', '8', '8', '8', '8', '8', '8', '8',
-        '9', '9', '9', '9', '9', '9', '9', '9', '9', '9'
-    };
-    private static final char[] DIGIT_ONES = {
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
-    };
-
-    // Scratch buffer for long-to-chars conversion (max 20 digits for Long.MIN_VALUE)
-    private final char[] longBuffer = new char[20];
-
-    /**
-     * Write a long value directly to output without creating a String object.
-     * Uses digit pair lookup tables for efficient conversion.
-     */
-    private void writeLongDirect(long value) throws IOException {
-        final Writer output = this.out;
-        if (value == 0) {
-            output.write('0');
-            return;
-        }
-
-        int idx = longBuffer.length;
-        boolean negative = value < 0;
-        if (!negative) {
-            value = -value;  // Work with negative to handle Long.MIN_VALUE
-        }
-
-        // Extract digits two at a time using lookup tables. The quotient must remain `long`
-        // throughout — casting to int here silently truncates for values outside Integer range
-        // (e.g., writing Long.MIN_VALUE produced -206158430208 before the cast was fixed).
-        while (value <= -100) {
-            long q = value / 100;
-            int r = (int) ((q * 100) - value);  // remainder 0-99 always fits in int
-            value = q;
-            longBuffer[--idx] = DIGIT_ONES[r];
-            longBuffer[--idx] = DIGIT_TENS[r];
-        }
-
-        // Handle remaining 1-2 digits
-        int r = (int) -value;
-        longBuffer[--idx] = DIGIT_ONES[r];
-        if (r >= 10) {
-            longBuffer[--idx] = DIGIT_TENS[r];
-        }
-
-        if (negative) {
-            longBuffer[--idx] = '-';
-        }
-
-        output.write(longBuffer, idx, longBuffer.length - idx);
-    }
-
-    /**
-     * Write an int value directly to output without creating a String object.
-     * Reuses the longBuffer and digit pair lookup tables.
-     */
-    private void writeIntDirect(int value) throws IOException {
-        final Writer output = this.out;
-        if (value == 0) {
-            output.write('0');
-            return;
-        }
-
-        int idx = longBuffer.length;
-        boolean negative = value < 0;
-        if (!negative) {
-            value = -value;  // Work with negative to handle Integer.MIN_VALUE
-        }
-
-        // Extract digits two at a time using lookup tables
-        while (value <= -100) {
-            int q = value / 100;
-            int r = (q * 100) - value;  // remainder 0-99
-            value = q;
-            longBuffer[--idx] = DIGIT_ONES[r];
-            longBuffer[--idx] = DIGIT_TENS[r];
-        }
-
-        // Handle remaining 1-2 digits
-        int r = -value;
-        longBuffer[--idx] = DIGIT_ONES[r];
-        if (r >= 10) {
-            longBuffer[--idx] = DIGIT_TENS[r];
-        }
-
-        if (negative) {
-            longBuffer[--idx] = '-';
-        }
-
-        output.write(longBuffer, idx, longBuffer.length - idx);
+        gen.writeLongRaw(id);  // int widened to long
     }
 
     // Optimized writeType method
@@ -1713,19 +1602,19 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private void writeIntArray(int[] ints, int lenMinus1) throws IOException {
         final Writer output = this.out;
         for (int i = 0; i < lenMinus1; i++) {
-            writeIntDirect(ints[i]);
+            gen.writeIntRaw(ints[i]);
             output.write(',');
         }
-        writeIntDirect(ints[lenMinus1]);
+        gen.writeIntRaw(ints[lenMinus1]);
     }
 
     private void writeShortArray(short[] shorts, int lenMinus1) throws IOException {
         final Writer output = this.out;
         for (int i = 0; i < lenMinus1; i++) {
-            writeIntDirect(shorts[i]);
+            gen.writeIntRaw(shorts[i]);
             output.write(',');
         }
-        writeIntDirect(shorts[lenMinus1]);
+        gen.writeIntRaw(shorts[lenMinus1]);
     }
 
     private void writeByteArray(byte[] bytes, int lenMinus1) throws IOException {
@@ -2866,12 +2755,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                     if (val >= SMALL_INT_LOW && val <= SMALL_INT_HIGH) {
                         output.write(SMALL_INT_STRINGS[val - SMALL_INT_LOW]);
                     } else {
-                        writeIntDirect(val);
+                        gen.writeIntRaw(val);
                     }
                     return false;
                 }
                 if (oClass == Long.class && !writeLongsAsStrings) {
-                    writeLongDirect((Long) o);
+                    gen.writeLongRaw((Long) o);
                     return false;
                 }
                 if (oClass == Boolean.class) {
@@ -2931,24 +2820,24 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 out.write(accessor.getBoolean(obj) ? "true" : "false");
                 break;
             case WriteFieldPlan.PRIMITIVE_BYTE:
-                writeIntDirect(accessor.getByte(obj));
+                gen.writeIntRaw(accessor.getByte(obj));
                 break;
             case WriteFieldPlan.PRIMITIVE_CHAR:
                 writeStringValue(String.valueOf(accessor.getChar(obj)));
                 break;
             case WriteFieldPlan.PRIMITIVE_SHORT:
-                writeIntDirect(accessor.getShort(obj));
+                gen.writeIntRaw(accessor.getShort(obj));
                 break;
             case WriteFieldPlan.PRIMITIVE_INT:
                 int intVal = accessor.getInt(obj);
                 if (intVal >= SMALL_INT_LOW && intVal <= SMALL_INT_HIGH) {
                     out.write(SMALL_INT_STRINGS[intVal - SMALL_INT_LOW]);
                 } else {
-                    writeIntDirect(intVal);
+                    gen.writeIntRaw(intVal);
                 }
                 break;
             case WriteFieldPlan.PRIMITIVE_LONG:
-                writeLongDirect(accessor.getLong(obj));
+                gen.writeLongRaw(accessor.getLong(obj));
                 break;
             case WriteFieldPlan.PRIMITIVE_FLOAT:
                 float floatVal = accessor.getFloat(obj);
