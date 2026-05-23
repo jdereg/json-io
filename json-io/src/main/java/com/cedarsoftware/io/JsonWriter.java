@@ -344,6 +344,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     // identifiers) get unquoted under json5UnquotedKeys.
     private final String idKey;
     private final String typeKey;
+    private final String refKey;
     private final String itemsPrefix;
     private final String keysPrefix;
     private static final Object[] byteStrings = new Object[256];
@@ -602,15 +603,19 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (useDollarPrefix && isShort) {
             this.idKey = "$i";
             this.typeKey = "$t";
+            this.refKey = "$r";
         } else if (useDollarPrefix) {
             this.idKey = "$id";
             this.typeKey = "$type";
+            this.refKey = "$ref";
         } else if (isShort) {
             this.idKey = "@i";
             this.typeKey = "@t";
+            this.refKey = "@r";
         } else {
             this.idKey = "@id";
             this.typeKey = "@type";
+            this.refKey = "@ref";
         }
 
         // Pre-fetch frequently accessed WriteOptions for hot path performance
@@ -1233,16 +1238,19 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             return false;
         }
 
-        final Writer output = this.out;
         if (objVisited.containsKey(obj)) {    // Only write (define) an object once in the JSON stream, otherwise emit a @ref
             int id = getIdInt(obj);
             if (id == 0) {   // Test for 0 because of Weak/Soft references being gc'd during serialization.
                 return false;
             }
-            output.write('{');
-            output.write(refPrefix);
-            gen.writeLongRaw(id);
-            output.write('}');
+            // Self-contained value-slot object emission: {"@ref":<id>} (or $ref / @r / $r variants).
+            // Drives the full Jackson-style API on gen — writeStartObject + writeNumberField +
+            // writeEndObject — so gen's structural state machine is engaged for the entire
+            // ref-object emission, not just the value side as in the prior gen.writeLongRaw path.
+            gen.resetForBridgeAtValueSlot();
+            gen.writeStartObject();
+            gen.writeNumberField(refKey, id);
+            gen.writeEndObject();
             return true;
         }
 
