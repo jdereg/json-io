@@ -2168,7 +2168,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
         final boolean referenced = cycleSupport && this.objsReferenced.containsKey(map);
 
-        gen.resetForBridgeAtValueSlot(this.depth);
+        gen.resetForBridgeAtValueSlot(gen.currentDepth());
         gen.writeStartObjectRaw();
 
         if (referenced) {
@@ -2197,14 +2197,15 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private void writeMapToEnd(Map map, Writer output) throws IOException {
         // Save current element type (Map value type) and switch to key type for @keys array
         final Class<?> savedValueType = declaredElementType;
-        final int depthAtEntry = this.depth;
-        // Both the @keys and @items array bodies sit at the same depth — inside the outer
-        // object body + inside one of the two array bodies.
-        final int bodyDepth = depthAtEntry + 2;
+        final int outerDepth = this.depth;
 
-        // @keys array
+        // @keys array. bodyDepth captured after the first writeStartArrayRaw — gen.depth
+        // returns to the same value after the @keys writeEndArrayRaw + @items
+        // writeStartArrayRaw pair (net push count of 0), so we reuse this value for the
+        // @items section.
         gen.writeFieldNameRaw(keysPrefix);
         gen.writeStartArrayRaw();
+        final int bodyDepth = gen.currentDepth();
         this.depth = bodyDepth;
         gen.beginInlineArrayBody();
 
@@ -2223,7 +2224,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.restoreDepthAfterExternalValue(bodyDepth);
         }
 
-        this.depth = depthAtEntry;
+        this.depth = outerDepth;
         gen.writeEndArrayRaw();
 
         // @items array
@@ -2243,7 +2244,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.restoreDepthAfterExternalValue(bodyDepth);
         }
 
-        this.depth = depthAtEntry;
+        this.depth = outerDepth;
         gen.writeEndArrayRaw();
 
         // Close the object body that the caller opened via gen.writeStartObjectRaw.
