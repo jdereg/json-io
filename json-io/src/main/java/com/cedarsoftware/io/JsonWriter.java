@@ -292,7 +292,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private final String itemsPrefix;
     private final String keysPrefix;
     private static final Object[] byteStrings = new Object[256];
-    private static final String NEW_LINE = System.lineSeparator();
     private final WriteOptions writeOptions;
     private final WriteOptionsBuilder.DefaultWriteOptions defaultWriteOptions;
     // Lightweight identity-based maps for reference tracking (faster than IdentityHashMap<Object, Long>)
@@ -319,7 +318,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      */
     private final CharStreamGenerator gen;
     private int identity = 1;  // int is sufficient - max 2.1 billion unique objects
-    private int depth = 0;
 
     // Primitive depth tracking for traceReferences (avoids Integer autoboxing)
     // Only allocated when cycleSupport=true
@@ -343,16 +341,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     // Pre-fetched WriteOptions values for hot path performance (immutable after construction)
     private final boolean skipNullFields;
-    private final boolean json5UnquotedKeys;
     private final int maxStringLength;
-    private final boolean prettyPrint;
     private final boolean neverShowingType;
     private final boolean alwaysShowingType;
     private final boolean writeLongsAsStrings;
     private final boolean json5SmartQuotes;
-    private final int maxIndentationDepth;
-    private final int indentationThreshold;
-    private final int indentationSize;
     private final boolean cycleSupport;
     private final boolean minimalPlusFormat;
     private final boolean stringifyMapKeys;
@@ -529,16 +522,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         // Pre-fetch frequently accessed WriteOptions for hot path performance
         this.skipNullFields = this.writeOptions.isSkipNullFields();
-        this.json5UnquotedKeys = isJson5UnquotedKeys;  // Already computed above
         this.maxStringLength = this.writeOptions.getMaxStringLength();
-        this.prettyPrint = this.writeOptions.isPrettyPrint();
         this.neverShowingType = this.writeOptions.isNeverShowingType();
         this.alwaysShowingType = this.writeOptions.isAlwaysShowingType();
         this.writeLongsAsStrings = this.writeOptions.isWriteLongsAsStrings();
         this.json5SmartQuotes = this.writeOptions.isJson5SmartQuotes();
-        this.maxIndentationDepth = this.writeOptions.getMaxIndentationDepth();
-        this.indentationThreshold = this.writeOptions.getIndentationThreshold();
-        this.indentationSize = this.writeOptions.getIndentationSize();
         this.cycleSupport = this.writeOptions.isCycleSupport();
         this.minimalPlusFormat = this.writeOptions.isMinimalPlusShowingType();
         this.stringifyMapKeys = this.writeOptions.isStringifyMapKeys();
@@ -606,52 +594,17 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     /**
-     * Add newline (\n) to output at the current indent level.
+     * Emit a newline followed by the current indent — thin delegating wrapper around
+     * {@link CharStreamGenerator#writeNewlineIndent()}. No-op when prettyPrint is off.
+     * Retained as part of the public {@code JsonWriter} API for any external custom
+     * writer that emits its own structural separators and needs the matching pretty-
+     * print newline+indent. Internal callers have been migrated to call
+     * {@code gen.writeNewlineIndent()} directly.
      *
-     * @throws IOException
+     * @throws IOException if the underlying writer throws
      */
     public void newLine() throws IOException {
-        tab(out, 0);
-    }
-
-    /**
-     * tab the JSON output by the given number of characters specified by delta.
-     *
-     * @param output Writer being used for JSON output.
-     * @param delta  int number of characters to tab.
-     * @throws IOException
-     */
-    private void tab(Writer output, int delta) throws IOException {
-        if (!prettyPrint) {
-            return;
-        }
-        output.write(NEW_LINE);
-        depth += delta;
-
-        // Optimized indentation - build spaces once instead of multiple writes
-        if (depth > 0) {
-            // Prevent excessive indentation to avoid memory issues using pre-fetched limit
-            final int actualDepth = Math.min(depth, maxIndentationDepth);
-
-            if (actualDepth <= indentationThreshold) {
-                // For small depths, use simple repeated writes (faster for small depths)
-                for (int i = 0; i < actualDepth; i++) {
-                    for (int j = 0; j < indentationSize; j++) {
-                        output.write(' ');
-                    }
-                }
-            } else {
-                // For larger depths, build the string once and write it
-                char[] spaces = new char[actualDepth * indentationSize];
-                Arrays.fill(spaces, ' ');
-                output.write(spaces);
-            }
-
-            if (depth > maxIndentationDepth) {
-                // Warn about excessive depth to help detect issues
-                output.write("... (depth=" + depth + ")");
-            }
-        }
+        gen.writeNewlineIndent();
     }
 
     /**
@@ -827,7 +780,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             } else {
                 if (referenced || showType) {
                     output.write(',');
-                    newLine();
+                    gen.writeNewlineIndent();
                 }
                 // Reset the CURRENT object-body frame to FRAME_OBJECT_EMPTY so legacy
                 // writers that call back via context.writeFieldName don't double-emit the
@@ -1173,19 +1126,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * <p>The body is bracketed by {@link CharStreamGenerator#snapshotForExternalValue}
      * / {@link CharStreamGenerator#restoreAfterExternalValue} so that callers (array /
      * collection / map element loops, POJO field emission, top-level emit) see gen in
-     * the same state on exit as on entry. The wrapper is load-bearing for two reasons:
-     * <ol>
-     *   <li>Several body paths intentionally reset gen state (writeCustom's primitive-form
-     *       + legacy-writer dispatch, writePrimitive's Long-wrap bare-value path,
-     *       writeStringValue's pretty-print indent reset). The wrapper restores outer
-     *       state on exit so callers don't need their own snap+restore.</li>
-     *   <li>Element loops compute indent off {@code this.depth} (legacy
-     *       {@code newLine()} path) which may diverge from {@code gen.depth} when the
-     *       body emits its own nested structures. The wrapper restores gen.depth so
-     *       subsequent body emissions are at the correct depth.</li>
-     * </ol>
-     * Removing the wrapper would require migrating all element loops off the
-     * {@code this.depth}-based newLine pattern to gen-driven indent emission.
+     * the same state on exit as on entry. The wrapper is load-bearing because several
+     * body paths intentionally reset gen state (writeCustom's primitive-form +
+     * legacy-writer dispatch, writePrimitive's Long-wrap bare-value path,
+     * writeStringValue's pretty-print indent reset). The wrapper restores outer state
+     * on exit so callers don't need their own snap+restore.
      *
      * @param obj      Object to be written
      * @param showType if set to true, the @type tag will be output.
@@ -1433,8 +1378,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * / {@code restoreAfterExternalValue} when they internally reset gen state (the
      * Long-wrap branch of writePrimitive and writeStringValue), so the array body's
      * structural state ({@code FRAME_ARRAY_AFTER_VALUE} at body depth) is preserved
-     * across the iteration. {@code this.depth} is temporarily synced to the array body
-     * depth so the legacy {@code newLine()} emissions between elements indent correctly.
+     * across the iteration.
      */
     private void writeObjectArray(final Object[] array, final Class<?> arrayType, boolean showType) throws IOException {
         if (neverShowingType && !forceElementShowType) {
@@ -1472,16 +1416,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         gen.writeStartArrayRaw();
-        // bodyDepth captures gen.depth AFTER all structural opens fired — the actual
-        // emission depth of array elements. Used for in-loop restoreDepth calls. The
-        // {@code this.depth} field is also synced to bodyDepth so any not-yet-migrated
-        // nested method's reset(this.depth) reads the correct value. {@code outerDepth}
-        // saves the OUTER this.depth so the exit restore is a true save/restore — vs
-        // using depthAtEntry which would (in nested-custom cases) be gen-derived and
-        // differ from the outer caller's this.depth.
-        final int outerDepth = this.depth;
+        // bodyDepth = gen.depth AFTER the structural opens fired — the actual emission
+        // depth of array elements. Used by in-loop restoreDepth calls that need to
+        // recover from inner emissions that reset gen.depth.
         final int bodyDepth = gen.currentDepth();
-        this.depth = bodyDepth;
         gen.beginInlineArrayBody();   // emit leading body indent, setTop=FRAME_ARRAY_AFTER_VALUE
 
         final int lenMinus1 = len - 1;
@@ -1529,7 +1467,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
 
-        this.depth = outerDepth;
         gen.writeEndArrayRaw();   // emits trailing indent + ']'
         if (wrapped) {
             gen.writeEndObjectRaw();
@@ -1740,9 +1677,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.writeFieldNameRaw(itemsPrefix);
         }
         gen.writeStartArrayRaw();
-        final int outerDepth = this.depth;
         final int bodyDepth = gen.currentDepth();
-        this.depth = bodyDepth;
         gen.beginInlineArrayBody();
 
         final Writer output = this.out;
@@ -1773,7 +1708,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
 
-        this.depth = outerDepth;
         gen.writeEndArrayRaw();
         if (wrapped) {
             gen.writeEndObjectRaw();
@@ -1862,9 +1796,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         gen.writeStartArrayRaw();
-        final int outerDepth = this.depth;
         final int bodyDepth = gen.currentDepth();
-        this.depth = bodyDepth;
         gen.beginInlineArrayBody();
 
         final Writer output = this.out;
@@ -1902,7 +1834,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
 
-        this.depth = outerDepth;
         gen.writeEndArrayRaw();
         if (wrapped) {
             gen.writeEndObjectRaw();
@@ -1954,9 +1885,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.writeFieldNameRaw(itemsPrefix);
         }
         gen.writeStartArrayRaw();
-        final int outerDepth = this.depth;
         final int bodyDepth = gen.currentDepth();
-        this.depth = bodyDepth;
         gen.beginInlineArrayBody();
 
         final Writer output = this.out;
@@ -1970,7 +1899,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
 
-        this.depth = outerDepth;
         gen.writeEndArrayRaw();
         if (referenced || showType) {
             gen.writeEndObjectRaw();
@@ -2097,8 +2025,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             return;
         }
 
-        final int outerDepth = this.depth;
-        this.depth = gen.currentDepth();   // inside object body — gen-anchored
 
         Iterator<Map.Entry<Object, Object>> i = jObj.entrySet().iterator();
         while (i.hasNext()) {
@@ -2128,7 +2054,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
 
-        this.depth = outerDepth;
         gen.writeEndObjectRaw();
     }
 
@@ -2197,7 +2122,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private void writeMapToEnd(Map map, Writer output) throws IOException {
         // Save current element type (Map value type) and switch to key type for @keys array
         final Class<?> savedValueType = declaredElementType;
-        final int outerDepth = this.depth;
 
         // @keys array. bodyDepth captured after the first writeStartArrayRaw — gen.depth
         // returns to the same value after the @keys writeEndArrayRaw + @items
@@ -2206,7 +2130,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         gen.writeFieldNameRaw(keysPrefix);
         gen.writeStartArrayRaw();
         final int bodyDepth = gen.currentDepth();
-        this.depth = bodyDepth;
         gen.beginInlineArrayBody();
 
         // Map is non-empty (caller's isEmpty path returned earlier), so the iterators
@@ -2224,13 +2147,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.restoreDepthAfterExternalValue(bodyDepth);
         }
 
-        this.depth = outerDepth;
         gen.writeEndArrayRaw();
 
         // @items array
         gen.writeFieldNameRaw(itemsPrefix);
         gen.writeStartArrayRaw();
-        this.depth = bodyDepth;
         gen.beginInlineArrayBody();
 
         i = map.values().iterator();
@@ -2244,7 +2165,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.restoreDepthAfterExternalValue(bodyDepth);
         }
 
-        this.depth = outerDepth;
         gen.writeEndArrayRaw();
 
         // Close the object body that the caller opened via gen.writeStartObjectRaw.
@@ -2318,9 +2238,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      */
     private boolean writeMapBody(final Iterator i) throws IOException {
         final boolean skipNulls = skipNullFields;
-        final int outerDepth = this.depth;
         final int bodyDepth = gen.currentDepth();   // inside the object body — caller already opened it
-        this.depth = bodyDepth;   // newLine() in nested writeImpl uses correct depth
 
         while (i.hasNext()) {
             Entry att2value = (Entry) i.next();
@@ -2334,7 +2252,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.markValue();
         }
 
-        this.depth = outerDepth;
         gen.writeEndObjectRaw();
         return true;
     }
@@ -2345,9 +2262,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      */
     private boolean writeMapBody(final JsonObject jObj) throws IOException {
         final boolean skipNulls = skipNullFields;
-        final int outerDepth = this.depth;
         final int bodyDepth = gen.currentDepth();
-        this.depth = bodyDepth;
         final int len = jObj.fastEntryCount();
 
         for (int idx = 0; idx < len; idx++) {
@@ -2361,7 +2276,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.markValue();
         }
 
-        this.depth = outerDepth;
         gen.writeEndObjectRaw();
         return true;
     }
@@ -2421,9 +2335,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      */
     private boolean writeStringifiedMapBody(final Iterator i) throws IOException {
         final boolean skipNulls = skipNullFields;
-        final int outerDepth = this.depth;
         final int bodyDepth = gen.currentDepth();
-        this.depth = bodyDepth;
 
         while (i.hasNext()) {
             Entry att2value = (Entry) i.next();
@@ -2439,7 +2351,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.markValue();
         }
 
-        this.depth = outerDepth;
         gen.writeEndObjectRaw();
         return true;
     }
@@ -2610,8 +2521,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             return;
         }
 
-        final int outerDepth = this.depth;
-        this.depth = gen.currentDepth();   // inside outer object body + inside @items array body — gen-anchored
         gen.beginInlineArrayBody();
 
         boolean firstInSet = true;
@@ -2642,7 +2551,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
 
-        this.depth = outerDepth;
         gen.writeEndArrayRaw();
         gen.writeEndObjectRaw();
     }
@@ -2671,7 +2579,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             showType = false;
         }
         final boolean referenced = cycleSupport && this.objsReferenced.containsKey(obj);
-        final int outerDepth = this.depth;
         if (!bodyOnly) {
             // No resetForBridgeAtValueSlot here: writeStartObjectRaw pushes from the current
             // gen.depth without overwriting contextStack[gen.depth]. This preserves the
@@ -2689,7 +2596,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 String alias = writeOptions.getTypeNameAlias(obj.getClass().getName());
                 gen.writeStringFieldUnescaped(typeKey, alias);
             }
-            this.depth = gen.currentDepth();   // inside object body — gen-anchored (= outerDepth's gen-equivalent + 1)
         }
 
         List<WriteFieldPlan> accessors = WriteOptionsBuilder.getWriteFieldPlans(writeOptions, obj.getClass());
@@ -2704,7 +2610,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         if (!bodyOnly) {
-            this.depth = outerDepth;
             gen.writeEndObjectRaw();
         }
     }
