@@ -1457,9 +1457,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         gen.writeStartArrayRaw();
         // Sync this.depth to the array body depth so legacy newLine() inside the loop
         // indents at the correct depth. Restored before writeEndArrayRaw fires its own
-        // trailing indent.
+        // trailing indent. {@code bodyDepth} captures the same value as a final local so
+        // depth-restore calls inside the loop don't depend on the {@code this.depth}
+        // field — first step toward eliminating that field entirely.
         final int depthAtEntry = this.depth;
-        this.depth = depthAtEntry + (wrapped ? 2 : 1);
+        final int bodyDepth = depthAtEntry + (wrapped ? 2 : 1);
+        this.depth = bodyDepth;
         gen.beginInlineArrayBody();   // emit leading body indent, setTop=FRAME_ARRAY_AFTER_VALUE
 
         final int lenMinus1 = len - 1;
@@ -1470,10 +1473,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // reset gen.depth to 0 (writeStringValue, writePrimitive's Long-wrap branch, and
         // writeArrayElementIfMatching → writeCustom's new-API dispatch) require a
         // lightweight depth restore — they operate at depth 0 and don't touch the array
-        // body's contextStack entry, so just restoring this.depth (== gen.depth at body
-        // depth) is sufficient. writeImpl has its own snapshot/restore wrapper that
-        // restores both depth and stack. writePrimitive's non-Long-wrap paths and the
-        // null-literal write don't touch gen state at all.
+        // body's contextStack entry, so just restoring gen.depth to bodyDepth is
+        // sufficient. writeImpl has its own snapshot/restore wrapper that restores both
+        // depth and stack. writePrimitive's non-Long-wrap paths and the null-literal
+        // write don't touch gen state at all.
         for (int i = 0; i < len; i++) {
             final Object value = array[i];
 
@@ -1497,7 +1500,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 if (!writeArrayElementIfMatching(componentClass, value, forceType, output)) {
                     writeImpl(value, forceType);   // wrapper handles full restore
                 } else {
-                    gen.restoreDepthAfterExternalValue(this.depth);   // writeCustom new-API reset gen.depth=0
+                    gen.restoreDepthAfterExternalValue(bodyDepth);   // writeCustom new-API reset gen.depth=0
                 }
             }
 
