@@ -58,6 +58,10 @@ class PrettyPrintTest
         String json = TestUtil.toJson(nice, writeOptions);
 
         assert JsonParser.parseString(json).equals(JsonParser.parseString(target));
+        // Strict comparison — verify the pretty-print output matches the reference fixture
+        // byte-for-byte (including all whitespace and indentation). Catches subtle indent
+        // bugs that the parseString tree-equality check above would silently accept.
+        assertThat(json).isEqualTo(target);
 
         String json1 = TestUtil.toJson(nice);
         assertThat(json)

@@ -463,30 +463,45 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // (@ prefix always requires quotes since @ is not a valid identifier start)
         boolean canUseUnquotedKeys = isJson5UnquotedKeys && useDollarPrefix;
 
+        final String itemsBase;
+        final String keysBase;
         if (useDollarPrefix && canUseUnquotedKeys && isShort) {
             // JSON5 + $ prefix + short: $e, $k (unquoted)
-            this.itemsPrefix = ITEMS_JSON5_SHORT;
-            this.keysPrefix = KEYS_JSON5_SHORT;
+            itemsBase = ITEMS_JSON5_SHORT;
+            keysBase = KEYS_JSON5_SHORT;
         } else if (useDollarPrefix && canUseUnquotedKeys) {
             // JSON5 + $ prefix + long: $items, $keys (unquoted)
-            this.itemsPrefix = ITEMS_JSON5;
-            this.keysPrefix = KEYS_JSON5;
+            itemsBase = ITEMS_JSON5;
+            keysBase = KEYS_JSON5;
         } else if (useDollarPrefix && isShort) {
             // $ prefix + short + quoted: "$e", "$k"
-            this.itemsPrefix = ITEMS_DOLLAR_SHORT_QUOTED;
-            this.keysPrefix = KEYS_DOLLAR_SHORT_QUOTED;
+            itemsBase = ITEMS_DOLLAR_SHORT_QUOTED;
+            keysBase = KEYS_DOLLAR_SHORT_QUOTED;
         } else if (useDollarPrefix) {
             // $ prefix + long + quoted: "$items", "$keys"
-            this.itemsPrefix = ITEMS_DOLLAR_QUOTED;
-            this.keysPrefix = KEYS_DOLLAR_QUOTED;
+            itemsBase = ITEMS_DOLLAR_QUOTED;
+            keysBase = KEYS_DOLLAR_QUOTED;
         } else if (isShort) {
             // @ prefix + short + quoted: "@e", "@k"
-            this.itemsPrefix = ITEMS_SHORT;
-            this.keysPrefix = KEYS_SHORT;
+            itemsBase = ITEMS_SHORT;
+            keysBase = KEYS_SHORT;
         } else {
             // @ prefix + long + quoted: "@items", "@keys"
-            this.itemsPrefix = ITEMS_LONG;
-            this.keysPrefix = KEYS_LONG;
+            itemsBase = ITEMS_LONG;
+            keysBase = KEYS_LONG;
+        }
+
+        // Append trailing space when prettyPrint is on, matching the post-colon space
+        // that CharStreamGenerator.writeKey emits via writeFieldName. Without this,
+        // gen.writeFieldNameRaw(itemsPrefix) would produce "@items":[ while a sibling
+        // @type field emitted via the gen API would produce "@type": "..." — a visible
+        // inconsistency in pretty-printed output.
+        if (this.writeOptions.isPrettyPrint()) {
+            this.itemsPrefix = itemsBase + ' ';
+            this.keysPrefix = keysBase + ' ';
+        } else {
+            this.itemsPrefix = itemsBase;
+            this.keysPrefix = keysBase;
         }
 
         // Bare key name (no quotes, no colon) for the dog-food path. 4 variants

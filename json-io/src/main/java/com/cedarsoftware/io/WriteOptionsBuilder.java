@@ -2996,13 +2996,20 @@ public class WriteOptionsBuilder {
         }
 
         private static String buildKeyLiteral(String fieldName, WriteOptions options) {
+            // Trailing space after the colon when prettyPrint is on — matches the
+            // post-colon space that CharStreamGenerator.writeKey emits via writeFieldName
+            // (which is used for @type / @id / @ref / @items etc.). Without this, POJO
+            // field emission via writeFieldNameRaw would produce `"name":"value"` while
+            // the same writer's gen-driven @type field emits `"@type": "value"` — a
+            // visible inconsistency in pretty-printed output.
+            final String colonSuffix = options.isPrettyPrint() ? ": " : ":";
             if (options.isJson5UnquotedKeys() && isValidJson5Identifier(fieldName)) {
-                return fieldName + ':';
+                return fieldName + colonSuffix;
             }
             try {
                 StringWriter sw = new StringWriter(fieldName.length() + 8);
                 CharStreamGenerator.writeJsonUtf8String(sw, fieldName, options.getMaxStringLength());
-                sw.write(':');
+                sw.write(colonSuffix);
                 return sw.toString();
             } catch (IOException e) {
                 throw new JsonIoException("Unable to precompute JSON key literal for field: " + fieldName, e);
