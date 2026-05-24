@@ -1143,13 +1143,15 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 return false;
             }
             // Self-contained value-slot object emission: {"@ref":<id>} (or $ref / @r / $r variants).
-            // Drives the full Jackson-style API on gen — writeStartObject + writeNumberField +
-            // writeEndObject — so gen's structural state machine is engaged for the entire
-            // ref-object emission, not just the value side as in the prior gen.writeLongRaw path.
-            gen.resetForBridgeAtValueSlot();
-            gen.writeStartObject();
+            // Uses writeStartObjectRaw which pushes from the current gen.depth without
+            // overwriting the outer caller's frame — outer state at gen.depth is preserved.
+            // writeEndObjectRaw's pop + markValue transitions the outer frame from
+            // FRAME_OBJECT_AFTER_FIELD (or whatever value-slot state the caller was in) to
+            // FRAME_OBJECT_AFTER_VALUE on exit. Same pattern as writeObject's chunk-6
+            // refactor — no reset needed.
+            gen.writeStartObjectRaw();
             gen.writeNumberField(refKey, id);
-            gen.writeEndObject();
+            gen.writeEndObjectRaw();
             return true;
         }
 
@@ -1373,19 +1375,30 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
         if (obj instanceof Long && writeLongsAsStrings) {
             // Long-wrap path: emits {"@type":"long","value":"<long-as-string>"} when
-            // showType, else just "<long-as-string>" at the value slot. Dog-food path
-            // — the entire emission goes through gen: writeStartObject opens the
-            // wrapper, writeStringFieldUnescaped emits the @type field (alias "long"
-            // is JSON-safe), longBoxedWriter.write dispatches through gen for the
-            // "value" field (and the bare-value case when !showType), writeEndObject
-            // closes. State machine is engaged for the entire structure.
-            gen.resetForBridgeAtValueSlot();
+            // showType, else just "<long-as-string>" at the value slot.
+            //
+            // showType=true (wrapped): uses writeStartObjectRaw + writeStringFieldUnescaped
+            // + longBoxedWriter.write + writeEndObjectRaw. Same pattern as writeObject's
+            // chunk-6 refactor — no reset needed; writeStartObjectRaw pushes from current
+            // depth, and writeEndObjectRaw's pop + markValue transitions the outer frame.
+            //
+            // showType=false (bare value): retains the legacy resetForBridgeAtValueSlot.
+            // longBoxedWriter.write(obj, false, gen, this) routes through PrimitiveTypeWriter.
+            // write -> writePrimitiveForm -> gen.writeString — which goes through the state
+            // machine. If the caller (e.g., writeJsonObjectArray's element loop) is in
+            // FRAME_ARRAY_AFTER_VALUE state with its own manual `,\n + indent` separator
+            // between elements, the gen-driven emission would add a SECOND comma. The reset
+            // puts gen at FRAME_ROOT_EMPTY so gen.writeString emits no separator. Caller
+            // restores depth afterward. Keeping the reset here preserves custom-writer
+            // compatibility (a user-registered LongWriter override fires through gen as
+            // expected).
             if (showType) {
-                gen.writeStartObject();
+                gen.writeStartObjectRaw();
                 gen.writeStringFieldUnescaped(typeKey, "long");
                 longBoxedWriter.write(obj, true, gen, this);
-                gen.writeEndObject();
+                gen.writeEndObjectRaw();
             } else {
+                gen.resetForBridgeAtValueSlot();
                 longBoxedWriter.write(obj, false, gen, this);
             }
             return;
@@ -1519,10 +1532,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                         !isForceType(value.getClass(), componentClass)) {
                 writePrimitive(value, false);   // state-machine-free helpers, no restore needed
             } else if (value instanceof Long && !isForceType(Long.class, componentClass)) {
+                // showType = writeLongsAsStrings. When true → Long-wrap's wrapped path
+                // (writeStartObjectRaw + ... + writeEndObjectRaw, no reset since chunk-8).
+                // When false → falls through to writeLongRaw (state-machine-free). Neither
+                // path resets gen state, so no restoreDepth needed.
                 writePrimitive(value, writeLongsAsStrings);
-                if (writeLongsAsStrings) {
-                    gen.restoreDepthAfterExternalValue(this.depth);   // Long-wrap reset gen.depth=0
-                }
             } else if (value instanceof String && !isForceType(String.class, componentClass)) {
                 writeStringValue((String) value);   // state-machine-free; no restore needed
             } else {
@@ -1890,12 +1904,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                     writeStringValue((String) value);   // state-machine-free; no restore needed
                 } else if (value instanceof Boolean || value instanceof Long || value instanceof Double) {
                     writePrimitive(value, forceType);
-                    if (forceType) {
-                        // writePrimitive's Long-wrap branch resets gen.depth=0 when
-                        // forceType + writeLongsAsStrings; other forceType cases don't.
-                        // Restoring unconditionally is safe (no-op when depth unchanged).
-                        gen.restoreDepthAfterExternalValue(this.depth);
-                    }
+                    // writePrimitive's Long-wrap bare-value path (showType=false +
+                    // writeLongsAsStrings + Long value) still resets gen state to
+                    // FRAME_ROOT_EMPTY at depth=0 (preserves custom-writer compat for
+                    // LongWriter overrides). Restore depth unconditionally — a no-op for
+                    // the wrapped path / state-machine-free paths, correct for the bare
+                    // Long-as-string path.
+                    gen.restoreDepthAfterExternalValue(this.depth);
                 } else {
                     writeImpl(value, forceType);   // wrapper handles full restore
                 }
