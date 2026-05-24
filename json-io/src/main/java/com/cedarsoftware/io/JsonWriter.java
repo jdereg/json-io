@@ -765,14 +765,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             if (closestWriter.hasPrimitiveForm(this)) {
                 if ((!referenced && !showType) || closestWriter instanceof Writers.JsonStringWriter) {
                     if (dispatch.useNewPrimitive) {
-                        // Primitive form: custom writer emits one value via gen
-                        // (gen.writeString / gen.writeNumber / etc.). gen's state machine
-                        // would add a leading separator if state is FRAME_ARRAY_AFTER_VALUE,
-                        // which is wrong for callers (e.g., writeObjectArray's element loop)
-                        // that emit their own manual ','. resetForBridgeAtValueSlot puts gen
-                        // at FRAME_ROOT_EMPTY so the writer's single emission has no leading
-                        // separator. Caller (via writeImpl wrapper, or by restoreDepth in the
-                        // migrated element loops) handles state restoration afterward.
+                        // Primitive form: custom writer emits one value via gen.
+                        // resetForBridgeAtValueSlot puts gen at FRAME_ROOT_EMPTY so the
+                        // writer's single emission has no leading separator. Caller's
+                        // writeImpl wrapper restores outer state on exit.
                         this.gen.resetForBridgeAtValueSlot();
                         closestWriter.writePrimitiveForm(o, this.gen, this);
                     } else {
@@ -818,9 +814,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                     output.write(',');
                     newLine();
                 }
-                // Reset the CURRENT object-body frame (the one writeStartObjectRaw pushed)
-                // to FRAME_OBJECT_EMPTY so legacy writers that call back via
-                // context.writeFieldName don't double-emit the leading comma.
+                // Reset the CURRENT object-body frame to FRAME_OBJECT_EMPTY so legacy
+                // writers that call back via context.writeFieldName don't double-emit the
+                // leading comma. Caller's writeImpl wrapper restores outer state on exit.
                 this.gen.resetCurrentObjectFrame();
                 closestWriter.write(o, showType || referenced, output, this);
             }
@@ -1159,16 +1155,22 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * JsonObject, Map, Map of JsonObjects, Collection, Collection of JsonObject, any regular
      * object, or a JsonObject representing a regular object.
      *
-     * <p>Wraps the actual serialization in a {@link CharStreamGenerator} state-sync
-     * window via {@code snapshotForExternalValue} + {@code resetForBridgeAtValueSlot} on
-     * entry, {@code restoreAfterExternalValue} on exit. The body of
-     * {@link #writeImplInternal} is treated as emitting exactly one JSON value at a
-     * value-slot position: gen state starts at {@code FRAME_ROOT_EMPTY} (clean
-     * value-slot), the body runs (mixing direct {@code out.write} with gen-driven
-     * Jackson API calls — both work because gen-driven emission has a known starting
-     * state), then the outer caller's gen state is restored and transitioned to
-     * "value emitted." This isolation lets any sub-method drive structural emission
-     * through gen without worrying about what the outer caller's gen state was.
+     * <p>The body is bracketed by {@link CharStreamGenerator#snapshotForExternalValue}
+     * / {@link CharStreamGenerator#restoreAfterExternalValue} so that callers (array /
+     * collection / map element loops, POJO field emission, top-level emit) see gen in
+     * the same state on exit as on entry. The wrapper is load-bearing for two reasons:
+     * <ol>
+     *   <li>Several body paths intentionally reset gen state (writeCustom's primitive-form
+     *       + legacy-writer dispatch, writePrimitive's Long-wrap bare-value path,
+     *       writeStringValue's pretty-print indent reset). The wrapper restores outer
+     *       state on exit so callers don't need their own snap+restore.</li>
+     *   <li>Element loops compute indent off {@code this.depth} (legacy
+     *       {@code newLine()} path) which may diverge from {@code gen.depth} when the
+     *       body emits its own nested structures. The wrapper restores gen.depth so
+     *       subsequent body emissions are at the correct depth.</li>
+     * </ol>
+     * Removing the wrapper would require migrating all element loops off the
+     * {@code this.depth}-based newLine pattern to gen-driven indent emission.
      *
      * @param obj      Object to be written
      * @param showType if set to true, the @type tag will be output.
@@ -1348,6 +1350,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 longBoxedWriter.write(obj, true, gen, this);
                 gen.writeEndObjectRaw();
             } else {
+                // Bare value path. Caller's writeImpl wrapper restores outer state on exit.
                 gen.resetForBridgeAtValueSlot();
                 longBoxedWriter.write(obj, false, gen, this);
             }
