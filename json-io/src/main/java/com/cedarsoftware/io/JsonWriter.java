@@ -1838,24 +1838,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         return obj.getClass().getName();
     }
 
-    private void writeIdAndTypeIfNeeded(Object col, boolean showType, boolean referenced) throws IOException {
-        if (neverShowingType && !forceElementShowType) {
-            showType = false;
-        }
-        if (referenced) {
-            writeId(getIdInt(col));
-        }
-
-        if (showType) {
-            final Writer output = this.out;
-            if (referenced) {
-                output.write(',');
-                newLine();
-            }
-            writeType(getTypeNameForOutput(col));
-        }
-    }
-
     /**
      * Emit a {@link JsonObject} that represents an Object array (the toMaps / direct
      * JsonObject form). Same structural shape as {@link #writeObjectArray(Object[], Class, boolean)};
@@ -2058,6 +2040,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         writeMapToEnd(jObj, this.out);
     }
 
+    /**
+     * Emit a JsonObject-as-Map in the string-key {@code {"k":v,...}} form. JsonObject
+     * counterpart to {@link #writeMapWithStringKeys(Map, boolean)}.
+     */
     private boolean writeJsonObjectMapWithStringKeys(JsonObject jObj, boolean showType) throws IOException {
         if (neverShowingType && !forceElementShowType) {
             showType = false;
@@ -2074,48 +2060,32 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             return false;
         }
 
-        Writer output = this.out;
-        emitIdAndTypeIfNeeded(jObj, showType, output);
+        final boolean referenced = adjustIfReferenced(jObj);
 
-        if (jObj.isEmpty()) { // Empty
-            tabOut();
-            output.write('}');
-            return true;
+        gen.resetForBridgeAtValueSlot(this.depth);
+        gen.writeStartObjectRaw();
+
+        if (referenced) {
+            gen.writeNumberField(idKey, (int) jObj.getId());
+        }
+        if (showType) {
+            String type = getTypeNameForOutput(jObj);
+            if (type != null) {
+                String alias = writeOptions.getTypeNameAlias(type);
+                gen.writeStringFieldUnescaped(typeKey, alias);
+            }
+            // else: type silently skipped — matches legacy emitIdAndTypeIfNeeded behavior
         }
 
-        if (showType) {
-            output.write(',');
-            newLine();
+        if (jObj.isEmpty()) {
+            gen.writeEndObjectRaw();
+            return true;
         }
 
         if (canStringify) {
             return writeStringifiedMapBody(jObj.entrySet().iterator());
         }
         return writeMapBody(jObj);
-    }
-
-    private boolean emitIdAndTypeIfNeeded(JsonObject jObj, boolean showType, Writer output) throws IOException {
-        boolean referenced = adjustIfReferenced(jObj);
-        output.write('{');
-        tabIn();
-
-        if (referenced) {
-            writeId((int) jObj.getId());  // Safe cast - internal storage is int
-        }
-
-        if (showType) {
-            if (referenced) {
-                output.write(',');
-                newLine();
-            }
-            String type = getTypeNameForOutput(jObj);
-            if (type != null) {
-                writeType(type);
-            } else {   // type not displayed
-                showType = false;
-            }
-        }
-        return showType;
     }
 
     /**
@@ -2304,6 +2274,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         gen.writeEndObjectRaw();
     }
 
+    /**
+     * Emit a Java Map in the string-key {@code {"k":v,...}} form (the standard JSON
+     * representation, when keys are Strings or can be stringified). Dog-food path —
+     * outer {@code {}} via {@link CharStreamGenerator#writeStartObjectRaw()} /
+     * {@link CharStreamGenerator#writeEndObjectRaw()}; @id / @type via gen field helpers;
+     * body via {@link #writeMapBody(Iterator)} or {@link #writeStringifiedMapBody(Iterator)}.
+     */
     private boolean writeMapWithStringKeys(Map map, boolean showType) throws IOException {
         if (neverShowingType && !forceElementShowType) {
             showType = false;
@@ -2328,21 +2305,22 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             return false;  // Fall back to @keys/@items
         }
 
-        boolean referenced = cycleSupport && this.objsReferenced.containsKey(map);
+        final boolean referenced = cycleSupport && this.objsReferenced.containsKey(map);
 
-        out.write('{');
-        tabIn();
-        writeIdAndTypeIfNeeded(map, showType, referenced);
+        gen.resetForBridgeAtValueSlot(this.depth);
+        gen.writeStartObjectRaw();
 
-        if (map.isEmpty()) {
-            tabOut();
-            out.write('}');
-            return true;
+        if (referenced) {
+            gen.writeNumberField(idKey, getIdInt(map));
+        }
+        if (showType) {
+            String alias = writeOptions.getTypeNameAlias(getTypeNameForOutput(map));
+            gen.writeStringFieldUnescaped(typeKey, alias);
         }
 
-        if (showType || referenced) {
-            out.write(',');
-            newLine();
+        if (map.isEmpty()) {
+            gen.writeEndObjectRaw();
+            return true;
         }
 
         if (canStringify) {
@@ -2351,133 +2329,61 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         return writeMapBody(map.entrySet().iterator());
     }
 
+    /**
+     * Write the body of a string-key Map (the {@code {"k1":v1,"k2":v2}} form). Caller has
+     * already opened the outer object via {@code gen.writeStartObjectRaw()} +
+     * any {@code @id}/{@code @type} fields. Each entry emits via
+     * {@link CharStreamGenerator#writeFieldName(String)} (auto-comma + indent + json5-aware
+     * key emission), then {@link #writeCollectionElement(Object)} for the value followed
+     * by a lightweight depth restore + {@code markValue} to transition the outer frame
+     * from {@code FRAME_OBJECT_AFTER_FIELD} to {@code FRAME_OBJECT_AFTER_VALUE}. Closes
+     * with {@code gen.writeEndObjectRaw()}.
+     */
     private boolean writeMapBody(final Iterator i) throws IOException {
-        final Writer output = out;
         final boolean skipNulls = skipNullFields;
-        final boolean unquotedKeys = json5UnquotedKeys;
-        final int maxLen = maxStringLength;
-        boolean wroteEntry = false;
+        final int depthAtEntry = this.depth;
+        this.depth = depthAtEntry + 1;   // inside the object body — newLine() in nested writeImpl uses correct depth
 
-        if (skipNulls) {
-            while (i.hasNext()) {
-                Entry att2value = (Entry) i.next();
-                Object value = att2value.getValue();
-                if (value == null) {
-                    continue;
-                }
-
-                if (wroteEntry) {
-                    output.write(',');
-                    newLine();
-                }
-
-                String key = (String) att2value.getKey();
-                if (unquotedKeys && isValidJson5Identifier(key)) {
-                    output.write(key);
-                } else {
-                    CharStreamGenerator.writeJsonUtf8String(output, key, maxLen);
-                }
-                output.write(':');
-                writeCollectionElement(value);
-                wroteEntry = true;
+        while (i.hasNext()) {
+            Entry att2value = (Entry) i.next();
+            Object value = att2value.getValue();
+            if (skipNulls && value == null) {
+                continue;
             }
-        } else if (unquotedKeys) {
-            while (i.hasNext()) {
-                Entry att2value = (Entry) i.next();
-                if (wroteEntry) {
-                    output.write(',');
-                    newLine();
-                }
-
-                String key = (String) att2value.getKey();
-                if (isValidJson5Identifier(key)) {
-                    output.write(key);
-                } else {
-                    CharStreamGenerator.writeJsonUtf8String(output, key, maxLen);
-                }
-                output.write(':');
-                writeCollectionElement(att2value.getValue());
-                wroteEntry = true;
-            }
-        } else {
-            while (i.hasNext()) {
-                Entry att2value = (Entry) i.next();
-                if (wroteEntry) {
-                    output.write(',');
-                    newLine();
-                }
-                CharStreamGenerator.writeJsonUtf8String(output, (String) att2value.getKey(), maxLen);
-                output.write(':');
-                writeCollectionElement(att2value.getValue());
-                wroteEntry = true;
-            }
+            gen.writeFieldName((String) att2value.getKey());
+            writeCollectionElement(value);
+            gen.restoreDepthAfterExternalValue(this.depth);
+            gen.markValue();
         }
 
-        tabOut();
-        output.write('}');
+        this.depth = depthAtEntry;
+        gen.writeEndObjectRaw();
         return true;
     }
 
+    /**
+     * JsonObject overload of {@link #writeMapBody(Iterator)}. Iterates via the fast
+     * {@code fastKeyAt}/{@code fastValueAt} primitives.
+     */
     private boolean writeMapBody(final JsonObject jObj) throws IOException {
-        final Writer output = out;
         final boolean skipNulls = skipNullFields;
-        final boolean unquotedKeys = json5UnquotedKeys;
-        final int maxLen = maxStringLength;
-        boolean wroteEntry = false;
-        int len = jObj.fastEntryCount();
+        final int depthAtEntry = this.depth;
+        this.depth = depthAtEntry + 1;
+        final int len = jObj.fastEntryCount();
 
-        if (skipNulls) {
-            for (int idx = 0; idx < len; idx++) {
-                Object value = jObj.fastValueAt(idx);
-                if (value == null) {
-                    continue;
-                }
-                if (wroteEntry) {
-                    output.write(',');
-                    newLine();
-                }
-
-                String key = (String) jObj.fastKeyAt(idx);
-                if (unquotedKeys && isValidJson5Identifier(key)) {
-                    output.write(key);
-                } else {
-                    CharStreamGenerator.writeJsonUtf8String(output, key, maxLen);
-                }
-                output.write(':');
-                writeCollectionElement(value);
-                wroteEntry = true;
+        for (int idx = 0; idx < len; idx++) {
+            Object value = jObj.fastValueAt(idx);
+            if (skipNulls && value == null) {
+                continue;
             }
-        } else if (unquotedKeys) {
-            for (int idx = 0; idx < len; idx++) {
-                if (wroteEntry) {
-                    output.write(',');
-                    newLine();
-                }
-                String key = (String) jObj.fastKeyAt(idx);
-                if (isValidJson5Identifier(key)) {
-                    output.write(key);
-                } else {
-                    CharStreamGenerator.writeJsonUtf8String(output, key, maxLen);
-                }
-                output.write(':');
-                writeCollectionElement(jObj.fastValueAt(idx));
-                wroteEntry = true;
-            }
-        } else {
-            for (int idx = 0; idx < len; idx++) {
-                if (wroteEntry) {
-                    output.write(',');
-                    newLine();
-                }
-                CharStreamGenerator.writeJsonUtf8String(output, (String) jObj.fastKeyAt(idx), maxLen);
-                output.write(':');
-                writeCollectionElement(jObj.fastValueAt(idx));
-                wroteEntry = true;
-            }
+            gen.writeFieldName((String) jObj.fastKeyAt(idx));
+            writeCollectionElement(value);
+            gen.restoreDepthAfterExternalValue(this.depth);
+            gen.markValue();
         }
 
-        tabOut();
-        output.write('}');
+        this.depth = depthAtEntry;
+        gen.writeEndObjectRaw();
         return true;
     }
 
@@ -2528,35 +2434,33 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * Write map entries with non-String keys converted to Strings via Converter.
      * Same structure as writeMapBody() but keys are stringified instead of cast to String.
      */
+    /**
+     * Write the body of a Map whose keys are stringified via {@code Converter.convert}.
+     * Same pattern as {@link #writeMapBody(Iterator)} but each key is first converted
+     * to its String form via the framework's bidirectional converter. Used when the Map
+     * has non-String keys but {@code stringifyMapKeys} is enabled.
+     */
     private boolean writeStringifiedMapBody(final Iterator i) throws IOException {
-        final Writer output = out;
         final boolean skipNulls = skipNullFields;
-        final int maxLen = maxStringLength;
-        boolean wroteEntry = false;
+        final int depthAtEntry = this.depth;
+        this.depth = depthAtEntry + 1;
 
         while (i.hasNext()) {
             Entry att2value = (Entry) i.next();
             Object value = att2value.getValue();
-
             if (skipNulls && value == null) {
                 continue;
             }
-
-            if (wroteEntry) {
-                output.write(',');
-                newLine();
-            }
-
             Object key = att2value.getKey();
             String keyStr = (key == null) ? "null" : Converter.convert(key, String.class);
-            CharStreamGenerator.writeJsonUtf8String(output, keyStr, maxLen);
-            output.write(':');
+            gen.writeFieldName(keyStr);
             writeCollectionElement(value);
-            wroteEntry = true;
+            gen.restoreDepthAfterExternalValue(this.depth);
+            gen.markValue();
         }
 
-        tabOut();
-        output.write('}');
+        this.depth = depthAtEntry;
+        gen.writeEndObjectRaw();
         return true;
     }
 
@@ -2600,6 +2504,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             // inlining budget for the inner write loop.
             if (!cycleSupport && writeTypeCache.get(o.getClass()) == WriteType.POJO
                     && AnnotationResolver.getMetadata(o.getClass()).getValueMethod() == null) {
+                // POJO short-circuit dispatches writeObject directly. writeObject no longer
+                // resets gen state (uses writeStartObjectRaw which pushes without
+                // overwriting the outer frame), so no caller-side snapshot/restore is
+                // needed — the outer state at gen.depth is preserved across the call.
+                // writeUsingCustomWriter (its writeCustom internal reset) operates at
+                // gen.depth=0 and doesn't touch contextStack[outer-depth].
                 if (!writeUsingCustomWriter(o, showType, out)) {
                     writeObject(o, showType, false);
                 }
@@ -2794,7 +2704,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         final boolean referenced = cycleSupport && this.objsReferenced.containsKey(obj);
         final int depthAtEntry = this.depth;
         if (!bodyOnly) {
-            gen.resetForBridgeAtValueSlot(this.depth);
+            // No resetForBridgeAtValueSlot here: writeStartObjectRaw pushes from the current
+            // gen.depth without overwriting contextStack[gen.depth]. This preserves the
+            // outer caller's frame state at gen.depth (e.g., the FRAME_OBJECT_AFTER_FIELD
+            // set by a preceding writeFieldName in writeMapBody). On exit,
+            // writeEndObjectRaw's pop + markValue transitions the outer frame from
+            // FRAME_OBJECT_AFTER_FIELD to FRAME_OBJECT_AFTER_VALUE — matching what an
+            // intervening writeImpl wrapper's snap+restore+markValue would do, but without
+            // the snap/restore overhead.
             gen.writeStartObjectRaw();
             if (referenced) {
                 gen.writeNumberField(idKey, getIdInt(obj));
