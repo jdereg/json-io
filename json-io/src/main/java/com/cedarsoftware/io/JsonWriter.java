@@ -1165,13 +1165,15 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * object, or a JsonObject representing a regular object.
      *
      * <p>Wraps the actual serialization in a {@link CharStreamGenerator} state-sync
-     * window via {@code snapshotForExternalValue} / {@code restoreAfterExternalValue}.
-     * The body of {@link #writeImplInternal} emits via {@code out.write(...)} directly
-     * and may recurse through {@code writeCustom} which resets gen state. The wrapper
-     * captures gen's pre-call state, lets writeImplInternal do anything, then restores
-     * state and transitions to "value emitted" — so subsequent gen-driven emission
-     * (from Jackson API calls, or from external custom writers using the WriterContext
-     * API) sees correct gen state.
+     * window via {@code snapshotForExternalValue} + {@code resetForBridgeAtValueSlot} on
+     * entry, {@code restoreAfterExternalValue} on exit. The body of
+     * {@link #writeImplInternal} is treated as emitting exactly one JSON value at a
+     * value-slot position: gen state starts at {@code FRAME_ROOT_EMPTY} (clean
+     * value-slot), the body runs (mixing direct {@code out.write} with gen-driven
+     * Jackson API calls — both work because gen-driven emission has a known starting
+     * state), then the outer caller's gen state is restored and transitioned to
+     * "value emitted." This isolation lets any sub-method drive structural emission
+     * through gen without worrying about what the outer caller's gen state was.
      *
      * @param obj      Object to be written
      * @param showType if set to true, the @type tag will be output.
@@ -1179,6 +1181,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      */
     public void writeImpl(Object obj, boolean showType) throws IOException {
         int snap = gen.snapshotForExternalValue();
+        gen.resetForBridgeAtValueSlot(this.depth);
         writeImplInternal(obj, showType);
         gen.restoreAfterExternalValue(snap);
     }
@@ -1522,65 +1525,67 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
     }
 
+    /**
+     * Emit a Java primitive-array (one of {@code boolean[] / byte[] / short[] / int[] /
+     * long[] / float[] / double[]}) as JSON. Dog-food path: ALL structural emission
+     * ({@code &#123;}, {@code &#125;}, {@code [}, {@code ]}, {@code @id} / {@code @type}
+     * / {@code @items} prefixes, and pretty-print whitespace) goes through
+     * {@link CharStreamGenerator} via the public {@code writeStartObject} /
+     * {@code writeEndObject} / {@code writeStartArray} / {@code writeEndArray} API. The
+     * inner per-element loop (the {@code 1,2,3} flat-pack body) stays state-machine-free
+     * via the {@code writeXxxRaw} helpers + manual {@code ','} separators, bracketed by
+     * {@link CharStreamGenerator#beginInlineArrayBody()} (sets up the array body's
+     * leading indent + flips state to {@code FRAME_ARRAY_AFTER_VALUE} so
+     * {@code writeEndArray} emits the correct trailing indent).
+     * <p>
+     * {@code itemsPrefix} (the precomputed {@code "@items":} / {@code "@e":} /
+     * {@code $items:} / {@code $e:} string per the writer's meta-key variant) is emitted
+     * through {@link CharStreamGenerator#writeFieldNameRaw(String)} — fast path that skips
+     * the per-call key-quoting decision while still engaging gen's state machine for
+     * auto-separator + auto-indent.
+     */
     private void writePrimitiveArray(final Object array, final Class<?> arrayType, boolean showType) throws IOException {
         if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
         final int len = ArrayUtilities.getLength(array);
-        boolean referenced = cycleSupport && objsReferenced.containsKey(array);
-        boolean typeWritten = showType;  // Primitive arrays are never Object[], type always written when showType
-        final Writer output = this.out;
+        final boolean referenced = cycleSupport && objsReferenced.containsKey(array);
+        final boolean typeWritten = showType;  // Primitive arrays are never Object[], type always written when showType
+        final boolean wrapped = typeWritten || referenced;
 
-        if (typeWritten || referenced) {
-            output.write('{');
-            tabIn();
-        }
-
-        if (referenced) {
-            writeId(getIdInt(array));
-            output.write(',');
-            newLine();
-        }
-
-        if (typeWritten) {
-            writeType(arrayType.getName());
-            output.write(',');
-            newLine();
+        if (wrapped) {
+            gen.writeStartObject();
+            if (referenced) {
+                gen.writeNumberField(idKey, getIdInt(array));
+            }
+            if (typeWritten) {
+                String alias = writeOptions.getTypeNameAlias(arrayType.getName());
+                gen.writeStringFieldUnescaped(typeKey, alias);
+            }
+            gen.writeFieldNameRaw(itemsPrefix);
         }
 
         if (len == 0) {
-            if (typeWritten || referenced) {
-                output.write(itemsPrefix);
-                output.write("[]");
-                tabOut();
-                output.write('}');
-            } else {
-                output.write("[]");
+            gen.writeStartArray();
+            gen.writeEndArray();
+            if (wrapped) {
+                gen.writeEndObject();
             }
             return;
         }
 
-        if (typeWritten || referenced) {
-            output.write(itemsPrefix);
-            output.write('[');
-        } else {
-            output.write('[');
-        }
-        tabIn();
+        gen.writeStartArray();
+        gen.beginInlineArrayBody();
 
         final int lenMinus1 = len - 1;
-
-        // Handle each primitive array type via ClassValueMap dispatch
         PrimitiveArrayHandler handler = PRIM_ARRAY_WRITERS.getByClass(arrayType);
         if (handler != null) {
             handler.write(this, array, lenMinus1);
         }
 
-        tabOut();
-        output.write(']');
-        if (typeWritten || referenced) {
-            tabOut();
-            output.write('}');
+        gen.writeEndArray();
+        if (wrapped) {
+            gen.writeEndObject();
         }
     }
 
@@ -3068,8 +3073,16 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * @throws IOException If an I/O error occurs
      */
     private void writeStringValue(String s) throws IOException {
+        // Self-contained value-slot string emission. Snapshot+reset+writeString+restore so
+        // the outer gen state is preserved across the call — required when this is invoked
+        // from inside a gen-driven structural body (e.g. writePrimitiveArray's char[]
+        // handler is invoked while gen is in FRAME_ARRAY_AFTER_VALUE at the array body
+        // depth). The reset puts gen into a clean FRAME_ROOT_EMPTY before writeString;
+        // restore reinstates the outer frame stack and transitions to "value emitted."
+        int snap = gen.snapshotForExternalValue();
         gen.resetForBridgeAtValueSlot();
         gen.writeString(s);
+        gen.restoreAfterExternalValue(snap);
     }
 
     // Package-private so {@link CharStreamGenerator#writeString(String)} can apply the same

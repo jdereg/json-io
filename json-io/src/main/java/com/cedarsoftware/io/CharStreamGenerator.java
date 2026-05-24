@@ -123,6 +123,38 @@ final class CharStreamGenerator extends JsonGenerator {
     }
 
     /**
+     * Reset this generator's structural state to "at a value slot at the given indent
+     * depth, ready to emit exactly one JSON value." Used by the {@link JsonWriter#writeImpl}
+     * wrapper to align gen's internal depth tracker with JsonWriter's outer
+     * {@code this.depth} (which is incremented by {@code tabIn}). Pretty-print indent
+     * emission inside the body then matches the actual document depth, even though the
+     * outer structure was emitted via legacy {@code out.write('{')} + {@code tabIn} that
+     * gen was not driving.
+     *
+     * <p>Frames at depths {@code 0..depth-1} are NOT cleared — they belong to the outer
+     * caller's structural context and the snapshot/restore pairing preserves them around
+     * this call. The body should never pop below its entry frame at {@code depth}.
+     *
+     * @param depth indent depth at the entry point (typically {@code JsonWriter.this.depth})
+     */
+    void resetForBridgeAtValueSlot(int depth) {
+        if (contextStack.length < depth + 1) {
+            byte[] grown = new byte[Math.max(contextStack.length * 2, depth + 1)];
+            System.arraycopy(contextStack, 0, grown, 0, contextStack.length);
+            contextStack = grown;
+        }
+        contextStack[depth] = FRAME_ROOT_EMPTY;
+        this.depth = depth;
+        // Suppress the FIRST emitIndent so the value is emitted in-place (after whatever
+        // the legacy out.write prelude already emitted — e.g., "fieldName:"). At depth=0
+        // the existing "root + FRAME_ROOT_EMPTY" optimization in emitIndentIfPretty would
+        // skip the indent anyway, so the suppression is a no-op there. At depth>0 the
+        // suppression bridges the legacy/gen-driven seam: legacy emits the key + colon
+        // without trailing newline, gen's first structural call doesn't add one.
+        suppressNextIndent = true;
+    }
+
+    /**
      * Reset this generator's structural state to "inside an open object body at the
      * given JsonWriter indent depth, ready for {@code writeFieldName}." Matches the
      * state {@link #bridgeInsideObjectBody(Writer, WriteOptions, int)} produces for
@@ -760,6 +792,70 @@ final class CharStreamGenerator extends JsonGenerator {
     }
 
     /**
+     * Field-name emission fast path that takes an ALREADY-FORMATTED key-and-colon string
+     * (e.g., {@code "\"@id\":"}, {@code "$items:"}). Skips the per-call quoting decision +
+     * escape scan that {@link #writeFieldName(String)} would perform. Auto-emits leading
+     * separator (comma between fields, indent in pretty-print mode) just like the public
+     * {@code writeFieldName} — drop-in fast path for callers that already have the
+     * formatted key+colon string in hand. Transitions state from {@code FRAME_OBJECT_EMPTY}
+     * or {@code FRAME_OBJECT_AFTER_VALUE} to {@code FRAME_OBJECT_AFTER_FIELD}.
+     *
+     * @param preformattedKeyAndColon the pre-quoted, colon-suffixed key string
+     * @throws IOException If an I/O error occurs (or {@link JsonGenerationException}
+     *         if the current state can't accept a field name)
+     */
+    void writeFieldNameRaw(String preformattedKeyAndColon) throws IOException {
+        byte t = top();
+        if (t == FRAME_OBJECT_EMPTY) {
+            emitIndentIfPretty();
+            out.write(preformattedKeyAndColon);
+            setTop(FRAME_OBJECT_AFTER_FIELD);
+            return;
+        }
+        if (t == FRAME_OBJECT_AFTER_VALUE) {
+            out.write(',');
+            emitIndentIfPretty();
+            out.write(preformattedKeyAndColon);
+            setTop(FRAME_OBJECT_AFTER_FIELD);
+            return;
+        }
+        if (t == FRAME_OBJECT_AFTER_FIELD) {
+            throw new JsonGenerationException(
+                    "Cannot write field name: previous field name is still pending a value");
+        }
+        throw new JsonGenerationException("Cannot write field name outside an object context");
+    }
+
+    /**
+     * Open the body of an array for raw flat-pack emission. Caller has just invoked
+     * {@link #writeStartArray()} and wants to emit values directly via the package-private
+     * {@code writeXxxRaw} helpers + manual {@code ','} separators, bypassing gen's
+     * per-element state machine. This helper:
+     * <ul>
+     *   <li>emits the leading newline + indent at the array body's depth (the lazy indent
+     *       that {@link #emitIndentIfPretty()} would otherwise produce on the first
+     *       {@code writeXxx} call), so pretty-print formatting matches gen-driven elements
+     *   <li>flips state from {@code FRAME_ARRAY_EMPTY} to {@code FRAME_ARRAY_AFTER_VALUE}
+     *       so {@link #writeEndArray()} emits the correct trailing indent + {@code ']'}
+     * </ul>
+     * Callers MUST NOT use the public {@code writeXxx} API between this and
+     * {@code writeEndArray} — that would emit a spurious leading {@code ','} (state is
+     * already {@code FRAME_ARRAY_AFTER_VALUE}). Pair with {@code writeXxxRaw} helpers and
+     * direct {@code ','} writes to the underlying writer.
+     *
+     * @throws IOException If an I/O error occurs (or {@link JsonGenerationException}
+     *         if the current state is not {@code FRAME_ARRAY_EMPTY})
+     */
+    void beginInlineArrayBody() throws IOException {
+        byte t = top();
+        if (t != FRAME_ARRAY_EMPTY) {
+            throw new JsonGenerationException("beginInlineArrayBody called outside FRAME_ARRAY_EMPTY");
+        }
+        emitIndentIfPretty();
+        setTop(FRAME_ARRAY_AFTER_VALUE);
+    }
+
+    /**
      * Field-level fast path that mirrors {@link #writeStringField(String, String)} but skips
      * the per-call escape scan on the value. The caller MUST guarantee the value contains
      * no JSON-special characters (no embedded {@code "}, {@code \}, or control chars below
@@ -777,32 +873,6 @@ final class CharStreamGenerator extends JsonGenerator {
      * @param value the value; MUST contain no JSON-special characters when non-null
      * @throws IOException If an I/O error occurs
      */
-    /**
-     * Field-name emission fast path that takes an ALREADY-FORMATTED key-and-colon string
-     * (e.g., {@code "\"@id\":"}, {@code "$id:"}). Skips the per-call quoting decision +
-     * escape scan that {@link #writeFieldName(String)} would perform. Transitions state
-     * from {@code FRAME_OBJECT_EMPTY} / {@code FRAME_OBJECT_AFTER_VALUE} to
-     * {@code FRAME_OBJECT_AFTER_FIELD}. Does NOT emit a separator — the caller is
-     * responsible for any leading comma (matches the precomputed-prefix pattern where
-     * JsonWriter has historically emitted commas manually before the prefix).
-     *
-     * @param preformattedKeyAndColon the pre-quoted, colon-suffixed key string
-     * @throws IOException If an I/O error occurs (or {@link JsonGenerationException}
-     *         if the current state can't accept a field name)
-     */
-    void writeFieldNameRaw(String preformattedKeyAndColon) throws IOException {
-        byte t = top();
-        if (t != FRAME_OBJECT_EMPTY && t != FRAME_OBJECT_AFTER_VALUE) {
-            if (t == FRAME_OBJECT_AFTER_FIELD) {
-                throw new JsonGenerationException(
-                        "Cannot write field name: previous field name is still pending a value");
-            }
-            throw new JsonGenerationException("Cannot write field name outside an object context");
-        }
-        out.write(preformattedKeyAndColon);
-        setTop(FRAME_OBJECT_AFTER_FIELD);
-    }
-
     void writeStringFieldUnescaped(String name, String value) throws IOException {
         writeFieldName(name);
         // After writeFieldName, state is FRAME_OBJECT_AFTER_FIELD — startValueContext

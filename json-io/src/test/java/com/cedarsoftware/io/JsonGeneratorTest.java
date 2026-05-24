@@ -496,22 +496,89 @@ class JsonGeneratorTest {
         // Package-private fast path for caller-precomputed key+colon strings (used by
         // JsonWriter for the @items / @keys meta-keys where the full key+colon is
         // precomputed at construction with the right quoting/prefix variant). Skips
-        // gen's quote-decision + escape-scan. Does NOT emit a separator — the caller
-        // has emitted any leading comma manually before calling.
+        // gen's quote-decision + escape-scan. Auto-emits the leading separator (comma
+        // between fields, indent in pretty-print) like the public writeFieldName.
         StringWriter sw = new StringWriter();
         try (JsonGenerator g = JsonIo.createGenerator(sw)) {
             CharStreamGenerator concrete = (CharStreamGenerator) g;
             concrete.writeStartObject();
             concrete.writeFieldNameRaw("\"@id\":");
             concrete.writeNumber(42);
-            // Subsequent field — caller emits the leading comma manually (matching
-            // the precomputed-prefix pattern), then the raw key, then the value.
-            concrete.writeRaw(",");
             concrete.writeFieldNameRaw("\"@type\":");
             concrete.writeString("Foo");
             concrete.writeEndObject();
         }
         assertEquals("{\"@id\":42,\"@type\":\"Foo\"}", sw.toString());
+    }
+
+    @Test
+    void writeFieldNameRaw_emitsIndentInPrettyPrint() throws IOException {
+        // Auto-indent applied per writeFieldName: first field gets a leading newline+indent,
+        // subsequent fields get a comma + newline + indent.
+        WriteOptions opts = new WriteOptionsBuilder().prettyPrint(true).build();
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw, opts)) {
+            CharStreamGenerator concrete = (CharStreamGenerator) g;
+            concrete.writeStartObject();
+            concrete.writeFieldNameRaw("\"@id\":");
+            concrete.writeNumber(42);
+            concrete.writeFieldNameRaw("\"@type\":");
+            concrete.writeString("Foo");
+            concrete.writeEndObject();
+        }
+        assertEquals("{\n  \"@id\":42,\n  \"@type\":\"Foo\"\n}", sw.toString());
+    }
+
+    @Test
+    void beginInlineArrayBody_flatPacksValuesWithCorrectTrailingIndent() throws IOException {
+        // Package-private helper that opens an array body for raw flat-pack emission:
+        // emits the leading body indent, then flips state to FRAME_ARRAY_AFTER_VALUE so
+        // writeEndArray emits the trailing indent. Callers use writeXxxRaw + manual ','
+        // for state-machine-free element emission between begin and writeEndArray.
+        WriteOptions opts = new WriteOptionsBuilder().prettyPrint(true).build();
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw, opts)) {
+            CharStreamGenerator concrete = (CharStreamGenerator) g;
+            concrete.writeStartArray();
+            concrete.beginInlineArrayBody();
+            concrete.writeIntRaw(1);
+            concrete.writeRaw(",");
+            concrete.writeIntRaw(2);
+            concrete.writeRaw(",");
+            concrete.writeIntRaw(3);
+            concrete.writeEndArray();
+        }
+        assertEquals("[\n  1,2,3\n]", sw.toString());
+    }
+
+    @Test
+    void beginInlineArrayBody_compactModeOmitsIndents() throws IOException {
+        // Without pretty-print, the leading-indent emission is a no-op and the trailing
+        // indent at writeEndArray is also a no-op. State transition still applies so
+        // writeEndArray accepts the FRAME_ARRAY_AFTER_VALUE state.
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw)) {
+            CharStreamGenerator concrete = (CharStreamGenerator) g;
+            concrete.writeStartArray();
+            concrete.beginInlineArrayBody();
+            concrete.writeIntRaw(1);
+            concrete.writeRaw(",");
+            concrete.writeIntRaw(2);
+            concrete.writeEndArray();
+        }
+        assertEquals("[1,2]", sw.toString());
+    }
+
+    @Test
+    void beginInlineArrayBody_rejectsOutOfArrayContext() throws IOException {
+        // Helper validates state — calling outside FRAME_ARRAY_EMPTY (e.g., at the root
+        // before writeStartArray) throws JsonGenerationException.
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw)) {
+            CharStreamGenerator concrete = (CharStreamGenerator) g;
+            org.junit.jupiter.api.Assertions.assertThrows(
+                    JsonGenerationException.class, concrete::beginInlineArrayBody);
+        }
     }
 
     @Test
