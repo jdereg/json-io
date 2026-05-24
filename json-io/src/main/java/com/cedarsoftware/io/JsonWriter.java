@@ -1931,7 +1931,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // empty case as wrapped for emission purposes.
         final boolean wrapped = referenced || showType || isEmpty;
 
-        gen.resetForBridgeAtValueSlot(this.depth);
+        gen.resetForBridgeAtValueSlot(gen.currentDepth());
 
         if (wrapped) {
             gen.writeStartObjectRaw();
@@ -1954,8 +1954,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.writeFieldNameRaw(itemsPrefix);
         }
         gen.writeStartArrayRaw();
-        final int depthAtEntry = this.depth;
-        final int bodyDepth = depthAtEntry + ((referenced || showType) ? 2 : 1);
+        final int outerDepth = this.depth;
+        final int bodyDepth = gen.currentDepth();
         this.depth = bodyDepth;
         gen.beginInlineArrayBody();
 
@@ -1970,7 +1970,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
 
-        this.depth = depthAtEntry;
+        this.depth = outerDepth;
         gen.writeEndArrayRaw();
         if (referenced || showType) {
             gen.writeEndObjectRaw();
