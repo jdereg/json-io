@@ -2119,84 +2119,74 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     /**
-     * Write fields of an Object (JsonObject)
+     * Write fields of a JsonObject representing a POJO. Dog-food path — outer {} via
+     * {@link CharStreamGenerator#writeStartObjectRaw()} / {@link CharStreamGenerator#writeEndObjectRaw()};
+     * the {@code @id} / {@code @type} fields via
+     * {@link CharStreamGenerator#writeNumberField(String, int)} /
+     * {@link CharStreamGenerator#writeStringFieldUnescaped(String, String)}; per-field
+     * key emission via {@link CharStreamGenerator#writeFieldName(String)} (auto-comma +
+     * indent, supports json5UnquotedKeys); per-value emission via the appropriate gen
+     * scalar method or writeImpl for complex / BigDecimal / BigInteger paths.
      */
     private void writeJsonObjectObject(JsonObject jObj, boolean showType) throws IOException {
         if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
-        final Writer output = this.out;
-        boolean referenced = adjustIfReferenced(jObj);
+        final boolean referenced = adjustIfReferenced(jObj);
         showType = showType && jObj.getType() != null;
 
-        output.write('{');
-        tabIn();
+        gen.resetForBridgeAtValueSlot(this.depth);
+        gen.writeStartObjectRaw();
+
         if (referenced) {
-            writeId(jObj.id);
+            gen.writeNumberField(idKey, jObj.id);
         }
 
         Class<?> type = null;
         if (showType) {
-            if (referenced) {
-                output.write(',');
-                newLine();
-            }
-            writeType(getTypeNameForOutput(jObj));
+            String alias = writeOptions.getTypeNameAlias(getTypeNameForOutput(jObj));
+            gen.writeStringFieldUnescaped(typeKey, alias);
             type = jObj.getRawType();
         }
 
         if (jObj.isEmpty()) {
-            tabOut();
-            output.write('}');
+            gen.writeEndObjectRaw();
             return;
         }
 
-        if (showType || referenced) {
-            output.write(',');
-            newLine();
-        }
+        final int depthAtEntry = this.depth;
+        this.depth = depthAtEntry + 1;   // inside object body
 
         Iterator<Map.Entry<Object, Object>> i = jObj.entrySet().iterator();
-        boolean first = true;
-
         while (i.hasNext()) {
             Map.Entry<Object, Object> entry = i.next();
             if (skipNullFields && entry.getValue() == null) {
                 continue;
             }
 
-            if (!first) {
-                output.write(',');
-                newLine();
-            }
-            first = false;
             final String fieldName = (String) entry.getKey();
-            // Support JSON5 unquoted keys and proper string escaping (consistent with writeMapBody)
-            if (json5UnquotedKeys && isValidJson5Identifier(fieldName)) {
-                output.write(fieldName);
-                output.write(':');
-            } else {
-                CharStreamGenerator.writeJsonUtf8String(output, fieldName, maxStringLength);
-                output.write(':');
-            }
-            Object value = entry.getValue();
+            gen.writeFieldName(fieldName);   // auto-separator + indent + key (handles json5 / escaping)
 
+            Object value = entry.getValue();
             if (value == null) {
-                output.write("null");
+                gen.writeNull();
             } else if (value instanceof BigDecimal || value instanceof BigInteger) {
                 writeImpl(value, !doesValueTypeMatchFieldType(type, fieldName, value));
-            } else if (value instanceof Number || value instanceof Boolean) {
-                output.write(value.toString());
+            } else if (value instanceof Boolean) {
+                gen.writeBoolean((Boolean) value);
+            } else if (value instanceof Number) {
+                gen.writeNumber(value.toString());   // emit the toString() form like legacy
             } else if (value instanceof String) {
-                writeStringValue((String) value);
+                gen.writeString((String) value);
             } else if (value instanceof Character) {
-                writeStringValue(String.valueOf(value));
+                gen.writeString(String.valueOf(value));
             } else {
                 writeImpl(value, !doesValueTypeMatchFieldType(type, fieldName, value));
             }
         }
-        tabOut();
-        output.write('}');
+
+        this.depth = depthAtEntry;
+        gen.writeEndObjectRaw();
     }
 
     private boolean adjustIfReferenced(JsonObject jObj) {
@@ -2752,13 +2742,19 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                     // Write the enum name as a string
                     writeStringValue(e.name());
                 } else {
-                    // Write the enum as a JSON object with its fields
+                    // Write the enum as a JSON object with its fields. Legacy outer context
+                    // uses out.write for the [/] array brackets; sync gen state to "inside
+                    // open object body at this.depth" so the migrated writeField's
+                    // writeFieldNameRaw + value emission works correctly, then restore the
+                    // outer gen state on exit.
                     out.write('{');
-                    boolean firstInEntry = true;
+                    int snap = gen.snapshotForExternalValue();
+                    gen.resetForBridgeInsideObjectBody(this.depth);
                     for (int p = 0, pLen = mapOfFields.size(); p < pLen; p++) {
-                        firstInEntry = writeField(e, firstInEntry, mapOfFields.get(p));
+                        writeField(e, mapOfFields.get(p));
                     }
                     out.write('}');
+                    gen.restoreAfterExternalValue(snap);
                 }
             }
 
@@ -2780,48 +2776,50 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * @param bodyOnly write only the body of the object
      * @throws IOException if an error occurs writing to the output stream.
      */
+    /**
+     * Write a Java POJO as JSON. Dog-food path — outer {@code {/&#125;} via
+     * {@link CharStreamGenerator#writeStartObjectRaw()} /
+     * {@link CharStreamGenerator#writeEndObjectRaw()}; @id / @type via gen field-level
+     * helpers; per-field emission via {@link #writeField(Object, WriteFieldPlan)} which
+     * uses {@link CharStreamGenerator#writeFieldNameRaw(String)} for the precomputed key
+     * emission. The {@code first}-flag tracking from the legacy code is no longer needed —
+     * gen's state machine auto-emits the leading separator for subsequent fields. When
+     * {@code bodyOnly} is true, the caller has already opened the outer {@code {} and is
+     * responsible for closing it; this method emits only the field block inside.
+     */
     public void writeObject(final Object obj, boolean showType, boolean bodyOnly) throws IOException {
         if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
-        final Writer output = this.out;
         final boolean referenced = cycleSupport && this.objsReferenced.containsKey(obj);
+        final int depthAtEntry = this.depth;
         if (!bodyOnly) {
-            output.write('{');
-            tabIn();
+            gen.resetForBridgeAtValueSlot(this.depth);
+            gen.writeStartObjectRaw();
             if (referenced) {
-                writeId(getIdInt(obj));
+                gen.writeNumberField(idKey, getIdInt(obj));
             }
-
-            if (referenced && showType) {
-                output.write(',');
-                newLine();
-            }
-
             if (showType) {
-                writeType(obj.getClass().getName());
+                String alias = writeOptions.getTypeNameAlias(obj.getClass().getName());
+                gen.writeStringFieldUnescaped(typeKey, alias);
             }
-        }
-
-        boolean first = !showType;
-        if (referenced && !showType) {
-            first = false;
+            this.depth = depthAtEntry + 1;   // inside object body
         }
 
         List<WriteFieldPlan> accessors = WriteOptionsBuilder.getWriteFieldPlans(writeOptions, obj.getClass());
         for (int i = 0, len = accessors.size(); i < len; i++) {
-            first = writeField(obj, first, accessors.get(i));
+            writeField(obj, accessors.get(i));
         }
 
         // @IoAnyGetter — write extra fields from annotated method
         Method anyGetter = AnnotationResolver.getMetadata(obj.getClass()).getAnyGetterMethod();
         if (anyGetter != null) {
-            first = writeAnyGetterFields(obj, anyGetter, first);
+            writeAnyGetterFields(obj, anyGetter);
         }
 
         if (!bodyOnly) {
-            tabOut();
-            output.write('}');
+            this.depth = depthAtEntry;
+            gen.writeEndObjectRaw();
         }
     }
 
@@ -2861,83 +2859,88 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
     }
 
-    private boolean writeField(Object obj, boolean first, WriteFieldPlan plan) throws IOException {
+    /**
+     * Write one POJO field via gen-driven structural emission. Caller (writeObject) has
+     * gen positioned inside the object body — the field name goes through
+     * {@link CharStreamGenerator#writeFieldNameRaw(String)} (auto-comma + indent based on
+     * gen state), the value through the appropriate scalar gen method or writeImpl for
+     * the slow path. State-machine-free emissions (SMALL_INT_STRINGS / writeIntRaw /
+     * writeLongRaw / writeBoolean toString) are followed by {@link CharStreamGenerator#markValue()}
+     * to transition the outer frame from {@code FRAME_OBJECT_AFTER_FIELD} to
+     * {@code FRAME_OBJECT_AFTER_VALUE} so the next field's writeFieldNameRaw emits the
+     * correct separator.
+     */
+    private void writeField(Object obj, WriteFieldPlan plan) throws IOException {
         final Accessor accessor = plan.accessor();
         if (plan.enumPublicOnlySkipCandidate() && writeOptions.isEnumPublicFieldsOnly()) {
-            return first;
+            return;
         }
 
         if (canWritePrimitiveFieldDirect(plan)) {
-            final Writer output = this.out;
-            if (!first) {
-                output.write(',');
-                newLine();
-            }
-            output.write(plan.serializedKey());
+            gen.writeFieldNameRaw(plan.serializedKey());
             writePrimitiveFieldDirect(obj, plan);
-            return false;
+            return;
         }
 
         Object o = accessor.retrieve(obj);
 
         if ((skipNullFields || plan.skipIfNull()) && o == null) {   // If skip null (global or per-field annotation), skip field
-            return first;
+            return;
         }
 
-        final Writer output = this.out;
-        if (!first) {
-            output.write(',');
-            newLine();
-        }
+        gen.writeFieldNameRaw(plan.serializedKey());
 
-        output.write(plan.serializedKey());
-
-        if (o == null) {    // don't quote null
-            output.write("null");
-            return false;
+        if (o == null) {
+            out.write("null");
+            gen.markValue();
+            return;
         }
 
         // Fast path for primitive/String field values: when no @IoShowType, no @IoFormat,
         // and the value type doesn't need @type (isForceType returns false), write the value
         // directly without going through writeImpl's full dispatch chain (security checks,
         // activePath tracking, custom writer lookup, @IoValue check, writeTypeCache switch).
-        // These types are not reference-trackable, so activePath is a no-op; they have no
-        // custom writers or @IoValue methods; and they are never containers, so the
-        // declaredElementType/declaredKeyType state save/restore is unnecessary.
         if (!plan.forceShowType() && !forceElementShowType && plan.formatPattern() == null) {
             Class<?> oClass = o.getClass();
             if (oClass == String.class) {
-                writeStringValue((String) o);
-                return false;
+                // Use gen.writeString directly (NOT writeStringValue which resets gen.depth=0).
+                // When this.depth=0 (e.g., inside writeEnumSet's enum-as-object block), the
+                // object context lives in contextStack[0] — the reset would overwrite it.
+                // gen.writeString starts from FRAME_OBJECT_AFTER_FIELD (set by the preceding
+                // writeFieldNameRaw), emits the quoted string, and transitions to AFTER_VALUE.
+                gen.writeString((String) o);
+                return;
             }
             if (!isForceType(oClass, plan.effectiveDeclaredType())) {
                 if (oClass == Integer.class) {
                     int val = (Integer) o;
                     if (val >= SMALL_INT_LOW && val <= SMALL_INT_HIGH) {
-                        output.write(SMALL_INT_STRINGS[val - SMALL_INT_LOW]);
+                        out.write(SMALL_INT_STRINGS[val - SMALL_INT_LOW]);
                     } else {
                         gen.writeIntRaw(val);
                     }
-                    return false;
+                    gen.markValue();
+                    return;
                 }
                 if (oClass == Long.class && !writeLongsAsStrings) {
                     gen.writeLongRaw((Long) o);
-                    return false;
+                    gen.markValue();
+                    return;
                 }
                 if (oClass == Boolean.class) {
-                    output.write(((Boolean) o) ? "true" : "false");
-                    return false;
+                    out.write(((Boolean) o) ? "true" : "false");
+                    gen.markValue();
+                    return;
                 }
                 if (oClass == Double.class) {
                     writePrimitive(o, false);
-                    return false;
+                    gen.markValue();
+                    return;
                 }
             }
         }
 
         // Slow path: save/restore container state, call writeImpl for full dispatch.
-        // Handles containers (Collection, Map), POJOs, arrays, custom-written types,
-        // @IoValue, @IoFormat, @IoShowType, and cycle-tracking.
         Class<?> type = plan.effectiveDeclaredType();
         Class<?> savedElementType = declaredElementType;
         Class<?> savedKeyType = declaredKeyType;
@@ -2948,21 +2951,18 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 declaredKeyType = plan.declaredKeyType();
                 declaredElementType = plan.declaredElementType();
             }
-            // @IoShowType forces type emission: on the value itself for plain fields,
-            // on each element for containers (Collection, Map, array)
             if (plan.forceShowType()) {
                 forceElementShowType = true;
             }
             fieldFormatPattern = plan.formatPattern();
-            boolean showType = plan.forceShowType() ? true : isForceType(o.getClass(), type);
-            writeImpl(o, showType);
+            boolean showType = plan.forceShowType() || isForceType(o.getClass(), type);
+            writeImpl(o, showType);   // wrapper's restore + markValue transitions outer frame
         } finally {
             declaredElementType = savedElementType;
             declaredKeyType = savedKeyType;
             forceElementShowType = savedForceElementShowType;
             fieldFormatPattern = savedFormatPattern;
         }
-        return false;
     }
 
     private boolean canWritePrimitiveFieldDirect(WriteFieldPlan plan) {
@@ -2984,8 +2984,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 gen.writeIntRaw(accessor.getByte(obj));
                 break;
             case WriteFieldPlan.PRIMITIVE_CHAR:
-                writeStringValue(String.valueOf(accessor.getChar(obj)));
-                break;
+                // Use gen.writeString directly (NOT writeStringValue) — see the analogous
+                // String fast path in writeField for why this matters when this.depth=0.
+                gen.writeString(String.valueOf(accessor.getChar(obj)));
+                return;   // gen.writeString already transitioned state via markValue; skip the trailing markValue
             case WriteFieldPlan.PRIMITIVE_SHORT:
                 gen.writeIntRaw(accessor.getShort(obj));
                 break;
@@ -3019,6 +3021,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             default:
                 throw new JsonIoException("Unsupported primitive field kind: " + plan.primitiveWriteKind());
         }
+        // All branches emit state-machine-free; transition outer frame
+        // FRAME_OBJECT_AFTER_FIELD -> FRAME_OBJECT_AFTER_VALUE so the next field's
+        // writeFieldNameRaw emits the correct leading separator.
+        gen.markValue();
     }
 
     /**
@@ -3026,7 +3032,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * whose entries are written as additional JSON fields after the regular declared fields.
      */
     @SuppressWarnings("unchecked")
-    private boolean writeAnyGetterFields(Object obj, Method anyGetter, boolean first) throws IOException {
+    private void writeAnyGetterFields(Object obj, Method anyGetter) throws IOException {
         Map<String, Object> extras;
         try {
             extras = (Map<String, Object>) anyGetter.invoke(obj);
@@ -3034,28 +3040,20 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             throw new JsonIoException("Error invoking @IoAnyGetter method: " + anyGetter.getName(), e);
         }
         if (extras == null || extras.isEmpty()) {
-            return first;
+            return;
         }
-        final Writer output = this.out;
         for (Map.Entry<String, Object> entry : extras.entrySet()) {
             Object value = entry.getValue();
-            if ((skipNullFields) && value == null) {
+            if (skipNullFields && value == null) {
                 continue;
             }
-            if (!first) {
-                output.write(',');
-                newLine();
-            }
-            CharStreamGenerator.writeBasicString(output, entry.getKey());
-            output.write(':');
+            gen.writeFieldName(entry.getKey());   // auto-separator + indent + key (json5-aware)
             if (value == null) {
-                output.write("null");
+                gen.writeNull();
             } else {
                 writeImpl(value, isForceType(value.getClass(), Object.class));
             }
-            first = false;
         }
-        return first;
     }
 
     private boolean isForceType(Class<?> objectClass, Class<?> declaredType) {
