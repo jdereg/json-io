@@ -2078,7 +2078,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         final boolean referenced = adjustIfReferenced(jObj);
         showType = showType && jObj.getType() != null;
 
-        gen.resetForBridgeAtValueSlot(this.depth);
+        gen.resetForBridgeAtValueSlot(gen.currentDepth());
         gen.writeStartObjectRaw();
 
         if (referenced) {
@@ -2097,8 +2097,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             return;
         }
 
-        final int depthAtEntry = this.depth;
-        this.depth = depthAtEntry + 1;   // inside object body
+        final int outerDepth = this.depth;
+        this.depth = gen.currentDepth();   // inside object body — gen-anchored
 
         Iterator<Map.Entry<Object, Object>> i = jObj.entrySet().iterator();
         while (i.hasNext()) {
@@ -2128,7 +2128,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
 
-        this.depth = depthAtEntry;
+        this.depth = outerDepth;
         gen.writeEndObjectRaw();
     }
 
@@ -2671,7 +2671,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             showType = false;
         }
         final boolean referenced = cycleSupport && this.objsReferenced.containsKey(obj);
-        final int depthAtEntry = this.depth;
+        final int outerDepth = this.depth;
         if (!bodyOnly) {
             // No resetForBridgeAtValueSlot here: writeStartObjectRaw pushes from the current
             // gen.depth without overwriting contextStack[gen.depth]. This preserves the
@@ -2689,7 +2689,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 String alias = writeOptions.getTypeNameAlias(obj.getClass().getName());
                 gen.writeStringFieldUnescaped(typeKey, alias);
             }
-            this.depth = depthAtEntry + 1;   // inside object body
+            this.depth = gen.currentDepth();   // inside object body — gen-anchored (= outerDepth's gen-equivalent + 1)
         }
 
         List<WriteFieldPlan> accessors = WriteOptionsBuilder.getWriteFieldPlans(writeOptions, obj.getClass());
@@ -2704,7 +2704,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         if (!bodyOnly) {
-            this.depth = depthAtEntry;
+            this.depth = outerDepth;
             gen.writeEndObjectRaw();
         }
     }
