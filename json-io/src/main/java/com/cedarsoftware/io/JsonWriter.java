@@ -1439,56 +1439,75 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
     }
 
+    /**
+     * Emit a Java {@code Object[]} (including reference-type arrays like {@code Integer[]},
+     * {@code String[]}, {@code Foo[]}, etc.) as JSON. Dog-food path: structural emission
+     * ({@code &#123;} / {@code &#125;} / {@code [} / {@code ]}, {@code @id} / {@code @type} /
+     * {@code @items} prefix, leading/trailing body indents) goes through
+     * {@link CharStreamGenerator} via {@code writeStartObjectRaw} / {@code writeEndObjectRaw} /
+     * {@code writeStartArrayRaw} / {@code writeEndArrayRaw} / {@code writeFieldNameRaw} /
+     * {@code beginInlineArrayBody}. The per-element loop keeps the legacy specialized
+     * fast paths ({@code writePrimitive}, {@code writeStringValue}, {@code writeImpl})
+     * for polymorphic value emission — these are bracketed by {@code snapshotForExternalValue}
+     * / {@code restoreAfterExternalValue} when they internally reset gen state (the
+     * Long-wrap branch of writePrimitive and writeStringValue), so the array body's
+     * structural state ({@code FRAME_ARRAY_AFTER_VALUE} at body depth) is preserved
+     * across the iteration. {@code this.depth} is temporarily synced to the array body
+     * depth so the legacy {@code newLine()} emissions between elements indent correctly.
+     */
     private void writeObjectArray(final Object[] array, final Class<?> arrayType, boolean showType) throws IOException {
         if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
-        final int len = array.length;  // Direct access - no reflection needed
-        boolean referenced = cycleSupport && objsReferenced.containsKey(array);
-        boolean typeWritten = showType && !(arrayType.equals(Object[].class));
-        final Writer output = this.out;
+        final int len = array.length;
+        final boolean referenced = cycleSupport && objsReferenced.containsKey(array);
+        final boolean typeWritten = showType && !(arrayType.equals(Object[].class));
+        final boolean wrapped = typeWritten || referenced;
 
-        if (typeWritten || referenced) {
-            output.write('{');
-            tabIn();
-        }
+        // Sync gen state to a clean value-slot at the current indent depth.
+        gen.resetForBridgeAtValueSlot(this.depth);
 
-        if (referenced) {
-            writeId(getIdInt(array));
-            output.write(',');
-            newLine();
-        }
-
-        if (typeWritten) {
-            writeType(arrayType.getName());
-            output.write(',');
-            newLine();
+        if (wrapped) {
+            gen.writeStartObjectRaw();
+            if (referenced) {
+                gen.writeNumberField(idKey, getIdInt(array));
+            }
+            if (typeWritten) {
+                String alias = writeOptions.getTypeNameAlias(arrayType.getName());
+                gen.writeStringFieldUnescaped(typeKey, alias);
+            }
+            gen.writeFieldNameRaw(itemsPrefix);
         }
 
         if (len == 0) {
-            if (typeWritten || referenced) {
-                output.write(itemsPrefix);
-                output.write("[]");
-                tabOut();
-                output.write('}');
-            } else {
-                output.write("[]");
+            gen.writeStartArrayRaw();
+            gen.writeEndArrayRaw();
+            if (wrapped) {
+                gen.writeEndObjectRaw();
             }
             return;
         }
 
-        if (typeWritten || referenced) {
-            output.write(itemsPrefix);
-            output.write('[');
-        } else {
-            output.write('[');
-        }
-        tabIn();
+        gen.writeStartArrayRaw();
+        // Sync this.depth to the array body depth so legacy newLine() inside the loop
+        // indents at the correct depth. Restored before writeEndArrayRaw fires its own
+        // trailing indent.
+        final int depthAtEntry = this.depth;
+        this.depth = depthAtEntry + (wrapped ? 2 : 1);
+        gen.beginInlineArrayBody();   // emit leading body indent, setTop=FRAME_ARRAY_AFTER_VALUE
 
         final int lenMinus1 = len - 1;
         final Class<?> componentClass = arrayType.getComponentType();
+        final Writer output = this.out;
 
-        // Write array elements with direct array access - no reflection
+        // Each iteration emits one element + an optional separator. Paths that internally
+        // reset gen.depth to 0 (writeStringValue, writePrimitive's Long-wrap branch, and
+        // writeArrayElementIfMatching → writeCustom's new-API dispatch) require a
+        // lightweight depth restore — they operate at depth 0 and don't touch the array
+        // body's contextStack entry, so just restoring this.depth (== gen.depth at body
+        // depth) is sufficient. writeImpl has its own snapshot/restore wrapper that
+        // restores both depth and stack. writePrimitive's non-Long-wrap paths and the
+        // null-literal write don't touch gen state at all.
         for (int i = 0; i < len; i++) {
             final Object value = array[i];
 
@@ -1498,16 +1517,21 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                          value instanceof Integer || value instanceof Float ||
                          value instanceof Short || value instanceof Byte) &&
                         !isForceType(value.getClass(), componentClass)) {
-                // Fast path for primitive wrappers — bypasses writeImpl() → writeCustom() dispatch chain
-                writePrimitive(value, false);
+                writePrimitive(value, false);   // state-machine-free helpers, no restore needed
             } else if (value instanceof Long && !isForceType(Long.class, componentClass)) {
                 writePrimitive(value, writeLongsAsStrings);
+                if (writeLongsAsStrings) {
+                    gen.restoreDepthAfterExternalValue(this.depth);   // Long-wrap reset gen.depth=0
+                }
             } else if (value instanceof String && !isForceType(String.class, componentClass)) {
                 writeStringValue((String) value);
+                gen.restoreDepthAfterExternalValue(this.depth);   // writeStringValue reset gen.depth=0
             } else {
                 final boolean forceType = isForceType(value.getClass(), componentClass);
                 if (!writeArrayElementIfMatching(componentClass, value, forceType, output)) {
-                    writeImpl(value, forceType);
+                    writeImpl(value, forceType);   // wrapper handles full restore
+                } else {
+                    gen.restoreDepthAfterExternalValue(this.depth);   // writeCustom new-API reset gen.depth=0
                 }
             }
 
@@ -1517,11 +1541,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
 
-        tabOut();
-        output.write(']');
-        if (typeWritten || referenced) {
-            tabOut();
-            output.write('}');
+        this.depth = depthAtEntry;
+        gen.writeEndArrayRaw();   // emits trailing indent + ']'
+        if (wrapped) {
+            gen.writeEndObjectRaw();
         }
     }
 

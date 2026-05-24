@@ -145,13 +145,13 @@ final class CharStreamGenerator extends JsonGenerator {
         }
         contextStack[depth] = FRAME_ROOT_EMPTY;
         this.depth = depth;
-        // Suppress the FIRST emitIndent so the value is emitted in-place (after whatever
-        // the legacy out.write prelude already emitted — e.g., "fieldName:"). At depth=0
-        // the existing "root + FRAME_ROOT_EMPTY" optimization in emitIndentIfPretty would
-        // skip the indent anyway, so the suppression is a no-op there. At depth>0 the
-        // suppression bridges the legacy/gen-driven seam: legacy emits the key + colon
-        // without trailing newline, gen's first structural call doesn't add one.
-        suppressNextIndent = true;
+        // suppressNextIndent stays false. The migrated callers use writeStart{Object,Array}Raw
+        // helpers to emit '{' or '[' WITHOUT going through startValueContext, so no leading
+        // emitIndentIfPretty fires for the structural-open token — there's no leading
+        // newline+indent to suppress. The FIRST emitIndentIfPretty in the migrated body is
+        // the indent INSIDE the body (between '{' and the first field key, or between '['
+        // and the first array element), which is exactly what we want to emit.
+        suppressNextIndent = false;
     }
 
     /**
@@ -917,6 +917,21 @@ final class CharStreamGenerator extends JsonGenerator {
         out.write(']');
         --depth;
         markValue();
+    }
+
+    /**
+     * Lightweight depth-only restore. Cheaper than the full {@code snapshotForExternalValue}
+     * / {@code restoreAfterExternalValue} arena round-trip (~25ns/pair) when the inner call
+     * is GUARANTEED to operate at depth 0 (via {@code resetForBridgeAtValueSlot()} no-arg)
+     * and therefore cannot modify {@code contextStack[targetDepth]} — only the depth field
+     * needs restoration. Use case: per-element loops in {@code writeObjectArray} /
+     * {@code writeCollection} where each element emission may go through a path that
+     * resets gen state to root (writeStringValue, writePrimitive's Long-wrap, writeCustom's
+     * new-API dispatch), but the array body's gen state at {@code targetDepth} is preserved
+     * by the inner call's depth-0 emission.
+     */
+    void restoreDepthAfterExternalValue(int targetDepth) {
+        depth = targetDepth;
     }
 
     /**
