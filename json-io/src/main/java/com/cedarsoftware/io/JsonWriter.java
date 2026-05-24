@@ -1699,35 +1699,61 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         output.write((char[]) byteStrs[bytes[lenMinus1] + 128]);
     }
 
+    /**
+     * Emit a Java {@link Collection} as JSON. Dog-food path — structural emission
+     * ({@code &#123;}/{@code &#125;}/{@code [}/{@code ]} brackets, {@code @id}/{@code @type}/
+     * {@code @items} prefixes, leading/trailing body indents) goes through
+     * {@link CharStreamGenerator}'s Raw structural-token family. The per-element loop keeps
+     * the legacy {@link #writeCollectionElement(Object)} dispatch — each element is
+     * bracketed by a lightweight {@link CharStreamGenerator#restoreDepthAfterExternalValue(int)}
+     * call since some element paths (writeStringValue, writePrimitive's Long-wrap,
+     * writeUsingCustomWriter's new-API dispatch) internally reset gen.depth=0.
+     * <p>
+     * Note: empty wrapped collection emits {@code &#123;"@type":"...","@id":N&#125;} with
+     * NO trailing {@code "@items":[]} field — matches legacy behavior (differs from
+     * {@code writePrimitiveArray}/{@code writeObjectArray} which DO emit
+     * {@code "@items":[]} for the empty case).
+     */
     private void writeCollection(Collection<?> col, boolean showType) throws IOException {
         if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
-        final Writer output = this.out;
-        boolean referenced = cycleSupport && this.objsReferenced.containsKey(col);
-        boolean isEmpty = col.isEmpty();
+        final boolean referenced = cycleSupport && this.objsReferenced.containsKey(col);
+        final boolean isEmpty = col.isEmpty();
+        final boolean wrapped = referenced || showType;
 
-        if (referenced || showType) {
-            output.write('{');
-            tabIn();
-        } else if (isEmpty) {
-            output.write('[');
+        gen.resetForBridgeAtValueSlot(this.depth);
+
+        if (wrapped) {
+            gen.writeStartObjectRaw();
+            if (referenced) {
+                gen.writeNumberField(idKey, getIdInt(col));
+            }
+            if (showType) {
+                String alias = writeOptions.getTypeNameAlias(getTypeNameForOutput(col));
+                gen.writeStringFieldUnescaped(typeKey, alias);
+            }
         }
 
-        writeIdAndTypeIfNeeded(col, showType, referenced);
-
         if (isEmpty) {
-            if (referenced || showType) {
-                tabOut();
-                output.write('}');
+            if (wrapped) {
+                gen.writeEndObjectRaw();
             } else {
-                output.write(']');
+                gen.writeStartArrayRaw();
+                gen.writeEndArrayRaw();
             }
             return;
         }
 
-        beginCollection(showType, referenced);
+        if (wrapped) {
+            gen.writeFieldNameRaw(itemsPrefix);
+        }
+        gen.writeStartArrayRaw();
+        final int depthAtEntry = this.depth;
+        this.depth = depthAtEntry + (wrapped ? 2 : 1);
+        gen.beginInlineArrayBody();
 
+        final Writer output = this.out;
         if (col instanceof List && col instanceof RandomAccess) {
             // Indexed loop avoids Iterator allocation for ArrayList and similar
             List<?> list = (List<?>) col;
@@ -1738,23 +1764,40 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                     newLine();
                 }
                 writeCollectionElement(list.get(idx));
+                gen.restoreDepthAfterExternalValue(this.depth);
             }
         } else {
-            writeElements(output, col.iterator());
+            Iterator<?> it = col.iterator();
+            boolean wroteElement = false;
+            while (it.hasNext()) {
+                if (wroteElement) {
+                    output.write(',');
+                    newLine();
+                }
+                writeCollectionElement(it.next());
+                gen.restoreDepthAfterExternalValue(this.depth);
+                wroteElement = true;
+            }
         }
 
-        tabOut();
-        output.write(']');
-        if (showType || referenced) {   // Finished object, as it was output as an object if @id or @type was output
-            tabOut();
-            output.write("}");
+        this.depth = depthAtEntry;
+        gen.writeEndArrayRaw();
+        if (wrapped) {
+            gen.writeEndObjectRaw();
         }
     }
 
+    /**
+     * Iterator-based legacy element emission helper. Used by the writeMap variants
+     * (writeMapToEnd) that haven't migrated yet — they emit @keys / @items arrays via this
+     * helper while still managing the surrounding structural punctuation themselves.
+     * Migrated paths (writeCollection / writeJsonObjectCollection) inline the loop and
+     * couple it with {@link CharStreamGenerator#restoreDepthAfterExternalValue(int)} for
+     * gen state preservation across element emissions.
+     */
     private void writeElements(Writer output, Iterator<?> i) throws IOException {
         boolean wroteElement = false;
         while (i.hasNext()) {
-            // Write comma and newline BEFORE element (except first) - avoids double hasNext() call
             if (wroteElement) {
                 output.write(',');
                 newLine();
@@ -1812,18 +1855,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
     }
 
-    private void beginCollection(boolean showType, boolean referenced) throws IOException {
-        if (showType || referenced) {
-            out.write(',');
-            newLine();
-            out.write(itemsPrefix);
-            out.write('[');
-        } else {
-            out.write('[');
-        }
-        tabIn();
-    }
-
+    /**
+     * Emit a {@link JsonObject} that represents an Object array (the toMaps / direct
+     * JsonObject form). Same structural shape as {@link #writeObjectArray(Object[], Class, boolean)};
+     * the per-element dispatch has a slightly different priority order (try writeArrayElement
+     * If matching custom writer first, then check char/String/Boolean/Long/Double, then
+     * fall through to writeImpl) inherited from the legacy implementation.
+     */
     private void writeJsonObjectArray(JsonObject jObj, boolean showType) throws IOException {
         if (neverShowingType && !forceElementShowType) {
             showType = false;
@@ -1839,52 +1877,42 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             arrayClass = jsonObjectType;
         }
 
-        final Writer output = this.out;
         final boolean isObjectArray = Object[].class == arrayClass;
         final Class<?> componentClass = arrayClass.getComponentType();
-        boolean referenced = adjustIfReferenced(jObj);
-        boolean typeWritten = showType && !isObjectArray;
+        final boolean referenced = adjustIfReferenced(jObj);
+        final boolean typeWritten = showType && !isObjectArray;
+        final boolean wrapped = typeWritten || referenced;
 
-        if (typeWritten || referenced) {
-            output.write('{');
-            tabIn();
-        }
+        gen.resetForBridgeAtValueSlot(this.depth);
 
-        if (referenced) {
-            writeId(jObj.id);
-            output.write(',');
-            newLine();
-        }
-
-        if (typeWritten) {
-            writeType(arrayClass.getName());
-            output.write(',');
-            newLine();
+        if (wrapped) {
+            gen.writeStartObjectRaw();
+            if (referenced) {
+                gen.writeNumberField(idKey, jObj.id);
+            }
+            if (typeWritten) {
+                String alias = writeOptions.getTypeNameAlias(arrayClass.getName());
+                gen.writeStringFieldUnescaped(typeKey, alias);
+            }
+            gen.writeFieldNameRaw(itemsPrefix);
         }
 
         if (len == 0) {
-            if (typeWritten || referenced) {
-                output.write(itemsPrefix);
-                output.write("[]");
-                tabOut();
-                output.write("}");
-            } else {
-                output.write("[]");
+            gen.writeStartArrayRaw();
+            gen.writeEndArrayRaw();
+            if (wrapped) {
+                gen.writeEndObjectRaw();
             }
             return;
         }
 
-        if (typeWritten || referenced) {
-            output.write(itemsPrefix);
-            output.write('[');
-        } else {
-            output.write('[');
-        }
-        tabIn();
+        gen.writeStartArrayRaw();
+        final int depthAtEntry = this.depth;
+        this.depth = depthAtEntry + (wrapped ? 2 : 1);
+        gen.beginInlineArrayBody();
 
-        // items array already fetched at method start
+        final Writer output = this.out;
         final int lenMinus1 = len - 1;
-
         for (int i = 0; i < len; i++) {
             final Object value = items[i];
 
@@ -1893,15 +1921,23 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             } else {
                 final boolean forceType = isForceType(value.getClass(), componentClass);
                 if (writeArrayElementIfMatching(componentClass, value, forceType, output)) {
+                    gen.restoreDepthAfterExternalValue(this.depth);
                 } else if (Character.class == componentClass || char.class == componentClass) {
                     writeStringValue((String) value);
+                    gen.restoreDepthAfterExternalValue(this.depth);
                 } else if (value instanceof String) {
                     writeStringValue((String) value);
+                    gen.restoreDepthAfterExternalValue(this.depth);
                 } else if (value instanceof Boolean || value instanceof Long || value instanceof Double) {
                     writePrimitive(value, forceType);
-                } else {   // Specific Class-type arrays - only force type when
-                    // the instance is derived from array base class.
-                    writeImpl(value, forceType);
+                    if (forceType) {
+                        // writePrimitive's Long-wrap branch resets gen.depth=0 when
+                        // forceType + writeLongsAsStrings; other forceType cases don't.
+                        // Restoring unconditionally is safe (no-op when depth unchanged).
+                        gen.restoreDepthAfterExternalValue(this.depth);
+                    }
+                } else {
+                    writeImpl(value, forceType);   // wrapper handles full restore
                 }
             }
 
@@ -1911,68 +1947,77 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
 
-        tabOut();
-        output.write(']');
-        if (typeWritten || referenced) {
-            tabOut();
-            output.write('}');
+        this.depth = depthAtEntry;
+        gen.writeEndArrayRaw();
+        if (wrapped) {
+            gen.writeEndObjectRaw();
         }
     }
 
+    /**
+     * Emit a {@link JsonObject} that represents a {@link Collection} during streaming
+     * (toMaps / direct JsonObject input). Same structural shape as
+     * {@link #writeCollection(Collection, boolean)} — see that method's javadoc for the
+     * dog-food details. Empty wrapped path emits {@code &#123;"@type":"...","@id":N&#125;}
+     * (no trailing {@code "@items":[]}); empty unwrapped emits {@code &#123;&#125;}
+     * (because the legacy code unconditionally wraps when {@code len == 0}, preserved here).
+     */
     private void writeJsonObjectCollection(JsonObject jObj, boolean showType) throws IOException {
         if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
         Class<?> colClass = jObj.getRawType();
-        boolean referenced = adjustIfReferenced(jObj);
-        final Writer output = this.out;
+        final boolean referenced = adjustIfReferenced(jObj);
         Object[] items = jObj.getItems();
-        int len = items != null ? items.length : 0;
+        final int len = items != null ? items.length : 0;
+        final boolean isEmpty = len == 0;
+        // Note: legacy emits '{' even when !showType && !referenced && isEmpty (i.e., emits
+        // '{}' for an unwrapped empty JsonObject-collection). Preserved by treating the
+        // empty case as wrapped for emission purposes.
+        final boolean wrapped = referenced || showType || isEmpty;
 
-        if (referenced || showType || len == 0) {
-            output.write('{');
-            tabIn();
-        }
+        gen.resetForBridgeAtValueSlot(this.depth);
 
-        if (referenced) {
-            writeId(jObj.id);
-        }
-
-        if (showType) {
+        if (wrapped) {
+            gen.writeStartObjectRaw();
             if (referenced) {
-                output.write(',');
-                newLine();
+                gen.writeNumberField(idKey, (int) jObj.getId());
             }
-
-            writeType(colClass.getName());
+            if (showType) {
+                String alias = writeOptions.getTypeNameAlias(colClass.getName());
+                gen.writeStringFieldUnescaped(typeKey, alias);
+            }
         }
 
-        if (len == 0) {
-            tabOut();
-            output.write('}');
+        if (isEmpty) {
+            // Wrapped (or always wrapped per legacy) — close the object body. No @items field.
+            gen.writeEndObjectRaw();
             return;
         }
 
-        beginCollection(showType, referenced);
+        if (referenced || showType) {
+            gen.writeFieldNameRaw(itemsPrefix);
+        }
+        gen.writeStartArrayRaw();
+        final int depthAtEntry = this.depth;
+        this.depth = depthAtEntry + ((referenced || showType) ? 2 : 1);
+        gen.beginInlineArrayBody();
 
-        // items already fetched at method start
-        final int itemsLen = items.length;
-        final int itemsLenMinus1 = itemsLen - 1;
-
-        for (int i = 0; i < itemsLen; i++) {
+        final Writer output = this.out;
+        final int itemsLenMinus1 = len - 1;
+        for (int i = 0; i < len; i++) {
             writeCollectionElement(items[i]);
-
+            gen.restoreDepthAfterExternalValue(this.depth);
             if (i != itemsLenMinus1) {
                 output.write(',');
                 newLine();
             }
         }
 
-        tabOut();
-        output.write("]");
-        if (showType || referenced) {
-            tabOut();
-            output.write('}');
+        this.depth = depthAtEntry;
+        gen.writeEndArrayRaw();
+        if (referenced || showType) {
+            gen.writeEndObjectRaw();
         }
     }
 
