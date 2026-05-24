@@ -2035,7 +2035,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         final boolean referenced = adjustIfReferenced(jObj);
 
-        gen.resetForBridgeAtValueSlot(this.depth);
+        gen.resetForBridgeAtValueSlot(gen.currentDepth());
         gen.writeStartObjectRaw();
 
         if (referenced) {
@@ -2284,7 +2284,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         final boolean referenced = cycleSupport && this.objsReferenced.containsKey(map);
 
-        gen.resetForBridgeAtValueSlot(this.depth);
+        gen.resetForBridgeAtValueSlot(gen.currentDepth());
         gen.writeStartObjectRaw();
 
         if (referenced) {
@@ -2318,8 +2318,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      */
     private boolean writeMapBody(final Iterator i) throws IOException {
         final boolean skipNulls = skipNullFields;
-        final int depthAtEntry = this.depth;
-        final int bodyDepth = depthAtEntry + 1;   // inside the object body
+        final int outerDepth = this.depth;
+        final int bodyDepth = gen.currentDepth();   // inside the object body — caller already opened it
         this.depth = bodyDepth;   // newLine() in nested writeImpl uses correct depth
 
         while (i.hasNext()) {
@@ -2334,7 +2334,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.markValue();
         }
 
-        this.depth = depthAtEntry;
+        this.depth = outerDepth;
         gen.writeEndObjectRaw();
         return true;
     }
@@ -2345,8 +2345,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      */
     private boolean writeMapBody(final JsonObject jObj) throws IOException {
         final boolean skipNulls = skipNullFields;
-        final int depthAtEntry = this.depth;
-        final int bodyDepth = depthAtEntry + 1;
+        final int outerDepth = this.depth;
+        final int bodyDepth = gen.currentDepth();
         this.depth = bodyDepth;
         final int len = jObj.fastEntryCount();
 
@@ -2361,7 +2361,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.markValue();
         }
 
-        this.depth = depthAtEntry;
+        this.depth = outerDepth;
         gen.writeEndObjectRaw();
         return true;
     }
@@ -2421,8 +2421,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      */
     private boolean writeStringifiedMapBody(final Iterator i) throws IOException {
         final boolean skipNulls = skipNullFields;
-        final int depthAtEntry = this.depth;
-        final int bodyDepth = depthAtEntry + 1;
+        final int outerDepth = this.depth;
+        final int bodyDepth = gen.currentDepth();
         this.depth = bodyDepth;
 
         while (i.hasNext()) {
@@ -2439,7 +2439,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.markValue();
         }
 
-        this.depth = depthAtEntry;
+        this.depth = outerDepth;
         gen.writeEndObjectRaw();
         return true;
     }
