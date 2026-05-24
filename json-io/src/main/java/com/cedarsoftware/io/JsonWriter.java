@@ -268,7 +268,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private static final ClassValueMap<PrimitiveArrayHandler> PRIM_ARRAY_WRITERS = new ClassValueMap<>();
     static {
         PRIM_ARRAY_WRITERS.put(byte[].class, (w, a, len) -> w.writeByteArray((byte[]) a, len));
-        PRIM_ARRAY_WRITERS.put(char[].class, (w, a, len) -> w.writeStringValue(new String((char[]) a)));
+        // char[] is special-cased inline in writePrimitiveArray (single string element via
+        // gen.writeString at FRAME_ARRAY_EMPTY) — bypasses this handler map entirely.
         PRIM_ARRAY_WRITERS.put(short[].class, (w, a, len) -> w.writeShortArray((short[]) a, len));
         PRIM_ARRAY_WRITERS.put(int[].class, (w, a, len) -> w.writeIntArray((int[]) a, len));
         PRIM_ARRAY_WRITERS.put(long[].class, (w, a, len) -> w.writeLongArray((long[]) a, len));
@@ -1181,7 +1182,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      */
     public void writeImpl(Object obj, boolean showType) throws IOException {
         int snap = gen.snapshotForExternalValue();
-        gen.resetForBridgeAtValueSlot(this.depth);
         writeImplInternal(obj, showType);
         gen.restoreAfterExternalValue(snap);
     }
@@ -1553,8 +1553,16 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         final boolean typeWritten = showType;  // Primitive arrays are never Object[], type always written when showType
         final boolean wrapped = typeWritten || referenced;
 
+        // Sync gen state to a clean value-slot at the current depth. Required because the
+        // writeImpl wrapper doesn't reset (so non-migrated dispatch paths don't pay for
+        // the reset); each migrated method owns its own state setup.
+        gen.resetForBridgeAtValueSlot(this.depth);
+
         if (wrapped) {
-            gen.writeStartObject();
+            // gen is now at FRAME_ROOT_EMPTY @ this.depth with suppressNextIndent=true —
+            // startValueContext + emitIndent would no-op. Use the Raw fast path to skip
+            // the switch/markValue overhead.
+            gen.writeStartObjectRaw();
             if (referenced) {
                 gen.writeNumberField(idKey, getIdInt(array));
             }
@@ -1565,16 +1573,32 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.writeFieldNameRaw(itemsPrefix);
         }
 
-        if (len == 0) {
-            gen.writeStartArray();
-            gen.writeEndArray();
+        // char[] is emitted as a single quoted string element (not flat-pack of chars).
+        // Use gen.writeString from FRAME_ARRAY_EMPTY so no leading separator is emitted —
+        // avoids the snapshot/restore overhead that calling JsonWriter.writeStringValue
+        // from FRAME_ARRAY_AFTER_VALUE would require.
+        if (arrayType == char[].class) {
+            gen.writeStartArrayRaw();
+            if (len > 0) {
+                gen.writeString(new String((char[]) array));
+            }
+            gen.writeEndArrayRaw();
             if (wrapped) {
-                gen.writeEndObject();
+                gen.writeEndObjectRaw();
             }
             return;
         }
 
-        gen.writeStartArray();
+        if (len == 0) {
+            gen.writeStartArrayRaw();
+            gen.writeEndArrayRaw();
+            if (wrapped) {
+                gen.writeEndObjectRaw();
+            }
+            return;
+        }
+
+        gen.writeStartArrayRaw();
         gen.beginInlineArrayBody();
 
         final int lenMinus1 = len - 1;
@@ -1583,9 +1607,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             handler.write(this, array, lenMinus1);
         }
 
-        gen.writeEndArray();
+        gen.writeEndArrayRaw();
         if (wrapped) {
-            gen.writeEndObject();
+            gen.writeEndObjectRaw();
         }
     }
 
@@ -3073,16 +3097,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * @throws IOException If an I/O error occurs
      */
     private void writeStringValue(String s) throws IOException {
-        // Self-contained value-slot string emission. Snapshot+reset+writeString+restore so
-        // the outer gen state is preserved across the call — required when this is invoked
-        // from inside a gen-driven structural body (e.g. writePrimitiveArray's char[]
-        // handler is invoked while gen is in FRAME_ARRAY_AFTER_VALUE at the array body
-        // depth). The reset puts gen into a clean FRAME_ROOT_EMPTY before writeString;
-        // restore reinstates the outer frame stack and transitions to "value emitted."
-        int snap = gen.snapshotForExternalValue();
         gen.resetForBridgeAtValueSlot();
         gen.writeString(s);
-        gen.restoreAfterExternalValue(snap);
     }
 
     // Package-private so {@link CharStreamGenerator#writeString(String)} can apply the same

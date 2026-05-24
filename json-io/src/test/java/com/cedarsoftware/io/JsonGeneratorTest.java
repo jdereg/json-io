@@ -582,6 +582,49 @@ class JsonGeneratorTest {
     }
 
     @Test
+    void rawStructuralTokens_emitMatchingShape() throws IOException {
+        // The Raw structural-token family — writeStartObjectRaw/EndObjectRaw and
+        // writeStartArrayRaw/EndArrayRaw — bypasses the startValueContext switch + the
+        // validation throw on end. State tracking is preserved so subsequent writeField /
+        // writeXxx calls inside the body work correctly. Outer-frame markValue happens at
+        // writeEndXxxRaw (after pop), restoring the transition that writeStartXxxRaw
+        // skipped on the way in.
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw)) {
+            CharStreamGenerator concrete = (CharStreamGenerator) g;
+            concrete.writeStartObjectRaw();
+            concrete.writeStringField("a", "v");
+            concrete.writeFieldName("arr");
+            concrete.writeStartArrayRaw();
+            concrete.writeNumber(1);
+            concrete.writeNumber(2);
+            concrete.writeEndArrayRaw();
+            concrete.writeEndObjectRaw();
+        }
+        assertEquals("{\"a\":\"v\",\"arr\":[1,2]}", sw.toString());
+    }
+
+    @Test
+    void rawStructuralTokens_emitMatchingShape_pretty() throws IOException {
+        WriteOptions opts = new WriteOptionsBuilder().prettyPrint(true).build();
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw, opts)) {
+            CharStreamGenerator concrete = (CharStreamGenerator) g;
+            concrete.writeStartObjectRaw();
+            concrete.writeStringField("a", "v");
+            concrete.writeFieldName("arr");
+            concrete.writeStartArrayRaw();
+            concrete.writeNumber(1);
+            concrete.writeNumber(2);
+            concrete.writeEndArrayRaw();
+            concrete.writeEndObjectRaw();
+        }
+        // writeEndXxxRaw preserves the pretty-print trailing indent that writeEndXxx emits
+        // for FRAME_XXX_AFTER_VALUE state.
+        assertEquals("{\n  \"a\": \"v\",\n  \"arr\": [\n    1,\n    2\n  ]\n}", sw.toString());
+    }
+
+    @Test
     void writeStringFieldUnescaped_nullEmitsJsonNull() throws IOException {
         StringWriter sw = new StringWriter();
         try (JsonGenerator g = JsonIo.createGenerator(sw)) {

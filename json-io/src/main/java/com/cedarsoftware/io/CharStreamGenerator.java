@@ -317,8 +317,12 @@ final class CharStreamGenerator extends JsonGenerator {
         }
     }
 
-    /** Transition the current frame after a value has been emitted. */
-    private void markValue() {
+    /**
+     * Transition the current frame after a value has been emitted. Package-private so
+     * the {@code writeXxxRaw} structural helpers can drive outer-frame state transitions
+     * after an inner structure (object/array body) completes.
+     */
+    void markValue() {
         switch (top()) {
             case FRAME_ROOT_EMPTY:
                 setTop(FRAME_ROOT_DONE);
@@ -853,6 +857,66 @@ final class CharStreamGenerator extends JsonGenerator {
         }
         emitIndentIfPretty();
         setTop(FRAME_ARRAY_AFTER_VALUE);
+    }
+
+    /**
+     * Open-object emission fast path that bypasses the {@code startValueContext} switch
+     * + the inner {@code markValue} (outer-frame state transition is deferred to the
+     * matching {@link #writeEndObjectRaw()}). State tracking inside the body still works
+     * — the {@code FRAME_OBJECT_EMPTY} frame is pushed exactly as {@code writeStartObject}
+     * would. Caller is responsible for any leading separator + indent emission and must
+     * call a matching {@code writeEndObjectRaw} or {@code writeEndObject} to close.
+     *
+     * <p>Use case: callers that know the gen state allows immediate {@code {} emission
+     * (e.g., at {@code FRAME_ROOT_EMPTY} with {@code suppressNextIndent=true} after a
+     * bridge reset, or at {@code FRAME_OBJECT_AFTER_FIELD} where no separator is needed)
+     * skip the per-call switch overhead. Counterpart to the {@code writeXxxRaw} scalar
+     * family for the structural-token side.
+     */
+    void writeStartObjectRaw() throws IOException {
+        out.write('{');
+        push(FRAME_OBJECT_EMPTY);
+    }
+
+    /**
+     * Open-array emission fast path. See {@link #writeStartObjectRaw()} for the design.
+     * Pushes {@code FRAME_ARRAY_EMPTY}; matching close via {@link #writeEndArrayRaw()}
+     * or {@link #writeEndArray()}.
+     */
+    void writeStartArrayRaw() throws IOException {
+        out.write('[');
+        push(FRAME_ARRAY_EMPTY);
+    }
+
+    /**
+     * Close-object emission fast path that bypasses the {@code top()} validation throw.
+     * Pretty-print trailing indent emission preserved. After {@code pop}, applies
+     * {@link #markValue()} to the new top frame — restoring the outer-frame state
+     * transition that {@code writeStartObjectRaw} skipped on the way in.
+     */
+    void writeEndObjectRaw() throws IOException {
+        if (prettyPrint && contextStack[depth] == FRAME_OBJECT_AFTER_VALUE) {
+            out.write('\n');
+            writeIndent(depth - 1);
+        }
+        out.write('}');
+        --depth;
+        markValue();
+    }
+
+    /**
+     * Close-array emission fast path. See {@link #writeEndObjectRaw()} for the design.
+     * Pretty-print trailing indent preserved; outer-frame {@link #markValue()} applied
+     * after {@code pop}.
+     */
+    void writeEndArrayRaw() throws IOException {
+        if (prettyPrint && contextStack[depth] == FRAME_ARRAY_AFTER_VALUE) {
+            out.write('\n');
+            writeIndent(depth - 1);
+        }
+        out.write(']');
+        --depth;
+        markValue();
     }
 
     /**
