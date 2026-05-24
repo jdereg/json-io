@@ -1990,7 +1990,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
         final boolean referenced = adjustIfReferenced(jObj);
 
-        gen.resetForBridgeAtValueSlot(this.depth);
+        gen.resetForBridgeAtValueSlot(gen.currentDepth());
         gen.writeStartObjectRaw();
 
         if (referenced) {
