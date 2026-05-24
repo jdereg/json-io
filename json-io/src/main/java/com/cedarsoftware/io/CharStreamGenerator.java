@@ -164,6 +164,22 @@ final class CharStreamGenerator extends JsonGenerator {
      * @param currentJsonWriterDepth JsonWriter's current indent depth (post-tabIn)
      * @since 4.104.0
      */
+    /**
+     * Reset the CURRENT top frame to {@code FRAME_OBJECT_EMPTY} (the "no fields emitted
+     * yet" state) without changing {@code gen.depth}. Used by
+     * {@link JsonWriter#writeCustom} 's legacy-API dispatch path: after gen-driven
+     * {@code @id}/{@code @type} emission (which left state at {@code FRAME_OBJECT_AFTER_VALUE})
+     * and a manual {@code ",\n"} prelude, a legacy custom writer that calls back via
+     * {@code context.writeFieldName} (which delegates to gen) expects gen at
+     * {@code FRAME_OBJECT_EMPTY} so its first field doesn't auto-emit an extra leading
+     * comma. Sets {@code suppressNextIndent=true} too — JsonWriter has already emitted
+     * the {@code newLine} prelude so the writer's first call should not duplicate it.
+     */
+    void resetCurrentObjectFrame() {
+        contextStack[depth] = FRAME_OBJECT_EMPTY;
+        suppressNextIndent = true;
+    }
+
     void resetForBridgeInsideObjectBody(int currentJsonWriterDepth) {
         // Ensure the contextStack has enough room for the resulting depth (one frame
         // per indent level plus the top FRAME_OBJECT_EMPTY for the new body).

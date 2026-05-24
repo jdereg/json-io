@@ -591,30 +591,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     /**
-     * Tab the output left (less indented)
-     *
-     * @throws IOException
-     */
-    public void tabIn() throws IOException {
-        tab(out, 1);
-    }
-
-    /**
-     * Add newline (\n) to output
+     * Add newline (\n) to output at the current indent level.
      *
      * @throws IOException
      */
     public void newLine() throws IOException {
         tab(out, 0);
-    }
-
-    /**
-     * Tab the output right (more indented)
-     *
-     * @throws IOException
-     */
-    public void tabOut() throws IOException {
-        tab(out, -1);
     }
 
     /**
@@ -775,7 +757,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 return true;
             }
 
-            boolean referenced = cycleSupport && objsReferenced.containsKey(o);
+            final boolean referenced = cycleSupport && objsReferenced.containsKey(o);
 
             // Dispatch decision: cached per writer class. See CustomWriterDispatch.
             CustomWriterDispatch.Info dispatch = CustomWriterDispatch.forWriter(closestWriter);
@@ -783,10 +765,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             if (closestWriter.hasPrimitiveForm(this)) {
                 if ((!referenced && !showType) || closestWriter instanceof Writers.JsonStringWriter) {
                     if (dispatch.useNewPrimitive) {
-                        // Reuse the long-lived this.gen instead of allocating a fresh bridge
-                        // generator per call (eliminates per-dispatch CharStreamGenerator +
-                        // byte[16] contextStack allocations on a hot path). State-reset
-                        // produces the same configuration bridgeAtValueSlot would have built.
+                        // Primitive form: custom writer emits one value via gen
+                        // (gen.writeString / gen.writeNumber / etc.). gen's state machine
+                        // would add a leading separator if state is FRAME_ARRAY_AFTER_VALUE,
+                        // which is wrong for callers (e.g., writeObjectArray's element loop)
+                        // that emit their own manual ','. resetForBridgeAtValueSlot puts gen
+                        // at FRAME_ROOT_EMPTY so the writer's single emission has no leading
+                        // separator. Caller (via writeImpl wrapper, or by restoreDepth in the
+                        // migrated element loops) handles state restoration afterward.
                         this.gen.resetForBridgeAtValueSlot();
                         closestWriter.writePrimitiveForm(o, this.gen, this);
                     } else {
@@ -796,44 +782,50 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 }
             }
 
-            output.write('{');
-            tabIn();
+            // Object-form custom-writer dispatch — emit the wrapping {} + @id/@type prelude
+            // via gen-driven structural emission (same pattern as writeObject's chunk-6
+            // refactor). writeStartObjectRaw pushes from current gen.depth without
+            // overwriting the outer frame, and writeEndObjectRaw's pop + markValue
+            // transitions the outer frame on exit.
+            gen.writeStartObjectRaw();
             if (referenced) {
-                writeId(getIdInt(o));
-                if (showType) {
-                    output.write(',');
-                    newLine();
-                }
+                gen.writeNumberField(idKey, getIdInt(o));
             }
-
             if (showType) {
-                String typeName = closestWriter.getTypeName(o);
-                writeType(typeName);
+                String alias = writeOptions.getTypeNameAlias(closestWriter.getTypeName(o));
+                gen.writeStringFieldUnescaped(typeKey, alias);
             }
 
-            if (referenced || showType) {
-                output.write(',');
-                newLine();
-            }
-
-            // Reuse the long-lived this.gen instead of allocating a fresh bridge
-            // generator per call. State-reset produces the same configuration
-            // bridgeInsideObjectBody would have built (stack matching this.depth,
-            // FRAME_OBJECT_EMPTY at top, suppressNextIndent=true). Required for BOTH
-            // dispatch paths: the new gen-based custom writer obviously needs it, but
-            // the legacy Writer-based custom writer ALSO needs it now that JsonWriter's
-            // public Jackson-style WriterContext methods (writeFieldName, writeStringField,
-            // etc.) delegate to gen — those calls go through gen's state machine and
-            // need gen positioned at FRAME_OBJECT_EMPTY (first-field) to emit correctly.
-            this.gen.resetForBridgeInsideObjectBody(this.depth);
+            // Dispatch the writer's body emission. Two paths:
+            // - New-API (dispatch.useNewWrite): writer receives this.gen and emits fields
+            //   via gen.writeFieldName / writeXxx. gen state at this point is either
+            //   FRAME_OBJECT_EMPTY (no @id/@type emitted) or FRAME_OBJECT_AFTER_VALUE
+            //   (after @id/@type) — both states correctly auto-emit the leading separator
+            //   for the writer's first writeFieldName call. No reset needed.
+            // - Legacy (Writer-based): writer may emit "field":value pairs via raw
+            //   output.write OR via context.writeFieldName (which delegates back to gen).
+            //   Legacy contract: JsonWriter emitted "," + newLine before the call (so the
+            //   raw output.write path's first field has its leading separator on the
+            //   stream); gen is positioned at FRAME_OBJECT_EMPTY (so the
+            //   context.writeFieldName path's first call doesn't auto-emit ANOTHER
+            //   comma). resetForBridgeInsideObjectBody synthesizes that gen state cheaply
+            //   without rebuilding a separate bridge generator. This dual-mode tolerance
+            //   preserves backward compat for all existing legacy custom writers.
             if (dispatch.useNewWrite) {
                 closestWriter.write(o, showType || referenced, this.gen, this);
             } else {
+                if (referenced || showType) {
+                    output.write(',');
+                    newLine();
+                }
+                // Reset the CURRENT object-body frame (the one writeStartObjectRaw pushed)
+                // to FRAME_OBJECT_EMPTY so legacy writers that call back via
+                // context.writeFieldName don't double-emit the leading comma.
+                this.gen.resetCurrentObjectFrame();
                 closestWriter.write(o, showType || referenced, output, this);
             }
 
-            tabOut();
-            output.write('}');
+            gen.writeEndObjectRaw();
             return true;
         } finally {
             if (enteredActivePath) {
@@ -1248,17 +1240,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 try {
                     Object val = valueMethod.invoke(obj);
                     if (showType) {
-                        out.write('{');
-                        tabIn();
-                        writeType(objClass.getName());
-                        out.write(',');
-                        newLine();
-                        CharStreamGenerator.writeBasicString(out, "value");
-                        out.write(':');
+                        // Gen-driven {} envelope around @type + value.
+                        gen.writeStartObjectRaw();
+                        String alias = writeOptions.getTypeNameAlias(objClass.getName());
+                        gen.writeStringFieldUnescaped(typeKey, alias);
+                        gen.writeFieldName("value");
                         writeImpl(val, false);
-                        tabOut();
-                        newLine();
-                        out.write('}');
+                        gen.writeEndObjectRaw();
                     } else {
                         writeImpl(val, false);
                     }
@@ -1316,44 +1304,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 activePath.remove(obj);
             }
         }
-    }
-
-    /**
-     * Emit the {@code @id} / {@code @i} / {@code $id} / {@code $i} field at the first-field
-     * position of an open object body. Dog-food path through {@link CharStreamGenerator}'s
-     * Jackson-aligned {@code writeNumberField} — gen does the key emission (quoted-or-unquoted
-     * by {@code json5UnquotedKeys} policy) plus the digit-pair value emission in one call.
-     * {@code resetForBridgeInsideObjectBody} synchronizes gen's structural state to "inside
-     * open object body at JsonWriter's current depth, first field," so {@code writeNumberField}
-     * emits without a leading separator and skips the leading indent (JsonWriter has already
-     * emitted the {@code &#123;} + tabIn newline+indent).
-     */
-    private void writeId(final int id) throws IOException {
-        gen.resetForBridgeInsideObjectBody(this.depth);
-        gen.writeNumberField(idKey, id);
-    }
-
-    /**
-     * Emit the {@code @type} / {@code @t} / {@code $type} / {@code $t} field at an
-     * inside-open-object-body position. Dog-food path through {@link CharStreamGenerator}'s
-     * {@code writeStringFieldUnescaped} — the value is a Java type alias / class name
-     * that is trusted to be JSON-safe (no characters requiring escape), so the helper
-     * skips the per-call escape scan that {@code writeStringField} would otherwise
-     * perform. State-machine is still fully engaged via {@code writeFieldName} for the
-     * key emission. Pattern mirrors the {@code writeXxxRaw} family for scalars: public
-     * Jackson API stays safe and comprehensive, an intra-package fast-path skips the
-     * unnecessary work for callers that can guarantee a safe input.
-     * <p>
-     * Honors the {@code neverShowingType}/{@code forceElementShowType} policy gate by
-     * short-circuiting before any emission.
-     */
-    private void writeType(String name) throws IOException {
-        if (neverShowingType && !forceElementShowType) {
-            return;
-        }
-        String alias = writeOptions.getTypeNameAlias(name);
-        gen.resetForBridgeInsideObjectBody(this.depth);
-        gen.writeStringFieldUnescaped(typeKey, alias);
     }
 
     /**
@@ -2563,20 +2513,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private void writeEnumSet(final EnumSet<?> enumSet) throws IOException {
-        out.write('{');
-        tabIn();
+        final boolean referenced = cycleSupport && this.objsReferenced.containsKey(enumSet);
 
-        boolean referenced = cycleSupport && this.objsReferenced.containsKey(enumSet);
+        gen.writeStartObjectRaw();
         if (referenced) {
-            writeId(getIdInt(enumSet));
-            out.write(',');
-            newLine();
+            gen.writeNumberField(idKey, getIdInt(enumSet));
         }
-
-        String typeKey = writeOptions.isEnumSetWrittenOldWay() ? ENUM : TYPE;
-        out.write('\"');
-        out.write(typeKey);
-        out.write("\":");
 
         // Obtain the actual Enum class
         Class<?> enumClass = null;
@@ -2614,60 +2556,57 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
 
-        // Write the @type field with the actual enum class name
-        CharStreamGenerator.writeBasicString(out, enumClass.getName());
+        // Write the @type / @enum field with the actual enum class name.
+        // The "old way" used @enum; the new way uses @type. Both are emitted via gen
+        // through writeStringField (which engages the state machine for separator/indent).
+        final String enumTypeFieldKey = writeOptions.isEnumSetWrittenOldWay() ? ENUM : TYPE;
+        gen.writeStringField(enumTypeFieldKey, enumClass.getName());
 
-        // EnumSets are always written with an @items key
-        out.write(",");
-        newLine();
-        CharStreamGenerator.writeBasicString(out, ITEMS);
-        out.write(":[");
-        boolean hasItems = !enumSet.isEmpty();
-
-        if (hasItems) {
-            newLine();
-            tabIn();
-
-            boolean firstInSet = true;
-            for (Enum<?> e : enumSet) {
-                if (!firstInSet) {
-                    out.write(",");
-                    newLine();
-                }
-                firstInSet = false;
-
-                // Determine whether to write the full enum object or just the name
-                List<WriteFieldPlan> mapOfFields = WriteOptionsBuilder.getWriteFieldPlans(writeOptions, e.getClass());
-                int enumFieldsCount = mapOfFields.size();
-
-                if (enumFieldsCount <= 2) {
-                    // Write the enum name as a string
-                    writeStringValue(e.name());
-                } else {
-                    // Write the enum as a JSON object with its fields. Legacy outer context
-                    // uses out.write for the [/] array brackets; sync gen state to "inside
-                    // open object body at this.depth" so the migrated writeField's
-                    // writeFieldNameRaw + value emission works correctly, then restore the
-                    // outer gen state on exit.
-                    out.write('{');
-                    int snap = gen.snapshotForExternalValue();
-                    gen.resetForBridgeInsideObjectBody(this.depth);
-                    for (int p = 0, pLen = mapOfFields.size(); p < pLen; p++) {
-                        writeField(e, mapOfFields.get(p));
-                    }
-                    out.write('}');
-                    gen.restoreAfterExternalValue(snap);
-                }
-            }
-
-            tabOut();
-            newLine();
+        // @items field opens the element array. Track gen.depth for the inner field loop's
+        // legacy newLine() emissions.
+        gen.writeFieldName(ITEMS);
+        gen.writeStartArrayRaw();
+        if (enumSet.isEmpty()) {
+            gen.writeEndArrayRaw();
+            gen.writeEndObjectRaw();
+            return;
         }
 
-        out.write(']');
-        tabOut();
-        newLine();
-        out.write('}');
+        final int depthAtEntry = this.depth;
+        this.depth = depthAtEntry + 2;   // inside outer object body + inside @items array body
+        gen.beginInlineArrayBody();
+
+        boolean firstInSet = true;
+        for (Enum<?> e : enumSet) {
+            if (!firstInSet) {
+                out.write(',');
+                newLine();
+            }
+            firstInSet = false;
+
+            // Determine whether to write the full enum object or just the name
+            List<WriteFieldPlan> mapOfFields = WriteOptionsBuilder.getWriteFieldPlans(writeOptions, e.getClass());
+            int enumFieldsCount = mapOfFields.size();
+
+            if (enumFieldsCount <= 2) {
+                // Write the enum name as a string (state-machine-free via writeStringValue).
+                writeStringValue(e.name());
+            } else {
+                // Write the enum as a JSON object with its fields. Gen-driven structural
+                // emission via writeStartObjectRaw + writeField loop + writeEndObjectRaw;
+                // writeField's writeFieldNameRaw + value emission keeps gen state correct
+                // throughout.
+                gen.writeStartObjectRaw();
+                for (int p = 0, pLen = mapOfFields.size(); p < pLen; p++) {
+                    writeField(e, mapOfFields.get(p));
+                }
+                gen.writeEndObjectRaw();
+            }
+        }
+
+        this.depth = depthAtEntry;
+        gen.writeEndArrayRaw();
+        gen.writeEndObjectRaw();
     }
 
     /**
