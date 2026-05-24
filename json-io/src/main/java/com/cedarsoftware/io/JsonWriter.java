@@ -1445,8 +1445,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         final boolean typeWritten = showType && !(arrayType.equals(Object[].class));
         final boolean wrapped = typeWritten || referenced;
 
-        // Sync gen state to a clean value-slot at the current indent depth.
-        gen.resetForBridgeAtValueSlot(this.depth);
+        // Sync gen state to a clean value-slot at the current gen depth (anchored on
+        // gen's own depth field, not the legacy this.depth — see chunk F-1's commit
+        // message for the divergence in nested-from-legacy-custom-writer cases).
+        gen.resetForBridgeAtValueSlot(gen.currentDepth());
 
         if (wrapped) {
             gen.writeStartObjectRaw();
@@ -1470,13 +1472,15 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         gen.writeStartArrayRaw();
-        // Sync this.depth to the array body depth so legacy newLine() inside the loop
-        // indents at the correct depth. Restored before writeEndArrayRaw fires its own
-        // trailing indent. {@code bodyDepth} captures the same value as a final local so
-        // depth-restore calls inside the loop don't depend on the {@code this.depth}
-        // field — first step toward eliminating that field entirely.
-        final int depthAtEntry = this.depth;
-        final int bodyDepth = depthAtEntry + (wrapped ? 2 : 1);
+        // bodyDepth captures gen.depth AFTER all structural opens fired — the actual
+        // emission depth of array elements. Used for in-loop restoreDepth calls. The
+        // {@code this.depth} field is also synced to bodyDepth so any not-yet-migrated
+        // nested method's reset(this.depth) reads the correct value. {@code outerDepth}
+        // saves the OUTER this.depth so the exit restore is a true save/restore — vs
+        // using depthAtEntry which would (in nested-custom cases) be gen-derived and
+        // differ from the outer caller's this.depth.
+        final int outerDepth = this.depth;
+        final int bodyDepth = gen.currentDepth();
         this.depth = bodyDepth;
         gen.beginInlineArrayBody();   // emit leading body indent, setTop=FRAME_ARRAY_AFTER_VALUE
 
@@ -1525,7 +1529,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
 
-        this.depth = depthAtEntry;
+        this.depth = outerDepth;
         gen.writeEndArrayRaw();   // emits trailing indent + ']'
         if (wrapped) {
             gen.writeEndObjectRaw();
