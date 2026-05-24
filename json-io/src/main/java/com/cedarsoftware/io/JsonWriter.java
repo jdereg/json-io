@@ -1506,7 +1506,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
             if (i != lenMinus1) {
                 output.write(',');
-                newLine();
+                gen.writeNewlineIndent();
             }
         }
 
@@ -1735,7 +1735,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.restoreDepthAfterExternalValue(bodyDepth);
             for (int idx = 1; idx < size; idx++) {
                 output.write(',');
-                newLine();
+                gen.writeNewlineIndent();
                 writeCollectionElement(list.get(idx));
                 gen.restoreDepthAfterExternalValue(bodyDepth);
             }
@@ -1745,7 +1745,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.restoreDepthAfterExternalValue(bodyDepth);
             while (it.hasNext()) {
                 output.write(',');
-                newLine();
+                gen.writeNewlineIndent();
                 writeCollectionElement(it.next());
                 gen.restoreDepthAfterExternalValue(bodyDepth);
             }
@@ -1876,7 +1876,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
             if (i != lenMinus1) {
                 output.write(',');
-                newLine();
+                gen.writeNewlineIndent();
             }
         }
 
@@ -1944,7 +1944,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.restoreDepthAfterExternalValue(bodyDepth);
             if (i != itemsLenMinus1) {
                 output.write(',');
-                newLine();
+                gen.writeNewlineIndent();
             }
         }
 
@@ -2196,7 +2196,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         gen.restoreDepthAfterExternalValue(bodyDepth);
         while (i.hasNext()) {
             output.write(',');
-            newLine();
+            gen.writeNewlineIndent();
             writeCollectionElement(i.next());
             gen.restoreDepthAfterExternalValue(bodyDepth);
         }
@@ -2216,7 +2216,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         gen.restoreDepthAfterExternalValue(bodyDepth);
         while (i.hasNext()) {
             output.write(',');
-            newLine();
+            gen.writeNewlineIndent();
             writeCollectionElement(i.next());
             gen.restoreDepthAfterExternalValue(bodyDepth);
         }
@@ -2595,7 +2595,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         for (Enum<?> e : enumSet) {
             if (!firstInSet) {
                 out.write(',');
-                newLine();
+                gen.writeNewlineIndent();
             }
             firstInSet = false;
 
