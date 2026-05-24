@@ -1545,13 +1545,16 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         final boolean typeWritten = showType;  // Primitive arrays are never Object[], type always written when showType
         final boolean wrapped = typeWritten || referenced;
 
-        // Sync gen state to a clean value-slot at the current depth. Required because the
-        // writeImpl wrapper doesn't reset (so non-migrated dispatch paths don't pay for
-        // the reset); each migrated method owns its own state setup.
-        gen.resetForBridgeAtValueSlot(this.depth);
+        // Sync gen state to a clean value-slot at the current gen depth. Anchored at
+        // gen.currentDepth() (not the legacy this.depth) so that body emission lands at
+        // the structurally-correct depth in nested-from-legacy-custom-writer cases where
+        // the two diverged. Required because the writeImpl wrapper doesn't reset (so
+        // non-migrated dispatch paths don't pay for the reset); each migrated method owns
+        // its own state setup.
+        gen.resetForBridgeAtValueSlot(gen.currentDepth());
 
         if (wrapped) {
-            // gen is now at FRAME_ROOT_EMPTY @ this.depth with suppressNextIndent=true —
+            // gen is now at FRAME_ROOT_EMPTY @ current depth with suppressNextIndent=true —
             // startValueContext + emitIndent would no-op. Use the Raw fast path to skip
             // the switch/markValue overhead.
             gen.writeStartObjectRaw();

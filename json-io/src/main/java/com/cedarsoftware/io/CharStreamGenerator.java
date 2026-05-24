@@ -970,6 +970,21 @@ final class CharStreamGenerator extends JsonGenerator {
     }
 
     /**
+     * Current structural depth, i.e., the index of the top frame in {@code contextStack}.
+     * Increments on each {@code writeStart*} push, decrements on each {@code writeEnd*} pop.
+     * Package-private accessor for {@code JsonWriter} migration steps that pass gen's own
+     * depth as the depth-anchor argument to {@link #resetForBridgeAtValueSlot(int)} —
+     * replaces the legacy {@code this.depth} argument that anchored body emission at
+     * JsonWriter's logical depth (which diverged from gen's actual depth in
+     * nested-from-legacy-custom-writer cases). Using gen's own depth makes body emission
+     * land at the structurally-correct depth, fixing the pretty-print indent of nested
+     * custom-writer payloads.
+     */
+    int currentDepth() {
+        return depth;
+    }
+
+    /**
      * Field-level fast path that mirrors {@link #writeStringField(String, String)} but skips
      * the per-call escape scan on the value. The caller MUST guarantee the value contains
      * no JSON-special characters (no embedded {@code "}, {@code \}, or control chars below
