@@ -2610,8 +2610,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             return;
         }
 
-        final int depthAtEntry = this.depth;
-        this.depth = depthAtEntry + 2;   // inside outer object body + inside @items array body
+        final int outerDepth = this.depth;
+        this.depth = gen.currentDepth();   // inside outer object body + inside @items array body — gen-anchored
         gen.beginInlineArrayBody();
 
         boolean firstInSet = true;
@@ -2642,7 +2642,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
 
-        this.depth = depthAtEntry;
+        this.depth = outerDepth;
         gen.writeEndArrayRaw();
         gen.writeEndObjectRaw();
     }
