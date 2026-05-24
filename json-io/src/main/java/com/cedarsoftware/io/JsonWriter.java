@@ -1524,8 +1524,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                     gen.restoreDepthAfterExternalValue(this.depth);   // Long-wrap reset gen.depth=0
                 }
             } else if (value instanceof String && !isForceType(String.class, componentClass)) {
-                writeStringValue((String) value);
-                gen.restoreDepthAfterExternalValue(this.depth);   // writeStringValue reset gen.depth=0
+                writeStringValue((String) value);   // state-machine-free; no restore needed
             } else {
                 final boolean forceType = isForceType(value.getClass(), componentClass);
                 if (!writeArrayElementIfMatching(componentClass, value, forceType, output)) {
@@ -1789,26 +1788,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     /**
-     * Iterator-based legacy element emission helper. Used by the writeMap variants
-     * (writeMapToEnd) that haven't migrated yet — they emit @keys / @items arrays via this
-     * helper while still managing the surrounding structural punctuation themselves.
-     * Migrated paths (writeCollection / writeJsonObjectCollection) inline the loop and
-     * couple it with {@link CharStreamGenerator#restoreDepthAfterExternalValue(int)} for
-     * gen state preservation across element emissions.
-     */
-    private void writeElements(Writer output, Iterator<?> i) throws IOException {
-        boolean wroteElement = false;
-        while (i.hasNext()) {
-            if (wroteElement) {
-                output.write(',');
-                newLine();
-            }
-            writeCollectionElement(i.next());
-            wroteElement = true;
-        }
-    }
-
-    /**
      * Determines the type name to write for an object, preferring preserved typeString
      * over actual class name for middleware safety.
      *
@@ -1906,11 +1885,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 if (writeArrayElementIfMatching(componentClass, value, forceType, output)) {
                     gen.restoreDepthAfterExternalValue(this.depth);
                 } else if (Character.class == componentClass || char.class == componentClass) {
-                    writeStringValue((String) value);
-                    gen.restoreDepthAfterExternalValue(this.depth);
+                    writeStringValue((String) value);   // state-machine-free; no restore needed
                 } else if (value instanceof String) {
-                    writeStringValue((String) value);
-                    gen.restoreDepthAfterExternalValue(this.depth);
+                    writeStringValue((String) value);   // state-machine-free; no restore needed
                 } else if (value instanceof Boolean || value instanceof Long || value instanceof Double) {
                     writePrimitive(value, forceType);
                     if (forceType) {
@@ -3123,9 +3100,26 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * @param s The string value to write (may be null)
      * @throws IOException If an I/O error occurs
      */
+    /**
+     * State-machine-free quoted-string emission. Writes {@code "value"} (or {@code 'value'}
+     * under json5SmartQuotes when the string contains {@code "} but not {@code '}) directly
+     * to the underlying writer — does NOT touch gen's structural state machine. Caller is
+     * responsible for any state transition (e.g. {@link CharStreamGenerator#markValue()} to
+     * flip {@code FRAME_OBJECT_AFTER_FIELD} to {@code FRAME_OBJECT_AFTER_VALUE} when called
+     * inside an object body). The state-machine bypass is the {@code writeStringValue}
+     * counterpart of the {@code writeXxxRaw} family for scalars — same design intent:
+     * gen-driven structural emission engages the state machine via Raw helpers, value
+     * emissions in element loops skip the per-call state machine work to keep the per-
+     * element overhead minimal. A {@code null} input emits the JSON literal {@code null}.
+     */
     private void writeStringValue(String s) throws IOException {
-        gen.resetForBridgeAtValueSlot();
-        gen.writeString(s);
+        if (s == null) {
+            out.write("null");
+        } else if (json5SmartQuotes && shouldUseSingleQuotedString(s)) {
+            CharStreamGenerator.writeSingleQuotedString(out, s, maxStringLength);
+        } else {
+            CharStreamGenerator.writeJsonUtf8String(out, s, maxStringLength);
+        }
     }
 
     // Package-private so {@link CharStreamGenerator#writeString(String)} can apply the same
@@ -3282,49 +3276,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     @Override
     public void writeBooleanField(String name, boolean value) throws IOException {
         gen.writeBooleanField(name, value);
-    }
-
-    // ======================== JSON5 Support Methods ========================
-
-    /**
-     * Check if a string is a valid ECMAScript identifier that can be used as an unquoted key in JSON5.
-     * Per JSON5 spec, identifiers follow ECMAScript 5.1 IdentifierName production:
-     * - Must start with a letter (a-z, A-Z), underscore (_), or dollar sign ($)
-     * - Subsequent characters can also include digits (0-9)
-     * - Must not be empty
-     * @param name the string to check
-     * @return true if the string is a valid JSON5 unquoted identifier
-     */
-    private static boolean isValidJson5Identifier(String name) {
-        if (name == null || name.isEmpty()) {
-            return false;
-        }
-
-        char first = name.charAt(0);
-        if (!isIdentifierStart(first)) {
-            return false;
-        }
-
-        for (int i = 1; i < name.length(); i++) {
-            if (!isIdentifierPart(name.charAt(i))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Check if character is a valid ECMAScript identifier start character.
-     */
-    private static boolean isIdentifierStart(char c) {
-        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '$';
-    }
-
-    /**
-     * Check if character is a valid ECMAScript identifier part character.
-     */
-    private static boolean isIdentifierPart(char c) {
-        return isIdentifierStart(c) || (c >= '0' && c <= '9');
     }
 
     /**
