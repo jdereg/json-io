@@ -2138,7 +2138,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * array bodies, {@code @id}/{@code @type}/{@code @keys}/{@code @items} prefixes) goes
      * through {@link CharStreamGenerator}'s Raw structural-token family + writeFieldNameRaw.
      * The per-element loops use legacy {@link #writeCollectionElement(Object)} dispatch with
-     * lightweight {@code gen.restoreDepthAfterExternalValue(this.depth)} after each call.
+     * a lightweight {@code gen.restoreDepthAfterExternalValue(bodyDepth)} after each call.
      */
     private void writeMap(Map map, boolean showType) throws IOException {
         if (neverShowingType && !forceElementShowType) {
@@ -2176,11 +2176,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // Save current element type (Map value type) and switch to key type for @keys array
         final Class<?> savedValueType = declaredElementType;
         final int depthAtEntry = this.depth;
+        // Both the @keys and @items array bodies sit at the same depth — inside the outer
+        // object body + inside one of the two array bodies.
+        final int bodyDepth = depthAtEntry + 2;
 
         // @keys array
         gen.writeFieldNameRaw(keysPrefix);
         gen.writeStartArrayRaw();
-        this.depth = depthAtEntry + 2;   // inside outer object body + inside @keys array body
+        this.depth = bodyDepth;
         gen.beginInlineArrayBody();
 
         // Map is non-empty (caller's isEmpty path returned earlier), so the iterators
@@ -2190,12 +2193,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         Iterator<?> i = map.keySet().iterator();
         declaredElementType = declaredKeyType;
         writeCollectionElement(i.next());
-        gen.restoreDepthAfterExternalValue(this.depth);
+        gen.restoreDepthAfterExternalValue(bodyDepth);
         while (i.hasNext()) {
             output.write(',');
             newLine();
             writeCollectionElement(i.next());
-            gen.restoreDepthAfterExternalValue(this.depth);
+            gen.restoreDepthAfterExternalValue(bodyDepth);
         }
 
         this.depth = depthAtEntry;
@@ -2204,18 +2207,18 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // @items array
         gen.writeFieldNameRaw(itemsPrefix);
         gen.writeStartArrayRaw();
-        this.depth = depthAtEntry + 2;
+        this.depth = bodyDepth;
         gen.beginInlineArrayBody();
 
         i = map.values().iterator();
         declaredElementType = savedValueType;
         writeCollectionElement(i.next());
-        gen.restoreDepthAfterExternalValue(this.depth);
+        gen.restoreDepthAfterExternalValue(bodyDepth);
         while (i.hasNext()) {
             output.write(',');
             newLine();
             writeCollectionElement(i.next());
-            gen.restoreDepthAfterExternalValue(this.depth);
+            gen.restoreDepthAfterExternalValue(bodyDepth);
         }
 
         this.depth = depthAtEntry;
@@ -2293,7 +2296,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private boolean writeMapBody(final Iterator i) throws IOException {
         final boolean skipNulls = skipNullFields;
         final int depthAtEntry = this.depth;
-        this.depth = depthAtEntry + 1;   // inside the object body — newLine() in nested writeImpl uses correct depth
+        final int bodyDepth = depthAtEntry + 1;   // inside the object body
+        this.depth = bodyDepth;   // newLine() in nested writeImpl uses correct depth
 
         while (i.hasNext()) {
             Entry att2value = (Entry) i.next();
@@ -2303,7 +2307,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
             gen.writeFieldName((String) att2value.getKey());
             writeCollectionElement(value);
-            gen.restoreDepthAfterExternalValue(this.depth);
+            gen.restoreDepthAfterExternalValue(bodyDepth);
             gen.markValue();
         }
 
@@ -2319,7 +2323,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private boolean writeMapBody(final JsonObject jObj) throws IOException {
         final boolean skipNulls = skipNullFields;
         final int depthAtEntry = this.depth;
-        this.depth = depthAtEntry + 1;
+        final int bodyDepth = depthAtEntry + 1;
+        this.depth = bodyDepth;
         final int len = jObj.fastEntryCount();
 
         for (int idx = 0; idx < len; idx++) {
@@ -2329,7 +2334,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
             gen.writeFieldName((String) jObj.fastKeyAt(idx));
             writeCollectionElement(value);
-            gen.restoreDepthAfterExternalValue(this.depth);
+            gen.restoreDepthAfterExternalValue(bodyDepth);
             gen.markValue();
         }
 
@@ -2394,7 +2399,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private boolean writeStringifiedMapBody(final Iterator i) throws IOException {
         final boolean skipNulls = skipNullFields;
         final int depthAtEntry = this.depth;
-        this.depth = depthAtEntry + 1;
+        final int bodyDepth = depthAtEntry + 1;
+        this.depth = bodyDepth;
 
         while (i.hasNext()) {
             Entry att2value = (Entry) i.next();
@@ -2406,7 +2412,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             String keyStr = (key == null) ? "null" : Converter.convert(key, String.class);
             gen.writeFieldName(keyStr);
             writeCollectionElement(value);
-            gen.restoreDepthAfterExternalValue(this.depth);
+            gen.restoreDepthAfterExternalValue(bodyDepth);
             gen.markValue();
         }
 
