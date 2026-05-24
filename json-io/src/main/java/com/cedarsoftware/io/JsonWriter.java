@@ -1719,7 +1719,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
         gen.writeStartArrayRaw();
         final int depthAtEntry = this.depth;
-        this.depth = depthAtEntry + (wrapped ? 2 : 1);
+        final int bodyDepth = depthAtEntry + (wrapped ? 2 : 1);
+        this.depth = bodyDepth;
         gen.beginInlineArrayBody();
 
         final Writer output = this.out;
@@ -1731,22 +1732,22 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             List<?> list = (List<?>) col;
             int size = list.size();
             writeCollectionElement(list.get(0));
-            gen.restoreDepthAfterExternalValue(this.depth);
+            gen.restoreDepthAfterExternalValue(bodyDepth);
             for (int idx = 1; idx < size; idx++) {
                 output.write(',');
                 newLine();
                 writeCollectionElement(list.get(idx));
-                gen.restoreDepthAfterExternalValue(this.depth);
+                gen.restoreDepthAfterExternalValue(bodyDepth);
             }
         } else {
             Iterator<?> it = col.iterator();
             writeCollectionElement(it.next());
-            gen.restoreDepthAfterExternalValue(this.depth);
+            gen.restoreDepthAfterExternalValue(bodyDepth);
             while (it.hasNext()) {
                 output.write(',');
                 newLine();
                 writeCollectionElement(it.next());
-                gen.restoreDepthAfterExternalValue(this.depth);
+                gen.restoreDepthAfterExternalValue(bodyDepth);
             }
         }
 
@@ -1840,7 +1841,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         gen.writeStartArrayRaw();
         final int depthAtEntry = this.depth;
-        this.depth = depthAtEntry + (wrapped ? 2 : 1);
+        final int bodyDepth = depthAtEntry + (wrapped ? 2 : 1);
+        this.depth = bodyDepth;
         gen.beginInlineArrayBody();
 
         final Writer output = this.out;
@@ -1853,7 +1855,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             } else {
                 final boolean forceType = isForceType(value.getClass(), componentClass);
                 if (writeArrayElementIfMatching(componentClass, value, forceType, output)) {
-                    gen.restoreDepthAfterExternalValue(this.depth);
+                    gen.restoreDepthAfterExternalValue(bodyDepth);
                 } else if (Character.class == componentClass || char.class == componentClass) {
                     writeStringValue((String) value);   // state-machine-free; no restore needed
                 } else if (value instanceof String) {
@@ -1866,7 +1868,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                     // LongWriter overrides). Restore depth unconditionally — a no-op for
                     // the wrapped path / state-machine-free paths, correct for the bare
                     // Long-as-string path.
-                    gen.restoreDepthAfterExternalValue(this.depth);
+                    gen.restoreDepthAfterExternalValue(bodyDepth);
                 } else {
                     writeImpl(value, forceType);   // wrapper handles full restore
                 }
@@ -1931,14 +1933,15 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
         gen.writeStartArrayRaw();
         final int depthAtEntry = this.depth;
-        this.depth = depthAtEntry + ((referenced || showType) ? 2 : 1);
+        final int bodyDepth = depthAtEntry + ((referenced || showType) ? 2 : 1);
+        this.depth = bodyDepth;
         gen.beginInlineArrayBody();
 
         final Writer output = this.out;
         final int itemsLenMinus1 = len - 1;
         for (int i = 0; i < len; i++) {
             writeCollectionElement(items[i]);
-            gen.restoreDepthAfterExternalValue(this.depth);
+            gen.restoreDepthAfterExternalValue(bodyDepth);
             if (i != itemsLenMinus1) {
                 output.write(',');
                 newLine();
