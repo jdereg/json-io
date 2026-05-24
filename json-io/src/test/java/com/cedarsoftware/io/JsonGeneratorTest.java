@@ -625,6 +625,44 @@ class JsonGeneratorTest {
     }
 
     @Test
+    void writeNewlineIndent_emitsNewlinePlusIndentAtCurrentDepth() throws IOException {
+        // writeNewlineIndent emits "\n" + indent at gen.depth when prettyPrint is on.
+        // Intended for callers that emit their own ',' separator between elements and
+        // need the trailing newline+indent (legacy JsonWriter newLine() pattern).
+        // Verified at depth 0, 1, and 2 to confirm the indent scales with gen.depth.
+        WriteOptions opts = new WriteOptionsBuilder().prettyPrint(true).build();
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw, opts)) {
+            CharStreamGenerator concrete = (CharStreamGenerator) g;
+            concrete.writeNewlineIndent();           // depth 0: "\n"
+            concrete.writeStartArrayRaw();           // depth -> 1
+            concrete.writeNewlineIndent();           // depth 1: "\n  "
+            concrete.writeStartArrayRaw();           // depth -> 2
+            concrete.writeNewlineIndent();           // depth 2: "\n    "
+            // FRAME_ARRAY_EMPTY at the inner level: writeEndArrayRaw emits just "]"
+            // (no value was emitted, so no preceding "\n + indent(depth-1)" fires).
+            concrete.writeEndArrayRaw();
+            // FRAME_ARRAY_AFTER_VALUE at the outer level: writeEndArrayRaw emits
+            // "\n" + indent(depth-1=0) + "]".
+            concrete.writeEndArrayRaw();
+        }
+        assertEquals("\n[\n  [\n    ]\n]", sw.toString());
+    }
+
+    @Test
+    void writeNewlineIndent_noOpWhenCompact() throws IOException {
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw)) {
+            CharStreamGenerator concrete = (CharStreamGenerator) g;
+            concrete.writeStartArrayRaw();
+            concrete.writeNewlineIndent();   // no-op
+            concrete.writeNewlineIndent();   // no-op
+            concrete.writeEndArrayRaw();
+        }
+        assertEquals("[]", sw.toString());
+    }
+
+    @Test
     void writeStringFieldUnescaped_nullEmitsJsonNull() throws IOException {
         StringWriter sw = new StringWriter();
         try (JsonGenerator g = JsonIo.createGenerator(sw)) {

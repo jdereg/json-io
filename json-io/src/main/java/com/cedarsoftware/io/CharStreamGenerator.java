@@ -383,6 +383,25 @@ final class CharStreamGenerator extends JsonGenerator {
         }
     }
 
+    /**
+     * Emit a newline followed by indentation for the current depth. No-op when
+     * {@code prettyPrint} is disabled.
+     *
+     * <p>Intended for callers (e.g., {@code JsonWriter} element loops) that emit
+     * their own separator chars (typically {@code ','}) between elements and need
+     * the matching {@code \n + indent} that the state machine would otherwise
+     * produce via {@link #emitIndentIfPretty()}. The indent level comes from
+     * gen's own {@code depth} field — callers don't need to track depth
+     * separately.
+     */
+    public void writeNewlineIndent() throws IOException {
+        if (!prettyPrint) {
+            return;
+        }
+        out.write('\n');
+        writeIndent(depth);
+    }
+
     // -------------------------------------------------------------------
     // Structural tokens
     // -------------------------------------------------------------------
