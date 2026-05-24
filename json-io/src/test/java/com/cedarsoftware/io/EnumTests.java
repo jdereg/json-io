@@ -221,7 +221,7 @@ class EnumTests {
 
         String json = TestUtil.toJson(list, options);
 
-        assertThat(json).isEqualToIgnoringWhitespace("[{\"name\":\"FEDERATE_THIS\"},{\"name\":\"EXCLUDE\"}]");
+        assertThat(json).isEqualTo("[{\"name\":\"FEDERATE_THIS\"},{\"name\":\"EXCLUDE\"}]");
     }
 
     @Test
@@ -232,7 +232,7 @@ class EnumTests {
 
         String json = TestUtil.toJson(list, options);
 
-        assertThat(json).isEqualToIgnoringWhitespace("[\"FEDERATE_THIS\",\"EXCLUDE\"]");
+        assertThat(json).isEqualTo("[\"FEDERATE_THIS\",\"EXCLUDE\"]");
     }
 
     @Test

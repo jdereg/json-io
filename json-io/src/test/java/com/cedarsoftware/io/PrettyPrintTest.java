@@ -71,11 +71,11 @@ class PrettyPrintTest
         // formatJson uses the JsonGenerator-based pipeline (standard JSON pretty-print:
         // space after colon, scalars on same line as field name). The pretty-print
         // direct path (TestUtil.toJson with prettyPrint=true) goes through JsonWriter's
-        // tree-walker which mostly produces the same standard format too, modulo a few
-        // tree-walker code paths that haven't migrated to drive a JsonGenerator yet.
-        // Use isEqualToIgnoringWhitespace so the comparison is structural — both paths
-        // produce the same JSON tokens with possibly different inter-token whitespace.
+        // tree-walker which now drives the same JsonGenerator under the hood, so the
+        // two pipelines should produce byte-identical output. Strict comparison
+        // catches any remaining tree-walker code paths that haven't migrated to the
+        // gen-driven structural emission yet.
         String json2 = JsonIo.formatJson(json1);
-        assertThat(json2).isEqualToIgnoringWhitespace(json);
+        assertThat(json2).isEqualTo(json);
     }
 }

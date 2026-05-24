@@ -119,7 +119,7 @@ class JsonObjectTest
         String json = TestUtil.toJson(jsonObj1, new WriteOptionsBuilder().showTypeInfoNever().build());
 
         assertThat(json)
-                .isEqualToIgnoringWhitespace("{\"@id\":1,\"name\":\"Batman\",\"partners\":[{\"name\":\"Robin\",\"partners\":[{\"@ref\":1}]}]}");
+                .isEqualTo("{\"@id\":1,\"name\":\"Batman\",\"partners\":[{\"name\":\"Robin\",\"partners\":[{\"@ref\":1}]}]}");
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
