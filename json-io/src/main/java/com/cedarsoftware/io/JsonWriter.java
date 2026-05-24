@@ -1754,29 +1754,30 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         gen.beginInlineArrayBody();
 
         final Writer output = this.out;
+        // Collection is non-empty (isEmpty path returned earlier), so peel off the first
+        // element + restore, then loop with the separator BEFORE each subsequent element.
+        // Avoids the per-iteration "is this the first element?" check.
         if (col instanceof List && col instanceof RandomAccess) {
             // Indexed loop avoids Iterator allocation for ArrayList and similar
             List<?> list = (List<?>) col;
             int size = list.size();
-            for (int idx = 0; idx < size; idx++) {
-                if (idx > 0) {
-                    output.write(',');
-                    newLine();
-                }
+            writeCollectionElement(list.get(0));
+            gen.restoreDepthAfterExternalValue(this.depth);
+            for (int idx = 1; idx < size; idx++) {
+                output.write(',');
+                newLine();
                 writeCollectionElement(list.get(idx));
                 gen.restoreDepthAfterExternalValue(this.depth);
             }
         } else {
             Iterator<?> it = col.iterator();
-            boolean wroteElement = false;
+            writeCollectionElement(it.next());
+            gen.restoreDepthAfterExternalValue(this.depth);
             while (it.hasNext()) {
-                if (wroteElement) {
-                    output.write(',');
-                    newLine();
-                }
+                output.write(',');
+                newLine();
                 writeCollectionElement(it.next());
                 gen.restoreDepthAfterExternalValue(this.depth);
-                wroteElement = true;
             }
         }
 
@@ -2021,25 +2022,40 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
     }
 
+    /**
+     * Emit a JsonObject representing a Map in the {@code @keys}/{@code @items}-array form.
+     * See {@link #writeMap(Map, boolean)} for the dog-food details. Note: if
+     * {@code showType} is true but {@link #getTypeNameForOutput(Object)} returns null, the
+     * type field is silently skipped (matches the legacy {@code emitIdAndTypeIfNeeded}
+     * behavior).
+     */
     private void writeJsonObjectMap(JsonObject jObj, boolean showType) throws IOException {
         if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
-        final Writer output = this.out;
-        showType = emitIdAndTypeIfNeeded(jObj, showType, output);
+        final boolean referenced = adjustIfReferenced(jObj);
 
-        if (jObj.isEmpty()) {   // Empty
-            tabOut();
-            output.write('}');
+        gen.resetForBridgeAtValueSlot(this.depth);
+        gen.writeStartObjectRaw();
+
+        if (referenced) {
+            gen.writeNumberField(idKey, (int) jObj.getId());
+        }
+        if (showType) {
+            String type = getTypeNameForOutput(jObj);
+            if (type != null) {
+                String alias = writeOptions.getTypeNameAlias(type);
+                gen.writeStringFieldUnescaped(typeKey, alias);
+            }
+            // else: type silently skipped — matches legacy emitIdAndTypeIfNeeded behavior
+        }
+
+        if (jObj.isEmpty()) {
+            gen.writeEndObjectRaw();
             return;
         }
 
-        if (showType) {
-            output.write(',');
-            newLine();
-        }
-
-        writeMapToEnd(jObj, output);
+        writeMapToEnd(jObj, this.out);
     }
 
     private boolean writeJsonObjectMapWithStringKeys(JsonObject jObj, boolean showType) throws IOException {
@@ -2204,70 +2220,98 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         return false;
     }
 
+    /**
+     * Emit a Java {@link Map} as JSON in the {@code @keys}/{@code @items}-array form
+     * (used when keys aren't strings or the writer is forced to two-arrays mode). Dog-food
+     * path — structural emission ({@code &#123;}/{@code &#125;}, the two {@code [}/{@code ]}
+     * array bodies, {@code @id}/{@code @type}/{@code @keys}/{@code @items} prefixes) goes
+     * through {@link CharStreamGenerator}'s Raw structural-token family + writeFieldNameRaw.
+     * The per-element loops use legacy {@link #writeCollectionElement(Object)} dispatch with
+     * lightweight {@code gen.restoreDepthAfterExternalValue(this.depth)} after each call.
+     */
     private void writeMap(Map map, boolean showType) throws IOException {
         if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
-        final Writer output = this.out;
-        boolean referenced = cycleSupport && this.objsReferenced.containsKey(map);
+        final boolean referenced = cycleSupport && this.objsReferenced.containsKey(map);
 
-        output.write('{');
-        tabIn();
+        gen.resetForBridgeAtValueSlot(this.depth);
+        gen.writeStartObjectRaw();
+
         if (referenced) {
-            writeId(getIdInt(map));
+            gen.writeNumberField(idKey, getIdInt(map));
         }
-
         if (showType) {
-            if (referenced) {
-                output.write(',');
-                newLine();
-            }
-            writeType(getTypeNameForOutput(map));
+            String alias = writeOptions.getTypeNameAlias(getTypeNameForOutput(map));
+            gen.writeStringFieldUnescaped(typeKey, alias);
         }
 
         if (map.isEmpty()) {
-            tabOut();
-            output.write('}');
+            gen.writeEndObjectRaw();
             return;
         }
 
-        if (showType || referenced) {
-            output.write(',');
-            newLine();
-        }
-
-        writeMapToEnd(map, output);
+        writeMapToEnd(map, this.out);
     }
 
+    /**
+     * Emit a Map's two-array body ({@code "@keys":[...]}, {@code "@items":[...]}) and the
+     * closing {@code &#125;}. Caller has already opened the outer object via
+     * {@code gen.writeStartObjectRaw()} + any {@code @id}/{@code @type} fields. Each
+     * per-element call goes through {@link #writeCollectionElement(Object)} with a
+     * lightweight depth restore — same pattern as the array migrations.
+     */
     private void writeMapToEnd(Map map, Writer output) throws IOException {
         // Save current element type (Map value type) and switch to key type for @keys array
-        Class<?> savedValueType = declaredElementType;
+        final Class<?> savedValueType = declaredElementType;
+        final int depthAtEntry = this.depth;
 
-        output.write(keysPrefix);
-        output.write('[');
-        tabIn();
+        // @keys array
+        gen.writeFieldNameRaw(keysPrefix);
+        gen.writeStartArrayRaw();
+        this.depth = depthAtEntry + 2;   // inside outer object body + inside @keys array body
+        gen.beginInlineArrayBody();
+
+        // Map is non-empty (caller's isEmpty path returned earlier), so the iterators
+        // each have at least one element — peel off the first element + restore, then
+        // loop with the separator BEFORE each subsequent element. Avoids the per-iteration
+        // "is this the first element?" check.
         Iterator<?> i = map.keySet().iterator();
-
-        // Use key type context for writing @keys array elements
         declaredElementType = declaredKeyType;
-        writeElements(output, i);
+        writeCollectionElement(i.next());
+        gen.restoreDepthAfterExternalValue(this.depth);
+        while (i.hasNext()) {
+            output.write(',');
+            newLine();
+            writeCollectionElement(i.next());
+            gen.restoreDepthAfterExternalValue(this.depth);
+        }
 
-        tabOut();
-        output.write("],");
-        newLine();
-        output.write(itemsPrefix);
-        output.write('[');
-        tabIn();
+        this.depth = depthAtEntry;
+        gen.writeEndArrayRaw();
+
+        // @items array
+        gen.writeFieldNameRaw(itemsPrefix);
+        gen.writeStartArrayRaw();
+        this.depth = depthAtEntry + 2;
+        gen.beginInlineArrayBody();
+
         i = map.values().iterator();
-
-        // Restore value type context for writing @items array elements
         declaredElementType = savedValueType;
-        writeElements(output, i);
+        writeCollectionElement(i.next());
+        gen.restoreDepthAfterExternalValue(this.depth);
+        while (i.hasNext()) {
+            output.write(',');
+            newLine();
+            writeCollectionElement(i.next());
+            gen.restoreDepthAfterExternalValue(this.depth);
+        }
 
-        tabOut();
-        output.write(']');
-        tabOut();
-        output.write('}');
+        this.depth = depthAtEntry;
+        gen.writeEndArrayRaw();
+
+        // Close the object body that the caller opened via gen.writeStartObjectRaw.
+        gen.writeEndObjectRaw();
     }
 
     private boolean writeMapWithStringKeys(Map map, boolean showType) throws IOException {
