@@ -349,9 +349,8 @@ public abstract class JsonGenerator implements Closeable, Flushable {
      * Identity tracking is currently per-call: two separate {@code writeObject} calls
      * with the same instance serialize the instance twice rather than sharing an
      * {@code @id}/{@code @ref}. The identity map lives inside the {@link JsonWriter}
-     * driven by each call. A future release will share the identity map across
-     * adjacent {@code writeObject} calls when the dog-food migration (JsonWriter
-     * driving JsonGenerator directly) lands.
+     * driven by each call. Sharing the identity map across adjacent {@code writeObject}
+     * calls is a planned enhancement for a future release.
      *
      * <h3>Declared-type overloads</h3>
      * {@code Class}- and {@code Type}-accepting overloads (the streaming-write mirror

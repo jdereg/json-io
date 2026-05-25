@@ -86,28 +86,47 @@ import static com.cedarsoftware.io.JsonValue.ITEMS;
 import static com.cedarsoftware.io.JsonValue.TYPE;
 
 /**
- * Output a Java object graph in JSON format.  This code handles cyclic
- * references and can serialize any Object graph without requiring a class
- * to be 'Serializable' or have any specific methods on it.
- * <br><ul><li>
- * Call the static method: {@code JsonWriter.objectToJson(employee)}.  This will
- * convert the passed in 'employee' instance into a JSON String.</li>
- * <li>Using streams:
- * <pre>     JsonWriter writer = new JsonWriter(stream);
+ * Tree-walking JSON writer — serializes a Java object graph to JSON. Handles cyclic
+ * references and arbitrary Object graphs without requiring {@code Serializable} or
+ * any specific accessor methods on the source types.
+ *
+ * <h3>Recommended entry points (for new code)</h3>
+ * <ul>
+ *   <li>{@link JsonIo#toJson(Object, WriteOptions)} — the canonical static API that
+ *       wraps a {@code JsonWriter} for one-shot serialization to a {@code String}.</li>
+ *   <li>{@link JsonGenerator} — the cursor-style streaming-write API (Jackson-aligned)
+ *       for hand-rolled serializers. Obtain via {@link JsonIo#createGenerator(Writer)}
+ *       or {@link JsonIo#createGenerator(java.io.OutputStream)}.</li>
+ * </ul>
+ *
+ * <h3>Direct {@code JsonWriter} usage</h3>
+ * Construct with an {@link OutputStream} or {@link Writer} (and optional
+ * {@link WriteOptions}), then call {@link #write(Object)} per top-level value:
+ * <pre>{@code
+ * try (JsonWriter writer = new JsonWriter(out, new WriteOptionsBuilder()
+ *         .prettyPrint(true).build())) {
  *     writer.write(employee);
- *     writer.close();</pre>
- * This will write the 'employee' object to the passed in OutputStream.
- * </li></ul>
- * <p>That's it.  This can be used as a debugging tool.  Output an object
- * graph using the above code.  Use the JsonWriter PRETTY_PRINT option to
- * format the JSON to be human-readable.
- * <br>
- * <p>This will output any object graph deeply (or null).  Object references are
- * properly handled.  For example, if you had {@code A->B, B->C, and C->A}, then
- * A will be serialized with a B object in it, B will be serialized with a C
- * object in it, and then C will be serialized with a reference to A (ref), not a
- * redefinition of A.</p>
- * <br>
+ * }
+ * }</pre>
+ *
+ * <h3>Custom writers</h3>
+ * {@code JsonWriter} implements {@link WriterContext}, the Jackson-style callback
+ * interface that custom {@link com.cedarsoftware.io.JsonClassWriter} implementations
+ * receive. Custom writers may emit fields via {@code context.writeFieldName(...)},
+ * {@code context.writeStringField(...)}, {@code context.writeObjectField(...)},
+ * etc., or — when implementing the modern {@code JsonClassWriter.write(T, boolean,
+ * JsonGenerator, WriterContext)} overload — drive emission directly through the
+ * supplied {@link JsonGenerator}.
+ *
+ * <h3>Cycle handling</h3>
+ * For {@code A->B, B->C, C->A}, the writer emits A with a B inside, B with a C
+ * inside, and C with a {@code "@ref"} pointer to A (not a redefinition of A).
+ * Cycle tracking is on by default; control via {@link WriteOptions#isCycleSupport()}
+ * (set through {@code WriteOptionsBuilder.cycleSupport(true|false)}).
+ *
+ * <h3>Pretty print</h3>
+ * Enable human-readable indented output via
+ * {@code WriteOptionsBuilder.prettyPrint(true)}.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
