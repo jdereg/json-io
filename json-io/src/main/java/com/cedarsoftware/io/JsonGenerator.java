@@ -345,12 +345,31 @@ public abstract class JsonGenerator implements Closeable, Flushable {
      * context, satisfies a pending field name. The emitted value may be a scalar,
      * an object, or an array depending on the object's structure.
      *
-     * <h3>Identity tracking limitation</h3>
-     * Identity tracking is currently per-call: two separate {@code writeObject} calls
-     * with the same instance serialize the instance twice rather than sharing an
-     * {@code @id}/{@code @ref}. The identity map lives inside the {@link JsonWriter}
-     * driven by each call. Sharing the identity map across adjacent {@code writeObject}
-     * calls is a planned enhancement for a future release.
+     * <h3>Identity tracking across {@code writeObject} calls</h3>
+     * Identity sharing is active when {@link WriteOptions#isCycleSupport()} is
+     * {@code true} (the default). When the same Java instance is passed to
+     * {@code writeObject} more than once on the same generator, the first call
+     * emits a full serialization with a top-level {@code @id}, and each subsequent
+     * call emits {@code {"@ref":N}} pointing back at it — preserving graph
+     * identity across multiple top-level value emits.
+     * <p>
+     * Example:
+     * <pre>{@code
+     * Person p = new Person("Eve", 28);
+     * try (JsonGenerator g = JsonIo.createGenerator(out)) {
+     *     g.writeStartObject()
+     *         .writeFieldName("first");
+     *     g.writeObject(p);          // emits {"@id":1, "name":"Eve", "age":28, ...}
+     *     g.writeFieldName("second");
+     *     g.writeObject(p);          // emits {"@ref":1}
+     *     g.writeEndObject();
+     * }
+     * }</pre>
+     * Under {@code cycleSupport(false)} JsonWriter cannot emit {@code @id} at all,
+     * so identity sharing is not active: each {@code writeObject} call serializes
+     * its argument fully. Within a single call's serialization, normal cycle
+     * handling (intra-document {@code @id}/{@code @ref}) is preserved in either
+     * mode.
      *
      * <h3>Declared-type overloads</h3>
      * {@code Class}- and {@code Type}-accepting overloads (the streaming-write mirror

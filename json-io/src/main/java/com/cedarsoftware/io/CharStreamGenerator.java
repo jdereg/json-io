@@ -1,9 +1,11 @@
 package com.cedarsoftware.io;
 
 import java.io.IOException;
+import java.io.StringWriter;
 import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.IdentityHashMap;
 
 import com.cedarsoftware.util.internal.CharBufScratch;
 
@@ -61,6 +63,17 @@ final class CharStreamGenerator extends JsonGenerator {
     // open object body where JsonWriter has already emitted the leading
     // newline+indent for the writer's first emit. Auto-clears on use.
     private boolean suppressNextIndent;
+
+    // Identity-sharing state for writeObject(Object) across multiple calls. Each
+    // distinct Java instance written via writeObject gets a top-level @id assigned
+    // on its first emission; subsequent writeObject calls with the same instance
+    // emit {"@ref":N} pointing back at that id. All fields are lazy-allocated on
+    // the first writeObject call so generators that never call writeObject pay
+    // zero overhead.
+    private IdentityHashMap<Object, Integer> sharedTopLevelIds;
+    private int sharedTopLevelCounter; // also tracks the highest id used by any per-call JsonWriter
+    private JsonWriter sharedGraphWriter;
+    private StringWriter sharedGraphBuffer;
 
     CharStreamGenerator(Writer out, WriteOptions writeOptions) {
         this.out = out;
@@ -1337,6 +1350,68 @@ final class CharStreamGenerator extends JsonGenerator {
     // -------------------------------------------------------------------
     // Raw injection
     // -------------------------------------------------------------------
+
+    /**
+     * Identity-sharing override for {@code writeObject(Object)} — multiple writeObject
+     * calls with the same Java instance emit a single full serialization (with a
+     * top-level {@code @id}) on the first call, and a {@code {"@ref":N}} pointer on
+     * each subsequent call.
+     *
+     * <p>Implementation: a lazy {@link IdentityHashMap} on the generator tracks
+     * which instances have already been emitted and the {@code @id} each was assigned.
+     * The first emission of an instance forces a top-level {@code @id} by pre-populating
+     * a per-call {@link JsonWriter}'s {@code objsReferenced} map; the @id namespace is
+     * advanced across writeObject calls (via JsonWriter's identity-counter accessors)
+     * so internal sub-object ids assigned by JsonWriter don't collide with the
+     * gen-allocated top-level ids of other writeObject calls.
+     *
+     * <p>Identity sharing is active only when the active {@link WriteOptions} has
+     * {@code cycleSupport(true)} (the default). With {@code cycleSupport(false)},
+     * JsonWriter doesn't emit @id at all, so this override falls back to the
+     * superclass behavior (full re-serialization on each call).
+     */
+    @Override
+    public JsonGenerator writeObject(Object o) throws IOException {
+        if (o == null) {
+            return writeNull();
+        }
+        if (!writeOptions.isCycleSupport()) {
+            // Without cycleSupport, JsonWriter won't emit @id and we can't @ref. Fall back.
+            return super.writeObject(o);
+        }
+        if (sharedTopLevelIds == null) {
+            sharedTopLevelIds = new IdentityHashMap<>();
+            sharedGraphBuffer = new StringWriter();
+            sharedGraphWriter = new JsonWriter(sharedGraphBuffer, writeOptions);
+        }
+        Integer existing = sharedTopLevelIds.get(o);
+        if (existing != null) {
+            // Already emitted in a prior writeObject call — emit @ref pointing at it.
+            return writeRawValue("{\"@ref\":" + existing + "}");
+        }
+        // First time. Assign a top-level @id, pre-populate the per-call JsonWriter's
+        // objsReferenced so traceReferences treats this instance as a referenced
+        // object (forcing @id emission at top level even when this instance only
+        // appears once in this call's graph). Start the JsonWriter's identity counter
+        // past the gen-allocated top-level id so any internal sub-ids it assigns
+        // can't collide with other writeObject calls' top-level ids.
+        int topId = ++sharedTopLevelCounter;
+        sharedTopLevelIds.put(o, topId);
+
+        sharedGraphBuffer.getBuffer().setLength(0);
+        IdentityIntMap refs = sharedGraphWriter.getObjsReferenced();
+        refs.clear();
+        refs.put(o, topId);
+        sharedGraphWriter.setIdentity(topId + 1);
+        sharedGraphWriter.write(o);
+        // Capture the highest id this call's JsonWriter advanced to so the NEXT
+        // call's top-level id starts past it.
+        int post = sharedGraphWriter.currentIdentity();
+        if (post > sharedTopLevelCounter) {
+            sharedTopLevelCounter = post - 1; // -1 because we ++ on next call
+        }
+        return writeRawValue(sharedGraphBuffer.toString());
+    }
 
     @Override
     public JsonGenerator writeRaw(String raw) throws IOException {

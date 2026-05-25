@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -1042,6 +1044,89 @@ class JsonGeneratorTest {
         assertEquals("A", round[0].name);
         assertEquals("B", round[1].name);
         assertEquals("C", round[2].name);
+    }
+
+    @Test
+    void writeObject_sameInstanceTwice_secondEmitsAsRef() throws IOException {
+        // Identity-map sharing across writeObject calls: when the same Java instance
+        // is passed to writeObject more than once on the same generator, the first
+        // call emits a full serialization with a top-level @id, and each subsequent
+        // call emits {"@ref":N} pointing back at it.
+        Person p = new Person("Eve", 28);
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw)) {
+            g.writeStartObject()
+                .writeFieldName("first");
+            g.writeObject(p);
+            g.writeFieldName("second");
+            g.writeObject(p);
+            g.writeEndObject();
+        }
+        String json = sw.toString();
+        // First emission carries @id=1 and the full body.
+        assertTrue(json.contains("\"@id\":1"),
+                "first emission should carry @id=1, got: " + json);
+        assertTrue(json.contains("\"name\":\"Eve\""),
+                "first emission should carry the full body, got: " + json);
+        // Second emission is a bare @ref pointer.
+        assertTrue(json.contains("\"@ref\":1"),
+                "second emission should be {\"@ref\":1}, got: " + json);
+        // Round-trip: both fields resolve to the SAME instance.
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, Object> map =
+                (java.util.Map<String, Object>) JsonIo.toJava(json, null).asClass(java.util.Map.class);
+        assertSame(map.get("first"), map.get("second"),
+                "round-tripped fields should be the same instance");
+    }
+
+    @Test
+    void writeObject_threeCallsTwoDistinctInstances_correctIdAndRefAllocation() throws IOException {
+        // Across three writeObject calls with two distinct instances (A, B, A), the
+        // first call gets @id=1, the second gets @id=2, the third is a @ref to 1.
+        Person a = new Person("A", 1);
+        Person b = new Person("B", 2);
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw)) {
+            g.writeStartArray();
+            g.writeObject(a);
+            g.writeObject(b);
+            g.writeObject(a);
+            g.writeEndArray();
+        }
+        String json = sw.toString();
+        assertTrue(json.contains("\"@id\":1"), "got: " + json);
+        assertTrue(json.contains("\"@id\":2"), "got: " + json);
+        assertTrue(json.contains("\"@ref\":1"), "got: " + json);
+        // Round-trip: first and third elements are the same instance, second is different.
+        Object[] arr = JsonIo.toJava(json, null).asClass(Object[].class);
+        assertEquals(3, arr.length);
+        assertSame(arr[0], arr[2]);
+        assertNotSame(arr[0], arr[1]);
+    }
+
+    @Test
+    void writeObject_underCycleSupportFalse_doesNotEmitRefs() throws IOException {
+        // Without cycleSupport, JsonWriter doesn't emit @id at all — identity sharing
+        // is not active, so each call serializes the instance fully.
+        Person p = new Person("Frank", 33);
+        WriteOptions opts = new WriteOptionsBuilder().cycleSupport(false).build();
+        StringWriter sw = new StringWriter();
+        try (JsonGenerator g = JsonIo.createGenerator(sw, opts)) {
+            g.writeStartArray();
+            g.writeObject(p);
+            g.writeObject(p);
+            g.writeEndArray();
+        }
+        String json = sw.toString();
+        assertTrue(!json.contains("\"@id\""),
+                "cycleSupport(false) should not emit @id, got: " + json);
+        assertTrue(!json.contains("\"@ref\""),
+                "cycleSupport(false) should not emit @ref, got: " + json);
+        // Both elements still round-trip correctly.
+        Person[] arr = JsonIo.toJava(json, null).asClass(Person[].class);
+        assertEquals(2, arr.length);
+        assertEquals("Frank", arr[0].name);
+        assertEquals("Frank", arr[1].name);
     }
 
     @Test

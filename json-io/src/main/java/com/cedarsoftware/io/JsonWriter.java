@@ -593,6 +593,26 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     /**
+     * Package-private: current identity counter (next id to assign during trace).
+     * Used by {@link CharStreamGenerator#writeObject(Object)} to coordinate id
+     * allocation across writeObject calls so each call's internal sub-object ids
+     * don't collide with the gen-level top-level ids assigned to other writeObject
+     * calls' top values.
+     */
+    int currentIdentity() {
+        return identity;
+    }
+
+    /**
+     * Package-private: set the identity counter's next-id-to-assign value. Used by
+     * {@link CharStreamGenerator#writeObject(Object)} to start each per-call
+     * JsonWriter's identity counter at a value past the gen-allocated top-level id.
+     */
+    void setIdentity(int next) {
+        this.identity = next;
+    }
+
+    /**
      * Emit a newline followed by the current indent — thin delegating wrapper around
      * {@link CharStreamGenerator#writeNewlineIndent()}. No-op when prettyPrint is off.
      * Retained as part of the public {@code JsonWriter} API for any external custom
@@ -887,7 +907,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             int id = visited.get(obj);
             if (id != 0) {   // Object has been seen before (0 = NOT_FOUND)
                 if (id == FIRST_SEEN) {
-                    id = identity++;
+                    // Preserve any pre-populated id in `referenced` (used by
+                    // CharStreamGenerator.writeObject to force a top-level @id for
+                    // identity-sharing across writeObject calls). Otherwise assign
+                    // a fresh id from the local counter.
+                    int existingId = referenced.get(obj);
+                    id = existingId != 0 ? existingId : identity++;
                     visited.put(obj, id);
                     referenced.put(obj, id);
                 }
