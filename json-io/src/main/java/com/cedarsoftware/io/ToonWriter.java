@@ -96,6 +96,17 @@ public class ToonWriter implements Closeable, Flushable {
     private static final boolean[] MUST_QUOTE_TAB = buildMustQuoteTable('\t');
     private static final boolean[] MUST_QUOTE_PIPE = buildMustQuoteTable('|');
 
+    /**
+     * ASCII lookup table for the §7.3 strict-identifier key-quoting rule. An unquoted key
+     * MUST match {@code ^[A-Za-z_][A-Za-z0-9_.]*$}, so any character outside
+     * {@code [A-Za-z0-9_]} forces quoting. (Dot is handled at the caller via the keyFolding
+     * flag — when folding is on, dots are part of the path syntax and may be unquoted;
+     * when off, dotted keys are quoted to avoid round-trip ambiguity with path-expansion
+     * decoders.) Non-ASCII characters (codepoint &ge; 128) always force quoting per §7.3
+     * — there is no allowance for letters outside ASCII in the unquoted-key grammar.
+     */
+    private static final boolean[] KEY_MUST_QUOTE_CHAR = buildKeyMustQuoteTable();
+
     private static boolean[] buildMustQuoteTable(char delim) {
         boolean[] table = new boolean[128];
         for (int i = 0; i < 32; i++) {
@@ -112,6 +123,23 @@ public class ToonWriter implements Closeable, Flushable {
         return table;
     }
 
+    private static boolean[] buildKeyMustQuoteTable() {
+        boolean[] table = new boolean[128];
+        // Every ASCII codepoint outside [A-Za-z0-9_] forces key quoting per §7.3.
+        // Dot ('.') is handled at the caller — when toonKeyFolding is enabled, dots are
+        // legitimate path separators and may appear in unquoted keys; otherwise dotted
+        // keys must be quoted. So we keep dot OFF in this table and let the caller
+        // gate it on the option.
+        for (int i = 0; i < 128; i++) {
+            boolean identifierChar = (i >= 'A' && i <= 'Z')
+                                  || (i >= 'a' && i <= 'z')
+                                  || (i >= '0' && i <= '9')
+                                  || i == '_';
+            table[i] = !identifierChar;
+        }
+        return table;
+    }
+
     /**
      * Compute whether a POJO field key needs TOON quoting, given the target WriteOptions.
      * Called once at {@link WriteOptionsBuilder.WriteFieldPlan} build time so the runtime
@@ -124,35 +152,35 @@ public class ToonWriter implements Closeable, Flushable {
         if (key == null || key.isEmpty()) {
             return true;
         }
-        if (!options.isToonKeyFolding() && key.indexOf('.') >= 0) {
-            return true;
-        }
-        int len = key.length();
+        // §7.3: unquoted keys must match ^[A-Za-z_][A-Za-z0-9_.]*$.
+        // First char must be a letter or underscore (digit/dot/anything else forces quoting).
         char first = key.charAt(0);
-        if (first <= ' ' || first == '-') {
+        if (!isIdentifierStart(first)) {
             return true;
         }
-        if (key.charAt(len - 1) <= ' ') {
-            return true;
-        }
-        if (len <= 5) {
-            switch (first) {
-                case 't': if (len == 4 && "true".equals(key)) return true; break;
-                case 'f': if (len == 5 && "false".equals(key)) return true; break;
-                case 'n': if (len == 4 && "null".equals(key)) return true; break;
-            }
-        }
-        char delim = options.getToonDelimiter();
-        boolean[] mq = (delim == '\t') ? MUST_QUOTE_TAB
-                     : (delim == '|')  ? MUST_QUOTE_PIPE
-                     :                    MUST_QUOTE_COMMA;
-        for (int i = 0; i < len; i++) {
+        boolean keyFolding = options.isToonKeyFolding();
+        int len = key.length();
+        for (int i = 1; i < len; i++) {
             char c = key.charAt(i);
-            if (c < 128 ? mq[c] : true) {
+            if (c == '.') {
+                // Dots are part of the §7.3 unquoted-key grammar, but we quote them when
+                // toonKeyFolding is disabled to avoid round-trip ambiguity with the path-
+                // expansion decoder (a literal dotted key vs. a folded path is ambiguous
+                // without the option).
+                if (!keyFolding) {
+                    return true;
+                }
+                continue;
+            }
+            if (c >= 128 || KEY_MUST_QUOTE_CHAR[c]) {
                 return true;
             }
         }
         return false;
+    }
+
+    private static boolean isIdentifierStart(char c) {
+        return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_';
     }
     private static final Map<Long, String> SHARED_DOUBLE_FORMAT_CACHE = new ConcurrentHashMap<>(1024);
     private static final Map<Integer, String> SHARED_FLOAT_FORMAT_CACHE = new ConcurrentHashMap<>(512);
@@ -634,13 +662,30 @@ public class ToonWriter implements Closeable, Flushable {
      * the full decision to writeFieldEntry/writeFieldEntryInline uniformly.
      */
     private boolean needsQuotingForMapKey(String key) {
-        if (key.isEmpty()) {
+        // §7.3 strict-identifier rule for keys: must match ^[A-Za-z_][A-Za-z0-9_.]*$.
+        // Stricter than the value table (§7.2 allows internal spaces, hyphens, Unicode);
+        // a separate path keeps the lenient value rules untouched.
+        if (key == null || key.isEmpty()) {
             return true;
         }
-        if (!toonKeyFolding && key.indexOf('.') >= 0) {
+        char first = key.charAt(0);
+        if (!isIdentifierStart(first)) {
             return true;
         }
-        return needsQuoting(key);
+        int len = key.length();
+        for (int i = 1; i < len; i++) {
+            char c = key.charAt(i);
+            if (c == '.') {
+                if (!toonKeyFolding) {
+                    return true;
+                }
+                continue;
+            }
+            if (c >= 128 || KEY_MUST_QUOTE_CHAR[c]) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -801,22 +846,38 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
-     * Write string content with TOON escape sequences.
-     * Only valid escapes: \\, \", \n, \r, \t
+     * Write string content with TOON §7.1 escape sequences.
+     * Explicit escapes for {@code \}, {@code "}, LF, CR, HTAB; other U+0000–U+001F control
+     * characters are emitted as {@code \}u + 4 hex digits with lowercase hex per §7.1. BMP and
+     * supplementary codepoints pass through as literal UTF-8.
      * Uses batch-scanning to write runs of safe characters in a single write() call.
      */
     private void writeEscapedString(String str) throws IOException {
         int len = str.length();
         int last = 0;
         for (int i = 0; i < len; i++) {
+            char c = str.charAt(i);
             String escape;
-            switch (str.charAt(i)) {
+            switch (c) {
                 case '\\': escape = "\\\\"; break;
                 case '"':  escape = "\\\""; break;
                 case '\n': escape = "\\n"; break;
                 case '\r': escape = "\\r"; break;
                 case '\t': escape = "\\t"; break;
-                default: continue;
+                default:
+                    if (c < 0x20) {
+                        // Other U+0000–U+001F controls → backslash-u + 4 lowercase hex digits per §7.1.
+                        if (last < i) {
+                            out.write(str, last, i - last);
+                        }
+                        out.write("\\u00");
+                        int hi = (c >> 4) & 0x0F;
+                        int lo = c & 0x0F;
+                        out.write(hi < 10 ? '0' + hi : 'a' + hi - 10);
+                        out.write(lo < 10 ? '0' + lo : 'a' + lo - 10);
+                        last = i + 1;
+                    }
+                    continue;
             }
             if (last < i) {
                 out.write(str, last, i - last);

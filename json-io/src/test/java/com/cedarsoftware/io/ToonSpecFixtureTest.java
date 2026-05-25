@@ -140,14 +140,9 @@ class ToonSpecFixtureTest {
             "encode/arrays-tabular.json :: encodes tabular arrays with keys needing quotes",
             "encode/key-folding.json :: encodes folded chain ending with empty object",
             "encode/key-folding.json :: skips folding on sibling literal-key collision (safe mode)",
-            "encode/key-folding.json :: skips folding when segment requires quotes (safe mode)",
             "encode/objects.json :: encodes empty nested object",
             "encode/objects.json :: encodes empty objects as empty string",
-            "encode/objects.json :: escapes U+0004 control character in key via \\uXXXX",
-            "encode/objects.json :: escapes U+001F control character in key via \\uXXXX",
-            "encode/objects.json :: quotes key with spaces",
             "encode/primitives.json :: encodes large number",
-            "encode/primitives.json :: encodes string with U+0004 control character via \\uXXXX",
             "encode/whitespace.json :: respects custom indent size option"
     ));
 
