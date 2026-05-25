@@ -1080,8 +1080,19 @@ public class ToonWriter implements Closeable, Flushable {
                 writeIndent();
                 out.write(itemsKey);
             }
-            out.write(countMarker(length));
-            writeArrayElements(array, length);
+            if (length == 0) {
+                // §9.1: canonical empty-array literal "[]". The legacy "[0]:" form is still
+                // accepted by decoders but encoders SHOULD emit "[]". When metadata was
+                // written this becomes "@items: []".
+                if (wroteMeta) {
+                    out.write(": []");
+                } else {
+                    out.write("[]");
+                }
+            } else {
+                out.write(countMarker(length));
+                writeArrayElements(array, length);
+            }
         } finally {
             if (!cycleSupport) {
                 exitActivePath(array);
@@ -1255,8 +1266,18 @@ public class ToonWriter implements Closeable, Flushable {
                 writeIndent();
                 out.write(itemsKey);
             }
-            out.write(countMarker(collection.size()));
-            writeCollectionElementsWithHeader(collection);
+            if (collection.isEmpty()) {
+                // §9.1 canonical empty-array literal "[]" (or "@items: []" when metadata
+                // was written). Mirrors the writeArray fix above.
+                if (wroteMeta) {
+                    out.write(": []");
+                } else {
+                    out.write("[]");
+                }
+            } else {
+                out.write(countMarker(collection.size()));
+                writeCollectionElementsWithHeader(collection);
+            }
         } finally {
             if (!cycleSupport) {
                 exitActivePath(collection);
@@ -1743,6 +1764,11 @@ public class ToonWriter implements Closeable, Flushable {
                 writeIndent();
                 writeCollection((Collection<?>) element);
                 depth--;
+            } else if (((Collection<?>) element).isEmpty()) {
+                // §9.1: empty array as a list element uses the legacy "[0]:" form on the
+                // hyphen line. The inline "[]" literal applies only to field-value position
+                // ("key: []"); a bare hyphen-line empty array stays in count-marker form.
+                out.write(" [0]:");
             } else {
                 out.write(" ");
                 writeCollection((Collection<?>) element);
@@ -1756,6 +1782,9 @@ public class ToonWriter implements Closeable, Flushable {
                 writeIndent();
                 writeArray(element);
                 depth--;
+            } else if (ArrayUtilities.getLength(element) == 0) {
+                // §9.1 list-element empty array — see Collection branch above.
+                out.write(" [0]:");
             } else {
                 out.write(" ");
                 writeArray(element);
@@ -2007,9 +2036,12 @@ public class ToonWriter implements Closeable, Flushable {
                         writeIndent();
                         writeTypeField(map.getClass());
                     }
-                } else {
-                    out.write("{}");
                 }
+                // Empty map with no metadata: emit nothing.
+                // At the root: produces an empty document (§8 "An empty object at the root
+                // yields an empty document"). At a field-value position: the caller has
+                // already emitted "key:"; the empty body is correctly absent. The previous
+                // "{}" emission was non-spec.
                 return;
             }
 
@@ -2175,11 +2207,18 @@ public class ToonWriter implements Closeable, Flushable {
                 writeArray(value);
                 depth--;
             } else {
-                // Combine key with array size: fieldName[N]:
                 int length = ArrayUtilities.getLength(value);
-                writeKeyStringKnown(keyStr, keyNeedsQuoting);
-                out.write(countMarker(length));
-                writeArrayElements(value, length);
+                if (length == 0) {
+                    // §9.1: empty array as field value uses inline literal "key: []",
+                    // not the legacy "key[0]:" form.
+                    writeKeyStringKnown(keyStr, keyNeedsQuoting);
+                    out.write(": []");
+                } else {
+                    // Combine key with array size: fieldName[N]:
+                    writeKeyStringKnown(keyStr, keyNeedsQuoting);
+                    out.write(countMarker(length));
+                    writeArrayElements(value, length);
+                }
             }
         } else if (value instanceof Collection) {
             if (shouldWrapArrayOrCollectionValue(value)
@@ -2193,18 +2232,25 @@ public class ToonWriter implements Closeable, Flushable {
                 writeCollection((Collection<?>) value);
                 depth--;
             } else {
-                // Combine key with collection size: fieldName[N]: or fieldName[N]{cols}:
                 Collection<?> coll = (Collection<?>) value;
-                writeKeyStringKnown(keyStr, keyNeedsQuoting);
-                out.write(countMarker(coll.size()));
-                writeCollectionElementsWithHeader(coll);
+                if (coll.isEmpty()) {
+                    // §9.1: empty collection as field value uses inline literal "key: []".
+                    writeKeyStringKnown(keyStr, keyNeedsQuoting);
+                    out.write(": []");
+                } else {
+                    // Combine key with collection size: fieldName[N]: or fieldName[N]{cols}:
+                    writeKeyStringKnown(keyStr, keyNeedsQuoting);
+                    out.write(countMarker(coll.size()));
+                    writeCollectionElementsWithHeader(coll);
+                }
             }
         } else {
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(":");
             if (value instanceof Map && ((Map<?, ?>) value).isEmpty()) {
-                // Empty map - write inline as "key: {}"
-                out.write(" {}");
+                // Empty map field value emits "key:" only — no body, no trailing "{}".
+                // Per §8: nested empty object is "key:" on its own line.
+                return;
             } else if (value != null && !isPrimitive(value)) {
                 // Nested object - newline, no trailing space after colon
                 out.write('\n');
@@ -2292,9 +2338,15 @@ public class ToonWriter implements Closeable, Flushable {
                 depth -= 2;
             } else {
                 int length = ArrayUtilities.getLength(value);
-                writeKeyStringKnown(keyStr, keyNeedsQuoting);
-                out.write(countMarker(length));
-                writeArrayElements(value, length);
+                if (length == 0) {
+                    // §9.1 inline empty-array literal — see writeFieldEntry.
+                    writeKeyStringKnown(keyStr, keyNeedsQuoting);
+                    out.write(": []");
+                } else {
+                    writeKeyStringKnown(keyStr, keyNeedsQuoting);
+                    out.write(countMarker(length));
+                    writeArrayElements(value, length);
+                }
             }
         } else if (value instanceof Collection) {
             if (shouldWrapArrayOrCollectionValue(value)
@@ -2308,17 +2360,24 @@ public class ToonWriter implements Closeable, Flushable {
                 depth -= 2;
             } else {
                 Collection<?> coll = (Collection<?>) value;
-                writeKeyStringKnown(keyStr, keyNeedsQuoting);
-                out.write(countMarker(coll.size()));
-                depth++;
-                writeCollectionElementsWithHeader(coll);
-                depth--;
+                if (coll.isEmpty()) {
+                    // §9.1 inline empty-array literal — see writeFieldEntry.
+                    writeKeyStringKnown(keyStr, keyNeedsQuoting);
+                    out.write(": []");
+                } else {
+                    writeKeyStringKnown(keyStr, keyNeedsQuoting);
+                    out.write(countMarker(coll.size()));
+                    depth++;
+                    writeCollectionElementsWithHeader(coll);
+                    depth--;
+                }
             }
         } else {
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(":");
             if (value instanceof Map && ((Map<?, ?>) value).isEmpty()) {
-                out.write(" {}");
+                // Empty map field value in inline list context: just "key:" — see writeFieldEntry.
+                return;
             } else if (value != null && !isPrimitive(value)) {
                 out.write('\n');
                 depth += 2;

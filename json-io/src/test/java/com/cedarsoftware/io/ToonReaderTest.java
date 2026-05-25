@@ -2786,15 +2786,17 @@ class ToonReaderTest {
     @Test
     void testEmptyMapInObject() {
         // Object containing an empty nested map - should round-trip correctly.
-        // ToonWriter writes "metadata: {}" inline, ToonReader parses "{}" as empty map.
+        // Per TOON v3.3 §8 the encoder emits empty nested objects as bare "key:" with no
+        // body; decoder accepts both that and the legacy "key: {}" inline form.
         Map<String, Object> original = new LinkedHashMap<>();
         original.put("name", "test");
         original.put("metadata", new LinkedHashMap<>());
         original.put("after", "value");
 
         String toon = JsonIo.toToon(original, null);
-        // Writer should produce inline "metadata: {}"
-        assertTrue(toon.contains("metadata: {}"), "Empty nested map should be inline: " + toon);
+        // Writer emits bare "metadata:" — the line ends after the colon and the next sibling
+        // ("after: value") starts at the same indent.
+        assertTrue(toon.contains("metadata:\nafter:"), "Empty nested map should be bare 'metadata:': " + toon);
 
         Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
         assertEquals("test", restored.get("name"));

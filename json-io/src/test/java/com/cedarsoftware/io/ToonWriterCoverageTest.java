@@ -282,7 +282,8 @@ class ToonWriterCoverageTest {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("items", new ArrayList<>());
         String toon = JsonIo.toToon(data);
-        assertThat(toon).contains("[0]");
+        // TOON v3.3 §9.1: empty array as a field value uses inline "key: []" form.
+        assertThat(toon).contains("items: []");
     }
 
     @Test
@@ -298,7 +299,8 @@ class ToonWriterCoverageTest {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("items", new int[0]);
         String toon = JsonIo.toToon(data);
-        assertThat(toon).contains("[0]");
+        // TOON v3.3 §9.1: empty array as a field value uses inline "key: []" form.
+        assertThat(toon).contains("items: []");
     }
 
     // ========== Sets ==========

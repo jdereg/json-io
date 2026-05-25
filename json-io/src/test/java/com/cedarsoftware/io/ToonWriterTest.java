@@ -143,7 +143,9 @@ class ToonWriterTest {
     void testEmptyArray() {
         int[] empty = new int[0];
         String toon = JsonIo.toToon(empty, null);
-        assertEquals("[0]:", toon);
+        // TOON v3.3 §9.1 canonical form for an empty array at root is "[]"
+        // (the legacy "[0]:" form is still accepted by decoders).
+        assertEquals("[]", toon);
     }
 
     @Test
@@ -362,7 +364,8 @@ class ToonWriterTest {
     void testEmptyList() {
         List<String> empty = new ArrayList<>();
         String toon = JsonIo.toToon(empty, null);
-        assertEquals("[0]:", toon);
+        // TOON v3.3 §9.1 canonical form for an empty array at root is "[]".
+        assertEquals("[]", toon);
     }
 
     @Test
@@ -378,8 +381,10 @@ class ToonWriterTest {
     void testEmptyMap() {
         Map<String, Object> empty = new HashMap<>();
         String toon = JsonIo.toToon(empty, null);
-        // Empty maps use {} syntax for round-trip support
-        assertEquals("{}", toon);
+        // TOON v3.3 §8: "An empty object at the root yields an empty document."
+        // The previous "{}" emission was non-spec; the decoder still accepts "{}"
+        // and bare "key:" for backwards compatibility.
+        assertEquals("", toon);
     }
 
     @Test

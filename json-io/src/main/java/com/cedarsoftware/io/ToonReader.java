@@ -416,7 +416,11 @@ public class ToonReader {
                         fieldValue = readObject(baseIndent + 1, null);
                     }
                 } else {
-                    fieldValue = null;
+                    // §8: bare "key:" with no nested body (next line is a sibling at the same
+                    // indent, or EOF) is an empty nested object — not null. Null is emitted
+                    // explicitly as "key: null" per §4. Round-trips cleanly with the encoder,
+                    // which emits empty Maps as bare "key:" too.
+                    fieldValue = new JsonObject();
                 }
             } else if (isArrayStart(lineBuf, valueStart, trimEnd)) {
                 fieldValue = parseArrayFromLine(trimAsciiRangeBuf(valueStart, trimEnd));
@@ -588,6 +592,10 @@ public class ToonReader {
         if (!trimmed.startsWith("[")) {
             return false;
         }
+        // §9.1 canonical empty-array literal "[]" (no count, no header, no body).
+        if (trimmed.length() == 2 && trimmed.charAt(1) == ']') {
+            return true;
+        }
         int bracketEnd = trimmed.indexOf(']');
         if (bracketEnd < 0 || bracketEnd + 1 >= trimmed.length()) {
             return false;
@@ -618,6 +626,12 @@ public class ToonReader {
      * Returns ArrayList instead of Object[] for better Java interoperability.
      */
     private List<Object> parseArrayFromLine(String trimmed) throws IOException {
+        // §9.1 canonical empty-array literal: "[]" with no count, no header, no body.
+        // Accept this in addition to the legacy "[0]:" form (both are valid per spec).
+        if (trimmed.length() == 2 && trimmed.charAt(0) == '[' && trimmed.charAt(1) == ']') {
+            return new ArrayList<>();
+        }
+
         // Extract count from [N]:
         int bracketEnd = trimmed.indexOf(']');
         if (bracketEnd < 0) {
@@ -1882,6 +1896,10 @@ public class ToonReader {
         if (start >= end) return false;
         char[] buf = lineBuf;
         if (buf[start] != '[') return false;
+        // §9.1 canonical empty-array literal "[]" (no count, no header, no body).
+        if (end - start == 2 && buf[start + 1] == ']') {
+            return true;
+        }
         for (int i = start + 1; i < end; i++) {
             if (buf[i] == ']') {
                 return i + 1 < end && (buf[i + 1] == ':' || buf[i + 1] == '{');
@@ -2041,6 +2059,10 @@ public class ToonReader {
         }
         if (start >= end || buf[start] != '[') {
             return false;
+        }
+        // §9.1 canonical empty-array literal "[]" (no count, no header, no body).
+        if (end - start == 2 && buf[start + 1] == ']') {
+            return true;
         }
         int bracketEnd = -1;
         for (int i = start + 1; i < end; i++) {
