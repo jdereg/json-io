@@ -1624,6 +1624,46 @@ public class ToonReader {
      * decimals with <= 16 mantissa digits, BigDecimal for high-precision decimals.
      * Returns null if text is not a valid number.
      */
+    /**
+     * Detect a forbidden-leading-zero integer form per §2 canonical numbers (§4
+     * type-inference). After an optional sign, a '0' followed by any decimal digit
+     * (e.g. "05", "-007", "0123") is not a canonical number and MUST decode as a
+     * string. A bare "0" and forms with leading "0." or "0e" remain canonical.
+     */
+    private static boolean hasForbiddenLeadingZero(String s, int start, int end) {
+        if (start >= end) {
+            return false;
+        }
+        char first = s.charAt(start);
+        int p = (first == '+' || first == '-') ? start + 1 : start;
+        if (p >= end || s.charAt(p) != '0') {
+            return false;
+        }
+        int next = p + 1;
+        if (next >= end) {
+            return false;
+        }
+        char c = s.charAt(next);
+        return c >= '0' && c <= '9';
+    }
+
+    private static boolean hasForbiddenLeadingZero(char[] buf, int start, int end) {
+        if (start >= end) {
+            return false;
+        }
+        char first = buf[start];
+        int p = (first == '+' || first == '-') ? start + 1 : start;
+        if (p >= end || buf[p] != '0') {
+            return false;
+        }
+        int next = p + 1;
+        if (next >= end) {
+            return false;
+        }
+        char c = buf[next];
+        return c >= '0' && c <= '9';
+    }
+
     private Number parseNumber(String text) {
         if (text.isEmpty()) {
             return null;
@@ -1633,6 +1673,12 @@ public class ToonReader {
 
     private Number parseNumber(String text, int start, int end) {
         if (start >= end) {
+            return null;
+        }
+        // §2 / §4: leading-zero integer forms (e.g. "05", "-007", "0123") are NOT
+        // canonical numbers and MUST be treated as strings by type-inference. Returning
+        // null here makes the caller fall back to cacheSubstring (string).
+        if (hasForbiddenLeadingZero(text, start, end)) {
             return null;
         }
 
@@ -1719,6 +1765,10 @@ public class ToonReader {
 
     private Number parseNumber(char[] buf, int start, int end) {
         if (start >= end) {
+            return null;
+        }
+        // §2 / §4 — see parseNumber(String,...) for rationale.
+        if (hasForbiddenLeadingZero(buf, start, end)) {
             return null;
         }
 
