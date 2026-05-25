@@ -263,6 +263,7 @@ public class ReadOptionsBuilder {
             options.useUnsafe = other.useUnsafe;
             options.strictJson = other.strictJson;
             options.strictToon = other.strictToon;
+            options.toonExpandPaths = other.toonExpandPaths;
 
             // Copy security limits
             options.maxUnresolvedReferences = other.maxUnresolvedReferences;
@@ -1441,6 +1442,20 @@ public class ReadOptionsBuilder {
     }
 
     /**
+     * Enable TOON §13.4 path expansion ({@code expandPaths: "safe"}): unquoted dotted
+     * keys whose segments are all IdentifierSegments are split into nested objects on
+     * decode. Default is {@code false} (literal keys, matching the spec's
+     * {@code expandPaths: "off"} default).
+     *
+     * @param toonExpandPaths {@code true} to enable safe-mode dotted-key expansion.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder toonExpandPaths(boolean toonExpandPaths) {
+        options.toonExpandPaths = toonExpandPaths;
+        return this;
+    }
+
+    /**
      * @param aliasTypeNames Map containing String class names to alias names.  The passed in Map will
      *                       be copied, and be the new baseline settings.
      * @return ReadOptionsBuilder for chained access.
@@ -1764,6 +1779,7 @@ public class ReadOptionsBuilder {
         private boolean allowNanAndInfinity = false;
         private boolean strictJson = false;  // Default to false (permissive JSON5 mode)
         private boolean strictToon = false;  // Default to false (permissive TOON mode)
+        private boolean toonExpandPaths = false;  // §13.4 default: "off" (no dotted-key expansion)
         private boolean useUnsafe = false;  // Default to false for security
         
         // Security limits - default to unlimited for backward compatibility
@@ -1889,6 +1905,10 @@ public class ReadOptionsBuilder {
 
         public boolean isStrictToon() {
             return strictToon;
+        }
+
+        public boolean isToonExpandPaths() {
+            return toonExpandPaths;
         }
 
         /**

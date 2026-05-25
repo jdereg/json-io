@@ -982,8 +982,10 @@ class ToonWriterTest {
         assertTrue(toonFolded.contains("data.metadata.value:"), "With folding: should have folded key");
         assertFalse(toonFolded.contains("\n  metadata:"), "With folding: should NOT have nested structure");
 
-        // Read folded TOON and verify structure
-        Map<String, Object> restored = JsonIo.fromToon(toonFolded, null).asClass(Map.class);
+        // Read folded TOON and verify structure. Path expansion (§13.4) is opt-in via
+        // toonExpandPaths — round-tripping a folded write requires enabling it on read.
+        ReadOptions expandOpts = new ReadOptionsBuilder().toonExpandPaths(true).build();
+        Map<String, Object> restored = JsonIo.fromToon(toonFolded, expandOpts).asClass(Map.class);
         Map<?, ?> restoredData = (Map<?, ?>) restored.get("data");
         assertNotNull(restoredData, "Restored should have 'data' key");
         Map<?, ?> restoredMetadata = (Map<?, ?>) restoredData.get("metadata");
@@ -1013,8 +1015,9 @@ class ToonWriterTest {
         String toonFolded = JsonIo.toToon(data, foldingOptions);
         assertTrue(toonFolded.contains("data.metadata.items[3]:"), "Should fold with array notation");
 
-        // Read and verify
-        Map<String, Object> restored = JsonIo.fromToon(toonFolded, null).asClass(Map.class);
+        // Read and verify — round-tripping a folded write requires toonExpandPaths on read.
+        ReadOptions expandOpts = new ReadOptionsBuilder().toonExpandPaths(true).build();
+        Map<String, Object> restored = JsonIo.fromToon(toonFolded, expandOpts).asClass(Map.class);
         Map<?, ?> restoredData = (Map<?, ?>) restored.get("data");
         Map<?, ?> restoredMetadata = (Map<?, ?>) restoredData.get("metadata");
         List<?> restoredItems = (List<?>) restoredMetadata.get("items");
@@ -1046,9 +1049,11 @@ class ToonWriterTest {
 
     @Test
     void testKeyFolding_ReadExpandsDottedKeys() {
-        // Test that reader expands dotted keys into nested structure
+        // Reader expands dotted keys into nested structure when toonExpandPaths is enabled
+        // (§13.4 "safe" mode). Default is literal keys.
+        ReadOptions expandOpts = new ReadOptionsBuilder().toonExpandPaths(true).build();
         String folded = "config.database.host: localhost";
-        Map<String, Object> parsed = JsonIo.fromToon(folded, null).asClass(Map.class);
+        Map<String, Object> parsed = JsonIo.fromToon(folded, expandOpts).asClass(Map.class);
 
         Map<?, ?> config = (Map<?, ?>) parsed.get("config");
         assertNotNull(config, "Should have 'config' key");

@@ -2430,10 +2430,11 @@ class ToonReaderTest {
 
     @Test
     void testKeyFolding_ConflictDetection() {
-        // Key folding: when expanding "a.b: 1" but key "a" already exists with a value.
-        // ToonReader should handle deep merge correctly.
+        // §13.4 path expansion is opt-in via toonExpandPaths (default off → literal keys).
+        // Enable it to exercise the deep-merge behavior when two dotted keys share a prefix.
+        ReadOptions opts = new ReadOptionsBuilder().toonExpandPaths(true).build();
         String toon = "a.b: 1\na.c: 2";
-        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        Map<String, Object> restored = JsonIo.fromToon(toon, opts).asClass(Map.class);
 
         Map<?, ?> a = (Map<?, ?>) restored.get("a");
         assertNotNull(a, "Should have 'a' key");
@@ -2443,9 +2444,11 @@ class ToonReaderTest {
 
     @Test
     void testKeyFolding_DeepMerge() {
-        // Multiple dotted keys that share a prefix should merge correctly
+        // Multiple dotted keys that share a prefix should merge correctly when
+        // path expansion is enabled.
+        ReadOptions opts = new ReadOptionsBuilder().toonExpandPaths(true).build();
         String toon = "config.db.host: localhost\nconfig.db.port: 5432\nconfig.app.name: myapp";
-        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        Map<String, Object> restored = JsonIo.fromToon(toon, opts).asClass(Map.class);
 
         Map<?, ?> config = (Map<?, ?>) restored.get("config");
         assertNotNull(config);
@@ -2460,15 +2463,28 @@ class ToonReaderTest {
 
     @Test
     void testKeyFolding_MixedWithNestedObjects() {
-        // Mix of dotted keys and regular nested objects
+        // Mix of dotted keys and regular nested objects (path expansion enabled).
+        ReadOptions opts = new ReadOptionsBuilder().toonExpandPaths(true).build();
         String toon = "a.b: 1\nc:\n  d: 2\n  e: 3";
-        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+        Map<String, Object> restored = JsonIo.fromToon(toon, opts).asClass(Map.class);
 
         Map<?, ?> a = (Map<?, ?>) restored.get("a");
         assertEquals(1L, a.get("b"));
         Map<?, ?> c = (Map<?, ?>) restored.get("c");
         assertEquals(2L, c.get("d"));
         assertEquals(3L, c.get("e"));
+    }
+
+    @Test
+    void testKeyFolding_LiteralByDefault() {
+        // Default behavior (toonExpandPaths=false, matching spec §13.4 "off"): dotted
+        // keys remain literal — no splitting, no merging.
+        String toon = "a.b: 1\na.c: 2";
+        Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
+
+        assertEquals(1L, restored.get("a.b"), "literal key 'a.b'");
+        assertEquals(2L, restored.get("a.c"), "literal key 'a.c'");
+        assertNull(restored.get("a"), "no expansion → no nested 'a' object");
     }
 
     @Test
@@ -3378,13 +3394,17 @@ class ToonReaderTest {
 
     @Test
     void testStrictToon_PathExpansionConflict_StrictFailsPermissiveUsesLww() {
+        // Path-expansion conflict only arises when toonExpandPaths is enabled — without
+        // it, "a.b" and "a" are independent literal keys (§13.4 "off" default).
         String toon = "a.b: 1\na: 2";
+        ReadOptions strict = new ReadOptionsBuilder().toonExpandPaths(true).strictToon(true).build();
+        ReadOptions permissive = new ReadOptionsBuilder().toonExpandPaths(true).strictToon(false).build();
 
         assertThrows(JsonIoException.class,
-                () -> JsonIo.fromToon(toon, toonOptions(true)).asClass(Map.class));
+                () -> JsonIo.fromToon(toon, strict).asClass(Map.class));
 
-        Map<String, Object> permissive = JsonIo.fromToon(toon, toonOptions(false)).asClass(Map.class);
-        assertEquals(2L, permissive.get("a"));
+        Map<String, Object> lww = JsonIo.fromToon(toon, permissive).asClass(Map.class);
+        assertEquals(2L, lww.get("a"));
     }
 
     @Test

@@ -124,6 +124,14 @@ public interface ReadOptions {
     boolean isStrictToon();
 
     /**
+     * @return true if TOON §13.4 path expansion is enabled ({@code expandPaths: "safe"}).
+     * When true, unquoted dotted keys whose segments are all IdentifierSegments are
+     * split into nested objects on decode. Default is false (literal keys, matching
+     * the spec's {@code expandPaths: "off"} default).
+     */
+    boolean isToonExpandPaths();
+
+    /**
      * @return ClassLoader to be used when reading JSON to resolve String named classes.
      */
     ClassLoader getClassLoader();

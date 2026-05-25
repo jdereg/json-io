@@ -54,9 +54,7 @@ class ToonSpecFixtureTest {
     ));
 
     /** Decoder options json-io does not implement; tests using these are skipped. */
-    private static final Set<String> UNSUPPORTED_DECODE_OPTIONS = new HashSet<>(Arrays.asList(
-            "expandPaths"
-    ));
+    private static final Set<String> UNSUPPORTED_DECODE_OPTIONS = new HashSet<>();
 
     /**
      * Cases that currently fail json-io's TOON v3.3 conformance and are tracked as known
@@ -81,11 +79,9 @@ class ToonSpecFixtureTest {
             "decode/blank-lines.json :: accepts whitespace-only line at non-multiple indent as blank in strict mode",
             "decode/delimiters.json :: parses tabular headers with keys containing the active delimiter",
             "decode/indentation-errors.json :: accepts correct indentation with custom indent size (4 spaces with indent=4)",
-            "decode/objects.json :: parses dotted keys as identifiers",
             "decode/objects.json :: treats extra brackets after valid array segment as literal key (non-strict)",
             "decode/objects.json :: treats non-integer bracket content as literal key (non-strict)",
             "decode/objects.json :: treats text between bracket segment and colon as literal key (non-strict)",
-            "decode/path-expansion.json :: preserves literal dotted keys when expansion is off",
             "decode/validation-errors.json :: throws on array header missing colon",
             "decode/validation-errors.json :: throws on array length mismatch (inline primitives - too many)",
             "decode/validation-errors.json :: throws on array length mismatch (list format - too many)",
@@ -278,6 +274,14 @@ class ToonSpecFixtureTest {
         Object strict = options.get("strict");
         if (strict instanceof Boolean) {
             b.strictToon((Boolean) strict);
+        }
+        Object expandPaths = options.get("expandPaths");
+        if ("safe".equals(expandPaths)) {
+            b.toonExpandPaths(true);
+        } else if (expandPaths != null && !"off".equals(expandPaths)) {
+            // Future expandPaths modes are deferred; let the unsupported-option skip
+            // path catch them once any fixture starts using them.
+            Assumptions.abort("expandPaths='" + expandPaths + "' is not implemented in json-io");
         }
         return b.build();
     }

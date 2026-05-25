@@ -105,6 +105,7 @@ public class ToonReader {
     private final ReferenceTracker references;
     private final long maxIdValue;
     private final boolean strictToon;
+    private final boolean toonExpandPaths;
     private final ClassLoader classLoader;
 
     // Line management - supports peek/consume pattern
@@ -149,6 +150,7 @@ public class ToonReader {
         this.references = references;
         this.maxIdValue = this.readOptions.getMaxIdValue();
         this.strictToon = this.readOptions.isStrictToon();
+        this.toonExpandPaths = this.readOptions.isToonExpandPaths();
         this.classLoader = this.readOptions.getClassLoader();
         this.ownedLineBuf = TL_LINE_BUF.get();
         this.lineBuf = ownedLineBuf;
@@ -2376,8 +2378,10 @@ public class ToonReader {
                     return loadMetaField(target, meta, value);
                 }
             }
-            // Folded key check: only non-quoted keys with '.' can be folded
-            if (key.indexOf('.') >= 0 && validateAndCacheFoldedKey(key)) {
+            // §13.4 path expansion: gated on toonExpandPaths (default off → literal keys).
+            // When enabled, unquoted dotted keys whose segments are all IdentifierSegments
+            // are split into nested objects on decode.
+            if (toonExpandPaths && key.indexOf('.') >= 0 && validateAndCacheFoldedKey(key)) {
                 putWithKeyExpansion(target, key, value);
                 return target;
             }
