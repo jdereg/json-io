@@ -1040,11 +1040,24 @@ public class ToonWriter implements Closeable, Flushable {
         // Check if all elements are primitives (can use inline format)
         if (isAllPrimitives(array, length)) {
             out.write(':'); out.write(' ');
-            for (int i = 0; i < length; i++) {
-                if (i > 0) {
-                    out.write(delimiter);
+            Class<?> componentType = array.getClass().getComponentType();
+            if (componentType.isPrimitive()) {
+                // Typed loops skip the Integer/Long/Double... wrapper that
+                // ArrayUtilities.getPrimitiveElement would otherwise allocate
+                // per element. JFR on the perf-test toon-write workload showed
+                // ~1.8 GB of Integer + ~2.4 GB of Long sampled-allocation weight
+                // funneling through this path; the typed loops emit the same
+                // bytes via toCachedLongString(long) / formatDecimalNumber(d|f)
+                // / boolean ternary with no boxing on the way in.
+                writePrimitiveInlineElements(array, componentType, length);
+            } else {
+                final Object[] arr = (Object[]) array;
+                for (int i = 0; i < length; i++) {
+                    if (i > 0) {
+                        out.write(delimiter);
+                    }
+                    writeInlineValue(arr[i]);
                 }
-                writeInlineValue(getArrayElement(array, i));
             }
         } else if (!writeOptions.isPrettyPrint()) {
             // Try tabular format for uniform POJO arrays
@@ -1077,6 +1090,70 @@ public class ToonWriter implements Closeable, Flushable {
                 writeListElement(element);
             }
             depth--;
+        }
+    }
+
+    /**
+     * Inline-emit a primitive array (int[], long[], double[], float[], short[],
+     * byte[], boolean[]) directly from typed storage. char[] is intercepted
+     * upstream in {@link #writeArray(Object)} and never reaches this method.
+     * Each typed loop preserves the byte-for-byte output of the boxed path
+     * (via {@code toCachedLongString} / {@code formatDecimalNumber} / boolean
+     * literal) while skipping the per-element wrapper allocation that
+     * {@link com.cedarsoftware.util.ArrayUtilities#getPrimitiveElement(Object, int)}
+     * would otherwise create.
+     */
+    private void writePrimitiveInlineElements(Object array, Class<?> componentType, int length) throws IOException {
+        if (componentType == int.class) {
+            final int[] arr = (int[]) array;
+            for (int i = 0; i < length; i++) {
+                if (i > 0) out.write(delimiter);
+                out.write(toCachedLongString(arr[i]));
+            }
+        } else if (componentType == long.class) {
+            final long[] arr = (long[]) array;
+            for (int i = 0; i < length; i++) {
+                if (i > 0) out.write(delimiter);
+                out.write(toCachedLongString(arr[i]));
+            }
+        } else if (componentType == double.class) {
+            final double[] arr = (double[]) array;
+            for (int i = 0; i < length; i++) {
+                if (i > 0) out.write(delimiter);
+                out.write(formatDecimalNumber(arr[i]));
+            }
+        } else if (componentType == boolean.class) {
+            final boolean[] arr = (boolean[]) array;
+            for (int i = 0; i < length; i++) {
+                if (i > 0) out.write(delimiter);
+                out.write(arr[i] ? "true" : "false");
+            }
+        } else if (componentType == byte.class) {
+            final byte[] arr = (byte[]) array;
+            for (int i = 0; i < length; i++) {
+                if (i > 0) out.write(delimiter);
+                out.write(toCachedLongString(arr[i]));
+            }
+        } else if (componentType == float.class) {
+            final float[] arr = (float[]) array;
+            for (int i = 0; i < length; i++) {
+                if (i > 0) out.write(delimiter);
+                out.write(formatDecimalNumber(arr[i]));
+            }
+        } else if (componentType == short.class) {
+            final short[] arr = (short[]) array;
+            for (int i = 0; i < length; i++) {
+                if (i > 0) out.write(delimiter);
+                out.write(toCachedLongString(arr[i]));
+            }
+        } else {
+            // Defensive: char[] is intercepted upstream; no other primitive
+            // type exists in Java. Fall back to the boxed path if we ever
+            // reach here so behavior degrades to "still correct."
+            for (int i = 0; i < length; i++) {
+                if (i > 0) out.write(delimiter);
+                writeInlineValue(getArrayElement(array, i));
+            }
         }
     }
 
