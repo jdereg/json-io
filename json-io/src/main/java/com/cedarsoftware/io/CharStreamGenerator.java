@@ -985,21 +985,6 @@ final class CharStreamGenerator extends JsonGenerator {
     }
 
     /**
-     * Lightweight depth-only restore. Cheaper than the full {@code snapshotForExternalValue}
-     * / {@code restoreAfterExternalValue} arena round-trip (~25ns/pair) when the inner call
-     * is GUARANTEED to operate at depth 0 (via {@code resetForBridgeAtValueSlot()} no-arg)
-     * and therefore cannot modify {@code contextStack[targetDepth]} — only the depth field
-     * needs restoration. Use case: per-element loops in {@code writeObjectArray} /
-     * {@code writeCollection} where each element emission may go through a path that
-     * resets gen state to root (writeStringValue, writePrimitive's Long-wrap, writeCustom's
-     * new-API dispatch), but the array body's gen state at {@code targetDepth} is preserved
-     * by the inner call's depth-0 emission.
-     */
-    void restoreDepthAfterExternalValue(int targetDepth) {
-        depth = targetDepth;
-    }
-
-    /**
      * Current structural depth, i.e., the index of the top frame in {@code contextStack}.
      * Increments on each {@code writeStart*} push, decrements on each {@code writeEnd*} pop.
      * Package-private accessor for {@code JsonWriter} migration steps that pass gen's own

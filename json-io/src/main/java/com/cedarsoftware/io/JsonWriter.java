@@ -1458,24 +1458,19 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         gen.writeStartArrayRaw();
-        // bodyDepth = gen.depth AFTER the structural opens fired — the actual emission
-        // depth of array elements. Used by in-loop restoreDepth calls that need to
-        // recover from inner emissions that reset gen.depth.
-        final int bodyDepth = gen.currentDepth();
         gen.beginInlineArrayBody();   // emit leading body indent, setTop=FRAME_ARRAY_AFTER_VALUE
 
         final int lenMinus1 = len - 1;
         final Class<?> componentClass = arrayType.getComponentType();
         final Writer output = this.out;
 
-        // Each iteration emits one element + an optional separator. Paths that internally
-        // reset gen.depth to 0 (writeStringValue, writePrimitive's Long-wrap branch, and
-        // writeArrayElementIfMatching → writeCustom's new-API dispatch) require a
-        // lightweight depth restore — they operate at depth 0 and don't touch the array
-        // body's contextStack entry, so just restoring gen.depth to bodyDepth is
-        // sufficient. writeImpl has its own snapshot/restore wrapper that restores both
-        // depth and stack. writePrimitive's non-Long-wrap paths and the null-literal
-        // write don't touch gen state at all.
+        // Each iteration emits one element + an optional separator. All element paths
+        // preserve gen.depth across the call: matched writeStartXxxRaw/writeEndXxxRaw
+        // pairs for nested structural emissions, and the three remaining
+        // resetForBridgeAtValueSlot paths (writeCustom primitive-form, writeCustom
+        // legacy-writer, writePrimitive Long-wrap bare-value) each wrap their reset
+        // in snapshotForExternalValue/restoreAfterExternalValue — so the per-element
+        // loop needs no post-call restore.
         for (int i = 0; i < len; i++) {
             final Object value = array[i];
 
@@ -1485,21 +1480,15 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                          value instanceof Integer || value instanceof Float ||
                          value instanceof Short || value instanceof Byte) &&
                         !isForceType(value.getClass(), componentClass)) {
-                writePrimitive(value, false);   // state-machine-free helpers, no restore needed
+                writePrimitive(value, false);
             } else if (value instanceof Long && !isForceType(Long.class, componentClass)) {
-                // showType = writeLongsAsStrings. When true → Long-wrap's wrapped path
-                // (writeStartObjectRaw + ... + writeEndObjectRaw, no reset since chunk-8).
-                // When false → falls through to writeLongRaw (state-machine-free). Neither
-                // path resets gen state, so no restoreDepth needed.
                 writePrimitive(value, writeLongsAsStrings);
             } else if (value instanceof String && !isForceType(String.class, componentClass)) {
-                writeStringValue((String) value);   // state-machine-free; no restore needed
+                writeStringValue((String) value);
             } else {
                 final boolean forceType = isForceType(value.getClass(), componentClass);
                 if (!writeArrayElementIfMatching(componentClass, value, forceType, output)) {
-                    writeImpl(value, forceType);   // wrapper handles full restore
-                } else {
-                    gen.restoreDepthAfterExternalValue(bodyDepth);   // writeCustom new-API reset gen.depth=0
+                    writeImpl(value, forceType);
                 }
             }
 
@@ -1670,10 +1659,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * ({@code &#123;}/{@code &#125;}/{@code [}/{@code ]} brackets, {@code @id}/{@code @type}/
      * {@code @items} prefixes, leading/trailing body indents) goes through
      * {@link CharStreamGenerator}'s Raw structural-token family. The per-element loop keeps
-     * the legacy {@link #writeCollectionElement(Object)} dispatch — each element is
-     * bracketed by a lightweight {@link CharStreamGenerator#restoreDepthAfterExternalValue(int)}
-     * call since some element paths (writeStringValue, writePrimitive's Long-wrap,
-     * writeUsingCustomWriter's new-API dispatch) internally reset gen.depth=0.
+     * the legacy {@link #writeCollectionElement(Object)} dispatch — element paths that
+     * internally reset gen state (writeCustom primitive-form, writeCustom legacy-writer,
+     * writePrimitive Long-wrap bare-value) are each wrapped in their own narrow
+     * {@code snapshotForExternalValue} / {@code restoreAfterExternalValue} pair that
+     * preserves the outer caller's gen state — so the element loop itself needs no
+     * post-call restore.
      * <p>
      * Note: empty wrapped collection emits {@code &#123;"@type":"...","@id":N&#125;} with
      * NO trailing {@code "@items":[]} field — matches legacy behavior (differs from
@@ -1714,7 +1705,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.writeFieldNameRaw(itemsPrefix);
         }
         gen.writeStartArrayRaw();
-        final int bodyDepth = gen.currentDepth();
         gen.beginInlineArrayBody();
 
         // Collection is non-empty (isEmpty path returned earlier), so peel off the first
@@ -1725,20 +1715,16 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             List<?> list = (List<?>) col;
             int size = list.size();
             writeCollectionElement(list.get(0));
-            gen.restoreDepthAfterExternalValue(bodyDepth);
             for (int idx = 1; idx < size; idx++) {
                 gen.writeSeparator();
                 writeCollectionElement(list.get(idx));
-                gen.restoreDepthAfterExternalValue(bodyDepth);
             }
         } else {
             Iterator<?> it = col.iterator();
             writeCollectionElement(it.next());
-            gen.restoreDepthAfterExternalValue(bodyDepth);
             while (it.hasNext()) {
                 gen.writeSeparator();
                 writeCollectionElement(it.next());
-                gen.restoreDepthAfterExternalValue(bodyDepth);
             }
         }
 
@@ -1829,7 +1815,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         gen.writeStartArrayRaw();
-        final int bodyDepth = gen.currentDepth();
         gen.beginInlineArrayBody();
 
         final Writer output = this.out;
@@ -1841,23 +1826,16 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 output.write("null");
             } else {
                 final boolean forceType = isForceType(value.getClass(), componentClass);
-                if (writeArrayElementIfMatching(componentClass, value, forceType, output)) {
-                    gen.restoreDepthAfterExternalValue(bodyDepth);
-                } else if (Character.class == componentClass || char.class == componentClass) {
-                    writeStringValue((String) value);   // state-machine-free; no restore needed
-                } else if (value instanceof String) {
-                    writeStringValue((String) value);   // state-machine-free; no restore needed
-                } else if (value instanceof Boolean || value instanceof Long || value instanceof Double) {
-                    writePrimitive(value, forceType);
-                    // writePrimitive's Long-wrap bare-value path (showType=false +
-                    // writeLongsAsStrings + Long value) still resets gen state to
-                    // FRAME_ROOT_EMPTY at depth=0 (preserves custom-writer compat for
-                    // LongWriter overrides). Restore depth unconditionally — a no-op for
-                    // the wrapped path / state-machine-free paths, correct for the bare
-                    // Long-as-string path.
-                    gen.restoreDepthAfterExternalValue(bodyDepth);
-                } else {
-                    writeImpl(value, forceType);   // wrapper handles full restore
+                if (!writeArrayElementIfMatching(componentClass, value, forceType, output)) {
+                    if (Character.class == componentClass || char.class == componentClass) {
+                        writeStringValue((String) value);
+                    } else if (value instanceof String) {
+                        writeStringValue((String) value);
+                    } else if (value instanceof Boolean || value instanceof Long || value instanceof Double) {
+                        writePrimitive(value, forceType);
+                    } else {
+                        writeImpl(value, forceType);
+                    }
                 }
             }
 
@@ -1916,13 +1894,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.writeFieldNameRaw(itemsPrefix);
         }
         gen.writeStartArrayRaw();
-        final int bodyDepth = gen.currentDepth();
         gen.beginInlineArrayBody();
 
         final int itemsLenMinus1 = len - 1;
         for (int i = 0; i < len; i++) {
             writeCollectionElement(items[i]);
-            gen.restoreDepthAfterExternalValue(bodyDepth);
             if (i != itemsLenMinus1) {
                 gen.writeSeparator();
             }
@@ -2110,8 +2086,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * path — structural emission ({@code &#123;}/{@code &#125;}, the two {@code [}/{@code ]}
      * array bodies, {@code @id}/{@code @type}/{@code @keys}/{@code @items} prefixes) goes
      * through {@link CharStreamGenerator}'s Raw structural-token family + writeFieldNameRaw.
-     * The per-element loops use legacy {@link #writeCollectionElement(Object)} dispatch with
-     * a lightweight {@code gen.restoreDepthAfterExternalValue(bodyDepth)} after each call.
+     * The per-element loops use legacy {@link #writeCollectionElement(Object)} dispatch;
+     * element paths that internally reset gen state are wrapped in their own narrow
+     * {@code snapshotForExternalValue}/{@code restoreAfterExternalValue} pair, so the
+     * per-element loop needs no post-call restore.
      */
     private void writeMap(Map map, boolean showType) throws IOException {
         if (neverShowingType && !forceElementShowType) {
@@ -2148,13 +2126,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // Save current element type (Map value type) and switch to key type for @keys array
         final Class<?> savedValueType = declaredElementType;
 
-        // @keys array. bodyDepth captured after the first writeStartArrayRaw — gen.depth
-        // returns to the same value after the @keys writeEndArrayRaw + @items
-        // writeStartArrayRaw pair (net push count of 0), so we reuse this value for the
-        // @items section.
+        // @keys array.
         gen.writeFieldNameRaw(keysPrefix);
         gen.writeStartArrayRaw();
-        final int bodyDepth = gen.currentDepth();
         gen.beginInlineArrayBody();
 
         // Map is non-empty (caller's isEmpty path returned earlier), so the iterators
@@ -2164,12 +2138,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         Iterator<?> i = map.keySet().iterator();
         declaredElementType = declaredKeyType;
         writeCollectionElement(i.next());
-        gen.restoreDepthAfterExternalValue(bodyDepth);
         while (i.hasNext()) {
             output.write(',');
             gen.writeNewlineIndent();
             writeCollectionElement(i.next());
-            gen.restoreDepthAfterExternalValue(bodyDepth);
         }
 
         gen.writeEndArrayRaw();
@@ -2182,12 +2154,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         i = map.values().iterator();
         declaredElementType = savedValueType;
         writeCollectionElement(i.next());
-        gen.restoreDepthAfterExternalValue(bodyDepth);
         while (i.hasNext()) {
             output.write(',');
             gen.writeNewlineIndent();
             writeCollectionElement(i.next());
-            gen.restoreDepthAfterExternalValue(bodyDepth);
         }
 
         gen.writeEndArrayRaw();
@@ -2262,7 +2232,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      */
     private boolean writeMapBody(final Iterator i) throws IOException {
         final boolean skipNulls = skipNullFields;
-        final int bodyDepth = gen.currentDepth();   // inside the object body — caller already opened it
 
         while (i.hasNext()) {
             Entry att2value = (Entry) i.next();
@@ -2272,7 +2241,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
             gen.writeFieldName((String) att2value.getKey());
             writeCollectionElement(value);
-            gen.restoreDepthAfterExternalValue(bodyDepth);
             gen.markValue();
         }
 
@@ -2286,7 +2254,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      */
     private boolean writeMapBody(final JsonObject jObj) throws IOException {
         final boolean skipNulls = skipNullFields;
-        final int bodyDepth = gen.currentDepth();
         final int len = jObj.fastEntryCount();
 
         for (int idx = 0; idx < len; idx++) {
@@ -2296,7 +2263,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
             gen.writeFieldName((String) jObj.fastKeyAt(idx));
             writeCollectionElement(value);
-            gen.restoreDepthAfterExternalValue(bodyDepth);
             gen.markValue();
         }
 
@@ -2355,7 +2321,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      */
     private boolean writeStringifiedMapBody(final Iterator i) throws IOException {
         final boolean skipNulls = skipNullFields;
-        final int bodyDepth = gen.currentDepth();
 
         while (i.hasNext()) {
             Entry att2value = (Entry) i.next();
@@ -2367,7 +2332,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             String keyStr = (key == null) ? "null" : Converter.convert(key, String.class);
             gen.writeFieldName(keyStr);
             writeCollectionElement(value);
-            gen.restoreDepthAfterExternalValue(bodyDepth);
             gen.markValue();
         }
 
