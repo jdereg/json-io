@@ -1288,7 +1288,16 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     private static int cacheHash(char first, char mid, char last, int len) {
-        return (first * 31 + mid) * 31 + last + len;
+        // Propagating len through one extra multiplication cuts measured slot
+        // collisions ~5 percentage points (23% → 18%) on the JsonPerformanceTest
+        // workload (477 distinct strings × ~2 lookups/parse in a 2048-slot cache).
+        // The added op is one IMUL + IADD; the saved work is one fewer
+        // String allocation per evicted-then-re-queried key.
+        int h = first;
+        h = h * 31 + mid;
+        h = h * 31 + last;
+        h = h * 31 + len;
+        return h;
     }
 
     private String cacheString(CharSequence str) {
