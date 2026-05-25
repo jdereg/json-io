@@ -735,10 +735,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                     if (dispatch.useNewPrimitive) {
                         // Primitive form: custom writer emits one value via gen.
                         // resetForBridgeAtValueSlot puts gen at FRAME_ROOT_EMPTY so the
-                        // writer's single emission has no leading separator. Caller's
-                        // writeImpl wrapper restores outer state on exit.
+                        // writer's single emission has no leading separator. Narrow
+                        // snap+restore preserves the outer caller's gen state across the
+                        // reset+emit (replaces the prior writeImpl-wide wrapper).
+                        int snap = this.gen.snapshotForExternalValue();
                         this.gen.resetForBridgeAtValueSlot();
                         closestWriter.writePrimitiveForm(o, this.gen, this);
+                        this.gen.restoreAfterExternalValue(snap);
                     } else {
                         closestWriter.writePrimitiveForm(o, output, this);
                     }
@@ -784,9 +787,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 }
                 // Reset the CURRENT object-body frame to FRAME_OBJECT_EMPTY so legacy
                 // writers that call back via context.writeFieldName don't double-emit the
-                // leading comma. Caller's writeImpl wrapper restores outer state on exit.
+                // leading comma. Narrow snap+restore protects the outer caller's gen
+                // state across the reset + legacy-writer emission (the legacy writer
+                // may corrupt contextStack at the object-body depth).
+                int snap = this.gen.snapshotForExternalValue();
                 this.gen.resetCurrentObjectFrame();
                 closestWriter.write(o, showType || referenced, output, this);
+                this.gen.restoreAfterExternalValue(snap);
             }
 
             gen.writeEndObjectRaw();
@@ -1123,23 +1130,31 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * JsonObject, Map, Map of JsonObjects, Collection, Collection of JsonObject, any regular
      * object, or a JsonObject representing a regular object.
      *
-     * <p>The body is bracketed by {@link CharStreamGenerator#snapshotForExternalValue}
-     * / {@link CharStreamGenerator#restoreAfterExternalValue} so that callers (array /
-     * collection / map element loops, POJO field emission, top-level emit) see gen in
-     * the same state on exit as on entry. The wrapper is load-bearing because several
-     * body paths intentionally reset gen state (writeCustom's primitive-form +
-     * legacy-writer dispatch, writePrimitive's Long-wrap bare-value path,
-     * writeStringValue's pretty-print indent reset). The wrapper restores outer state
-     * on exit so callers don't need their own snap+restore.
+     * <p>Body methods called from the internal dispatch (writeObjectArray,
+     * writeCollection, writeMap, writeObject, writeJsonObjectXxx variants,
+     * writeEnumSet, etc.) emit structural tokens through gen without corrupting the
+     * outer caller's frame at {@code gen.depth} — writeStartXxxRaw pushes a new frame,
+     * the body emits inside it, writeEndXxxRaw pops and applies markValue to the
+     * OUTER frame to advance its state. The 3 paths that DO need gen-state protection
+     * (writeCustom primitive-form dispatch, writeCustom legacy-writer dispatch,
+     * writePrimitive's Long-wrap bare-value path) each have their own narrow
+     * {@code snapshotForExternalValue} / {@code restoreAfterExternalValue} at the
+     * call site.
+     *
+     * <p>Fast paths that bypass gen entirely (out.write("null"), Integer/Long/Boolean
+     * raw writes, etc.) leave gen's structural state at the caller's frame. The
+     * trailing {@link CharStreamGenerator#markValue()} below advances the caller's
+     * frame on those paths. For body-method paths that already markValue via
+     * writeEndXxxRaw, the trailing markValue is a no-op (FRAME_OBJECT_AFTER_VALUE and
+     * FRAME_ARRAY_AFTER_VALUE both fall through markValue without effect).
      *
      * @param obj      Object to be written
      * @param showType if set to true, the @type tag will be output.
      * @throws IOException if one occurs on the underlying output stream.
      */
     public void writeImpl(Object obj, boolean showType) throws IOException {
-        int snap = gen.snapshotForExternalValue();
         writeImplInternal(obj, showType);
-        gen.restoreAfterExternalValue(snap);
+        gen.markValue();
     }
 
     private void writeImplInternal(Object obj, boolean showType) throws IOException {
@@ -1310,9 +1325,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 longBoxedWriter.write(obj, true, gen, this);
                 gen.writeEndObjectRaw();
             } else {
-                // Bare value path. Caller's writeImpl wrapper restores outer state on exit.
+                // Bare value path. Narrow snap+restore preserves the outer caller's gen
+                // state across the reset + writer emission (replaces the prior writeImpl
+                // wrapper protection).
+                int snap = gen.snapshotForExternalValue();
                 gen.resetForBridgeAtValueSlot();
                 longBoxedWriter.write(obj, false, gen, this);
+                gen.restoreAfterExternalValue(snap);
             }
             return;
         }
@@ -1392,7 +1411,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // Sync gen state to a clean value-slot at the current gen depth (anchored on
         // gen's own depth field, not the legacy this.depth — see chunk F-1's commit
         // message for the divergence in nested-from-legacy-custom-writer cases).
-        gen.resetForBridgeAtValueSlot(gen.currentDepth());
 
         if (wrapped) {
             gen.writeStartObjectRaw();
@@ -1507,7 +1525,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // the two diverged. Required because the writeImpl wrapper doesn't reset (so
         // non-migrated dispatch paths don't pay for the reset); each migrated method owns
         // its own state setup.
-        gen.resetForBridgeAtValueSlot(gen.currentDepth());
 
         if (wrapped) {
             // gen is now at FRAME_ROOT_EMPTY @ current depth with suppressNextIndent=true —
@@ -1650,7 +1667,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         final boolean isEmpty = col.isEmpty();
         final boolean wrapped = referenced || showType;
 
-        gen.resetForBridgeAtValueSlot(gen.currentDepth());
 
         if (wrapped) {
             gen.writeStartObjectRaw();
@@ -1772,7 +1788,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         final boolean typeWritten = showType && !isObjectArray;
         final boolean wrapped = typeWritten || referenced;
 
-        gen.resetForBridgeAtValueSlot(gen.currentDepth());
 
         if (wrapped) {
             gen.writeStartObjectRaw();
@@ -1862,7 +1877,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // empty case as wrapped for emission purposes.
         final boolean wrapped = referenced || showType || isEmpty;
 
-        gen.resetForBridgeAtValueSlot(gen.currentDepth());
 
         if (wrapped) {
             gen.writeStartObjectRaw();
@@ -1918,7 +1932,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
         final boolean referenced = adjustIfReferenced(jObj);
 
-        gen.resetForBridgeAtValueSlot(gen.currentDepth());
         gen.writeStartObjectRaw();
 
         if (referenced) {
@@ -1963,7 +1976,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         final boolean referenced = adjustIfReferenced(jObj);
 
-        gen.resetForBridgeAtValueSlot(gen.currentDepth());
         gen.writeStartObjectRaw();
 
         if (referenced) {
@@ -2006,7 +2018,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         final boolean referenced = adjustIfReferenced(jObj);
         showType = showType && jObj.getType() != null;
 
-        gen.resetForBridgeAtValueSlot(gen.currentDepth());
         gen.writeStartObjectRaw();
 
         if (referenced) {
@@ -2093,7 +2104,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
         final boolean referenced = cycleSupport && this.objsReferenced.containsKey(map);
 
-        gen.resetForBridgeAtValueSlot(gen.currentDepth());
         gen.writeStartObjectRaw();
 
         if (referenced) {
@@ -2204,7 +2214,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         final boolean referenced = cycleSupport && this.objsReferenced.containsKey(map);
 
-        gen.resetForBridgeAtValueSlot(gen.currentDepth());
         gen.writeStartObjectRaw();
 
         if (referenced) {
@@ -2694,11 +2703,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (!plan.forceShowType() && !forceElementShowType && plan.formatPattern() == null) {
             Class<?> oClass = o.getClass();
             if (oClass == String.class) {
-                // Use gen.writeString directly (NOT writeStringValue which resets gen.depth=0).
-                // When this.depth=0 (e.g., inside writeEnumSet's enum-as-object block), the
-                // object context lives in contextStack[0] — the reset would overwrite it.
-                // gen.writeString starts from FRAME_OBJECT_AFTER_FIELD (set by the preceding
-                // writeFieldNameRaw), emits the quoted string, and transitions to AFTER_VALUE.
+                // Use gen.writeString directly (NOT writeStringValue which bypasses gen's
+                // state machine entirely — it emits raw bytes without transitioning the
+                // current frame). gen.writeString starts from FRAME_OBJECT_AFTER_FIELD
+                // (set by the preceding writeFieldNameRaw), emits the quoted string, and
+                // transitions to FRAME_OBJECT_AFTER_VALUE.
                 gen.writeString((String) o);
                 return;
             }
@@ -2775,8 +2784,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 gen.writeIntRaw(accessor.getByte(obj));
                 break;
             case WriteFieldPlan.PRIMITIVE_CHAR:
-                // Use gen.writeString directly (NOT writeStringValue) — see the analogous
-                // String fast path in writeField for why this matters when this.depth=0.
+                // Use gen.writeString directly (NOT writeStringValue) so the state
+                // machine transitions correctly from FRAME_OBJECT_AFTER_FIELD to
+                // FRAME_OBJECT_AFTER_VALUE — see the analogous String fast path in
+                // writeField.
                 gen.writeString(String.valueOf(accessor.getChar(obj)));
                 return;   // gen.writeString already transitioned state via markValue; skip the trailing markValue
             case WriteFieldPlan.PRIMITIVE_SHORT:
