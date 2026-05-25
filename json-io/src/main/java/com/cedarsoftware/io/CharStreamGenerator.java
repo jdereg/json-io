@@ -402,6 +402,23 @@ final class CharStreamGenerator extends JsonGenerator {
         writeIndent(depth);
     }
 
+    /**
+     * Combined separator: emit {@code ','} followed by newline + indent (when
+     * prettyPrint is on) at the current depth. Equivalent to
+     * {@code out.write(','); writeNewlineIndent();} but fused into one method call to
+     * eliminate the per-element JIT call overhead in JsonWriter element loops that
+     * emit between-element separators manually (the bytes-only path that bypasses
+     * gen's state machine for the per-element value emission). State machine is NOT
+     * engaged — caller is responsible for context.
+     */
+    public void writeSeparator() throws IOException {
+        out.write(',');
+        if (prettyPrint) {
+            out.write('\n');
+            writeIndent(depth);
+        }
+    }
+
     // -------------------------------------------------------------------
     // Structural tokens
     // -------------------------------------------------------------------

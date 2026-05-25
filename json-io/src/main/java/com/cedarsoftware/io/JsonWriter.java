@@ -1480,8 +1480,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
 
             if (i != lenMinus1) {
-                output.write(',');
-                gen.writeNewlineIndent();
+                gen.writeSeparator();
             }
         }
 
@@ -1707,8 +1706,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             writeCollectionElement(list.get(0));
             gen.restoreDepthAfterExternalValue(bodyDepth);
             for (int idx = 1; idx < size; idx++) {
-                output.write(',');
-                gen.writeNewlineIndent();
+                gen.writeSeparator();
                 writeCollectionElement(list.get(idx));
                 gen.restoreDepthAfterExternalValue(bodyDepth);
             }
@@ -1717,8 +1715,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             writeCollectionElement(it.next());
             gen.restoreDepthAfterExternalValue(bodyDepth);
             while (it.hasNext()) {
-                output.write(',');
-                gen.writeNewlineIndent();
+                gen.writeSeparator();
                 writeCollectionElement(it.next());
                 gen.restoreDepthAfterExternalValue(bodyDepth);
             }
@@ -1844,8 +1841,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
 
             if (i != lenMinus1) {
-                output.write(',');
-                gen.writeNewlineIndent();
+                gen.writeSeparator();
             }
         }
 
@@ -1908,8 +1904,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             writeCollectionElement(items[i]);
             gen.restoreDepthAfterExternalValue(bodyDepth);
             if (i != itemsLenMinus1) {
-                output.write(',');
-                gen.writeNewlineIndent();
+                gen.writeSeparator();
             }
         }
 
