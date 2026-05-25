@@ -1469,8 +1469,10 @@ public class ToonReader {
     }
 
     /**
-     * Parse a quoted string, handling escape sequences.
-     * Only 5 valid escapes: \\, \", \n, \r, \t
+     * Parse a quoted string, handling escape sequences per §7.1.
+     * Explicit escapes: backslash-backslash, backslash-quote, \n, \r, \t. Plus the
+     * backslash-u + 4-hex-digit form (case-insensitive) for any non-explicit codepoint.
+     * Lone surrogates in the U+D800-U+DFFF range MUST be rejected.
      */
     private String parseQuotedString(String text) {
         return parseQuotedString(text, 0, text.length());
@@ -1502,6 +1504,10 @@ public class ToonReader {
                         break;
                     case 't':
                         quoteBuf.append('\t');
+                        break;
+                    case 'u':
+                        quoteBuf.append(decodeUnicodeEscape(text, i + 1, end - 1));
+                        i += 4;
                         break;
                     default:
                         throw new JsonIoException("Invalid escape sequence: \\" + next + " at line " + lineNumber);
@@ -1547,6 +1553,10 @@ public class ToonReader {
                     case 't':
                         quoteBuf.append('\t');
                         break;
+                    case 'u':
+                        quoteBuf.append(decodeUnicodeEscape(buf, i + 1, end - 1));
+                        i += 4;
+                        break;
                     default:
                         throw new JsonIoException("Invalid escape sequence: \\" + next + " at line " + lineNumber);
                 }
@@ -1556,6 +1566,55 @@ public class ToonReader {
         }
 
         return cacheString(quoteBuf.toString());
+    }
+
+    /**
+     * Decode a §7.1 backslash-u + 4-hex-digit unicode escape (case-insensitive). Rejects
+     * input with fewer than 4 trailing hex digits and rejects lone surrogates
+     * (U+D800-U+DFFF) per §7.1 ABNF (supplementary scalars MUST be literal UTF-8).
+     *
+     * @param src input source (String or char[] wrapped via overload)
+     * @param hexStart index of the first hex digit (immediately after the 'u')
+     * @param boundary one past the last index allowed (closing-quote position)
+     * @return the decoded char value
+     */
+    private char decodeUnicodeEscape(String src, int hexStart, int boundary) {
+        if (hexStart + 4 > boundary) {
+            throw new JsonIoException("Invalid escape sequence: \\u followed by fewer than 4 hex digits at line " + lineNumber);
+        }
+        int value = 0;
+        for (int j = 0; j < 4; j++) {
+            int digit = hexDigitOrThrow(src.charAt(hexStart + j));
+            value = (value << 4) | digit;
+        }
+        if (value >= 0xD800 && value <= 0xDFFF) {
+            throw new JsonIoException("Invalid escape sequence: \\u" + String.format("%04x", value)
+                    + " is a lone surrogate at line " + lineNumber);
+        }
+        return (char) value;
+    }
+
+    private char decodeUnicodeEscape(char[] src, int hexStart, int boundary) {
+        if (hexStart + 4 > boundary) {
+            throw new JsonIoException("Invalid escape sequence: \\u followed by fewer than 4 hex digits at line " + lineNumber);
+        }
+        int value = 0;
+        for (int j = 0; j < 4; j++) {
+            int digit = hexDigitOrThrow(src[hexStart + j]);
+            value = (value << 4) | digit;
+        }
+        if (value >= 0xD800 && value <= 0xDFFF) {
+            throw new JsonIoException("Invalid escape sequence: \\u" + String.format("%04x", value)
+                    + " is a lone surrogate at line " + lineNumber);
+        }
+        return (char) value;
+    }
+
+    private int hexDigitOrThrow(char c) {
+        if (c >= '0' && c <= '9') return c - '0';
+        if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+        if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+        throw new JsonIoException("Invalid hex digit in \\u escape: '" + c + "' at line " + lineNumber);
     }
 
     /**

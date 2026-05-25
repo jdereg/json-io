@@ -2619,13 +2619,31 @@ class ToonReaderTest {
     }
 
     @Test
-    void testInvalidEscapeSequence_Unicode() {
-        // \\uXXXX is NOT valid in TOON (unlike JSON)
-        // Build the string via concatenation so Java compiler doesn't interpret \\u
+    void testUnicodeEscape_Valid() {
+        // Per TOON v3.3 §7.1 the backslash-u + 4-hex-digit escape IS valid in quoted
+        // strings and keys (case-insensitive hex). Build the input via concatenation so
+        // the Java source preprocessor doesn't interpret the escape itself.
         String toon = "value: \"hello" + "\\" + "u0041world\"";
+        Map<?, ?> result = JsonIo.fromToon(toon, null).asClass(Map.class);
+        assertEquals("helloAworld", result.get("value"), "0041 should decode to 'A'");
+    }
+
+    @Test
+    void testUnicodeEscape_TruncatedRejected() {
+        // §7.1: decoders MUST reject backslash-u followed by fewer than four hex digits.
+        String toon = "value: \"x" + "\\" + "u00\"";
         assertThrows(JsonIoException.class, () ->
                         JsonIo.fromToon(toon, null).asClass(Map.class),
-                "Unicode escape should cause an error in TOON");
+                "Truncated unicode escape should be rejected");
+    }
+
+    @Test
+    void testUnicodeEscape_LoneSurrogateRejected() {
+        // §7.1: decoders MUST reject lone surrogates from the backslash-u form.
+        String toon = "value: \"x" + "\\" + "uD800\"";
+        assertThrows(JsonIoException.class, () ->
+                        JsonIo.fromToon(toon, null).asClass(Map.class),
+                "Lone surrogate should be rejected");
     }
 
     @Test
