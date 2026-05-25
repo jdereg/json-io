@@ -75,10 +75,7 @@ class ToonSpecFixtureTest {
             "decode/arrays-nested.json :: parses list arrays with deeply nested objects",
             "decode/arrays-nested.json :: parses list arrays with empty items",
             "decode/arrays-tabular.json :: parses quoted header keys in tabular arrays",
-            "decode/blank-lines.json :: accepts blank line between nested object fields",
-            "decode/blank-lines.json :: accepts whitespace-only line at non-multiple indent as blank in strict mode",
             "decode/delimiters.json :: parses tabular headers with keys containing the active delimiter",
-            "decode/indentation-errors.json :: accepts correct indentation with custom indent size (4 spaces with indent=4)",
             "decode/objects.json :: treats extra brackets after valid array segment as literal key (non-strict)",
             "decode/objects.json :: treats non-integer bracket content as literal key (non-strict)",
             "decode/objects.json :: treats text between bracket segment and colon as literal key (non-strict)",
@@ -99,7 +96,6 @@ class ToonSpecFixtureTest {
             "decode/validation-errors.json :: throws on text between bracket segment and colon in strict mode",
             "decode/validation-errors.json :: throws on two primitives at root depth in strict mode",
             "decode/validation-errors.json :: throws on unterminated string",
-            "decode/whitespace.json :: parses empty tokens as empty string",
             // --- encode gaps ---
             "encode/arrays-objects.json :: encodes empty object list items as bare hyphen",
             "encode/arrays-objects.json :: uses canonical encoding for multi-field list-item objects with tabular arrays",
@@ -282,6 +278,13 @@ class ToonSpecFixtureTest {
             // Future expandPaths modes are deferred; let the unsupported-option skip
             // path catch them once any fixture starts using them.
             Assumptions.abort("expandPaths='" + expandPaths + "' is not implemented in json-io");
+        }
+        Object indent = options.get("indent");
+        if (indent instanceof Number) {
+            int n = ((Number) indent).intValue();
+            if (n >= 1) {
+                b.toonIndentSize(n);
+            }
         }
         return b.build();
     }

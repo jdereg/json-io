@@ -132,6 +132,12 @@ public interface ReadOptions {
     boolean isToonExpandPaths();
 
     /**
+     * @return the expected number of spaces per indent level in TOON input (§12).
+     * Default is 2 to match the writer.
+     */
+    int getToonIndentSize();
+
+    /**
      * @return ClassLoader to be used when reading JSON to resolve String named classes.
      */
     ClassLoader getClassLoader();

@@ -63,7 +63,7 @@ public class ToonReader {
         }
     }
 
-    private static final int INDENT_SIZE = 2;  // 2 spaces per indent level (matches ToonWriter)
+    private static final int DEFAULT_INDENT_SIZE = 2;  // §12 default: 2 spaces per indent level (matches ToonWriter)
     private static final char DELIMITER = ','; // Default delimiter (matches ToonWriter)
     private static final int STRING_CACHE_MASK = 4095;
     private static final int MAX_CACHED_STRING_LENGTH = 64;
@@ -106,6 +106,7 @@ public class ToonReader {
     private final long maxIdValue;
     private final boolean strictToon;
     private final boolean toonExpandPaths;
+    private final int indentSize;
     private final ClassLoader classLoader;
 
     // Line management - supports peek/consume pattern
@@ -151,6 +152,7 @@ public class ToonReader {
         this.maxIdValue = this.readOptions.getMaxIdValue();
         this.strictToon = this.readOptions.isStrictToon();
         this.toonExpandPaths = this.readOptions.isToonExpandPaths();
+        this.indentSize = this.readOptions.getToonIndentSize();
         this.classLoader = this.readOptions.getClassLoader();
         this.ownedLineBuf = TL_LINE_BUF.get();
         this.lineBuf = ownedLineBuf;
@@ -339,14 +341,18 @@ public class ToonReader {
                 break;  // EOF
             }
 
-            int indent = peekIndent();
-            if (indent < baseIndent) {
-                break;  // Back to parent level
-            }
-
+            // §12: blank (whitespace-only) lines MAY be skipped regardless of their leading
+            // space count, including in the middle of a nested object body. The indent check
+            // must come AFTER the blank-line skip — otherwise a blank line at depth 0 inside
+            // a nested context (baseIndent ≥ 1) would falsely "exit" the parent.
             if (isTrimmedEmpty()) {
                 consumeLine();
                 continue;  // Skip empty lines
+            }
+
+            int indent = peekIndent();
+            if (indent < baseIndent) {
+                break;  // Back to parent level
             }
 
             // Must be at exactly our indent level for keys at this level
@@ -1040,12 +1046,22 @@ public class ToonReader {
             int tokenStart = 0;
             for (int i = 0; i < len; i++) {
                 if (content.charAt(i) == delimiter) {
-                    elements.add(readScalar(content, tokenStart, i));
+                    // Empty token between delimiters (e.g. "a,,c") parses as empty string
+                    // per §4 — empty unquoted token can only be a string, not a keyword
+                    // or number, so type-inference picks string.
+                    if (tokenStart == i) {
+                        elements.add("");
+                    } else {
+                        elements.add(readScalar(content, tokenStart, i));
+                    }
                     tokenStart = i + 1;
                 }
             }
-            if (tokenStart < len || elements.size() < count) {
+            if (tokenStart < len) {
                 elements.add(readScalar(content, tokenStart, len));
+            } else if (elements.size() < count) {
+                // Trailing empty token (e.g. "a,b,") — same rule as above.
+                elements.add("");
             }
         } else {
             // Slow path: handle quotes and escapes via StringBuilder
@@ -1112,12 +1128,19 @@ public class ToonReader {
             int tokenStart = start;
             for (int i = start; i < end; i++) {
                 if (buf[i] == delimiter) {
-                    elements.add(readScalar(buf, tokenStart, i));
+                    if (tokenStart == i) {
+                        // Empty inline-array token → "" per §4 (see String overload).
+                        elements.add("");
+                    } else {
+                        elements.add(readScalar(buf, tokenStart, i));
+                    }
                     tokenStart = i + 1;
                 }
             }
-            if (tokenStart < end || elements.size() < count) {
+            if (tokenStart < end) {
                 elements.add(readScalar(buf, tokenStart, end));
+            } else if (elements.size() < count) {
+                elements.add("");
             }
         } else {
             inlineBuf.setLength(0);
@@ -1955,14 +1978,20 @@ public class ToonReader {
                 while (spaces < lineLen && buf[start + spaces] == ' ') {
                     spaces++;
                 }
-                if (spaces < lineLen && buf[start + spaces] == '\t' && strictToon) {
-                    throw new JsonIoException("Tabs are not allowed in indentation at line " + lineNumber);
+                // §12: whitespace-only lines MAY be treated as blank regardless of their
+                // leading-space count. Skip strict-indent + tab checks for such lines so a
+                // 3-space empty line between depth-0 fields (in strict mode) doesn't reject.
+                boolean whitespaceOnly = (spaces == lineLen);
+                if (!whitespaceOnly) {
+                    if (spaces < lineLen && buf[start + spaces] == '\t' && strictToon) {
+                        throw new JsonIoException("Tabs are not allowed in indentation at line " + lineNumber);
+                    }
+                    if (strictToon && spaces % indentSize != 0) {
+                        throw new JsonIoException("Indentation must be a multiple of " + indentSize +
+                                " spaces at line " + lineNumber);
+                    }
                 }
-                if (strictToon && spaces % INDENT_SIZE != 0) {
-                    throw new JsonIoException("Indentation must be a multiple of " + INDENT_SIZE +
-                            " spaces at line " + lineNumber);
-                }
-                currentIndent = spaces / INDENT_SIZE;
+                currentIndent = whitespaceOnly ? 0 : spaces / indentSize;
 
                 // Compute trim-end directly from buf
                 int trimStart = start + spaces;

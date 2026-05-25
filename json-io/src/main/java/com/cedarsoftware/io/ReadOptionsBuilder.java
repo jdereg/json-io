@@ -264,6 +264,7 @@ public class ReadOptionsBuilder {
             options.strictJson = other.strictJson;
             options.strictToon = other.strictToon;
             options.toonExpandPaths = other.toonExpandPaths;
+            options.toonIndentSize = other.toonIndentSize;
 
             // Copy security limits
             options.maxUnresolvedReferences = other.maxUnresolvedReferences;
@@ -1456,6 +1457,23 @@ public class ReadOptionsBuilder {
     }
 
     /**
+     * Expected number of spaces per indentation level in the TOON input (§12). Default
+     * is 2 to match {@link WriteOptionsBuilder#indentationSize(int) the writer's default}.
+     * Set this to match the indent size of the input when it differs (e.g. an external
+     * source that uses {@code indent=4}).
+     *
+     * @param toonIndentSize positive integer, minimum 1.
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder toonIndentSize(int toonIndentSize) {
+        if (toonIndentSize < 1) {
+            throw new JsonIoException("toonIndentSize must be at least 1, value: " + toonIndentSize);
+        }
+        options.toonIndentSize = toonIndentSize;
+        return this;
+    }
+
+    /**
      * @param aliasTypeNames Map containing String class names to alias names.  The passed in Map will
      *                       be copied, and be the new baseline settings.
      * @return ReadOptionsBuilder for chained access.
@@ -1780,6 +1798,7 @@ public class ReadOptionsBuilder {
         private boolean strictJson = false;  // Default to false (permissive JSON5 mode)
         private boolean strictToon = false;  // Default to false (permissive TOON mode)
         private boolean toonExpandPaths = false;  // §13.4 default: "off" (no dotted-key expansion)
+        private int toonIndentSize = 2;  // §12 default: 2 spaces per indent level
         private boolean useUnsafe = false;  // Default to false for security
         
         // Security limits - default to unlimited for backward compatibility
@@ -1909,6 +1928,10 @@ public class ReadOptionsBuilder {
 
         public boolean isToonExpandPaths() {
             return toonExpandPaths;
+        }
+
+        public int getToonIndentSize() {
+            return toonIndentSize;
         }
 
         /**
