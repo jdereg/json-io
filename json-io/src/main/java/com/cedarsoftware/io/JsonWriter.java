@@ -10,7 +10,6 @@ import java.io.Writer;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URI;
@@ -77,12 +76,10 @@ import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.ClassValueMap;
 import com.cedarsoftware.util.CompactMap;
-import com.cedarsoftware.util.internal.CharBufScratch;
 import com.cedarsoftware.util.CompactSet;
 import com.cedarsoftware.util.FastWriter;
 import com.cedarsoftware.util.IOUtilities;
 import com.cedarsoftware.util.IdentitySet;
-import com.cedarsoftware.util.TypeUtilities;
 
 import static com.cedarsoftware.io.JsonValue.ENUM;
 import static com.cedarsoftware.io.JsonValue.ITEMS;
@@ -1599,19 +1596,17 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private void writeIntArray(int[] ints, int lenMinus1) throws IOException {
-        final Writer output = this.out;
         for (int i = 0; i < lenMinus1; i++) {
             gen.writeIntRaw(ints[i]);
-            output.write(',');
+            out.write(',');
         }
         gen.writeIntRaw(ints[lenMinus1]);
     }
 
     private void writeShortArray(short[] shorts, int lenMinus1) throws IOException {
-        final Writer output = this.out;
         for (int i = 0; i < lenMinus1; i++) {
             gen.writeIntRaw(shorts[i]);
-            output.write(',');
+            out.write(',');
         }
         gen.writeIntRaw(shorts[lenMinus1]);
     }
@@ -1713,7 +1708,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * Determines the type name to write for an object, preferring preserved typeString
      * over actual class name for middleware safety.
      *
-     * This handles the case where JSON is parsed on a system without the original class
+     * <p>This handles the case where JSON is parsed on a system without the original class
      * (e.g., com.example.House), stored as a fallback type (LinkedHashMap), and needs to
      * be re-serialized preserving the original @type for downstream systems.
      *
@@ -2309,10 +2304,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     /**
-     * Write map entries with non-String keys converted to Strings via Converter.
-     * Same structure as writeMapBody() but keys are stringified instead of cast to String.
-     */
-    /**
      * Write the body of a Map whose keys are stringified via {@code Converter.convert}.
      * Same pattern as {@link #writeMapBody(Iterator)} but each key is first converted
      * to its String form via the framework's bidirectional converter. Used when the Map
@@ -2400,7 +2391,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * If declaredElementType is set (from a field with generic info like {@code List<Foo>}),
      * and the element's class exactly matches (==) the declared type, @type is not needed.
      *
-     * This optimization works because JsonParser propagates element type context when
+     * <p>This optimization works because JsonParser propagates element type context when
      * parsing @items arrays - see JsonParser.pushArrayFrame() which receives element type,
      * and pushNestedContainerFrame() which passes it to pushObjectFrame().
      *
@@ -2541,14 +2532,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     /**
-     * @param obj      Object to be written in JSON format
-     * @param showType boolean true means show the "@type" field, false
-     *                 eliminates it.  Many times the type can be dropped because it can be
-     *                 inferred from the field or array type.
-     * @param bodyOnly write only the body of the object
-     * @throws IOException if an error occurs writing to the output stream.
-     */
-    /**
      * Write a Java POJO as JSON. Dog-food path — outer {@code {/&#125;} via
      * {@link CharStreamGenerator#writeStartObjectRaw()} /
      * {@link CharStreamGenerator#writeEndObjectRaw()}; @id / @type via gen field-level
@@ -2558,6 +2541,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * gen's state machine auto-emits the leading separator for subsequent fields. When
      * {@code bodyOnly} is true, the caller has already opened the outer {@code {} and is
      * responsible for closing it; this method emits only the field block inside.
+     *
+     * @param obj      Object to be written in JSON format
+     * @param showType boolean true means show the {@code @type} field, false eliminates it.
+     *                 Many times the type can be dropped because it can be inferred from the
+     *                 field or array type.
+     * @param bodyOnly write only the body of the object
+     * @throws IOException if an error occurs writing to the output stream.
      */
     public void writeObject(final Object obj, boolean showType, boolean bodyOnly) throws IOException {
         if (neverShowingType && !forceElementShowType) {
@@ -2929,7 +2919,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * known a-priori to be JSON-safe (no embedded {@code "}, {@code \\}, or control chars).
      *
      * @param writer Writer to which the quoted string is written
-     * @param s      String to write \u2014 must be JSON-safe
+     * @param s      String to write — must be JSON-safe
      * @throws IOException if an error occurs writing to the output stream
      * @deprecated since 4.103.0; the implementation moved to {@code CharStreamGenerator}.
      *             Internal callers route there directly; external callers should switch to
@@ -2972,18 +2962,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         CharStreamGenerator.writeJsonUtf8String(output, s, maxStringLength);
     }
 
-    /**
-     * Writes a string value at a value slot, delegating to {@link CharStreamGenerator#writeString(String)}
-     * via the bridge-reset hook. The generator applies the same smart quote-style selection in
-     * {@code json5SmartQuotes} mode that this method historically applied — picks single quotes only
-     * when the string contains {@code "} but not {@code '}, double quotes otherwise. Callers are
-     * responsible for surrounding separator/indent emission; this method emits only the quoted
-     * string content (or {@code null} if {@code s} is null). First leaf of the JsonWriter dog-food
-     * migration onto {@link CharStreamGenerator}.
-     *
-     * @param s The string value to write (may be null)
-     * @throws IOException If an I/O error occurs
-     */
     /**
      * State-machine-free quoted-string emission. Writes {@code "value"} (or {@code 'value'}
      * under json5SmartQuotes when the string contains {@code "} but not {@code '}) directly
