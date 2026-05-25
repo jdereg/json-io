@@ -10,19 +10,36 @@ import com.cedarsoftware.io.reflect.Accessor;
 import com.cedarsoftware.util.convert.ConverterOptions;
 
 /**
- * This class contains all the "feature" control (options) for controlling json-io's
- * output JSON. An instance of this class is passed to the JsonWriter.toJson() APIs
- * to set the desired capabilities.
- * <br/><br/>
- * You can make this class immutable and then store the class for re-use.
- * Call the ".build()" method and then no longer can any methods that change state be
- * called - it will throw a JsonIoException.
- * <br/><br/>
- * This class can be created from another WriteOptions instance, using the "copy constructor"
- * that takes a WriteOptions. All properties of the other WriteOptions will be copied to the
- * new instance, except for the 'built' property. That always starts off as false (mutable)
- * so that you can make changes to options.
- * <br/><br/>
+ * Read-only view over the "feature" control settings for json-io's writer side.
+ * An instance is passed to the {@link JsonIo#toJson(Object, WriteOptions)} family
+ * (and the {@code OutputStream} / {@link JsonGenerator} factories) to configure
+ * the desired output behavior.
+ *
+ * <p>{@code WriteOptions} is an <b>interface</b> — build instances via the
+ * mutable {@link WriteOptionsBuilder} and call {@link WriteOptionsBuilder#build()}
+ * to obtain the immutable read-only view that gets passed to the API:
+ *
+ * <pre>{@code
+ * WriteOptions opts = new WriteOptionsBuilder()
+ *         .prettyPrint(true)
+ *         .skipNullFields(true)
+ *         .cycleSupport(true)
+ *         .build();
+ *
+ * String json = JsonIo.toJson(myObject, opts);
+ * }</pre>
+ *
+ * <p>To start from an existing {@code WriteOptions} and adjust some fields, pass
+ * it to the builder's copy constructor:
+ *
+ * <pre>{@code
+ * WriteOptions tweaked = new WriteOptionsBuilder(opts)
+ *         .prettyPrint(false)
+ *         .build();
+ * }</pre>
+ *
+ * <p>A {@code null} {@code WriteOptions} passed to any of the {@code JsonIo}
+ * write APIs falls back to {@link WriteOptionsBuilder#getDefaultWriteOptions()}.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  * @author Ken Partlow (kpartlow@gmail.com)

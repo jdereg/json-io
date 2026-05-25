@@ -6,8 +6,8 @@ import java.io.IOException;
  * Convenience surface passed to {@link JsonClassWriter} implementations during
  * tree-walking serialization (via {@link JsonWriter}). Provides field-write
  * primitives and access to the active {@link WriteOptions} so a custom writer
- * can emit JSON fragments without re-implementing escape logic or option
- * lookups.
+ * can emit JSON fragments without re-implementing escape logic, comma placement,
+ * or option lookups.
  *
  * <h3>Relationship to {@link JsonGenerator}</h3>
  *
@@ -17,31 +17,19 @@ import java.io.IOException;
  * for one type. {@link JsonGenerator} is the <b>streaming-write API</b> for
  * callers who are <i>not</i> walking a Java object graph at all — for example,
  * emitting JSON token-by-token in a transform pipeline or porting Jackson
- * {@code JsonGenerator} code. The two surfaces are deliberately separate:
+ * {@code JsonGenerator} code.
  *
- * <ul>
- *   <li>{@code WriterContext} methods carry over a long-standing convention
- *       that some method names (notably {@code writeStringField} /
- *       {@code writeObjectField} / {@code writeNumberField} /
- *       {@code writeBooleanField} / {@code writeArrayFieldStart} /
- *       {@code writeObjectFieldStart}) write a <b>leading comma</b>. This is
- *       safe for fields after the first inside an existing object body but
- *       requires the caller to know what they're doing. The convention exists
- *       to preserve binary compatibility for the substantial body of existing
- *       custom-writer code that depends on it.</li>
- *   <li>{@link JsonGenerator} uses a Jackson-style auto-comma context machine
- *       — callers emit a sequence of tokens and structural separators are
- *       inserted (or rejected as misuse) automatically. New code outside the
- *       custom-writer use case should prefer {@code JsonGenerator}.</li>
- * </ul>
- *
- * <p>The two surfaces share the same low-level escape helpers
- * ({@link JsonWriter#writeJsonUtf8String}, {@link JsonWriter#writeSingleQuotedString})
- * and the same {@link WriteOptions} configuration. The "single source of truth
- * for well-formed JSON output" question is resolved at the static-helper
- * level today; a deeper unification (e.g. promoting {@code WriterContext} to
- * a Jackson-style auto-comma surface as a subset of {@code JsonGenerator}) is
- * a candidate for json-io 5.0 where a binary-compat break is acceptable.
+ * <p>As of json-io 4.103.0 the two surfaces share one underlying state machine:
+ * {@code WriterContext.writeXxxField} / {@code writeFieldName} / etc. all
+ * delegate to a {@link JsonGenerator} that {@code JsonWriter} owns, so all
+ * field-emission methods on this interface use the same Jackson-style auto-
+ * comma context machine. Callers emit a sequence of tokens and the framework
+ * inserts (or rejects as misuse) structural separators automatically — there
+ * are no longer any methods that <i>unconditionally</i> emit a leading comma.
+ * New {@code JsonClassWriter} implementations are encouraged to override the
+ * {@code write(T, boolean, JsonGenerator, WriterContext)} overload directly,
+ * which gives the writer direct access to the generator and bypasses this
+ * convenience interface entirely.
  *
  * @author Kenny Partlow (kpartlow@gmail.com)
  *         <br>
@@ -97,17 +85,16 @@ public interface WriterContext {
     // They handle quote escaping, comma management, and proper JSON syntax automatically.
 
     /**
-     * Writes a JSON field name followed by a colon. This method handles quote escaping
-     * and proper JSON formatting automatically.
+     * Writes a JSON field name followed by a colon (and, in pretty-print mode, a
+     * trailing space) — Jackson-aligned {@code writeFieldName} semantics. Handles
+     * quote escaping (or JSON5 unquoted identifier emission when enabled) automatically.
      * <p>
-     * Example: {@code writeFieldName("name")} produces {@code "name":}
-     * </p>
+     * Example: {@code writeFieldName("name")} produces {@code "name":} (or
+     * {@code "name": } in pretty-print mode).
      * <p>
-     * <b>Important:</b> This method does NOT write a preceding comma. If you need a comma
-     * before the field (for non-first fields in an object), you must write it manually.
-     * Consider using the higher-level methods like {@link #writeStringField(String, String)}
-     * or {@link #writeObjectField(String, Object)} which handle commas automatically.
-     * </p>
+     * The leading comma between fields is inserted automatically by the underlying
+     * state machine — callers do <i>not</i> emit it. Equivalent in semantics to the
+     * Jackson {@code com.fasterxml.jackson.core.JsonGenerator.writeFieldName}.
      *
      * @param name the field name to write (without quotes)
      * @throws IOException if an I/O error occurs
@@ -115,30 +102,28 @@ public interface WriterContext {
     void writeFieldName(String name) throws IOException;
 
     /**
-     * Writes a complete JSON string field with automatic comma handling.
+     * Writes a complete JSON string field — equivalent to
+     * {@link #writeFieldName(String)} followed by {@link #writeValue(String)}.
+     * Jackson-aligned {@code writeStringField} semantics.
      * <p>
-     * Example: {@code writeStringField("name", "John")} produces {@code ,"name":"John"}
-     * </p>
+     * Example: {@code writeStringField("name", "John")} produces {@code "name":"John"}
+     * for the first field in an object, or {@code ,"name":"John"} for a subsequent
+     * field — the leading comma is auto-emitted by the state machine when required.
      * <p>
-     * This method automatically:
-     * <ul>
-     *   <li>Writes a preceding comma (for proper JSON object formatting)</li>
-     *   <li>Escapes special characters in both field name and value</li>
-     *   <li>Handles null values by writing {@code ,"name":null}</li>
-     * </ul>
-     * </p>
+     * Escapes special characters in both field name and value. Handles {@code null}
+     * values by writing the JSON literal {@code null} for the value.
      * <p>
      * <b>Usage in custom writers:</b>
      * <pre>{@code
-     * public void write(Object obj, boolean showType, Writer output, WriterContext context) {
+     * public void write(Object obj, boolean showType,
+     *                  JsonGenerator gen, WriterContext context) {
      *     MyClass instance = (MyClass) obj;
-     *     output.write('{');
      *     context.writeStringField("firstName", instance.getFirstName());
-     *     context.writeStringField("lastName", instance.getLastName());
-     *     output.write('}');
+     *     context.writeStringField("lastName",  instance.getLastName());
      * }
      * }</pre>
-     * </p>
+     * Note: the surrounding {@code {/}} are emitted by the framework around the
+     * custom writer's body — the writer should NOT emit them itself.
      *
      * @param name the field name
      * @param value the string value (may be null)
@@ -147,29 +132,27 @@ public interface WriterContext {
     void writeStringField(String name, String value) throws IOException;
 
     /**
-     * Writes a complete JSON object field with automatic serialization and comma handling.
+     * Writes a complete JSON object field — equivalent to
+     * {@link #writeFieldName(String)} followed by full graph serialization of the
+     * value (the same code path as {@link JsonIo#toJson(Object, WriteOptions)},
+     * including cycle tracking and {@code @type} policy).
      * <p>
-     * Example: {@code writeObjectField("address", addressObj)} produces {@code ,"address":{...}}
-     * where the address object is fully serialized according to json-io's rules.
-     * </p>
+     * Example: {@code writeObjectField("address", addressObj)} produces
+     * {@code "address":{...}} for the first field, or {@code ,"address":{...}} for
+     * a subsequent field — the leading comma is auto-emitted by the state machine
+     * when required.
      * <p>
-     * This method automatically:
-     * <ul>
-     *   <li>Writes a preceding comma (for proper JSON object formatting)</li>
-     *   <li>Serializes the value object with proper type information and reference tracking</li>
-     *   <li>Handles null values by writing {@code ,"name":null}</li>
-     *   <li>Handles circular references and object deduplication</li>
-     * </ul>
-     * </p>
+     * This method handles {@code null} (writes the JSON literal {@code null}),
+     * circular references (emits {@code @ref}), and {@code @type} emission according
+     * to the active {@link WriteOptions}.
      * <p>
      * <b>Usage in custom writers:</b>
      * <pre>{@code
-     * public void write(Object obj, boolean showType, Writer output, WriterContext context) {
+     * public void write(Object obj, boolean showType,
+     *                  JsonGenerator gen, WriterContext context) {
      *     MyClass instance = (MyClass) obj;
-     *     output.write('{');
      *     context.writeObjectField("config", instance.getConfig());
-     *     context.writeObjectField("data", instance.getData());
-     *     output.write('}');
+     *     context.writeObjectField("data",   instance.getData());
      * }
      * }</pre>
      * </p>
@@ -301,32 +284,22 @@ public interface WriterContext {
     void writeValue(Object value) throws IOException;
 
     /**
-     * Writes a complete JSON array field start with automatic comma handling.
+     * Writes a JSON array-field opening — equivalent to
+     * {@link #writeFieldName(String)} followed by {@link #writeStartArray()}.
+     * Jackson-aligned {@code writeArrayFieldStart} semantics. The leading comma
+     * (when this is a non-first field) is auto-emitted by the state machine.
      * <p>
-     * Example: {@code writeArrayFieldStart("items")} produces {@code ,"items":[}
-     * </p>
-     * <p>
-     * This is a convenience method that combines three operations:
-     * <ul>
-     *   <li>Writes a leading comma (for proper JSON object formatting)</li>
-     *   <li>Writes the field name with quotes and colon</li>
-     *   <li>Writes the array opening bracket</li>
-     * </ul>
-     * </p>
+     * Example: {@code writeArrayFieldStart("items")} produces {@code "items":[}
+     * for the first field, or {@code ,"items":[} for a subsequent field.
      * <p>
      * <b>Usage pattern:</b>
      * <pre>{@code
      * context.writeArrayFieldStart("entries");
      * for (Entry entry : entries) {
-     *     // Write array elements...
+     *     context.writeValue(entry);
      * }
      * context.writeEndArray();
-     * // Produces: ,"entries":[...array elements...]
      * }</pre>
-     * </p>
-     * <p>
-     * This method writes a LEADING comma, making it suitable for fields after the first field.
-     * </p>
      *
      * @param name the field name
      * @throws IOException if an I/O error occurs
@@ -334,18 +307,13 @@ public interface WriterContext {
     void writeArrayFieldStart(String name) throws IOException;
 
     /**
-     * Writes a complete JSON object field start with automatic comma handling.
+     * Writes a JSON object-field opening — equivalent to
+     * {@link #writeFieldName(String)} followed by {@link #writeStartObject()}.
+     * Jackson-aligned {@code writeObjectFieldStart} semantics. The leading comma
+     * (when this is a non-first field) is auto-emitted by the state machine.
      * <p>
-     * Example: {@code writeObjectFieldStart("config")} produces <code>,"config":{</code>
-     * </p>
-     * <p>
-     * This is a convenience method that combines three operations:
-     * <ul>
-     *   <li>Writes a leading comma (for proper JSON object formatting)</li>
-     *   <li>Writes the field name with quotes and colon</li>
-     *   <li>Writes the object opening brace</li>
-     * </ul>
-     * </p>
+     * Example: {@code writeObjectFieldStart("config")} produces <code>"config":{</code>
+     * for the first field, or <code>,"config":{</code> for a subsequent field.
      * <p>
      * <b>Usage pattern:</b>
      * <pre>{@code
@@ -353,12 +321,7 @@ public interface WriterContext {
      * context.writeStringField("version", "1.0");
      * context.writeNumberField("count", 42);
      * context.writeEndObject();
-     * // Produces: ,"metadata":{"version":"1.0","count":42}
      * }</pre>
-     * </p>
-     * <p>
-     * This method writes a LEADING comma, making it suitable for fields after the first field.
-     * </p>
      *
      * @param name the field name
      * @throws IOException if an I/O error occurs
@@ -366,31 +329,22 @@ public interface WriterContext {
     void writeObjectFieldStart(String name) throws IOException;
 
     /**
-     * Writes a complete JSON number field with automatic comma handling.
+     * Writes a complete JSON number field — equivalent to
+     * {@link #writeFieldName(String)} followed by the number value (unquoted, per
+     * JSON spec). Jackson-aligned {@code writeNumberField} semantics. The leading
+     * comma (when this is a non-first field) is auto-emitted by the state machine.
      * <p>
-     * Example: {@code writeNumberField("count", 42)} produces {@code ,"count":42}
-     * </p>
+     * Example: {@code writeNumberField("count", 42)} produces {@code "count":42}
+     * for the first field, or {@code ,"count":42} for a subsequent field.
      * <p>
-     * This method automatically:
-     * <ul>
-     *   <li>Writes a preceding comma (for proper JSON object formatting)</li>
-     *   <li>Escapes the field name</li>
-     *   <li>Writes the number value WITHOUT quotes (proper JSON number format)</li>
-     *   <li>Handles null values by writing {@code ,"name":null}</li>
-     * </ul>
-     * </p>
+     * Handles {@code null} by writing the JSON literal {@code null} for the value.
      * <p>
      * <b>Usage pattern:</b>
      * <pre>{@code
-     * context.writeNumberField("capacity", 16);
+     * context.writeNumberField("capacity",   16);
      * context.writeNumberField("loadFactor", 0.75f);
-     * context.writeNumberField("size", 100L);
-     * // Produces: ,"capacity":16,"loadFactor":0.75,"size":100
+     * context.writeNumberField("size",       100L);
      * }</pre>
-     * </p>
-     * <p>
-     * This method writes a LEADING comma, making it suitable for fields after the first field.
-     * </p>
      *
      * @param name the field name
      * @param value the number value (may be null)
@@ -399,29 +353,19 @@ public interface WriterContext {
     void writeNumberField(String name, Number value) throws IOException;
 
     /**
-     * Writes a complete JSON boolean field with automatic comma handling.
+     * Writes a complete JSON boolean field — equivalent to
+     * {@link #writeFieldName(String)} followed by the boolean value (unquoted, per
+     * JSON spec). Jackson-aligned {@code writeBooleanField} semantics. The leading
+     * comma (when this is a non-first field) is auto-emitted by the state machine.
      * <p>
-     * Example: {@code writeBooleanField("active", true)} produces {@code ,"active":true}
-     * </p>
-     * <p>
-     * This method automatically:
-     * <ul>
-     *   <li>Writes a preceding comma (for proper JSON object formatting)</li>
-     *   <li>Escapes the field name</li>
-     *   <li>Writes the boolean value WITHOUT quotes (proper JSON boolean format)</li>
-     * </ul>
-     * </p>
+     * Example: {@code writeBooleanField("active", true)} produces {@code "active":true}
+     * for the first field, or {@code ,"active":true} for a subsequent field.
      * <p>
      * <b>Usage pattern:</b>
      * <pre>{@code
      * context.writeBooleanField("caseSensitive", true);
-     * context.writeBooleanField("enabled", false);
-     * // Produces: ,"caseSensitive":true,"enabled":false
+     * context.writeBooleanField("enabled",       false);
      * }</pre>
-     * </p>
-     * <p>
-     * This method writes a LEADING comma, making it suitable for fields after the first field.
-     * </p>
      *
      * @param name the field name
      * @param value the boolean value

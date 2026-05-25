@@ -92,6 +92,38 @@ import com.cedarsoftware.util.convert.Converter;
  * JsonIo.toToon(outputStream, myObject, writeOptions);
  * }</pre>
  *
+ * <h2>Streaming APIs (Jackson-aligned)</h2>
+ *
+ * <h3>Streaming write — {@link JsonGenerator}</h3>
+ * <p>Cursor-style streaming-write API, Jackson-aligned for porting friendliness.
+ * Use when you're emitting JSON token-by-token (e.g. transforming or filtering a
+ * data stream) rather than serializing a Java object graph:</p>
+ * <pre>{@code
+ * try (JsonGenerator g = JsonIo.createGenerator(out)) {
+ *     g.writeStartObject()
+ *         .writeStringField("id", "u-1")
+ *         .writeStringField("name", "Alice")
+ *         .writeArrayFieldStart("tags")
+ *             .writeString("admin")
+ *             .writeString("active")
+ *         .writeEndArray()
+ *         .writeNumberField("age", 30)
+ *      .writeEndObject();
+ * }
+ * }</pre>
+ *
+ * <h3>Streaming read — {@link JsonTokenizer}</h3>
+ * <p>Cursor-style streaming-parse API, Jackson-aligned. Use when you want to
+ * consume a JSON document token-by-token (e.g. extracting one field from a huge
+ * payload, or splicing into a streaming-write pipeline):</p>
+ * <pre>{@code
+ * try (JsonTokenizer t = JsonIo.createTokenizer(input)) {
+ *     while (t.nextToken() != null) {
+ *         // dispatch on t.currentToken(); fetch via t.getText(), t.getNumberValue(), etc.
+ *     }
+ * }
+ * }</pre>
+ *
  * <h2>Key Features</h2>
  * <ul>
  *   <li><b>Type Safety:</b> Java Object mode provides compile-time type checking</li>

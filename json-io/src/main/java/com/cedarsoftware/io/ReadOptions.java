@@ -7,19 +7,35 @@ import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.convert.ConverterOptions;
 
 /**
- * This class contains all the "feature" control (options) for controlling json-io's
- * flexibility in reading JSON. An instance of this class is passed to the JsonIo.toJava() APIs
- * to set the desired features.
- * <br/><br/>
- * You can make this class immutable and then store the class for re-use.
- * Call the ".build()" method and then no longer can any methods that change state be
- * called - it will throw a JsonIoException.
- * <br/><br/>
- * This class can be created from another ReadOptions instance, using the "copy constructor"
- * that takes a ReadOptions. All properties of the other ReadOptions will be copied to the
- * new instance, except for the 'built' property. That always starts off as false (mutable)
- * so that you can make changes to options.
- * <br/><br/>
+ * Read-only view over the "feature" control settings for json-io's reader side.
+ * An instance is passed to the {@link JsonIo#toJava(String, ReadOptions)} /
+ * {@link JsonIo#toMaps(String, ReadOptions)} family (and the {@link JsonTokenizer}
+ * factories) to configure the desired read behavior.
+ *
+ * <p>{@code ReadOptions} is an <b>interface</b> — build instances via the
+ * mutable {@link ReadOptionsBuilder} and call {@link ReadOptionsBuilder#build()}
+ * to obtain the immutable read-only view that gets passed to the API:
+ *
+ * <pre>{@code
+ * ReadOptions opts = new ReadOptionsBuilder()
+ *         .failOnUnknownType(false)
+ *         .aliasTypeName(Person.class, "Person")
+ *         .build();
+ *
+ * Person person = JsonIo.toJava(jsonString, opts).asClass(Person.class);
+ * }</pre>
+ *
+ * <p>To start from an existing {@code ReadOptions} and adjust some fields, pass
+ * it to the builder's copy constructor:
+ *
+ * <pre>{@code
+ * ReadOptions tweaked = new ReadOptionsBuilder(opts)
+ *         .failOnUnknownType(true)
+ *         .build();
+ * }</pre>
+ *
+ * <p>A {@code null} {@code ReadOptions} passed to any of the {@code JsonIo}
+ * read APIs falls back to {@link ReadOptionsBuilder#getDefaultReadOptions()}.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  * @author Kenny Partlow (kpartlow@gmail.com)
