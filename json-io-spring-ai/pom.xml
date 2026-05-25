@@ -15,8 +15,8 @@
     <description>Spring AI TOON integration for json-io - provides ToolCallResultConverter and StructuredOutputConverter using TOON format for LLM-optimized serialization</description>
 
     <properties>
-        <version.spring-boot>3.5.11</version.spring-boot>
-        <version.spring-ai>1.1.2</version.spring-ai>
+        <version.spring-boot>3.5.14</version.spring-boot>
+        <version.spring-ai>1.1.7</version.spring-ai>
     </properties>
 
     <dependencies>
