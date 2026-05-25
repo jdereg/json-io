@@ -166,7 +166,7 @@ automatic shared-reference and cycle preservation. No class annotations required
 
 | Capability | json-io | Jackson | Gson |
 |------------|---------|---------|------|
-| Performance (simple DTOs) | 1.3–1.9x vs Jackson (all paths under 2x) | Fastest | 1.4–2.1x vs Jackson |
+| Performance (simple DTOs) | 1.4–2.0x vs Jackson (all paths under 2x) | Fastest | 1.4–2.1x vs Jackson |
 | Dependencies | java-util only (~850K) | Multiple JARs (~2.5MB+) | Single JAR (~300KB) |
 | Java version | JDK 8+ | JDK 8+ | JDK 8+ |
 
@@ -177,18 +177,18 @@ automatic shared-reference and cycle preservation. No class annotations required
 
 | Mode | JsonIo | TOON | Gson |
 |---|---|---|---|
-| Read `toJava` (typed) | 1.83x | 1.91x | 1.45x |
-| Read `toMaps` (class-independent) | 1.30x | 1.63x | 1.39x |
-| Write `cycleSupport=true` (default) | 1.74x | 1.66x | 2.08x |
-| Write `cycleSupport=false` (DTOs/acyclic) | 1.59x | 1.55x | 2.08x |
-| Write `toMaps` `cycleSupport=true` | 1.85x | 1.79x | 2.11x |
-| Write `toMaps` `cycleSupport=false` | 1.59x | 1.61x | 2.11x |
+| Read `toJava` (typed) | 1.83x | 1.94x | 1.43x |
+| Read `toMaps` (class-independent) | 1.35x | 1.67x | 1.41x |
+| Write `cycleSupport=true` (default) | 1.82x | 1.68x | 2.07x |
+| Write `cycleSupport=false` (DTOs/acyclic) | 1.71x | 1.59x | 2.07x |
+| Write `toMaps` `cycleSupport=true` | 1.95x | 1.80x | 2.07x |
+| Write `toMaps` `cycleSupport=false` | 1.69x | 1.61x | 2.07x |
 
 Measured on JDK 21, `json-io 4.103.0` vs `jackson-databind 2.21.3` and `gson 2.14.0`, using the median of three run-mode executions. Reproduce with `mvn -q -pl json-io -DskipTests test-compile exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.cedarsoftware.io.JsonPerformanceTest -Dexec.args="--with-gson"` (100k iterations after 10k warmup; expect ±3% run-to-run noise from thermal / GC). All three libraries serialize comparable JSON: Jackson is configured with `JavaTimeModule` and `WRITE_DATES_AS_TIMESTAMPS=false` to match Spring Boot's default; Gson uses ISO-8601 `TypeAdapter`s for `Instant`, `LocalDate`, `LocalDateTime`, and `ZonedDateTime` to match. The `--with-gson` flag is opt-in so the default test run isn't slowed by the Gson loops; drop the flag for the two-way (jsonio vs Jackson) comparison.
 
 </details>
 
-**Performance tip:** Use `cycleSupport(false)` for ~10-25% faster writes when your data is acyclic (DTOs, POJOs, tree-shaped data) — the larger gain shows up in `toMaps` mode.
+**Performance tip:** Use `cycleSupport(false)` for ~5-15% faster writes when your data is acyclic (DTOs, POJOs, tree-shaped data) — the larger gain shows up in `toMaps` mode.
 
 **Performance tip — `ReadOptions` and `WriteOptions` are heavy and thread-safe.** `ReadOptionsBuilder.build()` and `WriteOptionsBuilder.build()` load type aliases, populate `ClassValueMap` caches, and allocate the immutable snapshot — it is not a cheap call. The returned options object is **immutable and thread-safe**: build it once per application (or per logical configuration), hold the reference, and share it freely across threads and across calls. The library already caches the common default singletons internally (`ReadOptionsBuilder.getDefaultReadOptions()`, `WriteOptionsBuilder.getDefaultWriteOptions()`), so passing `null` is fine; only custom-configured options need to be built and cached by you.
 
