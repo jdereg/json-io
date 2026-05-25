@@ -5,6 +5,8 @@
 
 Both formats can be used directly with Strings or Java's Streams.
 
+> **Need a streaming cursor instead of databind?** Since 4.103.0, json-io also exposes a Jackson-shaped streaming API — `JsonIo.createGenerator(...)` and `JsonIo.createTokenizer(...)` — for hand-rolled write/read pipelines that bypass the tree-builder entirely. See [Streaming API](#streaming-api-cursor-style-readwrite) below for use, exception conventions, custom-reader/-writer migration notes, and binary payload handling.
+
 ### Typed Usage
 
 _Example 1: Java object graph to JSON String_
@@ -1552,79 +1554,105 @@ have lots of additional information for how to register your factory classes wit
 
 ### Writing Custom JsonClassWriter
 
-When creating custom writers, use the **WriterContext semantic API** for cleaner, safer code. The API provides methods that handle quote escaping, comma management, and proper JSON formatting automatically.
+As of 4.103.0, `JsonClassWriter` offers two emission APIs — the **`JsonGenerator`-based form** (recommended) and the legacy **`Writer + WriterContext`** form (deprecated, scheduled for removal in 5.0). The new form is Jackson-shaped (`writeStringField`, `writeNumberField`, `writeObjectField`, …) and handles JSON escape, auto-commas, pretty-printing, JSON5 unquoted keys / smart quotes, NaN/Infinity policy, and `maxStringLength` enforcement automatically.
 
-**Basic Pattern:**
+**Basic Pattern (recommended — `JsonGenerator`):**
 ```java
-class MyWriter implements JsonClassWriter {
-    public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
-        MyClass instance = (MyClass) obj;
-
-        // First field: no leading comma
-        context.writeFieldName("fieldName");
-        context.writeValue(instance.getFieldValue());
-
-        // Subsequent fields: automatic comma handling
-        context.writeStringField("name", instance.getName());
-        context.writeNumberField("count", instance.getCount());
-        context.writeObjectField("data", instance.getData());
+class MyWriter implements JsonClassWriter<MyClass> {
+    @Override
+    public void write(MyClass instance, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
+        gen.writeStringField("name",  instance.getName());
+        gen.writeNumberField("count", instance.getCount());
+        gen.writeObjectField("data",  instance.getData());   // delegates to JsonIo for complex graph
     }
 }
 ```
 
-**Key Methods:**
+The framework opens the enclosing object (`{`) before calling your method and closes it (`}`) when you return — including any `@id` / `@type` prelude when policy allows. You emit field-name + value pairs for the body; auto-commas fire automatically. Unlike the legacy `WriterContext` API, **there is no "first field is different" pattern** — the generator's structural state knows whether a leading comma is needed.
 
-- **`writeFieldName(name)`** - Writes field name with colon (no comma): `"name":`
-- **`writeValue(value)`** - Writes any value with automatic type detection and escaping
-- **`writeStringField(name, value)`** - Complete string field with comma: `,"name":"value"`
-- **`writeNumberField(name, number)`** - Complete number field with comma: `,"count":42`
-- **`writeBooleanField(name, bool)`** - Complete boolean field with comma: `,"active":true`
-- **`writeObjectField(name, obj)`** - Complete object field with full serialization: `,"data":{...}`
-- **`writeArrayFieldStart(name)`** - Field name with opening bracket: `,"items":[`
-- **`writeObjectFieldStart(name)`** - Field name with opening brace: `,"config":{`
+**Key Methods on `JsonGenerator`:**
 
-**Why First Field is Different:**
+| Field-name + value (one call) | Description |
+|---|---|
+| `writeStringField(name, str)` | `"name":"<escaped>"` |
+| `writeNumberField(name, int/long/double/BigDecimal)` | `"name":42` — overloads pick the right numeric form |
+| `writeBooleanField(name, bool)` | `"name":true` / `"name":false` |
+| `writeNullField(name)` | `"name":null` |
+| `writeObjectField(name, pojo)` | `"name":<full serialization>` — delegates to `JsonIo.toJson` (cycles, custom writers, `@type` policy) |
+| `writeArrayFieldStart(name)` | `"name":[` — pair with `writeEndArray()` |
+| `writeObjectFieldStart(name)` | `"name":{` — pair with `writeEndObject()` |
 
-Custom writers are called *inside* the object that JsonWriter has already opened with `{`. The first field should NOT have a leading comma:
-
-```json
-{
-  "fieldName": "value",    // ← First field (no comma)
-  "name": "John",          // ← Subsequent fields (comma)
-  "count": 42
-}
-```
+| Standalone field-name then value | Description |
+|---|---|
+| `writeFieldName(name)` | `"name":` — next write call must produce the value |
+| `writeString(str)` / `writeNumber(n)` / `writeBoolean(b)` / `writeNull()` | scalar value (auto-commas, escapes) |
+| `writeStartObject()` / `writeEndObject()` | `{` … `}` for an object value |
+| `writeStartArray()` / `writeEndArray()` | `[` … `]` for an array value |
+| `writeObject(pojo)` | Full graph serialization for the current value slot (cycles, custom writers, `@type` policy) |
 
 **Complete Example:**
 ```java
-// From CustomJsonSubObjectsTest.java
-static class PersonWriter implements JsonClassWriter {
-    public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException {
-        Person p = (Person) o;
+static class PersonWriter implements JsonClassWriter<Person> {
+    @Override
+    public void write(Person p, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
+        gen.writeStringField("first", p.firstName);
+        gen.writeStringField("last",  p.lastName);
+        gen.writeStringField("phone", p.phoneNumber);
+        gen.writeStringField("dob",   p.dob.toString());
 
-        // First field: no leading comma
-        context.writeFieldName("first");
-        context.writeValue(p.firstName);
+        // Complex types: writeObjectField delegates to JsonIo
+        // (cycles, $id/$ref, nested custom writers all preserved)
+        gen.writeObjectField("kids",    p.kids);     // Array
+        gen.writeObjectField("friends", p.friends);  // Object[]
+        gen.writeObjectField("pets",    p.pets);     // List
+        gen.writeObjectField("items",   p.items);    // Map
+    }
+}
+```
 
-        // Subsequent fields: include leading comma
-        context.writeStringField("last", p.lastName);
-        context.writeStringField("phone", p.phoneNumber);
-        context.writeStringField("dob", p.dob.toString());
+**Primitive form** (for objects that write as a JSON scalar instead of `{...}`):
+```java
+static class TagWriter implements JsonClassWriter<Tag> {
+    @Override
+    public boolean hasPrimitiveForm(WriterContext ctx) { return true; }
 
-        // Complex types: automatic serialization with cycles/references
-        context.writeObjectField("kids", p.kids);      // Array
-        context.writeObjectField("pets", p.pets);      // List
-        context.writeObjectField("items", p.items);    // Map
+    @Override
+    public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext ctx) throws IOException {
+        gen.writeString(((Tag) o).getName());   // emits a bare quoted string instead of an object body
     }
 }
 ```
 
 **Benefits:**
-- ✅ Automatic quote escaping (no manual `\"` handling)
-- ✅ Automatic comma management (no "boolean first" pattern)
-- ✅ Type-safe methods for primitives (no manual formatting)
-- ✅ Full support for complex types (cycles, references, @id/@ref)
-- ✅ Cleaner, more maintainable code
+- Automatic JSON escape (no manual `\"` handling)
+- Automatic comma management (no "first field" boolean pattern)
+- Honors `prettyPrint`, JSON5 unquoted keys / smart quotes, NaN/Infinity policy, `maxStringLength`
+- `writeObjectField` delegates to the full tree-writer (cycles, references, `@id`/`@ref`, nested custom writers)
+- Method names match Jackson's `JsonGenerator` — easy porting from `JsonSerializer` implementations
+
+**Legacy form (still supported, deprecated):**
+
+The deprecated `Writer + WriterContext` form remains in 4.x for backwards compatibility:
+```java
+@SuppressWarnings("deprecation")
+class MyWriter implements JsonClassWriter<MyClass> {
+    @Override
+    public void write(MyClass instance, boolean showType, Writer output, WriterContext context) throws IOException {
+        // First field: no leading comma
+        context.writeFieldName("name");
+        context.writeValue(instance.getName());
+        // Subsequent fields: leading comma auto-emitted by writeStringField / writeNumberField / …
+        context.writeStringField("category", instance.getCategory());
+    }
+}
+```
+
+Dispatch rules:
+- If your class overrides only the deprecated `Writer`-based method, the legacy path is used.
+- If your class overrides the new `JsonGenerator`-based method, the deprecated form is bypassed.
+- If both are overridden (e.g. a base class that supports subclass chaining), the new form is preferred.
+
+The legacy form will be removed in 5.0; migrating to the `JsonGenerator` overload is mechanical — replace `output.write(...)` / `context.writeXxx(...)` calls with the matching `gen.writeXxx(...)` calls and drop the "first field" branch.
 
 ### Writing Custom ClassFactory (Reader)
 
@@ -1697,6 +1725,50 @@ static class PersonFactory implements ClassFactory {
 - ✅ Automatic type conversion via Converter
 - ✅ Full support for complex types (cycles, references, @id/@ref)
 - ✅ Cleaner, more maintainable code
+
+### Streaming custom reader (Jackson-port style)
+
+`ClassFactory` + `Resolver` is the recommended path for custom readers: it composes with all of json-io's graph features (`@id` / `@ref` cycle resolution, `@type` polymorphism, sub-object dispatch through nested factories and custom readers, type coercion via `Converter`). For two specific use cases — porting a Jackson `JsonDeserializer` with minimal change, or reading a very large single-shape document where the tree pass is the cost you want to avoid — `JsonTokenizer` is available directly, outside the custom-reader machinery:
+
+```java
+public class Pojo {
+    String id;
+    int count;
+}
+
+public Pojo readPojo(InputStream in) throws IOException {
+    try (JsonTokenizer t = JsonIo.createTokenizer(in)) {
+        Pojo p = new Pojo();
+        require(t.nextToken() == JsonToken.START_OBJECT, "expected {");
+        while (t.nextToken() != JsonToken.END_OBJECT) {
+            String field = t.currentName();
+            t.nextToken();                     // advance to the value token
+            switch (field) {
+                case "id":    p.id    = t.getText();     break;
+                case "count": p.count = t.getIntValue(); break;
+                default: t.skipChildren();     // unknown field — skip its value
+            }
+        }
+        return p;
+    }
+}
+```
+
+**What you give up by going around `ClassFactory`:**
+- `@id` / `@ref` cycle resolution — the tokenizer emits these as plain `@id` / `@ref` field tokens; you track them yourself if you want graph identity
+- `@type` polymorphism — the declared class is whatever you wrote in your reader code
+- Sub-object dispatch through `ClassFactory` / `JsonClassReader` for nested types — your code recurses by hand
+- The `Resolver` convenience methods (`readObject`, `readList`, `readMap`) and `Converter`-driven type coercion
+
+**What you gain:**
+- No tree allocation — no `JsonObject` Map built first
+- Token-by-token control identical to Jackson's `JsonParser.nextToken()`
+- Method-for-method portability from Jackson `JsonDeserializer` implementations (`t.currentName()` ⇔ `parser.currentName()`, `t.getIntValue()` ⇔ `parser.getIntValue()`, etc.)
+
+**Why no `ClassFactory.newInstance(Class, JsonTokenizer, Resolver)` overload?**
+Custom readers run *after* the framework has resolved `@id` / `@type` / `@ref` metadata and is mid-graph-walk — they receive a `JsonObject` tree because the resolver needs to keep tracking sub-object dispatch and cycle references after the factory returns. A token-stream factory would have to either re-implement those features inside each user-written factory or bypass them entirely. Jackson has the same asymmetry on its side: `JsonSerializer` works against a streaming `JsonGenerator`, but `JsonDeserializer` works against a `JsonParser` that has no equivalent of the graph machinery `ObjectMapper` adds on top.
+
+If you only need direct tokenizer access (no graph features), use `JsonIo.createTokenizer(...)` outside the custom-reader path entirely — that is the supported pattern for the Jackson-port use case.
 
 ### Order of Type Resolution and Substitution
 

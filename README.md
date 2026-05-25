@@ -210,6 +210,7 @@ MyType result = JsonIo.toJava(json, READ_OPTS).asClass(MyType.class);
 ### Key Features
 
 - **Jackson-compatible standard JSON** — `writeOptions.standardJson()` matches Spring Boot's default Jackson output (ISO-8601 dates, stringified Map keys, no proprietary metadata). Drop-in for Jackson.
+- **Jackson-shaped streaming API (since 4.103.0)** — `JsonIo.createGenerator(...)` / `JsonIo.createTokenizer(...)` expose cursor-style read/write that mirrors Jackson's `JsonGenerator` / `JsonParser` method-for-method. Hand-roll large-document or transform pipelines without building an in-memory tree. Included in [fabien renaud's java-json-benchmark](https://github.com/fabienrenaud/java-json-benchmark) `stream` comparison alongside Jackson, Gson, Jakarta-JSON, and others. See the [Streaming API](#streaming-api-jackson-compatible-cursor) section below.
 - Two modes: typed Java objects (`toJava()`) or class-independent Maps (`toMaps()`)
 - Preserves object references and handles cyclic relationships via `$id`/`$ref` — zero annotations required (Jackson needs `@JsonIdentityInfo` on every class)
 - Supports polymorphic types and complex object graphs
@@ -363,6 +364,84 @@ Person person = chatClient.prompt()
 **Also supports WebFlux and WebClient** for reactive applications.
 
 See the [Spring Integration Guide](/user-guide-spring.md) for configuration options, WebFlux usage, customizers, and Jackson coexistence modes.
+
+</details>
+
+<details id="streaming-api-jackson-compatible-cursor">
+<summary><strong style="font-size:1.4em">Streaming API (Jackson-compatible cursor)</strong></summary>
+
+Since 4.103.0, json-io exposes **`JsonGenerator`** and **`JsonTokenizer`** — cursor-style streaming write/read surfaces shaped method-for-method against Jackson's `com.fasterxml.jackson.core.JsonGenerator` / `JsonParser`. These bypass the tree-builder entirely: no `JsonObject` graph is built on read, no reflection is invoked on write.
+
+### Streaming write
+
+```java
+try (JsonGenerator g = JsonIo.createGenerator(outputStream)) {
+    g.writeStartObject()
+        .writeStringField("id", "u-1")
+        .writeStringField("name", "Alice")
+        .writeArrayFieldStart("tags")
+            .writeString("admin").writeString("active")
+        .writeEndArray()
+        .writeNumberField("age", 30)
+     .writeEndObject();
+}
+```
+
+Factories: `createGenerator(Writer)`, `createGenerator(OutputStream)`, plus `WriteOptions`-aware overloads. Honors `prettyPrint`, `indentationSize`, `json5UnquotedKeys`, `json5SmartQuotes`, `allowNanAndInfinity`, and `maxStringLength` from the supplied options.
+
+### Streaming read
+
+```java
+try (JsonTokenizer t = JsonIo.createTokenizer(jsonString)) {
+    while (t.nextToken() != null) {
+        switch (t.currentToken()) {
+            case FIELD_NAME:         String name = t.currentName();    break;
+            case VALUE_STRING:       String text = t.getText();        break;
+            case VALUE_NUMBER_INT:   long   i    = t.getLongValue();   break;
+            case VALUE_NUMBER_FLOAT: double f    = t.getDoubleValue(); break;
+            // ...
+        }
+    }
+}
+```
+
+Factories: `createTokenizer(String)`, `createTokenizer(InputStream)`, plus `ReadOptions`-aware overloads. Honors `strictJson`, `allowNanAndInfinity`, `integerTypeBigInteger`, `floatingPointBigDecimal`, and `stringBufferSize`.
+
+### Splice streaming read into streaming write
+
+```java
+try (JsonTokenizer t = JsonIo.createTokenizer(input);
+     JsonGenerator g = JsonIo.createGenerator(out)) {
+    while (t.nextToken() != null) {
+        g.copyCurrentEvent(t);          // single token
+    }
+}
+```
+
+`copyCurrentStructure(tokenizer)` copies the current value plus all of its children (scalar, full object, or full array) for higher-level parse-transform-emit pipelines.
+
+### When streaming vs tree
+
+| Use case | API |
+|---|---|
+| Cycle-bearing graphs, full type fidelity, `@id` / `@ref` / custom readers / custom writers | `JsonIo.toJava` / `toJson` (tree, default) |
+| Very large documents (avoid an in-memory `JsonObject` tree) | `JsonGenerator` / `JsonTokenizer` |
+| Pass-through transform / re-emit pipelines | `copyCurrentEvent` / `copyCurrentStructure` |
+| Direct port from Jackson `JsonGenerator` / `JsonParser` code | Streaming API — same shape, same call sites |
+
+### Benchmarked alongside Jackson, Gson, Jakarta-JSON
+
+json-io is wired into [fabien renaud's java-json-benchmark](https://github.com/fabienrenaud/java-json-benchmark) `stream` comparison — a JMH suite that hand-rolls each library's tokenizer/generator method-for-method against the same model. The json-io entry uses `JsonTokenizer` for read and `JsonGenerator` for write, with the same shape as the Jackson entry it sits next to. This makes the comparison apples-to-apples: no databind, no reflection, no pre-built trees on either side.
+
+### Exception conventions
+
+Streaming-API methods declare `IOException` (Jackson convention). Two checked subtypes carry the structural / lexical detail:
+- `JsonParseException` — malformed JSON or wrong-token-type accessor calls (`getBooleanValue()` on a number, etc.)
+- `JsonGenerationException` — structural misuse (`writeFieldName` outside an object, mismatched `writeEndArray`, value without a field name, etc.)
+
+Both extend `IOException` and are transparently caught by existing `catch (IOException e)` blocks. The tree-API (`JsonIo.toJava` / `toJson`) continues to use the unchecked `JsonIoException`.
+
+See the [Streaming API section of the User Guide](/user-guide.md#streaming-api-cursor-style-readwrite) for full details, the custom-reader/-writer migration path, and binary (`byte[]`) handling.
 
 </details>
 

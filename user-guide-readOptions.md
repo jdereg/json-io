@@ -35,7 +35,15 @@ ReadOptionsBuilder(readOptionsToCopyFrom)` to start with the copied settings.
 
 By following these guidelines, you can effectively manage how JSON data is processed and ensure that your application handles data consistently across various contexts.
 
+### `ReadOptions` also drives the streaming-read API
 
+`ReadOptions` is consumed by both deserialization surfaces:
+- `JsonIo.toJava(json, readOptions)` and `JsonIo.toMaps(json, readOptions)` — the tree-building parser (`JsonParser` + `Resolver`), which honors the **full** option set described in this guide (type-info policy, class factories, custom readers, missing-field handler, coerced types, aliasing, etc.).
+- `JsonIo.createTokenizer(in, readOptions)` — the [streaming-read cursor API](/user-guide.md#streaming-api-cursor-style-readwrite) (`JsonTokenizer`), which honors only the **token-level** options that apply at the lexical layer: `strictJson`, `allowNanAndInfinity`, `integerTypeBigInteger`, `floatingPointBigDecimal`, and `stringBufferSize`. Tree-only options (`classFactory`, `customReaders`, `coercedTypes`, `missingFieldHandler`, aliasing, unsafe-mode policy, etc.) have no meaning at the streaming level and are ignored.
+
+Pass a `null` `ReadOptions` to either API to use cached library defaults — the streaming-tokenizer factory in particular caches the default-options snapshot (lazy-init) for the hot-path zero-config use case.
+
+---
 
 ### Constructors
 Create new instances of`ReadOptions`.
