@@ -50,6 +50,21 @@ public class Accessor {
     private static final Method PRIVATE_LOOKUP_IN_METHOD;
     private static final Method FIND_VAR_HANDLE_METHOD;
     private static final MethodHandle VAR_HANDLE_GET_METHOD;
+    // Factory MethodHandles that bind a VarHandle into an XGetter functional-interface
+    // instance via LambdaMetafactory. Each factory has signature (Object varHandle) ->
+    // XGetter; the asType wrapper is on the FACTORY (called once per field at Accessor
+    // construction), not on the per-call hot path. The generated XGetter class captures
+    // the VarHandle as a final field and dispatches XGetter.get(target) via a direct
+    // invokevirtual to VarHandle.get(Object) — JIT intrinsifies that polymorphic call,
+    // so per-call cost is a plain inlined primitive read with no boxing.
+    private static final MethodHandle BOOLEAN_GETTER_FACTORY;
+    private static final MethodHandle BYTE_GETTER_FACTORY;
+    private static final MethodHandle CHAR_GETTER_FACTORY;
+    private static final MethodHandle SHORT_GETTER_FACTORY;
+    private static final MethodHandle INT_GETTER_FACTORY;
+    private static final MethodHandle LONG_GETTER_FACTORY;
+    private static final MethodHandle FLOAT_GETTER_FACTORY;
+    private static final MethodHandle DOUBLE_GETTER_FACTORY;
     private static final byte PRIMITIVE_NONE = 0;
     private static final byte PRIMITIVE_BOOLEAN = 1;
     private static final byte PRIMITIVE_BYTE = 2;
@@ -67,6 +82,14 @@ public class Accessor {
         Method privateLookupInMethod = null;
         Method findVarHandleMethod = null;
         MethodHandle varHandleGetMethod = null;
+        MethodHandle booleanGetterFactory = null;
+        MethodHandle byteGetterFactory = null;
+        MethodHandle charGetterFactory = null;
+        MethodHandle shortGetterFactory = null;
+        MethodHandle intGetterFactory = null;
+        MethodHandle longGetterFactory = null;
+        MethodHandle floatGetterFactory = null;
+        MethodHandle doubleGetterFactory = null;
 
         if (javaVersion >= 9) {
             try {
@@ -83,15 +106,36 @@ public class Accessor {
                 findVarHandleMethod = ReflectionUtils.getMethod(lookupClass,
                         "findVarHandle", Class.class, String.class, Class.class);
 
-                // VarHandle.get(Object) returns Object
+                // VarHandle.get(Object) returns Object (boxing form, used by retrieve())
                 MethodType getType = MethodType.methodType(Object.class, Object.class);
-                varHandleGetMethod = MethodHandles.publicLookup().findVirtual(varHandleClass, "get", getType);
+                MethodHandles.Lookup publicLookup = MethodHandles.publicLookup();
+                varHandleGetMethod = publicLookup.findVirtual(varHandleClass, "get", getType);
+
+                MethodHandles.Lookup myLookup = MethodHandles.lookup();
+                booleanGetterFactory = buildGetterFactory(publicLookup, myLookup, varHandleClass,
+                        boolean.class, BooleanGetter.class);
+                byteGetterFactory = buildGetterFactory(publicLookup, myLookup, varHandleClass,
+                        byte.class, ByteGetter.class);
+                charGetterFactory = buildGetterFactory(publicLookup, myLookup, varHandleClass,
+                        char.class, CharGetter.class);
+                shortGetterFactory = buildGetterFactory(publicLookup, myLookup, varHandleClass,
+                        short.class, ShortGetter.class);
+                intGetterFactory = buildGetterFactory(publicLookup, myLookup, varHandleClass,
+                        int.class, IntGetter.class);
+                longGetterFactory = buildGetterFactory(publicLookup, myLookup, varHandleClass,
+                        long.class, LongGetter.class);
+                floatGetterFactory = buildGetterFactory(publicLookup, myLookup, varHandleClass,
+                        float.class, FloatGetter.class);
+                doubleGetterFactory = buildGetterFactory(publicLookup, myLookup, varHandleClass,
+                        double.class, DoubleGetter.class);
             } catch (Exception e) {
                 // VarHandle reflection setup failed - will use MethodHandle/Field.get() fallback
                 lookup = null;
                 privateLookupInMethod = null;
                 findVarHandleMethod = null;
                 varHandleGetMethod = null;
+                booleanGetterFactory = byteGetterFactory = charGetterFactory = shortGetterFactory = null;
+                intGetterFactory = longGetterFactory = floatGetterFactory = doubleGetterFactory = null;
             }
         }
 
@@ -99,6 +143,44 @@ public class Accessor {
         PRIVATE_LOOKUP_IN_METHOD = privateLookupInMethod;
         FIND_VAR_HANDLE_METHOD = findVarHandleMethod;
         VAR_HANDLE_GET_METHOD = varHandleGetMethod;
+        BOOLEAN_GETTER_FACTORY = booleanGetterFactory;
+        BYTE_GETTER_FACTORY = byteGetterFactory;
+        CHAR_GETTER_FACTORY = charGetterFactory;
+        SHORT_GETTER_FACTORY = shortGetterFactory;
+        INT_GETTER_FACTORY = intGetterFactory;
+        LONG_GETTER_FACTORY = longGetterFactory;
+        FLOAT_GETTER_FACTORY = floatGetterFactory;
+        DOUBLE_GETTER_FACTORY = doubleGetterFactory;
+    }
+
+    /**
+     * Build a factory MethodHandle that produces an {@code XGetter} instance bound to a
+     * specific VarHandle. The generated lambda class implements {@code XGetter} and
+     * dispatches {@code get(target)} via a direct {@code invokevirtual VarHandle.get(Object)X}
+     * (signature-polymorphic), captured VarHandle as a final field. JIT intrinsifies the
+     * VarHandle.get call and inlines the lambda dispatch, giving a per-call cost equivalent
+     * to a direct field read with no boxing. The {@code asType} wrapper is on the FACTORY
+     * (called once per field at Accessor construction) — not on the get path.
+     */
+    private static MethodHandle buildGetterFactory(MethodHandles.Lookup publicLookup,
+                                                   MethodHandles.Lookup myLookup,
+                                                   Class<?> varHandleClass,
+                                                   Class<?> primitiveType,
+                                                   Class<?> getterInterface) throws Exception {
+        // Direct invokevirtual MH: (VarHandle, Object) -> primitive. LMF accepts this.
+        MethodHandle implMethod = publicLookup.findVirtual(varHandleClass, "get",
+                MethodType.methodType(primitiveType, Object.class));
+        MethodType samType = MethodType.methodType(primitiveType, Object.class);
+        java.lang.invoke.CallSite cs = LambdaMetafactory.metafactory(
+                myLookup,
+                "get",
+                MethodType.methodType(getterInterface, varHandleClass),   // factory: (VarHandle) -> XGetter
+                samType,                                                  // SAM: get(Object) -> primitive
+                implMethod,                                               // direct MH to invoke
+                samType);                                                 // instantiated SAM
+        // Adapt factory receiver from VarHandle to Object so we can invoke it from this
+        // source file (which can't reference VarHandle directly under -release 8).
+        return cs.dynamicInvoker().asType(MethodType.methodType(getterInterface, Object.class));
     }
 
     private final String uniqueFieldName;
@@ -326,6 +408,42 @@ public class Accessor {
     }
 
     /**
+     * Bind the given VarHandle into an XGetter functional-interface instance using the
+     * factory MH for the matching primitive kind. Returns null if no factory exists
+     * (e.g. JDK 8 where VarHandle is not available, or factory creation failed at
+     * static init). The returned object is one of {@link BooleanGetter}, {@link ByteGetter},
+     * {@link CharGetter}, {@link ShortGetter}, {@link IntGetter}, {@link LongGetter},
+     * {@link FloatGetter}, or {@link DoubleGetter} — same shape stored in
+     * {@code primitiveFunction}.
+     */
+    private static Object createGetterFromVarHandle(byte primKind, Object varHandle) {
+        try {
+            switch (primKind) {
+                case PRIMITIVE_BOOLEAN:
+                    return BOOLEAN_GETTER_FACTORY == null ? null : (BooleanGetter) BOOLEAN_GETTER_FACTORY.invokeExact(varHandle);
+                case PRIMITIVE_BYTE:
+                    return BYTE_GETTER_FACTORY == null ? null : (ByteGetter) BYTE_GETTER_FACTORY.invokeExact(varHandle);
+                case PRIMITIVE_CHAR:
+                    return CHAR_GETTER_FACTORY == null ? null : (CharGetter) CHAR_GETTER_FACTORY.invokeExact(varHandle);
+                case PRIMITIVE_SHORT:
+                    return SHORT_GETTER_FACTORY == null ? null : (ShortGetter) SHORT_GETTER_FACTORY.invokeExact(varHandle);
+                case PRIMITIVE_INT:
+                    return INT_GETTER_FACTORY == null ? null : (IntGetter) INT_GETTER_FACTORY.invokeExact(varHandle);
+                case PRIMITIVE_LONG:
+                    return LONG_GETTER_FACTORY == null ? null : (LongGetter) LONG_GETTER_FACTORY.invokeExact(varHandle);
+                case PRIMITIVE_FLOAT:
+                    return FLOAT_GETTER_FACTORY == null ? null : (FloatGetter) FLOAT_GETTER_FACTORY.invokeExact(varHandle);
+                case PRIMITIVE_DOUBLE:
+                    return DOUBLE_GETTER_FACTORY == null ? null : (DoubleGetter) DOUBLE_GETTER_FACTORY.invokeExact(varHandle);
+                default:
+                    return null;
+            }
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /**
      * Try to get a Lookup with private access to the target class via privateLookupIn (JDK 9+).
      * Returns the fallback Lookup if privateLookupIn is unavailable or fails.
      */
@@ -405,7 +523,32 @@ public class Accessor {
                     if (lambda != null) {
                         return new Accessor(field, handle, uniqueFieldName, field.getName(), Modifier.isPublic(field.getModifiers()), false, lambda);
                     }
-                    // Lambda failed but handle works — use MethodHandle path
+                    // Lambda failed but handle works. For primitive fields, build a typed
+                    // XGetter via VarHandle. LambdaMetafactory rejects the getField MH kind
+                    // produced by unreflectGetter, so the primitive-lambda path above is dead
+                    // for direct field accessors. The fix: create a VarHandle and bind it
+                    // into an XGetter functional-interface instance via the appropriate
+                    // factory MH (built once in static init via LMF). The generated lambda
+                    // class captures the VarHandle as a final field and dispatches via a
+                    // direct invokevirtual VarHandle.get(Object)X — JIT-inlinable, no boxing.
+                    byte primKind = primitiveKind(field.getType());
+                    if (primKind != PRIMITIVE_NONE && FIND_VAR_HANDLE_METHOD != null) {
+                        try {
+                            Object varHandle = FIND_VAR_HANDLE_METHOD.invoke(privateLookupObj,
+                                    declaringClass, field.getName(), field.getType());
+                            if (varHandle != null) {
+                                Object getter = createGetterFromVarHandle(primKind, varHandle);
+                                if (getter != null) {
+                                    return new Accessor(field, handle, uniqueFieldName,
+                                            field.getName(), Modifier.isPublic(field.getModifiers()),
+                                            false, getter);
+                                }
+                            }
+                        } catch (Exception ignore) {
+                            // Fall through to plain MethodHandle accessor
+                        }
+                    }
+                    // Non-primitive (or VarHandle creation failed): plain MethodHandle path
                     return new Accessor(field, handle, uniqueFieldName, field.getName(), Modifier.isPublic(field.getModifiers()), false);
                 } catch (IllegalAccessException e) {
                     // unreflectGetter failed — fall through to VarHandle
