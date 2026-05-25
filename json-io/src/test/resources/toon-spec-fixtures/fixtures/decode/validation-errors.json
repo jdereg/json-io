@@ -1,0 +1,235 @@
+{
+  "version": "3.1",
+  "category": "decode",
+  "description": "Validation errors - length mismatches, invalid escapes, syntax errors, delimiter mismatches",
+  "tests": [
+    {
+      "name": "throws on array length mismatch (inline primitives - too many)",
+      "input": "tags[2]: a,b,c",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.1"
+    },
+    {
+      "name": "throws on array length mismatch (list format - too many)",
+      "input": "items[1]:\n  - 1\n  - 2",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.1"
+    },
+    {
+      "name": "throws on tabular row value count mismatch with header field count",
+      "input": "items[2]{id,name}:\n  1,Ada\n  2",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.1"
+    },
+    {
+      "name": "throws on tabular row count mismatch with header length",
+      "input": "[1]{id}:\n  1\n  2",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.1"
+    },
+    {
+      "name": "throws on invalid escape sequence",
+      "input": "\"a\\x\"",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.2"
+    },
+    {
+      "name": "rejects truncated unicode escape \\u00b",
+      "input": "val: \"a\\u00b\"",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "7.1"
+    },
+    {
+      "name": "rejects lone surrogate code point \\uD800",
+      "input": "val: \"a\\uD800b\"",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "7.1"
+    },
+    {
+      "name": "throws on unterminated string",
+      "input": "\"unterminated",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.2"
+    },
+    {
+      "name": "throws on missing colon in key-value context",
+      "input": "a:\n  user",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.2"
+    },
+    {
+      "name": "throws on two primitives at root depth in strict mode",
+      "input": "hello\nworld",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "5"
+    },
+    {
+      "name": "throws on row width mismatch when rows use a different delimiter than the active delimiter",
+      "input": "items[2\t]{a\tb}:\n  1,2\n  3,4",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.1",
+      "note": "Active delimiter is tab; rows using comma each parse as 1 value, failing the row width check"
+    },
+    {
+      "name": "throws on mismatched delimiter between bracket and brace fields",
+      "input": "items[2\t]{a,b}:\n  1\t2\n  3\t4",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "6",
+      "minSpecVersion": "3.2"
+    },
+    {
+      "name": "throws on extra brackets between bracket segment and colon in strict mode",
+      "input": "foo[1][bar]: 10",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "6",
+      "note": "Non-whitespace content between ] and : must error in strict mode (§6 fall-through is non-strict only)",
+      "minSpecVersion": "3.2"
+    },
+    {
+      "name": "throws on text between bracket segment and colon in strict mode",
+      "input": "foo[2]extra: a,b",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "6",
+      "minSpecVersion": "3.2"
+    },
+    {
+      "name": "throws on non-integer bracket segment in strict mode",
+      "input": "foo[bar]: 10",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "6",
+      "minSpecVersion": "3.2"
+    },
+    {
+      "name": "throws on duplicate sibling keys in strict mode",
+      "input": "name: Ada\nname: Bob",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "14.4",
+      "minSpecVersion": "3.2"
+    },
+    {
+      "name": "throws on array header missing colon",
+      "input": "items[2]{id,name}\n  1,Ada\n  2,Bob",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "6"
+    },
+    {
+      "name": "throws on inline primitive array length mismatch (too few)",
+      "input": "tags[3]: a,b",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.1"
+    },
+    {
+      "name": "throws on list items length mismatch (too few)",
+      "input": "items[2]:\n  - a",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.1"
+    },
+    {
+      "name": "throws on bracket length with leading zeros in strict mode",
+      "input": "items[03]: a,b,c",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "6",
+      "note": "[03] is not a canonical non-negative integer length; decoders MUST NOT interpret it as a bracket segment",
+      "minSpecVersion": "3.2"
+    },
+    {
+      "name": "throws on negative bracket length in strict mode",
+      "input": "items[-1]: a,b,c",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "6",
+      "note": "[-1] is not a non-negative integer length; decoders MUST NOT interpret it as a bracket segment",
+      "minSpecVersion": "3.2"
+    },
+    {
+      "name": "throws on whitespace between bracket segment and colon in strict mode",
+      "input": "items[2] :\n  1,2",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "6",
+      "note": "No whitespace is permitted between ] and the colon/fields segment; any content there prevents header interpretation",
+      "minSpecVersion": "3.2"
+    },
+    {
+      "name": "throws on whitespace between bracket segment and fields segment in strict mode",
+      "input": "items[2] {a,b}:\n  1,2\n  3,4",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "6",
+      "note": "No whitespace is permitted between ] and the fields segment; mirrors the ]-to-colon rule",
+      "minSpecVersion": "3.2"
+    },
+    {
+      "name": "throws on nested duplicate sibling keys in strict mode",
+      "input": "outer:\n  name: Ada\n  name: Bob",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "14.4",
+      "minSpecVersion": "3.2"
+    },
+    {
+      "name": "throws on duplicate keys within a list-item object in strict mode",
+      "input": "items[1]:\n  - id: 1\n    id: 2",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "14.4",
+      "minSpecVersion": "3.2"
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "version": "1.4",
+  "category": "decode",
+  "description": "Root form detection - empty document, single primitive, literal empty array",
+  "tests": [
+    {
+      "name": "parses empty document as empty object",
+      "input": "",
+      "expected": {},
+      "options": {
+        "strict": true
+      },
+      "specSection": "5",
+      "note": "Empty input (no non-empty lines) decodes to empty object"
+    },
+    {
+      "name": "parses single primitive string at root as primitive",
+      "input": "hello",
+      "expected": "hello",
+      "options": {
+        "strict": true
+      },
+      "specSection": "5"
+    },
+    {
+      "name": "parses single primitive number at root as primitive",
+      "input": "42",
+      "expected": 42,
+      "options": {
+        "strict": true
+      },
+      "specSection": "5"
+    },
+    {
+      "name": "parses single primitive boolean at root as primitive",
+      "input": "true",
+      "expected": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "5"
+    },
+    {
+      "name": "parses literal [] at root as empty array",
+      "input": "[]",
+      "expected": [],
+      "options": {
+        "strict": true
+      },
+      "specSection": "5"
+    }
+  ]
+}

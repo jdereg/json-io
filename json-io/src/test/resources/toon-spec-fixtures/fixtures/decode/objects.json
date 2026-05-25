@@ -1,0 +1,340 @@
+{
+  "version": "3.1",
+  "category": "decode",
+  "description": "Object decoding - fields, nested objects, key parsing, §6 fall-through (non-strict), and §14.4 duplicate-key LWW",
+  "tests": [
+    {
+      "name": "parses objects with primitive values",
+      "input": "id: 123\nname: Ada\nactive: true",
+      "expected": {
+        "id": 123,
+        "name": "Ada",
+        "active": true
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "parses null values in objects",
+      "input": "id: 123\nvalue: null",
+      "expected": {
+        "id": 123,
+        "value": null
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "parses empty nested object header",
+      "input": "user:",
+      "expected": {
+        "user": {}
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "bare key: with no children decodes as empty object, not array",
+      "input": "matches:",
+      "expected": {
+        "matches": {}
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "applies last-write-wins for duplicate sibling keys in non-strict mode",
+      "input": "name: Ada\nname: Bob",
+      "expected": {
+        "name": "Bob"
+      },
+      "options": {
+        "strict": false
+      },
+      "specSection": "14.4",
+      "minSpecVersion": "3.2"
+    },
+    {
+      "name": "parses quoted object value with colon",
+      "input": "note: \"a:b\"",
+      "expected": {
+        "note": "a:b"
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "parses quoted object value with comma",
+      "input": "note: \"a,b\"",
+      "expected": {
+        "note": "a,b"
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "parses quoted object value with newline escape",
+      "input": "text: \"line1\\nline2\"",
+      "expected": {
+        "text": "line1\nline2"
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "parses quoted object value with escaped quotes",
+      "input": "text: \"say \\\"hello\\\"\"",
+      "expected": {
+        "text": "say \"hello\""
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "parses quoted object value with leading/trailing spaces",
+      "input": "text: \" padded \"",
+      "expected": {
+        "text": " padded "
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "parses quoted object value with only spaces",
+      "input": "text: \"  \"",
+      "expected": {
+        "text": "  "
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "parses quoted string value that looks like true",
+      "input": "v: \"true\"",
+      "expected": {
+        "v": "true"
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "parses quoted string value that looks like integer",
+      "input": "v: \"42\"",
+      "expected": {
+        "v": "42"
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "parses quoted string value that looks like negative decimal",
+      "input": "v: \"-7.5\"",
+      "expected": {
+        "v": "-7.5"
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "parses quoted key with colon",
+      "input": "\"order:id\": 7",
+      "expected": {
+        "order:id": 7
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "decodes \\uXXXX in quoted key (U+0004 control character)",
+      "input": "\"a\\u0004b\": 1",
+      "expected": {
+        "a\u0004b": 1
+      },
+      "specSection": "7.1"
+    },
+    {
+      "name": "decodes \\uXXXX in quoted key (case-insensitive hex)",
+      "input": "\"x\\u00E9y\": 2",
+      "expected": {
+        "xéy": 2
+      },
+      "specSection": "7.1"
+    },
+    {
+      "name": "parses quoted key with brackets",
+      "input": "\"[index]\": 5",
+      "expected": {
+        "[index]": 5
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "treats extra brackets after valid array segment as literal key (non-strict)",
+      "input": "foo[1][bar]: 10",
+      "options": {
+        "strict": false
+      },
+      "expected": {
+        "foo[1][bar]": 10
+      },
+      "specSection": "6",
+      "note": "Non-whitespace [bar] between ] and : prevents array header interpretation; non-strict fall-through produces a literal key not constrained by §7.3"
+    },
+    {
+      "name": "treats non-integer bracket content as literal key (non-strict)",
+      "input": "foo[bar][1]: 20",
+      "options": {
+        "strict": false
+      },
+      "expected": {
+        "foo[bar][1]": 20
+      },
+      "specSection": "6",
+      "note": "[bar] fails integer parsing; non-strict fall-through produces a literal key not constrained by §7.3"
+    },
+    {
+      "name": "treats text between bracket segment and colon as literal key (non-strict)",
+      "input": "foo[2]extra: a,b",
+      "options": {
+        "strict": false
+      },
+      "expected": {
+        "foo[2]extra": "a,b"
+      },
+      "specSection": "6",
+      "note": "Non-whitespace content between ] and : prevents array header interpretation; non-strict fall-through produces a literal key"
+    },
+    {
+      "name": "parses quoted key with braces",
+      "input": "\"{key}\": 5",
+      "expected": {
+        "{key}": 5
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "parses quoted key with comma",
+      "input": "\"a,b\": 1",
+      "expected": {
+        "a,b": 1
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "parses quoted key with spaces",
+      "input": "\"full name\": Ada",
+      "expected": {
+        "full name": "Ada"
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "parses quoted key with leading hyphen",
+      "input": "\"-lead\": 1",
+      "expected": {
+        "-lead": 1
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "parses quoted key with leading and trailing spaces",
+      "input": "\" a \": 1",
+      "expected": {
+        " a ": 1
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "parses quoted numeric key",
+      "input": "\"123\": x",
+      "expected": {
+        "123": "x"
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "parses quoted empty string key",
+      "input": "\"\": 1",
+      "expected": {
+        "": 1
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "parses dotted keys as identifiers",
+      "input": "user.name: Ada",
+      "expected": {
+        "user.name": "Ada"
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "parses underscore-prefixed keys",
+      "input": "_private: 1",
+      "expected": {
+        "_private": 1
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "parses underscore-containing keys",
+      "input": "user_name: 1",
+      "expected": {
+        "user_name": 1
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "unescapes newline in key",
+      "input": "\"line\\nbreak\": 1",
+      "expected": {
+        "line\nbreak": 1
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "unescapes tab in key",
+      "input": "\"tab\\there\": 2",
+      "expected": {
+        "tab\there": 2
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "unescapes quotes in key",
+      "input": "\"he said \\\"hi\\\"\": 1",
+      "expected": {
+        "he said \"hi\"": 1
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "parses deeply nested objects with indentation",
+      "input": "a:\n  b:\n    c: deep",
+      "expected": {
+        "a": {
+          "b": {
+            "c": "deep"
+          }
+        }
+      },
+      "specSection": "8"
+    },
+    {
+      "name": "applies LWW for nested duplicate sibling keys in non-strict mode",
+      "input": "outer:\n  name: Ada\n  name: Bob",
+      "expected": {
+        "outer": {
+          "name": "Bob"
+        }
+      },
+      "options": {
+        "strict": false
+      },
+      "specSection": "14.4",
+      "minSpecVersion": "3.2"
+    },
+    {
+      "name": "applies LWW for duplicate keys within a list-item object in non-strict mode",
+      "input": "items[1]:\n  - id: 1\n    id: 2",
+      "expected": {
+        "items": [
+          {
+            "id": 2
+          }
+        ]
+      },
+      "options": {
+        "strict": false
+      },
+      "specSection": "14.4",
+      "minSpecVersion": "3.2"
+    }
+  ]
+}
