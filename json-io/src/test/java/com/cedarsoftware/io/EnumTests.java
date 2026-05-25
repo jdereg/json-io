@@ -193,7 +193,7 @@ class EnumTests {
         String json = fbao.toString();
         
         String expected = loadJson("default-enum-with-no-type.json");
-        assertThat(json).isEqualToIgnoringWhitespace(expected);
+        assertThat(json).isEqualTo(expected.trim());
     }
 
     @Test
@@ -208,7 +208,7 @@ class EnumTests {
         String json = fbao.toString();
 
         String expected = loadJson("default-enum-standalone-without-privates.json");
-        assertThat(json).isEqualToIgnoringWhitespace(expected);
+        assertThat(json).isEqualTo(expected.trim());
     }
 
     @Test

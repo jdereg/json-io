@@ -64,9 +64,11 @@ class PrettyPrintTest
         assertThat(json).isEqualTo(target);
 
         String json1 = TestUtil.toJson(nice);
-        assertThat(json)
-                .isNotEqualTo(json1)
-                .isEqualToIgnoringWhitespace(json1);
+        assertThat(json).isNotEqualTo(json1);
+        // Tree equality: pretty (json) and compact (json1) differ only in inter-token
+        // whitespace. Use the gson parser to canonicalize both, then compare structurally
+        // — stricter than isEqualToIgnoringWhitespace (which would pass for "1.5" vs "1.50").
+        assertThat(JsonParser.parseString(json)).isEqualTo(JsonParser.parseString(json1));
 
         // formatJson uses the JsonGenerator-based pipeline (standard JSON pretty-print:
         // space after colon, scalars on same line as field name). The pretty-print
