@@ -1519,16 +1519,6 @@ public abstract class Resolver {
         return coercedClass != null ? ClassUtilities.getClassIfEnum(coercedClass) : null;
     }
 
-    // Determine the factory type, considering enums and collections
-    private Class<?> determineFactoryType(JsonObject jsonObj, Class<?> targetType) {
-        Class<?> enumClass = ClassUtilities.getClassIfEnum(targetType);
-        if (enumClass != null) {
-            boolean isEnumSet = jsonObj.getItems() != null;
-            return isEnumSet ? EnumSet.class : enumClass;
-        }
-        return targetType;
-    }
-
     private boolean shouldCreateArray(JsonObject jsonObj, Class<?> targetType) {
         Object[] items = jsonObj.getItems();
         return targetType.isArray() || (items != null && targetType == Object.class && jsonObj.getKeys() == null);
