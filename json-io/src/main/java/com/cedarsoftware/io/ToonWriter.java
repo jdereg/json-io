@@ -11,6 +11,7 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.IdentityHashMap;
@@ -1059,6 +1060,9 @@ public class ToonWriter implements Closeable, Flushable {
                     writeInlineValue(arr[i]);
                 }
             }
+        } else if (array instanceof Object[]
+                && tryWriteUniformMapTabular((Object[]) array, length)) {
+            // Uniform Map array emitted in tabular form per spec §9.3.
         } else if (!writeOptions.isPrettyPrint()) {
             // Try tabular format for uniform POJO arrays
             UniformPojoArrayData uniformPOJO = getUniformPOJODataFromArray(array, length);
@@ -1266,6 +1270,29 @@ public class ToonWriter implements Closeable, Flushable {
                 depth--;
             }
         }
+    }
+
+    /**
+     * Detect a uniform-Map {@code Object[]} (all Maps with the same primitive-valued keys,
+     * spec §9.3) and emit it in tabular form when matched. Returns {@code true} if the
+     * array was emitted; {@code false} if the caller should fall back to its existing
+     * non-tabular path (POJO check or expanded list form).
+     *
+     * <p>Mirrors the uniform-Map branch of
+     * {@link #writeCollectionElementsWithHeader(Collection)} so {@code Object[]} inputs —
+     * which are the tree-builder's representation for JSON arrays inside a parsed
+     * {@code Map} tree — get the same tabular treatment that {@code Collection} inputs
+     * already receive. {@code Arrays.asList} is a non-copying view so the path stays cheap.
+     */
+    private boolean tryWriteUniformMapTabular(Object[] array, int length) throws IOException {
+        List<Object> view = (length == array.length) ? Arrays.asList(array) : Arrays.asList(array).subList(0, length);
+        List<String> uniformKeys = getUniformKeys(view);
+        if (uniformKeys == null) {
+            return false;
+        }
+        writeTabularHeader(uniformKeys);
+        writeTabularRows(view, uniformKeys);
+        return true;
     }
 
     /**
