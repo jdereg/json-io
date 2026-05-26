@@ -247,6 +247,19 @@ public class ToonWriter implements Closeable, Flushable {
     // the call. Non-plan paths (e.g., Map as a direct root, or nested inside Collection/Array
     // element iteration) leave this false, preserving the hasComplexKeys scan.
     private boolean currentMapHasSimpleKeyTypeHint = false;
+    // §13.4 safe-mode folding: the set of LITERAL sibling keys at the depth currently being
+    // written. When a folded chain's computed dotted path would equal one of these literal
+    // keys, folding MUST be skipped to avoid collision. Set by writeMapWithSimpleKeys when
+    // keyFolding is enabled; null when folding is off (no overhead in the common case).
+    private java.util.Set<String> currentSiblingLiteralKeys;
+    // Set true while emitting a chain whose root-level fold collided with a literal sibling
+    // (§13.4 safe mode). Suppresses folding in the subtree so the entire blocked chain emits
+    // unfolded — matching ref-impl behavior. Reset when the suppressed branch closes.
+    private boolean foldingSuppressed = false;
+    // Sentinel set by collectFoldedPath when it returns null due to §13.4 sibling-literal
+    // collision (as opposed to "chain isn't foldable at all"). Caller reads to decide
+    // whether to suppress folding in the nested descent.
+    private boolean lastFoldCollision = false;
     private ArrayDeque<Object> traceStack;   // cycleSupport=true: work deque for traceReferences()
     // Cache resolved output type names per class for this write operation.
     private final Map<Class<?>, String> typeNameCache = new IdentityHashMap<>(32);
@@ -2132,17 +2145,34 @@ public class ToonWriter implements Closeable, Flushable {
      * Per TOON spec, array/collection values combine key with size marker: fieldName[N]:
      */
     private void writeMapWithSimpleKeys(Map<?, ?> map) throws IOException {
-        boolean first = true;
-        for (Map.Entry<?, ?> entry : map.entrySet()) {
-            if (!first) {
-                out.write('\n');
+        // §13.4 safe-mode folding: capture the literal sibling key set so folded chains
+        // can detect a collision with an existing literal key at this depth and skip
+        // folding. Only built when keyFolding is on; null otherwise.
+        java.util.Set<String> previousSiblings = currentSiblingLiteralKeys;
+        if (toonKeyFolding) {
+            java.util.Set<String> keys = new java.util.HashSet<>(map.size() * 2);
+            for (Object k : map.keySet()) {
+                if (k instanceof String) {
+                    keys.add((String) k);
+                }
             }
-            first = false;
-            writeIndent();
+            currentSiblingLiteralKeys = keys;
+        }
+        try {
+            boolean first = true;
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                if (!first) {
+                    out.write('\n');
+                }
+                first = false;
+                writeIndent();
 
-            Object key = entry.getKey();
-            String keyStr = (key == null) ? "null" : key.toString();
-            writeFieldEntry(keyStr, entry.getValue(), needsQuotingForMapKey(keyStr));
+                Object key = entry.getKey();
+                String keyStr = (key == null) ? "null" : key.toString();
+                writeFieldEntry(keyStr, entry.getValue(), needsQuotingForMapKey(keyStr));
+            }
+        } finally {
+            currentSiblingLiteralKeys = previousSiblings;
         }
     }
 
@@ -2200,14 +2230,33 @@ public class ToonWriter implements Closeable, Flushable {
             return;
         }
 
-        // Check for key folding: collapse single-key map chains into dotted notation
+        // Check for key folding: collapse single-key map chains into dotted notation.
+        // §13.4 safe-mode collision avoidance: when the candidate folded path would clash
+        // with a literal sibling key, skip folding for this chain AND suppress folding in
+        // the recursive descent so the entire chain emits unfolded.
         if (toonKeyFolding
+                && !foldingSuppressed
                 && value instanceof Map
                 && isValidFoldableKey(keyStr)
                 && !(cycleSupport && isReferenced(value))) {
             FoldedEntry folded = collectFoldedPath(keyStr, value);
             if (folded != null) {
                 writeFoldedEntry(folded.path, folded.value);
+                return;
+            }
+            if (lastFoldCollision) {
+                boolean savedSuppressed = foldingSuppressed;
+                foldingSuppressed = true;
+                try {
+                    writeKeyStringKnown(keyStr, keyNeedsQuoting);
+                    out.write(":");
+                    out.write('\n');
+                    depth++;
+                    writeMap((Map<?, ?>) value);
+                    depth--;
+                } finally {
+                    foldingSuppressed = savedSuppressed;
+                }
                 return;
             }
         }
@@ -2418,6 +2467,13 @@ public class ToonWriter implements Closeable, Flushable {
      * Write a folded entry (key path and value).
      */
     private void writeFoldedEntry(String path, Object value) throws IOException {
+        if (value instanceof Map && ((Map<?, ?>) value).isEmpty()) {
+            // §8 + §13.4: folded chain ending in an empty object emits bare "path:".
+            // Mirrors the empty-map field-value behavior in writeFieldEntry.
+            writeString(path);
+            out.write(":");
+            return;
+        }
         if (value instanceof char[]) {
             writeString(path);
             out.write(':'); out.write(' ');
@@ -3130,6 +3186,7 @@ public class ToonWriter implements Closeable, Flushable {
      * Returns null if the chain is not foldable.
      */
     private FoldedEntry collectFoldedPath(String firstKey, Object value) {
+        lastFoldCollision = false;
         StringBuilder path = new StringBuilder(firstKey);
         Object current = value;
         Map<Object, Boolean> seen = new IdentityHashMap<>();
@@ -3153,7 +3210,16 @@ public class ToonWriter implements Closeable, Flushable {
 
         // Only fold if we actually folded something (path contains a dot)
         if (path.indexOf(".") > 0) {
-            return new FoldedEntry(path.toString(), current);
+            String pathStr = path.toString();
+            // §13.4 safe-mode requirement: the resulting folded key string MUST NOT equal
+            // any existing sibling literal key at the same object depth. If it would
+            // collide with a literal key already in the parent map, skip folding so the
+            // chain is emitted as a normal nested structure.
+            if (currentSiblingLiteralKeys != null && currentSiblingLiteralKeys.contains(pathStr)) {
+                lastFoldCollision = true;
+                return null;
+            }
+            return new FoldedEntry(pathStr, current);
         }
         return null;
     }

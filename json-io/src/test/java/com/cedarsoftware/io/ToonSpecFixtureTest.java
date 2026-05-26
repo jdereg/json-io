@@ -98,9 +98,7 @@ class ToonSpecFixtureTest {
             "encode/arrays-objects.json :: uses list format for nested object arrays with mismatched keys",
             "encode/arrays-objects.json :: uses list format for objects containing arrays of arrays",
             "encode/arrays-objects.json :: uses tabular format for nested uniform object arrays",
-            "encode/arrays-tabular.json :: encodes tabular arrays with keys needing quotes",
-            "encode/key-folding.json :: encodes folded chain ending with empty object",
-            "encode/key-folding.json :: skips folding on sibling literal-key collision (safe mode)"
+            "encode/arrays-tabular.json :: encodes tabular arrays with keys needing quotes"
     ));
 
     @TestFactory
