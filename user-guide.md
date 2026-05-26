@@ -536,7 +536,8 @@ This JSON5 output can be read back by json-io (or any JSON5-compliant parser) wi
 
 [TOON (Token-Oriented Object Notation)](https://toonformat.dev/) is a compact, human-readable format
 optimized for LLM token efficiency, using approximately **40-50% fewer tokens** than equivalent JSON.
-json-io fully supports both reading and writing TOON format.
+json-io fully supports both reading and writing TOON format, and conforms to the **TOON v3.3 spec** —
+the full upstream conformance fixture suite (encode + decode + strict-mode validation) passes.
 
 ### Writing TOON
 
@@ -570,6 +571,9 @@ Map<String, Object> map = JsonIo.fromToonToMaps(toon, readOptions).asClass(Map.c
 
 // Stream from InputStream
 Person person = JsonIo.fromToon(inputStream, readOptions).asClass(Person.class);
+
+// Stream-to-Maps variant
+Map<String, Object> mapFromStream = JsonIo.fromToonToMaps(inputStream, readOptions).asClass(Map.class);
 ```
 
 The `fromToon()` API returns a fluent builder allowing:
@@ -755,6 +759,22 @@ If an actual cycle is encountered, a `JsonIoException` is thrown with guidance t
 WriteOptions options = new WriteOptionsBuilder().cycleSupport(true).build();
 String toon = JsonIo.toToon(cyclicObject, options);
 ```
+
+### Fine-tuning TOON
+
+For per-call control beyond the defaults, the dedicated options guides document every TOON-related option:
+
+**Read side** — see [Read Options TOON sections](user-guide-readOptions.md#toon-parsing-strictness):
+- `strictToon()` — strict spec validation (rejects duplicate keys, trailing content, malformed brackets)
+- `toonExpandPaths(boolean)` — opt-in spec §13.4 dotted-key path expansion *(new in 4.103.0)*
+- `toonIndentSize(int)` — custom decoder indent width for documents that don't use 2-space indent *(new in 4.103.0)*
+
+Each per-instance option has an `addPermanent*` sibling for JVM-lifetime defaults.
+
+**Write side** — see [Write Options TOON sections](user-guide-writeOptions.md#toon-key-folding):
+- `toonKeyFolding(boolean)` — collapse single-key object chains into dotted notation (e.g. `address.city: NYC`)
+- `toonDelimiter(char)` — switch tabular/inline delimiter to `','`, `'\t'`, or `'|'`
+- `indentationSize(int)` — encoder indent width (also drives JSON pretty-print)
 
 ## Annotations
 
