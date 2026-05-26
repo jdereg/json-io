@@ -118,6 +118,10 @@ public class ReadOptionsBuilder {
     
     // JsonValue-specific permanent security limits (JVM lifetime defaults)
     private static volatile int BASE_MAX_TYPE_RESOLUTION_CACHE_SIZE = 1000;  // 1K cache entries max
+
+    // TOON-specific permanent decoder defaults
+    private static volatile boolean BASE_TOON_EXPAND_PATHS = false;          // §13.4 default: literal dotted keys
+    private static volatile int BASE_TOON_INDENT_SIZE = 2;                   // §12 default: 2 spaces per indent level
     
     // Collection/Map Factory-specific permanent security limits - default to backward compatible values
     private static volatile int BASE_DEFAULT_COLLECTION_CAPACITY = 16;      // 16 default collection capacity
@@ -219,6 +223,10 @@ public class ReadOptionsBuilder {
         
         // Copy base permanent JsonValue-specific security limits
         options.maxTypeResolutionCacheSize = BASE_MAX_TYPE_RESOLUTION_CACHE_SIZE;
+
+        // Copy base permanent TOON decoder defaults
+        options.toonExpandPaths = BASE_TOON_EXPAND_PATHS;
+        options.toonIndentSize = BASE_TOON_INDENT_SIZE;
         
         // Copy base permanent Collection/Map Factory-specific security limits
         options.defaultCollectionCapacity = BASE_DEFAULT_COLLECTION_CAPACITY;
@@ -786,6 +794,37 @@ public class ReadOptionsBuilder {
         BASE_MAX_TYPE_RESOLUTION_CACHE_SIZE = maxTypeResolutionCacheSize;
         // Apply to JsonValue's static cache immediately
         JsonValue.setMaxTypeResolutionCacheSize(maxTypeResolutionCacheSize);
+    }
+
+    /**
+     * Set a permanent (JVM lifecycle) default for the TOON {@code toonExpandPaths} read option.
+     * All new ReadOptions instances will be initialized with this value unless explicitly overridden.
+     *
+     * <p>Per TOON v3.3 §13.4, the decoder treats dotted keys (e.g. {@code "address.city"}) as
+     * literal single keys by default. Setting this to {@code true} opts in to path expansion,
+     * which splits dotted keys into nested objects (e.g. {@code {address: {city: ...}}}).
+     *
+     * @param toonExpandPaths {@code true} to enable safe-mode dotted-key expansion; {@code false}
+     *                        to preserve literal dotted keys (the spec default).
+     */
+    public static void addPermanentToonExpandPaths(boolean toonExpandPaths) {
+        BASE_TOON_EXPAND_PATHS = toonExpandPaths;
+    }
+
+    /**
+     * Set a permanent (JVM lifecycle) default for the TOON {@code toonIndentSize} read option.
+     * All new ReadOptions instances will be initialized with this value unless explicitly overridden.
+     *
+     * <p>Per TOON v3.3 §12, the decoder expects 2 spaces per indent level by default. Set this
+     * to match documents that use a non-default indent width (e.g. 4 for 4-space indentation).
+     *
+     * @param toonIndentSize positive integer, minimum 1. Default is 2.
+     */
+    public static void addPermanentToonIndentSize(int toonIndentSize) {
+        if (toonIndentSize < 1) {
+            throw new JsonIoException("toonIndentSize must be at least 1, value: " + toonIndentSize);
+        }
+        BASE_TOON_INDENT_SIZE = toonIndentSize;
     }
 
     /**

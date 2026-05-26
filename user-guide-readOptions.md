@@ -272,6 +272,33 @@ These settings provide flexibility in how large or special floating point number
 > #### `ReadOptionsBuilder` strictToon(`boolean strictToon`)
 >- [ ] Enables or disables strict TOON parsing mode.
 
+### TOON Path Expansion (§13.4)
+
+By default, the TOON decoder treats dotted keys (e.g. `address.city`) as literal single keys
+per the TOON v3.3 spec §13.4. Setting this to `true` opts in to path expansion, which splits
+dotted keys into nested objects (e.g. `{address: {city: ...}}`).
+
+> #### `boolean` isToonExpandPaths()
+>- [ ] Returns `true` when dotted-key path expansion is enabled. Default is `false` (literal dotted keys).
+
+> #### `ReadOptionsBuilder` toonExpandPaths(`boolean toonExpandPaths`)
+>- [ ] Enables or disables safe-mode dotted-key path expansion.
+
+For the permanent (JVM-lifetime) form, see [Add Permanent TOON Expand Paths](#add-permanent-toon-expand-paths).
+
+### TOON Indent Size (§12)
+
+Per TOON v3.3 §12, the decoder expects 2 spaces per indent level by default. Override this to
+match documents that use a non-default indent width.
+
+> #### `int` getToonIndentSize()
+>- [ ] Returns the configured indent width. Default is `2`.
+
+> #### `ReadOptionsBuilder` toonIndentSize(`int toonIndentSize`)
+>- [ ] Sets the decoder indent width. Must be at least 1. Throws `JsonIoException` for values < 1.
+
+For the permanent (JVM-lifetime) form, see [Add Permanent TOON Indent Size](#add-permanent-toon-indent-size).
+
 >#### `boolean` isFloatingPointDouble()
 >- [ ] return `true` if floating point values should always be returned as `Double.`  This is the default.
 >#### `ReadOptionsBuilder` floatPointDouble()
@@ -878,6 +905,46 @@ ReadOptions options = new ReadOptionsBuilder().build();     // Keeps streams ope
 ```
 
 >#### ReadOptionsBuilder.addPermanentCloseStream(`boolean closeStream`)
+
+#### Add Permanent TOON Expand Paths
+
+The `addPermanentToonExpandPaths` method sets the application-wide default for TOON dotted-key path expansion (§13.4).
+
+- **Purpose**: Per TOON v3.3 §13.4, the decoder treats dotted keys (e.g. `address.city`) as literal single keys by default. Enabling expansion splits them into nested objects (`{address: {city: ...}}`).
+
+- **Default Value**: `false` (literal dotted keys — the spec default).
+
+**Example Usage:**
+```java
+// Application startup: enable dotted-key expansion globally
+ReadOptionsBuilder.addPermanentToonExpandPaths(true);
+
+// All subsequent ReadOptions instances inherit this
+ReadOptions options = new ReadOptionsBuilder().build();    // toonExpandPaths == true
+```
+
+>#### ReadOptionsBuilder.addPermanentToonExpandPaths(`boolean toonExpandPaths`)
+
+#### Add Permanent TOON Indent Size
+
+The `addPermanentToonIndentSize` method sets the application-wide default for the TOON decoder's expected indent width (§12).
+
+- **Purpose**: Per TOON v3.3 §12, the decoder expects 2 spaces per indent level by default. Documents that use a different indent width (e.g. 4) need this overridden.
+
+- **Validation**: Must be at least 1. Throws `JsonIoException` for values < 1.
+
+- **Default Value**: `2`.
+
+**Example Usage:**
+```java
+// Application startup: 4-space indent everywhere
+ReadOptionsBuilder.addPermanentToonIndentSize(4);
+
+// All subsequent ReadOptions instances inherit this
+ReadOptions options = new ReadOptionsBuilder().build();    // toonIndentSize == 4
+```
+
+>#### ReadOptionsBuilder.addPermanentToonIndentSize(`int toonIndentSize`)
 
 **Combined Configuration Example:**
 

@@ -266,6 +266,7 @@ Individual features can be enabled separately. See the [User Guide](/user-guide.
 - **Tabular format** — arrays of uniform objects as CSV-like rows with column headers
 - **Key folding** — nested keys like `address.city: Denver` flatten one level of nesting
 - **Full fidelity** — most data requires no extra metadata at all
+- **TOON v3.3 spec-conformant** — passes the full official upstream fixture suite (encode + decode + strict-mode validation)
 
 **JSON:**
 ```json
