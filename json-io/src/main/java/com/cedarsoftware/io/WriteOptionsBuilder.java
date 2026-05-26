@@ -1075,7 +1075,7 @@ public class WriteOptionsBuilder {
      *                         String conversion (via Converter) to stringified keys in standard JSON
      *                         object format (e.g., {"100": "value"} for Map&lt;Long, String&gt;).
      *                         Complex POJO keys without a bidirectional String conversion still use
-     *                         @keys/@items.  forceMapOutputAsTwoArrays(true) overrides this setting.
+     *                         {@code @keys}/{@code @items}.  forceMapOutputAsTwoArrays(true) overrides this setting.
      *                         Default is false for JSON, true for JSON5.
      * @return WriteOptionsBuilder for chained access.
      */

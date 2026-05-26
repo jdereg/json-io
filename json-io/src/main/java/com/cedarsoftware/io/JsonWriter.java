@@ -2545,14 +2545,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     /**
-     * Write a Java POJO as JSON. Dog-food path — outer {@code {/&#125;} via
+     * Write a Java POJO as JSON. Dog-food path — outer &#123;/&#125; via
      * {@link CharStreamGenerator#writeStartObjectRaw()} /
-     * {@link CharStreamGenerator#writeEndObjectRaw()}; @id / @type via gen field-level
+     * {@link CharStreamGenerator#writeEndObjectRaw()}; &#64;id / &#64;type via gen field-level
      * helpers; per-field emission via {@link #writeField(Object, WriteFieldPlan)} which
      * uses {@link CharStreamGenerator#writeFieldNameRaw(String)} for the precomputed key
      * emission. The {@code first}-flag tracking from the legacy code is no longer needed —
      * gen's state machine auto-emits the leading separator for subsequent fields. When
-     * {@code bodyOnly} is true, the caller has already opened the outer {@code {} and is
+     * {@code bodyOnly} is true, the caller has already opened the outer &#123; and is
      * responsible for closing it; this method emits only the field block inside.
      *
      * @param obj      Object to be written in JSON format
