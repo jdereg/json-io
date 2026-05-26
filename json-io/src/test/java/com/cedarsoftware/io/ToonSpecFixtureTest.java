@@ -70,24 +70,7 @@ class ToonSpecFixtureTest {
      * <p>When this set is empty, the workaround can be deleted entirely and the branch
      * is ready to merge back into {@code master}.
      */
-    private static final Set<String> EXPECTED_FAILURES = new HashSet<>(Arrays.asList(
-            // --- decode gaps ---
-            "decode/validation-errors.json :: throws on array header missing colon",
-            "decode/validation-errors.json :: throws on array length mismatch (inline primitives - too many)",
-            "decode/validation-errors.json :: throws on array length mismatch (list format - too many)",
-            "decode/validation-errors.json :: throws on bracket length with leading zeros in strict mode",
-            "decode/validation-errors.json :: throws on duplicate keys within a list-item object in strict mode",
-            "decode/validation-errors.json :: throws on duplicate sibling keys in strict mode",
-            "decode/validation-errors.json :: throws on inline primitive array length mismatch (too few)",
-            "decode/validation-errors.json :: throws on list items length mismatch (too few)",
-            "decode/validation-errors.json :: throws on missing colon in key-value context",
-            "decode/validation-errors.json :: throws on nested duplicate sibling keys in strict mode",
-            "decode/validation-errors.json :: throws on row width mismatch when rows use a different delimiter than the active delimiter",
-            "decode/validation-errors.json :: throws on tabular row count mismatch with header length",
-            "decode/validation-errors.json :: throws on tabular row value count mismatch with header field count",
-            "decode/validation-errors.json :: throws on two primitives at root depth in strict mode",
-            "decode/validation-errors.json :: throws on unterminated string"
-    ));
+    private static final Set<String> EXPECTED_FAILURES = Collections.emptySet();
 
     @TestFactory
     Stream<DynamicTest> encodeFixtures() throws Exception {
@@ -240,7 +223,10 @@ class ToonSpecFixtureTest {
     }
 
     private static ReadOptions toReadOptions(Map<String, Object> options) {
-        ReadOptionsBuilder b = new ReadOptionsBuilder();
+        // §13 decoder defaults: strict = true (per spec). json-io's library default is
+        // false (permissive) for backwards compatibility, so the conformance test mapping
+        // explicitly enables strict unless the fixture says otherwise.
+        ReadOptionsBuilder b = new ReadOptionsBuilder().strictToon(true);
         if (options == null) {
             return b.build();
         }

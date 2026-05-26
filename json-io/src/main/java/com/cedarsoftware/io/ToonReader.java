@@ -277,45 +277,65 @@ public class ToonReader {
      */
     public Object readValue(Type suggestedType) {
         try {
-            while (true) {
-                if (!hasLine()) {
-                    JsonObject emptyMap = new JsonObject();
-                    if (suggestedType != null) {
-                        emptyMap.setType(suggestedType);
+            Object value = readRootValueRaw(suggestedType);
+            // §14.2 strict: a TOON document MUST be exactly one value. Trailing non-blank
+            // content after the root value indicates malformed input (two primitives at
+            // root, missing-colon line dangling after a key:nested structure, header with
+            // missing colon followed by orphan rows, etc.). Non-strict tolerates it.
+            if (strictToon) {
+                while (hasLine()) {
+                    if (isTrimmedEmpty()) {
+                        consumeLine();
+                        continue;
                     }
-                    return emptyMap;
+                    String trailing = peekTrimmed();
+                    throw new JsonIoException("Unexpected content after root value at line "
+                            + lineNumber + ": " + trailing);
                 }
-
-                if (isTrimmedEmpty()) {
-                    consumeLine();
-                    continue;  // Skip empty lines
-                }
-
-                if (isEmptyObjectInBuf()) {
-                    consumeLine();
-                    JsonObject emptyMap = new JsonObject();
-                    if (suggestedType != null) {
-                        emptyMap.setType(suggestedType);
-                    }
-                    return emptyMap;
-                }
-
-                if (isArrayStartInBuf()) {
-                    return readArray();
-                }
-
-                if (findColonInBuf() > 0) {
-                    return readObject(0, suggestedType);
-                }
-
-                String trimmed = peekTrimmed();
-                consumeLine();
-                return readScalar(trimmed);
             }
+            return value;
         } catch (IOException e) {
             throw new JsonIoException("Error reading TOON input at line " + lineNumber, e);
         } finally {
             lineSlice.release();
+        }
+    }
+
+    private Object readRootValueRaw(Type suggestedType) throws IOException {
+        while (true) {
+            if (!hasLine()) {
+                JsonObject emptyMap = new JsonObject();
+                if (suggestedType != null) {
+                    emptyMap.setType(suggestedType);
+                }
+                return emptyMap;
+            }
+
+            if (isTrimmedEmpty()) {
+                consumeLine();
+                continue;  // Skip empty lines
+            }
+
+            if (isEmptyObjectInBuf()) {
+                consumeLine();
+                JsonObject emptyMap = new JsonObject();
+                if (suggestedType != null) {
+                    emptyMap.setType(suggestedType);
+                }
+                return emptyMap;
+            }
+
+            if (isArrayStartInBuf()) {
+                return readArray();
+            }
+
+            if (findColonInBuf() > 0) {
+                return readObject(0, suggestedType);
+            }
+
+            String trimmed = peekTrimmed();
+            consumeLine();
+            return readScalar(trimmed);
         }
     }
 
@@ -678,6 +698,16 @@ public class ToonReader {
         } catch (NumberFormatException e) {
             throw new JsonIoException("Invalid array count at line " + lineNumber + ": " + countStr);
         }
+        // §14.2 strict: bracket-length leading zeros and negative lengths are malformed.
+        if (strictToon) {
+            String trimmedCount = trimAscii(countStr);
+            if (trimmedCount.length() > 1 && trimmedCount.charAt(0) == '0') {
+                throw new JsonIoException("Array count with leading zeros at line " + lineNumber + ": " + countStr);
+            }
+            if (count < 0) {
+                throw new JsonIoException("Array count must not be negative at line " + lineNumber + ": " + countStr);
+            }
+        }
 
         // Handle empty array
         if (count == 0) {
@@ -769,6 +799,17 @@ public class ToonReader {
                 throw new JsonIoException("Invalid array count at line " + lineNumber + ": " + countStr);
             }
             return null;  // §14.2 non-strict tolerance: non-integer bracket content → literal key
+        }
+        // §14.2 strict: bracket-length leading zeros (e.g. "03") and negative lengths
+        // are malformed array headers.
+        if (strictToon) {
+            String trimmed = trimAscii(countStr);
+            if (trimmed.length() > 1 && trimmed.charAt(0) == '0') {
+                throw new JsonIoException("Array count with leading zeros at line " + lineNumber + ": " + countStr);
+            }
+            if (count < 0) {
+                throw new JsonIoException("Array count must not be negative at line " + lineNumber + ": " + countStr);
+            }
         }
 
         int afterBracket = bracketEnd + 1;
@@ -2480,13 +2521,18 @@ public class ToonReader {
             }
         }
         if (strictToon) {
-            Object existing = target.get(key);
-            if (existing != null) {
+            // §8 / §14.4: duplicate sibling keys at the same depth MUST error in strict
+            // mode. Non-strict mode applies last-write-wins silently (the appendFieldForParser
+            // below already overwrites the prior value). For target.get to distinguish
+            // "key is present with null value" from "key is absent", use containsKey.
+            if (target.containsKey(key)) {
+                Object existing = target.get(key);
                 boolean existingObj = existing instanceof JsonObject;
                 boolean incomingObj = value instanceof JsonObject;
                 if (existingObj != incomingObj) {
                     throw new JsonIoException("Path expansion conflict at line " + lineNumber + " for key: " + key);
                 }
+                throw new JsonIoException("Duplicate key '" + key + "' at line " + lineNumber);
             }
         }
         target.appendFieldForParser(key, value);
