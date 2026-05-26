@@ -18,6 +18,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@SuppressWarnings({"unchecked", "rawtypes"})
 class GetMethodAccessorFactoryTests extends AbstractAccessFactoryTest {
 
     @Override

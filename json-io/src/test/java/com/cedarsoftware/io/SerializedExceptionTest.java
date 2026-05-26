@@ -1,7 +1,6 @@
 package com.cedarsoftware.io;
 
 import java.io.IOException;
-import java.io.Writer;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -38,14 +37,11 @@ public class SerializedExceptionTest
 
     public static class MyExceptionWriter implements JsonClassWriter
     {
-        public void write(Object obj, boolean showType, Writer output, WriterContext writerContext) throws IOException
+        public void write(Object obj, boolean showType, JsonGenerator gen, WriterContext writerContext) throws IOException
         {
             MyException e = (MyException) obj;
-            output.write("\"name\":\"");
-            output.write(e.name);
-            output.write("\",\"detailMessage\":\"");
-            output.write(e.getMessage());
-            output.write('"');
+            gen.writeStringField("name", e.name);
+            gen.writeStringField("detailMessage", e.getMessage());
         }
     }
 

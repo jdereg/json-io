@@ -1,3 +1,4 @@
+
 package com.cedarsoftware.io;
 
 import java.io.Serializable;
@@ -39,6 +40,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 class ExceptionSerializeTest
 {
     @BeforeAll

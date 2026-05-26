@@ -98,6 +98,7 @@ public class SealableSet<T> implements Set<T> {
         Iterator<T> iterator = set.iterator();
         return new Iterator<T>() {
             public boolean hasNext() { return iterator.hasNext(); }
+            @SuppressWarnings("unchecked")
             public T next() {
                 T item = iterator.next();
                 if (item instanceof Map.Entry) {

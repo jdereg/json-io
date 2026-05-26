@@ -1,3 +1,4 @@
+
 package com.cedarsoftware.io;
 
 import java.util.Map;
@@ -35,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 class Json5TrailingCommasTest {
 
     @SuppressWarnings("unchecked")

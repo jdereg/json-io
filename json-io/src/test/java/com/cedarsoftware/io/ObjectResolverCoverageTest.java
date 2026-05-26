@@ -1,3 +1,4 @@
+
 package com.cedarsoftware.io;
 
 import java.util.ArrayList;
@@ -28,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - Unresolved field handling
  * - Map<Long, ...> key conversion (ParameterizedType keyType)
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 class ObjectResolverCoverageTest {
 
     // ========== Test models ==========

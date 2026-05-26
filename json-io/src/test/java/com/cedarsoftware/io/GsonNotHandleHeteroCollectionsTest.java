@@ -1,3 +1,4 @@
+
 package com.cedarsoftware.io;
 
 import java.util.ArrayList;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.Test;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class GsonNotHandleHeteroCollectionsTest
 {
     static class Node

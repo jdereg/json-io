@@ -109,20 +109,18 @@ class CustomClassHandlerTest
     public static class WeirdDateWriter extends Writers.PrimitiveTypeWriter
     {
 
-        public void write(Object o, boolean showType, Writer out, WriterContext writerContext) throws IOException
+        public void write(Object o, boolean showType, JsonGenerator gen, WriterContext writerContext) throws IOException
         {
             if (showType) {
-                out.write("\"stuff\":");
+                gen.writeFieldName("stuff");
             }
-            writePrimitiveForm(o, out, null);
+            writePrimitiveForm(o, gen, writerContext);
         }
 
-        public void writePrimitiveForm(Object o, Writer out, WriterContext writerContext) throws IOException
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext writerContext) throws IOException
         {
             String value = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format((Date) o);
-            out.write("\"");
-            out.write(value);
-            out.write("\"");
+            gen.writeString(value);
         }
     }
 }

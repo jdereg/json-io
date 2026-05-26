@@ -61,6 +61,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive tests for ToonReader - TOON format parsing.
  * Tests round-trip: Object -> ToonWriter -> ToonReader -> Object
  */
+@SuppressWarnings({"unchecked", "rawtypes"})  // test code uses raw Map/Collection patterns; narrow to this file
 class ToonReaderTest {
 
     // ========== Helper Methods ==========
@@ -452,7 +453,7 @@ class ToonReaderTest {
 
     @Test
     void testURL() throws Exception {
-        roundTrip(new URL("https://example.com"));
+        roundTrip(URI.create("https://example.com").toURL());
     }
 
     @Test

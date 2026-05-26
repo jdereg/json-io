@@ -2,7 +2,6 @@ package com.cedarsoftware.io;
 
 
 import java.io.IOException;
-import java.io.Writer;
 import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.HashMap;
@@ -32,8 +31,8 @@ public class WriteOptionsBuilderTest {
 
     static class DummyWriter implements JsonClassWriter {
         @Override
-        public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException {
-            output.write("\"dummy\"");
+        public void write(Object o, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
+            gen.writeString("dummy");
         }
     }
 

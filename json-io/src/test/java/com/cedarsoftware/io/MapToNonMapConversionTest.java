@@ -1,3 +1,4 @@
+
 package com.cedarsoftware.io;
 
 import java.math.BigDecimal;
@@ -48,6 +49,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 class MapToNonMapConversionTest {
 
     private static final WriteOptions WRITE_OPTIONS = new WriteOptionsBuilder().build();

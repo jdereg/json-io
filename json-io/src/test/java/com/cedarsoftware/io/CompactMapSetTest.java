@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@SuppressWarnings({"unchecked", "rawtypes"})  // test code uses raw Map/Collection patterns; narrow to this file
 public class CompactMapSetTest {
     private static final Logger LOG = Logger.getLogger(CompactMapSetTest.class.getName());
 

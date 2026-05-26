@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * automatically without requiring custom factories, leveraging the Converter
  * system for Map <-> Color transformations.
  */
+@SuppressWarnings({"unchecked", "rawtypes"})  // test code uses raw Map/Collection patterns; narrow to this file
 class AutomaticColorTest {
 
     @Test

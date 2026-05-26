@@ -1553,7 +1553,10 @@ public abstract class Resolver {
             if (isUnknownObject
                     && targetClass != null
                     && Map.class.isAssignableFrom(targetClass)) {
-                instance = ClassUtilities.newInstance(converter, targetClass, null);
+                // Cast null to Object to disambiguate from the deprecated
+                // newInstance(Converter, Class, Collection) overload — both accept null
+                // but only the Object overload is current.
+                instance = ClassUtilities.newInstance(converter, targetClass, (Object) null);
             } else {
                 // Remove annotation-ignored and non-whitelisted fields so they are not matched to constructor parameters
                 AnnotationResolver.ClassAnnotationMetadata annMeta = AnnotationResolver.getMetadata(targetClass);

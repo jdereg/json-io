@@ -657,7 +657,10 @@ final class CharStreamTokenizer extends JsonTokenizer {
 
     @Override
     public JsonLocation getCurrentLocation() {
-        return new JsonLocation(-1L, input.getLine(), input.getCol(), sourceRef);
+        // FastReader's line/col tracking was removed for performance and the deprecated
+        // getLine()/getCol() accessors always return 0. Pass 0 directly to skip the call.
+        // For richer diagnostics, callers can use the reader's getLastSnippet() pattern.
+        return new JsonLocation(-1L, 0, 0, sourceRef);
     }
 
     @Override

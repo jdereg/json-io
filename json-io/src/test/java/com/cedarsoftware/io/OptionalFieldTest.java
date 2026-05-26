@@ -1,3 +1,4 @@
+
 package com.cedarsoftware.io;
 
 import java.util.LinkedHashMap;
@@ -25,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * present), regardless of {@code showType}. The framework separately emits
  * the {@code @type} marker when needed.
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 class OptionalFieldTest {
 
     public static class OptHolder {

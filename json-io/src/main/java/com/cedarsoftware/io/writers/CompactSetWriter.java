@@ -41,6 +41,7 @@ import com.cedarsoftware.util.CompactSet;
 public class CompactSetWriter implements JsonClassWriter {
 
     @Override
+    @SuppressWarnings("unchecked")
     public void write(Object obj, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
         CompactSet set = (CompactSet) obj;
         Map<String, Object> config = set.getConfig();

@@ -1,3 +1,4 @@
+
 package com.cedarsoftware.io;
 
 import java.time.ZonedDateTime;
@@ -49,6 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 class JDK9ImmutableTest
 {
     static class Rec {

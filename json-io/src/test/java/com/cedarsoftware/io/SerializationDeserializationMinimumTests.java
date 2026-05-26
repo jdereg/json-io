@@ -33,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@SuppressWarnings({"unchecked", "rawtypes"})  // test code uses raw Map/Collection patterns; narrow to this file
 public abstract class SerializationDeserializationMinimumTests<T> {
 
     protected abstract T  provideT1();

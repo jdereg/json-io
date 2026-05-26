@@ -1,6 +1,7 @@
 package com.cedarsoftware.io;
 
 import java.net.URL;
+import java.net.URI;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -60,7 +61,7 @@ class URLTest
     @ParameterizedTest
     @MethodSource("argumentsForUrlTesting")
     void testToString_withDifferentUrls_works(String input) throws Exception {
-        URL url = new URL(input);
+        URL url = URI.create(input).toURL();
         assertThat(url.toString()).isEqualTo(input);
     }
 
@@ -68,7 +69,7 @@ class URLTest
     @ParameterizedTest
     @MethodSource("argumentsForUrlTesting")
     void testSerialization_withDifferentUrls_works(String input) throws Exception {
-        URL url = new URL(input);
+        URL url = URI.create(input).toURL();
         String json = TestUtil.toJson(url);
 
         TestUtil.printLine("json=" + json);
@@ -78,7 +79,7 @@ class URLTest
 
     @Test
     void testURL_hasTypeAndUrl_and_noOtherUrlParams() throws Exception {
-        URL url = new URL(OUTSIDE_DOMAIN);
+        URL url = URI.create(OUTSIDE_DOMAIN).toURL();
         String json = TestUtil.toJson(url);
         assertThatJsonIsNewStyle(json);
     }
@@ -96,7 +97,7 @@ class URLTest
 
     @Test
     void testUrl_inGenericSubobject_serializeBackCorrectly() throws Exception {
-        URL url = new URL(LOCALHOST);
+        URL url = URI.create(LOCALHOST).toURL();
         GenericSubObject initial = new GenericSubObject<>(url);
         String json = TestUtil.toJson(initial);
 
@@ -107,7 +108,7 @@ class URLTest
 
     @Test
     void testUrl_inNestedObject_serializeBackCorrectly() throws Exception {
-        URL url = new URL(OUTSIDE_DOMAIN);
+        URL url = URI.create(OUTSIDE_DOMAIN).toURL();
         NestedUrl initial = new NestedUrl(url);
         String json = TestUtil.toJson(initial);
         assertThatJsonIsNewStyle(json);
@@ -120,7 +121,7 @@ class URLTest
 
     @Test
     void testURL_referencedInArray() throws Exception {
-        URL url = new URL(OUTSIDE_DOMAIN);
+        URL url = URI.create(OUTSIDE_DOMAIN).toURL();
         List<URL> list = listOf(url, url, url, url, url);
         String json = TestUtil.toJson(list);
 
@@ -131,7 +132,7 @@ class URLTest
 
     @Test
     void testURL_referencedInObject() throws Exception {
-        NestedTwice expected = new NestedTwice(new URL(OUTSIDE_DOMAIN));
+        NestedTwice expected = new NestedTwice(URI.create(OUTSIDE_DOMAIN).toURL());
 
         String json = TestUtil.toJson(expected);
 

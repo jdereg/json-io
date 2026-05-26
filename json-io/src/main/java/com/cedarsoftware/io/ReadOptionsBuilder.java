@@ -1654,6 +1654,7 @@ public class ReadOptionsBuilder {
      * Load ClassFactory classes based on contents of resources/classFactory.txt.
      * Verify that classes listed are indeed valid classes loaded in the JVM.
      */
+    @SuppressWarnings("unchecked")  // Class<? extends ClassFactory> cast: classFactories.txt lists only ClassFactory classes
     private static void loadBaseClassFactory() {
         Map<String, String> map = MetaUtils.loadMapDefinition("config/classFactory.txt");
         ClassLoader classLoader = ClassUtilities.getClassLoader(ReadOptionsBuilder.class);
@@ -1691,6 +1692,7 @@ public class ReadOptionsBuilder {
      * Load custom reader classes based on contents of resources/customReaders.txt.
      * Verify that classes listed are indeed valid classes loaded in the JVM.
      */
+    @SuppressWarnings("unchecked")  // Class<JsonClassReader> cast: customReaders.txt lists only JsonClassReader classes
     private static void loadBaseReaders() {
         Map<String, String> map = MetaUtils.loadMapDefinition("config/customReaders.txt");
         ClassLoader classLoader = ClassUtilities.getClassLoader(ReadOptionsBuilder.class);
@@ -1778,6 +1780,7 @@ public class ReadOptionsBuilder {
             return converterOverrides;
         }
 
+        @SuppressWarnings("unchecked")  // T inferred from call site; caller is responsible for type
         public <T> T getCustomOption(String name) {
             return (T) customOptions.get(name);
         }

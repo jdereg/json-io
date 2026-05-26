@@ -46,8 +46,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class WritersTest {
     @Test
     void testUnusedAPIs() throws Exception {
+        // Smoke-test the writer's new JsonGenerator-based dispatch entry. Pass a stub
+        // generator that just discards output; we're only checking the API is callable.
         Writers.JsonStringWriter jsw = new Writers.JsonStringWriter();
-        jsw.write(8, false, new StringWriter(), null);
+        jsw.write(8, false, JsonIo.createGenerator(new StringWriter()), null);
     }
 
     @Test

@@ -22,6 +22,7 @@ import java.util.Set;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@SuppressWarnings("unchecked")
 public class SingletonMap<K, V> implements Map<K, V> {
     private static final Object UNINITIALIZED = new Object();
     private K key = (K) UNINITIALIZED;

@@ -1,3 +1,4 @@
+
 package com.cedarsoftware.io;
 
 import java.util.EnumSet;
@@ -13,6 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Tests for empty EnumSet serialization/deserialization in various formats
  * and verifying proper type preservation and mutability.
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 class EmptyEnumSetTest {
     private enum TestEnum {
         A, B, C

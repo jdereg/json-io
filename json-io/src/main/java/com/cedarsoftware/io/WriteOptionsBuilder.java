@@ -1970,6 +1970,7 @@ public class WriteOptionsBuilder {
             return converterOverrides;
         }
 
+        @SuppressWarnings("unchecked")  // T inferred from call site; caller is responsible for type
         public <T> T getCustomOption(String name) {
             return (T) customOptions.get(name);
         }
@@ -2736,6 +2737,7 @@ public class WriteOptionsBuilder {
      *
      * @return Map<Class < ?>, JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
      */
+    @SuppressWarnings("unchecked")  // Class<JsonClassWriter> cast: customWriters.txt lists only JsonClassWriter classes
     private static void loadBaseWriters() {
         Map<String, String> map = MetaUtils.loadMapDefinition("config/customWriters.txt");
         ClassLoader classLoader = ClassUtilities.getClassLoader(WriteOptionsBuilder.class);

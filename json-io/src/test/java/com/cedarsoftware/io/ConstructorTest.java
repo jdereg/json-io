@@ -1,8 +1,10 @@
+
 package com.cedarsoftware.io;
 
 import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URI;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -45,6 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class ConstructorTest
 {
     @Test
@@ -211,11 +214,11 @@ public class ConstructorTest
     @Test
     public void testUrlInConstructor() throws MalformedURLException
     {
-        Web addr = new Web(new URL("http://acme.com"));
+        Web addr = new Web(URI.create("http://acme.com").toURL());
         String json = TestUtil.toJson(addr);
         TestUtil.printLine("json = " + json);
         Web addr2 = TestUtil.toJava(json, null).asClass(null);
-        assertEquals(new URL("http://acme.com"), addr2.getUrl());
+        assertEquals(URI.create("http://acme.com").toURL(), addr2.getUrl());
     }
 
     @Test

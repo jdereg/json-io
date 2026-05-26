@@ -1,3 +1,4 @@
+
 package com.cedarsoftware.io;
 
 import java.math.BigDecimal;
@@ -39,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class NoTypeTest
 {
     static class Person

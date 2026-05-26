@@ -18,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Each test exercises a specific error path or edge case identified from
  * the JaCoCo "nc" (not covered) line analysis.
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 class ToonReaderCoverageTest {
 
     // ========== 2-arg constructor (line 130-132) ==========

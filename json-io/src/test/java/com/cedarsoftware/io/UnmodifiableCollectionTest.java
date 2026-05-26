@@ -40,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class UnmodifiableCollectionTest
 {
     @Test

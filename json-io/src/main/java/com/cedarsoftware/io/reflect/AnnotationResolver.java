@@ -75,6 +75,7 @@ import com.cedarsoftware.util.ReflectionUtils;
  *         <br><br>
  *         <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
  */
+@SuppressWarnings("unchecked")  // reflection-heavy: many Class<? extends Annotation> casts from Class<?>
 public class AnnotationResolver {
 
     // ======================== External annotation detection ========================

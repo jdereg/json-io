@@ -185,6 +185,7 @@ public class SealableNavigableSet<E> implements NavigableSet<E> {
     private Iterator<E> createSealHonoringIterator(Iterator<E> iterator) {
         return new Iterator<E>() {
             public boolean hasNext() { return iterator.hasNext(); }
+            @SuppressWarnings("unchecked")
             public E next() {
                 E item = iterator.next();
                 if (item instanceof Map.Entry) {

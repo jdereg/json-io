@@ -562,7 +562,7 @@ class AnnotationTest {
         WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoNever().build();
         String json = JsonIo.toJson(model, writeOptions);
 
-        ReadOptions readOptions = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().returnAsJsonObjects().build();
         Map<String, Object> map = JsonIo.toJava(json, readOptions).asClass(Map.class);
 
         assertTrue(map.containsKey("full_name"), "Map should contain renamed key: " + map);
@@ -577,7 +577,7 @@ class AnnotationTest {
         WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoNever().build();
         String json = JsonIo.toJson(model, writeOptions);
 
-        ReadOptions readOptions = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().returnAsJsonObjects().build();
         Map<String, Object> map = JsonIo.toJava(json, readOptions).asClass(Map.class);
 
         assertTrue(map.containsKey("visible"), "Map should contain visible field");
@@ -858,10 +858,11 @@ class AnnotationTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")  // raw Map.class cast on JsonIo.toJava(...).asClass(...)
     void testIoNamingMapMode() {
         SnakeCaseModel original = new SnakeCaseModel("Map", "Test", 7);
         WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().build();
-        ReadOptions ro = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
+        ReadOptions ro = new ReadOptionsBuilder().returnAsJsonObjects().build();
 
         String json = JsonIo.toJson(original, wo);
         Map<String, Object> map = JsonIo.toJava(json, ro).asClass(Map.class);
@@ -2611,16 +2612,16 @@ class AnnotationTest {
     // ======================== @IoCustomWriter / @IoCustomReader ========================
 
     public static class GadgetWriter implements JsonClassWriter {
-        public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException {
+        public void write(Object o, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
             if (showType) {
-                output.write("\"value\":");
+                gen.writeFieldName("value");
             }
-            writePrimitiveForm(o, output, context);
+            writePrimitiveForm(o, gen, context);
         }
         public boolean hasPrimitiveForm(WriterContext context) { return true; }
-        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+        public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
             Gadget g = (Gadget) o;
-            output.write("\"gadget:" + g.label + ":" + g.size + "\"");
+            gen.writeString("gadget:" + g.label + ":" + g.size);
         }
     }
 

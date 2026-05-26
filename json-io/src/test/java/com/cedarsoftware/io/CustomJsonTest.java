@@ -50,16 +50,12 @@ class CustomJsonTest
 	}
 
 	class PersonWriter implements JsonClassWriter {
-		public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException {
+		public void write(Object o, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
 			Person p = (Person) o;
-			// Using new WriterContext semantic API - automatic quote escaping and comma management
-			// First field: no leading comma
-			context.writeFieldName("first");
-			context.writeValue(p.firstName);
-			// Subsequent fields: include leading comma
-			context.writeStringField("last", p.lastName);
-			context.writeStringField("phone", p.phoneNumber);
-			context.writeStringField("dob", p.dob.toString());
+			gen.writeStringField("first", p.firstName);
+			gen.writeStringField("last",  p.lastName);
+			gen.writeStringField("phone", p.phoneNumber);
+			gen.writeStringField("dob",   p.dob.toString());
 		}
 	}
 

@@ -728,6 +728,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * @param output   Writer to write the JSON to (if there is a custom writer for o's Class).
      * @return true if the array element was written, false otherwise.
      */
+    @SuppressWarnings({"deprecation", "unchecked"})  // legacy JsonClassWriter.write(Writer)/writePrimitiveForm(Writer); raw JsonClassWriter dispatch
     protected boolean writeCustom(Class<?> clazz, Object o, boolean showType, Writer output) throws IOException {
         // Combined check and lookup - avoids redundant getCustomWriter calls
         com.cedarsoftware.io.JsonClassWriter closestWriter = getCustomWriterIfAllowed(clazz, o);
@@ -1320,6 +1321,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * The Long-wrap branch (showType + writeLongsAsStrings) remains on legacy
      * {@code out.write} pending {@code @type} prefix alignment.
      */
+    @SuppressWarnings("unchecked")  // raw JsonClassWriter dispatch (longBoxedWriter, etc.)
     private void writePrimitive(final Object obj, boolean showType) throws IOException {
         if (neverShowingType && !forceElementShowType) {
             showType = false;
@@ -1601,6 +1603,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         output.write(Boolean.toString(booleans[lenMinus1]));
     }
 
+    @SuppressWarnings({"deprecation", "unchecked"})  // legacy JsonClassWriter.write(Writer); raw JsonClassWriter dispatch
     private void writeDoubleArray(double[] doubles, int lenMinus1) throws IOException {
         final Writer output = this.out;
         for (int i = 0; i < lenMinus1; i++) {
@@ -1610,6 +1613,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         doubleWriter.write(doubles[lenMinus1], false, output, this);
     }
 
+    @SuppressWarnings({"deprecation", "unchecked"})  // legacy JsonClassWriter.write(Writer); raw JsonClassWriter dispatch
     private void writeFloatArray(float[] floats, int lenMinus1) throws IOException {
         final Writer output = this.out;
         for (int i = 0; i < lenMinus1; i++) {
@@ -1619,6 +1623,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         floatWriter.write(floats[lenMinus1], false, output, this);
     }
 
+    @SuppressWarnings({"deprecation", "unchecked"})  // legacy JsonClassWriter.write(Writer); raw JsonClassWriter dispatch
     private void writeLongArray(long[] longs, int lenMinus1) throws IOException {
         final Writer output = this.out;
         for (int i = 0; i < lenMinus1; i++) {

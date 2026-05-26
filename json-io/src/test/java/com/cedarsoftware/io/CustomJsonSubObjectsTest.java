@@ -1,3 +1,4 @@
+
 package com.cedarsoftware.io;
 
 import java.io.IOException;
@@ -33,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 class CustomJsonSubObjectsTest
 {
 	private static final Logger LOG = Logger.getLogger(CustomJsonSubObjectsTest.class.getName());
@@ -72,23 +74,18 @@ class CustomJsonSubObjectsTest
 	}
 
 	static class PersonWriter implements JsonClassWriter {
-		public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException {
+		public void write(Object o, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
 			Person p = (Person) o;
-			// Using new WriterContext semantic API - cleaner, safer, automatic formatting
-			// First field: no leading comma
-			context.writeFieldName("first");
-			context.writeValue(p.firstName);
-			// Subsequent fields: include leading comma
-			context.writeStringField("last", p.lastName);
-			context.writeStringField("phone", p.phoneNumber);
-			context.writeStringField("dob", p.dob.toString());
+			gen.writeStringField("first", p.firstName);
+			gen.writeStringField("last",  p.lastName);
+			gen.writeStringField("phone", p.phoneNumber);
+			gen.writeStringField("dob",   p.dob.toString());
 
-			// writeObjectField handles complex types (arrays, lists, maps) with full serialization
-			// Automatically handles cycles, references, and nested structures
-			context.writeObjectField("kids", p.kids);
-			context.writeObjectField("friends", p.friends);
-			context.writeObjectField("pets", p.pets);
-			context.writeObjectField("items", p.items);
+			// writeObjectField delegates to JsonIo.toJson (cycles, $id/$ref, custom writers preserved)
+			gen.writeObjectField("kids",    p.kids);
+			gen.writeObjectField("friends", p.friends);
+			gen.writeObjectField("pets",    p.pets);
+			gen.writeObjectField("items",   p.items);
 		}
 	}
 

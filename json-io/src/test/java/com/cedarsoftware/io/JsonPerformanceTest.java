@@ -1,3 +1,4 @@
+
 package com.cedarsoftware.io;
 
 import java.io.IOException;
@@ -26,6 +27,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializer;
+@SuppressWarnings({"unchecked", "rawtypes"})
 
 public class JsonPerformanceTest {
     private static final Logger LOG = Logger.getLogger(JsonPerformanceTest.class.getName());

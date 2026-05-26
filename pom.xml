@@ -84,6 +84,15 @@
                             <testRelease>8</testRelease>
                             <encoding>${project.build.sourceEncoding}</encoding>
                             <parameters>true</parameters>
+                            <!-- Library targets JDK 8 deliberately for broad compat. Modern
+                                 javac emits "source value 8 is obsolete" diagnostics for that
+                                 setting; -Xlint:-options silences those without affecting any
+                                 other lint check. -Xlint:unchecked is enabled explicitly so
+                                 unchecked-warning regressions surface in CI. -->
+                            <compilerArgs>
+                                <arg>-Xlint:-options</arg>
+                                <arg>-Xlint:unchecked</arg>
+                            </compilerArgs>
                         </configuration>
                     </plugin>
                 </plugins>
@@ -108,6 +117,11 @@
                             <source>1.8</source>
                             <target>1.8</target>
                             <encoding>${project.build.sourceEncoding}</encoding>
+                            <!-- See jdk9-and-above profile for rationale. -->
+                            <compilerArgs>
+                                <arg>-Xlint:-options</arg>
+                                <arg>-Xlint:unchecked</arg>
+                            </compilerArgs>
                         </configuration>
                     </plugin>
                 </plugins>

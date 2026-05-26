@@ -1,3 +1,4 @@
+
 package com.cedarsoftware.io;
 
 import java.io.Externalizable;
@@ -59,6 +60,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class MetaUtilsTests {
 
     private static Stream<Arguments> ensureFillArgsInstanceOf() {

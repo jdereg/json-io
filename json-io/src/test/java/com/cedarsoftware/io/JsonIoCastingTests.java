@@ -1,3 +1,4 @@
+
 package com.cedarsoftware.io;
 
 import java.math.BigDecimal;
@@ -34,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+@SuppressWarnings({"unchecked", "rawtypes"})
 
 class JsonIoCastingTests {
 

@@ -588,6 +588,7 @@ public class MapResolver extends Resolver {
      * @param jsonObj The JsonObject representing the collection.
      */
     @Override
+    @SuppressWarnings("unchecked")  // raw Collection cast — JsonObject.getTarget()/createInstance return Object
     protected void traverseCollection(final JsonObject jsonObj) {
         // Guard against reprocessing already-finished objects
         if (markFinishedIfNot(jsonObj)) {

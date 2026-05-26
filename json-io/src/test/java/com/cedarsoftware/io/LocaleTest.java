@@ -1,3 +1,4 @@
+
 package com.cedarsoftware.io;
 
 import java.util.HashMap;
@@ -31,18 +32,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class LocaleTest
 {
     @Test
     public void testLocale()
     {
-        Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
+        Locale locale = new Locale.Builder().setLanguage(Locale.ENGLISH.getLanguage()).setRegion(Locale.US.getCountry()).build();
         String json = TestUtil.toJson(locale);
         TestUtil.printLine("json=" + json);
         Locale us = TestUtil.toJava(json, null).asClass(null);
         assertEquals(locale, us);
 
-        locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry(), "johnson");
+        locale = new Locale.Builder().setLanguage(Locale.ENGLISH.getLanguage()).setRegion(Locale.US.getCountry()).setVariant("johnson").build();
         json = TestUtil.toJson(locale);
         TestUtil.printLine("json=" + json);
         us = TestUtil.toJava(json, null).asClass(null);
@@ -67,7 +69,7 @@ public class LocaleTest
     @Test
     public void testLocaleArray()
     {
-        Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
+        Locale locale = new Locale.Builder().setLanguage(Locale.ENGLISH.getLanguage()).setRegion(Locale.US.getCountry()).build();
         String json = TestUtil.toJson(new Object[]{locale});
         TestUtil.printLine("json=" + json);
         Object[] oArray = TestUtil.toJava(json, null).asClass(null);
@@ -86,7 +88,7 @@ public class LocaleTest
     @Test
     public void testLocaleInMapValue()
     {
-        Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
+        Locale locale = new Locale.Builder().setLanguage(Locale.ENGLISH.getLanguage()).setRegion(Locale.US.getCountry()).build();
         Map map = new HashMap<>();
         map.put("us", locale);
         String json = TestUtil.toJson(map);
@@ -101,7 +103,7 @@ public class LocaleTest
     @Test
     public void testLocaleInMapKey()
     {
-        Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
+        Locale locale = new Locale.Builder().setLanguage(Locale.ENGLISH.getLanguage()).setRegion(Locale.US.getCountry()).build();
         Map map = new HashMap<>();
         map.put(locale, "us");
         String json = TestUtil.toJson(map);
@@ -118,7 +120,7 @@ public class LocaleTest
 
     @Test
     void testLocaleInMapOfMaps() {
-        Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
+        Locale locale = new Locale.Builder().setLanguage(Locale.ENGLISH.getLanguage()).setRegion(Locale.US.getCountry()).build();
         String json = TestUtil.toJson(locale);
         Locale locale1 = TestUtil.toMaps(json, null).asClass(null);
         assertEquals(locale, locale1);
@@ -127,7 +129,7 @@ public class LocaleTest
     @Test
     public void testLocaleRef()
     {
-        Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
+        Locale locale = new Locale.Builder().setLanguage(Locale.ENGLISH.getLanguage()).setRegion(Locale.US.getCountry()).build();
         String json = TestUtil.toJson(new Object[]{locale, locale});
         TestUtil.printLine("json=" + json);
         Object[] oArray = TestUtil.toJava(json, null).asClass(null);

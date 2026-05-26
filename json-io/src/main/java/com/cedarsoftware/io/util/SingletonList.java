@@ -27,6 +27,7 @@ import java.util.NoSuchElementException;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@SuppressWarnings("unchecked")
 public class SingletonList<T> implements List<T> {
     private static final Object UNINITIALIZED = new Object();
     private T element = (T) UNINITIALIZED;

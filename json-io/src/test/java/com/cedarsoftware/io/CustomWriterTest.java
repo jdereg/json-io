@@ -1,3 +1,4 @@
+
 package com.cedarsoftware.io;
 
 import java.io.IOException;
@@ -31,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class CustomWriterTest
 {
     public static Person createTestPerson()
@@ -399,42 +401,38 @@ public class CustomWriterTest
     public static class CustomPersonWriter implements JsonClassWriter
     {
         @Override
-        public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException
+        public void write(Object o, boolean showType, JsonGenerator gen, WriterContext context) throws IOException
         {
             Person p = (Person) o;
-            output.write("\"f\":\"");
-            output.write(p.getFirstName());
-            output.write("\",\"l\":\"");
-            output.write(p.getLastName());
-            output.write("\",\"p\":[");
-
-            Iterator<Pet> i = p.getPets().iterator();
-            while (i.hasNext())
-            {
-                Pet pet = i.next();
-                output.write("{\"n\":\"");
-                output.write(pet.getName());
-                output.write("\",\"t\":\"");
-                output.write(pet.getType());
-                output.write("\",\"a\":");
-                output.write("" + pet.getAge());
-                output.write("}");
-                if (i.hasNext())
-                {
-                    output.write(",");
-                }
+            gen.writeStringField("f", p.getFirstName());
+            gen.writeStringField("l", p.getLastName());
+            gen.writeArrayFieldStart("p");
+            for (Pet pet : p.getPets()) {
+                gen.writeStartObject();
+                gen.writeStringField("n", pet.getName());
+                gen.writeStringField("t", pet.getType());
+                gen.writeNumberField("a", pet.getAge());
+                gen.writeEndObject();
             }
-
-            output.write("]");
+            gen.writeEndArray();
         }
     }
 
     public static class CustomPersonWriterAddField implements JsonClassWriter
     {
-        public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException
+        public void write(Object o, boolean showType, JsonGenerator gen, WriterContext context) throws IOException
         {
-            output.write("\"_version\":12,");
-            context.writeObject(o, false, true);
+            gen.writeNumberField("_version", 12);
+            // Emit the remainder of the standard object body inline. writeObject would
+            // emit a complete value (with its own braces), but here we want fields to be
+            // merged into the same enclosing object body. Use writeRawValue with the
+            // framework-emitted JSON minus the outer braces.
+            String inner = JsonIo.toJson(o);  // standard serialization
+            // Strip outer braces and prepend the comma (the inner JSON already starts
+            // with the standard object body).
+            inner = inner.substring(1, inner.length() - 1);
+            gen.writeRaw(',');
+            gen.writeRaw(inner);
         }
     }
 
@@ -465,7 +463,7 @@ public class CustomWriterTest
 
     public static class BadCustomPWriter implements JsonClassWriter
     {
-        public void write(Object o, boolean showType, Writer output, WriterContext writerContext) throws IOException
+        public void write(Object o, boolean showType, JsonGenerator gen, WriterContext writerContext) throws IOException
         {
             throw new RuntimeException("Bad custom writer");
         }

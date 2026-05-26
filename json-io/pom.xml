@@ -35,6 +35,7 @@
                             com.cedarsoftware.util.geom</Import-Package>
                         <Export-Package>
                             com.cedarsoftware.io,
+                            com.cedarsoftware.io.annotation,
                             com.cedarsoftware.io.factory,
                             com.cedarsoftware.io.prettyprint,
                             com.cedarsoftware.io.reflect,
@@ -78,6 +79,7 @@
                                     requires com.cedarsoftware.util;
                                     requires static java.sql;
                                     exports com.cedarsoftware.io;
+                                    exports com.cedarsoftware.io.annotation;
                                     exports com.cedarsoftware.io.factory;
                                     exports com.cedarsoftware.io.prettyprint;
                                     exports com.cedarsoftware.io.reflect;

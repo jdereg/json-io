@@ -1,3 +1,4 @@
+
 package com.cedarsoftware.io;
 
 import java.time.Instant;
@@ -19,6 +20,7 @@ import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static com.cedarsoftware.util.MapUtilities.mapOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+@SuppressWarnings({"unchecked", "rawtypes"})
 
 class InstantTests {
 

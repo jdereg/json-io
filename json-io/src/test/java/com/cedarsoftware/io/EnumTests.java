@@ -1,3 +1,4 @@
+
 package com.cedarsoftware.io;
 
 import java.util.Arrays;
@@ -38,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 class EnumTests {
     private static final WriteOptions basicWriteOptions = new WriteOptionsBuilder().writeEnumAsJsonObject(true).build();
     private static final WriteOptions enumAsPrimitiveOptions = new WriteOptionsBuilder().writeEnumAsJsonObject(false).build();

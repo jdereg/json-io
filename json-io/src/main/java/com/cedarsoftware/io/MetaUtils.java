@@ -89,6 +89,7 @@ public class MetaUtils {
         }
     }
 
+    @SuppressWarnings("unchecked")  // V cast from raw Map.get() — caller specifies expected type via defaultValue
     public static <K, V> V getValueWithDefaultForNull(Map map, K key, V defaultValue) {
         // Security: Validate map parameter to prevent null pointer exceptions
         if (map == null) {
@@ -106,6 +107,7 @@ public class MetaUtils {
         }
     }
 
+    @SuppressWarnings("unchecked")  // V cast from raw Map.get() — caller specifies expected type via defaultValue
     public static <K, V> V getValueWithDefaultForMissing(Map map, K key, V defaultValue) {
         // Security: Validate map parameter to prevent null pointer exceptions
         if (map == null) {

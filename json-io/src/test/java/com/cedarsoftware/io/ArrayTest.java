@@ -1174,6 +1174,7 @@ class ArrayTest
 
     @ParameterizedTest
     @MethodSource("stringVariants")
+    @SuppressWarnings("unchecked")  // raw Set.class cast on asClass result
     void testObjectArray_withLongsWrittenAsStrings_andNeverShowTypes_writesLikeStringVariants(Object arg1, Object arg2, Object arg3) {
         // The variant we're comparing against (string-like values)
         Object[] variantArray = {arg1, arg2, arg3};
@@ -1617,6 +1618,7 @@ class ArrayTest
     }
 
     @Test
+    @SuppressWarnings({"rawtypes", "unchecked"})  // new List[N] requires raw List array (no generic-array allowed)
     void testArrayOfLists_roundTrip() {
         // Create an instance, serialize and deserialize to verify round-trip
         ArrayOfListsHolder original = new ArrayOfListsHolder();

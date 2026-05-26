@@ -35,6 +35,7 @@ public class ArrayFactory<T> implements ClassFactory {
         this.type = c;
     }
 
+    @SuppressWarnings("unchecked")
     public T newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
         Object[] items = jObj.getItems();
         Converter converter = resolver.getConverter();
