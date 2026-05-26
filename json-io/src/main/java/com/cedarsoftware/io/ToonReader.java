@@ -406,13 +406,20 @@ public class ToonReader {
         Object fieldValue;
         boolean fieldWasQuoted;
         int bracketStart = findUnquotedBracketPosition(key);
-        if (bracketStart >= 0) {
+        // §14.2 non-strict tolerance: when the bracket segment is malformed (non-integer
+        // count, missing close-bracket, trailing non-{ text) AND strict is off, parseHeader
+        // returns null and we fall back to literal-key handling — the whole "key[…]" string
+        // becomes the literal field name and the value is parsed normally.
+        ArrayHeader arrayHeader = (bracketStart >= 0)
+                ? parseCombinedArrayHeader(key, bracketStart)
+                : null;
+        if (arrayHeader != null) {
             fieldKey = cacheSubstring(key, 0, bracketStart);
             fieldWasQuoted = fieldKey.startsWith("\"");
             if (fieldWasQuoted) {
                 fieldKey = unquoteString(fieldKey);
             }
-            fieldValue = parseCombinedArrayField(key, bracketStart, lineBuf, valueStart, trimEnd);
+            fieldValue = parseCombinedArrayValue(arrayHeader, lineBuf, valueStart, trimEnd);
         } else {
             fieldWasQuoted = key.startsWith("\"");
             fieldKey = unquoteString(key);
@@ -708,15 +715,13 @@ public class ToonReader {
         }
     }
 
-    private List<Object> parseCombinedArrayField(String key, int bracketStart, char[] valueBuf, int valueStart, int valueEnd)
+    /**
+     * Parse the array value for a pre-validated combined-array header (e.g.
+     * {@code items[3]:}). The header must be non-null; the literal-key fallback
+     * (header == null in non-strict mode) is handled by the caller.
+     */
+    private List<Object> parseCombinedArrayValue(ArrayHeader header, char[] valueBuf, int valueStart, int valueEnd)
             throws IOException {
-        ArrayHeader header = parseCombinedArrayHeader(key, bracketStart);
-        if (header == null) {
-            return parseArrayFromLine(buildCombinedArraySyntax(
-                    key,
-                    bracketStart,
-                    isTrimmedEmpty(valueBuf, valueStart, valueEnd) ? "" : trimAsciiRangeBuf(valueStart, valueEnd)));
-        }
         if (header.count == 0) {
             return new ArrayList<>();
         }
@@ -733,7 +738,10 @@ public class ToonReader {
         int keyLen = key.length();
         int bracketEnd = key.indexOf(']', bracketStart);
         if (bracketEnd < 0) {
-            throw new JsonIoException("Malformed array syntax at line " + lineNumber + ": " + key.substring(bracketStart));
+            if (strictToon) {
+                throw new JsonIoException("Malformed array syntax at line " + lineNumber + ": " + key.substring(bracketStart));
+            }
+            return null;  // §14.2 non-strict tolerance: treat as literal key at caller
         }
 
         String countStr = key.substring(bracketStart + 1, bracketEnd);
@@ -753,13 +761,23 @@ public class ToonReader {
         try {
             count = Integer.parseInt(trimAscii(countStr));
         } catch (NumberFormatException e) {
-            throw new JsonIoException("Invalid array count at line " + lineNumber + ": " + countStr);
+            if (strictToon) {
+                throw new JsonIoException("Invalid array count at line " + lineNumber + ": " + countStr);
+            }
+            return null;  // §14.2 non-strict tolerance: non-integer bracket content → literal key
         }
 
         int afterBracket = bracketEnd + 1;
         List<String> columnHeaders = null;
         if (afterBracket < keyLen) {
             if (key.charAt(afterBracket) != '{') {
+                // Trailing content after ]: not a fields segment. §14.2 strict-mode header
+                // error (whitespace between bracket and fields, extra-bracket noise, etc.).
+                // Non-strict: fall back to literal-key handling at caller.
+                if (strictToon) {
+                    throw new JsonIoException("Malformed array header (unexpected content after bracket segment) at line "
+                            + lineNumber + ": " + key.substring(bracketStart));
+                }
                 return null;
             }
             int braceEnd = key.indexOf('}', afterBracket);
@@ -775,18 +793,14 @@ public class ToonReader {
             }
         }
         if (afterBracket != keyLen) {
+            // Trailing content after fields segment closing brace. §14.2 strict error.
+            if (strictToon) {
+                throw new JsonIoException("Malformed array header (unexpected content after fields segment) at line "
+                        + lineNumber + ": " + key.substring(bracketStart));
+            }
             return null;
         }
         return new ArrayHeader(count, delimiter, columnHeaders);
-    }
-
-    private String buildCombinedArraySyntax(String key, int bracketStart, String valuePart) {
-        StringBuilder sb = new StringBuilder(key.length() - bracketStart + 2 + valuePart.length());
-        sb.append(key, bracketStart, key.length()).append(':');
-        if (!valuePart.isEmpty()) {
-            sb.append(' ').append(valuePart);
-        }
-        return sb.toString();
     }
 
     /**

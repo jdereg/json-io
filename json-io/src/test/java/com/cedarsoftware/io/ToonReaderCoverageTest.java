@@ -43,12 +43,17 @@ class ToonReaderCoverageTest {
     // ========== Malformed array syntax — invalid count ==========
 
     @Test
-    void testMalformedArrayCountNotANumber() {
-        // [abc]: ... — non-numeric count (line 463-464)
+    void testMalformedArrayCountNotANumber_StrictThrows_NonStrictLiteral() {
+        // §14.2 non-strict tolerance: non-integer bracket content is treated as part of
+        // the literal key. Strict mode still throws "Invalid array count".
         String toon = "items[abc]: 1,2,3";
-        assertThatThrownBy(() -> JsonIo.fromToon(toon).asClass(Map.class))
+        // Strict mode — must throw
+        assertThatThrownBy(() -> JsonIo.fromToon(toon, strictOpts()).asClass(Map.class))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("Invalid array count");
+        // Non-strict (default) — treat the whole thing as a literal key
+        Map<String, Object> result = JsonIo.fromToon(toon).asClass(Map.class);
+        assertThat(result).containsEntry("items[abc]", "1,2,3");
     }
 
     @Test
