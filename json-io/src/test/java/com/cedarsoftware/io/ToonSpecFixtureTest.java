@@ -95,8 +95,7 @@ class ToonSpecFixtureTest {
             "encode/arrays-objects.json :: uses field order from first object for tabular headers",
             "encode/arrays-objects.json :: uses list format for nested object arrays with mismatched keys",
             "encode/arrays-objects.json :: uses list format for objects containing arrays of arrays",
-            "encode/arrays-objects.json :: uses tabular format for nested uniform object arrays",
-            "encode/arrays-tabular.json :: encodes tabular arrays with keys needing quotes"
+            "encode/arrays-objects.json :: uses tabular format for nested uniform object arrays"
     ));
 
     @TestFactory

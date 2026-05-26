@@ -1473,7 +1473,9 @@ public class ToonWriter implements Closeable, Flushable {
                 out.write(delimiter);
             }
             first = false;
-            out.write(key);
+            // §7.3: header keys follow the same identifier rule as object keys — quote
+            // when the key contains chars outside [A-Za-z0-9_.] (e.g. colons, spaces).
+            writeKeyStringKnown(key, needsQuotingForMapKey(key));
         }
         out.write("}:");
     }
