@@ -74,8 +74,6 @@ class ToonSpecFixtureTest {
             // --- decode gaps ---
             "decode/arrays-nested.json :: parses list arrays with deeply nested objects",
             "decode/arrays-nested.json :: parses list arrays with empty items",
-            "decode/arrays-tabular.json :: parses quoted header keys in tabular arrays",
-            "decode/delimiters.json :: parses tabular headers with keys containing the active delimiter",
             "decode/validation-errors.json :: throws on array header missing colon",
             "decode/validation-errors.json :: throws on array length mismatch (inline primitives - too many)",
             "decode/validation-errors.json :: throws on array length mismatch (list format - too many)",

@@ -809,18 +809,37 @@ public class ToonReader {
     private List<String> parseColumnHeaders(String headerStr, char delimiter) {
         List<String> headers = new ArrayList<>();
         StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+        boolean escaped = false;
 
         for (int i = 0; i < headerStr.length(); i++) {
             char c = headerStr.charAt(i);
-            if (c == delimiter) {
-                headers.add(trimAscii(current));
+            // Quote-aware split: §7.3 tabular field names MAY be quoted; quoted keys can
+            // contain the active delimiter and other otherwise-significant characters.
+            if (escaped) {
+                current.append(c);
+                escaped = false;
+                continue;
+            }
+            if (c == '\\' && inQuotes) {
+                current.append(c);
+                escaped = true;
+                continue;
+            }
+            if (c == '"') {
+                inQuotes = !inQuotes;
+                current.append(c);
+                continue;
+            }
+            if (c == delimiter && !inQuotes) {
+                headers.add(unquoteString(trimAscii(current)));
                 current.setLength(0);
             } else {
                 current.append(c);
             }
         }
         if (current.length() > 0) {
-            headers.add(trimAscii(current));
+            headers.add(unquoteString(trimAscii(current)));
         }
 
         return headers;
@@ -830,14 +849,36 @@ public class ToonReader {
         if (!strictToon) {
             return;
         }
-        if (delimiter == ',' && (headerStr.indexOf('\t') >= 0 || headerStr.indexOf('|') >= 0)) {
-            throw new JsonIoException("Delimiter mismatch in tabular header at line " + lineNumber);
-        }
-        if (delimiter == '\t' && (headerStr.indexOf(',') >= 0 || headerStr.indexOf('|') >= 0)) {
-            throw new JsonIoException("Delimiter mismatch in tabular header at line " + lineNumber);
-        }
-        if (delimiter == '|' && (headerStr.indexOf(',') >= 0 || headerStr.indexOf('\t') >= 0)) {
-            throw new JsonIoException("Delimiter mismatch in tabular header at line " + lineNumber);
+        // §14.2: non-active delimiter characters inside QUOTED header keys are literal data
+        // and MUST NOT be flagged as a delimiter mismatch. Scan the header outside quoted
+        // segments only.
+        int len = headerStr.length();
+        boolean inQuotes = false;
+        boolean escaped = false;
+        for (int i = 0; i < len; i++) {
+            char c = headerStr.charAt(i);
+            if (escaped) {
+                escaped = false;
+                continue;
+            }
+            if (c == '\\' && inQuotes) {
+                escaped = true;
+                continue;
+            }
+            if (c == '"') {
+                inQuotes = !inQuotes;
+                continue;
+            }
+            if (inQuotes) {
+                continue;
+            }
+            boolean mismatch =
+                    (delimiter == ',' && (c == '\t' || c == '|'))
+                            || (delimiter == '\t' && (c == ',' || c == '|'))
+                            || (delimiter == '|' && (c == ',' || c == '\t'));
+            if (mismatch) {
+                throw new JsonIoException("Delimiter mismatch in tabular header at line " + lineNumber);
+            }
         }
     }
 
