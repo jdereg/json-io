@@ -143,4 +143,110 @@ class ReadOptionsBuilderTest {
         ReadOptions copy = new ReadOptionsBuilder(source).build();
         assertTrue(copy.isStrictToon());
     }
+
+    // ========== toonExpandPaths (§13.4) ==========
+
+    @Test
+    void testToonExpandPaths_DefaultFalse() {
+        ReadOptions options = new ReadOptionsBuilder().build();
+        assertFalse(options.isToonExpandPaths());
+    }
+
+    @Test
+    void testToonExpandPaths_EnableAndDisable() {
+        ReadOptions enabled = new ReadOptionsBuilder().toonExpandPaths(true).build();
+        assertTrue(enabled.isToonExpandPaths());
+
+        ReadOptions disabled = new ReadOptionsBuilder().toonExpandPaths(true).toonExpandPaths(false).build();
+        assertFalse(disabled.isToonExpandPaths());
+    }
+
+    @Test
+    void testToonExpandPaths_Copied() {
+        ReadOptions source = new ReadOptionsBuilder().toonExpandPaths(true).build();
+        ReadOptions copy = new ReadOptionsBuilder(source).build();
+        assertTrue(copy.isToonExpandPaths());
+    }
+
+    // ========== toonIndentSize (§12) ==========
+
+    @Test
+    void testToonIndentSize_Default2() {
+        ReadOptions options = new ReadOptionsBuilder().build();
+        assertEquals(2, options.getToonIndentSize());
+    }
+
+    @Test
+    void testToonIndentSize_SetAndRead() {
+        ReadOptions options = new ReadOptionsBuilder().toonIndentSize(4).build();
+        assertEquals(4, options.getToonIndentSize());
+    }
+
+    @Test
+    void testToonIndentSize_Copied() {
+        ReadOptions source = new ReadOptionsBuilder().toonIndentSize(8).build();
+        ReadOptions copy = new ReadOptionsBuilder(source).build();
+        assertEquals(8, copy.getToonIndentSize());
+    }
+
+    @Test
+    void testToonIndentSize_RejectsZeroAndNegative() {
+        ReadOptionsBuilder builder = new ReadOptionsBuilder();
+        assertThrows(JsonIoException.class, () -> builder.toonIndentSize(0));
+        assertThrows(JsonIoException.class, () -> builder.toonIndentSize(-1));
+        assertThrows(JsonIoException.class, () -> builder.toonIndentSize(Integer.MIN_VALUE));
+    }
+
+    // ========== addPermanentToonExpandPaths ==========
+
+    @Test
+    void testAddPermanentToonExpandPaths_AppliesToNewOptions() {
+        boolean originalDefault = new ReadOptionsBuilder().build().isToonExpandPaths();
+        try {
+            ReadOptionsBuilder.addPermanentToonExpandPaths(true);
+            ReadOptions options = new ReadOptionsBuilder().build();
+            assertTrue(options.isToonExpandPaths());
+        } finally {
+            ReadOptionsBuilder.addPermanentToonExpandPaths(originalDefault);
+        }
+    }
+
+    @Test
+    void testAddPermanentToonExpandPaths_ResetAfterTest() {
+        boolean originalDefault = new ReadOptionsBuilder().build().isToonExpandPaths();
+        ReadOptionsBuilder.addPermanentToonExpandPaths(true);
+        ReadOptionsBuilder.addPermanentToonExpandPaths(originalDefault);
+        ReadOptions options = new ReadOptionsBuilder().build();
+        assertEquals(originalDefault, options.isToonExpandPaths());
+    }
+
+    // ========== addPermanentToonIndentSize ==========
+
+    @Test
+    void testAddPermanentToonIndentSize_AppliesToNewOptions() {
+        int originalDefault = new ReadOptionsBuilder().build().getToonIndentSize();
+        try {
+            ReadOptionsBuilder.addPermanentToonIndentSize(6);
+            ReadOptions options = new ReadOptionsBuilder().build();
+            assertEquals(6, options.getToonIndentSize());
+        } finally {
+            ReadOptionsBuilder.addPermanentToonIndentSize(originalDefault);
+        }
+    }
+
+    @Test
+    void testAddPermanentToonIndentSize_RejectsZeroAndNegative() {
+        assertThrows(JsonIoException.class, () -> ReadOptionsBuilder.addPermanentToonIndentSize(0));
+        assertThrows(JsonIoException.class, () -> ReadOptionsBuilder.addPermanentToonIndentSize(-1));
+        assertThrows(JsonIoException.class, () -> ReadOptionsBuilder.addPermanentToonIndentSize(Integer.MIN_VALUE));
+    }
+
+    @Test
+    void testAddPermanentToonIndentSize_ResetAfterTest() {
+        int originalDefault = new ReadOptionsBuilder().build().getToonIndentSize();
+        ReadOptionsBuilder.addPermanentToonIndentSize(7);
+        ReadOptionsBuilder.addPermanentToonIndentSize(originalDefault);
+        ReadOptions options = new ReadOptionsBuilder().build();
+        assertEquals(originalDefault, options.getToonIndentSize());
+    }
 }
