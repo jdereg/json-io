@@ -72,8 +72,6 @@ class ToonSpecFixtureTest {
      */
     private static final Set<String> EXPECTED_FAILURES = new HashSet<>(Arrays.asList(
             // --- decode gaps ---
-            "decode/arrays-nested.json :: parses list arrays with deeply nested objects",
-            "decode/arrays-nested.json :: parses list arrays with empty items",
             "decode/validation-errors.json :: throws on array header missing colon",
             "decode/validation-errors.json :: throws on array length mismatch (inline primitives - too many)",
             "decode/validation-errors.json :: throws on array length mismatch (list format - too many)",

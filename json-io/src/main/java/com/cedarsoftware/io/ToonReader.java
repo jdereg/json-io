@@ -428,7 +428,11 @@ public class ToonReader {
                     if (isArrayStartInBuf()) {
                         fieldValue = readArray();
                     } else {
-                        fieldValue = readObject(baseIndent + 1, null);
+                        // Use the actual indent of the first nested line as the recursive
+                        // base, not baseIndent+1. The inline-first-field-on-hyphen-line
+                        // pattern has nested content at hyphenIndent+2 (not +1), and using
+                        // peekIndent() handles both that case and the standard +1 case.
+                        fieldValue = readObject(peekIndent(), null);
                     }
                 } else {
                     // §8: bare "key:" with no nested body (next line is a sibling at the same
@@ -1289,7 +1293,9 @@ public class ToonReader {
             }
 
             if (elementStart >= trimEnd) {
-                // Nested object/array on next lines
+                // Bare hyphen "- " — per §9.4 emits an empty object UNLESS the next line is
+                // a nested array or object at deeper indent. Match the writer's "empty
+                // object list item as bare hyphen" emission.
                 if (hasLine()) {
                     int nextIndent = peekIndent();
                     if (nextIndent > indent) {
@@ -1298,13 +1304,16 @@ public class ToonReader {
                         } else if (findColonInBuf() > 0) {
                             elements.add(readObject(nextIndent, null));
                         } else {
-                            elements.add(null);
+                            // Deeper-indented content that isn't an array or key:value pair
+                            // is unusual; treat the bare hyphen as an empty object and let
+                            // the outer loop handle that next line on its own.
+                            elements.add(new JsonObject());
                         }
                     } else {
-                        elements.add(null);
+                        elements.add(new JsonObject());
                     }
                 } else {
-                    elements.add(null);
+                    elements.add(new JsonObject());
                 }
             } else if (isEmptyObject(lineBuf, elementStart, trimEnd)) {
                 // Empty object: - {}
