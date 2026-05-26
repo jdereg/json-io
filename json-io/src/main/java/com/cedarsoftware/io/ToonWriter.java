@@ -221,6 +221,8 @@ public class ToonWriter implements Closeable, Flushable {
     private final boolean cycleSupport;
     private final boolean skipNullFields;
     private final boolean toonKeyFolding;
+    private final String indentUnit;       // single indent level (e.g. "  " for size 2)
+    private final String[] indentCache;    // per-instance cache for non-default indent sizes
     private final boolean enumPublicFieldsOnly;
     // Per-field @IoShowType — forces $type emission for the field value and its elements
     private boolean forceShowType = false;
@@ -250,11 +252,15 @@ public class ToonWriter implements Closeable, Flushable {
     private final Map<Class<?>, String> typeNameCache = new IdentityHashMap<>(32);
 
     private static String[] buildIndentCache() {
+        return buildIndentCache(INDENT);
+    }
+
+    private static String[] buildIndentCache(String unit) {
         String[] cache = new String[INDENT_CACHE_SIZE];
-        StringBuilder builder = new StringBuilder(INDENT_CACHE_SIZE * INDENT.length());
+        StringBuilder builder = new StringBuilder(INDENT_CACHE_SIZE * unit.length());
         for (int i = 0; i < INDENT_CACHE_SIZE; i++) {
             cache[i] = builder.toString();
-            builder.append(INDENT);
+            builder.append(unit);
         }
         return cache;
     }
@@ -314,6 +320,20 @@ public class ToonWriter implements Closeable, Flushable {
         this.skipNullFields = this.writeOptions.isSkipNullFields();
         this.toonKeyFolding = this.writeOptions.isToonKeyFolding();
         this.enumPublicFieldsOnly = this.writeOptions.isEnumPublicFieldsOnly();
+
+        // §12 honors WriteOptions.indentationSize for TOON output. Default (2) reuses the
+        // static INDENT_CACHE; non-default sizes build a per-instance cache so the
+        // writeIndent() hot path stays O(1) for typical depths.
+        int indentSize = this.writeOptions.getIndentationSize();
+        if (indentSize == INDENT.length()) {
+            this.indentUnit = INDENT;
+            this.indentCache = INDENT_CACHE;
+        } else {
+            char[] unitChars = new char[indentSize];
+            java.util.Arrays.fill(unitChars, ' ');
+            this.indentUnit = new String(unitChars);
+            this.indentCache = buildIndentCache(this.indentUnit);
+        }
 
         // TOON defaults to '$' meta keys for JSON5-friendly unquoted identifiers.
         char prefix = '$';
@@ -3064,11 +3084,11 @@ public class ToonWriter implements Closeable, Flushable {
      */
     private void writeIndent() throws IOException {
         if (depth < INDENT_CACHE_SIZE) {
-            out.write(INDENT_CACHE[depth]);
+            out.write(indentCache[depth]);
             return;
         }
         for (int i = 0; i < depth; i++) {
-            out.write(INDENT);
+            out.write(indentUnit);
         }
     }
 

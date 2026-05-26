@@ -107,9 +107,7 @@ class ToonSpecFixtureTest {
             "encode/arrays-objects.json :: uses tabular format for nested uniform object arrays",
             "encode/arrays-tabular.json :: encodes tabular arrays with keys needing quotes",
             "encode/key-folding.json :: encodes folded chain ending with empty object",
-            "encode/key-folding.json :: skips folding on sibling literal-key collision (safe mode)",
-            "encode/primitives.json :: encodes large number",
-            "encode/whitespace.json :: respects custom indent size option"
+            "encode/key-folding.json :: skips folding on sibling literal-key collision (safe mode)"
     ));
 
     @TestFactory

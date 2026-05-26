@@ -469,8 +469,11 @@ public class JsonParserErrorHandlingTest {
      * The BigInteger.longValue() wraps around similar to casting.
      */
     @Test
-    public void testIntegerOverflow_WithoutIntegerTypeBoth_ReturnsWrappedLong() {
-        // Number larger than Long.MAX_VALUE - should wrap around
+    public void testIntegerOverflow_WithoutIntegerTypeBoth_ReturnsBigInteger() {
+        // Number larger than Long.MAX_VALUE — must NOT silently wrap. The previous
+        // behavior (truncate via BigInteger.longValue()) was a precision-losing bug;
+        // the parser now promotes overflow to BigInteger to preserve value fidelity,
+        // matching TOON v3.3 §2 / JSON §6 round-trip-precision requirements.
         String json = "[9223372036854775808]";  // Long.MAX_VALUE + 1
         // Default options - integerTypeBoth is false
 
@@ -479,9 +482,9 @@ public class JsonParserErrorHandlingTest {
         assertTrue(result instanceof Object[]);
         Object[] arr = (Object[]) result;
         assertEquals(1, arr.length);
-        assertTrue(arr[0] instanceof Long, "Expected Long but got: " + arr[0].getClass().getName());
-        // Long.MAX_VALUE + 1 wraps to Long.MIN_VALUE
-        assertEquals(Long.MIN_VALUE, arr[0]);
+        assertTrue(arr[0] instanceof java.math.BigInteger,
+                "Expected BigInteger (overflow preserved) but got: " + arr[0].getClass().getName());
+        assertEquals(new java.math.BigInteger("9223372036854775808"), arr[0]);
     }
 
     /**

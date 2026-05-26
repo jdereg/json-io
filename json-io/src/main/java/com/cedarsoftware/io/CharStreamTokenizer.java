@@ -1013,11 +1013,14 @@ final class CharStreamTokenizer extends JsonTokenizer {
         try {
             return setLongResult(Long.parseLong(numStr));
         } catch (Exception e) {
-            BigInteger bigInt = parseBigInteger(numStr);
-            if (integerTypeBoth) {
-                return setBigIntegerResult(bigInt);
-            }
-            return setLongResult(bigInt.longValue());
+            // Overflow: parseLong rejected the value. Preserve precision by emitting a
+            // BigInteger result regardless of the integerTypeBoth flag. Previously the
+            // non-Both branch silently truncated to the low 64 bits via
+            // bigInt.longValue() — that is precision-losing data corruption for any
+            // value outside the Long range. Per TOON §2 / JSON §6 number grammar,
+            // implementations MUST emit sufficient precision so decode(encode(x))
+            // round-trips under JSON-model equality.
+            return setBigIntegerResult(parseBigInteger(numStr));
         }
     }
 
