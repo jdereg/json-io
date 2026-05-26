@@ -1,6 +1,6 @@
 ### Revision History
 
-#### 4.103.0 - (Unreleased)
+#### 4.103.0 - 2026-05-25
 * **BUG FIX**: `JsonGenerator.deprecatedWriterBridge_*` factories tolerate a `null` `WriteOptions` argument (fall back to defaults), preserving the legacy `Writer`-based custom-writer API contract for delegate-pattern migrations.
 * **BUILD**: Runtime dependency `java-util` 4.102.0 → 4.103.0. Test-scope dependency bumps: root pom (`junit-jupiter` 5.14.3 → 5.14.4, `maven-resources-plugin` 3.4.0 → 3.5.0, `jacoco-maven-plugin` 0.8.12 → 0.8.14) and Spring stack (`spring-boot` 3.5.11 → 3.5.14, `spring-web` 6.2.16 → 6.2.18, `reactor-test` 3.7.16 → 3.7.18, `spring-ai-model` 1.1.2 → 1.1.7 across `json-io-spring` and `json-io-spring-ai`).
 * **CLEANUP**: Removed `CharStreamGenerator.restoreDepthAfterExternalValue` + 15 call sites + 8 unused `bodyDepth` locals across JsonWriter element loops (-51 LOC). The narrow restore became redundant once all three remaining `resetForBridgeAtValueSlot` paths (writeCustom × 2 + writePrimitive Long-wrap bare-value) got their own narrow snap+restore pairs that fully restore depth.
