@@ -1567,9 +1567,10 @@ class ToonWriterTest {
 
     @Test
     void testEmptyObjectInListArray_RoundTrip() {
-        // Test that an empty map in a list-format array can round-trip.
-        // Writer: produces "- {}" for empty map in list context
-        // Reader: recognizes "{}" as empty object in list element
+        // §9.4: an empty object as a list element emits as bare hyphen ("-") with no
+        // body. Writer emits "-" (legacy "- {}" was non-spec). Reader parses bare
+        // hyphen as empty object. Both reading the bare-hyphen form and the legacy
+        // "- {}" form continue to work on the read side.
         Map<String, Object> emptyObj = new LinkedHashMap<>();
         Map<String, Object> namedObj = new LinkedHashMap<>();
         namedObj.put("name", "Bob");
@@ -1582,11 +1583,12 @@ class ToonWriterTest {
         root.put("items", items);
 
         String toon = JsonIo.toToon(root, null);
-        // Writer should produce "- {}" for empty map in list
-        assertTrue(toon.contains("- {}"), "Empty map in list should write as '- {}': " + toon);
+        // Writer produces bare "-" (no "{}") for empty map list element per §9.4.
+        assertTrue(toon.contains("items[2]:\n  -\n"),
+                "Empty map in list should write as bare hyphen: " + toon);
         assertTrue(toon.contains("- name: Bob"), "Named object should use hyphen format");
 
-        // Round-trip: reader should parse "{}" back as empty map
+        // Round-trip: reader parses bare "-" back as empty map
         Map<String, Object> restored = JsonIo.fromToon(toon, null).asClass(Map.class);
         List<?> restoredItems = (List<?>) restored.get("items");
         assertEquals(2, restoredItems.size());

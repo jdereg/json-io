@@ -86,16 +86,7 @@ class ToonSpecFixtureTest {
             "decode/validation-errors.json :: throws on tabular row count mismatch with header length",
             "decode/validation-errors.json :: throws on tabular row value count mismatch with header field count",
             "decode/validation-errors.json :: throws on two primitives at root depth in strict mode",
-            "decode/validation-errors.json :: throws on unterminated string",
-            // --- encode gaps ---
-            "encode/arrays-objects.json :: encodes empty object list items as bare hyphen",
-            "encode/arrays-objects.json :: uses canonical encoding for multi-field list-item objects with tabular arrays",
-            "encode/arrays-objects.json :: uses canonical encoding for single-field list-item tabular arrays",
-            "encode/arrays-objects.json :: uses expanded list for arrays containing empty objects",
-            "encode/arrays-objects.json :: uses field order from first object for tabular headers",
-            "encode/arrays-objects.json :: uses list format for nested object arrays with mismatched keys",
-            "encode/arrays-objects.json :: uses list format for objects containing arrays of arrays",
-            "encode/arrays-objects.json :: uses tabular format for nested uniform object arrays"
+            "decode/validation-errors.json :: throws on unterminated string"
     ));
 
     @TestFactory

@@ -1415,7 +1415,13 @@ public class ToonWriter implements Closeable, Flushable {
      * Returns the ordered list of keys if uniform, null otherwise.
      */
     private List<String> getUniformKeys(Collection<?> collection) {
-        List<String> keys = null;
+        // §9.3: tabular form applies when all elements are Maps with the SAME KEY SET
+        // (set-equality, not list-order). The header uses the first object's key order
+        // per the spec ("uses field order from first object for tabular headers"); rows
+        // look values up by key in writeTabularRows so non-first elements with different
+        // key order render correctly.
+        List<String> firstKeys = null;
+        java.util.Set<String> firstKeySet = null;
 
         for (Object element : collection) {
             if (element == null) {
@@ -1437,29 +1443,37 @@ public class ToonWriter implements Closeable, Flushable {
                 return null;  // Empty objects break uniformity
             }
 
-            // Check all keys are simple types (strings)
-            List<String> elementKeys = new ArrayList<>();
+            // Check all keys are simple types (strings) and all values are primitives
+            java.util.Set<String> elementKeySet = new java.util.HashSet<>(map.size() * 2);
+            List<String> elementKeys = null;
+            if (firstKeys == null) {
+                elementKeys = new ArrayList<>(map.size());
+            }
             for (Map.Entry<?, ?> entry : map.entrySet()) {
                 Object key = entry.getKey();
                 if (!(key instanceof String)) {
                     return null;  // Non-string keys break uniformity
                 }
-                // Check that values are primitives (for tabular format)
                 Object value = entry.getValue();
                 if (value != null && !isPrimitive(value)) {
                     return null;  // Complex values break tabular format
                 }
-                elementKeys.add((String) key);
+                String k = (String) key;
+                elementKeySet.add(k);
+                if (elementKeys != null) {
+                    elementKeys.add(k);
+                }
             }
 
-            if (keys == null) {
-                keys = elementKeys;
-            } else if (!keys.equals(elementKeys)) {
-                return null;  // Different keys break uniformity
+            if (firstKeys == null) {
+                firstKeys = elementKeys;
+                firstKeySet = elementKeySet;
+            } else if (!firstKeySet.equals(elementKeySet)) {
+                return null;  // Different key sets break uniformity
             }
         }
 
-        return keys;
+        return firstKeys;
     }
 
     /**
@@ -1851,9 +1865,10 @@ public class ToonWriter implements Closeable, Flushable {
                 if (cycleSupport && isReferenced(map)) {
                     out.write(" ");
                     writeIdField(map);
-                } else {
-                    out.write(" {}");
                 }
+                // §9.4: an empty object as a list element emits as bare hyphen — the
+                // caller already wrote "-" on the line; we write nothing here. The
+                // previous " {}" emission was non-spec.
                 return;
             }
 
@@ -2416,7 +2431,13 @@ public class ToonWriter implements Closeable, Flushable {
                 } else {
                     writeKeyStringKnown(keyStr, keyNeedsQuoting);
                     out.write(countMarker(length));
+                    // Bump depth so tabular rows / list-element hyphens emit at +1 from the
+                    // surrounding inline-list-element context. Mirrors the Collection branch
+                    // below; without this, nested tabular rows under a list element wind up
+                    // at the same indent as the list element's subsequent fields (wrong).
+                    depth++;
                     writeArrayElements(value, length);
+                    depth--;
                 }
             }
         } else if (value instanceof Collection) {
