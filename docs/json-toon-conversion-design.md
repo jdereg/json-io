@@ -72,6 +72,7 @@ streaming.
 | 4 | **Byte streams are UTF-8** | proposed | Matches `createTokenizer(InputStream)` / `createGenerator(OutputStream)`. |
 | 5 | **Only parse/emit-relevant options bite** | proposed | Strictness, TOON delimiter/folding/indent, prettyPrint, json5. Databind options (custom readers, type coercion, `@type` injection) are no-ops — no Java objects are built. |
 | 6 | **No JSON5-specific methods** | proposed | JSON5 is a `WriteOptions`/`ReadOptions` flavor: `toonToJson(toon, null, new WriteOptionsBuilder().json5().build())`. |
+| 7 | **Conversions preserve references by default** (`cycleSupport(true)` internally on the high-fidelity tier) | **DECIDED** | A faithful conversion must carry the source's `@id`/`@ref` structure, not inline shared nodes or throw on cycles. Caller may override via explicit `WriteOptions`. Applies to the Maps tier; the streaming tier passes references through verbatim regardless. |
 
 The options that plug straight in:
 - **Read side:** `strictToon`, `toonExpandPaths` (§13.4), `toonIndentSize` (§12) — all with
@@ -300,14 +301,11 @@ prerequisite for the JSON→TOON engine in §6; fold it into the `ToonGenerator`
 - **`createToonGenerator(...)` / `createToonTokenizer(...)` factory signatures** — mirror
   the existing `createGenerator` / `createTokenizer` (Writer/OutputStream and
   String/InputStream + options overloads). Exact surface is a separate design pass when §7/§8 start.
-- **Default `cycleSupport` for the conversion APIs** — `jsonToToon(json)` with null
-  options hits a conflict: TOON's default is `cycleSupport(false)` (acyclic, LLM-oriented),
-  so cyclic or `@id`/`@ref`-bearing JSON input would **throw** on the `toToon` step. Choice:
-  *preserve the source's reference structure* (default `cycleSupport(true)` for conversions)
-  vs. *emit canonical acyclic TOON* (`false`; throws on cycles, inlines shared DAG nodes as
-  copies). Leaning **preserve-by-default** for a conversion API. Note this only applies to
-  the high-fidelity (Maps) tier; the streaming tier passes references through verbatim
-  regardless.
+- ~~Default `cycleSupport` for the conversion APIs~~ — **DECIDED (see §3 contract #7):
+  preserve references by default** (`cycleSupport(true)` internally on the Maps tier). A
+  faithful conversion carries the source's reference structure rather than inlining shared
+  nodes or throwing on cycles; caller may override via explicit `WriteOptions`. The
+  streaming tier passes references through verbatim regardless.
 - **Whether to keep the String forms on the Maps round-trip permanently** (recommended —
   see §6) or ever move them onto the streaming cursor. Recommendation: keep String on Maps;
   the cursor is only for the genuinely-streaming entry points. The String and stream tiers
