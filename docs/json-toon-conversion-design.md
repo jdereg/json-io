@@ -133,6 +133,18 @@ count-free streaming form exists to fall back to. Hence the §4 floor.
 
 ## 6. Implementation strategy — tier by String-vs-stream, not by direction
 
+> **⚠️ SUPERSEDED (2026-05 spike).** This section's premise — that the Maps round-trip is the
+> "high-fidelity" path for the String forms — is **wrong**. The spike (§10a) proved the Maps
+> round-trip re-serializes a *typeless* graph and therefore **normalizes** `@type` and non-String
+> map keys (a `Map<Long,String>` → string-keyed object; a `TreeSet` → plain array). It is
+> *lower* fidelity, not higher. **Decision: do NOT ship a Maps-based String conversion.** ALL
+> conversion forms — String and stream, both directions — are built on the **tokenizer/generator
+> verbatim transcode**, which passes `@type`/`@id`/`@ref`/`@keys`/`@items` through as tokens and so
+> returns the user's metadata intact ("lexical" for TOON→JSON; faithful-but-array-reshaping for
+> JSON→TOON, which buffers each array for its `[N]` count). The String forms are thin wrappers over
+> that engine and arrive with it in 4.105.0; #35 (the Maps-based impl) is parked in a git stash as a
+> superseded experiment. The original tier analysis is retained below for history.
+
 The deciding factor is `$id`/`$ref` (and `@type`, `@keys`/`@items`) handling. A pure
 tokenizer→generator splice treats reference metadata as **opaque field tokens** — it
 neither resolves nor re-derives them. The **Maps layer** resolves on read (`MapResolver`
