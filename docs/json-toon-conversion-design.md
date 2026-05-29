@@ -313,6 +313,35 @@ prerequisite for the JSON→TOON engine in §6; fold it into the `ToonGenerator`
 
 ---
 
+## 10a. Discovered during the 4.104.0 spike (2026-05)
+
+Building the String conversion on the Maps round-trip surfaced that re-serializing a
+*resolved Maps graph* (whose containers are json-io's internal `JsonObject` /
+`JsonObjectMap` / `JsonObjectArray`) is the wrong mechanism for type-faithful output.
+Findings, in order of severity:
+
+1. **`@type` leak (FIXED, latent bug).** Both `JsonWriter` and `ToonWriter` emitted the
+   internal carrier class (`com.cedarsoftware.io.JsonObject` etc.) as `@type` for an untyped
+   JsonObject under `showTypeInfoMinimal`/`MinimalPlus`; the `JsonObjectMap` form then crashed
+   on read-back. Fixed in `JsonWriter.getTypeNameForOutput` (return null) and
+   `ToonWriter.shouldWriteTypeMetadata` (skip JsonObject-family classes). No regressions.
+2. **`ToonWriter` carrier gap (DEFERRED to this conversion work).** `ToonWriter` has no
+   handler for a `JsonObjectArray`/`JsonObjectMap` *carrier* (data in `@items`/`@keys`, not
+   map entries), so re-serializing such a graph to TOON silently drops the contents (a
+   resolved `TreeSet` writes empty). `JsonWriter` has `writeJsonObjectArray`/
+   `writeJsonObjectMap`; ToonWriter does not. The §6 verbatim-transcode approach sidesteps
+   this by never re-serializing carriers.
+3. **Type-inference modes can't suppress container noise on a typeless graph.** `MINIMAL`/
+   `MINIMAL_PLUS` decide `@type` by comparing runtime type to the *declared field type*; a
+   Maps graph has none, so they emit container types (`ArrayList`, etc.) as noise. This is
+   why the Maps round-trip cannot produce clean *and* type-faithful output — confirming the
+   §6 decision to do type-faithful conversion via verbatim transcode (4.105.0), not Maps.
+
+**Status:** #35 (the String `jsonToToon`/`toonToJson` impl) is parked in a git stash
+(`WIP #35 ...`) pending the 4.105.0 tokenizer/generator. Revisit it as a verbatim transcode.
+
+---
+
 ## 11. References
 
 - Spec (pinned): `toon-format/spec@07161ccc` (v3.3) — array grammar §6, arrays §9, strict
