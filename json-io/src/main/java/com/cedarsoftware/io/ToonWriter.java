@@ -587,7 +587,13 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     private boolean shouldWriteTypeMetadata(Class<?> clazz) {
-        return (typeMetadataEnabled || forceShowType) && clazz != null && !isPrimitiveClass(clazz);
+        return (typeMetadataEnabled || forceShowType) && clazz != null && !isPrimitiveClass(clazz)
+                // Never emit json-io's internal carrier classes (JsonObject / JsonObjectMap /
+                // JsonObjectArray) as @type. They appear only when re-serializing a resolved Maps
+                // graph; their class name is not a meaningful user type (it is noise, and
+                // @type:JsonObjectMap is not readable back). Mirrors the JsonWriter fix in
+                // getTypeNameForOutput().
+                && !JsonObject.class.isAssignableFrom(clazz);
     }
 
     private boolean isPrimitiveClass(Class<?> clazz) {

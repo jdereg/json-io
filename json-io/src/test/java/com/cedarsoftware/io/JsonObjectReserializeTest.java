@@ -48,6 +48,31 @@ class JsonObjectReserializeTest {
     }
 
     @Test
+    void toon_plainObjectGraph_doesNotLeakInternalType() {
+        // ToonWriter equivalent of the JsonWriter leak: re-serializing a resolved Maps graph to
+        // TOON must not emit json-io's internal carrier class as $type/@type.
+        Object graph = JsonIo.toMaps("{\"a\":1,\"b\":\"x\"}").asClass(null);
+        String toon = JsonIo.toToon(graph, new WriteOptionsBuilder().showTypeInfoMinimalPlus().cycleSupport(true).build());
+        assertFalse(toon.contains("com.cedarsoftware.io.JsonObject"), "internal class leaked into TOON: " + toon);
+    }
+
+    @Test
+    void toon_nonStringKeyMapGraph_noLeakNoCrash() {
+        // Previously leaked "$type: com.cedarsoftware.io.JsonObjectMap" into TOON, which then
+        // crashed on read-back ("put is not supported on JsonObjectMap").
+        Map<Long, String> m = new LinkedHashMap<>();
+        m.put(1L, "one");
+        m.put(2L, "two");
+        Object graph = JsonIo.toMaps(JsonIo.toJson(m)).asClass(null);
+
+        String toon = JsonIo.toToon(graph, new WriteOptionsBuilder().showTypeInfoMinimalPlus().cycleSupport(true).build());
+        assertFalse(toon.contains("JsonObjectMap"), "internal JsonObjectMap leaked into TOON: " + toon);
+        // Must read back without throwing.
+        Object back = JsonIo.fromToonToMaps(toon).asClass(null);
+        assertEquals(true, back instanceof Map);
+    }
+
+    @Test
     void nonStringKeyMapGraph_minimal_roundTripsWithoutCrash() {
         // Build a JsonObjectMap-shaped graph (non-String keys) and re-serialize with type info.
         Map<Long, String> m = new LinkedHashMap<>();
