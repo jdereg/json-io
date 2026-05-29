@@ -1,6 +1,7 @@
 package com.cedarsoftware.io;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -70,6 +71,42 @@ class JsonObjectReserializeTest {
         // Must read back without throwing.
         Object back = JsonIo.fromToonToMaps(toon).asClass(null);
         assertEquals(true, back instanceof Map);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void toon_arrayCarrier_root_writesElements() {
+        // Regression: a resolved collection carrier (JsonObjectArray, data in @items) used to write
+        // an empty TOON body. It must now emit its elements.
+        Object graph = JsonIo.toMaps("{\"@type\":\"TreeSet\",\"@items\":[1,2,3]}").asClass(null);
+        String toon = JsonIo.toToon(graph, new WriteOptionsBuilder().showTypeInfoNever().cycleSupport(true).build());
+        Object back = JsonIo.fromToonToMaps(toon).asClass(null);
+        assertEquals(true, back instanceof List, "expected a List, got " + back + " | toon=" + toon);
+        assertEquals(3, ((List<?>) back).size(), "array carrier dropped elements; toon=" + toon);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void toon_arrayCarrier_nestedField_writesElements() {
+        // The carrier-as-field-value path (writeFieldEntry) previously emitted "set:" with no body.
+        Object graph = JsonIo.toMaps("{\"set\":{\"@type\":\"TreeSet\",\"@items\":[3,1,2]}}").asClass(null);
+        String toon = JsonIo.toToon(graph, new WriteOptionsBuilder().showTypeInfoNever().cycleSupport(true).build());
+        Map<String, Object> back = (Map<String, Object>) JsonIo.fromToonToMaps(toon).asClass(null);
+        Object set = back.get("set");
+        assertEquals(true, set instanceof List, "expected nested List, got " + set + " | toon=" + toon);
+        assertEquals(3, ((List<?>) set).size(), "nested array carrier dropped elements; toon=" + toon);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void toon_complexKeyMapCarrier_writesEntries() {
+        // A complex-key map carrier (JsonObjectMap, @keys/@items) must emit its entries (keys
+        // stringified per TOON's String-keyed object model), not an empty body.
+        Object graph = JsonIo.toMaps("{\"@type\":\"LinkedHashMap\",\"@keys\":[1,2],\"@items\":[\"one\",\"two\"]}").asClass(null);
+        String toon = JsonIo.toToon(graph, new WriteOptionsBuilder().showTypeInfoNever().cycleSupport(true).build());
+        Map<String, Object> back = (Map<String, Object>) JsonIo.fromToonToMaps(toon).asClass(null);
+        assertEquals("one", back.get("1"), "map carrier dropped entries; toon=" + toon);
+        assertEquals("two", back.get("2"), "map carrier dropped entries; toon=" + toon);
     }
 
     @Test

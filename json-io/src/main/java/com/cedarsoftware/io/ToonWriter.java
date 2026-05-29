@@ -511,6 +511,10 @@ public class ToonWriter implements Closeable, Flushable {
             return;
         }
 
+        // Unwrap a resolved-Maps-graph carrier (JsonObjectArray / JsonObjectMap) to a plain
+        // container so its @items/@keys payload is written instead of an empty body.
+        value = unwrapCarrier(value);
+
         Class<?> clazz = value.getClass();
 
         switch (writeTypeCache.get(clazz)) {
@@ -1137,6 +1141,45 @@ public class ToonWriter implements Closeable, Flushable {
                 exitActivePath(array);
             }
         }
+    }
+
+    /**
+     * Unwrap a {@link JsonObject} carrier from a resolved Maps graph to a plain container so the
+     * normal container-writing paths emit its contents instead of an empty body (the historical
+     * TreeSet-writes-empty bug — ToonWriter has no per-shape JsonObject writers like JsonWriter's
+     * writeJsonObjectArray/writeJsonObjectMap, so a carrier's @items/@keys payload was invisible
+     * to the Map-entry iteration).
+     * <ul>
+     *   <li>Complex-key map carrier ({@code @keys}/{@code @items}) &rarr; a {@link LinkedHashMap}
+     *       (non-String keys are then stringified per TOON's String-keyed object model).</li>
+     *   <li>Array/collection carrier ({@code @items}) &rarr; the element {@code Object[]} (written
+     *       via the normal array path — inline {@code key[N]:} or the wrapped form, as context
+     *       dictates).</li>
+     *   <li>Plain String-keyed {@link JsonObject} or any non-carrier &rarr; returned unchanged.</li>
+     * </ul>
+     * The carrier's specific collection/map subtype is normalized away (e.g. a resolved TreeSet
+     * writes as a plain array). This matches JsonWriter output under {@code showTypeInfoNever}
+     * (the conversion default); full type-faithful TOON re-emission is the parked 4.105.0
+     * verbatim-transcode work, which sidesteps carriers entirely.
+     */
+    private Object unwrapCarrier(Object value) {
+        if (value instanceof JsonObject) {
+            JsonObject jObj = (JsonObject) value;
+            Object[] keys = jObj.getKeys();
+            if (keys != null) {
+                Object[] vals = jObj.getItems();
+                LinkedHashMap<Object, Object> rebuilt = new LinkedHashMap<>(Math.max(16, keys.length + (keys.length >> 1)));
+                for (int i = 0; i < keys.length; i++) {
+                    rebuilt.put(keys[i], (vals != null && i < vals.length) ? vals[i] : null);
+                }
+                return rebuilt;
+            }
+            Object[] items = jObj.getItems();
+            if (items != null) {
+                return items;
+            }
+        }
+        return value;
     }
 
     /**
@@ -1794,6 +1837,7 @@ public class ToonWriter implements Closeable, Flushable {
      * Per TOON spec: for object/map elements, first field goes on hyphen line.
      */
     private void writeListElement(Object element) throws IOException {
+        element = unwrapCarrier(element);   // resolved-Maps-graph carrier -> plain container
         if (element == null || isPrimitive(element)) {
             out.write(" ");
             writeValue(element);
@@ -2253,6 +2297,11 @@ public class ToonWriter implements Closeable, Flushable {
             return;
         }
 
+        // Unwrap a resolved-Maps-graph carrier (JsonObjectArray / JsonObjectMap) before the
+        // container checks below — otherwise an @items/@keys carrier (empty as a Map) would be
+        // mistaken for an empty object and emit "key:" with no body.
+        value = unwrapCarrier(value);
+
         // Check for key folding: collapse single-key map chains into dotted notation.
         // §13.4 safe-mode collision avoidance: when the candidate folded path would clash
         // with a literal sibling key, skip folding for this chain AND suppress folding in
@@ -2414,6 +2463,9 @@ public class ToonWriter implements Closeable, Flushable {
             writeNumber((Number) value);
             return;
         }
+
+        // Unwrap a resolved-Maps-graph carrier before the container checks (see writeFieldEntry).
+        value = unwrapCarrier(value);
 
         if (value instanceof char[]) {
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
