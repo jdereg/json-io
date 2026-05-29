@@ -1691,8 +1691,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 gen.writeNumberField(idKey, getIdInt(col));
             }
             if (showType) {
-                String alias = writeOptions.getTypeNameAlias(getTypeNameForOutput(col));
-                gen.writeStringFieldUnescaped(typeKey, alias);
+                String typeName = getTypeNameForOutput(col);
+                if (typeName != null) {
+                    String alias = writeOptions.getTypeNameAlias(typeName);
+                    gen.writeStringFieldUnescaped(typeKey, alias);
+                }
             }
         }
 
@@ -1763,6 +1766,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 !typeString.equals(obj.getClass().getName())) {
                 return typeString;  // Use preserved original @type
             }
+
+            // A JsonObject carrying no original @type is a plain anonymous object/map; its
+            // runtime class is the INTERNAL carrier (JsonObject / JsonObjectMap / JsonObjectArray),
+            // which is never a meaningful user type. Return null so callers emit no @type rather
+            // than leaking an internal class name like "com.cedarsoftware.io.JsonObject" (which is
+            // noise and, for JsonObjectMap, not even readable back). Callers treat null as
+            // "no type to show".
+            return null;
         }
 
         // Normal case: use actual class name
@@ -2022,9 +2033,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         Class<?> type = null;
         if (showType) {
-            String alias = writeOptions.getTypeNameAlias(getTypeNameForOutput(jObj));
-            gen.writeStringFieldUnescaped(typeKey, alias);
-            type = jObj.getRawType();
+            String typeName = getTypeNameForOutput(jObj);
+            if (typeName != null) {
+                String alias = writeOptions.getTypeNameAlias(typeName);
+                gen.writeStringFieldUnescaped(typeKey, alias);
+                type = jObj.getRawType();
+            }
         }
 
         if (jObj.isEmpty()) {
@@ -2108,8 +2122,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.writeNumberField(idKey, getIdInt(map));
         }
         if (showType) {
-            String alias = writeOptions.getTypeNameAlias(getTypeNameForOutput(map));
-            gen.writeStringFieldUnescaped(typeKey, alias);
+            String typeName = getTypeNameForOutput(map);
+            if (typeName != null) {
+                String alias = writeOptions.getTypeNameAlias(typeName);
+                gen.writeStringFieldUnescaped(typeKey, alias);
+            }
         }
 
         if (map.isEmpty()) {
@@ -2210,8 +2227,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.writeNumberField(idKey, getIdInt(map));
         }
         if (showType) {
-            String alias = writeOptions.getTypeNameAlias(getTypeNameForOutput(map));
-            gen.writeStringFieldUnescaped(typeKey, alias);
+            String typeName = getTypeNameForOutput(map);
+            if (typeName != null) {
+                String alias = writeOptions.getTypeNameAlias(typeName);
+                gen.writeStringFieldUnescaped(typeKey, alias);
+            }
         }
 
         if (map.isEmpty()) {
