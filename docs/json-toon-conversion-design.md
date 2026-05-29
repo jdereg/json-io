@@ -130,30 +130,55 @@ count-free streaming form exists to fall back to. Hence the §4 floor.
 
 ---
 
-## 6. Implementation strategy — two engines, one per direction
+## 6. Implementation strategy — tier by String-vs-stream, not by direction
 
-String forms are **thin wrappers** (`StringReader` in, `StringWriter`/`StringBuilder`
-out) over the *same* engine the stream forms use. The motivation is **single source of
-truth** — String-form and stream-form output are byte-identical, one code path per
-direction — not memory (irrelevant for String input).
+The deciding factor is `$id`/`$ref` (and `@type`, `@keys`/`@items`) handling. A pure
+tokenizer→generator splice treats reference metadata as **opaque field tokens** — it
+neither resolves nor re-derives them. The **Maps layer** resolves on read (`MapResolver`
+pairs `@id`/`@ref` into a real object graph — its Javadoc: "each `@ref` will be a pointer
+to the appropriate Map") and re-derives on write (`ToonWriter`/`JsonWriter`
+`traceReferences` re-emits references canonically for the target format). So whenever
+references matter, the Maps path is *correct* and the splice is merely *verbatim*.
 
-The engine is **not the same shape** in both directions, because of the tabular/`[N]`
-look-ahead:
+This splits the implementation into two **fidelity tiers**:
 
-| Direction | Engine | Notes |
-|---|---|---|
-| **TOON → JSON** | `ToonTokenizer → JsonGenerator` splice (forward-only, no tree) | The tokenizer expands tabular rows into normal object tokens (§9 below), so it feeds a `JsonGenerator` directly. Clean dogfood of both cursors. |
-| **JSON → TOON** | tokenizer-fed, **buffers per array, routes through `ToonWriter` → `ToonGenerator`** | Auto-tabular-detection (what makes TOON compact) needs the whole array materialized; that logic lives in `ToonWriter` (`tryWriteUniformMapTabular` / `getUniformPOJODataFromArray`). A raw caller-driven `ToonGenerator` does **not** auto-tabularize. |
+|                | **String / in-memory** (high fidelity) | **Streaming** (low memory) |
+|----------------|----------------------------------------|----------------------------|
+| **JSON → TOON** | `toToon(toMaps(json))` | buffer-per-array → `ToonWriter`→`ToonGenerator`; **no global ref re-derivation** |
+| **TOON → JSON** | `toJson(fromToonToMaps(toon))` | `ToonTokenizer`→`JsonGenerator` splice; **verbatim refs** |
 
-**Do NOT implement JSON→TOON as a naive `JsonTokenizer → ToonGenerator` splice.** That
-forces either (a) list-form output that is *worse* than `toToon` produces, or (b)
-re-implementing `ToonWriter`'s tabular detection in the splice (duplication). Instead the
-JSON→TOON engine interposes the tabular-aware `ToonWriter`, which itself dogfoods
-`ToonGenerator` (mirroring `JsonWriter`→`JsonGenerator`). The generator is still used —
-through the writer that owns tabular detection, not under a raw splice.
+### String / in-memory tier → Maps round-trip
+For the String forms, route **both directions through the Maps APIs**
+(`toMaps` / `fromToonToMaps` → `toToon` / `toJson`). This is strictly better than a token
+splice here:
+1. **Reference correctness** — `@id`/`@ref` resolution + canonical re-derivation, free.
+2. **Everything else free too** — meta-key prefix normalization (`@`↔`$`), tabular
+   detection, key folding, `@keys`/`@items`, map rehashing — all already in
+   `MapResolver` + the writers.
+3. **Near-zero new code** — `toToon(toMaps(json).asClass(Object.class))` and the mirror.
+   Ships 4.104.0 immediately.
+4. **Memory is irrelevant** — String input is already fully resident.
 
-End state: one JSON→TOON engine + one TOON→JSON engine, each with two entry points
-(String, stream), String entry = `StringReader`/`StringWriter` wrapper.
+### Streaming tier → cursor (cannot use Maps)
+`toMaps(in)` / `fromToonToMaps(in)` materialize the **whole** graph (reference
+re-derivation is inherently a whole-graph op), so the streaming forms cannot use them
+without abandoning their purpose. Streaming is therefore a **lower-fidelity tier**:
+references pass through verbatim (or cyclic graphs are rejected), acceptable because the
+streaming use cases (DB export, large flat data, LLM payloads) are reference-light.
+Per-direction the streaming engine is still asymmetric: TOON→JSON is a clean
+`ToonTokenizer`→`JsonGenerator` splice; JSON→TOON must buffer per array and route through
+`ToonWriter` (a raw `ToonGenerator` does not auto-tabularize — that needs the materialized
+array). **Do NOT** implement JSON→TOON streaming as a naive `JsonTokenizer →
+ToonGenerator` splice (it would emit list form, worse than `toToon`, or duplicate
+`ToonWriter`'s tabular detection).
+
+### Fidelity caveat (inherent, not a flaw)
+String and stream forms can **diverge on reference-bearing documents**: the String form
+re-derives *canonical* references via the resolver; the stream form preserves the
+*source's* reference metadata verbatim. For reference-free documents — the overwhelming
+majority, and **all** streaming use cases — they are byte-identical. This bends the
+"single source of truth" ideal, but it is an inherent consequence of streaming (whole-graph
+resolution needs the whole graph), not a fixable design flaw. Document it explicitly.
 
 ---
 
@@ -254,8 +279,10 @@ detection — each must become a deterministic token-emission rule.
    the unified tree-builder.
 3. **Stream + decorator conversion forms** (4.105.0) — thin wrappers over the §6 engines,
    once 1 + 2 land.
-4. **String conversion forms** (4.104.0) — ship first on the tree path; rewrite onto the
-   §6 engines in 4.105.0 (transparent, output-identical).
+4. **String conversion forms** (4.104.0) — Maps round-trip (`toToon(toMaps(...))` and the
+   mirror), the high-fidelity tier per §6. These **stay** on the Maps path permanently;
+   they are *not* later rewritten onto the streaming cursor (the two tiers are allowed to
+   differ on reference-bearing documents — §6 fidelity caveat).
 
 `ToonWriter` dogfooding `ToonGenerator` (mirror of `JsonWriter`→`JsonGenerator`) is a
 prerequisite for the JSON→TOON engine in §6; fold it into the `ToonGenerator` work.
@@ -273,9 +300,18 @@ prerequisite for the JSON→TOON engine in §6; fold it into the `ToonGenerator`
 - **`createToonGenerator(...)` / `createToonTokenizer(...)` factory signatures** — mirror
   the existing `createGenerator` / `createTokenizer` (Writer/OutputStream and
   String/InputStream + options overloads). Exact surface is a separate design pass when §7/§8 start.
-- **Whether to rewrite the TOON→JSON String form onto the splice in 4.105.0** or leave it
-  on the proven tree path — splice avoids tree allocation and dogfoods the core; tree path
-  is proven. Decide when the splice exists and can be A/B'd.
+- **Default `cycleSupport` for the conversion APIs** — `jsonToToon(json)` with null
+  options hits a conflict: TOON's default is `cycleSupport(false)` (acyclic, LLM-oriented),
+  so cyclic or `@id`/`@ref`-bearing JSON input would **throw** on the `toToon` step. Choice:
+  *preserve the source's reference structure* (default `cycleSupport(true)` for conversions)
+  vs. *emit canonical acyclic TOON* (`false`; throws on cycles, inlines shared DAG nodes as
+  copies). Leaning **preserve-by-default** for a conversion API. Note this only applies to
+  the high-fidelity (Maps) tier; the streaming tier passes references through verbatim
+  regardless.
+- **Whether to keep the String forms on the Maps round-trip permanently** (recommended —
+  see §6) or ever move them onto the streaming cursor. Recommendation: keep String on Maps;
+  the cursor is only for the genuinely-streaming entry points. The String and stream tiers
+  are allowed to differ on reference-bearing documents (§6 fidelity caveat).
 
 ---
 
