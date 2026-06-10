@@ -169,6 +169,26 @@ public abstract class JsonGenerator implements Closeable, Flushable {
     public abstract JsonGenerator writeString(String value) throws IOException;
 
     /**
+     * Emit a JSON string value whose content the caller GUARANTEES contains no
+     * character requiring JSON escaping (no {@code "}, no {@code \}, no control
+     * characters, no U+2028/U+2029). Skips the escape scan entirely: opening quote,
+     * bulk content write, closing quote. Used by the built-in temporal / UUID /
+     * numeric-string writers whose output alphabet (ISO-8601, hex digits, etc.)
+     * can never need escaping — JFR showed the per-value escape scan at a
+     * measurable share of write-phase CPU for temporal-heavy payloads.
+     * <p>
+     * Package-private: the no-escape guarantee cannot be validated, so this is not
+     * part of the public API. Default implementation falls back to the safe
+     * {@link #writeString(String)} path; {@code CharStreamGenerator} overrides.
+     *
+     * @param value escape-free string content; {@code null} emits the JSON literal null
+     * @return this generator for chaining
+     */
+    JsonGenerator writeStringUnescaped(String value) throws IOException {
+        return writeString(value);
+    }
+
+    /**
      * Emit a JSON string value sourced from a char-array slice (zero-copy
      * fast path). Standard JSON escaping is applied.
      *

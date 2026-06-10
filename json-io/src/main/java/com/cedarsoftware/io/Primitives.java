@@ -2,7 +2,7 @@ package com.cedarsoftware.io;
 
 import java.util.Set;
 
-import com.cedarsoftware.util.IdentitySet;
+import com.cedarsoftware.util.ClassValueSet;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -22,8 +22,11 @@ import com.cedarsoftware.util.IdentitySet;
  *         limitations under the License.
  */
 public class Primitives {
-    private static final Set<Class<?>> PRIMITIVE_WRAPPERS = new IdentitySet<>();
-    private static final Set<Class<?>> NATIVE_JSON_TYPES = new IdentitySet<>();
+    // ClassValueSet: contains(Class) rides the JVM's ClassValue fast path (class-local
+    // storage, no hash probe) — faster than hash-based sets on hot dispatch paths like
+    // JsonWriter.isForceType, which JFR showed at ~5% of write-phase CPU.
+    private static final Set<Class<?>> PRIMITIVE_WRAPPERS = new ClassValueSet();
+    private static final Set<Class<?>> NATIVE_JSON_TYPES = new ClassValueSet();
 
     static {
         PRIMITIVE_WRAPPERS.add(Byte.class);

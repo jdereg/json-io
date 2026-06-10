@@ -395,7 +395,7 @@ public class Writers {
          * delegates via a value-slot bridge generator.
          */
         public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
-            gen.writeString(Converter.convert(o, String.class));
+            gen.writeStringUnescaped(Converter.convert(o, String.class));
         }
 
         @Override
@@ -444,10 +444,10 @@ public class Writers {
             }
             if (o instanceof java.sql.Date) {
                 // Write just the date portion - no time, no timezone
-                gen.writeString(((java.sql.Date) o).toLocalDate().toString());
+                gen.writeStringUnescaped(((java.sql.Date) o).toLocalDate().toString());
             } else {
                 // Regular Date uses the converter's string format
-                gen.writeString(Converter.convert(o, String.class));
+                gen.writeStringUnescaped(Converter.convert(o, String.class));
             }
         }
 
@@ -502,7 +502,7 @@ public class Writers {
             }
             if (o instanceof java.sql.Date) {
                 // Same pure date format for sql.Date in both writers
-                gen.writeString(((java.sql.Date) o).toLocalDate().toString());
+                gen.writeStringUnescaped(((java.sql.Date) o).toLocalDate().toString());
             } else {
                 // Regular Date uses milliseconds
                 gen.writeNumber(((java.util.Date) o).getTime());
@@ -560,7 +560,7 @@ public class Writers {
             if (writeWithStringFormat(o, gen, context)) { return; }
             if (writeWithFieldFormat(o, gen, context)) { return; }
             LocalDate ld = (LocalDate) o;
-            gen.writeString(ld == null ? null : FORMATTER.format(ld));
+            gen.writeStringUnescaped(ld == null ? null : FORMATTER.format(ld));
         }
 
         @Override
@@ -585,7 +585,7 @@ public class Writers {
             if (writeWithStringFormat(o, gen, context)) { return; }
             if (writeWithFieldFormat(o, gen, context)) { return; }
             LocalTime lt = (LocalTime) o;
-            gen.writeString(lt == null ? null : FORMATTER.format(lt));
+            gen.writeStringUnescaped(lt == null ? null : FORMATTER.format(lt));
         }
 
         @Override
@@ -610,7 +610,7 @@ public class Writers {
             if (writeWithStringFormat(o, gen, context)) { return; }
             if (writeWithFieldFormat(o, gen, context)) { return; }
             LocalDateTime ldt = (LocalDateTime) o;
-            gen.writeString(ldt == null ? null : FORMATTER.format(ldt));
+            gen.writeStringUnescaped(ldt == null ? null : FORMATTER.format(ldt));
         }
 
         @Override
@@ -646,7 +646,8 @@ public class Writers {
             if (zdt.getZone().equals(ZoneOffset.UTC) || zdt.getZone().getId().equals("Z")) {
                 zdt = zdt.withZoneSameInstant(ZoneId.of("UTC"));
             }
-            gen.writeString(FORMATTER.format(zdt));
+            // IANA zone ids ([A-Za-z0-9_/+-]) and the ISO offset form never need escaping
+            gen.writeStringUnescaped(FORMATTER.format(zdt));
         }
 
         @Override
@@ -671,7 +672,7 @@ public class Writers {
 
         public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
             YearMonth ym = (YearMonth) o;
-            gen.writeString(ym == null ? null : FORMATTER.format(ym));
+            gen.writeStringUnescaped(ym == null ? null : FORMATTER.format(ym));
         }
 
         @Override
@@ -690,7 +691,7 @@ public class Writers {
 
         public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
             MonthDay md = (MonthDay) o;
-            gen.writeString(md == null ? null : md.toString());
+            gen.writeStringUnescaped(md == null ? null : md.toString());
         }
 
         @Override
@@ -715,7 +716,7 @@ public class Writers {
             if (writeWithStringFormat(o, gen, context)) { return; }
             if (writeWithFieldFormat(o, gen, context)) { return; }
             OffsetTime ot = (OffsetTime) o;
-            gen.writeString(ot == null ? null : FORMATTER.format(ot));
+            gen.writeStringUnescaped(ot == null ? null : FORMATTER.format(ot));
         }
 
         @Override
@@ -740,7 +741,7 @@ public class Writers {
             if (writeWithStringFormat(o, gen, context)) { return; }
             if (writeWithFieldFormat(o, gen, context)) { return; }
             OffsetDateTime odt = (OffsetDateTime) o;
-            gen.writeString(odt == null ? null : FORMATTER.format(odt));
+            gen.writeStringUnescaped(odt == null ? null : FORMATTER.format(odt));
         }
 
         @Override
@@ -766,7 +767,7 @@ public class Writers {
                 return;
             }
             Instant instant = (Instant) o;
-            gen.writeString(instant == null ? null : instant.toString());
+            gen.writeStringUnescaped(instant == null ? null : instant.toString());
         }
 
         @Override
@@ -785,7 +786,7 @@ public class Writers {
 
         public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
             ZoneOffset zo = (ZoneOffset) o;
-            gen.writeString(zo == null ? null : zo.toString());
+            gen.writeStringUnescaped(zo == null ? null : zo.toString());
         }
 
         @Override
@@ -804,7 +805,7 @@ public class Writers {
 
         public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
             Duration d = (Duration) o;
-            gen.writeString(d == null ? null : d.toString());
+            gen.writeStringUnescaped(d == null ? null : d.toString());
         }
 
         @Override
@@ -823,7 +824,7 @@ public class Writers {
 
         public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
             Period p = (Period) o;
-            gen.writeString(p == null ? null : p.toString());
+            gen.writeStringUnescaped(p == null ? null : p.toString());
         }
 
         @Override
@@ -841,7 +842,7 @@ public class Writers {
         }
 
         public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
-            gen.writeString(Converter.convert(o, String.class));
+            gen.writeStringUnescaped(Converter.convert(o, String.class));
         }
 
         @Override
@@ -859,7 +860,7 @@ public class Writers {
         }
 
         public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
-            gen.writeString(Converter.convert(o, String.class));
+            gen.writeStringUnescaped(Converter.convert(o, String.class));
         }
 
         @Override
@@ -877,7 +878,7 @@ public class Writers {
     public static class LocaleWriter extends PrimitiveTypeWriter {
         public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
             Locale locale = (Locale) o;
-            gen.writeString(locale.toLanguageTag());
+            gen.writeStringUnescaped(locale.toLanguageTag());
         }
 
         @Override
@@ -896,7 +897,7 @@ public class Writers {
             BigInteger big = (BigInteger) o;
             // Emit as a quoted JSON string (not a number literal) so JS / Jackson clients
             // that store numbers as doubles do not lose precision on 19+ digit BigInteger.
-            gen.writeString(big.toString(10));
+            gen.writeStringUnescaped(big.toString(10));
         }
 
         @Override
@@ -926,7 +927,7 @@ public class Writers {
     public static class CurrencyWriter extends PrimitiveTypeWriter {
         public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
             Currency currency = (Currency) o;
-            gen.writeString(currency.getCurrencyCode());
+            gen.writeStringUnescaped(currency.getCurrencyCode());
         }
 
         @Override
@@ -945,7 +946,7 @@ public class Writers {
             BigDecimal big = (BigDecimal) o;
             // Emit as a quoted JSON string (not a number literal) so JS / Jackson clients
             // that store numbers as doubles do not lose precision on arbitrary-scale BigDecimal.
-            gen.writeString(big.toPlainString());
+            gen.writeStringUnescaped(big.toPlainString());
         }
 
         @Override
@@ -960,7 +961,7 @@ public class Writers {
     public static class UUIDWriter extends PrimitiveTypeWriter {
         public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
             UUID uuid = (UUID) o;
-            gen.writeString(uuid.toString());
+            gen.writeStringUnescaped(uuid.toString());
         }
 
         @Override

@@ -554,6 +554,28 @@ final class CharStreamGenerator extends JsonGenerator {
         return writeString(new String(text, offset, length));
     }
 
+    /**
+     * Escape-free string value emission — see {@link JsonGenerator#writeStringUnescaped(String)}
+     * for the caller contract. Quote + bulk content write + quote; no escape scan, no
+     * CharBufScratch staging. Smart-quote selection is unnecessary: content with no
+     * double-quote characters always double-quotes correctly in both JSON and JSON5 modes.
+     */
+    @Override
+    JsonGenerator writeStringUnescaped(String value) throws IOException {
+        if (value == null) {
+            return writeString((String) null);
+        }
+        if (value.length() > maxStringLength) {
+            throw new JsonIoException("String too large: " + value.length() + " chars (max: " + maxStringLength + ")");
+        }
+        startValueContext();
+        out.write('"');
+        out.write(value);
+        out.write('"');
+        markValue();
+        return this;
+    }
+
     @Override
     public JsonGenerator writeNumber(int value) throws IOException {
         startValueContext();

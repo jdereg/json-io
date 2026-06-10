@@ -79,7 +79,7 @@ import com.cedarsoftware.util.CompactMap;
 import com.cedarsoftware.util.CompactSet;
 import com.cedarsoftware.util.FastWriter;
 import com.cedarsoftware.util.IOUtilities;
-import com.cedarsoftware.util.IdentitySet;
+import com.cedarsoftware.util.ClassValueSet;
 
 import static com.cedarsoftware.io.JsonValue.ENUM;
 import static com.cedarsoftware.io.JsonValue.ITEMS;
@@ -193,7 +193,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     // Natural default collection/map types: maps declared interface to the concrete type that CollectionFactory
     // and MapFactory create when reading. Used by compact format to omit @type wrapper when runtime type matches.
-    private static final Map<Class<?>, Class<?>> NATURAL_DEFAULTS = new IdentityHashMap<>();
+    private static final Map<Class<?>, Class<?>> NATURAL_DEFAULTS = new ClassValueMap<>();
     static {
         NATURAL_DEFAULTS.put(List.class, ArrayList.class);
         NATURAL_DEFAULTS.put(Collection.class, ArrayList.class);
@@ -210,7 +210,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     // Types that have lossless String round-trips via PrimitiveTypeWriter (write) and Converter (read).
     // When compact format is enabled and the field's declared type is in this set, @type can be omitted
     // because the reader's Injector will use Converter.convert(String, fieldType) to reconstruct the value.
-    private static final Set<Class<?>> CONVERTABLE_TYPES = new IdentitySet<>();
+    // ClassValueSet/ClassValueMap (here and NATURAL_DEFAULTS above): class-keyed lookups
+    // ride the JVM's ClassValue fast path instead of hash probes — isForceType consults
+    // both on the per-field hot path.
+    private static final Set<Class<?>> CONVERTABLE_TYPES = new ClassValueSet();
     static {
         // Java Time types
         CONVERTABLE_TYPES.add(Duration.class);
@@ -264,7 +267,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     // Numeric primitives that can safely write as plain JSON numbers in MINIMAL/MINIMAL_PLUS modes.
     // These types round-trip as Long (for integers) or Double (for floats) when no @type is present.
     // Excludes: Character (String != Character), Atomic* (behavioral semantics), Big* (precision/range)
-    private static final Set<Class<?>> NUMERIC_PRIMITIVES_FOR_COMPACT = new IdentitySet<>();
+    private static final Set<Class<?>> NUMERIC_PRIMITIVES_FOR_COMPACT = new ClassValueSet();
     static {
         NUMERIC_PRIMITIVES_FOR_COMPACT.add(Byte.class);
         NUMERIC_PRIMITIVES_FOR_COMPACT.add(byte.class);
