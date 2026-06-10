@@ -589,6 +589,16 @@ public class ObjectResolver extends Resolver
                         injector.inject(target, formatted);
                         return;
                     }
+                    // 3d. FAST ISO TEMPORAL PARSE — strict java.time parse for the ISO-8601
+                    // wire format json-io itself writes. Skips Converter → DateUtilities's
+                    // flexible regex parser (JFR: ~13% of read-phase CPU). Non-ISO strings
+                    // return null and fall through to the Converter path, preserving
+                    // flexible-format support.
+                    Object iso = FastIsoParser.parse((String) rhs, rawType);
+                    if (iso != null) {
+                        injector.inject(target, iso);
+                        return;
+                    }
                 }
                 // 4. CONVERTER - scalar-to-scalar conversion for simple types
                 final boolean pseudoPrimitive =
@@ -1240,6 +1250,15 @@ public class ObjectResolver extends Resolver
                 // Same type or assignable - no conversion needed
                 if (rawInferred == null || rawInferred == valueClass || rawInferred.isAssignableFrom(valueClass)) {
                     return null;
+                }
+                // FAST ISO TEMPORAL PARSE — strict java.time parse for the ISO-8601 wire
+                // format before the Converter → DateUtilities regex path (hot for
+                // List<Instant>/LocalDate[] style element conversion; see FastIsoParser).
+                if (valueClass == String.class) {
+                    Object iso = FastIsoParser.parse((String) o, rawInferred);
+                    if (iso != null) {
+                        return iso;
+                    }
                 }
                 // Type mismatch - try converter directly (skip factory/reader overhead)
                 if (converter.isConversionSupportedFor(valueClass, rawInferred)) {
