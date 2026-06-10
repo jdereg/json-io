@@ -1222,9 +1222,9 @@ final class CharStreamGenerator extends JsonGenerator {
             // byte[] -> char[]). Walking buf[i] is a raw array load; replaces per-character
             // s.charAt(i) and avoids the StringLatin1/UTF16 dispatch that JFR showed at
             // ~345 leaf samples combined inside this loop. Slice writes via
-            // output.write(buf, off, len) route through StringBuilder.append(char[], ...)
-            // — the fastest variant on StringBuilderWriter — instead of append(String, off,
-            // off+len). Re-entrancy contract: the TL char[] is consumed synchronously by
+            // output.write(buf, off, len) hit the bulk char[] fast path on
+            // CharSegmentWriter (a single System.arraycopy) instead of per-char appends.
+            // Re-entrancy contract: the TL char[] is consumed synchronously by
             // output.write calls (bytes copied immediately into the underlying sink) before
             // this method returns.
             char[] buf = CharBufScratch.getChars(s, len);

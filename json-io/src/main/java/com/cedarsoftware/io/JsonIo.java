@@ -404,18 +404,16 @@ public class JsonIo {
      */
     public static String toJson(Object srcObject, WriteOptions writeOptions) {
         // Direct char-based pipeline: skips OutputStreamWriter + UTF-8 encoder + FastByteArrayOutputStream
-        // and the final new String(bytes, UTF-8) decode. JFR profiling of JsonPerformanceTest showed
-        // roughly half of JSON write time was spent in sun.nio.cs.UTF_8$Encoder.encodeArrayLoopSlow,
-        // StringLatin1.getChars, Preconditions.checkFromIndexSize, and String.getChars — all driven by
-        // the char->byte->char round-trip that this path does not need when returning a String.
-        // StringBuilder stays in compact Latin-1 storage for pure-ASCII JSON, so the returned String's
-        // internal byte[] can be produced with a single copy, not a UTF-8 decode pass.
-        StringBuilder sb = new StringBuilder(32768);
+        // and the final new String(bytes, UTF-8) decode. CharSegmentWriter accumulates output in
+        // char[] segments — direct array stores with a single bounds check per write, no StringBuilder
+        // capacity/coder machinery, no growth copies, and no latin1->UTF16 full-buffer inflation when
+        // the payload contains non-Latin-1 characters (see CharSegmentWriter Javadoc for the JFR data).
+        CharSegmentWriter segWriter = new CharSegmentWriter();
         JsonWriter writer = null;
         try {
-            writer = new JsonWriter(new StringBuilderWriter(sb), writeOptions);
+            writer = new JsonWriter(segWriter, writeOptions);
             writer.write(srcObject);
-            return sb.toString();
+            return segWriter.toString();
         } catch (JsonIoException je) {
             throw je;
         } catch (Exception e) {
@@ -542,18 +540,16 @@ public class JsonIo {
         }
         // Direct char-based pipeline — mirrors the JsonIo.toJson(Object, WriteOptions) fix.
         // Skips OutputStreamWriter + UTF-8 encoder + FastByteArrayOutputStream and the final
-        // new String(bytes, UTF-8) decode. JFR profiling of JsonPerformanceTest (TOON Write
-        // baseline) showed ~33% of ToonWriter samples in the char->byte->char round-trip:
-        // sun.nio.cs.UTF_8$Encoder.encodeArrayLoopSlow (8.1%), StringLatin1.getChars (7.9%),
-        // String.getChars (7.1%), Preconditions.checkFromIndexSize (4.3%), FastWriter.write (~6%).
-        // StringBuilder stays in compact Latin-1 storage for pure-ASCII TOON, so the returned
-        // String is materialized with a single copy instead of a UTF-8 decode pass.
-        StringBuilder sb = new StringBuilder(32768);
+        // new String(bytes, UTF-8) decode. CharSegmentWriter accumulates output in char[]
+        // segments — direct array stores with a single bounds check per write, no StringBuilder
+        // capacity/coder machinery, no growth copies, and no latin1->UTF16 full-buffer inflation
+        // when the payload contains non-Latin-1 characters (see CharSegmentWriter Javadoc).
+        CharSegmentWriter segWriter = new CharSegmentWriter();
         ToonWriter writer = null;
         try {
-            writer = new ToonWriter(new StringBuilderWriter(sb), writeOptions);
+            writer = new ToonWriter(segWriter, writeOptions);
             writer.write(srcObject);
-            return sb.toString();
+            return segWriter.toString();
         } catch (JsonIoException je) {
             throw je;
         } catch (Exception e) {

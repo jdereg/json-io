@@ -1,6 +1,7 @@
 ### Revision History
 
 #### 4.104.0 - (Unreleased)
+* **PERFORMANCE**: **`JsonIo.toJson` / `JsonIo.toToon` String materialization rebuilt on a segmented `char[]` writer (`CharSegmentWriter`), replacing the `StringBuilder`-backed `StringBuilderWriter`.** JFR profiling showed ~46% of JSON write-phase CPU inside StringBuilder append machinery: per-append capacity checks, compact-string coder checks, doubling-growth copies, and — for any payload containing a non-Latin-1 character — a full-buffer latin1→UTF-16 inflation copy mid-write. The segmented writer appends via direct `char[]` stores with a single bounds check; filled segments are archived (never re-copied) and the final String is assembled in one exact-size pass — the same architecture as Jackson's `SegmentedStringWriter`/`TextBuffer`. Median-of-3 JsonPerformanceTest: JSON Write **-12.9%** (1.91x → 1.70x vs Jackson, cycleSupport=true), **-10.8%** (1.72x → 1.53x, cycleSupport=false); TOON Write **-13.9%** (1.72x → 1.47x) / **-13.7%** (1.60x → 1.40x).
 
 #### 4.103.0 - 2026-05-25
 * **BUG FIX**: `JsonGenerator.deprecatedWriterBridge_*` factories tolerate a `null` `WriteOptions` argument (fall back to defaults), preserving the legacy `Writer`-based custom-writer API contract for delegate-pattern migrations.
