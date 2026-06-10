@@ -6,7 +6,6 @@ import java.math.BigInteger;
 import java.util.Arrays;
 
 import com.cedarsoftware.util.FastReader;
-import com.cedarsoftware.util.internal.CharBufScratch;
 import com.cedarsoftware.util.internal.VectorizedArrays;
 
 import static com.cedarsoftware.util.MathUtilities.parseBigDecimal;
@@ -81,6 +80,13 @@ final class CharStreamTokenizer extends JsonTokenizer {
     private final StringBuilder strBuf;
     private final StringBuilder numBuf = new StringBuilder();
     private final String[] stringCacheArray = new String[STRING_CACHE_MASK + 1];
+
+    // Per-instance scratch for the cache-verify compare in cacheStringFromChars.
+    // Replaces a CharBufScratch ThreadLocal borrow — JFR showed ThreadLocalMap.getEntry
+    // at ~8% of read-phase CPU, one map walk per cache-checked string. The tokenizer is
+    // per-parse and single-threaded, so a plain field is safe; bounded by
+    // MAX_CACHED_STRING_LENGTH; primitive char[] stores incur no GC card marking.
+    private final char[] cacheCmpScratch = new char[MAX_CACHED_STRING_LENGTH];
 
     // Tokenization-policy flags.
     private final boolean strictJson;
@@ -1342,14 +1348,14 @@ final class CharStreamTokenizer extends JsonTokenizer {
 
         if (cached != null && cached.length() == len) {
             // Bulk-extract cached's chars via String.getChars (HotSpot intrinsic, SIMD)
-            // into a thread-local buffer, then compare char[] to char[] via
+            // into the per-instance scratch, then compare char[] to char[] via
             // VectorizedArrays.equalsRange — dispatches to JDK 9+'s SIMD-vectorized
             // Arrays.equals(arr, int, int, arr, int, int) intrinsic at runtime, with
             // a JDK 8 loop fallback. Mirrors the same optimization shipped in
             // ToonReader.cacheSubstringFromBuf; both are the parallel cache-verify
-            // hot spots in JFR profiles. Safe re: CharBufScratch's re-entrancy
-            // contract — VectorizedArrays.equalsRange does no callouts.
-            final char[] cachedChars = CharBufScratch.getChars(cached, len);
+            // hot spots in JFR profiles.
+            final char[] cachedChars = cacheCmpScratch;
+            cached.getChars(0, len, cachedChars, 0);
             if (VectorizedArrays.equalsRange(cachedChars, 0, len, buf, offset, offset + len)) {
                 return cached;
             }

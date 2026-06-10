@@ -15,7 +15,6 @@ import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.FastReader;
 import com.cedarsoftware.util.MathUtilities;
-import com.cedarsoftware.util.internal.CharBufScratch;
 import com.cedarsoftware.util.internal.VectorizedArrays;
 
 /**
@@ -127,6 +126,12 @@ public class ToonReader {
     private final String[] stringCache;
     private final String[] numberCacheKeys;
     private final Number[] numberCacheValues;
+
+    // Per-instance scratch for the cache-verify compare in cacheSubstringFromBuf.
+    // Replaces a CharBufScratch ThreadLocal borrow — JFR showed ThreadLocalMap.getEntry
+    // hot on this path, one map walk per cache-checked string. The reader is per-parse
+    // and single-threaded; bounded by MAX_CACHED_STRING_LENGTH.
+    private final char[] cacheCmpScratch = new char[MAX_CACHED_STRING_LENGTH];
 
     /**
      * Create a ToonReader that reads from a Reader.
@@ -2251,16 +2256,15 @@ public class ToonReader {
         String cached = cache[slot];
 
         if (cached != null && cached.length() == len) {
-            // Bulk-extract cached's chars into a thread-local buffer (String.getChars is
-            // a HotSpot intrinsic with SIMD on supported HW), then compare char[] to
+            // Bulk-extract cached's chars into the per-instance scratch (String.getChars
+            // is a HotSpot intrinsic with SIMD on supported HW), then compare char[] to
             // char[] via VectorizedArrays.equalsRange, which dispatches to JDK 9+'s
             // SIMD-vectorized Arrays.equals(arr, int, int, arr, int, int) intrinsic at
             // runtime (with a JDK 8 loop fallback). Replaces per-char cached.charAt(j)
             // — eliminates the LATIN1/UTF16 coder branch + per-char bounds check +
-            // virtual dispatch on every character of the cache-verify step. Safe re:
-            // CharBufScratch's re-entrancy contract: VectorizedArrays.equalsRange does
-            // not call back into any code that would clobber the scratch buffer.
-            char[] cachedChars = CharBufScratch.getChars(cached, len);
+            // virtual dispatch on every character of the cache-verify step.
+            char[] cachedChars = cacheCmpScratch;
+            cached.getChars(0, len, cachedChars, 0);
             if (VectorizedArrays.equalsRange(buf, start, end, cachedChars, 0, len)) {
                 return cached;
             }
