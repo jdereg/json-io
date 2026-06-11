@@ -3036,6 +3036,26 @@ public class ToonWriter implements Closeable, Flushable {
             out.write("null");
             return;
         }
+        // Fast path: common kinds via cheap instanceof, skipping the ClassValue lookup.
+        // Mirrors the fast path in isPrimitive() — element loops call isPrimitive then
+        // writeInlineValue on the same value, so without this the ClassValue dispatch
+        // ran twice per element (JFR: ~58 samples across the pair).
+        if (value instanceof String) {
+            writeString((String) value);
+            return;
+        }
+        if (value instanceof Number) {
+            writeNumber((Number) value);
+            return;
+        }
+        if (value instanceof Boolean) {
+            out.write(((Boolean) value) ? "true" : "false");
+            return;
+        }
+        if (value instanceof Character) {
+            writeString(String.valueOf(value));
+            return;
+        }
         switch (writeTypeCache.get(value.getClass())) {
             case STRING:
                 writeString((String) value);

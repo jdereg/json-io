@@ -2757,7 +2757,31 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 forceElementShowType = true;
             }
             fieldFormatPattern = plan.formatPattern();
-            boolean showType = plan.forceShowType() || isForceType(o.getClass(), type);
+            boolean showType;
+            if (plan.forceShowType()) {
+                showType = true;
+            } else {
+                // isForceType memo: fields are overwhelmingly monomorphic, and isForceType
+                // performs several class-keyed lookups (Primitives sets, NATURAL_DEFAULTS,
+                // CONVERTABLE_TYPES — JFR: ~5% of write CPU across the family). The plan
+                // caches the known-true/known-false runtime class; forceElementShowType
+                // is the one mutable input, so the memo is bypassed while it's set.
+                final Class<?> oClass = o.getClass();
+                if (!forceElementShowType && oClass == plan.forceTypeTrueClass) {
+                    showType = true;
+                } else if (!forceElementShowType && oClass == plan.forceTypeFalseClass) {
+                    showType = false;
+                } else {
+                    showType = isForceType(oClass, type);
+                    if (!forceElementShowType) {
+                        if (showType) {
+                            plan.forceTypeTrueClass = oClass;
+                        } else {
+                            plan.forceTypeFalseClass = oClass;
+                        }
+                    }
+                }
+            }
             writeImpl(o, showType);   // wrapper's restore + markValue transitions outer frame
         } finally {
             declaredElementType = savedElementType;

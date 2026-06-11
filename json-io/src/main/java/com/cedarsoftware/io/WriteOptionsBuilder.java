@@ -2874,6 +2874,17 @@ public class WriteOptionsBuilder {
         private final boolean mapKeyTypeIsSimple;
         private final byte primitiveWriteKind;
 
+        // isForceType memo — monomorphic-field fast path used by JsonWriter.writeField.
+        // Caches the runtime classes whose isForceType answer (against this plan's
+        // effectiveDeclaredType) is known-true / known-false. Two independent fields so
+        // racy unsynchronized publication is benign: each field alone is self-consistent,
+        // and the worst case is a missed cache hit + deterministic recompute. Plans are
+        // cached per-WriteOptions, so every writer-config flag isForceType consults is
+        // fixed for the plan's lifetime; JsonWriter only reads/writes the memo when
+        // forceElementShowType (the one per-writer mutable input) is false.
+        Class<?> forceTypeTrueClass;
+        Class<?> forceTypeFalseClass;
+
         private WriteFieldPlan(Accessor accessor, String fieldName, String serializedKey, Class<?> declaredFieldType,
                                Class<?> declaredElementType, Class<?> declaredKeyType,
                                boolean enumPublicOnlySkipCandidate, boolean applyDeclaredContainerTypes,
