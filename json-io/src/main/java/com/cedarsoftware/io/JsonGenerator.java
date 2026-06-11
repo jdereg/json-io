@@ -189,6 +189,15 @@ public abstract class JsonGenerator implements Closeable, Flushable {
     }
 
     /**
+     * char[]-slice variant of {@link #writeStringUnescaped(String)} — same caller
+     * contract (content must need no JSON escaping). Used by the hand-rolled ISO
+     * temporal emitters to avoid materializing an intermediate String per value.
+     */
+    JsonGenerator writeStringUnescaped(char[] buf, int len) throws IOException {
+        return writeStringUnescaped(new String(buf, 0, len));
+    }
+
+    /**
      * Emit a JSON string value sourced from a char-array slice (zero-copy
      * fast path). Standard JSON escaping is applied.
      *

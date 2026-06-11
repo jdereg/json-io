@@ -7,7 +7,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.IdentityHashMap;
 
-import com.cedarsoftware.util.internal.CharBufScratch;
 
 /**
  * Concrete {@link JsonGenerator} implementation that writes JSON tokens to an
@@ -571,6 +570,16 @@ final class CharStreamGenerator extends JsonGenerator {
         startValueContext();
         out.write('"');
         out.write(value);
+        out.write('"');
+        markValue();
+        return this;
+    }
+
+    @Override
+    JsonGenerator writeStringUnescaped(char[] buf, int len) throws IOException {
+        startValueContext();
+        out.write('"');
+        out.write(buf, 0, len);
         out.write('"');
         markValue();
         return this;
@@ -1213,9 +1222,9 @@ final class CharStreamGenerator extends JsonGenerator {
     /**
      * Writes a JSON string value, properly escaped per JSON specifications, with explicit
      * max-length cap. Uses batch scanning (run-of-safe-chars + escape + repeat) for
-     * minimal {@code Writer.write} calls. Per-thread {@code char[]} scratch buffer via
-     * {@code CharBufScratch.getChars} avoids per-call {@code StringLatin1}/{@code UTF16}
-     * dispatch on each character.
+     * minimal {@code Writer.write} calls; safe runs are emitted as String slices so the
+     * sink performs a single {@code String.getChars} into its buffer (no intermediate
+     * staging copy).
      *
      * @param output          The Writer to write to
      * @param s               The string to write as a JSON string value
@@ -1238,47 +1247,40 @@ final class CharStreamGenerator extends JsonGenerator {
 
         output.write('"');
 
-        if (len > 0) {
-            // Bulk-copy chars into a per-thread char[] via CharBufScratch.getChars — uses
-            // String.getChars (HotSpot intrinsic with SIMD on supported HW for compact-string
-            // byte[] -> char[]). Walking buf[i] is a raw array load; replaces per-character
-            // s.charAt(i) and avoids the StringLatin1/UTF16 dispatch that JFR showed at
-            // ~345 leaf samples combined inside this loop. Slice writes via
-            // output.write(buf, off, len) hit the bulk char[] fast path on
-            // CharSegmentWriter (a single System.arraycopy) instead of per-char appends.
-            // Re-entrancy contract: the TL char[] is consumed synchronously by
-            // output.write calls (bytes copied immediately into the underlying sink) before
-            // this method returns.
-            char[] buf = CharBufScratch.getChars(s, len);
+        // Scan the String directly via charAt and emit slices via output.write(String, off, len)
+        // — both CharSegmentWriter and FastWriter override the String-slice write to do one
+        // String.getChars straight into their buffer. This replaces the prior CharBufScratch
+        // staging (String -> ThreadLocal char[] copy, then char[]-slice writes), halving the
+        // copies per string value: scan is latin1/UTF16 charAt (no copy), transport is a
+        // single getChars into the sink. JFR showed the staging path at ~350 samples
+        // (~4.8% of write-phase CPU) across the staging copy + slice arraycopies.
+        int last = 0;
+        for (int i = 0; i < len; i++) {
+            char ch = s.charAt(i);
+            String escape;
 
-            int last = 0;
-            for (int i = 0; i < len; i++) {
-                char ch = buf[i];
-                String escape;
-
-                if (ch < 128) {
-                    escape = ESCAPE_STRINGS[ch];
-                    if (escape == null) {
-                        continue;  // No escape needed — most common path
-                    }
-                } else if (ch == 0x2028) {
-                    escape = "\\u2028";  // Line separator — escape for JavaScript compatibility
-                } else if (ch == 0x2029) {
-                    escape = "\\u2029";  // Paragraph separator — escape for JavaScript compatibility
-                } else {
-                    continue;  // Non-ASCII written as-is (UTF-8 handled by Writer)
+            if (ch < 128) {
+                escape = ESCAPE_STRINGS[ch];
+                if (escape == null) {
+                    continue;  // No escape needed — most common path
                 }
-
-                if (last < i) {
-                    output.write(buf, last, i - last);
-                }
-                output.write(escape);
-                last = i + 1;
+            } else if (ch == 0x2028) {
+                escape = "\\u2028";  // Line separator — escape for JavaScript compatibility
+            } else if (ch == 0x2029) {
+                escape = "\\u2029";  // Paragraph separator — escape for JavaScript compatibility
+            } else {
+                continue;  // Non-ASCII written as-is (UTF-8 handled by Writer)
             }
 
-            if (last < len) {
-                output.write(buf, last, len - last);
+            if (last < i) {
+                output.write(s, last, i - last);
             }
+            output.write(escape);
+            last = i + 1;
+        }
+
+        if (last < len) {
+            output.write(s, last, len - last);
         }
         output.write('"');
     }

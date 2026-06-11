@@ -560,7 +560,17 @@ public class Writers {
             if (writeWithStringFormat(o, gen, context)) { return; }
             if (writeWithFieldFormat(o, gen, context)) { return; }
             LocalDate ld = (LocalDate) o;
-            gen.writeStringUnescaped(ld == null ? null : FORMATTER.format(ld));
+            if (ld == null) {
+                gen.writeStringUnescaped((String) null);
+                return;
+            }
+            char[] buf = new char[10];
+            int n = TemporalChars.localDate(buf, 0, ld);
+            if (n < 0) {   // year outside 0..9999 — formatter fallback
+                gen.writeStringUnescaped(FORMATTER.format(ld));
+                return;
+            }
+            gen.writeStringUnescaped(buf, n);
         }
 
         @Override
@@ -585,7 +595,12 @@ public class Writers {
             if (writeWithStringFormat(o, gen, context)) { return; }
             if (writeWithFieldFormat(o, gen, context)) { return; }
             LocalTime lt = (LocalTime) o;
-            gen.writeStringUnescaped(lt == null ? null : FORMATTER.format(lt));
+            if (lt == null) {
+                gen.writeStringUnescaped((String) null);
+                return;
+            }
+            char[] buf = new char[18];
+            gen.writeStringUnescaped(buf, TemporalChars.localTime(buf, 0, lt));
         }
 
         @Override
@@ -610,7 +625,17 @@ public class Writers {
             if (writeWithStringFormat(o, gen, context)) { return; }
             if (writeWithFieldFormat(o, gen, context)) { return; }
             LocalDateTime ldt = (LocalDateTime) o;
-            gen.writeStringUnescaped(ldt == null ? null : FORMATTER.format(ldt));
+            if (ldt == null) {
+                gen.writeStringUnescaped((String) null);
+                return;
+            }
+            char[] buf = new char[29];
+            int n = TemporalChars.localDateTime(buf, 0, ldt);
+            if (n < 0) {
+                gen.writeStringUnescaped(FORMATTER.format(ldt));
+                return;
+            }
+            gen.writeStringUnescaped(buf, n);
         }
 
         @Override
@@ -647,7 +672,13 @@ public class Writers {
                 zdt = zdt.withZoneSameInstant(ZoneId.of("UTC"));
             }
             // IANA zone ids ([A-Za-z0-9_/+-]) and the ISO offset form never need escaping
-            gen.writeStringUnescaped(FORMATTER.format(zdt));
+            char[] buf = new char[40 + zdt.getZone().getId().length()];
+            int n = TemporalChars.zonedDateTime(buf, 0, zdt);
+            if (n < 0) {
+                gen.writeStringUnescaped(FORMATTER.format(zdt));
+                return;
+            }
+            gen.writeStringUnescaped(buf, n);
         }
 
         @Override
@@ -716,7 +747,12 @@ public class Writers {
             if (writeWithStringFormat(o, gen, context)) { return; }
             if (writeWithFieldFormat(o, gen, context)) { return; }
             OffsetTime ot = (OffsetTime) o;
-            gen.writeStringUnescaped(ot == null ? null : FORMATTER.format(ot));
+            if (ot == null) {
+                gen.writeStringUnescaped((String) null);
+                return;
+            }
+            char[] buf = new char[28];
+            gen.writeStringUnescaped(buf, TemporalChars.offsetTime(buf, 0, ot));
         }
 
         @Override
@@ -741,7 +777,17 @@ public class Writers {
             if (writeWithStringFormat(o, gen, context)) { return; }
             if (writeWithFieldFormat(o, gen, context)) { return; }
             OffsetDateTime odt = (OffsetDateTime) o;
-            gen.writeStringUnescaped(odt == null ? null : FORMATTER.format(odt));
+            if (odt == null) {
+                gen.writeStringUnescaped((String) null);
+                return;
+            }
+            char[] buf = new char[39];
+            int n = TemporalChars.offsetDateTime(buf, 0, odt);
+            if (n < 0) {
+                gen.writeStringUnescaped(FORMATTER.format(odt));
+                return;
+            }
+            gen.writeStringUnescaped(buf, n);
         }
 
         @Override
@@ -767,7 +813,17 @@ public class Writers {
                 return;
             }
             Instant instant = (Instant) o;
-            gen.writeStringUnescaped(instant == null ? null : instant.toString());
+            if (instant == null) {
+                gen.writeStringUnescaped((String) null);
+                return;
+            }
+            char[] buf = new char[31];
+            int n = TemporalChars.instant(buf, 0, instant);
+            if (n < 0) {   // year outside 0..9999 — Instant.toString fallback
+                gen.writeStringUnescaped(instant.toString());
+                return;
+            }
+            gen.writeStringUnescaped(buf, n);
         }
 
         @Override
