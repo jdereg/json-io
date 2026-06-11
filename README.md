@@ -166,27 +166,24 @@ automatic shared-reference and cycle preservation. No class annotations required
 
 | Capability | json-io | Jackson | Gson |
 |------------|---------|---------|------|
-| Performance (simple DTOs) | 1.4–2.0x vs Jackson (all paths under 2x) | Fastest | 1.4–2.1x vs Jackson |
+| Performance (simple DTOs) | 1.3–1.8x vs Jackson (all paths under 2x) | Fastest | 1.4–2.1x vs Jackson |
 | Dependencies | java-util only (~850K) | Multiple JARs (~2.5MB+) | Single JAR (~300KB) |
 | Java version | JDK 8+ | JDK 8+ | JDK 8+ |
 
 **On performance:** Jackson is faster for simple DTOs, but json-io stays **under 2x Jackson on every read/write mode** on the `JsonPerformanceTest` benchmark (100,000 iterations, diverse POJO workload — nested collections, floats, `BigDecimal`, `java.time.*`, UUIDs, nullable fields). json-io **beats Gson on every write mode** and is roughly tied with Gson on reads. In real-world applications, serialization is typically <1% of total request time — the rest is network I/O, database queries, and business logic. json-io's additional capabilities (cycles, polymorphism, zero-config, JSON5, TOON) often matter more than raw serialization throughput.
 
-<details>
-<summary>Measured ratios vs Jackson (lower is faster; 1.0 = Jackson parity)</summary>
+**Measured ratios vs Jackson** (lower is faster; 1.0 = Jackson parity):
 
 | Mode | JsonIo | TOON | Gson |
 |---|---|---|---|
-| Read `toJava` (typed) | 1.83x | 1.94x | 1.43x |
-| Read `toMaps` (class-independent) | 1.35x | 1.67x | 1.41x |
-| Write `cycleSupport=true` (default) | 1.82x | 1.68x | 2.07x |
-| Write `cycleSupport=false` (DTOs/acyclic) | 1.71x | 1.59x | 2.07x |
-| Write `toMaps` `cycleSupport=true` | 1.95x | 1.80x | 2.07x |
-| Write `toMaps` `cycleSupport=false` | 1.69x | 1.61x | 2.07x |
+| Read `toJava` (typed) | 1.64x | 1.70x | 1.41x |
+| Read `toMaps` (class-independent) | 1.32x | 1.60x | 1.40x |
+| Write `cycleSupport=true` (default) | 1.67x | 1.49x | 2.12x |
+| Write `cycleSupport=false` (DTOs/acyclic) | 1.52x | 1.35x | 2.12x |
+| Write `toMaps` `cycleSupport=true` | 1.76x | 1.63x | 2.09x |
+| Write `toMaps` `cycleSupport=false` | 1.51x | 1.38x | 2.09x |
 
-Measured on JDK 21, `json-io 4.103.0` vs `jackson-databind 2.21.3` and `gson 2.14.0`, using the median of three run-mode executions. Reproduce with `mvn -q -pl json-io -DskipTests test-compile exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.cedarsoftware.io.JsonPerformanceTest -Dexec.args="--with-gson"` (100k iterations after 10k warmup; expect ±3% run-to-run noise from thermal / GC). All three libraries serialize comparable JSON: Jackson is configured with `JavaTimeModule` and `WRITE_DATES_AS_TIMESTAMPS=false` to match Spring Boot's default; Gson uses ISO-8601 `TypeAdapter`s for `Instant`, `LocalDate`, `LocalDateTime`, and `ZonedDateTime` to match. The `--with-gson` flag is opt-in so the default test run isn't slowed by the Gson loops; drop the flag for the two-way (jsonio vs Jackson) comparison.
-
-</details>
+Measured on JDK 21, `json-io 4.104.0` vs `jackson-databind 2.21.3` and `gson 2.14.0`, using the median of three run-mode executions. Reproduce with `mvn -q -pl json-io -DskipTests test-compile exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.cedarsoftware.io.JsonPerformanceTest -Dexec.args="--with-gson"` (100k iterations after 10k warmup; expect ±3% run-to-run noise from thermal / GC). All three libraries serialize comparable JSON: Jackson is configured with `JavaTimeModule` and `WRITE_DATES_AS_TIMESTAMPS=false` to match Spring Boot's default; Gson uses ISO-8601 `TypeAdapter`s for `Instant`, `LocalDate`, `LocalDateTime`, and `ZonedDateTime` to match. The `--with-gson` flag is opt-in so the default test run isn't slowed by the Gson loops; drop the flag for the two-way (jsonio vs Jackson) comparison.
 
 **Performance tip:** Use `cycleSupport(false)` for ~5-15% faster writes when your data is acyclic (DTOs, POJOs, tree-shaped data) — the larger gain shows up in `toMaps` mode.
 
