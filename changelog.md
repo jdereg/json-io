@@ -1,6 +1,7 @@
 ### Revision History
 
-#### 4.104.0 - (Unreleased)
+#### 4.105.0 - 2026-06-13
+* **BUILD**: Runtime dependency `java-util` 4.103.0 → 4.105.0. Test-scope `jackson-databind` 2.21.3 → 2.22.0; `maven-surefire-plugin` 3.5.5 → 3.5.6.
 * **PERFORMANCE**: `CharSegmentWriter` — `JsonIo.toJson`/`toToon` materialize their result through a segmented `char[]` writer instead of a `StringBuilder`, dropping per-append capacity/coder checks, growth copies, and the latin1→UTF-16 inflation any non-Latin-1 payload forced mid-write (Jackson's `SegmentedStringWriter` design). JSON Write **1.91x → 1.70x** / **1.72x → 1.53x** (cycle on/off) vs Jackson; TOON Write **1.72x → 1.47x** / **1.60x → 1.40x**.
 * **PERFORMANCE**: `CharStreamTokenizer` / `ToonReader` replace a `CharBufScratch` ThreadLocal borrow in their cache-verify step with a per-instance 64-char scratch field (both are per-parse, single-threaded). JSON Read **1.67x → 1.62x**, TOON Read **1.78x → 1.73x**.
 * **PERFORMANCE**: `ClassValueSet`/`ClassValueMap` replace hash-probe sets for the class-keyed lookups `isForceType` consults (`Primitives`, `CONVERTABLE_TYPES`, `NUMERIC_PRIMITIVES_FOR_COMPACT`, `NATURAL_DEFAULTS`). Combined with the escape-free string path, JSON Write **1.71x → 1.67x** / **1.56x → 1.53x**.

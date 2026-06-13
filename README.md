@@ -59,7 +59,7 @@ String json = JsonIo.toJson(myObject, new WriteOptionsBuilder().standardJson().b
 
 **Gradle**
 ```groovy
-implementation 'com.cedarsoftware:json-io:4.104.0'
+implementation 'com.cedarsoftware:json-io:4.105.0'
 ```
 
 **Maven**
@@ -67,7 +67,7 @@ implementation 'com.cedarsoftware:json-io:4.104.0'
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>4.104.0</version>
+  <version>4.105.0</version>
 </dependency>
 ```
 
@@ -183,7 +183,7 @@ automatic shared-reference and cycle preservation. No class annotations required
 | Write `toMaps` `cycleSupport=true` | 1.76x | 1.63x | 2.09x |
 | Write `toMaps` `cycleSupport=false` | 1.51x | 1.38x | 2.09x |
 
-Measured on JDK 21, `json-io 4.104.0` vs `jackson-databind 2.21.3` and `gson 2.14.0`, using the median of three run-mode executions. Reproduce with `mvn -q -pl json-io -DskipTests test-compile exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.cedarsoftware.io.JsonPerformanceTest -Dexec.args="--with-gson"` (100k iterations after 10k warmup; expect ±3% run-to-run noise from thermal / GC). All three libraries serialize comparable JSON: Jackson is configured with `JavaTimeModule` and `WRITE_DATES_AS_TIMESTAMPS=false` to match Spring Boot's default; Gson uses ISO-8601 `TypeAdapter`s for `Instant`, `LocalDate`, `LocalDateTime`, and `ZonedDateTime` to match. The `--with-gson` flag is opt-in so the default test run isn't slowed by the Gson loops; drop the flag for the two-way (jsonio vs Jackson) comparison.
+Measured on JDK 21, `json-io 4.105.0` vs `jackson-databind 2.21.3` and `gson 2.14.0`, using the median of three run-mode executions. Reproduce with `mvn -q -pl json-io -DskipTests test-compile exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.cedarsoftware.io.JsonPerformanceTest -Dexec.args="--with-gson"` (100k iterations after 10k warmup; expect ±3% run-to-run noise from thermal / GC). All three libraries serialize comparable JSON: Jackson is configured with `JavaTimeModule` and `WRITE_DATES_AS_TIMESTAMPS=false` to match Spring Boot's default; Gson uses ISO-8601 `TypeAdapter`s for `Instant`, `LocalDate`, `LocalDateTime`, and `ZonedDateTime` to match. The `--with-gson` flag is opt-in so the default test run isn't slowed by the Gson loops; drop the flag for the two-way (jsonio vs Jackson) comparison.
 
 **Performance tip:** Use `cycleSupport(false)` for ~5-15% faster writes when your data is acyclic (DTOs, POJOs, tree-shaped data) — the larger gain shows up in `toMaps` mode.
 
@@ -321,7 +321,7 @@ json-io provides a Spring Boot starter for seamless integration with Spring MVC 
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io-spring-boot-starter</artifactId>
-  <version>4.104.0</version>
+  <version>4.105.0</version>
 </dependency>
 ```
 
@@ -345,7 +345,7 @@ json-io provides a Spring AI module that reduces LLM token usage by ~40-50% usin
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io-spring-ai-toon</artifactId>
-  <version>4.104.0</version>
+  <version>4.105.0</version>
 </dependency>
 ```
 
