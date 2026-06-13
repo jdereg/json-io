@@ -539,9 +539,15 @@ public class ToonWriter implements Closeable, Flushable {
             case CHARACTER:
                 writeString(String.valueOf(value));
                 break;
-            case CONVERTER_SUPPORTED:
-                writeString(Converter.convert(value, String.class));
+            case CONVERTER_SUPPORTED: {
+                // Temporal fast path: hand-rolled ISO emit (TemporalChars) instead of
+                // Converter -> DateTimeFormatter (JFR: ~11% of toon-write CPU). The
+                // String still flows through writeString, so TOON quoting semantics
+                // are unchanged; non-temporals and exotic years take the Converter path.
+                String iso = TemporalChars.toIsoString(value);
+                writeString(iso != null ? iso : Converter.convert(value, String.class));
                 break;
+            }
             case VALUE_METHOD:
                 try {
                     Method valueMethod = AnnotationResolver.getMetadata(clazz).getValueMethod();
@@ -3069,9 +3075,12 @@ public class ToonWriter implements Closeable, Flushable {
             case CHARACTER:
                 writeString(String.valueOf(value));
                 break;
-            case CONVERTER_SUPPORTED:
-                writeString(Converter.convert(value, String.class));
+            case CONVERTER_SUPPORTED: {
+                // Same temporal fast path as writeValue's CONVERTER_SUPPORTED case.
+                String iso = TemporalChars.toIsoString(value);
+                writeString(iso != null ? iso : Converter.convert(value, String.class));
                 break;
+            }
             default:
                 writeString(value.toString());
                 break;

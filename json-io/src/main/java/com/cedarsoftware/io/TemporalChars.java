@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.OffsetTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 
 /**
@@ -150,6 +152,69 @@ final class TemporalChars {
         p += n;
         b[p++] = ']';
         return p;
+    }
+
+    /**
+     * ISO_ZONED_DATE_TIME semantics — the form java-util's Converter produces for
+     * ZonedDateTime → String: offset always printed; bracketed zone id only when the
+     * zone is a region id, NOT a plain {@link ZoneOffset}. (Contrast with
+     * {@link #zonedDateTime}, the JSON ZonedDateTimeWriter form, which always
+     * brackets.) Returns -1 when the year falls outside 0..9999.
+     */
+    static int zonedDateTimeIsoZoned(char[] b, int p, ZonedDateTime zdt) {
+        p = localDateTime(b, p, zdt.toLocalDateTime());
+        if (p < 0) {
+            return -1;
+        }
+        p = offsetId(b, p, zdt.getOffset().getId());
+        ZoneId zone = zdt.getZone();
+        if (!(zone instanceof ZoneOffset)) {
+            b[p++] = '[';
+            String zid = zone.getId();
+            int n = zid.length();
+            zid.getChars(0, n, b, p);
+            p += n;
+            b[p++] = ']';
+        }
+        return p;
+    }
+
+    /**
+     * String-producing dispatcher for the TOON writer's CONVERTER_SUPPORTED case —
+     * returns the exact string java-util's Converter produces for the common
+     * java.time types (parity pinned by TemporalCharsTest), or {@code null} for
+     * non-temporal values and years outside 0..9999, where callers fall back to
+     * the Converter path.
+     */
+    static String toIsoString(Object value) {
+        final char[] b;
+        final int n;
+        if (value instanceof LocalDate) {
+            b = new char[10];
+            n = localDate(b, 0, (LocalDate) value);
+        } else if (value instanceof LocalDateTime) {
+            b = new char[29];
+            n = localDateTime(b, 0, (LocalDateTime) value);
+        } else if (value instanceof Instant) {
+            b = new char[31];
+            n = instant(b, 0, (Instant) value);
+        } else if (value instanceof ZonedDateTime) {
+            ZonedDateTime zdt = (ZonedDateTime) value;
+            b = new char[40 + zdt.getZone().getId().length()];
+            n = zonedDateTimeIsoZoned(b, 0, zdt);
+        } else if (value instanceof OffsetDateTime) {
+            b = new char[39];
+            n = offsetDateTime(b, 0, (OffsetDateTime) value);
+        } else if (value instanceof LocalTime) {
+            b = new char[18];
+            n = localTime(b, 0, (LocalTime) value);
+        } else if (value instanceof OffsetTime) {
+            b = new char[28];
+            n = offsetTime(b, 0, (OffsetTime) value);
+        } else {
+            return null;
+        }
+        return n < 0 ? null : new String(b, 0, n);
     }
 
     /**

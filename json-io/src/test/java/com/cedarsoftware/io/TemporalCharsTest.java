@@ -150,6 +150,65 @@ class TemporalCharsTest {
     }
 
     @Test
+    void toIsoStringMatchesConverterOutput() {
+        // The TOON CONVERTER_SUPPORTED fast path must produce the exact string
+        // java-util's Converter produces — including ISO_ZONED_DATE_TIME's
+        // bracket-only-for-region-zones rule.
+        com.cedarsoftware.util.convert.Converter converter =
+                new com.cedarsoftware.util.convert.Converter(
+                        new com.cedarsoftware.util.convert.DefaultConverterOptions());
+
+        Object[] values = {
+                LocalDate.of(2026, 6, 12),
+                LocalDateTime.of(2026, 6, 12, 13, 45, 30, 123_000_000),
+                LocalTime.of(13, 45, 30, 500_000_000),
+                Instant.parse("2026-06-12T17:45:30.123456789Z"),
+                OffsetDateTime.of(2026, 6, 12, 13, 45, 30, 0, ZoneOffset.ofHoursMinutes(5, 30)),
+                OffsetTime.of(13, 45, 30, 0, ZoneOffset.ofHours(-8)),
+                ZonedDateTime.of(2026, 6, 12, 13, 45, 30, 0, ZoneId.of("America/New_York")),  // region → bracketed
+                ZonedDateTime.of(2026, 6, 12, 13, 45, 30, 0, ZoneOffset.ofHoursMinutes(5, 30)), // offset → NOT bracketed
+                ZonedDateTime.of(2026, 6, 12, 13, 45, 30, 0, ZoneId.of("GMT+05:30")),         // GMT-region → bracketed
+                ZonedDateTime.of(2026, 6, 12, 13, 45, 30, 0, ZoneOffset.UTC),                  // Z offset → NOT bracketed
+        };
+        for (Object v : values) {
+            assertEquals(converter.convert(v, String.class), TemporalChars.toIsoString(v),
+                    "mismatch for " + v.getClass().getSimpleName() + ": " + v);
+        }
+
+        // Non-temporals and exotic years return null (Converter fallback)
+        assertEquals(null, TemporalChars.toIsoString("not a temporal"));
+        assertEquals(null, TemporalChars.toIsoString(java.util.UUID.randomUUID()));
+        assertEquals(null, TemporalChars.toIsoString(LocalDate.of(10000, 1, 1)));
+    }
+
+    @Test
+    void mapsModeReadsIsoTemporalsViaFastPath() {
+        // MapResolver hook: maps-mode reads with @type coerce ISO strings into the
+        // declared field types — must produce identical values to the Converter path,
+        // and flexible formats must still work via fallback.
+        java.util.Map<String, Object> result = JsonIo.toJava(
+                "{\"@type\":\"com.cedarsoftware.io.TemporalCharsTest$TemporalHolder\","
+                        + "\"when\":\"2026-06-12T17:45:30Z\",\"day\":\"2026-06-12\"}",
+                new ReadOptionsBuilder().returnAsJsonObjects().build())
+                .asClass(java.util.Map.class);
+        assertEquals(Instant.parse("2026-06-12T17:45:30Z"), result.get("when"));
+        assertEquals(LocalDate.of(2026, 6, 12), result.get("day"));
+
+        java.util.Map<String, Object> flexible = JsonIo.toJava(
+                "{\"@type\":\"com.cedarsoftware.io.TemporalCharsTest$TemporalHolder\","
+                        + "\"when\":\"2026-06-12T17:45:30Z\",\"day\":\"June 12, 2026\"}",
+                new ReadOptionsBuilder().returnAsJsonObjects().build())
+                .asClass(java.util.Map.class);
+        assertEquals(LocalDate.of(2026, 6, 12), flexible.get("day"));
+    }
+
+    @SuppressWarnings("unused")
+    private static class TemporalHolder {
+        Instant when;
+        LocalDate day;
+    }
+
+    @Test
     void writersEndToEndUnchanged() {
         // Through the real writers: serialized forms equal the pre-change wire format.
         LocalDateTime ldt = LocalDateTime.of(2026, 6, 10, 13, 45, 30, 123_000_000);

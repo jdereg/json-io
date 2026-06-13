@@ -397,6 +397,13 @@ public class MapResolver extends Resolver {
                 // Fast path for common JSON primitive coercions (Long->int, Double->float, etc.)
                 int fieldTargetKind = scalarTargetKind(fieldType);
                 Object fastValue = fastScalarCoercion(rhs, rhsClass, fieldTargetKind);
+                // FAST ISO TEMPORAL PARSE — strict java.time parse for the ISO-8601 wire
+                // format before the Converter → DateUtilities regex path. Maps-mode
+                // counterpart of the ObjectResolver hooks (see FastIsoParser); non-ISO
+                // strings fall through to Converter, preserving flexible-format support.
+                if (fastValue == null && rhs instanceof String) {
+                    fastValue = FastIsoParser.parse((String) rhs, fieldType);
+                }
                 if (fastValue != null) {
                     e.setValue(fastValue);   // Direct update - avoids indexOf() lookup
                 } else if (converter.isConversionSupportedFor(rhsClass, fieldType)) {
@@ -520,6 +527,10 @@ public class MapResolver extends Resolver {
 
         // Fast path for common JSON primitive coercions
         Object fastValue = fastScalarCoercion(element, elementClass, targetComponentKind);
+        // FAST ISO TEMPORAL PARSE — array-element counterpart of the traverseFields hook.
+        if (fastValue == null && element instanceof String) {
+            fastValue = FastIsoParser.parse((String) element, componentType);
+        }
         if (fastValue != null) {
             setArrayElement(target, refArray, index, fastValue, isPrimitive);
             return;
