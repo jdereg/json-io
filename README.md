@@ -14,7 +14,7 @@
     <a href="https://github.com/jdereg/json-io/blob/master/LICENSE">
       <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License" height="20" />
     </a>
-    <img src="https://img.shields.io/badge/JDK-8%20to%2024-orange" alt="JDK 8–24" height="20" />
+    <img src="https://img.shields.io/badge/JDK-1.8%2B-orange" alt="JDK 1.8+" height="20" />
     <a href="https://json5.org/">
       <img src="https://img.shields.io/badge/JSON5-Full%20Support-brightgreen" alt="JSON5" height="20" />
     </a>
@@ -59,7 +59,7 @@ String json = JsonIo.toJson(myObject, new WriteOptionsBuilder().standardJson().b
 
 **Gradle**
 ```groovy
-implementation 'com.cedarsoftware:json-io:4.105.0'
+implementation 'com.cedarsoftware:json-io:4.106.0'
 ```
 
 **Maven**
@@ -67,7 +67,7 @@ implementation 'com.cedarsoftware:json-io:4.105.0'
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>4.105.0</version>
+  <version>4.106.0</version>
 </dependency>
 ```
 
@@ -168,7 +168,7 @@ automatic shared-reference and cycle preservation. No class annotations required
 |------------|---------|---------|------|
 | Performance (simple DTOs) | 1.3–1.8x vs Jackson (all paths under 2x) | Fastest | 1.4–2.1x vs Jackson |
 | Dependencies | java-util only (~850K) | Multiple JARs (~2.5MB+) | Single JAR (~300KB) |
-| Java version | JDK 8+ | JDK 8+ | JDK 8+ |
+| Java version | JDK 1.8+ | JDK 1.8+ | JDK 1.8+ |
 
 **On performance:** Jackson is faster for simple DTOs, but json-io stays **under 2x Jackson on every read/write mode** on the `JsonPerformanceTest` benchmark (100,000 iterations, diverse POJO workload — nested collections, floats, `BigDecimal`, `java.time.*`, UUIDs, nullable fields). json-io **beats Gson on every write mode** and is roughly tied with Gson on reads. In real-world applications, serialization is typically <1% of total request time — the rest is network I/O, database queries, and business logic. json-io's additional capabilities (cycles, polymorphism, zero-config, JSON5, TOON) often matter more than raw serialization throughput.
 
@@ -183,7 +183,7 @@ automatic shared-reference and cycle preservation. No class annotations required
 | Write `toMaps` `cycleSupport=true` | 1.65x | 1.49x | 2.13x |
 | Write `toMaps` `cycleSupport=false` | 1.38x | 1.25x | 2.13x |
 
-Measured on JDK 21, `json-io 4.105.0` vs `jackson-databind 2.22.0` and `gson 2.14.0`, using the median of three run-mode executions. Reproduce with `mvn -q -pl json-io -DskipTests test-compile exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.cedarsoftware.io.JsonPerformanceTest -Dexec.args="--with-gson"` (100k iterations after 10k warmup; expect ±3% run-to-run noise from thermal / GC). All three libraries serialize comparable JSON: Jackson is configured with `JavaTimeModule` and `WRITE_DATES_AS_TIMESTAMPS=false` to match Spring Boot's default; Gson uses ISO-8601 `TypeAdapter`s for `Instant`, `LocalDate`, `LocalDateTime`, and `ZonedDateTime` to match. The `--with-gson` flag is opt-in so the default test run isn't slowed by the Gson loops; drop the flag for the two-way (jsonio vs Jackson) comparison.
+Measured on JDK 21, `json-io 4.106.0` vs `jackson-databind 2.22.0` and `gson 2.14.0`, using the median of three run-mode executions. Reproduce with `mvn -q -pl json-io -DskipTests test-compile exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.cedarsoftware.io.JsonPerformanceTest -Dexec.args="--with-gson"` (100k iterations after 10k warmup; expect ±3% run-to-run noise from thermal / GC). All three libraries serialize comparable JSON: Jackson is configured with `JavaTimeModule` and `WRITE_DATES_AS_TIMESTAMPS=false` to match Spring Boot's default; Gson uses ISO-8601 `TypeAdapter`s for `Instant`, `LocalDate`, `LocalDateTime`, and `ZonedDateTime` to match. The `--with-gson` flag is opt-in so the default test run isn't slowed by the Gson loops; drop the flag for the two-way (jsonio vs Jackson) comparison.
 
 **Performance tip:** Use `cycleSupport(false)` for ~5-15% faster writes when your data is acyclic (DTOs, POJOs, tree-shaped data) — the larger gain shows up in `toMaps` mode.
 
@@ -321,7 +321,7 @@ json-io provides a Spring Boot starter for seamless integration with Spring MVC 
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io-spring-boot-starter</artifactId>
-  <version>4.105.0</version>
+  <version>4.106.0</version>
 </dependency>
 ```
 
@@ -345,7 +345,7 @@ json-io provides a Spring AI module that reduces LLM token usage by ~40-50% usin
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io-spring-ai-toon</artifactId>
-  <version>4.105.0</version>
+  <version>4.106.0</version>
 </dependency>
 ```
 
@@ -505,8 +505,8 @@ See the [complete type comparison](/user-guide.md#toon-supported-types) showing 
 
 - Fully compatible with both JPMS and OSGi environments
 - Zero external dependencies (other than java-util)
-- Lightweight (`json-io.jar` is ~500K, `java-util` is ~850K — total ~1350K)
-- Compatible with JDK 1.8 through JDK 24
+- Lightweight (`json-io.jar` is ~570K, `java-util` is ~850K — total ~1420K)
+- Compatible with JDK 1.8+
 - Built with `-parameters` so reflection sees real parameter names (used for constructor discovery, etc.)
 - Optional unsafe mode for deserializing package-private classes, inner classes, and classes without accessible constructors (opt-in for security)
 - Extensive configuration options via `ReadOptionsBuilder` and `WriteOptionsBuilder`
