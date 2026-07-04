@@ -59,7 +59,7 @@
         <version.maven-deploy-plugin>3.1.4</version.maven-deploy-plugin>
 
         <!-- release to Maven Central via Sonatype Nexus -->
-        <version.central-publishing-maven-plugin>0.10.0</version.central-publishing-maven-plugin>
+        <version.central-publishing-maven-plugin>0.11.0</version.central-publishing-maven-plugin>
 
     </properties>
 
@@ -339,7 +339,7 @@
                 <plugin>
                     <groupId>org.jacoco</groupId>
                     <artifactId>jacoco-maven-plugin</artifactId>
-                    <version>0.8.14</version>
+                    <version>0.8.15</version>
                     <executions>
                         <execution>
                             <goals><goal>prepare-agent</goal></goals>
