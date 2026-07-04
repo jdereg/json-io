@@ -113,6 +113,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
     private BigDecimal bigDecimalValue;
     private boolean booleanValue;
     private boolean done;
+    private boolean closed;
 
     // Optional callback invoked once by close(). Used by JsonIo.createTokenizer
     // factories to release pooled FastReader buffers back to BUFFER_RECYCLER.
@@ -685,7 +686,13 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     @Override
+    public boolean isClosed() {
+        return closed;
+    }
+
+    @Override
     public void close() throws IOException {
+        closed = true;
         try {
             input.close();
         } finally {

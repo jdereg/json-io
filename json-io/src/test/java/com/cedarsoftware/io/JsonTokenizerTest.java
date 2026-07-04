@@ -1,9 +1,11 @@
 package com.cedarsoftware.io;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringReader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 
 import com.cedarsoftware.util.FastReader;
 import org.junit.jupiter.api.Test;
@@ -981,5 +983,139 @@ class JsonTokenizerTest {
         assertEquals("k", t.currentName());
         t.nextToken();                           // VALUE_NUMBER_INT
         assertEquals("k", t.currentName());      // still the field whose value we're on
+    }
+
+    // ------------------------------------------------------------------
+    // Re-entrancy: nested pooled tokenizers must not corrupt an outer one.
+    //
+    // Regression: JsonIo.createTokenizer borrows a shared reader buffer from a
+    // per-thread BufferRecycler. The close hook used to clear the "in-use" flag
+    // unconditionally, so a nested tokenizer (which correctly received a FRESH
+    // fallback buffer because the pool was in use) freed the OUTER holder's flag
+    // on close(). A second nested tokenizer then borrowed the outer's still-in-use
+    // buffer and clobbered it, so the suspended outer resumed on corrupted data
+    // (e.g. "EOF reached while reading JSON string" / "Object not ended with '}'").
+    // ------------------------------------------------------------------
+
+    private static JsonTokenizer pooled(String json) {
+        return JsonIo.createTokenizer(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    private static int drainAndClose(JsonTokenizer t) throws IOException {
+        int n = 0;
+        while (t.nextToken() != null) {
+            n++;
+        }
+        t.close();
+        return n;
+    }
+
+    @Test
+    void nestedTokenizersDoNotCorruptSuspendedOuter() throws IOException {
+        // Outer document: an axes array, then a long cells tail the outer reads
+        // only AFTER it suspends (so the tail lives in the shared buffer while
+        // the nested parses run).
+        StringBuilder ob = new StringBuilder("{\"ncube\":\"Outer\",\"axes\":[{\"id\":1,\"name\":\"reference\"}],\"cells\":[");
+        for (int i = 0; i < 200; i++) {
+            if (i > 0) ob.append(',');
+            ob.append("{\"id\":[").append(i).append("],\"value\":\"outer-payload-").append(i).append("\"}");
+        }
+        ob.append("]}");
+        String outer = ob.toString();
+
+        int expected = 0;
+        JsonTokenizer control = pooled(outer);
+        while (control.nextToken() != null) {
+            expected++;
+        }
+        control.close();
+
+        // Nested #2 is large enough to overwrite the region of the shared buffer
+        // that the suspended outer has not yet consumed.
+        StringBuilder nb = new StringBuilder("{\"ncube\":\"Transform\",\"axes\":[],\"cells\":[");
+        for (int i = 0; i < 400; i++) {
+            if (i > 0) nb.append(',');
+            nb.append("{\"id\":[").append(i).append("],\"value\":\"NESTED-CLOBBER-").append(i).append("\"}");
+        }
+        nb.append("]}");
+        String nested2 = nb.toString();
+        String nested1 = "{\"ncube\":\"Ref\",\"axes\":[],\"cells\":[]}";
+
+        JsonTokenizer o = pooled(outer);
+        int pre = 0;
+        JsonToken tok;
+        while ((tok = o.nextToken()) != null) {   // suspend right after the axes array closes
+            pre++;
+            if (tok == JsonToken.END_ARRAY) {
+                break;
+            }
+        }
+        // Two sequential nested parses on the same thread while the outer is suspended.
+        drainAndClose(pooled(nested1));
+        drainAndClose(pooled(nested2));
+        // The outer must resume cleanly from its own (uncorrupted) buffer.
+        int post = 0;
+        while (o.nextToken() != null) {
+            post++;
+        }
+        o.close();
+        assertEquals(expected, pre + post);
+    }
+
+    // ------------------------------------------------------------------
+    // Lenient getValueAsXxx coercion (Jackson getValueAsInt/Long/Double parity)
+    // ------------------------------------------------------------------
+
+    @Test
+    void getValueAsCoercesNumberTokens() throws IOException {
+        CharStreamTokenizer t = tokenizer("[7,12.7]");
+        t.nextToken();                 // START_ARRAY
+        t.nextToken();                 // 7
+        assertEquals(7, t.getValueAsInt());
+        assertEquals(7L, t.getValueAsLong());
+        assertThat(t.getValueAsDouble()).isEqualTo(7.0);
+        t.nextToken();                 // 12.7
+        assertEquals(12, t.getValueAsInt());       // fractional truncated toward zero (Jackson parity)
+        assertEquals(12L, t.getValueAsLong());
+        assertThat(t.getValueAsDouble()).isEqualTo(12.7);
+    }
+
+    @Test
+    void getValueAsCoercesNumericStrings() throws IOException {
+        CharStreamTokenizer t = tokenizer("[\"123\",\"12.7\",\"1.5\"]");
+        t.nextToken();                 // START_ARRAY
+        t.nextToken();                 // "123"
+        assertEquals(123, t.getValueAsInt());
+        assertEquals(123L, t.getValueAsLong());
+        t.nextToken();                 // "12.7"
+        assertEquals(12, t.getValueAsInt());       // numeric-string truncated like Jackson
+        assertEquals(12L, t.getValueAsLong());
+        t.nextToken();                 // "1.5"
+        assertThat(t.getValueAsDouble()).isEqualTo(1.5);
+    }
+
+    @Test
+    void getValueAsRejectsNonNumericText() {
+        assertThatThrownBy(() -> {
+            CharStreamTokenizer t = tokenizer("\"abc\"");
+            t.nextToken();
+            t.getValueAsLong();
+        }).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    // ------------------------------------------------------------------
+    // isClosed() (Jackson JsonParser.isClosed parity)
+    // ------------------------------------------------------------------
+
+    @Test
+    void isClosedReflectsCloseState() throws IOException {
+        JsonTokenizer t = pooled("{\"a\":1}");
+        assertThat(t.isClosed()).isFalse();
+        while (t.nextToken() != null) {
+            // drain to EOF
+        }
+        assertThat(t.isClosed()).isFalse();        // reaching EOF alone does not close
+        t.close();
+        assertThat(t.isClosed()).isTrue();
     }
 }

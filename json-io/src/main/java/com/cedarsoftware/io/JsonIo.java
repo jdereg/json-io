@@ -188,36 +188,13 @@ public class JsonIo {
     private JsonIo() {}
 
     private static final class BufferRecycler {
-        private byte[] byteBuffer = new byte[DEFAULT_BYTE_BUFFER_SIZE];
         private char[] writerCharBuffer = new char[DEFAULT_CHAR_BUFFER_SIZE];
         private char[] readerCharBuffer = new char[DEFAULT_READER_BUFFER_SIZE];
         private char[] pushbackCharBuffer = new char[DEFAULT_PUSHBACK_BUFFER_SIZE];
 
-        private boolean byteBufferInUse;
         private boolean writerBufferInUse;
         private boolean readerCharBufferInUse;
         private boolean pushbackBufferInUse;
-
-        byte[] borrowByteBuffer(int minSize) {
-            if (byteBufferInUse) {
-                return new byte[Math.max(minSize, DEFAULT_BYTE_BUFFER_SIZE)];
-            }
-            byteBufferInUse = true;
-            if (byteBuffer.length < minSize) {
-                byteBuffer = new byte[minSize];
-            }
-            return byteBuffer;
-        }
-
-        void releaseByteBuffer(byte[] used) {
-            if (!byteBufferInUse) {
-                return;
-            }
-            if (used != null && used.length > byteBuffer.length) {
-                byteBuffer = used;
-            }
-            byteBufferInUse = false;
-        }
 
         char[] borrowWriterCharBuffer(int minSize) {
             if (writerBufferInUse) {
@@ -230,8 +207,11 @@ public class JsonIo {
             return writerCharBuffer;
         }
 
-        void releaseWriterCharBuffer() {
-            writerBufferInUse = false;
+        void releaseWriterCharBuffer(char[] used) {
+            // Ownership check (re-entrancy safety) -- see releaseByteBuffer.
+            if (used == writerCharBuffer) {
+                writerBufferInUse = false;
+            }
         }
 
         char[] borrowReaderCharBuffer(int minSize) {
@@ -256,9 +236,17 @@ public class JsonIo {
             return pushbackCharBuffer;
         }
 
-        void releaseReaderBuffers() {
-            readerCharBufferInUse = false;
-            pushbackBufferInUse = false;
+        void releaseReaderBuffers(char[] usedReader, char[] usedPushback) {
+            // Ownership check (re-entrancy safety) -- see releaseByteBuffer. A nested
+            // tokenizer/parser created while the pool is in use is handed fresh fallback
+            // buffers; its close() must NOT free the outer holder's pooled buffers, or a
+            // later borrow would reuse a buffer the outer parse is still reading from.
+            if (usedReader == readerCharBuffer) {
+                readerCharBufferInUse = false;
+            }
+            if (usedPushback == pushbackCharBuffer) {
+                pushbackBufferInUse = false;
+            }
         }
     }
 
@@ -1132,10 +1120,9 @@ public class JsonIo {
         // the warm path. Released back via the close-hook below when the user
         // closes the tokenizer (try-with-resources is the documented pattern).
         BufferRecycler recycler = BUFFER_RECYCLER.get();
-        FastReader input = new FastReader(
-                reader,
-                recycler.borrowReaderCharBuffer(DEFAULT_READER_BUFFER_SIZE),
-                recycler.borrowPushbackBuffer(DEFAULT_PUSHBACK_BUFFER_SIZE));
+        char[] readerBuf = recycler.borrowReaderCharBuffer(DEFAULT_READER_BUFFER_SIZE);
+        char[] pushbackBuf = recycler.borrowPushbackBuffer(DEFAULT_PUSHBACK_BUFFER_SIZE);
+        FastReader input = new FastReader(reader, readerBuf, pushbackBuf);
         CharStreamTokenizer tokenizer = new CharStreamTokenizer(
                 input,
                 opts.isStrictJson(),
@@ -1146,7 +1133,8 @@ public class JsonIo {
                 opts.isFloatingPointBoth(),
                 opts.getStringBufferSize(),
                 sourceRef);
-        tokenizer.setCloseHook(recycler::releaseReaderBuffers);
+        // Return exactly the buffers this tokenizer borrowed (ownership-aware release).
+        tokenizer.setCloseHook(() -> recycler.releaseReaderBuffers(readerBuf, pushbackBuf));
         return tokenizer;
     }
 
@@ -1261,7 +1249,8 @@ public class JsonIo {
         char[] bufferCharArr = recycler.borrowWriterCharBuffer(DEFAULT_CHAR_BUFFER_SIZE);
         FastWriter fastOut = new FastWriter(writer, bufferCharArr);
         CharStreamGenerator generator = new CharStreamGenerator(fastOut, opts);
-        generator.setCloseHook(recycler::releaseWriterCharBuffer);
+        // Return exactly the buffer this generator borrowed (ownership-aware release).
+        generator.setCloseHook(() -> recycler.releaseWriterCharBuffer(bufferCharArr));
         return generator;
     }
 
@@ -1540,10 +1529,9 @@ public class JsonIo {
          */
         public <T> T asType(TypeHolder<T> typeHolder) {
             BufferRecycler recycler = BUFFER_RECYCLER.get();
-            FastReader input = new FastReader(
-                    new StringReader(json),
-                    recycler.borrowReaderCharBuffer(DEFAULT_READER_BUFFER_SIZE),
-                    recycler.borrowPushbackBuffer(DEFAULT_PUSHBACK_BUFFER_SIZE));
+            char[] readerBuf = recycler.borrowReaderCharBuffer(DEFAULT_READER_BUFFER_SIZE);
+            char[] pushbackBuf = recycler.borrowPushbackBuffer(DEFAULT_PUSHBACK_BUFFER_SIZE);
+            FastReader input = new FastReader(new StringReader(json), readerBuf, pushbackBuf);
             try {
                 return parseAndResolve(
                         readOptions,
@@ -1555,7 +1543,7 @@ public class JsonIo {
                         "Error parsing JSON value",
                         null);
             } finally {
-                recycler.releaseReaderBuffers();
+                recycler.releaseReaderBuffers(readerBuf, pushbackBuf);
             }
         }
     }
@@ -1630,10 +1618,9 @@ public class JsonIo {
          */
         public <T> T asType(TypeHolder<T> typeHolder) {
             BufferRecycler recycler = BUFFER_RECYCLER.get();
-            FastReader input = new FastReader(
-                    new InputStreamReader(in, StandardCharsets.UTF_8),
-                    recycler.borrowReaderCharBuffer(DEFAULT_READER_BUFFER_SIZE),
-                    recycler.borrowPushbackBuffer(DEFAULT_PUSHBACK_BUFFER_SIZE));
+            char[] readerBuf = recycler.borrowReaderCharBuffer(DEFAULT_READER_BUFFER_SIZE);
+            char[] pushbackBuf = recycler.borrowPushbackBuffer(DEFAULT_PUSHBACK_BUFFER_SIZE);
+            FastReader input = new FastReader(new InputStreamReader(in, StandardCharsets.UTF_8), readerBuf, pushbackBuf);
             try {
                 return parseAndResolve(
                         readOptions,
@@ -1645,7 +1632,7 @@ public class JsonIo {
                         "Error parsing JSON value",
                         input);
             } finally {
-                recycler.releaseReaderBuffers();
+                recycler.releaseReaderBuffers(readerBuf, pushbackBuf);
             }
         }
     }
@@ -1786,11 +1773,10 @@ public class JsonIo {
          */
         public <T> T asType(TypeHolder<T> typeHolder) {
             BufferRecycler recycler = BUFFER_RECYCLER.get();
+            char[] readerBuf = recycler.borrowReaderCharBuffer(DEFAULT_READER_BUFFER_SIZE);
+            char[] pushbackBuf = recycler.borrowPushbackBuffer(DEFAULT_PUSHBACK_BUFFER_SIZE);
             StringReader stringReader = new StringReader(toon);
-            FastReader input = new FastReader(
-                    stringReader,
-                    recycler.borrowReaderCharBuffer(DEFAULT_READER_BUFFER_SIZE),
-                    recycler.borrowPushbackBuffer(DEFAULT_PUSHBACK_BUFFER_SIZE));
+            FastReader input = new FastReader(stringReader, readerBuf, pushbackBuf);
             try {
                 return parseAndResolve(
                         readOptions,
@@ -1802,7 +1788,7 @@ public class JsonIo {
                         "Error parsing TOON value",
                         null);
             } finally {
-                recycler.releaseReaderBuffers();
+                recycler.releaseReaderBuffers(readerBuf, pushbackBuf);
             }
         }
     }
@@ -1845,11 +1831,10 @@ public class JsonIo {
          */
         public <T> T asType(TypeHolder<T> typeHolder) {
             BufferRecycler recycler = BUFFER_RECYCLER.get();
+            char[] readerBuf = recycler.borrowReaderCharBuffer(DEFAULT_READER_BUFFER_SIZE);
+            char[] pushbackBuf = recycler.borrowPushbackBuffer(DEFAULT_PUSHBACK_BUFFER_SIZE);
             InputStreamReader streamReader = new InputStreamReader(in, StandardCharsets.UTF_8);
-            FastReader input = new FastReader(
-                    streamReader,
-                    recycler.borrowReaderCharBuffer(DEFAULT_READER_BUFFER_SIZE),
-                    recycler.borrowPushbackBuffer(DEFAULT_PUSHBACK_BUFFER_SIZE));
+            FastReader input = new FastReader(streamReader, readerBuf, pushbackBuf);
             try {
                 return parseAndResolve(
                         readOptions,
@@ -1861,7 +1846,7 @@ public class JsonIo {
                         "Error parsing TOON value",
                         streamReader);
             } finally {
-                recycler.releaseReaderBuffers();
+                recycler.releaseReaderBuffers(readerBuf, pushbackBuf);
             }
         }
     }

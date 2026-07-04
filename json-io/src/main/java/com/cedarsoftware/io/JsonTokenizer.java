@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
+import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.FastReader;
 
 /**
@@ -34,8 +35,11 @@ import com.cedarsoftware.util.FastReader;
  *       and combine cursor advance + string fetch into one virtual dispatch,
  *       skipping the {@code nextToken() + currentName() / getText()}
  *       round-trip on the hot per-field path.</li>
- *   <li>No lenient cross-token coercion ({@code getValueAsString()} etc.) in
- *       v1; typed getters require the matching token type.</li>
+ *   <li>Lenient number coercion is available via the {@code getValueAsXxx()}
+ *       family ({@link #getValueAsInt()}, {@link #getValueAsLong()},
+ *       {@link #getValueAsDouble()}) — matching Jackson's coercing getters,
+ *       including numeric strings — while the strict {@code getXxxValue()}
+ *       getters still require a number token.</li>
  *   <li>No async/binary surface — sync-only, pure JSON.</li>
  * </ul>
  *
@@ -232,6 +236,61 @@ public abstract class JsonTokenizer implements Closeable {
     }
 
     // -------------------------------------------------------------------
+    // Lenient value accessors (Jackson getValueAsXxx parity)
+    // -------------------------------------------------------------------
+
+    /**
+     * Coercing counterpart to {@link #getIntValue()}, mirroring Jackson's
+     * {@code JsonParser.getValueAsInt()}. A number token returns its value (a
+     * fractional {@link JsonToken#VALUE_NUMBER_FLOAT} is truncated toward zero);
+     * a {@link JsonToken#VALUE_STRING} holding a number is coerced (e.g.
+     * {@code "123"} → {@code 123}, {@code "12.7"} → {@code 12}). Coercion is
+     * delegated to java-util's {@code Converter}, so numeric-string results match
+     * Jackson's.
+     *
+     * @throws IOException on I/O error
+     * @throws IllegalArgumentException if the current token's text cannot be
+     *                                  coerced to an {@code int}
+     */
+    public int getValueAsInt() throws IOException {
+        JsonToken t = currentToken();
+        if (t == JsonToken.VALUE_NUMBER_INT || t == JsonToken.VALUE_NUMBER_FLOAT) {
+            return getIntValue();
+        }
+        return Converter.convert(getText(), int.class);
+    }
+
+    /**
+     * Coercing counterpart to {@link #getLongValue()}; see {@link #getValueAsInt()}.
+     *
+     * @throws IOException on I/O error
+     * @throws IllegalArgumentException if the current token's text cannot be
+     *                                  coerced to a {@code long}
+     */
+    public long getValueAsLong() throws IOException {
+        JsonToken t = currentToken();
+        if (t == JsonToken.VALUE_NUMBER_INT || t == JsonToken.VALUE_NUMBER_FLOAT) {
+            return getLongValue();
+        }
+        return Converter.convert(getText(), long.class);
+    }
+
+    /**
+     * Coercing counterpart to {@link #getDoubleValue()}; see {@link #getValueAsInt()}.
+     *
+     * @throws IOException on I/O error
+     * @throws IllegalArgumentException if the current token's text cannot be
+     *                                  coerced to a {@code double}
+     */
+    public double getValueAsDouble() throws IOException {
+        JsonToken t = currentToken();
+        if (t == JsonToken.VALUE_NUMBER_INT || t == JsonToken.VALUE_NUMBER_FLOAT) {
+            return getDoubleValue();
+        }
+        return Converter.convert(getText(), double.class);
+    }
+
+    // -------------------------------------------------------------------
     // Navigation
     // -------------------------------------------------------------------
 
@@ -272,6 +331,20 @@ public abstract class JsonTokenizer implements Closeable {
     // -------------------------------------------------------------------
     // Lifecycle
     // -------------------------------------------------------------------
+
+    /**
+     * @return {@code true} once {@link #close()} has been called on this
+     *         tokenizer. Mirrors Jackson's {@code JsonParser.isClosed()} so a
+     *         {@code while (!tokenizer.isClosed())} drain loop ports directly.
+     *         Reaching end-of-input alone does not close the tokenizer —
+     *         {@link #nextToken()} returns {@code null} at EOF.
+     *
+     * <p>The default returns {@code false}; concrete tokenizers override to
+     * report real close state.
+     */
+    public boolean isClosed() {
+        return false;
+    }
 
     @Override
     public abstract void close() throws IOException;
