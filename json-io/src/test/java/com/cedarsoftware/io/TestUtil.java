@@ -1,11 +1,7 @@
 package com.cedarsoftware.io;
 
 import java.io.InputStream;
-import java.util.Map;
 import java.util.logging.Logger;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.Gson;
 
 /**
  * Useful utilities for use in unit testing.
@@ -64,33 +60,6 @@ public class TestUtil {
         return testInfo;
     }
 
-    private static TestInfo writeGSON(Object obj) {
-        TestInfo testInfo = new TestInfo();
-        try {
-            Gson gson = new Gson();
-            long start = System.nanoTime();
-            String json = gson.toJson(obj);
-            testInfo.nanos = System.nanoTime() - start;
-            testInfo.json = json;
-        } catch (Throwable t) {
-            testInfo.t = t;
-        }
-        return testInfo;
-    }
-
-    private static TestInfo writeJackson(Object obj) {
-        TestInfo testInfo = new TestInfo();
-        try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            long start = System.nanoTime();
-            testInfo.json = objectMapper.writeValueAsString(obj);
-            testInfo.nanos = System.nanoTime() - start;
-        } catch (Throwable t) {
-            testInfo.t = t;
-        }
-        return testInfo;
-    }
-
     private static TestInfo writeToon(Object obj, WriteOptions writeOptions) {
         TestInfo testInfo = new TestInfo();
         try {
@@ -130,15 +99,13 @@ public class TestUtil {
     }
 
     /**
-     * Generally, use this API to write JSON. It will do so using json-io and other serializers, so that
-     * timing statistics can be measured.
+     * Generally, use this API to write JSON. It writes with json-io and cross-checks the TOON and JSON5
+     * round-trips of the same object, so that timing statistics can be measured.
      */
     public static String toJson(Object obj, WriteOptions writeOptions) {
         totalWrites++;
-        // json-io
+        // json-io (plus its own TOON / JSON5 formats)
         TestInfo jsonIoTestInfo = writeJsonIo(obj, writeOptions);
-        TestInfo gsonTestInfo = writeGSON(obj);
-        TestInfo jacksonTestInfo = writeJackson(obj);
         TestInfo toonTestInfo = writeToon(obj, writeOptions);
         TestInfo json5TestInfo = writeJson5(obj, writeOptions);
 
@@ -146,20 +113,10 @@ public class TestUtil {
             printLine(jsonIoTestInfo.json);
         }
 
-        if (jsonIoTestInfo.t == null && gsonTestInfo.t == null && jacksonTestInfo.t == null) { // Only add times when all parsers succeeded
-            totalJsonWrite += jsonIoTestInfo.nanos;
-            totalGsonWrite += gsonTestInfo.nanos;
-            totalJacksonWrite += jacksonTestInfo.nanos;
+        if (jsonIoTestInfo.t != null) {
+            jsonIoWriteFails++;
         } else {
-            if (jsonIoTestInfo.t != null) {
-                jsonIoWriteFails++;
-            }
-            if (gsonTestInfo.t != null) {
-                gsonWriteFails++;
-            }
-            if (jacksonTestInfo.t != null) {
-                jacksonWriteFails++;
-            }
+            totalJsonWrite += jsonIoTestInfo.nanos;
         }
 
         if (toonTestInfo.t != null) {
@@ -195,34 +152,6 @@ public class TestUtil {
             long start = System.nanoTime();
             testInfo.obj = JsonIo.toJava(json, options).asClass(root);
             testInfo.nanos = System.nanoTime() - start;
-        } catch (Exception e) {
-            testInfo.t = e;
-        }
-        return testInfo;
-    }
-
-    private static TestInfo readGson(String json) {
-        TestInfo testInfo = new TestInfo();
-        try {
-            Gson gson = new Gson();
-            long start = System.nanoTime();
-            Map<?, ?> map = gson.fromJson(json, Map.class);
-            testInfo.nanos = System.nanoTime() - start;
-            testInfo.obj = map;
-        } catch (Exception e) {
-            testInfo.t = e;
-        }
-        return testInfo;
-    }
-
-    private static TestInfo readJackson(String json) {
-        TestInfo testInfo = new TestInfo();
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            long start = System.nanoTime();
-            Map<?, ?> map = mapper.readValue(json, Map.class);
-            testInfo.nanos = System.nanoTime() - start;
-            testInfo.obj = map;
         } catch (Exception e) {
             testInfo.t = e;
         }
@@ -291,30 +220,22 @@ public class TestUtil {
         logger.info("  json-io: " + (totalJsonWrite / 1_000_000.0) + " ms");
         logger.info("  TOON: " + (totalToonWrite / 1_000_000.0) + " ms");
         logger.info("  JSON5: " + (totalJson5Write / 1_000_000.0) + " ms");
-        logger.info("  GSON: " + (totalGsonWrite / 1_000_000.0) + " ms");
-        logger.info("  Jackson: " + (totalJacksonWrite / 1_000_000.0) + " ms");
         logger.info("Read JSON");
         logger.info("  json-io: " + (totalJsonRead / 1_000_000.0) + " ms");
         logger.info("  TOON: " + (totalToonRead / 1_000_000.0) + " ms");
         logger.info("  JSON5: " + (totalJson5Read / 1_000_000.0) + " ms");
-        logger.info("  GSON: " + (totalGsonRead / 1_000_000.0) + " ms");
-        logger.info("  Jackson: " + (totalJacksonRead / 1_000_000.0) + " ms");
         logger.info("Write Fails:");
         logger.info("  json-io: " + jsonIoWriteFails + " / " + totalWrites);
         logger.info("  TOON: " + toonWriteFails + " / " + totalWrites);
         logger.info("  JSON5: " + json5WriteFails + " / " + totalWrites);
-        logger.info("  GSON: " + gsonWriteFails + " / " + totalWrites);
-        logger.info("  Jackson: " + jacksonWriteFails + " / " + totalWrites);
         logger.info("Read Fails");
         logger.info("  json-io: " + jsonIoReadFails + " / " + totalReads);
         logger.info("  TOON: " + toonReadFails + " / " + totalReads);
         logger.info("  JSON5: " + json5ReadFails + " / " + totalReads);
-        logger.info("  GSON: " + gsonReadFails + " / " + totalReads);
-        logger.info("  Jackson: " + jacksonReadFails + " / " + totalReads);
     }
 
     /**
-     * Builder for testing JSON deserialization with json-io, GSON, and Jackson.
+     * Builder for testing JSON deserialization with json-io, cross-checking its TOON and JSON5 round-trips.
      * Matches the API of JsonIo.JavaStringBuilder.
      */
     public static class JavaTestBuilder {
@@ -328,15 +249,13 @@ public class TestUtil {
 
         /**
          * Complete deserialization to a specific class.
-         * Tests json-io, GSON, and Jackson and collects timing statistics.
+         * Cross-checks the json-io, TOON, and JSON5 round-trips of the same input and collects timing statistics.
          */
         @SuppressWarnings("unchecked")
         public <T> T asClass(Class<T> root) {
             totalReads++;
 
             TestInfo jsonIoTestInfo = readJsonIo(json, readOptions, root);
-            TestInfo gsonTestInfo = readGson(json);
-            TestInfo jacksonTestInfo = readJackson(json);
 
             // TOON round-trip: read back the TOON produced by the paired toJson() call
             String toon = lastToon;
@@ -364,20 +283,10 @@ public class TestUtil {
                 }
             }
 
-            if (jsonIoTestInfo.t == null && gsonTestInfo.t == null && jacksonTestInfo.t == null) {
-                totalJsonRead += jsonIoTestInfo.nanos;
-                totalGsonRead += gsonTestInfo.nanos;
-                totalJacksonRead += jacksonTestInfo.nanos;
+            if (jsonIoTestInfo.t != null) {
+                jsonIoReadFails++;
             } else {
-                if (jsonIoTestInfo.t != null) {
-                    jsonIoReadFails++;
-                }
-                if (gsonTestInfo.t != null) {
-                    gsonReadFails++;
-                }
-                if (jacksonTestInfo.t != null) {
-                    jacksonReadFails++;
-                }
+                totalJsonRead += jsonIoTestInfo.nanos;
             }
 
             if (jsonIoTestInfo.t != null) {
@@ -393,15 +302,13 @@ public class TestUtil {
 
         /**
          * Complete deserialization using generic type information.
-         * Tests json-io, GSON, and Jackson and collects timing statistics.
+         * Cross-checks the json-io, TOON, and JSON5 round-trips of the same input and collects timing statistics.
          */
         @SuppressWarnings("unchecked")
         public <T> T asType(TypeHolder<T> typeHolder) {
             totalReads++;
 
             TestInfo jsonIoTestInfo = readJsonIoAsType(json, readOptions, typeHolder);
-            TestInfo gsonTestInfo = readGson(json);
-            TestInfo jacksonTestInfo = readJackson(json);
 
             // TOON round-trip: read back the TOON produced by the paired toJson() call
             String toon = lastToon;
@@ -429,20 +336,10 @@ public class TestUtil {
                 }
             }
 
-            if (jsonIoTestInfo.t == null && gsonTestInfo.t == null && jacksonTestInfo.t == null) {
-                totalJsonRead += jsonIoTestInfo.nanos;
-                totalGsonRead += gsonTestInfo.nanos;
-                totalJacksonRead += jacksonTestInfo.nanos;
+            if (jsonIoTestInfo.t != null) {
+                jsonIoReadFails++;
             } else {
-                if (jsonIoTestInfo.t != null) {
-                    jsonIoReadFails++;
-                }
-                if (gsonTestInfo.t != null) {
-                    gsonReadFails++;
-                }
-                if (jacksonTestInfo.t != null) {
-                    jacksonReadFails++;
-                }
+                totalJsonRead += jsonIoTestInfo.nanos;
             }
 
             if (jsonIoTestInfo.t != null) {
@@ -474,7 +371,7 @@ public class TestUtil {
 
     /**
      * Parse JSON into typed Java objects. Returns a builder for completing the conversion.
-     * Tests json-io, GSON, and Jackson for performance comparison.
+     * Cross-checks the json-io, TOON, and JSON5 round-trips of the same input.
      *
      * Use this for Java Object Mode (requires classes on classpath).
      */
@@ -484,7 +381,7 @@ public class TestUtil {
 
     /**
      * Parse JSON into Map graph without requiring Java classes. Returns a builder for completing the conversion.
-     * Tests json-io, GSON, and Jackson for performance comparison.
+     * Cross-checks the json-io, TOON, and JSON5 round-trips of the same input.
      *
      * Use this for Map Mode (no classes required).
      */
@@ -525,23 +422,15 @@ public class TestUtil {
     private static long totalJsonWrite;
     private static long totalToonWrite;
     private static long totalJson5Write;
-    private static long totalGsonWrite;
-    private static long totalJacksonWrite;
     private static long totalJsonRead;
     private static long totalToonRead;
     private static long totalJson5Read;
-    private static long totalGsonRead;
-    private static long totalJacksonRead;
     private static long jsonIoWriteFails;
     private static long toonWriteFails;
     private static long json5WriteFails;
-    private static long gsonWriteFails;
-    private static long jacksonWriteFails;
     private static long jsonIoReadFails;
     private static long toonReadFails;
     private static long json5ReadFails;
-    private static long gsonReadFails;
-    private static long jacksonReadFails;
     private static long totalReads;
     private static long totalWrites;
     private static String lastToon;
