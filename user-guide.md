@@ -1455,7 +1455,7 @@ If your classes already use Jackson annotations, json-io will honor them automat
 | `@JsonFormat(pattern="...")` | `@IoFormat("pattern")` | Per-field format pattern (`String.format`, `DecimalFormat`, `DateTimeFormatter`, or `SimpleDateFormat`) |
 | `@JsonTypeInfo` (on field) | `@IoShowType` | Force `$type` (or `@type`) emission on field regardless of global showTypeInfo setting                  |
 
-Jackson's `jackson-annotations` JAR (~75KB) is commonly already on the classpath in Spring applications. json-io detects annotations via `Class.forName()` at startup — there is no compile-time dependency. Some annotations (`@JsonNaming`, `@JsonDeserialize`) live in `jackson-databind` and are detected independently.
+Jackson's `jackson-annotations` JAR (~75KB) is commonly already on the classpath in Spring applications. json-io detects annotations via `Class.forName()` at startup — there is no compile-time dependency. Some annotations (`@JsonNaming`, `@JsonDeserialize`) live in `jackson-databind` and are detected independently. Both **Jackson 2.x and 3.x** are recognized: the `com.fasterxml.jackson.annotation.*` annotations are shared across both majors (Jackson 3.x reuses the 2.x annotations jar), while `@JsonNaming`/`@JsonDeserialize` are detected under both `com.fasterxml.jackson.databind.annotation.*` (2.x) and `tools.jackson.databind.annotation.*` (3.x).
 
 ## Streaming API (cursor-style read/write)
 

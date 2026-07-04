@@ -53,8 +53,11 @@ import com.cedarsoftware.util.ReflectionUtils;
  * Supports two annotation sources with the following priority:
  * <ol>
  *   <li>json-io native annotations ({@code com.cedarsoftware.io.annotation.*}) — checked first</li>
- *   <li>External annotations (e.g., Jackson's {@code com.fasterxml.jackson.annotation.*}) —
- *       checked via reflection only if native annotation is absent on the same element</li>
+ *   <li>External annotations (e.g., Jackson's {@code com.fasterxml.jackson.annotation.*}, plus the
+ *       databind {@code @JsonNaming}/{@code @JsonDeserialize} from both Jackson 2.x
+ *       {@code com.fasterxml.jackson.databind.annotation.*} and Jackson 3.x
+ *       {@code tools.jackson.databind.annotation.*}) — checked via reflection only if the native
+ *       annotation is absent on the same element</li>
  * </ol>
  * <p>
  * External annotations are detected lazily via {@code ClassUtilities.forName()} with no compile-time
@@ -91,6 +94,15 @@ public class AnnotationResolver {
     private static final boolean extDeserializeAvailable;
     private static final Class<? extends Annotation> EXT_DESERIALIZE;
     private static final Method EXT_DESERIALIZE_AS;
+    // Jackson 3.x moved databind to the tools.jackson package; the same @JsonNaming/@JsonDeserialize
+    // are detected there too so json-io honors annotations from both Jackson majors (annotations from
+    // jackson-annotations stayed com.fasterxml and need no v3 twin).
+    private static final boolean extNamingV3Available;
+    private static final Class<? extends Annotation> EXT_NAMING_V3;
+    private static final Method EXT_NAMING_VALUE_V3;
+    private static final boolean extDeserializeV3Available;
+    private static final Class<? extends Annotation> EXT_DESERIALIZE_V3;
+    private static final Method EXT_DESERIALIZE_AS_V3;
     private static final Class<? extends Annotation> EXT_CREATOR;
     private static final Class<? extends Annotation> EXT_VALUE;
     private static final Class<? extends Annotation> EXT_PROPERTY;
@@ -314,6 +326,42 @@ public class AnnotationResolver {
         extDeserializeAvailable = deserAvail;
         EXT_DESERIALIZE = extDeserialize;
         EXT_DESERIALIZE_AS = extDeserializeAs;
+
+        // Jackson 3.x: @JsonNaming under the tools.jackson databind package
+        boolean namingV3Avail = false;
+        Class<? extends Annotation> extNamingV3 = null;
+        Method extNamingValueV3 = null;
+        try {
+            extNamingV3 = (Class<? extends Annotation>) ClassUtilities.forName("tools.jackson.databind.annotation.JsonNaming", classLoader);
+            if (extNamingV3 == null) {
+                throw new ClassNotFoundException("jackson 3 databind not on classpath");
+            }
+            extNamingValueV3 = extNamingV3.getMethod("value");
+            namingV3Avail = true;
+        } catch (Throwable t) {
+            // jackson 3 databind not on classpath — silently skip
+        }
+        extNamingV3Available = namingV3Avail;
+        EXT_NAMING_V3 = extNamingV3;
+        EXT_NAMING_VALUE_V3 = extNamingValueV3;
+
+        // Jackson 3.x: @JsonDeserialize under the tools.jackson databind package
+        boolean deserV3Avail = false;
+        Class<? extends Annotation> extDeserializeV3 = null;
+        Method extDeserializeAsV3 = null;
+        try {
+            extDeserializeV3 = (Class<? extends Annotation>) ClassUtilities.forName("tools.jackson.databind.annotation.JsonDeserialize", classLoader);
+            if (extDeserializeV3 == null) {
+                throw new ClassNotFoundException("jackson 3 databind not on classpath");
+            }
+            extDeserializeAsV3 = extDeserializeV3.getMethod("as");
+            deserV3Avail = true;
+        } catch (Throwable t) {
+            // jackson 3 databind not on classpath — silently skip
+        }
+        extDeserializeV3Available = deserV3Avail;
+        EXT_DESERIALIZE_V3 = extDeserializeV3;
+        EXT_DESERIALIZE_AS_V3 = extDeserializeAsV3;
     }
 
     // ======================== Cache ========================
@@ -572,21 +620,14 @@ public class AnnotationResolver {
                         fieldDeserializeOverrides = new LinkedHashMap<>();
                     }
                     fieldDeserializeOverrides.put(fieldName, deser.as());
-                } else if (extDeserializeAvailable && EXT_DESERIALIZE != null) {
-                    Annotation extDeser = field.getAnnotation(EXT_DESERIALIZE);
-                    if (extDeser != null) {
-                        try {
-                            Class<?> asClass = (Class<?>) EXT_DESERIALIZE_AS.invoke(extDeser);
-                            // Jackson uses Void.class as the default (meaning "not specified")
-                            if (asClass != null && asClass != Void.class) {
-                                if (fieldDeserializeOverrides == null) {
-                                    fieldDeserializeOverrides = new LinkedHashMap<>();
-                                }
-                                fieldDeserializeOverrides.put(fieldName, asClass);
-                            }
-                        } catch (Exception e) {
-                            // Ignore reflection failure
+                } else {
+                    // Jackson @JsonDeserialize(as=...) — honor both the 2.x and 3.x databind annotation
+                    Class<?> asClass = readExternalDeserializeAs(field);
+                    if (asClass != null) {
+                        if (fieldDeserializeOverrides == null) {
+                            fieldDeserializeOverrides = new LinkedHashMap<>();
                         }
+                        fieldDeserializeOverrides.put(fieldName, asClass);
                     }
                 }
 
@@ -809,15 +850,65 @@ public class AnnotationResolver {
         if (naming != null) {
             return naming.value();
         }
+        // Jackson @JsonNaming — honor both the 2.x (com.fasterxml) and 3.x (tools.jackson) databind annotation
         if (extNamingAvailable) {
-            Annotation extNaming = clazz.getAnnotation(EXT_NAMING);
-            if (extNaming != null) {
-                try {
-                    Class<?> strategyClass = (Class<?>) EXT_NAMING_VALUE.invoke(extNaming);
-                    return mapExternalNamingStrategy(strategyClass);
-                } catch (Exception e) {
-                    // Ignore reflection failure
+            IoNaming.Strategy strategy = readExternalNamingStrategy(clazz, EXT_NAMING, EXT_NAMING_VALUE);
+            if (strategy != null) {
+                return strategy;
+            }
+        }
+        if (extNamingV3Available) {
+            IoNaming.Strategy strategy = readExternalNamingStrategy(clazz, EXT_NAMING_V3, EXT_NAMING_VALUE_V3);
+            if (strategy != null) {
+                return strategy;
+            }
+        }
+        return null;
+    }
+
+    private static IoNaming.Strategy readExternalNamingStrategy(Class<?> clazz,
+                                                                Class<? extends Annotation> annoType,
+                                                                Method valueAccessor) {
+        Annotation extNaming = clazz.getAnnotation(annoType);
+        if (extNaming != null) {
+            try {
+                Class<?> strategyClass = (Class<?>) valueAccessor.invoke(extNaming);
+                return mapExternalNamingStrategy(strategyClass);
+            } catch (Exception e) {
+                // Ignore reflection failure
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Read a Jackson {@code @JsonDeserialize(as=...)} target type off a field, honoring both the
+     * 2.x ({@code com.fasterxml.jackson.databind.annotation}) and 3.x
+     * ({@code tools.jackson.databind.annotation}) forms. Returns null when neither is present or
+     * the {@code as} attribute is left at its Jackson default of {@code Void.class}.
+     */
+    private static Class<?> readExternalDeserializeAs(Field field) {
+        Class<?> asClass = null;
+        if (extDeserializeAvailable && EXT_DESERIALIZE != null) {
+            asClass = readDeserializeAs(field, EXT_DESERIALIZE, EXT_DESERIALIZE_AS);
+        }
+        if (asClass == null && extDeserializeV3Available && EXT_DESERIALIZE_V3 != null) {
+            asClass = readDeserializeAs(field, EXT_DESERIALIZE_V3, EXT_DESERIALIZE_AS_V3);
+        }
+        return asClass;
+    }
+
+    private static Class<?> readDeserializeAs(Field field, Class<? extends Annotation> annoType, Method asAccessor) {
+        Annotation extDeser = field.getAnnotation(annoType);
+        if (extDeser != null) {
+            try {
+                Class<?> asClass = (Class<?>) asAccessor.invoke(extDeser);
+                // Jackson uses Void.class as the default (meaning "not specified")
+                if (asClass != null && asClass != Void.class) {
+                    return asClass;
                 }
+            } catch (Exception e) {
+                // Ignore reflection failure
             }
         }
         return null;

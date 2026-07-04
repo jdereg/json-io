@@ -159,7 +159,7 @@ automatic shared-reference and cycle preservation. No class annotations required
 | JSON5 support | Full read/write (native) | Partial read only | None |
 | TOON support | Full read/write (40-50% fewer tokens) | None | None |
 | Configuration | Zero-config; optional `@Io*` | Annotation-heavy (`@Json*`) | Annotations + builders |
-| Jackson annotations | Recognized reflectively | Native | Not supported |
+| Jackson annotations | Recognized reflectively (v2 & v3) | Native | Not supported |
 | Two parse modes | `toJava()` (typed) + `toMaps()` | Typed only | Typed only |
 
 **Runtime**
@@ -479,6 +479,8 @@ json-io provides 25 annotations in the `com.cedarsoftware.io.annotation` package
 | `@IoFormat("pattern")` | Field | Per-field format pattern (`String.format`, `DecimalFormat`, `DateTimeFormatter`, or `SimpleDateFormat`) |
 
 Additionally, json-io **reflectively honors Jackson annotations** when they are on the classpath — with zero compile-time dependency on Jackson. Supported: `@JsonProperty`, `@JsonIgnore`, `@JsonIgnoreProperties`, `@JsonAlias`, `@JsonPropertyOrder`, `@JsonInclude`, `@JsonCreator`, `@JsonValue`, `@JsonIgnoreType`, `@JsonTypeInfo`, `@JsonIncludeProperties`, `@JsonNaming`, `@JsonDeserialize`, `@JsonGetter`, `@JsonSetter`, `@JsonTypeName`, `@JsonFormat`, `@JsonAnySetter`, `@JsonAnyGetter`.
+
+Both **Jackson 2.x and 3.x** are recognized: the `com.fasterxml.jackson.annotation.*` annotations are shared across both majors (Jackson 3.x reuses the 2.x annotations jar), while the two databind annotations that changed packages in 3.x — `@JsonNaming` and `@JsonDeserialize` — are detected under both `com.fasterxml.jackson.databind.annotation.*` (2.x) and `tools.jackson.databind.annotation.*` (3.x).
 
 **Precedence:** Programmatic API > json-io annotations > Jackson annotations.
 
