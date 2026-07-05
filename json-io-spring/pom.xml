@@ -15,21 +15,25 @@
     <description>Spring Boot starter for json-io - provides auto-configuration for JSON, JSON5, and TOON format support</description>
 
     <!--
-      Spring Boot version RANGE this single artifact supports: FLOOR Spring Boot 3.4 (Spring 6.2)
-      → CEILING latest Spring Boot 3.5.x (Spring 6.2). The starter is compiled ONCE against the floor
-      and Spring is PROVIDED: the consuming app supplies Spring at ITS version at runtime, so the host's
-      Spring Boot version wins and json-io forces NO Spring version onto consumers. Floor-compiled
-      bytecode links forward across the Boot 3.x line; `mvn test -Pspring-ceiling` runs the suite at the
-      ceiling (${spring-boot.ceiling}), driven by ${spring-boot.bom} (default = floor).
+      Spring Boot compatibility. The starter is compiled ONCE against a FLOOR (Spring Boot 3.4 / Spring
+      6.2) and Spring is PROVIDED: the consuming app supplies Spring at ITS version at runtime, so the
+      host's Spring Boot version wins and json-io forces NO Spring version onto consumers.
 
-      NOTE: the range stops at Boot 3.x on purpose. Spring Boot 4 relocated the web auto-config packages
-      this starter imports (org.springframework.boot.autoconfigure.web.servlet / .web.reactive and
-      org.springframework.boot.web.codec), so a single artifact cannot ALSO compile against Boot 4 /
-      Spring 7 — supporting Boot 4 would require a separate Boot-4 source variant.
+      The shipped auto-config uses only Spring FRAMEWORK-level APIs (WebMvcConfigurer, WebFluxConfigurer,
+      ServerCodecConfigurer) and orders itself relative to Boot's auto-configs BY NAME (afterName), so it
+      carries no Boot-version-specific type and runs on both Spring Boot 3.x AND 4.x from one artifact:
+        mvn test                  -> floor, Spring Boot 3.4 (default)
+        mvn test -Pspring-ceiling -> Spring Boot 3.5.x, full suite (forward-compat within Boot 3.x)
+        mvn test -Pspring-boot4   -> Spring Boot 4.1 / Spring 7, RUNTIME check of the auto-config beans,
+                                     converters, and codecs. The Boot-test-slice integration tests
+                                     (@AutoConfigureMockMvc, TestRestTemplate) are excluded there because
+                                     those Boot test slices moved packages in Boot 4; full HTTP
+                                     integration coverage runs on Boot 3.x.
     -->
     <properties>
         <spring-boot.floor>3.4.13</spring-boot.floor>       <!-- oldest supported: Spring 6.2; compile target + default test runtime -->
         <spring-boot.ceiling>3.5.14</spring-boot.ceiling>    <!-- newest certified: latest Boot 3.5.x, still Spring 6.2 (exercised via -Pspring-ceiling) -->
+        <spring-boot.boot4>4.1.0</spring-boot.boot4>         <!-- Spring Boot 4 / Spring 7 runtime check (via -Pspring-boot4; slice-based integration tests excluded) -->
         <spring-boot.bom>${spring-boot.floor}</spring-boot.bom>   <!-- active BOM version; default = floor -->
     </properties>
 
@@ -146,6 +150,43 @@
             <properties>
                 <spring-boot.bom>${spring-boot.ceiling}</spring-boot.bom>
             </properties>
+        </profile>
+
+        <!-- Spring Boot 4 / Spring 7 RUNTIME check: build + run the Framework-level tests (auto-config
+             beans, converters, codecs) against Spring Boot 4.1 to prove the starter actually RUNS on
+             Boot 4 (not merely compiles). The seven Spring-Boot-test-slice integration tests
+             (@AutoConfigureMockMvc, TestRestTemplate, auto-config class literals) are excluded — those
+             slices moved in Boot 4 with no string-based fallback and would need a separate Boot-4 test
+             module (see estimate). Usage: mvn clean test -Pspring-boot4 (JDK 17+). -->
+        <profile>
+            <id>spring-boot4</id>
+            <properties>
+                <spring-boot.bom>${spring-boot.boot4}</spring-boot.bom>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <testExcludes>
+                                <testExclude>**/integration/*.java</testExclude>
+                                <testExclude>**/JacksonCoexistenceModeTest.java</testExclude>
+                            </testExcludes>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/integration/*.java</exclude>
+                                <exclude>**/JacksonCoexistenceModeTest.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 </project>

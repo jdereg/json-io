@@ -1,62 +1,49 @@
 package com.cedarsoftware.io.spring.autoconfigure;
 
-import com.cedarsoftware.io.spring.http.codec.Json5Decoder;
-import com.cedarsoftware.io.spring.http.codec.Json5Encoder;
-import com.cedarsoftware.io.spring.http.codec.JsonIoDecoder;
-import com.cedarsoftware.io.spring.http.codec.JsonIoEncoder;
-import com.cedarsoftware.io.spring.http.codec.ToonDecoder;
-import com.cedarsoftware.io.spring.http.codec.ToonEncoder;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
-import org.springframework.boot.autoconfigure.web.reactive.WebFluxAutoConfiguration;
 import org.springframework.boot.test.context.runner.ReactiveWebApplicationContextRunner;
-import org.springframework.boot.web.codec.CodecCustomizer;
-import org.springframework.http.codec.CodecConfigurer;
 import org.springframework.http.codec.support.DefaultServerCodecConfigurer;
+import org.springframework.web.reactive.config.WebFluxConfigurer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for {@link JsonIoWebFluxAutoConfiguration}.
+ * <p>
+ * Loads only json-io's own auto-configs and asserts against Spring Framework types
+ * ({@link WebFluxConfigurer}) rather than Spring Boot types, so the test compiles and runs on both
+ * Spring Boot 3.x and 4.x (Boot relocated {@code CodecCustomizer}/{@code WebFluxAutoConfiguration}).
  */
 class WebFluxAutoConfigurationTest {
 
     private final ReactiveWebApplicationContextRunner contextRunner = new ReactiveWebApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(
                     JsonIoAutoConfiguration.class,
-                    JsonIoWebFluxAutoConfiguration.class,
-                    JacksonAutoConfiguration.class,
-                    WebFluxAutoConfiguration.class
+                    JsonIoWebFluxAutoConfiguration.class
             ));
 
     @Test
-    void codecCustomizerBeanIsCreated() {
+    void webFluxConfigurerBeanIsCreated() {
         contextRunner.run(context -> {
-            assertThat(context).hasSingleBean(CodecCustomizer.class);
+            assertThat(context).hasBean("jsonIoWebFluxConfigurer");
+            assertThat(context.getBean("jsonIoWebFluxConfigurer")).isInstanceOf(WebFluxConfigurer.class);
         });
     }
 
     @Test
     void coexistModeRegistersCodecs() {
         contextRunner.run(context -> {
-            // Verify the codec customizer bean is created and can be applied
-            CodecCustomizer customizer = context.getBean(CodecCustomizer.class);
-            assertThat(customizer).isNotNull();
-
-            // The customizer should run without error
-            CodecConfigurer configurer = new DefaultServerCodecConfigurer();
-            customizer.customize(configurer);
-            // If we get here without exception, the customizer is working
+            WebFluxConfigurer configurer = context.getBean("jsonIoWebFluxConfigurer", WebFluxConfigurer.class);
+            // Registers json-io's JSON5/TOON codecs without error
+            configurer.configureHttpMessageCodecs(new DefaultServerCodecConfigurer());
         });
     }
 
     @Test
-    void coexistModeDoesNotRegisterJsonIoCodecForJson() {
+    void coexistModeIsDefault() {
         contextRunner.run(context -> {
             JsonIoProperties properties = context.getBean(JsonIoProperties.class);
-            // Verify we're in COEXIST mode by default
             assertThat(properties.getIntegration().getJacksonMode())
                     .isEqualTo(JsonIoProperties.JacksonMode.COEXIST);
         });
@@ -71,55 +58,46 @@ class WebFluxAutoConfigurationTest {
                     assertThat(properties.getIntegration().getJacksonMode())
                             .isEqualTo(JsonIoProperties.JacksonMode.REPLACE);
 
-                    // Verify customizer can be applied in REPLACE mode
-                    CodecCustomizer customizer = context.getBean(CodecCustomizer.class);
-                    CodecConfigurer configurer = new DefaultServerCodecConfigurer();
-                    customizer.customize(configurer);
-                    // If we get here without exception, REPLACE mode works
+                    WebFluxConfigurer configurer = context.getBean("jsonIoWebFluxConfigurer", WebFluxConfigurer.class);
+                    // REPLACE mode registers json-io JSON codecs and disables Jackson defaults without error
+                    configurer.configureHttpMessageCodecs(new DefaultServerCodecConfigurer());
                 });
     }
 
     @Test
     void codecsAreConfiguredWithOptions() {
         contextRunner.run(context -> {
-            // Verify ReadOptions and WriteOptions beans are available
             assertThat(context).hasBean("jsonIoReadOptions");
             assertThat(context).hasBean("jsonIoWriteOptions");
-
-            // The codec customizer should be able to use these options
-            assertThat(context).hasSingleBean(CodecCustomizer.class);
+            assertThat(context).hasBean("jsonIoWebFluxConfigurer");
         });
     }
 
     @Test
-    void codecCustomizerWithCustomWriteOptions() {
+    void configurerWithCustomWriteOptions() {
         contextRunner
                 .withPropertyValues("spring.json-io.write.pretty-print=true")
                 .run(context -> {
-                    CodecCustomizer customizer = context.getBean(CodecCustomizer.class);
-                    assertThat(customizer).isNotNull();
-                    // The customizer should apply the configured options
+                    WebFluxConfigurer configurer = context.getBean("jsonIoWebFluxConfigurer", WebFluxConfigurer.class);
+                    configurer.configureHttpMessageCodecs(new DefaultServerCodecConfigurer());
                 });
     }
 
     @Test
-    void codecCustomizerWithCustomReadOptions() {
+    void configurerWithCustomReadOptions() {
         contextRunner
                 .withPropertyValues("spring.json-io.read.max-depth=500")
                 .run(context -> {
-                    CodecCustomizer customizer = context.getBean(CodecCustomizer.class);
-                    assertThat(customizer).isNotNull();
-                    // The customizer should apply the configured options
+                    WebFluxConfigurer configurer = context.getBean("jsonIoWebFluxConfigurer", WebFluxConfigurer.class);
+                    configurer.configureHttpMessageCodecs(new DefaultServerCodecConfigurer());
                 });
     }
 
     @Test
     void autoConfigurationIsConditionalOnReactiveWebApplication() {
-        // Verify the auto-configuration is properly conditional on reactive web application
-        // The @ConditionalOnWebApplication(type=REACTIVE) annotation ensures this
+        // @ConditionalOnWebApplication(type=REACTIVE) — the configurer is present in a reactive context
         contextRunner.run(context -> {
-            // In reactive context, the codec customizer should be present
-            assertThat(context).hasSingleBean(CodecCustomizer.class);
+            assertThat(context).hasBean("jsonIoWebFluxConfigurer");
         });
     }
 

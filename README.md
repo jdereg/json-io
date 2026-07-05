@@ -317,6 +317,8 @@ See the [Baeldung tutorial](https://www.baeldung.com/java-json-toon-format-libra
 
 json-io provides a Spring Boot starter for seamless integration with Spring MVC and WebFlux applications.
 
+**Standalone or with Spring — your choice.** json-io's core has no Spring dependency (its only runtime dependency is `java-util`), so it works anywhere. The Spring Boot starter is an optional, non-intrusive add-on: it declares Spring as **`provided`**, so it plugs into *your* application's own Spring and forces **no** Spring version onto your build — your Boot version always wins, and adding the starter puts nothing on your classpath but `json-io` itself. **Works on Spring Boot 3.x and 4.x** — the shipped starter uses only Spring Framework-level APIs (no Boot-version-specific types), so one artifact runs on both majors: compiled against a Spring Boot 3.4 (Spring 6.2) *floor*, forward-tested across Boot 3.x, and runtime-verified on Spring Boot 4.1 / Spring 7 (auto-configuration, HTTP message converters, and reactive codecs).
+
 ```xml
 <dependency>
   <groupId>com.cedarsoftware</groupId>

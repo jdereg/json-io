@@ -16,10 +16,9 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type;
-import org.springframework.boot.autoconfigure.web.reactive.WebFluxAutoConfiguration;
-import org.springframework.boot.web.codec.CodecCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.codec.CodecConfigurer;
+import org.springframework.http.codec.ServerCodecConfigurer;
 import org.springframework.web.reactive.config.WebFluxConfigurer;
 
 /**
@@ -45,7 +44,12 @@ import org.springframework.web.reactive.config.WebFluxConfigurer;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-@AutoConfiguration(after = {JsonIoAutoConfiguration.class, WebFluxAutoConfiguration.class})
+// Order after Boot's WebFlux auto-config by NAME (not class literal) so this compiles/runs on both
+// Spring Boot 3.x and 4.x — Boot 4 relocated the class; an absent name is simply ignored.
+@AutoConfiguration(after = JsonIoAutoConfiguration.class, afterName = {
+        "org.springframework.boot.autoconfigure.web.reactive.WebFluxAutoConfiguration",  // Spring Boot 3.x
+        "org.springframework.boot.webflux.autoconfigure.WebFluxAutoConfiguration"        // Spring Boot 4.x
+})
 @ConditionalOnClass({JsonIo.class, WebFluxConfigurer.class})
 @ConditionalOnWebApplication(type = Type.REACTIVE)
 public class JsonIoWebFluxAutoConfiguration {
@@ -66,32 +70,39 @@ public class JsonIoWebFluxAutoConfiguration {
     }
 
     /**
-     * CodecCustomizer that registers json-io encoders and decoders.
+     * WebFluxConfigurer that registers json-io encoders and decoders on the reactive codec pipeline.
+     * <p>
+     * Uses Spring Framework's {@link WebFluxConfigurer#configureHttpMessageCodecs(ServerCodecConfigurer)}
+     * rather than Spring Boot's {@code CodecCustomizer} so the class carries no Boot-version-specific
+     * type — it compiles and runs on both Spring Boot 3.x and 4.x.
      */
     @Bean
-    public CodecCustomizer jsonIoCodecCustomizer() {
-        return configurer -> {
-            JacksonMode jacksonMode = properties.getIntegration().getJacksonMode();
+    public WebFluxConfigurer jsonIoWebFluxConfigurer() {
+        return new WebFluxConfigurer() {
+            @Override
+            public void configureHttpMessageCodecs(ServerCodecConfigurer configurer) {
+                JacksonMode jacksonMode = properties.getIntegration().getJacksonMode();
 
-            CodecConfigurer.CustomCodecs customCodecs = configurer.customCodecs();
+                CodecConfigurer.CustomCodecs customCodecs = configurer.customCodecs();
 
-            // Always register JSON5 and TOON codecs (cycleSupport=false)
-            customCodecs.register(new Json5Encoder(toonWriteOptions));
-            customCodecs.register(new Json5Decoder(readOptions));
-            customCodecs.register(new ToonEncoder(toonWriteOptions));
-            customCodecs.register(new ToonDecoder(readOptions));
+                // Always register JSON5 and TOON codecs (cycleSupport=false)
+                customCodecs.register(new Json5Encoder(toonWriteOptions));
+                customCodecs.register(new Json5Decoder(readOptions));
+                customCodecs.register(new ToonEncoder(toonWriteOptions));
+                customCodecs.register(new ToonDecoder(readOptions));
 
-            // Handle JSON codec based on Jackson mode
-            if (jacksonMode == JacksonMode.REPLACE) {
-                // Register json-io JSON codec (cycleSupport=true)
-                customCodecs.register(new JsonIoEncoder(writeOptions));
-                customCodecs.register(new JsonIoDecoder(readOptions));
+                // Handle JSON codec based on Jackson mode
+                if (jacksonMode == JacksonMode.REPLACE) {
+                    // Register json-io JSON codec (cycleSupport=true)
+                    customCodecs.register(new JsonIoEncoder(writeOptions));
+                    customCodecs.register(new JsonIoDecoder(readOptions));
 
-                // Remove default Jackson codecs
-                configurer.defaultCodecs().jackson2JsonEncoder(null);
-                configurer.defaultCodecs().jackson2JsonDecoder(null);
+                    // Remove default Jackson codecs
+                    configurer.defaultCodecs().jackson2JsonEncoder(null);
+                    configurer.defaultCodecs().jackson2JsonDecoder(null);
+                }
+                // In COEXIST mode, Jackson handles application/json
             }
-            // In COEXIST mode, Jackson handles application/json
         };
     }
 }

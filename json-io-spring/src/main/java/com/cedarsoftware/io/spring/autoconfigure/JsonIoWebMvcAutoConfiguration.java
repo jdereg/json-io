@@ -15,7 +15,6 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type;
-import org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -43,7 +42,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-@AutoConfiguration(after = {JsonIoAutoConfiguration.class, WebMvcAutoConfiguration.class})
+// Order after Boot's WebMvc auto-config by NAME (not class literal) so this compiles/runs on both
+// Spring Boot 3.x and 4.x — Boot 4 relocated the class; an absent name is simply ignored.
+@AutoConfiguration(after = JsonIoAutoConfiguration.class, afterName = {
+        "org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration",  // Spring Boot 3.x
+        "org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration"        // Spring Boot 4.x
+})
 @ConditionalOnClass({JsonIo.class, WebMvcConfigurer.class})
 @ConditionalOnWebApplication(type = Type.SERVLET)
 public class JsonIoWebMvcAutoConfiguration {
