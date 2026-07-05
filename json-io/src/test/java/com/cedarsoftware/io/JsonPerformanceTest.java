@@ -3,6 +3,7 @@ package com.cedarsoftware.io;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.math.BigInteger;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -238,6 +239,10 @@ public class JsonPerformanceTest {
             case "no-meta":
                 testNoMetadataResolution();
                 break;
+            case "databind":
+            case "strings":
+                testStringHeavyDatabindRead();
+                break;
             case "both":
             default:
                 testFullJavaResolution();
@@ -245,6 +250,10 @@ public class JsonPerformanceTest {
                 LOG.info("========================================");
                 LOG.info("");
                 testMapsOnly();
+                LOG.info("");
+                LOG.info("========================================");
+                LOG.info("");
+                testStringHeavyDatabindRead();
                 break;
         }
 
@@ -298,6 +307,194 @@ public class JsonPerformanceTest {
         LOG.info("--- No-metadata Results ---");
         LOG.info("Iterations: " + TEST_ITERATIONS);
         LOG.info("JsonIo Read Time (no-metadata): " + (elapsed / 1_000_000.0) + " ms");
+    }
+
+    /**
+     * Read benchmark mirroring fabienrenaud/java-json-benchmark's "users" workload — the case where
+     * json-io's read gap vs Jackson is largest. Unlike the other read tests (which parse
+     * json-io-authored JSON of a type-diverse {@link TestData} — json-io's strength), this parses a
+     * FLAT, STRING-HEAVY POJO list from FOREIGN, metadata-free JSON (no {@code @type}/{@code @id},
+     * byte-equivalent to Jackson output) into typed objects. A large list of simple string-field
+     * objects maximally exposes json-io's two-phase read (tokenize &rarr; JsonObject maps &rarr;
+     * Resolver &rarr; injectors) against Jackson's streaming token&rarr;setter. Expect ~10-15x.
+     * <p>
+     * ~20 persons yields ~10-12 KB of JSON (the benchmark's "10 KB users" tier); at 100k iterations
+     * this adds only ~3s to the suite because per-parse the model is cheaper than {@link TestData}.
+     */
+    public static void testStringHeavyDatabindRead() throws IOException {
+        LOG.info("=== TEST: String-heavy Databind Read (foreign metadata-free JSON -> typed POJOs) ===");
+        // One ~10 KB tier (the java-json-benchmark "users" shape) as a regression guard for the databind
+        // read path — exposes json-io's read overhead vs Jackson without inflating the suite (~+3s). The
+        // gap is roughly flat with payload size, so a single representative size is sufficient; pass a
+        // larger count to databindReadAtSize() ad hoc if you want to re-characterize the curve.
+        databindReadAtSize(20, TEST_ITERATIONS);         // ~10 KB
+    }
+
+    /**
+     * One databind-read measurement at a given payload size: parse a foreign, metadata-free JSON
+     * document ({@code showTypeInfoNever}) of {@code personCount} string-heavy beans into typed POJOs.
+     * Jackson reads UTF-8 bytes (its fast path), json-io reads the String (its natural path) — each its
+     * idiomatic input for the same logical payload, as java-json-benchmark does.
+     */
+    private static void databindReadAtSize(int personCount, int iterations) throws IOException {
+        People people = createPeople(personCount);
+        ObjectMapper jacksonMapper = new ObjectMapper();   // no JavaTimeModule: this model has no java.time fields
+        WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoNever().cycleSupport(false).build();
+        ReadOptions readOptions = ReadOptionsBuilder.getDefaultReadOptions();
+
+        String json = JsonIo.toJson(people, writeOptions);
+        byte[] jsonBytes = json.getBytes(StandardCharsets.UTF_8);
+
+        int warmup = Math.max(200, iterations / 10);
+        for (int i = 0; i < warmup; i++) {
+            People w1 = JsonIo.toJava(json, readOptions).asClass(People.class);
+            People w2 = jacksonMapper.readValue(jsonBytes, People.class);
+            if (w1 == null || w2 == null) throw new IllegalStateException("warmup result null");
+        }
+
+        People result = null;
+        long start = System.nanoTime();
+        for (int i = 0; i < iterations; i++) {
+            result = JsonIo.toJava(json, readOptions).asClass(People.class);
+        }
+        long jsonIoTime = System.nanoTime() - start;
+
+        start = System.nanoTime();
+        for (int i = 0; i < iterations; i++) {
+            result = jacksonMapper.readValue(jsonBytes, People.class);
+        }
+        long jacksonTime = System.nanoTime() - start;
+
+        long gsonTime = -1;
+        if (runGson) {
+            start = System.nanoTime();
+            for (int i = 0; i < iterations; i++) {
+                result = GSON.fromJson(json, People.class);
+            }
+            gsonTime = System.nanoTime() - start;
+        }
+
+        LOG.info(String.format(
+                "  %5d persons (%7d chars, %6d iters): JsonIo %8.1f ms | Jackson %8.1f ms | Read Ratio (JsonIo/Jackson) %5.2fx%s  [result=%s]",
+                personCount, json.length(), iterations, jsonIoTime / 1e6, jacksonTime / 1e6,
+                (double) jsonIoTime / jacksonTime,
+                runGson ? String.format(" | Gson %5.2fx", (double) gsonTime / jacksonTime) : "",
+                result == null ? "null" : "ok"));
+    }
+
+    // ---- String-heavy model mirroring java-json-benchmark's Users/User: a JavaBean (private fields +
+    //      getters/setters) so Jackson uses its optimized method-based deserializer, exactly as the
+    //      benchmark's model does. json-io reads via field injection regardless. The generator sets
+    //      fields directly (legal — it is in the enclosing class), so only the read-side setters matter. ----
+
+    public static class People {
+        private List<Person> people;
+        public List<Person> getPeople() { return people; }
+        public void setPeople(List<Person> people) { this.people = people; }
+    }
+
+    public static class Person {
+        private String id;
+        private int index;
+        private String guid;
+        private boolean active;
+        private String balance;
+        private String picture;
+        private int age;
+        private String eyeColor;
+        private String name;
+        private String gender;
+        private String company;
+        private String email;
+        private String phone;
+        private String address;
+        private String about;
+        private String registered;
+        private double latitude;
+        private double longitude;
+        private List<String> tags;
+        private List<Friend> friends;
+        private String greeting;
+        private String favoriteFruit;
+
+        public String getId() { return id; } public void setId(String v) { id = v; }
+        public int getIndex() { return index; } public void setIndex(int v) { index = v; }
+        public String getGuid() { return guid; } public void setGuid(String v) { guid = v; }
+        public boolean isActive() { return active; } public void setActive(boolean v) { active = v; }
+        public String getBalance() { return balance; } public void setBalance(String v) { balance = v; }
+        public String getPicture() { return picture; } public void setPicture(String v) { picture = v; }
+        public int getAge() { return age; } public void setAge(int v) { age = v; }
+        public String getEyeColor() { return eyeColor; } public void setEyeColor(String v) { eyeColor = v; }
+        public String getName() { return name; } public void setName(String v) { name = v; }
+        public String getGender() { return gender; } public void setGender(String v) { gender = v; }
+        public String getCompany() { return company; } public void setCompany(String v) { company = v; }
+        public String getEmail() { return email; } public void setEmail(String v) { email = v; }
+        public String getPhone() { return phone; } public void setPhone(String v) { phone = v; }
+        public String getAddress() { return address; } public void setAddress(String v) { address = v; }
+        public String getAbout() { return about; } public void setAbout(String v) { about = v; }
+        public String getRegistered() { return registered; } public void setRegistered(String v) { registered = v; }
+        public double getLatitude() { return latitude; } public void setLatitude(double v) { latitude = v; }
+        public double getLongitude() { return longitude; } public void setLongitude(double v) { longitude = v; }
+        public List<String> getTags() { return tags; } public void setTags(List<String> v) { tags = v; }
+        public List<Friend> getFriends() { return friends; } public void setFriends(List<Friend> v) { friends = v; }
+        public String getGreeting() { return greeting; } public void setGreeting(String v) { greeting = v; }
+        public String getFavoriteFruit() { return favoriteFruit; } public void setFavoriteFruit(String v) { favoriteFruit = v; }
+    }
+
+    public static class Friend {
+        private String id;
+        private String name;
+        public String getId() { return id; } public void setId(String v) { id = v; }
+        public String getName() { return name; } public void setName(String v) { name = v; }
+    }
+
+    /**
+     * Deterministic generator for the string-heavy {@link People} graph. Values vary per index so a
+     * reader's string cache/interning can't unrealistically favor either side. ~20 persons yields
+     * ~10-12 KB of JSON (the java-json-benchmark "10 KB users" tier).
+     */
+    public static People createPeople(int count) {
+        String[] colors = {"brown", "blue", "green", "hazel", "gray"};
+        String[] fruits = {"apple", "banana", "strawberry", "mango", "kiwi"};
+        String[] genders = {"male", "female"};
+        People root = new People();
+        root.people = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            Person p = new Person();
+            p.id = "5f8d0d55b547644" + i;
+            p.index = i;
+            p.guid = "eab0324c-75ef-49a1-9c49-" + i;
+            p.active = (i % 2 == 0);
+            p.balance = "$" + (1000 + i * 37) + ".55";
+            p.picture = "http://placehold.it/32x32?u=" + i;
+            p.age = 20 + (i % 40);
+            p.eyeColor = colors[i % colors.length];
+            p.name = "Person " + i + " Longname";
+            p.gender = genders[i % genders.length];
+            p.company = "MEGADYNE-" + i;
+            p.email = "person" + i + "@megadyne.example.com";
+            p.phone = "+1 (800) 555-" + String.format("%04d", i);
+            p.address = (100 + i) + " Enterprise Ave, Springfield IL 6" + String.format("%04d", i);
+            p.about = "Person " + i + " enjoys velit aliqua nisi cupidatat consequat.";
+            p.registered = "201" + (i % 9) + "-0" + (1 + i % 8) + "-1" + (i % 9) + "T00:30:00 -00:00";
+            p.latitude = -80.0 + i * 1.37;
+            p.longitude = -170.0 + i * 2.11;
+            p.tags = new ArrayList<>();
+            for (int t = 0; t < 4; t++) {
+                p.tags.add("tag" + i + "_" + t);
+            }
+            p.friends = new ArrayList<>();
+            for (int f = 0; f < 2; f++) {
+                Friend fr = new Friend();
+                fr.id = i + "-" + f;
+                fr.name = "Friend " + f + " of " + i;
+                p.friends.add(fr);
+            }
+            p.greeting = "Hello, Person " + i + "!";
+            p.favoriteFruit = fruits[i % fruits.length];
+            root.people.add(p);
+        }
+        return root;
     }
 
     /**
