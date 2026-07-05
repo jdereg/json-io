@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.cedarsoftware</groupId>
         <artifactId>json-io-parent</artifactId>
-        <version>4.106.0</version>
+        <version>4.107.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -19,10 +19,15 @@
       PROVIDED so the host application supplies them at ITS version — json-io forces no version onto
       consumers. Spring Boot versions come from the spring-boot-dependencies BOM (${spring-boot.bom},
       default = floor); Spring AI is not in that BOM, so spring-ai-model is pinned to its own floor.
+
+      This module's auto-config uses only stable Boot APIs (@AutoConfiguration, @ConditionalOn*,
+      @ConfigurationProperties — no web auto-config), so a single artifact runs on both Spring Boot 3.x
+      AND 4.x: `mvn test` (floor 3.4), `-Pspring-ceiling` (3.5.x), `-Pspring-boot4` (4.1 / Spring 7).
     -->
     <properties>
         <spring-boot.floor>3.4.13</spring-boot.floor>       <!-- Spring 6.2 -->
-        <spring-boot.ceiling>3.5.14</spring-boot.ceiling>    <!-- latest Boot 3.5.x, still Spring 6.2 (via -Pspring-ceiling); Boot 4 moves web auto-config packages this module imports -->
+        <spring-boot.ceiling>3.5.14</spring-boot.ceiling>    <!-- latest Boot 3.5.x, still Spring 6.2 (via -Pspring-ceiling) -->
+        <spring-boot.boot4>4.1.0</spring-boot.boot4>         <!-- Spring Boot 4 / Spring 7 runtime check (via -Pspring-boot4) -->
         <spring-boot.bom>${spring-boot.floor}</spring-boot.bom>
         <spring-ai.floor>1.1.7</spring-ai.floor>
         <spring-ai.ceiling>1.1.7</spring-ai.ceiling>
@@ -116,6 +121,16 @@
             <properties>
                 <spring-boot.bom>${spring-boot.ceiling}</spring-boot.bom>
                 <spring-ai.version>${spring-ai.ceiling}</spring-ai.version>
+            </properties>
+        </profile>
+
+        <!-- Spring Boot 4 / Spring 7 RUNTIME check. This module has no web auto-config and its tests use
+             ApplicationContextRunner (no Boot test slices), so the full suite runs against Boot 4 with no
+             exclusions. Usage: mvn clean test -Pspring-boot4 (JDK 17+). -->
+        <profile>
+            <id>spring-boot4</id>
+            <properties>
+                <spring-boot.bom>${spring-boot.boot4}</spring-boot.bom>
             </properties>
         </profile>
     </profiles>

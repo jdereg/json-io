@@ -2258,18 +2258,24 @@ public class ReadOptionsBuilder {
          * @return JsonClassReader for the custom class (if one exists), null otherwise.
          */
         public JsonClassReader getCustomReader(Class<?> c) {
-            JsonClassReader reader = readerCache.computeIfAbsent(c, cls -> {
-                JsonClassReader found = ClassUtilities.findClosest(c, customReaderClasses, nullReader);
-                if (found != nullReader) {
-                    return found;
-                }
-                // Annotation fallback: @IoCustomReader
-                Class<? extends JsonClassReader> readerClass = AnnotationResolver.getMetadata(c).getCustomReader();
-                if (readerClass != null) {
-                    return getOrCreateAnnotationReader(readerClass);
-                }
-                return nullReader;
-            });
+            // Fast path: a plain get() allocates nothing. computeIfAbsent below would allocate the
+            // capturing lambda on EVERY call (hit or miss); after warmup every class is cached (with the
+            // nullReader sentinel for no-custom-reader classes), so this is a pure hit — no allocation.
+            JsonClassReader reader = readerCache.get(c);
+            if (reader == null) {
+                reader = readerCache.computeIfAbsent(c, cls -> {
+                    JsonClassReader found = ClassUtilities.findClosest(c, customReaderClasses, nullReader);
+                    if (found != nullReader) {
+                        return found;
+                    }
+                    // Annotation fallback: @IoCustomReader
+                    Class<? extends JsonClassReader> readerClass = AnnotationResolver.getMetadata(c).getCustomReader();
+                    if (readerClass != null) {
+                        return getOrCreateAnnotationReader(readerClass);
+                    }
+                    return nullReader;
+                });
+            }
             return reader == nullReader ? null : reader;
         }
 
