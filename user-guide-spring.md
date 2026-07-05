@@ -39,7 +39,7 @@ implementation 'com.cedarsoftware:json-io-spring-boot-starter:LATEST_VERSION'
 ```
 
 **Requirements:**
-- Spring Boot 3.x (Java 17+)
+- Spring Boot 3.x or 4.x (Java 17+) — Spring is a `provided` dependency, so your application supplies its own Spring version (json-io forces none)
 - json-io is included transitively
 
 ## Quick Start
@@ -437,7 +437,7 @@ implementation 'com.cedarsoftware:json-io-spring-ai-toon:LATEST_VERSION'
 ```
 
 **Requirements:**
-- Spring Boot 3.5+ (Java 17+)
+- Spring Boot 3.x or 4.x (Java 17+) — Spring is a `provided` dependency, so your application supplies its own Spring version
 - Spring AI 1.1+ (your project supplies it)
 
 ### Auto-Configuration
