@@ -17,6 +17,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -205,21 +209,20 @@ public class JsonPerformanceTest {
         public DeepNode child;
     }
 
-    public static void main(String[] args) throws IOException {
-        // Parse positional mode + optional --with-gson flag. Flag can appear
-        // anywhere; mode is the first non-flag arg (or defaults to "both").
-        // The `gson` mode shortcut is equivalent to `both --with-gson`.
-        String mode = "both";
-        boolean modeAssigned = false;
+    public static void main(String[] args) throws Exception {
+        // Parse positional args + optional --with-gson flag. Flag can appear anywhere; the first
+        // non-flag arg is the mode (defaults to "both"); remaining positionals feed modes that take
+        // parameters (e.g. "profile <lib> <threads> <sec>"). The `gson` shortcut == `both --with-gson`.
+        List<String> pos = new ArrayList<>();
         for (String arg : args) {
             if (arg == null) continue;
             if ("--with-gson".equalsIgnoreCase(arg)) {
                 runGson = true;
-            } else if (!modeAssigned) {
-                mode = arg.toLowerCase();
-                modeAssigned = true;
+            } else {
+                pos.add(arg);
             }
         }
+        String mode = pos.isEmpty() ? "both" : pos.get(0).toLowerCase();
         if ("gson".equals(mode)) {
             mode = "both";
             runGson = true;
@@ -243,6 +246,17 @@ public class JsonPerformanceTest {
             case "strings":
                 testStringHeavyDatabindRead();
                 break;
+            case "threads":
+                testThreadedDatabind();
+                break;
+            case "profile": {
+                // profile <lib> <threads> <measureSec>  (run under -XX:StartFlightRecording)
+                String lib = pos.size() > 1 ? pos.get(1).toLowerCase() : "jsonio";
+                int threads = pos.size() > 2 ? Integer.parseInt(pos.get(2)) : 4;
+                int seconds = pos.size() > 3 ? Integer.parseInt(pos.get(3)) : 20;
+                profileThreaded(lib, threads, seconds);
+                break;
+            }
             case "both":
             default:
                 testFullJavaResolution();
@@ -380,6 +394,105 @@ public class JsonPerformanceTest {
                 (double) jsonIoTime / jacksonTime,
                 runGson ? String.format(" | Gson %5.2fx", (double) gsonTime / jacksonTime) : "",
                 result == null ? "null" : "ok"));
+    }
+
+    // ===================================================================================================
+    // Multi-threaded databind read: aggregate throughput + a profiling hook.
+    //
+    // Real services deserialize concurrently, and single-threaded numbers hide lock/allocation scaling.
+    // These drive N worker threads all reading the SAME ~10 KB foreign-JSON payload (java-json-benchmark
+    // "users" shape) and report AGGREGATE ops/sec, so json-io's thread-scaling can be compared to Jackson.
+    //
+    //   main() "threads"                         -> sweep {1,4,8,12} threads for json-io + Jackson, table
+    //   main() "profile <lib> <threads> <sec>"   -> hammer ONE lib at ONE thread count for <sec> seconds;
+    //                                               run under -XX:StartFlightRecording to capture hotspots.
+    // ===================================================================================================
+    private static final int THREADED_PERSONS = 20;   // ~10 KB payload
+
+    public static void testThreadedDatabind() throws Exception {
+        Payload p = buildPayload(THREADED_PERSONS);
+        LOG.info("=== TEST: Multi-threaded Databind Read (aggregate ops/sec, " + p.json.length() + "-char payload) ===");
+        LOG.info(String.format("  %-7s | %14s | %14s | %8s | %9s | %9s",
+                "threads", "JsonIo ops/s", "Jackson ops/s", "Jak/Jio", "Jio scale", "Jak scale"));
+        double jioBase = 0, jakBase = 0;
+        for (int t : new int[]{1, 4, 8, 12}) {
+            double jio = threadedOps("jsonio", t, p);
+            double jak = threadedOps("jackson", t, p);
+            if (t == 1) { jioBase = jio; jakBase = jak; }
+            LOG.info(String.format("  %-7d | %14.0f | %14.0f | %7.2fx | %8.2fx | %8.2fx",
+                    t, jio, jak, jak / jio, jio / jioBase, jak / jakBase));
+        }
+    }
+
+    public static void profileThreaded(String lib, int threads, int measureSec) throws Exception {
+        Payload p = buildPayload(THREADED_PERSONS);
+        LOG.info(String.format("=== PROFILE: %s, %d threads, %ds, %d-char payload ===", lib, threads, measureSec, p.json.length()));
+        threadedRun(lib, threads, 3000, p);                        // warmup (discarded)
+        double ops = threadedRun(lib, threads, measureSec * 1000L, p);
+        LOG.info(String.format("  %s: %d threads -> %,.0f ops/s aggregate", lib, threads, ops));
+    }
+
+    private static double threadedOps(String lib, int threads, Payload p) throws Exception {
+        threadedRun(lib, threads, 2000, p);        // warmup (discarded)
+        return threadedRun(lib, threads, 3000, p); // measure
+    }
+
+    /** Runs {@code lib} on {@code threads} workers for {@code measureMs}; returns aggregate ops/sec. */
+    private static double threadedRun(String lib, int threads, long measureMs, Payload p) throws Exception {
+        Supplier<Object> action = readAction(lib, p);
+        AtomicBoolean running = new AtomicBoolean(true);
+        AtomicLong total = new AtomicLong();
+        CountDownLatch ready = new CountDownLatch(threads);
+        CountDownLatch go = new CountDownLatch(1);
+        Thread[] ws = new Thread[threads];
+        for (int i = 0; i < threads; i++) {
+            ws[i] = new Thread(() -> {
+                long c = 0;
+                ready.countDown();
+                try { go.await(); } catch (InterruptedException e) { return; }
+                while (running.get()) {
+                    if (action.get() == null) throw new IllegalStateException("null read result");
+                    c++;
+                }
+                total.addAndGet(c);
+            }, lib + "-worker-" + i);
+            ws[i].start();
+        }
+        ready.await();
+        long t0 = System.nanoTime();
+        go.countDown();
+        Thread.sleep(measureMs);
+        running.set(false);
+        for (Thread w : ws) w.join();
+        return total.get() / ((System.nanoTime() - t0) / 1e9);
+    }
+
+    private static Supplier<Object> readAction(String lib, Payload p) {
+        switch (lib) {
+            case "jsonio":
+                return () -> JsonIo.toJava(p.json, p.readOptions).asClass(People.class);
+            case "jackson":
+                return () -> { try { return p.jackson.readValue(p.bytes, People.class); } catch (Exception e) { throw new RuntimeException(e); } };
+            case "gson":
+                return () -> GSON.fromJson(p.json, People.class);
+            default:
+                throw new IllegalArgumentException("unknown lib (jsonio|jackson|gson): " + lib);
+        }
+    }
+
+    /** Shared, read-only payload for the threaded runs (json String for json-io/gson, UTF-8 bytes for Jackson). */
+    private static final class Payload {
+        final String json; final byte[] bytes; final ObjectMapper jackson; final ReadOptions readOptions;
+        Payload(String json, byte[] bytes, ObjectMapper jackson, ReadOptions ro) {
+            this.json = json; this.bytes = bytes; this.jackson = jackson; this.readOptions = ro;
+        }
+    }
+
+    private static Payload buildPayload(int persons) {
+        People people = createPeople(persons);
+        WriteOptions wo = new WriteOptionsBuilder().showTypeInfoNever().cycleSupport(false).build();
+        String json = JsonIo.toJson(people, wo);
+        return new Payload(json, json.getBytes(StandardCharsets.UTF_8), new ObjectMapper(), ReadOptionsBuilder.getDefaultReadOptions());
     }
 
     // ---- String-heavy model mirroring java-json-benchmark's Users/User: a JavaBean (private fields +
