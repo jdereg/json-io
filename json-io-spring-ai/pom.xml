@@ -14,10 +14,32 @@
     <name>json-io-spring-ai-toon</name>
     <description>Spring AI TOON integration for json-io - provides ToolCallResultConverter and StructuredOutputConverter using TOON format for LLM-optimized serialization</description>
 
+    <!--
+      Compiled against the FLOOR (Spring Boot 3.4 / Spring 6.2, Spring AI 1.1); Spring and Spring AI are
+      PROVIDED so the host application supplies them at ITS version — json-io forces no version onto
+      consumers. Spring Boot versions come from the spring-boot-dependencies BOM (${spring-boot.bom},
+      default = floor); Spring AI is not in that BOM, so spring-ai-model is pinned to its own floor.
+    -->
     <properties>
-        <version.spring-boot>3.5.14</version.spring-boot>
-        <version.spring-ai>1.1.7</version.spring-ai>
+        <spring-boot.floor>3.4.13</spring-boot.floor>       <!-- Spring 6.2 -->
+        <spring-boot.ceiling>3.5.14</spring-boot.ceiling>    <!-- latest Boot 3.5.x, still Spring 6.2 (via -Pspring-ceiling); Boot 4 moves web auto-config packages this module imports -->
+        <spring-boot.bom>${spring-boot.floor}</spring-boot.bom>
+        <spring-ai.floor>1.1.7</spring-ai.floor>
+        <spring-ai.ceiling>1.1.7</spring-ai.ceiling>
+        <spring-ai.version>${spring-ai.floor}</spring-ai.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.bom}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <!-- json-io core -->
@@ -27,33 +49,31 @@
             <version>${project.version}</version>
         </dependency>
 
-        <!-- Spring Boot -->
+        <!-- Spring Boot — PROVIDED, BOM-managed to the floor -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
-            <version>${version.spring-boot}</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
-            <version>${version.spring-boot}</version>
             <optional>true</optional>
         </dependency>
 
-        <!-- Spring AI Model (provided - user's project supplies this) -->
+        <!-- Spring AI Model — PROVIDED: the host application supplies this at its version -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-model</artifactId>
-            <version>${version.spring-ai}</version>
+            <version>${spring-ai.version}</version>
             <scope>provided</scope>
         </dependency>
 
-        <!-- Test dependencies -->
+        <!-- Test dependencies (BOM-managed to the floor) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-            <version>${version.spring-boot}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -87,4 +107,16 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Forward-compatibility test run: build + test against the CEILING (latest Spring Boot 3.5.x)
+             instead of the floor. Usage: mvn test -Pspring-ceiling -->
+        <profile>
+            <id>spring-ceiling</id>
+            <properties>
+                <spring-boot.bom>${spring-boot.ceiling}</spring-boot.bom>
+                <spring-ai.version>${spring-ai.ceiling}</spring-ai.version>
+            </properties>
+        </profile>
+    </profiles>
 </project>

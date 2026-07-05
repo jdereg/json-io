@@ -14,29 +14,56 @@
     <name>json-io-spring-boot-starter</name>
     <description>Spring Boot starter for json-io - provides auto-configuration for JSON, JSON5, and TOON format support</description>
 
+    <!--
+      Spring Boot version RANGE this single artifact supports: FLOOR Spring Boot 3.4 (Spring 6.2)
+      → CEILING latest Spring Boot 3.5.x (Spring 6.2). The starter is compiled ONCE against the floor
+      and Spring is PROVIDED: the consuming app supplies Spring at ITS version at runtime, so the host's
+      Spring Boot version wins and json-io forces NO Spring version onto consumers. Floor-compiled
+      bytecode links forward across the Boot 3.x line; `mvn test -Pspring-ceiling` runs the suite at the
+      ceiling (${spring-boot.ceiling}), driven by ${spring-boot.bom} (default = floor).
+
+      NOTE: the range stops at Boot 3.x on purpose. Spring Boot 4 relocated the web auto-config packages
+      this starter imports (org.springframework.boot.autoconfigure.web.servlet / .web.reactive and
+      org.springframework.boot.web.codec), so a single artifact cannot ALSO compile against Boot 4 /
+      Spring 7 — supporting Boot 4 would require a separate Boot-4 source variant.
+    -->
     <properties>
-        <version.spring-boot>3.5.14</version.spring-boot>
+        <spring-boot.floor>3.4.13</spring-boot.floor>       <!-- oldest supported: Spring 6.2; compile target + default test runtime -->
+        <spring-boot.ceiling>3.5.14</spring-boot.ceiling>    <!-- newest certified: latest Boot 3.5.x, still Spring 6.2 (exercised via -Pspring-ceiling) -->
+        <spring-boot.bom>${spring-boot.floor}</spring-boot.bom>   <!-- active BOM version; default = floor -->
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.bom}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
-        <!-- json-io core -->
+        <!-- json-io core (the only thing this starter contributes to a consumer's classpath) -->
         <dependency>
             <groupId>com.cedarsoftware</groupId>
             <artifactId>json-io</artifactId>
             <version>${project.version}</version>
         </dependency>
 
-        <!-- Spring Boot -->
+        <!-- Spring — PROVIDED: compiled against the floor, supplied by the host Spring Boot app at runtime.
+             Versions come from the spring-boot-dependencies BOM above (nothing is forced on consumers). -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
-            <version>${version.spring-boot}</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
-            <version>${version.spring-boot}</version>
             <optional>true</optional>
         </dependency>
 
@@ -44,45 +71,39 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-web</artifactId>
-            <version>6.2.18</version>
-            <optional>true</optional>
+            <scope>provided</scope>
         </dependency>
 
         <!-- Spring Web MVC (for WebMvcConfigurer) -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-webmvc</artifactId>
-            <version>6.2.18</version>
-            <optional>true</optional>
+            <scope>provided</scope>
         </dependency>
 
         <!-- Spring WebFlux (optional, for reactive support) -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-webflux</artifactId>
-            <version>6.2.18</version>
-            <optional>true</optional>
+            <scope>provided</scope>
         </dependency>
 
-        <!-- Test dependencies -->
+        <!-- Test dependencies (BOM-managed to the floor) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-            <version>${version.spring-boot}</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-            <version>${version.spring-boot}</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-test</artifactId>
-            <version>3.7.18</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -116,4 +137,15 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Forward-compatibility test run: build + test against the CEILING (latest Spring Boot 3.5.x)
+             instead of the floor. Usage: mvn test -Pspring-ceiling -->
+        <profile>
+            <id>spring-ceiling</id>
+            <properties>
+                <spring-boot.bom>${spring-boot.ceiling}</spring-boot.bom>
+            </properties>
+        </profile>
+    </profiles>
 </project>

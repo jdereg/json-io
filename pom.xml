@@ -33,14 +33,9 @@
         <!-- remove source encoding warnings from maven output -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <version.java-util>4.106.0</version.java-util>
-        <!-- testing only -->
-        <version.junit-jupiter-api>5.14.4</version.junit-jupiter-api>
-        <version.junit-jupiter-params>5.14.4</version.junit-jupiter-params>
-        <version.mockito-junit-jupiter>4.11.0</version.mockito-junit-jupiter>   <!-- can't update until they have JDK support -->
-        <version.assertj-core>3.27.7</version.assertj-core>
-        <version.gson>2.14.0</version.gson>
-        <version.jackson-databind>2.22.0</version.jackson-databind>
-        <version.jtokkit>1.1.0</version.jtokkit>
+        <!-- NOTE: test-lib versions (junit/mockito/assertj/gson/jackson/jtokkit) live in the json-io
+             (core) module, NOT here. Keeping them out of the shared parent lets the Spring modules'
+             spring-boot-dependencies BOM manage their own aligned test stack without conflict. -->
 
         <!-- Build maven-***-plugins-->
         <version.maven-jar-plugin>3.5.0</version.maven-jar-plugin>
@@ -186,61 +181,6 @@
                 <groupId>com.cedarsoftware</groupId>
                 <artifactId>java-util</artifactId>
                 <version>${version.java-util}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.junit.jupiter</groupId>
-                <artifactId>junit-jupiter-engine</artifactId>
-                <version>${version.junit-jupiter-api}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.junit.jupiter</groupId>
-                <artifactId>junit-jupiter-api</artifactId>
-                <version>${version.junit-jupiter-api}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.junit.jupiter</groupId>
-                <artifactId>junit-jupiter-params</artifactId>
-                <version>${version.junit-jupiter-params}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.mockito</groupId>
-                <artifactId>mockito-junit-jupiter</artifactId>
-                <version>${version.mockito-junit-jupiter}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.assertj</groupId>
-                <artifactId>assertj-core</artifactId>
-                <version>${version.assertj-core}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>com.google.code.gson</groupId>
-                <artifactId>gson</artifactId>
-                <version>${version.gson}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-databind</artifactId>
-                <version>${version.jackson-databind}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.datatype</groupId>
-                <artifactId>jackson-datatype-jsr310</artifactId>
-                <version>${version.jackson-databind}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>com.knuddels</groupId>
-                <artifactId>jtokkit</artifactId>
-                <version>${version.jtokkit}</version>
-                <scope>test</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
