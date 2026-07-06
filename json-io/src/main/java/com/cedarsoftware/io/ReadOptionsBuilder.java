@@ -1893,6 +1893,12 @@ public class ReadOptionsBuilder {
 
         // Runtime cache (not feature options)
         private final ClassValueMap<JsonClassReader> readerCache = new ClassValueMap<>();
+        // getClassFactory() re-runs a fallback chain (Throwable/enum/record — the record test is a
+        // reflective Method.invoke) for EVERY object whose class has no explicit factory. The result
+        // is stable per class (config is frozen after build()), so cache the full outcome. Plain
+        // ConcurrentHashMap (not ClassValueMap) to avoid ClassValue cache-array pressure; NO_FACTORY
+        // is the "no factory" sentinel since ConcurrentHashMap forbids null values.
+        private final Map<Class<?>, ClassFactory> factoryCache = new ConcurrentHashMap<>();
         private final ClassValueMap<InjectorPlan> injectorPlanCache = new ClassValueMap<>();
         // Plans amortize across all parses that share this ReadOptions; mirrors injectorPlanCache.
         private final ClassValueMap<Resolver.InstantiationPlan> instantiationPlanCache = new ClassValueMap<>();
@@ -2202,7 +2208,19 @@ public class ReadOptionsBuilder {
             if (c == null) {
                 return null;
             }
+            // Fast path: cached full result. get() allocates nothing; the capturing lambda below is
+            // allocated only on a miss (once per class), so hot reads are a pure cache hit.
+            ClassFactory factory = factoryCache.get(c);
+            if (factory == null) {
+                factory = factoryCache.computeIfAbsent(c, cls -> {
+                    ClassFactory f = computeClassFactory(cls);
+                    return f == null ? NO_FACTORY : f;
+                });
+            }
+            return factory == NO_FACTORY ? null : factory;
+        }
 
+        private ClassFactory computeClassFactory(Class<?> c) {
             ClassFactory factory = this.classFactoryMap.get(c);
 
             if (factory != null) {
@@ -2248,6 +2266,10 @@ public class ReadOptionsBuilder {
         }
 
         private static final NullClass nullReader = new NullClass();
+
+        // Sentinel stored in factoryCache to mean "this class has no factory" (ConcurrentHashMap
+        // cannot store null). All ClassFactory methods are default, so an empty impl suffices.
+        private static final ClassFactory NO_FACTORY = new ClassFactory() {};
 
         /**
          * Fetch the custom reader for the passed in Class.  If it is cached (already associated to the
