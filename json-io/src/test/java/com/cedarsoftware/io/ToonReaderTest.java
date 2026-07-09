@@ -3945,4 +3945,50 @@ class ToonReaderTest {
         @IoDeserialize(as = ToonDogValueMap.class)
         public Map<String, ToonPet> mapValue;
     }
+
+    // --- Buffer-boundary "special" round-trips (analogous to the JSON CharStreamTokenizer fix) ----------
+    // TOON reads whole physical lines (FastReader 8192 buffer; ToonReader's 4096 line buffer grows on
+    // overflow) and unescapes from the fully-read line, so it does not stream escapes the way the JSON
+    // tokenizer did. These sweeps prove a long quoted value whose escapes land at/around the 256, 4096, and
+    // 8192 boundaries survives a TOON round-trip -- regression cover matching the JSON slow-path fix.
+
+    @Test
+    void toonLongStringWithEscapesAtBufferBoundariesRoundTrips() {
+        for (int pad : new int[] {255, 256, 257, 1000, 4095, 4096, 4097, 8190, 8191, 8192, 8193, 8200, 16384}) {
+            StringBuilder v = new StringBuilder();
+            for (int i = 0; i < pad; i++) {
+                v.append('x');
+            }
+            // escapes that TOON supports: \" \\ \n \r \t -- placed right at the boundary offset
+            v.append('"').append('\\').append('\n').append('\r').append('\t').append("end");
+            String value = v.toString();
+
+            java.util.Map<String, Object> src = new java.util.LinkedHashMap<>();
+            src.put("s", value);
+
+            String toon = JsonIo.toToon(src);
+            java.util.Map<?, ?> restored = JsonIo.fromToon(toon).asClass(java.util.Map.class);
+            assertEquals(value, restored.get("s"), "pad=" + pad);
+        }
+    }
+
+    @Test
+    void toonQuotedKeyWithEscapesAcrossBoundaryRoundTrips() {
+        // The escape/quote also appears in a long KEY, exercising the key-unescape path across boundaries.
+        for (int pad : new int[] {256, 4096, 8192, 8200}) {
+            StringBuilder k = new StringBuilder();
+            for (int i = 0; i < pad; i++) {
+                k.append('k');
+            }
+            k.append('"').append('\\').append("end");
+            String key = k.toString();
+
+            java.util.Map<String, Object> src = new java.util.LinkedHashMap<>();
+            src.put(key, "v");
+
+            String toon = JsonIo.toToon(src);
+            java.util.Map<?, ?> restored = JsonIo.fromToon(toon).asClass(java.util.Map.class);
+            assertEquals("v", restored.get(key), "pad=" + pad);
+        }
+    }
 }
