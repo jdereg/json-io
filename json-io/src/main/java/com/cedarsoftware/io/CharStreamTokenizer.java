@@ -1197,7 +1197,17 @@ final class CharStreamTokenizer extends JsonTokenizer {
             if (c == quoteChar) {
                 break;
             }
-            return readStringWithEscapes(str, c, quoteChar);
+            // c is the '\\' escape lead (readUntil stops on quoteChar or '\\'); read the actual escape
+            // character that follows before handing off, exactly as the borrowed and small-buffer paths do.
+            // Passing the backslash itself made readStringWithEscapes treat '\' as the escaped char and,
+            // for '\"', terminate the string one char early -- corrupting any string with >=256 plain
+            // leading characters before its first escape. (in.read() here transparently crosses a buffer
+            // refill when the escape straddles the FastReader boundary.)
+            int escapeChar = in.read();
+            if (escapeChar == -1) {
+                error("EOF reached while reading escape sequence");
+            }
+            return readStringWithEscapes(str, escapeChar, quoteChar);
         }
         return cacheString(str);
     }

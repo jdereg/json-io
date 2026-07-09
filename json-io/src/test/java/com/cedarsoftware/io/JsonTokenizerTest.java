@@ -647,6 +647,56 @@ class JsonTokenizerTest {
         assertEquals(sb.toString(), t.getText());
     }
 
+    /**
+     * A string whose escape sequences straddle the FastReader 8192-char buffer refill boundary must
+     * still decode correctly. Regression for the tokenizer dropping an escape when the backslash (or the
+     * escaped char) lands exactly at a buffer refill: the escaped quote was treated as a string
+     * terminator, so parsing ended the string early ("Object not ended with '}'"). Reproduced in the
+     * wild via NCE Update-from-HEAD when a large /cmd payload pushed a quoted note across ~8192 bytes.
+     */
+    /**
+     * A JSON string with a long plain run (>= the 256-char readBuf) before its first escape takes the
+     * "slow path" in readString. That path handed the '\' backslash itself to readStringWithEscapes instead
+     * of the character AFTER it, so '\"' was decoded as a literal '\' and the escaped quote then terminated
+     * the string one character early -- corrupting the value (and, embedded in an object, throwing "Object
+     * not ended with '}'"). Not a buffer-boundary edge: it breaks for ANY leading run >= 256 (verified from
+     * pad 256 upward), which is why pad=300 (nowhere near the 8192 FastReader buffer) must pass too. Found
+     * in the wild via NCE Update-from-HEAD when a large /cmd payload carried a quoted merged-PR note.
+     */
+    @Test
+    void escapeAfterLongPlainRunDecodesCorrectly() throws IOException {
+        for (int pad : new int[] {256, 300, 1000, 8190, 8200}) {
+            StringBuilder run = new StringBuilder();
+            for (int i = 0; i < pad; i++) {
+                run.append('x');
+            }
+            String expected = run + "\"end";                  // decoded: xxxx..."end
+            String json = "\"" + run + "\\\"end\"";           // source:  "xxxx...\"end"
+            CharStreamTokenizer t = tokenizer(json);
+            assertEquals(JsonToken.VALUE_STRING, t.nextToken(), "pad=" + pad);
+            assertEquals(expected, t.getText(), "pad=" + pad);
+        }
+    }
+
+    /**
+     * End-to-end via the public read path (JsonIo.toJava -> Map) -- the exact shape n-cube's /cmd servlet
+     * uses. A JSON object whose string value carries an escaped quote after a long plain run must
+     * round-trip; before the fix this threw a parse error mid-object.
+     */
+    @Test
+    void escapeAfterLongPlainRunParsesToMap() {
+        for (int pad : new int[] {256, 300, 1000, 8190, 8200}) {
+            StringBuilder run = new StringBuilder();
+            for (int i = 0; i < pad; i++) {
+                run.append('x');
+            }
+            String expected = run + "\"end";
+            String json = "{\"s\":\"" + run + "\\\"end\"}";
+            java.util.Map<?, ?> map = TestUtil.toMaps(json, null).asClass(null);
+            assertEquals(expected, map.get("s"), "pad=" + pad);
+        }
+    }
+
     // ------------------------------------------------------------------
     // JSON5 features
     // ------------------------------------------------------------------
