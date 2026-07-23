@@ -23,7 +23,7 @@
         <version.mockito-junit-jupiter>4.11.0</version.mockito-junit-jupiter>   <!-- can't update until they have JDK support -->
         <version.assertj-core>3.27.7</version.assertj-core>
         <version.gson>2.14.0</version.gson>
-        <version.jackson-databind>2.21.4</version.jackson-databind>
+        <version.jackson-databind>2.21.5</version.jackson-databind>
         <version.jtokkit>1.1.0</version.jtokkit>
     </properties>
 
