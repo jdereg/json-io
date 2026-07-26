@@ -5,7 +5,7 @@
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io-parent</artifactId>
     <packaging>pom</packaging>
-    <version>4.108.0</version>
+    <version>4.109.0</version>
     <description>Parent POM for json-io modules</description>
     <url>https://github.com/jdereg/json-io</url>
 
@@ -32,7 +32,7 @@
         <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ss.SSSZ</maven.build.timestamp.format>
         <!-- remove source encoding warnings from maven output -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <version.java-util>4.108.0</version.java-util>
+        <version.java-util>4.109.0</version.java-util>
         <!-- NOTE: test-lib versions (junit/mockito/assertj/gson/jackson/jtokkit) live in the json-io
              (core) module, NOT here. Keeping them out of the shared parent lets the Spring modules'
              spring-boot-dependencies BOM manage their own aligned test stack without conflict. -->

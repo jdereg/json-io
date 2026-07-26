@@ -352,14 +352,59 @@ Monitor for these security events:
 
 ### Version Information
 
-Current security-hardened version: **4.57.0** (unreleased)
-
 **Security improvements included:**
 - Memory exhaustion protection
 - Reflection security hardening  
 - Input validation & bounds checking
 - Resource management enhancements
 - Thread safety improvements
+
+### Advisory: constructor-injection RCE — fixed in 4.109.0
+
+**Affected:** json-io 4.108.0 and earlier, when deserializing untrusted input with the default
+configuration (`JsonIo.toJava(json, null)`, `ReturnType.JAVA_OBJECTS`).
+**Fixed in:** json-io **4.109.0** (the fix itself ships in java-util **4.109.0**).
+
+json-io trusts the `@type` field to decide which class to instantiate and passes the sibling JSON
+fields to that class's constructor. It performs no security checks of its own — every instantiation is
+delegated to `ClassUtilities.newInstance()` in java-util, whose denylist is the sole gate.
+
+That gate had a hole: `newInstance` routes a map of *named* arguments through a path that never
+consulted the denylist, so a class the checker itself reported as blocked was constructed anyway. An
+attacker could name an **indirect loader** whose constructor fetches and interprets a remote resource
+— `org.springframework.context.support.ClassPathXmlApplicationContext`, whose varargs
+`String... configLocations` constructor calls `refresh()` — and have it load attacker-supplied bean XML
+that instantiates `ProcessBuilder` with `init-method="start"` inside a Spring child context, beyond the
+gate's reach. Result: remote code execution from a single deserialization. The same primitive also
+reached `java.net.Socket` (SSRF) and `java.io.FileOutputStream` (arbitrary file create/truncate) using
+nothing outside `java.base`.
+
+java-util 4.109.0 enforces the gate on every instantiation path, unifies name/prefix/supertype
+checking across both the class-resolution and instantiation layers, and expands the denylist to cover
+these families by supertype name. **Upgrading json-io to 4.109.0 (which pins java-util 4.109.0) closes
+this without any code change on your part** — the default `ReturnType` is unchanged.
+
+#### Hardening beyond the upgrade
+
+If you deserialize genuinely untrusted input, prefer the read-only object model. It returns only
+`Map`/`List` and never instantiates an arbitrary class, so the entire constructor-injection surface is
+absent rather than merely gated:
+
+```java
+ReadOptions options = new ReadOptionsBuilder()
+        .returnAsNativeJsonObjects()
+        .build();
+Object data = JsonIo.toJava(untrustedJson, options).asClass(Object.class);
+```
+
+You can also tighten or loosen the gate itself through java-util (see its user guide for the full
+precedence rules and the warning that applies to unblocking):
+
+```java
+// Block additional types for your application
+ClassUtilities.SecurityChecker.addBlockedClass("com.acme.Danger");
+ClassUtilities.SecurityChecker.addBlockedPackage("com.acme.unsafe.");
+```
 
 ### Reporting Security Issues
 
