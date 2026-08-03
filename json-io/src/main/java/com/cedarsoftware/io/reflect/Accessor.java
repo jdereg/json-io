@@ -656,7 +656,8 @@ public class Accessor {
                     primitiveFunctionFailed = true;
                 }
             }
-            return (Boolean) retrieve(o);
+            Object v = retrieve(o);
+            return v == null ? false : (Boolean) v;
         } catch (JsonIoException e) {
             throw e;
         } catch (Throwable t) {
@@ -678,7 +679,8 @@ public class Accessor {
                     primitiveFunctionFailed = true;
                 }
             }
-            return ((Number) retrieve(o)).byteValue();
+            Object v = retrieve(o);
+            return v == null ? (byte) 0 : ((Number) v).byteValue();
         } catch (JsonIoException e) {
             throw e;
         } catch (Throwable t) {
@@ -700,7 +702,8 @@ public class Accessor {
                     primitiveFunctionFailed = true;
                 }
             }
-            return (Character) retrieve(o);
+            Object v = retrieve(o);
+            return v == null ? (char) 0 : (Character) v;
         } catch (JsonIoException e) {
             throw e;
         } catch (Throwable t) {
@@ -722,7 +725,8 @@ public class Accessor {
                     primitiveFunctionFailed = true;
                 }
             }
-            return ((Number) retrieve(o)).shortValue();
+            Object v = retrieve(o);
+            return v == null ? (short) 0 : ((Number) v).shortValue();
         } catch (JsonIoException e) {
             throw e;
         } catch (Throwable t) {
@@ -744,7 +748,8 @@ public class Accessor {
                     primitiveFunctionFailed = true;
                 }
             }
-            return ((Number) retrieve(o)).intValue();
+            Object v = retrieve(o);
+            return v == null ? 0 : ((Number) v).intValue();
         } catch (JsonIoException e) {
             throw e;
         } catch (Throwable t) {
@@ -766,7 +771,8 @@ public class Accessor {
                     primitiveFunctionFailed = true;
                 }
             }
-            return ((Number) retrieve(o)).longValue();
+            Object v = retrieve(o);
+            return v == null ? 0L : ((Number) v).longValue();
         } catch (JsonIoException e) {
             throw e;
         } catch (Throwable t) {
@@ -788,7 +794,8 @@ public class Accessor {
                     primitiveFunctionFailed = true;
                 }
             }
-            return ((Number) retrieve(o)).floatValue();
+            Object v = retrieve(o);
+            return v == null ? 0f : ((Number) v).floatValue();
         } catch (JsonIoException e) {
             throw e;
         } catch (Throwable t) {
@@ -810,7 +817,8 @@ public class Accessor {
                     primitiveFunctionFailed = true;
                 }
             }
-            return ((Number) retrieve(o)).doubleValue();
+            Object v = retrieve(o);
+            return v == null ? 0d : ((Number) v).doubleValue();
         } catch (JsonIoException e) {
             throw e;
         } catch (Throwable t) {
@@ -915,7 +923,13 @@ public class Accessor {
      */
     private static Object handleInaccessibleJdkField(Class<?> declaringClass, String fieldName) {
         // For JDK internal fields, return null to skip them safely
-        // This allows serialization to continue without the restricted field
+        // This allows serialization to continue without the restricted field.
+        //
+        // Every caller must tolerate this null, INCLUDING the primitive getters. A primitive field can never
+        // legitimately hold null, so getInt() and friends used to unbox the result unchecked -- and an
+        // inaccessible primitive field therefore turned this deliberate "skip" into a NullPointerException.
+        // java.sql.SQLException.vendorCode is one: java.sql is exported but not opened, so no access path
+        // reaches it, and the whole SQLException family failed to serialize at all.
         return null;
     }
 }
