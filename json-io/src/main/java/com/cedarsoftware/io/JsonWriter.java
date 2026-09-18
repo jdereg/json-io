@@ -2206,9 +2206,15 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             return false;
         }
 
-        // Determine if keys can be written as JSON object keys (strings)
-        final boolean keysKnownString = declaredKeyType == String.class;
-        final boolean keysAreStrings = keysKnownString || ensureJsonPrimitiveKeys(map);
+        // Determine if keys can be written as JSON object keys (strings).  Only the real keys can
+        // answer that.  The field's declared generic type cannot: Map<String, Object> accepts
+        // put(null, v), and through a raw reference it accepts a key of any type -- generics are not
+        // enforced at runtime.  A declared-type shortcut here committed to the flat {"k":v} form and
+        // then met the real key in writeMapBody, which threw ("Field name must not be null" for a
+        // null key, ClassCastException for a non-String one) after the opening brace was already
+        // written.  The scan below is one instanceof per key, against a write that visits every
+        // entry anyway.
+        final boolean keysAreStrings = ensureJsonPrimitiveKeys(map);
         final boolean canStringify = !keysAreStrings && stringifyMapKeys && canStringifyMapKeys(map);
 
         if (!keysAreStrings && !canStringify) {
@@ -2323,9 +2329,22 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      */
     private boolean canStringifyMapKeys(Map map) {
         if (declaredKeyType != null && declaredKeyType != Object.class) {
-            // Known declared key type — check it once
-            return Converter.isConversionSupportedFor(declaredKeyType, String.class)
-                    && Converter.isConversionSupportedFor(String.class, declaredKeyType);
+            // Known declared key type — the CONVERSION question is answered once for the whole map
+            // rather than per key, which is the point of knowing the declared type.  The NULL
+            // question is not answered by it: the declared type permits put(null, v), and a null key
+            // reaching writeStringifiedMapBody is written as the literal "null" -- precisely the
+            // ambiguity this method exists to prevent.  So the conversion check is hoisted and the
+            // null check stays per key.
+            if (!(Converter.isConversionSupportedFor(declaredKeyType, String.class)
+                    && Converter.isConversionSupportedFor(String.class, declaredKeyType))) {
+                return false;
+            }
+            for (Object key : map.keySet()) {
+                if (key == null) {
+                    return false;
+                }
+            }
+            return true;
         }
         // Unknown declared type — check each actual key
         for (Object key : map.keySet()) {
@@ -2992,32 +3011,39 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     /**
-     * Writes a JSON string value, properly escaped per JSON specifications. Uses the
-     * default 1MB string-length limit.
+     * Writes {@code s} to {@code output} as a complete JSON string value -- surrounding quotes
+     * included, with everything JSON requires escaping escaped.  Uses the default 1MB
+     * string-length cap.
+     * <p>
+     * Supported one-shot API.  It engages no structural state: no comma, no indentation, no
+     * validation of where you are in a document -- which is exactly what you want when you are
+     * assembling JSON by hand and need one value escaped correctly.  Use
+     * {@link JsonIo#createGenerator(Writer)} instead when you are writing a whole document and
+     * want the commas, indentation and structural checks handled for you.
+     * <p>
+     * A {@code null} string writes the JSON literal {@code null}, unquoted.
      *
      * @param output The Writer to write to
-     * @param s      The string to write as a JSON string value
+     * @param s      The string to write as a JSON string value; may be {@code null}
      * @throws IOException If an I/O error occurs
-     * @deprecated since 4.103.0; the implementation moved to {@code CharStreamGenerator}.
-     *             See {@link #writeBasicString(Writer, String)} for migration notes.
+     * @see JsonIo#writeJsonString(Writer, String)
      */
-    @Deprecated
     public static void writeJsonUtf8String(final Writer output, String s) throws IOException {
         CharStreamGenerator.writeJsonUtf8String(output, s);
     }
 
     /**
-     * Writes a JSON string value, properly escaped per JSON specifications, with explicit
-     * max-length cap.
+     * Writes {@code s} to {@code output} as a complete JSON string value, with an explicit
+     * length cap.  See {@link #writeJsonUtf8String(Writer, String)} for the contract; this
+     * overload only replaces the default 1MB cap, above which a {@link JsonIoException} is
+     * thrown rather than the string being written or truncated.
      *
      * @param output          The Writer to write to
-     * @param s               The string to write as a JSON string value
-     * @param maxStringLength Maximum allowed string length
+     * @param s               The string to write as a JSON string value; may be {@code null}
+     * @param maxStringLength Maximum allowed string length (memory-safety cap)
      * @throws IOException If an I/O error occurs
-     * @deprecated since 4.103.0; the implementation moved to {@code CharStreamGenerator}.
-     *             See {@link #writeBasicString(Writer, String)} for migration notes.
+     * @see JsonIo#writeJsonString(Writer, String, int)
      */
-    @Deprecated
     public static void writeJsonUtf8String(final Writer output, String s, int maxStringLength) throws IOException {
         CharStreamGenerator.writeJsonUtf8String(output, s, maxStringLength);
     }

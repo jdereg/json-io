@@ -1223,6 +1223,50 @@ public class JsonIo {
         return createGeneratorImpl(new java.io.OutputStreamWriter(out, StandardCharsets.UTF_8), writeOptions);
     }
 
+    // -------------------------------------------------------------------
+    // One-shot JSON string escaping
+    // -------------------------------------------------------------------
+
+    /**
+     * Writes {@code s} to {@code output} as a complete JSON string value -- the surrounding
+     * quotes included, and every character JSON requires escaping escaped ({@code "}, {@code \},
+     * the control characters, and the line/paragraph separators).
+     * <p>
+     * This is the one-shot counterpart to {@link #createGenerator(Writer)}.  It engages no
+     * structural state: it writes no comma, no indentation, and does not check where you are in a
+     * document.  That makes it the right call when you are assembling JSON by hand -- a log line,
+     * a hand-built fragment, a value spliced into a template -- and need exactly one value escaped
+     * correctly.  Reach for a generator instead when you are writing a whole document and want the
+     * commas, indentation and structural validation handled for you.
+     * <p>
+     * A {@code null} string writes the JSON literal {@code null}, unquoted.  Strings longer than
+     * 1MB are refused with a {@link JsonIoException} rather than written or truncated; use
+     * {@link #writeJsonString(Writer, String, int)} to set your own cap.
+     *
+     * @param output the Writer to write to; must not be {@code null}
+     * @param s      the string to write as a JSON string value; may be {@code null}
+     * @throws IOException     if writing fails
+     * @throws JsonIoException if {@code output} is {@code null}, or {@code s} exceeds the cap
+     */
+    public static void writeJsonString(Writer output, String s) throws IOException {
+        CharStreamGenerator.writeJsonUtf8String(output, s);
+    }
+
+    /**
+     * Writes {@code s} to {@code output} as a complete JSON string value with an explicit length
+     * cap.  See {@link #writeJsonString(Writer, String)} for the contract; this overload only
+     * replaces the default 1MB cap.
+     *
+     * @param output          the Writer to write to; must not be {@code null}
+     * @param s               the string to write as a JSON string value; may be {@code null}
+     * @param maxStringLength maximum allowed string length (memory-safety cap)
+     * @throws IOException     if writing fails
+     * @throws JsonIoException if {@code output} is {@code null}, or {@code s} exceeds the cap
+     */
+    public static void writeJsonString(Writer output, String s, int maxStringLength) throws IOException {
+        CharStreamGenerator.writeJsonUtf8String(output, s, maxStringLength);
+    }
+
     /**
      * Lazily-initialized default WriteOptions for createGenerator when the caller
      * passes null. Mirrors the {@link #defaultTokenizerReadOptions} pattern — building
