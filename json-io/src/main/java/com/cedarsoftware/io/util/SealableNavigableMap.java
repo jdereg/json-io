@@ -89,7 +89,7 @@ public class SealableNavigableMap<K, V> implements NavigableMap<K, V> {
     // Immutable APIs
     public boolean equals(Object o) { return navMap.equals(o); }
     public int hashCode() { return navMap.hashCode(); }
-    public String toString() { return navMap.toString(); }
+    public String toString() { return CycleSafeToString.map(this, navMap); }
     public boolean isEmpty() { return navMap.isEmpty(); }
     public boolean containsKey(Object key) { return navMap.containsKey(key); }
     public boolean containsValue(Object value) { return navMap.containsValue(value); }

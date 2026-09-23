@@ -109,7 +109,7 @@ public class SealableNavigableSet<E> implements NavigableSet<E> {
     // Immutable APIs
     public boolean equals(Object o) { return o == this || navSet.equals(o); }
     public int hashCode() { return navSet.hashCode(); }
-    public String toString() { return navSet.toString(); }
+    public String toString() { return CycleSafeToString.collection(this, navSet::iterator, CycleSafeToString.THIS_COLLECTION); }
     public int size() { return navSet.size(); }
     public boolean isEmpty() { return navSet.isEmpty(); }
     public boolean contains(Object o) { return navSet.contains(o); }

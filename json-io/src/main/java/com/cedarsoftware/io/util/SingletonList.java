@@ -236,4 +236,10 @@ public class SingletonList<T> implements List<T> {
     public int hashCode() {
         return element != UNINITIALIZED ? Arrays.hashCode(new Object[]{element}) : 1;
     }
+
+    // As Collections.singletonList() prints. Without it, Object.toString() calls hashCode(), which hashes the
+    // element -- and, in a cycle, this list again.
+    public String toString() {
+        return CycleSafeToString.collection(this, this::iterator, CycleSafeToString.THIS_COLLECTION);
+    }
 }

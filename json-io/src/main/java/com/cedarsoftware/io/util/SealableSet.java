@@ -79,7 +79,7 @@ public class SealableSet<T> implements Set<T> {
     // Immutable APIs
     public boolean equals(Object o) { return set.equals(o); }
     public int hashCode() { return set.hashCode(); }
-    public String toString() { return set.toString(); }
+    public String toString() { return CycleSafeToString.collection(this, set::iterator, CycleSafeToString.THIS_COLLECTION); }
     public int size() { return set.size(); }
     public boolean isEmpty() { return set.isEmpty(); }
     public boolean contains(Object o) { return set.contains(o); }
@@ -133,5 +133,8 @@ public class SealableSet<T> implements Set<T> {
 
         public boolean equals(Object o) { return entry.equals(o); }
         public int hashCode() { return entry.hashCode(); }
+        // As the entry it wraps prints: k=v. Without it, Object.toString() calls hashCode(), which hashes the value --
+        // and, in a cycle, the map it came from.
+        public String toString() { return CycleSafeToString.entry(this); }
     }
 }

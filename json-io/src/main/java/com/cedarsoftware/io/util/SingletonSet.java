@@ -113,4 +113,9 @@ public class SingletonSet<T> implements Set<T> {
     public void clear() {
         throw new UnsupportedOperationException("Cannot clear singleton set");
     }
+
+    // As Collections.singleton() prints.
+    public String toString() {
+        return CycleSafeToString.collection(this, this::iterator, CycleSafeToString.THIS_COLLECTION);
+    }
 }

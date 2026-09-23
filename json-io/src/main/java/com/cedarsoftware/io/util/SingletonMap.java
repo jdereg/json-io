@@ -110,6 +110,10 @@ public class SingletonMap<K, V> implements Map<K, V> {
                 SingletonMap.this.value = value;
                 return oldVal;
             }
+
+            public String toString() {
+                return CycleSafeToString.entry(this);
+            }
         });
     }
 
@@ -126,5 +130,11 @@ public class SingletonMap<K, V> implements Map<K, V> {
 
     public int hashCode() {
         return key == UNINITIALIZED ? 0 : key.hashCode() ^ (value == null ? 0 : value.hashCode());
+    }
+
+    // As Collections.singletonMap() prints. Without it, Object.toString() calls hashCode(), which hashes the value --
+    // and, in a cycle, this map again.
+    public String toString() {
+        return CycleSafeToString.map(this, this);
     }
 }

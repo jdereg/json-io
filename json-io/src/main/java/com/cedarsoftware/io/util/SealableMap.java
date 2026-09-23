@@ -67,7 +67,7 @@ public class SealableMap<K, V> implements Map<K, V> {
     // Immutable
     public boolean equals(Object obj) { return map.equals(obj); }
     public int hashCode() { return map.hashCode(); }
-    public String toString() { return map.toString(); }
+    public String toString() { return CycleSafeToString.map(this, map); }
     public int size() { return map.size(); }
     public boolean isEmpty() { return map.isEmpty(); }
     public boolean containsKey(Object key) { return map.containsKey(key); }

@@ -1,12 +1,14 @@
 package com.cedarsoftware.io;
 
 import java.io.Serializable;
+import java.lang.reflect.Array;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.IdentityHashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -719,6 +721,28 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     }
 
     // ========== Hash and Equals ==========
+    // A JsonObject graph read with @ref is routinely CYCLIC -- a child's "parent" is its parent, a ring's last "next"
+    // is its first -- so neither method may walk the graph unguarded.
+    //
+    // hashCode() is shallow: this object's own keys and leaf values, and only the KIND of a nested map, collection,
+    // array or JsonObject. It never descends, so it cannot loop, and because nothing nested is folded in, a nested
+    // object changing after this hash was cached cannot make it disagree with equals().
+    //
+    // equals() is deep: every nested value is compared. A pair this comparison has already taken as equal -- one
+    // still being compared further up, or one already found equal -- is taken as equal again. That is how a loop
+    // closes, so two reads of one cyclic document are equal while a difference anywhere on the loop is still found;
+    // and it compares each pair of objects once, so a densely cross-linked graph costs time linear in its size
+    // rather than one visit per path through it. A pair found UNEQUAL is forgotten together with every pair decided
+    // after it, since those may have been judged equal only by assuming it was -- a set lookup that tries one
+    // candidate, fails, and moves on must not leave that failed assumption behind.
+
+    // Hash of a nested value that is not hashed by content
+    private static final int NESTED_MAP = 0x4D41;
+    private static final int NESTED_COLLECTION = 0x434F;
+    private static final int NESTED_ARRAY = 0x4152;
+
+    // The pairs the comparison running on this thread has taken as equal. Present only during a comparison.
+    private static final ThreadLocal<Comparison> COMPARISON = new ThreadLocal<>();
 
     @Override
     public int hashCode() {
@@ -726,37 +750,40 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
             int result = 1;
             int len = size();
             for (int i = 0; i < len; i++) {
-                result = 31 * result + (keys[i] == null ? 0 : keys[i].hashCode());
-                result = 31 * result + hashCodeSafe(data[i]);
+                result = 31 * result + shallowHash(keys[i]);
+                result = 31 * result + shallowHash(data[i]);
             }
             hash = result;
         }
         return hash;
     }
 
-    // Package-private so subclasses (JsonObjectArray, JsonObjectMap) can reuse for
-    // their own hashCode overrides.
-    int hashCodeSafe(Object obj) {
-        if (obj == null) return 0;
-        if (!obj.getClass().isArray()) return obj.hashCode();
-        return arrayHashCode(obj, new IdentityHashMap<>());
+    // Package-private so subclasses (JsonObjectArray, JsonObjectMap) hash their own storage the same way.
+    static int shallowHash(Object value) {
+        if (value == null) {
+            return 0;
+        }
+        if (value instanceof Map) {     // a JsonObject too: equal maps must hash alike, whatever their class
+            return NESTED_MAP;
+        }
+        if (value instanceof Collection) {
+            return NESTED_COLLECTION;
+        }
+        if (value.getClass().isArray()) {
+            return 31 * NESTED_ARRAY + Array.getLength(value);
+        }
+        return value.hashCode();
     }
 
-    private int arrayHashCode(Object array, Map<Object, Integer> seen) {
-        if (array == null) return 0;
-        if (!array.getClass().isArray()) return array.hashCode();
-
-        Integer cached = seen.get(array);
-        if (cached != null) return cached;
-
-        seen.put(array, 0);
-        int result = 1;
-        if (array instanceof Object[]) {
-            for (Object item : (Object[]) array) {
-                result = 31 * result + arrayHashCode(item, seen);
-            }
+    // Hash of an @items payload: the items themselves, each hashed shallowly.
+    static int itemsHash(Object[] items) {
+        if (items == null) {
+            return 0;
         }
-        seen.put(array, result);
+        int result = 1;
+        for (Object item : items) {
+            result = 31 * result + shallowHash(item);
+        }
         return result;
     }
 
@@ -765,19 +792,154 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         if (this == obj) return true;
         if (!(obj instanceof JsonObject)) return false;
         // Cross-shape comparison returns false. Different subclasses store their data
-        // in different fields; each overrides equals to handle its own shape. This base
-        // implementation handles only lite POJO/string-keyed-map data via keys[]/data[].
+        // in different fields; each overrides storageEquals to compare its own.
         if (this.getClass() != obj.getClass()) return false;
         JsonObject other = (JsonObject) obj;
-
-        int len = size();
-        if (len != other.size()) return false;
-
-        for (int i = 0; i < len; i++) {
-            if (!Objects.equals(keys[i], other.keys[i])) return false;
-            if (!Objects.equals(data[i], other.data[i])) return false;
+        if (size() != other.size()) return false;
+        int mark = enterComparison(this, other);
+        if (mark < 0) {
+            return true;    // already taken as equal: the loop has closed, or this pair was compared before
         }
+        boolean equal = false;
+        try {
+            // The lite keys[]/data[] (none on JsonObjectMap), compared here rather than in a helper, and with
+            // Objects.equals() written out: one stack frame per level keeps the deepest comparable graph at least
+            // as deep as it was before the cycle guard.
+            int len = size;
+            Object[] otherKeys = other.keys;
+            Object[] otherData = other.data;
+            for (int i = 0; i < len; i++) {
+                Object a = keys[i];
+                Object b = otherKeys[i];
+                if (a != b && (a == null || !a.equals(b))) {
+                    return false;
+                }
+                a = data[i];
+                b = otherData[i];
+                if (a != b && (a == null || !a.equals(b))) {
+                    return false;
+                }
+            }
+            equal = storageEquals(other);
+            return equal;
+        } finally {
+            exitComparison(mark, equal);
+        }
+    }
+
+    /**
+     * Compares the storage a subclass adds to the lite keys/data -- the {@code @items} of an array, the
+     * {@code @keys}/{@code @items} of a complex-keyed map. {@code other} is the same shape and size. Called only
+     * from {@link #equals(Object)}, while the pair is on this thread's comparison path.
+     */
+    boolean storageEquals(JsonObject other) {
         return true;
+    }
+
+    /**
+     * Compares two @items payloads as {@link Arrays#deepEquals} does -- nested arrays by content -- with nested
+     * arrays guarded like JsonObjects, since an array can hold itself.
+     */
+    static boolean itemsEqual(Object[] a, Object[] b) {
+        if (a == b) return true;
+        if (a == null || b == null || a.length != b.length) return false;
+        int mark = enterComparison(a, b);
+        if (mark < 0) {
+            return true;
+        }
+        boolean equal = false;
+        try {
+            for (int i = 0; i < a.length; i++) {
+                Object e1 = a[i];
+                Object e2 = b[i];
+                if (e1 == e2) {
+                    continue;
+                }
+                if (e1 == null || e2 == null) {
+                    return false;
+                }
+                boolean same;
+                if (e1 instanceof Object[] && e2 instanceof Object[]) {
+                    same = itemsEqual((Object[]) e1, (Object[]) e2);
+                } else if (e1.getClass().isArray() || e2.getClass().isArray()) {
+                    same = Objects.deepEquals(e1, e2);      // a primitive array: it holds no references
+                } else {
+                    same = e1.equals(e2);
+                }
+                if (!same) {
+                    return false;
+                }
+            }
+            equal = true;
+            return true;
+        } finally {
+            exitComparison(mark, equal);
+        }
+    }
+
+    /**
+     * Records the pair as taken as equal by the comparison running on this thread, starting one if none is. Returns
+     * the mark to hand back to {@link #exitComparison} -- or -1 when the pair (either way round) is already taken as
+     * equal, and so need not be compared again.
+     */
+    private static int enterComparison(Object a, Object b) {
+        Comparison comparison = COMPARISON.get();
+        if (comparison == null) {
+            comparison = new Comparison();
+            COMPARISON.set(comparison);
+        }
+        Pair pair = new Pair(a, b);
+        if (!comparison.taken.add(pair)) {
+            return -1;
+        }
+        comparison.order.add(pair);
+        return comparison.order.size() - 1;
+    }
+
+    /**
+     * Ends the comparison of the pair entered at {@code mark}. An unequal pair is forgotten with everything entered
+     * after it. The outermost comparison (mark 0) removes the record itself, so nothing is left on the thread -- not
+     * even when a nested equals() throws part-way through.
+     */
+    private static void exitComparison(int mark, boolean equal) {
+        if (mark == 0) {
+            COMPARISON.remove();
+            return;
+        }
+        if (!equal) {
+            Comparison comparison = COMPARISON.get();
+            ArrayList<Pair> order = comparison.order;
+            for (int i = order.size() - 1; i >= mark; i--) {
+                comparison.taken.remove(order.remove(i));
+            }
+        }
+    }
+
+    private static final class Comparison {
+        final HashSet<Pair> taken = new HashSet<>();
+        final ArrayList<Pair> order = new ArrayList<>();
+    }
+
+    // Two objects compared, by identity and either way round: hashCode() cannot be used on a cyclic graph.
+    private static final class Pair {
+        private final Object a;
+        private final Object b;
+
+        Pair(Object a, Object b) {
+            this.a = a;
+            this.b = b;
+        }
+
+        @Override
+        public int hashCode() {
+            return System.identityHashCode(a) + System.identityHashCode(b);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            Pair p = (Pair) o;
+            return (a == p.a && b == p.b) || (a == p.b && b == p.a);
+        }
     }
 
     // ========== Resolution Support ==========
