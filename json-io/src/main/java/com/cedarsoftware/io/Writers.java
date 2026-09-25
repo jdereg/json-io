@@ -346,6 +346,21 @@ public class Writers {
     }
 
     /**
+     * Writes a {@link java.nio.charset.Charset} as its canonical name, typed as {@code Charset}.
+     * <p>
+     * A Charset's runtime class is a JDK-internal subclass ({@code sun.nio.cs.UTF_8}, ...). Written under
+     * that name it could not be read back: JDK 16+ cannot instantiate a class in a non-exported package.
+     * Naming the public type instead lets the reader convert the name back through the Converter
+     * ({@code Charset.forName}), on every JDK, whatever the implementation class.
+     */
+    public static class CharsetWriter extends PrimitiveUtf8StringWriter {
+        @Override
+        public String getTypeName(Object o) {
+            return "java.nio.charset.Charset";
+        }
+    }
+
+    /**
      * Used as a template to write out primitive String types.
      * Uses default key of "value" and encodes the string.
      */
