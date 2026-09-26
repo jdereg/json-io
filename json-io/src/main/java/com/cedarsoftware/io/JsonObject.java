@@ -2,6 +2,7 @@ package com.cedarsoftware.io;
 
 import java.io.Serializable;
 import java.lang.reflect.Array;
+import java.util.AbstractCollection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.ArrayList;
@@ -668,7 +669,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         }
     }
 
-    private class ValuesCollection extends AbstractSet<Object> {
+    // A Collection, not a Set: values repeat (and, like HashMap.values(), it is not equal to a Set of the same values)
+    private class ValuesCollection extends AbstractCollection<Object> {
         @Override
         public int size() {
             return JsonObject.this.size();
@@ -748,14 +750,15 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     }
 
     /**
-     * One field as an entry of {@link #entrySet()}, reading and writing through to this JsonObject. A new one per
+     * One field as an entry of {@link #entrySet()} -- or, of a complex-keyed map, one key/value pair -- reading and
+     * writing through to this JsonObject, by way of the fast accessors each shape overrides. A new one per
      * {@code next()}: a single entry re-pointed at each field in turn -- as this used to be -- left anything that
      * keeps entries (a List of them, {@code toArray()}, a sorted stream) holding the last field N times, and made
      * {@code setValue()} on a kept entry write whichever field the iterator had reached. (The JDK fixed the same
      * pattern in EnumMap and IdentityHashMap as a bug, JDK-6312706.) json-io's own hot loops use
      * {@link #fastKeyAt}/{@link #fastValueAt} and allocate nothing.
      */
-    private final class FieldEntry implements Entry<Object, Object> {
+    final class FieldEntry implements Entry<Object, Object> {
         private final int index;
 
         FieldEntry(int index) {
@@ -764,19 +767,18 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
 
         @Override
         public Object getKey() {
-            return keys[index];
+            return fastKeyAt(index);
         }
 
         @Override
         public Object getValue() {
-            return data[index];
+            return fastValueAt(index);
         }
 
         @Override
         public Object setValue(Object value) {
-            Object old = data[index];
-            data[index] = value;
-            hash = null;
+            Object old = fastValueAt(index);
+            fastSetValueAt(index, value);       // clears the cached hash
             return old;
         }
 
@@ -784,18 +786,17 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         public boolean equals(Object o) {
             if (!(o instanceof Map.Entry)) return false;
             Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
-            return Objects.equals(keys[index], e.getKey()) &&
-                    Objects.equals(data[index], e.getValue());
+            return Objects.equals(getKey(), e.getKey()) && Objects.equals(getValue(), e.getValue());
         }
 
         @Override
         public int hashCode() {
-            return Objects.hashCode(keys[index]) ^ Objects.hashCode(data[index]);
+            return Objects.hashCode(getKey()) ^ Objects.hashCode(getValue());
         }
 
         @Override
         public String toString() {
-            return keys[index] + "=" + data[index];
+            return getKey() + "=" + getValue();
         }
     }
 

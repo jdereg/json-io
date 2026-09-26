@@ -1,5 +1,6 @@
 package com.cedarsoftware.io;
 
+import java.util.AbstractCollection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.Collection;
@@ -248,7 +249,7 @@ class JsonObjectMap extends JsonObject {
         }
     }
 
-    private final class MapValuesCollection extends AbstractSet<Object> {
+    private final class MapValuesCollection extends AbstractCollection<Object> {
         @Override
         public int size() {
             return JsonObjectMap.this.size();
@@ -309,8 +310,7 @@ class JsonObjectMap extends JsonObject {
                 @Override
                 public Map.Entry<Object, Object> next() {
                     if (!hasNext()) throw new NoSuchElementException();
-                    int i = idx++;
-                    return new AbstractMap.SimpleEntry<>(keysRef[i], valuesRef[i]);
+                    return new FieldEntry(idx++);     // reads and writes through, as a plain JsonObject's do
                 }
             };
         }
