@@ -2526,8 +2526,8 @@ public class ToonReader {
         }
         if (strictToon) {
             // §8 / §14.4: duplicate sibling keys at the same depth MUST error in strict
-            // mode. Non-strict mode applies last-write-wins silently (the appendFieldForParser
-            // below already overwrites the prior value). For target.get to distinguish
+            // mode. Non-strict mode applies last-write-wins silently (appendFieldForParser
+            // below appends the key again, and every JsonObject lookup reads its last value). For target.get to distinguish
             // "key is present with null value" from "key is absent", use containsKey.
             if (target.containsKey(key)) {
                 Object existing = target.get(key);

@@ -46,7 +46,9 @@ import java.util.Set;
  * entries are appended in insertion order to parallel {@code keys[]} / {@code data[]}
  * arrays via {@link #put} or {@link #appendFieldForParser} (the parser-only fast path
  * that skips duplicate-key detection). Lookup is linear up to {@link #getLinearSearchThreshold},
- * after which a lazy {@code HashMap} index is built for O(1) lookup. Calling
+ * after which a lazy {@code HashMap} index is built for O(1) lookup. A key a document repeats is kept as many
+ * times as it appears, and every lookup ({@code get}, {@code containsKey}, {@code put}) finds its LAST value, at
+ * every size -- as Maps mode, field injection and JavaScript's {@code JSON.parse} do. Calling
  * {@link #setItems} or {@link #setKeys} on a lite instance throws &mdash; those methods
  * are only valid on {@code JsonObjectArray} / {@code JsonObjectMap}.</p>
  *
@@ -410,7 +412,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
      * Parser-only fast append path.
      * <p>
      * JSON object keys are overwhelmingly unique in practice, so this method skips duplicate-key
-     * search and appends directly to avoid per-field {@code indexOf()} churn during parse.
+     * search and appends directly to avoid per-field {@code indexOf()} churn during parse. A repeated key is
+     * appended again; lookups then find its last value (see {@link #indexOf}).
      * The hash index is built lazily on first lookup via {@code indexOf()} -- but once a lookup has built it
      * (strict TOON checks each key for a duplicate before appending it), every appended key must go into it,
      * or get() and containsKey() miss the fields that follow while keySet() still lists them.
@@ -446,19 +449,22 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         int idx = indexOf(key);
         if (idx < 0) return null;
 
-        Object old = data[idx];
+        Object old = data[idx];     // the value get() returned: the last one
+        do {
+            // Every copy of a key a document repeated: removing one must not bring back the one before it
+            int numMoved = size - idx - 1;
+            if (numMoved > 0) {
+                System.arraycopy(keys, idx + 1, keys, idx, numMoved);
+                System.arraycopy(data, idx + 1, data, idx, numMoved);
+            }
 
-        int numMoved = size - idx - 1;
-        if (numMoved > 0) {
-            System.arraycopy(keys, idx + 1, keys, idx, numMoved);
-            System.arraycopy(data, idx + 1, data, idx, numMoved);
-        }
-
-        size--;
-        keys[size] = null;
-        data[size] = null;
-        hash = null;
-        index = null;
+            size--;
+            keys[size] = null;
+            data[size] = null;
+            hash = null;
+            index = null;
+            idx = indexOf(key);
+        } while (idx >= 0);
 
         return old;
     }
@@ -507,8 +513,9 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         if (size == 0) return -1;
 
         if (size <= INDEX_THRESHOLD) {
-            // Linear search for small objects
-            for (int i = 0; i < size; i++) {
+            // Linear search for small objects -- from the end, so a key a document repeated resolves to its last
+            // value, as the index below does (a later HashMap.put replaces an earlier one)
+            for (int i = size - 1; i >= 0; i--) {
                 if (Objects.equals(key, keys[i])) {
                     return i;
                 }
