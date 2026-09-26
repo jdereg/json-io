@@ -670,10 +670,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     }
 
     private class EntryIterator implements Iterator<Entry<Object, Object>> {
-        private final Object[] vals = data;
         private final int len = JsonObject.this.size();
         private int idx = 0;
-        private final ReusableEntry entry = new ReusableEntry();
 
         @Override
         public boolean hasNext() {
@@ -683,15 +681,24 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         @Override
         public Entry<Object, Object> next() {
             if (!hasNext()) throw new NoSuchElementException();
-            entry.index = idx++;
-            entry.vals = vals;
-            return entry;
+            return new FieldEntry(idx++);
         }
     }
 
-    private class ReusableEntry implements Entry<Object, Object> {
-        int index;
-        Object[] vals;
+    /**
+     * One field as an entry of {@link #entrySet()}, reading and writing through to this JsonObject. A new one per
+     * {@code next()}: a single entry re-pointed at each field in turn -- as this used to be -- left anything that
+     * keeps entries (a List of them, {@code toArray()}, a sorted stream) holding the last field N times, and made
+     * {@code setValue()} on a kept entry write whichever field the iterator had reached. (The JDK fixed the same
+     * pattern in EnumMap and IdentityHashMap as a bug, JDK-6312706.) json-io's own hot loops use
+     * {@link #fastKeyAt}/{@link #fastValueAt} and allocate nothing.
+     */
+    private final class FieldEntry implements Entry<Object, Object> {
+        private final int index;
+
+        FieldEntry(int index) {
+            this.index = index;
+        }
 
         @Override
         public Object getKey() {
@@ -700,13 +707,13 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
 
         @Override
         public Object getValue() {
-            return vals[index];
+            return data[index];
         }
 
         @Override
         public Object setValue(Object value) {
-            Object old = vals[index];
-            vals[index] = value;
+            Object old = data[index];
+            data[index] = value;
             hash = null;
             return old;
         }
@@ -716,13 +723,17 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
             if (!(o instanceof Map.Entry)) return false;
             Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
             return Objects.equals(keys[index], e.getKey()) &&
-                    Objects.equals(vals[index], e.getValue());
+                    Objects.equals(data[index], e.getValue());
         }
 
         @Override
         public int hashCode() {
-            return (keys[index] == null ? 0 : keys[index].hashCode()) ^
-                    (vals[index] == null ? 0 : vals[index].hashCode());
+            return Objects.hashCode(keys[index]) ^ Objects.hashCode(data[index]);
+        }
+
+        @Override
+        public String toString() {
+            return keys[index] + "=" + data[index];
         }
     }
 
