@@ -206,6 +206,12 @@ class JsonObjectMap extends JsonObject {
         return valuesRef[index];
     }
 
+    @Override
+    void fastSetValueAt(int index, Object value) {
+        valuesRef[index] = value;
+        hash = null;
+    }
+
     private final class MapKeySet extends AbstractSet<Object> {
         @Override
         public int size() {

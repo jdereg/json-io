@@ -340,10 +340,13 @@ public class MapResolver extends Resolver {
             injectorMap = readOptions.getDeepInjectorMap(target.getClass());
         }
 
-        for (Map.Entry<Object, Object> e : jsonObj.entrySet()) {
-            final Object fieldKey = e.getKey();
+        // By index, through the allocation-free accessors: this loop runs for every object a Maps-mode read builds,
+        // and is too large for the JIT to eliminate an entrySet() entry per field.
+        final int fieldCount = jsonObj.fastEntryCount();
+        for (int i = 0; i < fieldCount; i++) {
+            final Object fieldKey = jsonObj.fastKeyAt(i);
             final String fieldName = fieldKey instanceof String ? (String) fieldKey : null;
-            final Object rhs = e.getValue();
+            final Object rhs = jsonObj.fastValueAt(i);
             
             if (rhs == null) {
                 // No action needed - null is already the value in the map entry
@@ -370,14 +373,14 @@ public class MapResolver extends Resolver {
                 }
                 JsonObject refObject = resolveReference(jObj);
                 if (refObject != null) {    // Correct field references
-                    e.setValue(refObject);   // Direct update - avoids indexOf() lookup
+                    jsonObj.fastSetValueAt(i, refObject);   // Direct update - avoids indexOf() lookup
                 } else {
                     // In Maps mode, convert JsonObjects with simple types (Byte, Short, etc.)
                     // to their Java equivalents and update the Map entry
                     Object converted = convertIfNonRefType(jObj, jObj.getRawType());
                     if (converted != null) {
                         jObj.setFinishedTarget(converted, true);
-                        e.setValue(converted);  // Direct update - avoids indexOf() lookup
+                        jsonObj.fastSetValueAt(i, converted);  // Direct update - avoids indexOf() lookup
                     } else {
                         push(jObj);
                     }
@@ -405,15 +408,15 @@ public class MapResolver extends Resolver {
                     fastValue = FastIsoParser.parse((String) rhs, fieldType);
                 }
                 if (fastValue != null) {
-                    e.setValue(fastValue);   // Direct update - avoids indexOf() lookup
+                    jsonObj.fastSetValueAt(i, fastValue);   // Direct update - avoids indexOf() lookup
                 } else if (converter.isConversionSupportedFor(rhsClass, fieldType)) {
                     Object fieldValue = converter.convert(rhs, fieldType);
-                    e.setValue(fieldValue);  // Direct update - avoids indexOf() lookup
+                    jsonObj.fastSetValueAt(i, fieldValue);  // Direct update - avoids indexOf() lookup
                 } else if (rhs instanceof String && StringUtilities.isEmpty((String)rhs)) {
                     // Fallback: Allow "" to null out a field when converter doesn't support String conversion.
                     // Note: fieldType cannot be String.class here (line 390 checks rhsClass == fieldType).
                     // StringBuilder/StringBuffer have converter support, so they're handled above.
-                    e.setValue(null);        // Direct update - avoids indexOf() lookup
+                    jsonObj.fastSetValueAt(i, null);        // Direct update - avoids indexOf() lookup
                 }
             }
         }

@@ -570,6 +570,12 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         return data[index];
     }
 
+    /** Replaces the value at {@code index}, as {@code setValue()} on that field's entry would, allocating nothing. */
+    void fastSetValueAt(int index, Object value) {
+        data[index] = value;
+        hash = null;
+    }
+
     private class KeySet extends AbstractSet<Object> {
         @Override
         public int size() {
