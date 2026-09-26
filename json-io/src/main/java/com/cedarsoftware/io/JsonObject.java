@@ -7,7 +7,6 @@ import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -46,7 +45,7 @@ import java.util.Set;
  * entries are appended in insertion order to parallel {@code keys[]} / {@code data[]}
  * arrays via {@link #put} or {@link #appendFieldForParser} (the parser-only fast path
  * that skips duplicate-key detection). Lookup is linear up to {@link #getLinearSearchThreshold},
- * after which a lazy {@code HashMap} index is built for O(1) lookup. A key a document repeats is kept as many
+ * after which a lazy hash index is built for O(1) lookup. A key a document repeats is kept as many
  * times as it appears, and every lookup ({@code get}, {@code containsKey}, {@code put}) finds its LAST value, at
  * every size -- as Maps mode, field injection and JavaScript's {@code JSON.parse} do. Calling
  * {@link #setItems} or {@link #setKeys} on a lite instance throws &mdash; those methods
@@ -75,7 +74,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     private static final int INITIAL_CAPACITY = 16;
     // Package-private so subclasses (JsonObjectMap.asTwoArrays) can return canonical empty arrays.
     static final Object[] EMPTY = new Object[0];
-    // Threshold for switching from linear search to HashMap index.
+    // Threshold for switching from linear search to the hash index.
     // Lower values reduce O(n²) cost of building objects with many fields.
     private static volatile int INDEX_THRESHOLD = 4;
 
@@ -86,8 +85,11 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     private Object[] data;
     private int size;
 
-    // Lazy index for O(1) lookup on large objects
-    private transient Map<Object, Integer> index;
+    // Lazy index for O(1) lookup on objects past the linear-search threshold. Open addressing over positions: a slot
+    // holds a position + 1 (0 = empty), found from the key's hash by linear probing, in a power-of-two table kept at
+    // most half full. An int per slot, where the HashMap<Object, Integer> it replaces cost a node per field and often a
+    // boxed Integer: past the threshold, an object that was looked up paid for its arrays AND a HashMap.
+    private transient int[] index;
 
     // Cached values — package-private so subclasses can invalidate after their own mutations.
     Integer hash;
@@ -396,12 +398,11 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
 
         if (index != null) {
             // Index exists, add new key to it
-            index.put(key, size);
+            indexKey(key, size);
         } else if (size == INDEX_THRESHOLD) {
             // Just crossed threshold - build index proactively so next put() uses it
             // This includes the key we just added (at position 'size')
-            buildIndex();
-            index.put(key, size);
+            buildIndex(size + 1);
         }
 
         size++;
@@ -423,7 +424,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         keys[size] = key;
         data[size] = value;
         if (index != null) {
-            index.put(key, size);
+            indexKey(key, size);
         }
         size++;
         hash = null;
@@ -514,7 +515,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
 
         if (size <= INDEX_THRESHOLD) {
             // Linear search for small objects -- from the end, so a key a document repeated resolves to its last
-            // value, as the index below does (a later HashMap.put replaces an earlier one)
+            // value, as the index below does (a later position replaces an earlier one)
             for (int i = size - 1; i >= 0; i--) {
                 if (Objects.equals(key, keys[i])) {
                     return i;
@@ -525,17 +526,65 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
 
         // Use index for large POJO objects
         if (index == null) {
-            buildIndex();
+            buildIndex(size);
         }
-        Integer idx = index.get(key);
-        return idx != null ? idx : -1;
+        int[] table = index;
+        int mask = table.length - 1;
+        int i = slotOf(key, table.length);
+        for (;;) {
+            int slot = table[i];
+            if (slot == 0) {
+                return -1;
+            }
+            if (Objects.equals(key, keys[slot - 1])) {
+                return slot - 1;
+            }
+            i = (i + 1) & mask;
+        }
     }
 
-    private void buildIndex() {
-        index = new HashMap<>(size + (size >> 1));
-        for (int i = 0; i < size; i++) {
-            index.put(keys[i], i);
+    /** Indexes positions 0 to count - 1. A key a document repeated resolves to its last position. */
+    private void buildIndex(int count) {
+        int capacity = 16;
+        while (capacity < count * 2) {
+            capacity <<= 1;
         }
+        int[] table = new int[capacity];
+        for (int i = 0; i < count; i++) {
+            indexInsert(table, keys[i], i);
+        }
+        index = table;
+    }
+
+    /** Adds the key just stored at {@code pos} to the index, rebuilding it larger rather than pass half full. */
+    private void indexKey(Object key, int pos) {
+        if ((pos + 1) * 2 > index.length) {
+            buildIndex(pos + 1);
+        } else {
+            indexInsert(index, key, pos);
+        }
+    }
+
+    private void indexInsert(int[] table, Object key, int pos) {
+        int mask = table.length - 1;
+        int i = slotOf(key, table.length);
+        for (;;) {
+            int slot = table[i];
+            if (slot == 0 || Objects.equals(key, keys[slot - 1])) {
+                table[i] = pos + 1;     // an empty slot, or the key again: its later position wins
+                return;
+            }
+            i = (i + 1) & mask;
+        }
+    }
+
+    /**
+     * The key's home slot in a table of {@code length} (a power of two): Fibonacci hashing, the top bits of the hash
+     * times 2^32 / phi. Linear probing needs keys spread evenly; field names like field0..field999 have hash codes
+     * in overlapping runs, which the low bits alone pile into long clusters.
+     */
+    private static int slotOf(Object key, int length) {
+        return (Objects.hashCode(key) * 0x9E3779B9) >>> (Integer.numberOfLeadingZeros(length) + 1);
     }
 
     private void ensureCapacity(int minCapacity) {
