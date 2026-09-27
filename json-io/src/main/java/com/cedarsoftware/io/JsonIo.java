@@ -322,7 +322,9 @@ public class JsonIo {
      */
     private static Resolver createResolver(ReadOptions readOptions) {
         ReferenceTracker references = new Resolver.DefaultReferenceTracker(readOptions);
-        Converter converter = new Converter(readOptions.getConverterOptions());
+        Converter converter = readOptions instanceof ReadOptionsBuilder.DefaultReadOptions ?
+                ((ReadOptionsBuilder.DefaultReadOptions) readOptions).converter() :
+                new Converter(readOptions.getConverterOptions());
         return readOptions.isReturningJsonObjects() ?
                 new MapResolver(readOptions, references, converter) :
                 new ObjectResolver(readOptions, references, converter);

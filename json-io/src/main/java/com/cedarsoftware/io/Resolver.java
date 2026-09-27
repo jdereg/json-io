@@ -236,6 +236,14 @@ public abstract class Resolver {
         return references;
     }
 
+    /**
+     * The Converter this read uses. It is shared by every read with the same ReadOptions (the ReadOptions are fixed
+     * once built), so a conversion added to it with {@code addConversion()} is kept for later reads with those
+     * ReadOptions too, on every thread. To customize conversions, prefer
+     * {@link ReadOptionsBuilder#addConverterOverride} when building the ReadOptions.
+     *
+     * @return the Converter for this read
+     */
     public Converter getConverter() {
         return converter;
     }

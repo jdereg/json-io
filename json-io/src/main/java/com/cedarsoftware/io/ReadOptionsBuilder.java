@@ -1935,6 +1935,8 @@ public class ReadOptionsBuilder {
         private boolean aliasesShared;
         // These options returning JsonObjects (toMaps() reads with them): made on first use, and go when these go
         private volatile ReadOptions returningJsonObjects;
+        // The Converter every read with these options uses (their conversion settings are fixed once built)
+        private volatile Converter converter;
         // Class-keyed settings: plain concurrent maps and sets, cheap to copy from the BASE_* settings on every
         // build. The per-object lookups read the per-class caches below, which consult these only on first use.
         private Map<Class<?>, Class<?>> coercedTypes = new ConcurrentHashMapNullSafe<>();
@@ -2405,6 +2407,25 @@ public class ReadOptionsBuilder {
             return returnType == ReadOptions.ReturnType.JSON_OBJECTS;
         }
 
+        /**
+         * The Converter for reads with these options, made from their conversion settings on first use and shared by
+         * every read with them, on any thread. (One per read cost an allocation and a copy of the converter
+         * overrides every time.)
+         */
+        Converter converter() {
+            Converter c = converter;
+            if (c == null) {
+                synchronized (this) {       // one only: a conversion added to it must reach every later read
+                    c = converter;
+                    if (c == null) {
+                        c = new Converter(converterOptions);
+                        converter = c;
+                    }
+                }
+            }
+            return c;
+        }
+
         /** These options, returning JsonObjects (Maps): themselves if they already do, else a copy made once. */
         ReadOptions returningJsonObjects() {
             if (isReturningJsonObjects()) {
@@ -2498,6 +2519,7 @@ public class ReadOptionsBuilder {
             injectorsCache = newInjectorsCache();
             injectorPlanCache = newInjectorPlanCache();
             instantiationPlanCache = newInstantiationPlanCache();
+            converter = null;
         }
 
         private Map<String, Injector> buildInjectors(Class<?> c) {
