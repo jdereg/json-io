@@ -40,8 +40,8 @@ import com.cedarsoftware.io.reflect.filters.FieldFilter;
 import com.cedarsoftware.io.reflect.filters.field.EnumFieldFilter;
 import com.cedarsoftware.io.reflect.filters.field.StaticFieldFilter;
 import com.cedarsoftware.util.ClassUtilities;
-import com.cedarsoftware.util.ClassValueMap;
-import com.cedarsoftware.util.ClassValueSet;
+import com.cedarsoftware.util.ConcurrentHashMapNullSafe;
+import com.cedarsoftware.util.ConcurrentSet;
 import com.cedarsoftware.util.RegexUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.ReflectionUtils;
@@ -83,18 +83,19 @@ public class ReadOptionsBuilder {
     private static final Logger LOG = Logger.getLogger(ReadOptionsBuilder.class.getName());
     static { LoggingConfig.init(); }
 
-    // The BASE_* Maps/Sets with Class<?> keys use ClassValueMap/ClassValueSet for fast lookups (2-10x faster than ConcurrentHashMap)
-    private static final Map<Class<?>, JsonClassReader> BASE_READERS = new ClassValueMap<>();
-    private static final Map<Class<?>, ClassFactory> BASE_CLASS_FACTORIES = new ClassValueMap<>();
+    // The BASE_* settings are copied into every ReadOptions built, so they are plain concurrent maps and sets: cheap
+    // to copy. The per-object lookups go through each ReadOptions' per-class caches (ClassValues), not these.
+    private static final Map<Class<?>, JsonClassReader> BASE_READERS = new ConcurrentHashMapNullSafe<>();
+    private static final Map<Class<?>, ClassFactory> BASE_CLASS_FACTORIES = new ConcurrentHashMapNullSafe<>();
     // BASE_ALIAS_MAPPINGS uses LinkedHashMap to maintain insertion order so later aliases override earlier ones
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = Collections.synchronizedMap(new LinkedHashMap<>());
-    private static final Map<Class<?>, Class<?>> BASE_COERCED_TYPES = new ClassValueMap<>();
-    private static final Set<Class<?>> BASE_NON_REFS = new ClassValueSet();
-    private static final Set<Class<?>> BASE_NOT_CUSTOM_READ = new ClassValueSet();
+    private static final Map<Class<?>, Class<?>> BASE_COERCED_TYPES = new ConcurrentHashMapNullSafe<>();
+    private static final Set<Class<?>> BASE_NON_REFS = new ConcurrentSet<>();
+    private static final Set<Class<?>> BASE_NOT_CUSTOM_READ = new ConcurrentSet<>();
     private static final Map<Class<? extends JsonClassReader>, JsonClassReader> annotationReaderCache = new ConcurrentHashMap<>();
-    private static final ClassValueMap<Map<String, String>> BASE_NONSTANDARD_SETTERS = new ClassValueMap<>();
-    private static final Map<Class<?>, Set<String>> BASE_NOT_IMPORTED_FIELDS = new ClassValueMap<>();
-    private static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ClassValueMap<>();
+    private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_SETTERS = new ConcurrentHashMapNullSafe<>();
+    private static final Map<Class<?>, Set<String>> BASE_NOT_IMPORTED_FIELDS = new ConcurrentHashMapNullSafe<>();
+    private static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ConcurrentHashMapNullSafe<>();
     
     // Base permanent security limits - default to unlimited for backward compatibility
     private static volatile int BASE_MAX_UNRESOLVED_REFERENCES = Integer.MAX_VALUE;
@@ -138,10 +139,6 @@ public class ReadOptionsBuilder {
     private static volatile boolean BASE_FAIL_ON_UNKNOWN_TYPE = true;        // true fail on unknown type
     private static volatile boolean BASE_CLOSE_STREAM = true;                // true close stream after parsing
     
-    // Cache of fields used for accessors. Controlled by ignoredFields
-    private static final ClassValueMap<Map<String, Field>> classMetaCache = new ClassValueMap<>();
-    private static final ClassValueMap<Map<String, Injector>> injectorsCache = new ClassValueMap<>();
-
     private final static ReadOptions defReadOptions;
     private final DefaultReadOptions options;
 
@@ -941,20 +938,15 @@ public class ReadOptionsBuilder {
         JsonObject.setLinearSearchThreshold(options.linearSearchThreshold);
         
         options.aliasTypeNames = Collections.unmodifiableMap(options.aliasTypeNames);
-        options.coercedTypes = ((ClassValueMap<Class<?>>)options.coercedTypes).unmodifiableView();
-        // Capture typed fast-path refs before the unmodifiableView reassignment so that
-        // hot-path ClassValue computeValue lookups can call containsClass(Class) directly,
-        // skipping the instanceof-Class guard that contains(Object) must perform.
-        options.notCustomReadClassesFast = (ClassValueSet) options.notCustomReadClasses;
-        options.nonRefClassesFast = (ClassValueSet) options.nonRefClasses;
-        options.notCustomReadClasses = options.notCustomReadClassesFast.unmodifiableView();
-        options.customReaderClasses = ((ClassValueMap<JsonClassReader>)options.customReaderClasses).unmodifiableView();
-        options.classFactoryMap = ((ClassValueMap<ClassFactory>)options.classFactoryMap).unmodifiableView();
-        options.nonRefClasses = options.nonRefClassesFast.unmodifiableView();
+        options.coercedTypes = Collections.unmodifiableMap(options.coercedTypes);
+        options.notCustomReadClasses = Collections.unmodifiableSet(options.notCustomReadClasses);
+        options.customReaderClasses = Collections.unmodifiableMap(options.customReaderClasses);
+        options.classFactoryMap = Collections.unmodifiableMap(options.classFactoryMap);
+        options.nonRefClasses = Collections.unmodifiableSet(options.nonRefClasses);
         options.converterOptions.converterOverrides = Collections.unmodifiableMap(options.converterOptions.converterOverrides);
         options.converterOptions.customOptions = Collections.unmodifiableMap(options.converterOptions.customOptions);
-        options.excludedFieldNames = ((ClassValueMap<Set<String>>)options.excludedFieldNames).unmodifiableView();
-        options.fieldsNotImported = ((ClassValueMap<Set<String>>)options.fieldsNotImported).unmodifiableView();
+        options.excludedFieldNames = Collections.unmodifiableMap(options.excludedFieldNames);
+        options.fieldsNotImported = Collections.unmodifiableMap(options.fieldsNotImported);
         options.fieldFilters = Collections.unmodifiableList(options.fieldFilters);
         options.injectorFactories = Collections.unmodifiableList(options.injectorFactories);
         options.customOptions = Collections.unmodifiableMap(options.customOptions);
@@ -1875,33 +1867,78 @@ public class ReadOptionsBuilder {
         private int linearSearchThreshold = 8;            // 8 linear search threshold (same as JsonObject hardcoded default)
         
         private Map<String, String> aliasTypeNames = new LinkedHashMap<>();
-        private Map<Class<?>, Class<?>> coercedTypes = new ClassValueMap<>();
-        private Set<Class<?>> notCustomReadClasses = new ClassValueSet();
-        private Map<Class<?>, JsonClassReader> customReaderClasses = new ClassValueMap<>();
-        private Map<Class<?>, ClassFactory> classFactoryMap = new ClassValueMap<>();
-        private Set<Class<?>> nonRefClasses = new ClassValueSet();
-        // Typed fast-path references captured at build() time (same ClassValueSet instance as
-        // notCustomReadClasses / nonRefClasses before they're reassigned to an unmodifiable view).
-        // Used by ClassValue computeValue chains to skip the instanceof-Class guard.
-        private ClassValueSet notCustomReadClassesFast;
-        private ClassValueSet nonRefClassesFast;
-        private Map<Class<?>, Set<String>> excludedFieldNames = new ClassValueMap<>();
-        private Map<Class<?>, Set<String>> fieldsNotImported = new ClassValueMap<>();
+        // Class-keyed settings: plain concurrent maps and sets, cheap to copy from the BASE_* settings on every
+        // build. The per-object lookups read the per-class caches below, which consult these only on first use.
+        private Map<Class<?>, Class<?>> coercedTypes = new ConcurrentHashMapNullSafe<>();
+        private Set<Class<?>> notCustomReadClasses = new ConcurrentSet<>();
+        private Map<Class<?>, JsonClassReader> customReaderClasses = new ConcurrentHashMapNullSafe<>();
+        private Map<Class<?>, ClassFactory> classFactoryMap = new ConcurrentHashMapNullSafe<>();
+        private Set<Class<?>> nonRefClasses = new ConcurrentSet<>();
+        private Map<Class<?>, Set<String>> excludedFieldNames = new ConcurrentHashMapNullSafe<>();
+        private Map<Class<?>, Set<String>> fieldsNotImported = new ConcurrentHashMapNullSafe<>();
         private List<FieldFilter> fieldFilters = new ArrayList<>();
         private List<InjectorFactory> injectorFactories = new ArrayList<>();
         private Map<String, Object> customOptions = new LinkedHashMap<>();
 
-        // Runtime cache (not feature options)
-        private final ClassValueMap<JsonClassReader> readerCache = new ClassValueMap<>();
+        // Runtime caches (not feature options): per class, worked out on first use and kept on the class (a
+        // ClassValue, read without locking). The nullReader is cached for "no custom reader".
+        private final ClassValue<JsonClassReader> readerCache = new ClassValue<JsonClassReader>() {
+            @Override
+            protected JsonClassReader computeValue(Class<?> c) {
+                return findCustomReader(c);
+            }
+        };
         // getClassFactory() re-runs a fallback chain (Throwable/enum/record — the record test is a
         // reflective Method.invoke) for EVERY object whose class has no explicit factory. The result
         // is stable per class (config is frozen after build()), so cache the full outcome. Plain
         // ConcurrentHashMap (not ClassValueMap) to avoid ClassValue cache-array pressure; NO_FACTORY
         // is the "no factory" sentinel since ConcurrentHashMap forbids null values.
         private final Map<Class<?>, ClassFactory> factoryCache = new ConcurrentHashMap<>();
-        private final ClassValueMap<InjectorPlan> injectorPlanCache = new ClassValueMap<>();
+        // The fields and injectors of a class depend on this ReadOptions' settings (excluded and not-imported fields,
+        // field filters, injector factories), so they are cached per ReadOptions. (They were static, shared by every
+        // ReadOptions: one ReadOptions' not-imported field was then missing for all of them.) Replaced, not emptied,
+        // by clearCaches(): a ClassValue cannot be emptied.
+        private volatile ClassValue<Map<String, Field>> classMetaCache = newClassMetaCache();
+        private volatile ClassValue<Map<String, Injector>> injectorsCache = newInjectorsCache();
+        private volatile ClassValue<InjectorPlan> injectorPlanCache = newInjectorPlanCache();
         // Plans amortize across all parses that share this ReadOptions; mirrors injectorPlanCache.
-        private final ClassValueMap<Resolver.InstantiationPlan> instantiationPlanCache = new ClassValueMap<>();
+        private volatile ClassValue<Resolver.InstantiationPlan> instantiationPlanCache = newInstantiationPlanCache();
+
+        private ClassValue<Map<String, Field>> newClassMetaCache() {
+            return new ClassValue<Map<String, Field>>() {
+                @Override
+                protected Map<String, Field> computeValue(Class<?> c) {
+                    return buildDeepFieldMap(c);
+                }
+            };
+        }
+
+        private ClassValue<Map<String, Injector>> newInjectorsCache() {
+            return new ClassValue<Map<String, Injector>>() {
+                @Override
+                protected Map<String, Injector> computeValue(Class<?> c) {
+                    return buildInjectors(c);
+                }
+            };
+        }
+
+        private ClassValue<InjectorPlan> newInjectorPlanCache() {
+            return new ClassValue<InjectorPlan>() {
+                @Override
+                protected InjectorPlan computeValue(Class<?> c) {
+                    return new InjectorPlan(getDeepInjectorMap(c));
+                }
+            };
+        }
+
+        private ClassValue<Resolver.InstantiationPlan> newInstantiationPlanCache() {
+            return new ClassValue<Resolver.InstantiationPlan>() {
+                @Override
+                protected Resolver.InstantiationPlan computeValue(Class<?> c) {
+                    return Resolver.buildInstantiationPlan(c, DefaultReadOptions.this);
+                }
+            };
+        }
 
         /**
          * Per-(ReadOptions-instance) memoization of {@link #isNonReferenceableClass(Class)}.
@@ -1914,9 +1951,7 @@ public class ReadOptionsBuilder {
         private final ClassValue<Boolean> nonRefCache = new ClassValue<Boolean>() {
             @Override
             protected Boolean computeValue(Class<?> type) {
-                ClassValueSet fast = nonRefClassesFast;
-                boolean inSet = (fast != null) ? fast.containsClass(type) : nonRefClasses.contains(type);
-                return inSet ||
+                return nonRefClasses.contains(type) ||
                         Number.class.isAssignableFrom(type) ||
                         Date.class.isAssignableFrom(type) ||
                         String.class.isAssignableFrom(type) ||
@@ -1932,9 +1967,7 @@ public class ReadOptionsBuilder {
         private final ClassValue<Boolean> notCustomReadCache = new ClassValue<Boolean>() {
             @Override
             protected Boolean computeValue(Class<?> type) {
-                ClassValueSet fast = notCustomReadClassesFast;
-                boolean inSet = (fast != null) ? fast.containsClass(type) : notCustomReadClasses.contains(type);
-                return inSet || AnnotationResolver.getMetadata(type).isNotCustomRead();
+                return notCustomReadClasses.contains(type) || AnnotationResolver.getMetadata(type).isNotCustomRead();
             }
         };
 
@@ -2280,25 +2313,23 @@ public class ReadOptionsBuilder {
          * @return JsonClassReader for the custom class (if one exists), null otherwise.
          */
         public JsonClassReader getCustomReader(Class<?> c) {
-            // Fast path: a plain get() allocates nothing. computeIfAbsent below would allocate the
-            // capturing lambda on EVERY call (hit or miss); after warmup every class is cached (with the
-            // nullReader sentinel for no-custom-reader classes), so this is a pure hit — no allocation.
-            JsonClassReader reader = readerCache.get(c);
-            if (reader == null) {
-                reader = readerCache.computeIfAbsent(c, cls -> {
-                    JsonClassReader found = ClassUtilities.findClosest(c, customReaderClasses, nullReader);
-                    if (found != nullReader) {
-                        return found;
-                    }
-                    // Annotation fallback: @IoCustomReader
-                    Class<? extends JsonClassReader> readerClass = AnnotationResolver.getMetadata(c).getCustomReader();
-                    if (readerClass != null) {
-                        return getOrCreateAnnotationReader(readerClass);
-                    }
-                    return nullReader;
-                });
-            }
+            // After warmup every class is cached (with the nullReader sentinel for no-custom-reader classes), so
+            // this is a pure hit: no lock, no allocation.
+            JsonClassReader reader = c == null ? findCustomReader(null) : readerCache.get(c);
             return reader == nullReader ? null : reader;
+        }
+
+        private JsonClassReader findCustomReader(Class<?> c) {
+            JsonClassReader found = ClassUtilities.findClosest(c, customReaderClasses, nullReader);
+            if (found != nullReader) {
+                return found;
+            }
+            // Annotation fallback: @IoCustomReader
+            Class<? extends JsonClassReader> readerClass = AnnotationResolver.getMetadata(c).getCustomReader();
+            if (readerClass != null) {
+                return getOrCreateAnnotationReader(readerClass);
+            }
+            return nullReader;
         }
 
         /**
@@ -2364,40 +2395,25 @@ public class ReadOptionsBuilder {
             if (classToTraverse == null) {
                 return Collections.emptyMap();
             }
-            // Avoid computeIfAbsent with method reference - creates lambda on every call
-            Map<String, Injector> injectors = injectorsCache.getByClass(classToTraverse);
-            if (injectors == null) {
-                injectors = buildInjectors(classToTraverse);
-                injectorsCache.put(classToTraverse, injectors);
-            }
-            return injectors;
+            return injectorsCache.get(classToTraverse);
         }
 
         InjectorPlan getInjectorPlan(Class<?> classToTraverse) {
             if (classToTraverse == null) {
                 return InjectorPlan.EMPTY;
             }
-            InjectorPlan plan = injectorPlanCache.getByClass(classToTraverse);
-            if (plan == null) {
-                plan = new InjectorPlan(getDeepInjectorMap(classToTraverse));
-                injectorPlanCache.put(classToTraverse, plan);
-            }
-            return plan;
+            return injectorPlanCache.get(classToTraverse);
         }
 
         Resolver.InstantiationPlan getInstantiationPlan(Class<?> targetType) {
-            Resolver.InstantiationPlan plan = instantiationPlanCache.getByClass(targetType);
-            if (plan == null) {
-                plan = Resolver.buildInstantiationPlan(targetType, this);
-                instantiationPlanCache.put(targetType, plan);
-            }
-            return plan;
+            return targetType == null ? Resolver.buildInstantiationPlan(null, this) : instantiationPlanCache.get(targetType);
         }
 
         public void clearCaches() {
-            injectorsCache.clear();
-            injectorPlanCache.clear();
-            instantiationPlanCache.clear();
+            classMetaCache = newClassMetaCache();
+            injectorsCache = newInjectorsCache();
+            injectorPlanCache = newInjectorPlanCache();
+            instantiationPlanCache = newInstantiationPlanCache();
         }
 
         private Map<String, Injector> buildInjectors(Class<?> c) {
@@ -2417,7 +2433,7 @@ public class ReadOptionsBuilder {
                 // Check @IoSetter/@JsonSetter annotation — but only if no programmatic override exists
                 String annotationSetter = annMeta.getSetterMethod(field.getName());
                 if (annotationSetter != null) {
-                    Map<String, String> classSetters = BASE_NONSTANDARD_SETTERS.getByClass(field.getDeclaringClass());
+                    Map<String, String> classSetters = BASE_NONSTANDARD_SETTERS.get(field.getDeclaringClass());
                     if (classSetters == null || !classSetters.containsKey(field.getName())) {
                         try {
                             injector = Injector.create(field, annotationSetter, fieldName);
@@ -2493,13 +2509,7 @@ public class ReadOptionsBuilder {
          * deep list of fields for a given class.
          */
         public Map<String, Field> getDeepDeclaredFields(final Class<?> c) {
-            // Avoid computeIfAbsent with method reference - creates lambda on every call
-            Map<String, Field> fields = classMetaCache.getByClass(c);
-            if (fields == null) {
-                fields = buildDeepFieldMap(c);
-                classMetaCache.put(c, fields);
-            }
-            return fields;
+            return c == null ? buildDeepFieldMap(null) : classMetaCache.get(c);
         }
 
         /**

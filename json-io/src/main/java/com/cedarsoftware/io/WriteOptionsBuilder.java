@@ -36,8 +36,8 @@ import com.cedarsoftware.io.reflect.filters.method.DefaultMethodFilter;
 import com.cedarsoftware.io.reflect.filters.method.NamedMethodFilter;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.RegexUtilities;
-import com.cedarsoftware.util.ClassValueMap;
-import com.cedarsoftware.util.ClassValueSet;
+import com.cedarsoftware.util.ConcurrentHashMapNullSafe;
+import com.cedarsoftware.util.ConcurrentSet;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.LRUCache;
 import com.cedarsoftware.util.ReflectionUtils;
@@ -80,14 +80,15 @@ public class WriteOptionsBuilder {
     private static final Logger LOG = Logger.getLogger(WriteOptionsBuilder.class.getName());
     static { LoggingConfig.init(); }
 
-    // The BASE_* Maps/Sets with Class<?> keys use ClassValueMap/ClassValueSet for fast lookups (2-10x faster than ConcurrentHashMap)
+    // The BASE_* settings are copied into every WriteOptions built, so they are plain concurrent maps and sets: cheap
+    // to copy. The per-object lookups go through each WriteOptions' per-class caches (ClassValues), not these.
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
-    private static final Map<Class<?>, JsonClassWriter> BASE_WRITERS = new ClassValueMap<>();
-    private static final Set<Class<?>> BASE_NON_REFS = new ClassValueSet();
-    private static final Set<Class<?>> BASE_NOT_CUSTOM_WRITTEN = new ClassValueSet();
+    private static final Map<Class<?>, JsonClassWriter> BASE_WRITERS = new ConcurrentHashMapNullSafe<>();
+    private static final Set<Class<?>> BASE_NON_REFS = new ConcurrentSet<>();
+    private static final Set<Class<?>> BASE_NOT_CUSTOM_WRITTEN = new ConcurrentSet<>();
     private static final Map<Class<? extends JsonClassWriter>, JsonClassWriter> annotationWriterCache = new ConcurrentHashMap<>();
-    static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ClassValueMap<>();
-    private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_GETTERS = new ClassValueMap<>();
+    static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ConcurrentHashMapNullSafe<>();
+    private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_GETTERS = new ConcurrentHashMapNullSafe<>();
     private static final Map<String, FieldFilter> BASE_FIELD_FILTERS = new ConcurrentHashMap<>();
     private static final Map<String, MethodFilter> BASE_METHOD_FILTERS = new ConcurrentHashMap<>();
     private static final Map<String, AccessorFactory> BASE_ACCESSOR_FACTORIES = new ConcurrentHashMap<>();
@@ -1913,21 +1914,16 @@ public class WriteOptionsBuilder {
      */
     public WriteOptions build() {
         options.clearCaches();
-        options.includedFieldNames = ((ClassValueMap<Set<String>>)options.includedFieldNames).unmodifiableView();
-        options.nonStandardGetters = ((ClassValueMap<Map<String, String>>)options.nonStandardGetters).unmodifiableView();
+        options.includedFieldNames = Collections.unmodifiableMap(options.includedFieldNames);
+        options.nonStandardGetters = Collections.unmodifiableMap(options.nonStandardGetters);
         options.aliasTypeNames = Collections.unmodifiableMap(options.aliasTypeNames);
-        // Capture typed fast-path refs before the unmodifiableView reassignment so that
-        // hot-path ClassValue computeValue lookups can call containsClass(Class) directly,
-        // skipping the instanceof-Class guard that contains(Object) must perform.
-        options.nonRefClassesFast = (ClassValueSet) options.nonRefClasses;
-        options.notCustomWrittenClassesFast = (ClassValueSet) options.notCustomWrittenClasses;
-        options.notCustomWrittenClasses = options.notCustomWrittenClassesFast.unmodifiableView();
-        options.nonRefClasses = options.nonRefClassesFast.unmodifiableView();
-        options.excludedFieldNames = ((ClassValueMap<Set<String>>)options.excludedFieldNames).unmodifiableView();
+        options.notCustomWrittenClasses = Collections.unmodifiableSet(options.notCustomWrittenClasses);
+        options.nonRefClasses = Collections.unmodifiableSet(options.nonRefClasses);
+        options.excludedFieldNames = Collections.unmodifiableMap(options.excludedFieldNames);
         options.fieldFilters = Collections.unmodifiableMap(options.fieldFilters);
         options.methodFilters = Collections.unmodifiableMap(options.methodFilters);
         options.accessorFactories = Collections.unmodifiableMap(options.accessorFactories);
-        options.customWrittenClasses = ((ClassValueMap<JsonClassWriter>)options.customWrittenClasses).unmodifiableView();
+        options.customWrittenClasses = Collections.unmodifiableMap(options.customWrittenClasses);
         options.customOptions = Collections.unmodifiableMap(options.customOptions);
         return options;
     }
@@ -2013,22 +2009,19 @@ public class WriteOptionsBuilder {
 
         private JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
         private ClassLoader classLoader = ClassUtilities.getClassLoader(DefaultWriteOptions.class);
-        private Map<Class<?>, Set<String>> includedFieldNames = new ClassValueMap<>();
-        private Map<Class<?>, Map<String, String>> nonStandardGetters = new ClassValueMap<>();
+        // Class-keyed settings: plain concurrent maps and sets, cheap to copy from the BASE_* settings on every
+        // build. The per-object lookups read the per-class caches below, which consult these only on first use.
+        private Map<Class<?>, Set<String>> includedFieldNames = new ConcurrentHashMapNullSafe<>();
+        private Map<Class<?>, Map<String, String>> nonStandardGetters = new ConcurrentHashMapNullSafe<>();
         // Pre-size builder maps to avoid resize during typical configuration
         private Map<String, String> aliasTypeNames = new LinkedHashMap<>(32);
-        private Set<Class<?>> notCustomWrittenClasses = new ClassValueSet();
-        private Set<Class<?>> nonRefClasses = new ClassValueSet();
-        // Typed fast-path references captured at build() time (same ClassValueSet instance as
-        // notCustomWrittenClasses / nonRefClasses before they're reassigned to an unmodifiable view).
-        // Used by ClassValue computeValue chains to skip the instanceof-Class guard.
-        private ClassValueSet notCustomWrittenClassesFast;
-        private ClassValueSet nonRefClassesFast;
-        private Map<Class<?>, Set<String>> excludedFieldNames = new ClassValueMap<>();
+        private Set<Class<?>> notCustomWrittenClasses = new ConcurrentSet<>();
+        private Set<Class<?>> nonRefClasses = new ConcurrentSet<>();
+        private Map<Class<?>, Set<String>> excludedFieldNames = new ConcurrentHashMapNullSafe<>();
         private Map<String, FieldFilter> fieldFilters = new LinkedHashMap<>(16);
         private Map<String, MethodFilter> methodFilters = new LinkedHashMap<>(16);
         private Map<String, AccessorFactory> accessorFactories = new LinkedHashMap<>(16);
-        private Map<Class<?>, JsonClassWriter> customWrittenClasses = new ClassValueMap<>();
+        private Map<Class<?>, JsonClassWriter> customWrittenClasses = new ConcurrentHashMapNullSafe<>();
         private Map<String, Object> customOptions = new LinkedHashMap<>(16);
         private DefaultConverterOptions converterOptions = new DefaultConverterOptions();
 
@@ -2043,23 +2036,46 @@ public class WriteOptionsBuilder {
         private double bufferSizeMultiplier = 1.3;     // Buffer size multiplier for pretty-printing (30% larger)
         private int indentationThreshold = 10;         // Threshold for switching indentation strategies
 
-        // Runtime caches (not feature options), since looking up writers can be expensive
-        // when one does not exist, we cache the writer or a nullWriter if one does not exist.
-        private final ClassValueMap<JsonClassWriter> writerCache = new ClassValueMap<>();
-        private final ClassValueMap<CustomWriterGate> customWriterGateCache = new ClassValueMap<>();
+        // Runtime caches (not feature options): per class, worked out on first use and kept on the class (a
+        // ClassValue, read without locking). Looking up a writer can be expensive when there is none, so the
+        // nullWriter is cached for "none".
+        private final ClassValue<JsonClassWriter> writerCache = new ClassValue<JsonClassWriter>() {
+            @Override
+            protected JsonClassWriter computeValue(Class<?> c) {
+                return findCustomWriter(c);
+            }
+        };
+        // Replaced (not emptied) by clearCaches(): a ClassValue cannot be emptied
+        private volatile ClassValue<CustomWriterGate> customWriterGateCache = newCustomWriterGateCache();
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
-        private Map<Class<?>, List<Accessor>> accessorsCache = new ClassValueMap<>();
-        private ClassValueMap<List<WriteFieldPlan>> writeFieldPlanCache = new ClassValueMap<>();
-        private Map<Class<?>, Map<String, Field>> classMetaCache = new ClassValueMap<>();
+        private Map<Class<?>, List<Accessor>> accessorsCache;
+        private volatile ClassValue<List<WriteFieldPlan>> writeFieldPlanCache = newWriteFieldPlanCache();
+        private Map<Class<?>, Map<String, Field>> classMetaCache;
+
+        private ClassValue<CustomWriterGate> newCustomWriterGateCache() {
+            return new ClassValue<CustomWriterGate>() {
+                @Override
+                protected CustomWriterGate computeValue(Class<?> declaredType) {
+                    return new CustomWriterGate(isNotCustomWrittenClass(declaredType), getCustomWriter(declaredType));
+                }
+            };
+        }
+
+        private ClassValue<List<WriteFieldPlan>> newWriteFieldPlanCache() {
+            return new ClassValue<List<WriteFieldPlan>>() {
+                @Override
+                protected List<WriteFieldPlan> computeValue(Class<?> c) {
+                    return buildWriteFieldPlans(c);
+                }
+            };
+        }
 
         // Cache for isNonReferenceableClass() result - avoids repeated hierarchy checks for POJOs
         private final ClassValue<Boolean> nonRefCache = new ClassValue<Boolean>() {
             @Override
             protected Boolean computeValue(Class<?> type) {
-                ClassValueSet fast = nonRefClassesFast;
-                boolean inSet = (fast != null) ? fast.containsClass(type) : nonRefClasses.contains(type);
-                return inSet ||
+                return nonRefClasses.contains(type) ||
                         Number.class.isAssignableFrom(type) ||
                         Date.class.isAssignableFrom(type) ||
                         String.class.isAssignableFrom(type) ||
@@ -2161,9 +2177,7 @@ public class WriteOptionsBuilder {
          * @return boolean true if the passed in class is on the not-customized list, false otherwise.
          */
         public boolean isNotCustomWrittenClass(Class<?> clazz) {
-            ClassValueSet fast = notCustomWrittenClassesFast;
-            boolean inSet = (fast != null) ? fast.containsClass(clazz) : notCustomWrittenClasses.contains(clazz);
-            return inSet || AnnotationResolver.getMetadata(clazz).isNotCustomWrite();
+            return notCustomWrittenClasses.contains(clazz) || AnnotationResolver.getMetadata(clazz).isNotCustomWrite();
         }
 
         public List<Accessor> getAccessorsForClass(final Class<?> c) {
@@ -2177,12 +2191,7 @@ public class WriteOptionsBuilder {
         }
 
         List<WriteFieldPlan> getWriteFieldPlansForClass(final Class<?> c) {
-            List<WriteFieldPlan> plans = writeFieldPlanCache.getByClass(c);
-            if (plans == null) {
-                plans = buildWriteFieldPlans(c);
-                writeFieldPlanCache.put(c, plans);
-            }
-            return plans;
+            return c == null ? buildWriteFieldPlans(null) : writeFieldPlanCache.get(c);
         }
 
         /**
@@ -2415,24 +2424,15 @@ public class WriteOptionsBuilder {
          * @return JsonClassWriter for the custom class (if one exists), null otherwise.
          */
         public JsonClassWriter getCustomWriter(Class<?> c) {
-            // Avoid computeIfAbsent with method reference - creates lambda on every call
-            JsonClassWriter writer = writerCache.getByClass(c);
-            if (writer == null) {
-                writer = findCustomWriter(c);
-                writerCache.put(c, writer);
-            }
+            JsonClassWriter writer = c == null ? findCustomWriter(null) : writerCache.get(c);
             return writer == nullWriter ? null : writer;
         }
 
         CustomWriterGate getCustomWriterGate(Class<?> declaredType) {
-            CustomWriterGate gate = customWriterGateCache.getByClass(declaredType);
-            if (gate == null) {
-                gate = new CustomWriterGate(
-                        isNotCustomWrittenClass(declaredType),
-                        getCustomWriter(declaredType));
-                customWriterGateCache.put(declaredType, gate);
+            if (declaredType == null) {
+                return new CustomWriterGate(isNotCustomWrittenClass(null), getCustomWriter(null));
             }
-            return gate;
+            return customWriterGateCache.get(declaredType);
         }
 
         JsonClassWriter findCustomWriter(Class<?> c) {
@@ -2525,8 +2525,8 @@ public class WriteOptionsBuilder {
         public void clearCaches() {
             classMetaCache.clear();
             accessorsCache.clear();
-            writeFieldPlanCache.clear();
-            customWriterGateCache.clear();
+            writeFieldPlanCache = newWriteFieldPlanCache();
+            customWriterGateCache = newCustomWriterGateCache();
         }
 
         private List<WriteFieldPlan> buildWriteFieldPlans(final Class<?> clazz) {
