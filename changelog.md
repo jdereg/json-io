@@ -31,6 +31,8 @@
     * A copy starts from the original's aliases without changing them.
   * **Building options, with the rest of this release's changes:** `WriteOptions` 11.4 → 3.8 µs and `ReadOptions` 15.1 → 5.8 µs; they were 12 and 17 µs in 4.112.0. Creating a `WriteOptions` then writing a small map takes 18.4 → ~11.6 µs.
   * **Tests.** `AliasesSharedUntilChangedTest` (4) pins those rules. It passes against the previous code and fails if a permanent alias leaves a stale snapshot. Full suite: 4,700 + 165 + 28 tests, 0 failures.
+* **BUG FIX**: **A `ReadOptionsBuilder` copied from a `ReadOptions` no longer changes that `ReadOptions`.** `new ReadOptionsBuilder(existing)` shared the original's conversion settings, so `setZoneId()`, `setLocale()`, `setCharset()`, `classLoader()`, `setTrueCharacter()` and `setFalseCharacter()` on the copy changed the original too, even when the copy was never built. For a copy of `ReadOptionsBuilder.getDefaultReadOptions()`, that changed every read in the JVM that passes `null` options. `addConverterOverride()` on such a copy threw `UnsupportedOperationException`, because the original's overrides are unmodifiable once built. The copy now shares the settings only until it changes one, and copies them then.
+  * **Tests.** `ReadOptionsCopyKeepsOriginalTest` (4); all 4 fail against the previous code, each on the bug it targets. Full suite: 4,704 + 165 + 28 tests, 0 failures.
 * **BUILD**: `java-util` 4.112.0 → **4.113.0**, which adds the `Charset` conversions above.
 
 #### 4.112.0 - 2026-09-23

@@ -145,6 +145,9 @@ public class ReadOptionsBuilder {
     
     private final static ReadOptions defReadOptions;
     private final DefaultReadOptions options;
+    // True while options.converterOptions is the one of the ReadOptions this builder was copied from: that one is
+    // immutable, so it is shared until this builder changes a conversion setting, and copied then.
+    private boolean converterOptionsShared;
 
     static {
         // ClassFactories
@@ -252,10 +255,9 @@ public class ReadOptionsBuilder {
         if (copy != null) {
             DefaultReadOptions other = (DefaultReadOptions) copy;
 
-            // Pointing this ReadOptions.converterOptions to the other ReadOptions.converterOptions
-            // is OK, as we are not (yet) changing any of the values. However, if we decide to override
-            // one of the ConverterOptions settings, then we must deep-copy the ConverterOptions.
+            // Shared until this builder changes a conversion setting (ownConverterOptions() copies it then).
             options.converterOptions = other.converterOptions;
+            converterOptionsShared = true;
 
             // Copy simple settings
             options.allowNanAndInfinity = other.allowNanAndInfinity;
@@ -419,6 +421,18 @@ public class ReadOptionsBuilder {
             }
         }
         return snapshot;
+    }
+
+    /**
+     * This builder's own conversion settings, copied from the ReadOptions it was copied from the first time it changes
+     * one. Changing the shared ones changed that ReadOptions -- the default ReadOptions too, for the whole JVM.
+     */
+    private DefaultConverterOptions ownConverterOptions() {
+        if (converterOptionsShared) {
+            options.converterOptions = options.converterOptions.copy();
+            converterOptionsShared = false;
+        }
+        return options.converterOptions;
     }
 
     /** This builder's own aliases, copied from the shared ones the first time it changes them. */
@@ -978,8 +992,10 @@ public class ReadOptionsBuilder {
         options.customReaderClasses = Collections.unmodifiableMap(options.customReaderClasses);
         options.classFactoryMap = Collections.unmodifiableMap(options.classFactoryMap);
         options.nonRefClasses = Collections.unmodifiableSet(options.nonRefClasses);
-        options.converterOptions.converterOverrides = Collections.unmodifiableMap(options.converterOptions.converterOverrides);
-        options.converterOptions.customOptions = Collections.unmodifiableMap(options.converterOptions.customOptions);
+        if (!converterOptionsShared) {      // shared ones are already built: another ReadOptions' settings
+            options.converterOptions.converterOverrides = Collections.unmodifiableMap(options.converterOptions.converterOverrides);
+            options.converterOptions.customOptions = Collections.unmodifiableMap(options.converterOptions.customOptions);
+        }
         options.excludedFieldNames = Collections.unmodifiableMap(options.excludedFieldNames);
         options.fieldsNotImported = Collections.unmodifiableMap(options.fieldsNotImported);
         options.fieldFilters = Collections.unmodifiableList(options.fieldFilters);
@@ -1042,7 +1058,7 @@ public class ReadOptionsBuilder {
     public ReadOptionsBuilder addConverterOverride(Class<?> source, Class<?> target, Convert<?> conversionFunction) {
         source = ClassUtilities.toPrimitiveWrapperClass(source);
         target = ClassUtilities.toPrimitiveWrapperClass(target);
-        options.converterOptions.converterOverrides.put(Converter.pair(source, target), conversionFunction);
+        ownConverterOptions().converterOverrides.put(Converter.pair(source, target), conversionFunction);
         return this;
     }
 
@@ -1193,7 +1209,7 @@ public class ReadOptionsBuilder {
      */
     public ReadOptionsBuilder classLoader(ClassLoader classLoader) {
         Convention.throwIfNull(classLoader, "classloader cannot be null");
-        options.converterOptions.classloader = classLoader;
+        ownConverterOptions().classloader = classLoader;
         return this;
     }
 
@@ -1589,7 +1605,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder setLocale(Locale locale) {
-        options.converterOptions.locale = locale;
+        ownConverterOptions().locale = locale;
         return this;
     }
 
@@ -1598,7 +1614,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder setCharset(Charset charset) {
-        options.converterOptions.charset = charset;
+        ownConverterOptions().charset = charset;
         return this;
     }
 
@@ -1607,7 +1623,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder setZoneId(ZoneId zoneId) {
-        options.converterOptions.zoneId = zoneId;
+        ownConverterOptions().zoneId = zoneId;
         return this;
     }
 
@@ -1616,7 +1632,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder setTrueCharacter(Character ch) {
-        options.converterOptions.trueChar = ch;
+        ownConverterOptions().trueChar = ch;
         return this;
     }
 
@@ -1625,7 +1641,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder setFalseCharacter(Character ch) {
-        options.converterOptions.falseChar = ch;
+        ownConverterOptions().falseChar = ch;
         return this;
     }
 
@@ -1816,6 +1832,20 @@ public class ReadOptionsBuilder {
         private Character falseChar = CommonValues.CHARACTER_ZERO;
         private Map<String, Object> customOptions = new ConcurrentHashMap<>();
         private Map<Converter.ConversionPair, Convert<?>> converterOverrides = new ConcurrentHashMap<>(100, .8f);
+
+        /** A changeable copy: the same settings, in maps of its own. */
+        private DefaultConverterOptions copy() {
+            DefaultConverterOptions copy = new DefaultConverterOptions();
+            copy.zoneId = zoneId;
+            copy.locale = locale;
+            copy.charset = charset;
+            copy.classloader = classloader;
+            copy.trueChar = trueChar;
+            copy.falseChar = falseChar;
+            copy.customOptions.putAll(customOptions);
+            copy.converterOverrides.putAll(converterOverrides);
+            return copy;
+        }
 
         public ZoneId getZoneId() {
             return zoneId;
