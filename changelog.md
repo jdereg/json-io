@@ -14,6 +14,15 @@
   * **Building options:** `WriteOptions` ~11 µs, `ReadOptions` ~14 µs, and creating a `WriteOptions` then writing a small map ~16 µs (it was 20 µs).
   * **`JsonPerformanceTest`'s workloads, each alone in a fresh JVM (3 forks):** writing with cycle support 37.2 → 35.5 µs, without 34.0 → 33.1 µs, and reading 69.8 → 69.0 µs.
 * **BUG FIX**: **A field one `ReadOptions` does not import is no longer missing for every other `ReadOptions`.** A class's fields and injectors are worked out from one `ReadOptions`' settings: fields not imported, excluded fields, field filters and injector factories. They were nonetheless cached in static caches shared by every `ReadOptions`, so whichever `ReadOptions` read a class first decided its fields for all of them. After `new ReadOptionsBuilder().addNotImportedField(Foo.class, "b")` read a `Foo`, field `b` was dropped by every `ReadOptions` in the JVM, including ones built later: `build()` cleared the shared injectors but never the fields. The reverse also held, with a class read first by other options ignoring the `addNotImportedField`. Both caches now belong to each `ReadOptions`. `ReadOptionsFieldCachesArePerOptionsTest` (2) checks both orders, and both fail against the previous code.
+* **PERFORMANCE / BUG FIX (memory)**: **json-io uses no `ClassValueMap` or `ClassValueSet`, and what it works out about a class no longer keeps the class, or its `ClassLoader`, alive.** Writing or reading a class through the default options, which live for the life of the JVM, kept it in memory: a Groovy script n-cube recompiled, a plugin's class, a redeployed webapp's class, along with its loader and every class that loader loaded.
+  * **Fixed tables of JDK classes** are filled once and read through `ClassValue`s: scalar and numeric kinds, primitive-array writers, default instantiators, natural defaults, java.time parsers, and the primitive and native-JSON sets. With 40 other `ClassValue`s on the same classes a lookup stays at ~2.2 ns, against ~2.9 ns for a `HashMap`.
+  * **Caches filled for any class** are `ClassValue`s:
+    * Annotation metadata. It uses a slot per class, so its scan-cycle guard still returns `EMPTY` without caching it.
+    * Custom-writer dispatch.
+    * `ReadOptions`' class-factory cache. It was a `ConcurrentHashMap`, which held every class it saw.
+  * **`WriteOptions`' field and accessor caches** were `LRUCache`s sized by `lruSize`: bounded, but holding their classes until evicted, and writing on every hit. They are `ClassValue`s now. `lruSize` is kept for compatibility and no longer bounds anything; it already bounded nothing on the read side.
+  * **Speed, fresh JVMs, 3 forks each, together with java-util's leak-free `TypeUtilities`:** writing with cycle support 36.3 → 35.8 µs, without 33.3 → 32.5 µs, reading 71.0 → 68.0 µs.
+  * **Tests.** `ClassLoaderLeakTest` (1) writes and reads a class of a throwaway loader through the default options and checks the loader is collected. It fails against the previous code. Full suite: 4,696 + 165 + 28 tests, 0 failures.
 * **BUILD**: `java-util` 4.112.0 → **4.113.0**, which adds the `Charset` conversions above.
 
 #### 4.112.0 - 2026-09-23

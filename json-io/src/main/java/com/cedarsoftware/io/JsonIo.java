@@ -1051,8 +1051,8 @@ public class JsonIo {
 
     /**
      * Lazily-initialized default ReadOptions for createTokenizer when the caller
-     * passes null. Building ReadOptions per call is non-trivial (loads aliases,
-     * builds ClassValueMaps); for the streaming-parse hot path where most users
+     * passes null. Building ReadOptions per call is non-trivial (copies the aliases
+     * and class settings); for the streaming-parse hot path where most users
      * accept defaults, caching this saves the construction cost per parse.
      */
     private static volatile ReadOptions defaultTokenizerReadOptions;

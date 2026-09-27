@@ -177,7 +177,8 @@ public interface WriteOptions {
     boolean isCloseStream();
 
     /**
-     * @return int size of LRU Cache used to cache Class to Field and Class to Accessor
+     * @return int the lruSize setting. Retained for compatibility; no longer bounds anything: the Class-to-fields
+     * and Class-to-accessors caches are kept per class, on the class itself.
      */
     int getLruSize();
 

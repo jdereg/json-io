@@ -339,7 +339,7 @@ public class ObjectResolver extends Resolver
         final Object javaMate = jsonObj.getTarget();
         final Class<?> javaClass = javaMate.getClass();
         final ReadOptionsBuilder.InjectorPlan injectorPlan = ReadOptionsBuilder.getInjectorPlan(readOptions, javaClass);
-        // Cache annotation metadata (O(1) via ClassValueMap) once for this object — it does not
+        // Cache annotation metadata (O(1), cached per class) once for this object — it does not
         // vary by field. Reused in assignField for field-level type override lookups and in
         // assignJsonObjectField for the same reason, eliminating N per-field getMetadata calls.
         final AnnotationResolver.ClassAnnotationMetadata parentMeta =

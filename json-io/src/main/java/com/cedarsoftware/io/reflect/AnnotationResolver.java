@@ -13,6 +13,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.cedarsoftware.io.ClassFactory;
 import com.cedarsoftware.util.ClassUtilities;
@@ -44,7 +45,6 @@ import com.cedarsoftware.io.annotation.IoTypeInfo;
 import com.cedarsoftware.io.annotation.IoTypeName;
 import com.cedarsoftware.io.annotation.IoValue;
 import com.cedarsoftware.io.annotation.IoPropertyOrder;
-import com.cedarsoftware.util.ClassValueMap;
 import com.cedarsoftware.util.ReflectionUtils;
 
 /**
@@ -64,7 +64,7 @@ import com.cedarsoftware.util.ReflectionUtils;
  * dependency, supporting OSGi and JPMS classloader resolution. If the external annotation library
  * is not on the classpath, detection is silently skipped with zero overhead.
  * <p>
- * Results are cached in a static {@link ClassValueMap} — each class is scanned exactly once
+ * Results are cached in a static {@link ClassValue} — each class is scanned exactly once
  * per JVM lifetime. Annotation metadata is intrinsic to classes and does not depend on
  * ReadOptions/WriteOptions settings.
  *
@@ -366,7 +366,15 @@ public class AnnotationResolver {
 
     // ======================== Cache ========================
 
-    private static final ClassValueMap<ClassAnnotationMetadata> cache = new ClassValueMap<>();
+    // Per class, a slot for its metadata, kept on the class (a ClassValue). A slot rather than the metadata itself:
+    // a scan that meets its own class again gets EMPTY (see scanAndCache), which must not become the class's value.
+    private static final ClassValue<AtomicReference<ClassAnnotationMetadata>> cache =
+            new ClassValue<AtomicReference<ClassAnnotationMetadata>>() {
+                @Override
+                protected AtomicReference<ClassAnnotationMetadata> computeValue(Class<?> type) {
+                    return new AtomicReference<>();
+                }
+            };
     // Reverse map for @IoTypeName / @JsonTypeName: alias → fully-qualified class name
     private static final Map<String, String> annotationAliasToClassName = new ConcurrentHashMap<>();
     // ThreadLocal to track classes currently being scanned (prevents recursive stack overflow)
@@ -411,7 +419,7 @@ public class AnnotationResolver {
 
     /**
      * Get annotation metadata for a class. Scans once, caches forever.
-     * Thread-safe via ClassValueMap. Recursive calls during scanning
+     * Thread-safe via a ClassValue slot per class. Recursive calls during scanning
      * (e.g., @IoIgnoreType check on field types) return EMPTY to prevent stack overflow.
      * <p>
      * The hot path (cache hit) is kept tiny and free of try/finally so HotSpot can
@@ -423,8 +431,9 @@ public class AnnotationResolver {
         if (clazz == null) {
             return EMPTY;
         }
-        ClassAnnotationMetadata meta = cache.getByClass(clazz);
-        return meta != null ? meta : scanAndCache(clazz);
+        AtomicReference<ClassAnnotationMetadata> slot = cache.get(clazz);
+        ClassAnnotationMetadata meta = slot.get();
+        return meta != null ? meta : scanAndCache(clazz, slot);
     }
 
     /**
@@ -433,7 +442,7 @@ public class AnnotationResolver {
      * field type references back into the class being scanned. Invoked only on
      * the first {@link #getMetadata(Class)} miss for a given class.
      */
-    private static ClassAnnotationMetadata scanAndCache(Class<?> clazz) {
+    private static ClassAnnotationMetadata scanAndCache(Class<?> clazz, AtomicReference<ClassAnnotationMetadata> slot) {
         Set<Class<?>> scanning = SCANNING.get();
         if (!scanning.add(clazz)) {
             // Already scanning this class on this thread — return EMPTY to break cycle.
@@ -441,7 +450,7 @@ public class AnnotationResolver {
         }
         try {
             ClassAnnotationMetadata meta = scan(clazz);
-            cache.put(clazz, meta);
+            slot.set(meta);
             return meta;
         } finally {
             scanning.remove(clazz);
@@ -1408,7 +1417,7 @@ public class AnnotationResolver {
     // ======================== Metadata Container ========================
 
     /**
-     * Immutable per-class annotation metadata. Computed once, cached by ClassValueMap.
+     * Immutable per-class annotation metadata. Computed once, cached on the class (a ClassValue).
      */
     public static final class ClassAnnotationMetadata {
         private final Map<String, String> renamedFields;

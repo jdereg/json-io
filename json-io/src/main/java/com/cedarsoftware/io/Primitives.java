@@ -1,8 +1,8 @@
 package com.cedarsoftware.io;
 
+import java.util.HashSet;
 import java.util.Set;
 
-import com.cedarsoftware.util.ClassValueSet;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -22,31 +22,43 @@ import com.cedarsoftware.util.ClassValueSet;
  *         limitations under the License.
  */
 public class Primitives {
-    // ClassValueSet: contains(Class) rides the JVM's ClassValue fast path (class-local
-    // storage, no hash probe) — faster than hash-based sets on hot dispatch paths like
-    // JsonWriter.isForceType, which JFR showed at ~5% of write-phase CPU.
-    private static final Set<Class<?>> PRIMITIVE_WRAPPERS = new ClassValueSet();
-    private static final Set<Class<?>> NATIVE_JSON_TYPES = new ClassValueSet();
+    // Filled once below, then read through ClassValues: each class's answer is kept on the class (no hash probe)
+    // -- faster than a hash-based set on hot dispatch paths like JsonWriter.isForceType, which JFR showed at ~5%
+    // of write-phase CPU.
+    private static final Set<Class<?>> PRIMITIVE_WRAPPER_TABLE = new HashSet<>();
+    private static final Set<Class<?>> NATIVE_JSON_TYPE_TABLE = new HashSet<>();
+    private static final ClassValue<Boolean> PRIMITIVE_WRAPPERS = new ClassValue<Boolean>() {
+        @Override
+        protected Boolean computeValue(Class<?> c) {
+            return PRIMITIVE_WRAPPER_TABLE.contains(c);
+        }
+    };
+    private static final ClassValue<Boolean> NATIVE_JSON_TYPES = new ClassValue<Boolean>() {
+        @Override
+        protected Boolean computeValue(Class<?> c) {
+            return NATIVE_JSON_TYPE_TABLE.contains(c);
+        }
+    };
 
     static {
-        PRIMITIVE_WRAPPERS.add(Byte.class);
-        PRIMITIVE_WRAPPERS.add(Integer.class);
-        PRIMITIVE_WRAPPERS.add(Long.class);
-        PRIMITIVE_WRAPPERS.add(Double.class);
-        PRIMITIVE_WRAPPERS.add(Character.class);
-        PRIMITIVE_WRAPPERS.add(Float.class);
-        PRIMITIVE_WRAPPERS.add(Boolean.class);
-        PRIMITIVE_WRAPPERS.add(Short.class);
+        PRIMITIVE_WRAPPER_TABLE.add(Byte.class);
+        PRIMITIVE_WRAPPER_TABLE.add(Integer.class);
+        PRIMITIVE_WRAPPER_TABLE.add(Long.class);
+        PRIMITIVE_WRAPPER_TABLE.add(Double.class);
+        PRIMITIVE_WRAPPER_TABLE.add(Character.class);
+        PRIMITIVE_WRAPPER_TABLE.add(Float.class);
+        PRIMITIVE_WRAPPER_TABLE.add(Boolean.class);
+        PRIMITIVE_WRAPPER_TABLE.add(Short.class);
 
         // Native json types are the types we can leave the type value off of now matter what
-        NATIVE_JSON_TYPES.add(Long.class);
-        NATIVE_JSON_TYPES.add(long.class);
-        NATIVE_JSON_TYPES.add(Double.class);
-        NATIVE_JSON_TYPES.add(double.class);
-        NATIVE_JSON_TYPES.add(String.class);
-        NATIVE_JSON_TYPES.add(Boolean.class);
-        NATIVE_JSON_TYPES.add(boolean.class);
-        NATIVE_JSON_TYPES.add(Object[].class);
+        NATIVE_JSON_TYPE_TABLE.add(Long.class);
+        NATIVE_JSON_TYPE_TABLE.add(long.class);
+        NATIVE_JSON_TYPE_TABLE.add(Double.class);
+        NATIVE_JSON_TYPE_TABLE.add(double.class);
+        NATIVE_JSON_TYPE_TABLE.add(String.class);
+        NATIVE_JSON_TYPE_TABLE.add(Boolean.class);
+        NATIVE_JSON_TYPE_TABLE.add(boolean.class);
+        NATIVE_JSON_TYPE_TABLE.add(Object[].class);
     }
 
     /**
@@ -61,7 +73,7 @@ public class Primitives {
      * Integer, Long, Boolean, etc. are considered primitives by this method.
      */
     public static boolean isPrimitive(Class<?> c) {
-        return c.isPrimitive() || PRIMITIVE_WRAPPERS.contains(c);
+        return c.isPrimitive() || PRIMITIVE_WRAPPERS.get(c);
     }
 
     /**
@@ -70,6 +82,6 @@ public class Primitives {
      * Integer, Long, Boolean, etc. are considered primitives by this method.
      */
     public static boolean isNativeJsonType(Class<?> c) {
-        return NATIVE_JSON_TYPES.contains(c);
+        return c != null && NATIVE_JSON_TYPES.get(c);
     }
 }

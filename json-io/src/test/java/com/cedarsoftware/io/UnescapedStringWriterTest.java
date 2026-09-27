@@ -147,7 +147,7 @@ class UnescapedStringWriterTest {
 
     @Test
     void primitivesClassificationBehaviorPinned() {
-        // ClassValueSet swap in Primitives must preserve exact contains() semantics.
+        // Primitives' ClassValue-backed lookups must preserve exact contains() semantics.
         assertTrue(Primitives.isPrimitive(Integer.class));
         assertTrue(Primitives.isPrimitive(int.class));
         assertTrue(Primitives.isPrimitive(Boolean.class));

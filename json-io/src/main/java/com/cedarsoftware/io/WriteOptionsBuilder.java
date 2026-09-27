@@ -39,7 +39,6 @@ import com.cedarsoftware.util.RegexUtilities;
 import com.cedarsoftware.util.ConcurrentHashMapNullSafe;
 import com.cedarsoftware.util.ConcurrentSet;
 import com.cedarsoftware.util.Convention;
-import com.cedarsoftware.util.LRUCache;
 import com.cedarsoftware.util.ReflectionUtils;
 import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.TypeUtilities;
@@ -212,9 +211,6 @@ public class WriteOptionsBuilder {
         options.toonDelimiter = BASE_TOON_DELIMITER;
         options.classLoader = BASE_CLASS_LOADER;
         
-        // Initialize cache sizes with the permanent LRU size
-        options.accessorsCache = new LRUCache<>(BASE_LRU_SIZE);
-        options.classMetaCache = new LRUCache<>(BASE_LRU_SIZE);
     }
 
     /**
@@ -299,13 +295,6 @@ public class WriteOptionsBuilder {
 
             options.accessorFactories.clear();
             options.accessorFactories.putAll(other.accessorFactories);
-
-            // Copy caches
-            options.accessorsCache = new LRUCache<>(other.lruSize);
-            options.accessorsCache.putAll(other.accessorsCache);
-
-            options.classMetaCache = new LRUCache<>(other.lruSize);
-            options.classMetaCache.putAll(other.classMetaCache);
         }
     }
 
@@ -687,8 +676,9 @@ public class WriteOptionsBuilder {
     /**
      * Call this method to set a permanent (JVM lifetime) LRU cache size.
      * All WriteOptions instances will be initialized with this value unless explicitly overridden.
-     * 
-     * @param lruSize int size of LRU Cache used to cache Class to Field and Class to Accessor mappings.
+     *
+     * @param lruSize Retained for compatibility; no longer bounds anything. The Class-to-fields and
+     *                Class-to-accessors caches are kept per class, on the class itself.
      *                Must be at least 1. Default is 1000.
      */
     public static void addPermanentLruSize(int lruSize) {
@@ -1023,19 +1013,13 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * @param size Max size of the cache for Class fields and Class accessors
+     * @param size Retained for compatibility; no longer bounds anything. The Class-to-fields and Class-to-accessors
+     *             caches it sized are kept per class, on the class itself (bounded by the classes written, and
+     *             never keeping a class alive).
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder lruSize(int size) {
         options.lruSize = size;
-
-        Map<Class<?>, List<Accessor>> accessorCacheCopy = options.accessorsCache;
-        options.accessorsCache = new LRUCache<>(options.getLruSize());
-        options.accessorsCache.putAll(accessorCacheCopy);
-
-        Map<Class<?>, Map<String, Field>> classMetaCacheCopy = options.classMetaCache;
-        options.classMetaCache = new LRUCache<>(options.getLruSize());
-        options.classMetaCache.putAll(classMetaCacheCopy);
         return this;
     }
     
@@ -2049,9 +2033,27 @@ public class WriteOptionsBuilder {
         private volatile ClassValue<CustomWriterGate> customWriterGateCache = newCustomWriterGateCache();
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
-        private Map<Class<?>, List<Accessor>> accessorsCache;
+        private volatile ClassValue<List<Accessor>> accessorsCache = newAccessorsCache();
         private volatile ClassValue<List<WriteFieldPlan>> writeFieldPlanCache = newWriteFieldPlanCache();
-        private Map<Class<?>, Map<String, Field>> classMetaCache;
+        private volatile ClassValue<Map<String, Field>> classMetaCache = newClassMetaCache();
+
+        private ClassValue<List<Accessor>> newAccessorsCache() {
+            return new ClassValue<List<Accessor>>() {
+                @Override
+                protected List<Accessor> computeValue(Class<?> c) {
+                    return buildDeepAccessors(c);
+                }
+            };
+        }
+
+        private ClassValue<Map<String, Field>> newClassMetaCache() {
+            return new ClassValue<Map<String, Field>>() {
+                @Override
+                protected Map<String, Field> computeValue(Class<?> c) {
+                    return buildWithIncludedMinusExcluded(c);
+                }
+            };
+        }
 
         private ClassValue<CustomWriterGate> newCustomWriterGateCache() {
             return new ClassValue<CustomWriterGate>() {
@@ -2181,13 +2183,7 @@ public class WriteOptionsBuilder {
         }
 
         public List<Accessor> getAccessorsForClass(final Class<?> c) {
-            // Avoid computeIfAbsent with method reference - creates lambda on every call
-            List<Accessor> accessors = accessorsCache.get(c);
-            if (accessors == null) {
-                accessors = buildDeepAccessors(c);
-                accessorsCache.put(c, accessors);
-            }
-            return accessors;
+            return c == null ? buildDeepAccessors(null) : accessorsCache.get(c);
         }
 
         List<WriteFieldPlan> getWriteFieldPlansForClass(final Class<?> c) {
@@ -2523,8 +2519,8 @@ public class WriteOptionsBuilder {
         }
 
         public void clearCaches() {
-            classMetaCache.clear();
-            accessorsCache.clear();
+            classMetaCache = newClassMetaCache();
+            accessorsCache = newAccessorsCache();
             writeFieldPlanCache = newWriteFieldPlanCache();
             customWriterGateCache = newCustomWriterGateCache();
         }
@@ -2654,13 +2650,7 @@ public class WriteOptionsBuilder {
          * deep list of fields for a given class.
          */
         public Map<String, Field> getDeepDeclaredFields(final Class<?> c) {
-            // Avoid computeIfAbsent with method reference - creates lambda on every call
-            Map<String, Field> fields = classMetaCache.get(c);
-            if (fields == null) {
-                fields = buildWithIncludedMinusExcluded(c);
-                classMetaCache.put(c, fields);
-            }
-            return fields;
+            return c == null ? buildWithIncludedMinusExcluded(null) : classMetaCache.get(c);
         }
 
         private Map<String, Field> buildWithIncludedMinusExcluded(Class<?> c) {

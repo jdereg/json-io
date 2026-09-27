@@ -115,14 +115,14 @@ you know that the maximum object nesting level has been reached.
 >- [ ] Set the max depth to allow for nested JSON {...}.  Set this to prevent security risk from`StackOverflow`attack
    vectors.
 
-### lruSize - LRU Size [Cache of fields and filters]
-Set the maximum number of `Class` to `Field` mappings and `Class` to filter mappings. This will allow infrequently used `Class's`
-to drop from the cache - they will be dynamically added back if not in the cache.  Reduces operational memory foot print.
+### lruSize - LRU Size (retained for compatibility)
+Kept so existing code compiles and runs; it bounds nothing. What `ReadOptions` works out about a class (its fields, injectors,
+factory, reader) is kept on the class itself: bounded by the classes read, never keeping a class alive, and read without locking.
 > #### `int` lruSize()
->- [ ] Return the LRU size. Default is 1000.
+>- [ ] Return the lruSize setting. Default is 1000.
 
 > #### `ReadOptionsBuilder` lruSize(`int size`)
->- [ ] Set the max LRU cache size
+>- [ ] Set the lruSize setting (no effect)
 
 ### Security Limits - Advanced DoS Protection
 
@@ -822,23 +822,16 @@ ReadOptions options2 = new ReadOptionsBuilder()              // Can override if 
 
 #### Add Permanent LRU Size
 
-The `addPermanentLruSize` method allows you to set a permanent LRU cache size that controls memory usage for field and filter mappings across your application.
+The `addPermanentLruSize` method sets the lruSize every new `ReadOptions` starts with. It is retained for compatibility and bounds nothing: what `ReadOptions` works out about a class is kept on the class itself (see [lruSize](#lrusize---lru-size-retained-for-compatibility)).
 
-- **Purpose**: This method establishes a global LRU cache size for `Class` to `Field` mappings and `Class` to filter mappings. The LRU cache automatically evicts infrequently used entries to control memory footprint.
+- **Validation**: The method validates that the value is at least 1, throwing a `JsonIoException` for invalid values.
 
-- **Memory Management**: By setting a permanent LRU size, you ensure consistent memory usage patterns across your application. Larger caches improve performance but use more memory, while smaller caches reduce memory usage but may require more frequent cache rebuilding.
-
-- **Validation**: The method validates that the LRU size is at least 1, throwing a `JsonIoException` for invalid values.
-
-- **Default Value**: The default permanent LRU size is 1000, which provides a good balance between performance and memory usage for most applications.
+- **Default Value**: 1000.
 
 **Example Usage:**
 ```java
-// Set at application startup for consistent memory management
-ReadOptionsBuilder.addPermanentLruSize(1000);  // Larger cache for better performance
-
-// All subsequent ReadOptions instances inherit this cache size
-ReadOptions options = new ReadOptionsBuilder().build();     // Has 1000 LRU size
+ReadOptionsBuilder.addPermanentLruSize(1000);           // accepted; bounds nothing
+ReadOptions options = new ReadOptionsBuilder().build();  // getLruSize() returns 1000
 ```
 
 >#### ReadOptionsBuilder.addPermanentLruSize(`int lruSize`)

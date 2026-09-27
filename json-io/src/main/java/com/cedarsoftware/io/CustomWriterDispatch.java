@@ -3,7 +3,6 @@ package com.cedarsoftware.io;
 import java.io.Writer;
 import java.lang.reflect.Method;
 
-import com.cedarsoftware.util.ClassValueMap;
 
 /**
  * Dispatch detection for {@link JsonClassWriter} implementations during the
@@ -13,9 +12,9 @@ import com.cedarsoftware.util.ClassValueMap;
  * <p>Each registered custom writer's class is inspected once (via reflection,
  * walking up the class hierarchy) to determine whether it overrides the new
  * {@link JsonGenerator}-taking forms of {@code write} and
- * {@code writePrimitiveForm}. The decision is cached in a {@link ClassValueMap}
- * keyed by the writer's runtime class so the dispatch cost on the hot path is
- * a single map lookup.
+ * {@code writePrimitiveForm}. The decision is cached per writer class, on the
+ * class (a {@link ClassValue}), so the dispatch cost on the hot path is a single
+ * lookup.
  *
  * <h3>Dispatch rule</h3>
  *
@@ -39,13 +38,11 @@ import com.cedarsoftware.util.ClassValueMap;
  * any override), the result is irrelevant — both methods are no-ops — and we
  * arbitrarily return the new-method dispatch decision.
  *
- * <h3>Why {@link ClassValueMap}?</h3>
+ * <h3>Why {@link ClassValue}?</h3>
  *
- * <p>{@link ClassValueMap} backs the lookup with the JVM's per-Class side
- * channel ({@code ClassValue}), so cache entries are unloaded with their
- * classes — no leak under custom classloaders. The {@code computeIfAbsent}
- * surface is friendlier than raw {@code ClassValue} (no anonymous subclass
- * for each cache).
+ * <p>A {@link ClassValue} keeps each writer class's decision on the class
+ * itself, so cache entries are unloaded with their classes — no leak under
+ * custom classloaders — and a lookup takes no lock.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -82,7 +79,12 @@ final class CustomWriterDispatch {
         }
     }
 
-    private static final ClassValueMap<Info> CACHE = new ClassValueMap<>();
+    private static final ClassValue<Info> CACHE = new ClassValue<Info>() {
+        @Override
+        protected Info computeValue(Class<?> writerClass) {
+            return detect(writerClass);
+        }
+    };
 
     private CustomWriterDispatch() {
     }
@@ -92,7 +94,7 @@ final class CustomWriterDispatch {
      * computing it on first lookup. Safe to call from any thread.
      */
     static Info forWriter(JsonClassWriter<?> writer) {
-        return CACHE.computeIfAbsent(writer.getClass(), CustomWriterDispatch::detect);
+        return CACHE.get(writer.getClass());
     }
 
     /**

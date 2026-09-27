@@ -42,6 +42,8 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.Deque;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -74,12 +76,10 @@ import com.cedarsoftware.io.WriteOptionsBuilder.WriteFieldPlan;
 import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.ClassUtilities;
-import com.cedarsoftware.util.ClassValueMap;
 import com.cedarsoftware.util.CompactMap;
 import com.cedarsoftware.util.CompactSet;
 import com.cedarsoftware.util.FastWriter;
 import com.cedarsoftware.util.IOUtilities;
-import com.cedarsoftware.util.ClassValueSet;
 
 import static com.cedarsoftware.io.JsonValue.ENUM;
 import static com.cedarsoftware.io.JsonValue.ITEMS;
@@ -193,90 +193,121 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
     // Natural default collection/map types: maps declared interface to the concrete type that CollectionFactory
     // and MapFactory create when reading. Used by compact format to omit @type wrapper when runtime type matches.
-    private static final Map<Class<?>, Class<?>> NATURAL_DEFAULTS = new ClassValueMap<>();
+    private static final Map<Class<?>, Class<?>> NATURAL_DEFAULT_TABLE = new HashMap<>();
+    private static final ClassValue<Class<?>> NATURAL_DEFAULTS = new ClassValue<Class<?>>() {
+        @Override
+        protected Class<?> computeValue(Class<?> c) {
+            return NATURAL_DEFAULT_TABLE.get(c);
+        }
+    };
     static {
-        NATURAL_DEFAULTS.put(List.class, ArrayList.class);
-        NATURAL_DEFAULTS.put(Collection.class, ArrayList.class);
-        NATURAL_DEFAULTS.put(Set.class, LinkedHashSet.class);
-        NATURAL_DEFAULTS.put(SortedSet.class, TreeSet.class);
-        NATURAL_DEFAULTS.put(NavigableSet.class, TreeSet.class);
-        NATURAL_DEFAULTS.put(Queue.class, LinkedList.class);
-        NATURAL_DEFAULTS.put(Deque.class, ArrayDeque.class);
-        NATURAL_DEFAULTS.put(Map.class, LinkedHashMap.class);
-        NATURAL_DEFAULTS.put(SortedMap.class, TreeMap.class);
-        NATURAL_DEFAULTS.put(NavigableMap.class, TreeMap.class);
+        NATURAL_DEFAULT_TABLE.put(List.class, ArrayList.class);
+        NATURAL_DEFAULT_TABLE.put(Collection.class, ArrayList.class);
+        NATURAL_DEFAULT_TABLE.put(Set.class, LinkedHashSet.class);
+        NATURAL_DEFAULT_TABLE.put(SortedSet.class, TreeSet.class);
+        NATURAL_DEFAULT_TABLE.put(NavigableSet.class, TreeSet.class);
+        NATURAL_DEFAULT_TABLE.put(Queue.class, LinkedList.class);
+        NATURAL_DEFAULT_TABLE.put(Deque.class, ArrayDeque.class);
+        NATURAL_DEFAULT_TABLE.put(Map.class, LinkedHashMap.class);
+        NATURAL_DEFAULT_TABLE.put(SortedMap.class, TreeMap.class);
+        NATURAL_DEFAULT_TABLE.put(NavigableMap.class, TreeMap.class);
     }
 
     // Types that have lossless String round-trips via PrimitiveTypeWriter (write) and Converter (read).
     // When compact format is enabled and the field's declared type is in this set, @type can be omitted
     // because the reader's Injector will use Converter.convert(String, fieldType) to reconstruct the value.
-    // ClassValueSet/ClassValueMap (here and NATURAL_DEFAULTS above): class-keyed lookups
-    // ride the JVM's ClassValue fast path instead of hash probes — isForceType consults
-    // both on the per-field hot path.
-    private static final Set<Class<?>> CONVERTABLE_TYPES = new ClassValueSet();
+    // Filled once below (like NATURAL_DEFAULTS above), then read through a ClassValue, which keeps each class's
+    // answer on the class instead of probing a hash table: isForceType consults both on the per-field hot path.
+    private static final Set<Class<?>> CONVERTABLE_TYPE_TABLE = new HashSet<>();
+    private static final ClassValue<Boolean> CONVERTABLE_TYPES = new ClassValue<Boolean>() {
+        @Override
+        protected Boolean computeValue(Class<?> c) {
+            return CONVERTABLE_TYPE_TABLE.contains(c);
+        }
+    };
     static {
         // Java Time types
-        CONVERTABLE_TYPES.add(Duration.class);
-        CONVERTABLE_TYPES.add(Instant.class);
-        CONVERTABLE_TYPES.add(LocalDate.class);
-        CONVERTABLE_TYPES.add(LocalDateTime.class);
-        CONVERTABLE_TYPES.add(LocalTime.class);
-        CONVERTABLE_TYPES.add(MonthDay.class);
-        CONVERTABLE_TYPES.add(OffsetDateTime.class);
-        CONVERTABLE_TYPES.add(OffsetTime.class);
-        CONVERTABLE_TYPES.add(Period.class);
-        CONVERTABLE_TYPES.add(Year.class);
-        CONVERTABLE_TYPES.add(YearMonth.class);
-        CONVERTABLE_TYPES.add(ZonedDateTime.class);
-        CONVERTABLE_TYPES.add(ZoneId.class);
-        CONVERTABLE_TYPES.add(ZoneOffset.class);
+        CONVERTABLE_TYPE_TABLE.add(Duration.class);
+        CONVERTABLE_TYPE_TABLE.add(Instant.class);
+        CONVERTABLE_TYPE_TABLE.add(LocalDate.class);
+        CONVERTABLE_TYPE_TABLE.add(LocalDateTime.class);
+        CONVERTABLE_TYPE_TABLE.add(LocalTime.class);
+        CONVERTABLE_TYPE_TABLE.add(MonthDay.class);
+        CONVERTABLE_TYPE_TABLE.add(OffsetDateTime.class);
+        CONVERTABLE_TYPE_TABLE.add(OffsetTime.class);
+        CONVERTABLE_TYPE_TABLE.add(Period.class);
+        CONVERTABLE_TYPE_TABLE.add(Year.class);
+        CONVERTABLE_TYPE_TABLE.add(YearMonth.class);
+        CONVERTABLE_TYPE_TABLE.add(ZonedDateTime.class);
+        CONVERTABLE_TYPE_TABLE.add(ZoneId.class);
+        CONVERTABLE_TYPE_TABLE.add(ZoneOffset.class);
 
         // Date/Calendar types
-        CONVERTABLE_TYPES.add(Date.class);
-        CONVERTABLE_TYPES.add(java.sql.Date.class);
-        CONVERTABLE_TYPES.add(java.sql.Timestamp.class);
-        CONVERTABLE_TYPES.add(Calendar.class);
-        CONVERTABLE_TYPES.add(GregorianCalendar.class);
+        CONVERTABLE_TYPE_TABLE.add(Date.class);
+        CONVERTABLE_TYPE_TABLE.add(java.sql.Date.class);
+        CONVERTABLE_TYPE_TABLE.add(java.sql.Timestamp.class);
+        CONVERTABLE_TYPE_TABLE.add(Calendar.class);
+        CONVERTABLE_TYPE_TABLE.add(GregorianCalendar.class);
 
         // Numeric types (BigInteger/BigDecimal write as strings, Atomics write as numbers)
-        CONVERTABLE_TYPES.add(BigInteger.class);
-        CONVERTABLE_TYPES.add(BigDecimal.class);
-        CONVERTABLE_TYPES.add(AtomicBoolean.class);
-        CONVERTABLE_TYPES.add(AtomicInteger.class);
-        CONVERTABLE_TYPES.add(AtomicLong.class);
+        CONVERTABLE_TYPE_TABLE.add(BigInteger.class);
+        CONVERTABLE_TYPE_TABLE.add(BigDecimal.class);
+        CONVERTABLE_TYPE_TABLE.add(AtomicBoolean.class);
+        CONVERTABLE_TYPE_TABLE.add(AtomicInteger.class);
+        CONVERTABLE_TYPE_TABLE.add(AtomicLong.class);
 
         // Utility types
-        CONVERTABLE_TYPES.add(UUID.class);
-        CONVERTABLE_TYPES.add(URI.class);
-        CONVERTABLE_TYPES.add(URL.class);
-        CONVERTABLE_TYPES.add(File.class);
-        CONVERTABLE_TYPES.add(Path.class);
-        CONVERTABLE_TYPES.add(Locale.class);
-        CONVERTABLE_TYPES.add(TimeZone.class);
-        CONVERTABLE_TYPES.add(Currency.class);
-        CONVERTABLE_TYPES.add(Pattern.class);
-        CONVERTABLE_TYPES.add(Class.class);
+        CONVERTABLE_TYPE_TABLE.add(UUID.class);
+        CONVERTABLE_TYPE_TABLE.add(URI.class);
+        CONVERTABLE_TYPE_TABLE.add(URL.class);
+        CONVERTABLE_TYPE_TABLE.add(File.class);
+        CONVERTABLE_TYPE_TABLE.add(Path.class);
+        CONVERTABLE_TYPE_TABLE.add(Locale.class);
+        CONVERTABLE_TYPE_TABLE.add(TimeZone.class);
+        CONVERTABLE_TYPE_TABLE.add(Currency.class);
+        CONVERTABLE_TYPE_TABLE.add(Pattern.class);
+        CONVERTABLE_TYPE_TABLE.add(Class.class);
 
         // String-like and buffer types
-        CONVERTABLE_TYPES.add(StringBuffer.class);
-        CONVERTABLE_TYPES.add(StringBuilder.class);
-        CONVERTABLE_TYPES.add(CharBuffer.class);
-        CONVERTABLE_TYPES.add(ByteBuffer.class);
+        CONVERTABLE_TYPE_TABLE.add(StringBuffer.class);
+        CONVERTABLE_TYPE_TABLE.add(StringBuilder.class);
+        CONVERTABLE_TYPE_TABLE.add(CharBuffer.class);
+        CONVERTABLE_TYPE_TABLE.add(ByteBuffer.class);
     }
 
     // Numeric primitives that can safely write as plain JSON numbers in MINIMAL/MINIMAL_PLUS modes.
     // These types round-trip as Long (for integers) or Double (for floats) when no @type is present.
     // Excludes: Character (String != Character), Atomic* (behavioral semantics), Big* (precision/range)
-    private static final Set<Class<?>> NUMERIC_PRIMITIVES_FOR_COMPACT = new ClassValueSet();
+    private static final Set<Class<?>> NUMERIC_PRIMITIVE_FOR_COMPACT_TABLE = new HashSet<>();
+    private static final ClassValue<Boolean> NUMERIC_PRIMITIVES_FOR_COMPACT = new ClassValue<Boolean>() {
+        @Override
+        protected Boolean computeValue(Class<?> c) {
+            return NUMERIC_PRIMITIVE_FOR_COMPACT_TABLE.contains(c);
+        }
+    };
     static {
-        NUMERIC_PRIMITIVES_FOR_COMPACT.add(Byte.class);
-        NUMERIC_PRIMITIVES_FOR_COMPACT.add(byte.class);
-        NUMERIC_PRIMITIVES_FOR_COMPACT.add(Short.class);
-        NUMERIC_PRIMITIVES_FOR_COMPACT.add(short.class);
-        NUMERIC_PRIMITIVES_FOR_COMPACT.add(Integer.class);
-        NUMERIC_PRIMITIVES_FOR_COMPACT.add(int.class);
-        NUMERIC_PRIMITIVES_FOR_COMPACT.add(Float.class);
-        NUMERIC_PRIMITIVES_FOR_COMPACT.add(float.class);
+        NUMERIC_PRIMITIVE_FOR_COMPACT_TABLE.add(Byte.class);
+        NUMERIC_PRIMITIVE_FOR_COMPACT_TABLE.add(byte.class);
+        NUMERIC_PRIMITIVE_FOR_COMPACT_TABLE.add(Short.class);
+        NUMERIC_PRIMITIVE_FOR_COMPACT_TABLE.add(short.class);
+        NUMERIC_PRIMITIVE_FOR_COMPACT_TABLE.add(Integer.class);
+        NUMERIC_PRIMITIVE_FOR_COMPACT_TABLE.add(int.class);
+        NUMERIC_PRIMITIVE_FOR_COMPACT_TABLE.add(Float.class);
+        NUMERIC_PRIMITIVE_FOR_COMPACT_TABLE.add(float.class);
+    }
+
+    private static boolean isNumericPrimitiveForCompact(Class<?> c) {
+        return c != null && NUMERIC_PRIMITIVES_FOR_COMPACT.get(c);
+    }
+
+    private static boolean isConvertableType(Class<?> c) {
+        return c != null && CONVERTABLE_TYPES.get(c);
+    }
+
+    // The natural default for a declared type, or Void.class when it has none
+    private static Class<?> naturalDefault(Class<?> declared) {
+        Class<?> natural = declared == null ? null : NATURAL_DEFAULTS.get(declared);
+        return natural != null ? natural : Void.class;
     }
 
     // Dispatch table for primitive array serialization (replaces class == chain)
@@ -284,17 +315,23 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private interface PrimitiveArrayHandler {
         void write(JsonWriter writer, Object array, int lenMinus1) throws IOException;
     }
-    private static final ClassValueMap<PrimitiveArrayHandler> PRIM_ARRAY_WRITERS = new ClassValueMap<>();
+    private static final Map<Class<?>, PrimitiveArrayHandler> PRIM_ARRAY_WRITER_TABLE = new HashMap<>();
+    private static final ClassValue<PrimitiveArrayHandler> PRIM_ARRAY_WRITERS = new ClassValue<PrimitiveArrayHandler>() {
+        @Override
+        protected PrimitiveArrayHandler computeValue(Class<?> c) {
+            return PRIM_ARRAY_WRITER_TABLE.get(c);
+        }
+    };
     static {
-        PRIM_ARRAY_WRITERS.put(byte[].class, (w, a, len) -> w.writeByteArray((byte[]) a, len));
+        PRIM_ARRAY_WRITER_TABLE.put(byte[].class, (w, a, len) -> w.writeByteArray((byte[]) a, len));
         // char[] is special-cased inline in writePrimitiveArray (single string element via
         // gen.writeString at FRAME_ARRAY_EMPTY) — bypasses this handler map entirely.
-        PRIM_ARRAY_WRITERS.put(short[].class, (w, a, len) -> w.writeShortArray((short[]) a, len));
-        PRIM_ARRAY_WRITERS.put(int[].class, (w, a, len) -> w.writeIntArray((int[]) a, len));
-        PRIM_ARRAY_WRITERS.put(long[].class, (w, a, len) -> w.writeLongArray((long[]) a, len));
-        PRIM_ARRAY_WRITERS.put(float[].class, (w, a, len) -> w.writeFloatArray((float[]) a, len));
-        PRIM_ARRAY_WRITERS.put(double[].class, (w, a, len) -> w.writeDoubleArray((double[]) a, len));
-        PRIM_ARRAY_WRITERS.put(boolean[].class, (w, a, len) -> w.writeBooleanArray((boolean[]) a, len));
+        PRIM_ARRAY_WRITER_TABLE.put(short[].class, (w, a, len) -> w.writeShortArray((short[]) a, len));
+        PRIM_ARRAY_WRITER_TABLE.put(int[].class, (w, a, len) -> w.writeIntArray((int[]) a, len));
+        PRIM_ARRAY_WRITER_TABLE.put(long[].class, (w, a, len) -> w.writeLongArray((long[]) a, len));
+        PRIM_ARRAY_WRITER_TABLE.put(float[].class, (w, a, len) -> w.writeFloatArray((float[]) a, len));
+        PRIM_ARRAY_WRITER_TABLE.put(double[].class, (w, a, len) -> w.writeDoubleArray((double[]) a, len));
+        PRIM_ARRAY_WRITER_TABLE.put(boolean[].class, (w, a, len) -> w.writeBooleanArray((boolean[]) a, len));
     }
 
     // Cached Field for EnumSet.elementType (lazy-initialized, immutable once set)
@@ -1587,7 +1624,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         gen.beginInlineArrayBody();
 
         final int lenMinus1 = len - 1;
-        PrimitiveArrayHandler handler = PRIM_ARRAY_WRITERS.getByClass(arrayType);
+        PrimitiveArrayHandler handler = arrayType == null ? null : PRIM_ARRAY_WRITERS.get(arrayType);
         if (handler != null) {
             handler.write(this, array, lenMinus1);
         }
@@ -2461,7 +2498,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // If no declared element type context (raw collection), treat numeric primitives as safe to omit @type
         // in NEVER and MINIMAL_PLUS modes since they round-trip as Long/Double.
         if (declaredElementType == null) {
-            if ((minimalPlusFormat || neverShowingType) && NUMERIC_PRIMITIVES_FOR_COMPACT.contains(elementClass)) {
+            if ((minimalPlusFormat || neverShowingType) && isNumericPrimitiveForCompact(elementClass)) {
                 return false;
             }
             return true;
@@ -2476,17 +2513,17 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             return false;
         }
         // Minimal plus format: treat natural defaults as matching (e.g., ArrayList for List element type)
-        if (minimalPlusFormat && NATURAL_DEFAULTS.getOrDefault(declaredElementType, Void.class) == elementClass) {
+        if (minimalPlusFormat && naturalDefault(declaredElementType) == elementClass) {
             return false;
         }
         // Minimal plus format: treat convertable types as matching (e.g., ZonedDateTime element in Temporal list)
-        if (minimalPlusFormat && CONVERTABLE_TYPES.contains(declaredElementType) && CONVERTABLE_TYPES.contains(elementClass)) {
+        if (minimalPlusFormat && isConvertableType(declaredElementType) && isConvertableType(elementClass)) {
             return false;
         }
         // Numeric primitives (Byte/Short/Integer/Float) write as plain JSON numbers when element type is Object.
         // They round-trip as Long (for integers) or Double (for floats).
         // This applies to NEVER and MINIMAL_PLUS modes (not MINIMAL or ALWAYS).
-        if ((minimalPlusFormat || neverShowingType) && declaredElementType == Object.class && NUMERIC_PRIMITIVES_FOR_COMPACT.contains(elementClass)) {
+        if ((minimalPlusFormat || neverShowingType) && declaredElementType == Object.class && isNumericPrimitiveForCompact(elementClass)) {
             return false;
         }
         return true;
@@ -2937,21 +2974,21 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // Numeric primitives (Byte/Short/Integer/Float) write as plain JSON numbers when declared type is Object.
         // They round-trip as Long (for integers) or Double (for floats).
         // This applies to NEVER and MINIMAL_PLUS modes (not MINIMAL or ALWAYS).
-        if ((minimalPlusFormat || neverShowingType) && !forceElementShowType && declaredType == Object.class && NUMERIC_PRIMITIVES_FOR_COMPACT.contains(objectClass)) {
+        if ((minimalPlusFormat || neverShowingType) && !forceElementShowType && declaredType == Object.class && isNumericPrimitiveForCompact(objectClass)) {
             return false;
         }
 
         // Minimal plus format: omit @type when the runtime type is the "natural default" for the declared type.
         // E.g., ArrayList for List, LinkedHashSet for Set, LinkedHashMap for Map.
         // The reader creates these same defaults via CollectionFactory/MapFactory when @type is absent.
-        if (minimalPlusFormat && NATURAL_DEFAULTS.getOrDefault(declaredType, Void.class) == objectClass) {
+        if (minimalPlusFormat && naturalDefault(declaredType) == objectClass) {
             return false;
         }
 
         // Minimal plus format: omit @type when both the declared type and runtime type are "convertable" types
         // that have lossless String round-trips. The reader's Injector catches ClassCastException and calls
         // Converter.convert(value, fieldType) to reconstruct the correct type from the primitive form.
-        if (minimalPlusFormat && CONVERTABLE_TYPES.contains(declaredType) && CONVERTABLE_TYPES.contains(objectClass)) {
+        if (minimalPlusFormat && isConvertableType(declaredType) && isConvertableType(objectClass)) {
             return false;
         }
 

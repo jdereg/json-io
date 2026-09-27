@@ -1412,13 +1412,12 @@ public class ReadOptionsBuilder {
     }
 
     /**
-     * @param lruSize int maximum size of the LRU cache that holds reflective information like fields of a Class and
-     *                injectors associated to a class.
+     * @param lruSize Retained for compatibility; bounds nothing. The fields and injectors of a class are kept per
+     *                class, on the class itself.
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder lruSize(int lruSize) {
         options.lruSize = lruSize;
-        // Not used at the moment, but may be used at a later point
         return this;
     }
 
@@ -1890,10 +1889,16 @@ public class ReadOptionsBuilder {
         };
         // getClassFactory() re-runs a fallback chain (Throwable/enum/record — the record test is a
         // reflective Method.invoke) for EVERY object whose class has no explicit factory. The result
-        // is stable per class (config is frozen after build()), so cache the full outcome. Plain
-        // ConcurrentHashMap (not ClassValueMap) to avoid ClassValue cache-array pressure; NO_FACTORY
-        // is the "no factory" sentinel since ConcurrentHashMap forbids null values.
-        private final Map<Class<?>, ClassFactory> factoryCache = new ConcurrentHashMap<>();
+        // is stable per class (config is frozen after build()), so cache the full outcome, on the class (a
+        // ClassValue: no lock on a hit, and a class is never kept alive by it). NO_FACTORY is the "no factory"
+        // sentinel.
+        private final ClassValue<ClassFactory> factoryCache = new ClassValue<ClassFactory>() {
+            @Override
+            protected ClassFactory computeValue(Class<?> c) {
+                ClassFactory f = computeClassFactory(c);
+                return f == null ? NO_FACTORY : f;
+            }
+        };
         // The fields and injectors of a class depend on this ReadOptions' settings (excluded and not-imported fields,
         // field filters, injector factories), so they are cached per ReadOptions. (They were static, shared by every
         // ReadOptions: one ReadOptions' not-imported field was then missing for all of them.) Replaced, not emptied,
@@ -2241,15 +2246,7 @@ public class ReadOptionsBuilder {
             if (c == null) {
                 return null;
             }
-            // Fast path: cached full result. get() allocates nothing; the capturing lambda below is
-            // allocated only on a miss (once per class), so hot reads are a pure cache hit.
             ClassFactory factory = factoryCache.get(c);
-            if (factory == null) {
-                factory = factoryCache.computeIfAbsent(c, cls -> {
-                    ClassFactory f = computeClassFactory(cls);
-                    return f == null ? NO_FACTORY : f;
-                });
-            }
             return factory == NO_FACTORY ? null : factory;
         }
 

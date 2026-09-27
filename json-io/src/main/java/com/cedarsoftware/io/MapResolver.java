@@ -334,7 +334,7 @@ public class MapResolver extends Resolver {
         final Object target = jsonObj.getTarget();
         final ReadOptions readOptions = getReadOptions();
 
-        // Get injector map directly - ReadOptions.getDeepInjectorMap() already caches via ClassValueMap
+        // Get injector map directly - ReadOptions.getDeepInjectorMap() already caches per class
         Map<String, Injector> injectorMap = null;
         if (target != null) {
             injectorMap = readOptions.getDeepInjectorMap(target.getClass());

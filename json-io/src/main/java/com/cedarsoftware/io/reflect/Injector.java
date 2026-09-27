@@ -9,9 +9,10 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import com.cedarsoftware.io.JsonIoException;
-import com.cedarsoftware.util.ClassValueMap;
 import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.ReflectionUtils;
 import com.cedarsoftware.util.StringUtilities;
@@ -138,31 +139,44 @@ public class Injector {
     public static final byte FAST_PATH_STRING = 3;            // String
     private final byte fastPath;
 
-    // O(1) ClassValueMap lookups for type categorization (replaces sequential class == chains)
-    private static final ClassValueMap<Integer> NUMERIC_KINDS = new ClassValueMap<>();
-    private static final ClassValueMap<Class<?>> PRIM_TO_WRAPPER = new ClassValueMap<>();
+    // Type categorization (replaces sequential class == chains): filled once below, then read through ClassValues,
+    // which keep each class's answer on the class
+    private static final Map<Class<?>, Integer> NUMERIC_KIND_TABLE = new HashMap<>();
+    private static final Map<Class<?>, Class<?>> PRIM_TO_WRAPPER_TABLE = new HashMap<>();
+    private static final ClassValue<Integer> NUMERIC_KINDS = new ClassValue<Integer>() {
+        @Override
+        protected Integer computeValue(Class<?> c) {
+            return NUMERIC_KIND_TABLE.get(c);
+        }
+    };
+    private static final ClassValue<Class<?>> PRIM_TO_WRAPPER = new ClassValue<Class<?>>() {
+        @Override
+        protected Class<?> computeValue(Class<?> c) {
+            return PRIM_TO_WRAPPER_TABLE.get(c);
+        }
+    };
     static {
-        NUMERIC_KINDS.put(int.class, NUM_INT);
-        NUMERIC_KINDS.put(Integer.class, NUM_INT);
-        NUMERIC_KINDS.put(double.class, NUM_DOUBLE);
-        NUMERIC_KINDS.put(Double.class, NUM_DOUBLE);
-        NUMERIC_KINDS.put(byte.class, NUM_BYTE);
-        NUMERIC_KINDS.put(Byte.class, NUM_BYTE);
-        NUMERIC_KINDS.put(float.class, NUM_FLOAT);
-        NUMERIC_KINDS.put(Float.class, NUM_FLOAT);
-        NUMERIC_KINDS.put(short.class, NUM_SHORT);
-        NUMERIC_KINDS.put(Short.class, NUM_SHORT);
-        NUMERIC_KINDS.put(long.class, NUM_LONG);
-        NUMERIC_KINDS.put(Long.class, NUM_LONG);
+        NUMERIC_KIND_TABLE.put(int.class, NUM_INT);
+        NUMERIC_KIND_TABLE.put(Integer.class, NUM_INT);
+        NUMERIC_KIND_TABLE.put(double.class, NUM_DOUBLE);
+        NUMERIC_KIND_TABLE.put(Double.class, NUM_DOUBLE);
+        NUMERIC_KIND_TABLE.put(byte.class, NUM_BYTE);
+        NUMERIC_KIND_TABLE.put(Byte.class, NUM_BYTE);
+        NUMERIC_KIND_TABLE.put(float.class, NUM_FLOAT);
+        NUMERIC_KIND_TABLE.put(Float.class, NUM_FLOAT);
+        NUMERIC_KIND_TABLE.put(short.class, NUM_SHORT);
+        NUMERIC_KIND_TABLE.put(Short.class, NUM_SHORT);
+        NUMERIC_KIND_TABLE.put(long.class, NUM_LONG);
+        NUMERIC_KIND_TABLE.put(Long.class, NUM_LONG);
 
-        PRIM_TO_WRAPPER.put(int.class, Integer.class);
-        PRIM_TO_WRAPPER.put(long.class, Long.class);
-        PRIM_TO_WRAPPER.put(short.class, Short.class);
-        PRIM_TO_WRAPPER.put(byte.class, Byte.class);
-        PRIM_TO_WRAPPER.put(boolean.class, Boolean.class);
-        PRIM_TO_WRAPPER.put(char.class, Character.class);
-        PRIM_TO_WRAPPER.put(float.class, Float.class);
-        PRIM_TO_WRAPPER.put(double.class, Double.class);
+        PRIM_TO_WRAPPER_TABLE.put(int.class, Integer.class);
+        PRIM_TO_WRAPPER_TABLE.put(long.class, Long.class);
+        PRIM_TO_WRAPPER_TABLE.put(short.class, Short.class);
+        PRIM_TO_WRAPPER_TABLE.put(byte.class, Byte.class);
+        PRIM_TO_WRAPPER_TABLE.put(boolean.class, Boolean.class);
+        PRIM_TO_WRAPPER_TABLE.put(char.class, Character.class);
+        PRIM_TO_WRAPPER_TABLE.put(float.class, Float.class);
+        PRIM_TO_WRAPPER_TABLE.put(double.class, Double.class);
     }
 
     /**
@@ -657,12 +671,12 @@ public class Injector {
     }
 
     private static int numericKind(Class<?> type) {
-        Integer kind = NUMERIC_KINDS.getByClass(type);
+        Integer kind = type == null ? null : NUMERIC_KINDS.get(type);
         return kind != null ? kind : NUM_NONE;
     }
 
     private static Class<?> primitiveWrapper(Class<?> primitiveType) {
-        Class<?> w = PRIM_TO_WRAPPER.getByClass(primitiveType);
+        Class<?> w = primitiveType == null ? null : PRIM_TO_WRAPPER.get(primitiveType);
         return w != null ? w : Void.class;
     }
 

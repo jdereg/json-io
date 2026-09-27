@@ -357,14 +357,15 @@ To activate pretty printing, configure your serialization settings accordingly:
 
 Pretty-print is honored by both the tree writer (`JsonIo.toJson(...)`) and the [streaming-write API](/user-guide.md#streaming-api-cursor-style-readwrite) (`JsonIo.createGenerator(...)`). The generator emits a newline + `indentationSize × depth` spaces before each value-position and before each matching close-brace/bracket; empty containers (`{}`, `[]`) stay compact.
 
-### lruSize - LRU Size [Cache of fields and filters]
-Set the maximum number of `Class` to `Field` mappings and `Class` to accessor mappings. This will allow infrequently used `Class's`
-to drop from the cache - they will be dynamically added back if not in the cache.  Reduces operational memory foot print.
+### lruSize - LRU Size (retained for compatibility)
+Kept so existing code compiles and runs; it no longer bounds anything. The `Class` to `Field` and `Class` to accessor
+caches it sized are kept on each class itself: bounded by the classes written, never keeping a class alive, and read
+without locking or writing (an LRU cache writes on every hit).
 > #### `int` lruSize()
->- [ ] Return the LRU size
+>- [ ] Return the lruSize setting
 
 > #### `WriteOptionsBuilder` lruSize(`int size`)
->- [ ] Set the max LRU cache size
+>- [ ] Set the lruSize setting (no effect)
 
 ### Automatically Close OutputStream (or Not)
 
@@ -1508,13 +1509,12 @@ Sets the permanent pretty print setting for all new `WriteOptions` instances. Wh
 >#### WriteOptionsBuilder.addPermanentPrettyPrint(`boolean prettyPrint`)
 
 ### addPermanentLruSize
-Sets the permanent LRU cache size for all new `WriteOptions` instances. This cache stores Class-to-Field and Class-to-Accessor mappings to improve performance.
+Sets the lruSize every new `WriteOptions` starts with. Retained for compatibility: the Class-to-Field and Class-to-Accessor caches it sized are now kept on each class, so it no longer bounds anything.
 >#### WriteOptionsBuilder.addPermanentLruSize(`int lruSize`)
 
-Example: Set a smaller cache for memory-constrained environments:
 ```java
-WriteOptionsBuilder.addPermanentLruSize(500);
-WriteOptions options = new WriteOptionsBuilder().build(); // Uses 500 LRU size
+WriteOptionsBuilder.addPermanentLruSize(500);               // accepted; bounds nothing
+WriteOptions options = new WriteOptionsBuilder().build();    // getLruSize() returns 500
 ```
 
 ### addPermanentWriteLongsAsStrings

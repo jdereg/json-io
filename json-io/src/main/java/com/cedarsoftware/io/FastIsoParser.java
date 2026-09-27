@@ -14,9 +14,10 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Function;
 
-import com.cedarsoftware.util.ClassValueMap;
 
 /**
  * Strict-ISO-first fast path for String → java.time conversion on the read side.
@@ -36,22 +37,29 @@ import com.cedarsoftware.util.ClassValueMap;
  * bypass of Converter for the dominant wire formats.
  */
 final class FastIsoParser {
-    private static final ClassValueMap<Function<String, Object>> PARSERS = new ClassValueMap<>();
+    // Filled once below, then read through PARSERS: each class's answer is kept on the class (a ClassValue)
+    private static final Map<Class<?>, Function<String, Object>> PARSER_TABLE = new HashMap<>();
+    private static final ClassValue<Function<String, Object>> PARSERS = new ClassValue<Function<String, Object>>() {
+        @Override
+        protected Function<String, Object> computeValue(Class<?> c) {
+            return PARSER_TABLE.get(c);
+        }
+    };
     static {
-        PARSERS.put(Instant.class, Instant::parse);
-        PARSERS.put(LocalDate.class, LocalDate::parse);
-        PARSERS.put(LocalDateTime.class, LocalDateTime::parse);
-        PARSERS.put(LocalTime.class, LocalTime::parse);
-        PARSERS.put(ZonedDateTime.class, ZonedDateTime::parse);
-        PARSERS.put(OffsetDateTime.class, OffsetDateTime::parse);
-        PARSERS.put(OffsetTime.class, OffsetTime::parse);
-        PARSERS.put(Duration.class, Duration::parse);
-        PARSERS.put(Period.class, Period::parse);
-        PARSERS.put(Year.class, Year::parse);
-        PARSERS.put(YearMonth.class, YearMonth::parse);
-        PARSERS.put(MonthDay.class, MonthDay::parse);
-        PARSERS.put(ZoneOffset.class, ZoneOffset::of);
-        PARSERS.put(ZoneId.class, ZoneId::of);
+        PARSER_TABLE.put(Instant.class, Instant::parse);
+        PARSER_TABLE.put(LocalDate.class, LocalDate::parse);
+        PARSER_TABLE.put(LocalDateTime.class, LocalDateTime::parse);
+        PARSER_TABLE.put(LocalTime.class, LocalTime::parse);
+        PARSER_TABLE.put(ZonedDateTime.class, ZonedDateTime::parse);
+        PARSER_TABLE.put(OffsetDateTime.class, OffsetDateTime::parse);
+        PARSER_TABLE.put(OffsetTime.class, OffsetTime::parse);
+        PARSER_TABLE.put(Duration.class, Duration::parse);
+        PARSER_TABLE.put(Period.class, Period::parse);
+        PARSER_TABLE.put(Year.class, Year::parse);
+        PARSER_TABLE.put(YearMonth.class, YearMonth::parse);
+        PARSER_TABLE.put(MonthDay.class, MonthDay::parse);
+        PARSER_TABLE.put(ZoneOffset.class, ZoneOffset::of);
+        PARSER_TABLE.put(ZoneId.class, ZoneId::of);
     }
 
     private FastIsoParser() {
@@ -65,7 +73,7 @@ final class FastIsoParser {
      *         fall back to the Converter path on null.
      */
     static Object parse(String value, Class<?> target) {
-        Function<String, Object> parser = PARSERS.get(target);
+        Function<String, Object> parser = target == null ? null : PARSERS.get(target);
         if (parser == null) {
             return null;
         }

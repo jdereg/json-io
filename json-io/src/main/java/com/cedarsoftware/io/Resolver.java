@@ -38,7 +38,6 @@ import com.cedarsoftware.io.reflect.AnnotationResolver;
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.ClassUtilities;
-import com.cedarsoftware.util.ClassValueMap;
 import com.cedarsoftware.util.CompactCIHashMap;
 import com.cedarsoftware.util.CompactCIHashSet;
 import com.cedarsoftware.util.CompactCILinkedMap;
@@ -96,25 +95,32 @@ public abstract class Resolver {
     protected static final int TARGET_LONG = 6;
     protected static final int TARGET_BOOLEAN = 7;
     protected static final int TARGET_CHAR = 8;
-    // O(1) ClassValueMap for scalar type categorization (replaces 16 sequential class == checks)
-    private static final ClassValueMap<Integer> SCALAR_KINDS = new ClassValueMap<>();
+    // Scalar type categorization (replaces 16 sequential class == checks): filled once below, then read through
+    // SCALAR_KINDS, which keeps each class's answer on the class (a ClassValue)
+    private static final Map<Class<?>, Integer> SCALAR_KIND_TABLE = new HashMap<>();
+    private static final ClassValue<Integer> SCALAR_KINDS = new ClassValue<Integer>() {
+        @Override
+        protected Integer computeValue(Class<?> c) {
+            return SCALAR_KIND_TABLE.get(c);
+        }
+    };
     static {
-        SCALAR_KINDS.put(int.class, TARGET_INT);
-        SCALAR_KINDS.put(Integer.class, TARGET_INT);
-        SCALAR_KINDS.put(double.class, TARGET_DOUBLE);
-        SCALAR_KINDS.put(Double.class, TARGET_DOUBLE);
-        SCALAR_KINDS.put(byte.class, TARGET_BYTE);
-        SCALAR_KINDS.put(Byte.class, TARGET_BYTE);
-        SCALAR_KINDS.put(float.class, TARGET_FLOAT);
-        SCALAR_KINDS.put(Float.class, TARGET_FLOAT);
-        SCALAR_KINDS.put(short.class, TARGET_SHORT);
-        SCALAR_KINDS.put(Short.class, TARGET_SHORT);
-        SCALAR_KINDS.put(long.class, TARGET_LONG);
-        SCALAR_KINDS.put(Long.class, TARGET_LONG);
-        SCALAR_KINDS.put(boolean.class, TARGET_BOOLEAN);
-        SCALAR_KINDS.put(Boolean.class, TARGET_BOOLEAN);
-        SCALAR_KINDS.put(char.class, TARGET_CHAR);
-        SCALAR_KINDS.put(Character.class, TARGET_CHAR);
+        SCALAR_KIND_TABLE.put(int.class, TARGET_INT);
+        SCALAR_KIND_TABLE.put(Integer.class, TARGET_INT);
+        SCALAR_KIND_TABLE.put(double.class, TARGET_DOUBLE);
+        SCALAR_KIND_TABLE.put(Double.class, TARGET_DOUBLE);
+        SCALAR_KIND_TABLE.put(byte.class, TARGET_BYTE);
+        SCALAR_KIND_TABLE.put(Byte.class, TARGET_BYTE);
+        SCALAR_KIND_TABLE.put(float.class, TARGET_FLOAT);
+        SCALAR_KIND_TABLE.put(Float.class, TARGET_FLOAT);
+        SCALAR_KIND_TABLE.put(short.class, TARGET_SHORT);
+        SCALAR_KIND_TABLE.put(Short.class, TARGET_SHORT);
+        SCALAR_KIND_TABLE.put(long.class, TARGET_LONG);
+        SCALAR_KIND_TABLE.put(Long.class, TARGET_LONG);
+        SCALAR_KIND_TABLE.put(boolean.class, TARGET_BOOLEAN);
+        SCALAR_KIND_TABLE.put(Boolean.class, TARGET_BOOLEAN);
+        SCALAR_KIND_TABLE.put(char.class, TARGET_CHAR);
+        SCALAR_KIND_TABLE.put(Character.class, TARGET_CHAR);
     }
 
     // Common ancestor roots to skip when checking type compatibility (using IdentitySet for Class comparison)
@@ -1204,34 +1210,40 @@ public abstract class Resolver {
         mapsToRehash.add(jsonObj);
     }
 
-    // Create a ClassValueMap for direct instantiation of certain classes
-    private static final ClassValueMap<Function<JsonObject, Object>> DEFAULT_INSTANTIATORS = new ClassValueMap<>();
+    // Direct instantiation of certain classes: filled once below, then read through DEFAULT_INSTANTIATORS
+    private static final Map<Class<?>, Function<JsonObject, Object>> DEFAULT_INSTANTIATOR_TABLE = new HashMap<>();
+    private static final ClassValue<Function<JsonObject, Object>> DEFAULT_INSTANTIATORS = new ClassValue<Function<JsonObject, Object>>() {
+        @Override
+        protected Function<JsonObject, Object> computeValue(Class<?> c) {
+            return DEFAULT_INSTANTIATOR_TABLE.get(c);
+        }
+    };
 
     static {
         // Initialize the map with lambda factory instantiators for each class
-        DEFAULT_INSTANTIATORS.put(ArrayList.class, jsonObj -> new ArrayList<>());
-        DEFAULT_INSTANTIATORS.put(LinkedList.class, jsonObj -> new LinkedList<>());
-        DEFAULT_INSTANTIATORS.put(CopyOnWriteArrayList.class, jsonObj -> new CopyOnWriteArrayList<>());
-        DEFAULT_INSTANTIATORS.put(ConcurrentList.class, jsonObj -> new ConcurrentList<>());
-        DEFAULT_INSTANTIATORS.put(CompactCIHashMap.class, jsonObj -> new CompactCIHashMap<>());
-        DEFAULT_INSTANTIATORS.put(CompactCILinkedMap.class, jsonObj -> new CompactCILinkedMap<>());
-        DEFAULT_INSTANTIATORS.put(CompactLinkedMap.class, jsonObj -> new CompactLinkedMap<>());
-        DEFAULT_INSTANTIATORS.put(ConcurrentHashMap.class, jsonObj -> new ConcurrentHashMap<>());
-        DEFAULT_INSTANTIATORS.put(ConcurrentSkipListMap.class, jsonObj -> new ConcurrentSkipListMap<>());
-        DEFAULT_INSTANTIATORS.put(Vector.class, jsonObj -> new Vector<>());
-        DEFAULT_INSTANTIATORS.put(HashMap.class, jsonObj -> new HashMap<>());
-        DEFAULT_INSTANTIATORS.put(TreeMap.class, jsonObj -> new TreeMap<>());
-        DEFAULT_INSTANTIATORS.put(CompactCIHashSet.class, jsonObj -> new CompactCIHashSet<>());
-        DEFAULT_INSTANTIATORS.put(CompactCILinkedSet.class, jsonObj -> new CompactCILinkedSet<>());
-        DEFAULT_INSTANTIATORS.put(CompactLinkedSet.class, jsonObj -> new CompactLinkedSet<>());
-        DEFAULT_INSTANTIATORS.put(ConcurrentSkipListSet.class, jsonObj -> new ConcurrentSkipListSet<>());
-        DEFAULT_INSTANTIATORS.put(ConcurrentNavigableSetNullSafe.class, jsonObj -> new ConcurrentNavigableSetNullSafe<>());
-        DEFAULT_INSTANTIATORS.put(ConcurrentSet.class, jsonObj -> new ConcurrentSet<>());
-        DEFAULT_INSTANTIATORS.put(HashSet.class, jsonObj -> new HashSet<>());
-        DEFAULT_INSTANTIATORS.put(LinkedHashSet.class, jsonObj -> new LinkedHashSet<>());
-        DEFAULT_INSTANTIATORS.put(TreeSet.class, jsonObj -> new TreeSet<>());
-        DEFAULT_INSTANTIATORS.put(LinkedHashMap.class, jsonObj -> new LinkedHashMap<>());
-        DEFAULT_INSTANTIATORS.put(CompactMap.class, jsonObj -> {
+        DEFAULT_INSTANTIATOR_TABLE.put(ArrayList.class, jsonObj -> new ArrayList<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(LinkedList.class, jsonObj -> new LinkedList<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(CopyOnWriteArrayList.class, jsonObj -> new CopyOnWriteArrayList<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(ConcurrentList.class, jsonObj -> new ConcurrentList<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(CompactCIHashMap.class, jsonObj -> new CompactCIHashMap<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(CompactCILinkedMap.class, jsonObj -> new CompactCILinkedMap<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(CompactLinkedMap.class, jsonObj -> new CompactLinkedMap<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(ConcurrentHashMap.class, jsonObj -> new ConcurrentHashMap<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(ConcurrentSkipListMap.class, jsonObj -> new ConcurrentSkipListMap<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(Vector.class, jsonObj -> new Vector<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(HashMap.class, jsonObj -> new HashMap<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(TreeMap.class, jsonObj -> new TreeMap<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(CompactCIHashSet.class, jsonObj -> new CompactCIHashSet<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(CompactCILinkedSet.class, jsonObj -> new CompactCILinkedSet<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(CompactLinkedSet.class, jsonObj -> new CompactLinkedSet<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(ConcurrentSkipListSet.class, jsonObj -> new ConcurrentSkipListSet<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(ConcurrentNavigableSetNullSafe.class, jsonObj -> new ConcurrentNavigableSetNullSafe<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(ConcurrentSet.class, jsonObj -> new ConcurrentSet<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(HashSet.class, jsonObj -> new HashSet<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(LinkedHashSet.class, jsonObj -> new LinkedHashSet<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(TreeSet.class, jsonObj -> new TreeSet<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(LinkedHashMap.class, jsonObj -> new LinkedHashMap<>());
+        DEFAULT_INSTANTIATOR_TABLE.put(CompactMap.class, jsonObj -> {
             // If the map does not have both config and data keys, then it is a regular CompactMap
             // Note: CompactMap in custom form, has two key/values at the Object level (config and data)
             if (!jsonObj.containsKey("config") || !jsonObj.containsKey("data")) {
@@ -1260,7 +1272,7 @@ public abstract class Resolver {
 
             return null; // Return null to indicate custom factory should be used
         });
-        DEFAULT_INSTANTIATORS.put(CompactSet.class, jsonObj -> {
+        DEFAULT_INSTANTIATOR_TABLE.put(CompactSet.class, jsonObj -> {
             // CompactSet instantiator with special logic
 
             // If the set does not have both config and data keys, then it is a regular CompactSet
@@ -1444,7 +1456,7 @@ public abstract class Resolver {
         // 1. Default instantiator (HashMap, ArrayList, LinkedHashMap, ...).
         //    For CompactMap/CompactSet the lambda may return null at runtime,
         //    so we bind a precomputed fallback (factory if registered, else reflection).
-        Function<JsonObject, Object> instantiator = DEFAULT_INSTANTIATORS.getByClass(targetType);
+        Function<JsonObject, Object> instantiator = targetType == null ? null : DEFAULT_INSTANTIATORS.get(targetType);
         if (instantiator != null) {
             InstantiationPlan fallback = buildNonLambdaPlan(targetType, readOptions);
             return new DefaultLambdaPlan(instantiator, fallback);
@@ -1719,7 +1731,7 @@ public abstract class Resolver {
                     ((Object[]) objToFix)[ref.index] = referencedTarget;
                 }
             } else {    // Fix field forward reference
-                // ReadOptions.getDeepInjectorMap() already caches via ClassValueMap - no local cache needed
+                // ReadOptions.getDeepInjectorMap() already caches per class - no local cache needed
                 ReadOptionsBuilder.InjectorPlan plan = ReadOptionsBuilder.getInjectorPlan(readOptions, objToFix.getClass());
                 Injector injector = plan.get(ref.field);
                 if (injector != null) {
@@ -1920,7 +1932,7 @@ public abstract class Resolver {
      * Categorize a target type into a compact scalar kind for hot conversion paths.
      */
     protected static int scalarTargetKind(Class<?> targetType) {
-        Integer kind = SCALAR_KINDS.getByClass(targetType);
+        Integer kind = targetType == null ? null : SCALAR_KINDS.get(targetType);
         return kind != null ? kind : TARGET_OTHER;
     }
 

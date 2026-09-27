@@ -248,7 +248,8 @@ public interface ReadOptions {
     int getMaxLineLength();
 
     /**
-     * @return int size of LRU Cache used to cache Class to Field and Class to injectors
+     * @return int the lruSize setting. Retained for compatibility; bounds nothing: the fields and injectors of a
+     * class are kept per class, on the class itself.
      */
     int getLruSize();
 
