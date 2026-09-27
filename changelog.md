@@ -23,6 +23,14 @@
   * **`WriteOptions`' field and accessor caches** were `LRUCache`s sized by `lruSize`: bounded, but holding their classes until evicted, and writing on every hit. They are `ClassValue`s now. `lruSize` is kept for compatibility and no longer bounds anything; it already bounded nothing on the read side.
   * **Speed, fresh JVMs, 3 forks each, together with java-util's leak-free `TypeUtilities`:** writing with cycle support 36.3 → 35.8 µs, without 33.3 → 32.5 µs, reading 71.0 → 68.0 µs.
   * **Tests.** `ClassLoaderLeakTest` (1) writes and reads a class of a throwaway loader through the default options and checks the loader is collected. It fails against the previous code. Full suite: 4,696 + 165 + 28 tests, 0 failures.
+* **PERFORMANCE**: **Building options no longer copies the 700 permanent aliases.** Every `ReadOptionsBuilder` and `WriteOptionsBuilder` copied them into its own map. Builders now share one unmodifiable snapshot and copy it only if they change their aliases. The snapshot is rebuilt when a permanent alias is added or removed, under the same lock as the change.
+  * **What each options object sees is unchanged:**
+    * Its own alias changes stay its own.
+    * A permanent alias reaches the builders created after it, not one already started.
+    * Built options refuse changes.
+    * A copy starts from the original's aliases without changing them.
+  * **Building options, with the rest of this release's changes:** `WriteOptions` 11.4 → 3.8 µs and `ReadOptions` 15.1 → 5.8 µs; they were 12 and 17 µs in 4.112.0. Creating a `WriteOptions` then writing a small map takes 18.4 → ~11.6 µs.
+  * **Tests.** `AliasesSharedUntilChangedTest` (4) pins those rules. It passes against the previous code and fails if a permanent alias leaves a stale snapshot. Full suite: 4,700 + 165 + 28 tests, 0 failures.
 * **BUILD**: `java-util` 4.112.0 → **4.113.0**, which adds the `Charset` conversions above.
 
 #### 4.112.0 - 2026-09-23

@@ -82,6 +82,9 @@ public class WriteOptionsBuilder {
     // The BASE_* settings are copied into every WriteOptions built, so they are plain concurrent maps and sets: cheap
     // to copy. The per-object lookups go through each WriteOptions' per-class caches (ClassValues), not these.
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
+    // What every builder starts from: an unmodifiable copy of BASE_ALIAS_MAPPINGS, shared until a builder changes its
+    // aliases (then it copies them). Rebuilt after a permanent alias is added or removed; guarded by BASE_ALIAS_MAPPINGS.
+    private static volatile Map<String, String> baseAliasSnapshot;
     private static final Map<Class<?>, JsonClassWriter> BASE_WRITERS = new ConcurrentHashMapNullSafe<>();
     private static final Set<Class<?>> BASE_NON_REFS = new ConcurrentSet<>();
     private static final Set<Class<?>> BASE_NOT_CUSTOM_WRITTEN = new ConcurrentSet<>();
@@ -171,8 +174,10 @@ public class WriteOptionsBuilder {
 
         // Start with all BASE_ALIAS_MAPPINGS (more aliases can be added to this instance, and more aliases
         // can be added to the BASE_ALIAS_MAPPINGS via the static method, so that all instances get them.)
+        // Shared, not copied, until this builder changes its aliases.
         options.nonStandardGetters.putAll(BASE_NONSTANDARD_GETTERS);
-        options.aliasTypeNames.putAll(BASE_ALIAS_MAPPINGS);
+        options.aliasTypeNames = baseAliases();
+        options.aliasesShared = true;
         options.customWrittenClasses.putAll(BASE_WRITERS);
         options.nonRefClasses.addAll(BASE_NON_REFS);
         options.notCustomWrittenClasses.addAll(BASE_NOT_CUSTOM_WRITTEN);
@@ -272,8 +277,8 @@ public class WriteOptionsBuilder {
             options.nonStandardGetters.clear();
             options.nonStandardGetters.putAll(other.nonStandardGetters);
 
-            options.aliasTypeNames.clear();
-            options.aliasTypeNames.putAll(other.aliasTypeNames);
+            options.aliasTypeNames = other.aliasTypeNames;     // unmodifiable once built: shared until changed
+            options.aliasesShared = true;
 
             options.excludedFieldNames.clear();
             options.excludedFieldNames.putAll(other.excludedFieldNames);
@@ -306,7 +311,33 @@ public class WriteOptionsBuilder {
      * @param alias Shorter alias name, for example, "ArrayList" as opposed to "java.util.ArrayList"
      */
     public static void addPermanentAlias(Class<?> clazz, String alias) {
-        BASE_ALIAS_MAPPINGS.put(clazz.getName(), alias);
+        synchronized (BASE_ALIAS_MAPPINGS) {
+            BASE_ALIAS_MAPPINGS.put(clazz.getName(), alias);
+            baseAliasSnapshot = null;
+        }
+    }
+
+    private static Map<String, String> baseAliases() {
+        Map<String, String> snapshot = baseAliasSnapshot;
+        if (snapshot == null) {
+            synchronized (BASE_ALIAS_MAPPINGS) {
+                snapshot = baseAliasSnapshot;
+                if (snapshot == null) {
+                    snapshot = Collections.unmodifiableMap(new LinkedHashMap<>(BASE_ALIAS_MAPPINGS));
+                    baseAliasSnapshot = snapshot;
+                }
+            }
+        }
+        return snapshot;
+    }
+
+    /** This builder's own aliases, copied from the shared ones the first time it changes them. */
+    private Map<String, String> ownAliases() {
+        if (options.aliasesShared) {
+            options.aliasTypeNames = new LinkedHashMap<>(options.aliasTypeNames);
+            options.aliasesShared = false;
+        }
+        return options.aliasTypeNames;
     }
 
     /**
@@ -322,7 +353,10 @@ public class WriteOptionsBuilder {
         String regex = StringUtilities.wildcardToRegexString(classNamePattern);
         Pattern pattern = RegexUtilities.getCachedPattern(regex);
         if (pattern != null) {
-            BASE_ALIAS_MAPPINGS.keySet().removeIf(key -> RegexUtilities.safeMatches(pattern, key));
+            synchronized (BASE_ALIAS_MAPPINGS) {
+                BASE_ALIAS_MAPPINGS.keySet().removeIf(key -> RegexUtilities.safeMatches(pattern, key));
+                baseAliasSnapshot = null;
+            }
         }
     }
 
@@ -911,7 +945,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder aliasTypeName(Class<?> type, String alias) {
-        options.aliasTypeNames.put(type.getName(), alias);
+        ownAliases().put(type.getName(), alias);
         return this;
     }
 
@@ -933,7 +967,7 @@ public class WriteOptionsBuilder {
     private void addUniqueAlias(String typeName, String alias) {
         Convention.throwIfClassNotFound(typeName, options.classLoader);
         Convention.throwIfKeyExists(options.aliasTypeNames, typeName, "Tried to create @type alias '" + alias + "' for '" + typeName + "', but it is already aliased to: " + options.aliasTypeNames.get(typeName));
-        options.aliasTypeNames.put(typeName, alias);
+        ownAliases().put(typeName, alias);
     }
 
     /**
@@ -947,7 +981,7 @@ public class WriteOptionsBuilder {
         String regex = StringUtilities.wildcardToRegexString(typeNamePattern);
         Pattern pattern = RegexUtilities.getCachedPattern(regex);
         if (pattern != null) {
-            options.aliasTypeNames.keySet().removeIf(key -> RegexUtilities.safeMatches(pattern, key));
+            ownAliases().keySet().removeIf(key -> RegexUtilities.safeMatches(pattern, key));
         }
         return this;
     }
@@ -1901,6 +1935,7 @@ public class WriteOptionsBuilder {
         options.includedFieldNames = Collections.unmodifiableMap(options.includedFieldNames);
         options.nonStandardGetters = Collections.unmodifiableMap(options.nonStandardGetters);
         options.aliasTypeNames = Collections.unmodifiableMap(options.aliasTypeNames);
+        options.aliasesShared = false;      // built: no more changes, and none through the builder either
         options.notCustomWrittenClasses = Collections.unmodifiableSet(options.notCustomWrittenClasses);
         options.nonRefClasses = Collections.unmodifiableSet(options.nonRefClasses);
         options.excludedFieldNames = Collections.unmodifiableMap(options.excludedFieldNames);
@@ -1999,6 +2034,8 @@ public class WriteOptionsBuilder {
         private Map<Class<?>, Map<String, String>> nonStandardGetters = new ConcurrentHashMapNullSafe<>();
         // Pre-size builder maps to avoid resize during typical configuration
         private Map<String, String> aliasTypeNames = new LinkedHashMap<>(32);
+        // True while aliasTypeNames is shared (the base snapshot, or another WriteOptions' aliases): copied before a change
+        private boolean aliasesShared;
         private Set<Class<?>> notCustomWrittenClasses = new ConcurrentSet<>();
         private Set<Class<?>> nonRefClasses = new ConcurrentSet<>();
         private Map<Class<?>, Set<String>> excludedFieldNames = new ConcurrentHashMapNullSafe<>();

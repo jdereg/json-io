@@ -89,6 +89,10 @@ public class ReadOptionsBuilder {
     private static final Map<Class<?>, ClassFactory> BASE_CLASS_FACTORIES = new ConcurrentHashMapNullSafe<>();
     // BASE_ALIAS_MAPPINGS uses LinkedHashMap to maintain insertion order so later aliases override earlier ones
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = Collections.synchronizedMap(new LinkedHashMap<>());
+    // What every builder starts from: BASE_ALIAS_MAPPINGS swapped to alias -> class name, unmodifiable, shared until a
+    // builder changes its aliases (then it copies them). Rebuilt after a permanent alias is added or removed; guarded
+    // by BASE_ALIAS_MAPPINGS.
+    private static volatile Map<String, String> baseAliasSnapshot;
     private static final Map<Class<?>, Class<?>> BASE_COERCED_TYPES = new ConcurrentHashMapNullSafe<>();
     private static final Set<Class<?>> BASE_NON_REFS = new ConcurrentSet<>();
     private static final Set<Class<?>> BASE_NOT_CUSTOM_READ = new ConcurrentSet<>();
@@ -179,11 +183,10 @@ public class ReadOptionsBuilder {
     public ReadOptionsBuilder() {
         options = new DefaultReadOptions();
 
-        // Direct copy (with swap) without classForName() lookups for speed.
-        // (The classForName check is done with the BASE_ALIAS_MAPPINGS are loaded)
-        BASE_ALIAS_MAPPINGS.forEach((srcType, alias) -> {
-            options.aliasTypeNames.put(alias, srcType);
-        });
+        // The base aliases, swapped, without classForName() lookups for speed; shared, not copied, until this builder
+        // changes its aliases. (The classForName check is done when the BASE_ALIAS_MAPPINGS are loaded.)
+        options.aliasTypeNames = baseAliases();
+        options.aliasesShared = true;
 
         addInjectorFactory(new MethodInjectorFactory());
 
@@ -303,8 +306,8 @@ public class ReadOptionsBuilder {
             options.linearSearchThreshold = other.linearSearchThreshold;
 
             // Copy complex settings
-            options.aliasTypeNames.clear();
-            options.aliasTypeNames.putAll(other.aliasTypeNames);
+            options.aliasTypeNames = other.aliasTypeNames;     // unmodifiable once built: shared until changed
+            options.aliasesShared = true;
 
             options.injectorFactories.clear();
             options.injectorFactories.addAll(other.injectorFactories);
@@ -396,7 +399,35 @@ public class ReadOptionsBuilder {
      * @param alias       Shorter alias name, for example, "ArrayList" as opposed to "java.util.ArrayList"
      */
     public static void addPermanentAlias(Class<?> sourceClass, String alias) {
-        BASE_ALIAS_MAPPINGS.put(sourceClass.getName(), alias);
+        synchronized (BASE_ALIAS_MAPPINGS) {
+            BASE_ALIAS_MAPPINGS.put(sourceClass.getName(), alias);
+            baseAliasSnapshot = null;
+        }
+    }
+
+    private static Map<String, String> baseAliases() {
+        Map<String, String> snapshot = baseAliasSnapshot;
+        if (snapshot == null) {
+            synchronized (BASE_ALIAS_MAPPINGS) {
+                snapshot = baseAliasSnapshot;
+                if (snapshot == null) {
+                    Map<String, String> swapped = new LinkedHashMap<>();
+                    BASE_ALIAS_MAPPINGS.forEach((srcType, alias) -> swapped.put(alias, srcType));
+                    snapshot = Collections.unmodifiableMap(swapped);
+                    baseAliasSnapshot = snapshot;
+                }
+            }
+        }
+        return snapshot;
+    }
+
+    /** This builder's own aliases, copied from the shared ones the first time it changes them. */
+    private Map<String, String> ownAliases() {
+        if (options.aliasesShared) {
+            options.aliasTypeNames = new LinkedHashMap<>(options.aliasTypeNames);
+            options.aliasesShared = false;
+        }
+        return options.aliasTypeNames;
     }
 
     /**
@@ -415,7 +446,10 @@ public class ReadOptionsBuilder {
         String regex = StringUtilities.wildcardToRegexString(classNamePattern);
         Pattern pattern = RegexUtilities.getCachedPattern(regex);
         if (pattern != null) {
-            BASE_ALIAS_MAPPINGS.values().removeIf(value -> RegexUtilities.safeMatches(pattern, value));
+            synchronized (BASE_ALIAS_MAPPINGS) {
+                BASE_ALIAS_MAPPINGS.values().removeIf(value -> RegexUtilities.safeMatches(pattern, value));
+                baseAliasSnapshot = null;
+            }
         }
     }
 
@@ -938,6 +972,7 @@ public class ReadOptionsBuilder {
         JsonObject.setLinearSearchThreshold(options.linearSearchThreshold);
         
         options.aliasTypeNames = Collections.unmodifiableMap(options.aliasTypeNames);
+        options.aliasesShared = false;      // built: no more changes, and none through the builder either
         options.coercedTypes = Collections.unmodifiableMap(options.coercedTypes);
         options.notCustomReadClasses = Collections.unmodifiableSet(options.notCustomReadClasses);
         options.customReaderClasses = Collections.unmodifiableMap(options.customReaderClasses);
@@ -1544,7 +1579,7 @@ public class ReadOptionsBuilder {
         String regex = StringUtilities.wildcardToRegexString(typeNamePattern);
         Pattern pattern = RegexUtilities.getCachedPattern(regex);
         if (pattern != null) {
-            options.aliasTypeNames.values().removeIf(key -> RegexUtilities.safeMatches(pattern, key));
+            ownAliases().values().removeIf(key -> RegexUtilities.safeMatches(pattern, key));
         }
         return this;
     }
@@ -1627,7 +1662,7 @@ public class ReadOptionsBuilder {
         if (existType != null) {
             LOG.warning("Non-unique ReadOptions alias: " + alias + " attempted assign to: " + type + ", but is already assigned to: " + existType);
         }
-        options.aliasTypeNames.put(alias, type);
+        ownAliases().put(alias, type);
     }
 
     /**
@@ -1866,6 +1901,8 @@ public class ReadOptionsBuilder {
         private int linearSearchThreshold = 8;            // 8 linear search threshold (same as JsonObject hardcoded default)
         
         private Map<String, String> aliasTypeNames = new LinkedHashMap<>();
+        // True while aliasTypeNames is shared (the base snapshot, or another ReadOptions' aliases): copied before a change
+        private boolean aliasesShared;
         // Class-keyed settings: plain concurrent maps and sets, cheap to copy from the BASE_* settings on every
         // build. The per-object lookups read the per-class caches below, which consult these only on first use.
         private Map<Class<?>, Class<?>> coercedTypes = new ConcurrentHashMapNullSafe<>();
