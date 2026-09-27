@@ -9,8 +9,6 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 import com.cedarsoftware.util.ClassUtilities;
@@ -175,8 +173,6 @@ public class JsonIo {
     private static final Logger LOG = Logger.getLogger(JsonIo.class.getName());
     static { LoggingConfig.init(); }
 
-    // Performance: Cache map-mode ReadOptions to avoid creating ReadOptionsBuilder on every toMaps() call
-    private static final Map<ReadOptions, ReadOptions> MAP_OPTIONS_CACHE = new ConcurrentHashMap<>();
     // Performance: Recycle common read/write buffers per thread for String-based APIs.
     private static final ThreadLocal<BufferRecycler> BUFFER_RECYCLER = ThreadLocal.withInitial(BufferRecycler::new);
 
@@ -333,14 +329,13 @@ public class JsonIo {
     }
 
     /**
-     * Gets or creates cached ReadOptions configured for Map mode (returnAsJsonObjects).
+     * The given ReadOptions (or the default ones), configured for Map mode (returnAsJsonObjects). Made once per
+     * ReadOptions and kept on it -- not in a static map, which kept every ReadOptions it was given (a ReadOptions built
+     * per call to toMaps() was never let go, nor the class loader it named).
      */
     private static ReadOptions getMapOptions(ReadOptions readOptions) {
-        final ReadOptions cacheKey = readOptions != null ? readOptions : ReadOptionsBuilder.getDefaultReadOptions();
-        return MAP_OPTIONS_CACHE.computeIfAbsent(cacheKey, opts ->
-                new ReadOptionsBuilder(readOptions)
-                        .returnAsJsonObjects()
-                        .build());
+        ReadOptions options = readOptions != null ? readOptions : ReadOptionsBuilder.getDefaultReadOptions();
+        return ((ReadOptionsBuilder.DefaultReadOptions) options).returningJsonObjects();
     }
 
     // ========== Public API ==========

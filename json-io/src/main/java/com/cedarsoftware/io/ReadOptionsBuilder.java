@@ -1933,6 +1933,8 @@ public class ReadOptionsBuilder {
         private Map<String, String> aliasTypeNames = new LinkedHashMap<>();
         // True while aliasTypeNames is shared (the base snapshot, or another ReadOptions' aliases): copied before a change
         private boolean aliasesShared;
+        // These options returning JsonObjects (toMaps() reads with them): made on first use, and go when these go
+        private volatile ReadOptions returningJsonObjects;
         // Class-keyed settings: plain concurrent maps and sets, cheap to copy from the BASE_* settings on every
         // build. The per-object lookups read the per-class caches below, which consult these only on first use.
         private Map<Class<?>, Class<?>> coercedTypes = new ConcurrentHashMapNullSafe<>();
@@ -2401,6 +2403,24 @@ public class ReadOptionsBuilder {
          */
         public boolean isReturningJsonObjects() {
             return returnType == ReadOptions.ReturnType.JSON_OBJECTS;
+        }
+
+        /** These options, returning JsonObjects (Maps): themselves if they already do, else a copy made once. */
+        ReadOptions returningJsonObjects() {
+            if (isReturningJsonObjects()) {
+                return this;
+            }
+            ReadOptions maps = returningJsonObjects;
+            if (maps == null) {
+                synchronized (this) {
+                    maps = returningJsonObjects;
+                    if (maps == null) {
+                        maps = new ReadOptionsBuilder(this).returnAsJsonObjects().build();
+                        returningJsonObjects = maps;
+                    }
+                }
+            }
+            return maps;
         }
 
         /**

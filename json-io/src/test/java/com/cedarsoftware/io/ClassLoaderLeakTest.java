@@ -4,6 +4,7 @@ import java.io.File;
 import java.lang.ref.WeakReference;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -18,13 +19,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * (writers, readers, class factories, field plans, injectors, annotation metadata) is kept on the class itself (a
  * ClassValue) and goes away with it. A class from a discarded loader -- a Groovy script n-cube recompiled, a plugin, a
  * redeployed webapp -- would otherwise stay in memory, with its loader and every class that loader loaded. (The
- * default ReadOptions' class-factory cache was a ConcurrentHashMap, which held every class it saw.)
+ * default ReadOptions' class-factory cache was a ConcurrentHashMap, which held every class it saw.) Nor may reading
+ * keep a ReadOptions made for one call: toMaps() kept every ReadOptions it was given, in a static map, with the Map-mode
+ * copy it made of it -- and whatever those name (a class loader, readers, factories) -- for the life of the JVM.
  */
 class ClassLoaderLeakTest {
 
     private static final String FIXTURE = "com.cedarsoftware.io.ClassLoaderLeakTest$Fixture";
 
-    /** Loaded in a throwaway ClassLoader whose parent is the bootstrap loader: may depend only on java.base. */
+    /**
+     * Loaded in a throwaway ClassLoader whose parent is the bootstrap loader: may depend only on java.base. It must also
+     * be the first nested class this file mentions: on JDK 8, asking it for its enclosing class (json-io does, to see
+     * whether it belongs to an enum) resolves the outer class of each nested class listed before it in this class --
+     * JsonIo, for JsonIo.JavaStringBuilder -- which the throwaway loader cannot load.
+     */
     public static class Fixture {
         public String name;
         public int count;
@@ -37,7 +45,8 @@ class ClassLoaderLeakTest {
     @Test
     void writingAndReadingAClassDoesNotKeepItsLoaderAlive() throws Exception {
         WeakReference<ClassLoader> loader = writeAndReadAFixture();
-        for (int i = 0; i < 100 && loader.get() != null; i++) {
+        WeakReference<ReadOptions> perCall = readMapsWithOptionsMadeForTheCall();
+        for (int i = 0; i < 100 && (loader.get() != null || perCall.get() != null); i++) {
             System.gc();
             byte[][] pressure = new byte[64][];
             for (int j = 0; j < pressure.length; j++) {
@@ -46,6 +55,7 @@ class ClassLoaderLeakTest {
             Thread.sleep(10);
         }
         assertNull(loader.get(), "writing or reading kept the class loader alive");
+        assertNull(perCall.get(), "toMaps() kept a ReadOptions made for one call");
     }
 
     private static WeakReference<ClassLoader> writeAndReadAFixture() throws Exception {
@@ -68,5 +78,15 @@ class ClassLoaderLeakTest {
 
         loader.close();
         return new WeakReference<>(loader);
+    }
+
+    private static WeakReference<ReadOptions> readMapsWithOptionsMadeForTheCall() {
+        ReadOptions perCall = new ReadOptionsBuilder().maxDepth(500).build();
+        for (int i = 0; i < 2; i++) {
+            Map<?, ?> map = JsonIo.toMaps("{\"name\":\"n\",\"count\":3}", perCall).asClass(Map.class);
+            assertEquals("n", map.get("name"));
+            assertEquals(3L, map.get("count"));
+        }
+        return new WeakReference<>(perCall);
     }
 }
