@@ -1,1 +1,2 @@
 java.lang.Throwable = cause:initCause
+java.util.concurrent.atomic.AtomicReference = value:set

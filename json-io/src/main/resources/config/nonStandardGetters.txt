@@ -7,3 +7,4 @@ java.time.Duration = nanos:getNano
 java.time.Instant = seconds:getEpochSecond,nanos:getNano
 java.time.MonthDay = month:getMonthValue,day:getDayOfMonth
 java.sql.SQLException = vendorCode:getErrorCode,next:getNextException
+java.util.concurrent.atomic.AtomicReference = value:get

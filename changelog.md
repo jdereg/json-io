@@ -49,6 +49,7 @@
   * **TOON** wrote an `Optional` holding an object or a list on the key's line, so the content's fields landed at the parent's level and the document read back wrong, with or without a cycle.
   * **Now:** both writers trace the content; the reader wraps a `@ref` in an `Optional` field, whether it resolves at once or later; and TOON writes the content as the field's own value. JDK 8 and JDK 21 write the same JSON.
   * **Tests.** `OptionalSharedAndCyclicTest` (4); all 4 fail against the previous code. `OptionalPrimitiveVariantsTest.sharedObjectInOptional_cycleSupportEnabled` failed on JDK 8 and now passes. `JsonPerformanceTest`'s workloads are unchanged. Full suite: 4,710 + 165 + 28 tests, 0 failures.
+* **BUG FIX**: **An `AtomicReference` keeps its content on JDK 9+.** The content lives in a private field that `java.util.concurrent.atomic` does not open, and json-io writes a JDK field it cannot reach as `null`. The content was therefore written as `"value":null`, and reading it back failed. It is now written through `get()` and read through `set()` (`nonStandardGetters.txt`, `nonStandardSetters.txt`), as it effectively was on JDK 8, including shared objects and cycles through it. `AtomicReferenceRoundTripTest` (3); all 3 fail against the previous code on JDK 21. Full suite: 4,713 + 165 + 28 tests on JDK 21, and 4,713 on JDK 8, 0 failures.
 * **BUILD**: `java-util` 4.112.0 → **4.113.0**, which adds the `Charset` conversions above.
 
 #### 4.112.0 - 2026-09-23
