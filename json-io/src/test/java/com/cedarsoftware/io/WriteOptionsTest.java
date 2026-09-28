@@ -86,7 +86,10 @@ class WriteOptionsTest {
         );
     }
 
-    @ParameterizedTest
+    // autoCloseArguments = false: JUnit closes every AutoCloseable argument after the invocation, and a class loader
+    // may be a URLClassLoader -- on JDK 8 the system class loader is one. Closed, it loads no further classes, and
+    // every later test in the run failed with NoClassDefFoundError.
+    @ParameterizedTest(autoCloseArguments = false)
     @MethodSource("classLoadersTest")
     void testClassLoader(ClassLoader classLoader) {
         WriteOptions options = new WriteOptionsBuilder().classLoader(classLoader).build();

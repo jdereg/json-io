@@ -3,6 +3,8 @@ package com.cedarsoftware.io.reflect;
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.util.SystemUtilities;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -18,6 +20,7 @@ class InjectorTests {
     }
 
     @Test
+    @EnabledForJreRange(min = JRE.JAVA_9, disabledReason = "VarHandle arrived in JDK 9")
     void createWithVarHandle_setsFieldValue() throws Exception {
         Field field = Sample.class.getDeclaredField("value");
         Method create = Injector.class.getDeclaredMethod("createWithVarHandle", Field.class, String.class);

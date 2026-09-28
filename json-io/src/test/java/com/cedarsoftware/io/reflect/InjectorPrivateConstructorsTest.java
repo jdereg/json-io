@@ -8,6 +8,8 @@ import java.lang.reflect.Method;
 import com.cedarsoftware.util.ReflectionUtils;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -36,6 +38,7 @@ class InjectorPrivateConstructorsTest {
     }
 
     @Test
+    @EnabledForJreRange(min = JRE.JAVA_9, disabledReason = "VarHandle and privateLookupIn arrived in JDK 9")
     void varHandleConstructor_injectsValue() throws Exception {
         Field field = VarHandleTarget.class.getDeclaredField("number");
         field.setAccessible(true);
