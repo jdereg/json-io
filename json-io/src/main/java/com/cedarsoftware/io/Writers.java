@@ -346,6 +346,21 @@ public class Writers {
     }
 
     /**
+     * An InetAddress as its IP address, preceded by the host name it already carries ("build-server/10.0.0.7").
+     * Reading one back looks nothing up (see java-util's InetAddress conversions); without a name, just "10.0.0.7".
+     */
+    public static class InetAddressWriter extends PrimitiveUtf8StringWriter {
+        @Override
+        public String extractString(Object o) {
+            if (o == null) {
+                return null;
+            }
+            String text = o.toString();         // toString(), not getHostName(): no reverse lookup
+            return text.startsWith("/") ? text.substring(1) : text;
+        }
+    }
+
+    /**
      * Writes a {@link java.nio.charset.Charset} as its canonical name, typed as {@code Charset}.
      * <p>
      * A Charset's runtime class is a JDK-internal subclass ({@code sun.nio.cs.UTF_8}, ...). Written under

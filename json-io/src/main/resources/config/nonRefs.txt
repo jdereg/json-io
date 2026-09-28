@@ -33,6 +33,9 @@ java.math.BigInteger
 java.math.BigDecimal
 
 java.net.URI
+java.net.InetAddress
+java.net.Inet4Address
+java.net.Inet6Address
 java.net.URL
 
 java.nio.file.Path
@@ -67,6 +70,8 @@ java.util.UUID
 java.util.concurrent.atomic.AtomicBoolean
 java.util.concurrent.atomic.AtomicInteger
 java.util.concurrent.atomic.AtomicLong
+java.util.concurrent.atomic.LongAdder
+java.util.concurrent.atomic.DoubleAdder
 
 java.util.regex.Pattern
 
