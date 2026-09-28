@@ -450,4 +450,23 @@ class ResolverValueToTargetTest {
         assertThat(result).isSameAs(car);
         assertThat(result).isInstanceOf(Vehicle.class);
     }
+
+    /**
+     * Lenient mode never accepts an array for another array type. Under java-util's JLS hierarchy (4.113.0) two
+     * arrays of objects share Object[] and Serializable[], and an array of Cars shares Vehicle[] with an array of
+     * Motorcycles: each was accepted as the other, and the caller got an array of the wrong type.
+     */
+    @Test
+    void toJava_lenientModeRefusesAnArrayOfAnotherType() {
+        Car[] cars = {new Car("Tesla")};
+        assertThatThrownBy(() -> resolver.callToJava(Motorcycle[].class, cars))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Return type mismatch");
+        assertThatThrownBy(() -> resolver.callToJava(OrderedMini[].class, cars))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Return type mismatch");
+        assertThatThrownBy(() -> resolver.callToJava(OrderedMini[][].class, new Car[][]{cars}))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Return type mismatch");
+    }
 }

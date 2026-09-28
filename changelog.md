@@ -118,6 +118,10 @@
   * **Gson claim corrected:** the README said json-io was "roughly tied" with Gson on reads. It is faster on `toMaps` reads, and takes about 13% longer on typed reads.
   * **`cycleSupport(false)` tip updated:** the gain is now 15% for typed writes and 11% in `toMaps` mode.
   * **Options-building tip corrected:** building options takes well under a microsecond.
+* **BUG FIX**: **Lenient type matching never accepts an array for another array type.** When a value can't be converted to the requested type, json-io accepts a complex object that shares a meaningful common ancestor with that type: a `Car` where a `Motorcycle` is asked for, since both are `Vehicle`s.
+  * **The defect:** java-util 4.113.0's class hierarchy follows the Java Language Specification. So two arrays of objects now share `Object[]` and `Serializable[]`, which the check did not skip, and an array of `Car`s shares `Vehicle[]` with an array of `Motorcycle`s. Either was then accepted as the other, and the caller got an array of the wrong type.
+  * **Now:** an array is never accepted here, as before the hierarchy changed.
+  * **Tests.** `ResolverValueToTargetTest.toJava_lenientModeRefusesAnArrayOfAnotherType` fails without this change (against java-util 4.113.0). Full suite: 4,736 + 165 + 28 tests, 0 failures on JDK 21. The core module passes on JDK 8 as well (4,736 tests, 0 failures).
 * **BUILD**: `java-util` 4.112.0 → **4.113.0**, which adds the `Charset`, `java.sql.Time`, `InetAddress`, `LongAdder` and `DoubleAdder` conversions above.
 
 #### 4.112.0 - 2026-09-23

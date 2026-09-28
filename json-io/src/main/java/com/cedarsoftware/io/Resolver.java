@@ -788,9 +788,12 @@ public abstract class Resolver {
         // 4. Lenient mode for complex objects: accept if they share meaningful common ancestors
         //    This is for POJOs/complex objects, NOT for primitives or simple types.
         //    Only apply this when value is a "complex" object (not a primitive wrapper, String, etc.)
+        //    Never for an array: two arrays of objects share Object[] and Serializable[], the arrays of their
+        //    components' supertypes (JLS 4.10.3), which the roots skipped below do not cover -- and an array was
+        //    never accepted here (while java-util's hierarchy gave arrays only Object, Cloneable and Serializable).
         Class<?> valueClass = value.getClass();
         boolean simpleLike = isPseudoPrimitive(valueClass) || valueClass.isEnum() || valueClass == Class.class;
-        if (!simpleLike) {
+        if (!simpleLike && !valueClass.isArray()) {
             Set<Class<?>> commonAncestors = ClassUtilities.findLowestCommonSupertypesExcluding(value.getClass(), targetClass, SKIP_COMMON_ROOTS);
             if (!commonAncestors.isEmpty()) {
                 return value;
