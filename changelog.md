@@ -103,6 +103,21 @@
   * **Tests.** `StringCachePooledTest` (3). The allocation check fails against the previous code; the two that check stale entries and a read within a read pass on both. Full suite: 4,734 + 165 + 28 tests on JDK 21 and 4,734 on JDK 8, 0 failures.
 * **BUG FIX**: **An object of a class declared inside an enum is written and read back.** For example, `enum Status { …; public static class Detail { … } }`. java-util's `getClassIfEnum()` reported such a class as its enclosing enum. json-io therefore chose the enum writer for it and failed ("Status$Detail cannot be cast to java.lang.Enum") on every JDK. Fixed in java-util 4.113.0. Enum constants with bodies, and enums nested in enums, still read and write as enums.
   * **Tests.** `EnumNestedClassTest` (1). Full suite: 4,735 + 165 + 28 tests on JDK 21 and 4,735 on JDK 8, 0 failures.
+* **DOCS**: **README performance figures re-measured** with `JsonPerformanceTest --with-gson`, median of three runs, on JDK 21.0.12 with `jackson-databind 2.22.3` and `gson 2.14.0`. Ratios to Jackson:
+
+  | Mode | Before (4.106.0) | Now |
+  |---|---|---|
+  | Typed read | 1.64x | 1.60x |
+  | `toMaps` read | 1.32x | 1.31x |
+  | Write, `cycleSupport=true` | 1.57x | 1.66x |
+  | Write, `cycleSupport=false` | 1.40x | 1.45x |
+  | `toMaps` write, `cycleSupport=true` | 1.65x | 1.59x |
+  | `toMaps` write, `cycleSupport=false` | 1.38x | 1.45x |
+
+  * **Against the released 4.112.0**, same machine and libraries, three runs each: typed reads are about 4% faster relative to Jackson, and the other modes are within ±3%.
+  * **Gson claim corrected:** the README said json-io was "roughly tied" with Gson on reads. It is faster on `toMaps` reads, and takes about 13% longer on typed reads.
+  * **`cycleSupport(false)` tip updated:** the gain is now 15% for typed writes and 11% in `toMaps` mode.
+  * **Options-building tip corrected:** building options takes well under a microsecond.
 * **BUILD**: `java-util` 4.112.0 → **4.113.0**, which adds the `Charset`, `java.sql.Time`, `InetAddress`, `LongAdder` and `DoubleAdder` conversions above.
 
 #### 4.112.0 - 2026-09-23
