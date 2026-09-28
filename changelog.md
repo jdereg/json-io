@@ -86,6 +86,21 @@
     * Built options refuse changes, including changes through their builder.
     * A copy starts from the original's settings without changing them.
   * **Tests.** `OptionsShareClassSettingsTest` (5). The 2 that check sharing fail against the previous code; the 3 that check behavior pass on both. Full suite: 4,731 + 165 + 28 tests on JDK 21 and 4,731 on JDK 8, 0 failures.
+* **PERFORMANCE**: **A small read is 2.2–2.5x faster and allocates about a quarter as much.** The tokenizer's string cache is now lent per thread instead of made for every parse.
+  * **The cause:** each parse allocated and zeroed the cache's 2,048-slot array (8 KB), which was most of the cost of reading a small document.
+  * **What lends it:** the per-thread buffer recycler that already lends the reader buffers, for String and InputStream reads, and for the streaming tokenizer until it is closed. A read within a read gets its own.
+  * **Earlier documents' strings:** a lent cache keeps strings of 64 characters or fewer from earlier documents, as ToonReader's cache does, and as the recycled reader buffer already keeps their text. A hit is always checked against the text, so a cached string never stands in for a different one. Repeated field names now hit across documents.
+  * **Speed**, small reads with one `ReadOptions`, fresh JVMs, 3 forks:
+
+    | | Before | After |
+    |---|---|---|
+    | Two-field `Map` | 612 ns | 281 ns |
+    | Three-field object | 622 ns | 251 ns |
+    | `toMaps()` | 589 ns | 231 ns |
+    | Allocated per read | 10.4–10.8 KB | 2.0–2.5 KB |
+
+    `JsonPerformanceTest`'s read is unchanged.
+  * **Tests.** `StringCachePooledTest` (3). The allocation check fails against the previous code; the two that check stale entries and a read within a read pass on both. Full suite: 4,734 + 165 + 28 tests on JDK 21 and 4,734 on JDK 8, 0 failures.
 * **BUILD**: `java-util` 4.112.0 → **4.113.0**, which adds the `Charset`, `java.sql.Time`, `InetAddress`, `LongAdder` and `DoubleAdder` conversions above.
 
 #### 4.112.0 - 2026-09-23

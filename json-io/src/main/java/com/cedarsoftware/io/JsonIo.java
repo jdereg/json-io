@@ -191,6 +191,9 @@ public class JsonIo {
         private boolean writerBufferInUse;
         private boolean readerCharBufferInUse;
         private boolean pushbackBufferInUse;
+        // Made on first use: a thread that only writes never needs it
+        private String[] stringCache;
+        private boolean stringCacheInUse;
 
         char[] borrowWriterCharBuffer(int minSize) {
             if (writerBufferInUse) {
@@ -230,6 +233,24 @@ public class JsonIo {
                 pushbackCharBuffer = new char[minSize];
             }
             return pushbackCharBuffer;
+        }
+
+        /** The tokenizer's string cache, or null while this thread's is lent (a read within a read makes its own). */
+        String[] borrowStringCache() {
+            if (stringCacheInUse) {
+                return null;
+            }
+            stringCacheInUse = true;
+            if (stringCache == null) {
+                stringCache = new String[CharStreamTokenizer.STRING_CACHE_SIZE];
+            }
+            return stringCache;
+        }
+
+        void releaseStringCache(String[] used) {
+            if (used != null && used == stringCache) {
+                stringCacheInUse = false;
+            }
         }
 
         void releaseReaderBuffers(char[] usedReader, char[] usedPushback) {
@@ -1120,6 +1141,7 @@ public class JsonIo {
         char[] readerBuf = recycler.borrowReaderCharBuffer(DEFAULT_READER_BUFFER_SIZE);
         char[] pushbackBuf = recycler.borrowPushbackBuffer(DEFAULT_PUSHBACK_BUFFER_SIZE);
         FastReader input = new FastReader(reader, readerBuf, pushbackBuf);
+        String[] strings = recycler.borrowStringCache();
         CharStreamTokenizer tokenizer = new CharStreamTokenizer(
                 input,
                 opts.isStrictJson(),
@@ -1129,9 +1151,13 @@ public class JsonIo {
                 opts.isFloatingPointBigDecimal(),
                 opts.isFloatingPointBoth(),
                 opts.getStringBufferSize(),
-                sourceRef);
+                sourceRef,
+                strings);
         // Return exactly the buffers this tokenizer borrowed (ownership-aware release).
-        tokenizer.setCloseHook(() -> recycler.releaseReaderBuffers(readerBuf, pushbackBuf));
+        tokenizer.setCloseHook(() -> {
+            recycler.releaseReaderBuffers(readerBuf, pushbackBuf);
+            recycler.releaseStringCache(strings);
+        });
         return tokenizer;
     }
 
@@ -1573,18 +1599,20 @@ public class JsonIo {
             char[] readerBuf = recycler.borrowReaderCharBuffer(DEFAULT_READER_BUFFER_SIZE);
             char[] pushbackBuf = recycler.borrowPushbackBuffer(DEFAULT_PUSHBACK_BUFFER_SIZE);
             FastReader input = new FastReader(new StringReader(json), readerBuf, pushbackBuf);
+            String[] strings = recycler.borrowStringCache();
             try {
                 return parseAndResolve(
                         readOptions,
                         typeHolder.getType(),
                         resolver -> {
-                            JsonParser parser = new JsonParser(input, resolver);
+                            JsonParser parser = new JsonParser(input, resolver, strings);
                             return parser.readValue(typeHolder.getType());
                         },
                         "Error parsing JSON value",
                         null);
             } finally {
                 recycler.releaseReaderBuffers(readerBuf, pushbackBuf);
+                recycler.releaseStringCache(strings);
             }
         }
     }
@@ -1662,18 +1690,20 @@ public class JsonIo {
             char[] readerBuf = recycler.borrowReaderCharBuffer(DEFAULT_READER_BUFFER_SIZE);
             char[] pushbackBuf = recycler.borrowPushbackBuffer(DEFAULT_PUSHBACK_BUFFER_SIZE);
             FastReader input = new FastReader(new InputStreamReader(in, StandardCharsets.UTF_8), readerBuf, pushbackBuf);
+            String[] strings = recycler.borrowStringCache();
             try {
                 return parseAndResolve(
                         readOptions,
                         typeHolder.getType(),
                         resolver -> {
-                            JsonParser parser = new JsonParser(input, resolver);
+                            JsonParser parser = new JsonParser(input, resolver, strings);
                             return parser.readValue(typeHolder.getType());
                         },
                         "Error parsing JSON value",
                         input);
             } finally {
                 recycler.releaseReaderBuffers(readerBuf, pushbackBuf);
+                recycler.releaseStringCache(strings);
             }
         }
     }

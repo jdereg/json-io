@@ -107,6 +107,11 @@ class JsonParser {
     }
 
     JsonParser(FastReader reader, Resolver resolver) {
+        this(reader, resolver, null);
+    }
+
+    /** @param stringCache a pooled string cache for the tokenizer (see CharStreamTokenizer), or null for a new one */
+    JsonParser(FastReader reader, Resolver resolver, String[] stringCache) {
         this.substitutes = SUBSTITUTES;
         this.input = reader;
         this.resolver = resolver;
@@ -125,7 +130,8 @@ class JsonParser {
                 readOptions.isFloatingPointBigDecimal(),
                 readOptions.isFloatingPointBoth(),
                 readOptions.getStringBufferSize(),
-                null);
+                null,
+                stringCache);
     }
 
     /**

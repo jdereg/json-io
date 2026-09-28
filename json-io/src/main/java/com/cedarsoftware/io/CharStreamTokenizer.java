@@ -34,6 +34,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
 
     // String-cache sizing (mirrors JsonParser).
     private static final int STRING_CACHE_MASK = 2047;
+    static final int STRING_CACHE_SIZE = STRING_CACHE_MASK + 1;
     private static final int MAX_CACHED_STRING_LENGTH = 64;
     private static final int NO_PREFETCH = -2;
 
@@ -79,7 +80,10 @@ final class CharStreamTokenizer extends JsonTokenizer {
     private final FastReader.BufferSlice readSlice = new FastReader.BufferSlice();
     private final StringBuilder strBuf;
     private final StringBuilder numBuf = new StringBuilder();
-    private final String[] stringCacheArray = new String[STRING_CACHE_MASK + 1];
+    // Lent by JsonIo's per-thread buffer recycler, or made for this parse. A lent one still holds strings from
+    // earlier documents; a hit is always checked against the text, so a stale entry is only a miss. (Allocating and
+    // zeroing this 8 KB array was most of the cost of reading a small document.)
+    private final String[] stringCacheArray;
 
     // Per-instance scratch for the cache-verify compare in cacheStringFromChars.
     // Replaces a CharBufScratch ThreadLocal borrow — JFR showed ThreadLocalMap.getEntry
@@ -144,6 +148,25 @@ final class CharStreamTokenizer extends JsonTokenizer {
                         boolean floatingPointBoth,
                         int stringBufferSize,
                         Object sourceRef) {
+        this(input, strictJson, allowNanAndInfinity, integerTypeBigInteger, integerTypeBoth, floatingPointBigDecimal,
+                floatingPointBoth, stringBufferSize, sourceRef, null);
+    }
+
+    /**
+     * @param stringCache the string cache to use, {@link #STRING_CACHE_SIZE} long -- a pooled one, whose entries may
+     *                    be from earlier documents -- or null for a new one.
+     */
+    CharStreamTokenizer(FastReader input,
+                        boolean strictJson,
+                        boolean allowNanAndInfinity,
+                        boolean integerTypeBigInteger,
+                        boolean integerTypeBoth,
+                        boolean floatingPointBigDecimal,
+                        boolean floatingPointBoth,
+                        int stringBufferSize,
+                        Object sourceRef,
+                        String[] stringCache) {
+        this.stringCacheArray = stringCache != null ? stringCache : new String[STRING_CACHE_SIZE];
         this.input = input;
         this.strictJson = strictJson;
         this.allowNanAndInfinity = allowNanAndInfinity;
