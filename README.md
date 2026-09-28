@@ -495,14 +495,15 @@ json-io handles your **business objects, DTOs, and Records** automatically—no 
 | Category | Types |
 |----------|-------|
 | Primitives | `byte`, `short`, `int`, `long`, `float`, `double`, `boolean`, `char` + wrappers |
-| Numbers | `BigInteger`, `BigDecimal`, `AtomicInteger`, `AtomicLong`, `AtomicBoolean` |
-| Date/Time | `Date`, `Calendar`, `Instant`, `LocalDate`, `LocalTime`, `LocalDateTime`, `ZonedDateTime`, `OffsetDateTime`, `OffsetTime`, `Duration`, `Period`, `Year`, `YearMonth`, `MonthDay`, `TimeZone`, `ZoneId`, `ZoneOffset`, `java.sql.Date`, `Timestamp` |
+| Numbers | `BigInteger`, `BigDecimal`, `AtomicInteger`, `AtomicLong`, `AtomicBoolean`, `LongAdder`, `DoubleAdder` |
+| Date/Time | `Date`, `Calendar`, `Instant`, `LocalDate`, `LocalTime`, `LocalDateTime`, `ZonedDateTime`, `OffsetDateTime`, `OffsetTime`, `Duration`, `Period`, `Year`, `YearMonth`, `MonthDay`, `TimeZone`, `ZoneId`, `ZoneOffset`, `java.sql.Date`, `java.sql.Time`, `Timestamp` |
 | Strings | `String`, `StringBuffer`, `StringBuilder`, `char[]`, `CharBuffer` |
 | Binary | `byte[]`, `ByteBuffer`, `BitSet` |
-| IDs | `UUID`, `URI`, `URL`, `Class`, `Locale`, `Currency`, `Pattern`, `File`, `Path` |
+| IDs | `UUID`, `URI`, `URL`, `Class`, `Locale`, `Currency`, `Pattern`, `File`, `Path`, `InetAddress` |
 | Geometric | `Color`, `Dimension`, `Point`, `Rectangle`, `Insets` |
-| Other | `Enum` (any), `Throwable`, all `Collection`, `Map`, `EnumSet`, and array types |
+| Other | `Enum` (any), `Throwable`, all `Collection`, `Map`, `EnumSet`, `EnumMap`, and array types |
 
+See [JDK types compared with Jackson](/user-guide.md#jdk-types-compared-with-jackson): of 104 JDK values written and read back, json-io keeps 97 intact on JDK 21 and 100 on JDK 8, Jackson 84.
 See the [complete type comparison](/user-guide.md#toon-supported-types) showing json-io's comprehensive support vs other TOON implementations.
 
 ### Key Features

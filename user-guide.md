@@ -203,6 +203,48 @@ Jackson strategies are supported (`SNAKE_CASE`, `UPPER_SNAKE_CASE`, `KEBAB_CASE`
 / `@JsonProperty` still win. See
 [user-guide-writeOptions.md](user-guide-writeOptions.md#global-naming-strategy) for details.
 
+### JDK Types Compared with Jackson
+
+json-io writes and reads back more JDK types than Jackson does. Measured for 4.113.0 by writing 104 JDK values —
+atomics, numbers, dates and times, identifiers, enums, collections and maps, exceptions, records — and reading each
+back as its declared type (json-io defaults; Jackson 2.22 with its `jdk8` and `JavaTimeModule` modules, and
+Jackson 3.1):
+
+| | Values read back intact |
+|---|---|
+| json-io, JDK 21 | 97 of 104 |
+| json-io, JDK 8 | 100 of 104 |
+| Jackson 2.22 (with modules) / Jackson 3.1 | 84 of 104 |
+
+No type in the set reads back intact with Jackson but not with json-io. Where json-io keeps what Jackson loses:
+
+| Type | json-io | Jackson |
+|---|---|---|
+| `java.sql.Timestamp` | nanoseconds kept | milliseconds only |
+| `ZonedDateTime`, `OffsetDateTime` | zone and offset kept | converted to UTC |
+| `Calendar` / `GregorianCalendar` | time zone kept | read back in UTC |
+| An exception with a cause | the cause's class kept | the cause becomes a plain `Throwable` |
+| `BitSet` | its bits | written as `{"empty":false}`; cannot be read back |
+| `AtomicIntegerArray`, `AtomicLongArray` | read back | cannot be written (2.x) or read back (3.x) |
+| `AbstractMap.SimpleEntry`, `SimpleImmutableEntry` | read back | cannot be read back |
+| `LongAdder`, `DoubleAdder` | read back, as their sum | written as a number; cannot be read back |
+| `InetAddress` | the IP address, and a host name it carries — read back without any DNS lookup | the host name if it has one, else the address; a host name is resolved by DNS when read |
+
+json-io never looks up a host name while reading: an `InetAddress` is read from an IP address, and a host name
+travels beside it (`"build-server/10.0.0.7"`). A bare host name is rejected rather than resolved, so input cannot
+make a read wait on DNS or reach a host of its choosing.
+
+What neither keeps:
+
+- **A `TreeMap`, `TreeSet` or `ConcurrentSkipList*` comparator** (such as `String.CASE_INSENSITIVE_ORDER`): the
+  entries come back in natural order. Comparators are code, not data.
+- **`Pattern` flags** such as `CASE_INSENSITIVE`: the pattern text is kept. Write the flags inline instead
+  (`(?i)a+b`).
+- **An `ArrayBlockingQueue`'s capacity**: its items come back, in a queue as large as its items (as Jackson does).
+- **The enum class of an empty `EnumMap`** read with no declared type: declare the field as `EnumMap<YourEnum, V>`.
+- **`AtomicReferenceArray`, `AtomicMarkableReference` and `AtomicStampedReference` on JDK 9+**, whose state lives in
+  fields the JDK does not open (on JDK 8 json-io reads them back). Neither Jackson version reads them.
+
 ## Standard JSON Output
 
 json-io can produce standard JSON output identical to Jackson and other mainstream libraries — no
