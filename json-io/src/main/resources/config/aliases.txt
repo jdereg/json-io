@@ -193,6 +193,8 @@ java.util.ImmutableCollections$ListN = ListN
 java.util.ImmutableCollections$List12 = List12
 java.util.ImmutableCollections$SetN = SetN
 java.util.ImmutableCollections$Set12 = Set12
+java.util.ImmutableCollections$MapN = MapN
+java.util.ImmutableCollections$Map1 = Map1
 
 # Collections "synchronized" types
 java.util.Collections$SynchronizedCollection = SynchronizedCollection

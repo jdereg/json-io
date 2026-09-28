@@ -40,6 +40,8 @@ java.util.NavigableSet = com.cedarsoftware.io.factory.CollectionFactory
 java.util.Deque = com.cedarsoftware.io.factory.CollectionFactory
 java.util.Queue = com.cedarsoftware.io.factory.CollectionFactory
 java.util.Map = com.cedarsoftware.io.factory.MapFactory
+java.util.EnumMap = com.cedarsoftware.io.factory.EnumMapFactory
+java.util.concurrent.ArrayBlockingQueue = com.cedarsoftware.io.factory.ArrayBlockingQueueFactory
 java.util.SortedMap = com.cedarsoftware.io.factory.MapFactory
 java.util.NavigableMap = com.cedarsoftware.io.factory.MapFactory
 
@@ -150,11 +152,13 @@ com.cedarsoftware.io.util.SealableNavigableSet = com.cedarsoftware.io.factory.Un
 com.cedarsoftware.io.util.SealableMap = com.cedarsoftware.io.factory.UnmodifiableFactory
 com.cedarsoftware.io.util.SealableNavigableMap = com.cedarsoftware.io.factory.UnmodifiableFactory
 
-# List.of() and Set.of() support
+# List.of(), Set.of() and Map.of() support
 java.util.ImmutableCollections$ListN = com.cedarsoftware.io.factory.UnmodifiableFactory
 java.util.ImmutableCollections$List12 = com.cedarsoftware.io.factory.UnmodifiableFactory
 java.util.ImmutableCollections$SetN = com.cedarsoftware.io.factory.UnmodifiableFactory
 java.util.ImmutableCollections$Set12 = com.cedarsoftware.io.factory.UnmodifiableFactory
+java.util.ImmutableCollections$MapN = com.cedarsoftware.io.factory.UnmodifiableFactory
+java.util.ImmutableCollections$Map1 = com.cedarsoftware.io.factory.UnmodifiableFactory
 
 java.util.EnumSet = com.cedarsoftware.io.factory.EnumSetFactory
 

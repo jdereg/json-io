@@ -734,4 +734,38 @@ class JDK9ImmutableTest
         assertEquals("bar", map.keySet().toArray()[1]);
         assertEquals("bar", map.values().toArray()[1]);
     }
+
+    /** Map.of(...) itself (JDK 9+), reached reflectively because this file compiles for Java 8. */
+    private static Map<String, Object> jdkMapOf(Object... keysAndValues) throws Exception {
+        Class<?>[] types = new Class<?>[keysAndValues.length];
+        java.util.Arrays.fill(types, Object.class);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> map = (Map<String, Object>) Map.class.getMethod("of", types).invoke(null, keysAndValues);
+        return map;
+    }
+
+    public static class HoldsJdkMap {
+        public Map<String, Object> map;
+    }
+
+    /**
+     * Map.of()'s own classes (ImmutableCollections$Map1 for one entry, $MapN otherwise, the empty map included) had no
+     * factory, unlike List.of()'s and Set.of()'s: reading one back failed with "Unable to instantiate".
+     */
+    @Test
+    @EnabledForJreRange(min = JRE.JAVA_9)
+    void testMapOfRoundTrips() throws Exception {
+        for (Map<String, Object> original : java.util.Arrays.asList(jdkMapOf(), jdkMapOf("k", "v"), jdkMapOf("a", 1L, "b", "two"))) {
+            String json = JsonIo.toJson(original, null);
+            Map<?, ?> read = JsonIo.toJava(json, null).asClass(Map.class);
+            assertEquals(original, read, json);
+            assertThrows(UnsupportedOperationException.class, () -> ((Map<Object, Object>) read).put("x", "y"));
+
+            HoldsJdkMap holder = new HoldsJdkMap();
+            holder.map = original;
+            HoldsJdkMap readHolder = JsonIo.toJava(JsonIo.toJson(holder, null), null).asClass(HoldsJdkMap.class);
+            assertEquals(original, readHolder.map);
+        }
+        assertEquals("{\"@type\":\"Map1\",\"k\":\"v\"}", JsonIo.toJson(jdkMapOf("k", "v"), null), "aliased like List12");
+    }
 }
