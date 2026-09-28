@@ -291,9 +291,11 @@ public class Injector {
             Class<?> targetClass = setter.type().parameterType(0);
             MethodHandles.Lookup lambdaLookup = tryPrivateLookup(targetClass, lookup);
 
-            // If we couldn't get a private lookup and the target class is not public,
-            // the generated lambda would fail at runtime with IllegalAccessError
-            if (lambdaLookup == lookup && !Modifier.isPublic(targetClass.getModifiers())) {
+            // Without a private lookup (JDK 8 has no privateLookupIn), the generated lambda has only this class's
+            // access, so every class in the setter's signature must be public: the class declaring the setter, and
+            // the value type the lambda casts to. setA(PackagePrivateType) on a public class failed at invocation
+            // with IllegalAccessError, after the lambda had been created.
+            if (lambdaLookup == lookup && !allPublic(setter.type())) {
                 return null;
             }
 
@@ -309,6 +311,20 @@ public class Injector {
         } catch (Throwable t) {
             return null;  // Fall back to existing mechanisms
         }
+    }
+
+    /** True if every parameter class of {@code type} (an array's element class) is primitive or public. */
+    private static boolean allPublic(MethodType type) {
+        for (int i = 0; i < type.parameterCount(); i++) {
+            Class<?> c = type.parameterType(i);
+            while (c.isArray()) {
+                c = c.getComponentType();
+            }
+            if (!c.isPrimitive() && !Modifier.isPublic(c.getModifiers())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
