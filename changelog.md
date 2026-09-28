@@ -101,6 +101,8 @@
 
     `JsonPerformanceTest`'s read is unchanged.
   * **Tests.** `StringCachePooledTest` (3). The allocation check fails against the previous code; the two that check stale entries and a read within a read pass on both. Full suite: 4,734 + 165 + 28 tests on JDK 21 and 4,734 on JDK 8, 0 failures.
+* **BUG FIX**: **An object of a class declared inside an enum is written and read back.** For example, `enum Status { …; public static class Detail { … } }`. java-util's `getClassIfEnum()` reported such a class as its enclosing enum. json-io therefore chose the enum writer for it and failed ("Status$Detail cannot be cast to java.lang.Enum") on every JDK. Fixed in java-util 4.113.0. Enum constants with bodies, and enums nested in enums, still read and write as enums.
+  * **Tests.** `EnumNestedClassTest` (1). Full suite: 4,735 + 165 + 28 tests on JDK 21 and 4,735 on JDK 8, 0 failures.
 * **BUILD**: `java-util` 4.112.0 → **4.113.0**, which adds the `Charset`, `java.sql.Time`, `InetAddress`, `LongAdder` and `DoubleAdder` conversions above.
 
 #### 4.112.0 - 2026-09-23
