@@ -100,6 +100,22 @@ public class ReadOptionsBuilder {
     private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_SETTERS = new ConcurrentHashMapNullSafe<>();
     private static final Map<Class<?>, Set<String>> BASE_NOT_IMPORTED_FIELDS = new ConcurrentHashMapNullSafe<>();
     private static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ConcurrentHashMapNullSafe<>();
+    // The tables every builder starts from, shared as read-only snapshots until a builder changes one (see
+    // PermanentSetting). Change a table only through its setting's change().
+    private static final PermanentSetting<Map<Class<?>, JsonClassReader>> READERS =
+            new PermanentSetting<>(BASE_READERS, PermanentSetting.mapSnapshot());
+    private static final PermanentSetting<Map<Class<?>, ClassFactory>> CLASS_FACTORIES =
+            new PermanentSetting<>(BASE_CLASS_FACTORIES, PermanentSetting.mapSnapshot());
+    private static final PermanentSetting<Map<Class<?>, Class<?>>> COERCED_TYPES =
+            new PermanentSetting<>(BASE_COERCED_TYPES, PermanentSetting.mapSnapshot());
+    private static final PermanentSetting<Set<Class<?>>> NON_REFS =
+            new PermanentSetting<>(BASE_NON_REFS, PermanentSetting.setSnapshot());
+    private static final PermanentSetting<Set<Class<?>>> NOT_CUSTOM_READ =
+            new PermanentSetting<>(BASE_NOT_CUSTOM_READ, PermanentSetting.setSnapshot());
+    private static final PermanentSetting<Map<Class<?>, Set<String>>> NOT_IMPORTED_FIELDS =
+            new PermanentSetting<>(BASE_NOT_IMPORTED_FIELDS, PermanentSetting.mapOfSetsSnapshot());
+    private static final PermanentSetting<Map<Class<?>, Set<String>>> EXCLUDED_FIELD_NAMES =
+            new PermanentSetting<>(BASE_EXCLUDED_FIELD_NAMES, PermanentSetting.mapOfSetsSnapshot());
     
     // Base permanent security limits - default to unlimited for backward compatibility
     private static volatile int BASE_MAX_UNRESOLVED_REFERENCES = Integer.MAX_VALUE;
@@ -148,6 +164,8 @@ public class ReadOptionsBuilder {
     // True while options.converterOptions is the one of the ReadOptions this builder was copied from: that one is
     // immutable, so it is shared until this builder changes a conversion setting, and copied then.
     private boolean converterOptionsShared;
+    // The class settings this builder has copied (OWN_* bits); all of them once built
+    private int owned;
 
     static {
         // ClassFactories
@@ -196,13 +214,14 @@ public class ReadOptionsBuilder {
         addFieldFilter(new StaticFieldFilter());
         addFieldFilter(new EnumFieldFilter());
 
-        options.coercedTypes.putAll(BASE_COERCED_TYPES);
-        options.customReaderClasses.putAll(BASE_READERS);
-        options.classFactoryMap.putAll(BASE_CLASS_FACTORIES);
-        options.nonRefClasses.addAll(BASE_NON_REFS);
-        options.notCustomReadClasses.addAll(BASE_NOT_CUSTOM_READ);
-        options.excludedFieldNames.putAll(BASE_EXCLUDED_FIELD_NAMES);
-        options.fieldsNotImported.putAll(BASE_NOT_IMPORTED_FIELDS);
+        // The permanent class settings, shared read-only until this builder changes one (see own*())
+        options.coercedTypes = COERCED_TYPES.snapshot();
+        options.customReaderClasses = READERS.snapshot();
+        options.classFactoryMap = CLASS_FACTORIES.snapshot();
+        options.nonRefClasses = NON_REFS.snapshot();
+        options.notCustomReadClasses = NOT_CUSTOM_READ.snapshot();
+        options.excludedFieldNames = EXCLUDED_FIELD_NAMES.snapshot();
+        options.fieldsNotImported = NOT_IMPORTED_FIELDS.snapshot();
         
         // Copy base permanent security limits
         options.maxUnresolvedReferences = BASE_MAX_UNRESOLVED_REFERENCES;
@@ -317,26 +336,14 @@ public class ReadOptionsBuilder {
             options.fieldFilters.clear();
             options.fieldFilters.addAll(other.fieldFilters);
 
-            options.excludedFieldNames.clear();
-            options.excludedFieldNames.putAll(other.excludedFieldNames);
-
-            options.fieldsNotImported.clear();
-            options.fieldsNotImported.putAll(other.fieldsNotImported);
-
-            options.coercedTypes.clear();
-            options.coercedTypes.putAll(other.coercedTypes);
-
-            options.customReaderClasses.clear();
-            options.customReaderClasses.putAll(other.customReaderClasses);
-
-            options.notCustomReadClasses.clear();
-            options.notCustomReadClasses.addAll(other.notCustomReadClasses);
-
-            options.classFactoryMap.clear();
-            options.classFactoryMap.putAll(other.classFactoryMap);
-
-            options.nonRefClasses.clear();
-            options.nonRefClasses.addAll(other.nonRefClasses);
+            // The other's class settings (read-only once built), shared until this builder changes one
+            options.excludedFieldNames = other.excludedFieldNames;
+            options.fieldsNotImported = other.fieldsNotImported;
+            options.coercedTypes = other.coercedTypes;
+            options.customReaderClasses = other.customReaderClasses;
+            options.notCustomReadClasses = other.notCustomReadClasses;
+            options.classFactoryMap = other.classFactoryMap;
+            options.nonRefClasses = other.nonRefClasses;
 
             options.customOptions.clear();
             options.customOptions.putAll(other.customOptions);
@@ -367,7 +374,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentClassFactory(Class<?> sourceClass, ClassFactory factory) {
         throwIfPrimitiveOrString(sourceClass, "register ClassFactory");
-        BASE_CLASS_FACTORIES.put(sourceClass, factory);
+        CLASS_FACTORIES.change(factories -> factories.put(sourceClass, factory));
     }
 
     /**
@@ -378,7 +385,7 @@ public class ReadOptionsBuilder {
      */
     @Deprecated
     public static void assignInstantiator(Class<?> classToCreate, ClassFactory factory) {
-        BASE_CLASS_FACTORIES.put(classToCreate, factory);
+        CLASS_FACTORIES.change(factories -> factories.put(classToCreate, factory));
     }
 
     /**
@@ -391,7 +398,7 @@ public class ReadOptionsBuilder {
      * @param destinationClass Class to coerce to.  For example, java.util.Collections$EmptyList to java.util.ArrayList.
      */
     public static void addPermanentCoercedType(Class<?> sourceClass, Class<?> destinationClass) {
-        BASE_COERCED_TYPES.put(sourceClass, destinationClass);
+        COERCED_TYPES.change(coerced -> coerced.put(sourceClass, destinationClass));
     }
 
     /**
@@ -433,6 +440,64 @@ public class ReadOptionsBuilder {
             converterOptionsShared = false;
         }
         return options.converterOptions;
+    }
+
+    // Which class settings this builder has copied to change: the others are shared, read-only (see own*()).
+    private static final int OWN_COERCED_TYPES = 1;
+    private static final int OWN_READERS = 1 << 1;
+    private static final int OWN_CLASS_FACTORIES = 1 << 2;
+    private static final int OWN_NON_REFS = 1 << 3;
+    private static final int OWN_NOT_CUSTOM_READ = 1 << 4;
+    private static final int OWN_NOT_IMPORTED = 1 << 5;
+    private static final int OWN_ALL = (1 << 6) - 1;
+
+    private Map<Class<?>, Class<?>> ownCoercedTypes() {
+        if ((owned & OWN_COERCED_TYPES) == 0) {
+            options.coercedTypes = new ConcurrentHashMapNullSafe<>(options.coercedTypes);
+            owned |= OWN_COERCED_TYPES;
+        }
+        return options.coercedTypes;
+    }
+
+    private Map<Class<?>, JsonClassReader> ownCustomReaderClasses() {
+        if ((owned & OWN_READERS) == 0) {
+            options.customReaderClasses = new ConcurrentHashMapNullSafe<>(options.customReaderClasses);
+            owned |= OWN_READERS;
+        }
+        return options.customReaderClasses;
+    }
+
+    private Map<Class<?>, ClassFactory> ownClassFactoryMap() {
+        if ((owned & OWN_CLASS_FACTORIES) == 0) {
+            options.classFactoryMap = new ConcurrentHashMapNullSafe<>(options.classFactoryMap);
+            owned |= OWN_CLASS_FACTORIES;
+        }
+        return options.classFactoryMap;
+    }
+
+    private Set<Class<?>> ownNonRefClasses() {
+        if ((owned & OWN_NON_REFS) == 0) {
+            options.nonRefClasses = new ConcurrentSet<>(options.nonRefClasses);
+            owned |= OWN_NON_REFS;
+        }
+        return options.nonRefClasses;
+    }
+
+    private Set<Class<?>> ownNotCustomReadClasses() {
+        if ((owned & OWN_NOT_CUSTOM_READ) == 0) {
+            options.notCustomReadClasses = new ConcurrentSet<>(options.notCustomReadClasses);
+            owned |= OWN_NOT_CUSTOM_READ;
+        }
+        return options.notCustomReadClasses;
+    }
+
+    /** Its own map; the per-class Sets inside stay shared until addNotImportedField() replaces one. */
+    private Map<Class<?>, Set<String>> ownFieldsNotImported() {
+        if ((owned & OWN_NOT_IMPORTED) == 0) {
+            options.fieldsNotImported = new ConcurrentHashMapNullSafe<>(options.fieldsNotImported);
+            owned |= OWN_NOT_IMPORTED;
+        }
+        return options.fieldsNotImported;
     }
 
     /** This builder's own aliases, copied from the shared ones the first time it changes them. */
@@ -483,7 +548,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentReader(Class<?> c, JsonClassReader reader) {
         throwIfPrimitiveOrString(c, "register custom reader");
-        BASE_READERS.put(c, reader);
+        READERS.change(readers -> readers.put(c, reader));
     }
 
     /**
@@ -496,7 +561,7 @@ public class ReadOptionsBuilder {
      *              for very simple, atomic type (single field classes).
      */
     public static void addPermanentNonReferenceableClass(Class<?> clazz) {
-        BASE_NON_REFS.add(clazz);
+        NON_REFS.change(nonRefs -> nonRefs.add(clazz));
     }
 
     /**
@@ -508,7 +573,7 @@ public class ReadOptionsBuilder {
      *              a Custom Reader or Class Factory when read from the JSON.
      */
     public static void addPermanentNotCustomReadClass(Class<?> clazz) {
-        BASE_NOT_CUSTOM_READ.add(clazz);
+        NOT_CUSTOM_READ.change(notCustom -> notCustom.add(clazz));
     }
 
     /**
@@ -548,7 +613,8 @@ public class ReadOptionsBuilder {
      * @param fieldName Java field name to exclude on read.
      */
     public static void addPermanentNotImportedField(Class<?> clazz, String fieldName) {
-        BASE_NOT_IMPORTED_FIELDS.computeIfAbsent(clazz, k -> ConcurrentHashMap.newKeySet()).add(fieldName);
+        NOT_IMPORTED_FIELDS.change(notImported ->
+                notImported.computeIfAbsent(clazz, k -> ConcurrentHashMap.newKeySet()).add(fieldName));
     }
 
     /**
@@ -620,10 +686,8 @@ public class ReadOptionsBuilder {
      * @return this builder for chaining.
      */
     public ReadOptionsBuilder addNotImportedField(Class<?> clazz, String fieldName) {
-        // options.fieldsNotImported is initialized via a shallow putAll(BASE_NOT_IMPORTED_FIELDS),
-        // so its Sets may alias the permanent-state Sets. compute() with a fresh Set guarantees
-        // the builder owns its own copy and never mutates BASE_NOT_IMPORTED_FIELDS.
-        options.fieldsNotImported.compute(clazz, (k, existing) -> {
+        // A fresh Set: the one there may be another's (a copied map shares its Sets)
+        ownFieldsNotImported().compute(clazz, (k, existing) -> {
             Set<String> result = ConcurrentHashMap.newKeySet();
             if (existing != null) {
                 result.addAll(existing);
@@ -987,17 +1051,31 @@ public class ReadOptionsBuilder {
         
         options.aliasTypeNames = Collections.unmodifiableMap(options.aliasTypeNames);
         options.aliasesShared = false;      // built: no more changes, and none through the builder either
-        options.coercedTypes = Collections.unmodifiableMap(options.coercedTypes);
-        options.notCustomReadClasses = Collections.unmodifiableSet(options.notCustomReadClasses);
-        options.customReaderClasses = Collections.unmodifiableMap(options.customReaderClasses);
-        options.classFactoryMap = Collections.unmodifiableMap(options.classFactoryMap);
-        options.nonRefClasses = Collections.unmodifiableSet(options.nonRefClasses);
+        // The class settings this builder copied are made read-only; the ones it shares already are
+        if ((owned & OWN_COERCED_TYPES) != 0) {
+            options.coercedTypes = Collections.unmodifiableMap(options.coercedTypes);
+        }
+        if ((owned & OWN_NOT_CUSTOM_READ) != 0) {
+            options.notCustomReadClasses = Collections.unmodifiableSet(options.notCustomReadClasses);
+        }
+        if ((owned & OWN_READERS) != 0) {
+            options.customReaderClasses = Collections.unmodifiableMap(options.customReaderClasses);
+        }
+        if ((owned & OWN_CLASS_FACTORIES) != 0) {
+            options.classFactoryMap = Collections.unmodifiableMap(options.classFactoryMap);
+        }
+        if ((owned & OWN_NON_REFS) != 0) {
+            options.nonRefClasses = Collections.unmodifiableSet(options.nonRefClasses);
+        }
+        if ((owned & OWN_NOT_IMPORTED) != 0) {
+            options.fieldsNotImported = Collections.unmodifiableMap(options.fieldsNotImported);
+        }
+        // Built: these are its settings now, and a change through this builder must fail, as it always has
+        owned = OWN_ALL;
         if (!converterOptionsShared) {      // shared ones are already built: another ReadOptions' settings
             options.converterOptions.converterOverrides = Collections.unmodifiableMap(options.converterOptions.converterOverrides);
             options.converterOptions.customOptions = Collections.unmodifiableMap(options.converterOptions.customOptions);
         }
-        options.excludedFieldNames = Collections.unmodifiableMap(options.excludedFieldNames);
-        options.fieldsNotImported = Collections.unmodifiableMap(options.fieldsNotImported);
         options.fieldFilters = Collections.unmodifiableList(options.fieldFilters);
         options.injectorFactories = Collections.unmodifiableList(options.injectorFactories);
         options.customOptions = Collections.unmodifiableMap(options.customOptions);
@@ -1034,7 +1112,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder addNotCustomReaderClass(Class<?> notCustomClass) {
-        options.notCustomReadClasses.add(notCustomClass);
+        ownNotCustomReadClasses().add(notCustomClass);
         return this;
     }
 
@@ -1044,8 +1122,8 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder replaceNotCustomReaderClasses(Collection<? extends Class<?>> notCustomClasses) {
-        options.notCustomReadClasses.clear();
-        options.notCustomReadClasses.addAll(notCustomClasses);
+        ownNotCustomReadClasses().clear();
+        ownNotCustomReadClasses().addAll(notCustomClasses);
         return this;
     }
 
@@ -1070,8 +1148,8 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder replaceCustomReaderClasses(Map<? extends Class<?>, ? extends JsonClassReader> customReaderClasses) {
-        options.customReaderClasses.clear();
-        options.customReaderClasses.putAll(customReaderClasses);
+        ownCustomReaderClasses().clear();
+        ownCustomReaderClasses().putAll(customReaderClasses);
         return this;
     }
 
@@ -1085,7 +1163,7 @@ public class ReadOptionsBuilder {
      */
     public <T> ReadOptionsBuilder addCustomReaderClass(Class<T> clazz, JsonClassReader<? super T> customReader) {
         throwIfPrimitiveOrString(clazz, "register custom reader");
-        options.customReaderClasses.put(clazz, customReader);
+        ownCustomReaderClasses().put(clazz, customReader);
         return this;
     }
 
@@ -1097,8 +1175,8 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder replaceClassFactories(Map<? extends Class<?>, ? extends ClassFactory> factories) {
-        options.classFactoryMap.clear();
-        options.classFactoryMap.putAll(factories);
+        ownClassFactoryMap().clear();
+        ownClassFactoryMap().putAll(factories);
         return this;
     }
 
@@ -1112,7 +1190,7 @@ public class ReadOptionsBuilder {
      */
     public ReadOptionsBuilder addClassFactory(Class<?> clazz, ClassFactory factory) {
         throwIfPrimitiveOrString(clazz, "register ClassFactory");
-        options.classFactoryMap.put(clazz, factory);
+        ownClassFactoryMap().put(clazz, factory);
         return this;
     }
 
@@ -1692,7 +1770,7 @@ public class ReadOptionsBuilder {
     public ReadOptionsBuilder coerceClass(String sourceClassName, Class<?> destClass) {
         Class<?> clazz = ClassUtilities.forName(sourceClassName, options.getClassLoader());
         if (clazz != null) {
-            options.coercedTypes.put(clazz, destClass);
+            ownCoercedTypes().put(clazz, destClass);
         }
         return this;
     }
@@ -1715,7 +1793,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder addNonReferenceableClass(Class<?> clazz) {
-        options.nonRefClasses.add(clazz);
+        ownNonRefClasses().add(clazz);
         return this;
     }
 
@@ -1939,13 +2017,14 @@ public class ReadOptionsBuilder {
         private volatile Converter converter;
         // Class-keyed settings: plain concurrent maps and sets, cheap to copy from the BASE_* settings on every
         // build. The per-object lookups read the per-class caches below, which consult these only on first use.
-        private Map<Class<?>, Class<?>> coercedTypes = new ConcurrentHashMapNullSafe<>();
-        private Set<Class<?>> notCustomReadClasses = new ConcurrentSet<>();
-        private Map<Class<?>, JsonClassReader> customReaderClasses = new ConcurrentHashMapNullSafe<>();
-        private Map<Class<?>, ClassFactory> classFactoryMap = new ConcurrentHashMapNullSafe<>();
-        private Set<Class<?>> nonRefClasses = new ConcurrentSet<>();
-        private Map<Class<?>, Set<String>> excludedFieldNames = new ConcurrentHashMapNullSafe<>();
-        private Map<Class<?>, Set<String>> fieldsNotImported = new ConcurrentHashMapNullSafe<>();
+        // Set by the builder: the permanent settings' shared snapshots, or its own copies (see ReadOptionsBuilder.own*())
+        private Map<Class<?>, Class<?>> coercedTypes;
+        private Set<Class<?>> notCustomReadClasses;
+        private Map<Class<?>, JsonClassReader> customReaderClasses;
+        private Map<Class<?>, ClassFactory> classFactoryMap;
+        private Set<Class<?>> nonRefClasses;
+        private Map<Class<?>, Set<String>> excludedFieldNames;
+        private Map<Class<?>, Set<String>> fieldsNotImported;
         private List<FieldFilter> fieldFilters = new ArrayList<>();
         private List<InjectorFactory> injectorFactories = new ArrayList<>();
         private Map<String, Object> customOptions = new LinkedHashMap<>();
@@ -2842,7 +2921,8 @@ public class ReadOptionsBuilder {
             Class<?> clazz = entry.getKey();
             Set<String> excludedFields = entry.getValue();
             for (String fieldName : excludedFields) {
-                BASE_EXCLUDED_FIELD_NAMES.computeIfAbsent(clazz, k -> ConcurrentHashMap.newKeySet()).add(fieldName);
+                EXCLUDED_FIELD_NAMES.change(excluded ->
+                        excluded.computeIfAbsent(clazz, k -> ConcurrentHashMap.newKeySet()).add(fieldName));
             }
         }
     }

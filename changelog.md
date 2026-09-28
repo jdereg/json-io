@@ -67,6 +67,25 @@
   * **The fix:** these methods now copy the set or map before adding, as `addExcludedField()` already did.
   * **`getIncludedFields()` and `getExcludedFields()`** now return an empty set for a class with none configured. They threw `NullPointerException`.
   * **Tests.** `WriteOptionsBuilderOwnSettingsTest` (3); all 3 fail against the previous code. Full suite: 4,726 + 165 + 28 tests, 0 failures.
+* **PERFORMANCE / MEMORY**: **Builders share the permanent class settings instead of copying them. Building options is about 10x faster, and each `ReadOptions` or `WriteOptions` is 85–88% smaller.**
+  * **What was copied:** every builder copied the permanent custom readers and writers, class factories, coerced types, non-referenceable and not-custom classes, excluded and not-imported fields, non-standard getters, and field and method filters.
+  * **What happens now:** builders share read-only snapshots (`PermanentSetting`), and a builder copies a setting only when it changes it, as with the aliases.
+  * **Size per instance:** a `ReadOptions` 11.9 → 1.7 KB, a `WriteOptions` 9.2 → 1.1 KB.
+  * **Speed** (fresh JVMs, 3 forks):
+
+    | | Before | After |
+    |---|---|---|
+    | `ReadOptionsBuilder().build()` | 6.6 µs | 0.6 µs |
+    | `WriteOptionsBuilder().build()` | 3.9 µs | 0.4 µs |
+    | Create a `WriteOptions` and write a small map | 11.6 µs | 6.7 µs |
+
+    `JsonPerformanceTest`'s workloads are unchanged (within 2%).
+  * **Unchanged behavior:**
+    * A builder's changes stay its own.
+    * A permanent change reaches the builders created after it, never a builder already started or options already built. Snapshots are deep, so the per-class field sets are copied too.
+    * Built options refuse changes, including changes through their builder.
+    * A copy starts from the original's settings without changing them.
+  * **Tests.** `OptionsShareClassSettingsTest` (5). The 2 that check sharing fail against the previous code; the 3 that check behavior pass on both. Full suite: 4,731 + 165 + 28 tests on JDK 21 and 4,731 on JDK 8, 0 failures.
 * **BUILD**: `java-util` 4.112.0 → **4.113.0**, which adds the `Charset`, `java.sql.Time`, `InetAddress`, `LongAdder` and `DoubleAdder` conversions above.
 
 #### 4.112.0 - 2026-09-23

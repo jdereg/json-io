@@ -94,6 +94,24 @@ public class WriteOptionsBuilder {
     private static final Map<String, FieldFilter> BASE_FIELD_FILTERS = new ConcurrentHashMap<>();
     private static final Map<String, MethodFilter> BASE_METHOD_FILTERS = new ConcurrentHashMap<>();
     private static final Map<String, AccessorFactory> BASE_ACCESSOR_FACTORIES = new ConcurrentHashMap<>();
+    // The tables every builder starts from, shared as read-only snapshots until a builder changes one (see
+    // PermanentSetting). Change a table only through its setting's change().
+    private static final PermanentSetting<Map<Class<?>, JsonClassWriter>> WRITERS =
+            new PermanentSetting<>(BASE_WRITERS, PermanentSetting.mapSnapshot());
+    private static final PermanentSetting<Set<Class<?>>> NON_REFS =
+            new PermanentSetting<>(BASE_NON_REFS, PermanentSetting.setSnapshot());
+    private static final PermanentSetting<Set<Class<?>>> NOT_CUSTOM_WRITTEN =
+            new PermanentSetting<>(BASE_NOT_CUSTOM_WRITTEN, PermanentSetting.setSnapshot());
+    private static final PermanentSetting<Map<Class<?>, Set<String>>> EXCLUDED_FIELD_NAMES =
+            new PermanentSetting<>(BASE_EXCLUDED_FIELD_NAMES, PermanentSetting.mapOfSetsSnapshot());
+    private static final PermanentSetting<Map<Class<?>, Map<String, String>>> NONSTANDARD_GETTERS =
+            new PermanentSetting<>(BASE_NONSTANDARD_GETTERS, PermanentSetting.mapOfMapsSnapshot());
+    private static final PermanentSetting<Map<String, FieldFilter>> FIELD_FILTERS =
+            new PermanentSetting<>(BASE_FIELD_FILTERS, PermanentSetting.mapSnapshot());
+    private static final PermanentSetting<Map<String, MethodFilter>> METHOD_FILTERS =
+            new PermanentSetting<>(BASE_METHOD_FILTERS, PermanentSetting.mapSnapshot());
+    private static final PermanentSetting<Map<String, AccessorFactory>> ACCESSOR_FACTORIES =
+            new PermanentSetting<>(BASE_ACCESSOR_FACTORIES, PermanentSetting.mapSnapshot());
     
     // Permanent security limits (JVM lifetime defaults)
     private static volatile int permanentMaxIndentationDepth = 100;        // Maximum indentation depth to prevent memory exhaustion
@@ -128,6 +146,8 @@ public class WriteOptionsBuilder {
     
     private static final WriteOptions defWriteOptions;
     private final DefaultWriteOptions options;
+    // The class settings this builder has copied (OWN_* bits); all of them once built
+    private int owned;
 
     // Cached lambda instances to reduce allocations in computeIfAbsent calls
     private static final Function<Class<?>, Set<String>> LINKED_HASH_SET_FACTORY = k -> new LinkedHashSet<>();
@@ -175,16 +195,18 @@ public class WriteOptionsBuilder {
         // Start with all BASE_ALIAS_MAPPINGS (more aliases can be added to this instance, and more aliases
         // can be added to the BASE_ALIAS_MAPPINGS via the static method, so that all instances get them.)
         // Shared, not copied, until this builder changes its aliases.
-        options.nonStandardGetters.putAll(BASE_NONSTANDARD_GETTERS);
         options.aliasTypeNames = baseAliases();
         options.aliasesShared = true;
-        options.customWrittenClasses.putAll(BASE_WRITERS);
-        options.nonRefClasses.addAll(BASE_NON_REFS);
-        options.notCustomWrittenClasses.addAll(BASE_NOT_CUSTOM_WRITTEN);
-        options.excludedFieldNames.putAll(BASE_EXCLUDED_FIELD_NAMES);
-        options.fieldFilters.putAll(BASE_FIELD_FILTERS);
-        options.methodFilters.putAll(BASE_METHOD_FILTERS);
-        options.accessorFactories.putAll(BASE_ACCESSOR_FACTORIES);
+        // The permanent class settings, shared read-only until this builder changes one (see own*())
+        options.nonStandardGetters = NONSTANDARD_GETTERS.snapshot();
+        options.customWrittenClasses = WRITERS.snapshot();
+        options.nonRefClasses = NON_REFS.snapshot();
+        options.notCustomWrittenClasses = NOT_CUSTOM_WRITTEN.snapshot();
+        options.excludedFieldNames = EXCLUDED_FIELD_NAMES.snapshot();
+        options.fieldFilters = FIELD_FILTERS.snapshot();
+        options.methodFilters = METHOD_FILTERS.snapshot();
+        options.accessorFactories = ACCESSOR_FACTORIES.snapshot();
+        options.includedFieldNames = Collections.emptyMap();
         
         // Initialize security limits with permanent values
         options.maxIndentationDepth = permanentMaxIndentationDepth;
@@ -271,35 +293,19 @@ public class WriteOptionsBuilder {
             options.indentationThreshold = other.indentationThreshold;
 
             // Copy complex settings
-            options.includedFieldNames.clear();
-            options.includedFieldNames.putAll(other.includedFieldNames);
-
-            options.nonStandardGetters.clear();
-            options.nonStandardGetters.putAll(other.nonStandardGetters);
-
             options.aliasTypeNames = other.aliasTypeNames;     // unmodifiable once built: shared until changed
             options.aliasesShared = true;
 
-            options.excludedFieldNames.clear();
-            options.excludedFieldNames.putAll(other.excludedFieldNames);
-
-            options.customWrittenClasses.clear();
-            options.customWrittenClasses.putAll(other.customWrittenClasses);
-
-            options.notCustomWrittenClasses.clear();
-            options.notCustomWrittenClasses.addAll(other.notCustomWrittenClasses);
-
-            options.nonRefClasses.clear();
-            options.nonRefClasses.addAll(other.nonRefClasses);
-
-            options.fieldFilters.clear();
-            options.fieldFilters.putAll(other.fieldFilters);
-
-            options.methodFilters.clear();
-            options.methodFilters.putAll(other.methodFilters);
-
-            options.accessorFactories.clear();
-            options.accessorFactories.putAll(other.accessorFactories);
+            // The other's class settings (read-only once built), shared until this builder changes one
+            options.includedFieldNames = other.includedFieldNames;
+            options.nonStandardGetters = other.nonStandardGetters;
+            options.excludedFieldNames = other.excludedFieldNames;
+            options.customWrittenClasses = other.customWrittenClasses;
+            options.notCustomWrittenClasses = other.notCustomWrittenClasses;
+            options.nonRefClasses = other.nonRefClasses;
+            options.fieldFilters = other.fieldFilters;
+            options.methodFilters = other.methodFilters;
+            options.accessorFactories = other.accessorFactories;
         }
     }
 
@@ -396,7 +402,7 @@ public class WriteOptionsBuilder {
      * @param fieldName Java field name to exclude on write.
      */
     public static void addPermanentExcludedField(Class<?> clazz, String fieldName) {
-        BASE_EXCLUDED_FIELD_NAMES.computeIfAbsent(clazz, CONCURRENT_SET_FACTORY).add(fieldName);
+        EXCLUDED_FIELD_NAMES.change(excluded -> excluded.computeIfAbsent(clazz, CONCURRENT_SET_FACTORY).add(fieldName));
     }
 
     /**
@@ -441,7 +447,7 @@ public class WriteOptionsBuilder {
      * @param clazz Class that will no longer be treated as referenceable when being written to JSON.
      */
     public static void addPermanentNonRef(Class<?> clazz) {
-        BASE_NON_REFS.add(clazz);
+        NON_REFS.change(nonRefs -> nonRefs.add(clazz));
     }
 
     /**
@@ -451,7 +457,7 @@ public class WriteOptionsBuilder {
      * @param clazz Class that will no longer be written with a custom writer.
      */
     public static void addPermanentNotCustomWrittenClass(Class<?> clazz) {
-        BASE_NOT_CUSTOM_WRITTEN.add(clazz);
+        NOT_CUSTOM_WRITTEN.change(notCustom -> notCustom.add(clazz));
     }
 
     /**
@@ -468,7 +474,7 @@ public class WriteOptionsBuilder {
      * @param writer The JsonClassWriter which will write the custom JSON format of class.
      */
     public static void addPermanentWriter(Class<?> clazz, JsonClassWriter writer) {
-        BASE_WRITERS.put(clazz, writer);
+        WRITERS.change(writers -> writers.put(clazz, writer));
     }
 
     /**
@@ -481,7 +487,7 @@ public class WriteOptionsBuilder {
      * @param methodName The name of the non-standard method used to get the field value. 'getEpochSecond' in the example above.
      */
     public static void addPermanentNonStandardGetter(Class<?> clazz, String field, String methodName) {
-        BASE_NONSTANDARD_GETTERS.computeIfAbsent(clazz, CONCURRENT_MAP_FACTORY).put(field, methodName);
+        NONSTANDARD_GETTERS.change(getters -> getters.computeIfAbsent(clazz, CONCURRENT_MAP_FACTORY).put(field, methodName));
     }
 
     /**
@@ -489,7 +495,7 @@ public class WriteOptionsBuilder {
      * @param fieldFilter {@link FieldFilter} class used to eliminate fields from being included in the serialized JSON.
      */
     public static void addPermanentFieldFilter(String name, FieldFilter fieldFilter) {
-        BASE_FIELD_FILTERS.put(name, fieldFilter);
+        FIELD_FILTERS.change(filters -> filters.put(name, fieldFilter));
     }
 
     /**
@@ -498,7 +504,7 @@ public class WriteOptionsBuilder {
      * @param methodFilter {@link MethodFilter} class used to eliminate a particular accessor method from being used.
      */
     public static void addPermanentMethodFilter(String name, MethodFilter methodFilter) {
-        BASE_METHOD_FILTERS.put(name, methodFilter);
+        METHOD_FILTERS.change(filters -> filters.put(name, methodFilter));
     }
 
     /**
@@ -507,7 +513,7 @@ public class WriteOptionsBuilder {
      * @param name String name of the MethodFilter to remove.
      */
     public static void removePermanentMethodFilter(String name) {
-        BASE_METHOD_FILTERS.remove(name);
+        METHOD_FILTERS.change(filters -> filters.remove(name));
     }
 
     /**
@@ -517,7 +523,7 @@ public class WriteOptionsBuilder {
      * @param methodName String name of no-argument method to be filtered.
      */
     public static void addPermanentNamedMethodFilter(String name, Class<?> clazz, String methodName) {
-        BASE_METHOD_FILTERS.put(name, new NamedMethodFilter(clazz, methodName));
+        METHOD_FILTERS.change(filters -> filters.put(name, new NamedMethodFilter(clazz, methodName)));
     }
 
     /**
@@ -531,7 +537,7 @@ public class WriteOptionsBuilder {
      * @param factory AccessorFactory subclass.
      */
     public static void addPermanentAccessorFactory(String name, AccessorFactory factory) {
-        BASE_ACCESSOR_FACTORIES.put(name, factory);
+        ACCESSOR_FACTORIES.change(factories -> factories.put(name, factory));
     }
 
     /**
@@ -540,7 +546,7 @@ public class WriteOptionsBuilder {
      * @param name String name of the AccessorFactory to remove.
      */
     public static void removePermanentAccessorFactory(String name) {
-        BASE_ACCESSOR_FACTORIES.remove(name);
+        ACCESSOR_FACTORIES.change(factories -> factories.remove(name));
     }
 
     /**
@@ -1499,7 +1505,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder setCustomWrittenClasses(Map<? extends Class<?>, ? extends JsonClassWriter> customWrittenClasses) {
-        options.customWrittenClasses.clear();
+        ownCustomWrittenClasses().clear();
         addCustomWrittenClasses(customWrittenClasses);
         return this;
     }
@@ -1510,7 +1516,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder addCustomWrittenClasses(Map<? extends Class<?>, ? extends JsonClassWriter> customWrittenClasses) {
-        options.customWrittenClasses.putAll(customWrittenClasses);
+        ownCustomWrittenClasses().putAll(customWrittenClasses);
         return this;
     }
 
@@ -1520,7 +1526,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder addCustomWrittenClass(Class<?> clazz, JsonClassWriter customWriter) {
-        options.customWrittenClasses.put(clazz, customWriter);
+        ownCustomWrittenClasses().put(clazz, customWriter);
         return this;
     }
 
@@ -1532,7 +1538,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder addNotCustomWrittenClass(Class<?> notCustomClass) {
-        options.notCustomWrittenClasses.add(notCustomClass);
+        ownNotCustomWrittenClasses().add(notCustomClass);
         return this;
     }
 
@@ -1542,8 +1548,8 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder setNotCustomWrittenClasses(Collection<? extends Class<?>> notCustomClasses) {
-        options.notCustomWrittenClasses.clear();
-        options.notCustomWrittenClasses.addAll(notCustomClasses);
+        ownNotCustomWrittenClasses().clear();
+        ownNotCustomWrittenClasses().addAll(notCustomClasses);
         return this;
     }
 
@@ -1554,7 +1560,7 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder addIncludedField(Class<?> clazz, String includedFieldName) {
         Convention.throwIfNull(includedFieldName, "includedFieldName cannot be null");
-        ownFieldSet(options.includedFieldNames, clazz).add(includedFieldName);
+        ownFieldSet(ownIncludedFieldNames(), clazz).add(includedFieldName);
         return this;
     }
 
@@ -1564,7 +1570,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder addIncludedFields(Class<?> clazz, Collection<? extends String> includedFieldNames) {
-        ownFieldSet(options.includedFieldNames, clazz).addAll(includedFieldNames);
+        ownFieldSet(ownIncludedFieldNames(), clazz).addAll(includedFieldNames);
         return this;
     }
 
@@ -1613,7 +1619,7 @@ public class WriteOptionsBuilder {
      * @return this builder for chaining.
      */
     public WriteOptionsBuilder addExcludedField(Class<?> clazz, String excludedFieldName) {
-        ownFieldSet(options.excludedFieldNames, clazz).add(excludedFieldName);
+        ownFieldSet(ownExcludedFieldNames(), clazz).add(excludedFieldName);
         return this;
     }
 
@@ -1653,7 +1659,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder addExcludedFields(Class<?> clazz, Collection<? extends String> excludedFields) {
-        ownFieldSet(options.excludedFieldNames, clazz).addAll(excludedFields);
+        ownFieldSet(ownExcludedFieldNames(), clazz).addAll(excludedFields);
         return this;
     }
 
@@ -1708,8 +1714,95 @@ public class WriteOptionsBuilder {
             own.putAll(existing);
         }
         own.put(fieldName, methodName);
-        options.nonStandardGetters.put(c, own);
+        ownNonStandardGetters().put(c, own);
         return this;
+    }
+
+    // Which class settings this builder has copied to change: the others are shared, read-only (see own*()).
+    private static final int OWN_INCLUDED = 1;
+    private static final int OWN_GETTERS = 1 << 1;
+    private static final int OWN_NOT_CUSTOM_WRITTEN = 1 << 2;
+    private static final int OWN_NON_REFS = 1 << 3;
+    private static final int OWN_EXCLUDED = 1 << 4;
+    private static final int OWN_FIELD_FILTERS = 1 << 5;
+    private static final int OWN_METHOD_FILTERS = 1 << 6;
+    private static final int OWN_ACCESSOR_FACTORIES = 1 << 7;
+    private static final int OWN_WRITERS = 1 << 8;
+    private static final int OWN_ALL = (1 << 9) - 1;
+
+    /** Its own map; the per-class Sets inside stay shared until ownFieldSet() replaces one. */
+    private Map<Class<?>, Set<String>> ownIncludedFieldNames() {
+        if ((owned & OWN_INCLUDED) == 0) {
+            options.includedFieldNames = new ConcurrentHashMapNullSafe<>(options.includedFieldNames);
+            owned |= OWN_INCLUDED;
+        }
+        return options.includedFieldNames;
+    }
+
+    /** Its own map; the per-class Sets inside stay shared until ownFieldSet() replaces one. */
+    private Map<Class<?>, Set<String>> ownExcludedFieldNames() {
+        if ((owned & OWN_EXCLUDED) == 0) {
+            options.excludedFieldNames = new ConcurrentHashMapNullSafe<>(options.excludedFieldNames);
+            owned |= OWN_EXCLUDED;
+        }
+        return options.excludedFieldNames;
+    }
+
+    /** Its own map; the per-class Maps inside stay shared until addNonStandardGetter() replaces one. */
+    private Map<Class<?>, Map<String, String>> ownNonStandardGetters() {
+        if ((owned & OWN_GETTERS) == 0) {
+            options.nonStandardGetters = new ConcurrentHashMapNullSafe<>(options.nonStandardGetters);
+            owned |= OWN_GETTERS;
+        }
+        return options.nonStandardGetters;
+    }
+
+    private Set<Class<?>> ownNotCustomWrittenClasses() {
+        if ((owned & OWN_NOT_CUSTOM_WRITTEN) == 0) {
+            options.notCustomWrittenClasses = new ConcurrentSet<>(options.notCustomWrittenClasses);
+            owned |= OWN_NOT_CUSTOM_WRITTEN;
+        }
+        return options.notCustomWrittenClasses;
+    }
+
+    private Set<Class<?>> ownNonRefClasses() {
+        if ((owned & OWN_NON_REFS) == 0) {
+            options.nonRefClasses = new ConcurrentSet<>(options.nonRefClasses);
+            owned |= OWN_NON_REFS;
+        }
+        return options.nonRefClasses;
+    }
+
+    private Map<String, FieldFilter> ownFieldFilters() {
+        if ((owned & OWN_FIELD_FILTERS) == 0) {
+            options.fieldFilters = new LinkedHashMap<>(options.fieldFilters);
+            owned |= OWN_FIELD_FILTERS;
+        }
+        return options.fieldFilters;
+    }
+
+    private Map<String, MethodFilter> ownMethodFilters() {
+        if ((owned & OWN_METHOD_FILTERS) == 0) {
+            options.methodFilters = new LinkedHashMap<>(options.methodFilters);
+            owned |= OWN_METHOD_FILTERS;
+        }
+        return options.methodFilters;
+    }
+
+    private Map<String, AccessorFactory> ownAccessorFactories() {
+        if ((owned & OWN_ACCESSOR_FACTORIES) == 0) {
+            options.accessorFactories = new LinkedHashMap<>(options.accessorFactories);
+            owned |= OWN_ACCESSOR_FACTORIES;
+        }
+        return options.accessorFactories;
+    }
+
+    private Map<Class<?>, JsonClassWriter> ownCustomWrittenClasses() {
+        if ((owned & OWN_WRITERS) == 0) {
+            options.customWrittenClasses = new ConcurrentHashMapNullSafe<>(options.customWrittenClasses);
+            owned |= OWN_WRITERS;
+        }
+        return options.customWrittenClasses;
     }
 
     /**
@@ -1736,7 +1829,7 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder addNonReferenceableClass(Class<?> clazz) {
         Convention.throwIfNull(clazz, "clazz cannot be null");
-        options.nonRefClasses.add(clazz);
+        ownNonRefClasses().add(clazz);
         return this;
     }
 
@@ -1767,7 +1860,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder addFieldFilter(String filterName, FieldFilter filter) {
-        options.fieldFilters.put(filterName, filter);
+        ownFieldFilters().put(filterName, filter);
         return this;
     }
 
@@ -1777,7 +1870,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder removeFieldFilter(String filterName) {
-        options.fieldFilters.remove(filterName);
+        ownFieldFilters().remove(filterName);
         return this;
     }
 
@@ -1791,7 +1884,7 @@ public class WriteOptionsBuilder {
      * @return {@link WriteOptionsBuilder} for chained access.
      */
     public WriteOptionsBuilder addMethodFilter(String filterName, MethodFilter methodFilter) {
-        options.methodFilters.put(filterName, methodFilter);
+        ownMethodFilters().put(filterName, methodFilter);
         return this;
     }
 
@@ -1806,7 +1899,7 @@ public class WriteOptionsBuilder {
      * @return {@link WriteOptionsBuilder} for chained access.
      */
     public WriteOptionsBuilder addNamedMethodFilter(String filterName, Class<?> clazz, String methodName) {
-        options.methodFilters.put(filterName, new NamedMethodFilter(clazz, methodName));
+        ownMethodFilters().put(filterName, new NamedMethodFilter(clazz, methodName));
         return this;
     }
 
@@ -1816,7 +1909,7 @@ public class WriteOptionsBuilder {
      * @return {@link WriteOptionsBuilder} for chained access.
      */
     public WriteOptionsBuilder removeMethodFilter(String filterName) {
-        options.methodFilters.remove(filterName);
+        ownMethodFilters().remove(filterName);
         return this;
     }
 
@@ -1831,8 +1924,8 @@ public class WriteOptionsBuilder {
         Map<String, AccessorFactory> map = new LinkedHashMap<>();
         map.put(factoryName, accessorFactory);
         map.putAll(options.accessorFactories);
-        options.accessorFactories.clear();
-        options.accessorFactories.putAll(map);
+        ownAccessorFactories().clear();
+        ownAccessorFactories().putAll(map);
         return this;
     }
 
@@ -1842,7 +1935,7 @@ public class WriteOptionsBuilder {
      * @return {@link WriteOptionsBuilder} for chained access.
      */
     public WriteOptionsBuilder removeAccessorFactory(String factoryName) {
-        options.accessorFactories.remove(factoryName);
+        ownAccessorFactories().remove(factoryName);
         return this;
     }
 
@@ -1944,17 +2037,38 @@ public class WriteOptionsBuilder {
      */
     public WriteOptions build() {
         options.clearCaches();
-        options.includedFieldNames = Collections.unmodifiableMap(options.includedFieldNames);
-        options.nonStandardGetters = Collections.unmodifiableMap(options.nonStandardGetters);
         options.aliasTypeNames = Collections.unmodifiableMap(options.aliasTypeNames);
         options.aliasesShared = false;      // built: no more changes, and none through the builder either
-        options.notCustomWrittenClasses = Collections.unmodifiableSet(options.notCustomWrittenClasses);
-        options.nonRefClasses = Collections.unmodifiableSet(options.nonRefClasses);
-        options.excludedFieldNames = Collections.unmodifiableMap(options.excludedFieldNames);
-        options.fieldFilters = Collections.unmodifiableMap(options.fieldFilters);
-        options.methodFilters = Collections.unmodifiableMap(options.methodFilters);
-        options.accessorFactories = Collections.unmodifiableMap(options.accessorFactories);
-        options.customWrittenClasses = Collections.unmodifiableMap(options.customWrittenClasses);
+        // The class settings this builder copied are made read-only; the ones it shares already are
+        if ((owned & OWN_INCLUDED) != 0) {
+            options.includedFieldNames = Collections.unmodifiableMap(options.includedFieldNames);
+        }
+        if ((owned & OWN_GETTERS) != 0) {
+            options.nonStandardGetters = Collections.unmodifiableMap(options.nonStandardGetters);
+        }
+        if ((owned & OWN_NOT_CUSTOM_WRITTEN) != 0) {
+            options.notCustomWrittenClasses = Collections.unmodifiableSet(options.notCustomWrittenClasses);
+        }
+        if ((owned & OWN_NON_REFS) != 0) {
+            options.nonRefClasses = Collections.unmodifiableSet(options.nonRefClasses);
+        }
+        if ((owned & OWN_EXCLUDED) != 0) {
+            options.excludedFieldNames = Collections.unmodifiableMap(options.excludedFieldNames);
+        }
+        if ((owned & OWN_FIELD_FILTERS) != 0) {
+            options.fieldFilters = Collections.unmodifiableMap(options.fieldFilters);
+        }
+        if ((owned & OWN_METHOD_FILTERS) != 0) {
+            options.methodFilters = Collections.unmodifiableMap(options.methodFilters);
+        }
+        if ((owned & OWN_ACCESSOR_FACTORIES) != 0) {
+            options.accessorFactories = Collections.unmodifiableMap(options.accessorFactories);
+        }
+        if ((owned & OWN_WRITERS) != 0) {
+            options.customWrittenClasses = Collections.unmodifiableMap(options.customWrittenClasses);
+        }
+        // Built: these are its settings now, and a change through this builder must fail, as it always has
+        owned = OWN_ALL;
         options.customOptions = Collections.unmodifiableMap(options.customOptions);
         return options;
     }
@@ -2042,19 +2156,20 @@ public class WriteOptionsBuilder {
         private ClassLoader classLoader = ClassUtilities.getClassLoader(DefaultWriteOptions.class);
         // Class-keyed settings: plain concurrent maps and sets, cheap to copy from the BASE_* settings on every
         // build. The per-object lookups read the per-class caches below, which consult these only on first use.
-        private Map<Class<?>, Set<String>> includedFieldNames = new ConcurrentHashMapNullSafe<>();
-        private Map<Class<?>, Map<String, String>> nonStandardGetters = new ConcurrentHashMapNullSafe<>();
+        // Set by the builder: the permanent settings' shared snapshots, or its own copies (see WriteOptionsBuilder.own*())
+        private Map<Class<?>, Set<String>> includedFieldNames;
+        private Map<Class<?>, Map<String, String>> nonStandardGetters;
         // Pre-size builder maps to avoid resize during typical configuration
         private Map<String, String> aliasTypeNames = new LinkedHashMap<>(32);
         // True while aliasTypeNames is shared (the base snapshot, or another WriteOptions' aliases): copied before a change
         private boolean aliasesShared;
-        private Set<Class<?>> notCustomWrittenClasses = new ConcurrentSet<>();
-        private Set<Class<?>> nonRefClasses = new ConcurrentSet<>();
-        private Map<Class<?>, Set<String>> excludedFieldNames = new ConcurrentHashMapNullSafe<>();
-        private Map<String, FieldFilter> fieldFilters = new LinkedHashMap<>(16);
-        private Map<String, MethodFilter> methodFilters = new LinkedHashMap<>(16);
-        private Map<String, AccessorFactory> accessorFactories = new LinkedHashMap<>(16);
-        private Map<Class<?>, JsonClassWriter> customWrittenClasses = new ConcurrentHashMapNullSafe<>();
+        private Set<Class<?>> notCustomWrittenClasses;
+        private Set<Class<?>> nonRefClasses;
+        private Map<Class<?>, Set<String>> excludedFieldNames;
+        private Map<String, FieldFilter> fieldFilters;
+        private Map<String, MethodFilter> methodFilters;
+        private Map<String, AccessorFactory> accessorFactories;
+        private Map<Class<?>, JsonClassWriter> customWrittenClasses;
         private Map<String, Object> customOptions = new LinkedHashMap<>(16);
         private DefaultConverterOptions converterOptions = new DefaultConverterOptions();
 
