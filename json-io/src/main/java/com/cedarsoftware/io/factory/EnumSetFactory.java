@@ -101,6 +101,9 @@ public class EnumSetFactory implements ClassFactory {
                 // Use Converter for String→Enum conversion
                 Enum<?> enumConstant = (Enum<?>) resolver.getConverter().convert(enumName, enumClass);
                 enumSet.add(enumConstant);
+            } else if (item == null) {
+                throw new JsonIoException("An EnumSet cannot hold null, but the @items of an EnumSet of "
+                        + enumClass.getName() + " contain a null");
             } else {
                 throw new JsonIoException("Unexpected item type in EnumSet: " + item.getClass());
             }

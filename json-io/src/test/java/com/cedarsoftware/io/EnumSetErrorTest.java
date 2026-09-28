@@ -47,9 +47,12 @@ class EnumSetErrorTest {
                 "  \"@items\": [\"A\", null, \"C\"]\n" +
                 "}";
 
+        // json-io's own message: it was a NullPointerException, whose message is JDK 14+'s helpful text or, on
+        // earlier JDKs, nothing at all
         assertThatThrownBy(() -> TestUtil.toJava(json, null).asClass(null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("null");
+                .hasMessageContaining("An EnumSet cannot hold null")
+                .hasMessageContaining(TestEnum.class.getName());
     }
 
     @Test
