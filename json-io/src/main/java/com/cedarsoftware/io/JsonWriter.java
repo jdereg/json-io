@@ -972,6 +972,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 processMap((Map<?, ?>) obj, objectStack, nextDepth);
             } else if (obj instanceof Collection) {
                 processCollection((Collection<?>) obj, objectStack, nextDepth);
+            } else if (obj instanceof java.util.Optional) {
+                // What OptionalWriter writes: the content. Traced through its fields, an Optional showed nothing on
+                // JDK 9+ (java.util keeps its fields to itself), so a cycle through one recursed until the stack
+                // overflowed, and an object shared through Optionals was written twice.
+                traceVisit(((java.util.Optional<?>) obj).orElse(null), objectStack, nextDepth);
             } else {
                 processFields(objectStack, obj, nextDepth);
             }

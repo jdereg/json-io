@@ -2264,8 +2264,13 @@ public class ToonWriter implements Closeable, Flushable {
         }
         // Optional types — unwrap and write the bare value or null (Jackson-style).
         // TOON is new enough that there is no legacy object form to preserve.
-        if (value instanceof java.util.Optional
-                || value instanceof java.util.OptionalInt
+        // An Optional's content is written as the field's own value: an object or a list inside one was written on
+        // the key's line, so its fields landed at the parent's level and the document read back wrong.
+        if (value instanceof java.util.Optional) {
+            writeFieldEntry(keyStr, ((java.util.Optional<?>) value).orElse(null), keyNeedsQuoting);
+            return;
+        }
+        if (value instanceof java.util.OptionalInt
                 || value instanceof java.util.OptionalLong
                 || value instanceof java.util.OptionalDouble) {
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
@@ -3192,6 +3197,12 @@ public class ToonWriter implements Closeable, Flushable {
                     pushReferenceCandidate(stack, element);
                 }
             }
+            return;
+        }
+
+        if (current instanceof java.util.Optional) {
+            // Its content, as it is written: its fields are hidden on JDK 9+ (see JsonWriter.traceReferences)
+            pushReferenceCandidate(stack, ((java.util.Optional<?>) current).orElse(null));
             return;
         }
 

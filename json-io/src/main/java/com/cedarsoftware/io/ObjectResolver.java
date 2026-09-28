@@ -541,7 +541,13 @@ public class ObjectResolver extends Resolver
             if (jsObj.isReference()) {
                 JsonObject refObject = resolveReference(jsObj);
                 if (refObject != null && refObject.getTarget() != null) {
-                    injector.inject(target, refObject.getTarget());
+                    Object referenced = refObject.getTarget();
+                    if ((fieldTypeUnchanged ? assignmentPlan.optionalType : isOptionalRawType(rawType))
+                            && !isOptionalInstance(referenced)) {
+                        // An Optional is written as its content, so a @ref in an Optional field names the content
+                        referenced = wrapAsOptional(rawType, effectiveFieldType, referenced);
+                    }
+                    injector.inject(target, referenced);
                 } else {
                     addUnresolvedReference(new UnresolvedReference(
                             jsonObj, injector.getName(), jsObj.getReferenceId()));

@@ -1744,6 +1744,11 @@ public abstract class Resolver {
                 Injector injector = plan.get(ref.field);
                 if (injector != null) {
                     try {
+                        // An Optional is written as its content, so a @ref in an Optional field names the content
+                        if (injector.getType() == java.util.Optional.class
+                                && !(referencedTarget instanceof java.util.Optional)) {
+                            referencedTarget = java.util.Optional.ofNullable(referencedTarget);
+                        }
                         injector.inject(objToFix, referencedTarget);
                     } catch (Exception e) {
                         throw new JsonIoException("Error setting field while resolving references '" + ref.field + "', @ref = " + ref.refId, e);
