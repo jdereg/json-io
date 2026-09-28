@@ -61,6 +61,12 @@
   * **`LongAdder` and `DoubleAdder`** were written as empty objects on every JDK, losing the count. They are now written as their sum, as `AtomicLong` is, and are treated as values (no `@id`), also as `AtomicLong` is.
   * **Tests.** `JdkValueTypesRoundTripTest` (3); against the previous code and java-util, the `InetAddress` and adder tests fail. Full suite: 4,723 + 165 + 28 tests on JDK 21 and 4,723 on JDK 8, 0 failures.
 * **DOCS**: **User guide: "JDK Types Compared with Jackson".** It reports a survey of 104 JDK values written and read back as their declared types. json-io reads back 97 intact on JDK 21 (90 before this release) and 100 on JDK 8 (94 before). Jackson 2.22 with its `jdk8` and `JavaTimeModule` modules reads back 84, and so does Jackson 3.1. No type in the set reads back intact with Jackson but not with json-io. The section lists what json-io keeps that Jackson loses, and what neither keeps, with workarounds. The README's supported-types table adds `LongAdder`, `DoubleAdder`, `java.sql.Time`, `InetAddress` and `EnumMap`, and links the section.
+* **BUG FIX**: **A `WriteOptionsBuilder` no longer changes other `WriteOptions`.** A builder's per-class settings start as shallow copies, of the permanent ones or of the options it was copied from, so the field-name sets and getter maps inside them were shared. `addExcludedFields()` (plural), `addIncludedField(s)()` and `addNonStandardGetter()` added to those shared sets:
+  * **Exceptions lost their message:** excluding `Throwable`'s `detailMessage` on one builder made every `WriteOptions` built afterwards, including the default one, write exceptions without their message.
+  * **Copies changed their original:** adding an included field to a copy added it to the original.
+  * **The fix:** these methods now copy the set or map before adding, as `addExcludedField()` already did.
+  * **`getIncludedFields()` and `getExcludedFields()`** now return an empty set for a class with none configured. They threw `NullPointerException`.
+  * **Tests.** `WriteOptionsBuilderOwnSettingsTest` (3); all 3 fail against the previous code. Full suite: 4,726 + 165 + 28 tests, 0 failures.
 * **BUILD**: `java-util` 4.112.0 → **4.113.0**, which adds the `Charset`, `java.sql.Time`, `InetAddress`, `LongAdder` and `DoubleAdder` conversions above.
 
 #### 4.112.0 - 2026-09-23

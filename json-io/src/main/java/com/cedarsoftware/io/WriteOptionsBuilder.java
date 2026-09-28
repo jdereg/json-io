@@ -1554,7 +1554,7 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder addIncludedField(Class<?> clazz, String includedFieldName) {
         Convention.throwIfNull(includedFieldName, "includedFieldName cannot be null");
-        options.includedFieldNames.computeIfAbsent(clazz, LINKED_HASH_SET_FACTORY).add(includedFieldName);
+        ownFieldSet(options.includedFieldNames, clazz).add(includedFieldName);
         return this;
     }
 
@@ -1564,7 +1564,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder addIncludedFields(Class<?> clazz, Collection<? extends String> includedFieldNames) {
-        options.includedFieldNames.computeIfAbsent(clazz, LINKED_HASH_SET_FACTORY).addAll(includedFieldNames);
+        ownFieldSet(options.includedFieldNames, clazz).addAll(includedFieldNames);
         return this;
     }
 
@@ -1613,17 +1613,7 @@ public class WriteOptionsBuilder {
      * @return this builder for chaining.
      */
     public WriteOptionsBuilder addExcludedField(Class<?> clazz, String excludedFieldName) {
-        // options.excludedFieldNames is initialized via a shallow putAll(BASE_EXCLUDED_FIELD_NAMES),
-        // so its Sets may alias the permanent-state Sets. compute() with a fresh Set guarantees
-        // the builder owns its own copy and never mutates BASE_EXCLUDED_FIELD_NAMES.
-        options.excludedFieldNames.compute(clazz, (k, existing) -> {
-            Set<String> result = LINKED_HASH_SET_FACTORY.apply(k);
-            if (existing != null) {
-                result.addAll(existing);
-            }
-            result.add(excludedFieldName);
-            return result;
-        });
+        ownFieldSet(options.excludedFieldNames, clazz).add(excludedFieldName);
         return this;
     }
 
@@ -1663,7 +1653,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder addExcludedFields(Class<?> clazz, Collection<? extends String> excludedFields) {
-        options.excludedFieldNames.computeIfAbsent(clazz, LINKED_HASH_SET_FACTORY).addAll(excludedFields);
+        ownFieldSet(options.excludedFieldNames, clazz).addAll(excludedFields);
         return this;
     }
 
@@ -1712,8 +1702,30 @@ public class WriteOptionsBuilder {
         Convention.throwIfNull(c, "class cannot be null");
         Convention.throwIfNull(fieldName, "fieldName cannot be null");
         Convention.throwIfNull(methodName, "methodName cannot be null");
-        options.nonStandardGetters.computeIfAbsent(c, LINKED_HASH_MAP_FACTORY).put(fieldName, methodName);
+        Map<String, String> own = LINKED_HASH_MAP_FACTORY.apply(c);     // a copy, for the reason in ownFieldSet()
+        Map<String, String> existing = options.nonStandardGetters.get(c);
+        if (existing != null) {
+            own.putAll(existing);
+        }
+        own.put(fieldName, methodName);
+        options.nonStandardGetters.put(c, own);
         return this;
+    }
+
+    /**
+     * This builder's own set of field names for {@code clazz}, copied into {@code byClass} before it is changed. The
+     * settings start as shallow copies -- of the permanent ones, or of the options this builder was copied from -- so
+     * the set there may be theirs: adding to it changed them too (excluding a field of Throwable on one builder
+     * dropped it from every WriteOptions built after, the default ones included).
+     */
+    private static Set<String> ownFieldSet(Map<Class<?>, Set<String>> byClass, Class<?> clazz) {
+        Set<String> own = LINKED_HASH_SET_FACTORY.apply(clazz);
+        Set<String> existing = byClass.get(clazz);
+        if (existing != null) {
+            own.addAll(existing);
+        }
+        byClass.put(clazz, own);
+        return own;
     }
 
     /**
@@ -2492,11 +2504,13 @@ public class WriteOptionsBuilder {
         }
 
         public Set<String> getIncludedFields(Class<?> c) {
-            return Collections.unmodifiableSet(includedFieldNames.get(c));
+            Set<String> included = includedFieldNames.get(c);      // none: empty, not a NullPointerException
+            return included == null ? Collections.emptySet() : Collections.unmodifiableSet(included);
         }
 
         public Set<String> getExcludedFields(Class<?> c) {
-            return Collections.unmodifiableSet(excludedFieldNames.get(c));
+            Set<String> excluded = excludedFieldNames.get(c);
+            return excluded == null ? Collections.emptySet() : Collections.unmodifiableSet(excluded);
         }
 
         /**
