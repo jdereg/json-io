@@ -827,4 +827,27 @@ public class MultiKeyMapTest {
 
         assertEquals("notExpandedSetOfLists", deserializedNotExpanded.get(lookupSet));
     }
+
+    /**
+     * Keys that differ only in nesting survive a round trip. The map reported them wrongly through entrySet(),
+     * which the writer uses: [a] was written as a and {{a},{b}} as {a,b}, so the read map had 3 of these 5 entries.
+     */
+    @Test
+    void testMultiKeyMapKeysThatDifferOnlyInNesting() {
+        MultiKeyMap<String> map = new MultiKeyMap<>();
+        map.put("a", "bare");
+        map.put(new Object[]{"a"}, "one element");
+        map.put(new java.util.LinkedHashSet<>(Arrays.asList(new java.util.LinkedHashSet<>(Arrays.asList("a")),
+                new java.util.LinkedHashSet<>(Arrays.asList("b")))), "set of sets");
+        map.put(new java.util.LinkedHashSet<>(Arrays.asList("a", "b")), "set");
+        map.put(new Object[]{"x", Arrays.asList("y", "z")}, "nested");
+
+        MultiKeyMap<String> back = TestUtil.toJava(TestUtil.toJson(map), null).asClass(MultiKeyMap.class);
+
+        assertEquals(5, back.size());
+        assertEquals(map, back);
+        assertEquals("bare", back.get("a"));
+        assertEquals("one element", back.get(new Object[]{"a"}));
+        assertEquals("set", back.get(new java.util.LinkedHashSet<>(Arrays.asList("a", "b"))));
+    }
 }

@@ -122,6 +122,7 @@
   * **The defect:** java-util 4.113.0's class hierarchy follows the Java Language Specification. So two arrays of objects now share `Object[]` and `Serializable[]`, which the check did not skip, and an array of `Car`s shares `Vehicle[]` with an array of `Motorcycle`s. Either was then accepted as the other, and the caller got an array of the wrong type.
   * **Now:** an array is never accepted here, as before the hierarchy changed.
   * **Tests.** `ResolverValueToTargetTest.toJava_lenientModeRefusesAnArrayOfAnotherType` fails without this change (against java-util 4.113.0). Full suite: 4,736 + 165 + 28 tests, 0 failures on JDK 21. The core module passes on JDK 8 as well (4,736 tests, 0 failures).
+* **TESTING**: `MultiKeyMapTest.testMultiKeyMapKeysThatDifferOnlyInNesting`: a `MultiKeyMap` whose keys differ only in nesting (`a` and `[a]`, `{{a},{b}}` and `{a,b}`) is read back with all its entries. Before java-util 4.113.0's fix to the keys `MultiKeyMap` reports through `entrySet()` (which this library's writer uses), the read map had 3 of the 5.
 * **BUILD**: `java-util` 4.112.0 → **4.113.0**, which adds the `Charset`, `java.sql.Time`, `InetAddress`, `LongAdder` and `DoubleAdder` conversions above.
 
 #### 4.112.0 - 2026-09-23
