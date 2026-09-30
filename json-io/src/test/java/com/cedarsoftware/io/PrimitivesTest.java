@@ -553,4 +553,30 @@ class PrimitivesTest
         private String nullField;
         private String[] values;
     }
+
+    /**
+     * The two fixed sets, tested by identity since 4.113.0 (they were ClassValues over HashSets): exactly these
+     * classes, nothing near them.
+     */
+    @Test
+    void theWrapperAndNativeJsonTypeSetsAreExactlyTheseClasses() {
+        for (Class<?> c : new Class<?>[]{Byte.class, Short.class, Integer.class, Long.class, Float.class, Double.class,
+                Character.class, Boolean.class, byte.class, short.class, int.class, long.class, float.class,
+                double.class, char.class, boolean.class}) {
+            assertTrue(Primitives.isPrimitive(c), c.getName());
+        }
+        for (Class<?> c : new Class<?>[]{String.class, Object.class, Number.class, java.math.BigDecimal.class,
+                java.util.concurrent.atomic.AtomicInteger.class, Integer[].class, Void.class}) {
+            assertFalse(Primitives.isPrimitive(c), c.getName());
+        }
+        for (Class<?> c : new Class<?>[]{String.class, Long.class, long.class, Double.class, double.class,
+                Boolean.class, boolean.class, Object[].class}) {
+            assertTrue(Primitives.isNativeJsonType(c), c.getName());
+        }
+        for (Class<?> c : new Class<?>[]{Integer.class, int.class, Float.class, float.class, Short.class, Byte.class,
+                Character.class, char.class, Object.class, String[].class, Long[].class, CharSequence.class,
+                java.math.BigDecimal.class, null}) {
+            assertFalse(Primitives.isNativeJsonType(c), String.valueOf(c));
+        }
+    }
 }

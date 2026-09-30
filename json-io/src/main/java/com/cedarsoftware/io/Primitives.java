@@ -1,9 +1,5 @@
 package com.cedarsoftware.io;
 
-import java.util.HashSet;
-import java.util.Set;
-
-
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
  *         <br>
@@ -22,44 +18,9 @@ import java.util.Set;
  *         limitations under the License.
  */
 public class Primitives {
-    // Filled once below, then read through ClassValues: each class's answer is kept on the class (no hash probe)
-    // -- faster than a hash-based set on hot dispatch paths like JsonWriter.isForceType, which JFR showed at ~5%
-    // of write-phase CPU.
-    private static final Set<Class<?>> PRIMITIVE_WRAPPER_TABLE = new HashSet<>();
-    private static final Set<Class<?>> NATIVE_JSON_TYPE_TABLE = new HashSet<>();
-    private static final ClassValue<Boolean> PRIMITIVE_WRAPPERS = new ClassValue<Boolean>() {
-        @Override
-        protected Boolean computeValue(Class<?> c) {
-            return PRIMITIVE_WRAPPER_TABLE.contains(c);
-        }
-    };
-    private static final ClassValue<Boolean> NATIVE_JSON_TYPES = new ClassValue<Boolean>() {
-        @Override
-        protected Boolean computeValue(Class<?> c) {
-            return NATIVE_JSON_TYPE_TABLE.contains(c);
-        }
-    };
-
-    static {
-        PRIMITIVE_WRAPPER_TABLE.add(Byte.class);
-        PRIMITIVE_WRAPPER_TABLE.add(Integer.class);
-        PRIMITIVE_WRAPPER_TABLE.add(Long.class);
-        PRIMITIVE_WRAPPER_TABLE.add(Double.class);
-        PRIMITIVE_WRAPPER_TABLE.add(Character.class);
-        PRIMITIVE_WRAPPER_TABLE.add(Float.class);
-        PRIMITIVE_WRAPPER_TABLE.add(Boolean.class);
-        PRIMITIVE_WRAPPER_TABLE.add(Short.class);
-
-        // Native json types are the types we can leave the type value off of now matter what
-        NATIVE_JSON_TYPE_TABLE.add(Long.class);
-        NATIVE_JSON_TYPE_TABLE.add(long.class);
-        NATIVE_JSON_TYPE_TABLE.add(Double.class);
-        NATIVE_JSON_TYPE_TABLE.add(double.class);
-        NATIVE_JSON_TYPE_TABLE.add(String.class);
-        NATIVE_JSON_TYPE_TABLE.add(Boolean.class);
-        NATIVE_JSON_TYPE_TABLE.add(boolean.class);
-        NATIVE_JSON_TYPE_TABLE.add(Object[].class);
-    }
+    // Two small fixed sets, tested by identity in rough order of frequency: cheaper than a ClassValue lookup on these
+    // classes (String carries ~15 ClassValues once json-io and java-util have seen it, which crowds its small cache)
+    // and than a hash-based set.
 
     /**
      * Statically accessed class, no need for Construction
@@ -73,7 +34,8 @@ public class Primitives {
      * Integer, Long, Boolean, etc. are considered primitives by this method.
      */
     public static boolean isPrimitive(Class<?> c) {
-        return c.isPrimitive() || PRIMITIVE_WRAPPERS.get(c);
+        return c.isPrimitive() || c == Integer.class || c == Long.class || c == Double.class || c == Boolean.class
+                || c == Character.class || c == Float.class || c == Short.class || c == Byte.class;
     }
 
     /**
@@ -82,6 +44,8 @@ public class Primitives {
      * Integer, Long, Boolean, etc. are considered primitives by this method.
      */
     public static boolean isNativeJsonType(Class<?> c) {
-        return c != null && NATIVE_JSON_TYPES.get(c);
+        // Native JSON types: the ones whose type can be left off no matter what
+        return c == String.class || c == Long.class || c == Double.class || c == Boolean.class || c == Object[].class
+                || c == long.class || c == double.class || c == boolean.class;
     }
 }
