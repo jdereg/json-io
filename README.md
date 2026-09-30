@@ -170,22 +170,22 @@ automatic shared-reference and cycle preservation. No class annotations required
 | Dependencies | java-util only (~850K) | Multiple JARs (~2.5MB+) | Single JAR (~300KB) |
 | Java version | JDK 1.8+ | JDK 1.8+ | JDK 1.8+ |
 
-**On performance:** Jackson is faster for simple DTOs, but json-io stays **under 2x Jackson on every read/write mode** on the `JsonPerformanceTest` benchmark (100,000 iterations, diverse POJO workload — nested collections, floats, `BigDecimal`, `java.time.*`, UUIDs, nullable fields). json-io **beats Gson on every write mode** and on `toMaps` reads; on typed reads it takes about 13% longer than Gson. In real-world applications, serialization is typically <1% of total request time — the rest is network I/O, database queries, and business logic. json-io's additional capabilities (cycles, polymorphism, zero-config, JSON5, TOON) often matter more than raw serialization throughput.
+**On performance:** Jackson is faster for simple DTOs, but json-io stays **under 2x Jackson on every read/write mode** on the `JsonPerformanceTest` benchmark (100,000 iterations, diverse POJO workload — nested collections, floats, `BigDecimal`, `java.time.*`, UUIDs, nullable fields). json-io **beats Gson on every write mode** and on `toMaps` reads; on typed reads it takes about 10% longer than Gson. In real-world applications, serialization is typically <1% of total request time — the rest is network I/O, database queries, and business logic. json-io's additional capabilities (cycles, polymorphism, zero-config, JSON5, TOON) often matter more than raw serialization throughput.
 
 **Measured ratios vs Jackson** (lower is faster; 1.0 = Jackson parity):
 
 | Mode | JsonIo | TOON | Gson |
 |---|---|---|---|
-| Read `toJava` (typed) | 1.60x | 1.62x | 1.42x |
-| Read `toMaps` (class-independent) | 1.31x | 1.54x | 1.42x |
-| Write `cycleSupport=true` (default) | 1.66x | 1.34x | 2.17x |
-| Write `cycleSupport=false` (DTOs/acyclic) | 1.45x | 1.24x | 2.17x |
-| Write `toMaps` `cycleSupport=true` | 1.59x | 1.38x | 2.16x |
-| Write `toMaps` `cycleSupport=false` | 1.45x | 1.27x | 2.16x |
+| Read `toJava` (typed) | 1.61x | 1.63x | 1.44x |
+| Read `toMaps` (class-independent) | 1.30x | 1.55x | 1.42x |
+| Write `cycleSupport=true` (default) | 1.59x | 1.36x | 2.18x |
+| Write `cycleSupport=false` (DTOs/acyclic) | 1.45x | 1.25x | 2.18x |
+| Write `toMaps` `cycleSupport=true` | 1.55x | 1.37x | 2.16x |
+| Write `toMaps` `cycleSupport=false` | 1.42x | 1.27x | 2.16x |
 
 Measured on JDK 21 (21.0.12), `json-io 4.113.0` vs `jackson-databind 2.22.3` and `gson 2.14.0`, using the median of three run-mode executions. Reproduce with `mvn -q -pl json-io -DskipTests test-compile exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.cedarsoftware.io.JsonPerformanceTest -Dexec.args="--with-gson"` (100k iterations after 10k warmup; expect ±3% run-to-run noise from thermal / GC). All three libraries serialize comparable JSON: Jackson is configured with `JavaTimeModule` and `WRITE_DATES_AS_TIMESTAMPS=false` to match Spring Boot's default; Gson uses ISO-8601 `TypeAdapter`s for `Instant`, `LocalDate`, `LocalDateTime`, and `ZonedDateTime` to match. The `--with-gson` flag is opt-in so the default test run isn't slowed by the Gson loops; drop the flag for the two-way (jsonio vs Jackson) comparison.
 
-**Performance tip:** Use `cycleSupport(false)` for ~10-15% faster writes when your data is acyclic (DTOs, POJOs, tree-shaped data) — 15% for typed objects and 11% in `toMaps` mode on this benchmark.
+**Performance tip:** Use `cycleSupport(false)` for ~10% faster writes when your data is acyclic (DTOs, POJOs, tree-shaped data) — 10% for typed objects and in `toMaps` mode on this benchmark.
 
 **Performance tip — reuse `ReadOptions` and `WriteOptions`; they are thread-safe.** `ReadOptionsBuilder.build()` and `WriteOptionsBuilder.build()` take well under a microsecond (the permanent class settings are shared, not copied), but each new options object works out what it needs about each class it meets, once — so it pays to reuse one. The returned options object is **immutable and thread-safe**: build it once per application (or per logical configuration), hold the reference, and share it freely across threads and across calls. The library already caches the common default singletons internally (`ReadOptionsBuilder.getDefaultReadOptions()`, `WriteOptionsBuilder.getDefaultWriteOptions()`), so passing `null` is fine; only custom-configured options need to be built and cached by you.
 

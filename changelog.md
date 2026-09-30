@@ -107,16 +107,17 @@
 
   | Mode | Before (4.106.0) | Now |
   |---|---|---|
-  | Typed read | 1.64x | 1.60x |
-  | `toMaps` read | 1.32x | 1.31x |
-  | Write, `cycleSupport=true` | 1.57x | 1.66x |
+  | Typed read | 1.64x | 1.61x |
+  | `toMaps` read | 1.32x | 1.30x |
+  | Write, `cycleSupport=true` | 1.57x | 1.59x |
   | Write, `cycleSupport=false` | 1.40x | 1.45x |
-  | `toMaps` write, `cycleSupport=true` | 1.65x | 1.59x |
-  | `toMaps` write, `cycleSupport=false` | 1.38x | 1.45x |
+  | `toMaps` write, `cycleSupport=true` | 1.65x | 1.55x |
+  | `toMaps` write, `cycleSupport=false` | 1.38x | 1.42x |
 
-  * **Against the released 4.112.0**, same machine and libraries, three runs each: typed reads are about 4% faster relative to Jackson, and the other modes are within ±3%.
-  * **Gson claim corrected:** the README said json-io was "roughly tied" with Gson on reads. It is faster on `toMaps` reads, and takes about 13% longer on typed reads.
-  * **`cycleSupport(false)` tip updated:** the gain is now 15% for typed writes and 11% in `toMaps` mode.
+  * **Measured twice.** The first measurement (before this release's faster write) put `cycleSupport=true` writes at 1.66x and `toMaps` writes at 1.59x and 1.45x; it was taken again after that change, and the figures above and in the README are the second.
+  * **Against the released 4.112.0**, same machine and libraries, each workload alone in a fresh JVM, eight rounds: writes are 5.1% faster with `cycleSupport=true` and 5.6% without, and typed reads 4.2% faster, in every round (JDK 8: writes 3.0% and 1.5% faster). Jackson moved by 1% or less.
+  * **Gson claim corrected:** the README said json-io was "roughly tied" with Gson on reads. It is faster on `toMaps` reads, and takes about 10% longer on typed reads.
+  * **`cycleSupport(false)` tip updated:** the gain is now about 10%, for typed writes and in `toMaps` mode, since writes with cycle support got faster.
   * **Options-building tip corrected:** building options takes well under a microsecond.
 * **BUG FIX**: **Lenient type matching never accepts an array for another array type.** When a value can't be converted to the requested type, json-io accepts a complex object that shares a meaningful common ancestor with that type: a `Car` where a `Motorcycle` is asked for, since both are `Vehicle`s.
   * **The defect:** java-util 4.113.0's class hierarchy follows the Java Language Specification. So two arrays of objects now share `Object[]` and `Serializable[]`, which the check did not skip, and an array of `Car`s shares `Vehicle[]` with an array of `Motorcycle`s. Either was then accepted as the other, and the caller got an array of the wrong type.
