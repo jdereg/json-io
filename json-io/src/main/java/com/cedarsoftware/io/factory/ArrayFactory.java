@@ -40,6 +40,13 @@ public class ArrayFactory<T> implements ClassFactory {
         Object[] items = jObj.getItems();
         Converter converter = resolver.getConverter();
         if (items == null) {
+            // No @items: the wrapped form {"@type":"byte[]","value":"<base64>"} carries its content under 'value'
+            // (or '_v'), which the Converter reads, as ObjectResolver does for a typed field. Without this, that form
+            // read back as null at the root and in an Object field.
+            if ((jObj.containsKey("value") || jObj.containsKey("_v"))
+                    && converter.isConversionSupportedFor(jObj.getClass(), c)) {
+                return (T) jObj.setFinishedTarget(converter.convert(jObj, c), true);
+            }
             return (T)jObj.setTarget(null);
         }
         int len = items.length;
