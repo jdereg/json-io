@@ -9,6 +9,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -208,14 +210,16 @@ class ReturnValueTest
     @Test
     void testReturnAsJsonObjectWithBigIntegerJsonPrimitiveForceToLong()
     {
+        // Too large for a long: refused, naming the range. It wrapped to 5098844603236747986; java-util 4.113.0
+        // narrows a number only when it fits.
         String json = "12345678901235678901234567890";
-        Object x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().integerTypeLong().build()).asClass(Long.class);
-        assert x instanceof Long;
-        assertEquals(5098844603236747986L, x);    // Wrap around because forced to Long
-
-        x = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJavaObjects().integerTypeLong().build()).asClass(Long.class);
-        assert x instanceof Long;
-        assertEquals(5098844603236747986L, x);  // Wrap around because forced to Long
+        for (ReadOptions options : new ReadOptions[] {
+                new ReadOptionsBuilder().returnAsJsonObjects().integerTypeLong().build(),
+                new ReadOptionsBuilder().returnAsJavaObjects().integerTypeLong().build()}) {
+            JsonIoException e = assertThrows(JsonIoException.class,
+                    () -> TestUtil.toJava(json, options).asClass(Long.class));
+            assertTrue(e.getMessage().contains("outside -9223372036854775808 to 9223372036854775807"), e.getMessage());
+        }
     }
 
     @Test

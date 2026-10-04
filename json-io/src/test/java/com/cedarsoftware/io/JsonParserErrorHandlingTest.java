@@ -464,9 +464,9 @@ public class JsonParserErrorHandlingTest {
     }
 
     /**
-     * Test that integers larger than Long.MAX_VALUE wrap around when integerTypeBoth is NOT enabled.
+     * Test that integers larger than Long.MAX_VALUE become BigInteger when integerTypeBoth is NOT enabled.
      * This tests lines 685-687 of JsonParser.readInteger().
-     * The BigInteger.longValue() wraps around similar to casting.
+     * (BigInteger.longValue() used to wrap them around, as a cast does.)
      */
     @Test
     public void testIntegerOverflow_WithoutIntegerTypeBoth_ReturnsBigInteger() {
