@@ -37,8 +37,8 @@ import java.math.BigInteger;
  *       through {@link JsonIo#toJava} back into the original {@code byte[]}. Under
  *       {@code showTypeInfoNever()} — the explicit Jackson-compatible mode — it
  *       emits a <b>bare base64 string</b> ({@code "<base64>"}) instead, matching
- *       Jackson's wire format. Bare-base64 input is still decodable on the read
- *       side via java-util's smart {@code String → byte[]} detection. A
+ *       Jackson's wire format. json-io reads it back: a JSON string read into a
+ *       {@code byte[]} is Base64, as Jackson reads it. A
  *       {@code null} input emits the JSON literal {@code null} in either mode.
  *       For {@link java.nio.ByteBuffer} (position/limit-aware) round-trip,
  *       continue to use the tree writer ({@link JsonIo#toJson}) which has a
@@ -294,9 +294,8 @@ public abstract class JsonGenerator implements Closeable, Flushable {
      *   <li><b>{@code showTypeInfoNever()}</b>: emits the bare base64 string
      *       <code>"&lt;base64&gt;"</code> (Jackson-compatible). The receiver must
      *       know from external schema or declared Java type that this slot holds a
-     *       {@code byte[]}; json-io's reader can also recover the original bytes via
-     *       java-util's smart {@code String → byte[]} detection at the
-     *       {@link com.cedarsoftware.util.Converter} layer.</li>
+     *       {@code byte[]}; json-io's reader reads a JSON string into a {@code byte[]}
+     *       as Base64, as Jackson does.</li>
      * </ul>
      * A {@code null} input is emitted as the JSON literal {@code null} in either mode.
      *

@@ -768,6 +768,14 @@ public abstract class Resolver {
             return value;
         }
 
+        // 2b. A JSON string into a byte[] is Base64, as it is in a field or a collection (FastIsoParser)
+        if (targetClass == byte[].class && value instanceof String) {
+            Object bytes = FastIsoParser.parse((String) value, byte[].class);
+            if (bytes != null) {
+                return bytes;
+            }
+        }
+
         // 3. Try Converter (handles String→Enum, Number→Enum, and many other conversions)
         if (converter.isConversionSupportedFor(value.getClass(), targetClass)) {
             try {

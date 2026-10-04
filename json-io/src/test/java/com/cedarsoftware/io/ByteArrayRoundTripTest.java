@@ -19,17 +19,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Round-trip tests for {@code byte[]} across json-io's read and write paths plus
  * the new wrapped form emitted by {@link JsonGenerator#writeBinary(byte[])}.
  *
- * <p>Together with the format-detection tests in java-util's
- * {@code ConverterEverythingTest}, these verify that:
+ * <p>These verify that:
  * <ul>
  *   <li>{@code JsonGenerator.writeBinary(byte[])} emits the wrapped form
  *       {@code {"@type":"byte[]","value":"<base64>"}} and json-io's reader
  *       round-trips it back to the original byte array.</li>
  *   <li>The existing {@code [1, 2, 3]} number-array form (the default tree-writer
  *       output for {@code byte[]}) continues to round-trip.</li>
- *   <li>Foreign JSON inputs containing bare Base64 / hex / spaced-hex strings
- *       in {@code byte[]} fields are correctly decoded via java-util's smart
- *       {@code String → byte[]} detection in 4.103.0.</li>
+ *   <li>A bare string in a {@code byte[]} field, as Jackson writes it, is read as
+ *       Base64; a string that is not Base64 gives its own bytes.</li>
  * </ul>
  */
 class ByteArrayRoundTripTest {
@@ -170,15 +168,13 @@ class ByteArrayRoundTripTest {
     }
 
     // -------------------------------------------------------------------
-    // Foreign-format inputs (Jackson-style bare base64, hex, spaced-hex) decode
-    // via java-util smart String → byte[] in 4.103.0
+    // Foreign inputs: a JSON string read into a byte[] is Base64, as Jackson writes it.
+    // Nothing is guessed from what the string looks like (hex was, from 4.103.0 to 4.112.0).
     // -------------------------------------------------------------------
 
     @Test
     void foreignInput_bareBase64String_decodesIntoByteArrayField() {
-        // Jackson's writeBinary emits a bare base64 string. With java-util 4.103.0's smart
-        // String → byte[], json-io's resolver routes through Converter and decodes correctly.
-        // Use padded form so the tight rule fires.
+        // Jackson's writeBinary emits a bare base64 string
         String json = "{\"name\":\"jackson-emitter\",\"data\":\"SGVsbG8sIFdvcmxkIQ==\"}";
         BlobHolder round = JsonIo.toJava(json, null).asClass(BlobHolder.class);
         assertEquals("jackson-emitter", round.name);
@@ -186,27 +182,26 @@ class ByteArrayRoundTripTest {
     }
 
     @Test
-    void foreignInput_unspacedHexMagicNumber_decodes() {
-        // Hex string of length 8 — passes the hex-tight rule.
+    void foreignInput_hexLookingString_isReadAsBase64() {
+        // "CAFEBABE" is valid Base64 (6 bytes), as Jackson reads it; it is not guessed to be hex
         String json = "{\"name\":\"magic\",\"data\":\"CAFEBABE\"}";
         BlobHolder round = JsonIo.toJava(json, null).asClass(BlobHolder.class);
-        assertArrayEquals(new byte[]{(byte) 0xCA, (byte) 0xFE, (byte) 0xBA, (byte) 0xBE}, round.data);
+        assertArrayEquals(java.util.Base64.getDecoder().decode("CAFEBABE"), round.data);
     }
 
     @Test
-    void foreignInput_spacedHexBytes_decode() {
+    void foreignInput_stringThatIsNotBase64_givesItsBytes() {
         String json = "{\"name\":\"hexdump\",\"data\":\"00 01 02 FF\"}";
         BlobHolder round = JsonIo.toJava(json, null).asClass(BlobHolder.class);
-        assertArrayEquals(new byte[]{0, 1, 2, (byte) 0xFF}, round.data);
+        assertArrayEquals("00 01 02 FF".getBytes(StandardCharsets.UTF_8), round.data);
     }
 
     @Test
-    void foreignInput_shortTextString_fallsBackToCharset() {
-        // "DATA" fails all tight rules → charset fallback → UTF-8 bytes of "DATA".
-        // Preserves the historical behavior for short text on byte[] fields.
+    void foreignInput_shortWord_isReadAsBase64() {
+        // "DATA" is valid Base64 (3 bytes); a byte[] slot holds Base64
         String json = "{\"name\":\"short\",\"data\":\"DATA\"}";
         BlobHolder round = JsonIo.toJava(json, null).asClass(BlobHolder.class);
-        assertArrayEquals("DATA".getBytes(StandardCharsets.UTF_8), round.data);
+        assertArrayEquals(java.util.Base64.getDecoder().decode("DATA"), round.data);
     }
 
     // -------------------------------------------------------------------
@@ -285,7 +280,7 @@ class ByteArrayRoundTripTest {
     }
 
     @Test
-    void writeBinary_underShowTypeInfoNever_roundTripsViaSmartDetection() throws IOException {
+    void writeBinary_underShowTypeInfoNever_roundTripsAsBase64() throws IOException {
         byte[] payload = "Round-trip me through bare base64".getBytes(StandardCharsets.UTF_8);
 
         WriteOptions opts = new WriteOptionsBuilder().showTypeInfoNever().build();
@@ -299,8 +294,7 @@ class ByteArrayRoundTripTest {
         }
         String json = sw.toString();
 
-        // Read side: java-util's smart String→byte[] detection recovers the bytes
-        // from the bare base64 form (no @type to drive the decode).
+        // Read side: a JSON string read into a byte[] is Base64 (no @type needed).
         BlobHolder round = JsonIo.toJava(json, null).asClass(BlobHolder.class);
         assertEquals("alice", round.name);
         assertNotNull(round.data);
