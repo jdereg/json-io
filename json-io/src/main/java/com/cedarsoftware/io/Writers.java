@@ -29,7 +29,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.MathUtilities;
@@ -997,9 +996,9 @@ public class Writers {
     }
 
     public static class PatternWriter extends PrimitiveTypeWriter {
+        // the Converter writes the flags inline, "(?i)abc", so the Pattern read back matches what this one matched
         public void writePrimitiveForm(Object o, JsonGenerator gen, WriterContext context) throws IOException {
-            Pattern pattern = (Pattern) o;
-            gen.writeString(pattern.pattern());
+            gen.writeString(Converter.convert(o, String.class));
         }
 
         @Override
