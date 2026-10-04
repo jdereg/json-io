@@ -360,7 +360,11 @@ public class ObjectResolver extends Resolver
                 final ReadOptionsBuilder.FieldAssignmentPlan assignmentPlan = cachedPlans[i];
                 final Object rhs = jsonObj.fastValueAt(i);
                 if (assignmentPlan != null) {
-                    assignField(jsonObj, assignmentPlan, rhs, parentMeta);
+                    try {
+                        assignField(jsonObj, assignmentPlan, rhs, parentMeta);
+                    } catch (RuntimeException e) {
+                        throw fieldError(javaClass, assignmentPlan, e);
+                    }
                 } else if (anySetter != null) {
                     invokeAnySetter(javaMate, anySetter, (String) jsonObj.fastKeyAt(i), rhs);
                 } else if (missingFieldHandler != null) {
@@ -375,7 +379,11 @@ public class ObjectResolver extends Resolver
                 final ReadOptionsBuilder.FieldAssignmentPlan assignmentPlan = injectorPlan.getAssignmentPlan(key);
                 Object rhs = entry.getValue();
                 if (assignmentPlan != null) {
-                    assignField(jsonObj, assignmentPlan, rhs, parentMeta);
+                    try {
+                        assignField(jsonObj, assignmentPlan, rhs, parentMeta);
+                    } catch (RuntimeException e) {
+                        throw fieldError(javaClass, assignmentPlan, e);
+                    }
                 } else if (anySetter != null) {
                     invokeAnySetter(javaMate, anySetter, key, rhs);
                 } else if (missingFieldHandler != null) {
@@ -383,6 +391,23 @@ public class ObjectResolver extends Resolver
                 }
             }
         }
+    }
+
+    /**
+     * A field whose value could not be read, as a JsonIoException that names the class and the field --
+     * "com.acme.Holder.count: Value 'abc' not parseable as an int value ..." -- with the original exception as its
+     * cause. The message was only the conversion's, which did not say which of a document's values was wrong.
+     */
+    private static JsonIoException fieldError(Class<?> javaClass, ReadOptionsBuilder.FieldAssignmentPlan plan,
+                                              RuntimeException e) {
+        String where = javaClass.getName() + "." + plan.injector.getName() + ": ";
+        String message = e.getMessage();
+        if (message != null && message.startsWith(where) && e instanceof JsonIoException) {
+            return (JsonIoException) e;      // already says where
+        }
+        // A JsonIoException that only wraps the conversion's exception hands over that exception as the cause
+        Throwable cause = e instanceof JsonIoException && e.getCause() != null ? e.getCause() : e;
+        return new JsonIoException(where + message, cause);
     }
 
     /**
