@@ -50,6 +50,21 @@ class BitSetReadTest {
         assertEquals(bits(1, 3, 5), JsonIo.toJava("{\"flags\":\"101010\"}", null).asClass(Holder.class).flags);
     }
 
+    /**
+     * The indices of the set bits, {"@type":"BitSet","value":[1,3,5]}, as older json-io wrote a BitSet. Only
+     * BitSetFactory read it, and the factory was never reached, so the form failed ("Unsupported conversion, source
+     * type [Object[]]"). It reads at the root and in a field; an index is a whole number below 2^24.
+     */
+    @Test
+    void theOlderIndexFormReads() {
+        assertEquals(bits(1, 3, 5), JsonIo.toJava("{\"@type\":\"BitSet\",\"value\":[1,3,5]}", null)
+                .asClass(BitSet.class));
+        assertEquals(bits(1, 3, 5), JsonIo.toJava("{\"flags\":{\"@type\":\"BitSet\",\"value\":[1,3,5]}}", null)
+                .asClass(Holder.class).flags);
+        assertThrows(JsonIoException.class, () -> JsonIo.toJava(
+                "{\"@type\":\"BitSet\",\"value\":[2000000000]}", null).asClass(BitSet.class));
+    }
+
     /** Random BitSets, in a field and at the root, come back equal. */
     @Test
     void bitSetsRoundTrip() {

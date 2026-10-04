@@ -24,8 +24,6 @@ java.util.OptionalInt = com.cedarsoftware.io.factory.OptionalIntFactory
 java.util.OptionalLong = com.cedarsoftware.io.factory.OptionalLongFactory
 java.util.OptionalDouble = com.cedarsoftware.io.factory.OptionalDoubleFactory
 
-# java.util - BitSet
-java.util.BitSet = com.cedarsoftware.io.factory.BitSetFactory
 
 # java.util.concurrent.atomic
 java.util.concurrent.atomic.AtomicIntegerArray = com.cedarsoftware.io.factory.AtomicIntegerArrayFactory
