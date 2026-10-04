@@ -32,6 +32,7 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 import com.cedarsoftware.util.Converter;
+import com.cedarsoftware.util.MathUtilities;
 
 import static com.cedarsoftware.io.JsonValue.VALUE;
 import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
@@ -1032,7 +1033,10 @@ public class Writers {
             BigDecimal big = (BigDecimal) o;
             // Emit as a quoted JSON string (not a number literal) so JS / Jackson clients
             // that store numbers as doubles do not lose precision on arbitrary-scale BigDecimal.
-            gen.writeStringUnescaped(big.toPlainString());
+            // Plain digits up to ConverterOptions.getMaxPlainDigits(); past that its exponent form
+            // (1E+999999999 written out is a billion digits).
+            gen.writeStringUnescaped(MathUtilities.toPlainString(big,
+                    context.getWriteOptions().getConverterOptions().getMaxPlainDigits()));
         }
 
         @Override

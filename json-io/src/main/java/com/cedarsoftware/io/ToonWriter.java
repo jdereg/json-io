@@ -30,6 +30,7 @@ import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.FastWriter;
 import com.cedarsoftware.util.IOUtilities;
+import com.cedarsoftware.util.MathUtilities;
 
 /**
  * Output a Java object graph in TOON (Token-Oriented Object Notation) format.
@@ -976,6 +977,13 @@ public class ToonWriter implements Closeable, Flushable {
         }
         if (num instanceof BigDecimal) {
             BigDecimal bd = (BigDecimal) num;
+            if (!MathUtilities.fitsPlainDigits(bd.stripTrailingZeros(),
+                    writeOptions.getConverterOptions().getMaxPlainDigits())) {
+                // TOON numbers have no exponent, and written out this one is too long (1E+999999999 is a billion
+                // digits): the exponent form as a string, which reads back into a BigDecimal
+                writeQuotedString(bd.toString());
+                return;
+            }
             out.write(formatBigDecimal(bd));
             return;
         }

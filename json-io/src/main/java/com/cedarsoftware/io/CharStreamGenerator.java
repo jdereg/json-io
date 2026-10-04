@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.IdentityHashMap;
 
+import com.cedarsoftware.util.MathUtilities;
 
 /**
  * Concrete {@link JsonGenerator} implementation that writes JSON tokens to an
@@ -829,7 +830,9 @@ final class CharStreamGenerator extends JsonGenerator {
         if (value == null) {
             out.write("null");
         } else {
-            out.write(value.stripTrailingZeros().toPlainString());
+            // plain digits up to the plain-digit limit, else the exponent form, which is a valid JSON number
+            out.write(MathUtilities.toPlainString(value.stripTrailingZeros(),
+                    writeOptions.getConverterOptions().getMaxPlainDigits()));
         }
         markValue();
         return this;
