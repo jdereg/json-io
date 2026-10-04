@@ -779,6 +779,9 @@ public abstract class Resolver {
         // 3. Try Converter (handles String→Enum, Number→Enum, and many other conversions)
         if (converter.isConversionSupportedFor(value.getClass(), targetClass)) {
             try {
+                if (value instanceof JsonObject && !Map.class.isAssignableFrom(targetClass)) {
+                    resolveTypedValues((JsonObject) value);
+                }
                 return converter.convert(value, targetClass);
             } catch (Exception e) {
                 // For String→Class conversion from plain JSON strings, if the class is not found,
@@ -1386,7 +1389,7 @@ public abstract class Resolver {
 
     /** Pseudo-primitives (BigInteger, BigDecimal, UUID, Date, ...) — go through Converter. */
     private static final InstantiationPlan PSEUDO_PRIMITIVE_PLAN = (jsonObj, resolver, targetType) -> {
-        Object result = resolver.converter.convert(jsonObj, targetType);
+        Object result = resolver.converter.convert(resolver.resolveTypedValues(jsonObj), targetType);
         return jsonObj.setFinishedTarget(result, true);
     };
 
@@ -1834,7 +1837,7 @@ public abstract class Resolver {
         }
 
         try {
-            Object value = converter.convert(jsonObject, javaType);
+            Object value = converter.convert(resolveTypedValues(jsonObject), javaType);
             jsonObject.setFinishedTarget(value, true);
             return true;
         } catch (Exception e) {
@@ -1859,6 +1862,38 @@ public abstract class Resolver {
      * Returns true when the type should be treated as a pseudo-primitive in json-io resolution.
      * Pseudo-primitives are non-container types that have String conversion support.
      */
+    /**
+     * {@code jsonObj}, each of whose values that json-io wrote with its own type --
+     * {@code {"@type":"BigDecimal","value":"123"}} -- is replaced by that value, before the Converter turns the
+     * JsonObject into a non-Map type (a Duration from {@code {"duration": ...}}). The Converter reads Maps, not
+     * json-io's types: it read such a value as a Map holding the text "123", so a BigDecimal of seconds became integer
+     * text, milliseconds. Nested values are resolved first; references are left alone.
+     */
+    JsonObject resolveTypedValues(JsonObject jsonObj) {
+        int size = jsonObj.size();
+        for (int i = 0; i < size; i++) {
+            Object value = jsonObj.fastValueAt(i);
+            if (!(value instanceof JsonObject)) {
+                continue;
+            }
+            JsonObject typed = (JsonObject) value;
+            if (typed.isReference()) {
+                continue;
+            }
+            if (typed.isFinished() && typed.getTarget() != null) {
+                jsonObj.fastSetValueAt(i, typed.getTarget());
+                continue;
+            }
+            Class<?> type = typed.getRawType();
+            if (type == null || !isPseudoPrimitive(type) || !converter.isConversionSupportedFor(Map.class, type)) {
+                continue;
+            }
+            resolveTypedValues(typed);
+            jsonObj.fastSetValueAt(i, typed.setFinishedTarget(converter.convert(typed, type), true));
+        }
+        return jsonObj;
+    }
+
     static boolean isPseudoPrimitive(Class<?> type) {
         if (type == null || Enum.class.isAssignableFrom(type)) {
             return false;
@@ -2180,7 +2215,7 @@ public abstract class Resolver {
     protected Object convertIfNonRefType(JsonObject jsonObj, Class<?> type) {
         if (type != null && readOptions.isNonReferenceableClass(type) &&
                 converter.isConversionSupportedFor(Map.class, type)) {
-            return converter.convert(jsonObj, type);
+            return converter.convert(resolveTypedValues(jsonObj), type);
         }
         return null;
     }

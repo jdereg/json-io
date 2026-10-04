@@ -410,6 +410,9 @@ public class MapResolver extends Resolver {
                 if (fastValue != null) {
                     jsonObj.fastSetValueAt(i, fastValue);   // Direct update - avoids indexOf() lookup
                 } else if (converter.isConversionSupportedFor(rhsClass, fieldType)) {
+                    if (rhs instanceof JsonObject && !Map.class.isAssignableFrom(fieldType)) {
+                        resolveTypedValues((JsonObject) rhs);
+                    }
                     Object fieldValue = converter.convert(rhs, fieldType);
                     jsonObj.fastSetValueAt(i, fieldValue);  // Direct update - avoids indexOf() lookup
                 } else if (rhs instanceof String && StringUtilities.isEmpty((String)rhs)) {

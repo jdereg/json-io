@@ -675,7 +675,7 @@ public class ObjectResolver extends Resolver
             JsonObject jObj = (JsonObject) rhs;
             if ((jObj.containsKey("value") || jObj.containsKey("_v"))
                     && converter.isConversionSupportedFor(rhs.getClass(), rawType)) {
-                Object converted = converter.convert(rhs, rawType);
+                Object converted = converter.convert(resolveTypedValues(jObj), rawType);
                 jObj.setTarget(converted);
                 injector.inject(target, converted);
                 return;
