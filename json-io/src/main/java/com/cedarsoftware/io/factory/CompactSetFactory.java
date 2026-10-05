@@ -1,11 +1,13 @@
 package com.cedarsoftware.io.factory;
 
 import java.util.Collection;
+import java.util.Map;
 
 import com.cedarsoftware.io.ClassFactory;
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.Resolver;
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.CompactMap;
 import com.cedarsoftware.util.CompactSet;
 
@@ -29,6 +31,25 @@ import com.cedarsoftware.util.CompactSet;
  *         limitations under the License.
  */
 public class CompactSetFactory implements ClassFactory {
+    /**
+     * The backing map class named in the JSON, vetted as CompactMap's is: looked up through ClassUtilities (its
+     * security block list), and a Map from a package CompactSet allows. Anything else is refused, not replaced by the
+     * default, which would hand back a set that silently lost what it was built on (thread safety).
+     */
+    @SuppressWarnings("unchecked")
+    private static Class<? extends Map> backingMapType(String className) {
+        Class<?> cls;
+        try {
+            cls = ClassUtilities.forName(className, ClassUtilities.getClassLoader());
+        } catch (RuntimeException e) {
+            throw new JsonIoException("CompactSet backing map class not allowed: " + className, e);
+        }
+        if (cls == null || !Map.class.isAssignableFrom(cls)) {
+            throw new JsonIoException("CompactSet backing map class is not a Map: " + className);
+        }
+        return (Class<? extends Map>) cls;
+    }
+
     @Override
     @SuppressWarnings("unchecked")
     public Collection newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
@@ -49,10 +70,10 @@ public class CompactSetFactory implements ClassFactory {
         jObj.remove("config");
         jObj.remove("data");
 
-        // Parse config string: CS|CI/S{size}/{order}
+        // Parse config string: CS|CI/S{size}/{order}[/{backing map class}], the class only when not the default
         String[] parts = configStr.split("/");
 
-        if (parts.length != 3) {
+        if (parts.length != 3 && parts.length != 4) {
             throw new JsonIoException("Invalid CompactSet config format: " + configStr);
         }
 
@@ -99,7 +120,15 @@ public class CompactSetFactory implements ClassFactory {
                 break;
         }
 
-        CompactSet<Object> cset = builder.build();
+        CompactSet<Object> cset;
+        try {
+            if (parts.length == 4) {
+                builder.mapType(backingMapType(parts[3]));     // the builder allows only Maps from known packages
+            }
+            cset = builder.build();
+        } catch (IllegalArgumentException e) {
+            throw new JsonIoException("Invalid CompactSet config: " + configStr + ": " + e.getMessage(), e);
+        }
 
         // Use a JsonObjectArray as a transient @items vessel for traversal. The original
         // jObj remains the identity in the references map (its target is set to cset by

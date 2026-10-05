@@ -2,7 +2,10 @@ package com.cedarsoftware.io.writers;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 import com.cedarsoftware.io.JsonClassWriter;
 import com.cedarsoftware.io.JsonGenerator;
@@ -70,6 +73,13 @@ public class CompactSetWriter implements JsonClassWriter {
         }
         configStr.append(orderCode);
 
+        // The backing map, when it is not the ordering's default (a ConcurrentHashMap for a thread-safe set). A set
+        // on its default map is written as before, three parts, so older json-io reads it.
+        Class<?> mapType = (Class<?>) config.get(CompactMap.MAP_TYPE);
+        if (mapType != null && mapType != defaultMapType(ordering)) {
+            configStr.append('/').append(mapType.getName());
+        }
+
         // "config" field via the JsonGenerator
         gen.writeFieldName("config");
         gen.writeString(configStr.toString());
@@ -94,5 +104,18 @@ public class CompactSetWriter implements JsonClassWriter {
     @Override
     public String getTypeName(Object o) {
         return CompactSet.class.getName();
+    }
+
+    /** The map a CompactSet with this ordering is backed by when its builder is given none. */
+    private static Class<?> defaultMapType(String ordering) {
+        switch (ordering) {
+            case CompactMap.SORTED:
+            case CompactMap.REVERSE:
+                return TreeMap.class;
+            case CompactMap.INSERTION:
+                return LinkedHashMap.class;
+            default:
+                return HashMap.class;
+        }
     }
 }
