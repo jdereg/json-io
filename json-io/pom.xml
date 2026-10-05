@@ -109,13 +109,11 @@
                             com.cedarsoftware.io,
                             com.cedarsoftware.io.annotation,
                             com.cedarsoftware.io.factory,
-                            com.cedarsoftware.io.prettyprint,
                             com.cedarsoftware.io.reflect,
                             com.cedarsoftware.io.reflect.factories,
                             com.cedarsoftware.io.reflect.filters,
                             com.cedarsoftware.io.reflect.filters.field,
                             com.cedarsoftware.io.reflect.filters.method,
-                            com.cedarsoftware.io.reflect.injectors,
                             com.cedarsoftware.io.util,
                             com.cedarsoftware.io.writers
                         </Export-Package>
@@ -127,6 +125,29 @@
                         <id>bundle-manifest</id>
                         <goals>
                             <goal>manifest</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Integration tests (*IT) run against the packaged jar, not target/classes: the jar's layout, and
+                 multi-release versions, which the JVM applies only to classes loaded from a jar -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${version.maven-failsafe-plugin}</version>
+                <configuration>
+                    <classesDirectory>${project.build.directory}/${project.build.finalName}.jar</classesDirectory>
+                    <useModulePath>false</useModulePath>     <!-- on the classpath, as surefire runs the tests -->
+                    <systemPropertyVariables>
+                        <json-io.jar>${project.build.directory}/${project.build.finalName}.jar</json-io.jar>
+                    </systemPropertyVariables>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -144,7 +165,9 @@
                         </goals>
                         <phase>package</phase>
                         <configuration>
-                            <jvmVersion>base</jvmVersion>
+                            <!-- under META-INF/versions/9 of a multi-release jar, where only JDK 9+ looks: at the
+                                 root it was the one Java 9 class file in a JDK 8 jar -->
+                            <jvmVersion>9</jvmVersion>
                             <module>
                                 <moduleInfoSource>
                                     module com.cedarsoftware.io {
@@ -153,13 +176,11 @@
                                     exports com.cedarsoftware.io;
                                     exports com.cedarsoftware.io.annotation;
                                     exports com.cedarsoftware.io.factory;
-                                    exports com.cedarsoftware.io.prettyprint;
                                     exports com.cedarsoftware.io.reflect;
                                     exports com.cedarsoftware.io.reflect.factories;
                                     exports com.cedarsoftware.io.reflect.filters;
                                     exports com.cedarsoftware.io.reflect.filters.field;
                                     exports com.cedarsoftware.io.reflect.filters.method;
-                                    exports com.cedarsoftware.io.reflect.injectors;
                                     exports com.cedarsoftware.io.util;
                                     exports com.cedarsoftware.io.writers;
                                     }

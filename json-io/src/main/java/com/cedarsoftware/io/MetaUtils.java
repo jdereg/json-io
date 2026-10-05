@@ -1,8 +1,12 @@
 package com.cedarsoftware.io;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
@@ -16,6 +20,7 @@ import java.util.concurrent.Callable;
 import com.cedarsoftware.util.CaseInsensitiveMap;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.ExceptionUtilities;
+import com.cedarsoftware.util.IOUtilities;
 import com.cedarsoftware.util.ReflectionUtils;
 import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.convert.Converter;
@@ -182,7 +187,7 @@ public class MetaUtils {
         Map<String, String> map = new LinkedHashMap<>();
         Scanner scanner = null;
         try {
-            String contents = ClassUtilities.loadResourceAsString(resName);
+            String contents = loadConfig(resName);
 
             // Security: Validate content size to prevent memory exhaustion
             if (contents.length() > maxFileContentSize) {
@@ -278,7 +283,7 @@ public class MetaUtils {
         Set<String> set = new LinkedHashSet<>();
         Scanner scanner = null;
         try {
-            String contents = ClassUtilities.loadResourceAsString(resName);
+            String contents = loadConfig(resName);
 
             // Security: Validate content size to prevent memory exhaustion
             if (contents.length() > maxFileContentSize) {
@@ -319,6 +324,27 @@ public class MetaUtils {
         return set;
     }
 
+
+    /**
+     * A config resource, found as ClassUtilities finds one (the context class loader first, so a copy there still
+     * wins), else in json-io's own module: on the module path, json-io's config/ folder is a package of the module
+     * that it does not open, which no class loader can read from outside the module.
+     */
+    private static String loadConfig(String resName) {
+        try {
+            return ClassUtilities.loadResourceAsString(resName);
+        } catch (IllegalArgumentException notFound) {
+            InputStream in = MetaUtils.class.getResourceAsStream("/" + resName);
+            if (in == null) {
+                throw notFound;
+            }
+            try (InputStream stream = in) {
+                return new String(IOUtilities.inputStreamToBytes(stream), StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                throw new UncheckedIOException("Error reading resource: " + resName, e);
+            }
+        }
+    }
 
     /**
      * @deprecated This method is deprecated and will be removed in a future version.
