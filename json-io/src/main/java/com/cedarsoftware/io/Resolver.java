@@ -421,10 +421,15 @@ public abstract class Resolver {
                     Type keyType = Object.class;
                     Type valueType = Object.class;
                     if (type instanceof ParameterizedType) {
+                        // matched to Map's own key and value, not taken in order (StringMap<Integer>: String keys)
                         Type[] typeArgs = ((ParameterizedType) type).getActualTypeArguments();
-                        if (typeArgs.length >= 2) {
-                            keyType = typeArgs[0];
-                            valueType = typeArgs[1];
+                        Type inferredKey = mapKeyType(type, typeArgs);
+                        Type inferredValue = mapValueType(type, typeArgs);
+                        if (inferredKey != null) {
+                            keyType = inferredKey;
+                        }
+                        if (inferredValue != null) {
+                            valueType = inferredValue;
                         }
                     } else if (type instanceof Class) {
                         Type[] mapTypeArgs = extractMapTypesFromGenericSuperclass((Class<?>) type);
@@ -441,7 +446,8 @@ public abstract class Resolver {
                 if (type instanceof ParameterizedType) {
                     Type[] typeArgs = ((ParameterizedType) type).getActualTypeArguments();
                     if (typeArgs.length > 0 && containsJsonObjects(col)) {
-                        Type elementType = typeArgs[0];
+                        Type elementType = Collection.class.isAssignableFrom(rawClass)
+                                ? collectionElementType(type, typeArgs) : typeArgs[0];
                         return convertCollectionElements(col, elementType);
                     }
                 }
@@ -847,12 +853,11 @@ public abstract class Resolver {
             return null;
         }
 
-        Type[] typeArgs = ((ParameterizedType) requestedType).getActualTypeArguments();
-        if (typeArgs.length < 2) {
+        // the value matched to Map's own, not taken in order (StringMap<Person>: its one argument is the value's)
+        Type valueType = mapValueType(requestedType, ((ParameterizedType) requestedType).getActualTypeArguments());
+        if (valueType == null) {
             return null;
         }
-
-        Type valueType = typeArgs[1];
         Class<?> valueClass = TypeUtilities.getRawClass(valueType);
         return shouldConvertMapValueTypeAsPojo(valueClass) ? valueType : null;
     }
@@ -890,6 +895,41 @@ public abstract class Resolver {
             }
         }
         return false;
+    }
+
+    /**
+     * A parameterized Map type's key type, given its arguments ({@code args}, already in hand). The JDK's containers
+     * take their arguments in Map's own order (HashMap&lt;K, V&gt;), so the first is the key; another class's are
+     * matched to Map's own through its hierarchy (StringMap&lt;V&gt; extends HashMap&lt;String, V&gt;: a
+     * StringMap&lt;Integer&gt; has String keys), by java-util's TypeUtilities. Null when it is not known.
+     */
+    static Type mapKeyType(Type mapType, Type[] args) {
+        if (TypeUtilities.getRawClass(mapType).getClassLoader() == null) {
+            return args.length >= 1 ? args[0] : null;
+        }
+        return TypeUtilities.inferKeyType(mapType);
+    }
+
+    /** As {@link #mapKeyType(Type, Type[])}, for the value type. */
+    static Type mapValueType(Type mapType, Type[] args) {
+        if (TypeUtilities.getRawClass(mapType).getClassLoader() == null) {
+            return args.length >= 2 ? args[1] : null;
+        }
+        return TypeUtilities.inferElementType(mapType, null);
+    }
+
+    /**
+     * As {@link #mapKeyType(Type, Type[])}, for a parameterized Collection type's element type (Tagged&lt;X&gt;
+     * extends ArrayList&lt;String&gt; holds Strings, whatever X is).
+     */
+    static Type collectionElementType(Type collectionType, Type[] args) {
+        if (TypeUtilities.getRawClass(collectionType).getClassLoader() != null) {
+            Type element = TypeUtilities.inferElementType(collectionType, null);
+            if (element != null) {
+                return element;
+            }
+        }
+        return args.length >= 1 ? args[0] : null;
     }
 
     /**

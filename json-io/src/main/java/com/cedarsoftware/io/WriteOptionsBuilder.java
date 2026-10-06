@@ -3079,9 +3079,10 @@ public class WriteOptionsBuilder {
                 Type genericType = accessor.getGenericType();
                 if (genericType != null) {
                     if (Map.class.isAssignableFrom(fieldType) && genericType instanceof ParameterizedType) {
-                        Type[] typeArgs = ((ParameterizedType) genericType).getActualTypeArguments();
-                        if (typeArgs.length >= 1 && typeArgs[0] instanceof Class) {
-                            keyType = (Class<?>) typeArgs[0];
+                        // matched to Map's own key, not the first argument (StringMap<Integer>: String)
+                        Type inferredKey = TypeUtilities.inferKeyType(genericType);
+                        if (inferredKey instanceof Class) {
+                            keyType = (Class<?>) inferredKey;
                         }
                     }
                     Type inferred = TypeUtilities.inferElementType(genericType, null);

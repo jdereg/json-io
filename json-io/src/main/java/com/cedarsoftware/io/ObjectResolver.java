@@ -196,11 +196,13 @@ public class ObjectResolver extends Resolver
         jsonArray.setType(fieldType);
         jsonArray.setItems(elements);
 
-        // Preserve generic type information for collections
+        // Preserve generic type information for collections: a collection's element matched to Collection's own
+        // (Tagged<X> extends ArrayList<String> holds Strings, whatever X is)
         if (fieldType instanceof ParameterizedType) {
             Type[] typeArgs = ((ParameterizedType) fieldType).getActualTypeArguments();
             if (typeArgs.length > 0) {
-                Type elementType = typeArgs[0];
+                Type elementType = rawFieldType != null && Collection.class.isAssignableFrom(rawFieldType)
+                        ? collectionElementType(fieldType, typeArgs) : typeArgs[0];
                 jsonArray.setItemElementType(elementType);
                 stampElementTypes(elements, elementType);
             }
@@ -272,17 +274,23 @@ public class ObjectResolver extends Resolver
 
         Type[] typeArgs = pType.getActualTypeArguments();
         if (Map.class.isAssignableFrom(rawClass)) {
-            if (typeArgs.length >= 1 && jsRhs.getMapKeyType() == null) {
-                jsRhs.setMapKeyType(typeArgs[0]);
+            // key and value matched to Map's own, not taken in order: StringMap<V> extends HashMap<String, V>, so a
+            // StringMap<Integer>'s keys are Strings and its one argument is the values' type
+            if (jsRhs.getMapKeyType() == null) {
+                Type keyType = mapKeyType(pType, typeArgs);
+                if (keyType != null) {
+                    jsRhs.setMapKeyType(keyType);
+                }
             }
-            if (typeArgs.length >= 2) {
-                jsRhs.setItemElementType(typeArgs[1]);
+            Type valueType = mapValueType(pType, typeArgs);
+            if (valueType != null) {
+                jsRhs.setItemElementType(valueType);
             }
             return;
         }
 
         if (Collection.class.isAssignableFrom(rawClass) && typeArgs.length >= 1) {
-            jsRhs.setItemElementType(typeArgs[0]);
+            jsRhs.setItemElementType(collectionElementType(pType, typeArgs));
             return;
         }
 
@@ -821,7 +829,7 @@ public class ObjectResolver extends Resolver
             if (collectionType instanceof ParameterizedType) {
                 Type[] typeArgs = ((ParameterizedType) collectionType).getActualTypeArguments();
                 if (typeArgs.length > 0) {
-                    elementType = typeArgs[0];
+                    elementType = collectionElementType(collectionType, typeArgs);
                     rawElementType = TypeUtilities.getRawClass(elementType);
                     if (rawElementType == null) {
                         rawElementType = Object.class;
@@ -979,12 +987,16 @@ public class ObjectResolver extends Resolver
         Type valueType = jsonObj.getItemElementType();  // For Maps, this stores the value type
         Type mapType = jsonObj.getType();
         if (mapType instanceof ParameterizedType) {
+            // matched to Map's own key and value, not taken in order (StringMap<Integer>: String keys)
             Type[] typeArgs = ((ParameterizedType) mapType).getActualTypeArguments();
-            if (typeArgs.length >= 1 && keyType == Object.class) {
-                keyType = typeArgs[0];
+            if (keyType == Object.class) {
+                Type inferredKey = mapKeyType(mapType, typeArgs);
+                if (inferredKey != null) {
+                    keyType = inferredKey;
+                }
             }
-            if (valueType == null && typeArgs.length >= 2) {
-                valueType = typeArgs[1];
+            if (valueType == null) {
+                valueType = mapValueType(mapType, typeArgs);
             }
         } else if (mapType instanceof Class) {
             Type[] typeArgs = extractMapTypesFromGenericSuperclass((Class<?>) mapType);
@@ -1041,7 +1053,7 @@ public class ObjectResolver extends Resolver
         if (valueIsCollection && valueType instanceof ParameterizedType) {
             Type[] typeArgs = ((ParameterizedType) valueType).getActualTypeArguments();
             if (typeArgs.length > 0) {
-                valueElementType = typeArgs[0];
+                valueElementType = collectionElementType(valueType, typeArgs);
             }
         }
 
@@ -1099,7 +1111,7 @@ public class ObjectResolver extends Resolver
             if (valueType instanceof ParameterizedType) {
                 Type[] typeArgs = ((ParameterizedType) valueType).getActualTypeArguments();
                 if (typeArgs.length > 0) {
-                    valueElementType = typeArgs[0];
+                    valueElementType = collectionElementType(valueType, typeArgs);
                 }
             }
 
@@ -1608,7 +1620,7 @@ public class ObjectResolver extends Resolver
         if (componentType instanceof ParameterizedType) {
             Type[] typeArgs = ((ParameterizedType) componentType).getActualTypeArguments();
             if (typeArgs.length > 0) {
-                jObj.setItemElementType(typeArgs[0]);
+                jObj.setItemElementType(collectionElementType(componentType, typeArgs));
             }
         }
 
