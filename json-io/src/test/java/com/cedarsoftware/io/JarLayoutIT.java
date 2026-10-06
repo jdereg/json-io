@@ -3,12 +3,21 @@ package com.cedarsoftware.io;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.cedarsoftware.util.IOUtilities;
 
 import org.junit.jupiter.api.Test;
 
@@ -190,5 +199,64 @@ class JarLayoutIT {
             assertTrue(main.getValue("Import-Package").contains("com.cedarsoftware.util"),
                     main.getValue("Import-Package"));
         }
+    }
+
+    /**
+     * Every java-util package json-io's classes use is imported, so json-io runs in an OSGi framework: it used
+     * com.cedarsoftware.util.internal (VectorizedArrays since 4.103.0, then DoubleDecimal and FloatDecimal) without
+     * importing it, and failed there with NoClassDefFoundError. That package is exported to json-io only, through the
+     * mandatory attribute friend=json-io.
+     */
+    @Test
+    void everyJavaUtilPackageItUsesIsImported() throws IOException {
+        try (JarFile jar = jar()) {
+            Set<String> used = new TreeSet<>();
+            Pattern reference = Pattern.compile("com/cedarsoftware/util/(?:[a-z0-9_]+/)*(?=[A-Z])");
+            Enumeration<JarEntry> entries = jar.entries();
+            while (entries.hasMoreElements()) {
+                JarEntry entry = entries.nextElement();
+                if (!entry.getName().endsWith(".class") || entry.getName().startsWith("META-INF/")) {
+                    continue;
+                }
+                try (InputStream in = jar.getInputStream(entry)) {
+                    String bytes = new String(IOUtilities.inputStreamToBytes(in), StandardCharsets.ISO_8859_1);
+                    Matcher m = reference.matcher(bytes);
+                    while (m.find()) {
+                        String path = m.group();
+                        used.add(path.substring(0, path.length() - 1).replace('/', '.'));
+                    }
+                }
+            }
+            assertTrue(used.contains("com.cedarsoftware.util.internal"), used.toString());
+            Map<String, String> imports = new HashMap<>();
+            for (String clause : clauses(jar.getManifest().getMainAttributes().getValue("Import-Package"))) {
+                imports.put(clause.split(";")[0], clause);
+            }
+            for (String pkg : used) {
+                assertTrue(imports.containsKey(pkg), pkg + " is used but not imported: " + imports.keySet());
+            }
+            assertTrue(imports.get("com.cedarsoftware.util.internal").contains("friend=json-io"),
+                    imports.get("com.cedarsoftware.util.internal"));
+        }
+    }
+
+    /** A manifest header's clauses: split at the commas outside quotes (a version range holds one). */
+    private static List<String> clauses(String header) {
+        List<String> clauses = new ArrayList<>();
+        StringBuilder clause = new StringBuilder();
+        boolean quoted = false;
+        for (char c : header.toCharArray()) {
+            if (c == '"') {
+                quoted = !quoted;
+            }
+            if (c == ',' && !quoted) {
+                clauses.add(clause.toString().trim());
+                clause.setLength(0);
+            } else {
+                clause.append(c);
+            }
+        }
+        clauses.add(clause.toString().trim());
+        return clauses;
     }
 }

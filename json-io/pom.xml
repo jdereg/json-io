@@ -101,10 +101,13 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
+                        <!-- util.internal is exported to json-io only: friend=json-io matches its mandatory
+                             attribute -->
                         <Import-Package>
                             com.cedarsoftware.util,
                             com.cedarsoftware.util.convert,
-                            com.cedarsoftware.util.geom</Import-Package>
+                            com.cedarsoftware.util.geom,
+                            com.cedarsoftware.util.internal;friend=json-io</Import-Package>
                         <Export-Package>
                             com.cedarsoftware.io,
                             com.cedarsoftware.io.annotation,
