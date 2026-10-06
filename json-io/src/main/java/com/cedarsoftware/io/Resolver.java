@@ -1528,8 +1528,13 @@ public abstract class Resolver {
 
     // Resolve a target type with proper coercion and enum handling
     private Class<?> resolveTargetType(JsonObject jsonObj) {
-        Class<?> targetType = coerceClassIfNeeded(jsonObj.getRawType());
-        jsonObj.setType(targetType);
+        Class<?> rawType = jsonObj.getRawType();
+        Class<?> targetType = coerceClassIfNeeded(rawType);
+        // A parameterized type stays (Box<Integer>): its arguments bind the type variables the class's fields are
+        // declared with (T value is an Integer). Replaced by its raw class, a T field took its bound or failed.
+        if (targetType != rawType || !(jsonObj.getType() instanceof ParameterizedType)) {
+            jsonObj.setType(targetType);
+        }
 
         // Handle enum coercion as before.
         Class<?> enumClass = ClassUtilities.getClassIfEnum(targetType);

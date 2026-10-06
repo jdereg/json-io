@@ -514,9 +514,15 @@ public class ObjectResolver extends Resolver
             }
         }
 
-        final Type fieldType = assignmentPlan.fieldType;
+        // A field declared with its class's type variables (T value, T[] arr, List<T> items) takes them from this
+        // object's own type: OC<String>.Inner's T is String, Gen<Item>'s List<T> is List<Item>. From the
+        // declaration alone, T stayed unresolved ("Unresolved type: java.util.List<T>") or became Object (a Long
+        // stored where a String was declared, a ClassCastException later).
+        final boolean typeVariables = assignmentPlan.typeVariables;
+        final Type fieldType = typeVariables ? resolveFieldType(jsonObj, target, assignmentPlan.fieldType)
+                : assignmentPlan.fieldType;
         Type effectiveFieldType = fieldType;
-        Class<?> rawType = assignmentPlan.rawType;
+        Class<?> rawType = typeVariables ? TypeUtilities.getRawClass(fieldType) : assignmentPlan.rawType;
 
         // Resolve @IoDeserialize > @IoTypeInfo field-level type overrides once for this assignment.
         // parentMeta is hoisted in from traverseFields so all fields on this object reuse the same
@@ -545,7 +551,8 @@ public class ObjectResolver extends Resolver
         //    fields. The Jackson-compatible primitive form of Optional is a bare value or `null`;
         //    legacy json-io used {"present":X, "value":Y} which arrives as a JsonObject and is
         //    still handled by OptionalFactory further down.
-        final boolean fieldTypeUnchanged = effectiveFieldType == fieldType;
+        // the plan's precomputed facts describe the declared type: not one resolved from type variables
+        final boolean fieldTypeUnchanged = effectiveFieldType == fieldType && !typeVariables;
         if (rawType != null
                 && (fieldTypeUnchanged ? assignmentPlan.optionalType : isOptionalRawType(rawType))
                 && !isLegacyOptionalJsonObject(rhs)
@@ -684,6 +691,24 @@ public class ObjectResolver extends Resolver
 
         // 6. JSONOBJECT (non-reference, already checked above)
         assignJsonObjectField(jsonObj, injector, (JsonObject) rhs, fieldType, target, parentMeta);
+    }
+
+    /**
+     * A field type declared with type variables, resolved for this object: against the object's own type (a
+     * parameterized one, as Gen&lt;Item&gt; when the field holding it was declared so, or the class an @type named),
+     * then against the instance's class hierarchy, whose bounds stand in for what neither binds. A variable left
+     * inside a container (List&lt;T&gt; of a raw Gen) leaves the raw container: its elements are read as they come.
+     */
+    private static Type resolveFieldType(JsonObject jsonObj, Object target, Type declared) {
+        Type context = jsonObj.getType();
+        if (context != null && context != Object.class) {
+            Type resolved = TypeUtilities.resolveType(context, declared);
+            if (!TypeUtilities.hasUnresolvedType(resolved)) {
+                return resolved;
+            }
+        }
+        Type resolved = TypeUtilities.resolveTypeUsingInstance(target, declared);
+        return TypeUtilities.hasUnresolvedType(resolved) ? TypeUtilities.getRawClass(declared) : resolved;
     }
 
     /**

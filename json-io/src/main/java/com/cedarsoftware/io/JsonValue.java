@@ -1,5 +1,6 @@
 package com.cedarsoftware.io;
 
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -113,7 +114,12 @@ public abstract class JsonValue {
     public Object setTarget(Object target) {
         this.target = target;
         if (target != null) {
-            setType(target.getClass());
+            Class<?> targetClass = target.getClass();
+            // A parameterized type of the target's own class stays (Box<Integer> for a Box): its arguments bind the
+            // type variables the class's fields are declared with. Replaced by the class, a T field took its bound.
+            if (!(type instanceof ParameterizedType) || ((ParameterizedType) type).getRawType() != targetClass) {
+                setType(targetClass);
+            }
         }
         return target;
     }

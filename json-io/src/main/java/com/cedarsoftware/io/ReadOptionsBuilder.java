@@ -2977,6 +2977,8 @@ public class ReadOptionsBuilder {
         final byte fastPath;
         final boolean optionalType;
         final boolean pseudoPrimitive;
+        /** Declared with type variables (T value, T[] arr, List<T> items): the type of its object binds them. */
+        final boolean typeVariables;
 
         FieldAssignmentPlan(Injector injector) {
             this.injector = injector;
@@ -2985,6 +2987,7 @@ public class ReadOptionsBuilder {
             this.fastPath = injector.getFastPath();
             this.optionalType = isOptionalRawType(rawType);
             this.pseudoPrimitive = Resolver.isPseudoPrimitive(rawType);
+            this.typeVariables = TypeUtilities.hasUnresolvedType(fieldType);
         }
 
         private static boolean isOptionalRawType(Class<?> rawType) {
