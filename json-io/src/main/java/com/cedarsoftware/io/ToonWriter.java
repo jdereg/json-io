@@ -1006,6 +1006,10 @@ public class ToonWriter implements Closeable, Flushable {
      * - No exponent notation
      * - No trailing zeros in fractional part
      * - Whole numbers have no decimal point
+     * The digits are the decimal the number prints, as the reference encoder's JavaScript String(value) gives them:
+     * 2^60 is 1152921504606847000, not its binary value 1152921504606846976. Below 2^53 (2^24 for a float) a whole
+     * number is exact and is written from its long; above, the long was the binary value, and at 2^63 the cast
+     * clamped to Long.MAX_VALUE (9223372036854775807 for 9223372036854775808).
      */
     private String formatDecimalNumber(double d) {
         long bits = Double.doubleToLongBits(d);
@@ -1015,7 +1019,7 @@ public class ToonWriter implements Closeable, Flushable {
         }
 
         String formatted;
-        if (d >= Long.MIN_VALUE && d <= Long.MAX_VALUE) {
+        if (d > -0x1p53 && d < 0x1p53) {
             long l = (long) d;
             if (d == l) {
                 formatted = toCachedLongString(l);
@@ -1050,7 +1054,7 @@ public class ToonWriter implements Closeable, Flushable {
         }
 
         String formatted;
-        if (f >= Long.MIN_VALUE && f <= Long.MAX_VALUE) {
+        if (f > -0x1p24f && f < 0x1p24f) {
             long l = (long) f;
             if (f == l) {
                 formatted = toCachedLongString(l);
