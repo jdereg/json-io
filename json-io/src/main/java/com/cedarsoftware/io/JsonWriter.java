@@ -2110,7 +2110,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             } else if (value instanceof Boolean) {
                 gen.writeBoolean((Boolean) value);
             } else if (value instanceof Number) {
-                gen.writeNumber(value.toString());   // emit the toString() form like legacy
+                gen.writeNumber(Writers.numberText((Number) value));   // its toString() form, a double's the same on every JDK
             } else if (value instanceof String) {
                 gen.writeString((String) value);
             } else if (value instanceof Character) {
@@ -2896,7 +2896,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 if (!isNanInfinityAllowed() && (Float.isNaN(floatVal) || Float.isInfinite(floatVal))) {
                     out.write("null");
                 } else {
-                    out.write(Float.toString(floatVal));
+                    gen.writeFloatRaw(floatVal);
                 }
                 break;
             case WriteFieldPlan.PRIMITIVE_DOUBLE:
@@ -2904,7 +2904,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 if (!isNanInfinityAllowed() && (Double.isNaN(doubleVal) || Double.isInfinite(doubleVal))) {
                     out.write("null");
                 } else {
-                    out.write(Double.toString(doubleVal));
+                    gen.writeDoubleRaw(doubleVal);
                 }
                 break;
             default:

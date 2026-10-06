@@ -99,7 +99,8 @@ public abstract class JsonTokenizer implements Closeable {
      *       of the parsed value, not the raw source lexeme. Trailing zeros,
      *       leading {@code +} signs, leading decimal points, hex prefixes,
      *       and scientific notation are normalized via
-     *       {@link Long#toString(long)} / {@link Double#toString(double)} /
+     *       {@link Long#toString(long)} / {@link Double#toString(double)} (the
+     *       text it prints from JDK 19 on, on every JDK) /
      *       {@link java.math.BigInteger#toString()} /
      *       {@link java.math.BigDecimal#toString()}. E.g. {@code 1e2} reads
      *       back as {@code "100.0"}, {@code 1.2300} as {@code "1.23"},

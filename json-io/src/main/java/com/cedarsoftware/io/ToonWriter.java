@@ -31,6 +31,8 @@ import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.FastWriter;
 import com.cedarsoftware.util.IOUtilities;
 import com.cedarsoftware.util.MathUtilities;
+import com.cedarsoftware.util.internal.DoubleDecimal;
+import com.cedarsoftware.util.internal.FloatDecimal;
 
 /**
  * Output a Java object graph in TOON (Token-Oriented Object Notation) format.
@@ -1024,11 +1026,11 @@ public class ToonWriter implements Closeable, Flushable {
             }
         }
 
-        String text = Double.toString(d);
+        String text = DoubleDecimal.toString(d);           // the JDK 19 decimal, on every JDK
         if (text.indexOf('E') < 0 && text.indexOf('e') < 0) {
             formatted = text.endsWith(".0") ? text.substring(0, text.length() - 2) : text;
         } else {
-            formatted = formatBigDecimal(BigDecimal.valueOf(d));
+            formatted = formatBigDecimal(DoubleDecimal.printedDecimal(d));
         }
 
         if (SHARED_DOUBLE_FORMAT_CACHE.size() < DECIMAL_FORMAT_CACHE_MAX) {
@@ -1059,11 +1061,11 @@ public class ToonWriter implements Closeable, Flushable {
             }
         }
 
-        String text = Float.toString(f);
+        String text = FloatDecimal.toString(f);            // the JDK 19 decimal, on every JDK
         if (text.indexOf('E') < 0 && text.indexOf('e') < 0) {
             formatted = text.endsWith(".0") ? text.substring(0, text.length() - 2) : text;
         } else {
-            formatted = formatBigDecimal(new BigDecimal(text));
+            formatted = formatBigDecimal(FloatDecimal.printedDecimal(f));
         }
 
         if (SHARED_FLOAT_FORMAT_CACHE.size() < DECIMAL_FORMAT_CACHE_MAX) {

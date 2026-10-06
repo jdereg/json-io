@@ -6,6 +6,8 @@ import java.math.BigInteger;
 import java.util.Arrays;
 
 import com.cedarsoftware.util.FastReader;
+import com.cedarsoftware.util.internal.DoubleDecimal;
+import com.cedarsoftware.util.internal.FloatDecimal;
 import com.cedarsoftware.util.internal.VectorizedArrays;
 
 import static com.cedarsoftware.util.MathUtilities.parseBigDecimal;
@@ -470,11 +472,11 @@ final class CharStreamTokenizer extends JsonTokenizer {
                 currentText = Long.toString(longValue);
                 break;
             case DOUBLE:
-                currentText = Double.toString(doubleValue);
+                currentText = DoubleDecimal.toString(doubleValue);     // the JDK 19 text on every JDK
                 break;
             case FLOAT:
                 // doubleValue holds the widened float; (float) is lossless round-trip.
-                currentText = Float.toString((float) doubleValue);
+                currentText = FloatDecimal.toString((float) doubleValue);
                 break;
             case BIG_INTEGER:
                 currentText = bigIntegerValue.toString();

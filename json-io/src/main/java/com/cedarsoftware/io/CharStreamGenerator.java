@@ -8,6 +8,8 @@ import java.math.BigInteger;
 import java.util.IdentityHashMap;
 
 import com.cedarsoftware.util.MathUtilities;
+import com.cedarsoftware.util.internal.DoubleDecimal;
+import com.cedarsoftware.util.internal.FloatDecimal;
 
 /**
  * Concrete {@link JsonGenerator} implementation that writes JSON tokens to an
@@ -54,6 +56,8 @@ final class CharStreamGenerator extends JsonGenerator {
     private final boolean json5SingleQuotes;
     private final boolean allowNanAndInfinity;
     private final int maxStringLength;
+    // a float or double laid out here, then written: the JDK 19 decimal on every JDK, with no String made
+    private final char[] numberChars = new char[DoubleDecimal.MAX_CHARS];
 
     private boolean closed;
     private Runnable closeHook; // optional release-buffers callback wired by JsonIo factory
@@ -779,7 +783,7 @@ final class CharStreamGenerator extends JsonGenerator {
                 out.write("-Infinity");
             }
         } else {
-            out.write(Float.toString(value));
+            out.write(numberChars, 0, FloatDecimal.toChars(value, numberChars, 0));
         }
     }
 
@@ -808,7 +812,7 @@ final class CharStreamGenerator extends JsonGenerator {
                 out.write("-Infinity");
             }
         } else {
-            out.write(Double.toString(value));
+            out.write(numberChars, 0, DoubleDecimal.toChars(value, numberChars, 0));
         }
     }
 

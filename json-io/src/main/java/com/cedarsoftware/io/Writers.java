@@ -32,6 +32,8 @@ import java.util.UUID;
 
 import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.MathUtilities;
+import com.cedarsoftware.util.internal.DoubleDecimal;
+import com.cedarsoftware.util.internal.FloatDecimal;
 
 import static com.cedarsoftware.io.JsonValue.VALUE;
 import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
@@ -254,6 +256,20 @@ public class Writers {
     }
 
     /**
+     * A number's JSON text: a Double or Float as the decimal Double.toString / Float.toString print from JDK 19 on, on
+     * every JDK (JDK 8 printed 1.0E23 as 9.999999999999999E22); any other number its toString().
+     */
+    static String numberText(Number value) {
+        if (value instanceof Double) {
+            return DoubleDecimal.toString((Double) value);
+        }
+        if (value instanceof Float) {
+            return FloatDecimal.toString((Float) value);
+        }
+        return value.toString();
+    }
+
+    /**
      * Used as a template to write out primitive value types such as int, boolean, etc. that we extract as a String,
      * but we do not put in quotes.  Uses the default key of "value" unless overridden
      */
@@ -272,7 +288,7 @@ public class Writers {
             WriteOptions options = context.getWriteOptions();
             boolean allowNanInfinity = options.isAllowNanAndInfinity() || options.isJson5InfinityNaN();
             if (allowNanInfinity || !isNanOrInfinity((T) o)) {
-                gen.writeNumber(o.toString());
+                gen.writeNumber(numberText((Number) o));
             } else {
                 gen.writeNull();
             }
