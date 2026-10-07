@@ -651,33 +651,18 @@ class EnumTests {
     }
 
     /**
-     * Tests that an empty string value for an enum throws JsonIoException.
-     * The Converter's EnumConversions.stringToEnum validates empty strings.
+     * An empty string value for an enum reads as null: blank text is no value of a type without a zero, as for the
+     * dates (java-util 4.113.0's Converter; it threw).
      */
     @Test
-    void testEnum_emptyStringValue_throwsException() {
-        // Plain JSON string - empty
-        String json = "\"\"";
-
-        assertThatThrownBy(() -> JsonIo.toJava(json, null).asClass(SimpleEnum.class))
-                .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("empty String")
-                .hasMessageContaining(SimpleEnum.class.getName());
+    void testEnum_emptyStringValue_isNull() {
+        assertThat((Object) JsonIo.toJava("\"\"", null).asClass(SimpleEnum.class)).isNull();
     }
 
-    /**
-     * Tests that a whitespace-only string value for an enum throws JsonIoException.
-     * The Converter's EnumConversions.stringToEnum trims and validates empty strings.
-     */
+    /** A whitespace-only string value for an enum reads as null too. */
     @Test
-    void testEnum_whitespaceOnlyValue_throwsException() {
-        // Plain JSON string - whitespace only
-        String json = "\"   \"";
-
-        assertThatThrownBy(() -> JsonIo.toJava(json, null).asClass(SimpleEnum.class))
-                .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("empty String")
-                .hasMessageContaining(SimpleEnum.class.getName());
+    void testEnum_whitespaceOnlyValue_isNull() {
+        assertThat((Object) JsonIo.toJava("\"   \"", null).asClass(SimpleEnum.class)).isNull();
     }
 
     /**

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -44,9 +45,12 @@ public class UUIDTest
         assertEquals(UUID.fromString("6508db3c-52c5-42ad-91f3-621d6e1d6557"), tu.getFromString());
         assertEquals(UUID.fromString("6508db3c-52c5-42ad-91f3-621d6e1d6557"), tu.getInternals());
 
+        // blank text is no UUID: null, as for the dates (java-util 4.113.0's Converter; it threw)
         String json1 = "{\"@type\":\"" + TestUUIDFields.class.getName() + "\",\"fromString\":\"\"}";
-        Throwable thrown = assertThrows(JsonIoException.class, () -> { TestUtil.toJava(json1, null).asClass(null); });
-        assertEquals(IllegalArgumentException.class, thrown.getCause().getClass());
+        tu = TestUtil.toJava(json1, null).asClass(null);
+        assertNull(tu.getFromString());
+
+        Throwable thrown;
 
         String json2 = "{\"@type\":\"" + TestUUIDFields.class.getName() + "\", \"internals\": {\"@type\": \"java.util.UUID\", \"leastSigBits\":-7929886640328317609}}";
         thrown = assertThrows(JsonIoException.class, () -> { TestUtil.toJava(json2, null).asClass(null); });
