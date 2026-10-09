@@ -3,7 +3,9 @@ package com.cedarsoftware.io;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
@@ -15,9 +17,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
- * An {@code Optional} inside a collection or an array, written as its content (or null) -- as Jackson writes it, and
- * as json-io writes it in TOON and in JSON without type info -- reads back as an {@code Optional} of the declared
- * type: the element is wrapped, as a field's is. It was put in the list or array bare, so a
+ * An {@code Optional} inside a collection, an array or a map's values, written as its content (or null) -- as Jackson
+ * writes it, and as json-io writes it in TOON and in JSON without type info -- reads back as an {@code Optional} of
+ * the declared type: the element is wrapped, as a field's is. It was put in the list, array or map bare, so a
  * {@code List<Optional<String>>} held Strings (a ClassCastException at the first get()) and an
  * {@code Optional<String>[]} could not be filled.
  *
@@ -56,6 +58,8 @@ class OptionalElementsTest {
         public Optional<String>[] textArray;
         public List<Optional<Item>> items;
         public List<Optional<List<String>>> lists;
+        public Map<String, Optional<String>> textMap;
+        public Map<String, OptionalInt> intMap;
     }
 
     @SuppressWarnings("unchecked")
@@ -67,6 +71,12 @@ class OptionalElementsTest {
         h.textArray = new Optional[] {Optional.of("a"), Optional.empty()};
         h.items = new ArrayList<>(Arrays.asList(Optional.of(new Item("bolt")), Optional.empty()));
         h.lists = new ArrayList<>(Arrays.asList(Optional.of(Arrays.asList("p", "q")), Optional.empty()));
+        h.textMap = new LinkedHashMap<>();
+        h.textMap.put("a", Optional.of("x"));
+        h.textMap.put("b", Optional.empty());
+        h.intMap = new LinkedHashMap<>();
+        h.intMap.put("i", OptionalInt.of(7));
+        h.intMap.put("j", OptionalInt.empty());
         return h;
     }
 
@@ -78,6 +88,14 @@ class OptionalElementsTest {
         assertEquals("bolt", back.items.get(0).get().name, written);
         assertEquals(Optional.empty(), back.items.get(1), written);
         assertEquals(Arrays.asList(Optional.of(Arrays.asList("p", "q")), Optional.empty()), back.lists, written);
+        Map<String, Optional<String>> textMap = new LinkedHashMap<>();
+        textMap.put("a", Optional.of("x"));
+        textMap.put("b", Optional.empty());
+        assertEquals(textMap, back.textMap, written);
+        Map<String, OptionalInt> intMap = new LinkedHashMap<>();
+        intMap.put("i", OptionalInt.of(7));
+        intMap.put("j", OptionalInt.empty());
+        assertEquals(intMap, back.intMap, written);
     }
 
     @Test
@@ -116,6 +134,7 @@ class OptionalElementsTest {
         public Wrapper first;
         public List<Optional<Item>> items;
         public Optional<Item>[] array;
+        public Map<String, Optional<Item>> map;
     }
 
     @Test
@@ -127,12 +146,15 @@ class OptionalElementsTest {
         shared.first.item = item;
         shared.items = new ArrayList<>(Arrays.asList(Optional.of(item), Optional.empty()));
         shared.array = new Optional[] {Optional.of(item)};
+        shared.map = new LinkedHashMap<>();
+        shared.map.put("s", Optional.of(item));
         for (WriteOptions options : new WriteOptions[] {null, new WriteOptionsBuilder().showTypeInfoNever().build()}) {
             String json = JsonIo.toJson(shared, options);
             Shared back = JsonIo.toJava(json, null).asClass(Shared.class);
             assertSame(back.first.item, back.items.get(0).get(), json);
             assertEquals(Optional.empty(), back.items.get(1), json);
             assertSame(back.first.item, back.array[0].get(), json);
+            assertSame(back.first.item, back.map.get("s").get(), json);
         }
     }
 }
