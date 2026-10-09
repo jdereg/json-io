@@ -24,6 +24,10 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -414,7 +418,8 @@ public abstract class Resolver {
      */
     public Object toJava(Type type, Object value) {
         if (value == null) {
-            return null;
+            // An empty Optional is written as null (TOON; JSON without type info): read as an Optional, null is empty
+            return type == null || type == Object.class ? null : emptyIfOptional(TypeUtilities.getRawClass(type));
         }
 
         // Primitives (String, Boolean, Number, etc.) - not JsonObjects or arrays
@@ -908,6 +913,20 @@ public abstract class Resolver {
             }
         }
         return false;
+    }
+
+    /** The empty {@code Optional} (or {@code OptionalInt}, ...) for one of the Optional types, else null. */
+    private static Object emptyIfOptional(Class<?> c) {
+        if (c == Optional.class) {
+            return Optional.empty();
+        } else if (c == OptionalInt.class) {
+            return OptionalInt.empty();
+        } else if (c == OptionalLong.class) {
+            return OptionalLong.empty();
+        } else if (c == OptionalDouble.class) {
+            return OptionalDouble.empty();
+        }
+        return null;
     }
 
     /** Whether a Collection from ToonReader holds a JsonObject that names its own type (TOON with type info). */

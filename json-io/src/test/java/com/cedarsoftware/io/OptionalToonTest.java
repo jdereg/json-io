@@ -114,4 +114,24 @@ class OptionalToonTest {
         assertThat(restored.optLong.getAsLong()).isEqualTo(500L);
         assertThat(restored.optDouble).isEmpty();
     }
+
+    /**
+     * An empty Optional at the root is written as null -- in TOON, and in JSON without type info -- as an empty
+     * Optional field is. Read as an Optional (or OptionalInt, ...), null is empty; it came back null.
+     */
+    @Test
+    void rootEmptyOptionalReadsBackEmpty() {
+        assertThat(JsonIo.fromToon(JsonIo.toToon(Optional.empty())).asClass(Optional.class)).isEmpty();
+        assertThat(JsonIo.fromToon(JsonIo.toToon(OptionalInt.empty())).asClass(OptionalInt.class)).isEmpty();
+        assertThat(JsonIo.fromToon(JsonIo.toToon(OptionalLong.empty())).asClass(OptionalLong.class)).isEmpty();
+        assertThat(JsonIo.fromToon(JsonIo.toToon(OptionalDouble.empty())).asClass(OptionalDouble.class)).isEmpty();
+        Optional<String> typed = JsonIo.fromToon("null").asType(new TypeHolder<Optional<String>>() { });
+        assertThat(typed).isEmpty();
+
+        String json = JsonIo.toJson(Optional.empty(), new WriteOptionsBuilder().showTypeInfoNever().build());
+        assertThat(JsonIo.toJava(json, null).asClass(Optional.class)).isEmpty();
+        // Read as anything else, null is null
+        assertThat(JsonIo.fromToon("null").asClass(Object.class)).isNull();
+        assertThat(JsonIo.fromToon("null").asClass(String.class)).isNull();
+    }
 }
