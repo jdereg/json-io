@@ -59,8 +59,12 @@ public class CompactSetFactory implements ClassFactory {
             throw new JsonIoException("CompactSet requires a config string");
         }
 
-        // Extract data array directly (can be primitive array types like int[], so can't use readArray)
+        // Extract data array directly (can be primitive array types like int[], so can't use readArray); TOON reads
+        // a list in an object as a List
         Object dataObj = jObj.get("data");
+        if (dataObj instanceof Collection) {
+            dataObj = ((Collection<?>) dataObj).toArray();
+        }
         if (!(dataObj instanceof Object[])) {
             throw new JsonIoException("CompactSet requires a data []");
         }

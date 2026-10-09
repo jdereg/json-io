@@ -296,16 +296,16 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         NUMERIC_PRIMITIVE_FOR_COMPACT_TABLE.add(float.class);
     }
 
-    private static boolean isNumericPrimitiveForCompact(Class<?> c) {
+    static boolean isNumericPrimitiveForCompact(Class<?> c) {
         return c != null && NUMERIC_PRIMITIVES_FOR_COMPACT.get(c);
     }
 
-    private static boolean isConvertableType(Class<?> c) {
+    static boolean isConvertableType(Class<?> c) {
         return c != null && CONVERTABLE_TYPES.get(c);
     }
 
     // The natural default for a declared type, or Void.class when it has none
-    private static Class<?> naturalDefault(Class<?> declared) {
+    static Class<?> naturalDefault(Class<?> declared) {
         Class<?> natural = declared == null ? null : NATURAL_DEFAULTS.get(declared);
         return natural != null ? natural : Void.class;
     }

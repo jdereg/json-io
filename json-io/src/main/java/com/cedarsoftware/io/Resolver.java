@@ -459,6 +459,10 @@ public abstract class Resolver {
                                 ? collectionElementType(type, typeArgs) : typeArgs[0];
                         return convertCollectionElements(col, elementType);
                     }
+                } else if ((rawClass == null || rawClass.isInstance(col)) && containsTypedJsonObjects(col)) {
+                    // No element type to go by (a TOON root list read as a raw List): elements that name their own
+                    // type are built as it, as JSON's are
+                    return convertCollectionElements(col, Object.class);
                 }
             }
             return convertToType(value, type);
@@ -900,6 +904,16 @@ public abstract class Resolver {
     private boolean containsJsonObjects(Collection<?> col) {
         for (Object element : col) {
             if (element instanceof JsonObject) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Whether a Collection from ToonReader holds a JsonObject that names its own type (TOON with type info). */
+    private static boolean containsTypedJsonObjects(Collection<?> col) {
+        for (Object element : col) {
+            if (element instanceof JsonObject && ((JsonObject) element).getType() != null) {
                 return true;
             }
         }

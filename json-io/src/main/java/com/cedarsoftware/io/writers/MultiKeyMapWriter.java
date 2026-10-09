@@ -2,6 +2,10 @@ package com.cedarsoftware.io.writers;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 import com.cedarsoftware.io.JsonClassWriter;
 import com.cedarsoftware.io.JsonGenerator;
@@ -44,6 +48,47 @@ public class MultiKeyMapWriter implements JsonClassWriter {
     public void write(Object obj, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
         MultiKeyMap<?> map = (MultiKeyMap<?>) obj;
 
+        // "config" field via the JsonGenerator
+        gen.writeFieldName("config");
+        gen.writeString(configOf(map));
+
+        // "entries" array via the tree-walker's semantic API — each element is a
+        // {"keys":...,"value":...} sub-object containing arbitrary objects.
+        // JsonWriter's contextStack handles all structural commas in the loop.
+        context.writeArrayFieldStart("entries");
+        for (java.util.Map.Entry<Object, ?> entry : map.entrySet()) {
+            context.writeStartObject();
+            context.writeFieldName("keys");
+            context.writeImpl(entry.getKey(), showType);
+            context.writeObjectField("value", entry.getValue());
+            context.writeEndObject();
+        }
+        context.writeEndArray();
+    }
+
+    /**
+     * What {@link #write} writes, as data: the configuration ("config") and the entries ("entries", each its
+     * "keys" and "value"). TOON with type info writes it, so the map reads back with its configuration and keys.
+     */
+    @Override
+    public Object toData(Object obj) {
+        MultiKeyMap<?> map = (MultiKeyMap<?>) obj;
+        List<Object> entries = new ArrayList<>(map.size());
+        for (Map.Entry<Object, ?> entry : map.entrySet()) {
+            Map<String, Object> pair = new LinkedHashMap<>(4);
+            pair.put("keys", entry.getKey());
+            pair.put("value", entry.getValue());
+            entries.add(pair);
+        }
+        Map<String, Object> data = new LinkedHashMap<>(4);
+        data.put("config", configOf(map));
+        data.put("entries", entries);
+        return data;
+    }
+
+    /** The map's configuration, as {@code MultiKeyMapFactory} reads it. */
+    private static String configOf(MultiKeyMap<?> map) {
+
         int capacity = map.getCapacity();
         float loadFactor = map.getLoadFactor();
         MultiKeyMap.CollectionKeyMode collectionKeyMode = map.getCollectionKeyMode();
@@ -72,23 +117,7 @@ public class MultiKeyMapWriter implements JsonClassWriter {
         config.append(simpleKeysMode ? "T" : "F").append('/');
         config.append(valueBasedEquality ? "T" : "F").append('/');
         config.append(caseSensitive ? "T" : "F");
-
-        // "config" field via the JsonGenerator
-        gen.writeFieldName("config");
-        gen.writeString(config.toString());
-
-        // "entries" array via the tree-walker's semantic API — each element is a
-        // {"keys":...,"value":...} sub-object containing arbitrary objects.
-        // JsonWriter's contextStack handles all structural commas in the loop.
-        context.writeArrayFieldStart("entries");
-        for (java.util.Map.Entry<Object, ?> entry : map.entrySet()) {
-            context.writeStartObject();
-            context.writeFieldName("keys");
-            context.writeImpl(entry.getKey(), showType);
-            context.writeObjectField("value", entry.getValue());
-            context.writeEndObject();
-        }
-        context.writeEndArray();
+        return config.toString();
     }
 
     @Override

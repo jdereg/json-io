@@ -1,5 +1,6 @@
 package com.cedarsoftware.io.factory;
 
+import java.util.Collection;
 import java.util.Map;
 
 import com.cedarsoftware.io.ClassFactory;
@@ -126,11 +127,13 @@ public class MultiKeyMapFactory implements ClassFactory {
 
     /**
      * Extracts the entries array from the JsonObject.
-     * Handles both direct array and JsonObject with @items.
+     * Handles both direct array and JsonObject with @items, and a List (TOON reads a list in an object as one).
      */
     private Object[] extractEntriesArray(Object entriesObj) {
         if (entriesObj instanceof Object[]) {
             return (Object[]) entriesObj;
+        } else if (entriesObj instanceof Collection) {
+            return ((Collection<?>) entriesObj).toArray();
         } else if (entriesObj instanceof JsonObject) {
             JsonObject entriesJsonObj = (JsonObject) entriesObj;
             Object itemsObj = entriesJsonObj.get("@items");

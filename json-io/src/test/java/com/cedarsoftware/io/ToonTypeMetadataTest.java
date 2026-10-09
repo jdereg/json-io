@@ -175,37 +175,34 @@ class ToonTypeMetadataTest {
 
     @Test
     void testAlways_enumSet() {
-        // EnumSet round-trip via TOON: write produces type metadata but the enum element type
-        // is not preserved in the TOON text. Verify write succeeds and contains type info.
+        // An EnumSet's $type names its enum (as JSON's does), so it reads back with nothing declaring it
         EnumSet<Color> set = EnumSet.of(Color.RED, Color.BLUE);
         String toon = JsonIo.toToon(set, alwaysType());
         assertContainsType(toon);
-        assertTrue(toon.contains("RED"), "Should contain RED");
-        assertTrue(toon.contains("BLUE"), "Should contain BLUE");
+        assertEquals(set, JsonIo.fromToon(toon, null).asClass(null), toon);
     }
 
     @Test
     void testAlways_emptyEnumSet() {
-        // Empty EnumSet loses its element type in TOON (no items to infer from).
-        // Verify write produces valid output.
+        // Empty, it still names its enum
         EnumSet<Season> set = EnumSet.noneOf(Season.class);
         String toon = JsonIo.toToon(set, alwaysType());
-        assertNotNull(toon);
+        Object back = JsonIo.fromToon(toon, null).asClass(null);
+        assertEquals(set, back, toon);
+        assertEquals(EnumSet.allOf(Season.class), EnumSet.complementOf((EnumSet<?>) back), toon);
     }
 
     @Test
     void testAlways_mapWithIntegerKeys() {
-        // TOON format: map keys are textual. Integer keys become String keys on read-back.
-        // Verify the write succeeds and values round-trip correctly.
+        // Keys the reader must be told the class of are written as a list ($keys) with their types
         Map<Integer, String> map = new LinkedHashMap<>();
         map.put(1, "one");
         map.put(2, "two");
         String toon = JsonIo.toToon(map, alwaysType());
         assertContainsType(toon);
         Map<?, ?> result = JsonIo.fromToon(toon, null).asClass(LinkedHashMap.class);
-        assertEquals(2, result.size());
-        assertTrue(result.containsValue("one"));
-        assertTrue(result.containsValue("two"));
+        assertEquals(map, result, toon);
+        assertEquals(Integer.class, result.keySet().iterator().next().getClass(), toon);
     }
 
     @Test
@@ -335,12 +332,9 @@ class ToonTypeMetadataTest {
 
     @Test
     void testMinimal_enumSet() {
-        // EnumSet write succeeds but the enum element type is not preserved in TOON text.
         EnumSet<Color> set = EnumSet.of(Color.RED, Color.GREEN);
         String toon = JsonIo.toToon(set, minimalType());
-        assertNotNull(toon);
-        assertTrue(toon.contains("RED"));
-        assertTrue(toon.contains("GREEN"));
+        assertEquals(set, JsonIo.fromToon(toon, null).asClass(null), toon);
     }
 
     @Test

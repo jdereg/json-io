@@ -997,7 +997,8 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * Set to always show type
+     * Set to always show type. TOON (which writes no type unless one of these is called) then writes {@code $type}
+     * on every value but a String, Long, Double or Boolean, which it reads back as themselves.
      *
      * @return WriteOptionsBuilder for chained access.
      */
@@ -1023,6 +1024,12 @@ public class WriteOptionsBuilder {
      * be output.  A Field that points to an instance of the same time, or a typed [] of objects don't need the type
      * info.  However, an Object[], a Collection with no generics, the reader will need to know what type the JSON
      * object is, in order to instantiate the write Java class to which the information will be copied.
+     * <p>
+     * TOON writes no type unless one of these is called. With this, it writes {@code $type} only where the declared
+     * type does not determine the class the reader builds -- a subclass in a field or list, anything in an Object
+     * slot, an exception's cause -- and on the root ({@link #omitRootTypeInfo()} leaves that off). Unlike JSON here, a
+     * List, Set or Map holding the class the reader builds for it (ArrayList for List) carries none, so a graph of
+     * plain DTOs costs one line over TOON without types.
      *
      * @return WriteOptionsBuilder for chained access.
      */
@@ -1038,6 +1045,9 @@ public class WriteOptionsBuilder {
      * ArrayList in a List field writes as direct [...] instead of {"@type":"ArrayList","@items":[...]}.
      * Natural defaults include: List→ArrayList, Set→LinkedHashSet, Map→LinkedHashMap, SortedSet→TreeSet, etc.
      * The reader already handles this compact format via field type inference.
+     * <p>
+     * TOON: as {@link #showTypeInfoMinimal()}, and also no type on an int, short, byte or float in an Object slot
+     * (read back as a long or a double), nor on one date or number type where another is declared (converted).
      *
      * @return WriteOptionsBuilder for chained access.
      */
@@ -3095,6 +3105,15 @@ public class WriteOptionsBuilder {
         return writer != null && overridesToData(writer) ? writer : null;
     }
 
+    /** The class a declared type argument stands for (Map for Map&lt;String, Object&gt;), or null if none. */
+    private static Class<?> rawClassOf(Type type) {
+        try {
+            return type == null ? null : TypeUtilities.getRawClass(type);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
     /** True when {@code writer} overrides {@link JsonClassWriter#toData}, rather than inheriting "no data". */
     static boolean overridesToData(JsonClassWriter writer) {
         try {
@@ -3131,6 +3150,12 @@ public class WriteOptionsBuilder {
         private final boolean toonKeyNeedsQuoting;
         private final boolean mapKeyTypeIsSimple;
         private final byte primitiveWriteKind;
+        // The declared element (Map: value) and key classes, also from a parameterized argument (Map for
+        // List<Map<String, Object>>), where declaredElementType/declaredKeyType are null, and a one-argument type's
+        // (Address for Optional<Address>): what TOON's type info compares an element's or content's class with.
+        // null when the field says nothing.
+        private final Class<?> elementClass;
+        private final Class<?> keyClass;
 
         // isForceType memo — monomorphic-field fast path used by JsonWriter.writeField.
         // Caches the runtime classes whose isForceType answer (against this plan's
@@ -3148,7 +3173,8 @@ public class WriteOptionsBuilder {
                                boolean enumPublicOnlySkipCandidate, boolean applyDeclaredContainerTypes,
                                boolean skipReferenceTrace, boolean skipIfNull, String formatPattern,
                                Class<?> effectiveDeclaredType, boolean forceShowType,
-                               boolean toonKeyNeedsQuoting, boolean mapKeyTypeIsSimple, byte primitiveWriteKind) {
+                               boolean toonKeyNeedsQuoting, boolean mapKeyTypeIsSimple, byte primitiveWriteKind,
+                               Class<?> elementClass, Class<?> keyClass) {
             this.accessor = accessor;
             this.fieldName = fieldName;
             this.serializedKey = serializedKey;
@@ -3165,6 +3191,8 @@ public class WriteOptionsBuilder {
             this.toonKeyNeedsQuoting = toonKeyNeedsQuoting;
             this.mapKeyTypeIsSimple = mapKeyTypeIsSimple;
             this.primitiveWriteKind = primitiveWriteKind;
+            this.elementClass = elementClass;
+            this.keyClass = keyClass;
         }
 
         static WriteFieldPlan create(Accessor accessor, WriteOptions options) {
@@ -3173,6 +3201,8 @@ public class WriteOptionsBuilder {
             Class<?> fieldType = accessor.getFieldType();
             Class<?> elementType = null;
             Class<?> keyType = null;
+            Class<?> elementClass = null;   // also from a parameterized argument: Map for List<Map<String, Object>>
+            Class<?> keyClass = null;
             boolean applyContainerTypes = false;
             Class<?> declaringClass = accessor.getDeclaringClass();
 
@@ -3186,12 +3216,20 @@ public class WriteOptionsBuilder {
                         if (inferredKey instanceof Class) {
                             keyType = (Class<?>) inferredKey;
                         }
+                        keyClass = rawClassOf(inferredKey);
                     }
                     Type inferred = TypeUtilities.inferElementType(genericType, null);
                     if (inferred instanceof Class) {
                         elementType = (Class<?>) inferred;
                     }
+                    elementClass = rawClassOf(inferred);
                     applyContainerTypes = keyType != null || elementType != null;
+                }
+            } else if (accessor.getGenericType() instanceof ParameterizedType) {
+                // One type argument (Optional<Address>): what a holder written as its content holds
+                Type[] args = ((ParameterizedType) accessor.getGenericType()).getActualTypeArguments();
+                if (args.length == 1) {
+                    elementClass = rawClassOf(args[0]);
                 }
             }
 
@@ -3236,7 +3274,7 @@ public class WriteOptionsBuilder {
 
             return new WriteFieldPlan(accessor, fieldName, keyLiteral, fieldType, elementType, keyType,
                     enumSkip, applyContainerTypes, skipTrace, nullSkip, formatPat, effectiveType, forceType,
-                    toonKeyQuote, simpleKeys, primitiveWriteKind(fieldType));
+                    toonKeyQuote, simpleKeys, primitiveWriteKind(fieldType), elementClass, keyClass);
         }
 
         private static byte primitiveWriteKind(Class<?> type) {
@@ -3330,6 +3368,14 @@ public class WriteOptionsBuilder {
 
         Class<?> declaredKeyType() {
             return declaredKeyType;
+        }
+
+        Class<?> elementClass() {
+            return elementClass;
+        }
+
+        Class<?> keyClass() {
+            return keyClass;
         }
 
         boolean enumPublicOnlySkipCandidate() {

@@ -2,6 +2,7 @@ package com.cedarsoftware.io.writers;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -47,6 +48,35 @@ public class CompactSetWriter implements JsonClassWriter {
     @SuppressWarnings("unchecked")
     public void write(Object obj, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
         CompactSet set = (CompactSet) obj;
+
+        // "config" field via the JsonGenerator
+        gen.writeFieldName("config");
+        gen.writeString(configOf(set));
+
+        // "data" array via the tree-walker's semantic API — writeValue() handles
+        // element commas via JsonWriter's contextStack during recursion.
+        context.writeArrayFieldStart("data");
+        for (Object element : set) {
+            context.writeValue(element);
+        }
+        context.writeEndArray();
+    }
+
+    /**
+     * What {@link #write} writes, as data: the configuration ("config") and the elements ("data"). TOON with type
+     * info writes it, so the set reads back with its configuration (case-insensitivity, ordering, ...).
+     */
+    @Override
+    public Object toData(Object obj) {
+        CompactSet<?> set = (CompactSet<?>) obj;
+        Map<String, Object> data = new LinkedHashMap<>(4);
+        data.put("config", configOf(set));
+        data.put("data", new ArrayList<Object>(set));
+        return data;
+    }
+
+    /** The set's configuration, as {@code CompactSetFactory} reads it: CS|CI/S{size}/{order}[/{mapClass}]. */
+    private static String configOf(CompactSet<?> set) {
         Map<String, Object> config = set.getConfig();
 
         boolean caseSensitive = (Boolean) config.get(CompactMap.CASE_SENSITIVE);
@@ -79,18 +109,7 @@ public class CompactSetWriter implements JsonClassWriter {
         if (mapType != null && mapType != defaultMapType(ordering)) {
             configStr.append('/').append(mapType.getName());
         }
-
-        // "config" field via the JsonGenerator
-        gen.writeFieldName("config");
-        gen.writeString(configStr.toString());
-
-        // "data" array via the tree-walker's semantic API — writeValue() handles
-        // element commas via JsonWriter's contextStack during recursion.
-        context.writeArrayFieldStart("data");
-        for (Object element : set) {
-            context.writeValue(element);
-        }
-        context.writeEndArray();
+        return configStr.toString();
     }
 
     @Override

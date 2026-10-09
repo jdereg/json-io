@@ -1876,7 +1876,8 @@ public class ObjectResolver extends Resolver
         // element type, so the type alone does not tell. {value: ...} alone is the form TOON wrote by reflection on
         // JDK 8 and 11. Its value is read as the bare form is, so a @ref inside it resolves, even to an object not
         // built yet; the Optional becomes the form's own target, for a @ref to the Optional itself.
-        if (element instanceof JsonObject && (((JsonObject) element).containsKey("present")
+        if (element instanceof JsonObject && isOptionalFormType(((JsonObject) element).getRawType())
+                && (((JsonObject) element).containsKey("present")
                 || (((JsonObject) element).size() == 1 && ((JsonObject) element).containsKey("value")))) {
             JsonObject form = (JsonObject) element;
             boolean present = form.containsKey("present")
@@ -1923,12 +1924,20 @@ public class ObjectResolver extends Resolver
             return false;
         }
         JsonObject jObj = (JsonObject) value;
-        if (jObj.containsKey("present") || jObj.containsKey("value")) {
+        Class<?> t = jObj.getRawType();
+        if (isOptionalRawType(t)) {
             return true;
         }
-        Class<?> t = jObj.getRawType();
-        return t == Optional.class || t == OptionalInt.class
-                || t == OptionalLong.class || t == OptionalDouble.class;
+        return isOptionalFormType(t) && (jObj.containsKey("present") || jObj.containsKey("value"));
+    }
+
+    /**
+     * Whether a JsonObject of this type can be an Optional's object form: untyped, or typed Optional. One whose type
+     * names another class is the content: TOON with type info writes a BigDecimal in an Optional's place as
+     * {$type: BigDecimal, value: 1.5}, and that "value" is the BigDecimal's own.
+     */
+    private static boolean isOptionalFormType(Class<?> t) {
+        return t == null || t == Object.class || isOptionalRawType(t);
     }
 
     /**

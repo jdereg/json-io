@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Deque;
+import java.util.EnumSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -291,6 +292,13 @@ public class ToonWriter implements Closeable, Flushable {
     private final String keysKey;
     private final String typeKey;
     private final boolean typeMetadataEnabled;
+    private final boolean alwaysType;       // showTypeInfoAlways: $type on every value but the four TOON reads as is
+    private final boolean minimalPlusType;  // showTypeInfoMinimalPlus: also leaves off what JSON's minimal-plus does
+    private final boolean rootType;         // $type on the root (always, or minimal unless omitRootTypeInfo)
+    // Type info on: the declared element (Map: value) and key types of the container about to be written, from its
+    // field's generics. Set around a field's write; a container takes them on entry, so anything inside sees Object.
+    private Class<?> elementType = Object.class;
+    private Class<?> keyType = Object.class;
     private int depth = 0;
     private int nextIdentity = 1;
 
@@ -426,6 +434,9 @@ public class ToonWriter implements Closeable, Flushable {
         boolean typeExplicitlyRequested = !(this.writeOptions instanceof WriteOptionsBuilder.DefaultWriteOptions)
                 || ((WriteOptionsBuilder.DefaultWriteOptions) this.writeOptions).isShowTypeInfoExplicitlySet();
         this.typeMetadataEnabled = typeModeEnabled && typeExplicitlyRequested;
+        this.alwaysType = typeMetadataEnabled && this.writeOptions.isAlwaysShowingType();
+        this.minimalPlusType = typeMetadataEnabled && this.writeOptions.isMinimalPlusShowingType();
+        this.rootType = alwaysType || (typeMetadataEnabled && this.writeOptions.isShowingRootTypeInfo());
     }
 
     /**
@@ -456,6 +467,8 @@ public class ToonWriter implements Closeable, Flushable {
         try {
             depth = 0;
             nextIdentity = 1;
+            elementType = Object.class;
+            keyType = Object.class;
             if (cycleSupport) {
                 // Lazy-init cycle-support structures
                 if (objVisited == null) {
@@ -476,7 +489,11 @@ public class ToonWriter implements Closeable, Flushable {
                     activePath.clear();
                 }
             }
-            writeValue(obj);
+            if (typeMetadataEnabled) {
+                writeRoot(obj);
+            } else {
+                writeValue(obj);
+            }
             out.flush();
         } catch (IOException e) {
             throw new JsonIoException("Error writing TOON output", e);
@@ -540,13 +557,13 @@ public class ToonWriter implements Closeable, Flushable {
 
         switch (writeTypeCache.get(clazz)) {
             case ARRAY:
-                writeArray(value);
+                writeArray(value, needsType(clazz, Object.class));
                 break;
             case COLLECTION:
-                writeCollection((Collection<?>) value);
+                writeCollection((Collection<?>) value, needsType(clazz, Object.class));
                 break;
             case MAP:
-                writeMap((Map<?, ?>) value);
+                writeMap((Map<?, ?>) value, needsType(clazz, Object.class));
                 break;
             case STRING:
                 writeString((String) value);
@@ -579,13 +596,46 @@ public class ToonWriter implements Closeable, Flushable {
                 }
                 break;
             case POJO:
-                writePojo(value);
+                writePojo(value, needsType(clazz, Object.class));
+                break;
+        }
+    }
+
+    /**
+     * Type info on: the root, with $type (unless omitRootTypeInfo(): then only on what it contains that the reader
+     * could not build from the class it is asked for).
+     */
+    private void writeRoot(Object obj) throws IOException {
+        Object value = unwrapCarrier(obj);
+        if (value == null) {
+            writeValue(null);
+            return;
+        }
+        Class<?> declared = rootType ? Object.class : value.getClass();
+        value = typedForm(value, declared);
+        Class<?> clazz = value.getClass();
+        boolean typed = needsType(clazz, declared);
+        switch (writeTypeCache.get(clazz)) {
+            case ARRAY:
+                writeArray(value, typed);
+                break;
+            case COLLECTION:
+                writeCollection((Collection<?>) value, typed);
+                break;
+            case MAP:
+                writeMap((Map<?, ?>) value, typed);
+                break;
+            case POJO:
+                writePojo(value, typed);
+                break;
+            default:
+                writeValue(value);
                 break;
         }
     }
 
     /** An object: as the data its custom writer gives in its place (an Optional's content), else its fields. */
-    private void writePojo(Object value) throws IOException {
+    private void writePojo(Object value, boolean typed) throws IOException {
         if (isDataClass(value.getClass())) {
             Object d = dataOf(value);
             if (isInPlace(d)) {
@@ -593,7 +643,7 @@ public class ToonWriter implements Closeable, Flushable {
                 return;
             }
         }
-        writeObject(value);
+        writeObject(value, typed);
     }
 
     private boolean isReferenceable(Object value) {
@@ -629,14 +679,247 @@ public class ToonWriter implements Closeable, Flushable {
         out.write(Integer.toString(getReferenceId(value)));
     }
 
-    private boolean shouldWriteTypeMetadata(Class<?> clazz) {
-        return (typeMetadataEnabled || forceShowType) && clazz != null && !isPrimitiveClass(clazz)
-                // Never emit json-io's internal carrier classes (JsonObject / JsonObjectMap /
-                // JsonObjectArray) as @type. They appear only when re-serializing a resolved Maps
-                // graph; their class name is not a meaningful user type (it is noise, and
-                // @type:JsonObjectMap is not readable back). Mirrors the JsonWriter fix in
-                // getTypeNameForOutput().
-                && !JsonObject.class.isAssignableFrom(clazz);
+    // ---------- Type info: showTypeInfoMinimal() / showTypeInfoMinimalPlus() / showTypeInfoAlways() ----------
+
+    // The declared type of a value written as itself, never with $type: a typed scalar's value, an object's $id, a
+    // custom writer's scalars. A primitive type, so needsType answers no in every mode.
+    private static final Class<?> AS_IS = void.class;
+
+    /**
+     * Whether a value of class {@code c}, written where the reader expects {@code declared} (Object where nothing is
+     * declared: the root, an element of a raw list, a map's value), carries $type.
+     * <ul>
+     *   <li>Minimal: only where the declared type does not determine the class the reader builds -- not for the
+     *       declared class itself, an enum constant of the declared enum, or the class the reader builds for a declared
+     *       interface (ArrayList for List, LinkedHashMap for Map, ...).</li>
+     *   <li>Minimal-plus: nor where JSON's minimal-plus leaves it off -- an int, short, byte or float in an Object slot
+     *       (read back as a long or a double), one date or number type where another is declared (converted).</li>
+     *   <li>Always: on every value.</li>
+     * </ul>
+     * Never on a String, Long, Double or Boolean, which TOON reads back as themselves, nor where a primitive is
+     * declared, nor on json-io's own carriers (JsonObject, JsonObjectMap, JsonObjectArray, from re-writing a Maps
+     * graph), which are not a type the reader builds. With type info off, only under {@code @IoShowType}, and only
+     * on objects and containers.
+     */
+    private boolean needsType(Class<?> c, Class<?> declared) {
+        if (!typeMetadataEnabled) {
+            return forceShowType && !isPrimitiveClass(c) && !JsonObject.class.isAssignableFrom(c);
+        }
+        if (c == String.class || c == Long.class || c == Double.class || c == Boolean.class
+                || declared.isPrimitive() || JsonObject.class.isAssignableFrom(c)) {
+            return false;
+        }
+        if (alwaysType || forceShowType) {
+            return true;
+        }
+        if (c == declared || JsonWriter.naturalDefault(declared) == c
+                || (declared.isEnum() && declared.isAssignableFrom(c))) {
+            return false;
+        }
+        return !minimalPlusType
+                || !((declared == Object.class && JsonWriter.isNumericPrimitiveForCompact(c))
+                    || (JsonWriter.isConvertableType(declared) && JsonWriter.isConvertableType(c)));
+    }
+
+    /**
+     * Type info on: what is written for {@code value} where the reader expects {@code declared}. A value whose type
+     * is written but which TOON writes as something other than an object becomes that object: a scalar
+     * {$type, value}; an object written as the value in its place {$type, value: that value} (an Optional's
+     * content); a list or map whose custom writer gives it as data {$type, ...that data} (a CompactMap's
+     * configuration and entries, as JSON writes it). Anything else is itself.
+     */
+    private Object typedForm(Object value, Class<?> declared) {
+        if (value == null || value instanceof Fields || !needsType(value.getClass(), declared)) {
+            return value;
+        }
+        Object content;
+        Object source;
+        if (isPrimitive(value)) {
+            content = value;
+            source = null;
+        } else if (value instanceof char[]) {
+            // As JSON writes it: {$type: char[], $items: [its text]}
+            Fields fields = new Fields(null);
+            fields.put(typeKey, typeNameOf(value), AS_IS);
+            fields.put(itemsKey, new String[] {new String((char[]) value)}, AS_IS);
+            return fields;
+        } else if (value instanceof Map || value instanceof Collection) {
+            Map<?, ?> data = containerData(value);
+            if (data == null) {
+                return value;
+            }
+            Fields fields = new Fields(value);
+            fields.put(typeKey, typeNameOf(value), AS_IS);
+            for (Map.Entry<?, ?> entry : data.entrySet()) {
+                fields.put(String.valueOf(entry.getKey()), entry.getValue(), dataType(entry.getValue()));
+            }
+            return fields;
+        } else if (isDataClass(value.getClass()) && isInPlace(dataOf(value))) {
+            content = dataOf(value);
+            source = value;
+        } else {
+            return value;
+        }
+        Fields fields = new Fields(source);
+        fields.put(typeKey, typeNameOf(value), AS_IS);
+        fields.put("value", content, source == null || !GENERIC.get(source.getClass()) ? AS_IS : Object.class);
+        return fields;
+    }
+
+    /** A list's or map's data from its custom writer (JsonClassWriter.toData) when that is a Map, else null. */
+    private Map<?, ?> containerData(Object container) {
+        JsonClassWriter writer = WriteOptionsBuilder.getDataWriter(writeOptions, container.getClass());
+        Object data = writer == null ? JsonClassWriter.NO_DATA : writer.toData(container);
+        return data instanceof Map ? (Map<?, ?>) data : null;
+    }
+
+    /**
+     * The type the reader expects for a value in a custom writer's data: a scalar, list, map or array as itself (the
+     * writer's factory reads it as such, as from the writer's JSON), any other object as Object (so it carries $type).
+     */
+    private Class<?> dataType(Object value) {
+        if (value != null && (isPrimitive(value) || value instanceof Map || value instanceof Collection
+                || value.getClass().isArray())) {
+            return AS_IS;
+        }
+        return Object.class;
+    }
+
+    /** The name written as $type for {@code value}: an EnumSet's enum class, else its custom writer's name for it. */
+    private String typeNameOf(Object value) {
+        if (value instanceof EnumSet) {
+            return writeOptions.getTypeNameAlias(enumClassOf((EnumSet<?>) value).getName());
+        }
+        Class<?> c = value.getClass();
+        String cached = typeNameCache.get(c);
+        if (cached == null) {
+            JsonClassWriter writer = writeOptions.isNotCustomWrittenClass(c) ? null : writeOptions.getCustomWriter(c);
+            cached = writeOptions.getTypeNameAlias(writer == null ? c.getName() : writer.getTypeName(value));
+            typeNameCache.put(c, cached);
+        }
+        return cached;
+    }
+
+    /** The enum an EnumSet holds: what JSON writes as its type, so it reads back at the root, where nothing declares it. */
+    private static Class<?> enumClassOf(EnumSet<?> set) {
+        EnumSet<?> constants = set.isEmpty() ? EnumSet.complementOf(set) : set;
+        return constants.isEmpty() ? set.getClass() : constants.iterator().next().getDeclaringClass();
+    }
+
+    /**
+     * Type info on: whether a map's keys need the {$keys, $items} form to read back -- some key is not a String, and
+     * the declared key type does not make it one (the plain form's keys are text, which the reader converts only to a
+     * declared key type).
+     */
+    private boolean keysNeedTypes(Map<?, ?> map, Class<?> declaredKey) {
+        if (!typeMetadataEnabled) {
+            return false;
+        }
+        for (Object key : map.keySet()) {
+            if (key != null && !(key instanceof String)
+                    && (declaredKey == Object.class || needsType(key.getClass(), declaredKey))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Type info on: the declared element and key types of the field's value, for a container to take. */
+    private void declareContainerTypes(WriteOptionsBuilder.WriteFieldPlan plan) {
+        Class<?> element = plan.elementClass();
+        Class<?> key = plan.keyClass();
+        elementType = element == null ? Object.class : element;
+        keyType = key == null ? Object.class : key;
+    }
+
+    /** The declared element (Map: value) type for the container being written; what it contains sees Object. */
+    private Class<?> takeElementType() {
+        Class<?> declared = elementType;
+        elementType = Object.class;
+        return declared;
+    }
+
+    /** The declared key type for the map being written; what it contains sees Object. */
+    private Class<?> takeKeyType() {
+        Class<?> declared = keyType;
+        keyType = Object.class;
+        return declared;
+    }
+
+    // Classes with a type parameter (Optional<T>): what such a holder holds is not given by its class
+    private static final ClassValue<Boolean> GENERIC = new ClassValue<Boolean>() {
+        @Override
+        protected Boolean computeValue(Class<?> type) {
+            return type.getTypeParameters().length > 0;
+        }
+    };
+
+    /**
+     * Type info on: the type the reader expects for what an object written in its place holds (an Optional's
+     * content). A holder with no type parameter (OptionalInt) determines it; a generic one holds what its field's type
+     * argument says (Address for Optional&lt;Address&gt;, taken as a container takes its element type), else anything.
+     */
+    private Class<?> contentTypeOf(Object holder) {
+        return GENERIC.get(holder.getClass()) ? takeElementType() : AS_IS;
+    }
+
+    /** Type info on: a generic holder written in its place (an Optional in a list) whose content needs its $type. */
+    private boolean holdsTypedContent(Object value) {
+        if (!GENERIC.get(value.getClass()) || !isDataClass(value.getClass())) {
+            return false;
+        }
+        Object content = dataOf(value);
+        return isInPlace(content) && content != null && needsType(content.getClass(), Object.class);
+    }
+
+    /** A map key's quoting: an object's $type, $id and $items (in its Fields) are meta keys, written bare. */
+    private boolean keyNeedsQuoting(Map<?, ?> map, String key) {
+        return !(map instanceof Fields && (key.equals(typeKey) || key.equals(idKey) || key.equals(itemsKey)))
+                && needsQuotingForMapKey(key);
+    }
+
+    /** The type the reader expects for a map's value: an object's field's own, else the map's declared value type. */
+    private static Class<?> valueTypeIn(Map<?, ?> map, Object key, Class<?> valueType) {
+        return map instanceof Fields ? ((Fields) map).typeOf(key) : valueType;
+    }
+
+    /** The object a map stands for (a typed scalar, a custom writer's data): its identity for $id, $ref and cycles. */
+    private static Object identityOf(Map<?, ?> map) {
+        return map instanceof Fields ? ((Fields) map).source : map;
+    }
+
+    /**
+     * An object's fields by name, each with the type the reader expects for it, written as a map: what json-io writes
+     * for an object it does not write field by field (an @IoAnyGetter's fields, a custom writer's data), and the
+     * object that carries a value's $type. Its own class is never written; it stands for {@code source}.
+     */
+    private static final class Fields extends LinkedHashMap<String, Object> {
+        private static final long serialVersionUID = 1L;
+        private final transient Object source;
+        private transient Map<String, Class<?>> types;   // null until a type is recorded (type info on)
+
+        Fields(Object source) {
+            this.source = source == null ? this : source;
+        }
+
+        void put(String key, Object value, Class<?> type) {
+            put(key, value);
+            if (type != null) {
+                if (types == null) {
+                    types = new java.util.HashMap<>();
+                }
+                types.put(key, type);
+            }
+        }
+
+        Class<?> typeOf(Object key) {
+            Class<?> type = recordedType(key);
+            return type == null ? Object.class : type;
+        }
+
+        Class<?> recordedType(Object key) {
+            return types == null ? null : types.get(key);
+        }
     }
 
     private boolean isPrimitiveClass(Class<?> clazz) {
@@ -652,20 +935,10 @@ public class ToonWriter implements Closeable, Flushable {
         }
     }
 
-    private String getTypeNameForOutput(Class<?> clazz) {
-        String cached = typeNameCache.get(clazz);
-        if (cached != null) {
-            return cached;
-        }
-        String alias = writeOptions.getTypeNameAlias(clazz.getName());
-        typeNameCache.put(clazz, alias);
-        return alias;
-    }
-
-    private void writeTypeField(Class<?> clazz) throws IOException {
+    private void writeTypeField(Object value) throws IOException {
         out.write(typeKey);
         out.write(':'); out.write(' ');
-        writeString(getTypeNameForOutput(clazz));
+        writeString(typeNameOf(value));
     }
 
     private boolean writeReferenceIfSeen(Object value) throws IOException {
@@ -1133,9 +1406,9 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
-     * Write an array value (standalone, not as a field value).
+     * Write an array value (standalone, not as a field value), with $type when {@code typed}.
      */
-    private void writeArray(Object array) throws IOException {
+    private void writeArray(Object array, boolean typed) throws IOException {
         // char[] is written as a plain string value, not as an array.
         // Converter handles String → char[] on read.
         if (array instanceof char[]) {
@@ -1154,18 +1427,17 @@ public class ToonWriter implements Closeable, Flushable {
         try {
             int length = ArrayUtilities.getLength(array);
             boolean includeId = cycleSupport && isReferenced(array);
-            boolean includeType = shouldWriteTypeMetadata(array.getClass());
             boolean wroteMeta = false;
             if (includeId) {
                 writeIdField(array);
                 wroteMeta = true;
             }
-            if (includeType) {
+            if (typed) {
                 if (wroteMeta) {
                     out.write('\n');
                     writeIndent();
                 }
-                writeTypeField(array.getClass());
+                writeTypeField(array);
                 wroteMeta = true;
             }
             if (wroteMeta) {
@@ -1243,9 +1515,9 @@ public class ToonWriter implements Closeable, Flushable {
         }
 
         // Check if all elements are primitives (can use inline format)
+        Class<?> componentType = array.getClass().getComponentType();   // what the reader expects for an element
         if (isAllPrimitives(array, length)) {
             out.write(':'); out.write(' ');
-            Class<?> componentType = array.getClass().getComponentType();
             if (componentType.isPrimitive()) {
                 // Typed loops skip the Integer/Long/Double... wrapper that
                 // ArrayUtilities.getPrimitiveElement would otherwise allocate
@@ -1265,11 +1537,11 @@ public class ToonWriter implements Closeable, Flushable {
                 }
             }
         } else if (array instanceof Object[]
-                && tryWriteUniformMapTabular((Object[]) array, length)) {
+                && tryWriteUniformMapTabular((Object[]) array, length, componentType)) {
             // Uniform Map array emitted in tabular form per spec §9.3.
         } else if (!writeOptions.isPrettyPrint()) {
             // Try tabular format for uniform POJO arrays
-            UniformPojoArrayData uniformPOJO = getUniformPOJODataFromArray(array, length);
+            UniformPojoArrayData uniformPOJO = getUniformPOJODataFromArray(array, length, componentType);
             if (uniformPOJO != null) {
                 writeTabularHeader(uniformPOJO.keys);
                 writeTabularPOJORowsFromArray(uniformPOJO, array, length);
@@ -1282,7 +1554,7 @@ public class ToonWriter implements Closeable, Flushable {
                     writeIndent();
                     out.write("-");
                     Object element = getArrayElement(array, i);
-                    writeListElement(element);
+                    writeListElement(element, componentType);
                 }
                 depth--;
             }
@@ -1295,7 +1567,7 @@ public class ToonWriter implements Closeable, Flushable {
                 writeIndent();
                 out.write("-");
                 Object element = getArrayElement(array, i);
-                writeListElement(element);
+                writeListElement(element, componentType);
             }
             depth--;
         }
@@ -1366,9 +1638,9 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
-     * Write a Collection value (standalone, not as a field value).
+     * Write a Collection value (standalone, not as a field value), with $type when {@code typed}.
      */
-    private void writeCollection(Collection<?> collection) throws IOException {
+    private void writeCollection(Collection<?> collection, boolean typed) throws IOException {
         if (cycleSupport) {
             if (writeReferenceIfSeen(collection)) {
                 return;
@@ -1379,18 +1651,17 @@ public class ToonWriter implements Closeable, Flushable {
 
         try {
             boolean includeId = cycleSupport && isReferenced(collection);
-            boolean includeType = shouldWriteTypeMetadata(collection.getClass());
             boolean wroteMeta = false;
             if (includeId) {
                 writeIdField(collection);
                 wroteMeta = true;
             }
-            if (includeType) {
+            if (typed) {
                 if (wroteMeta) {
                     out.write('\n');
                     writeIndent();
                 }
-                writeTypeField(collection.getClass());
+                writeTypeField(collection);
                 wroteMeta = true;
             }
             if (wroteMeta) {
@@ -1408,6 +1679,9 @@ public class ToonWriter implements Closeable, Flushable {
                 }
             } else {
                 out.write(countMarker(collection.size()));
+                if (typeMetadataEnabled && collection instanceof EnumSet) {
+                    elementType = AS_IS;   // its elements are of the enum its $type names: their names, as in JSON
+                }
                 writeCollectionElementsWithHeader(collection);
             }
         } finally {
@@ -1422,15 +1696,17 @@ public class ToonWriter implements Closeable, Flushable {
      * Called from writeMapWithSimpleKeys after [N] has been written.
      */
     private void writeCollectionElementsWithHeader(Collection<?> collection) throws IOException {
+        Class<?> declared = typeMetadataEnabled ? takeElementType() : Object.class;   // what the reader expects
         if (collection.isEmpty()) {
             out.write(":");
             return;
         }
 
-        // Check if all elements are primitives
+        // Check if all elements are primitives (that carry no $type)
         boolean allPrimitives = true;
         for (Object element : collection) {
-            if (element != null && !isInlineValue(element)) {
+            if (element != null && (!isInlineValue(element) || (typeMetadataEnabled
+                    && (needsType(element.getClass(), declared) || holdsTypedContent(element))))) {
                 allPrimitives = false;
                 break;
             }
@@ -1448,14 +1724,14 @@ public class ToonWriter implements Closeable, Flushable {
             }
         } else {
             // Check for uniform Map array (all Maps with same keys) → tabular format
-            List<String> uniformKeys = getUniformKeys(collection);
+            List<String> uniformKeys = getUniformKeys(collection, declared);
             if (uniformKeys != null) {
                 // Tabular format: {key1,key2,...}: followed by CSV rows
                 writeTabularHeader(uniformKeys);
                 writeTabularRows(collection, uniformKeys);
             } else if (!writeOptions.isPrettyPrint()) {
                 // Check for uniform POJO array → tabular format (default, compact)
-                UniformPojoArrayData uniformPOJO = getUniformPOJODataFromCollection(collection);
+                UniformPojoArrayData uniformPOJO = getUniformPOJODataFromCollection(collection, declared);
                 if (uniformPOJO != null) {
                     writeTabularHeader(uniformPOJO.keys);
                     writeTabularPOJORows(uniformPOJO, collection);
@@ -1467,7 +1743,7 @@ public class ToonWriter implements Closeable, Flushable {
                         out.write('\n');
                         writeIndent();
                         out.write("-");
-                        writeListElement(element);
+                        writeListElement(element, declared);
                     }
                     depth--;
                 }
@@ -1479,7 +1755,7 @@ public class ToonWriter implements Closeable, Flushable {
                     out.write('\n');
                     writeIndent();
                     out.write("-");
-                    writeListElement(element);
+                    writeListElement(element, declared);
                 }
                 depth--;
             }
@@ -1498,9 +1774,9 @@ public class ToonWriter implements Closeable, Flushable {
      * {@code Map} tree — get the same tabular treatment that {@code Collection} inputs
      * already receive. {@code Arrays.asList} is a non-copying view so the path stays cheap.
      */
-    private boolean tryWriteUniformMapTabular(Object[] array, int length) throws IOException {
+    private boolean tryWriteUniformMapTabular(Object[] array, int length, Class<?> declared) throws IOException {
         List<Object> view = (length == array.length) ? Arrays.asList(array) : Arrays.asList(array).subList(0, length);
-        List<String> uniformKeys = getUniformKeys(view);
+        List<String> uniformKeys = getUniformKeys(view, declared);
         if (uniformKeys == null) {
             return false;
         }
@@ -1511,9 +1787,10 @@ public class ToonWriter implements Closeable, Flushable {
 
     /**
      * Check if a collection contains uniform objects (all Maps with identical keys and primitive values).
-     * Returns the ordered list of keys if uniform, null otherwise.
+     * Returns the ordered list of keys if uniform, null otherwise. With type info on, a map or a value that carries
+     * $type ({@code declared} is what the reader expects for an element) is not a row.
      */
-    private List<String> getUniformKeys(Collection<?> collection) {
+    private List<String> getUniformKeys(Collection<?> collection, Class<?> declared) {
         // §9.3: tabular form applies when all elements are Maps with the SAME KEY SET
         // (set-equality, not list-order). The header uses the first object's key order
         // per the spec ("uses field order from first object for tabular headers"); rows
@@ -1538,7 +1815,7 @@ public class ToonWriter implements Closeable, Flushable {
 
             Map<?, ?> map = (Map<?, ?>) element;
 
-            if (map.isEmpty()) {
+            if (map.isEmpty() || (typeMetadataEnabled && needsType(map.getClass(), declared))) {
                 return null;  // Empty objects break uniformity
             }
 
@@ -1554,7 +1831,8 @@ public class ToonWriter implements Closeable, Flushable {
                     return null;  // Non-string keys break uniformity
                 }
                 Object value = entry.getValue();
-                if (value != null && !isPrimitive(value)) {
+                if (value != null && (!isPrimitive(value)
+                        || (typeMetadataEnabled && needsType(value.getClass(), Object.class)))) {
                     return null;  // Complex values break tabular format
                 }
                 String k = (String) key;
@@ -1632,11 +1910,12 @@ public class ToonWriter implements Closeable, Flushable {
      *   <li>All elements have the same fields in the same order</li>
      * </ul>
      */
-    private UniformPojoArrayData getUniformPOJODataFromCollection(Collection<?> collection) {
+    private UniformPojoArrayData getUniformPOJODataFromCollection(Collection<?> collection, Class<?> declared) {
         List<String> keys = null;
         List<WriteOptionsBuilder.WriteFieldPlan> activePlans = null;
         List<WriteOptionsBuilder.WriteFieldPlan> allPlans = null;
         Class<?> elementClass = null;
+        Object first = null;
 
         for (Object element : collection) {
             if (element == null) {
@@ -1659,6 +1938,7 @@ public class ToonWriter implements Closeable, Flushable {
             // All elements must be the same concrete class for tabular format
             if (elementClass == null) {
                 elementClass = element.getClass();
+                first = element;
 
                 // Bail out if @IoAnyGetter (extra dynamic fields could vary), or when a custom writer gives the
                 // objects as data (their fields are not what is written)
@@ -1680,7 +1960,7 @@ public class ToonWriter implements Closeable, Flushable {
                     }
                     Object value = plan.accessor().retrieve(element);
                     if ((skipNullFields || plan.skipIfNull()) && value == null) continue;
-                    if (value != null && !isPrimitive(value)) return null;
+                    if (value != null && !isPlainCell(value, plan)) return null;
                     activePlans.add(plan);
                     keys.add(plan.accessor().getUniqueFieldName());
                 }
@@ -1701,8 +1981,8 @@ public class ToonWriter implements Closeable, Flushable {
 
         // Inject @type as the first column when type metadata is needed
         String typeName = null;
-        if (shouldWriteTypeMetadata(elementClass)) {
-            typeName = getTypeNameForOutput(elementClass);
+        if (needsType(elementClass, declared)) {
+            typeName = typeNameOf(first);
             keys.add(0, typeKey);
         }
 
@@ -1715,11 +1995,12 @@ public class ToonWriter implements Closeable, Flushable {
      * Avoids intermediate LinkedHashMap allocations — field values are read directly
      * from accessors during the write phase.
      */
-    private UniformPojoArrayData getUniformPOJODataFromArray(Object array, int length) {
+    private UniformPojoArrayData getUniformPOJODataFromArray(Object array, int length, Class<?> declared) {
         List<String> keys = null;
         List<WriteOptionsBuilder.WriteFieldPlan> activePlans = null;
         List<WriteOptionsBuilder.WriteFieldPlan> allPlans = null;
         Class<?> elementClass = null;
+        Object first = null;
 
         for (int i = 0; i < length; i++) {
             Object element = getArrayElement(array, i);
@@ -1739,6 +2020,7 @@ public class ToonWriter implements Closeable, Flushable {
             // All elements must be the same concrete class for tabular format
             if (elementClass == null) {
                 elementClass = element.getClass();
+                first = element;
 
                 // Bail out if @IoAnyGetter (extra dynamic fields could vary), or when a custom writer gives the
                 // objects as data (their fields are not what is written)
@@ -1760,7 +2042,7 @@ public class ToonWriter implements Closeable, Flushable {
                     }
                     Object value = plan.accessor().retrieve(element);
                     if ((skipNullFields || plan.skipIfNull()) && value == null) continue;
-                    if (value != null && !isPrimitive(value)) return null;
+                    if (value != null && !isPlainCell(value, plan)) return null;
                     activePlans.add(plan);
                     keys.add(plan.accessor().getUniqueFieldName());
                 }
@@ -1781,8 +2063,8 @@ public class ToonWriter implements Closeable, Flushable {
 
         // Inject @type as the first column when type metadata is needed
         String typeName = null;
-        if (shouldWriteTypeMetadata(elementClass)) {
-            typeName = getTypeNameForOutput(elementClass);
+        if (needsType(elementClass, declared)) {
+            typeName = typeNameOf(first);
             keys.add(0, typeKey);
         }
 
@@ -1816,13 +2098,22 @@ public class ToonWriter implements Closeable, Flushable {
                 }
                 continue;
             }
-            if (value != null && !isPrimitive(value)) return false;
+            if (value != null && !isPlainCell(value, plan)) return false;
             if (activeIdx >= activePlans.size() || activePlans.get(activeIdx) != plan) {
                 return false;
             }
             activeIdx++;
         }
         return activeIdx == activePlans.size();
+    }
+
+    /**
+     * A field value a tabular row can hold: a primitive, carrying no $type where its field is declared (with type
+     * info on, an @IoShowType field's value is written as a field, where its type is).
+     */
+    private boolean isPlainCell(Object value, WriteOptionsBuilder.WriteFieldPlan plan) {
+        return isPrimitive(value) && !(typeMetadataEnabled
+                && (plan.forceShowType() || needsType(value.getClass(), plan.effectiveDeclaredType())));
     }
 
     private boolean isPrimitiveFieldPlan(WriteOptionsBuilder.WriteFieldPlan plan) {
@@ -1887,35 +2178,40 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
-     * Write a single list element (after the hyphen has been written).
-     * Per TOON spec: for object/map elements, first field goes on hyphen line.
+     * Write a single list element (after the hyphen has been written), {@code declared} being what the reader expects
+     * for it (with type info on). Per TOON spec: for object/map elements, first field goes on hyphen line.
      */
-    private void writeListElement(Object element) throws IOException {
+    private void writeListElement(Object element, Class<?> declared) throws IOException {
         element = unwrapCarrier(element);   // resolved-Maps-graph carrier -> plain container
+        if (typeMetadataEnabled) {
+            element = typedForm(element, declared);   // a scalar that carries its type: {$type, value}
+        }
         if (element == null || isPrimitive(element)) {
             out.write(" ");
             writeValue(element);
-        } else if (element instanceof Map) {
+            return;
+        }
+        boolean typed = needsType(element.getClass(), declared);
+        if (element instanceof Map) {
             // Nested map - first field on hyphen line per TOON spec
             Map<?, ?> mapElement = (Map<?, ?>) element;
-            if (hasComplexKeys(mapElement)) {
+            if (hasComplexKeys(mapElement) || keysNeedTypes(mapElement, Object.class)) {
                 out.write('\n');
                 depth++;
-                writeMap(mapElement);
+                writeMap(mapElement, typed);
                 depth--;
             } else {
-                writeMapInline(mapElement);
+                writeMapInline(mapElement, typed);
             }
         } else if (element instanceof Collection) {
             // Nested collection
-            if (shouldWrapArrayOrCollectionValue(element)
-                    || shouldWriteTypeMetadata(element.getClass())) {
+            if (shouldWrapArrayOrCollectionValue(element) || typed) {
                 // When type metadata is present, wrapping ensures $type and $items
                 // are properly indented relative to the parent hyphen.
                 out.write('\n');
                 depth++;
                 writeIndent();
-                writeCollection((Collection<?>) element);
+                writeCollection((Collection<?>) element, typed);
                 depth--;
             } else if (((Collection<?>) element).isEmpty()) {
                 // §9.1: empty array as a list element uses the legacy "[0]:" form on the
@@ -1924,70 +2220,64 @@ public class ToonWriter implements Closeable, Flushable {
                 out.write(" [0]:");
             } else {
                 out.write(" ");
-                writeCollection((Collection<?>) element);
+                writeCollection((Collection<?>) element, false);
             }
         } else if (element.getClass().isArray()) {
             // Nested array
-            if (shouldWrapArrayOrCollectionValue(element)
-                    || shouldWriteTypeMetadata(element.getClass())) {
+            if (shouldWrapArrayOrCollectionValue(element) || typed) {
                 out.write('\n');
                 depth++;
                 writeIndent();
-                writeArray(element);
+                writeArray(element, typed);
                 depth--;
             } else if (ArrayUtilities.getLength(element) == 0) {
                 // §9.1 list-element empty array — see Collection branch above.
                 out.write(" [0]:");
             } else {
                 out.write(" ");
-                writeArray(element);
+                writeArray(element, false);
             }
         } else {
             // An object whose writer gives it as data written in its place (an Optional's content): that value
             Object inPlace = inPlaceOf(element);
             if (inPlace != element) {
-                writeListElement(inPlace);
+                writeListElement(inPlace, typeMetadataEnabled ? contentTypeOf(element) : Object.class);
                 return;
             }
             // Complex object - first field on hyphen line
-            writeObjectInline(element);
+            writeObjectInline(element, typed);
         }
     }
 
     /**
-     * Write a map with first field on the current line (for list elements).
+     * Write a map with first field on the current line (for list elements), with $type when {@code typed}.
      * Per TOON spec: "first field on the hyphen line"
      */
-    private void writeMapInline(Map<?, ?> map) throws IOException {
+    private void writeMapInline(Map<?, ?> map, boolean typed) throws IOException {
+        Object identity = identityOf(map);
         if (cycleSupport) {
-            if (objVisited.get(map) != 0) {
+            if (objVisited.get(identity) != 0) {
                 out.write(" ");
-                writeReferenceValue(getReferenceId(map));
+                writeReferenceValue(getReferenceId(identity));
                 return;
             }
-            objVisited.put(map, VISITED);
-        } else if (!enterActivePath(map)) {
-            throw cycleDetected(map);
+            objVisited.put(identity, VISITED);
+        } else if (!enterActivePath(identity)) {
+            throw cycleDetected(identity);
         }
 
         try {
-            if (map.isEmpty()) {
-                if (cycleSupport && isReferenced(map)) {
-                    out.write(" ");
-                    writeIdField(map);
-                }
-                // §9.4: an empty object as a list element emits as bare hyphen — the
-                // caller already wrote "-" on the line; we write nothing here. The
-                // previous " {}" emission was non-spec.
-                return;
+            Class<?> valueType = Object.class;
+            if (typeMetadataEnabled) {
+                valueType = takeElementType();
+                takeKeyType();
             }
-
             boolean first = true;
-            boolean includeId = cycleSupport && isReferenced(map);
-            boolean includeType = shouldWriteTypeMetadata(map.getClass()) && !map.containsKey(typeKey);
+            boolean includeId = cycleSupport && isReferenced(identity);
+            boolean includeType = typed && !map.containsKey(typeKey);
             if (includeId) {
                 out.write(" ");
-                writeIdField(map);
+                writeIdField(identity);
                 first = false;
             }
             if (includeType) {
@@ -2000,8 +2290,11 @@ public class ToonWriter implements Closeable, Flushable {
                     writeIndent();
                     depth--;
                 }
-                writeTypeField(map.getClass());
+                writeTypeField(map);
             }
+            // §9.4: an empty object as a list element emits as bare hyphen — the
+            // caller already wrote "-" on the line; we write nothing more here. The
+            // previous " {}" emission was non-spec.
 
             for (Map.Entry<?, ?> entry : map.entrySet()) {
                 if (first) {
@@ -2016,21 +2309,22 @@ public class ToonWriter implements Closeable, Flushable {
 
                 Object key = entry.getKey();
                 String keyStr = (key == null) ? "null" : key.toString();
-                writeFieldEntryInline(keyStr, entry.getValue(), needsQuotingForMapKey(keyStr));
+                writeFieldEntryInline(keyStr, entry.getValue(), keyNeedsQuoting(map, keyStr),
+                        valueTypeIn(map, key, valueType));
             }
         } finally {
             if (!cycleSupport) {
-                exitActivePath(map);
+                exitActivePath(identity);
             }
         }
     }
 
     /**
-     * Write an object with first field on the current line (for list elements).
+     * Write an object with first field on the current line (for list elements), with $type when {@code typed}.
      * Iterates WriteFieldPlan directly to avoid intermediate LinkedHashMap allocation.
      * Falls back to map-based approach only when @IoAnyGetter is present (rare).
      */
-    private void writeObjectInline(Object obj) throws IOException {
+    private void writeObjectInline(Object obj, boolean typed) throws IOException {
         if (cycleSupport) {
             if (objVisited.get(obj) != 0) {
                 out.write(" ");
@@ -2049,7 +2343,7 @@ public class ToonWriter implements Closeable, Flushable {
             // If @IoAnyGetter is present, fall back to map-based approach (rare path); also for an object whose
             // custom writer gives it as fields (JsonClassWriter.toData)
             if (annMeta.getAnyGetterMethod() != null || isWrittenAsDataFields(obj)) {
-                writeObjectInlineViaMap(obj);
+                writeObjectInlineViaMap(obj, typed);
                 return;
             }
 
@@ -2057,7 +2351,6 @@ public class ToonWriter implements Closeable, Flushable {
                     WriteOptionsBuilder.getWriteFieldPlans(writeOptions, clazz);
 
             boolean includeId = cycleSupport && isReferenced(obj);
-            boolean includeType = shouldWriteTypeMetadata(clazz);
             boolean first = true;
 
             // Write metadata inline
@@ -2066,7 +2359,7 @@ public class ToonWriter implements Closeable, Flushable {
                 writeIdField(obj);
                 first = false;
             }
-            if (includeType) {
+            if (typed) {
                 if (first) {
                     out.write(" ");
                     first = false;
@@ -2076,7 +2369,7 @@ public class ToonWriter implements Closeable, Flushable {
                     writeIndent();
                     depth--;
                 }
-                writeTypeField(clazz);
+                writeTypeField(obj);
             }
 
             // Write fields directly from WriteFieldPlan
@@ -2121,7 +2414,14 @@ public class ToonWriter implements Closeable, Flushable {
                 forceShowType = plan.forceShowType();
                 boolean savedMapSimpleKey = currentMapHasSimpleKeyTypeHint;
                 currentMapHasSimpleKeyTypeHint = plan.mapKeyTypeIsSimple();
-                writeFieldEntryInline(key, value, plan.toonKeyNeedsQuoting());
+                if (typeMetadataEnabled) {
+                    declareContainerTypes(plan);
+                }
+                writeFieldEntryInline(key, value, plan.toonKeyNeedsQuoting(), plan.effectiveDeclaredType());
+                if (typeMetadataEnabled) {
+                    elementType = Object.class;
+                    keyType = Object.class;
+                }
                 currentMapHasSimpleKeyTypeHint = savedMapSimpleKey;
                 forceShowType = savedForceShowType;
             }
@@ -2137,65 +2437,72 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
-     * Fallback for objects with @IoAnyGetter in inline context.
+     * Fallback for objects with @IoAnyGetter in inline context (and objects written as their custom writer's data),
+     * with $type when {@code typed}.
      */
-    private void writeObjectInlineViaMap(Object obj) throws IOException {
-        Map<String, Object> fields = getObjectFields(obj);
+    private void writeObjectInlineViaMap(Object obj, boolean typed) throws IOException {
+        Fields fields = getObjectFields(obj);
         boolean includeId = cycleSupport && isReferenced(obj);
-        boolean includeType = shouldWriteTypeMetadata(obj.getClass());
-        if (includeId || includeType) {
-            LinkedHashMap<String, Object> withMeta = new LinkedHashMap<>(fields.size() + 2);
+        if (includeId || typed) {
+            Fields withMeta = new Fields(null);
             if (includeId) {
-                withMeta.put(idKey, getReferenceId(obj));
+                withMeta.put(idKey, getReferenceId(obj), AS_IS);
             }
-            if (includeType) {
-                withMeta.put(typeKey, getTypeNameForOutput(obj.getClass()));
+            if (typed) {
+                withMeta.put(typeKey, typeNameOf(obj), AS_IS);
             }
             for (Map.Entry<String, Object> entry : fields.entrySet()) {
                 String key = entry.getKey();
                 if (idKey.equals(key) || typeKey.equals(key)) {
                     continue;
                 }
-                withMeta.put(key, entry.getValue());
+                withMeta.put(key, entry.getValue(), fields.recordedType(key));
             }
-            writeMapInline(withMeta);
+            writeMapInline(withMeta, false);
         } else {
-            writeMapInline(fields);
+            writeMapInline(fields, false);
         }
     }
 
     /**
-     * Write a Map value.
+     * Write a Map value, with $type when {@code typed}.
      */
-    private void writeMap(Map<?, ?> map) throws IOException {
+    private void writeMap(Map<?, ?> map, boolean typed) throws IOException {
+        Object identity = identityOf(map);
         if (cycleSupport) {
-            if (objVisited.get(map) != 0) {
+            if (objVisited.get(identity) != 0) {
                 if (depth > 0) {
                     writeIndent();
                 }
-                writeReferenceValue(getReferenceId(map));
+                writeReferenceValue(getReferenceId(identity));
                 return;
             }
-            objVisited.put(map, VISITED);
-        } else if (!enterActivePath(map)) {
-            throw cycleDetected(map);
+            objVisited.put(identity, VISITED);
+        } else if (!enterActivePath(identity)) {
+            throw cycleDetected(identity);
         }
 
         try {
-            boolean includeId = cycleSupport && isReferenced(map);
-            boolean includeType = shouldWriteTypeMetadata(map.getClass()) && !map.containsKey(typeKey);
+            Class<?> valueType = Object.class;
+            Class<?> keyDeclared = Object.class;
+            if (typeMetadataEnabled) {
+                valueType = takeElementType();
+                keyDeclared = takeKeyType();
+            }
+            boolean includeId = cycleSupport && isReferenced(identity);
+            boolean includeType = typed && !map.containsKey(typeKey);
             if (map.isEmpty()) {
                 if (includeId || includeType) {
                     if (includeId) {
                         writeIndent();
-                        writeIdField(map);
+                        writeIdField(identity);
                         if (includeType) {
                             out.write('\n');
                         }
                     }
                     if (includeType) {
                         writeIndent();
-                        writeTypeField(map.getClass());
+                        writeTypeField(map);
                     }
                 }
                 // Empty map with no metadata: emit nothing.
@@ -2213,9 +2520,10 @@ public class ToonWriter implements Closeable, Flushable {
             // caller after the dispatch returns.
             boolean knownSimpleKeyType = currentMapHasSimpleKeyTypeHint;
             currentMapHasSimpleKeyTypeHint = false;  // don't propagate into nested children
-            if (!knownSimpleKeyType && hasComplexKeys(map)) {
-                if (includeId || includeType) {
-                    writeReferencedComplexMap(map, includeId, includeType);
+            if (keysNeedTypes(map, keyDeclared) || (!knownSimpleKeyType && hasComplexKeys(map))) {
+                // With type info on, keys whose class the reader must be told are written as a list ($keys)
+                if (includeId || includeType || typeMetadataEnabled) {
+                    writeReferencedComplexMap(map, includeId, includeType, keyDeclared, valueType);
                 } else {
                     writeMapWithComplexKeys(map);
                 }
@@ -2223,22 +2531,22 @@ public class ToonWriter implements Closeable, Flushable {
                 if (includeId || includeType) {
                     if (includeId) {
                         writeIndent();
-                        writeIdField(map);
+                        writeIdField(identity);
                         if (includeType) {
                             out.write('\n');
                         }
                     }
                     if (includeType) {
                         writeIndent();
-                        writeTypeField(map.getClass());
+                        writeTypeField(map);
                     }
                     out.write('\n');
                 }
-                writeMapWithSimpleKeys(map);
+                writeMapWithSimpleKeys(map, valueType);
             }
         } finally {
             if (!cycleSupport) {
-                exitActivePath(map);
+                exitActivePath(identity);
             }
         }
     }
@@ -2269,10 +2577,11 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
-     * Write a map with simple keys (String, Number, etc.) using the standard key: value format.
+     * Write a map with simple keys (String, Number, etc.) using the standard key: value format, {@code valueType}
+     * being what the reader expects for a value (with type info on).
      * Per TOON spec, array/collection values combine key with size marker: fieldName[N]:
      */
-    private void writeMapWithSimpleKeys(Map<?, ?> map) throws IOException {
+    private void writeMapWithSimpleKeys(Map<?, ?> map, Class<?> valueType) throws IOException {
         // §13.4 safe-mode folding: capture the literal sibling key set so folded chains
         // can detect a collision with an existing literal key at this depth and skip
         // folding. Only built when keyFolding is on; null otherwise.
@@ -2297,7 +2606,8 @@ public class ToonWriter implements Closeable, Flushable {
 
                 Object key = entry.getKey();
                 String keyStr = (key == null) ? "null" : key.toString();
-                writeFieldEntry(keyStr, entry.getValue(), needsQuotingForMapKey(keyStr));
+                writeFieldEntry(keyStr, entry.getValue(), keyNeedsQuoting(map, keyStr),
+                        valueTypeIn(map, key, valueType));
             }
         } finally {
             currentSiblingLiteralKeys = previousSiblings;
@@ -2307,8 +2617,10 @@ public class ToonWriter implements Closeable, Flushable {
     /**
      * Write a single key: value field entry. Handles arrays, collections, key folding,
      * nested objects, and primitives. Caller is responsible for indentation and newlines.
+     * {@code declared} is what the reader expects for the value: its field's type, a map's value type, or Object.
      */
-    private void writeFieldEntry(String keyStr, Object value, boolean keyNeedsQuoting) throws IOException {
+    private void writeFieldEntry(String keyStr, Object value, boolean keyNeedsQuoting, Class<?> declared)
+            throws IOException {
         // Fast path: null and primitive/String field values are the most common field types
         // in a POJO. Writing them directly avoids falling through the container checks
         // (char[], array, Collection, Map) that all miss for leaf values.
@@ -2316,6 +2628,18 @@ public class ToonWriter implements Closeable, Flushable {
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(": null");
             return;
+        }
+        if (typeMetadataEnabled) {
+            Object form = typedForm(value, declared);   // a scalar that carries its type: {$type, value}
+            if (form != value) {
+                writeKeyStringKnown(keyStr, keyNeedsQuoting);
+                out.write(":");
+                out.write('\n');
+                depth++;
+                writeMap((Map<?, ?>) form, false);
+                depth--;
+                return;
+            }
         }
         if (value instanceof String) {
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
@@ -2357,6 +2681,7 @@ public class ToonWriter implements Closeable, Flushable {
         // with a literal sibling key, skip folding for this chain AND suppress folding in
         // the recursive descent so the entire chain emits unfolded.
         if (toonKeyFolding
+                && !typeMetadataEnabled   // a folded path has nowhere to put a $type
                 && !foldingSuppressed
                 && value instanceof Map
                 && isValidFoldableKey(keyStr)
@@ -2374,7 +2699,7 @@ public class ToonWriter implements Closeable, Flushable {
                     out.write(":");
                     out.write('\n');
                     depth++;
-                    writeMap((Map<?, ?>) value);
+                    writeMap((Map<?, ?>) value, needsType(value.getClass(), declared));
                     depth--;
                 } finally {
                     foldingSuppressed = savedSuppressed;
@@ -2389,13 +2714,16 @@ public class ToonWriter implements Closeable, Flushable {
             out.write(':'); out.write(' ');
             writeString(new String((char[]) value));
         } else if (value != null && value.getClass().isArray()) {
-            if (shouldWrapArrayOrCollectionValue(value)) {
+            // With type info off, an @IoShowType array is written in the key[N]: form, its type written only when a
+            // reference wraps it (as before type info was declared-type aware)
+            boolean typed = needsType(value.getClass(), declared);
+            if (shouldWrapArrayOrCollectionValue(value) || (typed && typeMetadataEnabled)) {
                 writeKeyStringKnown(keyStr, keyNeedsQuoting);
                 out.write(":");
                 out.write('\n');
                 depth++;
                 writeIndent();
-                writeArray(value);
+                writeArray(value, typed);
                 depth--;
             } else {
                 int length = ArrayUtilities.getLength(value);
@@ -2412,15 +2740,15 @@ public class ToonWriter implements Closeable, Flushable {
                 }
             }
         } else if (value instanceof Collection) {
-            if (shouldWrapArrayOrCollectionValue(value)
-                    || shouldWriteTypeMetadata(value.getClass())) {
+            boolean typed = needsType(value.getClass(), declared);
+            if (shouldWrapArrayOrCollectionValue(value) || typed) {
                 // When type metadata is needed, use writeCollection (which emits $type/$items).
                 writeKeyStringKnown(keyStr, keyNeedsQuoting);
                 out.write(":");
                 out.write('\n');
                 depth++;
                 writeIndent();
-                writeCollection((Collection<?>) value);
+                writeCollection((Collection<?>) value, typed);
                 depth--;
             } else {
                 Collection<?> coll = (Collection<?>) value;
@@ -2440,12 +2768,14 @@ public class ToonWriter implements Closeable, Flushable {
             // laid out as itself (a list as "key[N]:", a scalar on the key's line)
             Object inPlace = inPlaceOf(value);
             if (inPlace != value) {
-                writeFieldEntry(keyStr, inPlace, keyNeedsQuoting);
+                writeFieldEntry(keyStr, inPlace, keyNeedsQuoting,
+                        typeMetadataEnabled ? contentTypeOf(value) : Object.class);
                 return;
             }
+            boolean typed = needsType(value.getClass(), declared);
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(":");
-            if (value instanceof Map && ((Map<?, ?>) value).isEmpty()) {
+            if (value instanceof Map && ((Map<?, ?>) value).isEmpty() && !typed) {
                 // Empty map field value emits "key:" only — no body, no trailing "{}".
                 // Per §8: nested empty object is "key:" on its own line.
                 return;
@@ -2455,10 +2785,10 @@ public class ToonWriter implements Closeable, Flushable {
                 depth++;
                 if (value instanceof Map) {
                     // writeMap handles its own indentation per entry
-                    writeMap((Map<?, ?>) value);
+                    writeMap((Map<?, ?>) value, typed);
                 } else {
                     // Use writeObject for cycle detection
-                    writeNestedObject(value);
+                    writeNestedObject(value, typed);
                 }
                 depth--;
             } else {
@@ -2474,12 +2804,25 @@ public class ToonWriter implements Closeable, Flushable {
      * Uses depth+2 for nested structures (instead of depth+1 in regular context).
      * Caller is responsible for indentation and newlines.
      */
-    private void writeFieldEntryInline(String keyStr, Object value, boolean keyNeedsQuoting) throws IOException {
+    private void writeFieldEntryInline(String keyStr, Object value, boolean keyNeedsQuoting, Class<?> declared)
+            throws IOException {
         // Fast path: null and primitive/String field values — same as writeFieldEntry
         if (value == null) {
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(": null");
             return;
+        }
+        if (typeMetadataEnabled) {
+            Object form = typedForm(value, declared);   // a scalar that carries its type: {$type, value}
+            if (form != value) {
+                writeKeyStringKnown(keyStr, keyNeedsQuoting);
+                out.write(":");
+                out.write('\n');
+                depth += 2;
+                writeMap((Map<?, ?>) form, false);
+                depth -= 2;
+                return;
+            }
         }
         if (value instanceof String) {
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
@@ -2519,13 +2862,14 @@ public class ToonWriter implements Closeable, Flushable {
             out.write(':'); out.write(' ');
             writeString(new String((char[]) value));
         } else if (value != null && value.getClass().isArray()) {
-            if (shouldWrapArrayOrCollectionValue(value)) {
+            boolean typed = needsType(value.getClass(), declared);   // see writeFieldEntry
+            if (shouldWrapArrayOrCollectionValue(value) || (typed && typeMetadataEnabled)) {
                 writeKeyStringKnown(keyStr, keyNeedsQuoting);
                 out.write(":");
                 out.write('\n');
                 depth += 2;
                 writeIndent();
-                writeArray(value);
+                writeArray(value, typed);
                 depth -= 2;
             } else {
                 int length = ArrayUtilities.getLength(value);
@@ -2546,14 +2890,14 @@ public class ToonWriter implements Closeable, Flushable {
                 }
             }
         } else if (value instanceof Collection) {
-            if (shouldWrapArrayOrCollectionValue(value)
-                    || shouldWriteTypeMetadata(value.getClass())) {
+            boolean typed = needsType(value.getClass(), declared);
+            if (shouldWrapArrayOrCollectionValue(value) || typed) {
                 writeKeyStringKnown(keyStr, keyNeedsQuoting);
                 out.write(":");
                 out.write('\n');
                 depth += 2;
                 writeIndent();
-                writeCollection((Collection<?>) value);
+                writeCollection((Collection<?>) value, typed);
                 depth -= 2;
             } else {
                 Collection<?> coll = (Collection<?>) value;
@@ -2574,21 +2918,23 @@ public class ToonWriter implements Closeable, Flushable {
             // laid out as itself (a list as "key[N]:", a scalar on the key's line)
             Object inPlace = inPlaceOf(value);
             if (inPlace != value) {
-                writeFieldEntryInline(keyStr, inPlace, keyNeedsQuoting);
+                writeFieldEntryInline(keyStr, inPlace, keyNeedsQuoting,
+                        typeMetadataEnabled ? contentTypeOf(value) : Object.class);
                 return;
             }
+            boolean typed = needsType(value.getClass(), declared);
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(":");
-            if (value instanceof Map && ((Map<?, ?>) value).isEmpty()) {
+            if (value instanceof Map && ((Map<?, ?>) value).isEmpty() && !typed) {
                 // Empty map field value in inline list context: just "key:" — see writeFieldEntry.
                 return;
             } else if (value != null && !isPrimitive(value)) {
                 out.write('\n');
                 depth += 2;
                 if (value instanceof Map) {
-                    writeMap((Map<?, ?>) value);
+                    writeMap((Map<?, ?>) value, typed);
                 } else {
-                    writeNestedObject(value);
+                    writeNestedObject(value, typed);
                 }
                 depth -= 2;
             } else {
@@ -2599,7 +2945,7 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
-     * Write a folded entry (key path and value).
+     * Write a folded entry (key path and value). Folding is off with type info on, so only @IoShowType types here.
      */
     private void writeFoldedEntry(String path, Object value) throws IOException {
         if (value instanceof Map && ((Map<?, ?>) value).isEmpty()) {
@@ -2620,7 +2966,7 @@ public class ToonWriter implements Closeable, Flushable {
                 out.write('\n');
                 depth++;
                 writeIndent();
-                writeArray(value);
+                writeArray(value, needsType(value.getClass(), Object.class));
                 depth--;
             } else {
                 int length = ArrayUtilities.getLength(value);
@@ -2629,14 +2975,14 @@ public class ToonWriter implements Closeable, Flushable {
                 writeArrayElements(value, length);
             }
         } else if (value instanceof Collection) {
-            if (shouldWrapArrayOrCollectionValue(value)
-                    || shouldWriteTypeMetadata(value.getClass())) {
+            boolean typed = needsType(value.getClass(), Object.class);
+            if (shouldWrapArrayOrCollectionValue(value) || typed) {
                 writeString(path);
                 out.write(":");
                 out.write('\n');
                 depth++;
                 writeIndent();
-                writeCollection((Collection<?>) value);
+                writeCollection((Collection<?>) value, typed);
                 depth--;
             } else {
                 Collection<?> coll = (Collection<?>) value;
@@ -2650,7 +2996,7 @@ public class ToonWriter implements Closeable, Flushable {
             out.write(":");
             out.write('\n');
             depth++;
-            writeMap((Map<?, ?>) value);
+            writeMap((Map<?, ?>) value, needsType(value.getClass(), Object.class));
             depth--;
         } else if (value != null && !isPrimitive(value)) {
             // Object at end of chain
@@ -2658,7 +3004,7 @@ public class ToonWriter implements Closeable, Flushable {
             out.write(":");
             out.write('\n');
             depth++;
-            writeNestedObject(value);
+            writeNestedObject(value, needsType(value.getClass(), Object.class));
             depth--;
         } else {
             // Primitive value
@@ -2698,16 +3044,17 @@ public class ToonWriter implements Closeable, Flushable {
             } else {
                 out.write('\n');
                 depth++;
+                boolean typed = needsType(key.getClass(), Object.class);
                 if (key instanceof Map) {
-                    writeMap((Map<?, ?>) key);
+                    writeMap((Map<?, ?>) key, typed);
                 } else if (key instanceof Collection) {
                     writeIndent();
-                    writeCollection((Collection<?>) key);
+                    writeCollection((Collection<?>) key, typed);
                 } else if (key.getClass().isArray()) {
                     writeIndent();
-                    writeArray(key);
+                    writeArray(key, typed);
                 } else {
-                    writeNestedObject(key);
+                    writeNestedObject(key, typed);
                 }
                 depth--;
             }
@@ -2723,16 +3070,17 @@ public class ToonWriter implements Closeable, Flushable {
             } else {
                 out.write('\n');
                 depth++;
+                boolean typed = needsType(value.getClass(), Object.class);
                 if (value instanceof Map) {
-                    writeMap((Map<?, ?>) value);
+                    writeMap((Map<?, ?>) value, typed);
                 } else if (value instanceof Collection) {
                     writeIndent();
-                    writeCollection((Collection<?>) value);
+                    writeCollection((Collection<?>) value, typed);
                 } else if (value.getClass().isArray()) {
                     writeIndent();
-                    writeArray(value);
+                    writeArray(value, typed);
                 } else {
-                    writeNestedObject(value);
+                    writeNestedObject(value, typed);
                 }
                 depth--;
             }
@@ -2741,34 +3089,45 @@ public class ToonWriter implements Closeable, Flushable {
         }
     }
 
-    private void writeReferencedComplexMap(Map<?, ?> map, boolean includeId, boolean includeType) throws IOException {
+    /**
+     * A map as its keys and its values, two lists ({$keys, $items}): for keys that are objects, or (type info on)
+     * whose class the reader must be told. {@code keyType} and {@code valueType} are what the reader expects.
+     */
+    private void writeReferencedComplexMap(Map<?, ?> map, boolean includeId, boolean includeType,
+                                           Class<?> keyType, Class<?> valueType) throws IOException {
         if (includeId) {
             writeIndent();
             out.write(idKey);
             out.write(':'); out.write(' ');
-            out.write(Integer.toString(getReferenceId(map)));
+            out.write(Integer.toString(getReferenceId(identityOf(map))));
             out.write('\n');
         }
         if (includeType) {
             writeIndent();
-            writeTypeField(map.getClass());
+            writeTypeField(map);
             out.write('\n');
         }
         writeIndent();
         out.write(keysKey);
         out.write(countMarker(map.size()));
+        if (typeMetadataEnabled) {
+            elementType = keyType;
+        }
         writeCollectionElementsWithHeader(map.keySet());
         out.write('\n');
         writeIndent();
         out.write(itemsKey);
         out.write(countMarker(map.size()));
+        if (typeMetadataEnabled) {
+            elementType = valueType;
+        }
         writeCollectionElementsWithHeader(map.values());
     }
 
     /**
-     * Write a nested object with cycle detection.
+     * Write a nested object with cycle detection, with $type when {@code typed}.
      */
-    private void writeNestedObject(Object obj) throws IOException {
+    private void writeNestedObject(Object obj, boolean typed) throws IOException {
         if (cycleSupport) {
             if (objVisited.get(obj) != 0) {
                 writeIndent();
@@ -2781,7 +3140,7 @@ public class ToonWriter implements Closeable, Flushable {
         }
 
         try {
-            writeObjectFields(obj);
+            writeObjectFields(obj, typed);
         } finally {
             if (!cycleSupport) {
                 exitActivePath(obj);
@@ -2790,9 +3149,9 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
-     * Write a complex object as key: value pairs.
+     * Write a complex object as key: value pairs, with $type when {@code typed}.
      */
-    private void writeObject(Object obj) throws IOException {
+    private void writeObject(Object obj, boolean typed) throws IOException {
         if (cycleSupport) {
             if (writeReferenceIfSeen(obj)) {
                 return;
@@ -2802,7 +3161,7 @@ public class ToonWriter implements Closeable, Flushable {
         }
 
         try {
-            writeObjectFields(obj);
+            writeObjectFields(obj, typed);
         } finally {
             if (!cycleSupport) {
                 exitActivePath(obj);
@@ -2811,11 +3170,11 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
-     * Write an object's fields as key: value pairs.
+     * Write an object's fields as key: value pairs, after its $type when {@code typed}.
      * Iterates WriteFieldPlan directly to avoid intermediate LinkedHashMap allocation.
      * Falls back to getObjectFields() only when @IoAnyGetter is present (rare).
      */
-    private void writeObjectFields(Object obj) throws IOException {
+    private void writeObjectFields(Object obj, boolean typed) throws IOException {
         if (obj == null) {
             return;
         }
@@ -2826,7 +3185,7 @@ public class ToonWriter implements Closeable, Flushable {
         // If @IoAnyGetter is present, fall back to map-based approach (rare path); also for an object whose
         // custom writer gives it as fields (JsonClassWriter.toData)
         if (annMeta.getAnyGetterMethod() != null || isWrittenAsDataFields(obj)) {
-            writeObjectFieldsViaMap(obj);
+            writeObjectFieldsViaMap(obj, typed);
             return;
         }
 
@@ -2834,7 +3193,6 @@ public class ToonWriter implements Closeable, Flushable {
                 WriteOptionsBuilder.getWriteFieldPlans(writeOptions, clazz);
 
         boolean includeId = cycleSupport && isReferenced(obj);
-        boolean includeType = shouldWriteTypeMetadata(clazz);
         boolean wroteField = false;
 
         // Write metadata first
@@ -2843,12 +3201,12 @@ public class ToonWriter implements Closeable, Flushable {
             writeIdField(obj);
             wroteField = true;
         }
-        if (includeType) {
+        if (typed) {
             if (wroteField) {
                 out.write('\n');
             }
             writeIndent();
-            writeTypeField(clazz);
+            writeTypeField(obj);
             wroteField = true;
         }
 
@@ -2886,7 +3244,14 @@ public class ToonWriter implements Closeable, Flushable {
             forceShowType = plan.forceShowType();
             boolean savedMapSimpleKey = currentMapHasSimpleKeyTypeHint;
             currentMapHasSimpleKeyTypeHint = plan.mapKeyTypeIsSimple();
-            writeFieldEntry(key, value, plan.toonKeyNeedsQuoting());
+            if (typeMetadataEnabled) {
+                declareContainerTypes(plan);
+            }
+            writeFieldEntry(key, value, plan.toonKeyNeedsQuoting(), plan.effectiveDeclaredType());
+            if (typeMetadataEnabled) {
+                elementType = Object.class;
+                keyType = Object.class;
+            }
             currentMapHasSimpleKeyTypeHint = savedMapSimpleKey;
             forceShowType = savedForceShowType;
         }
@@ -2965,32 +3330,32 @@ public class ToonWriter implements Closeable, Flushable {
 
     /**
      * Fallback for objects with @IoAnyGetter: uses getObjectFields() to collect all fields
-     * including the extra ones from the annotated method.
+     * including the extra ones from the annotated method (and for objects written as their custom writer's data),
+     * after the object's $type when {@code typed}.
      */
-    private void writeObjectFieldsViaMap(Object obj) throws IOException {
-        Map<String, Object> fields = getObjectFields(obj);
+    private void writeObjectFieldsViaMap(Object obj, boolean typed) throws IOException {
+        Fields fields = getObjectFields(obj);
         boolean includeId = cycleSupport && isReferenced(obj);
-        boolean includeType = shouldWriteTypeMetadata(obj.getClass());
-        if (includeId || includeType) {
+        if (includeId || typed) {
             if (includeId) {
                 writeIndent();
                 writeIdField(obj);
             }
-            if (includeType) {
+            if (typed) {
                 if (includeId) {
                     out.write('\n');
                 }
                 writeIndent();
-                writeTypeField(obj.getClass());
+                writeTypeField(obj);
             }
             if (!fields.isEmpty()) {
                 out.write('\n');
-                writeMapWithSimpleKeys(fields);
+                writeMapWithSimpleKeys(fields, Object.class);
             }
         } else if (fields.isEmpty()) {
             out.write("{}");
         } else {
-            writeMapWithSimpleKeys(fields);
+            writeMapWithSimpleKeys(fields, Object.class);
         }
     }
 
@@ -2998,16 +3363,17 @@ public class ToonWriter implements Closeable, Flushable {
      * Get object fields as a map using the same WriteFieldPlan / Accessor abstraction as JsonWriter.
      * This ensures all write-side annotations are respected: {@code @IoGetter}, {@code @IoFormat},
      * {@code @IoAnyGetter}, {@code @IoProperty}, {@code @IoPropertyOrder}, {@code @IoNaming},
-     * {@code @IoInclude(NON_NULL)}, etc.
+     * {@code @IoInclude(NON_NULL)}, etc. With type info on, each field with the type the reader expects for it.
      */
-    private Map<String, Object> getObjectFields(Object obj) {
+    private Fields getObjectFields(Object obj) {
         if (isDataClass(obj.getClass())) {
             Object d = dataOf(obj);
             if (d instanceof Map) {
                 // The fields its custom writer gives (JsonClassWriter.toData), by name
-                Map<String, Object> fields = new LinkedHashMap<>();
+                Fields fields = new Fields(null);
                 for (Map.Entry<?, ?> entry : ((Map<?, ?>) d).entrySet()) {
-                    fields.put(String.valueOf(entry.getKey()), entry.getValue());
+                    Object value = entry.getValue();
+                    fields.put(String.valueOf(entry.getKey()), value, typeMetadataEnabled ? dataType(value) : null);
                 }
                 return fields;
             }
@@ -3018,7 +3384,7 @@ public class ToonWriter implements Closeable, Flushable {
         List<WriteOptionsBuilder.WriteFieldPlan> plans =
                 WriteOptionsBuilder.getWriteFieldPlans(writeOptions, clazz);
 
-        Map<String, Object> result = new LinkedHashMap<>(plans.size());
+        Fields result = new Fields(null);
 
         for (WriteOptionsBuilder.WriteFieldPlan plan : plans) {
             // Skip non-public enum fields if configured
@@ -3042,7 +3408,7 @@ public class ToonWriter implements Closeable, Flushable {
 
             // Field name already has @IoProperty rename and @IoNaming applied
             String key = plan.accessor().getUniqueFieldName();
-            result.put(key, value);
+            result.put(key, value, typeMetadataEnabled ? plan.effectiveDeclaredType() : null);
         }
 
         // @IoAnyGetter — add extra fields from annotated method
@@ -3056,7 +3422,7 @@ public class ToonWriter implements Closeable, Flushable {
                     for (Map.Entry<String, Object> extra : extras.entrySet()) {
                         Object value = extra.getValue();
                         if (value != null || !skipNullFields) {
-                            result.put(extra.getKey(), value);
+                            result.put(extra.getKey(), value, typeMetadataEnabled ? Object.class : null);
                         }
                     }
                 }
@@ -3207,7 +3573,7 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
-     * Check if all elements in an array are primitives.
+     * Check if all elements in an array are primitives (that carry no $type where the component type is declared).
      */
     private boolean isAllPrimitives(Object array, int length) {
         Class<?> componentType = array.getClass().getComponentType();
@@ -3217,7 +3583,8 @@ public class ToonWriter implements Closeable, Flushable {
 
         for (int i = 0; i < length; i++) {
             Object element = getArrayElement(array, i);
-            if (element != null && !isInlineValue(element)) {
+            if (element != null && (!isInlineValue(element) || (typeMetadataEnabled
+                    && (needsType(element.getClass(), componentType) || holdsTypedContent(element))))) {
                 return false;
             }
         }

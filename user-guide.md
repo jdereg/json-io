@@ -605,10 +605,56 @@ JsonIo.toToon(outputStream, person, writeOptions);
 ```
 
 **TOON defaults with `null` write options:**
-- Type metadata is omitted (`showTypeInfoNever()` behavior).
+- Type metadata is omitted (`showTypeInfoNever()` behavior) — see [Type Info in TOON](#type-info-in-toon).
 - Cycle support is disabled (`cycleSupport(false)`) for ~35-40% faster serialization — TOON targets LLM communication where data is typically acyclic. If a cycle is encountered, a `JsonIoException` is thrown with guidance to enable `cycleSupport(true)`.
 - Meta keys use `$` prefix by default (for JSON5-friendly identifiers).
 - You can override any of these with explicit `WriteOptionsBuilder` settings.
+
+### Type Info in TOON
+
+Without type info the reader builds what the class you ask for declares. Plain data reads back whole that way,
+but a polymorphic graph does not: a `List<Shape>` of circles and squares comes back as `Shape`s (or fails, if
+`Shape` is abstract), a `BigDecimal` in an `Object` field as a `Double`, an exception's cause as a `Throwable`.
+Turn type info on to keep the classes:
+
+```java
+WriteOptions options = new WriteOptionsBuilder().showTypeInfoMinimal().build();
+String toon = JsonIo.toToon(drawing, options);
+Drawing back = JsonIo.fromToon(toon, null).asClass(Drawing.class);   // its circles, squares, BigDecimal, causes
+```
+
+| Setting | Where `$type` is written |
+|---------|--------------------------|
+| none (the default) | nowhere |
+| `showTypeInfoMinimal()` | where the declared type does not determine the class the reader builds — a subclass in a field, list or map, anything in an `Object` slot or a raw list, an exception's cause — and on the root (`omitRootTypeInfo()` leaves that off) |
+| `showTypeInfoMinimalPlus()` | as minimal, but not on an int, short, byte or float in an `Object` slot (it reads back as a long or a double), nor on one date or number type where another is declared (it is converted) |
+| `showTypeInfoAlways()` | on every value but a String, Long, Double or Boolean |
+
+Under minimal, a field, list, set or map that holds its declared class — or the class the reader builds for the
+declared interface (`ArrayList` for `List`, `LinkedHashMap` for `Map`, a list of maps for `List<Map<String, Object>>`)
+— carries no type, so a graph of plain DTOs costs one line, the root's type, over TOON without types. Elements of a
+list nothing declares (a list at the root, a `List<Object>`) carry theirs: a root list of 50 DTOs costs about 24% more
+tokens; inside a field declared `List<Person>`, nothing.
+
+A value that carries its type is written as an object, as JSON writes it:
+
+```
+anything:
+  $type: BigDecimal
+  value: 1.25
+shapes[2]:
+  - $type: com.example.Circle
+    radius: 1
+    name: c
+  - $type: com.example.Square
+    side: 2
+    name: s
+```
+
+A list writes its type with `$items`; a map whose keys the reader must be told the class of (an `Integer` key where no
+key type is declared) is written as `$keys` and `$items`; an `EnumSet` names its enum. A `CompactMap`, `CompactSet` or
+`MultiKeyMap` names its base class and writes its configuration from its writer's `toData`, so a case-insensitive map
+reads back case-insensitive.
 
 ### Reading TOON
 
@@ -788,6 +834,7 @@ This provides comprehensive coverage far exceeding other TOON implementations:
 | Complex object graphs | ✓ Full support | Limited |
 | Cyclic reference handling | ✓ `$id`/`$ref` (or `@id`/`@ref`) | N/A |
 | Generic type preservation | ✓ Via TypeHolder | ✗ |
+| Polymorphic graphs read back (`$type` where the declaration does not give the class) | ✓ [Type info](#type-info-in-toon) | ✗ |
 | Custom type extensibility | ✓ ClassFactory/CustomReader | Limited |
 | Delimiter options (comma/tab/pipe) | ✓ | ✓ |
 
@@ -1766,6 +1813,11 @@ the stack overflows. In TOON, the fields are written instead of what your writer
 it is still written by `write`. json-io's own writers for `Optional`, `OptionalInt`/`Long`/`Double`,
 `AtomicReferenceArray`, `AtomicMarkableReference`, `AtomicStampedReference`, `AtomicIntegerArray`,
 `AtomicLongArray`, `Semaphore`, `CountDownLatch`, `ReentrantLock` and `ReentrantReadWriteLock` use it.
+
+For a writer of a **map or list class**, TOON consults `toData` only where it writes the object's `$type` (with
+[type info](#type-info-in-toon) on): there the `Map` it gives is written after the type, as JSON writes the object;
+elsewhere TOON writes the entries or elements as its own map or list. json-io's writers for `CompactMap`,
+`CompactSet` and `MultiKeyMap` give their configuration this way.
 
 ### Writing Custom ClassFactory (Reader)
 

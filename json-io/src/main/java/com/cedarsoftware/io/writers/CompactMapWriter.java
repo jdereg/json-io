@@ -2,6 +2,7 @@ package com.cedarsoftware.io.writers;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -47,39 +48,10 @@ public class CompactMapWriter implements JsonClassWriter {
     @SuppressWarnings("unchecked")
     public void write(Object obj, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
         CompactMap map = (CompactMap) obj;
-        Map<String, Object> config = map.getConfig();
-        boolean caseSensitive = (Boolean) config.get(CompactMap.CASE_SENSITIVE);
-        int compactSize = (Integer) config.get(CompactMap.COMPACT_SIZE);
-        String ordering = (String) config.get(CompactMap.ORDERING);
-        String singleKey = (String) config.get(CompactMap.SINGLE_KEY);
-        Class<?> mapImplClass = (Class<?>) config.get(CompactMap.MAP_TYPE);
-        String mapImplClassName = mapImplClass.getName();
-
-        StringBuilder configStr = new StringBuilder();
-        configStr.append(mapImplClassName).append('/');
-        configStr.append(caseSensitive ? "CS" : "CI").append('/');
-        configStr.append('S').append(compactSize).append('/');
-        configStr.append(singleKey == null ? "-" : singleKey).append('/');
-
-        String orderCode;
-        switch (ordering) {
-            case CompactMap.SORTED:
-                orderCode = "Sort";
-                break;
-            case CompactMap.REVERSE:
-                orderCode = "Rev";
-                break;
-            case CompactMap.INSERTION:
-                orderCode = "Ins";
-                break;
-            default:
-                orderCode = "Unord";
-        }
-        configStr.append(orderCode);
 
         // "config" field via the JsonGenerator
         gen.writeFieldName("config");
-        gen.writeString(configStr.toString());
+        gen.writeString(configOf(map));
 
         // "data" sub-object via the tree-walker's semantic API — JsonWriter's
         // contextStack will handle structural commas for the inner-object fields.
@@ -116,6 +88,53 @@ public class CompactMapWriter implements JsonClassWriter {
             context.writeImpl(values, showType);
         }
         context.writeEndObject();
+    }
+
+    /**
+     * What {@link #write} writes, as data: the configuration ("config") and the entries ("data"). TOON with type info
+     * writes it, so the map reads back with its configuration (case-insensitivity, ordering, ...).
+     */
+    @Override
+    public Object toData(Object obj) {
+        CompactMap<?, ?> map = (CompactMap<?, ?>) obj;
+        Map<String, Object> data = new LinkedHashMap<>(4);
+        data.put("config", configOf(map));
+        data.put("data", new LinkedHashMap<Object, Object>(map));
+        return data;
+    }
+
+    /** The map's configuration, as {@code CompactMapFactory} reads it: mapClass/CS|CI/S{size}/{singleKey}/{order}. */
+    private static String configOf(CompactMap<?, ?> map) {
+        Map<String, Object> config = map.getConfig();
+        boolean caseSensitive = (Boolean) config.get(CompactMap.CASE_SENSITIVE);
+        int compactSize = (Integer) config.get(CompactMap.COMPACT_SIZE);
+        String ordering = (String) config.get(CompactMap.ORDERING);
+        String singleKey = (String) config.get(CompactMap.SINGLE_KEY);
+        Class<?> mapImplClass = (Class<?>) config.get(CompactMap.MAP_TYPE);
+        String mapImplClassName = mapImplClass.getName();
+
+        StringBuilder configStr = new StringBuilder();
+        configStr.append(mapImplClassName).append('/');
+        configStr.append(caseSensitive ? "CS" : "CI").append('/');
+        configStr.append('S').append(compactSize).append('/');
+        configStr.append(singleKey == null ? "-" : singleKey).append('/');
+
+        String orderCode;
+        switch (ordering) {
+            case CompactMap.SORTED:
+                orderCode = "Sort";
+                break;
+            case CompactMap.REVERSE:
+                orderCode = "Rev";
+                break;
+            case CompactMap.INSERTION:
+                orderCode = "Ins";
+                break;
+            default:
+                orderCode = "Unord";
+        }
+        configStr.append(orderCode);
+        return configStr.toString();
     }
 
     @Override

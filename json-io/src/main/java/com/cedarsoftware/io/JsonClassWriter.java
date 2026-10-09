@@ -202,8 +202,10 @@ public interface JsonClassWriter<T> {
      *   <li>{@link #NO_DATA}, the default: json-io uses the object's fields, as for any object.</li>
      * </ul>
      * Give the values {@code write} writes, so both passes see the same objects. Return new containers each time;
-     * json-io does not keep or change them. Not consulted for a class TOON writes as a map, list, array, number or
-     * string.
+     * json-io does not keep or change them. Not consulted for a class TOON writes as an array, number or string. For
+     * a map or list it is consulted only where TOON writes the map's or list's {@code $type} (type info on): there a
+     * Map is written after the type, as JSON writes the object (a CompactMap's configuration and entries); elsewhere
+     * TOON writes the entries or elements as its own map or list.
      *
      * @param o the object to describe
      * @return its data, or {@link #NO_DATA}
