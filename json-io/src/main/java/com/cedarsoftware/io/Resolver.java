@@ -32,6 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import com.cedarsoftware.io.reflect.AnnotationResolver;
@@ -169,6 +170,7 @@ public abstract class Resolver {
         private String field;
         private final long refId;
         private int index = -1;
+        private BiConsumer<Object, Object> later;
 
         UnresolvedReference(JsonObject referrer, String fld, long id) {
             referencingObj = referrer;
@@ -180,6 +182,13 @@ public abstract class Resolver {
             referencingObj = referrer;
             index = idx;
             refId = id;
+        }
+
+        /** A value a ClassFactory placed in the object it built: {@code later} sets it there. */
+        UnresolvedReference(JsonObject referrer, long id, BiConsumer<Object, Object> later) {
+            referencingObj = referrer;
+            refId = id;
+            this.later = later;
         }
     }
 
@@ -1087,6 +1096,40 @@ public abstract class Resolver {
     }
 
     /**
+     * Resolves a value that a {@link ClassFactory} places into the object it builds, for a type whose contents json-io
+     * cannot set through its fields (the factory fills the object itself, as for {@code AtomicReferenceArray}).
+     * {@code value} is as parsed: null, a scalar, an array, or a {@link JsonObject} (an object or an {@code @ref}). It
+     * is read as {@code type} -- from the field's generics, say -- or as written when {@code type} is {@code Object}.
+     * A {@code @ref} to an object not yet built returns null for now: once the graph is read, {@code later} receives
+     * the factory's object (the target of {@code holder}) and the referenced object, to put it where the null went.
+     *
+     * @param holder the JsonObject the factory is building from
+     * @param value  the parsed value
+     * @param type   the type to read it as; {@code Object.class} to read it as written
+     * @param later  puts a forward-referenced object into the factory's object: (factory's object, referenced object)
+     * @return the value, or null for a reference to an object not yet built
+     */
+    public Object resolveHeldValue(JsonObject holder, Object value, Type type, BiConsumer<Object, Object> later) {
+        if (value instanceof JsonObject && ((JsonObject) value).isReference()) {
+            long id = ((JsonObject) value).getReferenceId();
+            Object target = references.getOrThrow(id).getTarget();
+            if (target != null) {
+                return target;
+            }
+            addUnresolvedReference(new UnresolvedReference(holder, id, later));
+            return null;
+        }
+        if (value instanceof JsonObject && type != Object.class) {
+            // Untyped in the JSON (the parser read it as Object): it is the type the caller knows
+            JsonObject jsonObj = (JsonObject) value;
+            if (jsonObj.getType() == null || jsonObj.getType() == Object.class) {
+                jsonObj.setType(type);
+            }
+        }
+        return toJava(type, value);
+    }
+
+    /**
      * Walk a JsonObject (Map of String keys to values) and return the
      * Java object equivalent filled in as good as possible (everything
      * except unresolved reference fields or unresolved array/collection elements).
@@ -1789,7 +1832,9 @@ public abstract class Resolver {
             JsonObject objReferenced = this.references.getOrThrow(ref.refId);
             Object referencedTarget = objReferenced.getTarget();
 
-            if (ref.index >= 0) {    // Fix []'s and Collections containing a forward reference.
+            if (ref.later != null) {    // a value a ClassFactory placed in the object it built
+                ref.later.accept(objToFix, referencedTarget);
+            } else if (ref.index >= 0) {    // Fix []'s and Collections containing a forward reference.
                 if (objToFix instanceof List) {
                     ((List) objToFix).set(ref.index, referencedTarget);
                 } else if (objToFix instanceof Collection) {   // Patch up Indexable Collections

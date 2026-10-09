@@ -212,7 +212,7 @@ Jackson 3.1):
 
 | | Values read back intact |
 |---|---|
-| json-io, JDK 21 | 97 of 104 |
+| json-io, JDK 21 | 100 of 104 |
 | json-io, JDK 8 | 100 of 104 |
 | Jackson 2.22 (with modules) / Jackson 3.1 | 84 of 104 |
 
@@ -225,7 +225,9 @@ No type in the set reads back intact with Jackson but not with json-io. Where js
 | `Calendar` / `GregorianCalendar` | time zone kept | read back in UTC |
 | An exception with a cause | the cause's class kept | the cause becomes a plain `Throwable` |
 | `BitSet` | its bits | written as `{"empty":false}`; cannot be read back |
-| `AtomicIntegerArray`, `AtomicLongArray` | read back | cannot be written (2.x) or read back (3.x) |
+| `AtomicIntegerArray`, `AtomicLongArray`, `AtomicReferenceArray` | read back | cannot be written (2.x) or read back (3.x) |
+| `AtomicMarkableReference`, `AtomicStampedReference` | read back, with the mark or stamp | written; cannot be read back |
+| `Pattern` with flags (`CASE_INSENSITIVE`) | the flags kept, written inline (`"(?i)a+b"`): it matches what it matched | the flags lost: `"a+b"` reads back case-sensitive |
 | `AbstractMap.SimpleEntry`, `SimpleImmutableEntry` | read back | cannot be read back |
 | `LongAdder`, `DoubleAdder` | read back, as their sum | written as a number; cannot be read back |
 | `InetAddress` | the IP address, and a host name it carries — read back without any DNS lookup | the host name if it has one, else the address; a host name is resolved by DNS when read |
@@ -234,16 +236,23 @@ json-io never looks up a host name while reading: an `InetAddress` is read from 
 travels beside it (`"build-server/10.0.0.7"`). A bare host name is rejected rather than resolved, so input cannot
 make a read wait on DNS or reach a host of its choosing.
 
+`AtomicReferenceArray`, `AtomicMarkableReference` and `AtomicStampedReference` keep their state in fields the JDK
+closes from JDK 17 on, where Gson cannot write them either. json-io writes them through their public methods, as
+`{"array":[...]}` and `{"pair":{"reference":...,"mark":...}}` (or `"stamp"`) — the JSON it and Gson wrote on JDK 8
+and 11, so that JSON reads back too — and reads them back on every JDK: elements and references typed by the field's
+generics (`AtomicReferenceArray<Item>`), objects shared with the rest of the graph kept shared, cycles kept, in JSON
+and TOON.
+
+Of the 104 values, the four json-io does not read back exactly are a `TreeMap` and a `TreeSet` with comparators and an
+`ArrayBlockingQueue`'s capacity, below, and a `Pattern` with flags, which matches what it matched but whose text comes
+back with the flags written inline (`"(?i)a+b"` for `"a+b"` compiled `CASE_INSENSITIVE`).
+
 What neither keeps:
 
 - **A `TreeMap`, `TreeSet` or `ConcurrentSkipList*` comparator** (such as `String.CASE_INSENSITIVE_ORDER`): the
   entries come back in natural order. Comparators are code, not data.
-- **`Pattern` flags** such as `CASE_INSENSITIVE`: the pattern text is kept. Write the flags inline instead
-  (`(?i)a+b`).
 - **An `ArrayBlockingQueue`'s capacity**: its items come back, in a queue as large as its items (as Jackson does).
 - **The enum class of an empty `EnumMap`** read with no declared type: declare the field as `EnumMap<YourEnum, V>`.
-- **`AtomicReferenceArray`, `AtomicMarkableReference` and `AtomicStampedReference` on JDK 9+**, whose state lives in
-  fields the JDK does not open (on JDK 8 json-io reads them back). Neither Jackson version reads them.
 
 ## Standard JSON Output
 
@@ -745,6 +754,7 @@ This provides comprehensive coverage far exceeding other TOON implementations:
 | **Primitives & Wrappers** | `byte`, `Byte`, `short`, `Short`, `int`, `Integer`, `long`, `Long`, `float`, `Float`, `double`, `Double`, `boolean`, `Boolean`, `char`, `Character` | Numeric form or `true`/`false` |
 | **Big Numbers** | `BigInteger`, `BigDecimal` | Numeric (unquoted) |
 | **Atomic Types** | `AtomicInteger`, `AtomicLong`, `AtomicBoolean` | Unwrapped numeric/boolean value |
+| **Atomic Holders** | `AtomicReferenceArray`, `AtomicMarkableReference`, `AtomicStampedReference` | Object: `array` (its elements), or `pair` (`reference` with `mark` or `stamp`) |
 | **Date/Time (java.util)** | `Date`, `Calendar`, `TimeZone` | ISO-8601 string |
 | **Date/Time (java.sql)** | `java.sql.Date`, `Timestamp` | ISO-8601 string |
 | **Date/Time (java.time)** | `Instant`, `Duration`, `Period`, `LocalDate`, `LocalTime`, `LocalDateTime`, `ZonedDateTime`, `OffsetDateTime`, `OffsetTime`, `Year`, `YearMonth`, `MonthDay`, `ZoneId`, `ZoneOffset` | ISO-8601 string |
@@ -764,7 +774,7 @@ This provides comprehensive coverage far exceeding other TOON implementations:
 |---------|---------|-------|
 | Primitive types | ✓ All 8 | ✓ All 8 |
 | Date/Time types | ✓ 18 types | ✓ 8 types |
-| Atomic types | ✓ 3 types | ✗ |
+| Atomic types | ✓ 6 types | ✗ |
 | Geometric types | ✓ 5 types | ✗ |
 | `UUID`, `URI`, `URL` | ✓ | ✗ |
 | `Locale`, `Currency`, `Pattern` | ✓ | ✗ |

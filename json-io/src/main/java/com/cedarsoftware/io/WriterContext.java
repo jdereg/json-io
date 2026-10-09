@@ -164,6 +164,28 @@ public interface WriterContext {
     void writeObjectField(String name, Object value) throws IOException;
 
     /**
+     * Writes a field as json-io writes the fields of an object it walks itself: the value carries {@code @type} only
+     * where a field declared {@code declaredType} needs one under the active type-info setting. For a field declared
+     * {@code Object}, a {@code String}, {@code Long}, {@code Double} or {@code Boolean} is written bare, an
+     * {@code Integer} or an object as typed (unless type info is off); {@link #writeObjectField(String, Object)}
+     * always types the value. Circular references and shared objects are handled as there.
+     * <p>
+     * Example, for a holder whose content is declared {@code Object}:
+     * <pre>{@code
+     * context.writeObjectField("reference", holder.getReference(), Object.class);
+     * }</pre>
+     *
+     * @param name         the field name
+     * @param value        the object to serialize (may be null)
+     * @param declaredType the field's declared type
+     * @throws IOException if an I/O error occurs
+     * @since 4.113.0
+     */
+    default void writeObjectField(String name, Object value, Class<?> declaredType) throws IOException {
+        writeObjectField(name, value);
+    }
+
+    /**
      * Writes a JSON object opening brace "{".
      * <p>
      * This should be paired with {@link #writeEndObject()} to properly close the object.

@@ -67,6 +67,9 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicMarkableReference;
+import java.util.concurrent.atomic.AtomicReferenceArray;
+import java.util.concurrent.atomic.AtomicStampedReference;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
@@ -1085,6 +1088,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     protected void processFields(final Deque<Object> objectStack, final Object obj, int depth) {
         List<WriteFieldPlan> fields = WriteOptionsBuilder.getWriteFieldPlans(writeOptions, obj.getClass());
         int len = fields.size();
+        if (len == 1 && traceAtomicHolder(obj, objectStack, depth)) {
+            return;
+        }
         for (int i = 0; i < len; i++) {
             WriteFieldPlan fieldPlan = fields.get(i);
             if (fieldPlan.skipReferenceTrace()) {
@@ -1100,6 +1106,30 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
             traceVisit(fieldPlan.accessor().retrieve(obj), objectStack, depth);
         }
+    }
+
+    /**
+     * Traces what the atomic holders' writers write: an AtomicReferenceArray's elements, an AtomicMarkableReference's or
+     * AtomicStampedReference's reference. java.util.concurrent keeps them in a field it does not open on JDK 17+ (as
+     * Optional's content), the only field each has: so only a one-field object is asked. False for any other object.
+     */
+    private boolean traceAtomicHolder(Object obj, Deque<Object> objectStack, int depth) {
+        if (obj instanceof AtomicReferenceArray) {
+            AtomicReferenceArray<?> array = (AtomicReferenceArray<?>) obj;
+            for (int i = 0, len = array.length(); i < len; i++) {
+                traceVisit(array.get(i), objectStack, depth);
+            }
+            return true;
+        }
+        if (obj instanceof AtomicMarkableReference) {
+            traceVisit(((AtomicMarkableReference<?>) obj).getReference(), objectStack, depth);
+            return true;
+        }
+        if (obj instanceof AtomicStampedReference) {
+            traceVisit(((AtomicStampedReference<?>) obj).getReference(), objectStack, depth);
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -3189,6 +3219,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // writeImpl call below proceeds straight to the value emission. writeImpl's
         // wrapper handles state transition to FRAME_OBJECT_AFTER_VALUE via markValue.
         writeImpl(value, true);
+    }
+
+    @Override
+    public void writeObjectField(String name, Object value, Class<?> declaredType) throws IOException {
+        gen.writeFieldName(name);
+        // As writeField types a field's value: only where the declared type needs it
+        writeImpl(value, value != null && isForceType(value.getClass(), declaredType));
     }
 
     @Override

@@ -132,6 +132,29 @@ import com.cedarsoftware.util.convert.Converter;
  *   <li><b>LLM Optimization:</b> TOON format reduces token count by 40-50% vs JSON</li>
  * </ul>
  *
+ * <h2>JDK Types Compared with Jackson</h2>
+ * <p>json-io writes and reads back the JDK's own types as well as yours. Of 104 JDK values written and read back as
+ * their declared types, json-io keeps 100 intact on JDK 21 and on JDK 8; Jackson keeps 84 (2.22 with its {@code jdk8}
+ * and {@code JavaTimeModule} modules, and 3.1). No value in the set reads back with Jackson but not with json-io.
+ * Among those json-io keeps and Jackson does not:</p>
+ * <table>
+ *   <caption>Read back by json-io, not by Jackson</caption>
+ *   <tr><th>Type</th><th>json-io</th><th>Jackson</th></tr>
+ *   <tr><td>{@code AtomicReferenceArray}, {@code AtomicIntegerArray}, {@code AtomicLongArray}</td>
+ *       <td>read back, on every JDK</td><td>cannot be written (2.x) or read back (3.x)</td></tr>
+ *   <tr><td>{@code AtomicMarkableReference}, {@code AtomicStampedReference}</td>
+ *       <td>read back with the mark or stamp, on every JDK</td><td>cannot be read back</td></tr>
+ *   <tr><td>{@code Pattern} with flags</td><td>flags kept, written inline ({@code "(?i)a+b"})</td>
+ *       <td>flags lost</td></tr>
+ *   <tr><td>{@code java.sql.Timestamp}</td><td>nanoseconds kept</td><td>milliseconds only</td></tr>
+ *   <tr><td>{@code ZonedDateTime}, {@code OffsetDateTime}</td><td>zone and offset kept</td>
+ *       <td>converted to UTC</td></tr>
+ * </table>
+ * <p>{@code AtomicReferenceArray}, {@code AtomicMarkableReference} and {@code AtomicStampedReference} keep their state
+ * in fields the JDK closes from JDK 17 on (Gson cannot write them there); json-io writes them through their public
+ * methods, in the JSON it and Gson wrote on JDK 8 and 11, and keeps objects shared through them shared and cycles
+ * through them intact. The full table is in the user guide, <i>JDK Types Compared with Jackson</i>.</p>
+ *
  * <h2>Performance Tips</h2>
  * <ul>
  *   <li>Use {@code cycleSupport(false)} for ~35-40% faster writes on acyclic data</li>

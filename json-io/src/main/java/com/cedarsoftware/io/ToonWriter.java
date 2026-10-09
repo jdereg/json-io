@@ -21,6 +21,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicMarkableReference;
+import java.util.concurrent.atomic.AtomicReferenceArray;
+import java.util.concurrent.atomic.AtomicStampedReference;
 
 import java.lang.reflect.Method;
 
@@ -1630,8 +1633,10 @@ public class ToonWriter implements Closeable, Flushable {
             if (elementClass == null) {
                 elementClass = element.getClass();
 
-                // Bail out if @IoAnyGetter (extra dynamic fields could vary)
-                if (AnnotationResolver.getMetadata(elementClass).getAnyGetterMethod() != null) {
+                // Bail out if @IoAnyGetter (extra dynamic fields could vary), or for an atomic holder (its fields are
+                // not its state)
+                if (AnnotationResolver.getMetadata(elementClass).getAnyGetterMethod() != null
+                        || isAtomicHolder(element)) {
                     return null;
                 }
 
@@ -1708,8 +1713,10 @@ public class ToonWriter implements Closeable, Flushable {
             if (elementClass == null) {
                 elementClass = element.getClass();
 
-                // Bail out if @IoAnyGetter (extra dynamic fields could vary)
-                if (AnnotationResolver.getMetadata(elementClass).getAnyGetterMethod() != null) {
+                // Bail out if @IoAnyGetter (extra dynamic fields could vary), or for an atomic holder (its fields are
+                // not its state)
+                if (AnnotationResolver.getMetadata(elementClass).getAnyGetterMethod() != null
+                        || isAtomicHolder(element)) {
                     return null;
                 }
 
@@ -2006,8 +2013,9 @@ public class ToonWriter implements Closeable, Flushable {
             Class<?> clazz = obj.getClass();
             AnnotationResolver.ClassAnnotationMetadata annMeta = AnnotationResolver.getMetadata(clazz);
 
-            // If @IoAnyGetter is present, fall back to map-based approach (rare path)
-            if (annMeta.getAnyGetterMethod() != null) {
+            // If @IoAnyGetter is present, fall back to map-based approach (rare path); also for the atomic holders,
+            // whose state is in fields java.util.concurrent keeps to itself on JDK 17+ (see atomicHolderFields)
+            if (annMeta.getAnyGetterMethod() != null || isAtomicHolder(obj)) {
                 writeObjectInlineViaMap(obj);
                 return;
             }
@@ -2794,8 +2802,8 @@ public class ToonWriter implements Closeable, Flushable {
         Class<?> clazz = obj.getClass();
         AnnotationResolver.ClassAnnotationMetadata annMeta = AnnotationResolver.getMetadata(clazz);
 
-        // If @IoAnyGetter is present, fall back to map-based approach (rare path)
-        if (annMeta.getAnyGetterMethod() != null) {
+        // If @IoAnyGetter is present, fall back to map-based approach (rare path); also for the atomic holders
+        if (annMeta.getAnyGetterMethod() != null || isAtomicHolder(obj)) {
             writeObjectFieldsViaMap(obj);
             return;
         }
@@ -2964,6 +2972,45 @@ public class ToonWriter implements Closeable, Flushable {
         }
     }
 
+    /** One of the atomic holders whose state java.util.concurrent keeps in fields it does not open on JDK 17+. */
+    private static boolean isAtomicHolder(Object obj) {
+        return obj instanceof AtomicReferenceArray || obj instanceof AtomicMarkableReference
+                || obj instanceof AtomicStampedReference;
+    }
+
+    /**
+     * The fields of an atomic holder as json-io wrote them by reflection where it could read them (JDK 8 and 11),
+     * read through its public methods: {@code array} for an {@code AtomicReferenceArray}, {@code pair} (its
+     * {@code reference} and {@code mark} or {@code stamp}, read in one step) for the other two. Null for any other
+     * object. The JSON writers for these types write the same.
+     */
+    private static Map<String, Object> atomicHolderFields(Object obj) {
+        Map<String, Object> fields = new LinkedHashMap<>(2);
+        if (obj instanceof AtomicReferenceArray) {
+            AtomicReferenceArray<?> array = (AtomicReferenceArray<?>) obj;
+            Object[] elements = new Object[array.length()];
+            for (int i = 0; i < elements.length; i++) {
+                elements[i] = array.get(i);
+            }
+            fields.put("array", elements);
+            return fields;
+        }
+        Map<String, Object> pair = new LinkedHashMap<>(4);
+        if (obj instanceof AtomicMarkableReference) {
+            boolean[] mark = new boolean[1];
+            pair.put("reference", ((AtomicMarkableReference<?>) obj).get(mark));
+            pair.put("mark", mark[0]);
+        } else if (obj instanceof AtomicStampedReference) {
+            int[] stamp = new int[1];
+            pair.put("reference", ((AtomicStampedReference<?>) obj).get(stamp));
+            pair.put("stamp", stamp[0]);
+        } else {
+            return null;
+        }
+        fields.put("pair", pair);
+        return fields;
+    }
+
     /**
      * Get object fields as a map using the same WriteFieldPlan / Accessor abstraction as JsonWriter.
      * This ensures all write-side annotations are respected: {@code @IoGetter}, {@code @IoFormat},
@@ -2971,6 +3018,10 @@ public class ToonWriter implements Closeable, Flushable {
      * {@code @IoInclude(NON_NULL)}, etc.
      */
     private Map<String, Object> getObjectFields(Object obj) {
+        Map<String, Object> holderFields = atomicHolderFields(obj);
+        if (holderFields != null) {
+            return holderFields;
+        }
         Class<?> clazz = obj.getClass();
 
         // Use the same cached WriteFieldPlan list that JsonWriter uses
@@ -3222,6 +3273,21 @@ public class ToonWriter implements Closeable, Flushable {
 
         List<WriteOptionsBuilder.WriteFieldPlan> plans =
                 WriteOptionsBuilder.getWriteFieldPlans(writeOptions, current.getClass());
+        if (plans.size() == 1 && isAtomicHolder(current)) {
+            // As it is written (atomicHolderFields): its elements or reference, in its one field, which
+            // java.util.concurrent keeps to itself on JDK 17+ (see JsonWriter.traceAtomicHolder)
+            if (current instanceof AtomicReferenceArray) {
+                AtomicReferenceArray<?> array = (AtomicReferenceArray<?>) current;
+                for (int i = 0, len = array.length(); i < len; i++) {
+                    pushReferenceCandidate(stack, array.get(i));
+                }
+            } else if (current instanceof AtomicMarkableReference) {
+                pushReferenceCandidate(stack, ((AtomicMarkableReference<?>) current).getReference());
+            } else {
+                pushReferenceCandidate(stack, ((AtomicStampedReference<?>) current).getReference());
+            }
+            return;
+        }
         for (int i = 0, len = plans.size(); i < len; i++) {
             WriteOptionsBuilder.WriteFieldPlan plan = plans.get(i);
             if (plan.skipReferenceTrace()) {

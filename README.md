@@ -143,6 +143,14 @@ automatic shared-reference and cycle preservation. No class annotations required
 | Polymorphic types | Automatic -or- use `@IoTypeInfo`/`@JsonTypeInfo` | Requires `@JsonTypeInfo` | Requires `TypeAdapter` |
 | Unknown `$type` values | Graceful fallback to `Map` | Exception | Exception |
 
+**JDK types**
+
+| Capability | json-io | Jackson | Gson |
+|------------|---------|---------|------|
+| JDK values read back intact ([104 surveyed](/user-guide.md#jdk-types-compared-with-jackson)) | 100 on JDK 21 and on JDK 8 | 84 (2.22 with modules, and 3.1) | Not surveyed |
+| `AtomicReferenceArray`, `AtomicMarkableReference`, `AtomicStampedReference` | Read back on every JDK (8–25), shared and cyclic references kept | `AtomicReferenceArray` cannot be written (2.x) or read back (3.x); the other two cannot be read back | Read back on JDK 8 and 11; cannot be written on JDK 17+ |
+| `Pattern` flags (`CASE_INSENSITIVE`) | Kept, written inline (`"(?i)a+b"`) | Lost | Kept on JDK 8; lost on JDK 11; cannot be written on JDK 17+ |
+
 **Map handling**
 
 | Capability | json-io | Jackson | Gson |
@@ -496,6 +504,7 @@ json-io handles your **business objects, DTOs, and Records** automatically—no 
 |----------|-------|
 | Primitives | `byte`, `short`, `int`, `long`, `float`, `double`, `boolean`, `char` + wrappers |
 | Numbers | `BigInteger`, `BigDecimal`, `AtomicInteger`, `AtomicLong`, `AtomicBoolean`, `LongAdder`, `DoubleAdder` |
+| Atomic holders | `AtomicReference`, `AtomicReferenceArray`, `AtomicMarkableReference`, `AtomicStampedReference`, `AtomicIntegerArray`, `AtomicLongArray` |
 | Date/Time | `Date`, `Calendar`, `Instant`, `LocalDate`, `LocalTime`, `LocalDateTime`, `ZonedDateTime`, `OffsetDateTime`, `OffsetTime`, `Duration`, `Period`, `Year`, `YearMonth`, `MonthDay`, `TimeZone`, `ZoneId`, `ZoneOffset`, `java.sql.Date`, `java.sql.Time`, `Timestamp` |
 | Strings | `String`, `StringBuffer`, `StringBuilder`, `char[]`, `CharBuffer` |
 | Binary | `byte[]`, `ByteBuffer`, `BitSet` |
@@ -503,7 +512,7 @@ json-io handles your **business objects, DTOs, and Records** automatically—no 
 | Geometric | `Color`, `Dimension`, `Point`, `Rectangle`, `Insets` |
 | Other | `Enum` (any), `Throwable`, all `Collection`, `Map`, `EnumSet`, `EnumMap`, and array types |
 
-See [JDK types compared with Jackson](/user-guide.md#jdk-types-compared-with-jackson): of 104 JDK values written and read back, json-io keeps 97 intact on JDK 21 and 100 on JDK 8, Jackson 84.
+See [JDK types compared with Jackson](/user-guide.md#jdk-types-compared-with-jackson): of 104 JDK values written and read back, json-io keeps 100 intact on JDK 21 and on JDK 8, Jackson 84.
 See the [complete type comparison](/user-guide.md#toon-supported-types) showing json-io's comprehensive support vs other TOON implementations.
 
 ### Key Features

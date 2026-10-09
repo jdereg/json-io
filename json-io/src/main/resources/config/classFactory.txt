@@ -28,6 +28,9 @@ java.util.OptionalDouble = com.cedarsoftware.io.factory.OptionalDoubleFactory
 # java.util.concurrent.atomic
 java.util.concurrent.atomic.AtomicIntegerArray = com.cedarsoftware.io.factory.AtomicIntegerArrayFactory
 java.util.concurrent.atomic.AtomicLongArray = com.cedarsoftware.io.factory.AtomicLongArrayFactory
+java.util.concurrent.atomic.AtomicReferenceArray = com.cedarsoftware.io.factory.AtomicReferenceArrayFactory
+java.util.concurrent.atomic.AtomicMarkableReference = com.cedarsoftware.io.factory.AtomicMarkableReferenceFactory
+java.util.concurrent.atomic.AtomicStampedReference = com.cedarsoftware.io.factory.AtomicStampedReferenceFactory
 
 # interface instantiates to...
 java.util.Collection = com.cedarsoftware.io.factory.CollectionFactory
