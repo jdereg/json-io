@@ -10,6 +10,12 @@ import com.cedarsoftware.util.ClassUtilities;
  * Use the passed in {@link JsonObject} to source values for constructing your class instance.
  * This is useful for classes that require special construction logic, such as immutable objects,
  * classes with private constructors, or classes that need specific initialization.
+ * <p>
+ * The same factory reads JSON and TOON. One difference shows in the raw values: a list inside the object is an
+ * {@code Object[]} when JSON is read and a {@code List} when TOON is read. The {@link Resolver}'s read methods
+ * ({@code readList}, {@code readArray}, {@code readObject}, ...) take either, so a factory that reads through them
+ * reads both alike; one that reads {@code jObj.get(...)} directly should accept a {@code Collection} as well as an
+ * array.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>

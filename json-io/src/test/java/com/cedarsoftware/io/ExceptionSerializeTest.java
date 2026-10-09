@@ -86,6 +86,20 @@ class ExceptionSerializeTest
             super(s);
         }
     }
+    /**
+     * A stack trace reads from TOON as from JSON. TOON reads a list inside an object as a List where JSON's reader
+     * gives an array; ThrowableFactory cast it to Object[] (ClassCastException).
+     */
+    @Test
+    void testStackTraceReadsFromToon()
+    {
+        String toon = "$type: java.lang.RuntimeException\ndetailMessage: boom\nstackTrace[1]:\n"
+                + "  - declaringClass: A\n    methodName: m\n    fileName: A.java\n    lineNumber: 7";
+        Throwable t = (Throwable) JsonIo.fromToon(toon, null).asClass(null);
+        assertThat(t.getMessage()).isEqualTo("boom");
+        assertThat(t.getStackTrace()).containsExactly(new StackTraceElement("A", "m", "A.java", 7));
+    }
+
     @Test
     void testIllegalArgumentException_withNoCause()
     {

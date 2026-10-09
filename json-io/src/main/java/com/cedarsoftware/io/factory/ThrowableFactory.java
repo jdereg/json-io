@@ -1,5 +1,6 @@
 package com.cedarsoftware.io.factory;
 
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -72,8 +73,9 @@ public class ThrowableFactory implements ClassFactory {
         // Let Converter.convert() handle all the complex logic
         Throwable t = (Throwable) resolver.getConverter().convert(map, c);
 
-        // Handle stack trace separately since it needs special processing
-        Object[] stackTrace = (Object[]) jObj.get(STACK_TRACE);
+        // Handle stack trace separately since it needs special processing. JSON's reader gives an array, TOON's a List.
+        Object trace = jObj.get(STACK_TRACE);
+        Object[] stackTrace = trace instanceof Collection ? ((Collection<?>) trace).toArray() : (Object[]) trace;
         if (stackTrace != null) {
             StackTraceElement[] elements = new StackTraceElement[stackTrace.length];
             for (int i = 0; i < stackTrace.length; i++) {

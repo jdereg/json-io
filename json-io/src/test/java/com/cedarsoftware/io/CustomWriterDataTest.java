@@ -212,6 +212,81 @@ class CustomWriterDataTest {
         assertSame(back, back.next.next);
     }
 
+    // ---------- A factory reads TOON as it reads JSON, through the Resolver's read methods ----------
+
+    /** Its writer writes a list and an array; its factory reads them with readList and readArray. */
+    public static class Bag {
+        final String label;
+        final List<Item> items;
+        final String[] tags;
+
+        Bag(String label, List<Item> items, String[] tags) {
+            this.label = label;
+            this.items = items;
+            this.tags = tags;
+        }
+    }
+
+    public static class Satchel {
+        public Bag bag;
+    }
+
+    public static class BagWriter implements JsonClassWriter<Bag> {
+        @Override
+        public void write(Bag bag, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
+            context.writeObjectField("label", bag.label, String.class);
+            context.writeObjectField("items", bag.items, Object.class);
+            context.writeObjectField("tags", bag.tags, String[].class);
+        }
+
+        @Override
+        public Object toData(Bag bag) {
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("label", bag.label);
+            data.put("items", bag.items);
+            data.put("tags", bag.tags);
+            return data;
+        }
+    }
+
+    public static class BagFactory implements ClassFactory {
+        @Override
+        public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
+            List<Item> items = new ArrayList<>();
+            List<Object> read = resolver.readList(jObj, "items");
+            for (Object item : read) {
+                items.add(item instanceof Item ? (Item) item : (Item) resolver.toJava(Item.class, item));
+            }
+            return new Bag(resolver.readString(jObj, "label"), items, resolver.readArray(jObj, "tags", String[].class));
+        }
+
+        @Override
+        public boolean isObjectFinal() {
+            return true;
+        }
+    }
+
+    /**
+     * A list inside an object is an array as JSON is read and a List as TOON is read (TOON's lists stay lists, as its
+     * Maps mode gives them). The Resolver's read methods take either, so a factory that uses them reads both alike.
+     */
+    @Test
+    void aFactoryReadsToonAsItReadsJsonThroughTheResolver() {
+        WriteOptions write = new WriteOptionsBuilder().addCustomWrittenClass(Bag.class, new BagWriter()).build();
+        ReadOptions read = new ReadOptionsBuilder().addClassFactory(Bag.class, new BagFactory()).build();
+        Satchel satchel = new Satchel();
+        satchel.bag = new Bag("L", new ArrayList<>(Arrays.asList(new Item("a"), new Item("b"))),
+                new String[] {"x", "y"});
+        Satchel fromJson = JsonIo.toJava(JsonIo.toJson(satchel, write), read).asClass(Satchel.class);
+        Satchel fromToon = JsonIo.fromToon(JsonIo.toToon(satchel, write), read).asClass(Satchel.class);
+        for (Satchel back : new Satchel[] {fromJson, fromToon}) {
+            assertEquals("L", back.bag.label);
+            assertEquals("a", back.bag.items.get(0).name);
+            assertEquals("b", back.bag.items.get(1).name);
+            assertEquals(Arrays.asList("x", "y"), Arrays.asList(back.bag.tags));
+        }
+    }
+
     /** TOON writes the writer's data as the object's fields: the factory reads them back. */
     @Test
     void aWritersDataRoundTripsThroughToon() {

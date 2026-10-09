@@ -196,7 +196,8 @@ public interface JsonClassWriter<T> {
      * still written by {@code write}, which this never changes.
      * <ul>
      *   <li>A {@code Map} of name to value: written as the object's fields, with the object's own type and id. Use
-     *       the names your {@link ClassFactory} reads, which reads TOON as it reads JSON.</li>
+     *       the names your {@link ClassFactory} reads, which reads TOON as it reads JSON (a list inside the object is
+     *       a {@code List} from TOON, an array from JSON: see {@link ClassFactory}).</li>
      *   <li>Any other value (a number, a string, a list, another object, or null): written in the object's place, as
      *       an {@code Optional} is written as its content.</li>
      *   <li>{@link #NO_DATA}, the default: json-io uses the object's fields, as for any object.</li>

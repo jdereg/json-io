@@ -1803,7 +1803,8 @@ class BoxWriter implements JsonClassWriter<Box> {
 ```
 
 - **A `Map` of name to value:** TOON writes it as the object's fields, with the object's own type and id, and the
-  reference pass visits its values. Use the names your `ClassFactory` reads; it reads TOON as it reads JSON.
+  reference pass visits its values. Use the names your `ClassFactory` reads; it reads TOON as it reads JSON (see
+  [JSON and TOON](#writing-custom-classfactory-reader) for the one difference, a list inside the object).
 - **Any other value:** written in the object's place, as an `Optional` is written as its content.
 - **`JsonClassWriter.NO_DATA`** (the default): json-io uses the object's fields, as for any object.
 
@@ -1860,6 +1861,11 @@ class MyFactory implements ClassFactory {
 - **`readArray(jsonObj, fieldName, arrayType)`** - Read and deserialize a typed array (e.g., `String[].class`)
 - **`readList(jsonObj, fieldName)`** - Read and deserialize a List
 - **`readMap(jsonObj, fieldName)`** - Read and deserialize a Map
+
+**JSON and TOON:** the same factory reads both. One difference shows in the raw values: a list inside the object is an
+`Object[]` when JSON is read and a `List` when TOON is read (TOON's lists stay lists, as its Maps mode returns them).
+The read methods above take either. A factory that reads `jsonObj.get(...)` directly should accept a `Collection` as
+well as an array.
 
 **A factory that fills its object itself** (`isObjectFinal()` true) — a container whose contents cannot be set through
 fields — reads each value with **`resolveHeldValue(jsonObj, value, type, later)`**. A `@ref` to an object not yet
