@@ -363,11 +363,22 @@ class ResolverValueToTargetTest {
     }
 
     @Test
-    void toJava_mapBranch_createSameTypeMap_defaultLinkedHashMap() {
+    void toJava_mapBranch_createSameTypeMap_concreteClassAskedFor() {
         JsonObject source = mapWithMiniValues();
         Object result = resolver.callToJava(new TypeHolder<ConcurrentHashMap<String, Mini>>() {}.getType(), source);
 
-        // Default branch in createSameTypeMap() uses LinkedHashMap for non-explicit target classes.
+        // A map class that can be built is the one asked for (it was a LinkedHashMap in its place)
+        assertThat(result).isInstanceOf(ConcurrentHashMap.class);
+        assertThat(((Map<?, ?>) result).get("k2")).isInstanceOf(Mini.class);
+    }
+
+    @Test
+    void toJava_mapBranch_createSameTypeMap_defaultLinkedHashMap() {
+        JsonObject source = mapWithMiniValues();
+        Object result = resolver.callToJava(
+                new TypeHolder<java.util.concurrent.ConcurrentMap<String, Mini>>() {}.getType(), source);
+
+        // Default branch in createSameTypeMap(): a LinkedHashMap for a type it does not build (an interface)
         assertThat(result).isInstanceOf(LinkedHashMap.class);
         assertThat(((Map<?, ?>) result).get("k2")).isInstanceOf(Mini.class);
     }

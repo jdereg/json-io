@@ -1068,16 +1068,25 @@ public abstract class Resolver {
     }
 
     /**
-     * Create a new Map of the appropriate type, with the given capacity.
+     * Create a new Map of the class asked for, with the given capacity: that class when it can be built (a
+     * ConcurrentHashMap, a MultiKeyMap, ...), else a LinkedHashMap.
      */
+    @SuppressWarnings("unchecked")
     private Map<Object, Object> createSameTypeMap(Map<?, ?> source, Class<?> targetClass, int size) {
-        // Try to create the target type if specified
-        if (targetClass == LinkedHashMap.class || targetClass == Map.class) {
+        if (targetClass == null || targetClass == LinkedHashMap.class || targetClass == Map.class) {
             return new LinkedHashMap<>(size);
         } else if (targetClass == HashMap.class) {
             return new HashMap<>(size);
         } else if (targetClass == TreeMap.class) {
             return new TreeMap<>();
+        }
+        if (!targetClass.isInterface() && !java.lang.reflect.Modifier.isAbstract(targetClass.getModifiers())
+                && Map.class.isAssignableFrom(targetClass)) {
+            try {
+                return (Map<Object, Object>) ClassUtilities.newInstance(converter, targetClass, (Object) null);
+            } catch (RuntimeException e) {
+                // no way to build it (an EnumMap needs its key type): the default below
+            }
         }
         // Default to LinkedHashMap to preserve insertion order
         return new LinkedHashMap<>(size);

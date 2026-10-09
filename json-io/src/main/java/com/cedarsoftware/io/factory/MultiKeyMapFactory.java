@@ -36,6 +36,13 @@ public class MultiKeyMapFactory implements ClassFactory {
         // Extract config section using Resolver convenience method
         String configStr = resolver.readString(jObj, "config");
 
+        if (configStr == null && jObj.get("entries") == null) {
+            // Written as a plain map (TOON without type info writes a map's entries, no configuration): a default
+            // MultiKeyMap, which json-io fills with those entries as it fills any map
+            MultiKeyMap<Object> plain = new MultiKeyMap<>();
+            jObj.setTarget(plain);
+            return plain;
+        }
         if (configStr == null) {
             throw new JsonIoException("MultiKeyMap requires a config string. Found keys: " + jObj.keySet());
         }

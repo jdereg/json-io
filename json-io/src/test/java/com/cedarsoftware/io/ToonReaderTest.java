@@ -3631,6 +3631,20 @@ class ToonReaderTest {
         assertEquals("ok", typedKeyMap.get(typedKey));
     }
 
+    /** A complex-key map read as the map class asked for is that class, not a LinkedHashMap in its place. */
+    @Test
+    void testToonComplexKeyMapReadsAsTheMapClassAskedFor() {
+        Map<ToonDog, String> keyMap = new LinkedHashMap<>();
+        keyMap.put(new ToonDog("KeyDog", 9), "ok");
+        String keyMapToon = JsonIo.toToon(keyMap, null);
+        for (Class<?> mapClass : new Class<?>[] {java.util.concurrent.ConcurrentHashMap.class,
+                java.util.IdentityHashMap.class, HashMap.class}) {
+            Map<?, ?> back = (Map<?, ?>) JsonIo.fromToon(keyMapToon, null).asClass(mapClass);
+            assertEquals(mapClass, back.getClass(), keyMapToon);
+            assertEquals("ok", back.values().iterator().next());
+        }
+    }
+
     @Test
     void testToonDefaultNoTypeLeavesPolymorphicMembersAsMaps() {
         ToonDog original = new ToonDog("NoTypeDog", 1);

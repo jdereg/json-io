@@ -850,4 +850,35 @@ public class MultiKeyMapTest {
         assertEquals("one element", back.get(new Object[]{"a"}));
         assertEquals("set", back.get(new java.util.LinkedHashSet<>(Arrays.asList("a", "b"))));
     }
+
+    public static class MultiKeyHolder {
+        public MultiKeyMap<String> map;
+    }
+
+    /**
+     * TOON without type info writes a MultiKeyMap's entries with no configuration: as a plain map when its keys are
+     * Strings, as a list of key/value entries when a key has several parts. Read as a MultiKeyMap, either is a default
+     * MultiKeyMap holding them. The plain map failed ("MultiKeyMap requires a config string"), at the root and in a
+     * field; the entry list at the root came back as a LinkedHashMap.
+     */
+    @Test
+    void testMultiKeyMapReadsBackFromToonWithoutTypes() {
+        MultiKeyMap<String> simple = new MultiKeyMap<>();
+        simple.put("single", "w");
+        simple.put("other", "x");
+        MultiKeyMap<String> multi = new MultiKeyMap<>();
+        multi.putMultiKey("v", "a", "b");
+        multi.put("single", "w");
+        for (MultiKeyMap<String> map : Arrays.asList(simple, multi)) {
+            String toon = JsonIo.toToon(map, null);
+            Object back = JsonIo.fromToon(toon, null).asClass(MultiKeyMap.class);
+            assertEquals(MultiKeyMap.class, back.getClass(), toon);
+            assertEquals(map, back, toon);
+
+            MultiKeyHolder holder = new MultiKeyHolder();
+            holder.map = map;
+            toon = JsonIo.toToon(holder, null);
+            assertEquals(map, JsonIo.fromToon(toon, null).asClass(MultiKeyHolder.class).map, toon);
+        }
+    }
 }

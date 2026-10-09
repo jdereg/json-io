@@ -385,6 +385,9 @@ class ToonMinimalTypeTest {
             MultiKeyMap<?> back = (MultiKeyMap<?>) JsonIo.fromToon(toon, null).asClass(null);
             assertEquals("v", back.getMultiKey("a", "b"), toon);
             assertEquals("w", back.get("single"), toon);
+            if (options != ALWAYS) {
+                assertFalse(toon.contains("LinkedHashMap"), toon);   // its entries are plain maps, as in JSON
+            }
         }
     }
 

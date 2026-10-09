@@ -68,12 +68,14 @@ public class MultiKeyMapWriter implements JsonClassWriter {
 
     /**
      * What {@link #write} writes, as data: the configuration ("config") and the entries ("entries", each its
-     * "keys" and "value"). TOON with type info writes it, so the map reads back with its configuration and keys.
+     * "keys" and "value"). TOON with type info writes it, so the map reads back with its configuration and keys. The
+     * entries are an array of maps: its element type says each is a plain map, so none carries a type, as in JSON.
      */
     @Override
+    @SuppressWarnings("unchecked")
     public Object toData(Object obj) {
         MultiKeyMap<?> map = (MultiKeyMap<?>) obj;
-        List<Object> entries = new ArrayList<>(map.size());
+        List<Map<String, Object>> entries = new ArrayList<>(map.size());
         for (Map.Entry<Object, ?> entry : map.entrySet()) {
             Map<String, Object> pair = new LinkedHashMap<>(4);
             pair.put("keys", entry.getKey());
@@ -82,7 +84,7 @@ public class MultiKeyMapWriter implements JsonClassWriter {
         }
         Map<String, Object> data = new LinkedHashMap<>(4);
         data.put("config", configOf(map));
-        data.put("entries", entries);
+        data.put("entries", entries.toArray(new Map[0]));
         return data;
     }
 
