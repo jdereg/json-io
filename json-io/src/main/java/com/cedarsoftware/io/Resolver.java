@@ -462,12 +462,12 @@ public abstract class Resolver {
                     if (typeArgs.length > 0 && containsJsonObjects(col)) {
                         Type elementType = Collection.class.isAssignableFrom(rawClass)
                                 ? collectionElementType(type, typeArgs) : typeArgs[0];
-                        return convertCollectionElements(col, elementType);
+                        return convertCollectionElements(col, rawClass, elementType);
                     }
                 } else if ((rawClass == null || rawClass.isInstance(col)) && containsTypedJsonObjects(col)) {
                     // No element type to go by (a TOON root list read as a raw List): elements that name their own
                     // type are built as it, as JSON's are
-                    return convertCollectionElements(col, Object.class);
+                    return convertCollectionElements(col, rawClass, Object.class);
                 }
             }
             return convertToType(value, type);
@@ -720,6 +720,15 @@ public abstract class Resolver {
         // Check specific collection interfaces (List, Set, Queue)
         // Note: Map is NOT a Collection, so not checked here - Map compatibility
         // is handled by targetClass.isInstance(value) in convertToType()
+        // json-io's own sealable list or set stands in for the List or Set type it was read for (an unmodifiable or
+        // immutable one: sealed once its forward references are in); another collection only for an interface (a
+        // LinkedList asked for is not an ArrayList's to stand in for)
+        boolean sealable = graph instanceof com.cedarsoftware.io.util.SealableList
+                || graph instanceof com.cedarsoftware.io.util.SealableSet
+                || graph instanceof com.cedarsoftware.io.util.SealableNavigableSet;
+        if (!sealable && !rawType.isInterface()) {
+            return false;
+        }
         if (graph instanceof List && List.class.isAssignableFrom(rawType)) {
             return true;
         }
@@ -915,6 +924,44 @@ public abstract class Resolver {
         return false;
     }
 
+    /**
+     * A new, empty map or collection of {@code type}, built as json-io builds it anywhere: an interface or abstract
+     * class as the Converter builds it ({@link #newAbstractContainer}), a class by its no-argument instantiation.
+     * Null when it cannot be built that way (an EnumMap needs its key type).
+     */
+    private Object newContainer(Class<?> type) {
+        try {
+            if (type.isInterface() || java.lang.reflect.Modifier.isAbstract(type.getModifiers())) {
+                return newAbstractContainer(converter, type);
+            }
+            Function<JsonObject, Object> instantiator = DEFAULT_INSTANTIATORS.get(type);
+            Object container = instantiator == null ? null : instantiator.apply(new JsonObject());
+            return container != null ? container : ClassUtilities.newInstance(converter, type, (Object) null);
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    /**
+     * The map or collection the Converter builds for an interface or abstract class: a ConcurrentMap's
+     * ConcurrentHashMapNullSafe (JSON carries null values), a BlockingQueue's unbounded LinkedBlockingQueue, an
+     * AbstractList's ArrayList. Thrown when it builds none (an interface of the caller's own).
+     */
+    static Object newAbstractContainer(Converter converter, Class<?> type) {
+        Object empty = Map.class.isAssignableFrom(type) ? new LinkedHashMap<>() : new Object[0];
+        try {
+            Object container = converter.convert(empty, type);
+            if (type.isInstance(container)) {
+                return container;
+            }
+        } catch (RuntimeException ignore) {
+            // reported below
+        }
+        throw new JsonIoException("Unable to instantiate " + type.getName() + ": json-io knows no "
+                + (Map.class.isAssignableFrom(type) ? "map" : "collection") + " class that is one. Read it as a "
+                + "concrete class, or register a ClassFactory for it (ReadOptionsBuilder.addClassFactory).");
+    }
+
     /** The empty {@code Optional} (or {@code OptionalInt}, ...) for one of the Optional types, else null. */
     private static Object emptyIfOptional(Class<?> c) {
         if (c == Optional.class) {
@@ -1009,8 +1056,14 @@ public abstract class Resolver {
      * Returns a new Collection with the same type containing converted elements.
      * Used when parsing TOON format where collections contain raw JsonObjects.
      */
-    private Collection<Object> convertCollectionElements(Collection<?> col, Type elementType) {
-        Collection<Object> result = createSameTypeCollection(col, col.size());
+    @SuppressWarnings("unchecked")
+    private Collection<Object> convertCollectionElements(Collection<?> col, Class<?> askedFor, Type elementType) {
+        // The collection class asked for (a LinkedList, a BlockingQueue's LinkedBlockingQueue), else one like col
+        Collection<Object> result = askedFor != null && Collection.class.isAssignableFrom(askedFor)
+                && !askedFor.isInstance(col) ? (Collection<Object>) newContainer(askedFor) : null;
+        if (result == null) {
+            result = createSameTypeCollection(col, col.size());
+        }
         for (Object element : col) {
             result.add(toJava(elementType, element));
         }
@@ -1069,7 +1122,7 @@ public abstract class Resolver {
 
     /**
      * Create a new Map of the class asked for, with the given capacity: that class when it can be built (a
-     * ConcurrentHashMap, a MultiKeyMap, ...), else a LinkedHashMap.
+     * ConcurrentHashMap, a MultiKeyMap, a ConcurrentMap's ConcurrentHashMapNullSafe, ...), else a LinkedHashMap.
      */
     @SuppressWarnings("unchecked")
     private Map<Object, Object> createSameTypeMap(Map<?, ?> source, Class<?> targetClass, int size) {
@@ -1080,12 +1133,10 @@ public abstract class Resolver {
         } else if (targetClass == TreeMap.class) {
             return new TreeMap<>();
         }
-        if (!targetClass.isInterface() && !java.lang.reflect.Modifier.isAbstract(targetClass.getModifiers())
-                && Map.class.isAssignableFrom(targetClass)) {
-            try {
-                return (Map<Object, Object>) ClassUtilities.newInstance(converter, targetClass, (Object) null);
-            } catch (RuntimeException e) {
-                // no way to build it (an EnumMap needs its key type): the default below
+        if (Map.class.isAssignableFrom(targetClass)) {
+            Object map = newContainer(targetClass);
+            if (map != null) {
+                return (Map<Object, Object>) map;
             }
         }
         // Default to LinkedHashMap to preserve insertion order
@@ -1534,6 +1585,10 @@ public abstract class Resolver {
     private static final InstantiationPlan REFLECTION_PLAN = (jsonObj, resolver, targetType) ->
             resolver.createInstanceUsingType(jsonObj);
 
+    /** A map or collection interface or abstract class: the container the Converter builds for it. */
+    private static final InstantiationPlan ABSTRACT_CONTAINER_PLAN = (jsonObj, resolver, targetType) ->
+            jsonObj.setTarget(newAbstractContainer(resolver.converter, targetType));
+
     /** Class found in DEFAULT_INSTANTIATORS — apply the no-arg lambda; null result chains to {@code fallback}. */
     private static final class DefaultLambdaPlan implements InstantiationPlan {
         private final Function<JsonObject, Object> instantiator;
@@ -1635,6 +1690,14 @@ public abstract class Resolver {
         }
         if (factory != null) {
             return new FactoryPlan(factory);
+        }
+
+        // 4b. A map or collection type nothing instantiates (an interface, an abstract class) and no factory names:
+        //     built as the Converter builds it (ConcurrentMap: ConcurrentHashMapNullSafe; BlockingQueue: an unbounded
+        //     LinkedBlockingQueue; AbstractList: ArrayList).
+        if ((Map.class.isAssignableFrom(targetType) || Collection.class.isAssignableFrom(targetType))
+                && (targetType.isInterface() || java.lang.reflect.Modifier.isAbstract(targetType.getModifiers()))) {
+            return ABSTRACT_CONTAINER_PLAN;
         }
 
         // 5. Array.

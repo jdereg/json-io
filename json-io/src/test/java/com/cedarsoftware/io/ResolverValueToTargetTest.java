@@ -373,12 +373,26 @@ class ResolverValueToTargetTest {
     }
 
     @Test
-    void toJava_mapBranch_createSameTypeMap_defaultLinkedHashMap() {
+    void toJava_mapBranch_createSameTypeMap_interfaceAskedFor() {
         JsonObject source = mapWithMiniValues();
         Object result = resolver.callToJava(
                 new TypeHolder<java.util.concurrent.ConcurrentMap<String, Mini>>() {}.getType(), source);
 
-        // Default branch in createSameTypeMap(): a LinkedHashMap for a type it does not build (an interface)
+        // An interface: built as the Converter builds it
+        assertThat(result).isInstanceOf(com.cedarsoftware.util.ConcurrentHashMapNullSafe.class);
+        assertThat(((Map<?, ?>) result).get("k2")).isInstanceOf(Mini.class);
+    }
+
+    /** A map interface no class json-io knows is. */
+    public interface MiniMap<V> extends Map<String, V> {
+    }
+
+    @Test
+    void toJava_mapBranch_createSameTypeMap_defaultLinkedHashMap() {
+        JsonObject source = mapWithMiniValues();
+        Object result = resolver.callToJava(new TypeHolder<MiniMap<Mini>>() {}.getType(), source);
+
+        // Default branch in createSameTypeMap(): a LinkedHashMap for a type it cannot build
         assertThat(result).isInstanceOf(LinkedHashMap.class);
         assertThat(((Map<?, ?>) result).get("k2")).isInstanceOf(Mini.class);
     }
