@@ -2,6 +2,7 @@ package com.cedarsoftware.io.writers;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Collections;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.cedarsoftware.io.JsonClassWriter;
@@ -72,5 +73,11 @@ public class ReentrantReadWriteLockWriter implements JsonClassWriter {
         JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(
                 output, context.getWriteOptions());
         writePrimitiveForm(o, bridge, context);
+    }
+
+    /** {@code fair}, as the JSON object form writes it and the factory reads it. */
+    @Override
+    public Object toData(Object obj) {
+        return Collections.singletonMap("fair", ((ReentrantReadWriteLock) obj).isFair());
     }
 }

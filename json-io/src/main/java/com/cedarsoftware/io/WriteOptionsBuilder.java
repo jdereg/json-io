@@ -8,15 +8,19 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.RandomAccess;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -2200,6 +2204,24 @@ public class WriteOptionsBuilder {
         private volatile ClassValue<List<Accessor>> accessorsCache = newAccessorsCache();
         private volatile ClassValue<List<WriteFieldPlan>> writeFieldPlanCache = newWriteFieldPlanCache();
         private volatile ClassValue<Map<String, Field>> classMetaCache = newClassMetaCache();
+        // How TOON writes a class: ToonWriter's own categories, plus DATA for a custom writer that gives its objects as
+        // data (JsonClassWriter.toData), which depends on these options' writers
+        private volatile ClassValue<ToonWriter.ToonWriteType> toonWriteTypeCache = newToonWriteTypeCache();
+
+        private ClassValue<ToonWriter.ToonWriteType> newToonWriteTypeCache() {
+            return new ClassValue<ToonWriter.ToonWriteType>() {
+                @Override
+                protected ToonWriter.ToonWriteType computeValue(Class<?> c) {
+                    ToonWriter.ToonWriteType type = ToonWriter.writeTypeOf(c);
+                    return type == ToonWriter.ToonWriteType.POJO && findDataWriter(DefaultWriteOptions.this, c) != null
+                            ? ToonWriter.ToonWriteType.DATA : type;
+                }
+            };
+        }
+
+        ToonWriter.ToonWriteType getToonWriteType(Class<?> c) {
+            return toonWriteTypeCache.get(c);
+        }
 
         private ClassValue<List<Accessor>> newAccessorsCache() {
             return new ClassValue<List<Accessor>>() {
@@ -2689,6 +2711,7 @@ public class WriteOptionsBuilder {
             accessorsCache = newAccessorsCache();
             writeFieldPlanCache = newWriteFieldPlanCache();
             customWriterGateCache = newCustomWriterGateCache();
+            toonWriteTypeCache = newToonWriteTypeCache();
         }
 
         private List<WriteFieldPlan> buildWriteFieldPlans(final Class<?> clazz) {
@@ -2705,7 +2728,7 @@ public class WriteOptionsBuilder {
                 reorderPlans(plans, order);
             }
 
-            return Collections.unmodifiableList(plans);
+            return new WriteFieldPlanList(plans, clazz == null ? null : findDataWriter(this, clazz));
         }
 
         /**
@@ -3000,6 +3023,85 @@ public class WriteOptionsBuilder {
             plans.add(WriteFieldPlan.create(accessor, options));
         }
         return plans;
+    }
+
+    /**
+     * A class's write plans, as cached per {@link WriteOptions}, with the class's custom writer when that writer gives
+     * its objects as data ({@link JsonClassWriter#toData}). The reference pass and TOON fetch the plans for every
+     * object they walk, so the writer rides along at no extra lookup. Unmodifiable.
+     */
+    static final class WriteFieldPlanList extends AbstractList<WriteFieldPlan> implements RandomAccess {
+        private final WriteFieldPlan[] plans;
+        final JsonClassWriter dataWriter;
+
+        WriteFieldPlanList(List<WriteFieldPlan> plans, JsonClassWriter dataWriter) {
+            this.plans = plans.toArray(new WriteFieldPlan[0]);
+            this.dataWriter = dataWriter;
+        }
+
+        @Override
+        public WriteFieldPlan get(int index) {
+            return plans[index];
+        }
+
+        @Override
+        public int size() {
+            return plans.length;
+        }
+
+        @Override
+        public Iterator<WriteFieldPlan> iterator() {
+            // Over the array: AbstractList's iterator re-checks size and modification count on every step
+            return new Iterator<WriteFieldPlan>() {
+                private int next;
+
+                @Override
+                public boolean hasNext() {
+                    return next < plans.length;
+                }
+
+                @Override
+                public WriteFieldPlan next() {
+                    if (next >= plans.length) {
+                        throw new NoSuchElementException();
+                    }
+                    return plans[next++];
+                }
+            };
+        }
+    }
+
+    /**
+     * The custom writer that writes objects of {@code clazz}, if it gives them as data
+     * ({@link JsonClassWriter#toData}); else null. Cached with the class's write plans.
+     */
+    static JsonClassWriter getDataWriter(WriteOptions options, Class<?> clazz) {
+        return getDataWriter(options, clazz, getWriteFieldPlans(options, clazz));
+    }
+
+    /** As {@link #getDataWriter(WriteOptions, Class)}, from the class's write plans already in hand. */
+    static JsonClassWriter getDataWriter(WriteOptions options, Class<?> clazz, List<WriteFieldPlan> plans) {
+        if (plans instanceof WriteFieldPlanList) {
+            return ((WriteFieldPlanList) plans).dataWriter;
+        }
+        return findDataWriter(options, clazz);
+    }
+
+    private static JsonClassWriter findDataWriter(WriteOptions options, Class<?> clazz) {
+        if (clazz == null || options.isNotCustomWrittenClass(clazz)) {
+            return null;
+        }
+        JsonClassWriter writer = options.getCustomWriter(clazz);
+        return writer != null && overridesToData(writer) ? writer : null;
+    }
+
+    /** True when {@code writer} overrides {@link JsonClassWriter#toData}, rather than inheriting "no data". */
+    static boolean overridesToData(JsonClassWriter writer) {
+        try {
+            return writer.getClass().getMethod("toData", Object.class).getDeclaringClass() != JsonClassWriter.class;
+        } catch (NoSuchMethodException | SecurityException e) {
+            return false;
+        }
     }
 
     static final class WriteFieldPlan {

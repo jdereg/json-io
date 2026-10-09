@@ -95,4 +95,10 @@ public class OptionalWriter implements JsonClassWriter {
                 output, context.getWriteOptions());
         writePrimitiveForm(obj, bridge, context);
     }
+
+    /** Its content, written in its place (null when empty), as TOON writes it and the reference pass traces it. */
+    @Override
+    public Object toData(Object obj) {
+        return ((Optional<?>) obj).orElse(null);
+    }
 }

@@ -2,6 +2,8 @@ package com.cedarsoftware.io.writers;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.Semaphore;
 
 import com.cedarsoftware.io.JsonClassWriter;
@@ -74,5 +76,15 @@ public class SemaphoreWriter implements JsonClassWriter {
         JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(
                 output, context.getWriteOptions());
         writePrimitiveForm(o, bridge, context);
+    }
+
+    /** {@code permits} and {@code fair}, as the JSON object form writes them and the factory reads them. */
+    @Override
+    public Object toData(Object obj) {
+        Semaphore semaphore = (Semaphore) obj;
+        Map<String, Object> data = new LinkedHashMap<>(4);
+        data.put("permits", semaphore.availablePermits());
+        data.put("fair", semaphore.isFair());
+        return data;
     }
 }

@@ -21,9 +21,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicMarkableReference;
-import java.util.concurrent.atomic.AtomicReferenceArray;
-import java.util.concurrent.atomic.AtomicStampedReference;
 
 import java.lang.reflect.Method;
 
@@ -197,28 +194,84 @@ public class ToonWriter implements Closeable, Flushable {
 
     // Cached type dispatch enum - mirrors JsonWriter's writeTypeCache pattern.
     // Computed once per class, avoids repeated instanceof + Converter.isConversionSupportedFor() calls.
-    private enum ToonWriteType {
+    // DATA: an object its custom writer gives as data (JsonClassWriter.toData), written as that data: a Map as the
+    // object's fields, anything else in the object's place. Depends on the writers in the WriteOptions, so it comes
+    // from the options' own cache (DefaultWriteOptions.getToonWriteType); the static cache below never holds it.
+    enum ToonWriteType {
         ARRAY, COLLECTION, MAP, STRING, NUMBER, BOOLEAN, CHARACTER,
-        CONVERTER_SUPPORTED, VALUE_METHOD, POJO
+        CONVERTER_SUPPORTED, VALUE_METHOD, POJO, DATA
+    }
+
+    /** How TOON writes {@code type} whatever the custom writers: every category but DATA. */
+    static ToonWriteType writeTypeOf(Class<?> type) {
+        if (type.isArray()) return ToonWriteType.ARRAY;
+        if (Collection.class.isAssignableFrom(type)) return ToonWriteType.COLLECTION;
+        if (Map.class.isAssignableFrom(type)) return ToonWriteType.MAP;
+        if (type == String.class) return ToonWriteType.STRING;
+        if (Number.class.isAssignableFrom(type)) return ToonWriteType.NUMBER;
+        if (type == Boolean.class) return ToonWriteType.BOOLEAN;
+        if (type == Character.class) return ToonWriteType.CHARACTER;
+        if (Converter.isConversionSupportedFor(type, String.class)) return ToonWriteType.CONVERTER_SUPPORTED;
+        if (AnnotationResolver.getMetadata(type).getValueMethod() != null) return ToonWriteType.VALUE_METHOD;
+        return ToonWriteType.POJO;
     }
 
     private static final ClassValue<ToonWriteType> writeTypeCache = new ClassValue<ToonWriteType>() {
         @Override
         protected ToonWriteType computeValue(Class<?> type) {
-            if (type.isArray()) return ToonWriteType.ARRAY;
-            if (Collection.class.isAssignableFrom(type)) return ToonWriteType.COLLECTION;
-            if (Map.class.isAssignableFrom(type)) return ToonWriteType.MAP;
-            if (type == String.class) return ToonWriteType.STRING;
-            if (Number.class.isAssignableFrom(type)) return ToonWriteType.NUMBER;
-            if (type == Boolean.class) return ToonWriteType.BOOLEAN;
-            if (type == Character.class) return ToonWriteType.CHARACTER;
-            if (Converter.isConversionSupportedFor(type, String.class)) return ToonWriteType.CONVERTER_SUPPORTED;
-            if (AnnotationResolver.getMetadata(type).getValueMethod() != null) return ToonWriteType.VALUE_METHOD;
-            return ToonWriteType.POJO;
+            return writeTypeOf(type);
         }
     };
 
+    /**
+     * True when TOON writes objects of {@code type} as the data their custom writer gives (JsonClassWriter.toData).
+     * Asked only of what the static category calls a POJO: the hot switches below stay on the static cache, so the
+     * other values never pay for it (and the methods holding those switches stay small enough to inline).
+     */
+    private boolean isDataClass(Class<?> type) {
+        if (writeTypeCache.get(type) != ToonWriteType.POJO) {
+            return false;
+        }
+        if (defaultWriteOptions != null) {
+            return defaultWriteOptions.getToonWriteType(type) == ToonWriteType.DATA;
+        }
+        return WriteOptionsBuilder.getDataWriter(writeOptions, type) != null;
+    }
+
+    // The last object asked for its data, and that data: isPrimitive and the writer ask in turn for the same object
+    private Object dataSource;
+    private Object data;
+
+    /** The data {@code obj}'s custom writer gives for it (a DATA object): a Map, another value, or NO_DATA. */
+    private Object dataOf(Object obj) {
+        if (obj != dataSource) {
+            data = WriteOptionsBuilder.getDataWriter(writeOptions, obj.getClass()).toData(obj);
+            dataSource = obj;
+        }
+        return data;
+    }
+
+    /** True for data written in the object's place (an Optional's content) rather than as its fields. */
+    private static boolean isInPlace(Object data) {
+        return data != JsonClassWriter.NO_DATA && !(data instanceof Map);
+    }
+
+    /** What is written in {@code value}'s place: its data when that is not a Map of fields, else {@code value}. */
+    private Object inPlaceOf(Object value) {
+        if (value == null || value instanceof Map || !isDataClass(value.getClass())) {
+            return value;
+        }
+        Object d = dataOf(value);
+        return isInPlace(d) ? d : value;
+    }
+
+    /** An object written as the fields its custom writer gives (a Map from toData). */
+    private boolean isWrittenAsDataFields(Object obj) {
+        return isDataClass(obj.getClass()) && dataOf(obj) instanceof Map;
+    }
+
     private final WriteOptions writeOptions;
+    private final WriteOptionsBuilder.DefaultWriteOptions defaultWriteOptions;   // null for other implementations
     private final Writer out;
     private final char delimiter;  // Default comma, configurable to pipe or tab
     private final Map<String, Boolean> quoteDecisionCache;
@@ -320,6 +373,8 @@ public class ToonWriter implements Closeable, Flushable {
 
     ToonWriter(Writer out, WriteOptions writeOptions) {
         this.writeOptions = writeOptions == null ? WriteOptionsBuilder.getDefaultWriteOptions() : writeOptions;
+        this.defaultWriteOptions = this.writeOptions instanceof WriteOptionsBuilder.DefaultWriteOptions
+                ? (WriteOptionsBuilder.DefaultWriteOptions) this.writeOptions : null;
         this.out = out;
         this.delimiter = this.writeOptions.getToonDelimiter();
         if (delimiter == '\t') {
@@ -477,46 +532,6 @@ public class ToonWriter implements Closeable, Flushable {
             return;
         }
 
-        // Optional / OptionalInt / OptionalLong / OptionalDouble — always write
-        // Jackson-compatible primitive form (bare value or null). TOON does not
-        // support the legacy object form since it's too new to need backward-compat.
-        if (value instanceof java.util.Optional) {
-            java.util.Optional<?> opt = (java.util.Optional<?>) value;
-            if (opt.isPresent()) {
-                writeValue(opt.get());
-            } else {
-                out.write("null");
-            }
-            return;
-        }
-        if (value instanceof java.util.OptionalInt) {
-            java.util.OptionalInt opt = (java.util.OptionalInt) value;
-            if (opt.isPresent()) {
-                out.write(toCachedLongString(opt.getAsInt()));
-            } else {
-                out.write("null");
-            }
-            return;
-        }
-        if (value instanceof java.util.OptionalLong) {
-            java.util.OptionalLong opt = (java.util.OptionalLong) value;
-            if (opt.isPresent()) {
-                out.write(toCachedLongString(opt.getAsLong()));
-            } else {
-                out.write("null");
-            }
-            return;
-        }
-        if (value instanceof java.util.OptionalDouble) {
-            java.util.OptionalDouble opt = (java.util.OptionalDouble) value;
-            if (opt.isPresent()) {
-                writeNumber(opt.getAsDouble());
-            } else {
-                out.write("null");
-            }
-            return;
-        }
-
         // Unwrap a resolved-Maps-graph carrier (JsonObjectArray / JsonObjectMap) to a plain
         // container so its @items/@keys payload is written instead of an empty body.
         value = unwrapCarrier(value);
@@ -564,9 +579,21 @@ public class ToonWriter implements Closeable, Flushable {
                 }
                 break;
             case POJO:
-                writeObject(value);
+                writePojo(value);
                 break;
         }
+    }
+
+    /** An object: as the data its custom writer gives in its place (an Optional's content), else its fields. */
+    private void writePojo(Object value) throws IOException {
+        if (isDataClass(value.getClass())) {
+            Object d = dataOf(value);
+            if (isInPlace(d)) {
+                writeValue(d);
+                return;
+            }
+        }
+        writeObject(value);
     }
 
     private boolean isReferenceable(Object value) {
@@ -1403,7 +1430,7 @@ public class ToonWriter implements Closeable, Flushable {
         // Check if all elements are primitives
         boolean allPrimitives = true;
         for (Object element : collection) {
-            if (element != null && !isPrimitive(element)) {
+            if (element != null && !isInlineValue(element)) {
                 allPrimitives = false;
                 break;
             }
@@ -1633,10 +1660,10 @@ public class ToonWriter implements Closeable, Flushable {
             if (elementClass == null) {
                 elementClass = element.getClass();
 
-                // Bail out if @IoAnyGetter (extra dynamic fields could vary), or for an atomic holder (its fields are
-                // not its state)
+                // Bail out if @IoAnyGetter (extra dynamic fields could vary), or when a custom writer gives the
+                // objects as data (their fields are not what is written)
                 if (AnnotationResolver.getMetadata(elementClass).getAnyGetterMethod() != null
-                        || isAtomicHolder(element)) {
+                        || isDataClass(elementClass)) {
                     return null;
                 }
 
@@ -1713,10 +1740,10 @@ public class ToonWriter implements Closeable, Flushable {
             if (elementClass == null) {
                 elementClass = element.getClass();
 
-                // Bail out if @IoAnyGetter (extra dynamic fields could vary), or for an atomic holder (its fields are
-                // not its state)
+                // Bail out if @IoAnyGetter (extra dynamic fields could vary), or when a custom writer gives the
+                // objects as data (their fields are not what is written)
                 if (AnnotationResolver.getMetadata(elementClass).getAnyGetterMethod() != null
-                        || isAtomicHolder(element)) {
+                        || isDataClass(elementClass)) {
                     return null;
                 }
 
@@ -1916,6 +1943,12 @@ public class ToonWriter implements Closeable, Flushable {
                 writeArray(element);
             }
         } else {
+            // An object whose writer gives it as data written in its place (an Optional's content): that value
+            Object inPlace = inPlaceOf(element);
+            if (inPlace != element) {
+                writeListElement(inPlace);
+                return;
+            }
             // Complex object - first field on hyphen line
             writeObjectInline(element);
         }
@@ -2013,9 +2046,9 @@ public class ToonWriter implements Closeable, Flushable {
             Class<?> clazz = obj.getClass();
             AnnotationResolver.ClassAnnotationMetadata annMeta = AnnotationResolver.getMetadata(clazz);
 
-            // If @IoAnyGetter is present, fall back to map-based approach (rare path); also for the atomic holders,
-            // whose state is in fields java.util.concurrent keeps to itself on JDK 17+ (see atomicHolderFields)
-            if (annMeta.getAnyGetterMethod() != null || isAtomicHolder(obj)) {
+            // If @IoAnyGetter is present, fall back to map-based approach (rare path); also for an object whose
+            // custom writer gives it as fields (JsonClassWriter.toData)
+            if (annMeta.getAnyGetterMethod() != null || isWrittenAsDataFields(obj)) {
                 writeObjectInlineViaMap(obj);
                 return;
             }
@@ -2284,22 +2317,6 @@ public class ToonWriter implements Closeable, Flushable {
             out.write(": null");
             return;
         }
-        // Optional types — unwrap and write the bare value or null (Jackson-style).
-        // TOON is new enough that there is no legacy object form to preserve.
-        // An Optional's content is written as the field's own value: an object or a list inside one was written on
-        // the key's line, so its fields landed at the parent's level and the document read back wrong.
-        if (value instanceof java.util.Optional) {
-            writeFieldEntry(keyStr, ((java.util.Optional<?>) value).orElse(null), keyNeedsQuoting);
-            return;
-        }
-        if (value instanceof java.util.OptionalInt
-                || value instanceof java.util.OptionalLong
-                || value instanceof java.util.OptionalDouble) {
-            writeKeyStringKnown(keyStr, keyNeedsQuoting);
-            out.write(':'); out.write(' ');
-            writeValue(value);
-            return;
-        }
         if (value instanceof String) {
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(':'); out.write(' ');
@@ -2419,6 +2436,13 @@ public class ToonWriter implements Closeable, Flushable {
                 }
             }
         } else {
+            // An object whose writer gives it as data written in its place (an Optional's content): that value,
+            // laid out as itself (a list as "key[N]:", a scalar on the key's line)
+            Object inPlace = inPlaceOf(value);
+            if (inPlace != value) {
+                writeFieldEntry(keyStr, inPlace, keyNeedsQuoting);
+                return;
+            }
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(":");
             if (value instanceof Map && ((Map<?, ?>) value).isEmpty()) {
@@ -2455,16 +2479,6 @@ public class ToonWriter implements Closeable, Flushable {
         if (value == null) {
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(": null");
-            return;
-        }
-        // Optional types — unwrap (Jackson-style) before falling into the primitive paths.
-        if (value instanceof java.util.Optional
-                || value instanceof java.util.OptionalInt
-                || value instanceof java.util.OptionalLong
-                || value instanceof java.util.OptionalDouble) {
-            writeKeyStringKnown(keyStr, keyNeedsQuoting);
-            out.write(':'); out.write(' ');
-            writeValue(value);
             return;
         }
         if (value instanceof String) {
@@ -2556,6 +2570,13 @@ public class ToonWriter implements Closeable, Flushable {
                 }
             }
         } else {
+            // An object whose writer gives it as data written in its place (an Optional's content): that value,
+            // laid out as itself (a list as "key[N]:", a scalar on the key's line)
+            Object inPlace = inPlaceOf(value);
+            if (inPlace != value) {
+                writeFieldEntryInline(keyStr, inPlace, keyNeedsQuoting);
+                return;
+            }
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
             out.write(":");
             if (value instanceof Map && ((Map<?, ?>) value).isEmpty()) {
@@ -2802,8 +2823,9 @@ public class ToonWriter implements Closeable, Flushable {
         Class<?> clazz = obj.getClass();
         AnnotationResolver.ClassAnnotationMetadata annMeta = AnnotationResolver.getMetadata(clazz);
 
-        // If @IoAnyGetter is present, fall back to map-based approach (rare path); also for the atomic holders
-        if (annMeta.getAnyGetterMethod() != null || isAtomicHolder(obj)) {
+        // If @IoAnyGetter is present, fall back to map-based approach (rare path); also for an object whose
+        // custom writer gives it as fields (JsonClassWriter.toData)
+        if (annMeta.getAnyGetterMethod() != null || isWrittenAsDataFields(obj)) {
             writeObjectFieldsViaMap(obj);
             return;
         }
@@ -2972,45 +2994,6 @@ public class ToonWriter implements Closeable, Flushable {
         }
     }
 
-    /** One of the atomic holders whose state java.util.concurrent keeps in fields it does not open on JDK 17+. */
-    private static boolean isAtomicHolder(Object obj) {
-        return obj instanceof AtomicReferenceArray || obj instanceof AtomicMarkableReference
-                || obj instanceof AtomicStampedReference;
-    }
-
-    /**
-     * The fields of an atomic holder as json-io wrote them by reflection where it could read them (JDK 8 and 11),
-     * read through its public methods: {@code array} for an {@code AtomicReferenceArray}, {@code pair} (its
-     * {@code reference} and {@code mark} or {@code stamp}, read in one step) for the other two. Null for any other
-     * object. The JSON writers for these types write the same.
-     */
-    private static Map<String, Object> atomicHolderFields(Object obj) {
-        Map<String, Object> fields = new LinkedHashMap<>(2);
-        if (obj instanceof AtomicReferenceArray) {
-            AtomicReferenceArray<?> array = (AtomicReferenceArray<?>) obj;
-            Object[] elements = new Object[array.length()];
-            for (int i = 0; i < elements.length; i++) {
-                elements[i] = array.get(i);
-            }
-            fields.put("array", elements);
-            return fields;
-        }
-        Map<String, Object> pair = new LinkedHashMap<>(4);
-        if (obj instanceof AtomicMarkableReference) {
-            boolean[] mark = new boolean[1];
-            pair.put("reference", ((AtomicMarkableReference<?>) obj).get(mark));
-            pair.put("mark", mark[0]);
-        } else if (obj instanceof AtomicStampedReference) {
-            int[] stamp = new int[1];
-            pair.put("reference", ((AtomicStampedReference<?>) obj).get(stamp));
-            pair.put("stamp", stamp[0]);
-        } else {
-            return null;
-        }
-        fields.put("pair", pair);
-        return fields;
-    }
-
     /**
      * Get object fields as a map using the same WriteFieldPlan / Accessor abstraction as JsonWriter.
      * This ensures all write-side annotations are respected: {@code @IoGetter}, {@code @IoFormat},
@@ -3018,9 +3001,16 @@ public class ToonWriter implements Closeable, Flushable {
      * {@code @IoInclude(NON_NULL)}, etc.
      */
     private Map<String, Object> getObjectFields(Object obj) {
-        Map<String, Object> holderFields = atomicHolderFields(obj);
-        if (holderFields != null) {
-            return holderFields;
+        if (isDataClass(obj.getClass())) {
+            Object d = dataOf(obj);
+            if (d instanceof Map) {
+                // The fields its custom writer gives (JsonClassWriter.toData), by name
+                Map<String, Object> fields = new LinkedHashMap<>();
+                for (Map.Entry<?, ?> entry : ((Map<?, ?>) d).entrySet()) {
+                    fields.put(String.valueOf(entry.getKey()), entry.getValue());
+                }
+                return fields;
+            }
         }
         Class<?> clazz = obj.getClass();
 
@@ -3152,9 +3142,21 @@ public class ToonWriter implements Closeable, Flushable {
                 break;
             }
             default:
-                writeString(value.toString());
+                writeInlineDefault(value);
                 break;
         }
+    }
+
+    /** Inline only when isPrimitive said so: an object's data written in its place, else its toString(). */
+    private void writeInlineDefault(Object value) throws IOException {
+        if (isDataClass(value.getClass())) {
+            Object d = dataOf(value);
+            if (isInPlace(d)) {
+                writeInlineValue(d);
+                return;
+            }
+        }
+        writeString(value.toString());
     }
 
     /**
@@ -3188,6 +3190,23 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
+     * Whether a list's element can sit on the list's line: a primitive, or an object written as data in its place that
+     * is (an Optional of a string). Kept out of isPrimitive, which is hot enough to be worth inlining.
+     */
+    private boolean isInlineValue(Object value) {
+        return isPrimitive(value) || isPrimitiveData(value);
+    }
+
+    /** An object written as data in its place is as inline as that data: an Optional of a string is. */
+    private boolean isPrimitiveData(Object value) {
+        if (!isDataClass(value.getClass())) {
+            return false;
+        }
+        Object d = dataOf(value);
+        return isInPlace(d) && isPrimitive(d);
+    }
+
+    /**
      * Check if all elements in an array are primitives.
      */
     private boolean isAllPrimitives(Object array, int length) {
@@ -3198,7 +3217,7 @@ public class ToonWriter implements Closeable, Flushable {
 
         for (int i = 0; i < length; i++) {
             Object element = getArrayElement(array, i);
-            if (element != null && !isPrimitive(element)) {
+            if (element != null && !isInlineValue(element)) {
                 return false;
             }
         }
@@ -3265,28 +3284,23 @@ public class ToonWriter implements Closeable, Flushable {
             return;
         }
 
-        if (current instanceof java.util.Optional) {
-            // Its content, as it is written: its fields are hidden on JDK 9+ (see JsonWriter.traceReferences)
-            pushReferenceCandidate(stack, ((java.util.Optional<?>) current).orElse(null));
-            return;
-        }
-
         List<WriteOptionsBuilder.WriteFieldPlan> plans =
                 WriteOptionsBuilder.getWriteFieldPlans(writeOptions, current.getClass());
-        if (plans.size() == 1 && isAtomicHolder(current)) {
-            // As it is written (atomicHolderFields): its elements or reference, in its one field, which
-            // java.util.concurrent keeps to itself on JDK 17+ (see JsonWriter.traceAtomicHolder)
-            if (current instanceof AtomicReferenceArray) {
-                AtomicReferenceArray<?> array = (AtomicReferenceArray<?>) current;
-                for (int i = 0, len = array.length(); i < len; i++) {
-                    pushReferenceCandidate(stack, array.get(i));
+        JsonClassWriter dataWriter = WriteOptionsBuilder.getDataWriter(writeOptions, current.getClass(), plans);
+        if (dataWriter != null) {
+            // What is written for it (JsonClassWriter.toData), which its fields may not show: an Optional's content
+            // or an AtomicReferenceArray's elements are in fields the JDK keeps to itself
+            Object d = dataWriter.toData(current);
+            if (d != JsonClassWriter.NO_DATA) {
+                if (d instanceof Map) {
+                    for (Object value : ((Map<?, ?>) d).values()) {
+                        pushReferenceCandidate(stack, value);
+                    }
+                } else {
+                    pushReferenceCandidate(stack, d);
                 }
-            } else if (current instanceof AtomicMarkableReference) {
-                pushReferenceCandidate(stack, ((AtomicMarkableReference<?>) current).getReference());
-            } else {
-                pushReferenceCandidate(stack, ((AtomicStampedReference<?>) current).getReference());
+                return;
             }
-            return;
         }
         for (int i = 0, len = plans.size(); i < len; i++) {
             WriteOptionsBuilder.WriteFieldPlan plan = plans.get(i);

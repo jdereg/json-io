@@ -1,5 +1,6 @@
 package com.cedarsoftware.io.factory;
 
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicLongArray;
 
 import com.cedarsoftware.io.ClassFactory;
@@ -37,6 +38,10 @@ public class AtomicLongArrayFactory implements ClassFactory {
             return new AtomicLongArray(0);
         }
 
+        if (value instanceof Collection) {
+            // TOON's reader gives a list
+            value = ((Collection<?>) value).toArray();
+        }
         if (value instanceof Object[]) {
             Object[] array = (Object[]) value;
             long[] longArray = new long[array.length];

@@ -82,4 +82,11 @@ public class OptionalLongWriter implements JsonClassWriter {
                 output, context.getWriteOptions());
         writePrimitiveForm(obj, bridge, context);
     }
+
+    /** Its value, written in its place (null when empty). */
+    @Override
+    public Object toData(Object obj) {
+        OptionalLong opt = (OptionalLong) obj;
+        return opt.isPresent() ? (Object) opt.getAsLong() : null;
+    }
 }

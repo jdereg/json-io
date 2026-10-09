@@ -294,7 +294,10 @@ serialized in Jackson/Gson-compatible primitive form by default for JSON, JSON5,
 - `OptionalInt.of(42)` → `42` (bare number)
 
 Reading accepts both the primitive form and the legacy json-io object form
-`{"present":true,"value":X}` so JSON produced by older json-io versions still deserializes correctly.
+`{"present":true,"value":X}` so JSON produced by older json-io versions still deserializes correctly. Both are
+read as an `Optional` of the declared type in a field, and (since 4.113.0) as an element of a collection or an
+array (`List<Optional<String>>`, `Optional<Item>[]`): the elements were left bare there, so such a list held
+Strings. TOON writes an `Optional` as its content wherever it sits, a list element included.
 When interoperating with **pre-4.101.0** json-io readers (that cannot parse the primitive form), call
 `writeOptionalAsObject(true)` on the WriteOptionsBuilder. `standardJson()` always resets this toggle to
 `false` for maximum interoperability.
@@ -755,6 +758,7 @@ This provides comprehensive coverage far exceeding other TOON implementations:
 | **Big Numbers** | `BigInteger`, `BigDecimal` | Numeric (unquoted) |
 | **Atomic Types** | `AtomicInteger`, `AtomicLong`, `AtomicBoolean` | Unwrapped numeric/boolean value |
 | **Atomic Holders** | `AtomicReferenceArray`, `AtomicMarkableReference`, `AtomicStampedReference` | Object: `array` (its elements), or `pair` (`reference` with `mark` or `stamp`) |
+| **Concurrency** | `AtomicIntegerArray`, `AtomicLongArray`, `Semaphore`, `CountDownLatch`, `ReentrantLock`, `ReentrantReadWriteLock` | Object with what the type's factory reads: `value` (the numbers), `permits` and `fair`, `count`, `fair` |
 | **Date/Time (java.util)** | `Date`, `Calendar`, `TimeZone` | ISO-8601 string |
 | **Date/Time (java.sql)** | `java.sql.Date`, `Timestamp` | ISO-8601 string |
 | **Date/Time (java.time)** | `Instant`, `Duration`, `Period`, `LocalDate`, `LocalTime`, `LocalDateTime`, `ZonedDateTime`, `OffsetDateTime`, `OffsetTime`, `Year`, `YearMonth`, `MonthDay`, `ZoneId`, `ZoneOffset` | ISO-8601 string |
@@ -1726,6 +1730,43 @@ Dispatch rules:
 
 The legacy form will be removed in 5.0; migrating to the `JsonGenerator` overload is mechanical — replace `output.write(...)` / `context.writeXxx(...)` calls with the matching `gen.writeXxx(...)` calls and drop the "first field" branch.
 
+### Giving Your Object as Data: `toData` (TOON, Shared Objects, Cycles)
+
+`write` produces the JSON. Two parts of json-io work on an object's contents instead: **TOON**, which writes them,
+and the **reference pass**, which finds objects written more than once and cycles before JSON or TOON is written.
+Both reach an object through its fields. When your writer writes what the fields do not show — state the JDK keeps
+in fields it does not open, a computed value, a different shape — override `toData` (since 4.113.0) to give the
+object as plain data:
+
+```java
+class BoxWriter implements JsonClassWriter<Box> {
+    @Override
+    public void write(Box box, boolean showType, JsonGenerator gen, WriterContext context) throws IOException {
+        // Object.class: @type only where a field declared Object would need it, as json-io's own fields
+        context.writeObjectField("item", box.computeItem(), Object.class);
+    }
+
+    @Override
+    public Object toData(Box box) {      // the same values write() writes
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("item", box.computeItem());
+        return data;
+    }
+}
+```
+
+- **A `Map` of name to value:** TOON writes it as the object's fields, with the object's own type and id, and the
+  reference pass visits its values. Use the names your `ClassFactory` reads; it reads TOON as it reads JSON.
+- **Any other value:** written in the object's place, as an `Optional` is written as its content.
+- **`JsonClassWriter.NO_DATA`** (the default): json-io uses the object's fields, as for any object.
+
+Without it, an object your writer writes but the fields do not reach is invisible to the reference pass: if it also
+appears elsewhere in the graph it is written twice and read back as two objects, and a cycle through it recurses until
+the stack overflows. In TOON, the fields are written instead of what your writer writes. JSON output never changes:
+it is still written by `write`. json-io's own writers for `Optional`, `OptionalInt`/`Long`/`Double`,
+`AtomicReferenceArray`, `AtomicMarkableReference`, `AtomicStampedReference`, `AtomicIntegerArray`,
+`AtomicLongArray`, `Semaphore`, `CountDownLatch`, `ReentrantLock` and `ReentrantReadWriteLock` use it.
+
 ### Writing Custom ClassFactory (Reader)
 
 When creating custom readers, use the **Resolver convenience API** for cleaner, safer code. The API provides methods that handle type conversion and complex object deserialization automatically.
@@ -1767,6 +1808,15 @@ class MyFactory implements ClassFactory {
 - **`readArray(jsonObj, fieldName, arrayType)`** - Read and deserialize a typed array (e.g., `String[].class`)
 - **`readList(jsonObj, fieldName)`** - Read and deserialize a List
 - **`readMap(jsonObj, fieldName)`** - Read and deserialize a Map
+
+**A factory that fills its object itself** (`isObjectFinal()` true) — a container whose contents cannot be set through
+fields — reads each value with **`resolveHeldValue(jsonObj, value, type, later)`**. A `@ref` to an object not yet
+built returns null for now, and `later` puts that object in place once the graph is read:
+
+```java
+box.item = (Item) resolver.resolveHeldValue(jsonObj, jsonObj.get("item"), Item.class,
+        (built, value) -> ((Box) built).item = (Item) value);
+```
 
 **Complete Example:**
 ```java

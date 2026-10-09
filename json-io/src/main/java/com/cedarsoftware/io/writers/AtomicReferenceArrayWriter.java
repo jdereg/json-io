@@ -2,6 +2,8 @@ package com.cedarsoftware.io.writers;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import com.cedarsoftware.io.JsonClassWriter;
@@ -50,5 +52,18 @@ public class AtomicReferenceArrayWriter implements JsonClassWriter {
         JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_insideObjectBody(
                 output, context.getWriteOptions());
         write(obj, showType, bridge, context);
+    }
+
+    /** {@code array}: its elements, as {@code write} writes them (TOON, and the reference pass). */
+    @Override
+    public Object toData(Object obj) {
+        AtomicReferenceArray<?> array = (AtomicReferenceArray<?>) obj;
+        Object[] elements = new Object[array.length()];
+        for (int i = 0; i < elements.length; i++) {
+            elements[i] = array.get(i);
+        }
+        Map<String, Object> data = new LinkedHashMap<>(2);
+        data.put("array", elements);
+        return data;
     }
 }

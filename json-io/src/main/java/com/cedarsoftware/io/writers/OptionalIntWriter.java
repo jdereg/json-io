@@ -82,4 +82,11 @@ public class OptionalIntWriter implements JsonClassWriter {
                 output, context.getWriteOptions());
         writePrimitiveForm(obj, bridge, context);
     }
+
+    /** Its value, written in its place (null when empty). */
+    @Override
+    public Object toData(Object obj) {
+        OptionalInt opt = (OptionalInt) obj;
+        return opt.isPresent() ? (Object) opt.getAsInt() : null;
+    }
 }

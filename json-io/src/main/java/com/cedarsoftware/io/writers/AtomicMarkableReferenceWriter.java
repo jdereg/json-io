@@ -2,6 +2,8 @@ package com.cedarsoftware.io.writers;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 
 import com.cedarsoftware.io.JsonClassWriter;
@@ -50,5 +52,17 @@ public class AtomicMarkableReferenceWriter implements JsonClassWriter {
         JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_insideObjectBody(
                 output, context.getWriteOptions());
         write(obj, showType, bridge, context);
+    }
+
+    /** {@code pair}: its reference and mark, read in one step, as {@code write} writes them. */
+    @Override
+    public Object toData(Object obj) {
+        boolean[] mark = new boolean[1];
+        Map<String, Object> pair = new LinkedHashMap<>(4);
+        pair.put("reference", ((AtomicMarkableReference<?>) obj).get(mark));
+        pair.put("mark", mark[0]);
+        Map<String, Object> data = new LinkedHashMap<>(2);
+        data.put("pair", pair);
+        return data;
     }
 }

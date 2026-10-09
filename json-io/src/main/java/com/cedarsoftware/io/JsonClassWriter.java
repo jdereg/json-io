@@ -41,6 +41,15 @@ import java.io.Writer;
  * }
  * }</pre>
  *
+ * <h3>The object as data: {@link #toData(Object)}</h3>
+ *
+ * <p>JSON is written by {@code write}. Two parts of json-io work on an object's contents instead: TOON, which writes
+ * them, and the reference pass, which finds objects written more than once and cycles before JSON or TOON is written.
+ * Both reach an object through its fields. When your writer writes what the fields do not show (state the JDK keeps
+ * in fields it does not open, a computed value, a different shape), override {@code toData} to give the object as
+ * plain data: then TOON writes it, shared objects and cycles through it are kept, and your {@link ClassFactory} reads
+ * it back from TOON as from JSON.
+ *
  * @param <T> the type of object this writer handles
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -171,5 +180,36 @@ public interface JsonClassWriter<T> {
      */
     default String getTypeName(Object o) {
         return o.getClass().getName();
+    }
+
+    /** Returned by {@link #toData(Object)} for "nothing special": json-io uses the object's fields. */
+    Object NO_DATA = new Object() {
+        @Override
+        public String toString() {
+            return "JsonClassWriter.NO_DATA";
+        }
+    };
+
+    /**
+     * The object as plain data, for the parts of json-io that work on contents rather than JSON text: TOON writes it,
+     * and the reference pass (JSON and TOON) visits it to find objects written more than once and cycles. JSON is
+     * still written by {@code write}, which this never changes.
+     * <ul>
+     *   <li>A {@code Map} of name to value: written as the object's fields, with the object's own type and id. Use
+     *       the names your {@link ClassFactory} reads, which reads TOON as it reads JSON.</li>
+     *   <li>Any other value (a number, a string, a list, another object, or null): written in the object's place, as
+     *       an {@code Optional} is written as its content.</li>
+     *   <li>{@link #NO_DATA}, the default: json-io uses the object's fields, as for any object.</li>
+     * </ul>
+     * Give the values {@code write} writes, so both passes see the same objects. Return new containers each time;
+     * json-io does not keep or change them. Not consulted for a class TOON writes as a map, list, array, number or
+     * string.
+     *
+     * @param o the object to describe
+     * @return its data, or {@link #NO_DATA}
+     * @since 4.113.0
+     */
+    default Object toData(T o) {
+        return NO_DATA;
     }
 }

@@ -27,6 +27,7 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
+import java.util.function.BiConsumer;
 import com.cedarsoftware.io.reflect.AnnotationResolver;
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
@@ -855,8 +856,24 @@ public class ObjectResolver extends Resolver
         final boolean nestedElementIsCollectionType = rawNestedElementType != null
                 && Collection.class.isAssignableFrom(rawNestedElementType);
         final boolean nestedElementIsArrayType = rawNestedElementType != null && rawNestedElementType.isArray();
+        final boolean optionalElements = isOptionalRawType(rawElementType);
 
         for (Object element : items) {
+            // Strategy 0: OPTIONAL - an element declared Optional, written as its content (or null)
+            if (optionalElements) {
+                final int index = idx;
+                Object wrapped = asOptionalElement(rawElementType, elementType, element, jsonObj, isList
+                        ? (built, value) -> ((List<Object>) built).set(index, value)
+                        : (built, value) -> ((Collection<Object>) built).add(value));
+                if (wrapped != NOT_BARE_OPTIONAL) {
+                    if (wrapped != FORWARD_OPTIONAL || isList) {
+                        col.add(wrapped == FORWARD_OPTIONAL ? null : wrapped);
+                    }
+                    idx++;
+                    continue;
+                }
+            }
+
             // Strategy 1: NULL - fastest check
             if (element == null) {
                 col.add(null);
@@ -1214,9 +1231,23 @@ public class ObjectResolver extends Resolver
         // Optimize: check array type ONCE, not on every element assignment
         final boolean isPrimitive = fallbackCompType.isPrimitive();
         final Object[] refArray = isPrimitive ? null : (Object[]) array;
+        final boolean optionalComponents = isOptionalRawType(effectiveRawComponentType);
 
         for (int i = 0; i < len; i++) {
             final Object element = jsonItems[i];
+
+            // An element declared Optional, written as its content (or null)
+            if (optionalComponents) {
+                final int index = i;
+                Object wrapped = asOptionalElement(effectiveRawComponentType, effectiveComponentType, element, jsonObj,
+                        (built, value) -> ((Object[]) built)[index] = value);
+                if (wrapped != NOT_BARE_OPTIONAL) {
+                    if (wrapped != FORWARD_OPTIONAL) {
+                        setArrayElement(array, refArray, i, wrapped, false);
+                    }
+                    continue;
+                }
+            }
 
             // Strategy 1: NULL - fastest check
             if (element == null) {
@@ -1823,6 +1854,58 @@ public class ObjectResolver extends Resolver
                 || value instanceof OptionalDouble;
     }
 
+    // From asOptionalElement: the element is in json-io's object form ({"present":..,"value":..}) or already an
+    // Optional, read as any element; or it refers to an object not yet built, set into place once it is
+    private static final Object NOT_BARE_OPTIONAL = new Object();
+    private static final Object FORWARD_OPTIONAL = new Object();
+
+    /**
+     * An element of a collection or array declared {@code Optional} (or {@code OptionalInt}, ...). Jackson writes it
+     * as its content or null, as do json-io's TOON and its JSON without type info; json-io's JSON with type info
+     * writes it in the object form {@code {"@type":"Optional","present":true,"value":...}}. Either is read here and
+     * wrapped, as a field's is ({@link #wrapAsOptional}): null or not present is empty. A {@code @ref} is wrapped as
+     * the object it names, and when that object is not built yet, {@code setLater} puts the wrapped object in place
+     * once it is (FORWARD_OPTIONAL). NOT_BARE_OPTIONAL: an Optional already built, read as any element.
+     */
+    private Object asOptionalElement(Class<?> rawType, Type type, Object element, JsonObject holder,
+                                     BiConsumer<Object, Object> setLater) {
+        if (isOptionalInstance(element)) {
+            return NOT_BARE_OPTIONAL;
+        }
+        // The object form carries "present"; the parser may have typed a bare element Optional from the declared
+        // element type, so the type alone does not tell. {value: ...} alone is the form TOON wrote by reflection on
+        // JDK 8 and 11. Its value is read as the bare form is, so a @ref inside it resolves, even to an object not
+        // built yet; the Optional becomes the form's own target, for a @ref to the Optional itself.
+        if (element instanceof JsonObject && (((JsonObject) element).containsKey("present")
+                || (((JsonObject) element).size() == 1 && ((JsonObject) element).containsKey("value")))) {
+            JsonObject form = (JsonObject) element;
+            boolean present = form.containsKey("present")
+                    ? converter.convert(form.get("present"), boolean.class) : form.get("value") != null;
+            Object optional = bareOptionalElement(rawType, type, present ? form.get("value") : null, holder, setLater);
+            if (optional != FORWARD_OPTIONAL) {
+                form.setFinishedTarget(optional, true);
+            }
+            return optional;
+        }
+        return bareOptionalElement(rawType, type, element, holder, setLater);
+    }
+
+    private Object bareOptionalElement(Class<?> rawType, Type type, Object element, JsonObject holder,
+                                       BiConsumer<Object, Object> setLater) {
+        if (element instanceof JsonObject && ((JsonObject) element).isReference()) {
+            long id = ((JsonObject) element).getReferenceId();
+            Object target = references.getOrThrow(id).getTarget();
+            if (target != null) {
+                // The reference may name an Optional itself (one shared, as Optional.empty() is)
+                return isOptionalInstance(target) ? target : wrapAsOptional(rawType, type, target);
+            }
+            addUnresolvedReference(new UnresolvedReference(holder, id, (built, referenced) -> setLater.accept(built,
+                    isOptionalInstance(referenced) ? referenced : wrapAsOptional(rawType, type, referenced))));
+            return FORWARD_OPTIONAL;
+        }
+        return wrapAsOptional(rawType, type, element);
+    }
+
     private static boolean isOptionalRawType(Class<?> rawType) {
         return rawType == Optional.class
                 || rawType == OptionalInt.class
@@ -1886,12 +1969,23 @@ public class ObjectResolver extends Resolver
         }
 
         Object innerValue;
-        if (rhs instanceof JsonObject) {
-            // Jackson-compat form: bare pojo inside Optional<Pojo>.
-            // Resolve the JsonObject through the full resolver using the inferred inner type.
+        if (rhs instanceof Object[]) {
+            // A list or array inside (Optional<List<T>>), written as its items: read as the declared inner type
             innerValue = toJava(fieldType instanceof ParameterizedType
                     ? ((ParameterizedType) fieldType).getActualTypeArguments()[0]
                     : innerType, rhs);
+        } else if (rhs instanceof JsonObject) {
+            // Jackson-compat form: bare pojo inside Optional<Pojo>.
+            // Resolve the JsonObject through the full resolver using the inferred inner type.
+            Type inner = fieldType instanceof ParameterizedType
+                    ? ((ParameterizedType) fieldType).getActualTypeArguments()[0]
+                    : innerType;
+            JsonObject content = (JsonObject) rhs;
+            if (isOptionalRawType(content.getRawType())) {
+                // Typed Optional by the parser from the declared type (a list's element type), but it is the content
+                content.setType(inner);
+            }
+            innerValue = toJava(inner, rhs);
         } else if (innerType != Object.class && !innerType.isInstance(rhs)
                 && converter.isConversionSupportedFor(rhs.getClass(), innerType)) {
             innerValue = converter.convert(rhs, innerType);

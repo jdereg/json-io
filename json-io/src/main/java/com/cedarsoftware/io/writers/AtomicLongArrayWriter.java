@@ -2,6 +2,7 @@ package com.cedarsoftware.io.writers;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicLongArray;
 
 import com.cedarsoftware.io.JsonGenerator;
@@ -52,5 +53,16 @@ public class AtomicLongArrayWriter extends Writers.PrimitiveTypeWriter {
         JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_atValueSlot(
                 output, context.getWriteOptions());
         writePrimitiveForm(o, bridge, context);
+    }
+
+    /** {@code value}: its longs, as the JSON object form writes them and the factory reads them. */
+    @Override
+    public Object toData(Object obj) {
+        AtomicLongArray array = (AtomicLongArray) obj;
+        long[] values = new long[array.length()];
+        for (int i = 0; i < values.length; i++) {
+            values[i] = array.get(i);
+        }
+        return Collections.singletonMap("value", values);
     }
 }

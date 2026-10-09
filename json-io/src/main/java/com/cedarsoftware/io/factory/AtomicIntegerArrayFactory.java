@@ -1,5 +1,6 @@
 package com.cedarsoftware.io.factory;
 
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 
 import com.cedarsoftware.io.ClassFactory;
@@ -37,6 +38,10 @@ public class AtomicIntegerArrayFactory implements ClassFactory {
             return new AtomicIntegerArray(0);
         }
 
+        if (value instanceof Collection) {
+            // TOON's reader gives a list
+            value = ((Collection<?>) value).toArray();
+        }
         if (value instanceof Object[]) {
             Object[] array = (Object[]) value;
             int[] intArray = new int[array.length];

@@ -67,9 +67,6 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicMarkableReference;
-import java.util.concurrent.atomic.AtomicReferenceArray;
-import java.util.concurrent.atomic.AtomicStampedReference;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
@@ -975,11 +972,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 processMap((Map<?, ?>) obj, objectStack, nextDepth);
             } else if (obj instanceof Collection) {
                 processCollection((Collection<?>) obj, objectStack, nextDepth);
-            } else if (obj instanceof java.util.Optional) {
-                // What OptionalWriter writes: the content. Traced through its fields, an Optional showed nothing on
-                // JDK 9+ (java.util keeps its fields to itself), so a cycle through one recursed until the stack
-                // overflowed, and an object shared through Optionals was written twice.
-                traceVisit(((java.util.Optional<?>) obj).orElse(null), objectStack, nextDepth);
             } else {
                 processFields(objectStack, obj, nextDepth);
             }
@@ -1087,10 +1079,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      */
     protected void processFields(final Deque<Object> objectStack, final Object obj, int depth) {
         List<WriteFieldPlan> fields = WriteOptionsBuilder.getWriteFieldPlans(writeOptions, obj.getClass());
-        int len = fields.size();
-        if (len == 1 && traceAtomicHolder(obj, objectStack, depth)) {
+        com.cedarsoftware.io.JsonClassWriter dataWriter =
+                WriteOptionsBuilder.getDataWriter(writeOptions, obj.getClass(), fields);
+        if (dataWriter != null && traceData(dataWriter.toData(obj), objectStack, depth)) {
             return;
         }
+        int len = fields.size();
         for (int i = 0; i < len; i++) {
             WriteFieldPlan fieldPlan = fields.get(i);
             if (fieldPlan.skipReferenceTrace()) {
@@ -1109,27 +1103,24 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     /**
-     * Traces what the atomic holders' writers write: an AtomicReferenceArray's elements, an AtomicMarkableReference's or
-     * AtomicStampedReference's reference. java.util.concurrent keeps them in a field it does not open on JDK 17+ (as
-     * Optional's content), the only field each has: so only a one-field object is asked. False for any other object.
+     * Traces what a custom writer writes for an object, as it gives it ({@link JsonClassWriter#toData}), in place of
+     * the object's fields, which may not show it: an Optional's content and an AtomicReferenceArray's elements are in
+     * fields the JDK keeps to itself on JDK 9+ / 17+, and a writer may write what no field holds. Traced through its
+     * fields, a cycle through such an object recursed until the stack overflowed and a shared object was written twice.
+     * False (trace the fields) for NO_DATA.
      */
-    private boolean traceAtomicHolder(Object obj, Deque<Object> objectStack, int depth) {
-        if (obj instanceof AtomicReferenceArray) {
-            AtomicReferenceArray<?> array = (AtomicReferenceArray<?>) obj;
-            for (int i = 0, len = array.length(); i < len; i++) {
-                traceVisit(array.get(i), objectStack, depth);
+    private boolean traceData(Object data, Deque<Object> objectStack, int depth) {
+        if (data == com.cedarsoftware.io.JsonClassWriter.NO_DATA) {
+            return false;
+        }
+        if (data instanceof Map) {
+            for (Object value : ((Map<?, ?>) data).values()) {
+                traceVisit(value, objectStack, depth);
             }
-            return true;
+        } else {
+            traceVisit(data, objectStack, depth);
         }
-        if (obj instanceof AtomicMarkableReference) {
-            traceVisit(((AtomicMarkableReference<?>) obj).getReference(), objectStack, depth);
-            return true;
-        }
-        if (obj instanceof AtomicStampedReference) {
-            traceVisit(((AtomicStampedReference<?>) obj).getReference(), objectStack, depth);
-            return true;
-        }
-        return false;
+        return true;
     }
 
     /**

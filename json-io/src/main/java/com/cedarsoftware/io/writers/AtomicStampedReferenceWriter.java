@@ -2,6 +2,8 @@ package com.cedarsoftware.io.writers;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicStampedReference;
 
 import com.cedarsoftware.io.JsonClassWriter;
@@ -50,5 +52,17 @@ public class AtomicStampedReferenceWriter implements JsonClassWriter {
         JsonGenerator bridge = JsonGenerator.deprecatedWriterBridge_insideObjectBody(
                 output, context.getWriteOptions());
         write(obj, showType, bridge, context);
+    }
+
+    /** {@code pair}: its reference and stamp, read in one step, as {@code write} writes them. */
+    @Override
+    public Object toData(Object obj) {
+        int[] stamp = new int[1];
+        Map<String, Object> pair = new LinkedHashMap<>(4);
+        pair.put("reference", ((AtomicStampedReference<?>) obj).get(stamp));
+        pair.put("stamp", stamp[0]);
+        Map<String, Object> data = new LinkedHashMap<>(2);
+        data.put("pair", pair);
+        return data;
     }
 }
