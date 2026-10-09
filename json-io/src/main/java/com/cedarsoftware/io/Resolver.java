@@ -455,13 +455,14 @@ public abstract class Resolver {
                     return convertKeyValueEntriesToMap(col, rawClass, keyType, valueType);
                 }
 
-                // Special case: Collection with JsonObject elements (e.g., from ToonReader)
-                // and a parameterized target like List<Person>.
+                // Special case: a Collection (from ToonReader) and a parameterized target like List<Person>: its
+                // elements read as the type argument -- objects built, numbers converted (List<Integer>)
                 if (type instanceof ParameterizedType) {
                     Type[] typeArgs = ((ParameterizedType) type).getActualTypeArguments();
-                    if (typeArgs.length > 0 && containsJsonObjects(col)) {
-                        Type elementType = Collection.class.isAssignableFrom(rawClass)
-                                ? collectionElementType(type, typeArgs) : typeArgs[0];
+                    Type elementType = typeArgs.length == 0 ? Object.class
+                            : Collection.class.isAssignableFrom(rawClass) ? collectionElementType(type, typeArgs)
+                            : typeArgs[0];
+                    if (elementType != Object.class || containsJsonObjects(col)) {
                         return convertCollectionElements(col, rawClass, elementType);
                     }
                 } else if ((rawClass == null || rawClass.isInstance(col)) && containsTypedJsonObjects(col)) {
@@ -491,7 +492,11 @@ public abstract class Resolver {
             }
             jsonObj = new JsonObjectArray();
             jsonObj.setType(type);
-            jsonObj.setTarget(value);
+            if (!returningJavaObjects || !(type instanceof ParameterizedType)
+                    || !Collection.class.isAssignableFrom(TypeUtilities.getRawClass(type))) {
+                jsonObj.setTarget(value);   // read into the array itself; converted afterward if another type was asked for
+            }
+            // else the collection asked for (List<Employee>) is built, and its elements read as its type argument
             jsonObj.setItems((Object[]) value);
         } else {
             jsonObj = (JsonObject) value;
@@ -563,6 +568,12 @@ public abstract class Resolver {
                     }
                 }
             }
+        }
+
+        // The type arguments asked for (List<Employee>, Map<String, Integer>) reach the elements, keys and values, as a
+        // field's do
+        if (type instanceof ParameterizedType) {
+            seedRootTypeArguments(jsonObj, (ParameterizedType) type);
         }
 
         // Resolve the JsonObject (handles both arrays and objects)
@@ -922,6 +933,13 @@ public abstract class Resolver {
             }
         }
         return false;
+    }
+
+    /**
+     * Applies the type arguments asked for at the root ({@code List<Employee>}, {@code Map<String, Integer>}) to the
+     * root's elements, keys and values, as a field's are applied. Nothing in Maps mode.
+     */
+    protected void seedRootTypeArguments(JsonObject jsonObj, ParameterizedType type) {
     }
 
     /**

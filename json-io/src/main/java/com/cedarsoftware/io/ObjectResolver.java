@@ -262,6 +262,22 @@ public class ObjectResolver extends Resolver
      * Seed container metadata on the current JsonObject so downstream traversal can stamp types incrementally.
      * This avoids deep pre-pass traversal and only annotates the immediate container when metadata is missing.
      */
+    /**
+     * The root's elements, keys and values are read as the type asked for says, as a field's: when the root is a map
+     * or collection and the JSON's own type (an {@code @type} ArrayList) is one of the type asked for, or untyped.
+     */
+    @Override
+    protected void seedRootTypeArguments(JsonObject jsonObj, ParameterizedType type) {
+        Class<?> asked = TypeUtilities.getRawClass(type);
+        if (asked == null || !(Map.class.isAssignableFrom(asked) || Collection.class.isAssignableFrom(asked))) {
+            return;
+        }
+        Class<?> written = jsonObj.getRawType();
+        if (written == null || written == Object.class || written.isArray() || asked.isAssignableFrom(written)) {
+            seedIncrementalContainerMetadata(type, jsonObj);
+        }
+    }
+
     private void seedIncrementalContainerMetadata(final Type fieldType, final JsonObject jsRhs) {
         if (!(fieldType instanceof ParameterizedType)) {
             return;
@@ -1078,6 +1094,9 @@ public class ObjectResolver extends Resolver
         if (valueIsCollection) {
             for (int i = 0; i < items.length; i++) {
                 Object value = items[i];
+                if (value instanceof Collection) {
+                    value = ((Collection<?>) value).toArray();   // a TOON list, as JSON's array
+                }
                 if (value instanceof Object[] && !(value instanceof JsonObject)) {
                     JsonObject wrapper = new JsonObjectArray();
                     wrapper.setType(valueType);
@@ -1137,6 +1156,9 @@ public class ObjectResolver extends Resolver
             int len = Math.min(keys.length, items.length);
             for (int i = 0; i < len; i++) {
                 Object value = items[i];
+                if (value instanceof Collection) {
+                    value = ((Collection<?>) value).toArray();   // a TOON list, as JSON's array
+                }
                 if (value instanceof Object[] && !(value instanceof JsonObject)) {
                     // Wrap raw array in JsonObject with collection type
                     JsonObject wrapper = new JsonObjectArray();
