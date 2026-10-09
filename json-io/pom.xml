@@ -25,6 +25,7 @@
         <version.gson>2.14.0</version.gson>
         <version.jackson-databind>2.22.3</version.jackson-databind>
         <version.jtokkit>1.1.0</version.jtokkit>
+        <version.felix-framework>7.0.5</version.felix-framework>   <!-- OSGi framework for OsgiBundleIT only -->
     </properties>
 
     <dependencyManagement>
@@ -83,6 +84,12 @@
                 <version>${version.jtokkit}</version>
                 <scope>test</scope>
             </dependency>
+            <dependency>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>org.apache.felix.framework</artifactId>
+                <version>${version.felix-framework}</version>
+                <scope>test</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -131,6 +138,17 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+
+            <!-- an OSGi framework is for the integration tests only: unit tests check behavior without one -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <classpathDependencyExcludes>
+                        <classpathDependencyExclude>org.apache.felix:org.apache.felix.framework</classpathDependencyExclude>
+                    </classpathDependencyExcludes>
+                </configuration>
             </plugin>
 
             <!-- Integration tests (*IT) run against the packaged jar, not target/classes: the jar's layout, and
@@ -247,6 +265,11 @@
         <dependency>
             <groupId>com.knuddels</groupId>
             <artifactId>jtokkit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>org.apache.felix.framework</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
