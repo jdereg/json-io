@@ -201,6 +201,25 @@ class UpgradeTo4113NotesTest {
         assertEquals(shared.a, JsonIo.fromToon(toon, null).asClass(SharedMap.class).b);
     }
 
+    public static class Buffers {
+        public java.nio.ByteBuffer buffer;
+    }
+
+    @Test
+    void aByteBufferIsBase64InToonAndFromAJsonString() {
+        byte[] all = new byte[256];
+        for (int i = 0; i < 256; i++) {
+            all[i] = (byte) i;
+        }
+        Buffers buffers = new Buffers();
+        buffers.buffer = java.nio.ByteBuffer.wrap(all);
+        Buffers back = JsonIo.fromToon(JsonIo.toToon(buffers, new WriteOptionsBuilder().build()), null)
+                .asClass(Buffers.class);
+        assertEquals(java.nio.ByteBuffer.wrap(all), back.buffer);
+        assertEquals(java.nio.ByteBuffer.wrap(new byte[] {1, 2, 3}),
+                JsonIo.toJava("{\"buffer\":\"AQID\"}", null).asClass(Buffers.class).buffer);
+    }
+
     /** The class factory nothing reached is gone; a BitSet still reads, as do the older index form's lists. */
     @Test
     void bitSetFactoryIsRemovedAndABitSetStillReads() {

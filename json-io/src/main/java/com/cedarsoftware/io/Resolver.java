@@ -821,9 +821,9 @@ public abstract class Resolver {
             return value;
         }
 
-        // 2b. A JSON string into a byte[] is Base64, as it is in a field or a collection (FastIsoParser)
-        if (targetClass == byte[].class && value instanceof String) {
-            Object bytes = FastIsoParser.parse((String) value, byte[].class);
+        // 2b. A JSON string into a byte[] or a ByteBuffer is Base64, as it is in a field or a collection (FastIsoParser)
+        if ((targetClass == byte[].class || targetClass == java.nio.ByteBuffer.class) && value instanceof String) {
+            Object bytes = FastIsoParser.parse((String) value, targetClass);
             if (bytes != null) {
                 return bytes;
             }

@@ -3,6 +3,7 @@ package com.cedarsoftware.io;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
@@ -12,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.EnumSet;
@@ -582,8 +584,7 @@ public class ToonWriter implements Closeable, Flushable {
                 // Converter -> DateTimeFormatter (JFR: ~11% of toon-write CPU). The
                 // String still flows through writeString, so TOON quoting semantics
                 // are unchanged; non-temporals and exotic years take the Converter path.
-                String iso = TemporalChars.toIsoString(value);
-                writeString(iso != null ? iso : Converter.convert(value, String.class));
+                writeString(converterText(value));
                 break;
             }
             case VALUE_METHOD:
@@ -956,6 +957,22 @@ public class ToonWriter implements Closeable, Flushable {
         out.write(typeKey);
         out.write(':'); out.write(' ');
         writeString(typeNameOf(value));
+    }
+
+    /**
+     * The text written for a value the Converter writes as text: a temporal's ISO form, a ByteBuffer's remaining bytes
+     * as Base64 (as JSON writes them -- the Converter gives their text in its charset, which read back as other
+     * bytes from 128 up), anything else as the Converter writes it.
+     */
+    private static String converterText(Object value) {
+        if (value instanceof ByteBuffer) {
+            ByteBuffer buffer = (ByteBuffer) value;
+            byte[] bytes = new byte[buffer.remaining()];
+            buffer.duplicate().get(bytes);      // a duplicate: the buffer's own position does not move
+            return Base64.getEncoder().encodeToString(bytes);
+        }
+        String iso = TemporalChars.toIsoString(value);
+        return iso != null ? iso : Converter.convert(value, String.class);
     }
 
     private boolean writeReferenceIfSeen(Object value) throws IOException {
@@ -3539,8 +3556,7 @@ public class ToonWriter implements Closeable, Flushable {
                 break;
             case CONVERTER_SUPPORTED: {
                 // Same temporal fast path as writeValue's CONVERTER_SUPPORTED case.
-                String iso = TemporalChars.toIsoString(value);
-                writeString(iso != null ? iso : Converter.convert(value, String.class));
+                writeString(converterText(value));
                 break;
             }
             default:

@@ -1,5 +1,6 @@
 package com.cedarsoftware.io;
 
+import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -67,6 +68,13 @@ final class FastIsoParser {
         // Base64. A string that is not Base64 parses to null, and the Converter gives its bytes. Nothing is guessed
         // from what the string looks like.
         PARSER_TABLE.put(byte[].class, ByteUtilities::decodeBase64);
+        // A ByteBuffer read from a string by the same rule (JSON's wrapped form and TOON write its bytes as Base64)
+        PARSER_TABLE.put(ByteBuffer.class, FastIsoParser::base64Buffer);
+    }
+
+    private static Object base64Buffer(String value) {
+        byte[] bytes = ByteUtilities.decodeBase64(value);
+        return bytes == null ? null : ByteBuffer.wrap(bytes);
     }
 
     private FastIsoParser() {
