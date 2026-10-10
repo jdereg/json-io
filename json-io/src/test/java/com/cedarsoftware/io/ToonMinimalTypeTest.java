@@ -391,6 +391,27 @@ class ToonMinimalTypeTest {
         }
     }
 
+    public static class Configured {
+        public MultiKeyMap<String> keys;
+    }
+
+    /**
+     * In a field of its own class, which needs no $type, a container's configuration is still written, as JSON writes
+     * it: TOON wrote the map's entries alone, and a case-insensitive MultiKeyMap came back case-sensitive.
+     */
+    @Test
+    void aContainersConfigurationIsWrittenWhereItsClassGoesWithoutSaying() {
+        Configured c = new Configured();
+        c.keys = MultiKeyMap.<String>builder().caseSensitive(false).build();
+        c.keys.put("Key", "v");
+        for (WriteOptions options : TYPED) {
+            String toon = JsonIo.toToon(c, options);
+            Configured back = JsonIo.fromToon(toon, null).asClass(Configured.class);
+            assertEquals("v", back.keys.get("KEY"), toon);
+            assertFalse(back.keys.getCaseSensitive(), toon);
+        }
+    }
+
     public static class Sets {
         public Set<Color> colors;
         public EnumSet<TimeUnit> units;

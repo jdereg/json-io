@@ -729,8 +729,13 @@ public class ToonWriter implements Closeable, Flushable {
      * configuration and entries, as JSON writes it). Anything else is itself.
      */
     private Object typedForm(Object value, Class<?> declared) {
-        if (value == null || value instanceof Fields || !needsType(value.getClass(), declared)) {
+        if (value == null || value instanceof Fields) {
             return value;
+        }
+        if (!needsType(value.getClass(), declared)) {
+            // Its custom writer's data even where its class goes without saying, as JSON writes it: a MultiKeyMap's
+            // or CompactMap's configuration is its content, not type info
+            return value instanceof Map || value instanceof Collection ? containerForm(value, false) : value;
         }
         Object content;
         Object source;
@@ -744,16 +749,7 @@ public class ToonWriter implements Closeable, Flushable {
             fields.put(itemsKey, new String[] {new String((char[]) value)}, AS_IS);
             return fields;
         } else if (value instanceof Map || value instanceof Collection) {
-            Map<?, ?> data = containerData(value);
-            if (data == null) {
-                return value;
-            }
-            Fields fields = new Fields(value);
-            fields.put(typeKey, typeNameOf(value), AS_IS);
-            for (Map.Entry<?, ?> entry : data.entrySet()) {
-                fields.put(String.valueOf(entry.getKey()), entry.getValue(), dataType(entry.getValue()));
-            }
-            return fields;
+            return containerForm(value, true);
         } else if (isDataClass(value.getClass()) && isInPlace(dataOf(value))) {
             content = dataOf(value);
             source = value;
@@ -763,6 +759,25 @@ public class ToonWriter implements Closeable, Flushable {
         Fields fields = new Fields(source);
         fields.put(typeKey, typeNameOf(value), AS_IS);
         fields.put("value", content, source == null || !GENERIC.get(source.getClass()) ? AS_IS : Object.class);
+        return fields;
+    }
+
+    /**
+     * A list or map whose custom writer gives it as data, as that data ({$type, ...that data} when {@code typed});
+     * any other, itself.
+     */
+    private Object containerForm(Object container, boolean typed) {
+        Map<?, ?> data = containerData(container);
+        if (data == null) {
+            return container;
+        }
+        Fields fields = new Fields(container);
+        if (typed) {
+            fields.put(typeKey, typeNameOf(container), AS_IS);
+        }
+        for (Map.Entry<?, ?> entry : data.entrySet()) {
+            fields.put(String.valueOf(entry.getKey()), entry.getValue(), dataType(entry.getValue()));
+        }
         return fields;
     }
 
