@@ -158,6 +158,41 @@ Map<String, List<Department<Employee>>> orgMap = JsonIo.toJava(json, readOptions
                                 .asType(new TypeHolder<Map<String, List<Department<Employee>>>>(){});
 ```
 
+The type arguments apply at the root as they do in a field: a list's elements, a map's keys and values, all the way
+down -- also to plain JSON with no `@type` (Jackson's, a REST service's). Before 4.113.0 the root's arguments were
+not applied: `[{"name":"ann"}]` read with `TypeHolder<List<Employee>>` gave a list of maps, and numbers came back as
+`Long` and `Double`.
+
+### Which Class You Get for an Interface
+
+Ask for an interface or an abstract container type -- with `asClass()`, `asType()`, or as a field's declared type --
+and json-io builds this class, in JSON and in TOON alike, when the JSON does not name one with `@type`:
+
+| Asked for | Built |
+|---|---|
+| `Map`, `AbstractMap` | `LinkedHashMap` |
+| `SortedMap`, `NavigableMap` | `TreeMap` |
+| `ConcurrentMap` | `ConcurrentHashMapNullSafe` (java-util) |
+| `ConcurrentNavigableMap` | `ConcurrentNavigableMapNullSafe` (java-util) |
+| `Collection`, `List`, `AbstractCollection`, `AbstractList` | `ArrayList` |
+| `Set`, `AbstractSet` | `LinkedHashSet` |
+| `SortedSet`, `NavigableSet` | `TreeSet` |
+| `Queue`, `AbstractSequentialList` | `LinkedList` |
+| `Deque` | `ArrayDeque` |
+| `AbstractQueue` | `ConcurrentLinkedQueue` |
+| `BlockingQueue` | `LinkedBlockingQueue` (unbounded) |
+| `BlockingDeque` | `LinkedBlockingDeque` (unbounded) |
+| `TransferQueue` | `LinkedTransferQueue` |
+
+- The concurrent maps are java-util's null-safe ones because JSON carries null values, which `ConcurrentHashMap`
+  and `ConcurrentSkipListMap` refuse.
+- A `@type` in the JSON wins: `{"@type":"TreeMap",...}` read as a `Map` is a `TreeMap`.
+- Ask for a concrete class to get exactly that class: `asClass(LinkedList.class)`, a `ConcurrentHashMap` field.
+- An interface json-io knows no class for -- your own `interface Registry extends Map<String, Object>` -- is an
+  error that names it; register a `ClassFactory` for it (`ReadOptionsBuilder.addClassFactory`).
+
+`ContainerTypeAskedForTest` pins this table, so it changes only with a test.
+
 ## Jackson Compatibility
 
 **json-io is Jackson-compatible — just call `.standardJson()` on your `WriteOptionsBuilder`.**

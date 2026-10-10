@@ -6,17 +6,34 @@ import java.util.AbstractMap;
 import java.util.AbstractQueue;
 import java.util.AbstractSequentialList;
 import java.util.AbstractSet;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.NavigableSet;
+import java.util.Queue;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
 import java.util.Stack;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.Vector;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TransferQueue;
 
 import com.cedarsoftware.util.ConcurrentHashMapNullSafe;
@@ -81,6 +98,54 @@ class ContainerTypeAskedForTest {
             assertSame(Integer.class, maps.abstractMap.get("a").getClass());
         }
         assertInstanceOf(ConcurrentHashMapNullSafe.class, JsonIo.fromToon("a: 1", null).asClass(ConcurrentMap.class));
+    }
+
+    /**
+     * The class built for each interface or abstract container type, at the root and in a field, JSON and TOON --
+     * the table in the user guide ("Which class you get for an interface").
+     */
+    private static final Object[][] BUILT_FOR = {
+            {Map.class, LinkedHashMap.class}, {SortedMap.class, TreeMap.class}, {NavigableMap.class, TreeMap.class},
+            {ConcurrentMap.class, ConcurrentHashMapNullSafe.class},
+            {ConcurrentNavigableMap.class, ConcurrentNavigableMapNullSafe.class}, {AbstractMap.class, LinkedHashMap.class},
+            {Collection.class, ArrayList.class}, {List.class, ArrayList.class}, {Set.class, LinkedHashSet.class},
+            {SortedSet.class, TreeSet.class}, {NavigableSet.class, TreeSet.class}, {Queue.class, LinkedList.class},
+            {Deque.class, ArrayDeque.class}, {BlockingQueue.class, LinkedBlockingQueue.class},
+            {BlockingDeque.class, LinkedBlockingDeque.class}, {TransferQueue.class, LinkedTransferQueue.class},
+            {AbstractCollection.class, ArrayList.class}, {AbstractList.class, ArrayList.class},
+            {AbstractSequentialList.class, LinkedList.class}, {AbstractSet.class, LinkedHashSet.class},
+            {AbstractQueue.class, ConcurrentLinkedQueue.class}};
+
+    public static class AllKinds {
+        public Map<String, Integer> map;
+        public Set<String> set;
+        public SortedSet<String> sortedSet;
+        public Queue<String> queue;
+        public Deque<String> deque;
+        public ConcurrentMap<String, Integer> concurrentMap;
+        public AbstractQueue<String> abstractQueue;
+    }
+
+    @Test
+    void theClassBuiltForEachInterfaceIsTheDocumentedOne() {
+        for (Object[] row : BUILT_FOR) {
+            Class<?> asked = (Class<?>) row[0];
+            boolean isMap = Map.class.isAssignableFrom(asked);
+            String json = isMap ? "{\"b\":2,\"a\":1}" : "[\"b\",\"a\"]";
+            String toon = isMap ? "b: 2\na: 1" : "[2]: b,a";
+            assertSame(row[1], JsonIo.toJava(json, null).asClass(asked).getClass(), asked.getName());
+            assertSame(row[1], JsonIo.fromToon(toon, null).asClass(asked).getClass(), asked.getName() + " (TOON)");
+        }
+        String json = "{\"map\":{\"a\":1},\"set\":[\"a\"],\"sortedSet\":[\"a\"],\"queue\":[\"a\"],"
+                + "\"deque\":[\"a\"],\"concurrentMap\":{\"a\":1},\"abstractQueue\":[\"a\"]}";
+        AllKinds k = JsonIo.toJava(json, null).asClass(AllKinds.class);
+        assertSame(LinkedHashMap.class, k.map.getClass());
+        assertSame(LinkedHashSet.class, k.set.getClass());
+        assertSame(TreeSet.class, k.sortedSet.getClass());
+        assertSame(LinkedList.class, k.queue.getClass());
+        assertSame(ArrayDeque.class, k.deque.getClass());
+        assertSame(ConcurrentHashMapNullSafe.class, k.concurrentMap.getClass());
+        assertSame(ConcurrentLinkedQueue.class, k.abstractQueue.getClass());
     }
 
     public static class Containers {
