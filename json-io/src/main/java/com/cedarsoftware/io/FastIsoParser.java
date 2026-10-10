@@ -14,11 +14,11 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+import com.cedarsoftware.util.ByteUtilities;
 
 /**
  * Strict-ISO-first fast path for String → java.time conversion on the read side.
@@ -61,24 +61,12 @@ final class FastIsoParser {
         PARSER_TABLE.put(MonthDay.class, MonthDay::parse);
         PARSER_TABLE.put(ZoneOffset.class, ZoneOffset::of);
         PARSER_TABLE.put(ZoneId.class, ZoneId::of);
-        PARSER_TABLE.put(byte[].class, FastIsoParser::base64);
-    }
-
-    /**
-     * A JSON string read into a byte[] is Base64, as Jackson writes and reads it (and as json-io's writeBinary writes
-     * it under showTypeInfoNever): standard, or URL-safe as in JWT segments, padded or not. A string that is not
-     * Base64 returns null, and the Converter gives its bytes. Nothing is guessed from what the string looks like.
-     */
-    private static Object base64(String value) {
-        try {
-            return Base64.getDecoder().decode(value);
-        } catch (IllegalArgumentException notStandard) {
-            try {
-                return Base64.getUrlDecoder().decode(value);
-            } catch (IllegalArgumentException notBase64) {
-                return null;
-            }
-        }
+        // A JSON string read into a byte[] is Base64, as Jackson writes and reads it (and as json-io's writeBinary
+        // writes it under showTypeInfoNever): standard, or URL-safe, padded correctly. "AQ==" is {1}; "AF" and "OK"
+        // have no padding (Jackson rejects them too) and "AF==" has left-over bits no encoder writes, so none is
+        // Base64. A string that is not Base64 parses to null, and the Converter gives its bytes. Nothing is guessed
+        // from what the string looks like.
+        PARSER_TABLE.put(byte[].class, ByteUtilities::decodeBase64);
     }
 
     private FastIsoParser() {

@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * A JSON string read into a byte[] is Base64, as Jackson writes and reads it: json-io decodes it itself, wherever the
- * byte[] sits. A string that is not Base64 gives its own UTF-8 bytes.
+ * byte[] sits, when it is padded correctly. A string that is not Base64 gives its own UTF-8 bytes.
  */
 class ByteArrayBase64ReadTest {
 
@@ -74,11 +74,32 @@ class ByteArrayBase64ReadTest {
         assertArrayEquals(expected, holder.map.get("k"));
     }
 
-    /** URL-safe Base64 (JWT segments) reads too: "-_8" is {0xFB, 0xFF}. */
+    /** URL-safe Base64 reads too: "-_8=" is {0xFB, 0xFF}. */
     @Test
     void urlSafeBase64Reads() {
-        Holder holder = JsonIo.toJava("{\"data\":\"-_8\"}", null).asClass(Holder.class);
+        Holder holder = JsonIo.toJava("{\"data\":\"-_8=\"}", null).asClass(Holder.class);
         assertArrayEquals(new byte[] {(byte) 0xFB, (byte) 0xFF}, holder.data);
+    }
+
+    /**
+     * Base64 is read only when it is padded correctly, exactly as an encoder writes it: "AF" and "OK" have no padding
+     * (the JDK's decoder read them as {0} and {56}; Jackson rejects them), and "AF==" has left-over bits no encoder
+     * writes. Each gives its own bytes at the root, in a field, a List, and in the wrapped form.
+     */
+    @Test
+    void base64ThatIsNotPaddedCorrectlyGivesItsBytes() {
+        for (String text : new String[] {"AF", "OK", "AQ", "AQI", "-_8", "AF==", "OK=="}) {
+            byte[] own = text.getBytes(StandardCharsets.UTF_8);
+            assertArrayEquals(own, JsonIo.toJava("\"" + text + "\"", null).asClass(byte[].class), text);
+            String json = "{\"data\":\"" + text + "\",\"list\":[\"" + text + "\"]}";
+            Holder holder = JsonIo.toJava(json, null).asClass(Holder.class);
+            assertArrayEquals(own, holder.data, text);
+            assertArrayEquals(own, holder.list.get(0), text);
+            String wrapped = "{\"any\":{\"@type\":\"byte[]\",\"value\":\"" + text + "\"}}";
+            assertArrayEquals(own, (byte[]) JsonIo.toJava(wrapped, null).asClass(Holder.class).any, text);
+        }
+        assertArrayEquals(new byte[] {1}, JsonIo.toJava("\"AQ==\"", null).asClass(byte[].class));
+        assertArrayEquals(new byte[] {1, 2}, JsonIo.toJava("{\"data\":\"AQI=\"}", null).asClass(Holder.class).data);
     }
 
     /** A string that is not Base64 (a space, or a length no Base64 has) gives its own UTF-8 bytes. */
