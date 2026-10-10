@@ -369,7 +369,7 @@ Aliasing simplifies JSON output by converting fully qualified Java class names i
 
 - **Scope of Aliases**: The aliases added affect only the instance of `ReadOptions` created from a `ReadOptionsBuilder`. To apply aliases across all instances throughout the JVM's lifecycle, refer to the [application-scoped options](/user-guide-readOptions.md#application-scoped-options-full-lifecycle-of-jvm) section.
 
-- **External Alias Configuration**: Alternatively, you can manage aliases externally by creating an [aliases.txt](/src/main/resources/config/aliases.txt) file and placing it in the class path. `json-io` includes a comprehensive list of default aliases, but you can override this by providing your own file.
+- **External Alias Configuration**: Alternatively, you can manage aliases externally by creating an [aliases.txt](/src/main/resources/config/aliases.txt) file and placing it in the class path, ahead of json-io's jar. `json-io` includes a comprehensive list of default aliases; your file then decides the names json-io *writes*. Since 4.113.0 json-io still *reads* the names every copy on the class path defines -- yours and its own, yours winning where they disagree -- so JSON written with json-io's names stays readable.
 
 - **Annotation Alternative:** For your own classes, use `@IoTypeName("ShortName")` directly on the class. See [Annotations](/user-guide.md#iotypenameshortnameclass-level).
 
@@ -386,9 +386,9 @@ Aliasing simplifies JSON output by converting fully qualified Java class names i
 >- [ ] Sets the alias for a given class name.
 >#### `ReadOptionsBuilder` aliasTypeName(`Class, String alias`)
 >- [ ] Sets the alias for a given class.
->#### `ReadOptionsBuilder` removeAliasTypeNamesMatching(`String typeNamePattern`)
+>#### `ReadOptionsBuilder` removeAliasTypeNameMatching(`String typeNamePattern`)
 >- [ ] Remove alias entries from this `ReadOptionsBuilder` instance where the Java fully qualified string class name
-   matches the passed in wildcard pattern. The `typeNamePattern` matches using a wild-card pattern, where * matches
+   matches the passed in wildcard pattern (the permanent `removePermanentAliasTypeNamesMatching` matches alias names). The `typeNamePattern` matches using a wild-card pattern, where * matches
    anything and ? matches one character. As many * or ? can be used as needed.
 
 ### JSON Object Conversion Mode
@@ -690,13 +690,13 @@ The `removePermanentAliasTypeNamesMatching` method in `json-io` is designed to p
 
 - **Operational Implications**: This action modifies the alias configuration globally within the JVM, ensuring that all future `ReadOptions` instances conform to the new alias settings. It's recommended to expand your READ alias support before enhancing WRITE alias support unless you are updating all related services simultaneously to accommodate new aliases.
 
-- **Wildcard Pattern Matching**: The API accepts wildcard patterns (`*`, `?`, and regular characters) to identify which aliases to remove, allowing for flexible and powerful pattern matching against fully qualified class names stored in its cache.
+- **Wildcard Pattern Matching**: The API accepts wildcard patterns (`*`, `?`, and regular characters) matched against **alias names**: `"ArrayList"` removes the alias `ArrayList`, `"*Map"` every alias ending in `Map`. The full class name stays readable. (The per-builder `removeAliasTypeNameMatching`, and the write-side methods, match class names.)
 
-- **Alternative Method**: As an alternative to using this API programmatically, you can manage aliases by placing a custom [aliases.txt](/src/main/resources/config/aliases.txt) file in the class path. `json-io` provides a comprehensive default list, but you can override this with your own configurations if preferred.
+- **Alternative Method**: A custom [aliases.txt](/src/main/resources/config/aliases.txt) ahead of json-io's on the class path decides the names json-io writes; for reading, json-io also accepts the names in every other copy, its own included, so a custom file does not remove names from the read side.
 
 This method provides a robust tool for managing how aliases are used in JSON serialization and deserialization, ensuring that alias configurations are kept up-to-date and relevant to the application's current operational needs.
 
->#### WriteOptionsBuilder.removePermanentAliasTypeNamesMatching(`String classNamePattern`)
+>#### ReadOptionsBuilder.removePermanentAliasTypeNamesMatching(`String aliasNamePattern`)
 
 ### Add Permanent Reader
 

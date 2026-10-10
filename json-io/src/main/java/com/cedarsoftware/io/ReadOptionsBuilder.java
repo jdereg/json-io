@@ -516,19 +516,23 @@ public class ReadOptionsBuilder {
     }
 
     /**
-     * Call this method to remove alias patterns from the ReadsOptionsBuilder. Be careful doing so. In a micro-services
-     * environment, you want the receiving services to know as many substitutions as possible. It is important to control
-     * the aliases on the "written" side, to ensure that written JSON does not include aliases that the receiving
-     * micro-services do not yet 'understand.' Therefore, you should rarely need this API.<br>
+     * Call this method to stop accepting, in {@code @type}, the aliases whose ALIAS NAME matches the pattern -- for
+     * every ReadOptionsBuilder created after this call, for the life of the JVM. {@code "ArrayList"} matches the alias
+     * {@code ArrayList}; {@code "*Map"} every alias ending in Map. The full class name stays readable. Aliases are
+     * removed whichever copy of config/aliases.txt defines them.<br>
      * <br>
-     * This API matches your wildcard pattern of *, ?, and characters against class names in its cache. It removes the
-     * entries (className to aliasName) from the cache to prevent the resultant classes from being aliased during output.
+     * Be careful doing so. In a micro-services environment, you want the receiving services to know as many names as
+     * possible; control the aliases on the "written" side instead
+     * ({@link WriteOptionsBuilder#removePermanentAliasTypeNamesMatching(String)}, which matches class names), so that
+     * written JSON does not use names the receiving services do not yet 'understand.' You should rarely need this API.
+     * <br><br>
+     * Note: {@link #removeAliasTypeNameMatching(String)}, on one builder, matches CLASS names instead.
      *
-     * @param classNamePattern String pattern to match class names. This String matches using a wild-card
+     * @param aliasNamePattern String pattern to match alias names. This String matches using a wild-card
      * pattern, where * matches anything and ? matches one character. As many * or ? can be used as needed.
      */
-    public static void removePermanentAliasTypeNamesMatching(String classNamePattern) {
-        String regex = StringUtilities.wildcardToRegexString(classNamePattern);
+    public static void removePermanentAliasTypeNamesMatching(String aliasNamePattern) {
+        String regex = StringUtilities.wildcardToRegexString(aliasNamePattern);
         Pattern pattern = RegexUtilities.getCachedPattern(regex);
         if (pattern != null) {
             synchronized (BASE_ALIAS_MAPPINGS) {

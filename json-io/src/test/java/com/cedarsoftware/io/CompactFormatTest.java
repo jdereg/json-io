@@ -712,13 +712,17 @@ class CompactFormatTest {
                 "Compact JSON should be shorter than legacy JSON for collection elements");
 
         // Both round-trip correctly because the field type (List<ZonedDateTime>) is preserved
-        ZonedDateTimeListHolder resultDefault = JsonIo.toJava(jsonDefault, defaultReadOpts()).asClass(ZonedDateTimeListHolder.class);
+        ZonedDateTimeListHolder resultDefault = JsonIo.toJava(jsonDefault, defaultReadOpts())
+                .asClass(ZonedDateTimeListHolder.class);
         assertEquals(holder.events, resultDefault.events);
-        ZonedDateTimeListHolder resultCompact = JsonIo.toJava(jsonCompact, defaultReadOpts()).asClass(ZonedDateTimeListHolder.class);
+        ZonedDateTimeListHolder resultCompact = JsonIo.toJava(jsonCompact, defaultReadOpts())
+                .asClass(ZonedDateTimeListHolder.class);
         assertEquals(holder.events, resultCompact.events);
 
-        // Note: LEGACY format with @type:"ArrayList" loses generic type info, so elements stay as strings.
-        // This is expected behavior - the wrapper loses the parameterized type information.
+        // The legacy wrapper ({"@type":"ArrayList","@items":[...]}) keeps the field's element type too
+        ZonedDateTimeListHolder resultLegacy = JsonIo.toJava(jsonLegacy, defaultReadOpts())
+                .asClass(ZonedDateTimeListHolder.class);
+        assertEquals(holder.events, resultLegacy.events);
     }
 
     // ========== ARRAY COMPONENT TYPE SIMPLIFICATION TESTS ==========
