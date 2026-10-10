@@ -220,6 +220,20 @@ class UpgradeTo4113NotesTest {
                 JsonIo.toJava("{\"buffer\":\"AQID\"}", null).asClass(Buffers.class).buffer);
     }
 
+    public static class Frame {
+        public Object frame;
+    }
+
+    @Test
+    void aStackTraceElementsAliasIsStackTraceElement() {
+        Frame frame = new Frame();
+        frame.frame = new StackTraceElement("C", "m", "F.java", 7);
+        String json = JsonIo.toJson(frame, null);
+        assertTrue(json.contains("\"@type\":\"StackTraceElement\""), json);
+        assertEquals(frame.frame, JsonIo.toJava(json.replace("\"StackTraceElement\"", "\"StackTraceElementElement\""),
+                null).asClass(Frame.class).frame);
+    }
+
     /** The class factory nothing reached is gone; a BitSet still reads, as do the older index form's lists. */
     @Test
     void bitSetFactoryIsRemovedAndABitSetStillReads() {

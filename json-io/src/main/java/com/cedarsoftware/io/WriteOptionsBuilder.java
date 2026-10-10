@@ -2077,12 +2077,31 @@ public class WriteOptionsBuilder {
     }
 
     /**
+     * 4.112.0 wrote a StackTraceElement as "StackTraceElementElement" (an alias that doubled its last word), and
+     * showTypeInfoMinimalLegacy() keeps its text byte for byte: the old name is written in its place, unless the
+     * application chose its own.
+     */
+    private void keepLegacyStackTraceElementAlias() {
+        String[] suffixes = {"", "[]", "[][]", "[][][]"};
+        String[] classNames = {StackTraceElement.class.getName(), StackTraceElement[].class.getName(),
+                StackTraceElement[][].class.getName(), StackTraceElement[][][].class.getName()};
+        for (int i = 0; i < classNames.length; i++) {
+            if (("StackTraceElement" + suffixes[i]).equals(options.aliasTypeNames.get(classNames[i]))) {
+                ownAliases().put(classNames[i], "StackTraceElementElement" + suffixes[i]);
+            }
+        }
+    }
+
+    /**
      * Seal the instance of this class so that no more changes can be made to it.
      *
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptions build() {
         options.clearCaches();
+        if (options.showTypeInfo == WriteOptions.ShowType.MINIMAL_LEGACY) {
+            keepLegacyStackTraceElementAlias();
+        }
         options.aliasTypeNames = Collections.unmodifiableMap(options.aliasTypeNames);
         options.aliasesShared = false;      // built: no more changes, and none through the builder either
         // The class settings this builder copied are made read-only; the ones it shares already are

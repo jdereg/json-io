@@ -95,8 +95,8 @@ public class ReadOptionsBuilder {
     private static volatile Map<String, String> baseAliasSnapshot;
     // The aliases the other copies of config/aliases.txt on the class path define (alias -> class name), json-io's
     // own among them: an application that puts its own copy first, so that json-io writes the names it chooses, still
-    // reads the names json-io (or any other copy) writes. Under BASE_ALIAS_MAPPINGS, which win where they disagree.
-    // Guarded by BASE_ALIAS_MAPPINGS.
+    // reads the names json-io (or any other copy) writes. Also the names json-io wrote for a class before
+    // (loadFormerAliases). Under BASE_ALIAS_MAPPINGS, which win where they disagree. Guarded by BASE_ALIAS_MAPPINGS.
     private static final Map<String, String> OTHER_COPIES_ALIASES = new LinkedHashMap<>();
     private static final Map<Class<?>, Class<?>> BASE_COERCED_TYPES = new ConcurrentHashMapNullSafe<>();
     private static final Set<Class<?>> BASE_NON_REFS = new ConcurrentSet<>();
@@ -178,6 +178,7 @@ public class ReadOptionsBuilder {
         loadBaseReaders();
         loadBaseAliasMappings(ReadOptionsBuilder::addPermanentAlias);
         loadOtherCopiesAliases();
+        loadFormerAliases();
         loadBaseCoercedTypes();
         loadBaseNonRefs();
         loadBaseNotCustomReadClasses();
@@ -2887,6 +2888,16 @@ public class ReadOptionsBuilder {
         for (Map<String, String> copy : MetaUtils.loadOtherMapDefinitions("config/aliases.txt")) {
             applyAliases(copy, (clazz, alias) -> OTHER_COPIES_ALIASES.putIfAbsent(alias, clazz.getName()));
         }
+    }
+
+    /**
+     * Names json-io wrote for a class before, read only: "StackTraceElementElement" was StackTraceElement's alias from
+     * 2024 to 4.112.0 (a slip that doubled its last word), so JSON and TOON written then still read.
+     */
+    private static void loadFormerAliases() {
+        Map<String, String> former = new LinkedHashMap<>();
+        former.put(StackTraceElement.class.getName(), "StackTraceElementElement");
+        applyAliases(former, (clazz, alias) -> OTHER_COPIES_ALIASES.putIfAbsent(alias, clazz.getName()));
     }
 
     private static void applyAliases(Map<String, String> aliasMappings, AliasApplier aliasApplier) {
