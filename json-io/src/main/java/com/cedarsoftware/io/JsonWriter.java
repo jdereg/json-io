@@ -400,7 +400,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private final boolean writeLongsAsStrings;
     private final boolean json5SmartQuotes;
     private final boolean cycleSupport;
-    private final boolean minimalPlusFormat;
+    private final boolean minimalPlusFormat;   // MINIMAL_PLUS: also its lossy shortcuts
+    private final boolean naturalDefaults;     // MINIMAL, MINIMAL_PLUS: no @type on a natural default
     private final boolean stringifyMapKeys;
 
     // Pre-fetched custom writers for primitive array hot paths (avoids per-array lookup)
@@ -582,6 +583,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         this.json5SmartQuotes = this.writeOptions.isJson5SmartQuotes();
         this.cycleSupport = this.writeOptions.isCycleSupport();
         this.minimalPlusFormat = this.writeOptions.isMinimalPlusShowingType();
+        this.naturalDefaults = this.writeOptions.isMinimalShowingType()
+                && !this.writeOptions.isMinimalLegacyShowingType();
         this.stringifyMapKeys = this.writeOptions.isStringifyMapKeys();
 
         // Pre-fetch custom writers for primitive array hot paths
@@ -2538,8 +2541,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (elementClass == declaredElementType) {
             return false;
         }
-        // Minimal plus format: treat natural defaults as matching (e.g., ArrayList for List element type)
-        if (minimalPlusFormat && naturalDefault(declaredElementType) == elementClass) {
+        // Minimal (not legacy): treat natural defaults as matching (e.g., ArrayList for List element type)
+        if (naturalDefaults && naturalDefault(declaredElementType) == elementClass) {
             return false;
         }
         // Minimal plus format: treat convertable types as matching (e.g., ZonedDateTime element in Temporal list)
@@ -3004,10 +3007,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             return false;
         }
 
-        // Minimal plus format: omit @type when the runtime type is the "natural default" for the declared type.
+        // Minimal (not legacy): omit @type when the runtime type is the "natural default" for the declared type.
         // E.g., ArrayList for List, LinkedHashSet for Set, LinkedHashMap for Map.
         // The reader creates these same defaults via CollectionFactory/MapFactory when @type is absent.
-        if (minimalPlusFormat && naturalDefault(declaredType) == objectClass) {
+        if (naturalDefaults && naturalDefault(declaredType) == objectClass) {
             return false;
         }
 

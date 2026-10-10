@@ -628,6 +628,7 @@ Drawing back = JsonIo.fromToon(toon, null).asClass(Drawing.class);   // its circ
 | none (the default) | nowhere |
 | `showTypeInfoMinimal()` | where the declared type does not determine the class the reader builds — a subclass in a field, list or map, anything in an `Object` slot or a raw list, an exception's cause — and on the root (`omitRootTypeInfo()` leaves that off) |
 | `showTypeInfoMinimalPlus()` | as minimal, but not on an int, short, byte or float in an `Object` slot (it reads back as a long or a double), nor on one date or number type where another is declared (it is converted) |
+| `showTypeInfoMinimalLegacy()` | as minimal (the legacy form is JSON's: TOON has always written minimal this way) |
 | `showTypeInfoAlways()` | on every value but a String, Long, Double or Boolean |
 
 Under minimal, a field, list, set or map that holds its declared class — or the class the reader builds for the

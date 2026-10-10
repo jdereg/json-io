@@ -91,8 +91,9 @@ spring:
 
       # When to include @type metadata
       # ALWAYS - Always include type info
-      # MINIMAL - Only when needed for polymorphism
-      # MINIMAL_PLUS - Extends MINIMAL with optimizations for collections, maps, and convertible types (default)
+      # MINIMAL - Only where the reader could not build the same class without it
+      # MINIMAL_PLUS - MINIMAL, and plain numbers in Object slots (read back as Long/Double) (default)
+      # MINIMAL_LEGACY - as MINIMAL wrote before json-io 4.113.0, for json-io readers older than 4.88.0
       # NEVER - Never include type info
       show-type-info: MINIMAL_PLUS
 

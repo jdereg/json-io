@@ -70,6 +70,17 @@ class JsonIoAutoConfigurationTest {
     }
 
     @Test
+    void showTypeInfoMinimalLegacyCanBeConfigured() {
+        contextRunner
+                .withPropertyValues("spring.json-io.write.show-type-info=MINIMAL_LEGACY")
+                .run(context -> {
+                    WriteOptions writeOptions = context.getBean(WriteOptions.class);
+                    assertThat(writeOptions.isMinimalLegacyShowingType()).isTrue();
+                    assertThat(writeOptions.isMinimalShowingType()).isTrue();
+                });
+    }
+
+    @Test
     void showTypeInfoNeverCanBeConfigured() {
         contextRunner
                 .withPropertyValues("spring.json-io.write.show-type-info=NEVER")

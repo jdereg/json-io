@@ -61,9 +61,14 @@ import com.cedarsoftware.util.convert.ConverterOptions;
 public interface WriteOptions {
     // Properties
 
-    // Enum for the type info display modes
+    /**
+     * The type info display modes. MINIMAL (the default) writes {@code @type} only where the reader could not build the
+     * same class without it, so everything reads back exactly; MINIMAL_PLUS also leaves it off where the reader builds
+     * a close stand-in (a Long for an Integer in an Object slot), which is smaller and lossy; MINIMAL_LEGACY writes what
+     * MINIMAL wrote before 4.113.0, for readers older than json-io 4.88.0 and for text that must not change.
+     */
     enum ShowType {
-        ALWAYS, NEVER, MINIMAL, MINIMAL_PLUS
+        ALWAYS, NEVER, MINIMAL, MINIMAL_PLUS, MINIMAL_LEGACY
     }
 
     /**
@@ -222,16 +227,26 @@ public interface WriteOptions {
     boolean isNeverShowingType();
 
     /**
-     * @return boolean true if set to show minimal type (@type)
+     * @return boolean true if set to show minimal type (@type): MINIMAL, MINIMAL_PLUS or MINIMAL_LEGACY
      */
     boolean isMinimalShowingType();
 
     /**
-     * @return boolean true if set to show minimal plus type info. Minimal plus mode extends minimal mode by also
-     * omitting @type for Collections and Maps whose runtime type is the "natural default" for the field's
-     * declared type (e.g., ArrayList for List, LinkedHashSet for Set, LinkedHashMap for Map).
+     * @return boolean true if set to show minimal plus type info: minimal, and also no @type where the reader builds a
+     * close stand-in -- an int, short, byte or float in an Object slot (read back as a Long or Double), one date or
+     * number type where another convertible one is declared (converted). Smaller, and lossy.
      */
     boolean isMinimalPlusShowingType();
+
+    /**
+     * @return boolean true if set to show type info as MINIMAL did before 4.113.0: also on a List, Set or Map, or an
+     * element of one, whose class is the one the reader builds for its declared type (an ArrayList in a List field).
+     * For readers older than json-io 4.88.0, which need it there, and for JSON text that must stay byte for byte
+     * what it was (text that is hashed or compared).
+     */
+    default boolean isMinimalLegacyShowingType() {
+        return false;
+    }
 
     /**
      * @return boolean true if the root type (@type on the root object) should be shown, false to omit it.

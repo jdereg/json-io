@@ -707,6 +707,15 @@ public class WriteOptionsBuilder {
     }
 
     /**
+     * Call this method to set a permanent (JVM lifetime) type info display setting to minimal legacy: type info as
+     * {@link #showTypeInfoMinimal()} wrote it before 4.113.0 (see {@link #showTypeInfoMinimalLegacy()}).
+     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     */
+    public static void addPermanentShowTypeInfoMinimalLegacy() {
+        BASE_SHOW_TYPE_INFO = WriteOptions.ShowType.MINIMAL_LEGACY;
+    }
+
+    /**
      * Call this method to set a permanent (JVM lifetime) pretty print setting.
      * All WriteOptions instances will be initialized with this value unless explicitly overridden.
      * 
@@ -1020,15 +1029,20 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * Set to show minimal type.  This means that when the type of object can be inferred, a type field will not
-     * be output.  A Field that points to an instance of the same time, or a typed [] of objects don't need the type
-     * info.  However, an Object[], a Collection with no generics, the reader will need to know what type the JSON
-     * object is, in order to instantiate the write Java class to which the information will be copied.
+     * Set to show minimal type info, the default: {@literal @type} only where the reader could not build the same
+     * class without it, so everything reads back exactly. Not on a field or element of its declared class, nor on a
+     * List, Set or Map (or an element of one) whose class is the one the reader builds for its declared type -- an
+     * ArrayList in a List field writes as [...], not {"@type":"ArrayList","@items":[...]} (natural defaults:
+     * List→ArrayList, Set→LinkedHashSet, Map→LinkedHashMap, SortedSet→TreeSet, ...). An Object[], a Collection with no
+     * generics, anything in an Object slot carries its type.
+     * <p>
+     * Before 4.113.0 the natural defaults carried {@literal @type} too: half the JSON of a typical graph of DTOs. A
+     * json-io reader older than 4.88.0 needs it there (it reads such elements back as maps); write for one with
+     * {@link #showTypeInfoMinimalLegacy()}, which also keeps JSON text byte for byte what it was.
      * <p>
      * TOON writes no type unless one of these is called. With this, it writes {@code $type} only where the declared
      * type does not determine the class the reader builds -- a subclass in a field or list, anything in an Object
-     * slot, an exception's cause -- and on the root ({@link #omitRootTypeInfo()} leaves that off). Unlike JSON here, a
-     * List, Set or Map holding the class the reader builds for it (ArrayList for List) carries none, so a graph of
+     * slot, an exception's cause -- and on the root ({@link #omitRootTypeInfo()} leaves that off), so a graph of
      * plain DTOs costs one line over TOON without types.
      *
      * @return WriteOptionsBuilder for chained access.
@@ -1040,11 +1054,27 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * Set to show minimal plus type info. This extends minimal mode by also omitting {@literal @type} for Collections
-     * and Maps whose runtime type is the "natural default" for the field's declared type. For example, an
-     * ArrayList in a List field writes as direct [...] instead of {"@type":"ArrayList","@items":[...]}.
-     * Natural defaults include: List→ArrayList, Set→LinkedHashSet, Map→LinkedHashMap, SortedSet→TreeSet, etc.
-     * The reader already handles this compact format via field type inference.
+     * Set to show type info as {@link #showTypeInfoMinimal()} wrote it before 4.113.0: also on a List, Set or Map, or
+     * an element of one, whose class is the one the reader builds for its declared type (an ArrayList in a List field
+     * writes {"@type":"ArrayList","@items":[...]}). For two cases: a json-io reader older than 4.88.0 -- one that would
+     * read such an element back as a map -- and JSON text that must stay byte for byte what it was, because it is
+     * hashed or compared. TOON writes as with {@link #showTypeInfoMinimal()}.
+     *
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder showTypeInfoMinimalLegacy() {
+        options.showTypeInfo = WriteOptions.ShowType.MINIMAL_LEGACY;
+        options.showTypeInfoExplicitlySet = true;
+        return this;
+    }
+
+    /**
+     * Set to show minimal plus type info: {@link #showTypeInfoMinimal()}, and also no {@literal @type} where the reader
+     * builds a close stand-in -- an int, short, byte or float in an Object slot (a {@code Map<String, Object>}
+     * value, a {@code List<Object>} element, an Object field) is written as a plain number and read back as a Long
+     * or Double, and one date or number type where another convertible one is declared (a Timestamp in a Date
+     * field) is read back as the declared type. Smaller than minimal where values sit in Object slots, and lossy
+     * there; a {@code Map<String, List<Integer>>} field still reads back Integers.
      * <p>
      * TOON: as {@link #showTypeInfoMinimal()}, and also no type on an int, short, byte or float in an Object slot
      * (read back as a long or a double), nor on one date or number type where another is declared (converted).
@@ -1281,9 +1311,10 @@ public class WriteOptionsBuilder {
      * @throws IllegalStateException if not in showTypeInfoMinimal() or showTypeInfoMinimalPlus() mode.
      */
     public WriteOptionsBuilder showRootTypeInfo() {
-        if (options.showTypeInfo != WriteOptions.ShowType.MINIMAL && options.showTypeInfo != WriteOptions.ShowType.MINIMAL_PLUS) {
+        if (options.showTypeInfo != WriteOptions.ShowType.MINIMAL && options.showTypeInfo != WriteOptions.ShowType.MINIMAL_PLUS
+                && options.showTypeInfo != WriteOptions.ShowType.MINIMAL_LEGACY) {
             throw new IllegalStateException(
-                "showRootTypeInfo() is only valid when using showTypeInfoMinimal() or showTypeInfoMinimalPlus(). " +
+                "showRootTypeInfo() is only valid when using showTypeInfoMinimal(), showTypeInfoMinimalPlus() or showTypeInfoMinimalLegacy(). " +
                 "With showTypeInfoAlways() or showTypeInfoNever(), root type behavior " +
                 "is determined by the global setting.");
         }
@@ -1311,9 +1342,10 @@ public class WriteOptionsBuilder {
      * @throws IllegalStateException if not in showTypeInfoMinimal() or showTypeInfoMinimalPlus() mode.
      */
     public WriteOptionsBuilder omitRootTypeInfo() {
-        if (options.showTypeInfo != WriteOptions.ShowType.MINIMAL && options.showTypeInfo != WriteOptions.ShowType.MINIMAL_PLUS) {
+        if (options.showTypeInfo != WriteOptions.ShowType.MINIMAL && options.showTypeInfo != WriteOptions.ShowType.MINIMAL_PLUS
+                && options.showTypeInfo != WriteOptions.ShowType.MINIMAL_LEGACY) {
             throw new IllegalStateException(
-                "omitRootTypeInfo() is only valid when using showTypeInfoMinimal() or showTypeInfoMinimalPlus(). " +
+                "omitRootTypeInfo() is only valid when using showTypeInfoMinimal(), showTypeInfoMinimalPlus() or showTypeInfoMinimalLegacy(). " +
                 "With showTypeInfoAlways() or showTypeInfoNever(), root type behavior " +
                 "is determined by the global setting.");
         }
@@ -2336,7 +2368,8 @@ public class WriteOptionsBuilder {
          * Note: MINIMAL_PLUS mode is a superset of MINIMAL, so this returns true for both.
          */
         public boolean isMinimalShowingType() {
-            return showTypeInfo == ShowType.MINIMAL || showTypeInfo == ShowType.MINIMAL_PLUS;
+            return showTypeInfo == ShowType.MINIMAL || showTypeInfo == ShowType.MINIMAL_PLUS
+                    || showTypeInfo == ShowType.MINIMAL_LEGACY;
         }
 
         /**
@@ -2344,6 +2377,14 @@ public class WriteOptionsBuilder {
          */
         public boolean isMinimalPlusShowingType() {
             return showTypeInfo == ShowType.MINIMAL_PLUS;
+        }
+
+        /**
+         * @return boolean true if set to show type info as minimal did before 4.113.0
+         */
+        @Override
+        public boolean isMinimalLegacyShowingType() {
+            return showTypeInfo == ShowType.MINIMAL_LEGACY;
         }
 
         /**

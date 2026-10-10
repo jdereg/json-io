@@ -1,20 +1,16 @@
 {
   "@type": "com.cedarsoftware.io.PrettyPrintTest$Nice",
   "name": "Louie",
-  "items": {
-    "@type": "ArrayList",
-    "@items": [
-      "One",
-      1,
-      {
-        "@type": "Integer",
-        "value": 1
-      },
-      true
-    ]
-  },
+  "items": [
+    "One",
+    1,
+    {
+      "@type": "Integer",
+      "value": 1
+    },
+    true
+  ],
   "dictionary": {
-    "@type": "LinkedHashMap",
     "grade": "A",
     "price": 100.0,
     "bigdec": {

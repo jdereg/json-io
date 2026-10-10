@@ -73,6 +73,14 @@ implementation 'com.cedarsoftware:json-io:4.112.0'
 
 Latest version: [![Maven Central](https://img.shields.io/maven-central/v/com.cedarsoftware/json-io)](https://central.sonatype.com/artifact/com.cedarsoftware/json-io)
 
+> **Upgrading to 4.113.0: smaller default JSON.** The default type info (`showTypeInfoMinimal()`) no longer writes
+> `@type` on a List, Set or Map whose class is the one the reader builds for its declared type: an `ArrayList` in a
+> `List` field is `[...]`, not `{"@type":"ArrayList","@items":[...]}`. That is about half the JSON of a typical graph
+> of DTOs, and it still reads back exactly. **A json-io reader older than 4.88.0 reads such elements back as maps,
+> without an error.** If your JSON is read by an older json-io, or must stay byte for byte what it was (it is hashed
+> or compared), write it with `showTypeInfoMinimalLegacy()`. `showTypeInfoMinimalPlus()` is smaller still where values
+> sit in `Object` slots, and lossy there: an `int` in a `Map<String, Object>` reads back as a `Long`.
+
 ---
 
 <details>

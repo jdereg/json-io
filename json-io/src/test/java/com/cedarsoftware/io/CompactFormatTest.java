@@ -362,20 +362,24 @@ class CompactFormatTest {
         ListHolder holder = new ListHolder();
         holder.names = new ArrayList<>(Arrays.asList("Alice", "Bob"));
 
+        String legacyJson = JsonIo.toJson(holder, new WriteOptionsBuilder().showTypeInfoMinimalLegacy().build());
         String defaultJson = JsonIo.toJson(holder, defaultWriteOpts());
         String compactJson = JsonIo.toJson(holder, compactWriteOpts());
 
-        // Default should still use wrapper
-        assertTrue(defaultJson.contains("ArrayList") || defaultJson.contains("@items") || defaultJson.contains("@e"),
-                "Default format should use @type or @items wrapper");
+        // Minimal legacy keeps the wrapper (minimal before 4.113.0, for readers older than 4.88.0)
+        assertTrue(legacyJson.contains("ArrayList") || legacyJson.contains("@items") || legacyJson.contains("@e"),
+                "Legacy format should use @type or @items wrapper");
 
-        // Compact should not
+        // The default (minimal) and compact (minimal plus) omit it
+        assertFalse(defaultJson.contains("ArrayList"), "Default format should omit wrapper");
         assertFalse(compactJson.contains("ArrayList"), "Compact format should omit wrapper");
 
-        // Both should round-trip correctly
-        ListHolder result1 = JsonIo.toJava(defaultJson, defaultReadOpts()).asClass(ListHolder.class);
-        ListHolder result2 = JsonIo.toJava(compactJson, defaultReadOpts()).asClass(ListHolder.class);
-        assertTrue(DeepEquals.deepEquals(result1, result2), "Both formats should produce equal objects");
+        // All round-trip correctly
+        ListHolder result1 = JsonIo.toJava(legacyJson, defaultReadOpts()).asClass(ListHolder.class);
+        ListHolder result2 = JsonIo.toJava(defaultJson, defaultReadOpts()).asClass(ListHolder.class);
+        ListHolder result3 = JsonIo.toJava(compactJson, defaultReadOpts()).asClass(ListHolder.class);
+        assertTrue(DeepEquals.deepEquals(result1, result2), "Legacy and default should produce equal objects");
+        assertTrue(DeepEquals.deepEquals(result1, result3), "Legacy and compact should produce equal objects");
     }
 
     // ========== Additional edge case tests ==========
@@ -693,21 +697,27 @@ class CompactFormatTest {
         holder.events.add(ZonedDateTime.parse("2023-10-22T12:03:01+03:00[Asia/Aden]"));
         holder.events.add(ZonedDateTime.parse("2023-11-15T14:30:45-05:00[America/New_York]"));
 
+        WriteOptions prettyLegacy = new WriteOptionsBuilder().showTypeInfoMinimalLegacy().prettyPrint(true).build();
         WriteOptions prettyDefault = new WriteOptionsBuilder().prettyPrint(true).build();
         WriteOptions prettyCompact = new WriteOptionsBuilder().showTypeInfoMinimalPlus().prettyPrint(true).build();
 
+        String jsonLegacy = JsonIo.toJson(holder, prettyLegacy);
         String jsonDefault = JsonIo.toJson(holder, prettyDefault);
         String jsonCompact = JsonIo.toJson(holder, prettyCompact);
 
-        // Compact should be shorter (no @type wrappers on container)
-        assertTrue(jsonCompact.length() < jsonDefault.length(),
-                "Compact JSON should be shorter than default JSON for collection elements");
+        // Default and compact are shorter than legacy (no @type wrapper on the container)
+        assertTrue(jsonDefault.length() < jsonLegacy.length(),
+                "Default JSON should be shorter than legacy JSON for collection elements");
+        assertTrue(jsonCompact.length() < jsonLegacy.length(),
+                "Compact JSON should be shorter than legacy JSON for collection elements");
 
-        // Compact format round-trips correctly because field type (List<ZonedDateTime>) is preserved
+        // Both round-trip correctly because the field type (List<ZonedDateTime>) is preserved
+        ZonedDateTimeListHolder resultDefault = JsonIo.toJava(jsonDefault, defaultReadOpts()).asClass(ZonedDateTimeListHolder.class);
+        assertEquals(holder.events, resultDefault.events);
         ZonedDateTimeListHolder resultCompact = JsonIo.toJava(jsonCompact, defaultReadOpts()).asClass(ZonedDateTimeListHolder.class);
         assertEquals(holder.events, resultCompact.events);
 
-        // Note: DEFAULT format with @type:"ArrayList" loses generic type info, so elements stay as strings.
+        // Note: LEGACY format with @type:"ArrayList" loses generic type info, so elements stay as strings.
         // This is expected behavior - the wrapper loses the parameterized type information.
     }
 

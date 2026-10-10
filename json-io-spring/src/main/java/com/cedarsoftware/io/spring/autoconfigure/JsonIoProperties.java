@@ -402,16 +402,21 @@ public class JsonIoProperties {
          */
         ALWAYS,
         /**
-         * Include @type only when needed for polymorphic types.
+         * Include @type only where the reader could not build the same class without it: not on a field of its
+         * declared class, nor on a natural default (an ArrayList in a List field). Everything reads back exactly.
          */
         MINIMAL,
         /**
-         * Extends MINIMAL with optimizations for collections, maps, and convertible types.
-         * Omits @type for natural defaults (e.g., ArrayList for List) and types with
-         * lossless String round-trips (e.g., ZonedDateTime, UUID, BigDecimal).
-         * This is the default for Spring integration.
+         * Extends MINIMAL: also no @type on an int, short, byte or float in an Object slot (read back as a Long or
+         * Double) nor on one convertible date or number type where another is declared. Plain numbers for clients
+         * that are not json-io; lossy for a json-io reader. This is the default for Spring integration.
          */
         MINIMAL_PLUS,
+        /**
+         * Type info as MINIMAL wrote it before json-io 4.113.0, also on natural defaults: for json-io readers older
+         * than 4.88.0, and for JSON text that must stay byte for byte what it was.
+         */
+        MINIMAL_LEGACY,
         /**
          * Never include @type metadata.
          */

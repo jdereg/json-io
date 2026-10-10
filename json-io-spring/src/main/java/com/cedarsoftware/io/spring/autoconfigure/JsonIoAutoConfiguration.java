@@ -198,6 +198,9 @@ public class JsonIoAutoConfiguration {
             case MINIMAL:
                 builder.showTypeInfoMinimal();
                 break;
+            case MINIMAL_LEGACY:
+                builder.showTypeInfoMinimalLegacy();
+                break;
             case MINIMAL_PLUS:
             default:
                 builder.showTypeInfoMinimalPlus();

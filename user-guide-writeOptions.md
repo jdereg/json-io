@@ -305,18 +305,22 @@ This mechanism is crucial for maintaining the fidelity of the object graph when 
 >#### `boolean` isNeverShowingType()
 >- [ ] Returns `true` if set to never show type (no @type).
 >#### `boolean` isMinimalShowingType()
->- [ ] Returns `true` if set to show minimal type (@type). This is the default. Note: Returns `true` for both MINIMAL and MINIMAL_PLUS modes since MINIMAL_PLUS is a superset of MINIMAL.
+>- [ ] Returns `true` if set to show minimal type (@type). This is the default. Note: Returns `true` for MINIMAL, MINIMAL_PLUS and MINIMAL_LEGACY.
 >#### `boolean` isMinimalPlusShowingType()
 >- [ ] Returns `true` if set to show minimal plus type info.
+>#### `boolean` isMinimalLegacyShowingType()
+>- [ ] Returns `true` if set to show type info as minimal did before 4.113.0.
 
 >#### `WriteOptionsBuilder` showTypeInfoAlways()
 >- [ ] Sets to always show type.
 >#### `WriteOptionsBuilder` showTypeInfoNever()
 >- [ ] Sets to never show type.
 >#### `WriteOptionsBuilder` showTypeInfoMinimal()
->- [ ] Sets to show minimal type. This means that when the type of object can be inferred, a type field will not be output. This is the default.
+>- [ ] Sets to show minimal type, the default: `@type` only where the reader could not build the same class without it, so everything reads back exactly. Not on a field or element of its declared class, nor on a Collection or Map whose runtime type is the "natural default" for its declared type -- an ArrayList in a List field writes as `[...]` instead of `{"@type":"ArrayList","@items":[...]}`. Natural defaults include: List→ArrayList, Set→LinkedHashSet, Map→LinkedHashMap, SortedSet→TreeSet, SortedMap→TreeMap, etc. **Changed in 4.113.0:** before it, minimal wrote `@type` on natural defaults too (about half the JSON of a graph of DTOs); a json-io reader older than 4.88.0 needs it there -- it reads such elements back as maps -- so write for one with `showTypeInfoMinimalLegacy()`.
+>#### `WriteOptionsBuilder` showTypeInfoMinimalLegacy()
+>- [ ] Sets to show type info as `showTypeInfoMinimal()` did before 4.113.0, byte for byte: also on natural defaults. For a json-io reader older than 4.88.0, and for JSON text that must not change because it is hashed or compared. TOON writes as with `showTypeInfoMinimal()`.
 >#### `WriteOptionsBuilder` showTypeInfoMinimalPlus()
->- [ ] Sets to show minimal plus type info. This extends minimal mode by also omitting `@type` for Collections and Maps whose runtime type is the "natural default" for the field's declared type. For example, an ArrayList in a List field writes as direct `[...]` instead of `{"@type":"ArrayList","@items":[...]}`. Natural defaults include: List→ArrayList, Set→LinkedHashSet, Map→LinkedHashMap, SortedSet→TreeSet, SortedMap→TreeMap, etc. Also omits `@type` for convertible types (types that can be losslessly round-tripped via String representation like ZonedDateTime, UUID, BigDecimal, etc.).
+>- [ ] Sets to show minimal plus type info: minimal, and also no `@type` where the reader builds a close stand-in -- an int, short, byte or float in an `Object` slot (a `Map<String, Object>` value, a `List<Object>` element) is written as a plain number and read back as a Long or Double, and one date or number type where another convertible one is declared (a Timestamp in a Date field) is read back as the declared type. Smaller where values sit in `Object` slots, and lossy there; a `Map<String, List<Integer>>` field still reads back Integers. The Spring Boot starter's default, for clients that are not json-io.
 
 ### Root @type
 
@@ -327,10 +331,10 @@ The `@type` field on the root object can be controlled when using `showTypeInfoM
 
 >#### `WriteOptionsBuilder` showRootTypeInfo()
 >- [ ] Show the `@type` on the root object. This is the current default behavior. Use this method to explicitly enable root type output, especially after the default changes to omit root type in a future release.
->- [ ] **Only valid with `showTypeInfoMinimal()` or `showTypeInfoMinimalPlus()`**. Throws `IllegalStateException` if used with `showTypeInfoAlways()` or `showTypeInfoNever()`.
+>- [ ] **Only valid with `showTypeInfoMinimal()`, `showTypeInfoMinimalPlus()` or `showTypeInfoMinimalLegacy()`**. Throws `IllegalStateException` if used with `showTypeInfoAlways()` or `showTypeInfoNever()`.
 >#### `WriteOptionsBuilder` omitRootTypeInfo()
 >- [ ] Omit the `@type` on the root object in the JSON output. This is useful when the receiving system will specify the expected type via `.asClass()` or `.asType()`, making the root `@type` redundant. Omitting the root type reduces JSON payload size.
->- [ ] **Only valid with `showTypeInfoMinimal()` or `showTypeInfoMinimalPlus()`**. Throws `IllegalStateException` if used with `showTypeInfoAlways()` or `showTypeInfoNever()`.
+>- [ ] **Only valid with `showTypeInfoMinimal()`, `showTypeInfoMinimalPlus()` or `showTypeInfoMinimalLegacy()`**. Throws `IllegalStateException` if used with `showTypeInfoAlways()` or `showTypeInfoNever()`.
 
 **Note:** The current default is to show the root type (for backward compatibility), but this default will likely change to omit root type in a future release.
 
@@ -339,6 +343,7 @@ The `@type` field on the root object can be controlled when using `showTypeInfoM
 - `showTypeInfoNever()` — *never* show `@type` on any object, root type control not allowed
 - `showTypeInfoMinimal()` (default) — allows `showRootTypeInfo()` / `omitRootTypeInfo()` for fine-grained control
 - `showTypeInfoMinimalPlus()` — allows `showRootTypeInfo()` / `omitRootTypeInfo()` for fine-grained control
+- `showTypeInfoMinimalLegacy()` — allows `showRootTypeInfo()` / `omitRootTypeInfo()` for fine-grained control
 
 ### Pretty Print
 
@@ -1493,16 +1498,18 @@ Sets the permanent short meta keys setting for all new `WriteOptions` instances.
 >#### WriteOptionsBuilder.addPermanentShortMetaKeys(`boolean shortMetaKeys`)
 
 ### addPermanentShowTypeInfo
-Sets the permanent type information display mode for all new `WriteOptions` instances. You can choose from four methods:
+Sets the permanent type information display mode for all new `WriteOptions` instances. You can choose from five methods:
 - **Always**: Type information is always included in JSON output
 - **Never**: Type information is never included in JSON output
-- **Minimal**: Type information is included only when necessary (default)
-- **MinimalPlus**: Extends minimal mode with additional optimizations for collections, maps, and convertible types
+- **Minimal**: Type information is included only where the reader could not build the same class without it (default)
+- **MinimalPlus**: Minimal, and also no type where the reader builds a close stand-in (lossy in `Object` slots)
+- **MinimalLegacy**: Type information as minimal wrote it before 4.113.0, for readers older than 4.88.0
 
 >#### WriteOptionsBuilder.addPermanentShowTypeInfoAlways()
 >#### WriteOptionsBuilder.addPermanentShowTypeInfoNever()
 >#### WriteOptionsBuilder.addPermanentShowTypeInfoMinimal()
 >#### WriteOptionsBuilder.addPermanentShowTypeInfoMinimalPlus()
+>#### WriteOptionsBuilder.addPermanentShowTypeInfoMinimalLegacy()
 
 ### addPermanentPrettyPrint
 Sets the permanent pretty print setting for all new `WriteOptions` instances. When enabled, JSON output includes vertical white-space and indentations for readability.
