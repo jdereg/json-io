@@ -1777,6 +1777,20 @@ public abstract class Resolver {
     }
 
     /**
+     * A map class, built as an unknownTypeClass map is: with no arguments. Its JSON entries are its contents, which
+     * Resolver traversal puts in afterward, not its constructor's arguments -- ClassUtilities matched them to
+     * constructor parameters, so {"a":1,"b":2} read as an LRUCache was a cache of capacity 1. Only a map class that
+     * cannot be built so (no constructor takes json-io's defaults) is built from them, as before.
+     */
+    private Object newMap(Class<?> mapClass, Map<Object, Object> args) {
+        try {
+            return ClassUtilities.newInstance(converter, mapClass, (Object) null);
+        } catch (RuntimeException noArgumentsWillDo) {
+            return ClassUtilities.newInstance(converter, mapClass, args);
+        }
+    }
+
+    /**
      * Create an instance of a Java class using the JavaType field on the jsonObj.
      */
     private Object createInstanceUsingType(JsonObject jsonObj) {
@@ -1838,6 +1852,8 @@ public abstract class Resolver {
                     } else {
                         instance = invokeCreator(creator, args);
                     }
+                } else if (Map.class.isAssignableFrom(targetClass)) {
+                    instance = newMap(targetClass, args);
                 } else {
                     instance = ClassUtilities.newInstance(converter, targetClass, args);
                 }
