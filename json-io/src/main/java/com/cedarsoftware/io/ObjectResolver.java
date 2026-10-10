@@ -578,10 +578,12 @@ public class ObjectResolver extends Resolver
         //    still handled by OptionalFactory further down.
         // the plan's precomputed facts describe the declared type: not one resolved from type variables
         final boolean fieldTypeUnchanged = effectiveFieldType == fieldType && !typeVariables;
+        // A reference goes to step 2, which wraps the content it names (or keeps the Optional it names)
         if (rawType != null
                 && (fieldTypeUnchanged ? assignmentPlan.optionalType : isOptionalRawType(rawType))
                 && !isLegacyOptionalJsonObject(rhs)
-                && !isOptionalInstance(rhs)) {
+                && !isOptionalInstance(rhs)
+                && !(rhs instanceof JsonObject && ((JsonObject) rhs).isReference())) {
             injector.inject(target, wrapAsOptional(rawType, effectiveFieldType, rhs));
             return;
         }

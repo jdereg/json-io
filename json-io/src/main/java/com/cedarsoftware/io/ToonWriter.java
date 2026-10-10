@@ -980,6 +980,18 @@ public class ToonWriter implements Closeable, Flushable {
         return objVisited.get(value) != 0 && getReferenceId(value) != 0;
     }
 
+    /**
+     * An object written as its content, in the content's place (an Optional of a list, with no type info), can carry
+     * no $id of its own. When it is shared, its content carries one -- $id where it is first written, $ref after --
+     * so the reader gets the content once, held twice. Its content is given an id only before it is first written.
+     */
+    private void lendIdentityToContent(Object holder, Object content) {
+        if (cycleSupport && content != null && isReferenced(holder) && !isReferenced(content)
+                && isReferenceable(content) && objVisited.get(content) == 0) {
+            objsReferenced.put(content, nextIdentity++);
+        }
+    }
+
     private boolean enterActivePath(Object value) {
         if (value == null || !isReferenceable(value)) {
             return true;
@@ -2262,6 +2274,7 @@ public class ToonWriter implements Closeable, Flushable {
             // An object whose writer gives it as data written in its place (an Optional's content): that value
             Object inPlace = inPlaceOf(element);
             if (inPlace != element) {
+                lendIdentityToContent(element, inPlace);
                 writeListElement(inPlace, typeMetadataEnabled ? contentTypeOf(element) : Object.class);
                 return;
             }
@@ -2789,6 +2802,7 @@ public class ToonWriter implements Closeable, Flushable {
             // laid out as itself (a list as "key[N]:", a scalar on the key's line)
             Object inPlace = inPlaceOf(value);
             if (inPlace != value) {
+                lendIdentityToContent(value, inPlace);
                 writeFieldEntry(keyStr, inPlace, keyNeedsQuoting,
                         typeMetadataEnabled ? contentTypeOf(value) : Object.class);
                 return;
@@ -2939,6 +2953,7 @@ public class ToonWriter implements Closeable, Flushable {
             // laid out as itself (a list as "key[N]:", a scalar on the key's line)
             Object inPlace = inPlaceOf(value);
             if (inPlace != value) {
+                lendIdentityToContent(value, inPlace);
                 writeFieldEntryInline(keyStr, inPlace, keyNeedsQuoting,
                         typeMetadataEnabled ? contentTypeOf(value) : Object.class);
                 return;

@@ -470,8 +470,17 @@ public abstract class Resolver {
                     // type are built as it, as JSON's are
                     return convertCollectionElements(col, rawClass, Object.class);
                 }
+                if (!(type instanceof ParameterizedType) && (rawClass == null || rawClass.isInstance(col))
+                        && containsIdentityOrItems(col)) {
+                    // A TOON root list read as a raw List whose elements define or name a shared value ($id, $ref)
+                    // or hold items: read as JSON reads a root array, which resolves them. Otherwise the $ref came
+                    // back an empty map and the $items unread.
+                    value = col.toArray();
+                }
             }
-            return convertToType(value, type);
+            if (!value.getClass().isArray()) {
+                return convertToType(value, type);
+            }
         }
 
         // Wrap raw Java arrays in a JsonObject for uniform processing
@@ -995,6 +1004,19 @@ public abstract class Resolver {
     }
 
     /** Whether a Collection from ToonReader holds a JsonObject that names its own type (TOON with type info). */
+    /** True when an element is a JsonObject with an id or a reference ($id, $ref), or one holding items. */
+    private static boolean containsIdentityOrItems(Collection<?> col) {
+        for (Object element : col) {
+            if (element instanceof JsonObject) {
+                JsonObject jsonObject = (JsonObject) element;
+                if (jsonObject.hasId() || jsonObject.isReference() || jsonObject.getItems() != null) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private static boolean containsTypedJsonObjects(Collection<?> col) {
         for (Object element : col) {
             if (element instanceof JsonObject && ((JsonObject) element).getType() != null) {
