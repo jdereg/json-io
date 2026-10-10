@@ -192,14 +192,14 @@ automatic shared-reference and cycle preservation. No class annotations required
 
 | Mode | JsonIo | TOON | Gson |
 |---|---|---|---|
-| Read `toJava` (typed) | 1.61x | 1.63x | 1.44x |
-| Read `toMaps` (class-independent) | 1.30x | 1.55x | 1.42x |
-| Write `cycleSupport=true` (default) | 1.59x | 1.36x | 2.18x |
-| Write `cycleSupport=false` (DTOs/acyclic) | 1.45x | 1.25x | 2.18x |
-| Write `toMaps` `cycleSupport=true` | 1.55x | 1.37x | 2.16x |
-| Write `toMaps` `cycleSupport=false` | 1.42x | 1.27x | 2.16x |
+| Read `toJava` (typed) | 1.61x | 1.55x | 1.44x |
+| Read `toMaps` (class-independent) | 1.30x | 1.27x | 1.42x |
+| Write `cycleSupport=true` (default) | 1.59x | 1.46x | 2.18x |
+| Write `cycleSupport=false` (DTOs/acyclic) | 1.45x | 1.36x | 2.18x |
+| Write `toMaps` `cycleSupport=true` | 1.55x | 1.49x | 2.16x |
+| Write `toMaps` `cycleSupport=false` | 1.42x | 1.38x | 2.16x |
 
-Measured on JDK 21 (21.0.12), `json-io 4.113.0` vs `jackson-databind 2.22.3` and `gson 2.14.0`, using the median of three run-mode executions. Reproduce with `mvn -q -pl json-io -DskipTests test-compile exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.cedarsoftware.io.JsonPerformanceTest -Dexec.args="--with-gson"` (100k iterations after 10k warmup; expect ±3% run-to-run noise from thermal / GC). All three libraries serialize comparable JSON: Jackson is configured with `JavaTimeModule` and `WRITE_DATES_AS_TIMESTAMPS=false` to match Spring Boot's default; Gson uses ISO-8601 `TypeAdapter`s for `Instant`, `LocalDate`, `LocalDateTime`, and `ZonedDateTime` to match. The `--with-gson` flag is opt-in so the default test run isn't slowed by the Gson loops; drop the flag for the two-way (jsonio vs Jackson) comparison.
+Measured on JDK 21 (21.0.12), `json-io 4.113.0` vs `jackson-databind 2.22.3` and `gson 2.14.0`, using the median of three run-mode executions. The TOON column was re-measured after 4.113.0's exact TOON type rule, which writes 19% less text. Reproduce with `mvn -q -pl json-io -DskipTests test-compile exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.cedarsoftware.io.JsonPerformanceTest -Dexec.args="--with-gson"` (100k iterations after 10k warmup; expect ±3% run-to-run noise from thermal / GC). All three libraries serialize comparable JSON: Jackson is configured with `JavaTimeModule` and `WRITE_DATES_AS_TIMESTAMPS=false` to match Spring Boot's default; Gson uses ISO-8601 `TypeAdapter`s for `Instant`, `LocalDate`, `LocalDateTime`, and `ZonedDateTime` to match. The `--with-gson` flag is opt-in so the default test run isn't slowed by the Gson loops; drop the flag for the two-way (jsonio vs Jackson) comparison.
 
 **Performance tip:** Use `cycleSupport(false)` for ~10% faster writes when your data is acyclic (DTOs, POJOs, tree-shaped data) — 10% for typed objects and in `toMaps` mode on this benchmark.
 
