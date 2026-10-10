@@ -1,6 +1,32 @@
 ### Revision History
 
 #### 4.113.0 - 2026-09-25
+**Upgrading from 4.112.0 -- what can change a result.** Each row is pinned by `UpgradeTo4113NotesTest`; every
+example gave the 4.112.0 answer shown. json-io reads and converts through java-util, whose 4.113.0 has its own table
+(conversions, dates, zones, the class block list): see java-util's
+[changelog](https://github.com/jdereg/java-util/blob/master/changelog.md). The entries below have the details.
+
+| Area | 4.112.0 | 4.113.0 |
+|---|---|---|
+| Default JSON type info | an `ArrayList` in a `List` field was `{"@type":"ArrayList","@items":[...]}` | `[...]`: the class the reader builds for the declared type is left out (about half the JSON of a typical graph of DTOs). Readers older than 4.88.0 read such elements as maps; `showTypeInfoMinimalLegacy()` writes 4.112.0's text |
+| A JSON string in a `byte[]` field | guessed: `"CAFEBABE"` was hex (4 bytes), `"AQID"` text | Base64 when padded correctly, as Jackson reads it (`"CAFEBABE"` is 6 bytes); otherwise the text's bytes (`"AF"`) |
+| The type asked for at the root | `asType(new TypeHolder<List<Item>>(){})` on plain JSON gave maps | the elements are `Item`s |
+| TOON whole doubles | `9.223372036854776E18` was written as `9223372036854775807` (a long's limit) | `9223372036854776000`, the decimal the double prints |
+| `Pattern` | its flags were dropped | written inline (`"(?i)abc"`); reads back matching what it matched |
+| `BigDecimal` with a huge exponent | `1E+100000` was written as 100,001 digits | written with its exponent |
+| A JSON number too large for its field | wrapped silently (`99999999999999999999` into a `long`) | `JsonIoException` |
+| A blank string into a `UUID` or an enum | threw | `null` |
+| Number text into a `Number` field (or a `T extends Number`) | refused | the number (`"42"` is `42L`) |
+| `EnumMap`, `ArrayBlockingQueue`, `AtomicReferenceArray`, `LongAdder`, `InetAddress` | the first three failed to read back, `LongAdder` read back 0, `InetAddress` could not be built | read back (an `ArrayBlockingQueue`'s capacity is its size, as Jackson reads it) |
+| `LRUCache`, `TTLCache` | could not be read back | an `LRUCache` reads back with its entries; a `TTLCache` writes its settings and reads back as an empty cache |
+| An empty `Optional` at the root of TOON | read back `null` | `Optional.empty()` |
+| A shared `Optional` in plain TOON (cycle support on) | read back as unresolved maps | one content, held twice; a TOON root list resolves `$id` and `$ref` as a JSON root array does |
+| A map shared between a `Map<String, String>` field and another field, in TOON | the second was written `$ref: 0` and read back empty | written again, as JSON writes it |
+| `com.cedarsoftware.io.factory.BitSetFactory` | a public class (nothing reached it) | **removed**: code that names it no longer compiles or loads. A `BitSet` reads through the Converter, and the older index form (`[1,3,5]`) reads again |
+
+Also: json-io reads the aliases of every `config/aliases.txt` on the class path, and writes with the first copy's
+(an application's own copy decides), pinned by `AliasesOfEveryCopyAreReadTest`.
+
 * **BUG FIX**: **A shared `Optional` in plain TOON is written once and read back once, and a TOON root list resolves its `$id`s and `$ref`s as a JSON root array does.**
   * **Writing.** With no type info (TOON's default), an `Optional` is written as its content, in the content's place, so it can carry no `$id`. A shared one threw "Reference tracking failure" when its content came round again (new in this release; 4.112.0 read it back wrong instead). Its content now carries the identity: `$id` where it is first written, `$ref` after.
   * **Reading an `Optional` field.** A `$ref` in an `Optional` field was taken for the content and failed ("Return type mismatch"); it now goes to the reference step, which wraps the content it names, or keeps the `Optional` it names.

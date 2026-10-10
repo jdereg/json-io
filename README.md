@@ -80,6 +80,8 @@ Latest version: [![Maven Central](https://img.shields.io/maven-central/v/com.ced
 > without an error.** If your JSON is read by an older json-io, or must stay byte for byte what it was (it is hashed
 > or compared), write it with `showTypeInfoMinimalLegacy()`. `showTypeInfoMinimalPlus()` is smaller still where values
 > sit in `Object` slots, and lossy there: an `int` in a `Map<String, Object>` reads back as a `Long`.
+> Everything else in 4.113.0 that can change a result is in the "Upgrading from 4.112.0" table at the top of the
+> [changelog](changelog.md).
 
 ---
 
