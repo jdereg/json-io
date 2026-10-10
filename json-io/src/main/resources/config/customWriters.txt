@@ -95,3 +95,6 @@ com.cedarsoftware.util.CompactSet = com.cedarsoftware.io.writers.CompactSetWrite
 
 # MultiKeyMap
 com.cedarsoftware.util.MultiKeyMap = com.cedarsoftware.io.writers.MultiKeyMapWriter
+
+# TTLCache: its settings, no entries
+com.cedarsoftware.util.TTLCache = com.cedarsoftware.io.writers.TTLCacheWriter

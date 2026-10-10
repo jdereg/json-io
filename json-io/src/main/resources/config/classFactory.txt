@@ -171,3 +171,7 @@ com.cedarsoftware.util.CompactSet = com.cedarsoftware.io.factory.CompactSetFacto
 
 # MultiKeyMap
 com.cedarsoftware.util.MultiKeyMap = com.cedarsoftware.io.factory.MultiKeyMapFactory
+
+# LRUCache, TTLCache
+com.cedarsoftware.util.LRUCache = com.cedarsoftware.io.factory.LRUCacheFactory
+com.cedarsoftware.util.TTLCache = com.cedarsoftware.io.factory.TTLCacheFactory
