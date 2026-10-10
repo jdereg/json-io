@@ -712,8 +712,10 @@ public class ToonWriter implements Closeable, Flushable {
         if (alwaysType || forceShowType) {
             return true;
         }
-        if (c == declared || JsonWriter.naturalDefault(declared) == c
-                || (declared.isEnum() && declared.isAssignableFrom(c))) {
+        // Object, the most common declaration (a map's value, a raw list's element), has no natural default and is no
+        // enum: skip both lookups for it
+        if (c == declared || (declared != Object.class && (JsonWriter.naturalDefault(declared) == c
+                || (declared.isEnum() && declared.isAssignableFrom(c))))) {
             return false;
         }
         return !minimalPlusType
@@ -1720,8 +1722,7 @@ public class ToonWriter implements Closeable, Flushable {
         // Check if all elements are primitives (that carry no $type)
         boolean allPrimitives = true;
         for (Object element : collection) {
-            if (element != null && (!isInlineValue(element) || (typeMetadataEnabled
-                    && (needsType(element.getClass(), declared) || holdsTypedContent(element))))) {
+            if (element != null && !isPlainInline(element, declared)) {
                 allPrimitives = false;
                 break;
             }
@@ -3570,14 +3571,6 @@ public class ToonWriter implements Closeable, Flushable {
         }
     }
 
-    /**
-     * Whether a list's element can sit on the list's line: a primitive, or an object written as data in its place that
-     * is (an Optional of a string). Kept out of isPrimitive, which is hot enough to be worth inlining.
-     */
-    private boolean isInlineValue(Object value) {
-        return isPrimitive(value) || isPrimitiveData(value);
-    }
-
     /** An object written as data in its place is as inline as that data: an Optional of a string is. */
     private boolean isPrimitiveData(Object value) {
         if (!isDataClass(value.getClass())) {
@@ -3598,12 +3591,24 @@ public class ToonWriter implements Closeable, Flushable {
 
         for (int i = 0; i < length; i++) {
             Object element = getArrayElement(array, i);
-            if (element != null && (!isInlineValue(element) || (typeMetadataEnabled
-                    && (needsType(element.getClass(), componentType) || holdsTypedContent(element))))) {
+            if (element != null && !isPlainInline(element, componentType)) {
                 return false;
             }
         }
         return true;
+    }
+
+    /**
+     * Whether a list's element sits on the list's line with no $type where {@code declared} is expected: a primitive
+     * that needs no $type, or an object written as data in its place that is (an Optional of a string) and whose
+     * content needs none either. A primitive is never such an object, so it is not asked what it holds.
+     */
+    private boolean isPlainInline(Object element, Class<?> declared) {
+        if (isPrimitive(element)) {
+            return !typeMetadataEnabled || !needsType(element.getClass(), declared);
+        }
+        return isPrimitiveData(element) && (!typeMetadataEnabled
+                || (!needsType(element.getClass(), declared) && !holdsTypedContent(element)));
     }
 
     private void traceReferences(Object root) {
