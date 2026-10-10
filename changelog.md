@@ -1,6 +1,8 @@
 ### Revision History
 
 #### 4.113.0 - 2026-09-25
+* **BUG FIX**: **A container shared between a field declared with leaf elements and another field is written again in TOON, as JSON writes it -- not refused, and not referenced as `$ref: 0`.** The reference pass skips a container declared with leaf elements (`List<String>`, `Map<String, String>`), as JSON's does, so it never gave such a container an id. When another field held the same container, TOON threw "Reference tracking failure" (a list, under `showTypeInfoAlways()`; 4.112.0 also under MinimalPlus) or wrote `$ref: 0`, a reference to nothing, which read back as an empty map (a map, in every mode, 4.112.0 too). A value written already that has no id is now written again, in all five places TOON checks for one.
+  * **Tests.** `ToonSharedReferenceTest` (2): a `List<String>` and a `Map<String, String>` held by another field, and the map also inside a `List<Object>`, in all five type-info modes: no `$ref`, read back equal. Both fail on the previous writer; mutants (the reference check reverted in `writeReferenceIfSeen`, `writeMap`, `writeMapInline`) each fail it. A corpus of 60 TOON outputs (10 graphs x 6 option sets) is byte-identical to before except four that threw.
 * **DOCS**: **README ratio table re-measured, all three columns**, after the exact TOON type rule: `JsonPerformanceTest --with-gson`, median of three runs, JDK 21.0.12, `jackson-databind 2.22.3`, `gson 2.14.0`. These replace the figures in the "README performance figures re-measured" entry below.
 
   | Mode (ratio to Jackson) | JsonIo | TOON | Gson |

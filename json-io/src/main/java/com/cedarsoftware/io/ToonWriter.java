@@ -962,17 +962,22 @@ public class ToonWriter implements Closeable, Flushable {
         if (!cycleSupport || !isReferenceable(value)) {
             return false;
         }
-        if (objVisited.get(value) != 0) {
-            int refId = getReferenceId(value);
-            if (refId == 0) {
-                throw new JsonIoException("Reference tracking failure for repeated value of type: "
-                        + value.getClass().getName());
-            }
-            writeReferenceValue(refId);
+        if (isWrittenAndShared(value)) {
+            writeReferenceValue(getReferenceId(value));
             return true;
         }
         objVisited.put(value, VISITED);
         return false;
+    }
+
+    /**
+     * True when {@code value} was written already and the trace found it shared, so it has an id to refer to. One
+     * written already that the trace did not find shared -- a container declared with leaf elements
+     * ({@code List<String>}, {@code Map<String, String>}), which the trace skips as JSON does -- is written again, as
+     * JSON writes it, rather than referenced as id 0 (which nothing defines) or refused.
+     */
+    private boolean isWrittenAndShared(Object value) {
+        return objVisited.get(value) != 0 && getReferenceId(value) != 0;
     }
 
     private boolean enterActivePath(Object value) {
@@ -2272,7 +2277,7 @@ public class ToonWriter implements Closeable, Flushable {
     private void writeMapInline(Map<?, ?> map, boolean typed) throws IOException {
         Object identity = identityOf(map);
         if (cycleSupport) {
-            if (objVisited.get(identity) != 0) {
+            if (isWrittenAndShared(identity)) {
                 out.write(" ");
                 writeReferenceValue(getReferenceId(identity));
                 return;
@@ -2342,7 +2347,7 @@ public class ToonWriter implements Closeable, Flushable {
      */
     private void writeObjectInline(Object obj, boolean typed) throws IOException {
         if (cycleSupport) {
-            if (objVisited.get(obj) != 0) {
+            if (isWrittenAndShared(obj)) {
                 out.write(" ");
                 writeReferenceValue(getReferenceId(obj));
                 return;
@@ -2486,7 +2491,7 @@ public class ToonWriter implements Closeable, Flushable {
     private void writeMap(Map<?, ?> map, boolean typed) throws IOException {
         Object identity = identityOf(map);
         if (cycleSupport) {
-            if (objVisited.get(identity) != 0) {
+            if (isWrittenAndShared(identity)) {
                 if (depth > 0) {
                     writeIndent();
                 }
@@ -3145,7 +3150,7 @@ public class ToonWriter implements Closeable, Flushable {
      */
     private void writeNestedObject(Object obj, boolean typed) throws IOException {
         if (cycleSupport) {
-            if (objVisited.get(obj) != 0) {
+            if (isWrittenAndShared(obj)) {
                 writeIndent();
                 writeReferenceValue(getReferenceId(obj));
                 return;
