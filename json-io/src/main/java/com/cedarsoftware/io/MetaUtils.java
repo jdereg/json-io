@@ -6,12 +6,17 @@ import java.io.UncheckedIOException;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
@@ -174,6 +179,64 @@ public class MetaUtils {
     }
 
     private static Map<String, String> loadMapDefinitionCore(String resName, int maxFileContentSize, int maxLineCount, int maxLineLength) {
+        checkResourceName(resName);
+        try {
+            return parseMapDefinition(loadConfig(resName), resName, maxFileContentSize, maxLineCount, maxLineLength);
+        } catch (JsonIoException e) {
+            throw e; // Re-throw security validation errors
+        } catch (Exception e) {
+            throw new JsonIoException("Error reading in " + resName + ". The file should be in the resources folder. The contents are expected to have two strings separated by '='. You can use # or blank lines in the file, they will be skipped.", e);
+        }
+    }
+
+    /**
+     * The other copies of a Map-style config resource, parsed with the default limits: each one on the class path that
+     * differs from the one {@link #loadMapDefinition(String)} reads, in class path order, and json-io's own (on the
+     * module path, where no class loader reaches it, read here). An application that puts its own copy first replaces
+     * json-io's for what json-io writes; these let json-io still read what the others name. A copy that cannot be read
+     * or parsed is left out.
+     *
+     * @param resName String name of the resource file.
+     * @return the maps, one per distinct other copy (none when there is only the one)
+     */
+    static List<Map<String, String>> loadOtherMapDefinitions(String resName) {
+        checkResourceName(resName);
+        Set<String> seen = new HashSet<>();
+        List<Map<String, String>> maps = new ArrayList<>();
+        try {
+            seen.add(loadConfig(resName));
+            Enumeration<URL> copies = ClassUtilities.getClassLoader(MetaUtils.class).getResources(resName);
+            while (copies.hasMoreElements()) {
+                try (InputStream in = copies.nextElement().openStream()) {
+                    addMapDefinition(maps, seen, in, resName);
+                }
+            }
+        } catch (Exception leftOut) {
+            // the copies read so far stand
+        }
+        try (InputStream in = MetaUtils.class.getResourceAsStream("/" + resName)) {
+            if (in != null) {
+                addMapDefinition(maps, seen, in, resName);
+            }
+        } catch (Exception leftOut) {
+            // json-io's own was read above, or cannot be
+        }
+        return maps;
+    }
+
+    private static void addMapDefinition(List<Map<String, String>> maps, Set<String> seen, InputStream in,
+                                         String resName) throws IOException {
+        String contents = new String(IOUtilities.inputStreamToBytes(in), StandardCharsets.UTF_8);
+        if (seen.add(contents)) {
+            try {
+                maps.add(parseMapDefinition(contents, resName, 1048576, 10000, 8192));
+            } catch (JsonIoException leftOut) {
+                // a copy json-io cannot parse names nothing it can read
+            }
+        }
+    }
+
+    private static void checkResourceName(String resName) {
         // Security: Validate resource name to prevent directory traversal attacks
         if (resName == null || resName.trim().isEmpty()) {
             throw new JsonIoException("Resource name cannot be null or empty");
@@ -183,18 +246,17 @@ public class MetaUtils {
         if (resName.contains("..") || resName.contains("\\") || resName.startsWith("/")) {
             throw new JsonIoException("Invalid resource name: " + resName + ". Resource names cannot contain '..' or path separators.");
         }
+    }
+
+    private static Map<String, String> parseMapDefinition(String contents, String resName, int maxFileContentSize,
+                                                          int maxLineCount, int maxLineLength) {
+        // Security: Validate content size to prevent memory exhaustion
+        if (contents.length() > maxFileContentSize) {
+            throw new JsonIoException("Resource file too large: " + resName + " (" + contents.length() + " bytes). Maximum allowed: " + maxFileContentSize + " bytes");
+        }
 
         Map<String, String> map = new LinkedHashMap<>();
-        Scanner scanner = null;
-        try {
-            String contents = loadConfig(resName);
-
-            // Security: Validate content size to prevent memory exhaustion
-            if (contents.length() > maxFileContentSize) {
-                throw new JsonIoException("Resource file too large: " + resName + " (" + contents.length() + " bytes). Maximum allowed: " + maxFileContentSize + " bytes");
-            }
-
-            scanner = new Scanner(contents);
+        try (Scanner scanner = new Scanner(contents)) {
             int lineCount = 0;
 
             while (scanner.hasNextLine()) {
@@ -229,15 +291,6 @@ public class MetaUtils {
 
                     map.put(key, value);
                 }
-            }
-        } catch (Exception e) {
-            if (e instanceof JsonIoException) {
-                throw e; // Re-throw security validation errors
-            }
-            throw new JsonIoException("Error reading in " + resName + ". The file should be in the resources folder. The contents are expected to have two strings separated by '='. You can use # or blank lines in the file, they will be skipped.", e);
-        } finally {
-            if (scanner != null) {
-                scanner.close();
             }
         }
         return map;

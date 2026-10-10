@@ -93,6 +93,11 @@ public class ReadOptionsBuilder {
     // builder changes its aliases (then it copies them). Rebuilt after a permanent alias is added or removed; guarded
     // by BASE_ALIAS_MAPPINGS.
     private static volatile Map<String, String> baseAliasSnapshot;
+    // The aliases the other copies of config/aliases.txt on the class path define (alias -> class name), json-io's
+    // own among them: an application that puts its own copy first, so that json-io writes the names it chooses, still
+    // reads the names json-io (or any other copy) writes. Under BASE_ALIAS_MAPPINGS, which win where they disagree.
+    // Guarded by BASE_ALIAS_MAPPINGS.
+    private static final Map<String, String> OTHER_COPIES_ALIASES = new LinkedHashMap<>();
     private static final Map<Class<?>, Class<?>> BASE_COERCED_TYPES = new ConcurrentHashMapNullSafe<>();
     private static final Set<Class<?>> BASE_NON_REFS = new ConcurrentSet<>();
     private static final Set<Class<?>> BASE_NOT_CUSTOM_READ = new ConcurrentSet<>();
@@ -172,6 +177,7 @@ public class ReadOptionsBuilder {
         loadBaseClassFactory();
         loadBaseReaders();
         loadBaseAliasMappings(ReadOptionsBuilder::addPermanentAlias);
+        loadOtherCopiesAliases();
         loadBaseCoercedTypes();
         loadBaseNonRefs();
         loadBaseNotCustomReadClasses();
@@ -420,7 +426,7 @@ public class ReadOptionsBuilder {
             synchronized (BASE_ALIAS_MAPPINGS) {
                 snapshot = baseAliasSnapshot;
                 if (snapshot == null) {
-                    Map<String, String> swapped = new LinkedHashMap<>();
+                    Map<String, String> swapped = new LinkedHashMap<>(OTHER_COPIES_ALIASES);
                     BASE_ALIAS_MAPPINGS.forEach((srcType, alias) -> swapped.put(alias, srcType));
                     snapshot = Collections.unmodifiableMap(swapped);
                     baseAliasSnapshot = snapshot;
@@ -527,6 +533,7 @@ public class ReadOptionsBuilder {
         if (pattern != null) {
             synchronized (BASE_ALIAS_MAPPINGS) {
                 BASE_ALIAS_MAPPINGS.values().removeIf(value -> RegexUtilities.safeMatches(pattern, value));
+                OTHER_COPIES_ALIASES.keySet().removeIf(alias -> RegexUtilities.safeMatches(pattern, alias));
                 baseAliasSnapshot = null;
             }
         }
@@ -2865,7 +2872,20 @@ public class ReadOptionsBuilder {
     }
 
     static void loadBaseAliasMappings(AliasApplier aliasApplier) {
-        Map<String, String> aliasMappings = MetaUtils.loadMapDefinition("config/aliases.txt");
+        applyAliases(MetaUtils.loadMapDefinition("config/aliases.txt"), aliasApplier);
+    }
+
+    /**
+     * The aliases of the other copies of config/aliases.txt -- json-io's own, when an application's copy comes first
+     * -- read only; the first copy to name an alias wins.
+     */
+    private static void loadOtherCopiesAliases() {
+        for (Map<String, String> copy : MetaUtils.loadOtherMapDefinitions("config/aliases.txt")) {
+            applyAliases(copy, (clazz, alias) -> OTHER_COPIES_ALIASES.putIfAbsent(alias, clazz.getName()));
+        }
+    }
+
+    private static void applyAliases(Map<String, String> aliasMappings, AliasApplier aliasApplier) {
         ClassLoader classLoader = ClassUtilities.getClassLoader(ReadOptionsBuilder.class);
         for (Map.Entry<String, String> entry : aliasMappings.entrySet()) {
             String className = entry.getKey();
