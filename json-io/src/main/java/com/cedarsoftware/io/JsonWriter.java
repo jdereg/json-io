@@ -2620,6 +2620,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         gen.beginInlineArrayBody();
 
+        // Each item is its name, as an enum constant is written anywhere else (and as TOON writes an EnumSet). Only
+        // 4.112.0's text, kept byte for byte by showTypeInfoMinimalLegacy(), wrote an enum with more than two fields
+        // as an object of them -- every value 0 for a JDK enum, whose fields cannot be read.
+        final boolean legacyText = writeOptions.isMinimalLegacyShowingType();
         boolean firstInSet = true;
         for (Enum<?> e : enumSet) {
             if (!firstInSet) {
@@ -2628,11 +2632,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
             firstInSet = false;
 
-            // Determine whether to write the full enum object or just the name
-            List<WriteFieldPlan> mapOfFields = WriteOptionsBuilder.getWriteFieldPlans(writeOptions, e.getClass());
-            int enumFieldsCount = mapOfFields.size();
-
-            if (enumFieldsCount <= 2) {
+            List<WriteFieldPlan> mapOfFields = legacyText
+                    ? WriteOptionsBuilder.getWriteFieldPlans(writeOptions, e.getClass()) : null;
+            if (mapOfFields == null || mapOfFields.size() <= 2) {
                 // Write the enum name as a string (state-machine-free via writeStringValue).
                 writeStringValue(e.name());
             } else {

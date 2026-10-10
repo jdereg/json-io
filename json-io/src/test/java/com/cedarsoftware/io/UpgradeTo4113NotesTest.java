@@ -234,6 +234,19 @@ class UpgradeTo4113NotesTest {
                 null).asClass(Frame.class).frame);
     }
 
+    public static class Units {
+        public java.util.EnumSet<TimeUnit> units;
+    }
+
+    @Test
+    void anEnumSetsItemsAreTheirNames() {
+        Units units = new Units();
+        units.units = java.util.EnumSet.of(TimeUnit.SECONDS);
+        String json = JsonIo.toJson(units, null);
+        assertTrue(json.contains("\"@items\":[\"SECONDS\"]"), json);
+        assertEquals(units.units, JsonIo.toJava(json, null).asClass(Units.class).units);
+    }
+
     /** The class factory nothing reached is gone; a BitSet still reads, as do the older index form's lists. */
     @Test
     void bitSetFactoryIsRemovedAndABitSetStillReads() {
