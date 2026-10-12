@@ -1371,6 +1371,10 @@ orders[2]:
 
 json-io itself reads both, whichever was written: nothing has to be set on the reading side.
 
+One more difference is in the quotes. A string such as `.5`, `5.` or `1e` is no number in TOON's grammar, so by the
+spec it is written without quotes, and json-io does so. json-io 4.113.0 and earlier read such a token as a number;
+with `toonLegacyForms(true)` it is written in quotes, as they wrote it.
+
 >#### `boolean` isToonLegacyForms()
 >- [ ] Returns `true` if only the forms of TOON spec v3 are written, `false` (the default) for those of spec v4.
 

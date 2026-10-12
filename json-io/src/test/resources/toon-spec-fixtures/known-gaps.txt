@@ -5,10 +5,6 @@
 # when a listed case passes, so a fix removes its lines here in the same commit.
 # A case that is not listed must pass. The groups are for the reader; the test ignores them.
 
-# Reading: +1, .5 and 1. are strings, not numbers (spec 4) -- 2
-decode/numbers.json#10  treats bare-fraction, trailing-dot, and leading-plus tokens as strings
-decode/numbers.json#11  treats leading-plus tokens in array as strings
-
 # Reading: blank lines are allowed outside a header span (spec 12) -- 3
 decode/blank-lines.json#10  accepts blank lines before and between nested object fields
 decode/blank-lines.json#16  accepts blank line between header and first list item
@@ -90,7 +86,6 @@ decode/whitespace.json#15     keeps a second carriage return before CRLF as cont
 decode/whitespace.json#16     keeps a byte-order mark after the document start as content
 decode/whitespace.json#17     removes a byte-order mark before a comment line
 
-# Writing: other (dotted keys and .5 unquoted, U+FEFF root string) -- 3
+# Writing: other (dotted keys unquoted, U+FEFF root string) -- 2
 encode/objects.json#19        keeps dotted and literal-named keys unquoted
-encode/objects.json#30        keeps strings that only resemble numbers or literals, a leading byte-order mark, or DEL unquoted
 encode/primitives.json#37     quotes a root string starting with U+FEFF

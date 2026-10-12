@@ -1944,7 +1944,7 @@ public class ToonReader {
      */
     /**
      * Detect a forbidden-leading-zero integer form per §2 canonical numbers (§4
-     * type-inference). After an optional sign, a '0' followed by any decimal digit
+     * type-inference). After an optional minus, a '0' followed by any decimal digit
      * (e.g. "05", "-007", "0123") is not a canonical number and MUST decode as a
      * string. A bare "0" and forms with leading "0." or "0e" remain canonical.
      */
@@ -1952,8 +1952,7 @@ public class ToonReader {
         if (start >= end) {
             return false;
         }
-        char first = s.charAt(start);
-        int p = (first == '+' || first == '-') ? start + 1 : start;
+        int p = s.charAt(start) == '-' ? start + 1 : start;
         if (p >= end || s.charAt(p) != '0') {
             return false;
         }
@@ -1969,8 +1968,7 @@ public class ToonReader {
         if (start >= end) {
             return false;
         }
-        char first = buf[start];
-        int p = (first == '+' || first == '-') ? start + 1 : start;
+        int p = buf[start] == '-' ? start + 1 : start;
         if (p >= end || buf[p] != '0') {
             return false;
         }
@@ -2013,10 +2011,9 @@ public class ToonReader {
             return numVals[slot];
         }
 
-        char first = text.charAt(start);
-        int digitStart = (first == '-' || first == '+') ? start + 1 : start;
+        boolean negative = text.charAt(start) == '-';
+        int digitStart = negative ? start + 1 : start;
         if (digitStart < end) {
-            boolean negative = first == '-';
             long limit = negative ? Long.MIN_VALUE : -Long.MAX_VALUE;
             long multmin = limit / 10;
             long result = 0;
@@ -2064,9 +2061,8 @@ public class ToonReader {
             }
         }
 
-        // Pre-validate: reject tokens with non-numeric characters to avoid expensive
-        // NumberFormatException + fillInStackTrace inside MathUtilities / Double.parseDouble.
-        if (!isValidNumberToken(text, start, end)) {
+        // Only a token of the number grammar is a number; see isNumberToken.
+        if (!isNumberToken(text, start, end)) {
             return null;
         }
 
@@ -2141,10 +2137,9 @@ public class ToonReader {
             }
         }
 
-        char first = buf[start];
-        int digitStart = (first == '-' || first == '+') ? start + 1 : start;
+        boolean negative = firstChar == '-';
+        int digitStart = negative ? start + 1 : start;
         if (digitStart < end) {
-            boolean negative = first == '-';
             long limit = negative ? Long.MIN_VALUE : -Long.MAX_VALUE;
             long multmin = limit / 10;
             long result = 0;
@@ -2192,13 +2187,8 @@ public class ToonReader {
             }
         }
 
-        // Pre-validate: reject tokens that contain characters impossible in a number.
-        // Avoids the expensive NumberFormatException + Throwable.fillInStackTrace path
-        // inside MathUtilities.parseToMinimalNumericType / Double.parseDouble / BigInteger
-        // for tokens like "2024-03-15" or "10:30:00" that start with a digit but are
-        // dates, times, or other non-numeric content. JFR showed fillInStackTrace as
-        // the #1 leaf in TOON Read (291 samples) before this guard was added.
-        if (!isValidNumberToken(buf, start, end)) {
+        // Only a token of the number grammar is a number; see isNumberToken.
+        if (!isNumberToken(buf, start, end)) {
             return null;
         }
 
@@ -2546,41 +2536,105 @@ public class ToonReader {
         return end - start == 2 && buf[start] == '{' && buf[start + 1] == '}';
     }
 
+    /** A number starts with a digit or a minus (spec 4): {@code +1} and {@code .5} are strings. */
     private boolean isLikelyNumberStart(char firstChar) {
-        return (firstChar >= '0' && firstChar <= '9') || firstChar == '-' || firstChar == '+' || firstChar == '.';
+        return (firstChar >= '0' && firstChar <= '9') || firstChar == '-';
     }
 
     /**
-     * Quick validation that every character in the token is plausible for a numeric literal.
-     * Valid characters: digits, '.', 'e'/'E', and '+'/'-' (only at position 0 or after 'e'/'E').
-     * Rejects tokens like "2024-03-15" (date), "10:30:00" (time), or UUID segments that
-     * start with a digit but contain characters impossible in any numeric format.
+     * TOON's number grammar (spec 4), which is JSON's:
+     * {@code -?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?}. A token is a number if and only if it
+     * matches; every other token -- {@code .5}, {@code 1.}, {@code +1}, {@code 05}, {@code 1e},
+     * {@code Infinity}, {@code 0x10}, {@code 1_000}, a date -- is a string. The decision is made here and
+     * not left to Java's number parsers, which accept more ({@code Double.parseDouble} reads {@code .5},
+     * {@code 1.}, {@code +1}, {@code 0x1p3} and {@code 1d}); read as numbers, such strings would come
+     * back changed.
      * <p>
-     * This guard prevents the expensive {@code NumberFormatException + fillInStackTrace}
-     * path inside {@code MathUtilities.parseToMinimalNumericType} / {@code Double.parseDouble}
-     * for non-numeric tokens. JFR showed {@code Throwable.fillInStackTrace} as the #1 leaf
-     * in TOON Read (291 samples) before this guard was added.
+     * It also keeps the cost of a token that merely starts with a digit ("2024-03-15", "10:30:00") to
+     * this one pass: before there was a check, such a token went to the parser, and the
+     * {@code NumberFormatException} it threw ({@code Throwable.fillInStackTrace}) was the #1 leaf in a
+     * JFR profile of TOON reading (291 samples).
      */
-    private static boolean isValidNumberToken(char[] buf, int start, int end) {
-        for (int i = start; i < end; i++) {
-            char c = buf[i];
-            if (c >= '0' && c <= '9') continue;
-            if (c == '.' || c == 'e' || c == 'E') continue;
-            if ((c == '-' || c == '+') && (i == start || buf[i - 1] == 'e' || buf[i - 1] == 'E')) continue;
+    private static boolean isNumberToken(char[] buf, int start, int end) {
+        int i = start;
+        if (i < end && buf[i] == '-') {
+            i++;
+        }
+        if (i >= end) {
             return false;
         }
-        return true;
+        char c = buf[i++];
+        if (c >= '1' && c <= '9') {
+            while (i < end && buf[i] >= '0' && buf[i] <= '9') {
+                i++;
+            }
+        } else if (c != '0') {
+            return false;
+        }
+        if (i < end && buf[i] == '.') {
+            int fraction = ++i;
+            while (i < end && buf[i] >= '0' && buf[i] <= '9') {
+                i++;
+            }
+            if (i == fraction) {
+                return false;
+            }
+        }
+        if (i < end && (buf[i] == 'e' || buf[i] == 'E')) {
+            i++;
+            if (i < end && (buf[i] == '+' || buf[i] == '-')) {
+                i++;
+            }
+            int exponent = i;
+            while (i < end && buf[i] >= '0' && buf[i] <= '9') {
+                i++;
+            }
+            if (i == exponent) {
+                return false;
+            }
+        }
+        return i == end;
     }
 
-    private static boolean isValidNumberToken(String text, int start, int end) {
-        for (int i = start; i < end; i++) {
-            char c = text.charAt(i);
-            if (c >= '0' && c <= '9') continue;
-            if (c == '.' || c == 'e' || c == 'E') continue;
-            if ((c == '-' || c == '+') && (i == start || text.charAt(i - 1) == 'e' || text.charAt(i - 1) == 'E')) continue;
+    private static boolean isNumberToken(String text, int start, int end) {
+        int i = start;
+        if (i < end && text.charAt(i) == '-') {
+            i++;
+        }
+        if (i >= end) {
             return false;
         }
-        return true;
+        char c = text.charAt(i++);
+        if (c >= '1' && c <= '9') {
+            while (i < end && text.charAt(i) >= '0' && text.charAt(i) <= '9') {
+                i++;
+            }
+        } else if (c != '0') {
+            return false;
+        }
+        if (i < end && text.charAt(i) == '.') {
+            int fraction = ++i;
+            while (i < end && text.charAt(i) >= '0' && text.charAt(i) <= '9') {
+                i++;
+            }
+            if (i == fraction) {
+                return false;
+            }
+        }
+        if (i < end && (text.charAt(i) == 'e' || text.charAt(i) == 'E')) {
+            i++;
+            if (i < end && (text.charAt(i) == '+' || text.charAt(i) == '-')) {
+                i++;
+            }
+            int exponent = i;
+            while (i < end && text.charAt(i) >= '0' && text.charAt(i) <= '9') {
+                i++;
+            }
+            if (i == exponent) {
+                return false;
+            }
+        }
+        return i == end;
     }
 
     private boolean matchesLiteral(String text, int start, String literal) {

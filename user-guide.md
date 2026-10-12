@@ -776,7 +776,8 @@ TOON only quotes strings when necessary. Strings are quoted when they:
 - Are empty
 - Have leading/trailing whitespace
 - Equal `true`, `false`, or `null`
-- Look like numbers (e.g., `"42"`, `"3.14"`)
+- Look like numbers (e.g., `"42"`, `"3.14"`, `"05"`, `"+1"`, `"1e-6"`): an optional sign, digits, an optional
+  fraction of a point and digits, an optional exponent
 - Contain special characters: `:`, `"`, `\`, `[`, `]`, `{`, `}`, newlines, tabs
 - Contain the delimiter character (comma by default)
 - Start with hyphen
@@ -785,6 +786,8 @@ TOON only quotes strings when necessary. Strings are quoted when they:
 // These strings will NOT be quoted:
 "hello"     →  hello
 "NYC"       →  NYC
+".5"        →  .5        // no number in TOON: a number is what JSON calls one
+"1."        →  1.
 
 // These strings WILL be quoted:
 ""          →  ""
@@ -793,6 +796,12 @@ TOON only quotes strings when necessary. Strings are quoted when they:
 "hello:world" → "hello:world"
 " spaced "  →  " spaced "
 ```
+
+Reading is the other side of the same rule. A token without quotes is a number only if it is one in JSON's grammar
+(an optional minus, digits without a leading zero, an optional fraction, an optional exponent); `true`, `false` and
+`null` are themselves; everything else is a string. So `.5`, `1.`, `+1`, `05`, `1_000`, `0x10`, `NaN` and
+`Infinity` are read as strings, as the TOON spec requires. A field declared as a number is still given its value:
+`price: .5` read into a `double` is `0.5`.
 
 ### TOON Array Formats
 

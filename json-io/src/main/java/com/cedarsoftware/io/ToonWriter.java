@@ -1156,37 +1156,51 @@ public class ToonWriter implements Closeable, Flushable {
             return cached;
         }
 
-        boolean result = scanNeedsQuoting(str, len);
+        int answer = scanNeedsQuoting(str, len);
+        if (answer == QUOTE_LEGACY_ONLY) {
+            // .5, 1. and their like: the two rules differ, and the cache is shared by writers of both kinds
+            return !v4Forms;
+        }
+        boolean result = answer == QUOTE_YES;
         cacheQuoteDecision(str, result ? Boolean.TRUE : Boolean.FALSE);
         return result;
     }
+
+    // What scanNeedsQuoting answers
+    private static final int QUOTE_NO = 0;
+    private static final int QUOTE_YES = 1;
+    private static final int QUOTE_LEGACY_ONLY = 2;     // only when writing for a reader of json-io 4.113.0
 
     /**
      * Single-pass quoting decision. Replaces the former isReservedScalarLiteral(),
      * isSimpleUnquotedAsciiToken(), and computeNeedsQuoting() multi-method chain.
      * Uses a pre-built boolean[128] lookup table (mustQuoteChar) so the inner loop
      * performs one array access per character instead of 8+ branch comparisons.
+     *
+     * @return QUOTE_YES, QUOTE_NO, or QUOTE_LEGACY_ONLY for a string that is no number in TOON's grammar but that
+     * json-io 4.113.0 and earlier read as one ({@code .5}, {@code 1.}, {@code 1e}): written without quotes by the
+     * spec (7.2), and with them under {@code toonLegacyForms}, for the reader that would make a number of it.
      */
-    private boolean scanNeedsQuoting(String str, int len) {
+    private int scanNeedsQuoting(String str, int len) {
         char first = str.charAt(0);
 
         // Leading whitespace, hyphen, or # (spec 7.2). A line whose first character is # is a
         // comment (spec 5.1), so an unquoted "#ff0000" that starts a line is dropped by the reader.
         if (first <= ' ' || first == '-' || first == '#') {
-            return true;
+            return QUOTE_YES;
         }
 
         // Trailing whitespace
         if (str.charAt(len - 1) <= ' ') {
-            return true;
+            return QUOTE_YES;
         }
 
         // Reserved literals — length-gated and first-char-gated for near-zero cost on non-matching strings
         if (len <= 5) {
             switch (first) {
-                case 't': if (len == 4 && "true".equals(str)) return true; break;
-                case 'f': if (len == 5 && "false".equals(str)) return true; break;
-                case 'n': if (len == 4 && "null".equals(str)) return true; break;
+                case 't': if (len == 4 && "true".equals(str)) return QUOTE_YES; break;
+                case 'f': if (len == 5 && "false".equals(str)) return QUOTE_YES; break;
+                case 'n': if (len == 4 && "null".equals(str)) return QUOTE_YES; break;
             }
         }
 
@@ -1195,16 +1209,62 @@ public class ToonWriter implements Closeable, Flushable {
         for (int i = 0; i < len; i++) {
             char c = str.charAt(i);
             if (c < 128 ? mq[c] : false) {
-                return true;
+                return QUOTE_YES;
             }
         }
 
         // Number check — only when the first char makes it plausible (digit, '+', '.')
         if ((first >= '0' && first <= '9') || first == '+' || first == '.') {
-            return looksLikeNumber(str);
+            if (isNumericLike(str, len)) {
+                return QUOTE_YES;
+            }
+            return looksLikeNumber(str) ? QUOTE_LEGACY_ONLY : QUOTE_NO;
         }
 
-        return false;
+        return QUOTE_NO;
+    }
+
+    /**
+     * The spec's "numeric-like" (7.2): {@code [+-]?[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?}. Such a string is
+     * quoted so that it is read back as a string. It is wider than the number grammar a reader applies
+     * ({@code 05} and {@code +1} are numeric-like and no numbers) and narrower than {@link #looksLikeNumber}.
+     */
+    private static boolean isNumericLike(String str, int len) {
+        int i = 0;
+        char c = str.charAt(0);
+        if (c == '+' || c == '-') {
+            i++;
+        }
+        int digits = i;
+        while (i < len && str.charAt(i) >= '0' && str.charAt(i) <= '9') {
+            i++;
+        }
+        if (i == digits) {
+            return false;
+        }
+        if (i < len && str.charAt(i) == '.') {
+            digits = ++i;
+            while (i < len && str.charAt(i) >= '0' && str.charAt(i) <= '9') {
+                i++;
+            }
+            if (i == digits) {
+                return false;
+            }
+        }
+        if (i < len && (str.charAt(i) == 'e' || str.charAt(i) == 'E')) {
+            i++;
+            if (i < len && (str.charAt(i) == '+' || str.charAt(i) == '-')) {
+                i++;
+            }
+            digits = i;
+            while (i < len && str.charAt(i) >= '0' && str.charAt(i) <= '9') {
+                i++;
+            }
+            if (i == digits) {
+                return false;
+            }
+        }
+        return i == len;
     }
 
     private void cacheQuoteDecision(String str, Boolean decision) {
@@ -1217,7 +1277,8 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
-     * Check if a string looks like a number (needs quoting to preserve as string).
+     * What json-io 4.113.0 and earlier took for a number, and so quoted: besides the spec's numeric-like strings
+     * also {@code .5}, {@code 5.}, {@code 1e} and {@code 1.e5}. Decides the quotes under {@code toonLegacyForms}.
      */
     private boolean looksLikeNumber(String str) {
         if (str.isEmpty()) {
