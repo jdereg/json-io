@@ -41,7 +41,7 @@ By following these guidelines, you can effectively manage how JSON data is proce
 - `JsonIo.toJava(json, readOptions)` and `JsonIo.toMaps(json, readOptions)` — the tree-building parser (`JsonParser` + `Resolver`), which honors the **full** option set described in this guide (type-info policy, class factories, custom readers, missing-field handler, coerced types, aliasing, etc.).
 - `JsonIo.createTokenizer(in, readOptions)` — the [streaming-read cursor API](/user-guide.md#streaming-api-cursor-style-readwrite) (`JsonTokenizer`), which honors only the **token-level** options that apply at the lexical layer: `strictJson`, `allowNanAndInfinity`, `integerTypeBigInteger`, `floatingPointBigDecimal`, and `stringBufferSize`. Tree-only options (`classFactory`, `customReaders`, `coercedTypes`, `missingFieldHandler`, aliasing, unsafe-mode policy, etc.) have no meaning at the streaming level and are ignored.
 
-Pass a `null` `ReadOptions` to either API to use cached library defaults — the streaming-tokenizer factory in particular caches the default-options snapshot (lazy-init) for the hot-path zero-config use case.
+Pass a `null` `ReadOptions` to either API to use the library defaults together with any [permanent settings](#application-scoped-options-full-lifecycle-of-jvm) you have made. Those options are built once and cached, and built again when a permanent setting is made, so the zero-config path stays cheap. (Through 4.113.0 a permanent setting did not reach a call that passed `null`.)
 
 ---
 

@@ -16,7 +16,7 @@ created from another `WriteOptions` instance by using `new WriteOptionsBuilder(w
 - `JsonIo.toJson(root, writeOptions)` — the tree-walking serializer (`JsonWriter`), which honors the **full** option set described in this guide (type-info policy, cycle support, custom writers, excluded fields, naming strategies, etc.).
 - `JsonIo.createGenerator(out, writeOptions)` — the [streaming-write cursor API](/user-guide.md#streaming-api-cursor-style-readwrite) (`JsonGenerator`), which honors only the **token-level** options that apply outside the context of walking a Java object graph: `prettyPrint`, `indentationSize`, `json5UnquotedKeys`, `json5SmartQuotes`, `allowNanAndInfinity`, and `maxStringLength`. Tree-only options (`showTypeInfo`, `cycleSupport`, custom writers, field filters, naming strategies, etc.) have no meaning at the streaming level and are ignored.
 
-Pass a `null` `WriteOptions` to either API to use cached library defaults — the streaming-generator factory in particular caches the default-options snapshot (lazy-init) for the hot-path zero-config use case.
+Pass a `null` `WriteOptions` to either API to use the library defaults together with any [permanent settings](#application-scoped-options-full-lifecycle-of-jvm) you have made. Those options are built once and cached, and built again when a permanent setting is made, so the zero-config path stays cheap. (Through 4.113.0 a permanent setting did not reach a call that passed `null`.)
 
 ---
 ### Constructors

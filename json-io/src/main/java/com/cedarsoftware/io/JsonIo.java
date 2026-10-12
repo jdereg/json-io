@@ -1091,64 +1091,52 @@ public class JsonIo {
     }
 
     /**
-     * Lazily-initialized default ReadOptions for createTokenizer when the caller
-     * passes null. Building ReadOptions per call is non-trivial (copies the aliases
-     * and class settings); for the streaming-parse hot path where most users
-     * accept defaults, caching this saves the construction cost per parse.
+     * The ReadOptions for createTokenizer when the caller passes null: built at first use, and built
+     * again after a permanent setting is made ({@code ReadOptionsBuilder.addPermanent...}), so such a
+     * setting reaches these callers too. Building ReadOptions per call is non-trivial (copies the aliases
+     * and class settings); for the streaming-parse hot path where most users accept defaults, keeping
+     * them saves the construction cost per parse.
      */
-    private static volatile ReadOptions defaultTokenizerReadOptions;
+    private static final DefaultOptionsCache<ReadOptions> defaultTokenizerReadOptions = new DefaultOptionsCache<>(
+            ReadOptionsBuilder::permanentVersion, () -> new ReadOptionsBuilder().build());
 
     private static ReadOptions defaultTokenizerReadOptions() {
-        ReadOptions o = defaultTokenizerReadOptions;
-        if (o == null) {
-            o = new ReadOptionsBuilder().build();
-            defaultTokenizerReadOptions = o;
-        }
-        return o;
+        return defaultTokenizerReadOptions.get();
     }
 
     /**
-     * Lazily-initialized default WriteOptions for toToon() when the caller
-     * passes null. TOON's preferred default differs from the standard
-     * {@code WriteOptionsBuilder.getDefaultWriteOptions()} (no @type metadata
-     * and acyclic-graph optimization on); caching this specific configuration
-     * avoids rebuilding it on every invocation. Same reasoning as
-     * {@link #defaultTokenizerReadOptions} — WriteOptions are immutable
-     * and thread-safe, so the singleton is reusable.
+     * The WriteOptions for toToon() when the caller passes null: built at first use, and built again
+     * after a permanent setting is made ({@code WriteOptionsBuilder.addPermanent...}). TOON's preferred
+     * default differs from the standard {@code WriteOptionsBuilder.getDefaultWriteOptions()} (no @type
+     * metadata and acyclic-graph optimization on); keeping this specific configuration avoids rebuilding
+     * it on every invocation. Same reasoning as {@link #defaultTokenizerReadOptions} — WriteOptions are
+     * immutable and thread-safe, so one instance serves every caller.
      */
-    private static volatile WriteOptions defaultToonWriteOptions;
+    private static final DefaultOptionsCache<WriteOptions> defaultToonWriteOptions = new DefaultOptionsCache<>(
+            WriteOptionsBuilder::permanentVersion,
+            () -> new WriteOptionsBuilder().showTypeInfoNever().cycleSupport(false).build());
 
     private static WriteOptions defaultToonWriteOptions() {
-        WriteOptions o = defaultToonWriteOptions;
-        if (o == null) {
-            o = new WriteOptionsBuilder().showTypeInfoNever().cycleSupport(false).build();
-            defaultToonWriteOptions = o;
-        }
-        return o;
+        return defaultToonWriteOptions.get();
     }
 
     /**
-     * Lazily-initialized WriteOptions for {@link #deepCopy} when the caller
-     * passes null writeOptions. deepCopy's pipeline always wraps the user's
-     * options through {@code new WriteOptionsBuilder(writeOptions).json5()
-     * .showTypeInfoMinimal().shortMetaKeys(true).cycleSupport(true).build()};
-     * when writeOptions is null the result is configuration-stable, so we
-     * cache that single null-input output.
+     * The WriteOptions for {@link #deepCopy} when the caller passes null writeOptions. deepCopy's
+     * pipeline always wraps the user's options through {@code new WriteOptionsBuilder(writeOptions)
+     * .json5().showTypeInfoMinimal().shortMetaKeys(true).cycleSupport(true).build()}; when writeOptions
+     * is null the result changes only when a permanent setting is made, so it is kept until then.
      */
-    private static volatile WriteOptions defaultDeepCopyWriteOptions;
-
-    private static WriteOptions defaultDeepCopyWriteOptions() {
-        WriteOptions o = defaultDeepCopyWriteOptions;
-        if (o == null) {
-            o = new WriteOptionsBuilder()
+    private static final DefaultOptionsCache<WriteOptions> defaultDeepCopyWriteOptions = new DefaultOptionsCache<>(
+            WriteOptionsBuilder::permanentVersion,
+            () -> new WriteOptionsBuilder()
                     .json5()
                     .showTypeInfoMinimal()
                     .shortMetaKeys(true)
                     .cycleSupport(true)
-                    .build();
-            defaultDeepCopyWriteOptions = o;
-        }
-        return o;
+                    .build());
+
+    private static WriteOptions defaultDeepCopyWriteOptions() {
+        return defaultDeepCopyWriteOptions.get();
     }
 
     private static JsonTokenizer createTokenizerImpl(java.io.Reader reader,
@@ -1314,20 +1302,16 @@ public class JsonIo {
     }
 
     /**
-     * Lazily-initialized default WriteOptions for createGenerator when the caller
-     * passes null. Mirrors the {@link #defaultTokenizerReadOptions} pattern — building
-     * WriteOptions per call is non-trivial; for streaming-serialize callers that
-     * accept defaults, caching this saves the construction cost per emit.
+     * The WriteOptions for createGenerator when the caller passes null: built at first use, and built
+     * again after a permanent setting is made. Mirrors the {@link #defaultTokenizerReadOptions} pattern —
+     * building WriteOptions per call is non-trivial; for streaming-serialize callers that accept
+     * defaults, keeping them saves the construction cost per emit.
      */
-    private static volatile WriteOptions defaultGeneratorWriteOptions;
+    private static final DefaultOptionsCache<WriteOptions> defaultGeneratorWriteOptions = new DefaultOptionsCache<>(
+            WriteOptionsBuilder::permanentVersion, () -> new WriteOptionsBuilder().build());
 
     private static WriteOptions defaultGeneratorWriteOptions() {
-        WriteOptions o = defaultGeneratorWriteOptions;
-        if (o == null) {
-            o = new WriteOptionsBuilder().build();
-            defaultGeneratorWriteOptions = o;
-        }
-        return o;
+        return defaultGeneratorWriteOptions.get();
     }
 
     private static JsonGenerator createGeneratorImpl(Writer writer, WriteOptions writeOptions) {

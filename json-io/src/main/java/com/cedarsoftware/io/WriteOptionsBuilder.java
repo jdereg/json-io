@@ -25,6 +25,7 @@ import java.util.NoSuchElementException;
 import java.util.RandomAccess;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
@@ -152,7 +153,11 @@ public class WriteOptionsBuilder {
     private static volatile boolean BASE_TOON_LEGACY_FORMS = false;     // false write the forms of TOON spec v4
     private static volatile ClassLoader BASE_CLASS_LOADER = ClassUtilities.getClassLoader(WriteOptionsBuilder.class);
     
-    private static final WriteOptions defWriteOptions;
+    // How many permanent settings have been made. The options for callers that pass none (here and in JsonIo) are
+    // built again when it has moved on: see DefaultOptionsCache.
+    private static final AtomicInteger PERMANENT_VERSION = new AtomicInteger();
+    private static final DefaultOptionsCache<WriteOptions> DEFAULT_WRITE_OPTIONS = new DefaultOptionsCache<>(
+            WriteOptionsBuilder::permanentVersion, () -> new WriteOptionsBuilder().build());
     private final DefaultWriteOptions options;
     // The class settings this builder has copied (OWN_* bits); all of them once built
     private int owned;
@@ -178,8 +183,6 @@ public class WriteOptionsBuilder {
         addPermanentAccessorFactory("get", new GetMethodAccessorFactory());
         addPermanentAccessorFactory("is", new IsMethodAccessorFactory());
 
-        defWriteOptions = new WriteOptionsBuilder().build();
-
         // low-level alias support (bigint, bigdec)
         ClassUtilities.addPermanentClassAlias(BigInteger.class, "bigint");
         ClassUtilities.addPermanentClassAlias(BigInteger.class, "BigInt");
@@ -188,10 +191,20 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * @return Default WriteOptions - no construction needed, unmodifiable.
+     * @return Default WriteOptions - no construction needed, unmodifiable: the library's defaults with the permanent
+     * settings made so far ({@code addPermanent...}). This is what a write API uses when it is passed no options.
      */
     public static WriteOptions getDefaultWriteOptions() {
-        return defWriteOptions;
+        return DEFAULT_WRITE_OPTIONS.get();
+    }
+
+    /** How many permanent settings have been made: options cached for callers that pass none follow it. */
+    static int permanentVersion() {
+        return PERMANENT_VERSION.get();
+    }
+
+    private static void permanentSettingMade() {
+        PERMANENT_VERSION.incrementAndGet();
     }
 
     /**
@@ -333,6 +346,7 @@ public class WriteOptionsBuilder {
             BASE_ALIAS_MAPPINGS.put(clazz.getName(), alias);
             baseAliasSnapshot = null;
         }
+        permanentSettingMade();
     }
 
     private static Map<String, String> baseAliases() {
@@ -376,6 +390,7 @@ public class WriteOptionsBuilder {
                 baseAliasSnapshot = null;
             }
         }
+        permanentSettingMade();
     }
 
     /**
@@ -415,6 +430,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentExcludedField(Class<?> clazz, String fieldName) {
         EXCLUDED_FIELD_NAMES.change(excluded -> excluded.computeIfAbsent(clazz, CONCURRENT_SET_FACTORY).add(fieldName));
+        permanentSettingMade();
     }
 
     /**
@@ -460,6 +476,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentNonRef(Class<?> clazz) {
         NON_REFS.change(nonRefs -> nonRefs.add(clazz));
+        permanentSettingMade();
     }
 
     /**
@@ -470,6 +487,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentNotCustomWrittenClass(Class<?> clazz) {
         NOT_CUSTOM_WRITTEN.change(notCustom -> notCustom.add(clazz));
+        permanentSettingMade();
     }
 
     /**
@@ -487,6 +505,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentWriter(Class<?> clazz, JsonClassWriter writer) {
         WRITERS.change(writers -> writers.put(clazz, writer));
+        permanentSettingMade();
     }
 
     /**
@@ -500,6 +519,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentNonStandardGetter(Class<?> clazz, String field, String methodName) {
         NONSTANDARD_GETTERS.change(getters -> getters.computeIfAbsent(clazz, CONCURRENT_MAP_FACTORY).put(field, methodName));
+        permanentSettingMade();
     }
 
     /**
@@ -508,6 +528,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentFieldFilter(String name, FieldFilter fieldFilter) {
         FIELD_FILTERS.change(filters -> filters.put(name, fieldFilter));
+        permanentSettingMade();
     }
 
     /**
@@ -517,6 +538,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentMethodFilter(String name, MethodFilter methodFilter) {
         METHOD_FILTERS.change(filters -> filters.put(name, methodFilter));
+        permanentSettingMade();
     }
 
     /**
@@ -526,6 +548,7 @@ public class WriteOptionsBuilder {
      */
     public static void removePermanentMethodFilter(String name) {
         METHOD_FILTERS.change(filters -> filters.remove(name));
+        permanentSettingMade();
     }
 
     /**
@@ -536,6 +559,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentNamedMethodFilter(String name, Class<?> clazz, String methodName) {
         METHOD_FILTERS.change(filters -> filters.put(name, new NamedMethodFilter(clazz, methodName)));
+        permanentSettingMade();
     }
 
     /**
@@ -550,6 +574,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentAccessorFactory(String name, AccessorFactory factory) {
         ACCESSOR_FACTORIES.change(factories -> factories.put(name, factory));
+        permanentSettingMade();
     }
 
     /**
@@ -559,6 +584,7 @@ public class WriteOptionsBuilder {
      */
     public static void removePermanentAccessorFactory(String name) {
         ACCESSOR_FACTORIES.change(factories -> factories.remove(name));
+        permanentSettingMade();
     }
 
     /**
@@ -573,6 +599,7 @@ public class WriteOptionsBuilder {
             throw new JsonIoException("maxIndentationDepth must be at least 1, value: " + maxIndentationDepth);
         }
         permanentMaxIndentationDepth = maxIndentationDepth;
+        permanentSettingMade();
     }
 
     /**
@@ -587,6 +614,7 @@ public class WriteOptionsBuilder {
             throw new JsonIoException("maxObjectGraphDepth must be at least 1, value: " + maxObjectGraphDepth);
         }
         permanentMaxObjectGraphDepth = maxObjectGraphDepth;
+        permanentSettingMade();
     }
 
     /**
@@ -601,6 +629,7 @@ public class WriteOptionsBuilder {
             throw new JsonIoException("maxObjectCount must be at least 1, value: " + maxObjectCount);
         }
         permanentMaxObjectCount = maxObjectCount;
+        permanentSettingMade();
     }
 
     /**
@@ -615,6 +644,7 @@ public class WriteOptionsBuilder {
             throw new JsonIoException("maxStringLength must be at least 1, value: " + maxStringLength);
         }
         permanentMaxStringLength = maxStringLength;
+        permanentSettingMade();
     }
 
     /**
@@ -628,6 +658,7 @@ public class WriteOptionsBuilder {
             throw new JsonIoException("indentationSize must be at least 1, value: " + indentationSize);
         }
         permanentIndentationSize = indentationSize;
+        permanentSettingMade();
     }
 
     /**
@@ -641,6 +672,7 @@ public class WriteOptionsBuilder {
             throw new JsonIoException("bufferSizeMultiplier must be at least 1.0, value: " + bufferSizeMultiplier);
         }
         permanentBufferSizeMultiplier = bufferSizeMultiplier;
+        permanentSettingMade();
     }
 
     /**
@@ -654,6 +686,7 @@ public class WriteOptionsBuilder {
             throw new JsonIoException("indentationThreshold must be at least 1, value: " + indentationThreshold);
         }
         permanentIndentationThreshold = indentationThreshold;
+        permanentSettingMade();
     }
 
     /**
@@ -668,6 +701,7 @@ public class WriteOptionsBuilder {
             throw new JsonIoException("classLoader cannot be null");
         }
         BASE_CLASS_LOADER = classLoader;
+        permanentSettingMade();
     }
 
     /**
@@ -679,6 +713,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentShortMetaKeys(boolean shortMetaKeys) {
         BASE_SHORT_META_KEYS = shortMetaKeys;
+        permanentSettingMade();
     }
 
     /**
@@ -687,6 +722,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentShowTypeInfoAlways() {
         BASE_SHOW_TYPE_INFO = WriteOptions.ShowType.ALWAYS;
+        permanentSettingMade();
     }
 
     /**
@@ -695,6 +731,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentShowTypeInfoNever() {
         BASE_SHOW_TYPE_INFO = WriteOptions.ShowType.NEVER;
+        permanentSettingMade();
     }
 
     /**
@@ -704,6 +741,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentShowTypeInfoMinimal() {
         BASE_SHOW_TYPE_INFO = WriteOptions.ShowType.MINIMAL;
+        permanentSettingMade();
     }
 
     /**
@@ -712,6 +750,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentShowTypeInfoMinimalPlus() {
         BASE_SHOW_TYPE_INFO = WriteOptions.ShowType.MINIMAL_PLUS;
+        permanentSettingMade();
     }
 
     /**
@@ -721,6 +760,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentShowTypeInfoMinimalLegacy() {
         BASE_SHOW_TYPE_INFO = WriteOptions.ShowType.MINIMAL_LEGACY;
+        permanentSettingMade();
     }
 
     /**
@@ -732,6 +772,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentPrettyPrint(boolean prettyPrint) {
         BASE_PRETTY_PRINT = prettyPrint;
+        permanentSettingMade();
     }
 
     /**
@@ -747,6 +788,7 @@ public class WriteOptionsBuilder {
             throw new JsonIoException("lruSize must be at least 1, value: " + lruSize);
         }
         BASE_LRU_SIZE = lruSize;
+        permanentSettingMade();
     }
 
     /**
@@ -758,6 +800,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentWriteLongsAsStrings(boolean writeLongsAsStrings) {
         BASE_WRITE_LONGS_AS_STRINGS = writeLongsAsStrings;
+        permanentSettingMade();
     }
 
     /**
@@ -769,6 +812,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentSkipNullFields(boolean skipNullFields) {
         BASE_SKIP_NULL_FIELDS = skipNullFields;
+        permanentSettingMade();
     }
 
     /**
@@ -780,6 +824,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentForceMapOutputAsTwoArrays(boolean forceMapOutputAsTwoArrays) {
         BASE_FORCE_MAP_OUTPUT_AS_TWO_ARRAYS = forceMapOutputAsTwoArrays;
+        permanentSettingMade();
     }
 
     /**
@@ -792,6 +837,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentStringifyMapKeys(boolean stringifyMapKeys) {
         BASE_STRINGIFY_MAP_KEYS = stringifyMapKeys;
+        permanentSettingMade();
     }
 
     /**
@@ -805,6 +851,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentWriteOptionalAsObject(boolean writeOptionalAsObject) {
         BASE_WRITE_OPTIONAL_AS_OBJECT = writeOptionalAsObject;
+        permanentSettingMade();
     }
 
     /**
@@ -820,6 +867,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentPreserveLeafContainerIdentity(boolean preserveLeafContainerIdentity) {
         BASE_PRESERVE_LEAF_CONTAINER_IDENTITY = preserveLeafContainerIdentity;
+        permanentSettingMade();
     }
 
     /**
@@ -837,6 +885,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentNamingStrategy(IoNaming.Strategy strategy) {
         BASE_NAMING_STRATEGY = strategy;
+        permanentSettingMade();
     }
 
     /**
@@ -848,6 +897,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentAllowNanAndInfinity(boolean allowNanAndInfinity) {
         BASE_ALLOW_NAN_AND_INFINITY = allowNanAndInfinity;
+        permanentSettingMade();
     }
 
     /**
@@ -859,6 +909,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentEnumPublicFieldsOnly(boolean enumPublicFieldsOnly) {
         BASE_ENUM_PUBLIC_FIELDS_ONLY = enumPublicFieldsOnly;
+        permanentSettingMade();
     }
 
     /**
@@ -870,6 +921,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentEnumSetWrittenOldWay(boolean enumSetWrittenOldWay) {
         BASE_ENUM_SET_WRITTEN_OLD_WAY = enumSetWrittenOldWay;
+        permanentSettingMade();
     }
 
     /**
@@ -881,6 +933,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentCloseStream(boolean closeStream) {
         BASE_CLOSE_STREAM = closeStream;
+        permanentSettingMade();
     }
 
     /**
@@ -897,6 +950,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentCycleSupport(boolean cycleSupport) {
         BASE_CYCLE_SUPPORT = cycleSupport;
+        permanentSettingMade();
     }
 
     /**
@@ -908,6 +962,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentUseGetters(boolean useGetters) {
         BASE_USE_GETTERS = useGetters;
+        permanentSettingMade();
     }
 
     /**
@@ -922,6 +977,7 @@ public class WriteOptionsBuilder {
             throw new IllegalArgumentException("TOON delimiter must be ',' (comma), '\\t' (tab), or '|' (pipe)");
         }
         BASE_TOON_DELIMITER = delimiter;
+        permanentSettingMade();
     }
 
     /**
@@ -934,6 +990,7 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentToonLegacyForms(boolean legacyForms) {
         BASE_TOON_LEGACY_FORMS = legacyForms;
+        permanentSettingMade();
     }
 
     /**

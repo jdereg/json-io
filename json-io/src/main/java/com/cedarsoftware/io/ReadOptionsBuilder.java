@@ -25,6 +25,7 @@ import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 import java.lang.reflect.Method;
 
@@ -165,7 +166,11 @@ public class ReadOptionsBuilder {
     private static volatile boolean BASE_CLOSE_STREAM = true;                // true close stream after parsing
     private static volatile boolean BASE_USE_SETTERS = false;                // false assign fields, do not call setters
     
-    private final static ReadOptions defReadOptions;
+    // How many permanent settings have been made. The options for callers that pass none (here and in JsonIo) are
+    // built again when it has moved on: see DefaultOptionsCache.
+    private static final AtomicInteger PERMANENT_VERSION = new AtomicInteger();
+    private static final DefaultOptionsCache<ReadOptions> DEFAULT_READ_OPTIONS = new DefaultOptionsCache<>(
+            ReadOptionsBuilder::permanentVersion, () -> new ReadOptionsBuilder().build());
     private final DefaultReadOptions options;
     // True while options.converterOptions is the one of the ReadOptions this builder was copied from: that one is
     // immutable, so it is shared until this builder changes a conversion setting, and copied then.
@@ -195,15 +200,23 @@ public class ReadOptionsBuilder {
         ClassUtilities.addPermanentClassAlias(BigInteger.class, "BigInt");
         ClassUtilities.addPermanentClassAlias(BigDecimal.class, "bigdec");
         ClassUtilities.addPermanentClassAlias(BigDecimal.class, "BigDec");
-
-        defReadOptions = new ReadOptionsBuilder().build();
     }
 
     /**
-     * @return Default ReadOptions - no construction needed, unmodifiable.
+     * @return Default ReadOptions - no construction needed, unmodifiable: the library's defaults with the permanent
+     * settings made so far ({@code addPermanent...}). This is what a read API uses when it is passed no options.
      */
     public static ReadOptions getDefaultReadOptions() {
-        return defReadOptions;
+        return DEFAULT_READ_OPTIONS.get();
+    }
+
+    /** How many permanent settings have been made: options cached for callers that pass none follow it. */
+    static int permanentVersion() {
+        return PERMANENT_VERSION.get();
+    }
+
+    private static void permanentSettingMade() {
+        PERMANENT_VERSION.incrementAndGet();
     }
     
     /**
@@ -385,6 +398,7 @@ public class ReadOptionsBuilder {
     public static void addPermanentClassFactory(Class<?> sourceClass, ClassFactory factory) {
         throwIfPrimitiveOrString(sourceClass, "register ClassFactory");
         CLASS_FACTORIES.change(factories -> factories.put(sourceClass, factory));
+        permanentSettingMade();
     }
 
     /**
@@ -396,6 +410,7 @@ public class ReadOptionsBuilder {
     @Deprecated
     public static void assignInstantiator(Class<?> classToCreate, ClassFactory factory) {
         CLASS_FACTORIES.change(factories -> factories.put(classToCreate, factory));
+        permanentSettingMade();
     }
 
     /**
@@ -409,6 +424,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentCoercedType(Class<?> sourceClass, Class<?> destinationClass) {
         COERCED_TYPES.change(coerced -> coerced.put(sourceClass, destinationClass));
+        permanentSettingMade();
     }
 
     /**
@@ -422,6 +438,7 @@ public class ReadOptionsBuilder {
             BASE_ALIAS_MAPPINGS.put(sourceClass.getName(), alias);
             baseAliasSnapshot = null;
         }
+        permanentSettingMade();
     }
 
     private static Map<String, String> baseAliases() {
@@ -545,6 +562,7 @@ public class ReadOptionsBuilder {
                 baseAliasSnapshot = null;
             }
         }
+        permanentSettingMade();
     }
 
     /**
@@ -564,6 +582,7 @@ public class ReadOptionsBuilder {
     public static void addPermanentReader(Class<?> c, JsonClassReader reader) {
         throwIfPrimitiveOrString(c, "register custom reader");
         READERS.change(readers -> readers.put(c, reader));
+        permanentSettingMade();
     }
 
     /**
@@ -577,6 +596,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentNonReferenceableClass(Class<?> clazz) {
         NON_REFS.change(nonRefs -> nonRefs.add(clazz));
+        permanentSettingMade();
     }
 
     /**
@@ -589,6 +609,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentNotCustomReadClass(Class<?> clazz) {
         NOT_CUSTOM_READ.change(notCustom -> notCustom.add(clazz));
+        permanentSettingMade();
     }
 
     /**
@@ -630,6 +651,7 @@ public class ReadOptionsBuilder {
     public static void addPermanentNotImportedField(Class<?> clazz, String fieldName) {
         NOT_IMPORTED_FIELDS.change(notImported ->
                 notImported.computeIfAbsent(clazz, k -> ConcurrentHashMap.newKeySet()).add(fieldName));
+        permanentSettingMade();
     }
 
     /**
@@ -752,6 +774,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentNonStandardSetter(Class<?> clazz, String fieldName, String alias) {
         BASE_NONSTANDARD_SETTERS.computeIfAbsent(clazz, k -> new ConcurrentHashMap<>()).put(fieldName, alias);
+        permanentSettingMade();
     }
     
     /**
@@ -765,6 +788,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentMaxUnresolvedReferences(int maxUnresolvedReferences) {
         BASE_MAX_UNRESOLVED_REFERENCES = maxUnresolvedReferences;
+        permanentSettingMade();
     }
     
     /**
@@ -778,6 +802,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentMaxStackDepth(int maxStackDepth) {
         BASE_MAX_STACK_DEPTH = maxStackDepth;
+        permanentSettingMade();
     }
     
     /**
@@ -791,6 +816,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentMaxMapsToRehash(int maxMapsToRehash) {
         BASE_MAX_MAPS_TO_REHASH = maxMapsToRehash;
+        permanentSettingMade();
     }
     
     /**
@@ -804,6 +830,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentMaxMissingFields(int maxMissingFields) {
         BASE_MAX_MISSING_FIELDS = maxMissingFields;
+        permanentSettingMade();
     }
     
     /**
@@ -817,6 +844,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentMaxObjectReferences(int maxObjectReferences) {
         BASE_MAX_OBJECT_REFERENCES = maxObjectReferences;
+        permanentSettingMade();
     }
     
     /**
@@ -830,6 +858,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentMaxReferenceChainDepth(int maxReferenceChainDepth) {
         BASE_MAX_REFERENCE_CHAIN_DEPTH = maxReferenceChainDepth;
+        permanentSettingMade();
     }
     
     /**
@@ -842,6 +871,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentMaxIdValue(long maxIdValue) {
         BASE_MAX_ID_VALUE = maxIdValue;
+        permanentSettingMade();
     }
 
     /**
@@ -854,6 +884,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentStringBufferSize(int stringBufferSize) {
         BASE_STRING_BUFFER_SIZE = stringBufferSize;
+        permanentSettingMade();
     }
 
     /**
@@ -866,6 +897,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentMaxAllowedLength(int maxAllowedLength) {
         BASE_MAX_ALLOWED_LENGTH = maxAllowedLength;
+        permanentSettingMade();
     }
 
     /**
@@ -878,6 +910,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentMaxFileContentSize(int maxFileContentSize) {
         BASE_MAX_FILE_CONTENT_SIZE = maxFileContentSize;
+        permanentSettingMade();
     }
 
     /**
@@ -890,6 +923,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentMaxLineCount(int maxLineCount) {
         BASE_MAX_LINE_COUNT = maxLineCount;
+        permanentSettingMade();
     }
 
     /**
@@ -902,6 +936,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentMaxLineLength(int maxLineLength) {
         BASE_MAX_LINE_LENGTH = maxLineLength;
+        permanentSettingMade();
     }
 
     /**
@@ -918,6 +953,7 @@ public class ReadOptionsBuilder {
         BASE_MAX_TYPE_RESOLUTION_CACHE_SIZE = maxTypeResolutionCacheSize;
         // Apply to JsonValue's static cache immediately
         JsonValue.setMaxTypeResolutionCacheSize(maxTypeResolutionCacheSize);
+        permanentSettingMade();
     }
 
     /**
@@ -933,6 +969,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentToonExpandPaths(boolean toonExpandPaths) {
         BASE_TOON_EXPAND_PATHS = toonExpandPaths;
+        permanentSettingMade();
     }
 
     /**
@@ -949,6 +986,7 @@ public class ReadOptionsBuilder {
             throw new JsonIoException("toonIndentSize must be at least 1, value: " + toonIndentSize);
         }
         BASE_TOON_INDENT_SIZE = toonIndentSize;
+        permanentSettingMade();
     }
 
     /**
@@ -961,6 +999,7 @@ public class ReadOptionsBuilder {
             throw new JsonIoException("defaultCollectionCapacity must be at least 1, value: " + defaultCollectionCapacity);
         }
         BASE_DEFAULT_COLLECTION_CAPACITY = defaultCollectionCapacity;
+        permanentSettingMade();
     }
 
     /**
@@ -973,6 +1012,7 @@ public class ReadOptionsBuilder {
             throw new JsonIoException("collectionLoadFactor must be between 0.0 and 1.0 (exclusive), value: " + collectionLoadFactor);
         }
         BASE_COLLECTION_LOAD_FACTOR = collectionLoadFactor;
+        permanentSettingMade();
     }
 
     /**
@@ -985,6 +1025,7 @@ public class ReadOptionsBuilder {
             throw new JsonIoException("minCollectionCapacity must be at least 1, value: " + minCollectionCapacity);
         }
         BASE_MIN_COLLECTION_CAPACITY = minCollectionCapacity;
+        permanentSettingMade();
     }
 
     /**
@@ -999,6 +1040,7 @@ public class ReadOptionsBuilder {
         BASE_LINEAR_SEARCH_THRESHOLD = linearSearchThreshold;
         // Apply to JsonObject's static configuration immediately
         JsonObject.setLinearSearchThreshold(linearSearchThreshold);
+        permanentSettingMade();
     }
 
     /**
@@ -1011,6 +1053,7 @@ public class ReadOptionsBuilder {
             throw new JsonIoException("maxDepth must be at least 1, value: " + maxDepth);
         }
         BASE_MAX_DEPTH = maxDepth;
+        permanentSettingMade();
     }
 
     /**
@@ -1023,6 +1066,7 @@ public class ReadOptionsBuilder {
             throw new JsonIoException("lruSize must be at least 1, value: " + lruSize);
         }
         BASE_LRU_SIZE = lruSize;
+        permanentSettingMade();
     }
 
     /**
@@ -1032,6 +1076,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentAllowNanAndInfinity(boolean allowNanAndInfinity) {
         BASE_ALLOW_NAN_AND_INFINITY = allowNanAndInfinity;
+        permanentSettingMade();
     }
 
     /**
@@ -1041,6 +1086,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentFailOnUnknownType(boolean failOnUnknownType) {
         BASE_FAIL_ON_UNKNOWN_TYPE = failOnUnknownType;
+        permanentSettingMade();
     }
 
     /**
@@ -1050,6 +1096,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentCloseStream(boolean closeStream) {
         BASE_CLOSE_STREAM = closeStream;
+        permanentSettingMade();
     }
 
     /**
@@ -1059,6 +1106,7 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentUseSetters(boolean useSetters) {
         BASE_USE_SETTERS = useSetters;
+        permanentSettingMade();
     }
     
     /**
