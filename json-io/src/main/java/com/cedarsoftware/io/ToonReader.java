@@ -1535,7 +1535,9 @@ public class ToonReader {
                 // (indicating an inline object like "- name: John"). Work directly on
                 // lineBuf — no String materialization — since lineBuf[elementStart..trimEnd)
                 // still holds the hyphen line until the first hasLine() inside readInlineObject.
-                if (lineBuf[elementStart] != '"' && findColonInBuf(elementStart, trimEnd) > 0) {
+                // The colon scan skips quoted spans, so it tells a quoted key (- "my key": 1) from a
+                // quoted string that holds a colon (- "a: b") by itself.
+                if (findColonInBuf(elementStart, trimEnd) > 0) {
                     // Per TOON spec: first field of object is on hyphen line
                     // e.g., "- name: John" followed by "  age: 30" on next line
                     JsonObject inlineObj = readInlineObject(elementStart, trimEnd, indent);
