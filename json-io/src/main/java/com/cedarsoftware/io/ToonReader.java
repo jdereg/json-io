@@ -55,7 +55,7 @@ public class ToonReader {
     /** One entry of a header's field list (spec 6): a name, and for a nested field group its own entries. */
     private static final class FieldEntry {
         private final String name;
-        private final String metaKey;       // set when the unquoted name is one of json-io's meta keys (@type, ...)
+        private final String metaKey;       // set when the name, quoted or not, is a json-io meta key ($type, ...)
         private final FieldEntry[] group;   // the nested field group, or null for a leaf field
 
         private FieldEntry(String name, String metaKey, FieldEntry[] group) {
@@ -994,9 +994,11 @@ public class ToonReader {
     private FieldEntry fieldEntry(int nameStart, int nameEnd, FieldEntry[] group) {
         String raw = trimAsciiRangeBuf(nameStart, nameEnd);
         String name = unquoteString(raw);
+        // A meta key quoted or not, as in a header without a nested field group (buildColumnMetaKeys): json-io
+        // writes a table's $type column in quotes, $ being no character of an unquoted key
         String metaKey = null;
-        if (group == null && !raw.isEmpty()) {
-            char first = raw.charAt(0);
+        if (group == null && !name.isEmpty()) {
+            char first = name.charAt(0);
             if (first == '@' || first == '$') {
                 metaKey = META_KEY_MAP.get(name);
             }

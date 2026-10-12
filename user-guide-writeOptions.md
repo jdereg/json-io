@@ -1329,6 +1329,63 @@ String toon = JsonIo.toToon(data, opts);
 List<?> restored = JsonIo.fromToon(toon, null).asClass(List.class);
 ```
 
+### TOON Legacy Forms
+
+By default json-io writes TOON with the forms of **TOON spec v4**. Two of them are newer than json-io 4.113.0, and
+a reader of spec v3 -- json-io 4.113.0 and earlier among them -- does not read them:
+
+```
+servers[2:]{host,port}:                         a keyed table: an object whose values are
+  alpha: a.example.com,8080                     objects with the same fields
+  beta: b.example.com,9090
+
+orders[2]{id,customer{name,country},total}:     a nested field group: a table column whose
+  1,Ada,DK,99                                   values are objects with the same fields
+  2,Bob,UK,149
+```
+
+Set `toonLegacyForms(true)` when what you write is read by such a reader. json-io then writes what 4.113.0
+wrote, character for character: every object field by field, a table only of primitive columns, and a list of like
+objects inside a list as a table (which spec v4 no longer allows, and writes item by item).
+
+```
+servers:
+  alpha:
+    host: a.example.com
+    port: 8080
+  beta:
+    host: b.example.com
+    port: 9090
+orders[2]:
+  - id: 1
+    customer:
+      name: Ada
+      country: DK
+    total: 99
+  - id: 2
+    customer:
+      name: Bob
+      country: UK
+    total: 149
+```
+
+json-io itself reads both, whichever was written: nothing has to be set on the reading side.
+
+>#### `boolean` isToonLegacyForms()
+>- [ ] Returns `true` if only the forms of TOON spec v3 are written, `false` (the default) for those of spec v4.
+
+>#### `WriteOptionsBuilder` toonLegacyForms(`boolean legacyForms`)
+>- [ ] `true` to write only the forms of TOON spec v3, as json-io 4.113.0 did; `false` for those of spec v4.
+
+```java
+// For a consumer that still runs json-io 4.113.0 or earlier, or another TOON v3 reader
+WriteOptions options = new WriteOptionsBuilder().toonLegacyForms(true).build();
+String toon = JsonIo.toToon(data, options);
+```
+
+To make it the default of every `WriteOptions` built afterwards, call
+`WriteOptionsBuilder.addPermanentToonLegacyForms(true)` once at startup.
+
 ---
 
 ---
@@ -1627,6 +1684,10 @@ Sets the permanent cycle support setting for all new `WriteOptions` instances. W
 ### addPermanentUseGetters
 Sets, for all new `WriteOptions` instances, whether a field's value is obtained by calling the class's public getter (`true`) or by reading the field (`false`, the default). See [Fields or Getters](#fields-or-getters---how-a-value-is-obtained).
 >#### WriteOptionsBuilder.addPermanentUseGetters(`boolean useGetters`)
+
+### addPermanentToonLegacyForms
+Sets, for every `WriteOptions` built afterwards, whether TOON is written with only the forms of TOON spec v3 (`true`), as json-io 4.113.0 and earlier wrote and read it, or with those of spec v4 (`false`, the default). See [TOON Legacy Forms](#toon-legacy-forms).
+>#### WriteOptionsBuilder.addPermanentToonLegacyForms(`boolean legacyForms`)
 
 ### addPermanentToonDelimiter
 Sets the permanent TOON delimiter for all new `WriteOptions` instances. Must be `','` (comma, default), `'\t'` (tab), or `'|'` (pipe). This sets the default delimiter used for TOON tabular arrays and inline primitive arrays.

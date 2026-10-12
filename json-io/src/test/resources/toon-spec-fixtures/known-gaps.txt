@@ -90,26 +90,7 @@ decode/whitespace.json#15     keeps a second carriage return before CRLF as cont
 decode/whitespace.json#16     keeps a byte-order mark after the document start as content
 decode/whitespace.json#17     removes a byte-order mark before a comment line
 
-# Writing: nested field groups (spec 9.3) -- 6
-encode/arrays-objects.json#9   encodes a keyed-eligible object in a tabular column as a nested field group
-encode/arrays-tabular.json#7   collapses a uniform nested object column into a nested field group
-encode/arrays-tabular.json#8   collapses sibling nested field groups with depth-first row layout
-encode/arrays-tabular.json#9   collapses nested field groups recursively without a depth cap
-encode/arrays-tabular.json#10  uses the active delimiter inside nested field groups
-encode/arrays-tabular.json#11  quotes subfield names inside nested field groups per key encoding
-
-# Writing: keyed tabular form (spec 9.5) -- 8
-encode/objects-keyed.json#0   encodes objects of uniform objects in keyed tabular form
-encode/objects-keyed.json#1   encodes an eligible root object with a keyless keyed header
-encode/objects-keyed.json#2   collapses uniform nested object columns inside keyed headers
-encode/objects-keyed.json#3   orders fields by the first entry value's encounter order
-encode/objects-keyed.json#4   uses the active delimiter in keyed headers and entry-row cells
-encode/objects-keyed.json#5   quotes entry keys per key encoding
-encode/objects-keyed.json#6   quotes entry-row cells containing the active delimiter
-encode/objects-keyed.json#11  emits a keyed header on the hyphen line when it is the first field of a list item
-
-# Writing: other (dotted keys and .5 unquoted, U+FEFF root string, list form in list-item position) -- 4
-encode/arrays-nested.json#11  uses list form for a tabular-eligible array in list-item position
+# Writing: other (dotted keys and .5 unquoted, U+FEFF root string) -- 3
 encode/objects.json#19        keeps dotted and literal-named keys unquoted
 encode/objects.json#30        keeps strings that only resemble numbers or literals, a leading byte-order mark, or DEL unquoted
 encode/primitives.json#37     quotes a root string starting with U+FEFF

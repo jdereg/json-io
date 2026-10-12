@@ -17,6 +17,7 @@ import java.util.Base64;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -283,6 +284,11 @@ public class ToonWriter implements Closeable, Flushable {
     private final boolean cycleSupport;
     private final boolean skipNullFields;
     private final boolean toonKeyFolding;
+    private final boolean v4Forms;          // the forms of TOON spec v4: keyed tables, nested field groups (not legacy)
+    private final boolean prettyPrint;
+    // Set for the one array written next, on a list item's hyphen line with no key: such an array is never a table
+    // (spec 9.4: a keyless header with a field list stands only at the root). Taken by the array's writer.
+    private boolean keylessListItemArray;
     private final String indentUnit;       // single indent level (e.g. "  " for size 2)
     private final String[] indentCache;    // per-instance cache for non-default indent sizes
     private final boolean enumPublicFieldsOnly;
@@ -403,6 +409,8 @@ public class ToonWriter implements Closeable, Flushable {
         this.cycleSupport = this.writeOptions.isCycleSupport();
         this.skipNullFields = this.writeOptions.isSkipNullFields();
         this.toonKeyFolding = this.writeOptions.isToonKeyFolding();
+        this.v4Forms = !this.writeOptions.isToonLegacyForms();
+        this.prettyPrint = this.writeOptions.isPrettyPrint();
         this.enumPublicFieldsOnly = this.writeOptions.isEnumPublicFieldsOnly();
 
         // §12 honors WriteOptions.indentationSize for TOON output. Default (2) reuses the
@@ -491,7 +499,10 @@ public class ToonWriter implements Closeable, Flushable {
                     activePath.clear();
                 }
             }
-            if (typeMetadataEnabled) {
+            keylessListItemArray = false;
+            if (v4Forms && writeRootKeyedTable(obj)) {
+                // spec 9.5: a root object of uniform objects is a keyed table with no key
+            } else if (typeMetadataEnabled) {
                 writeRoot(obj);
             } else {
                 writeValue(obj);
@@ -1561,6 +1572,8 @@ public class ToonWriter implements Closeable, Flushable {
      * Per TOON spec: first field of object elements goes on hyphen line.
      */
     private void writeArrayElements(Object array, int length) throws IOException {
+        boolean tables = !keylessListItemArray;
+        keylessListItemArray = false;
         if (length == 0) {
             out.write(":");
             return;
@@ -1588,15 +1601,21 @@ public class ToonWriter implements Closeable, Flushable {
                     writeInlineValue(arr[i]);
                 }
             }
-        } else if (array instanceof Object[]
+        } else if (tables && array instanceof Object[]
                 && tryWriteUniformMapTabular((Object[]) array, length, componentType)) {
             // Uniform Map array emitted in tabular form per spec §9.3.
-        } else if (!writeOptions.isPrettyPrint()) {
-            // Try tabular format for uniform POJO arrays
-            UniformPojoArrayData uniformPOJO = getUniformPOJODataFromArray(array, length, componentType);
+        } else {
+            // Try tabular format for uniform POJO arrays (prettyPrint=true → always the verbose list format)
+            UniformPojoArrayData uniformPOJO = tables && !writeOptions.isPrettyPrint()
+                    ? getUniformPOJODataFromArray(array, length, componentType) : null;
+            RowShape shape = uniformPOJO == null && tables && v4Forms && array instanceof Object[]
+                    ? tableShape(Arrays.asList((Object[]) array), componentType) : null;
             if (uniformPOJO != null) {
                 writeTabularHeader(uniformPOJO.keys);
                 writeTabularPOJORowsFromArray(uniformPOJO, array, length);
+            } else if (shape != null) {
+                // A table whose columns hold uniform objects: nested field groups (spec 9.3)
+                writeTable(shape, Arrays.asList((Object[]) array));
             } else {
                 // Mixed/complex array - use list format with hyphens
                 out.write(":");
@@ -1610,18 +1629,6 @@ public class ToonWriter implements Closeable, Flushable {
                 }
                 depth--;
             }
-        } else {
-            // prettyPrint=true → always use verbose list format
-            out.write(":");
-            depth++;
-            for (int i = 0; i < length; i++) {
-                out.write('\n');
-                writeIndent();
-                out.write("-");
-                Object element = getArrayElement(array, i);
-                writeListElement(element, componentType);
-            }
-            depth--;
         }
     }
 
@@ -1749,6 +1756,8 @@ public class ToonWriter implements Closeable, Flushable {
      */
     private void writeCollectionElementsWithHeader(Collection<?> collection) throws IOException {
         Class<?> declared = typeMetadataEnabled ? takeElementType() : Object.class;   // what the reader expects
+        boolean tables = !keylessListItemArray;
+        keylessListItemArray = false;
         if (collection.isEmpty()) {
             out.write(":");
             return;
@@ -1775,31 +1784,24 @@ public class ToonWriter implements Closeable, Flushable {
             }
         } else {
             // Check for uniform Map array (all Maps with same keys) → tabular format
-            List<String> uniformKeys = getUniformKeys(collection, declared);
+            List<String> uniformKeys = tables ? getUniformKeys(collection, declared) : null;
+            // Check for uniform POJO array → tabular format (prettyPrint=true → always the verbose list format)
+            UniformPojoArrayData uniformPOJO = uniformKeys == null && tables && !writeOptions.isPrettyPrint()
+                    ? getUniformPOJODataFromCollection(collection, declared) : null;
+            RowShape shape = uniformKeys == null && uniformPOJO == null && tables && v4Forms
+                    ? tableShape(collection, declared) : null;
             if (uniformKeys != null) {
                 // Tabular format: {key1,key2,...}: followed by CSV rows
                 writeTabularHeader(uniformKeys);
                 writeTabularRows(collection, uniformKeys);
-            } else if (!writeOptions.isPrettyPrint()) {
-                // Check for uniform POJO array → tabular format (default, compact)
-                UniformPojoArrayData uniformPOJO = getUniformPOJODataFromCollection(collection, declared);
-                if (uniformPOJO != null) {
-                    writeTabularHeader(uniformPOJO.keys);
-                    writeTabularPOJORows(uniformPOJO, collection);
-                } else {
-                    // Non-uniform or mixed - use list format with hyphens
-                    out.write(":");
-                    depth++;
-                    for (Object element : collection) {
-                        out.write('\n');
-                        writeIndent();
-                        out.write("-");
-                        writeListElement(element, declared);
-                    }
-                    depth--;
-                }
+            } else if (uniformPOJO != null) {
+                writeTabularHeader(uniformPOJO.keys);
+                writeTabularPOJORows(uniformPOJO, collection);
+            } else if (shape != null) {
+                // A table whose columns hold uniform objects: nested field groups (spec 9.3)
+                writeTable(shape, collection);
             } else {
-                // prettyPrint=true → always use verbose list format
+                // Non-uniform or mixed - use list format with hyphens
                 out.write(":");
                 depth++;
                 for (Object element : collection) {
@@ -2228,6 +2230,586 @@ public class ToonWriter implements Closeable, Flushable {
         }
     }
 
+    // ---------- TOON spec v4: nested field groups (9.3) and the keyed tabular form (9.5) ----------
+
+    /**
+     * The field list that the rows of a table share: its names in the first row's order, and for each name either
+     * a leaf -- one primitive cell -- or the field list of the objects that column holds, a nested field group
+     * (spec 9.3). The rows are Maps with String keys, or objects of one class read through their field plans.
+     */
+    private static final class RowShape {
+        final Class<?> rowClass;                                    // null: the rows are Maps
+        final List<WriteOptionsBuilder.WriteFieldPlan> allPlans;    // rowClass's plans, written or not; null for Maps
+        final String[] names;
+        final WriteOptionsBuilder.WriteFieldPlan[] plans;           // one per name; null for Maps
+        final RowShape[] groups;                                    // one per name, null for a leaf; null: all leaves
+        private Map<String, Integer> index;                         // Maps: name -> position, made when first asked
+        String typeName;                                            // rows of a class that carry $type: its name
+
+        RowShape(Class<?> rowClass, List<WriteOptionsBuilder.WriteFieldPlan> allPlans, String[] names,
+                 WriteOptionsBuilder.WriteFieldPlan[] plans, RowShape[] groups) {
+            this.rowClass = rowClass;
+            this.allPlans = allPlans;
+            this.names = names;
+            this.plans = plans;
+            this.groups = groups;
+        }
+
+        RowShape group(int i) {
+            return groups == null ? null : groups[i];
+        }
+
+        Integer positionOf(Object key) {
+            if (index == null) {
+                index = new HashMap<>(names.length * 2);
+                for (int i = 0; i < names.length; i++) {
+                    index.put(names[i], i);
+                }
+            }
+            return index.get(key);
+        }
+    }
+
+    /** An object of uniform objects, ready to be written in the keyed tabular form: its entries and their shape. */
+    private static final class KeyedTable {
+        final RowShape shape;
+        final String[] keys;
+        final boolean[] quoted;     // per key: whether it is written in quotes
+        final Object[] values;
+
+        KeyedTable(RowShape shape, String[] keys, boolean[] quoted, Object[] values) {
+            this.shape = shape;
+            this.keys = keys;
+            this.quoted = quoted;
+            this.values = values;
+        }
+    }
+
+    /**
+     * Whether {@code value}, written where the reader expects {@code declared}, can be a table row, a keyed table's
+     * entry or the object of a nested field group: a Map or an object written field by field that is not empty, is
+     * written once (a shared one needs its $id), and carries no $type -- a row of a table may, in the table's $type
+     * column ({@code typeColumn}), as before. With prettyPrint an object is always written field by field.
+     */
+    private boolean isRowObject(Object value, Class<?> declared, boolean typeColumn) {
+        if (value == null || value instanceof String || value instanceof Number || value instanceof Boolean) {
+            return false;
+        }
+        Class<?> c = value.getClass();
+        ToonWriteType kind = writeTypeCache.get(c);
+        if ((kind != ToonWriteType.MAP && kind != ToonWriteType.POJO) || (cycleSupport && isReferenced(value))) {
+            return false;
+        }
+        switch (kind) {
+            case MAP:
+                if (value instanceof JsonObject) {
+                    // A carrier from a Maps graph holds its keys or items aside: not a plain object
+                    JsonObject carrier = (JsonObject) value;
+                    if (carrier.getKeys() != null || carrier.getItems() != null) {
+                        return false;
+                    }
+                }
+                return !((Map<?, ?>) value).isEmpty() && !needsType(c, declared);
+            case POJO:
+                return !prettyPrint && !isDataClass(c)
+                        && AnnotationResolver.getMetadata(c).getAnyGetterMethod() == null
+                        && (typeColumn || !needsType(c, declared));
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * The field list of {@code row}, which {@link #isRowObject} accepted, or null when a field holds what a cell
+     * cannot: an array, an empty object, a shared object, a value that carries $type. An object that holds itself
+     * has no field list either; the path that writes it field by field reports the cycle.
+     */
+    private RowShape shapeOf(Object row) {
+        if (!cycleSupport && !enterActivePath(row)) {
+            return null;
+        }
+        try {
+            return row instanceof Map ? mapShape((Map<?, ?>) row) : classShape(row);
+        } finally {
+            if (!cycleSupport) {
+                exitActivePath(row);
+            }
+        }
+    }
+
+    private RowShape mapShape(Map<?, ?> map) {
+        int size = map.size();
+        String[] names = new String[size];
+        RowShape[] groups = null;
+        int n = 0;
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            Object key = entry.getKey();
+            if (!(key instanceof String) || n == size) {
+                return null;
+            }
+            Object value = entry.getValue();
+            if (!isMapCell(value)) {
+                RowShape group = isRowObject(value, Object.class, false) ? shapeOf(value) : null;
+                if (group == null) {
+                    return null;
+                }
+                if (groups == null) {
+                    groups = new RowShape[size];
+                }
+                groups[n] = group;
+            }
+            names[n++] = (String) key;
+        }
+        return n == size ? new RowShape(null, null, names, null, groups) : null;
+    }
+
+    /** A Map's value that is one cell: a primitive that carries no $type (what a map's value does is not declared). */
+    private boolean isMapCell(Object value) {
+        return value == null
+                || (isPrimitive(value) && !(typeMetadataEnabled && needsType(value.getClass(), Object.class)));
+    }
+
+    private RowShape classShape(Object row) {
+        Class<?> c = row.getClass();
+        List<WriteOptionsBuilder.WriteFieldPlan> all = WriteOptionsBuilder.getWriteFieldPlans(writeOptions, c);
+        int max = all.size();
+        String[] names = new String[max];
+        WriteOptionsBuilder.WriteFieldPlan[] plans = new WriteOptionsBuilder.WriteFieldPlan[max];
+        RowShape[] groups = null;
+        int n = 0;
+        for (int i = 0; i < max; i++) {
+            WriteOptionsBuilder.WriteFieldPlan plan = all.get(i);
+            if (plan.enumPublicOnlySkipCandidate() && enumPublicFieldsOnly) {
+                continue;
+            }
+            if (!isPrimitiveFieldPlan(plan)) {
+                Object value = plan.accessor().retrieve(row);
+                if (value == null) {
+                    if (skipNullFields || plan.skipIfNull()) {
+                        continue;
+                    }
+                } else if (!isPlainCell(value, plan)) {
+                    // @IoShowType: the value's $type is written with it, as a field
+                    RowShape group = !plan.forceShowType() && isRowObject(value, plan.effectiveDeclaredType(), false)
+                            ? shapeOf(value) : null;
+                    if (group == null) {
+                        return null;
+                    }
+                    if (groups == null) {
+                        groups = new RowShape[max];
+                    }
+                    groups[n] = group;
+                }
+            }
+            names[n] = plan.accessor().getUniqueFieldName();
+            plans[n++] = plan;
+        }
+        if (n == 0) {
+            return null;
+        }
+        return new RowShape(c, all, Arrays.copyOf(names, n), Arrays.copyOf(plans, n),
+                groups == null ? null : Arrays.copyOf(groups, n));
+    }
+
+    /**
+     * Whether {@code row}, which {@link #isRowObject} accepted, has the fields of {@code shape}: the same names
+     * (in any order for a Map), a primitive in every leaf, and in every nested field group an object that fits it.
+     */
+    private boolean fits(RowShape shape, Object row) {
+        // No guard against an object that holds itself is needed here: the walk follows the shape, which ends
+        return shape.rowClass == null ? mapFits(shape, row) : classFits(shape, row);
+    }
+
+    private boolean mapFits(RowShape shape, Object row) {
+        if (!(row instanceof Map)) {
+            return false;
+        }
+        Map<?, ?> map = (Map<?, ?>) row;
+        if (map.size() != shape.names.length) {
+            return false;
+        }
+        // As many keys as names, every key one of the names: the same set, each name spelled as the header spells it
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            Object key = entry.getKey();
+            Integer at = key instanceof String ? shape.positionOf(key) : null;
+            if (at == null) {
+                return false;
+            }
+            Object value = entry.getValue();
+            RowShape group = shape.group(at);
+            if (group == null ? !isMapCell(value)
+                    : !(isRowObject(value, Object.class, false) && fits(group, value))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean classFits(RowShape shape, Object row) {
+        if (row.getClass() != shape.rowClass) {
+            return false;
+        }
+        List<WriteOptionsBuilder.WriteFieldPlan> all = shape.allPlans;
+        WriteOptionsBuilder.WriteFieldPlan[] plans = shape.plans;
+        int n = 0;
+        for (int i = 0, len = all.size(); i < len; i++) {
+            WriteOptionsBuilder.WriteFieldPlan plan = all.get(i);
+            if (plan.enumPublicOnlySkipCandidate() && enumPublicFieldsOnly) {
+                continue;
+            }
+            boolean inHeader = n < plans.length && plans[n] == plan;
+            if (isPrimitiveFieldPlan(plan)) {
+                if (!inHeader) {
+                    return false;
+                }
+                n++;
+                continue;
+            }
+            Object value = plan.accessor().retrieve(row);
+            if (value == null && (skipNullFields || plan.skipIfNull())) {
+                if (inHeader) {
+                    return false;       // left out of this row, but a column of the header
+                }
+                continue;
+            }
+            if (!inHeader) {
+                return false;
+            }
+            RowShape group = shape.group(n);
+            if (group == null ? value != null && !isPlainCell(value, plan)
+                    : !(isRowObject(value, plan.effectiveDeclaredType(), false) && fits(group, value))) {
+                return false;
+            }
+            n++;
+        }
+        return n == plans.length;
+    }
+
+    /**
+     * The field list of a table for {@code elements}, {@code declared} being what the reader expects for one, or
+     * null when they are not all objects with the same fields (spec 9.3). Asked after the two older checks, which
+     * know only tables of primitive columns, so what this adds is the table with a nested field group.
+     */
+    private RowShape tableShape(Collection<?> elements, Class<?> declared) {
+        RowShape shape = null;
+        Object first = null;
+        for (Object element : elements) {
+            if (!isRowObject(element, declared, true)) {
+                return null;
+            }
+            if (shape == null) {
+                shape = shapeOf(element);
+                first = element;
+                if (shape == null) {
+                    return null;
+                }
+            } else if (!fits(shape, element)) {
+                return null;
+            }
+        }
+        if (shape != null && shape.rowClass != null && needsType(shape.rowClass, declared)) {
+            shape.typeName = typeNameOf(first);     // the rows' $type, as the table's first column
+        }
+        return shape;
+    }
+
+    /** The field list in braces, a nested field group after its field's name: {id,customer{name,country},total} */
+    private void writeFieldList(RowShape shape) throws IOException {
+        out.write('{');
+        boolean first = true;
+        if (shape.typeName != null) {
+            writeKeyStringKnown(typeKey, needsQuotingForMapKey(typeKey));
+            first = false;
+        }
+        String[] names = shape.names;
+        for (int i = 0; i < names.length; i++) {
+            if (!first) {
+                out.write(delimiter);
+            }
+            first = false;
+            writeKeyStringKnown(names[i], shape.plans == null
+                    ? needsQuotingForMapKey(names[i]) : shape.plans[i].toonKeyNeedsQuoting());
+            RowShape group = shape.group(i);
+            if (group != null) {
+                writeFieldList(group);
+            }
+        }
+        out.write('}');
+    }
+
+    /**
+     * The cells of one row: the leaves in the header's order, a nested field group's cells in its field's place.
+     * Returns false once a cell has been written ({@code first} for the next one).
+     */
+    private boolean writeCells(RowShape shape, Object row, boolean first) throws IOException {
+        if (shape.rowClass == null) {
+            Map<?, ?> map = (Map<?, ?>) row;
+            String[] names = shape.names;
+            for (int i = 0; i < names.length; i++) {
+                Object value = map.get(names[i]);
+                RowShape group = shape.group(i);
+                if (group != null) {
+                    first = writeCells(group, value, first);
+                    continue;
+                }
+                if (!first) {
+                    out.write(delimiter);
+                }
+                first = false;
+                writeInlineValue(value);
+            }
+            return first;
+        }
+        WriteOptionsBuilder.WriteFieldPlan[] plans = shape.plans;
+        for (int i = 0; i < plans.length; i++) {
+            WriteOptionsBuilder.WriteFieldPlan plan = plans[i];
+            RowShape group = shape.group(i);
+            if (group != null) {
+                first = writeCells(group, plan.accessor().retrieve(row), first);
+                continue;
+            }
+            if (!first) {
+                out.write(delimiter);
+            }
+            first = false;
+            if (canWritePrimitiveFieldDirect(plan)) {
+                writePrimitiveFieldValue(row, plan);
+                continue;
+            }
+            Object value = plan.accessor().retrieve(row);
+            String formatPattern = plan.formatPattern();
+            if (formatPattern != null && value != null) {
+                value = applyFormatPattern(value, formatPattern);
+            }
+            writeInlineValue(value);
+        }
+        return first;
+    }
+
+    /** A table after its [N]: the field list, then one row per element. */
+    private void writeTable(RowShape shape, Collection<?> rows) throws IOException {
+        writeFieldList(shape);
+        out.write(':');
+        depth++;
+        for (Object row : rows) {
+            out.write('\n');
+            writeIndent();
+            boolean first = true;
+            if (shape.typeName != null) {
+                writeInlineValue(shape.typeName);
+                first = false;
+            }
+            writeCells(shape, row, first);
+        }
+        depth--;
+    }
+
+    /**
+     * {@code value}, an object in a field's place or at the root that carries no $type, as a keyed table (spec
+     * 9.5), or null when it is not one: it needs at least two entries, each an object, all with the same fields.
+     * A Map's entries are its entries, an object's are its fields. Not for an object that is shared (it needs its
+     * $id), nor for a Map whose keys need the {$keys, $items} form. The declared types of the Map's keys and values
+     * are read here and, when the answer is a table, taken as {@link #writeMap} takes them.
+     */
+    private KeyedTable keyedTable(Object value) {
+        // Asked for every object and Map written as a field's value, so the usual answer has to be cheap: nearly
+        // all are out at their first value, a primitive, before anything is tracked or allocated. (Measured: with
+        // the full check first, writing lists of objects that are no tables took 13-17% longer.)
+        boolean isMap = value instanceof Map;
+        if (isMap ? !mayBeKeyedMap((Map<?, ?>) value) : !mayBeKeyedObject(value)) {
+            return null;
+        }
+        if (cycleSupport && isReferenced(value)) {
+            return null;        // shared: it needs its $id
+        }
+        return isMap ? keyedMap((Map<?, ?>) value) : keyedObject(value);
+    }
+
+    /** At least two entries, the first one's value an object that can be a row. */
+    private boolean mayBeKeyedMap(Map<?, ?> map) {
+        if (map.size() < 2) {
+            return false;
+        }
+        // Through the entry set, which the writer walks next anyway: the Map makes that view once
+        for (Map.Entry<?, ?> first : map.entrySet()) {
+            return isRowObject(first.getValue(), elementType, false);
+        }
+        return false;
+    }
+
+    /** An object written field by field, with no field of a primitive type, whose first field can be a row. */
+    private boolean mayBeKeyedObject(Object obj) {
+        Class<?> c = obj.getClass();
+        if (prettyPrint || writeTypeCache.get(c) != ToonWriteType.POJO) {
+            return false;
+        }
+        List<WriteOptionsBuilder.WriteFieldPlan> all = WriteOptionsBuilder.getWriteFieldPlans(writeOptions, c);
+        if (all instanceof WriteOptionsBuilder.WriteFieldPlanList
+                && ((WriteOptionsBuilder.WriteFieldPlanList) all).anyPrimitiveField) {
+            return false;       // known without looking at a field: the loop below would find it out as well
+        }
+        for (int i = 0, max = all.size(); i < max; i++) {
+            WriteOptionsBuilder.WriteFieldPlan plan = all.get(i);
+            if (plan.enumPublicOnlySkipCandidate() && enumPublicFieldsOnly) {
+                continue;
+            }
+            if (isPrimitiveFieldPlan(plan) || plan.forceShowType()) {
+                return false;
+            }
+            Object value = plan.accessor().retrieve(obj);
+            if (value == null && (skipNullFields || plan.skipIfNull())) {
+                continue;
+            }
+            return isRowObject(value, plan.effectiveDeclaredType(), false);
+        }
+        return false;
+    }
+
+    /** The keyed table of a Map that {@link #mayBeKeyedMap} let through, or null. */
+    private KeyedTable keyedMap(Map<?, ?> map) {
+        int size = map.size();
+        if (map instanceof JsonObject) {
+            JsonObject carrier = (JsonObject) map;
+            if (carrier.getKeys() != null || carrier.getItems() != null) {
+                return null;
+            }
+        }
+        Class<?> valueType = elementType;
+        Class<?> keyDeclared = keyType;
+        RowShape shape = null;
+        Object[] values = new Object[size];
+        int n = 0;
+        for (Object entryValue : map.values()) {
+            if (n == size || !isRowObject(entryValue, valueType, false)) {
+                return null;
+            }
+            if (shape == null) {
+                shape = shapeOf(entryValue);
+                if (shape == null) {
+                    return null;
+                }
+            } else if (!fits(shape, entryValue)) {
+                return null;
+            }
+            values[n++] = entryValue;
+        }
+        if (n != size || keysNeedTypes(map, keyDeclared) || (!currentMapHasSimpleKeyTypeHint && hasComplexKeys(map))) {
+            return null;
+        }
+        String[] keys = new String[size];
+        boolean[] quoted = new boolean[size];
+        n = 0;
+        for (Object key : map.keySet()) {
+            if (n == size) {
+                return null;
+            }
+            keys[n] = key == null ? "null" : key.toString();
+            quoted[n] = needsQuotingForMapKey(keys[n]);
+            n++;
+        }
+        // The map's declared types are used up, as writeMap uses them up: what the rows hold sees Object
+        elementType = Object.class;
+        keyType = Object.class;
+        currentMapHasSimpleKeyTypeHint = false;
+        return new KeyedTable(shape, keys, quoted, values);
+    }
+
+    /** The keyed table of an object that {@link #mayBeKeyedObject} let through, or null. */
+    private KeyedTable keyedObject(Object obj) {
+        Class<?> c = obj.getClass();
+        List<WriteOptionsBuilder.WriteFieldPlan> all = WriteOptionsBuilder.getWriteFieldPlans(writeOptions, c);
+        int max = all.size();
+        RowShape shape = null;
+        String[] keys = new String[max];
+        boolean[] quoted = new boolean[max];
+        Object[] values = new Object[max];
+        int n = 0;
+        for (int i = 0; i < max; i++) {
+            WriteOptionsBuilder.WriteFieldPlan plan = all.get(i);
+            if (plan.enumPublicOnlySkipCandidate() && enumPublicFieldsOnly) {
+                continue;
+            }
+            if (isPrimitiveFieldPlan(plan) || plan.forceShowType()) {
+                return null;
+            }
+            Object value = plan.accessor().retrieve(obj);
+            if (value == null && (skipNullFields || plan.skipIfNull())) {
+                continue;
+            }
+            if (!isRowObject(value, plan.effectiveDeclaredType(), false)) {
+                return null;
+            }
+            if (shape == null) {
+                // An object with an @IoAnyGetter or a custom writer's data is not written field by field
+                if (isDataClass(c) || AnnotationResolver.getMetadata(c).getAnyGetterMethod() != null) {
+                    return null;
+                }
+                shape = shapeOf(value);
+                if (shape == null) {
+                    return null;
+                }
+            } else if (!fits(shape, value)) {
+                return null;
+            }
+            keys[n] = plan.accessor().getUniqueFieldName();
+            quoted[n] = plan.toonKeyNeedsQuoting();
+            values[n++] = value;
+        }
+        if (n < 2) {
+            return null;
+        }
+        return new KeyedTable(shape, Arrays.copyOf(keys, n), Arrays.copyOf(quoted, n), Arrays.copyOf(values, n));
+    }
+
+    /**
+     * A keyed table after its key: the header {@code [N:]{fields}:}, then one row per entry, {@code key: cells},
+     * {@code levels} below the line the header is on (one, or two when that line is a list item's hyphen line).
+     */
+    private void writeKeyedTable(KeyedTable table, int levels) throws IOException {
+        out.write('[');
+        out.write(Integer.toString(table.keys.length));
+        out.write(':');
+        if (delimiter != ',') {
+            out.write(delimiter);
+        }
+        out.write(']');
+        writeFieldList(table.shape);
+        out.write(':');
+        depth += levels;
+        for (int i = 0; i < table.keys.length; i++) {
+            out.write('\n');
+            writeIndent();
+            writeKeyStringKnown(table.keys[i], table.quoted[i]);
+            out.write(':');
+            out.write(' ');
+            writeCells(table.shape, table.values[i], true);
+        }
+        depth -= levels;
+    }
+
+    /**
+     * The root as a keyed table (spec 9.5: its header has no key), when it is an object of uniform objects that
+     * carries no $type. Returns false, having written nothing, when it is not.
+     */
+    private boolean writeRootKeyedTable(Object root) throws IOException {
+        if (root == null || isPrimitive(root)) {
+            return false;
+        }
+        Class<?> c = root.getClass();
+        if (typeMetadataEnabled) {
+            Class<?> declared = rootType ? Object.class : c;
+            if (needsType(c, declared) || typedForm(root, declared) != root) {
+                return false;
+            }
+        }
+        KeyedTable table = keyedTable(root);
+        if (table == null) {
+            return false;
+        }
+        writeKeyedTable(table, 1);
+        return true;
+    }
+
     /**
      * Write a single list element (after the hyphen has been written), {@code declared} being what the reader expects
      * for it (with type info on). Per TOON spec: for object/map elements, first field goes on hyphen line.
@@ -2271,7 +2853,12 @@ public class ToonWriter implements Closeable, Flushable {
                 out.write(" [0]:");
             } else {
                 out.write(" ");
-                writeCollection((Collection<?>) element, false);
+                keylessListItemArray = v4Forms;
+                try {
+                    writeCollection((Collection<?>) element, false);
+                } finally {
+                    keylessListItemArray = false;
+                }
             }
         } else if (element.getClass().isArray()) {
             // Nested array
@@ -2286,7 +2873,12 @@ public class ToonWriter implements Closeable, Flushable {
                 out.write(" [0]:");
             } else {
                 out.write(" ");
-                writeArray(element, false);
+                keylessListItemArray = v4Forms;
+                try {
+                    writeArray(element, false);
+                } finally {
+                    keylessListItemArray = false;
+                }
             }
         } else {
             // An object whose writer gives it as data written in its place (an Optional's content): that value
@@ -2607,7 +3199,10 @@ public class ToonWriter implements Closeable, Flushable {
      * Check if any key in the map is a complex object that needs special handling.
      */
     private boolean hasComplexKeys(Map<?, ?> map) {
-        for (Object key : map.keySet()) {
+        // Through the entry set, as the check for a keyed table before it and the writer after it: a Map makes
+        // each of its views once, so one view serves all three
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            Object key = entry.getKey();
             if (key != null && !isSimpleKeyType(key)) {
                 return true;
             }
@@ -2826,7 +3421,12 @@ public class ToonWriter implements Closeable, Flushable {
                 return;
             }
             boolean typed = needsType(value.getClass(), declared);
+            KeyedTable keyed = v4Forms && !typed ? keyedTable(value) : null;
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
+            if (keyed != null) {
+                writeKeyedTable(keyed, 1);      // spec 9.5: an object of uniform objects
+                return;
+            }
             out.write(":");
             if (value instanceof Map && ((Map<?, ?>) value).isEmpty() && !typed) {
                 // Empty map field value emits "key:" only — no body, no trailing "{}".
@@ -2977,7 +3577,12 @@ public class ToonWriter implements Closeable, Flushable {
                 return;
             }
             boolean typed = needsType(value.getClass(), declared);
+            KeyedTable keyed = v4Forms && !typed ? keyedTable(value) : null;
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
+            if (keyed != null) {
+                writeKeyedTable(keyed, 2);      // spec 9.5 and 10: its entry rows two levels below the hyphen
+                return;
+            }
             out.write(":");
             if (value instanceof Map && ((Map<?, ?>) value).isEmpty() && !typed) {
                 // Empty map field value in inline list context: just "key:" — see writeFieldEntry.

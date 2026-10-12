@@ -796,22 +796,51 @@ TOON only quotes strings when necessary. Strings are quoted when they:
 
 ### TOON Array Formats
 
-**Primitive arrays** (inline format):
+Which form a value takes follows from its shape, as the TOON spec lays down.
+
+**A list of primitives** is written on one line (inline form):
 ```
 tags[3]: foo,bar,baz
 numbers[5]: 1,2,3,4,5
 ```
 
-**Complex arrays** (list format with hyphens):
+**A list of objects with the same fields** is a table: the field names once, then a row per object. A field that
+holds objects with the same fields is a *nested field group* in the header, and its values are cells of the row:
+```
+employees[2]{name,age}:
+  Alice,25
+  Bob,30
+orders[2]{id,customer{name,country},total}:
+  1,Ada,DK,99
+  2,Bob,UK,149
+```
+
+**An object whose values are objects with the same fields** -- a `Map<String, Server>`, or any object whose
+fields all hold like objects -- is a *keyed table*: the field names once, then a row per entry, led by its key:
+```
+servers[2:]{host,port}:
+  alpha: a.example.com,8080
+  beta: b.example.com,9090
+```
+
+**Any other list** is written item by item (list form), an object's first field on the hyphen line:
 ```
 employees[2]:
-  -
-    name: Alice
-    age: 25
-  -
-    name: Bob
-    age: 30
+  - name: Alice
+    skills[2]: java,sql
+  - name: Bob
+    skills[1]: go
 ```
+
+A table needs every row to have the same fields, each holding a primitive or a like object: one `null` where the
+others hold an object, an empty object, a list, or a missing field, and the whole list is written item by item (or
+the object field by field). So is an object that is shared when references are written (`cycleSupport(true)`),
+and one that carries its `$type`. The first row gives the order of the fields; when read back, every row has them
+in that order.
+
+Nested field groups and keyed tables came with TOON spec v4. json-io reads them from 4.114.0 on; to write for an
+older json-io, or any reader of spec v3, see
+[TOON Legacy Forms](user-guide-writeOptions.md#toon-legacy-forms).
 
 ### TOON Special Value Handling
 
@@ -913,6 +942,7 @@ Each per-instance option has an `addPermanent*` sibling for JVM-lifetime default
 **Write side** — see [Write Options TOON sections](user-guide-writeOptions.md#toon-key-folding):
 - `toonKeyFolding(boolean)` — collapse single-key object chains into dotted notation (e.g. `address.city: NYC`)
 - `toonDelimiter(char)` — switch tabular/inline delimiter to `','`, `'\t'`, or `'|'`
+- `toonLegacyForms(boolean)` — write only the forms of TOON spec v3, for a reader older than json-io 4.114.0 *(new in 4.114.0)*
 - `indentationSize(int)` — encoder indent width (also drives JSON pretty-print)
 
 ## Annotations

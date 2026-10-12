@@ -149,6 +149,7 @@ public class WriteOptionsBuilder {
     private static volatile boolean BASE_CLOSE_STREAM = true;
     private static volatile boolean BASE_CYCLE_SUPPORT = true;
     private static volatile char BASE_TOON_DELIMITER = ',';
+    private static volatile boolean BASE_TOON_LEGACY_FORMS = false;     // false write the forms of TOON spec v4
     private static volatile ClassLoader BASE_CLASS_LOADER = ClassUtilities.getClassLoader(WriteOptionsBuilder.class);
     
     private static final WriteOptions defWriteOptions;
@@ -244,6 +245,7 @@ public class WriteOptionsBuilder {
         options.enumSetWrittenOldWay = BASE_ENUM_SET_WRITTEN_OLD_WAY;
         options.closeStream = BASE_CLOSE_STREAM;
         options.toonDelimiter = BASE_TOON_DELIMITER;
+        options.toonLegacyForms = BASE_TOON_LEGACY_FORMS;
         options.classLoader = BASE_CLASS_LOADER;
         
     }
@@ -289,6 +291,7 @@ public class WriteOptionsBuilder {
             options.json5TrailingCommas = other.json5TrailingCommas;
             options.toonKeyFolding = other.toonKeyFolding;
             options.toonDelimiter = other.toonDelimiter;
+            options.toonLegacyForms = other.toonLegacyForms;
 
             // Copy security limits
             options.maxIndentationDepth = other.maxIndentationDepth;
@@ -919,6 +922,18 @@ public class WriteOptionsBuilder {
             throw new IllegalArgumentException("TOON delimiter must be ',' (comma), '\\t' (tab), or '|' (pipe)");
         }
         BASE_TOON_DELIMITER = delimiter;
+    }
+
+    /**
+     * Call this method to set, for the lifetime of the JVM, which TOON forms are written. All WriteOptions instances
+     * will be initialized with this value unless explicitly overridden.
+     *
+     * @param legacyForms boolean true to write only the forms of TOON spec v3, which json-io 4.113.0 and earlier
+     *                    read; false (the default) to write the forms of TOON spec v4. See
+     *                    {@link #toonLegacyForms(boolean)}.
+     */
+    public static void addPermanentToonLegacyForms(boolean legacyForms) {
+        BASE_TOON_LEGACY_FORMS = legacyForms;
     }
 
     /**
@@ -1581,6 +1596,35 @@ public class WriteOptionsBuilder {
             throw new IllegalArgumentException("TOON delimiter must be ',' (comma), '\\t' (tab), or '|' (pipe)");
         }
         options.toonDelimiter = delimiter;
+        return this;
+    }
+
+    /**
+     * Choose the TOON forms that are written. By default json-io writes the forms of TOON spec v4:
+     * <ul>
+     *   <li>an object whose values are objects with the same fields is a <b>keyed table</b>: the fields once in the
+     *       header, one row per entry, each row led by its key
+     *       <pre>
+     * servers[2:]{host,port}:
+     *   alpha: a.example.com,8080
+     *   beta: b.example.com,9090</pre></li>
+     *   <li>a table column whose values are objects with the same fields is a <b>nested field group</b>
+     *       <pre>
+     * orders[2]{id,customer{name,country},total}:
+     *   1,Ada,DK,99
+     *   2,Bob,UK,149</pre></li>
+     *   <li>a list directly inside a list is written item by item, never as a table.</li>
+     * </ul>
+     * A reader of TOON spec v3 -- json-io 4.113.0 and earlier among them -- does not read the first two. Pass
+     * {@code true} to write for such a reader: every object is then written field by field, a table holds only
+     * primitive columns, and a list of uniform objects inside a list is a table, exactly as json-io 4.113.0 wrote
+     * them. json-io reads both, whichever is set here.
+     *
+     * @param legacyForms true to write only the forms of TOON spec v3, false (the default) for those of spec v4
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder toonLegacyForms(boolean legacyForms) {
+        options.toonLegacyForms = legacyForms;
         return this;
     }
 
@@ -2255,6 +2299,7 @@ public class WriteOptionsBuilder {
         // TOON write options
         private boolean toonKeyFolding = false;
         private char toonDelimiter = ',';
+        private boolean toonLegacyForms = false;    // Default: the forms of TOON spec v4
 
         // Meta key prefix override (null = use default based on JSON5 mode, '@' = force @, '$' = force $)
         private Character metaPrefixOverride = null;
@@ -2691,6 +2736,10 @@ public class WriteOptionsBuilder {
 
         public char getToonDelimiter() {
             return toonDelimiter;
+        }
+
+        public boolean isToonLegacyForms() {
+            return toonLegacyForms;
         }
 
         /**
@@ -3167,10 +3216,18 @@ public class WriteOptionsBuilder {
     static final class WriteFieldPlanList extends AbstractList<WriteFieldPlan> implements RandomAccess {
         private final WriteFieldPlan[] plans;
         final JsonClassWriter dataWriter;
+        // True when a field is of a primitive type: such an object's fields are never all objects, so TOON need not
+        // look at them to know it is no keyed table. Asked for every object written as a field's value.
+        final boolean anyPrimitiveField;
 
         WriteFieldPlanList(List<WriteFieldPlan> plans, JsonClassWriter dataWriter) {
             this.plans = plans.toArray(new WriteFieldPlan[0]);
             this.dataWriter = dataWriter;
+            boolean primitive = false;
+            for (WriteFieldPlan plan : this.plans) {
+                primitive |= plan.primitiveWriteKind() != WriteFieldPlan.PRIMITIVE_NONE;
+            }
+            this.anyPrimitiveField = primitive;
         }
 
         @Override

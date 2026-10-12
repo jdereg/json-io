@@ -442,4 +442,11 @@ public interface WriteOptions {
      */
     char getToonDelimiter();
 
+    /**
+     * @return boolean true if TOON is written with the forms of TOON spec v3 only, as json-io 4.113.0 and earlier
+     * wrote it and can read it: no keyed tabular form for an object of uniform objects, no nested field groups in a
+     * tabular header, and a table as a list item. Default is false: the forms of TOON spec v4.
+     */
+    boolean isToonLegacyForms();
+
 }
