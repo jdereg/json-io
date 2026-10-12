@@ -181,6 +181,9 @@ public class ToonReader {
     private final StringBuilder inlineBuf = new StringBuilder(64);
     private int fieldListEnd;     // set by parseFieldList: the index just after the field list's closing brace
     private int rowCellCursor;    // the next cell buildRow takes
+    // Set once the document names a meta key ($type, $id, $ref, $items, $keys, $enum). A document that names none
+    // is plain data: its lists hold nothing for the resolver to build, follow or convert (see metaKeysSeen()).
+    private boolean metaKeysSeen;
     private String[] cachedFoldSegments;
     private char[] ownedLineBuf;
     private char[] lineBuf;
@@ -213,6 +216,14 @@ public class ToonReader {
      * @param readOptions configuration options (may be null for defaults)
      * @param references reference tracker used during resolution (may be null)
      */
+    /**
+     * True once the document read so far named a meta key ({@code $type}, {@code $id}, {@code $ref}, {@code $items},
+     * {@code $keys}, {@code $enum}; {@code @} for {@code $}). A document that names none is plain data.
+     */
+    boolean metaKeysSeen() {
+        return metaKeysSeen;
+    }
+
     public ToonReader(Reader reader, ReadOptions readOptions, ReferenceTracker references) {
         this.reader = reader instanceof FastReader ? (FastReader) reader : new FastReader(reader);
         this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
@@ -551,6 +562,9 @@ public class ToonReader {
                                      String fieldKey, Object fieldValue, boolean fieldWasQuoted) {
         if (jsonObj == null) {
             String meta = metaKeyFor(fieldKey, fieldWasQuoted);
+            if (meta != null) {
+                metaKeysSeen = true;
+            }
             if (JsonValue.ITEMS.equals(meta)) {
                 jsonObj = new JsonObjectArray();
                 applyPendingMetadata(jsonObj, suggestedType, pending);
@@ -2745,6 +2759,7 @@ public class ToonReader {
      * use the returned reference from this point on.
      */
     private JsonObject loadMetaField(JsonObject target, String metaKey, Object value) {
+        metaKeysSeen = true;
         if (JsonValue.TYPE.equals(metaKey)) {
             loadType(value, target);
         } else if (JsonValue.ID.equals(metaKey)) {

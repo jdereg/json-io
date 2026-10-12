@@ -235,6 +235,36 @@ public class MapResolver extends Resolver {
             } else if (element instanceof Object[]) {
                 // Recursively traverse nested arrays inline to avoid JsonObject allocation
                 traverseArrayForRefs((Object[]) element);
+            } else if (element instanceof List) {
+                traverseListForRefs((List<Object>) element);
+            }
+        }
+    }
+
+    /**
+     * A TOON list -- the parser's own java.util.List, where JSON's parser gives an Object[] -- patched in place as
+     * {@link #traverseArrayForRefs} patches an array: a {@code $ref} becomes the object it names, any other object
+     * is traversed, and a list or an array inside it is patched in turn. Without this a {@code $ref} in such a
+     * list stayed the empty map it was parsed as. Not for a document that names no $type, $id or $ref anywhere.
+     */
+    private void traverseListForRefs(List<Object> list) {
+        if (!parsedListsHoldMeta()) {
+            return;     // plain data: no $ref to patch, no typed value to convert
+        }
+        for (int i = 0, len = list.size(); i < len; i++) {
+            Object element = list.get(i);
+            if (element instanceof JsonObject) {
+                JsonObject jObj = (JsonObject) element;
+                JsonObject refObject = resolveReference(jObj);
+                if (refObject != null) {
+                    list.set(i, refObject);
+                } else {
+                    push(jObj);
+                }
+            } else if (element instanceof Object[]) {
+                traverseArrayForRefs((Object[]) element);
+            } else if (element instanceof List) {
+                traverseListForRefs((List<Object>) element);
             }
         }
     }
@@ -356,7 +386,12 @@ public class MapResolver extends Resolver {
             // Pre-cache class and injector to avoid repeated lookups
             final Class<?> rhsClass = rhs.getClass();
             final Injector injector = (injectorMap == null || fieldName == null) ? null : injectorMap.get(fieldName);
-            
+
+            if (rhs instanceof List) {
+                // A TOON list: its @refs patched in it, then on as any other value
+                traverseListForRefs((List<Object>) rhs);
+            }
+
             if (rhsClass.isArray()) {   // RHS is an array
                 // Traverse array inline to patch @refs - avoids JsonObject wrapper allocation
                 // No put needed - rhs is already the value in the map entry
@@ -496,6 +531,10 @@ public class MapResolver extends Resolver {
             if (element == null) {
                 setArrayElement(target, refArray, i, null, isPrimitive);
                 continue;
+            }
+
+            if (element instanceof List) {
+                traverseListForRefs((List<Object>) element);    // a TOON list: patched in place, then stored
             }
 
             final Class<?> elementClass = element.getClass();
@@ -645,6 +684,9 @@ public class MapResolver extends Resolver {
                     if (element instanceof JsonObject) {
                         processJsonObjectElement((JsonObject) element, jsonObj, col, idx, isList, isEnumSet);
                     } else {
+                        if (element instanceof List) {
+                            traverseListForRefs((List<Object>) element);    // a TOON list: patched in place
+                        }
                         // Preserve non-JsonObject values in maps mode instead of hard-casting.
                         col.add(element);
                     }

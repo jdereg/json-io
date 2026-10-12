@@ -634,6 +634,9 @@ public class ObjectResolver extends Resolver
                 }
                 // 3. DIRECT ASSIGN - already correct type
                 if (rawType.isAssignableFrom(rhsClass)) {
+                    if (rhs instanceof Collection) {
+                        resolveParsedList((Collection<Object>) rhs);    // a TOON list in an Object field
+                    }
                     injector.inject(target, rhs);
                     return;
                 }
@@ -682,6 +685,9 @@ public class ObjectResolver extends Resolver
             if (rhs instanceof String && StringUtilities.isEmpty((String) rhs) && rawType != String.class) {
                 injector.inject(target, null);
             } else {
+                if (rhs instanceof Collection && rawType == null) {
+                    resolveParsedList((Collection<Object>) rhs);        // a TOON list where no type is known
+                }
                 injector.inject(target, rhs);
             }
             return;
@@ -875,8 +881,20 @@ public class ObjectResolver extends Resolver
                 && Collection.class.isAssignableFrom(rawNestedElementType);
         final boolean nestedElementIsArrayType = rawNestedElementType != null && rawNestedElementType.isArray();
         final boolean optionalElements = isOptionalRawType(rawElementType);
+        // What a list inside this one holds, when this one's elements are declared as lists: X of List<List<X>>
+        Type innerElementType = Object.class;
+        if (nestedElementIsCollectionType && elementType instanceof ParameterizedType) {
+            Type inner = collectionElementType(elementType, ((ParameterizedType) elementType).getActualTypeArguments());
+            if (inner != null && !TypeUtilities.hasUnresolvedType(inner)) {
+                innerElementType = inner;
+            }
+        }
+        final Class<?> rawInnerElementType = TypeUtilities.getRawClass(innerElementType);
+        final boolean innerElementsUntyped = rawInnerElementType == null || rawInnerElementType == Object.class;
+        final int innerElementKind = innerElementsUntyped ? TARGET_OTHER : scalarTargetKind(rawInnerElementType);
 
-        for (Object element : items) {
+        for (Object item : items) {
+            Object element = item;
             // Strategy 0: OPTIONAL - an element declared Optional, written as its content (or null)
             if (optionalElements) {
                 final int index = idx;
@@ -897,6 +915,17 @@ public class ObjectResolver extends Resolver
                 col.add(null);
                 idx++;
                 continue;
+            }
+
+            // A TOON list inside this one, which would be added as it was parsed
+            if (element instanceof Collection
+                    && (!hasSpecificElementType || rawElementType.isAssignableFrom(element.getClass()))) {
+                if (!nestedElementIsCollectionType || innerElementsUntyped) {
+                    resolveParsedList((Collection<Object>) element);    // nothing declared for what it holds
+                } else if (!(element instanceof List) || !coerceScalarsInPlace((List<Object>) element,
+                        rawInnerElementType, innerElementKind)) {
+                    element = ((Collection<?>) element).toArray();      // as the declared List<X>: Strategy 6
+                }
             }
 
             final Class<?> elementClass = element.getClass();
@@ -1258,7 +1287,7 @@ public class ObjectResolver extends Resolver
         final boolean optionalComponents = isOptionalRawType(effectiveRawComponentType);
 
         for (int i = 0; i < len; i++) {
-            final Object element = jsonItems[i];
+            Object element = jsonItems[i];
 
             // An element declared Optional, written as its content (or null)
             if (optionalComponents) {
@@ -1277,6 +1306,18 @@ public class ObjectResolver extends Resolver
             if (element == null) {
                 setArrayElement(array, refArray, i, null, isPrimitive);
                 continue;
+            }
+
+            // A TOON list among the elements (or among a Map's values), which would be stored as it was parsed
+            if (element instanceof Collection
+                    && (!hasSpecificComponentType || effectiveRawComponentType.isAssignableFrom(element.getClass()))) {
+                if (hasSpecificComponentType && Collection.class.isAssignableFrom(effectiveRawComponentType)) {
+                    // as the declared List<X>
+                    setArrayElement(array, refArray, i, readNestedCollection(((Collection<?>) element).toArray(),
+                            effectiveComponentType), isPrimitive);
+                    continue;
+                }
+                resolveParsedList((Collection<Object>) element);        // no collection declared: as itself
             }
 
             final Class<?> elementClass = element.getClass();
@@ -1667,21 +1708,83 @@ public class ObjectResolver extends Resolver
      */
     @Override
     protected void wrapArrayAndAddToCollection(Object[] arrayElement, Type componentType, Collection<Object> col) {
+        col.add(readNestedCollection(arrayElement, componentType));
+    }
+
+    /** The collection (or array) of {@code type} that {@code items} are read into; its elements follow. */
+    private Object readNestedCollection(Object[] items, Type type) {
         JsonObject jObj = new JsonObjectArray();
-        jObj.setType(componentType);
-        jObj.setItems(arrayElement);
+        jObj.setType(type);
+        jObj.setItems(items);
 
         // Preserve element type for nested collections (e.g., List<List<User>> -> List<User>)
-        if (componentType instanceof ParameterizedType) {
-            Type[] typeArgs = ((ParameterizedType) componentType).getActualTypeArguments();
+        if (type instanceof ParameterizedType) {
+            Type[] typeArgs = ((ParameterizedType) type).getActualTypeArguments();
             if (typeArgs.length > 0) {
-                jObj.setItemElementType(collectionElementType(componentType, typeArgs));
+                jObj.setItemElementType(collectionElementType(type, typeArgs));
             }
         }
 
         createInstance(jObj);
-        col.add(jObj.getTarget());
         push(jObj);
+        return jObj.getTarget();
+    }
+
+    /**
+     * A list of scalars read as the {@code List<X>} it is declared to be, in the list itself: true when every
+     * element is an X or was made one (the parser's Long an Integer). False as soon as an element is anything else
+     * -- an object, a list, text for a number -- and the list is then read the general way.
+     */
+    private static boolean coerceScalarsInPlace(List<Object> list, Class<?> rawType, int kind) {
+        for (int i = 0, len = list.size(); i < len; i++) {
+            Object element = list.get(i);
+            if (element == null) {
+                continue;
+            }
+            if (element instanceof JsonObject || element instanceof Collection || element.getClass().isArray()) {
+                return false;
+            }
+            if (rawType.isInstance(element)) {
+                continue;
+            }
+            Object coerced = fastScalarCoercion(element, element.getClass(), kind);
+            if (coerced == null || !rawType.isInstance(coerced)) {
+                return false;
+            }
+            list.set(i, coerced);
+        }
+        return true;
+    }
+
+    /**
+     * A TOON list in a slot that declares no collection of its own: an Object field, a Map's value, an element of a
+     * list or an array of Object. TOON's parser hands a list over as a {@code java.util.List} (JSON's hands an
+     * {@code Object[]}), and such a slot has always been given that list as it is. Its elements were never looked
+     * at, though: a {@code $ref} stayed the empty map it was parsed as, an element that names its {@code $type} was
+     * not built, a list inside it was not read either. The slot still gets the same list; its elements are now read
+     * into it as any list's are. A list of nothing but scalars has nothing to read and is left alone; so is every
+     * list of a document that names no $type, $id or $ref anywhere, which is plain data.
+     */
+    private void resolveParsedList(Collection<Object> parsed) {
+        if (!parsedListsHoldMeta()) {
+            return;     // plain data: nothing in the document to build, follow or convert
+        }
+        boolean anythingToRead = false;
+        for (Object element : parsed) {
+            if (element instanceof JsonObject || element instanceof Collection || element instanceof Object[]) {
+                anythingToRead = true;
+                break;
+            }
+        }
+        if (!anythingToRead) {
+            return;
+        }
+        Object[] items = parsed.toArray();
+        parsed.clear();
+        JsonObject list = new JsonObjectArray();
+        list.setItems(items);
+        list.setTarget(parsed);     // read into the list itself: whoever holds it holds the result
+        push(list);
     }
 
     /**

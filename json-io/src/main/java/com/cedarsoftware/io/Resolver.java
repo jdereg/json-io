@@ -249,6 +249,21 @@ public abstract class Resolver {
         return references;
     }
 
+    // Whether a list from TOON's parser (a java.util.List, where JSON's parser gives an Object[]) can hold something
+    // to resolve: an element that names its $type, a $ref, an $id. The TOON reader says so after parsing; a document
+    // that names no meta key at all is plain data, and its lists in untyped slots are handed over as parsed, as they
+    // always were (reading them element by element cost such lists 2-3 times their read time, for nothing).
+    // True until told otherwise.
+    private boolean parsedListsHoldMeta = true;
+
+    void setParsedListsHoldMeta(boolean holdMeta) {
+        this.parsedListsHoldMeta = holdMeta;
+    }
+
+    protected boolean parsedListsHoldMeta() {
+        return parsedListsHoldMeta;
+    }
+
     /**
      * The Converter this read uses. It is shared by every read with the same ReadOptions (the ReadOptions are fixed
      * once built), so a conversion added to it with {@code addConversion()} is kept for later reads with those
@@ -471,7 +486,7 @@ public abstract class Resolver {
                     return convertCollectionElements(col, rawClass, Object.class);
                 }
                 if (!(type instanceof ParameterizedType) && (rawClass == null || rawClass.isInstance(col))
-                        && containsIdentityOrItems(col)) {
+                        && (containsIdentityOrItems(col) || (parsedListsHoldMeta && holdsNestedObjects(col)))) {
                     // A TOON root list read as a raw List whose elements define or name a shared value ($id, $ref)
                     // or hold items: read as JSON reads a root array, which resolves them. Otherwise the $ref came
                     // back an empty map and the $items unread.
@@ -1010,6 +1025,23 @@ public abstract class Resolver {
             if (element instanceof JsonObject) {
                 JsonObject jsonObject = (JsonObject) element;
                 if (jsonObject.hasId() || jsonObject.isReference() || jsonObject.getItems() != null) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** True when a list inside this one holds an object, at any depth: it is read as this one's elements are. */
+    private static boolean holdsNestedObjects(Collection<?> col) {
+        for (Object element : col) {
+            if (element instanceof Collection) {
+                for (Object inner : (Collection<?>) element) {
+                    if (inner instanceof JsonObject) {
+                        return true;
+                    }
+                }
+                if (holdsNestedObjects((Collection<?>) element)) {
                     return true;
                 }
             }
