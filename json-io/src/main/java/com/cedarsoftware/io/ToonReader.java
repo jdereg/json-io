@@ -113,6 +113,7 @@ public class ToonReader {
     private boolean lineConsumed = true;
     private int lineNumber = 0;
     private int currentIndent = 0;
+    private int lineSpaces = 0;   // leading spaces of the line readContentLine() last returned
     private int currentTrimStart = 0;
     private int currentTrimEnd = 0;
     private String currentTrimmed = null;
@@ -2072,22 +2073,47 @@ public class ToonReader {
     }
 
     /**
+     * Read the next line that is not a comment into lineBuf. Returns its length, or -1 on EOF, and leaves the
+     * count of its leading spaces in {@link #lineSpaces}.
+     * <p>
+     * Spec 5.1: a comment line is a line whose first character after zero or more leading spaces is '#'. It is
+     * removed before anything else looks at the lines, so it is never a row, a list item or a blank line, it
+     * never opens or closes a scope, and its own indentation is not checked. Only spaces may come before the
+     * '#': a line indented with a tab is not a comment. A '#' anywhere else on a line is content.
+     */
+    private int readContentLine() {
+        while (true) {
+            int lineLen = readLineRaw();
+            if (lineLen < 0) {
+                return -1;
+            }
+            lineNumber++;
+            final char[] buf = lineBuf;  // localize after readLineRaw (which may resize/borrow)
+            final int start = lineStart;
+            int spaces = 0;
+            while (spaces < lineLen && buf[start + spaces] == ' ') {
+                spaces++;
+            }
+            if (spaces == lineLen || buf[start + spaces] != '#') {
+                lineSpaces = spaces;
+                return lineLen;
+            }
+        }
+    }
+
+    /**
      * Ensure the next line is loaded without materializing a trimmed String unless requested.
      */
     private boolean hasLine() throws IOException {
         if (lineConsumed) {
-            int lineLen = readLineRaw();
+            int lineLen = readContentLine();
             lineConsumed = false;
             if (lineLen >= 0) {
-                lineNumber++;
-                final char[] buf = lineBuf;  // localize after readLineRaw (which may resize/borrow)
+                final char[] buf = lineBuf;  // localize after readContentLine (which may resize/borrow)
                 final int start = lineStart;
 
-                // Compute indent directly from buf — no intermediate String needed
-                int spaces = 0;
-                while (spaces < lineLen && buf[start + spaces] == ' ') {
-                    spaces++;
-                }
+                // Indent was counted directly from buf — no intermediate String needed
+                final int spaces = lineSpaces;
                 // §12: whitespace-only lines MAY be treated as blank regardless of their
                 // leading-space count. Skip strict-indent + tab checks for such lines so a
                 // 3-space empty line between depth-0 fields (in strict mode) doesn't reject.
