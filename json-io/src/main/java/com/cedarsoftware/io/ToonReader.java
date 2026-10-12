@@ -453,7 +453,7 @@ public class ToonReader {
             }
 
             jsonObj = readAndDispatchField(jsonObj, suggestedType, pending,
-                    key, trimStart, valueStart, trimEnd, baseIndent, baseIndent);
+                    key, trimStart, valueStart, trimEnd, baseIndent);
         }
 
         // Metadata-only object (e.g., {"@type":"Foo","@id":1} with no shape determiner): allocate
@@ -470,11 +470,11 @@ public class ToonReader {
      * Resolve {@code key}, parse the value, and dispatch the field through the peek-through
      * pipeline. {@code jsonObj} may be {@code null} when still in pre-allocation phase; the
      * returned value is the freshly-allocated JsonObject (subclass picked by shape) or the
-     * still-{@code null} sentinel if this field was buffered as pure metadata.
+     * still-{@code null} sentinel if this field was buffered as pure metadata. {@code fieldDepth} is the depth at
+     * which the field stands: its line's own, or for a list item's first field one below its hyphen (spec 10).
      */
     private JsonObject readAndDispatchField(JsonObject jsonObj, Type suggestedType, PendingMeta pending,
-                                            String key, int keyStart, int valueStart, int trimEnd, int baseIndent,
-                                            int fieldDepth)
+                                            String key, int keyStart, int valueStart, int trimEnd, int fieldDepth)
             throws IOException {
         // Resolve key, value, and wasQuoted into a uniform shape so the dispatch below
         // treats combined-array-notation fields (e.g., "@items[3]:") and standard fields
@@ -508,14 +508,14 @@ public class ToonReader {
             fieldWasQuoted = key.startsWith("\"");
             fieldKey = unquoteString(key);
             if (isTrimmedEmpty(lineBuf, valueStart, trimEnd)) {
-                if (hasLine() && peekIndent() > baseIndent) {
+                // What the field holds lies deeper than the field itself. A list item's first field stands one
+                // level below its hyphen (spec 10), so the lines at that level are the item's other fields, not
+                // this field's content: "- a:" followed by "b: 1" is {a: {}, b: 1}.
+                if (hasLine() && peekIndent() > fieldDepth) {
                     if (isArrayStartInBuf()) {
                         fieldValue = readArray();
                     } else {
-                        // Use the actual indent of the first nested line as the recursive
-                        // base, not baseIndent+1. The inline-first-field-on-hyphen-line
-                        // pattern has nested content at hyphenIndent+2 (not +1), and using
-                        // peekIndent() handles both that case and the standard +1 case.
+                        // The actual indent of the first nested line is the recursive base
                         fieldValue = readObject(peekIndent(), null);
                     }
                 } else {
@@ -1608,7 +1608,7 @@ public class ToonReader {
 
             // §10: a first field carried on the hyphen line stands one level below the hyphen.
             jsonObj = readAndDispatchField(jsonObj, null, pending,
-                    key, firstFieldStart, valueStart, valueEnd, hyphenIndent, hyphenIndent + 1);
+                    key, firstFieldStart, valueStart, valueEnd, hyphenIndent + 1);
         }
 
         // Read subsequent fields at the same indent level as the first field's content
@@ -1646,7 +1646,7 @@ public class ToonReader {
             }
 
             jsonObj = readAndDispatchField(jsonObj, null, pending,
-                    key, trimStart, valueStart2, trimEnd, fieldIndent, fieldIndent);
+                    key, trimStart, valueStart2, trimEnd, fieldIndent);
         }
 
         // Metadata-only or empty inline object → allocate lite now and apply buffered metadata.

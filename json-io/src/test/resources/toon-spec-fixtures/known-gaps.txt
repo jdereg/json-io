@@ -77,8 +77,7 @@ decode/validation-errors.json#86   throws on tabular rows at depth +1 under a li
 decode/validation-errors.json#90   throws on an empty field entry
 decode/whitespace.json#14          throws on a tab after a list-item hyphen
 
-# Reading: other (byte-order mark, NBSP, carriage return, quotes mid-token, any text as a key) -- 12
-decode/arrays-nested.json#21  parses an empty object as the first field of a list-item object
+# Reading: other (byte-order mark, NBSP, carriage return, quotes mid-token, any text as a key) -- 11
 decode/delimiters.json#22     treats a delimiter inside a closed or unclosed mid-token quote span as quoted
 decode/objects.json#10        parses an unquoted field value starting with a bracket segment as a string
 decode/objects.json#32        accepts unquoted values and keys an encoder would quote in strict mode
