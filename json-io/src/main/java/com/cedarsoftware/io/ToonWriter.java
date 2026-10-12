@@ -3446,7 +3446,7 @@ public class ToonWriter implements Closeable, Flushable {
                 continue;
             }
 
-            // Use Accessor.retrieve() — supports @IoGetter, LambdaMetafactory, VarHandle, etc.
+            // Accessor.retrieve() reads the field, or calls the getter named for it (@IoGetter, useGetters)
             Object value = plan.accessor().retrieve(obj);
 
             // Respect skipNullFields (global) and skipIfNull (per-field @IoInclude NON_NULL)

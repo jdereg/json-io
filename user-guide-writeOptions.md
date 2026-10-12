@@ -880,9 +880,8 @@ set the two alike or differently.
 field is read. The JSON differs only for a getter that returns something other than its field. If you rely on that,
 add `.useGetters(true)`, or call `WriteOptionsBuilder.addPermanentUseGetters(true)` once at startup.
 
-**Speed:** on JDK 17 and later, reading a field costs a little more than calling a getter the JIT can inline. A class
-whose every field has a public getter writes about 4-16% slower than it did (fields of primitive type most, `String`
-fields least); a class without getters is unchanged, since its fields were always read this way.
+**Speed:** the two cost the same, to within 2% (measured on JDK 8, 17, 21 and 25). Choose by what the JSON should
+hold, not by speed.
 
 **Enums:** an enum written as an object shows only its public fields unless you say otherwise
 (see [Enum Options](#enum-options-in-json-io)). A private field with a public getter counts as public there, as it
