@@ -2143,8 +2143,8 @@ json-io uses several system properties to control behavior and optimize performa
 **Purpose**: Automatically detected to determine the optimal field injection strategy  
 **Values**: Automatically set by JVM  
 **Behavior**:
-- **JDK 8-16**: Uses `Field.set()` for final fields and `MethodHandle` for regular fields
-- **JDK 17+**: Uses `VarHandle` for improved performance and module system compatibility
+- **JDK 8-16**: Uses `Field.set()` for final fields and a `MethodHandle` for regular fields
+- **JDK 17+**: Uses a `MethodHandle` for every field
 
 This is handled automatically by json-io and requires no user configuration. The library adapts its internal field injection mechanisms based on the detected JDK version for optimal performance and compatibility.
 

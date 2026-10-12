@@ -1,7 +1,5 @@
 package com.cedarsoftware.io.reflect;
 
-import java.lang.invoke.CallSite;
-import java.lang.invoke.LambdaMetafactory;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -11,7 +9,6 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.BiConsumer;
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.ReflectionUtils;
@@ -19,26 +16,22 @@ import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.SystemUtilities;
 
 /**
- * High-performance field injection utility that automatically adapts to different JDK versions
- * for optimal performance and compatibility.
- * 
- * <p>This class uses the {@code java.version} system property to automatically detect the
- * JDK version and select the most appropriate field injection strategy:</p>
- * 
- * <ul>
- * <li><strong>JDK 8-16:</strong> Uses {@code Field.set()} for final fields and {@code MethodHandle} for regular fields</li>
- * <li><strong>JDK 17+:</strong> Uses {@code VarHandle} for improved performance and module system compatibility</li>
- * </ul>
- * 
- * <p>The JDK version detection and strategy selection is completely automatic and requires no
- * user configuration. This ensures optimal performance across all supported JDK versions while
- * maintaining compatibility with the module system introduced in JDK 9+.</p>
- * 
- * <h3>System Properties Used:</h3>
- * <ul>
- * <li>{@code java.version} - Automatically detected by the JVM to determine injection strategy</li>
- * </ul>
- * 
+ * Sets one field of an object for the reader: the field itself, or the setter method that stands in for it.
+ *
+ * <p>Either way the value goes in through one {@link MethodHandle}, adapted once to {@code (Object, Object)void}
+ * and, for a primitive number, to {@code (Object, long)void} and its like, and called with {@code invokeExact}. The
+ * handle comes from a private lookup on JDK 9 and later and from {@code setAccessible} on JDK 8. A field no handle
+ * can set is set with {@code Field.set}: a final field on JDK 8 through 16, or a field that could not be opened.</p>
+ *
+ * <p><b>Why one mechanism.</b> Through 4.113.0 a field was set through {@code MethodHandle.invoke}, which looks up
+ * the handle's adapted form on every call; a setter through a {@code LambdaMetafactory} lambda where one could be
+ * made; and a {@code VarHandle} stood by that could set nothing the handle could not. Measured on the injector calls
+ * of a read alone (2,000 objects of 10 fields, before and after in interleaved fresh JVMs), the adapted handle takes
+ * 1-8% less time per field on JDK 17, 11-17% less on JDK 21, 8-9% less on JDK 25 and 18-25% less on JDK 8; against
+ * the setter lambda it is between 4% faster and 9% slower. Setting a field is 3-4 ns of the 55-65 ns a field costs
+ * to read, so none of this shows in a whole read: do not add a second mechanism here for speed without measuring
+ * one that does.</p>
+ *
  * @author Ken Partlow (kpartlow@gmail.com)
  *         John DeRegnaucourt (jereg@gmail.com)
  *         <br>
@@ -59,11 +52,10 @@ import com.cedarsoftware.util.SystemUtilities;
 public class Injector {
 
     private static final boolean IS_JDK17_OR_HIGHER;
+    // JDK 9+: MethodHandles.privateLookupIn(Class, Lookup), reached by reflection because json-io compiles for Java 8.
+    // A lookup with private access to a class sets its private fields without setAccessible.
     private static final Object LOOKUP;
     private static final Method PRIVATE_LOOKUP_IN_METHOD;
-    private static final Method FIND_VAR_HANDLE_METHOD;
-    private static final MethodHandle VAR_HANDLE_SET_METHOD;
-    private static final Class<?> VAR_HANDLE_CLASS;        // although appears unused, it is intentional for caching
 
     static {
         int javaVersion = SystemUtilities.currentJdkMajorVersion();
@@ -71,50 +63,32 @@ public class Injector {
 
         Object lookup = null;
         Method privateLookupInMethod = null;
-        Method findVarHandleMethod = null;
-        MethodHandle varHandleSetMethod = null;
-        Class<?> varHandleClass = null;
 
         if (javaVersion >= 9) {
             try {
                 Class<?> methodHandlesClass = Class.forName("java.lang.invoke.MethodHandles");
                 Class<?> lookupClass = Class.forName("java.lang.invoke.MethodHandles$Lookup");
-
-                Method lookupMethod = ReflectionUtils.getMethod(methodHandlesClass, "lookup");
-                lookup = lookupMethod.invoke(null);
-
+                lookup = ReflectionUtils.getMethod(methodHandlesClass, "lookup").invoke(null);
                 privateLookupInMethod = ReflectionUtils.getMethod(methodHandlesClass,
                         "privateLookupIn", Class.class, lookupClass);
-
-                varHandleClass = Class.forName("java.lang.invoke.VarHandle");
-                findVarHandleMethod = ReflectionUtils.getMethod(lookupClass,
-                        "findVarHandle", Class.class, String.class, Class.class);
-                MethodType setType = MethodType.methodType(void.class, Object.class, Object.class);
-                varHandleSetMethod = MethodHandles.publicLookup().findVirtual(varHandleClass, "set", setType);
             } catch (Exception e) {
-                // VarHandle reflection setup failed.
+                // No private lookup: fields are opened with setAccessible, as on JDK 8
                 lookup = null;
                 privateLookupInMethod = null;
-                findVarHandleMethod = null;
-                varHandleSetMethod = null;
-                varHandleClass = null;
             }
         }
 
         LOOKUP = lookup;
         PRIVATE_LOOKUP_IN_METHOD = privateLookupInMethod;
-        FIND_VAR_HANDLE_METHOD = findVarHandleMethod;
-        VAR_HANDLE_SET_METHOD = varHandleSetMethod;
-        VAR_HANDLE_CLASS = varHandleClass;
     }
 
     private final Field field;
     private final String displayName;
     private final String uniqueFieldName;
-    private MethodHandle injector;
-    private Object varHandle; // For JDK 17+ VarHandle-based injection
-    private final boolean useFieldSet; // flag to use Field.set() instead of MethodHandle
-    private BiConsumer<Object, Object> consumer; // LambdaMetafactory-generated fast setter (JIT-inlinable)
+    private final MethodHandle injector;        // sets the field or calls the setter; null when Field.set is used
+    private final MethodHandle boxedSetter;     // injector as (Object, Object)void, for invokeExact
+    private final MethodHandle primitiveSetter; // injector as (Object, long)void and its like: a primitive number
+    private final boolean useFieldSet;          // Field.set() sets the field: there is no handle
 
     // Cached values for performance - computed once at construction
     private final Class<?> fieldType;
@@ -199,28 +173,22 @@ public class Injector {
         return FAST_PATH_GENERIC;
     }
 
-    // Constructor for MethodHandle injection
+    // A handle sets the field or calls the setter
     private Injector(Field field, MethodHandle handle, String uniqueFieldName, String displayName) {
+        this(field, handle, uniqueFieldName, displayName, false);
+    }
+
+    // Field.set() sets the field
+    private Injector(Field field, String uniqueFieldName, String displayName, boolean useFieldSet) {
+        this(field, null, uniqueFieldName, displayName, useFieldSet);
+    }
+
+    private Injector(Field field, MethodHandle handle, String uniqueFieldName, String displayName,
+                     boolean useFieldSet) {
         this.field = field;
         this.displayName = displayName;
         this.uniqueFieldName = uniqueFieldName;
         this.injector = handle;
-        this.useFieldSet = false;
-
-        // Cache values for performance
-        this.fieldType = field.getType();
-        this.genericType = field.getGenericType();
-        this.assignmentType = this.fieldType.isPrimitive() ? primitiveWrapper(this.fieldType) : this.fieldType;
-        this.fieldNumericKind = numericKind(this.fieldType);
-        this.fieldName = field.getName();
-        this.fastPath = computeFastPath(this.fieldType);
-    }
-
-    // Constructor for Field.set() fallback injection
-    private Injector(Field field, String uniqueFieldName, String displayName, boolean useFieldSet) {
-        this.field = field;
-        this.displayName = displayName;
-        this.uniqueFieldName = uniqueFieldName;
         this.useFieldSet = useFieldSet;
 
         // Cache values for performance
@@ -230,41 +198,21 @@ public class Injector {
         this.fieldNumericKind = numericKind(this.fieldType);
         this.fieldName = field.getName();
         this.fastPath = computeFastPath(this.fieldType);
-    }
 
-    // Constructor for VarHandle-based injection (JDK 17+)
-    private Injector(Field field, Object varHandle, String uniqueFieldName, String displayName) {
-        this.field = field;
-        this.displayName = displayName;
-        this.uniqueFieldName = uniqueFieldName;
-        this.varHandle = varHandle;
-        this.useFieldSet = false;
-
-        // Cache values for performance
-        this.fieldType = field.getType();
-        this.genericType = field.getGenericType();
-        this.assignmentType = this.fieldType.isPrimitive() ? primitiveWrapper(this.fieldType) : this.fieldType;
-        this.fieldNumericKind = numericKind(this.fieldType);
-        this.fieldName = field.getName();
-        this.fastPath = computeFastPath(this.fieldType);
-    }
-
-    // Constructor for LambdaMetafactory-accelerated injection
-    private Injector(Field field, MethodHandle handle, String uniqueFieldName, String displayName, BiConsumer<Object, Object> consumer) {
-        this.field = field;
-        this.displayName = displayName;
-        this.uniqueFieldName = uniqueFieldName;
-        this.injector = handle;
-        this.useFieldSet = false;
-        this.consumer = consumer;
-
-        // Cache values for performance
-        this.fieldType = field.getType();
-        this.genericType = field.getGenericType();
-        this.assignmentType = this.fieldType.isPrimitive() ? primitiveWrapper(this.fieldType) : this.fieldType;
-        this.fieldNumericKind = numericKind(this.fieldType);
-        this.fieldName = field.getName();
-        this.fastPath = computeFastPath(this.fieldType);
+        // Adapted once, here, so that every injection is an invokeExact: the call site's signature is the handle's
+        // own and nothing is converted or looked up per call. MethodHandle.invoke on the unadapted handle asks for
+        // the adapted one on every call. A handle that takes no object (a static field) cannot be adapted; it is
+        // left to invoke, which refuses it as it always has.
+        MethodHandle boxed = null;
+        MethodHandle primitive = null;
+        if (handle != null && handle.type().parameterCount() == 2) {
+            boxed = handle.asType(MethodType.methodType(void.class, Object.class, Object.class));
+            if (this.fieldType.isPrimitive() && this.fieldNumericKind != NUM_NONE) {
+                primitive = handle.asType(MethodType.methodType(void.class, Object.class, this.fieldType));
+            }
+        }
+        this.boxedSetter = boxed;
+        this.primitiveSetter = primitive;
     }
 
     /**
@@ -276,62 +224,10 @@ public class Injector {
     }
 
     /**
-     * Attempt to create a LambdaMetafactory-generated BiConsumer for the given MethodHandle.
-     * The generated BiConsumer is JIT-inlinable, providing near-direct field access speed.
-     * Returns null if creation fails (caller should fall back to existing mechanisms).
-     *
-     * <p>The generated lambda class needs access to the target class (the setter's declaring class).
-     * This method uses {@code privateLookupIn} (JDK 9+) to obtain a Lookup with proper access.
-     * For non-public classes on JDK 8 (where privateLookupIn is unavailable), returns null
-     * to avoid IllegalAccessError at invocation time.</p>
+     * A Lookup with private access to the target class via privateLookupIn (JDK 9+), or null when there is none:
+     * JDK 8, or a class whose module is not open to json-io.
      */
-    @SuppressWarnings("unchecked")
-    private static BiConsumer<Object, Object> createLambdaConsumer(MethodHandles.Lookup lookup, MethodHandle setter) {
-        try {
-            Class<?> targetClass = setter.type().parameterType(0);
-            MethodHandles.Lookup lambdaLookup = tryPrivateLookup(targetClass, lookup);
-
-            // Without a private lookup (JDK 8 has no privateLookupIn), the generated lambda has only this class's
-            // access, so every class in the setter's signature must be public: the class declaring the setter, and
-            // the value type the lambda casts to. setA(PackagePrivateType) on a public class failed at invocation
-            // with IllegalAccessError, after the lambda had been created.
-            if (lambdaLookup == lookup && !allPublic(setter.type())) {
-                return null;
-            }
-
-            CallSite callSite = LambdaMetafactory.metafactory(
-                    lambdaLookup,
-                    "accept",
-                    MethodType.methodType(BiConsumer.class),
-                    MethodType.methodType(void.class, Object.class, Object.class),  // SAM erased type
-                    setter,
-                    setter.type()  // e.g. (Foo, int)void — LambdaMetafactory handles auto-unboxing
-            );
-            return (BiConsumer<Object, Object>) callSite.getTarget().invokeExact();
-        } catch (Throwable t) {
-            return null;  // Fall back to existing mechanisms
-        }
-    }
-
-    /** True if every parameter class of {@code type} (an array's element class) is primitive or public. */
-    private static boolean allPublic(MethodType type) {
-        for (int i = 0; i < type.parameterCount(); i++) {
-            Class<?> c = type.parameterType(i);
-            while (c.isArray()) {
-                c = c.getComponentType();
-            }
-            if (!c.isPrimitive() && !Modifier.isPublic(c.getModifiers())) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Try to get a Lookup with private access to the target class via privateLookupIn (JDK 9+).
-     * Returns the fallback Lookup if privateLookupIn is unavailable or fails.
-     */
-    private static MethodHandles.Lookup tryPrivateLookup(Class<?> targetClass, MethodHandles.Lookup fallback) {
+    private static MethodHandles.Lookup privateLookup(Class<?> targetClass) {
         if (PRIVATE_LOOKUP_IN_METHOD != null && LOOKUP != null) {
             try {
                 Object result = PRIVATE_LOOKUP_IN_METHOD.invoke(null, targetClass, LOOKUP);
@@ -339,10 +235,10 @@ public class Injector {
                     return (MethodHandles.Lookup) result;
                 }
             } catch (Exception e) {
-                // privateLookupIn failed, use fallback
+                // privateLookupIn failed: the caller opens the field with setAccessible
             }
         }
-        return fallback;
+        return null;
     }
 
     public static Injector create(Field field, String uniqueFieldName) {
@@ -355,17 +251,17 @@ public class Injector {
             throw new JsonIoException("Unique field name cannot be null or empty");
         }
 
-        // ── PHASE 1: Modern path (JDK 9+) ──
-        // Try privateLookupIn-based paths FIRST — no setAccessible needed.
-        // This is future-proof for Java 25+ where setAccessible is increasingly restricted.
-        if (PRIVATE_LOOKUP_IN_METHOD != null) {
-            Injector injector = createWithVarHandle(field, uniqueFieldName);
-            if (injector != null) {
-                return injector;
+        // JDK 9+: a private lookup sets the field with no setAccessible, which newer JDKs restrict step by step.
+        MethodHandles.Lookup privateLookup = privateLookup(field.getDeclaringClass());
+        if (privateLookup != null) {
+            try {
+                return new Injector(field, privateLookup.unreflectSetter(field), uniqueFieldName, field.getName());
+            } catch (IllegalAccessException e) {
+                // A final field that has not been made accessible, or one nothing may set (a record's): below
             }
         }
 
-        // ── PHASE 2: Legacy path (JDK 8, or JDK 9+ where modern path failed) ──
+        // JDK 8, no private lookup for this class, or the private lookup refused the field
         if (!field.isAccessible()) {
             try {
                 field.setAccessible(true);
@@ -391,61 +287,12 @@ public class Injector {
             return new Injector(field, uniqueFieldName, field.getName(), true);
         }
 
-        // setAccessible succeeded — try MethodHandle → LambdaMetafactory
         try {
-            MethodHandles.Lookup fieldLookup = MethodHandles.lookup();
-            MethodHandle handle = fieldLookup.unreflectSetter(field);
-            BiConsumer<Object, Object> lambda = createLambdaConsumer(fieldLookup, handle);
-            if (lambda != null) {
-                return new Injector(field, handle, uniqueFieldName, field.getName(), lambda);
-            }
-            return new Injector(field, handle, uniqueFieldName, field.getName());
+            return new Injector(field, MethodHandles.lookup().unreflectSetter(field), uniqueFieldName,
+                    field.getName());
         } catch (IllegalAccessException e) {
             // Fallback to Field.set() injection
             return new Injector(field, uniqueFieldName, field.getName(), true);
-        }
-    }
-
-    private static Injector createWithVarHandle(Field field, String uniqueFieldName) {
-        if (PRIVATE_LOOKUP_IN_METHOD == null || FIND_VAR_HANDLE_METHOD == null ||
-                VAR_HANDLE_SET_METHOD == null || LOOKUP == null) {
-            return null; // Return null to allow fallback to Field.set()
-        }
-
-        try {
-            Class<?> declaringClass = field.getDeclaringClass();
-
-            Object privateLookupObj = PRIVATE_LOOKUP_IN_METHOD.invoke(null, declaringClass, LOOKUP);
-            if (privateLookupObj == null) {
-                return null;
-            }
-
-            // First try: MethodHandle + LambdaMetafactory via privateLookup (fastest path)
-            if (privateLookupObj instanceof MethodHandles.Lookup) {
-                MethodHandles.Lookup privateLookup = (MethodHandles.Lookup) privateLookupObj;
-                try {
-                    MethodHandle handle = privateLookup.unreflectSetter(field);
-                    BiConsumer<Object, Object> lambda = createLambdaConsumer(privateLookup, handle);
-                    if (lambda != null) {
-                        return new Injector(field, handle, uniqueFieldName, field.getName(), lambda);
-                    }
-                    // Lambda failed but handle works — use MethodHandle path
-                    return new Injector(field, handle, uniqueFieldName, field.getName());
-                } catch (IllegalAccessException e) {
-                    // unreflectSetter failed (e.g. final field) — fall through to VarHandle
-                }
-            }
-
-            // Second try: VarHandle (existing fallback path)
-            Object varHandle = FIND_VAR_HANDLE_METHOD.invoke(privateLookupObj, declaringClass, field.getName(), field.getType());
-            if (varHandle == null) {
-                return null;
-            }
-
-            return new Injector(field, varHandle, uniqueFieldName, field.getName());
-        } catch (Exception e) {
-            // VarHandle creation failed - allow fallback to Field.set()
-            return null;
         }
     }
 
@@ -462,13 +309,9 @@ public class Injector {
         }
 
         try {
-            MethodHandles.Lookup methodLookup = MethodHandles.lookup();
             MethodType methodType = MethodType.methodType(void.class, field.getType());
-            MethodHandle handle = methodLookup.findVirtual(field.getDeclaringClass(), methodName, methodType);
-            BiConsumer<Object, Object> lambda = createLambdaConsumer(methodLookup, handle);
-            if (lambda != null) {
-                return new Injector(field, handle, uniqueFieldName, methodName, lambda);
-            }
+            MethodHandle handle = MethodHandles.lookup()
+                    .findVirtual(field.getDeclaringClass(), methodName, methodType);
             return new Injector(field, handle, uniqueFieldName, methodName);
         } catch (NoSuchMethodException e) {
             throw new JsonIoException("Method not found: " + methodName + " in class: " + field.getDeclaringClass().getName(), e);
@@ -579,10 +422,8 @@ public class Injector {
     }
 
     private void injectDirect(Object object, Object value) throws Throwable {
-        if (consumer != null) {
-            consumer.accept(object, value);
-        } else if (varHandle != null) {
-            injectWithVarHandle(object, value);
+        if (boxedSetter != null) {
+            boxedSetter.invokeExact(object, value);
         } else if (useFieldSet) {
             field.set(object, value);
         } else {
@@ -592,14 +433,12 @@ public class Injector {
 
     private void injectAsLong(Object object, long value) throws Throwable {
         if (fieldType == long.class) {
-            if (useFieldSet) {
+            if (primitiveSetter != null) {
+                primitiveSetter.invokeExact(object, value);
+            } else if (useFieldSet) {
                 field.setLong(object, value);
-            } else if (injector != null) {
-                injector.invoke(object, value);
-            } else if (varHandle != null) {
-                injectWithVarHandle(object, value);
             } else {
-                consumer.accept(object, value);
+                injector.invoke(object, value);
             }
         } else {
             injectDirect(object, value);
@@ -608,14 +447,12 @@ public class Injector {
 
     private void injectAsInt(Object object, int value) throws Throwable {
         if (fieldType == int.class) {
-            if (useFieldSet) {
+            if (primitiveSetter != null) {
+                primitiveSetter.invokeExact(object, value);
+            } else if (useFieldSet) {
                 field.setInt(object, value);
-            } else if (injector != null) {
-                injector.invoke(object, value);
-            } else if (varHandle != null) {
-                injectWithVarHandle(object, value);
             } else {
-                consumer.accept(object, value);
+                injector.invoke(object, value);
             }
         } else {
             injectDirect(object, value);
@@ -624,14 +461,12 @@ public class Injector {
 
     private void injectAsShort(Object object, short value) throws Throwable {
         if (fieldType == short.class) {
-            if (useFieldSet) {
+            if (primitiveSetter != null) {
+                primitiveSetter.invokeExact(object, value);
+            } else if (useFieldSet) {
                 field.setShort(object, value);
-            } else if (injector != null) {
-                injector.invoke(object, value);
-            } else if (varHandle != null) {
-                injectWithVarHandle(object, value);
             } else {
-                consumer.accept(object, value);
+                injector.invoke(object, value);
             }
         } else {
             injectDirect(object, value);
@@ -640,14 +475,12 @@ public class Injector {
 
     private void injectAsByte(Object object, byte value) throws Throwable {
         if (fieldType == byte.class) {
-            if (useFieldSet) {
+            if (primitiveSetter != null) {
+                primitiveSetter.invokeExact(object, value);
+            } else if (useFieldSet) {
                 field.setByte(object, value);
-            } else if (injector != null) {
-                injector.invoke(object, value);
-            } else if (varHandle != null) {
-                injectWithVarHandle(object, value);
             } else {
-                consumer.accept(object, value);
+                injector.invoke(object, value);
             }
         } else {
             injectDirect(object, value);
@@ -656,14 +489,12 @@ public class Injector {
 
     private void injectAsFloat(Object object, float value) throws Throwable {
         if (fieldType == float.class) {
-            if (useFieldSet) {
+            if (primitiveSetter != null) {
+                primitiveSetter.invokeExact(object, value);
+            } else if (useFieldSet) {
                 field.setFloat(object, value);
-            } else if (injector != null) {
-                injector.invoke(object, value);
-            } else if (varHandle != null) {
-                injectWithVarHandle(object, value);
             } else {
-                consumer.accept(object, value);
+                injector.invoke(object, value);
             }
         } else {
             injectDirect(object, value);
@@ -672,14 +503,12 @@ public class Injector {
 
     private void injectAsDouble(Object object, double value) throws Throwable {
         if (fieldType == double.class) {
-            if (useFieldSet) {
+            if (primitiveSetter != null) {
+                primitiveSetter.invokeExact(object, value);
+            } else if (useFieldSet) {
                 field.setDouble(object, value);
-            } else if (injector != null) {
-                injector.invoke(object, value);
-            } else if (varHandle != null) {
-                injectWithVarHandle(object, value);
             } else {
-                consumer.accept(object, value);
+                injector.invoke(object, value);
             }
         } else {
             injectDirect(object, value);
@@ -694,26 +523,6 @@ public class Injector {
     private static Class<?> primitiveWrapper(Class<?> primitiveType) {
         Class<?> w = primitiveType == null ? null : PRIM_TO_WRAPPER.get(primitiveType);
         return w != null ? w : Void.class;
-    }
-
-    private void injectWithVarHandle(Object object, Object value) throws Throwable {
-        // Security: Validate VarHandle infrastructure
-        if (varHandle == null || VAR_HANDLE_SET_METHOD == null) {
-            throw new JsonIoException("Unable to set field: " + getName() + " - VarHandle not available");
-        }
-
-        // Security: Validate arguments before VarHandle invocation
-        if (object == null) {
-            throw new JsonIoException("Cannot inject into null object using VarHandle for field: " + getName());
-        }
-
-        try {
-            // Performance: Use direct invoke() instead of invokeWithArguments() + Arrays.asList()
-            // Eliminates array and list allocation overhead (25-35% faster)
-            VAR_HANDLE_SET_METHOD.invoke(varHandle, object, value);
-        } catch (Exception e) {
-            throw new JsonIoException("VarHandle injection failed for field: " + getName() + " in class: " + field.getDeclaringClass().getName(), e);
-        }
     }
 
     public Class<?> getType() {

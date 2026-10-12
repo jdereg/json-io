@@ -179,11 +179,15 @@ class InjectorCoverageTest {
 
     @Test
     void testInjectIntoFinalFieldWorks() throws Exception {
-        // Final fields can typically be set via reflection on JDK 8-16,
-        // and via VarHandle on JDK 9+
+        // The field has not been made accessible: the injector opens it, on every JDK
         Field field = FinalFieldClass.class.getDeclaredField("constant");
         Injector injector = Injector.create(field, "constant");
         assertThat(injector).isNotNull();
+
+        FinalFieldClass target = new FinalFieldClass();
+        injector.inject(target, "injected");
+        Field check = FinalFieldClass.class.getDeclaredField("constant");
+        assertThat(check.get(target)).isEqualTo("injected");
     }
 
     // ========== Round-trip with all types ==========
