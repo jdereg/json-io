@@ -500,7 +500,11 @@ public class ToonWriter implements Closeable, Flushable {
                 }
             }
             keylessListItemArray = false;
-            if (v4Forms && writeRootKeyedTable(obj)) {
+            if (obj instanceof String && ((String) obj).startsWith("\uFEFF")) {
+                // Spec 7.2: without quotes the U+FEFF would be the first character of the document, which a
+                // reader removes as a byte-order mark (spec 12). Anywhere but at the root it needs none.
+                writeQuotedString((String) obj);
+            } else if (v4Forms && writeRootKeyedTable(obj)) {
                 // spec 9.5: a root object of uniform objects is a keyed table with no key
             } else if (typeMetadataEnabled) {
                 writeRoot(obj);

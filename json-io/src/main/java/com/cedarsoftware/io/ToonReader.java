@@ -170,6 +170,7 @@ public class ToonReader {
     // Line management - supports peek/consume pattern
     private boolean currentHasLine = false;
     private boolean lineConsumed = true;
+    private static final char BYTE_ORDER_MARK = '\uFEFF';
     private int lineNumber = 0;
     private int currentIndent = 0;
     private int lineSpaces = 0;   // leading spaces of the line readContentLine() last returned
@@ -2259,7 +2260,12 @@ public class ToonReader {
             if (lineLen < 0) {
                 return -1;
             }
-            lineNumber++;
+            if (lineNumber++ == 0 && lineLen > 0 && lineBuf[lineStart] == BYTE_ORDER_MARK) {
+                // Spec 12: one U+FEFF at the very start of the document is a byte-order mark and is removed
+                // before anything else looks at the line. Anywhere else, a second one included, it is content.
+                lineStart++;
+                lineLen--;
+            }
             final char[] buf = lineBuf;  // localize after readLineRaw (which may resize/borrow)
             final int start = lineStart;
             int spaces = 0;

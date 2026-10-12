@@ -780,7 +780,8 @@ TOON only quotes strings when necessary. Strings are quoted when they:
   fraction of a point and digits, an optional exponent
 - Contain special characters: `:`, `"`, `\`, `[`, `]`, `{`, `}`, newlines, tabs
 - Contain the delimiter character (comma by default)
-- Start with hyphen
+- Start with a hyphen or `#`
+- Are the whole document (a root string) and start with U+FEFF, which a reader would take for a byte-order mark
 
 ```java
 // These strings will NOT be quoted:
@@ -797,7 +798,10 @@ TOON only quotes strings when necessary. Strings are quoted when they:
 " spaced "  →  " spaced "
 ```
 
-Reading is the other side of the same rule. A token without quotes is a number only if it is one in JSON's grammar
+A byte-order mark (U+FEFF) at the very start of a document is removed before the document is read, so a file saved
+with one reads like the same file without it. json-io writes none.
+
+Reading is the other side of the quoting rules. A token without quotes is a number only if it is one in JSON's grammar
 (an optional minus, digits without a leading zero, an optional fraction, an optional exponent); `true`, `false` and
 `null` are themselves; everything else is a string. So `.5`, `1.`, `+1`, `05`, `1_000`, `0x10`, `NaN` and
 `Infinity` are read as strings, as the TOON spec requires. A field declared as a number is still given its value:

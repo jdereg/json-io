@@ -1375,6 +1375,10 @@ One more difference is in the quotes. A string such as `.5`, `5.` or `1e` is no 
 spec it is written without quotes, and json-io does so. json-io 4.113.0 and earlier read such a token as a number;
 with `toonLegacyForms(true)` it is written in quotes, as they wrote it.
 
+The one place where the text is not 4.113.0's: a document that is a single string starting with U+FEFF is written
+in quotes in both modes. Without them a reader that follows the spec, json-io 4.114.0 included, removes the U+FEFF
+as a byte-order mark; with them every reader, old or new, reads the string.
+
 >#### `boolean` isToonLegacyForms()
 >- [ ] Returns `true` if only the forms of TOON spec v3 are written, `false` (the default) for those of spec v4.
 

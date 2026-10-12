@@ -73,7 +73,7 @@ decode/validation-errors.json#86   throws on tabular rows at depth +1 under a li
 decode/validation-errors.json#90   throws on an empty field entry
 decode/whitespace.json#14          throws on a tab after a list-item hyphen
 
-# Reading: other (byte-order mark, NBSP, carriage return, quotes mid-token, any text as a key) -- 11
+# Reading: other (NBSP and tab, carriage return, quotes mid-token, any text as a key) -- 8
 decode/delimiters.json#22     treats a delimiter inside a closed or unclosed mid-token quote span as quoted
 decode/objects.json#10        parses an unquoted field value starting with a bracket segment as a string
 decode/objects.json#32        accepts unquoted values and keys an encoder would quote in strict mode
@@ -81,11 +81,7 @@ decode/objects.json#47        parses an empty unquoted key as the empty key
 decode/whitespace.json#4      keeps a leading NBSP and a trailing tab in unquoted values
 decode/whitespace.json#5      preserves NBSP and tab around inline array tokens
 decode/whitespace.json#6      keeps an NBSP or a tab around a key or field name
-decode/whitespace.json#11     strips a leading byte-order mark
 decode/whitespace.json#15     keeps a second carriage return before CRLF as content
-decode/whitespace.json#16     keeps a byte-order mark after the document start as content
-decode/whitespace.json#17     removes a byte-order mark before a comment line
 
-# Writing: other (dotted keys unquoted, U+FEFF root string) -- 2
+# Writing: other (dotted keys unquoted) -- 1
 encode/objects.json#19        keeps dotted and literal-named keys unquoted
-encode/primitives.json#37     quotes a root string starting with U+FEFF
