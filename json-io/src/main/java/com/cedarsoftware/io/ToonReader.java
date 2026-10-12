@@ -7,9 +7,11 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.ClassUtilities;
@@ -50,15 +52,69 @@ import com.cedarsoftware.util.internal.VectorizedArrays;
  *         limitations under the License.
  */
 public class ToonReader {
+    /** One entry of a header's field list (spec 6): a name, and for a nested field group its own entries. */
+    private static final class FieldEntry {
+        private final String name;
+        private final String metaKey;       // set when the unquoted name is one of json-io's meta keys (@type, ...)
+        private final FieldEntry[] group;   // the nested field group, or null for a leaf field
+
+        private FieldEntry(String name, String metaKey, FieldEntry[] group) {
+            this.name = name;
+            this.metaKey = metaKey;
+            this.group = group;
+        }
+    }
+
     private static final class ArrayHeader {
         private final int count;
         private final char delimiter;
-        private final List<String> columnHeaders;
+        private final List<String> columnHeaders;   // the field names, when no field carries a nested field group
+        private final FieldEntry[] fieldTree;       // the field list, when a field carries a nested field group
+        private final int leafCount;                // cells per row under fieldTree
+        private final int valueStart;               // index in the line buffer just after the header's colon
 
-        private ArrayHeader(int count, char delimiter, List<String> columnHeaders) {
+        private ArrayHeader(int count, char delimiter, FieldEntry[] fields, int valueStart) {
             this.count = count;
             this.delimiter = delimiter;
-            this.columnHeaders = columnHeaders;
+            this.valueStart = valueStart;
+            if (fields == null) {
+                this.columnHeaders = null;
+                this.fieldTree = null;
+                this.leafCount = 0;
+            } else if (hasNestedGroup(fields)) {
+                this.columnHeaders = null;
+                this.fieldTree = fields;
+                this.leafCount = countLeaves(fields);
+            } else {
+                List<String> names = new ArrayList<>(fields.length);
+                for (FieldEntry field : fields) {
+                    names.add(field.name);
+                }
+                this.columnHeaders = names;
+                this.fieldTree = null;
+                this.leafCount = fields.length;
+            }
+        }
+
+        private boolean isTabular() {
+            return columnHeaders != null || fieldTree != null;
+        }
+
+        private static boolean hasNestedGroup(FieldEntry[] fields) {
+            for (FieldEntry field : fields) {
+                if (field.group != null) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static int countLeaves(FieldEntry[] fields) {
+            int leaves = 0;
+            for (FieldEntry field : fields) {
+                leaves += field.group == null ? 1 : countLeaves(field.group);
+            }
+            return leaves;
         }
     }
 
@@ -106,6 +162,7 @@ public class ToonReader {
     private final boolean strictToon;
     private final boolean toonExpandPaths;
     private final int indentSize;
+    private final int maxDepth;
     private final ClassLoader classLoader;
 
     // Line management - supports peek/consume pattern
@@ -119,6 +176,8 @@ public class ToonReader {
     private String currentTrimmed = null;
     private final StringBuilder quoteBuf = new StringBuilder(64);
     private final StringBuilder inlineBuf = new StringBuilder(64);
+    private int fieldListEnd;     // set by parseFieldList: the index just after the field list's closing brace
+    private int rowCellCursor;    // the next cell buildRow takes
     private String[] cachedFoldSegments;
     private char[] ownedLineBuf;
     private char[] lineBuf;
@@ -159,6 +218,7 @@ public class ToonReader {
         this.strictToon = this.readOptions.isStrictToon();
         this.toonExpandPaths = this.readOptions.isToonExpandPaths();
         this.indentSize = this.readOptions.getToonIndentSize();
+        this.maxDepth = this.readOptions.getMaxDepth();
         this.classLoader = this.readOptions.getClassLoader();
         this.ownedLineBuf = TL_LINE_BUF.get();
         this.lineBuf = ownedLineBuf;
@@ -255,24 +315,6 @@ public class ToonReader {
             return text.toString();
         }
         return text.substring(start, end);
-    }
-
-    private String trimAsciiRange(String text, int start, int end) {
-        // Fast path: no trimming needed and range spans full string
-        if (start < end && text.charAt(start) > ' ' && text.charAt(end - 1) > ' ') {
-            if (start == 0 && end == text.length()) {
-                return text;
-            }
-            return cacheSubstring(text, start, end);
-        }
-        while (start < end && text.charAt(start) <= ' ') {
-            start++;
-        }
-        while (end > start && text.charAt(end - 1) <= ' ') {
-            end--;
-        }
-        if (start >= end) return "";
-        return cacheSubstring(text, start, end);
     }
 
     /**
@@ -403,7 +445,7 @@ public class ToonReader {
             }
 
             jsonObj = readAndDispatchField(jsonObj, suggestedType, pending,
-                    key, valueStart, trimEnd, baseIndent);
+                    key, trimStart, valueStart, trimEnd, baseIndent);
         }
 
         // Metadata-only object (e.g., {"@type":"Foo","@id":1} with no shape determiner): allocate
@@ -423,7 +465,7 @@ public class ToonReader {
      * still-{@code null} sentinel if this field was buffered as pure metadata.
      */
     private JsonObject readAndDispatchField(JsonObject jsonObj, Type suggestedType, PendingMeta pending,
-                                            String key, int valueStart, int trimEnd, int baseIndent)
+                                            String key, int keyStart, int valueStart, int trimEnd, int baseIndent)
             throws IOException {
         // Resolve key, value, and wasQuoted into a uniform shape so the dispatch below
         // treats combined-array-notation fields (e.g., "@items[3]:") and standard fields
@@ -436,16 +478,23 @@ public class ToonReader {
         // count, missing close-bracket, trailing non-{ text) AND strict is off, parseHeader
         // returns null and we fall back to literal-key handling — the whole "key[…]" string
         // becomes the literal field name and the value is parsed normally.
-        ArrayHeader arrayHeader = (bracketStart >= 0)
-                ? parseCombinedArrayHeader(key, bracketStart)
-                : null;
+        ArrayHeader arrayHeader = null;
+        if (bracketStart >= 0) {
+            // The header is parsed from the line, not from the key: the key stops at the line's first colon,
+            // and a field list may hold one. The key was trimmed, so find where it starts in the buffer.
+            int keyOffset = keyStart;
+            while (lineBuf[keyOffset] <= ' ') {
+                keyOffset++;
+            }
+            arrayHeader = parseHeader(lineBuf, keyOffset + bracketStart, trimEnd, false);
+        }
         if (arrayHeader != null) {
             fieldKey = cacheSubstring(key, 0, bracketStart);
             fieldWasQuoted = fieldKey.startsWith("\"");
             if (fieldWasQuoted) {
                 fieldKey = unquoteString(fieldKey);
             }
-            fieldValue = parseCombinedArrayValue(arrayHeader, lineBuf, valueStart, trimEnd);
+            fieldValue = readHeaderValue(arrayHeader, trimEnd);
         } else {
             fieldWasQuoted = key.startsWith("\"");
             fieldKey = unquoteString(key);
@@ -468,7 +517,7 @@ public class ToonReader {
                     fieldValue = new JsonObject();
                 }
             } else if (isArrayStart(lineBuf, valueStart, trimEnd)) {
-                fieldValue = parseArrayFromLine(trimAsciiRangeBuf(valueStart, trimEnd));
+                fieldValue = readKeylessArray(valueStart, trimEnd);
             } else if (isEmptyObject(lineBuf, valueStart, trimEnd)) {
                 fieldValue = new JsonObject();
             } else {
@@ -631,27 +680,7 @@ public class ToonReader {
     // ========== Array Parsing ==========
 
     /**
-     * Check if a line starts with array syntax [N]:
-     */
-    private boolean isArrayStart(String trimmed) {
-        if (!trimmed.startsWith("[")) {
-            return false;
-        }
-        // §9.1 canonical empty-array literal "[]" (no count, no header, no body).
-        if (trimmed.length() == 2 && trimmed.charAt(1) == ']') {
-            return true;
-        }
-        int bracketEnd = trimmed.indexOf(']');
-        if (bracketEnd < 0 || bracketEnd + 1 >= trimmed.length()) {
-            return false;
-        }
-        // After ']', expect ':' (inline/list) or '{' (tabular: [N]{cols}:)
-        char next = trimmed.charAt(bracketEnd + 1);
-        return next == ':' || next == '{';
-    }
-
-    /**
-     * Read an array starting at the given indentation level.
+     * Read the array whose keyless header is the current line.
      * Returns ArrayList instead of Object[] for better Java interoperability.
      */
     private List<Object> readArray() throws IOException {
@@ -659,54 +688,166 @@ public class ToonReader {
             return new ArrayList<>();
         }
 
-        String trimmed = peekTrimmed();
+        int start = currentTrimStart;
+        int end = currentTrimEnd;
         consumeLine();
 
-        return parseArrayFromLine(trimmed);
+        return readKeylessArray(start, end);
     }
 
     /**
-     * Parse an array from a line containing [N]: ... or [N]{cols}: ...
-     * Supports delimiter variants: [N] for comma, [N\t] for tab, [N|] for pipe
+     * Read an array from its keyless header in lineBuf[start..end): [N]: ..., [N]{fields}:, or the literal [].
+     * Supports delimiter variants: [N] for comma, [N\t] for tab, [N|] for pipe.
      * Returns ArrayList instead of Object[] for better Java interoperability.
      */
-    private List<Object> parseArrayFromLine(String trimmed) throws IOException {
+    private List<Object> readKeylessArray(int start, int end) throws IOException {
+        final char[] buf = lineBuf;
+        while (start < end && buf[start] <= ' ') {
+            start++;
+        }
+        while (end > start && buf[end - 1] <= ' ') {
+            end--;
+        }
         // §9.1 canonical empty-array literal: "[]" with no count, no header, no body.
         // Accept this in addition to the legacy "[0]:" form (both are valid per spec).
-        if (trimmed.length() == 2 && trimmed.charAt(0) == '[' && trimmed.charAt(1) == ']') {
+        if (end - start == 2 && buf[start] == '[' && buf[start + 1] == ']') {
             return new ArrayList<>();
         }
+        return readHeaderValue(parseHeader(buf, start, end, true), end);
+    }
 
-        // Extract count from [N]:
-        int bracketEnd = trimmed.indexOf(']');
+    /**
+     * Read the array a header announces: the values after its colon, or the rows or list items on the lines
+     * below it. lineBuf still holds the header's line, and lineEnd is the end of that line's content.
+     */
+    private List<Object> readHeaderValue(ArrayHeader header, int lineEnd) throws IOException {
+        if (header.count == 0) {
+            return new ArrayList<>();
+        }
+        if (header.isTabular()) {
+            return readTabularArray(header);
+        }
+        int valueStart = header.valueStart;
+        while (valueStart < lineEnd && lineBuf[valueStart] == ' ') {
+            valueStart++;
+        }
+        if (valueStart < lineEnd) {
+            return readInlineArray(lineBuf, valueStart, lineEnd, header.count, header.delimiter);
+        }
+        return readListArray(header.count);
+    }
+
+    /**
+     * Parse the header whose bracket segment starts at buf[bracket] (spec 6): [N], with a tab or a pipe before
+     * the closing bracket to declare that delimiter, then an optional field list, then the colon. The header is
+     * read from the line rather than from the text before the line's first colon, because a field name may hold
+     * a colon and a nested field group holds braces.
+     * <p>
+     * A malformed header is an error, except behind a key in non-strict mode (§14.2 non-strict tolerance):
+     * there null is returned and the caller reads the line as "key: value", bracket text and all.
+     *
+     * @param keyless true when no key stands before the bracket, so the line has no "key: value" reading
+     */
+    private ArrayHeader parseHeader(char[] buf, int bracket, int end, boolean keyless) {
+        final boolean mustThrow = strictToon || keyless;
+        int bracketEnd = -1;
+        for (int i = bracket + 1; i < end; i++) {
+            if (buf[i] == ']') {
+                bracketEnd = i;
+                break;
+            }
+        }
         if (bracketEnd < 0) {
-            throw new JsonIoException("Malformed array syntax at line " + lineNumber + ": " + trimmed);
+            if (mustThrow) {
+                throw new JsonIoException("Malformed array syntax at line " + lineNumber + ": "
+                        + new String(buf, bracket, end - bracket));
+            }
+            return null;
         }
 
-        String countStr = trimmed.substring(1, bracketEnd);
-
-        // Detect delimiter from count string: [2] = comma, [2\t] = tab, [2|] = pipe
-        char delimiter = DELIMITER;  // Default to comma
-        if (!countStr.isEmpty()) {
-            char lastChar = countStr.charAt(countStr.length() - 1);
-            if (lastChar == '\t') {
-                delimiter = '\t';
-                countStr = countStr.substring(0, countStr.length() - 1);
-            } else if (lastChar == '|') {
-                delimiter = '|';
-                countStr = countStr.substring(0, countStr.length() - 1);
+        // Detect delimiter from the bracket segment: [2] = comma, [2\t] = tab, [2|] = pipe
+        int countEnd = bracketEnd;
+        char delimiter = DELIMITER;
+        if (countEnd > bracket + 1) {
+            char lastChar = buf[countEnd - 1];
+            if (lastChar == '\t' || lastChar == '|') {
+                delimiter = lastChar;
+                countEnd--;
             }
         }
 
+        int count = parseHeaderCount(buf, bracket + 1, countEnd, mustThrow);
+        if (count == INVALID_COUNT) {
+            return null;
+        }
+
+        int pos = bracketEnd + 1;
+        FieldEntry[] fields = null;
+        if (pos < end && buf[pos] == '{') {
+            fields = parseFieldList(buf, pos, end, delimiter, 1);
+            if (fields == null) {
+                if (mustThrow) {
+                    throw new JsonIoException("Malformed array header (field list) at line " + lineNumber + ": "
+                            + new String(buf, bracket, end - bracket));
+                }
+                return null;
+            }
+            pos = fieldListEnd;
+        }
+        while (pos < end && buf[pos] <= ' ') {
+            pos++;
+        }
+        if (pos >= end || buf[pos] != ':') {
+            // Trailing content after the bracket segment or the field list (whitespace between bracket and
+            // fields, extra-bracket noise, a missing colon). Non-strict: literal-key handling at caller.
+            if (mustThrow) {
+                throw new JsonIoException("Malformed array header (unexpected content after "
+                        + (fields == null ? "bracket" : "fields") + " segment) at line " + lineNumber + ": "
+                        + new String(buf, bracket, end - bracket));
+            }
+            return null;
+        }
+        return new ArrayHeader(count, delimiter, fields, pos + 1);
+    }
+
+    private static final int INVALID_COUNT = Integer.MIN_VALUE;
+
+    /**
+     * The length a bracket segment declares, from buf[start..end). Returns INVALID_COUNT for text that is not
+     * an integer when the caller falls back to a literal key (mustThrow false).
+     */
+    private int parseHeaderCount(char[] buf, int start, int end, boolean mustThrow) {
+        // Plain digits with no leading zero are the whole of what a writer produces: no String needed.
+        int digits = end - start;
+        if (digits > 0 && digits <= 9 && (digits == 1 || buf[start] != '0')) {
+            int n = 0;
+            int i = start;
+            for (; i < end; i++) {
+                char c = buf[i];
+                if (c < '0' || c > '9') {
+                    break;
+                }
+                n = n * 10 + (c - '0');
+            }
+            if (i == end) {
+                return n;
+            }
+        }
+
+        String countStr = new String(buf, start, end - start);
+        String trimmedCount = trimAscii(countStr);
         int count;
         try {
-            count = Integer.parseInt(trimAscii(countStr));
+            count = Integer.parseInt(trimmedCount);
         } catch (NumberFormatException e) {
-            throw new JsonIoException("Invalid array count at line " + lineNumber + ": " + countStr);
+            if (mustThrow) {
+                throw new JsonIoException("Invalid array count at line " + lineNumber + ": " + countStr);
+            }
+            return INVALID_COUNT;  // §14.2 non-strict tolerance: non-integer bracket content → literal key
         }
-        // §14.2 strict: bracket-length leading zeros and negative lengths are malformed.
+        // §14.2 strict: bracket-length leading zeros (e.g. "03") and negative lengths
+        // are malformed array headers.
         if (strictToon) {
-            String trimmedCount = trimAscii(countStr);
             if (trimmedCount.length() > 1 && trimmedCount.charAt(0) == '0') {
                 throw new JsonIoException("Array count with leading zeros at line " + lineNumber + ": " + countStr);
             }
@@ -714,233 +855,118 @@ public class ToonReader {
                 throw new JsonIoException("Array count must not be negative at line " + lineNumber + ": " + countStr);
             }
         }
-
-        // Handle empty array
-        if (count == 0) {
-            return new ArrayList<>();
-        }
-
-        // Check for tabular format: [N]{col1,col2,...}:
-        int afterBracket = bracketEnd + 1;
-        List<String> columnHeaders = null;
-        if (afterBracket < trimmed.length() && trimmed.charAt(afterBracket) == '{') {
-            int braceEnd = trimmed.indexOf('}', afterBracket);
-            if (braceEnd > afterBracket) {
-                String headerStr = trimmed.substring(afterBracket + 1, braceEnd);
-                validateFieldDelimiterConsistency(headerStr, delimiter);
-                columnHeaders = parseColumnHeaders(headerStr, delimiter);
-                afterBracket = braceEnd + 1;
-            } else if (strictToon) {
-                throw new JsonIoException("Malformed array syntax (missing closing brace) at line " + lineNumber);
-            }
-        }
-
-        // Get content after [N]: or [N]{cols}:
-        int colonPos = trimmed.indexOf(':', afterBracket);
-        if (colonPos < 0) {
-            throw new JsonIoException("Malformed array syntax (missing colon) at line " + lineNumber);
-        }
-
-        String content = trimAsciiRange(trimmed, colonPos + 1, trimmed.length());
-
-        if (columnHeaders != null) {
-            // Tabular format: [N]{cols}: followed by CSV rows
-            return readTabularArray(count, columnHeaders, delimiter);
-        } else if (!content.isEmpty()) {
-            // Inline array: [N]: elem1,elem2,elem3
-            return readInlineArray(content, count, delimiter);
-        } else {
-            // List format array: [N]: followed by - elem lines
-            return readListArray(count);
-        }
+        return count;
     }
 
     /**
-     * Parse the array value for a pre-validated combined-array header (e.g.
-     * {@code items[3]:}). The header must be non-null; the literal-key fallback
-     * (header == null in non-strict mode) is handled by the caller.
+     * Parse the field list that opens with the brace at buf[open] (spec 6): field entries separated by the
+     * header's delimiter, each a name that its own nested field group may follow directly, as in
+     * {id,customer{name,country},total}. Quotes are honoured: a brace, a delimiter or a colon inside a quoted
+     * span is part of the name. Leaves {@link #fieldListEnd} just after the closing brace.
+     * <p>
+     * Returns null when the list cannot be read: a brace without its partner, or text between a nested group
+     * and the next delimiter. In strict mode it is also null for a nested group with no name or no fields, and
+     * for whitespace between a name and its group; and a name repeated within one list is an error there
+     * (§14.2), while non-strict mode lets the last one win (§14.4). The same name at two levels is no repeat.
      */
-    private List<Object> parseCombinedArrayValue(ArrayHeader header, char[] valueBuf, int valueStart, int valueEnd)
-            throws IOException {
-        if (header.count == 0) {
-            return new ArrayList<>();
+    private FieldEntry[] parseFieldList(char[] buf, int open, int end, char delimiter, int depth) {
+        if (depth > maxDepth) {
+            throw new JsonIoException("Field list nested deeper than " + maxDepth + " levels at line " + lineNumber);
         }
-        if (header.columnHeaders != null) {
-            return readTabularArray(header.count, header.columnHeaders, header.delimiter);
-        }
-        if (!isTrimmedEmpty(valueBuf, valueStart, valueEnd)) {
-            return readInlineArray(valueBuf, valueStart, valueEnd, header.count, header.delimiter);
-        }
-        return readListArray(header.count);
-    }
-
-    private ArrayHeader parseCombinedArrayHeader(String key, int bracketStart) {
-        int keyLen = key.length();
-        int bracketEnd = key.indexOf(']', bracketStart);
-        if (bracketEnd < 0) {
-            if (strictToon) {
-                throw new JsonIoException("Malformed array syntax at line " + lineNumber + ": " + key.substring(bracketStart));
-            }
-            return null;  // §14.2 non-strict tolerance: treat as literal key at caller
-        }
-
-        String countStr = key.substring(bracketStart + 1, bracketEnd);
-        char delimiter = DELIMITER;
-        if (!countStr.isEmpty()) {
-            char lastChar = countStr.charAt(countStr.length() - 1);
-            if (lastChar == '\t') {
-                delimiter = '\t';
-                countStr = countStr.substring(0, countStr.length() - 1);
-            } else if (lastChar == '|') {
-                delimiter = '|';
-                countStr = countStr.substring(0, countStr.length() - 1);
-            }
-        }
-
-        int count;
-        try {
-            count = Integer.parseInt(trimAscii(countStr));
-        } catch (NumberFormatException e) {
-            if (strictToon) {
-                throw new JsonIoException("Invalid array count at line " + lineNumber + ": " + countStr);
-            }
-            return null;  // §14.2 non-strict tolerance: non-integer bracket content → literal key
-        }
-        // §14.2 strict: bracket-length leading zeros (e.g. "03") and negative lengths
-        // are malformed array headers.
-        if (strictToon) {
-            String trimmed = trimAscii(countStr);
-            if (trimmed.length() > 1 && trimmed.charAt(0) == '0') {
-                throw new JsonIoException("Array count with leading zeros at line " + lineNumber + ": " + countStr);
-            }
-            if (count < 0) {
-                throw new JsonIoException("Array count must not be negative at line " + lineNumber + ": " + countStr);
-            }
-        }
-
-        int afterBracket = bracketEnd + 1;
-        List<String> columnHeaders = null;
-        if (afterBracket < keyLen) {
-            if (key.charAt(afterBracket) != '{') {
-                // Trailing content after ]: not a fields segment. §14.2 strict-mode header
-                // error (whitespace between bracket and fields, extra-bracket noise, etc.).
-                // Non-strict: fall back to literal-key handling at caller.
-                if (strictToon) {
-                    throw new JsonIoException("Malformed array header (unexpected content after bracket segment) at line "
-                            + lineNumber + ": " + key.substring(bracketStart));
+        List<FieldEntry> entries = new ArrayList<>();
+        Set<String> names = strictToon ? new HashSet<>() : null;
+        int i = open + 1;
+        while (true) {
+            // A name runs to the first unquoted delimiter or brace.
+            int nameStart = i;
+            boolean inQuotes = false;
+            while (i < end) {
+                char c = buf[i];
+                if (inQuotes) {
+                    if (c == '\\') {
+                        i++;
+                    } else if (c == '"') {
+                        inQuotes = false;
+                    }
+                } else if (c == '"') {
+                    inQuotes = true;
+                } else if (c == delimiter || c == '{' || c == '}') {
+                    break;
+                } else if (strictToon && (c == ',' || c == '\t' || c == '|')) {
+                    // §14.2: an unquoted delimiter other than the header's own. Inside a quoted name these
+                    // characters are literal data.
+                    throw new JsonIoException("Delimiter mismatch in tabular header at line " + lineNumber);
                 }
-                return null;
+                i++;
             }
-            int braceEnd = key.indexOf('}', afterBracket);
-            if (braceEnd > afterBracket) {
-                String headerStr = key.substring(afterBracket + 1, braceEnd);
-                validateFieldDelimiterConsistency(headerStr, delimiter);
-                columnHeaders = parseColumnHeaders(headerStr, delimiter);
-                afterBracket = braceEnd + 1;
-            } else if (strictToon) {
-                throw new JsonIoException("Malformed array syntax (missing closing brace) at line " + lineNumber);
-            } else {
-                return null;
+            if (i >= end) {
+                return null;    // the line ended inside the field list
+            }
+            int nameEnd = i;
+
+            FieldEntry[] group = null;
+            if (buf[i] == '{') {
+                if (strictToon && (nameEnd == nameStart || buf[nameEnd - 1] <= ' ')) {
+                    return null;    // a group with no name, or whitespace between the name and its group
+                }
+                group = parseFieldList(buf, i, end, delimiter, depth + 1);
+                if (group == null || (strictToon && group.length == 0)) {
+                    return null;
+                }
+                i = fieldListEnd;
+                while (i < end && buf[i] == ' ') {
+                    i++;
+                }
+                if (i >= end || (buf[i] != delimiter && buf[i] != '}')) {
+                    return null;    // text between a nested group and the next delimiter
+                }
+            }
+
+            boolean last = buf[i] == '}';
+            // A trailing empty entry, as in {a,}, adds no field.
+            if (!last || group != null || nameEnd > nameStart) {
+                FieldEntry entry = fieldEntry(nameStart, nameEnd, group);
+                if (names != null && !names.add(entry.name)) {
+                    throw new JsonIoException("Duplicate field name '" + entry.name + "' in array header at line "
+                            + lineNumber);
+                }
+                entries.add(entry);
+            }
+            i++;
+            if (last) {
+                fieldListEnd = i;
+                return entries.toArray(new FieldEntry[0]);
             }
         }
-        if (afterBracket != keyLen) {
-            // Trailing content after fields segment closing brace. §14.2 strict error.
-            if (strictToon) {
-                throw new JsonIoException("Malformed array header (unexpected content after fields segment) at line "
-                        + lineNumber + ": " + key.substring(bracketStart));
-            }
-            return null;
-        }
-        return new ArrayHeader(count, delimiter, columnHeaders);
     }
 
-    /**
-     * Parse column headers from a delimiter-separated string.
-     */
-    private List<String> parseColumnHeaders(String headerStr, char delimiter) {
-        List<String> headers = new ArrayList<>();
-        StringBuilder current = new StringBuilder();
-        boolean inQuotes = false;
-        boolean escaped = false;
-
-        for (int i = 0; i < headerStr.length(); i++) {
-            char c = headerStr.charAt(i);
-            // Quote-aware split: §7.3 tabular field names MAY be quoted; quoted keys can
-            // contain the active delimiter and other otherwise-significant characters.
-            if (escaped) {
-                current.append(c);
-                escaped = false;
-                continue;
-            }
-            if (c == '\\' && inQuotes) {
-                current.append(c);
-                escaped = true;
-                continue;
-            }
-            if (c == '"') {
-                inQuotes = !inQuotes;
-                current.append(c);
-                continue;
-            }
-            if (c == delimiter && !inQuotes) {
-                headers.add(unquoteString(trimAscii(current)));
-                current.setLength(0);
-            } else {
-                current.append(c);
+    /** The field entry whose name is the text in lineBuf[nameStart..nameEnd): trimmed, and unescaped if quoted. */
+    private FieldEntry fieldEntry(int nameStart, int nameEnd, FieldEntry[] group) {
+        String raw = trimAsciiRangeBuf(nameStart, nameEnd);
+        String name = unquoteString(raw);
+        String metaKey = null;
+        if (group == null && !raw.isEmpty()) {
+            char first = raw.charAt(0);
+            if (first == '@' || first == '$') {
+                metaKey = META_KEY_MAP.get(name);
             }
         }
-        if (current.length() > 0) {
-            headers.add(unquoteString(trimAscii(current)));
-        }
-
-        return headers;
-    }
-
-    private void validateFieldDelimiterConsistency(String headerStr, char delimiter) {
-        if (!strictToon) {
-            return;
-        }
-        // §14.2: non-active delimiter characters inside QUOTED header keys are literal data
-        // and MUST NOT be flagged as a delimiter mismatch. Scan the header outside quoted
-        // segments only.
-        int len = headerStr.length();
-        boolean inQuotes = false;
-        boolean escaped = false;
-        for (int i = 0; i < len; i++) {
-            char c = headerStr.charAt(i);
-            if (escaped) {
-                escaped = false;
-                continue;
-            }
-            if (c == '\\' && inQuotes) {
-                escaped = true;
-                continue;
-            }
-            if (c == '"') {
-                inQuotes = !inQuotes;
-                continue;
-            }
-            if (inQuotes) {
-                continue;
-            }
-            boolean mismatch =
-                    (delimiter == ',' && (c == '\t' || c == '|'))
-                            || (delimiter == '\t' && (c == ',' || c == '|'))
-                            || (delimiter == '|' && (c == ',' || c == '\t'));
-            if (mismatch) {
-                throw new JsonIoException("Delimiter mismatch in tabular header at line " + lineNumber);
-            }
-        }
+        return new FieldEntry(name, metaKey, group);
     }
 
     /**
      * Read a tabular array: rows of delimiter-separated data where each row becomes an object.
      */
-    private List<Object> readTabularArray(int count, List<String> columnHeaders, char delimiter) throws IOException {
+    private List<Object> readTabularArray(ArrayHeader header) throws IOException {
+        final int count = header.count;
+        final char delimiter = header.delimiter;
+        final List<String> columnHeaders = header.columnHeaders;
+        final FieldEntry[] fieldTree = header.fieldTree;
         List<Object> elements = new ArrayList<>(count);
         int baseIndent = -1;
-        int colHeadersSize = columnHeaders.size();
-        String[] columnMetaKeys = buildColumnMetaKeys(columnHeaders);
+        int colHeadersSize = header.leafCount;
+        String[] columnMetaKeys = fieldTree == null ? buildColumnMetaKeys(columnHeaders) : null;
+        Object[] cells = fieldTree == null ? null : new Object[colHeadersSize];
 
         while (elements.size() < count) {
             if (!hasLine()) {
@@ -976,13 +1002,26 @@ public class ToonReader {
             int trimEnd = currentTrimEnd;
             consumeLine();
 
-            // Parse the row directly into a pre-sized object (no intermediate List)
-            JsonObject rowObj = new JsonObject(colHeadersSize);
-            int valuesCount = parseRowIntoObject(lineBuf, trimStart, trimEnd, columnHeaders, columnMetaKeys, delimiter,
-                    rowObj);
-            if (strictToon && valuesCount != colHeadersSize) {
-                throw new JsonIoException("Tabular row width mismatch at line " + lineNumber +
-                        ", expected " + colHeadersSize + " values, got " + valuesCount);
+            JsonObject rowObj;
+            if (fieldTree == null) {
+                // Parse the row directly into a pre-sized object (no intermediate List)
+                rowObj = new JsonObject(colHeadersSize);
+                int valuesCount = parseRowIntoObject(lineBuf, trimStart, trimEnd, columnHeaders, columnMetaKeys,
+                        delimiter, rowObj);
+                if (strictToon && valuesCount != colHeadersSize) {
+                    throw new JsonIoException("Tabular row width mismatch at line " + lineNumber +
+                            ", expected " + colHeadersSize + " values, got " + valuesCount);
+                }
+            } else {
+                // §9.3: a row under nested field groups holds one cell per leaf field, in the header's
+                // depth-first order. Without every cell the nesting cannot be rebuilt, in either mode.
+                int valuesCount = readRowCells(lineBuf, trimStart, trimEnd, delimiter, cells);
+                if (valuesCount != colHeadersSize) {
+                    throw new JsonIoException("Tabular row width mismatch at line " + lineNumber +
+                            ", expected " + colHeadersSize + " values, got " + valuesCount);
+                }
+                rowCellCursor = 0;
+                rowObj = buildRow(fieldTree, cells);
             }
 
             elements.add(rowObj);
@@ -1129,6 +1168,56 @@ public class ToonReader {
         return colIndex;
     }
 
+    /**
+     * Split a row at its unquoted delimiters and read each cell (spec 9.3, 11.2). Returns the number of cells
+     * the row holds; the first cells.length of them are stored.
+     */
+    private int readRowCells(char[] buf, int start, int end, char delimiter, Object[] cells) {
+        int count = 0;
+        int tokenStart = start;
+        boolean inQuotes = false;
+        for (int i = start; i < end; i++) {
+            char c = buf[i];
+            if (inQuotes) {
+                if (c == '\\') {
+                    i++;
+                } else if (c == '"') {
+                    inQuotes = false;
+                }
+            } else if (c == '"') {
+                inQuotes = true;
+            } else if (c == delimiter) {
+                if (count < cells.length) {
+                    cells[count] = readScalar(buf, tokenStart, i);
+                }
+                count++;
+                tokenStart = i + 1;
+            }
+        }
+        if (count < cells.length) {
+            cells[count] = readScalar(buf, tokenStart, end);
+        }
+        return count + 1;
+    }
+
+    /**
+     * Build the object a row stands for by walking the field list in header order (spec 9.3): a leaf field
+     * takes the next cell, and a nested field group becomes an object built from its own fields.
+     */
+    private JsonObject buildRow(FieldEntry[] fields, Object[] cells) {
+        JsonObject obj = new JsonObject(fields.length);
+        for (FieldEntry field : fields) {
+            if (field.group != null) {
+                obj.appendFieldForParser(field.name, buildRow(field.group, cells));
+            } else if (field.metaKey != null) {
+                loadMetaField(obj, field.metaKey, cells[rowCellCursor++]);
+            } else {
+                obj.appendFieldForParser(field.name, cells[rowCellCursor++]);
+            }
+        }
+        return obj;
+    }
+
     private void appendColumn(JsonObject target, List<String> columnHeaders, String[] columnMetaKeys, int colIndex,
                               Object value) {
         String metaKey = columnMetaKeys == null ? null : columnMetaKeys[colIndex];
@@ -1143,82 +1232,6 @@ public class ToonReader {
      * Read an inline array with a specific delimiter.
      * Returns ArrayList instead of Object[] for better Java interoperability.
      */
-    private List<Object> readInlineArray(String content, int count, char delimiter) {
-        List<Object> elements = new ArrayList<>(count);
-        int len = content.length();
-
-        // Fast path: no quotes or escapes — parse directly from string ranges
-        if (content.indexOf('"') < 0 && content.indexOf('\\') < 0) {
-            int tokenStart = 0;
-            for (int i = 0; i < len; i++) {
-                if (content.charAt(i) == delimiter) {
-                    // Empty token between delimiters (e.g. "a,,c") parses as empty string
-                    // per §4 — empty unquoted token can only be a string, not a keyword
-                    // or number, so type-inference picks string.
-                    if (tokenStart == i) {
-                        elements.add("");
-                    } else {
-                        elements.add(readScalar(content, tokenStart, i));
-                    }
-                    tokenStart = i + 1;
-                }
-            }
-            if (tokenStart < len) {
-                elements.add(readScalar(content, tokenStart, len));
-            } else if (elements.size() < count) {
-                // Trailing empty token (e.g. "a,b,") — same rule as above.
-                elements.add("");
-            }
-        } else {
-            // Slow path: handle quotes and escapes via StringBuilder
-            inlineBuf.setLength(0);
-            final StringBuilder current = inlineBuf;
-            boolean inQuotes = false;
-            boolean escaped = false;
-
-            for (int i = 0; i < len; i++) {
-                char c = content.charAt(i);
-
-                if (escaped) {
-                    current.append(c);
-                    escaped = false;
-                    continue;
-                }
-
-                if (c == '\\') {
-                    escaped = true;
-                    current.append(c);
-                    continue;
-                }
-
-                if (c == '"') {
-                    inQuotes = !inQuotes;
-                    current.append(c);
-                    continue;
-                }
-
-                if (c == delimiter && !inQuotes) {
-                    elements.add(readScalar(trimAscii(current)));
-                    current.setLength(0);
-                } else {
-                    current.append(c);
-                }
-            }
-
-            // Add last element
-            if (current.length() > 0 || elements.size() < count) {
-                elements.add(readScalar(trimAscii(current)));
-            }
-        }
-
-        if (strictToon && elements.size() != count) {
-            throw new JsonIoException("Inline array count mismatch at line " + lineNumber +
-                    ", expected " + count + " values, got " + elements.size());
-        }
-
-        return elements;
-    }
-
     private List<Object> readInlineArray(char[] buf, int start, int end, int count, char delimiter) {
         List<Object> elements = new ArrayList<>(count);
         boolean hasQuotesOrEscapes = false;
@@ -1235,7 +1248,9 @@ public class ToonReader {
             for (int i = start; i < end; i++) {
                 if (buf[i] == delimiter) {
                     if (tokenStart == i) {
-                        // Empty inline-array token → "" per §4 (see String overload).
+                        // Empty token between delimiters (e.g. "a,,c") parses as empty string
+                        // per §4 — empty unquoted token can only be a string, not a keyword
+                        // or number, so type-inference picks string.
                         elements.add("");
                     } else {
                         elements.add(readScalar(buf, tokenStart, i));
@@ -1246,6 +1261,7 @@ public class ToonReader {
             if (tokenStart < end) {
                 elements.add(readScalar(buf, tokenStart, end));
             } else if (elements.size() < count) {
+                // Trailing empty token (e.g. "a,b,") — same rule as above.
                 elements.add("");
             }
         } else {
@@ -1366,7 +1382,7 @@ public class ToonReader {
                 // Empty object: - {}
                 elements.add(new JsonObject());
             } else if (isArrayStart(lineBuf, elementStart, trimEnd)) {
-                elements.add(parseArrayFromLine(trimAsciiRangeBuf(elementStart, trimEnd)));
+                elements.add(readKeylessArray(elementStart, trimEnd));
             } else {
                 // Pre-check whether the hyphen-line slice contains an unquoted colon
                 // (indicating an inline object like "- name: John"). Work directly on
@@ -1442,7 +1458,7 @@ public class ToonReader {
             }
 
             jsonObj = readAndDispatchField(jsonObj, null, pending,
-                    key, valueStart, valueEnd, hyphenIndent);
+                    key, firstFieldStart, valueStart, valueEnd, hyphenIndent);
         }
 
         // Read subsequent fields at the same indent level as the first field's content
@@ -1480,7 +1496,7 @@ public class ToonReader {
             }
 
             jsonObj = readAndDispatchField(jsonObj, null, pending,
-                    key, valueStart2, trimEnd, fieldIndent);
+                    key, trimStart, valueStart2, trimEnd, fieldIndent);
         }
 
         // Metadata-only or empty inline object → allocate lite now and apply buffered metadata.

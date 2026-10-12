@@ -443,4 +443,41 @@ class ToonReaderCoverageTest {
         Map<?, ?> result = JsonIo.fromToon(toon).asClass(Map.class);
         assertThat(result.get("outer")).isInstanceOf(Map.class);
     }
+
+    // ========== One header parser for a header with a key and a header without one ==========
+
+    /**
+     * A tab-delimited array with no key (the root, or a list item) lost an empty first value: the text after
+     * the colon was trimmed of all whitespace, the first delimiter with it. Behind a key it was always kept.
+     */
+    @Test
+    void testKeylessTabDelimitedArrayKeepsAnEmptyFirstValue() {
+        for (ReadOptions options : new ReadOptions[]{strictOpts(), new ReadOptionsBuilder().build()}) {
+            List<?> root = JsonIo.fromToon("[2\t]: \tb", options).asClass(List.class);
+            assertThat(root).isEqualTo(java.util.Arrays.asList("", "b"));
+
+            Map<?, ?> listItem = JsonIo.fromToon("items[1]:\n  - [2\t]: \tb", options).asClass(Map.class);
+            assertThat(((List<?>) listItem.get("items")).get(0)).isEqualTo(java.util.Arrays.asList("", "b"));
+
+            Map<?, ?> keyed = JsonIo.fromToon("k[2\t]: \tb", options).asClass(Map.class);
+            assertThat(keyed.get("k")).isEqualTo(java.util.Arrays.asList("", "b"));
+        }
+    }
+
+    /**
+     * A header with no key has no "key: value" reading to fall back to, so a malformed one is an error in both
+     * modes. Two of these used to be read: an unclosed field list behind a zero count, and text between the
+     * field list and the colon.
+     */
+    @Test
+    void testMalformedKeylessHeaderIsAnError() {
+        for (ReadOptions options : new ReadOptions[]{strictOpts(), new ReadOptionsBuilder().build()}) {
+            assertThatThrownBy(() -> JsonIo.fromToon("[0]{unclosed", options).asClass(Object.class))
+                    .isInstanceOf(JsonIoException.class)
+                    .hasMessageContaining("Malformed array header (field list)");
+            assertThatThrownBy(() -> JsonIo.fromToon("[2]{a,b}x:\n  1,2\n  3,4", options).asClass(Object.class))
+                    .isInstanceOf(JsonIoException.class)
+                    .hasMessageContaining("unexpected content after fields segment");
+        }
+    }
 }
