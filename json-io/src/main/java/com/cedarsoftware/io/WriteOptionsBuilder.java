@@ -1,5 +1,7 @@
 package com.cedarsoftware.io;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
@@ -135,6 +137,7 @@ public class WriteOptionsBuilder {
     private static volatile int BASE_LRU_SIZE = 1000;
     private static volatile boolean BASE_WRITE_LONGS_AS_STRINGS = false;
     private static volatile boolean BASE_SKIP_NULL_FIELDS = false;
+    private static volatile boolean BASE_USE_GETTERS = false;           // false read fields, do not call getters
     private static volatile boolean BASE_FORCE_MAP_OUTPUT_AS_TWO_ARRAYS = false;
     private static volatile boolean BASE_STRINGIFY_MAP_KEYS = false;
     private static volatile boolean BASE_WRITE_OPTIONAL_AS_OBJECT = false;
@@ -230,6 +233,7 @@ public class WriteOptionsBuilder {
         options.lruSize = BASE_LRU_SIZE;
         options.writeLongsAsStrings = BASE_WRITE_LONGS_AS_STRINGS;
         options.skipNullFields = BASE_SKIP_NULL_FIELDS;
+        options.useGetters = BASE_USE_GETTERS;
         options.forceMapOutputAsTwoArrays = BASE_FORCE_MAP_OUTPUT_AS_TWO_ARRAYS;
         options.stringifyMapKeys = BASE_STRINGIFY_MAP_KEYS;
         options.writeOptionalAsObject = BASE_WRITE_OPTIONAL_AS_OBJECT;
@@ -276,6 +280,7 @@ public class WriteOptionsBuilder {
             options.showTypeInfo = other.showTypeInfo;
             options.showTypeInfoExplicitlySet = other.showTypeInfoExplicitlySet;
             options.skipNullFields = other.skipNullFields;
+            options.useGetters = other.useGetters;
             options.writeLongsAsStrings = other.writeLongsAsStrings;
             options.cycleSupport = other.cycleSupport;
             options.json5UnquotedKeys = other.json5UnquotedKeys;
@@ -892,6 +897,17 @@ public class WriteOptionsBuilder {
     }
 
     /**
+     * Call this method to set, for the lifetime of the JVM, how a field's value is obtained when an object is
+     * written. All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     *
+     * @param useGetters boolean true to call a class's public getter, {@code getX()} or {@code isX()}, when it
+     *                   has one; false (the default) to read the field itself. See {@link #useGetters(boolean)}.
+     */
+    public static void addPermanentUseGetters(boolean useGetters) {
+        BASE_USE_GETTERS = useGetters;
+    }
+
+    /**
      * Call this method to set a permanent (JVM lifetime) TOON delimiter.
      * All WriteOptions instances will be initialized with this value unless explicitly overridden.
      *
@@ -1124,6 +1140,31 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder skipNullFields(boolean skipNullFields) {
         options.skipNullFields = skipNullFields;
+        return this;
+    }
+
+    /**
+     * Choose how a field's value is obtained when an object is written.
+     * <ul>
+     *     <li><b>false (default)</b>: the field itself is read. What is written is the object's state, and no
+     *     code of the class runs. A public getter is called only for a field json-io cannot reach, and for the
+     *     JDK's own classes, whose fields are closed from JDK 17 on and are read through their getters on every
+     *     JDK.</li>
+     *     <li><b>true</b>: the class's public getter is called when it has one for the field, and the field is
+     *     read only when it has none. Use this when the JSON should hold what the getters return rather than
+     *     what the fields hold. A getter qualifies when the class and the method are public, the method is named
+     *     {@code get} plus the capitalized field name ({@code is} for a boolean), takes no argument, and
+     *     returns exactly the field's type.</li>
+     * </ul>
+     * A getter named for a field is used either way: {@code @IoGetter}, {@code @JsonGetter},
+     * {@link #addNonStandardGetter(Class, String, String)}; and a method filter still takes a getter out of use.
+     * The read-side counterpart is {@link ReadOptionsBuilder#useSetters(boolean)}; the two are independent.
+     *
+     * @param useGetters boolean true to call public getters, false to read fields
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder useGetters(boolean useGetters) {
+        options.useGetters = useGetters;
         return this;
     }
 
@@ -2190,6 +2231,7 @@ public class WriteOptionsBuilder {
         private int lruSize = 1000;
         private boolean writeLongsAsStrings = false;
         private boolean skipNullFields = false;
+        private boolean useGetters = false;         // Default: read the field, do not call a getter
         private boolean forceMapOutputAsTwoArrays = false;
         private boolean stringifyMapKeys = false;
         private boolean writeOptionalAsObject = false;
@@ -2602,6 +2644,10 @@ public class WriteOptionsBuilder {
          * are detected during writing — a {@code JsonIoException} is thrown with a hint to enable
          * {@code cycleSupport(true)}.
          */
+        public boolean isUseGetters() {
+            return useGetters;
+        }
+
         public boolean isCycleSupport() {
             return cycleSupport;
         }
@@ -2860,9 +2906,14 @@ public class WriteOptionsBuilder {
                     }
                 }
 
-                // Fall back to factory chain (nonStandardGetters + getXxx convention)
+                // The factory chain: a getter named for this field (nonStandardGetters), then accessor factories
+                // the caller added. The getXxx / isXxx naming convention is tried only when getters were asked
+                // for (useGetters), or when the field itself cannot be reached.
                 if (accessor == null) {
-                    accessor = findMethodAccessor(field, uniqueFieldName);
+                    Map<String, String> namedGetters = nonStandardGetters.get(field.getDeclaringClass());
+                    boolean getterNamed = namedGetters != null && namedGetters.containsKey(field.getName());
+                    boolean byConvention = useGetters || !MetaUtils.isFieldOpen(field);
+                    accessor = findMethodAccessor(field, uniqueFieldName, getterNamed, byConvention);
                 }
 
                 if (accessor != null && isMethodFiltered(clazz, accessor.getFieldOrMethodName())) {
@@ -2887,8 +2938,21 @@ public class WriteOptionsBuilder {
             return false;
         }
 
-        private Accessor findMethodAccessor(Field field, String uniqueFieldName) {
+        /**
+         * @param getterNamed  true when a non-standard getter is registered for this field
+         * @param byConvention false to leave out the getters json-io's own factories find by name alone
+         *                     (getXxx, isXxx). Factories the caller added are always asked.
+         */
+        private Accessor findMethodAccessor(Field field, String uniqueFieldName, boolean getterNamed,
+                                            boolean byConvention) {
             for (final AccessorFactory factory : accessorFactories.values()) {
+                Class<?> factoryClass = factory.getClass();
+                if (factoryClass == GetMethodAccessorFactory.class && !getterNamed && !byConvention) {
+                    continue;
+                }
+                if (factoryClass == IsMethodAccessorFactory.class && !byConvention) {
+                    continue;
+                }
                 try {
                     final Accessor accessor = factory.buildAccessor(field, nonStandardGetters, uniqueFieldName);
 
@@ -3255,6 +3319,30 @@ public class WriteOptionsBuilder {
             this.keyClass = keyClass;
         }
 
+        /** Has the class a public getter for the field: getX(), or isX() for a boolean, returning the field's type? */
+        private static boolean hasPublicGetter(Class<?> declaringClass, String fieldName, Class<?> fieldType) {
+            if (fieldName == null || fieldName.isEmpty()) {
+                return false;
+            }
+            String capitalized = Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
+            MethodType type = MethodType.methodType(fieldType);
+            try {
+                MethodHandles.publicLookup().findVirtual(declaringClass, "get" + capitalized, type);
+                return true;
+            } catch (Exception ignore) {
+                // no getX()
+            }
+            if (fieldType == boolean.class || fieldType == Boolean.class) {
+                try {
+                    MethodHandles.publicLookup().findVirtual(declaringClass, "is" + capitalized, type);
+                    return true;
+                } catch (Exception ignore) {
+                    // no isX()
+                }
+            }
+            return false;
+        }
+
         static WriteFieldPlan create(Accessor accessor, WriteOptions options) {
             String fieldName = accessor.getUniqueFieldName();
             String keyLiteral = buildKeyLiteral(fieldName, options);
@@ -3293,7 +3381,10 @@ public class WriteOptionsBuilder {
                 }
             }
 
-            boolean enumSkip = Enum.class.isAssignableFrom(declaringClass) && !accessor.isPublic();
+            // enumPublicFieldsOnly: a field of an enum counts as public when the field is public or it has a
+            // public getter, however its value is read.
+            boolean enumSkip = Enum.class.isAssignableFrom(declaringClass) && !accessor.isPublic()
+                    && !hasPublicGetter(declaringClass, accessor.getActualFieldName(), fieldType);
             boolean skipTrace = fieldType.isPrimitive()
                     || (Modifier.isFinal(fieldType.getModifiers()) && options.isNonReferenceableClass(fieldType));
 

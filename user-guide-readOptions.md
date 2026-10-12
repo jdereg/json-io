@@ -359,6 +359,53 @@ For specific examples and implementation details, refer to the example at the be
 >#### `ReadOptionsBuilder` closeStream(`boolean closeStream`)
 >- [ ] Sets the 'closeStream' setting,`true`to turn on,`false`will turn off. The default setting is`false.`
 
+### Fields or Setters - How a Value Is Stored
+
+When `json-io` reads an object, each value from the JSON has to be put into the object. There are two ways to do
+that, and one option chooses between them.
+
+- **Fields (the default)**: the field itself is assigned, private and final fields included. No code of your class
+  runs while it is being read, so the object comes back in the state that was written. A setter that validates,
+  fills a cache, fires an event or keeps another object in step is not called.
+
+- **Setters**: the class's public setter is called when it has one for the field, and the field is assigned only when
+  it has none. Choose this when your setters do work that must also happen on read. Be aware that a setter then
+  runs on an object that is still being read: other fields may not be set yet, and a list, map or object handed to
+  the setter may not be filled yet. A setter that copies its argument (`this.items = new ArrayList<>(items)`) copies
+  it empty.
+
+A method counts as the setter of a field when the class and the method are public, the method is named `set` plus
+the capitalized field name, it returns `void`, and its one parameter is exactly the field's type. A fluent setter
+(one that returns `this`) or one that takes `Integer` for an `int` field does not count.
+
+Two things hold whichever you choose:
+
+- A setter that is **named** for a field is always used: `@IoSetter`, `@JsonSetter`, or
+  [`addPermanentNonStandardSetter`](#add-permanent-non-standard-setter).
+- **The JDK's own classes** (`java.*`, `javax.*` and the like) are set through their public setters where they have
+  them, on every JDK. Their fields are an implementation detail, and from JDK 17 on the module system keeps them
+  closed. The same goes for any other field that cannot be reached.
+
+```java
+ReadOptions options = new ReadOptionsBuilder()
+        .useSetters(true)       // call setX(value) where a class has it
+        .build();
+```
+
+The option for writing is separate: see `useGetters` in the [WriteOptions guide](/user-guide-writeOptions.md). You
+may set the two alike or differently.
+
+>#### `boolean` isUseSetters()
+>- [ ] Returns `true` if public setters are called, `false` (the default) if fields are assigned.
+
+>#### `ReadOptionsBuilder` useSetters(`boolean useSetters`)
+>- [ ] `true` to call a class's public setter where it has one, `false` to assign the field.
+
+**Upgrading:** `json-io` 4.55.0 through 4.113.0 called a public setter whenever a class had one, and there was no
+option. From 4.114.0 the field is assigned, as it was before 4.55.0. If your classes rely on their setters being
+called during a read, add `.useSetters(true)`, or call `ReadOptionsBuilder.addPermanentUseSetters(true)` once at
+startup.
+
 ### Aliasing - Shorten Class Names in @type
 
 Aliasing simplifies JSON output by converting fully qualified Java class names into shorter, simpler class names. For example, `java.util.ArrayList` can be aliased to just `ArrayList`, reducing the JSON content size and enhancing readability.
@@ -606,7 +653,7 @@ This feature enhances the efficiency of serialization and deserialization proces
 
 ### Add InjectorFactory
 
-The `addInjectorFactory` method in `json-io` allows you to specify a custom, global approach for injecting values into an object. For instance, if you have a specific way of declaring setter methods and want them to be invoked when setting values, this method can accommodate that. Additionally, it can be used to customize value injection for inner classes with special naming conventions.
+The `addInjectorFactory` method in `json-io` allows you to specify a custom, global approach for injecting values into an object. An `InjectorFactory` you add is asked for every field, whether or not [`useSetters`](#fields-or-setters---how-a-value-is-stored) is on. For instance, if you have a specific way of declaring setter methods and want them to be invoked when setting values, this method can accommodate that. Additionally, it can be used to customize value injection for inner classes with special naming conventions.
 
 >#### ReadOptionsBuilder.addInjectorFactory(`InjectorFactory factory`)
 
@@ -782,7 +829,7 @@ The `addPermanentNonStandardSetter` method in `json-io` allows you to define cus
 
 - **Purpose**: This method is used to associate non-standard setter methods with specific fields, ensuring that `json-io` can correctly apply data from JSON to Java objects even when setter methods are named unconventionally.
 
-- **Functionality**: When you specify a non-standard setter, `json-io` will invoke this method instead of the standard setter during the deserialization process. This is essential for classes where the setter methods do not follow the typical `setFieldName` format.
+- **Functionality**: When you specify a non-standard setter, `json-io` will invoke this method during the deserialization process, instead of assigning the field or calling the standard setter. It is used whether or not [`useSetters`](#fields-or-setters---how-a-value-is-stored) is on. This is essential for classes where the setter methods do not follow the typical `setFieldName` format.
 
 - **Example Usage**: An example of using this feature is with the `Throwable` class in Java. Typically, to set a cause on a `Throwable`, the `initCause()` method is used instead of a standard setter. Configuring `addPermanentNonStandardSetter(Throwable.class, "cause", "initCause")` instructs `json-io` to use `initCause()` to set the cause from the JSON data:
 
@@ -898,6 +945,22 @@ ReadOptions options = new ReadOptionsBuilder().build();     // Keeps streams ope
 ```
 
 >#### ReadOptionsBuilder.addPermanentCloseStream(`boolean closeStream`)
+
+#### Add Permanent Use Setters
+
+The `addPermanentUseSetters` method sets, for every new `ReadOptions`, whether a value is stored by calling the
+class's public setter or by assigning the field (see
+[Fields or Setters](#fields-or-setters---how-a-value-is-stored)).
+
+- **Default Value**: `false` (assign the field).
+
+**Example Usage:**
+```java
+ReadOptionsBuilder.addPermanentUseSetters(true);         // every read calls public setters
+ReadOptions options = new ReadOptionsBuilder().build();  // isUseSetters() returns true
+```
+
+>#### ReadOptionsBuilder.addPermanentUseSetters(`boolean useSetters`)
 
 #### Add Permanent TOON Expand Paths
 

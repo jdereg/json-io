@@ -50,6 +50,28 @@ import com.cedarsoftware.util.convert.Converter;
  *         limitations under the License.
  */
 public class MetaUtils {
+    /**
+     * Should json-io read and write this field itself? Yes for a field of an application class, which can be
+     * opened even when it is private. No for a field of the JDK's own classes: their public getters and setters
+     * are their contract and their fields an implementation detail (a Throwable without a cause holds itself in
+     * {@code cause}), and from JDK 17 on the module system keeps those fields closed anyway. Treating them as
+     * closed on every JDK makes json-io write and read a JDK class the same way everywhere. No, too, for any other
+     * field that cannot be opened, such as one in a named module that does not open its package.
+     */
+    static boolean isFieldOpen(Field field) {
+        String className = field.getDeclaringClass().getName();
+        if (className.startsWith("java.") || className.startsWith("javax.") || className.startsWith("jdk.")
+                || className.startsWith("sun.") || className.startsWith("com.sun.")) {
+            return false;
+        }
+        try {
+            field.setAccessible(true);
+            return true;
+        } catch (RuntimeException e) {      // InaccessibleObjectException (JDK 9+), SecurityException
+            return false;
+        }
+    }
+
     private MetaUtils() {
     }
 

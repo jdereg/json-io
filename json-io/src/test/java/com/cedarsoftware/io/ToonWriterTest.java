@@ -1731,7 +1731,7 @@ class ToonWriterTest {
                 new CountingPrimitivePojo(false, (byte) 7, 'K', (short) 12345, 42, 123456789L, 1.5f, 2.75d)
         );
 
-        String toon = JsonIo.toToon(rows, null);
+        String toon = JsonIo.toToon(rows, new WriteOptionsBuilder().useGetters(true).build());
 
         assertPrimitivePojoTabularOutput(toon);
         assertEquals(16, CountingPrimitivePojo.getGetterCalls(),
@@ -1746,7 +1746,7 @@ class ToonWriterTest {
                 new CountingPrimitivePojo(false, (byte) 7, 'K', (short) 12345, 42, 123456789L, 1.5f, 2.75d)
         };
 
-        String toon = JsonIo.toToon(rows, null);
+        String toon = JsonIo.toToon(rows, new WriteOptionsBuilder().useGetters(true).build());
 
         assertPrimitivePojoTabularOutput(toon);
         assertEquals(16, CountingPrimitivePojo.getGetterCalls(),

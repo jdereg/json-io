@@ -61,12 +61,12 @@ public class WriteOptionsBuilderTest {
 
     @Test
     void testAddPermanentNamedMethodFilter() {
-        WriteOptions before = new WriteOptionsBuilder().build();
+        WriteOptions before = new WriteOptionsBuilder().useGetters(true).build();
         List<Accessor> pre = before.getAccessorsForClass(Example.class);
         boolean preMethod = pre.stream().filter(a -> "value".equals(a.getActualFieldName())).findFirst().get().isMethod();
 
         WriteOptionsBuilder.addPermanentNamedMethodFilter("test", Example.class, "getValue");
-        WriteOptions after = new WriteOptionsBuilder().build();
+        WriteOptions after = new WriteOptionsBuilder().useGetters(true).build();
         List<Accessor> post = after.getAccessorsForClass(Example.class);
         boolean postMethod = post.stream().filter(a -> "value".equals(a.getActualFieldName())).findFirst().get().isMethod();
 
@@ -142,14 +142,14 @@ public class WriteOptionsBuilderTest {
     @Test
     void testAddAndRemoveMethodFilter() {
         MethodFilter mf = new NamedFilter("getValue");
-        WriteOptions opts = new WriteOptionsBuilder()
+        WriteOptions opts = new WriteOptionsBuilder().useGetters(true)
                 .addMethodFilter("f", mf)
                 .build();
         List<Accessor> a = opts.getAccessorsForClass(Example.class);
         boolean method = a.stream().filter(x -> "value".equals(x.getActualFieldName())).findFirst().get().isMethod();
         assertFalse(method);
 
-        WriteOptions opts2 = new WriteOptionsBuilder()
+        WriteOptions opts2 = new WriteOptionsBuilder().useGetters(true)
                 .addMethodFilter("f", mf)
                 .removeMethodFilter("f")
                 .build();

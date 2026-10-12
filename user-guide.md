@@ -1202,7 +1202,8 @@ public class Sensor {
     @IoGetter("location")
     public String fetchLocation() { return location; }
 }
-// json-io calls readTemperature() and fetchLocation() instead of getTemperature()/getLocation()
+// json-io calls readTemperature() and fetchLocation() instead of reading the fields,
+// whether or not WriteOptionsBuilder.useGetters(true) is set
 ```
 
 #### `@IoSetter("fieldName")` — Custom Setter Method
@@ -1219,7 +1220,8 @@ public class Sensor {
     @IoSetter("location")
     public void assignLocation(String loc) { this.location = loc; }
 }
-// json-io calls calibrateTemperature() and assignLocation() instead of setTemperature()/setLocation()
+// json-io calls calibrateTemperature() and assignLocation() instead of assigning the fields,
+// whether or not ReadOptionsBuilder.useSetters(true) is set
 ```
 
 **Note:** `@IoGetter`/`@IoSetter` are the annotation equivalents of the `nonStandardGetters.txt` and `nonStandardSetters.txt` config files. Config files are used for JDK classes that cannot be annotated; annotations are for user classes.

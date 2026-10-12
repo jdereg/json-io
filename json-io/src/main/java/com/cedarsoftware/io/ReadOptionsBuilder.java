@@ -163,6 +163,7 @@ public class ReadOptionsBuilder {
     private static volatile boolean BASE_ALLOW_NAN_AND_INFINITY = false;     // false allow NaN/Infinity
     private static volatile boolean BASE_FAIL_ON_UNKNOWN_TYPE = true;        // true fail on unknown type
     private static volatile boolean BASE_CLOSE_STREAM = true;                // true close stream after parsing
+    private static volatile boolean BASE_USE_SETTERS = false;                // false assign fields, do not call setters
     
     private final static ReadOptions defReadOptions;
     private final DefaultReadOptions options;
@@ -271,6 +272,7 @@ public class ReadOptionsBuilder {
         options.allowNanAndInfinity = BASE_ALLOW_NAN_AND_INFINITY;
         options.failOnUnknownType = BASE_FAIL_ON_UNKNOWN_TYPE;
         options.closeStream = BASE_CLOSE_STREAM;
+        options.useSetters = BASE_USE_SETTERS;
     }
 
     /**
@@ -297,6 +299,7 @@ public class ReadOptionsBuilder {
             options.decimalType = other.decimalType;
             options.integerType = other.integerType;
             options.useUnsafe = other.useUnsafe;
+            options.useSetters = other.useSetters;
             options.strictJson = other.strictJson;
             options.strictToon = other.strictToon;
             options.toonExpandPaths = other.toonExpandPaths;
@@ -1047,6 +1050,15 @@ public class ReadOptionsBuilder {
      */
     public static void addPermanentCloseStream(boolean closeStream) {
         BASE_CLOSE_STREAM = closeStream;
+    }
+
+    /**
+     * All new ReadOptions instances will use this setting for how a field's value is stored.
+     * @param useSetters boolean true to call a class's public setter, {@code setX(value)}, when it has one;
+     *                   false (the default) to assign the field itself. See {@link #useSetters(boolean)}.
+     */
+    public static void addPermanentUseSetters(boolean useSetters) {
+        BASE_USE_SETTERS = useSetters;
     }
     
     /**
@@ -1822,6 +1834,30 @@ public class ReadOptionsBuilder {
     }
 
     /**
+     * Choose how a field's value is stored when an object is read.
+     * <ul>
+     *     <li><b>false (default)</b>: the field itself is assigned. No code of the class runs while it is being
+     *     read, so the object comes back in the state that was written. A public setter is called only for a
+     *     field json-io cannot reach, and for the JDK's own classes, whose fields are closed from JDK 17 on and
+     *     are set through their setters on every JDK.</li>
+     *     <li><b>true</b>: the class's public setter is called when it has one for the field, and the field is
+     *     assigned only when it has none. Use this when the setters do work that must happen on read too, such as
+     *     filling a cache. A setter qualifies when the class and the method are public, the method is named
+     *     {@code set} plus the capitalized field name, returns {@code void}, and takes exactly the field's type.</li>
+     * </ul>
+     * A setter named for a field is used either way: {@code @IoSetter}, {@code @JsonSetter}, and
+     * {@link #addPermanentNonStandardSetter(Class, String, String)}.
+     * The write-side counterpart is {@link WriteOptionsBuilder#useGetters(boolean)}; the two are independent.
+     *
+     * @param useSetters boolean true to call public setters, false to assign fields
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder useSetters(boolean useSetters) {
+        options.useSetters = useSetters;
+        return this;
+    }
+
+    /**
      * Load ClassFactory classes based on contents of resources/classFactory.txt.
      * Verify that classes listed are indeed valid classes loaded in the JVM.
      */
@@ -1988,6 +2024,7 @@ public class ReadOptionsBuilder {
         private boolean toonExpandPaths = false;  // §13.4 default: "off" (no dotted-key expansion)
         private int toonIndentSize = 2;  // §12 default: 2 spaces per indent level
         private boolean useUnsafe = false;  // Default to false for security
+        private boolean useSetters = false; // Default: assign the field, do not call a setter
         
         // Security limits - default to unlimited for backward compatibility
         private int maxUnresolvedReferences = Integer.MAX_VALUE;
@@ -2309,6 +2346,10 @@ public class ReadOptionsBuilder {
 
         public boolean isUseUnsafe() {
             return useUnsafe;
+        }
+
+        public boolean isUseSetters() {
+            return useSetters;
         }
         
         /**
@@ -2640,9 +2681,14 @@ public class ReadOptionsBuilder {
                     }
                 }
 
-                // Fall back to factory chain (BASE_NONSTANDARD_SETTERS + setXxx convention)
+                // The factory chain: a setter named for this field (BASE_NONSTANDARD_SETTERS), then injector
+                // factories the caller added. The setXxx naming convention is tried only when setters were
+                // asked for (useSetters), or when the field itself cannot be reached.
                 if (injector == null) {
-                    injector = this.findInjector(field, fieldName);
+                    Map<String, String> namedSetters = BASE_NONSTANDARD_SETTERS.get(field.getDeclaringClass());
+                    boolean setterNamed = namedSetters != null && namedSetters.containsKey(field.getName());
+                    boolean byConvention = useSetters || !MetaUtils.isFieldOpen(field);
+                    injector = this.findInjector(field, fieldName, setterNamed || byConvention);
                 }
 
                 if (injector == null) {
@@ -2675,8 +2721,15 @@ public class ReadOptionsBuilder {
             return injectors;
         }
 
-        private Injector findInjector(Field field, String key) {
+        /**
+         * @param setterMethods false to leave out json-io's own {@link MethodInjectorFactory}, which finds a setter
+         *                      by its name. Factories the caller added are always asked.
+         */
+        private Injector findInjector(Field field, String key, boolean setterMethods) {
             for (final InjectorFactory factory : this.injectorFactories) {
+                if (!setterMethods && factory.getClass() == MethodInjectorFactory.class) {
+                    continue;
+                }
                 try {
                     final Injector injector = factory.createInjector(field, BASE_NONSTANDARD_SETTERS, key);
 

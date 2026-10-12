@@ -456,7 +456,8 @@ class WriteOptionsTest {
     @Test
     void getAccessorsForClass_withMixedAccessors() {
 
-        List<Accessor> accessors = new WriteOptionsBuilder().build().getAccessorsForClass(PrivateFinalObject.class);
+        List<Accessor> accessors = new WriteOptionsBuilder().useGetters(true).build()
+                .getAccessorsForClass(PrivateFinalObject.class);
 
         assertThat(accessors).hasSize(4);
 
@@ -533,7 +534,7 @@ class WriteOptionsTest {
 
     @Test
     void getAccessorsForClass_whenMethodDoesNotExists_doesNotThrowException() throws Throwable {
-        List<Accessor> list = new WriteOptionsBuilder()
+        List<Accessor> list = new WriteOptionsBuilder().useGetters(true)
                 .addNonStandardGetter(PrivateFinalObject.class, "x", "getTotal")
                 .build()
                 .getAccessorsForClass(PrivateFinalObject.class);
@@ -566,7 +567,8 @@ class WriteOptionsTest {
 
     @Test
     void getAccessorsForClass_findsAllNonStaticFieldAccessors() {
-        List<Accessor> list = new WriteOptionsBuilder().build().getAccessorsForClass(GetMethodTestObject.class);
+        List<Accessor> list = new WriteOptionsBuilder().useGetters(true).build()
+                .getAccessorsForClass(GetMethodTestObject.class);
 
         //  will not include
         assertEquals(list.size(), 5);
@@ -590,7 +592,8 @@ class WriteOptionsTest {
 
     @Test
     void getAccessorsForClass_bindsBooleanNonStaticFieldAccessors() throws Throwable {
-        List<Accessor> list = new WriteOptionsBuilder().build().getAccessorsForClass(ObjectWithBooleanValues.class);
+        List<Accessor> list = new WriteOptionsBuilder().useGetters(true).build()
+                .getAccessorsForClass(ObjectWithBooleanValues.class);
 
         assertEquals(list.size(), 5);
 
@@ -613,7 +616,8 @@ class WriteOptionsTest {
 
     @Test
     void getAccessorsForClass_findEnumWithCustomFields_whenNotPublicFieldsOnly() {
-        List<Accessor> list = new WriteOptionsBuilder().writeEnumAsJsonObject(false).build().getAccessorsForClass(CarEnumWithCustomFields.class);
+        List<Accessor> list = new WriteOptionsBuilder().useGetters(true).writeEnumAsJsonObject(false).build()
+                .getAccessorsForClass(CarEnumWithCustomFields.class);
 
         assertEquals(list.size(), 5);
 

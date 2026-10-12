@@ -401,4 +401,14 @@ public interface ReadOptions {
      * cannot be instantiated through normal means and you trust the JSON source.
      */
     boolean isUseUnsafe();
+
+    /**
+     * @return boolean true if a field's value is stored by calling the class's public setter,
+     * {@code setX(value)}, when it has one, and by assigning the field only when it has none. The default is
+     * false: the field itself is assigned, so no code of the class runs while an object is being read, and a
+     * setter is used only for a field that cannot be reached, and for the JDK's own classes.
+     * A setter named for a field ({@code @IoSetter}, {@code @JsonSetter}, a non-standard setter) is used either way.
+     * See {@link ReadOptionsBuilder#useSetters(boolean)}.
+     */
+    boolean isUseSetters();
 }

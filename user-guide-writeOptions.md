@@ -836,6 +836,58 @@ Utilizing the "Excluded Fields" feature effectively allows developers to manage 
 >#### `WriteOptionsBuilder` addExcludedFields(`Map<Class, Collection<String>> excludedFields`)
 >- [ ] Adds multiple Classes and their associated fields to be excluded from the written JSON.
 
+### Fields or Getters - How a Value Is Obtained
+
+When `json-io` writes an object, it needs the value of each field. There are two ways to get it, and one option
+chooses between them.
+
+- **Fields (the default)**: the field itself is read, private fields included. What is written is the object's state,
+  and no code of your class runs. A getter that computes its result, returns a copy or an unmodifiable view, or loads
+  something on demand is not called.
+
+- **Getters**: the class's public getter is called when it has one for the field, and the field is read only when it
+  has none. Choose this when the JSON should hold what the getters return rather than what the fields hold.
+
+A method counts as the getter of a field when the class and the method are public, the method is named `get` plus the
+capitalized field name (`is` for a `boolean` or `Boolean`), it takes no argument, and it returns exactly the field's
+type.
+
+Three things hold whichever you choose:
+
+- A getter that is **named** for a field is always used: `@IoGetter`, `@JsonGetter`, or a
+  [non-standard getter](#non-standard-accessors).
+- **The JDK's own classes** (`java.*`, `javax.*` and the like) are read through their public getters where they have
+  them, on every JDK. Their fields are an implementation detail, and from JDK 17 on the module system keeps them
+  closed. The same goes for any other field that cannot be reached.
+- An [accessor factory](#method-accessor) you add yourself is asked for every field.
+
+```java
+WriteOptions options = new WriteOptionsBuilder()
+        .useGetters(true)       // call getX() / isX() where a class has it
+        .build();
+```
+
+The option for reading is separate: see `useSetters` in the [ReadOptions guide](/user-guide-readOptions.md). You may
+set the two alike or differently.
+
+>#### `boolean` isUseGetters()
+>- [ ] Returns `true` if public getters are called, `false` (the default) if fields are read.
+
+>#### `WriteOptionsBuilder` useGetters(`boolean useGetters`)
+>- [ ] `true` to call a class's public getter where it has one, `false` to read the field.
+
+**Upgrading:** through `json-io` 4.113.0 a public getter was always called when a class had one. From 4.114.0 the
+field is read. The JSON differs only for a getter that returns something other than its field. If you rely on that,
+add `.useGetters(true)`, or call `WriteOptionsBuilder.addPermanentUseGetters(true)` once at startup.
+
+**Speed:** on JDK 17 and later, reading a field costs a little more than calling a getter the JIT can inline. A class
+whose every field has a public getter writes about 4-16% slower than it did (fields of primitive type most, `String`
+fields least); a class without getters is unchanged, since its fields were always read this way.
+
+**Enums:** an enum written as an object shows only its public fields unless you say otherwise
+(see [Enum Options](#enum-options-in-json-io)). A private field with a public getter counts as public there, as it
+always has, whichever way its value is read.
+
 ### Non-Standard Accessors
 
 The "Non-Standard Accessors" feature in `json-io` provides the flexibility to define custom accessor methods for
@@ -921,6 +973,9 @@ easy way to identify the filter if you need to remove it.
 
 `json-io` allows the customization of serialization behavior through the use of "Method Filters." These filters provide control over which methods are used during serialization, particularly useful for excluding methods that may not be suitable for direct data extraction.
 
+A method filter matters only where a getter would be used: under
+[`useGetters(true)`](#fields-or-getters---how-a-value-is-obtained), or for the JDK's own classes.
+
 #### How Method Filters Work:
 - **Filter Chain**: Method Filters are added to a method filter chain within `json-io`. Each filter in the chain has the opportunity to inspect a reflected method.
 - **Exclusion Logic**: If a filter returns `true` for a method, that method is excluded from being used to access data. Instead, `json-io` will revert to direct field access techniques. This is particularly beneficial if a method, such as a getter, triggers undesirable side effects.
@@ -971,8 +1026,10 @@ By using Method Filters, developers can fine-tune how json-io accesses data duri
 ### Method Accessor
 
 In `json-io`, "Method Accessors" are used to define how properties are accessed during serialization, typically
-through getter methods. By default, `json-io` recognizes standard "get" and "is" prefixes for method accessors.
-However, you can extend this functionality by defining custom accessor patterns and adding them to the method accessor chain.
+through getter methods. `json-io` ships with two, for the standard "get" and "is" prefixes; they are used under
+[`useGetters(true)`](#fields-or-getters---how-a-value-is-obtained) and for the JDK's own classes.
+You can extend this functionality by defining custom accessor patterns and adding them to the method accessor chain.
+An accessor factory you add is asked for every field, whether or not `useGetters` is on.
 
 #### Customizing Accessors:
 - **Flexibility**: You can create custom patterns for method accessors to accommodate different naming conventions or method structures within your classes.
@@ -1567,6 +1624,10 @@ Sets the permanent close stream setting for all new `WriteOptions` instances. Wh
 ### addPermanentCycleSupport
 Sets the permanent cycle support setting for all new `WriteOptions` instances. When enabled (default), the writer performs a `traceReferences()` pre-pass to identify multi-referenced objects and emit `@id`/`@ref`. When disabled, the pre-pass is skipped for ~35-40% faster serialization of acyclic data, identity markers are not emitted, and true cycles throw with remediation guidance.
 >#### WriteOptionsBuilder.addPermanentCycleSupport(`boolean cycleSupport`)
+
+### addPermanentUseGetters
+Sets, for all new `WriteOptions` instances, whether a field's value is obtained by calling the class's public getter (`true`) or by reading the field (`false`, the default). See [Fields or Getters](#fields-or-getters---how-a-value-is-obtained).
+>#### WriteOptionsBuilder.addPermanentUseGetters(`boolean useGetters`)
 
 ### addPermanentToonDelimiter
 Sets the permanent TOON delimiter for all new `WriteOptions` instances. Must be `','` (comma, default), `'\t'` (tab), or `'|'` (pipe). This sets the default delimiter used for TOON tabular arrays and inline primitive arrays.

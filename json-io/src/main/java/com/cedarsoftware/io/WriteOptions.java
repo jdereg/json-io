@@ -389,6 +389,16 @@ public interface WriteOptions {
      */
     boolean isCycleSupport();
 
+    /**
+     * @return boolean true if a field's value is obtained by calling the class's public getter,
+     * {@code getX()} or {@code isX()}, when it has one, and by reading the field only when it has none. The
+     * default is false: the field itself is read, so what is written is the object's state and no code of the
+     * class runs, and a getter is used only for a field that cannot be reached, and for the JDK's own classes.
+     * A getter named for a field ({@code @IoGetter}, {@code @JsonGetter}, a non-standard getter) is used either
+     * way. See {@link WriteOptionsBuilder#useGetters(boolean)}.
+     */
+    boolean isUseGetters();
+
     // ========== JSON5 Write Options ==========
 
     /**
