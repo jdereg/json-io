@@ -1114,7 +1114,7 @@ public class ToonWriter implements Closeable, Flushable {
      *   <li>Look like numbers</li>
      *   <li>Contain special chars: :, ", \, [, ], {, }, newlines, tabs</li>
      *   <li>Contain the active delimiter</li>
-     *   <li>Start with hyphen</li>
+     *   <li>Start with hyphen or #</li>
      * </ul>
      */
     private void writeString(String str) throws IOException {
@@ -1159,8 +1159,9 @@ public class ToonWriter implements Closeable, Flushable {
     private boolean scanNeedsQuoting(String str, int len) {
         char first = str.charAt(0);
 
-        // Leading whitespace or hyphen
-        if (first <= ' ' || first == '-') {
+        // Leading whitespace, hyphen, or # (spec 7.2). A line whose first character is # is a
+        // comment (spec 5.1), so an unquoted "#ff0000" that starts a line is dropped by the reader.
+        if (first <= ' ' || first == '-' || first == '#') {
             return true;
         }
 

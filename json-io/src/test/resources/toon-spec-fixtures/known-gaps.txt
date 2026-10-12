@@ -145,14 +145,6 @@ decode/whitespace.json#11      strips a leading byte-order mark
 decode/whitespace.json#15      keeps a second carriage return before CRLF as content
 decode/whitespace.json#16      keeps a byte-order mark after the document start as content
 
-# Writing: quote a string that starts with # (spec 7.2) -- 6
-encode/arrays-nested.json#10     quotes hash-leading string as list item
-encode/arrays-primitive.json#10  quotes hash-leading string in inline array
-encode/arrays-tabular.json#6     quotes hash-leading string in tabular cell
-encode/objects.json#28           quotes hash-leading string in object field value
-encode/primitives.json#36        quotes string starting with hash
-encode/primitives.json#39        quotes a delimiter, colon, hyphen, or number sign that a combining mark follows
-
 # Writing: nested field groups (spec 9.3) -- 6
 encode/arrays-objects.json#9   encodes a keyed-eligible object in a tabular column as a nested field group
 encode/arrays-tabular.json#7   collapses a uniform nested object column into a nested field group
