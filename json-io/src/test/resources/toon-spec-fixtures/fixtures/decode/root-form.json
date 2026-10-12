@@ -1,40 +1,12 @@
 {
-  "version": "1.4",
+  "version": "4.0",
   "category": "decode",
-  "description": "Root form detection - empty document, single primitive, literal empty array",
+  "description": "Root form detection – empty document, single primitive, literal empty array",
   "tests": [
     {
       "name": "parses empty document as empty object",
       "input": "",
       "expected": {},
-      "options": {
-        "strict": true
-      },
-      "specSection": "5",
-      "note": "Empty input (no non-empty lines) decodes to empty object"
-    },
-    {
-      "name": "parses single primitive string at root as primitive",
-      "input": "hello",
-      "expected": "hello",
-      "options": {
-        "strict": true
-      },
-      "specSection": "5"
-    },
-    {
-      "name": "parses single primitive number at root as primitive",
-      "input": "42",
-      "expected": 42,
-      "options": {
-        "strict": true
-      },
-      "specSection": "5"
-    },
-    {
-      "name": "parses single primitive boolean at root as primitive",
-      "input": "true",
-      "expected": true,
       "options": {
         "strict": true
       },
@@ -48,6 +20,116 @@
         "strict": true
       },
       "specSection": "5"
+    },
+    {
+      "name": "throws on trailing content after a root array",
+      "input": "[2]: 1,2\njunk: 3",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "5",
+      "note": "The root form spans the whole document; trailing lines must not be silently discarded"
+    },
+    {
+      "name": "throws on trailing content after a keyed tabular root",
+      "input": "[2:]{v}:\n  a: 1\n  b: 2\njunk: 3",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "5"
+    },
+    {
+      "name": "throws on trailing content after a root empty array",
+      "input": "[]\njunk: 3",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "5"
+    },
+    {
+      "name": "parses a root primitive after a leading blank line",
+      "input": "\nhello",
+      "expected": "hello",
+      "options": {
+        "strict": true
+      },
+      "specSection": "5"
+    },
+    {
+      "name": "throws on trailing content after a root array in non-strict mode",
+      "input": "[2]: 1,2\njunk: 3",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": false
+      },
+      "specSection": "5",
+      "minSpecVersion": "4.4"
+    },
+    {
+      "name": "throws on trailing content after a root empty array in non-strict mode",
+      "input": "[]\njunk: 3",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": false
+      },
+      "specSection": "5",
+      "minSpecVersion": "4.4"
+    },
+    {
+      "name": "parses a root line shaped like a header without a colon as a string",
+      "input": "items[2]",
+      "expected": "items[2]",
+      "specSection": "6",
+      "minSpecVersion": "4.2"
+    },
+    {
+      "name": "throws on an indented root primitive in non-strict mode",
+      "input": "  hello",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": false
+      },
+      "specSection": "5",
+      "minSpecVersion": "4.2"
+    },
+    {
+      "name": "throws on an indented root array header",
+      "input": "  [2]: 1,2",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "5",
+      "note": "Root form discovery reads the first non-blank depth-0 line; an indented first line is over-indented (§8)",
+      "minSpecVersion": "4.2"
+    },
+    {
+      "name": "parses a root primitive whose bracket segment and colon follow an unclosed quote",
+      "input": "k\"x[2]: 1,2",
+      "expected": "k\"x[2]: 1,2",
+      "specSection": "5.2",
+      "minSpecVersion": "4.2"
+    },
+    {
+      "name": "throws on a whole document indented by one level in non-strict mode",
+      "input": "  a: 1\n  b: 2",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": false
+      },
+      "specSection": "8",
+      "minSpecVersion": "4.4"
     }
   ]
 }

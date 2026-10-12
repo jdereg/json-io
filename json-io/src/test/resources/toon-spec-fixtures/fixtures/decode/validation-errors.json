@@ -1,17 +1,17 @@
 {
-  "version": "3.1",
+  "version": "4.0",
   "category": "decode",
-  "description": "Validation errors - length mismatches, invalid escapes, syntax errors, delimiter mismatches",
+  "description": "Validation errors – length mismatches, invalid escapes, syntax errors, delimiter mismatches",
   "tests": [
     {
-      "name": "throws on array length mismatch (inline primitives - too many)",
+      "name": "throws when inline values outnumber the declared length",
       "input": "tags[2]: a,b,c",
       "expected": null,
       "shouldError": true,
       "specSection": "14.1"
     },
     {
-      "name": "throws on array length mismatch (list format - too many)",
+      "name": "throws when list items outnumber the declared length",
       "input": "items[1]:\n  - 1\n  - 2",
       "expected": null,
       "shouldError": true,
@@ -33,20 +33,20 @@
     },
     {
       "name": "throws on invalid escape sequence",
-      "input": "\"a\\x\"",
+      "input": "\"a\\b\"",
       "expected": null,
       "shouldError": true,
-      "specSection": "14.2"
+      "specSection": "7.1"
     },
     {
-      "name": "rejects truncated unicode escape \\u00b",
+      "name": "throws on truncated unicode escape \\u00b",
       "input": "val: \"a\\u00b\"",
       "expected": null,
       "shouldError": true,
       "specSection": "7.1"
     },
     {
-      "name": "rejects lone surrogate code point \\uD800",
+      "name": "throws on lone surrogate code point \\uD800",
       "input": "val: \"a\\uD800b\"",
       "expected": null,
       "shouldError": true,
@@ -57,7 +57,7 @@
       "input": "\"unterminated",
       "expected": null,
       "shouldError": true,
-      "specSection": "14.2"
+      "specSection": "7.1"
     },
     {
       "name": "throws on missing colon in key-value context",
@@ -67,7 +67,7 @@
       "specSection": "14.2"
     },
     {
-      "name": "throws on two primitives at root depth in strict mode",
+      "name": "throws on two primitives at root depth",
       "input": "hello\nworld",
       "expected": null,
       "shouldError": true,
@@ -81,22 +81,11 @@
       "input": "items[2\t]{a\tb}:\n  1,2\n  3,4",
       "expected": null,
       "shouldError": true,
-      "specSection": "14.1",
+      "specSection": "11.2",
       "note": "Active delimiter is tab; rows using comma each parse as 1 value, failing the row width check"
     },
     {
-      "name": "throws on mismatched delimiter between bracket and brace fields",
-      "input": "items[2\t]{a,b}:\n  1\t2\n  3\t4",
-      "expected": null,
-      "shouldError": true,
-      "options": {
-        "strict": true
-      },
-      "specSection": "6",
-      "minSpecVersion": "3.2"
-    },
-    {
-      "name": "throws on extra brackets between bracket segment and colon in strict mode",
+      "name": "throws on extra brackets between bracket segment and colon",
       "input": "foo[1][bar]: 10",
       "expected": null,
       "shouldError": true,
@@ -104,65 +93,95 @@
         "strict": true
       },
       "specSection": "6",
-      "note": "Non-whitespace content between ] and : must error in strict mode (§6 fall-through is non-strict only)",
-      "minSpecVersion": "3.2"
+      "note": "The line is an array-header line that fails the §6 grammar (§5.2)"
     },
     {
-      "name": "throws on text between bracket segment and colon in strict mode",
+      "name": "throws on text between bracket segment and colon",
       "input": "foo[2]extra: a,b",
       "expected": null,
       "shouldError": true,
       "options": {
         "strict": true
       },
-      "specSection": "6",
-      "minSpecVersion": "3.2"
+      "specSection": "6"
     },
     {
-      "name": "throws on non-integer bracket segment in strict mode",
+      "name": "throws on non-integer bracket segment",
       "input": "foo[bar]: 10",
       "expected": null,
       "shouldError": true,
       "options": {
         "strict": true
       },
-      "specSection": "6",
-      "minSpecVersion": "3.2"
+      "specSection": "6"
     },
     {
-      "name": "throws on duplicate sibling keys in strict mode",
-      "input": "name: Ada\nname: Bob",
+      "name": "throws on duplicate sibling keys, one of them quoted, in strict mode",
+      "input": "name: Ada\n\"name\": Bob",
       "expected": null,
       "shouldError": true,
       "options": {
         "strict": true
       },
-      "specSection": "14.4",
-      "minSpecVersion": "3.2"
+      "specSection": "14.3"
     },
     {
-      "name": "throws on array header missing colon",
+      "name": "throws on a header-shaped line without a colon above indented rows",
       "input": "items[2]{id,name}\n  1,Ada\n  2,Bob",
       "expected": null,
       "shouldError": true,
-      "specSection": "6"
+      "specSection": "5.2"
     },
     {
-      "name": "throws on inline primitive array length mismatch (too few)",
+      "name": "throws on a header line with an unclosed bracket segment",
+      "input": "a[1:",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "5.2",
+      "minSpecVersion": "4.3"
+    },
+    {
+      "name": "throws on a keyed header line without its colon",
+      "input": "a[2:]{x}",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "5.2",
+      "minSpecVersion": "4.3"
+    },
+    {
+      "name": "throws on a keyed header line without its colon in non-strict mode",
+      "input": "a[2:]{x}",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": false
+      },
+      "specSection": "5.2",
+      "minSpecVersion": "4.4"
+    },
+    {
+      "name": "throws when inline values fall short of the declared length",
       "input": "tags[3]: a,b",
       "expected": null,
       "shouldError": true,
       "specSection": "14.1"
     },
     {
-      "name": "throws on list items length mismatch (too few)",
+      "name": "throws when list items fall short of the declared length",
       "input": "items[2]:\n  - a",
       "expected": null,
       "shouldError": true,
       "specSection": "14.1"
     },
     {
-      "name": "throws on bracket length with leading zeros in strict mode",
+      "name": "throws on a value line under a bare list-form header",
+      "input": "tags[3]:\n  reading,gaming,coding",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "6"
+    },
+    {
+      "name": "throws on bracket length with leading zeros",
       "input": "items[03]: a,b,c",
       "expected": null,
       "shouldError": true,
@@ -170,11 +189,10 @@
         "strict": true
       },
       "specSection": "6",
-      "note": "[03] is not a canonical non-negative integer length; decoders MUST NOT interpret it as a bracket segment",
-      "minSpecVersion": "3.2"
+      "note": "[03] is not a canonical non-negative integer length; decoders MUST NOT interpret it as a bracket segment"
     },
     {
-      "name": "throws on negative bracket length in strict mode",
+      "name": "throws on negative bracket length",
       "input": "items[-1]: a,b,c",
       "expected": null,
       "shouldError": true,
@@ -182,32 +200,77 @@
         "strict": true
       },
       "specSection": "6",
-      "note": "[-1] is not a non-negative integer length; decoders MUST NOT interpret it as a bracket segment",
-      "minSpecVersion": "3.2"
+      "note": "[-1] is not a non-negative integer length; decoders MUST NOT interpret it as a bracket segment"
     },
     {
-      "name": "throws on whitespace between bracket segment and colon in strict mode",
-      "input": "items[2] :\n  1,2",
+      "name": "throws on decimal bracket length",
+      "input": "x[3.7]: a,b,c",
       "expected": null,
       "shouldError": true,
       "options": {
         "strict": true
       },
       "specSection": "6",
-      "note": "No whitespace is permitted between ] and the colon/fields segment; any content there prevents header interpretation",
-      "minSpecVersion": "3.2"
+      "note": "[3.7] is not an integer length – lengths are DIGIT-only – so decoders MUST NOT interpret it as a bracket segment"
     },
     {
-      "name": "throws on whitespace between bracket segment and fields segment in strict mode",
-      "input": "items[2] {a,b}:\n  1,2\n  3,4",
+      "name": "throws on bracket length with plus sign",
+      "input": "x[+3]: a,b,c",
       "expected": null,
       "shouldError": true,
       "options": {
         "strict": true
       },
       "specSection": "6",
-      "note": "No whitespace is permitted between ] and the fields segment; mirrors the ]-to-colon rule",
-      "minSpecVersion": "3.2"
+      "note": "[+3] carries a sign and is not a non-negative integer length; decoders MUST NOT interpret it as a bracket segment"
+    },
+    {
+      "name": "throws on bracket length in exponent form",
+      "input": "x[1e1]: 1,2,3,4,5,6,7,8,9,10",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "6",
+      "note": "[1e1] is exponent notation, not a DIGIT-only integer length; decoders MUST NOT interpret it as a bracket segment"
+    },
+    {
+      "name": "throws on a bracket length with a non-ASCII digit",
+      "input": "k[\u0662]: a,b",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "6",
+      "note": "A length takes ASCII digits only; a Unicode-aware \\d would accept \u0662"
+    },
+    {
+      "name": "throws on whitespace between bracket segment and colon",
+      "input": "items[2] : 1,2",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "6",
+      "note": "The line is an array-header line that fails the §6 grammar (§5.2)"
+    },
+    {
+      "name": "throws on whitespace between bracket segment and field list",
+      "input": "items[0] {a,b}:",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "6",
+      "note": "No whitespace is permitted between ] and the field list; mirrors the ]-to-colon rule"
+    },
+    {
+      "name": "throws on whitespace between a field list and the header colon",
+      "input": "a[1]{x} :\n  1",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "6"
     },
     {
       "name": "throws on nested duplicate sibling keys in strict mode",
@@ -217,8 +280,7 @@
       "options": {
         "strict": true
       },
-      "specSection": "14.4",
-      "minSpecVersion": "3.2"
+      "specSection": "14.3"
     },
     {
       "name": "throws on duplicate keys within a list-item object in strict mode",
@@ -228,8 +290,627 @@
       "options": {
         "strict": true
       },
-      "specSection": "14.4",
-      "minSpecVersion": "3.2"
+      "specSection": "14.3"
+    },
+    {
+      "name": "throws on bracket segment without a length",
+      "input": "key[]: 1,2",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.2",
+      "note": "An absent length is a malformed bracket segment, same class as [03] and [-1]; only key: [] (bracket after the colon) means an empty array"
+    },
+    {
+      "name": "throws on row cell count not matching the leaf-field count",
+      "input": "orders[1]{id,customer{name,country}}:\n  1,Ada",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.1",
+      "note": "The header declares three leaf fields (id, customer.name, customer.country); the row has two cells"
+    },
+    {
+      "name": "throws on empty field list",
+      "input": "items[0]{}:",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.2"
+    },
+    {
+      "name": "throws on empty nested field group",
+      "input": "items[0]{id,meta{}}:",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.2",
+      "note": "A field list must contain at least one field entry at every nesting level"
+    },
+    {
+      "name": "throws on unmatched brace in field list",
+      "input": "items[0]{id,customer{name:",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.2"
+    },
+    {
+      "name": "throws on an unmatched closing brace after a field list",
+      "input": "a[0]{x}}:",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "6"
+    },
+    {
+      "name": "throws on duplicate field names at the same field-list level in strict mode",
+      "input": "items[0]{a,a{x}}:",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "9.3",
+      "note": "A duplicate field name is a header defect, diagnosed from the header line alone",
+      "minSpecVersion": "4.1"
+    },
+    {
+      "name": "throws on entry row count mismatch with keyed header length",
+      "input": "m[2:]{v}:\n  a: 1",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.1"
+    },
+    {
+      "name": "throws on entry row cell count not matching the leaf-field count",
+      "input": "m[1:]{a,b}:\n  k: 1",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.1"
+    },
+    {
+      "name": "throws on an entry row with no cells after the entry key",
+      "input": "m[1:]{v}:\n  a:",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.1",
+      "note": "A bare entrykey: has zero cells, and a field list always declares at least one leaf field (§9.5)"
+    },
+    {
+      "name": "throws on keyed header without a field list",
+      "input": "m[0:]:",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "14.2",
+      "note": "A keyed header without a field list declares no cells at all"
+    },
+    {
+      "name": "throws on keyed marker after the delimiter symbol",
+      "input": "m[2|:]{v}:\n  a: 1\n  b: 2",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "6",
+      "note": "The keyed colon must immediately follow the length and precede the delimiter symbol: [2:|]"
+    },
+    {
+      "name": "throws on keyed marker with leading-zero length",
+      "input": "m[02:]{v}:\n  a: 1\n  b: 2",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "6"
+    },
+    {
+      "name": "throws on whitespace before the keyed marker",
+      "input": "m[2 :]{v}:\n  a: 1\n  b: 2",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "6"
+    },
+    {
+      "name": "throws on explicit comma delimiter after the keyed marker",
+      "input": "m[2:,]{v}:\n  a: 1\n  b: 2",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "6",
+      "note": "Comma is never written as a delimiter symbol; [N:] already declares it"
+    },
+    {
+      "name": "throws on inline content after a keyed header colon",
+      "input": "m[1:]{v}: x\n  a: 1",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "14.2",
+      "note": "A keyed header carries no inline entries"
+    },
+    {
+      "name": "throws on a line without an unquoted colon at entry depth",
+      "input": "m[1:]{v}:\n  a: 1\n  5",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "14.2"
+    },
+    {
+      "name": "throws on duplicate entry keys in strict mode",
+      "input": "m[2:]{v}:\n  a: 1\n  a: 2",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "14.3"
+    },
+    {
+      "name": "throws on a list-item first-field header key repeated by a later header",
+      "input": "items[1]:\n  - t[1]{a}:\n      1\n    t[1]: 2",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.3"
+    },
+    {
+      "name": "throws on a keyless keyed header as a list item",
+      "input": "items[1]:\n  - [2:]{v}:\n      a: 1\n      b: 2",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "14.2",
+      "note": "The keyless keyed header is valid only as the document's root header (§5, §9.5)"
+    },
+    {
+      "name": "throws on inner array item count not matching its declared length",
+      "input": "pairs[2]:\n  - [3]: 1,2\n  - [2]: 3,4",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "9.2"
+    },
+    {
+      "name": "throws on keyless array header in object field position",
+      "input": "a:\n  [2]: 1,2",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "6"
+    },
+    {
+      "name": "throws on keyless array header in object field position in non-strict mode",
+      "input": "a:\n  [2]: 1,2",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": false
+      },
+      "specSection": "6",
+      "minSpecVersion": "4.4"
+    },
+    {
+      "name": "throws on keyless array header after a depth-0 field",
+      "input": "a: 1\n[2]: x,y",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "6",
+      "note": "Keyless headers are valid only as the document's root header or as list items"
+    },
+    {
+      "name": "throws on keyless array header as a later field of a list-item object",
+      "input": "a[1]:\n  - b: 1\n    [2]: x,y",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "6"
+    },
+    {
+      "name": "throws on keyless fields-bearing header as list item",
+      "input": "items[1]:\n  - [0]{x}:",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "6"
+    },
+    {
+      "name": "throws on keyless fields-bearing header as list item in non-strict mode",
+      "input": "items[1]:\n  - [0]{x}:",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": false
+      },
+      "specSection": "6",
+      "minSpecVersion": "4.4"
+    },
+    {
+      "name": "throws on inline content after tabular header",
+      "input": "items[2]{a,b}: 1,2",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "6",
+      "note": "A fields-bearing header carries no inline content; decoding the values as an inline array would silently drop the field list"
+    },
+    {
+      "name": "throws on a fields-bearing header with inline content in non-strict mode",
+      "input": "b[1]{c}: x",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": false
+      },
+      "specSection": "6",
+      "minSpecVersion": "4.4"
+    },
+    {
+      "name": "throws on a fields-bearing header with inline content after a list-item hyphen in non-strict mode",
+      "input": "items[1]:\n  - k[1]{a}: 1",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": false
+      },
+      "specSection": "6",
+      "minSpecVersion": "4.4"
+    },
+    {
+      "name": "throws on inline content after root tabular header",
+      "input": "[2]{a,b}: 1,2",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "6"
+    },
+    {
+      "name": "throws on a tab after a fields-bearing header's colon",
+      "input": "a[1:]{x}:\t\n  k: 1",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "6",
+      "minSpecVersion": "4.4"
+    },
+    {
+      "name": "throws on whitespace between a key and its bracket segment",
+      "input": "foo [2]: bar,baz",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "6",
+      "minSpecVersion": "4.1"
+    },
+    {
+      "name": "throws on a space before the bracket segment in non-strict mode",
+      "input": "foo [2]: bar,baz",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": false
+      },
+      "specSection": "6",
+      "minSpecVersion": "4.4"
+    },
+    {
+      "name": "throws on a tab between a key and its bracket segment",
+      "input": "t\t[1]: x",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "6",
+      "minSpecVersion": "4.1"
+    },
+    {
+      "name": "throws on duplicate field names inside a nested field group",
+      "input": "items[0]{n{x,x}}:",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "9.3",
+      "minSpecVersion": "4.1"
+    },
+    {
+      "name": "throws on characters after a closing quote in non-strict mode",
+      "input": "k: \"abc\" def",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": false
+      },
+      "specSection": "7.4",
+      "note": "The quoted-token boundary rule applies in strict and non-strict mode alike",
+      "minSpecVersion": "4.1"
+    },
+    {
+      "name": "throws on a bare token line inside an array scope in non-strict mode",
+      "input": "k[1]:\n  - x: 1\n  bare",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": false
+      },
+      "specSection": "5.2",
+      "note": "A scalar line outside root primitive position is an error in strict and non-strict mode alike",
+      "minSpecVersion": "4.1"
+    },
+    {
+      "name": "throws on a bare token line among list-item fields in non-strict mode",
+      "input": "items[1]:\n  - a: 1\n    b",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": false
+      },
+      "specSection": "5.2",
+      "minSpecVersion": "4.1"
+    },
+    {
+      "name": "throws on the removed [#N] length marker in a root header",
+      "input": "[#2]: a,b",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "6"
+    },
+    {
+      "name": "throws on the removed [#N] length marker in a field header",
+      "input": "xs[#2]: a,b",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "6"
+    },
+    {
+      "name": "throws on the removed [#N] length marker in a keyless list-item header",
+      "input": "items[1]:\n  - [#2]: a,b",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "6"
+    },
+    {
+      "name": "throws on the removed [#N] length marker in a list-item first-field header",
+      "input": "items[1]:\n  - xs[#2]: a,b",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "6"
+    },
+    {
+      "name": "throws on tabular row count mismatch in a later field of a list-item object",
+      "input": "items[1]:\n  - id: 1\n    users[2]{id,name}:\n      1,Ada",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.1"
+    },
+    {
+      "name": "throws on a tab after a quoted value's closing quote",
+      "input": "k: \"a\"\t",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "7.4",
+      "minSpecVersion": "4.1"
+    },
+    {
+      "name": "throws on a tab after a quoted key's closing quote",
+      "input": "\"a\"\t: 1",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "7.4",
+      "minSpecVersion": "4.1"
+    },
+    {
+      "name": "throws on two primitives at root depth in non-strict mode",
+      "input": "hello\nworld",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": false
+      },
+      "specSection": "5",
+      "minSpecVersion": "4.1"
+    },
+    {
+      "name": "throws on a surrogate pair escape",
+      "input": "val: \"\\ud83d\\ude00\"",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "7.1"
+    },
+    {
+      "name": "throws on a key-value line at row depth inside a tabular array",
+      "input": "items[2]{a,b}:\n  1,2\n  c: 3,4",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "9.3",
+      "note": "The colon precedes the delimiter, so the line ends the rows instead of becoming a second row"
+    },
+    {
+      "name": "throws on a header delimiter mismatch inside a nested field group that row widths do not expose",
+      "input": "items[1|]{a|n{x,y}}:\n  1|2",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": true
+      },
+      "specSection": "6"
+    },
+    {
+      "name": "throws on a tab field list after a pipe delimiter symbol in non-strict mode",
+      "input": "a[0|]{x\ty}:",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": false
+      },
+      "specSection": "6",
+      "minSpecVersion": "4.4"
+    },
+    {
+      "name": "throws on a pipe field list after a bracket segment without a delimiter symbol in non-strict mode",
+      "input": "a[0]{x|y}:",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": false
+      },
+      "specSection": "6",
+      "minSpecVersion": "4.4"
+    },
+    {
+      "name": "throws on a hyphen without a following space at item depth",
+      "input": "items[2]:\n  - a\n  -b",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "5.2"
+    },
+    {
+      "name": "throws on tabular rows at depth +1 under a list-item first-field header",
+      "input": "x[1]:\n  - a[1]{p}:\n    1",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "10"
+    },
+    {
+      "name": "throws on invalid escape sequence in a quoted key",
+      "input": "\"a\\x\": 1",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "7.4"
+    },
+    {
+      "name": "throws on a [1] header with nothing after the colon",
+      "input": "a[1]:",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "9.1",
+      "note": "Nothing after the colon is list form with zero items, not one empty inline value"
+    },
+    {
+      "name": "throws on a length beyond the integer range that wraps to the value count",
+      "input": "a[18446744073709551617]: 1",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "6",
+      "note": "2^64 + 1 wraps to 1 in 64-bit integers; an unrepresentable length is unmet (§14.1)",
+      "minSpecVersion": "4.2"
+    },
+    {
+      "name": "throws on an empty field entry",
+      "input": "a[0]{x,}:",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "6",
+      "minSpecVersion": "4.2"
+    },
+    {
+      "name": "throws on a space between a field name and its nested field group",
+      "input": "a[0]{b {c}}:",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "6",
+      "minSpecVersion": "4.2"
+    },
+    {
+      "name": "throws on a nested field group without a name",
+      "input": "a[0]{x,{y}}:",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "6",
+      "minSpecVersion": "4.2"
+    },
+    {
+      "name": "throws on content after a nested field group in non-strict mode",
+      "input": "a[0]{b{c}d}:",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": false
+      },
+      "specSection": "6",
+      "minSpecVersion": "4.4"
+    },
+    {
+      "name": "throws on a \\u escape with a sign before its hex digits",
+      "input": "val: \"\\u+0ab\"",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "7.1"
+    },
+    {
+      "name": "throws on a \\u escape with non-ASCII digits",
+      "input": "val: \"\\u\u0660\u0660\u0664\u0661\"",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "7.1"
+    },
+    {
+      "name": "throws on an escaped lone low surrogate",
+      "input": "val: \"\\udc00\"",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "7.1"
+    },
+    {
+      "name": "throws on characters after a closing quote in an inline array cell",
+      "input": "k[2]: \"a\"x,b",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "7.4",
+      "minSpecVersion": "4.1"
+    },
+    {
+      "name": "throws on a key-value line among tabular rows that breaks the declared count",
+      "input": "t[2]{a}:\n  1\n  x: 2",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "9.3"
+    },
+    {
+      "name": "throws on a tabular row with more cells than fields",
+      "input": "items[1]{a}:\n  1,2",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.1"
+    },
+    {
+      "name": "throws on more keyed entry rows than declared",
+      "input": "m[1:]{v}:\n  a: 1\n  b: 2",
+      "expected": null,
+      "shouldError": true,
+      "specSection": "14.1"
+    },
+    {
+      "name": "throws on an invalid escape in non-strict mode",
+      "input": "k: \"a\\x\"",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": false
+      },
+      "specSection": "7.1",
+      "minSpecVersion": "4.1"
+    },
+    {
+      "name": "throws on an unterminated string in non-strict mode",
+      "input": "k: \"abc",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": false
+      },
+      "specSection": "7.1",
+      "minSpecVersion": "4.1"
     }
   ]
 }

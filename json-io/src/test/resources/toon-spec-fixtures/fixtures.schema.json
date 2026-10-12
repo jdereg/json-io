@@ -10,7 +10,7 @@
       "type": "string",
       "description": "Baseline TOON spec version for this file. Per-test `minSpecVersion` overrides this for individual tests that exercise newer behavior. Fixtures remain valid for all later versions.",
       "pattern": "^\\d+\\.\\d+$",
-      "examples": ["1.4", "1.5", "3.1"]
+      "examples": ["4.0"]
     },
     "category": {
       "type": "string",
@@ -61,9 +61,9 @@
                 "description": "Array delimiter (encode only)",
                 "default": ","
               },
-              "indent": {
+              "indentSize": {
                 "type": "integer",
-                "description": "Number of spaces per indentation level",
+                "description": "Number of spaces per indentation level (matches the indentSize option in §13)",
                 "minimum": 1,
                 "default": 2
               },
@@ -71,23 +71,6 @@
                 "type": "boolean",
                 "description": "Enable strict validation (decode only)",
                 "default": true
-              },
-              "keyFolding": {
-                "type": "string",
-                "enum": ["off", "safe"],
-                "description": "Key folding mode for encoders: 'off' (default) or 'safe' (encode only)",
-                "default": "off"
-              },
-              "flattenDepth": {
-                "type": "integer",
-                "description": "Maximum depth to fold key chains when keyFolding is 'safe'. Values less than 2 have no practical folding effect (encode only)",
-                "minimum": 0
-              },
-              "expandPaths": {
-                "type": "string",
-                "enum": ["off", "safe"],
-                "description": "Path expansion mode for decoders: 'off' (default) or 'safe' (decode only)",
-                "default": "off"
               }
             },
             "additionalProperties": false
@@ -106,7 +89,7 @@
             "type": "string",
             "description": "Minimum specification version required for this test",
             "pattern": "^\\d+\\.\\d+$",
-            "examples": ["1.0", "1.4"]
+            "examples": ["4.1"]
           }
         },
         "additionalProperties": false

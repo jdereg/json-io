@@ -1,6 +1,7 @@
 ### Revision History
 
 #### 4.114.0 - (unreleased)
+* **TESTING**: **The official TOON spec fixtures move from v3.3 to v4.4.** `toon-spec-fixtures/fixtures` now holds the spec's 564 cases at `toon-format/spec@d09c3d33` (v4.4.0, 2026-10-08), run by `ToonSpecFixtureTest`. json-io does not pass all of them yet: `toon-spec-fixtures/known-gaps.txt` lists the 148 that fail, grouped by spec feature (comment lines, nested field groups, the keyed tabular form, the number grammar, strict and non-strict mode, quoting). A listed case is reported as skipped while it fails and **fails the build once it passes**, so each fix removes its lines; a case that is not listed must pass. A case is identified by its file and position (`decode/comments.json#3`), because the spec rewrites case names. Spec v4.0 removed key folding and path expansion; json-io keeps both as opt-in options (`toonKeyFolding`, `toonExpandPaths`), so v3.3's 24 cases for them stay, under `toon-spec-fixtures/v3-options`.
 * **BUILD**: `java-util` 4.113.0 → **4.114.0**, its next development version: json-io depends on the java-util of its own version number. Until java-util 4.114.0 is released, build it locally first (`mvn install -DskipTests` in java-util).
 
 #### 4.113.0 - 2026-10-10

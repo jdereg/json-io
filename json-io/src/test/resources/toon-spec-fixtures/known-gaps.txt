@@ -1,0 +1,178 @@
+# Cases of the official TOON spec fixtures that json-io does not pass yet.
+#
+# One case per line: <file>#<0-based position in that file>, then its name for the reader.
+# ToonSpecFixtureTest reports a listed case as skipped while it fails, and FAILS the build
+# when a listed case passes, so a fix removes its lines here in the same commit.
+# A case that is not listed must pass. The groups are for the reader; the test ignores them.
+
+# Reading: comment lines (spec 5.1) -- 13
+decode/comments.json#0     strips comment lines after the header and between tabular rows
+decode/comments.json#1     strips comment line whose indentation is not a multiple of indentSize
+decode/comments.json#2     strips outdented comment inside nested object scope without closing it
+decode/comments.json#3     strips comment inside list array without counting as item
+decode/comments.json#4     strips comment before root array header
+decode/comments.json#5     strips comment containing an unterminated quote without unescaping
+decode/comments.json#6     decodes comments and blank lines only to empty object
+decode/comments.json#7     decodes a hash-leading root line as a comment, yielding an empty object
+decode/comments.json#8     throws when a stripped hash-leading row breaks the declared count
+decode/comments.json#9     strips a hash-leading row as a comment in non-strict mode
+decode/comments.json#11    decodes tab-indented hash row as data in non-strict mode
+decode/delimiters.json#24  matches a delimiter, colon, space, or comment marker followed by a combining mark as syntax
+decode/whitespace.json#17  removes a byte-order mark before a comment line
+
+# Reading: nested field groups in a tabular header (spec 9.3) -- 11
+decode/arrays-tabular.json#7      parses nested field groups into nested objects
+decode/arrays-tabular.json#8      parses sibling nested field groups by depth-first cell assignment, with a name repeated across levels
+decode/arrays-tabular.json#9      parses nested field groups recursively without a depth cap
+decode/arrays-tabular.json#10     parses nested field groups with the pipe delimiter
+decode/arrays-tabular.json#11     matches braces outside quoted names only when parsing field entries
+decode/arrays-tabular.json#12     parses quoted subfield names inside nested field groups
+decode/arrays-tabular.json#13     applies last-write-wins for duplicate field names, bare or grouped, in non-strict mode
+decode/arrays-tabular.json#17     trims spaces around field names
+decode/arrays-tabular.json#18     throws on a row missing a nested field group's cells in non-strict mode
+decode/objects.json#37            reads an NBSP before a quote, bracket segment, or nested field group as part of the name
+decode/validation-errors.json#93  throws on content after a nested field group in non-strict mode
+
+# Reading: keyed tabular form for an object of uniform objects (spec 9.5) -- 27
+decode/blank-lines.json#9          accepts blank lines after list, tabular, and keyed scopes end, at root and in a nested object
+decode/blank-lines.json#13         ignores blank lines between tabular rows and entry rows in non-strict mode
+decode/blank-lines.json#18         accepts blank line between header and first entry row
+decode/indentation-errors.json#22  throws on an over-indented line after keyed entry rows in non-strict mode
+decode/indentation-errors.json#24  adopts the depth of a jumped first line in non-strict mode
+decode/indentation-errors.json#26  throws on a line above the adopted entry depth in non-strict mode
+decode/objects-keyed.json#0        parses keyed tabular objects
+decode/objects-keyed.json#1        parses a keyless keyed header as a root object
+decode/objects-keyed.json#2        parses nested field groups in keyed headers
+decode/objects-keyed.json#3        parses keyed headers with the pipe and tab delimiters
+decode/objects-keyed.json#4        parses quoted entry keys
+decode/objects-keyed.json#5        parses a quoted entry key containing a colon
+decode/objects-keyed.json#6        treats a key-value line at the header's depth as a sibling after entries end
+decode/objects-keyed.json#7        splits an entry row at its first unquoted colon before delimiter or header parsing
+decode/objects-keyed.json#8        decodes the cell token [] as a string, not an empty array
+decode/objects-keyed.json#9        accepts a declared entry count of zero
+decode/objects-keyed.json#10       parses quoted cells containing the active delimiter
+decode/objects-keyed.json#11       parses a keyed header on a hyphen line
+decode/objects-keyed.json#12       ignores comment lines between entry rows
+decode/objects-keyed.json#13       applies last-write-wins for duplicate entry keys in non-strict mode
+decode/objects-keyed.json#14       accepts entry keys outside the encoder unquoted-key pattern
+decode/objects-keyed.json#15       throws on an entry-depth line without a colon in non-strict mode
+decode/objects-keyed.json#16       throws on an entry row with fewer cells than fields in non-strict mode
+decode/objects-keyed.json#17       decodes every entry row whatever the declared count in non-strict mode
+decode/objects.json#42             materializes __proto__ entry key as an ordinary own key
+decode/objects.json#47             parses an empty unquoted key as the empty key
+decode/validation-errors.json#18   throws on a keyed header line without its colon in non-strict mode
+
+# Reading: +1, .5 and 1. are strings, not numbers (spec 4) -- 2
+decode/numbers.json#10  treats bare-fraction, trailing-dot, and leading-plus tokens as strings
+decode/numbers.json#11  treats leading-plus tokens in array as strings
+
+# Reading: blank lines are allowed outside a header span (spec 12) -- 3
+decode/blank-lines.json#10  accepts blank lines before and between nested object fields
+decode/blank-lines.json#16  accepts blank line between header and first list item
+decode/blank-lines.json#17  accepts blank line between header and first tabular row
+
+# Reading, non-strict mode: only the five recoveries of spec 14.4; everything else errors -- 33
+decode/arrays-nested.json#18       keeps every list item when the count mismatches in non-strict mode
+decode/arrays-nested.json#24       keeps list items under a legacy [0] header in non-strict mode
+decode/arrays-primitive.json#13    keeps inline values under a legacy [0] header in non-strict mode
+decode/arrays-primitive.json#16    keeps a header whose length exceeds integer range in non-strict mode
+decode/arrays-tabular.json#15      keeps every row when the count mismatches in non-strict mode
+decode/arrays-tabular.json#19      throws on a row with more cells than fields in non-strict mode
+decode/blank-lines.json#11         accepts blank lines before and between nested object fields in non-strict mode
+decode/blank-lines.json#12         ignores blank lines inside list array in non-strict mode
+decode/indentation-errors.json#11  counts every tab and space of mixed indentation in non-strict mode
+decode/indentation-errors.json#20  throws on an over-indented line under a primitive field in non-strict mode
+decode/indentation-errors.json#21  throws on an over-indented line after tabular rows in non-strict mode
+decode/indentation-errors.json#25  throws on a line above the adopted depth in non-strict mode
+decode/indentation-errors.json#27  throws on a line above the adopted row depth in non-strict mode
+decode/indentation-errors.json#28  throws on an over-indented line under a primitive list item in non-strict mode
+decode/indentation-errors.json#29  throws on a non-list-item line at item depth in non-strict mode
+decode/indentation-errors.json#30  throws on an over-indented line under a list-item field in non-strict mode
+decode/indentation-errors.json#31  throws on an over-indented line under a list-item inline array in non-strict mode
+decode/root-form.json#6            throws on trailing content after a root array in non-strict mode
+decode/root-form.json#7            throws on trailing content after a root empty array in non-strict mode
+decode/root-form.json#9            throws on an indented root primitive in non-strict mode
+decode/root-form.json#12           throws on a whole document indented by one level in non-strict mode
+decode/validation-errors.json#55   throws on keyless array header in object field position in non-strict mode
+decode/validation-errors.json#59   throws on keyless fields-bearing header as list item in non-strict mode
+decode/validation-errors.json#61   throws on a fields-bearing header with inline content in non-strict mode
+decode/validation-errors.json#62   throws on a fields-bearing header with inline content after a list-item hyphen in non-strict mode
+decode/validation-errors.json#66   throws on a space before the bracket segment in non-strict mode
+decode/validation-errors.json#69   throws on characters after a closing quote in non-strict mode
+decode/validation-errors.json#70   throws on a bare token line inside an array scope in non-strict mode
+decode/validation-errors.json#71   throws on a bare token line among list-item fields in non-strict mode
+decode/validation-errors.json#79   throws on two primitives at root depth in non-strict mode
+decode/validation-errors.json#83   throws on a tab field list after a pipe delimiter symbol in non-strict mode
+decode/validation-errors.json#84   throws on a pipe field list after a bracket segment without a delimiter symbol in non-strict mode
+decode/validation-errors.json#102  throws on an unterminated string in non-strict mode
+
+# Reading, strict mode: input that must be rejected (header grammar, depth jumps, stray whitespace) -- 23
+decode/blank-lines.json#20         throws on blank line between list items after a nested object
+decode/indentation-errors.json#12  throws on depth jump of more than one level
+decode/indentation-errors.json#13  throws on depth jump inside a nested object
+decode/indentation-errors.json#15  throws on a field line indented under a bare hyphen
+decode/indentation-errors.json#32  throws on a depth jump to the first tabular row
+decode/indentation-errors.json#33  throws on a depth jump to the first list item
+decode/root-form.json#10           throws on an indented root array header
+decode/validation-errors.json#25   throws on bracket length with plus sign
+decode/validation-errors.json#27   throws on a bracket length with a non-ASCII digit
+decode/validation-errors.json#28   throws on whitespace between bracket segment and colon
+decode/validation-errors.json#30   throws on whitespace between a field list and the header colon
+decode/validation-errors.json#35   throws on empty field list
+decode/validation-errors.json#54   throws on keyless array header in object field position
+decode/validation-errors.json#58   throws on keyless fields-bearing header as list item
+decode/validation-errors.json#65   throws on whitespace between a key and its bracket segment
+decode/validation-errors.json#67   throws on a tab between a key and its bracket segment
+decode/validation-errors.json#77   throws on a tab after a quoted value's closing quote
+decode/validation-errors.json#78   throws on a tab after a quoted key's closing quote
+decode/validation-errors.json#81   throws on a key-value line at row depth inside a tabular array
+decode/validation-errors.json#85   throws on a hyphen without a following space at item depth
+decode/validation-errors.json#86   throws on tabular rows at depth +1 under a list-item first-field header
+decode/validation-errors.json#90   throws on an empty field entry
+decode/whitespace.json#14          throws on a tab after a list-item hyphen
+
+# Reading: other (byte-order mark, NBSP, carriage return, quotes mid-token, any text as a key) -- 12
+decode/arrays-nested.json#21   parses an empty object as the first field of a list-item object
+decode/arrays-tabular.json#14  accepts field names outside the encoder unquoted-key pattern
+decode/arrays-tabular.json#21  ignores a brace inside a mid-name quote span in a field list
+decode/delimiters.json#22      treats a delimiter inside a closed or unclosed mid-token quote span as quoted
+decode/objects.json#10         parses an unquoted field value starting with a bracket segment as a string
+decode/objects.json#32         accepts unquoted values and keys an encoder would quote in strict mode
+decode/whitespace.json#4       keeps a leading NBSP and a trailing tab in unquoted values
+decode/whitespace.json#5       preserves NBSP and tab around inline array tokens
+decode/whitespace.json#6       keeps an NBSP or a tab around a key or field name
+decode/whitespace.json#11      strips a leading byte-order mark
+decode/whitespace.json#15      keeps a second carriage return before CRLF as content
+decode/whitespace.json#16      keeps a byte-order mark after the document start as content
+
+# Writing: quote a string that starts with # (spec 7.2) -- 6
+encode/arrays-nested.json#10     quotes hash-leading string as list item
+encode/arrays-primitive.json#10  quotes hash-leading string in inline array
+encode/arrays-tabular.json#6     quotes hash-leading string in tabular cell
+encode/objects.json#28           quotes hash-leading string in object field value
+encode/primitives.json#36        quotes string starting with hash
+encode/primitives.json#39        quotes a delimiter, colon, hyphen, or number sign that a combining mark follows
+
+# Writing: nested field groups (spec 9.3) -- 6
+encode/arrays-objects.json#9   encodes a keyed-eligible object in a tabular column as a nested field group
+encode/arrays-tabular.json#7   collapses a uniform nested object column into a nested field group
+encode/arrays-tabular.json#8   collapses sibling nested field groups with depth-first row layout
+encode/arrays-tabular.json#9   collapses nested field groups recursively without a depth cap
+encode/arrays-tabular.json#10  uses the active delimiter inside nested field groups
+encode/arrays-tabular.json#11  quotes subfield names inside nested field groups per key encoding
+
+# Writing: keyed tabular form (spec 9.5) -- 8
+encode/objects-keyed.json#0   encodes objects of uniform objects in keyed tabular form
+encode/objects-keyed.json#1   encodes an eligible root object with a keyless keyed header
+encode/objects-keyed.json#2   collapses uniform nested object columns inside keyed headers
+encode/objects-keyed.json#3   orders fields by the first entry value's encounter order
+encode/objects-keyed.json#4   uses the active delimiter in keyed headers and entry-row cells
+encode/objects-keyed.json#5   quotes entry keys per key encoding
+encode/objects-keyed.json#6   quotes entry-row cells containing the active delimiter
+encode/objects-keyed.json#11  emits a keyed header on the hyphen line when it is the first field of a list item
+
+# Writing: other (dotted keys and .5 unquoted, U+FEFF root string, list form in list-item position) -- 4
+encode/arrays-nested.json#11  uses list form for a tabular-eligible array in list-item position
+encode/objects.json#19        keeps dotted and literal-named keys unquoted
+encode/objects.json#30        keeps strings that only resemble numbers or literals, a leading byte-order mark, or DEL unquoted
+encode/primitives.json#37     quotes a root string starting with U+FEFF

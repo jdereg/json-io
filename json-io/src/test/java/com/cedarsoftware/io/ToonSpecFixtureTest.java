@@ -1,7 +1,9 @@
 package com.cedarsoftware.io;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -11,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -19,6 +22,7 @@ import java.util.stream.Stream;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.DynamicTest;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.function.Executable;
 import org.opentest4j.TestAbortedException;
@@ -35,18 +39,33 @@ import static org.junit.jupiter.api.Assertions.fail;
  *
  * <p>Each test case in each fixture file is materialized as a JUnit 5
  * {@link DynamicTest} so individual cases show up as separate rows in the IDE
- * / CI test report. Fixtures whose {@code options} block references features
- * json-io does not implement (e.g. {@code flattenDepth}, {@code expandPaths:
- * "safe"}) are skipped via {@link Assumptions}, leaving the gap visible in the
- * skipped-tests count without failing the build.
+ * / CI test report. A case is identified by its file and its 0-based position in
+ * that file ({@code decode/comments.json#3}), never by its name: the spec rewrites
+ * the names whenever its terminology changes.
  *
- * <p>The suite is offline — fixtures are loaded from the classpath, never
+ * <p>Two sets of fixtures run:
+ * <ul>
+ *   <li>{@code fixtures/} - the official set, unchanged.</li>
+ *   <li>{@code v3-options/} - spec v3.3's fixtures for key folding and path expansion.
+ *       Spec v4.0 removed both options; json-io keeps them as opt-in extensions
+ *       ({@code toonKeyFolding}, {@code toonExpandPaths}), so their fixtures stay.</li>
+ * </ul>
+ *
+ * <p>The suite is offline - fixtures are loaded from the classpath, never
  * fetched at test time. Refresh the snapshot with
  * {@code scripts/refresh-toon-fixtures.sh <commit-sha>}.
  */
 class ToonSpecFixtureTest {
 
-    private static final String RESOURCE_ROOT = "toon-spec-fixtures/fixtures";
+    private static final String RESOURCE_BASE = "toon-spec-fixtures";
+
+    /** The official fixtures, vendored unchanged. A case id under this root has no prefix. */
+    private static final String OFFICIAL = "fixtures";
+
+    /** json-io's opt-in key folding and path expansion, from spec v3.3. */
+    private static final String V3_OPTIONS = "v3-options";
+
+    private static final String KNOWN_GAPS_RESOURCE = RESOURCE_BASE + "/known-gaps.txt";
 
     /** Encoder options json-io does not implement; tests using these are skipped. */
     private static final Set<String> UNSUPPORTED_ENCODE_OPTIONS = new HashSet<>(Arrays.asList(
@@ -57,29 +76,51 @@ class ToonSpecFixtureTest {
     private static final Set<String> UNSUPPORTED_DECODE_OPTIONS = new HashSet<>();
 
     /**
-     * Cases that currently fail json-io's TOON v3.3 conformance and are tracked as known
-     * gaps on this branch ({@code toon-spec-v3.3-conformance}). Listed cases are converted
-     * from a failed assertion into a JUnit "aborted" (skipped) status so the build stays
-     * green while the encoder/decoder work proceeds.
-     *
-     * <p><b>This is a temporary, branch-scoped mechanism.</b> As each gap is fixed, drop
-     * the corresponding entry from this set in the same commit. If a listed case starts
-     * passing without being removed from the set, the test will fail loudly to force the
-     * retirement.
-     *
-     * <p>When this set is empty, the workaround can be deleted entirely and the branch
-     * is ready to merge back into {@code master}.
+     * The cases json-io does not pass yet, read from {@code toon-spec-fixtures/known-gaps.txt}.
+     * A listed case that fails is reported as skipped, so the build stays green while the
+     * gap is visible in the skipped count. A listed case that <b>passes</b> fails the build:
+     * the fix that made it pass must remove it from the file in the same commit. A case that
+     * is not listed must pass.
      */
-    private static final Set<String> EXPECTED_FAILURES = Collections.emptySet();
+    private static final Set<String> KNOWN_GAPS = loadKnownGaps();
 
     @TestFactory
     Stream<DynamicTest> encodeFixtures() throws Exception {
-        return fixturesFor("encode").stream().flatMap(this::generateEncodeCases);
+        return fixturesFor(OFFICIAL, "encode").stream().flatMap(this::generateEncodeCases);
     }
 
     @TestFactory
     Stream<DynamicTest> decodeFixtures() throws Exception {
-        return fixturesFor("decode").stream().flatMap(this::generateDecodeCases);
+        return fixturesFor(OFFICIAL, "decode").stream().flatMap(this::generateDecodeCases);
+    }
+
+    @TestFactory
+    Stream<DynamicTest> v3OptionEncodeFixtures() throws Exception {
+        return fixturesFor(V3_OPTIONS, "encode").stream().flatMap(this::generateEncodeCases);
+    }
+
+    @TestFactory
+    Stream<DynamicTest> v3OptionDecodeFixtures() throws Exception {
+        return fixturesFor(V3_OPTIONS, "decode").stream().flatMap(this::generateDecodeCases);
+    }
+
+    /** A gap that names no case is stale: a fixture refresh moved or removed the case it meant. */
+    @Test
+    void everyKnownGapNamesACase() throws Exception {
+        Set<String> ids = new HashSet<>();
+        for (String root : new String[]{OFFICIAL, V3_OPTIONS}) {
+            for (String category : new String[]{"encode", "decode"}) {
+                for (FixtureFile f : fixturesFor(root, category)) {
+                    int count = asMapList(f.contents.get("tests")).size();
+                    for (int i = 0; i < count; i++) {
+                        ids.add(f.name + "#" + i);
+                    }
+                }
+            }
+        }
+        Set<String> stale = new LinkedHashSet<>(KNOWN_GAPS);
+        stale.removeAll(ids);
+        assertTrue(stale.isEmpty(), "known-gaps.txt names cases that do not exist: " + stale);
     }
 
     // ------------------------------------------------------------------
@@ -88,12 +129,15 @@ class ToonSpecFixtureTest {
 
     private Stream<DynamicTest> generateEncodeCases(FixtureFile f) {
         List<Map<String, Object>> tests = asMapList(f.contents.get("tests"));
-        return tests.stream().map(tc -> {
-            String name = String.valueOf(tc.get("name"));
-            String fullName = f.name + " :: " + name;
-            return DynamicTest.dynamicTest(fullName,
-                    () -> runWithKnownGapTolerance(fullName, () -> runEncodeCase(f.name, tc)));
-        });
+        List<DynamicTest> cases = new ArrayList<>(tests.size());
+        for (int i = 0; i < tests.size(); i++) {
+            Map<String, Object> tc = tests.get(i);
+            String id = f.name + "#" + i;
+            String fullName = id + " :: " + tc.get("name");
+            cases.add(DynamicTest.dynamicTest(fullName,
+                    () -> runWithKnownGapTolerance(id, fullName, () -> runEncodeCase(f.name, tc))));
+        }
+        return cases.stream();
     }
 
     @SuppressWarnings("unchecked")
@@ -128,7 +172,7 @@ class ToonSpecFixtureTest {
         if (delimiter instanceof String && !((String) delimiter).isEmpty()) {
             b.toonDelimiter(((String) delimiter).charAt(0));
         }
-        Object indent = options.get("indent");
+        Object indent = indentOption(options);
         if (indent instanceof Number) {
             int n = ((Number) indent).intValue();
             if (n >= 1) {
@@ -148,12 +192,15 @@ class ToonSpecFixtureTest {
 
     private Stream<DynamicTest> generateDecodeCases(FixtureFile f) {
         List<Map<String, Object>> tests = asMapList(f.contents.get("tests"));
-        return tests.stream().map(tc -> {
-            String name = String.valueOf(tc.get("name"));
-            String fullName = f.name + " :: " + name;
-            return DynamicTest.dynamicTest(fullName,
-                    () -> runWithKnownGapTolerance(fullName, () -> runDecodeCase(f.name, tc)));
-        });
+        List<DynamicTest> cases = new ArrayList<>(tests.size());
+        for (int i = 0; i < tests.size(); i++) {
+            Map<String, Object> tc = tests.get(i);
+            String id = f.name + "#" + i;
+            String fullName = id + " :: " + tc.get("name");
+            cases.add(DynamicTest.dynamicTest(fullName,
+                    () -> runWithKnownGapTolerance(id, fullName, () -> runDecodeCase(f.name, tc))));
+        }
+        return cases.stream();
     }
 
     @SuppressWarnings("unchecked")
@@ -242,7 +289,7 @@ class ToonSpecFixtureTest {
             // path catch them once any fixture starts using them.
             Assumptions.abort("expandPaths='" + expandPaths + "' is not implemented in json-io");
         }
-        Object indent = options.get("indent");
+        Object indent = indentOption(options);
         if (indent instanceof Number) {
             int n = ((Number) indent).intValue();
             if (n >= 1) {
@@ -256,14 +303,19 @@ class ToonSpecFixtureTest {
     // Shared helpers
     // ------------------------------------------------------------------
 
+    /** Spec v4.0 renamed the fixture option {@code indent} to {@code indentSize}; the v3.3 files keep the old name. */
+    private static Object indentOption(Map<String, Object> options) {
+        Object indentSize = options.get("indentSize");
+        return indentSize != null ? indentSize : options.get("indent");
+    }
+
     /**
-     * Wraps a fixture case execution with the {@link #EXPECTED_FAILURES} mechanism.
-     * Listed cases that fail convert into a JUnit "aborted" status (skip). Listed cases
-     * that pass throw a loud failure so the entry can be retired from the list. Unrelated
-     * skips (via {@link #skipIfUnsupported}) pass through untouched.
+     * Runs one case under the {@link #KNOWN_GAPS} rule: a listed case that fails is skipped,
+     * a listed case that passes fails the build, and an unlisted case must pass. Cases skipped
+     * for an unsupported option (via {@link #skipIfUnsupported}) pass through untouched.
      */
-    private static void runWithKnownGapTolerance(String fullName, Executable action) throws Throwable {
-        boolean expectFail = EXPECTED_FAILURES.contains(fullName);
+    private static void runWithKnownGapTolerance(String id, String fullName, Executable action) throws Throwable {
+        boolean knownGap = KNOWN_GAPS.contains(id);
         Throwable thrown = null;
         try {
             action.execute();
@@ -273,21 +325,50 @@ class ToonSpecFixtureTest {
         } catch (Throwable t) {
             thrown = t;
         }
-        if (expectFail) {
+        if (knownGap) {
             if (thrown == null) {
-                fail("EXPECTED_FAILURES contains '" + fullName
-                        + "' but the case now passes. Remove it from EXPECTED_FAILURES in the same commit as the fix.");
+                fail("known-gaps.txt lists '" + id + "' but the case now passes."
+                        + " Remove it from known-gaps.txt in the same commit as the fix.");
             }
-            Assumptions.abort("known-gap (TOON v3.3 conformance): " + fullName);
+            Assumptions.abort("known gap: " + fullName);
         }
         if (thrown != null) {
             // Re-wrap so the JUnit failure message always carries the fixture-case name,
             // not just the raw json-io exception text. Without this, decoder errors
             // (e.g. "Invalid escape sequence: \\u at line 1") strip the fixture context
-            // and become hard to diagnose / hard to add to EXPECTED_FAILURES.
-            AssertionError wrapped = new AssertionError(fullName + " ==> " + thrown.getMessage(), thrown);
-            throw wrapped;
+            // and become hard to diagnose.
+            throw new AssertionError(fullName + " ==> " + thrown.getMessage(), thrown);
         }
+    }
+
+    /**
+     * Reads {@code known-gaps.txt}: one case id per line ({@code decode/comments.json#3}),
+     * optionally followed by spaces and a description. Blank lines and lines starting
+     * with {@code #} are ignored.
+     */
+    private static Set<String> loadKnownGaps() {
+        Set<String> gaps = new LinkedHashSet<>();
+        InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream(KNOWN_GAPS_RESOURCE);
+        if (in == null) {
+            throw new IllegalStateException("Missing " + KNOWN_GAPS_RESOURCE + " on the classpath");
+        }
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String trimmed = line.trim();
+                if (trimmed.isEmpty() || trimmed.charAt(0) == '#') {
+                    continue;
+                }
+                int space = trimmed.indexOf(' ');
+                String id = space < 0 ? trimmed : trimmed.substring(0, space);
+                if (!gaps.add(id)) {
+                    throw new IllegalStateException(KNOWN_GAPS_RESOURCE + " lists " + id + " twice");
+                }
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot read " + KNOWN_GAPS_RESOURCE, e);
+        }
+        return Collections.unmodifiableSet(gaps);
     }
 
     private static void skipIfUnsupported(Map<String, Object> options,
@@ -314,11 +395,14 @@ class ToonSpecFixtureTest {
     }
 
     @SuppressWarnings("unchecked")
-    private static List<FixtureFile> fixturesFor(String category) throws IOException {
-        URL root = Thread.currentThread().getContextClassLoader().getResource(RESOURCE_ROOT + "/" + category);
+    private static List<FixtureFile> fixturesFor(String fixtureRoot, String category) throws IOException {
+        String resourceDir = RESOURCE_BASE + "/" + fixtureRoot + "/" + category;
+        URL root = Thread.currentThread().getContextClassLoader().getResource(resourceDir);
         if (root == null) {
-            fail("Missing fixture directory on classpath: " + RESOURCE_ROOT + "/" + category);
+            fail("Missing fixture directory on classpath: " + resourceDir);
         }
+        // An official case is "decode/comments.json#3"; any other root shows in the id.
+        String prefix = OFFICIAL.equals(fixtureRoot) ? category : fixtureRoot + "/" + category;
         Path dir = Paths.get(root.getPath());
         if (!Files.isDirectory(dir)) {
             fail("Fixture path is not a directory: " + dir);
@@ -331,7 +415,7 @@ class ToonSpecFixtureTest {
                         try (InputStream in = Files.newInputStream(p)) {
                             String json = new String(readAll(in), StandardCharsets.UTF_8);
                             Map<String, Object> fixture = JsonIo.toMaps(json, null).asClass(Map.class);
-                            result.add(new FixtureFile(category + "/" + p.getFileName().toString(), fixture));
+                            result.add(new FixtureFile(prefix + "/" + p.getFileName().toString(), fixture));
                         } catch (IOException e) {
                             throw new RuntimeException("Failed to read fixture " + p, e);
                         }

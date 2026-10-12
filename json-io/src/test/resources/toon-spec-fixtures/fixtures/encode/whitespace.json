@@ -1,17 +1,8 @@
 {
-  "version": "1.4",
+  "version": "4.0",
   "category": "encode",
-  "description": "Whitespace and formatting invariants - no trailing spaces, no trailing newlines",
+  "description": "Whitespace and formatting invariants – no trailing spaces, no trailing newlines",
   "tests": [
-    {
-      "name": "produces no trailing newline at end of output",
-      "input": {
-        "id": 123
-      },
-      "expected": "id: 123",
-      "specSection": "12",
-      "note": "Output should not end with newline character"
-    },
     {
       "name": "maintains proper indentation for nested structures",
       "input": {
@@ -22,11 +13,10 @@
         "items": ["a", "b"]
       },
       "expected": "user:\n  id: 123\n  name: Ada\nitems[2]: a,b",
-      "specSection": "12",
-      "note": "2-space indentation, no trailing spaces on any line"
+      "specSection": "12"
     },
     {
-      "name": "respects custom indent size option",
+      "name": "respects custom indentSize option",
       "input": {
         "user": {
           "name": "Ada",
@@ -36,9 +26,29 @@
       "expected": "user:\n    name: Ada\n    role: admin",
       "specSection": "12",
       "options": {
-        "indent": 4
+        "indentSize": 4
+      }
+    },
+    {
+      "name": "leaves non-ASCII whitespace unquoted",
+      "input": {
+        "k": "\u00a0x\u00a0"
       },
-      "note": "4-space indentation for nested objects when indent option is set to 4"
+      "expected": "k: \u00a0x\u00a0",
+      "specSection": "7.2",
+      "note": "The whitespace trigger is U+0020 and U+0009 only",
+      "minSpecVersion": "4.2"
+    },
+    {
+      "name": "indents list-item sibling fields by indentSize",
+      "input": {
+        "a": [{ "b": 1, "c": 2 }, 1]
+      },
+      "expected": "a[2]:\n    - b: 1\n        c: 2\n    - 1",
+      "options": {
+        "indentSize": 4
+      },
+      "specSection": "10"
     }
   ]
 }

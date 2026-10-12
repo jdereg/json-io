@@ -1,7 +1,7 @@
 {
-  "version": "1.4",
+  "version": "4.0",
   "category": "decode",
-  "description": "Tabular array decoding - parsing arrays of uniform objects with headers",
+  "description": "Tabular array decoding – parsing arrays of uniform objects with headers",
   "tests": [
     {
       "name": "parses tabular arrays of uniform objects",
@@ -26,17 +26,6 @@
       "specSection": "9.3"
     },
     {
-      "name": "parses quoted colon in tabular row as data",
-      "input": "items[2]{id,note}:\n  1,\"a:b\"\n  2,\"c:d\"",
-      "expected": {
-        "items": [
-          { "id": 1, "note": "a:b" },
-          { "id": 2, "note": "c:d" }
-        ]
-      },
-      "specSection": "9.3"
-    },
-    {
       "name": "parses quoted header keys in tabular arrays",
       "input": "items[2]{\"order:id\",\"full name\"}:\n  1,Ada\n  2,Bob",
       "expected": {
@@ -48,7 +37,7 @@
       "specSection": "9.3"
     },
     {
-      "name": "parses quoted key with tabular array format",
+      "name": "parses quoted key with tabular array",
       "input": "\"x-items\"[2]{id,name}:\n  1,Ada\n  2,Bob",
       "expected": {
         "x-items": [
@@ -59,7 +48,7 @@
       "specSection": "9.3"
     },
     {
-      "name": "parses quoted empty string key with tabular array format",
+      "name": "parses quoted empty string key with tabular array",
       "input": "\"\"[2]{id,name}:\n  1,Ada\n  2,Bob",
       "expected": {
         "": [
@@ -70,16 +59,240 @@
       "specSection": "9.3"
     },
     {
-      "name": "treats unquoted colon as terminator for tabular rows and start of key-value pair",
-      "input": "items[2]{id,name}:\n  1,Alice\n  2,Bob\ncount: 2",
+      "name": "terminates a tabular scope at a dedented key-value line",
+      "input": "items[2]{id,name}:\n  1,Ada\n  2,Bob\ncount: 2",
       "expected": {
         "items": [
-          { "id": 1, "name": "Alice" },
+          { "id": 1, "name": "Ada" },
           { "id": 2, "name": "Bob" }
         ],
         "count": 2
       },
       "specSection": "9.3"
+    },
+    {
+      "name": "treats a key-value line at header depth whose value contains the active delimiter as end of rows, not a row",
+      "input": "t[2]{a,b}:\n  1,2\n  3,4\nx: 3,4",
+      "expected": {
+        "t": [
+          { "a": 1, "b": 2 },
+          { "a": 3, "b": 4 }
+        ],
+        "x": "3,4"
+      },
+      "specSection": "9.3",
+      "note": "The dedent to the header's depth closes the rows (§8); the line is a key-value pair, and the whole post-colon token is the value, non-numeric so a string (§11.2)"
+    },
+    {
+      "name": "parses nested field groups into nested objects",
+      "input": "orders[2]{id,customer{name,country},total}:\n  1,Ada,DK,99\n  2,Bob,UK,149",
+      "expected": {
+        "orders": [
+          { "id": 1, "customer": { "name": "Ada", "country": "DK" }, "total": 99 },
+          { "id": 2, "customer": { "name": "Bob", "country": "UK" }, "total": 149 }
+        ]
+      },
+      "specSection": "9.3"
+    },
+    {
+      "name": "parses sibling nested field groups by depth-first cell assignment, with a name repeated across levels",
+      "input": "shipments[1]{id,sender{id,city},receiver{id,city}}:\n  s1,ACME,Berlin,Globex,Oslo",
+      "expected": {
+        "shipments": [
+          { "id": "s1", "sender": { "id": "ACME", "city": "Berlin" }, "receiver": { "id": "Globex", "city": "Oslo" } }
+        ]
+      },
+      "specSection": "9.3"
+    },
+    {
+      "name": "parses nested field groups recursively without a depth cap",
+      "input": "items[2]{id,geo{point{lat,lon}}}:\n  1,1.5,2.5\n  2,3,4",
+      "expected": {
+        "items": [
+          { "id": 1, "geo": { "point": { "lat": 1.5, "lon": 2.5 } } },
+          { "id": 2, "geo": { "point": { "lat": 3, "lon": 4 } } }
+        ]
+      },
+      "specSection": "9.3"
+    },
+    {
+      "name": "parses nested field groups with the pipe delimiter",
+      "input": "orders[2|]{id|customer{name|country}|total}:\n  1|Ada|DK|99\n  2|Bob|UK|149",
+      "expected": {
+        "orders": [
+          { "id": 1, "customer": { "name": "Ada", "country": "DK" }, "total": 99 },
+          { "id": 2, "customer": { "name": "Bob", "country": "UK" }, "total": 149 }
+        ]
+      },
+      "specSection": "9.3"
+    },
+    {
+      "name": "matches braces outside quoted names only when parsing field entries",
+      "input": "items[1]{\"a{b}\",c}:\n  1,2",
+      "expected": {
+        "items": [
+          { "a{b}": 1, "c": 2 }
+        ]
+      },
+      "specSection": "6",
+      "note": "A quoted field name may contain braces; brace matching is quote-aware"
+    },
+    {
+      "name": "parses quoted subfield names inside nested field groups",
+      "input": "items[1]{id,customer{\"full name\",country}}:\n  1,Ada,UK",
+      "expected": {
+        "items": [
+          { "id": 1, "customer": { "full name": "Ada", "country": "UK" } }
+        ]
+      },
+      "specSection": "9.3"
+    },
+    {
+      "name": "applies last-write-wins for duplicate field names, bare or grouped, in non-strict mode",
+      "input": "items[1]{a,a,b,b{x}}:\n  1,2,3,4",
+      "expected": {
+        "items": [
+          { "a": 2, "b": { "x": 4 } }
+        ]
+      },
+      "options": {
+        "strict": false
+      },
+      "specSection": "14.4",
+      "note": "Duplicate field names yield duplicate sibling keys per row; non-strict resolves last-write-wins"
+    },
+    {
+      "name": "accepts field names outside the encoder unquoted-key pattern",
+      "input": "items[1]{2key,x:y}:\n  1,2",
+      "expected": {
+        "items": [
+          {
+            "2key": 1,
+            "x:y": 2
+          }
+        ]
+      },
+      "specSection": "7.4",
+      "minSpecVersion": "4.1"
+    },
+    {
+      "name": "keeps every row when the count mismatches in non-strict mode",
+      "input": "a[1]{x}:\n  1\n  2",
+      "expected": {
+        "a": [
+          {
+            "x": 1
+          },
+          {
+            "x": 2
+          }
+        ]
+      },
+      "options": {
+        "strict": false
+      },
+      "specSection": "14.4",
+      "note": "A declared [N] never truncates a scope",
+      "minSpecVersion": "4.1"
+    },
+    {
+      "name": "parses quoted leading tabular cell shaped like an inline array header",
+      "input": "rows[1]{note,id}:\n  \"[2]: x\",1",
+      "expected": {
+        "rows": [
+          {
+            "note": "[2]: x",
+            "id": 1
+          }
+        ]
+      },
+      "specSection": "9.3"
+    },
+    {
+      "name": "trims spaces around field names",
+      "input": "items[1]{ a , n{x} , b }:\n  1,2,3",
+      "expected": {
+        "items": [
+          {
+            "a": 1,
+            "n": {
+              "x": 2
+            },
+            "b": 3
+          }
+        ]
+      },
+      "specSection": "12",
+      "minSpecVersion": "4.1"
+    },
+    {
+      "name": "throws on a row missing a nested field group's cells in non-strict mode",
+      "input": "items[1]{a,n{x}}:\n  1",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": false
+      },
+      "specSection": "14.1",
+      "minSpecVersion": "4.4"
+    },
+    {
+      "name": "throws on a row with more cells than fields in non-strict mode",
+      "input": "items[1]{a}:\n  1,2",
+      "expected": null,
+      "shouldError": true,
+      "options": {
+        "strict": false
+      },
+      "specSection": "14.1",
+      "minSpecVersion": "4.4"
+    },
+    {
+      "name": "parses an unquoted colon after the active delimiter in a tabular row as data",
+      "input": "items[1|]{id|note}:\n  1|a:b",
+      "expected": {
+        "items": [
+          {
+            "id": 1,
+            "note": "a:b"
+          }
+        ]
+      },
+      "specSection": "9.3"
+    },
+    {
+      "name": "ignores a brace inside a mid-name quote span in a field list",
+      "input": "a[1]{x\"}\"y}:\n  1",
+      "expected": {
+        "a": [
+          {
+            "x\"}\"y": 1
+          }
+        ]
+      },
+      "specSection": "6",
+      "minSpecVersion": "4.2"
+    },
+    {
+      "name": "parses a quoted empty field name",
+      "input": "[2]{\"\"}:\n  1\n  2",
+      "expected": [
+        {
+          "": 1
+        },
+        {
+          "": 2
+        }
+      ],
+      "specSection": "6"
+    },
+    {
+      "name": "unescapes a quoted field name",
+      "input": "a[1]{\"x\\\"y\"}:\n  1",
+      "expected": {
+        "a": [{ "x\"y": 1 }]
+      },
+      "specSection": "6"
     }
   ]
 }

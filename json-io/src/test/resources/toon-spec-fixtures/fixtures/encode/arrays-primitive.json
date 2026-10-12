@@ -1,24 +1,8 @@
 {
-  "version": "3.1",
+  "version": "4.0",
   "category": "encode",
-  "description": "Primitive array encoding - inline arrays of strings, numbers, booleans",
+  "description": "Primitive array encoding – inline arrays of strings, numbers, booleans",
   "tests": [
-    {
-      "name": "encodes string arrays inline",
-      "input": {
-        "tags": ["reading", "gaming"]
-      },
-      "expected": "tags[2]: reading,gaming",
-      "specSection": "9.1"
-    },
-    {
-      "name": "encodes number arrays inline",
-      "input": {
-        "nums": [1, 2, 3]
-      },
-      "expected": "nums[3]: 1,2,3",
-      "specSection": "9.1"
-    },
     {
       "name": "encodes mixed primitive arrays inline",
       "input": {
@@ -84,7 +68,7 @@
       "specSection": "9.1"
     },
     {
-      "name": "quotes strings that look like booleans in arrays",
+      "name": "quotes strings that look like literals or numbers in arrays",
       "input": {
         "items": ["x", "true", "42", "-3.14"]
       },
@@ -94,10 +78,18 @@
     {
       "name": "quotes strings with structural meanings in arrays",
       "input": {
-        "items": ["[5]", "- item", "{key}"]
+        "items": ["[5", "x]", "- item", "{key", "y}"]
       },
-      "expected": "items[3]: \"[5]\",\"- item\",\"{key}\"",
+      "expected": "items[5]: \"[5\",\"x]\",\"- item\",\"{key\",\"y}\"",
       "specSection": "9.1"
+    },
+    {
+      "name": "quotes hash-leading string in inline array",
+      "input": {
+        "tags": ["#a", "b"]
+      },
+      "expected": "tags[2]: \"#a\",b",
+      "specSection": "7.2"
     }
   ]
 }
