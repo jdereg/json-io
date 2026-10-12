@@ -5,35 +5,6 @@
 # when a listed case passes, so a fix removes its lines here in the same commit.
 # A case that is not listed must pass. The groups are for the reader; the test ignores them.
 
-# Reading: keyed tabular form for an object of uniform objects (spec 9.5) -- 27
-decode/blank-lines.json#9          accepts blank lines after list, tabular, and keyed scopes end, at root and in a nested object
-decode/blank-lines.json#13         ignores blank lines between tabular rows and entry rows in non-strict mode
-decode/blank-lines.json#18         accepts blank line between header and first entry row
-decode/indentation-errors.json#22  throws on an over-indented line after keyed entry rows in non-strict mode
-decode/indentation-errors.json#24  adopts the depth of a jumped first line in non-strict mode
-decode/indentation-errors.json#26  throws on a line above the adopted entry depth in non-strict mode
-decode/objects-keyed.json#0        parses keyed tabular objects
-decode/objects-keyed.json#1        parses a keyless keyed header as a root object
-decode/objects-keyed.json#2        parses nested field groups in keyed headers
-decode/objects-keyed.json#3        parses keyed headers with the pipe and tab delimiters
-decode/objects-keyed.json#4        parses quoted entry keys
-decode/objects-keyed.json#5        parses a quoted entry key containing a colon
-decode/objects-keyed.json#6        treats a key-value line at the header's depth as a sibling after entries end
-decode/objects-keyed.json#7        splits an entry row at its first unquoted colon before delimiter or header parsing
-decode/objects-keyed.json#8        decodes the cell token [] as a string, not an empty array
-decode/objects-keyed.json#9        accepts a declared entry count of zero
-decode/objects-keyed.json#10       parses quoted cells containing the active delimiter
-decode/objects-keyed.json#11       parses a keyed header on a hyphen line
-decode/objects-keyed.json#12       ignores comment lines between entry rows
-decode/objects-keyed.json#13       applies last-write-wins for duplicate entry keys in non-strict mode
-decode/objects-keyed.json#14       accepts entry keys outside the encoder unquoted-key pattern
-decode/objects-keyed.json#15       throws on an entry-depth line without a colon in non-strict mode
-decode/objects-keyed.json#16       throws on an entry row with fewer cells than fields in non-strict mode
-decode/objects-keyed.json#17       decodes every entry row whatever the declared count in non-strict mode
-decode/objects.json#42             materializes __proto__ entry key as an ordinary own key
-decode/objects.json#47             parses an empty unquoted key as the empty key
-decode/validation-errors.json#18   throws on a keyed header line without its colon in non-strict mode
-
 # Reading: +1, .5 and 1. are strings, not numbers (spec 4) -- 2
 decode/numbers.json#10  treats bare-fraction, trailing-dot, and leading-plus tokens as strings
 decode/numbers.json#11  treats leading-plus tokens in array as strings
@@ -43,7 +14,7 @@ decode/blank-lines.json#10  accepts blank lines before and between nested object
 decode/blank-lines.json#16  accepts blank line between header and first list item
 decode/blank-lines.json#17  accepts blank line between header and first tabular row
 
-# Reading, non-strict mode: only the five recoveries of spec 14.4; everything else errors -- 35
+# Reading, non-strict mode: only the five recoveries of spec 14.4; everything else errors -- 36
 decode/arrays-nested.json#18       keeps every list item when the count mismatches in non-strict mode
 decode/arrays-nested.json#24       keeps list items under a legacy [0] header in non-strict mode
 decode/arrays-primitive.json#13    keeps inline values under a legacy [0] header in non-strict mode
@@ -66,6 +37,7 @@ decode/root-form.json#6            throws on trailing content after a root array
 decode/root-form.json#7            throws on trailing content after a root empty array in non-strict mode
 decode/root-form.json#9            throws on an indented root primitive in non-strict mode
 decode/root-form.json#12           throws on a whole document indented by one level in non-strict mode
+decode/validation-errors.json#18   throws on a keyed header line without its colon in non-strict mode
 decode/validation-errors.json#55   throws on keyless array header in object field position in non-strict mode
 decode/validation-errors.json#59   throws on keyless fields-bearing header as list item in non-strict mode
 decode/validation-errors.json#61   throws on a fields-bearing header with inline content in non-strict mode
@@ -105,11 +77,12 @@ decode/validation-errors.json#86   throws on tabular rows at depth +1 under a li
 decode/validation-errors.json#90   throws on an empty field entry
 decode/whitespace.json#14          throws on a tab after a list-item hyphen
 
-# Reading: other (byte-order mark, NBSP, carriage return, quotes mid-token, any text as a key) -- 11
+# Reading: other (byte-order mark, NBSP, carriage return, quotes mid-token, any text as a key) -- 12
 decode/arrays-nested.json#21  parses an empty object as the first field of a list-item object
 decode/delimiters.json#22     treats a delimiter inside a closed or unclosed mid-token quote span as quoted
 decode/objects.json#10        parses an unquoted field value starting with a bracket segment as a string
 decode/objects.json#32        accepts unquoted values and keys an encoder would quote in strict mode
+decode/objects.json#47        parses an empty unquoted key as the empty key
 decode/whitespace.json#4      keeps a leading NBSP and a trailing tab in unquoted values
 decode/whitespace.json#5      preserves NBSP and tab around inline array tokens
 decode/whitespace.json#6      keeps an NBSP or a tab around a key or field name

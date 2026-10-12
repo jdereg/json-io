@@ -72,11 +72,13 @@ public class ToonReader {
         private final FieldEntry[] fieldTree;       // the field list, when a field carries a nested field group
         private final int leafCount;                // cells per row under fieldTree
         private final int valueStart;               // index in the line buffer just after the header's colon
+        private final boolean keyed;                // [N:]: an object whose entries are rows that carry their keys
 
-        private ArrayHeader(int count, char delimiter, FieldEntry[] fields, int valueStart) {
+        private ArrayHeader(int count, char delimiter, FieldEntry[] fields, int valueStart, boolean keyed) {
             this.count = count;
             this.delimiter = delimiter;
             this.valueStart = valueStart;
+            this.keyed = keyed;
             if (fields == null) {
                 this.columnHeaders = null;
                 this.fieldTree = null;
@@ -173,6 +175,7 @@ public class ToonReader {
     private int lineSpaces = 0;   // leading spaces of the line readContentLine() last returned
     private int currentTrimStart = 0;
     private int currentTrimEnd = 0;
+    private int currentLineEnd = 0;   // end of the line before its trailing whitespace was trimmed
     private String currentTrimmed = null;
     private final StringBuilder quoteBuf = new StringBuilder(64);
     private final StringBuilder inlineBuf = new StringBuilder(64);
@@ -374,7 +377,12 @@ public class ToonReader {
             }
 
             if (isArrayStartInBuf()) {
-                return readArray();
+                Object value = readArray();
+                if (suggestedType != null && value instanceof JsonObject) {
+                    // A keyed header at the root, [N:]{...}:, is the root object (spec 9.5).
+                    ((JsonObject) value).setType(suggestedType);
+                }
+                return value;
             }
 
             if (findColonInBuf() > 0) {
@@ -445,7 +453,7 @@ public class ToonReader {
             }
 
             jsonObj = readAndDispatchField(jsonObj, suggestedType, pending,
-                    key, trimStart, valueStart, trimEnd, baseIndent);
+                    key, trimStart, valueStart, trimEnd, baseIndent, baseIndent);
         }
 
         // Metadata-only object (e.g., {"@type":"Foo","@id":1} with no shape determiner): allocate
@@ -465,7 +473,8 @@ public class ToonReader {
      * still-{@code null} sentinel if this field was buffered as pure metadata.
      */
     private JsonObject readAndDispatchField(JsonObject jsonObj, Type suggestedType, PendingMeta pending,
-                                            String key, int keyStart, int valueStart, int trimEnd, int baseIndent)
+                                            String key, int keyStart, int valueStart, int trimEnd, int baseIndent,
+                                            int fieldDepth)
             throws IOException {
         // Resolve key, value, and wasQuoted into a uniform shape so the dispatch below
         // treats combined-array-notation fields (e.g., "@items[3]:") and standard fields
@@ -494,7 +503,7 @@ public class ToonReader {
             if (fieldWasQuoted) {
                 fieldKey = unquoteString(fieldKey);
             }
-            fieldValue = readHeaderValue(arrayHeader, trimEnd);
+            fieldValue = readHeaderValue(arrayHeader, trimEnd, fieldDepth);
         } else {
             fieldWasQuoted = key.startsWith("\"");
             fieldKey = unquoteString(key);
@@ -517,7 +526,7 @@ public class ToonReader {
                     fieldValue = new JsonObject();
                 }
             } else if (isArrayStart(lineBuf, valueStart, trimEnd)) {
-                fieldValue = readKeylessArray(valueStart, trimEnd);
+                fieldValue = readKeylessArray(valueStart, trimEnd, fieldDepth);
             } else if (isEmptyObject(lineBuf, valueStart, trimEnd)) {
                 fieldValue = new JsonObject();
             } else {
@@ -680,27 +689,31 @@ public class ToonReader {
     // ========== Array Parsing ==========
 
     /**
-     * Read the array whose keyless header is the current line.
-     * Returns ArrayList instead of Object[] for better Java interoperability.
+     * Read the array whose keyless header is the current line, or the object when that header is keyed.
+     * An array is returned as an ArrayList instead of Object[] for better Java interoperability.
      */
-    private List<Object> readArray() throws IOException {
+    private Object readArray() throws IOException {
         if (!hasLine()) {
             return new ArrayList<>();
         }
 
         int start = currentTrimStart;
         int end = currentTrimEnd;
+        int depth = currentIndent;
         consumeLine();
 
-        return readKeylessArray(start, end);
+        return readKeylessArray(start, end, depth);
     }
 
     /**
-     * Read an array from its keyless header in lineBuf[start..end): [N]: ..., [N]{fields}:, or the literal [].
+     * Read an array from its keyless header in lineBuf[start..end): [N]: ..., [N]{fields}:, or the literal [];
+     * or the object a keyless keyed header [N:]{fields}: announces.
      * Supports delimiter variants: [N] for comma, [N\t] for tab, [N|] for pipe.
-     * Returns ArrayList instead of Object[] for better Java interoperability.
+     * An array is returned as an ArrayList instead of Object[] for better Java interoperability.
+     *
+     * @param headerDepth the depth at which the header stands
      */
-    private List<Object> readKeylessArray(int start, int end) throws IOException {
+    private Object readKeylessArray(int start, int end, int headerDepth) throws IOException {
         final char[] buf = lineBuf;
         while (start < end && buf[start] <= ' ') {
             start++;
@@ -713,14 +726,25 @@ public class ToonReader {
         if (end - start == 2 && buf[start] == '[' && buf[start + 1] == ']') {
             return new ArrayList<>();
         }
-        return readHeaderValue(parseHeader(buf, start, end, true), end);
+        return readHeaderValue(parseHeader(buf, start, end, true), end, headerDepth);
     }
 
     /**
-     * Read the array a header announces: the values after its colon, or the rows or list items on the lines
-     * below it. lineBuf still holds the header's line, and lineEnd is the end of that line's content.
+     * Read what a header announces: for an array, the values after its colon, or the rows or list items on the
+     * lines below it; for a keyed header, the object whose entries are the rows below it. lineBuf still holds
+     * the header's line, and lineEnd is the end of that line's content.
      */
-    private List<Object> readHeaderValue(ArrayHeader header, int lineEnd) throws IOException {
+    private Object readHeaderValue(ArrayHeader header, int lineEnd, int headerDepth) throws IOException {
+        if (header.keyed) {
+            // §6: a keyed header carries nothing after its colon. Only spaces are whitespace there: a tab is
+            // content, though the line's trimmed end no longer shows it.
+            for (int i = header.valueStart; i < currentLineEnd; i++) {
+                if (lineBuf[i] != ' ') {
+                    throw new JsonIoException("Content after the colon of a keyed header at line " + lineNumber);
+                }
+            }
+            return readKeyedObject(header, headerDepth);
+        }
         if (header.count == 0) {
             return new ArrayList<>();
         }
@@ -739,9 +763,10 @@ public class ToonReader {
 
     /**
      * Parse the header whose bracket segment starts at buf[bracket] (spec 6): [N], with a tab or a pipe before
-     * the closing bracket to declare that delimiter, then an optional field list, then the colon. The header is
-     * read from the line rather than from the text before the line's first colon, because a field name may hold
-     * a colon and a nested field group holds braces.
+     * the closing bracket to declare that delimiter, then an optional field list, then the colon. A colon
+     * directly after the length, [N:], makes it a keyed header (spec 9.5), which must have a field list. The
+     * header is read from the line rather than from the text before the line's first colon, because a keyed
+     * bracket and a field name may hold a colon, and a nested field group holds braces.
      * <p>
      * A malformed header is an error, except behind a key in non-strict mode (§14.2 non-strict tolerance):
      * there null is returned and the caller reads the line as "key: value", bracket text and all.
@@ -776,6 +801,24 @@ public class ToonReader {
             }
         }
 
+        // A colon directly after the length marks a keyed header: [2:], [2:\t], [2:|]
+        boolean keyed = countEnd > bracket + 1 && buf[countEnd - 1] == ':';
+        if (keyed) {
+            countEnd--;
+            // §6: the colon stands exactly there, so the length before it is digits and nothing else.
+            boolean digitsOnly = countEnd > bracket + 1;
+            for (int i = bracket + 1; digitsOnly && i < countEnd; i++) {
+                digitsOnly = buf[i] >= '0' && buf[i] <= '9';
+            }
+            if (!digitsOnly) {
+                if (mustThrow) {
+                    throw new JsonIoException("Malformed keyed header (length) at line " + lineNumber + ": "
+                            + new String(buf, bracket, end - bracket));
+                }
+                return null;
+            }
+        }
+
         int count = parseHeaderCount(buf, bracket + 1, countEnd, mustThrow);
         if (count == INVALID_COUNT) {
             return null;
@@ -793,6 +836,13 @@ public class ToonReader {
                 return null;
             }
             pos = fieldListEnd;
+        } else if (keyed) {
+            // §6: the rows of a keyed header need its field list to say what their cells are.
+            if (mustThrow) {
+                throw new JsonIoException("Malformed keyed header (no field list) at line " + lineNumber + ": "
+                        + new String(buf, bracket, end - bracket));
+            }
+            return null;
         }
         while (pos < end && buf[pos] <= ' ') {
             pos++;
@@ -807,7 +857,7 @@ public class ToonReader {
             }
             return null;
         }
-        return new ArrayHeader(count, delimiter, fields, pos + 1);
+        return new ArrayHeader(count, delimiter, fields, pos + 1, keyed);
     }
 
     private static final int INVALID_COUNT = Integer.MIN_VALUE;
@@ -952,6 +1002,103 @@ public class ToonReader {
             }
         }
         return new FieldEntry(name, metaKey, group);
+    }
+
+    /**
+     * Read the entry rows of a keyed tabular object (spec 9.5): one line "entrykey: cell,cell" per entry, one
+     * level below the header. The key is the text before the line's first unquoted colon; the cells after it
+     * are read exactly as a row of a tabular array. Every line at that depth is an entry row, so the object
+     * ends only where the depth drops back to the header's, or at the end of the input.
+     * <p>
+     * As the syntax is new in spec v4.0 there is no lenient reading to keep: a row with too few or too many
+     * cells, a line without a colon and a line at another depth are errors in both modes. Non-strict mode
+     * differs by three of the recoveries of §14.4: the declared count is not checked, a repeated key lets the
+     * last one win, and a first row indented too far sets the depth of the rows.
+     */
+    private JsonObject readKeyedObject(ArrayHeader header, int headerDepth) throws IOException {
+        final char delimiter = header.delimiter;
+        final List<String> columnHeaders = header.columnHeaders;
+        final FieldEntry[] fieldTree = header.fieldTree;
+        final int leafCount = header.leafCount;
+        final String[] columnMetaKeys = fieldTree == null ? buildColumnMetaKeys(columnHeaders) : null;
+        final Object[] cells = fieldTree == null ? null : new Object[leafCount];
+        JsonObject entries = new JsonObject();
+        int entryCount = 0;
+        int entryDepth = -1;
+        int blankLine = 0;      // a blank line after the first row: an error in strict mode if a row follows it
+
+        while (hasLine()) {
+            if (isTrimmedEmpty()) {
+                if (entryCount > 0 && blankLine == 0) {
+                    blankLine = lineNumber;
+                }
+                consumeLine();
+                continue;
+            }
+
+            int depth = peekIndent();
+            if (depth <= headerDepth) {
+                break;  // Back to the header's level: the object is complete
+            }
+            if (entryDepth < 0) {
+                if (strictToon && depth != headerDepth + 1) {
+                    throw new JsonIoException("Entry row indented more than one level below its header at line "
+                            + lineNumber);
+                }
+                entryDepth = depth;
+            } else if (depth != entryDepth) {
+                throw new JsonIoException("Line at the wrong depth among the entry rows at line " + lineNumber);
+            }
+            if (strictToon && blankLine != 0) {
+                throw new JsonIoException("Blank lines are not allowed among entry rows at line " + blankLine);
+            }
+
+            int colonPos = findColonInBuf();
+            if (colonPos < 0) {
+                throw new JsonIoException("Entry row without a colon at line " + lineNumber + ": "
+                        + peekTrimmed());
+            }
+            int trimStart = currentTrimStart;
+            int trimEnd = currentTrimEnd;
+            consumeLine();
+            String key = unquoteString(trimAsciiRangeBuf(trimStart, trimStart + colonPos));
+            int valueStart = trimStart + colonPos + 1;
+
+            // A bare "key:" holds no cell at all, not one empty cell.
+            int valuesCount = 0;
+            JsonObject entry = null;
+            if (!isTrimmedEmpty(lineBuf, valueStart, trimEnd)) {
+                if (fieldTree == null) {
+                    entry = new JsonObject(leafCount);
+                    valuesCount = parseRowIntoObject(lineBuf, valueStart, trimEnd, columnHeaders, columnMetaKeys,
+                            delimiter, entry);
+                } else {
+                    valuesCount = readRowCells(lineBuf, valueStart, trimEnd, delimiter, cells);
+                    if (valuesCount == leafCount) {
+                        rowCellCursor = 0;
+                        entry = buildRow(fieldTree, cells);
+                    }
+                }
+            }
+            if (valuesCount != leafCount) {
+                throw new JsonIoException("Entry row width mismatch at line " + lineNumber +
+                        ", expected " + leafCount + " values, got " + valuesCount);
+            }
+
+            // §14.3: entry keys are the keys of the object. They are never json-io meta keys: an entry is
+            // always an object, which none of @type, @id, @ref, @items or @keys can be.
+            if (strictToon && entries.containsKey(key)) {
+                throw new JsonIoException("Duplicate key '" + key + "' at line " + lineNumber);
+            }
+            entries.appendFieldForParser(key, entry);
+            entryCount++;
+        }
+
+        if (strictToon && entryCount != header.count) {
+            throw new JsonIoException("Keyed object count mismatch at line " + lineNumber +
+                    ", expected " + header.count + " entries, got " + entryCount);
+        }
+        return entries;
     }
 
     /**
@@ -1382,7 +1529,7 @@ public class ToonReader {
                 // Empty object: - {}
                 elements.add(new JsonObject());
             } else if (isArrayStart(lineBuf, elementStart, trimEnd)) {
-                elements.add(readKeylessArray(elementStart, trimEnd));
+                elements.add(readKeylessArray(elementStart, trimEnd, indent));
             } else {
                 // Pre-check whether the hyphen-line slice contains an unquoted colon
                 // (indicating an inline object like "- name: John"). Work directly on
@@ -1457,8 +1604,9 @@ public class ToonReader {
                 valueEnd--;
             }
 
+            // §10: a first field carried on the hyphen line stands one level below the hyphen.
             jsonObj = readAndDispatchField(jsonObj, null, pending,
-                    key, firstFieldStart, valueStart, valueEnd, hyphenIndent);
+                    key, firstFieldStart, valueStart, valueEnd, hyphenIndent, hyphenIndent + 1);
         }
 
         // Read subsequent fields at the same indent level as the first field's content
@@ -1496,7 +1644,7 @@ public class ToonReader {
             }
 
             jsonObj = readAndDispatchField(jsonObj, null, pending,
-                    key, trimStart, valueStart2, trimEnd, fieldIndent);
+                    key, trimStart, valueStart2, trimEnd, fieldIndent, fieldIndent);
         }
 
         // Metadata-only or empty inline object → allocate lite now and apply buffered metadata.
@@ -2148,6 +2296,7 @@ public class ToonReader {
                 // Compute trim-end directly from buf
                 int trimStart = start + spaces;
                 int trimEnd = start + lineLen;
+                currentLineEnd = trimEnd;
                 while (trimEnd > trimStart && buf[trimEnd - 1] <= ' ') {
                     trimEnd--;
                 }
