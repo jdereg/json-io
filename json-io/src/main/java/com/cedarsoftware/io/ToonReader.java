@@ -186,7 +186,6 @@ public class ToonReader {
     private int currentLineEnd = 0;   // end of the line before its trailing whitespace was trimmed
     private String currentTrimmed = null;
     private final StringBuilder quoteBuf = new StringBuilder(64);
-    private final StringBuilder inlineBuf = new StringBuilder(64);
     private int fieldListEnd;     // set by parseFieldList: the index just after the field list's closing brace
     private int rowCellCursor;    // the next cell buildRow takes
     // Set once the document names a meta key ($type, $id, $ref, $items, $keys, $enum). A document that names none
@@ -318,25 +317,6 @@ public class ToonReader {
             end--;
         }
         return (start == 0 && end == len) ? text : text.substring(start, end);
-    }
-
-    private static String trimSpaces(StringBuilder text) {
-        int start = 0;
-        int textLen = text.length();
-        int end = textLen;
-        if (start < end && text.charAt(start) != ' ' && text.charAt(end - 1) != ' ') {
-            return text.toString();
-        }
-        while (start < end && text.charAt(start) == ' ') {
-            start++;
-        }
-        while (end > start && text.charAt(end - 1) == ' ') {
-            end--;
-        }
-        if (start == 0 && end == textLen) {
-            return text.toString();
-        }
-        return text.substring(start, end);
     }
 
     /**
@@ -1230,68 +1210,51 @@ public class ToonReader {
                 }
                 colIndex++;
                 tokenStart = i + 1;
-            } else if (c == '"' || c == '\\') {
+            } else if (c == '"') {
                 return parseQuotedRowRemainder(buf, tokenStart, end, columnHeaders, columnMetaKeys, delimiter, target,
                         colIndex);
             }
         }
-        if (tokenStart < end || colIndex < colHeadersSize) {
-            if (colIndex < colHeadersSize) {
-                appendColumn(target, columnHeaders, columnMetaKeys, colIndex, readScalar(buf, tokenStart, end));
-            }
-            colIndex++;
+        // Spec 11.2: splitting keeps empty tokens, the one after the last delimiter too
+        if (colIndex < colHeadersSize) {
+            appendColumn(target, columnHeaders, columnMetaKeys, colIndex, readScalar(buf, tokenStart, end));
         }
-        return colIndex;
+        return colIndex + 1;
     }
 
+    /**
+     * The rest of a row from its first token that holds a quote. Spec 5.2: a quote opens a quoted span wherever
+     * it stands, also in the middle of a token, and the next quote that is not part of an escape sequence closes
+     * it; without one the span runs to the end of the line. A delimiter inside a span is part of the token.
+     * Outside a span a backslash is a character like another.
+     */
     private int parseQuotedRowRemainder(char[] buf, int start, int end, List<String> columnHeaders,
                                         String[] columnMetaKeys, char delimiter, JsonObject target, int colIndex) {
         int colHeadersSize = columnHeaders.size();
-        inlineBuf.setLength(0);
-        final StringBuilder current = inlineBuf;
+        int tokenStart = start;
         boolean inQuotes = false;
-        boolean escaped = false;
-
         for (int i = start; i < end; i++) {
             char c = buf[i];
-
-            if (escaped) {
-                current.append(c);
-                escaped = false;
-                continue;
-            }
-
-            if (c == '\\') {
-                escaped = true;
-                current.append(c);
-                continue;
-            }
-
-            if (c == '"') {
-                inQuotes = !inQuotes;
-                current.append(c);
-                continue;
-            }
-
-            if (c == delimiter && !inQuotes) {
+            if (inQuotes) {
+                if (c == '\\') {
+                    i++;
+                } else if (c == '"') {
+                    inQuotes = false;
+                }
+            } else if (c == '"') {
+                inQuotes = true;
+            } else if (c == delimiter) {
                 if (colIndex < colHeadersSize) {
-                    appendColumn(target, columnHeaders, columnMetaKeys, colIndex, readScalar(trimSpaces(current)));
+                    appendColumn(target, columnHeaders, columnMetaKeys, colIndex, readScalar(buf, tokenStart, i));
                 }
                 colIndex++;
-                current.setLength(0);
-            } else {
-                current.append(c);
+                tokenStart = i + 1;
             }
         }
-
-        if (current.length() > 0 || colIndex < colHeadersSize) {
-            if (colIndex < colHeadersSize) {
-                appendColumn(target, columnHeaders, columnMetaKeys, colIndex, readScalar(trimSpaces(current)));
-            }
-            colIndex++;
+        if (colIndex < colHeadersSize) {
+            appendColumn(target, columnHeaders, columnMetaKeys, colIndex, readScalar(buf, tokenStart, end));
         }
-
-        return colIndex;
+        return colIndex + 1;
     }
 
     /**
@@ -1360,75 +1323,28 @@ public class ToonReader {
      */
     private List<Object> readInlineArray(char[] buf, int start, int end, int count, char delimiter) {
         List<Object> elements = new ArrayList<>(count);
-        boolean hasQuotesOrEscapes = false;
+        // Spec 11.2: split at every unquoted delimiter, keeping empty tokens (the empty string), so N
+        // delimiters make N + 1 values. Spec 5.2: a quote opens a quoted span wherever it stands, the next
+        // quote that is not part of an escape sequence closes it, and a delimiter inside a span is part of
+        // the token. Outside a span a backslash is a character like another.
+        int tokenStart = start;
+        boolean inQuotes = false;
         for (int i = start; i < end; i++) {
             char c = buf[i];
-            if (c == '"' || c == '\\') {
-                hasQuotesOrEscapes = true;
-                break;
-            }
-        }
-
-        if (!hasQuotesOrEscapes) {
-            int tokenStart = start;
-            for (int i = start; i < end; i++) {
-                if (buf[i] == delimiter) {
-                    if (tokenStart == i) {
-                        // Empty token between delimiters (e.g. "a,,c") parses as empty string
-                        // per §4 — empty unquoted token can only be a string, not a keyword
-                        // or number, so type-inference picks string.
-                        elements.add("");
-                    } else {
-                        elements.add(readScalar(buf, tokenStart, i));
-                    }
-                    tokenStart = i + 1;
-                }
-            }
-            if (tokenStart < end) {
-                elements.add(readScalar(buf, tokenStart, end));
-            } else if (elements.size() < count) {
-                // Trailing empty token (e.g. "a,b,") — same rule as above.
-                elements.add("");
-            }
-        } else {
-            inlineBuf.setLength(0);
-            final StringBuilder current = inlineBuf;
-            boolean inQuotes = false;
-            boolean escaped = false;
-
-            for (int i = start; i < end; i++) {
-                char c = buf[i];
-
-                if (escaped) {
-                    current.append(c);
-                    escaped = false;
-                    continue;
-                }
-
+            if (inQuotes) {
                 if (c == '\\') {
-                    escaped = true;
-                    current.append(c);
-                    continue;
+                    i++;
+                } else if (c == '"') {
+                    inQuotes = false;
                 }
-
-                if (c == '"') {
-                    inQuotes = !inQuotes;
-                    current.append(c);
-                    continue;
-                }
-
-                if (c == delimiter && !inQuotes) {
-                    elements.add(readScalar(trimSpaces(current)));
-                    current.setLength(0);
-                } else {
-                    current.append(c);
-                }
-            }
-
-            if (current.length() > 0 || elements.size() < count) {
-                elements.add(readScalar(trimSpaces(current)));
+            } else if (c == '"') {
+                inQuotes = true;
+            } else if (c == delimiter) {
+                elements.add(readScalar(buf, tokenStart, i));
+                tokenStart = i + 1;
             }
         }
+        elements.add(readScalar(buf, tokenStart, end));
 
         if (strictToon && elements.size() != count) {
             throw new JsonIoException("Inline array count mismatch at line " + lineNumber +
@@ -1641,20 +1557,11 @@ public class ToonReader {
             end--;
         }
         if (start >= end) {
-            return null;
+            return "";      // spec 11.2: an empty token is the empty string
         }
 
         int len = end - start;
         char firstChar = text.charAt(start);
-        char lastChar = text.charAt(end - 1);
-
-        if (strictToon) {
-            boolean startsQuote = firstChar == '"';
-            boolean endsQuote = lastChar == '"';
-            if (startsQuote != endsQuote) {
-                throw new JsonIoException("Unclosed quoted string at line " + lineNumber);
-            }
-        }
 
         if (len == 4) {
             if (matchesLiteral(text, start, "null")) {
@@ -1667,7 +1574,7 @@ public class ToonReader {
             return Boolean.FALSE;
         }
 
-        if (len >= 2 && firstChar == '"' && lastChar == '"') {
+        if (firstChar == '"') {
             return parseQuotedString(text, start, end);
         }
 
@@ -1691,20 +1598,11 @@ public class ToonReader {
             end--;
         }
         if (start >= end) {
-            return null;
+            return "";      // spec 11.2: an empty token is the empty string
         }
 
         int len = end - start;
         char firstChar = buf[start];
-        char lastChar = buf[end - 1];
-
-        if (strictToon) {
-            boolean startsQuote = firstChar == '"';
-            boolean endsQuote = lastChar == '"';
-            if (startsQuote != endsQuote) {
-                throw new JsonIoException("Unclosed quoted string at line " + lineNumber);
-            }
-        }
 
         if (len == 4) {
             if (matchesLiteral(buf, start, "null")) {
@@ -1717,7 +1615,7 @@ public class ToonReader {
             return Boolean.FALSE;
         }
 
-        if (len >= 2 && firstChar == '"' && lastChar == '"') {
+        if (firstChar == '"') {
             return parseQuotedString(buf, start, end);
         }
 
@@ -1743,94 +1641,119 @@ public class ToonReader {
         return parseQuotedString(text, 0, text.length());
     }
 
+    /**
+     * A token that opens with a quote is a complete quoted token (spec 7.4): its closing quote -- the first
+     * quote that is not part of an escape sequence -- is the token's last character. Anything after it, or no
+     * closing quote at all, is an error in strict and non-strict mode alike.
+     */
     private String parseQuotedString(String text, int start, int end) {
-        int escapePos = text.indexOf('\\', start + 1);
-        if (escapePos < 0 || escapePos >= end - 1) {
-            return cacheSubstring(text, start + 1, end - 1);
+        final int last = end - 1;
+        int i = start + 1;
+        while (i < last && text.charAt(i) != '\\' && text.charAt(i) != '"') {
+            i++;
+        }
+        if (i == last && last > start && text.charAt(last) == '"') {
+            return cacheSubstring(text, start + 1, last);      // no escape, and the first quote ends the token
         }
 
         quoteBuf.setLength(0);
-        for (int i = start + 1; i < end - 1; i++) {
+        quoteBuf.append(text, start + 1, Math.max(i, start + 1));
+        for (; i < end; i++) {
             char c = text.charAt(i);
-            if (c == '\\' && i + 1 < end - 1) {
-                char next = text.charAt(++i);
-                switch (next) {
-                    case '\\':
-                        quoteBuf.append('\\');
-                        break;
-                    case '"':
-                        quoteBuf.append('"');
-                        break;
-                    case 'n':
-                        quoteBuf.append('\n');
-                        break;
-                    case 'r':
-                        quoteBuf.append('\r');
-                        break;
-                    case 't':
-                        quoteBuf.append('\t');
-                        break;
-                    case 'u':
-                        quoteBuf.append(decodeUnicodeEscape(text, i + 1, end - 1));
-                        i += 4;
-                        break;
-                    default:
-                        throw new JsonIoException("Invalid escape sequence: \\" + next + " at line " + lineNumber);
+            if (c == '"') {
+                if (i != last) {
+                    throw new JsonIoException("Characters after the closing quote at line " + lineNumber);
                 }
-            } else {
+                return cacheString(quoteBuf.toString());
+            }
+            if (c != '\\') {
                 quoteBuf.append(c);
+                continue;
+            }
+            if (++i >= end) {
+                break;      // the token ends in a backslash
+            }
+            char next = text.charAt(i);
+            switch (next) {
+                case '\\':
+                    quoteBuf.append('\\');
+                    break;
+                case '"':
+                    quoteBuf.append('"');
+                    break;
+                case 'n':
+                    quoteBuf.append('\n');
+                    break;
+                case 'r':
+                    quoteBuf.append('\r');
+                    break;
+                case 't':
+                    quoteBuf.append('\t');
+                    break;
+                case 'u':
+                    quoteBuf.append(decodeUnicodeEscape(text, i + 1, last));
+                    i += 4;
+                    break;
+                default:
+                    throw new JsonIoException("Invalid escape sequence: \\" + next + " at line " + lineNumber);
             }
         }
-
-        return cacheString(quoteBuf.toString());
+        throw new JsonIoException("Unclosed quoted string at line " + lineNumber);
     }
 
     private String parseQuotedString(char[] buf, int start, int end) {
-        int escapePos = -1;
-        for (int i = start + 1; i < end - 1; i++) {
-            if (buf[i] == '\\') {
-                escapePos = i;
-                break;
-            }
+        final int last = end - 1;
+        int i = start + 1;
+        while (i < last && buf[i] != '\\' && buf[i] != '"') {
+            i++;
         }
-        if (escapePos < 0) {
-            return cacheSubstringFromBuf(buf, start + 1, end - 1);
+        if (i == last && last > start && buf[last] == '"') {
+            return cacheSubstringFromBuf(buf, start + 1, last);     // no escape, and the first quote ends the token
         }
 
         quoteBuf.setLength(0);
-        for (int i = start + 1; i < end - 1; i++) {
+        quoteBuf.append(buf, start + 1, Math.max(i, start + 1) - (start + 1));
+        for (; i < end; i++) {
             char c = buf[i];
-            if (c == '\\' && i + 1 < end - 1) {
-                char next = buf[++i];
-                switch (next) {
-                    case '\\':
-                        quoteBuf.append('\\');
-                        break;
-                    case '"':
-                        quoteBuf.append('"');
-                        break;
-                    case 'n':
-                        quoteBuf.append('\n');
-                        break;
-                    case 'r':
-                        quoteBuf.append('\r');
-                        break;
-                    case 't':
-                        quoteBuf.append('\t');
-                        break;
-                    case 'u':
-                        quoteBuf.append(decodeUnicodeEscape(buf, i + 1, end - 1));
-                        i += 4;
-                        break;
-                    default:
-                        throw new JsonIoException("Invalid escape sequence: \\" + next + " at line " + lineNumber);
+            if (c == '"') {
+                if (i != last) {
+                    throw new JsonIoException("Characters after the closing quote at line " + lineNumber);
                 }
-            } else {
+                return cacheString(quoteBuf.toString());
+            }
+            if (c != '\\') {
                 quoteBuf.append(c);
+                continue;
+            }
+            if (++i >= end) {
+                break;      // the token ends in a backslash
+            }
+            char next = buf[i];
+            switch (next) {
+                case '\\':
+                    quoteBuf.append('\\');
+                    break;
+                case '"':
+                    quoteBuf.append('"');
+                    break;
+                case 'n':
+                    quoteBuf.append('\n');
+                    break;
+                case 'r':
+                    quoteBuf.append('\r');
+                    break;
+                case 't':
+                    quoteBuf.append('\t');
+                    break;
+                case 'u':
+                    quoteBuf.append(decodeUnicodeEscape(buf, i + 1, last));
+                    i += 4;
+                    break;
+                default:
+                    throw new JsonIoException("Invalid escape sequence: \\" + next + " at line " + lineNumber);
             }
         }
-
-        return cacheString(quoteBuf.toString());
+        throw new JsonIoException("Unclosed quoted string at line " + lineNumber);
     }
 
     /**
@@ -2408,16 +2331,26 @@ public class ToonReader {
         return -1;
     }
 
-    /** Scan for the first unquoted colon, handling escape sequences within quoted strings. */
+    /**
+     * Scan for the first unquoted colon. Spec 5.2: a quote opens a quoted span wherever it stands in a line, and
+     * the next quote that is not part of an escape sequence closes it. Outside a span a backslash is a
+     * character like another.
+     */
     private static int findColonQuoteAware(char[] buf, int start, int end) {
         boolean inQuotes = false;
-        boolean escaped = false;
         for (int i = start; i < end; i++) {
             char c = buf[i];
-            if (escaped) { escaped = false; continue; }
-            if (c == '\\') { escaped = true; continue; }
-            if (c == '"') { inQuotes = !inQuotes; continue; }
-            if (c == ':' && !inQuotes) return i - start;
+            if (inQuotes) {
+                if (c == '\\') {
+                    i++;
+                } else if (c == '"') {
+                    inQuotes = false;
+                }
+            } else if (c == '"') {
+                inQuotes = true;
+            } else if (c == ':') {
+                return i - start;
+            }
         }
         return -1;
     }
@@ -2636,28 +2569,19 @@ public class ToonReader {
         }
 
         boolean inQuotes = false;
-        boolean escaped = false;
         int len = text.length();
 
         for (int i = 0; i < len; i++) {
             char c = text.charAt(i);
-
-            if (escaped) {
-                escaped = false;
-                continue;
-            }
-
-            if (c == '\\') {
-                escaped = true;
-                continue;
-            }
-
-            if (c == '"') {
-                inQuotes = !inQuotes;
-                continue;
-            }
-
-            if (c == '[' && !inQuotes) {
+            if (inQuotes) {
+                if (c == '\\') {
+                    i++;
+                } else if (c == '"') {
+                    inQuotes = false;
+                }
+            } else if (c == '"') {
+                inQuotes = true;
+            } else if (c == '[') {
                 return i;
             }
         }
@@ -2669,19 +2593,8 @@ public class ToonReader {
      * Unquote a string if it's quoted.
      */
     private String unquoteString(String text) {
-        int len = text.length();
-        if (len < 2) {
-            return text;
-        }
-        char first = text.charAt(0);
-        char last = text.charAt(len - 1);
-        if (first == '"' && last == '"') {
-            return parseQuotedString(text);
-        }
-        if (strictToon && (first == '"') != (last == '"')) {
-            throw new JsonIoException("Unclosed quoted key at line " + lineNumber);
-        }
-        return text;
+        // A key that opens with a quote is a complete quoted token too (spec 7.4); any other key is literal.
+        return !text.isEmpty() && text.charAt(0) == '"' ? parseQuotedString(text) : text;
     }
 
     // ========== Key Folding Support ==========

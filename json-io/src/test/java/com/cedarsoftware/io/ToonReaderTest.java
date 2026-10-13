@@ -3111,14 +3111,15 @@ class ToonReaderTest {
     }
 
     @Test
-    void testStrictToon_UnclosedQuotedScalar_StrictFailsPermissiveWorks() {
+    void testUnclosedQuotedScalar_FailsInBothModes() {
+        // Spec 7.1 / 7.4: a token that opens with a quote must close; this is none of the five non-strict
+        // recoveries (14.4), so non-strict mode refuses it as well.
         String toon = "value: \"unclosed";
 
         assertThrows(JsonIoException.class,
                 () -> JsonIo.fromToon(toon, toonOptions(true)).asClass(Map.class));
-
-        Map<String, Object> map = JsonIo.fromToon(toon, toonOptions(false)).asClass(Map.class);
-        assertEquals("\"unclosed", map.get("value"));
+        assertThrows(JsonIoException.class,
+                () -> JsonIo.fromToon(toon, toonOptions(false)).asClass(Map.class));
     }
 
     // ========== GAP TESTS: fromToonToMaps with Tabular Arrays ==========
@@ -3263,14 +3264,12 @@ class ToonReaderTest {
 
     @Test
     void testUnclosedQuote_InScalar() {
-        // Unclosed quote in a scalar value — reader treats it as unquoted string
+        // Unclosed quote in a scalar value: an unterminated string is an error (spec 7.1), with the default
+        // options too
         String toon = "value: \"unclosed";
-        Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
-        // The readScalar checks startsWith(") && endsWith(") — this fails the endsWith check
-        // So it falls through to parseNumber (fails) then returns as unquoted string
-        Object val = map.get("value");
-        assertNotNull(val, "Should not throw — treated as unquoted string");
-        assertTrue(val instanceof String);
+        JsonIoException e = assertThrows(JsonIoException.class,
+                () -> JsonIo.fromToon(toon, null).asClass(Map.class));
+        assertTrue(e.getMessage().contains("Unclosed quoted string"), e.getMessage());
     }
 
     @Test
@@ -3364,16 +3363,15 @@ class ToonReaderTest {
 
     @Test
     void testEscapeAtEndOfString() {
-        // Backslash as the very last character before closing quote
-        // In parseQuotedString, when i+1 < len-1 is false (backslash is at position len-2),
-        // the backslash is treated as literal char
+        // Backslash as the very last character before the quote: that quote is escaped, so the string has no
+        // closing quote and is unterminated (spec 7.1). A backslash that is meant is written twice.
         String toon = "value: \"trailing\\\"";
-        Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
-        Object val = map.get("value");
-        assertNotNull(val);
-        // The backslash at position len-2: i=len-2, i+1=len-1, condition i+1 < len-1 is false
-        // So backslash is appended as literal
-        assertEquals("trailing\\", val);
+        JsonIoException e = assertThrows(JsonIoException.class,
+                () -> JsonIo.fromToon(toon, null).asClass(Map.class));
+        assertTrue(e.getMessage().contains("Unclosed quoted string"), e.getMessage());
+
+        Map<String, Object> map = JsonIo.fromToon("value: \"trailing\\\\\"", null).asClass(Map.class);
+        assertEquals("trailing\\", map.get("value"));
     }
 
     @Test

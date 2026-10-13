@@ -807,6 +807,12 @@ and so are spaces at the end of a line; a tab, a no-break space or any other cha
 so this matters only for TOON written by hand or by another tool. Indentation is spaces too: strict mode refuses a
 tab in it, and non-strict mode counts each tab as one level.
 
+A line is split into its values at every delimiter that is not inside quotes, and an empty value between two
+delimiters, or after the last one, is the empty string: `1,,x` holds three values. A quote starts a quoted stretch
+wherever it stands, also in the middle of a value, and a delimiter or colon inside it is ordinary text; a backslash
+means something only inside quotes, so `C:\,D:\` is two values. A value that *begins* with a quote must end with its
+closing quote: `"abc" def` and `"abc` are errors, in strict and non-strict mode.
+
 A blank line means nothing: it never ends an object or an array and is never counted, so `address:`, a blank line,
 then the indented fields is still one nested object. The one place a blank line may not stand in strict mode is
 inside an array or a keyed table, from its first item or row through the last line that belongs to it; non-strict
