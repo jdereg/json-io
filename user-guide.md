@@ -872,6 +872,10 @@ Per the TOON specification:
 - `NaN` → `null`
 - `Infinity` / `-Infinity` → `null`
 - `-0` → `0`
+- An empty object -- a `Map` with no entries, or an object with no field to write -- is `key:` with nothing after
+  it in a field, a bare `-` in a list, and an empty document at the root. TOON has no `{}`: read, it is the string
+  of two braces, and written, that string is quoted (`"{}"`).
+- An empty array is `key: []`.
 
 ### TOON Escape Sequences
 

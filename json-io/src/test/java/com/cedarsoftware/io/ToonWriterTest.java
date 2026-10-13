@@ -382,9 +382,8 @@ class ToonWriterTest {
     void testEmptyMap() {
         Map<String, Object> empty = new HashMap<>();
         String toon = JsonIo.toToon(empty, null);
-        // TOON v3.3 §8: "An empty object at the root yields an empty document."
-        // The previous "{}" emission was non-spec; the decoder still accepts "{}"
-        // and bare "key:" for backwards compatibility.
+        // TOON §8: "An empty object at the root yields an empty document."
+        // "{}" is not an object in TOON: a reader takes it for the string "{}".
         assertEquals("", toon);
     }
 
@@ -1569,9 +1568,8 @@ class ToonWriterTest {
     @Test
     void testEmptyObjectInListArray_RoundTrip() {
         // §9.4: an empty object as a list element emits as bare hyphen ("-") with no
-        // body. Writer emits "-" (legacy "- {}" was non-spec). Reader parses bare
-        // hyphen as empty object. Both reading the bare-hyphen form and the legacy
-        // "- {}" form continue to work on the read side.
+        // body. Writer emits "-". Reader parses bare hyphen as empty object; "- {}" is an
+        // item that is the string "{}".
         Map<String, Object> emptyObj = new LinkedHashMap<>();
         Map<String, Object> namedObj = new LinkedHashMap<>();
         namedObj.put("name", "Bob");

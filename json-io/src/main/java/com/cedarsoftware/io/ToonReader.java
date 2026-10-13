@@ -377,15 +377,6 @@ public class ToonReader {
                 return emptyMap;
             }
 
-            if (isEmptyObjectInBuf()) {
-                consumeLine();
-                JsonObject emptyMap = new JsonObject();
-                if (suggestedType != null) {
-                    emptyMap.setType(suggestedType);
-                }
-                return emptyMap;
-            }
-
             if (isArrayStartInBuf()) {
                 Object value = readArray();
                 if (suggestedType != null && value instanceof JsonObject) {
@@ -528,9 +519,8 @@ public class ToonReader {
                 }
             } else if (isArrayStart(lineBuf, valueStart, trimEnd)) {
                 fieldValue = readKeylessArray(valueStart, trimEnd, fieldDepth);
-            } else if (isEmptyObject(lineBuf, valueStart, trimEnd)) {
-                fieldValue = new JsonObject();
             } else {
+                // "{}" included: the empty object is "key:" with nothing after it (spec 8), and {} is a string
                 fieldValue = readScalar(lineBuf, valueStart, trimEnd);
             }
         }
@@ -1508,9 +1498,6 @@ public class ToonReader {
                 } else {
                     elements.add(new JsonObject());
                 }
-            } else if (isEmptyObject(lineBuf, elementStart, trimEnd)) {
-                // Empty object: - {}
-                elements.add(new JsonObject());
             } else if (isArrayStart(lineBuf, elementStart, trimEnd)) {
                 elements.add(readKeylessArray(elementStart, trimEnd, indent));
             } else {
@@ -2349,12 +2336,6 @@ public class ToonReader {
         return false;
     }
 
-    private boolean isEmptyObjectInBuf() {
-        return (currentTrimEnd - currentTrimStart) == 2
-                && lineBuf[currentTrimStart] == '{'
-                && lineBuf[currentTrimStart + 1] == '}';
-    }
-
     private boolean startsWithDashInBuf() {
         return currentTrimStart < currentTrimEnd && lineBuf[currentTrimStart] == '-';
     }
@@ -2528,16 +2509,6 @@ public class ToonReader {
         }
         char next = buf[bracketEnd + 1];
         return next == ':' || next == '{';
-    }
-
-    private boolean isEmptyObject(char[] buf, int start, int end) {
-        while (start < end && buf[start] == ' ') {
-            start++;
-        }
-        while (end > start && buf[end - 1] == ' ') {
-            end--;
-        }
-        return end - start == 2 && buf[start] == '{' && buf[start + 1] == '}';
     }
 
     /** A number starts with a digit or a minus (spec 4): {@code +1} and {@code .5} are strings. */

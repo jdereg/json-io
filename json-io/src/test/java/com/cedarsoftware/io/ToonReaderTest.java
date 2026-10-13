@@ -2821,8 +2821,8 @@ class ToonReaderTest {
     @Test
     void testEmptyMapInObject() {
         // Object containing an empty nested map - should round-trip correctly.
-        // Per TOON v3.3 §8 the encoder emits empty nested objects as bare "key:" with no
-        // body; decoder accepts both that and the legacy "key: {}" inline form.
+        // Per TOON §8 the encoder emits empty nested objects as bare "key:" with no body.
+        // ("key: {}" is the string "{}": see ToonEmptyObjectTest.)
         Map<String, Object> original = new LinkedHashMap<>();
         original.put("name", "test");
         original.put("metadata", new LinkedHashMap<>());
@@ -3231,10 +3231,11 @@ class ToonReaderTest {
 
     @Test
     void testFromToonToMaps_EmptyMap() {
-        // Empty map through toMaps path
-        String toon = "{}";
+        // Empty map through toMaps path: an empty document (spec 8). "{}" is a string, not an object.
+        String toon = "";
         Map<String, Object> map = JsonIo.fromToonToMaps(toon, null).asClass(Map.class);
         assertTrue(map.isEmpty());
+        assertEquals("{}", JsonIo.fromToonToMaps("{}", null).asClass(String.class));
     }
 
     @Test

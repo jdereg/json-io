@@ -3135,9 +3135,8 @@ public class ToonWriter implements Closeable, Flushable {
                 forceShowType = savedForceShowType;
             }
 
-            if (first) {
-                out.write(" {}");
-            }
+            // Spec 9.4: an object with nothing to write is the bare hyphen the caller has written, as an
+            // empty map is. " {}" would be read as the string "{}".
         } finally {
             if (!cycleSupport) {
                 exitActivePath(obj);
@@ -3499,13 +3498,13 @@ public class ToonWriter implements Closeable, Flushable {
                 return;
             } else if (value != null && !isPrimitive(value)) {
                 // Nested object - newline, no trailing space after colon
-                out.write('\n');
                 depth++;
                 if (value instanceof Map) {
                     // writeMap handles its own indentation per entry
+                    out.write('\n');
                     writeMap((Map<?, ?>) value, typed);
                 } else {
-                    // Use writeObject for cycle detection
+                    // Breaks the line itself, if it writes anything: an object with nothing to write is "key:"
                     writeNestedObject(value, typed);
                 }
                 depth--;
@@ -3653,9 +3652,9 @@ public class ToonWriter implements Closeable, Flushable {
                 // Empty map field value in inline list context: just "key:" — see writeFieldEntry.
                 return;
             } else if (value != null && !isPrimitive(value)) {
-                out.write('\n');
                 depth += 2;
                 if (value instanceof Map) {
+                    out.write('\n');
                     writeMap((Map<?, ?>) value, typed);
                 } else {
                     writeNestedObject(value, typed);
@@ -3726,7 +3725,6 @@ public class ToonWriter implements Closeable, Flushable {
             // Object at end of chain
             writeString(path);
             out.write(":");
-            out.write('\n');
             depth++;
             writeNestedObject(value, needsType(value.getClass(), Object.class));
             depth--;
@@ -3766,15 +3764,17 @@ public class ToonWriter implements Closeable, Flushable {
                 out.write(" ");
                 writeValue(key);
             } else {
-                out.write('\n');
                 depth++;
                 boolean typed = needsType(key.getClass(), Object.class);
                 if (key instanceof Map) {
+                    out.write('\n');
                     writeMap((Map<?, ?>) key, typed);
                 } else if (key instanceof Collection) {
+                    out.write('\n');
                     writeIndent();
                     writeCollection((Collection<?>) key, typed);
                 } else if (key.getClass().isArray()) {
+                    out.write('\n');
                     writeIndent();
                     writeArray(key, typed);
                 } else {
@@ -3792,15 +3792,17 @@ public class ToonWriter implements Closeable, Flushable {
                 out.write(" ");
                 writeValue(value);
             } else {
-                out.write('\n');
                 depth++;
                 boolean typed = needsType(value.getClass(), Object.class);
                 if (value instanceof Map) {
+                    out.write('\n');
                     writeMap((Map<?, ?>) value, typed);
                 } else if (value instanceof Collection) {
+                    out.write('\n');
                     writeIndent();
                     writeCollection((Collection<?>) value, typed);
                 } else if (value.getClass().isArray()) {
+                    out.write('\n');
                     writeIndent();
                     writeArray(value, typed);
                 } else {
@@ -3849,11 +3851,14 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
-     * Write a nested object with cycle detection, with $type when {@code typed}.
+     * Write a nested object with cycle detection, with $type when {@code typed}. The caller has written
+     * "key:" and nothing after it: each line written here is led by its own line break. An object with nothing
+     * to write (no field, or every field skipped as null) therefore stays "key:", TOON's empty object (spec 8).
      */
     private void writeNestedObject(Object obj, boolean typed) throws IOException {
         if (cycleSupport) {
             if (isWrittenAndShared(obj)) {
+                out.write('\n');
                 writeIndent();
                 writeReferenceValue(getReferenceId(obj));
                 return;
@@ -3864,7 +3869,7 @@ public class ToonWriter implements Closeable, Flushable {
         }
 
         try {
-            writeObjectFields(obj, typed);
+            writeObjectFields(obj, typed, true);
         } finally {
             if (!cycleSupport) {
                 exitActivePath(obj);
@@ -3885,7 +3890,7 @@ public class ToonWriter implements Closeable, Flushable {
         }
 
         try {
-            writeObjectFields(obj, typed);
+            writeObjectFields(obj, typed, false);
         } finally {
             if (!cycleSupport) {
                 exitActivePath(obj);
@@ -3897,8 +3902,13 @@ public class ToonWriter implements Closeable, Flushable {
      * Write an object's fields as key: value pairs, after its $type when {@code typed}.
      * Iterates WriteFieldPlan directly to avoid intermediate LinkedHashMap allocation.
      * Falls back to getObjectFields() only when @IoAnyGetter is present (rare).
+     * <p>
+     * With nothing to write, nothing is written: the empty object is "key:" in a field and an empty document
+     * at the root (spec 8), never "{}", which a reader takes for a string.
+     *
+     * @param breakFirst whether the first line written is led by a line break too (the object follows "key:")
      */
-    private void writeObjectFields(Object obj, boolean typed) throws IOException {
+    private void writeObjectFields(Object obj, boolean typed, boolean breakFirst) throws IOException {
         if (obj == null) {
             return;
         }
@@ -3909,7 +3919,7 @@ public class ToonWriter implements Closeable, Flushable {
         // If @IoAnyGetter is present, fall back to map-based approach (rare path); also for an object whose
         // custom writer gives it as fields (JsonClassWriter.toData)
         if (annMeta.getAnyGetterMethod() != null || isWrittenAsDataFields(obj)) {
-            writeObjectFieldsViaMap(obj, typed);
+            writeObjectFieldsViaMap(obj, typed, breakFirst);
             return;
         }
 
@@ -3917,10 +3927,13 @@ public class ToonWriter implements Closeable, Flushable {
                 WriteOptionsBuilder.getWriteFieldPlans(writeOptions, clazz);
 
         boolean includeId = cycleSupport && isReferenced(obj);
-        boolean wroteField = false;
+        boolean wroteField = breakFirst;        // whether the next line written is led by a line break
 
         // Write metadata first
         if (includeId) {
+            if (wroteField) {
+                out.write('\n');
+            }
             writeIndent();
             writeIdField(obj);
             wroteField = true;
@@ -3978,10 +3991,6 @@ public class ToonWriter implements Closeable, Flushable {
             }
             currentMapHasSimpleKeyTypeHint = savedMapSimpleKey;
             forceShowType = savedForceShowType;
-        }
-
-        if (!wroteField) {
-            out.write("{}");
         }
     }
 
@@ -4057,9 +4066,15 @@ public class ToonWriter implements Closeable, Flushable {
      * including the extra ones from the annotated method (and for objects written as their custom writer's data),
      * after the object's $type when {@code typed}.
      */
-    private void writeObjectFieldsViaMap(Object obj, boolean typed) throws IOException {
+    private void writeObjectFieldsViaMap(Object obj, boolean typed, boolean breakFirst) throws IOException {
         Fields fields = getObjectFields(obj);
         boolean includeId = cycleSupport && isReferenced(obj);
+        if (!includeId && !typed && fields.isEmpty()) {
+            return;     // the empty object: "key:" alone, or an empty document
+        }
+        if (breakFirst) {
+            out.write('\n');
+        }
         if (includeId || typed) {
             if (includeId) {
                 writeIndent();
@@ -4076,8 +4091,6 @@ public class ToonWriter implements Closeable, Flushable {
                 out.write('\n');
                 writeMapWithSimpleKeys(fields, Object.class);
             }
-        } else if (fields.isEmpty()) {
-            out.write("{}");
         } else {
             writeMapWithSimpleKeys(fields, Object.class);
         }
