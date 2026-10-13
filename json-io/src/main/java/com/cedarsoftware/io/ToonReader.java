@@ -174,6 +174,13 @@ public class ToonReader {
     private int lineNumber = 0;
     private int currentIndent = 0;
     private int lineSpaces = 0;   // leading spaces of the line readContentLine() last returned
+    private int pendingBlankLine = 0;   // the first blank line skipped before the current line; 0 for none
+    // The innermost header span that is open: its first item, row or entry line has been read and its reader
+    // has not returned. Null outside every span. The text completes "Blank lines are not allowed ...".
+    private String openSpan;
+    private static final String SPAN_LIST = "inside list arrays";
+    private static final String SPAN_TABLE = "inside tabular arrays";
+    private static final String SPAN_KEYED = "among entry rows";
     private int currentTrimStart = 0;
     private int currentTrimEnd = 0;
     private int currentLineEnd = 0;   // end of the line before its trailing whitespace was trimmed
@@ -346,11 +353,7 @@ public class ToonReader {
             // root, missing-colon line dangling after a key:nested structure, header with
             // missing colon followed by orphan rows, etc.). Non-strict tolerates it.
             if (strictToon) {
-                while (hasLine()) {
-                    if (isTrimmedEmpty()) {
-                        consumeLine();
-                        continue;
-                    }
+                if (hasLine()) {
                     String trailing = peekTrimmed();
                     throw new JsonIoException("Unexpected content after root value at line "
                             + lineNumber + ": " + trailing);
@@ -372,11 +375,6 @@ public class ToonReader {
                     emptyMap.setType(suggestedType);
                 }
                 return emptyMap;
-            }
-
-            if (isTrimmedEmpty()) {
-                consumeLine();
-                continue;  // Skip empty lines
             }
 
             if (isEmptyObjectInBuf()) {
@@ -427,15 +425,6 @@ public class ToonReader {
         while (true) {
             if (!hasLine()) {
                 break;  // EOF
-            }
-
-            // §12: blank (whitespace-only) lines MAY be skipped regardless of their leading
-            // space count, including in the middle of a nested object body. The indent check
-            // must come AFTER the blank-line skip — otherwise a blank line at depth 0 inside
-            // a nested context (baseIndent ≥ 1) would falsely "exit" the parent.
-            if (isTrimmedEmpty()) {
-                consumeLine();
-                continue;  // Skip empty lines
             }
 
             int indent = peekIndent();
@@ -1042,17 +1031,9 @@ public class ToonReader {
         JsonObject entries = new JsonObject();
         int entryCount = 0;
         int entryDepth = -1;
-        int blankLine = 0;      // a blank line after the first row: an error in strict mode if a row follows it
+        final String outerSpan = openSpan;
 
         while (hasLine()) {
-            if (isTrimmedEmpty()) {
-                if (entryCount > 0 && blankLine == 0) {
-                    blankLine = lineNumber;
-                }
-                consumeLine();
-                continue;
-            }
-
             int depth = peekIndent();
             if (depth <= headerDepth) {
                 break;  // Back to the header's level: the object is complete
@@ -1066,9 +1047,6 @@ public class ToonReader {
             } else if (depth != entryDepth) {
                 throw new JsonIoException("Line at the wrong depth among the entry rows at line " + lineNumber);
             }
-            if (strictToon && blankLine != 0) {
-                throw new JsonIoException("Blank lines are not allowed among entry rows at line " + blankLine);
-            }
 
             int colonPos = findColonInBuf();
             if (colonPos < 0) {
@@ -1078,6 +1056,7 @@ public class ToonReader {
             int trimStart = currentTrimStart;
             int trimEnd = currentTrimEnd;
             consumeLine();
+            openSpan = SPAN_KEYED;
             String key = unquoteString(trimSpacesRangeBuf(trimStart, trimStart + colonPos));
             int valueStart = trimStart + colonPos + 1;
 
@@ -1111,6 +1090,7 @@ public class ToonReader {
             entryCount++;
         }
 
+        openSpan = outerSpan;
         if (strictToon && entryCount != header.count) {
             throw new JsonIoException("Keyed object count mismatch at line " + lineNumber +
                     ", expected " + header.count + " entries, got " + entryCount);
@@ -1131,18 +1111,11 @@ public class ToonReader {
         int colHeadersSize = header.leafCount;
         String[] columnMetaKeys = fieldTree == null ? buildColumnMetaKeys(columnHeaders) : null;
         Object[] cells = fieldTree == null ? null : new Object[colHeadersSize];
+        final String outerSpan = openSpan;
 
         while (elements.size() < count) {
             if (!hasLine()) {
                 break;  // EOF
-            }
-
-            if (isTrimmedEmpty()) {
-                if (strictToon) {
-                    throw new JsonIoException("Blank lines are not allowed inside tabular arrays at line " + lineNumber);
-                }
-                consumeLine();
-                continue;
             }
 
             int indent = peekIndent();
@@ -1165,6 +1138,7 @@ public class ToonReader {
             int trimStart = currentTrimStart;
             int trimEnd = currentTrimEnd;
             consumeLine();
+            openSpan = SPAN_TABLE;
 
             JsonObject rowObj;
             if (fieldTree == null) {
@@ -1191,6 +1165,7 @@ public class ToonReader {
             elements.add(rowObj);
         }
 
+        openSpan = outerSpan;
         if (strictToon) {
             if (elements.size() != count) {
                 throw new JsonIoException("Tabular array count mismatch at line " + lineNumber +
@@ -1207,9 +1182,6 @@ public class ToonReader {
 
     private boolean hasAdditionalTabularRows(int baseIndent, char delimiter) throws IOException {
         if (!hasLine()) {
-            return false;
-        }
-        if (isTrimmedEmpty()) {
             return false;
         }
         int indent = peekIndent();
@@ -1483,18 +1455,11 @@ public class ToonReader {
     private List<Object> readListArray(int count) throws IOException {
         List<Object> elements = new ArrayList<>(count);
         int baseIndent = -1;
+        final String outerSpan = openSpan;
 
         while (elements.size() < count) {
             if (!hasLine()) {
                 break;  // EOF
-            }
-
-            if (isTrimmedEmpty()) {
-                if (strictToon) {
-                    throw new JsonIoException("Blank lines are not allowed inside list arrays at line " + lineNumber);
-                }
-                consumeLine();
-                continue;
             }
 
             int indent = peekIndent();
@@ -1514,6 +1479,7 @@ public class ToonReader {
             int trimStart = currentTrimStart;
             int trimEnd = currentTrimEnd;
             consumeLine();
+            openSpan = SPAN_LIST;       // whatever this item holds is read inside the span, nested headers too
             int elementStart = trimStart + 1;
             while (elementStart < trimEnd && lineBuf[elementStart] == ' ') {
                 elementStart++;
@@ -1565,6 +1531,7 @@ public class ToonReader {
             }
         }
 
+        openSpan = outerSpan;
         if (strictToon) {
             if (elements.size() != count) {
                 throw new JsonIoException("List array count mismatch at line " + lineNumber +
@@ -1581,9 +1548,6 @@ public class ToonReader {
 
     private boolean hasAdditionalListElements(int baseIndent) throws IOException {
         if (!hasLine()) {
-            return false;
-        }
-        if (isTrimmedEmpty()) {
             return false;
         }
         int indent = peekIndent();
@@ -1640,11 +1604,6 @@ public class ToonReader {
 
             if (peekIndent() != fieldIndent) {
                 break;  // Not at our indent level
-            }
-
-            if (isTrimmedEmpty()) {
-                consumeLine();
-                continue;
             }
 
             // Find colon directly in the line buffer
@@ -2284,9 +2243,18 @@ public class ToonReader {
      */
     private boolean hasLine() throws IOException {
         if (lineConsumed) {
-            int lineLen = readContentLine();
             lineConsumed = false;
-            if (lineLen >= 0) {
+            while (true) {
+                int lineLen = readContentLine();
+                if (lineLen < 0) {
+                    currentHasLine = false;
+                    currentIndent = 0;
+                    lineStart = 0;
+                    currentTrimStart = 0;
+                    currentTrimEnd = 0;
+                    currentTrimmed = "";
+                    break;
+                }
                 final char[] buf = lineBuf;  // localize after readContentLine (which may resize/borrow)
                 final int start = lineStart;
 
@@ -2319,11 +2287,21 @@ public class ToonReader {
                     }
                     blank = indentEnd == lineLen;
                     depth = tabs + counted / indentSize;
-                } else if (!blank && strictToon && spaces % indentSize != 0) {
+                }
+                if (blank) {
+                    // Spec 12: a blank line never creates or closes structure and is never counted, so no reader
+                    // is shown one. Where it stood is kept for consumeLine(), which refuses it inside a header
+                    // span once it knows who takes the line that follows.
+                    if (pendingBlankLine == 0) {
+                        pendingBlankLine = lineNumber;
+                    }
+                    continue;
+                }
+                if (strictToon && indentEnd == spaces && spaces % indentSize != 0) {
                     throw new JsonIoException("Indentation must be a multiple of " + indentSize +
                             " spaces at line " + lineNumber);
                 }
-                currentIndent = blank ? 0 : depth;
+                currentIndent = depth;
 
                 // Compute trim-end directly from buf: trailing spaces go, and nothing else (a tab is content)
                 int trimStart = start + indentEnd;
@@ -2334,15 +2312,9 @@ public class ToonReader {
                 }
                 currentTrimStart = trimStart;
                 currentTrimEnd = trimEnd;
-                currentTrimmed = trimStart < trimEnd ? null : "";
+                currentTrimmed = null;
                 currentHasLine = true;
-            } else {
-                currentHasLine = false;
-                currentIndent = 0;
-                lineStart = 0;
-                currentTrimStart = 0;
-                currentTrimEnd = 0;
-                currentTrimmed = "";
+                break;
             }
         }
         return currentHasLine;
@@ -2357,10 +2329,6 @@ public class ToonReader {
             currentTrimmed = new String(lineBuf, currentTrimStart, currentTrimEnd - currentTrimStart);
         }
         return currentTrimmed;
-    }
-
-    private boolean isTrimmedEmpty() {
-        return currentTrimStart >= currentTrimEnd;
     }
 
     private boolean isArrayStartInBuf() {
@@ -2400,9 +2368,21 @@ public class ToonReader {
     }
 
     /**
-     * Consume the current line (move to next).
+     * Consume the current line (move to next): the caller has taken it for its own.
+     * <p>
+     * Spec 12: a blank line inside a header span -- from an array's or keyed table's first item, row or entry
+     * line through the last line of its content -- is an error, and every other blank line is ignored. Whether
+     * a blank line lay inside a span is known only when the line after it is taken: by a reader working inside
+     * an open span (the line belongs to it, or to something within it), or by one outside every span. Non-strict
+     * mode ignores the blank line in either case (spec 14.4, recovery 4).
      */
     private void consumeLine() {
+        if (pendingBlankLine != 0) {
+            if (strictToon && openSpan != null) {
+                throw new JsonIoException("Blank lines are not allowed " + openSpan + " at line " + pendingBlankLine);
+            }
+            pendingBlankLine = 0;
+        }
         lineConsumed = true;
     }
 

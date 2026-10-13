@@ -807,6 +807,11 @@ and so are spaces at the end of a line; a tab, a no-break space or any other cha
 so this matters only for TOON written by hand or by another tool. Indentation is spaces too: strict mode refuses a
 tab in it, and non-strict mode counts each tab as one level.
 
+A blank line means nothing: it never ends an object or an array and is never counted, so `address:`, a blank line,
+then the indented fields is still one nested object. The one place a blank line may not stand in strict mode is
+inside an array or a keyed table, from its first item or row through the last line that belongs to it; non-strict
+mode ignores it there too.
+
 Reading is the other side of the quoting rules. A token without quotes is a number only if it is one in JSON's grammar
 (an optional minus, digits without a leading zero, an optional fraction, an optional exponent); `true`, `false` and
 `null` are themselves; everything else is a string. So `.5`, `1.`, `+1`, `05`, `1_000`, `0x10`, `NaN` and
