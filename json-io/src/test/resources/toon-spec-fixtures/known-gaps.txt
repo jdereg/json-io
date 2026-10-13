@@ -61,6 +61,3 @@ decode/whitespace.json#14          throws on a tab after a list-item hyphen
 
 # Reading: a carriage return ends a line only together with its line feed (spec 12) -- 1
 decode/whitespace.json#15     keeps a second carriage return before CRLF as content
-
-# Writing: other (dotted keys unquoted) -- 1
-encode/objects.json#19        keeps dotted and literal-named keys unquoted

@@ -829,6 +829,11 @@ Reading is the other side of the quoting rules. A token without quotes is a numb
 `Infinity` are read as strings, as the TOON spec requires. A field declared as a number is still given its value:
 `price: .5` read into a `double` is `0.5`.
 
+A key is written without quotes when it starts with a letter or an underscore and holds only letters, digits,
+underscores and dots (`name`, `_id`, `server.port`); any other key is quoted (`"content-type"`, `"2fa"`, `""`).
+A dotted key is a key like another: `server.port: 8080` reads back as the one key `server.port`, unless the reader
+is told to expand paths (`toonExpandPaths(true)`), which splits every unquoted dotted key into nested objects.
+
 ### TOON Array Formats
 
 Which form a value takes follows from its shape, as the TOON spec lays down.

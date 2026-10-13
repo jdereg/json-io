@@ -1173,6 +1173,10 @@ Key folding only applies when:
 - Each nested object has exactly one key
 - All key segments are valid identifiers (letters, digits, underscores, starting with letter/underscore)
 
+A key that holds a dot itself (`"server.port"` in a `Map`) is written the same way, `server.port: 8080`, with or
+without key folding. A reader that expands paths (`toonExpandPaths(true)`) cannot tell the two apart and expands
+both; read without that option, each dotted key is the one key it is written as.
+
 Arrays are also supported in folded paths:
 ```
 data.items[3]: foo,bar,baz
@@ -1374,6 +1378,9 @@ json-io itself reads both, whichever was written: nothing has to be set on the r
 One more difference is in the quotes. A string such as `.5`, `5.` or `1e` is no number in TOON's grammar, so by the
 spec it is written without quotes, and json-io does so. json-io 4.113.0 and earlier read such a token as a number;
 with `toonLegacyForms(true)` it is written in quotes, as they wrote it.
+
+A key that holds a dot (`server.port`) is written without quotes, as the spec has it. json-io 4.113.0 and
+earlier quoted it unless `toonKeyFolding` was on, and with `toonLegacyForms(true)` it is written as they wrote it.
 
 The one place where the text is not 4.113.0's: a document that is a single string starting with U+FEFF is written
 in quotes in both modes. Without them a reader that follows the spec, json-io 4.114.0 included, removes the U+FEFF

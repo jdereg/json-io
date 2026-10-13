@@ -133,10 +133,9 @@ public class ToonWriter implements Closeable, Flushable {
     private static boolean[] buildKeyMustQuoteTable() {
         boolean[] table = new boolean[128];
         // Every ASCII codepoint outside [A-Za-z0-9_] forces key quoting per §7.3.
-        // Dot ('.') is handled at the caller — when toonKeyFolding is enabled, dots are
-        // legitimate path separators and may appear in unquoted keys; otherwise dotted
-        // keys must be quoted. So we keep dot OFF in this table and let the caller
-        // gate it on the option.
+        // Dot ('.') is part of the unquoted-key grammar and is OFF in this table. The caller
+        // quotes a dotted key only under toonLegacyForms without toonKeyFolding, as json-io
+        // 4.113.0 wrote it.
         for (int i = 0; i < 128; i++) {
             boolean identifierChar = (i >= 'A' && i <= 'Z')
                                   || (i >= 'a' && i <= 'z')
@@ -165,16 +164,15 @@ public class ToonWriter implements Closeable, Flushable {
         if (!isIdentifierStart(first)) {
             return true;
         }
-        boolean keyFolding = options.isToonKeyFolding();
+        // Dots are part of the §7.3 unquoted-key grammar: a.b is a key like another, written without quotes.
+        // json-io 4.113.0 and earlier quoted a dotted key unless toonKeyFolding was on, to keep it from a
+        // reader that expands paths (toonExpandPaths); under toonLegacyForms it is still written that way.
+        boolean quoteDots = options.isToonLegacyForms() && !options.isToonKeyFolding();
         int len = key.length();
         for (int i = 1; i < len; i++) {
             char c = key.charAt(i);
             if (c == '.') {
-                // Dots are part of the §7.3 unquoted-key grammar, but we quote them when
-                // toonKeyFolding is disabled to avoid round-trip ambiguity with the path-
-                // expansion decoder (a literal dotted key vs. a folded path is ambiguous
-                // without the option).
-                if (!keyFolding) {
+                if (quoteDots) {
                     return true;
                 }
                 continue;
@@ -1097,8 +1095,8 @@ public class ToonWriter implements Closeable, Flushable {
         for (int i = 1; i < len; i++) {
             char c = key.charAt(i);
             if (c == '.') {
-                if (!toonKeyFolding) {
-                    return true;
+                if (!v4Forms && !toonKeyFolding) {
+                    return true;        // as json-io 4.113.0 wrote it: see computeKeyNeedsQuoting
                 }
                 continue;
             }
