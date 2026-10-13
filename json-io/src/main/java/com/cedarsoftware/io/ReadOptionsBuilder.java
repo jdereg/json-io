@@ -976,7 +976,7 @@ public class ReadOptionsBuilder {
      * Set a permanent (JVM lifecycle) default for the TOON {@code toonIndentSize} read option.
      * All new ReadOptions instances will be initialized with this value unless explicitly overridden.
      *
-     * <p>Per TOON v3.3 §12, the decoder expects 2 spaces per indent level by default. Set this
+     * <p>Per the TOON spec (§12), the decoder expects 2 spaces per indent level by default. Set this
      * to match documents that use a non-default indent width (e.g. 4 for 4-space indentation).
      *
      * @param toonIndentSize positive integer, minimum 1. Default is 2.
