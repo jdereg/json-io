@@ -4,9 +4,3 @@
 # ToonSpecFixtureTest reports a listed case as skipped while it fails, and FAILS the build
 # when a listed case passes, so a fix removes its lines here in the same commit.
 # A case that is not listed must pass. The groups are for the reader; the test ignores them.
-
-# Reading, strict mode: input that must be rejected (header grammar, depth jumps, stray whitespace) -- 4
-decode/indentation-errors.json#12  throws on depth jump of more than one level
-decode/indentation-errors.json#13  throws on depth jump inside a nested object
-decode/indentation-errors.json#32  throws on a depth jump to the first tabular row
-decode/indentation-errors.json#33  throws on a depth jump to the first list item

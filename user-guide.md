@@ -414,9 +414,22 @@ ReadOptions strictToonOptions = new ReadOptionsBuilder()
         .build();
 ```
 
-`strictToon()` is **off by default** for backward compatibility. When enabled, TOON parsing enforces strict
-format checks such as indentation validity, array count matching, delimiter/header consistency, and rejection
-of blank lines inside list/tabular arrays.
+`strictToon()` is **off by default**. Both modes read every well-formed TOON document alike, and both refuse
+malformed input: a header that is not one, an unterminated string, a row of the wrong width, a line that belongs
+to nothing. Non-strict mode differs by exactly the five recoveries the TOON spec allows a reader (§14.4), and no
+others:
+
+1. **Counts.** A declared count that does not match what is there (`items[3]:` with two items, or with four) is
+   not an error; every item, row and value in the header's scope is read.
+2. **Duplicate keys.** A key that stands twice in an object, or a field name twice in a table header, is not an
+   error; the last one wins.
+3. **Indentation.** A tab in the indentation counts as one level, and indentation that is not a multiple of the
+   indent size is rounded down. A line of only spaces and tabs is blank.
+4. **Blank lines.** A blank line inside an array or a keyed table is ignored.
+5. **Depth jumps.** A nested block whose first line stands more than one level below its key or header is read
+   from where it stands.
+
+Strict mode refuses each of these. In neither mode is anything skipped or dropped without an error.
 
 ### Writing JSON5
 
@@ -625,8 +638,10 @@ This JSON5 output can be read back by json-io (or any JSON5-compliant parser) wi
 
 [TOON (Token-Oriented Object Notation)](https://toonformat.dev/) is a compact, human-readable format
 optimized for LLM token efficiency, using approximately **40-50% fewer tokens** than equivalent JSON.
-json-io fully supports both reading and writing TOON format, and conforms to the **TOON v3.3 spec** —
-the full upstream conformance fixture suite (encode + decode + strict-mode validation) passes.
+json-io fully supports both reading and writing TOON format, and conforms to the **TOON v4.4 spec**: all 564
+cases of the official conformance fixture suite pass (160 for writing, 404 for reading, in strict and non-strict
+mode). Key folding and path expansion, which spec v3.3 had and v4 dropped, remain as options that are off by
+default.
 
 ### Writing TOON
 
@@ -998,7 +1013,7 @@ String toon = JsonIo.toToon(cyclicObject, options);
 For per-call control beyond the defaults, the dedicated options guides document every TOON-related option:
 
 **Read side** — see [Read Options TOON sections](user-guide-readOptions.md#toon-parsing-strictness):
-- `strictToon()` — strict spec validation (rejects duplicate keys, trailing content, malformed brackets)
+- `strictToon()` — refuses what non-strict mode recovers from: a count that does not match, a key that stands twice, a tab or uneven indentation, a blank line inside an array, a depth jump
 - `toonExpandPaths(boolean)` — opt-in spec §13.4 dotted-key path expansion *(new in 4.103.0)*
 - `toonIndentSize(int)` — custom decoder indent width for documents that don't use 2-space indent *(new in 4.103.0)*
 

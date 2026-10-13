@@ -498,6 +498,7 @@ public class ToonReader {
                 if (hasLine() && peekIndent() > fieldDepth) {
                     // The lines below are the fields of an object: a header without a key cannot stand there
                     // (spec 6), and readObject says so. The first nested line's own depth is the object's.
+                    checkNoDepthJump(fieldDepth);
                     fieldValue = readObject(peekIndent(), null);
                 } else {
                     // §8: bare "key:" with no nested body (next line is a sibling at the same
@@ -753,6 +754,20 @@ public class ToonReader {
             return readInlineArray(lineBuf, valueStart, lineEnd, header.count, header.delimiter);
         }
         return readListArray(header.count, headerDepth);
+    }
+
+    /**
+     * The first line of a nested scope stands exactly one level below the line that opens it (spec 8, 9, 12).
+     * Deeper is a depth jump: an error in strict mode. Non-strict mode takes that line's depth for the depth of
+     * the scope (spec 14.4, recovery 5); the scope's readers then hold every later line to it.
+     *
+     * @param openerDepth the depth of the key or header whose scope the current line opens
+     */
+    private void checkNoDepthJump(int openerDepth) {
+        if (strictToon && peekIndent() != openerDepth + 1) {
+            throw new JsonIoException("Indentation jumps more than one level at line " + lineNumber
+                    + ": the first line under a key or header stands one level below it");
+        }
     }
 
     /**
@@ -1103,6 +1118,7 @@ public class ToonReader {
                 if (indent <= headerDepth) {
                     break;      // nothing stands in the header's scope
                 }
+                checkNoDepthJump(headerDepth);
                 rowDepth = indent;
             } else if (indent != rowDepth) {
                 break;          // shallower: the scope is over. Deeper: no row takes it, and readValue refuses it
@@ -1393,6 +1409,7 @@ public class ToonReader {
                 if (indent <= headerDepth) {
                     break;      // nothing stands in the header's scope
                 }
+                checkNoDepthJump(headerDepth);
                 itemDepth = indent;
             } else if (indent != itemDepth) {
                 break;          // shallower: the scope is over. Deeper: no item took it, and readValue refuses it
