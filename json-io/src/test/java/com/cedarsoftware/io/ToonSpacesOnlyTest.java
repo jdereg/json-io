@@ -116,8 +116,12 @@ class ToonSpacesOnlyTest {
         assertReads(map("items", listOf(map("k", "v\t"))), "items[1]:\n  - k: v\t");
         assertReads(map("items", listOf(map("\tk", listOf(1L, 2L)))), "items[1]:\n  - \tk[2]: 1,2");
         assertReads(map("items", listOf(listOf("x", "y\t"))), "items[1]:\n  - [2]: x,y\t");
-        // whatever stands before the bracket is the key (spec 6): this item is an object, not an array
-        assertReads(map("items", listOf(map("\t", listOf("x", "y")))), "items[1]:\n  - \t[2]: x,y");
+        // a tab before the bracket is no part of a key (spec 6: no whitespace between a key and its bracket), and
+        // the item is no array either: the line is refused
+        for (ReadOptions options : BOTH_MODES) {
+            assertThatThrownBy(() -> read("items[1]:\n  - \t[2]: x,y", options)).isInstanceOf(JsonIoException.class);
+        }
+        assertReads(map("items", listOf(map("\tk", listOf("x", "y")))), "items[1]:\n  - \tk[2]: x,y");
         assertReads(map("m", map("x", map("v", "\t1"), "y", map("v", 2L))), "m[2:]{v}:\n  x:\t1\n  y: 2");
     }
 

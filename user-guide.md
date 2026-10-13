@@ -833,6 +833,12 @@ an error, never skipped. The number in a header (`items[3]:`) is a claim that st
 how much is read, so non-strict mode reads every item, row and value that stands in the header's scope, three or
 not. A row of a table must have a cell for every field in both modes.
 
+A line with a bracket before its first colon (outside quotes) is a header, and must be one: `key[N]:`, with `:`
+after the count for a keyed table, a tab or `|` before the closing bracket to name that delimiter, and a field
+list in braces -- nothing else, and no space anywhere between the key and the final colon. `items[2] : 1,2`,
+`items [2]: 1,2`, `items[+2]: 1,2` and `rows[1]{a,}:` are errors in strict and non-strict mode; a key that holds
+a bracket is written in quotes (`"a[0]": x`).
+
 A blank line means nothing: it never ends an object or an array and is never counted, so `address:`, a blank line,
 then the indented fields is still one nested object. The one place a blank line may not stand in strict mode is
 inside an array or a keyed table, from its first item or row through the last line that belongs to it; non-strict

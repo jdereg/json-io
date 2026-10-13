@@ -44,17 +44,17 @@ class ToonReaderCoverageTest {
     // ========== Malformed array syntax — invalid count ==========
 
     @Test
-    void testMalformedArrayCountNotANumber_StrictThrows_NonStrictLiteral() {
-        // §14.2 non-strict tolerance: non-integer bracket content is treated as part of
-        // the literal key. Strict mode still throws "Invalid array count".
+    void testMalformedArrayCountNotANumber_ThrowsInBothModes() {
+        // Spec 5.2, 6: a bracket before the line's first colon makes it a header line, and a header's length
+        // is digits. A header syntax error is an error in strict and in non-strict mode: the line is not read
+        // as a key that holds a bracket.
         String toon = "items[abc]: 1,2,3";
-        // Strict mode — must throw
         assertThatThrownBy(() -> JsonIo.fromToon(toon, strictOpts()).asClass(Map.class))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("Invalid array count");
-        // Non-strict (default) — treat the whole thing as a literal key
-        Map<String, Object> result = JsonIo.fromToon(toon).asClass(Map.class);
-        assertThat(result).containsEntry("items[abc]", "1,2,3");
+        assertThatThrownBy(() -> JsonIo.fromToon(toon).asClass(Map.class))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Invalid array count");
     }
 
     @Test

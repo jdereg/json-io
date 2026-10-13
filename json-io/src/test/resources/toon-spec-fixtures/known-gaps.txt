@@ -5,23 +5,8 @@
 # when a listed case passes, so a fix removes its lines here in the same commit.
 # A case that is not listed must pass. The groups are for the reader; the test ignores them.
 
-# Reading, non-strict mode: only the five recoveries of spec 14.4; everything else errors -- 5
-decode/validation-errors.json#18   throws on a keyed header line without its colon in non-strict mode
-decode/validation-errors.json#66   throws on a space before the bracket segment in non-strict mode
-decode/validation-errors.json#83   throws on a tab field list after a pipe delimiter symbol in non-strict mode
-decode/validation-errors.json#84   throws on a pipe field list after a bracket segment without a delimiter symbol in non-strict mode
-decode/validation-errors.json#93   throws on content after a nested field group in non-strict mode
-
-# Reading, strict mode: input that must be rejected (header grammar, depth jumps, stray whitespace) -- 12
+# Reading, strict mode: input that must be rejected (header grammar, depth jumps, stray whitespace) -- 4
 decode/indentation-errors.json#12  throws on depth jump of more than one level
 decode/indentation-errors.json#13  throws on depth jump inside a nested object
 decode/indentation-errors.json#32  throws on a depth jump to the first tabular row
 decode/indentation-errors.json#33  throws on a depth jump to the first list item
-decode/validation-errors.json#25   throws on bracket length with plus sign
-decode/validation-errors.json#27   throws on a bracket length with a non-ASCII digit
-decode/validation-errors.json#28   throws on whitespace between bracket segment and colon
-decode/validation-errors.json#30   throws on whitespace between a field list and the header colon
-decode/validation-errors.json#35   throws on empty field list
-decode/validation-errors.json#65   throws on whitespace between a key and its bracket segment
-decode/validation-errors.json#67   throws on a tab between a key and its bracket segment
-decode/validation-errors.json#90   throws on an empty field entry

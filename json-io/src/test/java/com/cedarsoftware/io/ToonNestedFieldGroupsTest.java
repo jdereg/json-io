@@ -250,12 +250,11 @@ class ToonNestedFieldGroupsTest {
         assertEquals(json(mapOf("x", 4L)), json(item.get("b")));
     }
 
-    /** As for any malformed header behind a key, non-strict mode reads the line as a key and its value. */
+    /** A malformed header is an error in non-strict mode too (spec 5.2, 6): it is no key with a bracket in it. */
     @Test
-    void nonStrictModeReadsAMalformedHeaderAsAKeyAndItsValue() {
-        Map<?, ?> root = (Map<?, ?>) read("a[1]{b{c}d}: 5", LENIENT);
-
-        assertEquals(5L, root.get("a[1]{b{c}d}"));
+    void nonStrictModeRefusesAMalformedHeaderToo() {
+        assertThatThrownBy(() -> read("a[1]{b{c}d}: 5", LENIENT)).isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Malformed array header (field list)");
     }
 
     @Test

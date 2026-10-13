@@ -460,26 +460,28 @@ public class ToonReader {
         Object fieldValue;
         boolean fieldWasQuoted;
         int bracketStart = findUnquotedBracketPosition(key);
-        // §14.2 non-strict tolerance: when the bracket segment is malformed (non-integer
-        // count, missing close-bracket, trailing non-{ text) AND strict is off, parseHeader
-        // returns null and we fall back to literal-key handling — the whole "key[…]" string
-        // becomes the literal field name and the value is parsed normally.
-        ArrayHeader arrayHeader = null;
         if (bracketStart >= 0) {
+            // Spec 5.2: an unquoted bracket before the line's first unquoted colon makes the line a header, and
+            // it must be one by the grammar of spec 6, in strict and non-strict mode: a line that is not is an
+            // error, not a key with a bracket in it. (A key that holds a bracket is written in quotes.)
+            if (bracketStart == 0) {
+                // Spec 6: a header without a key stands only at the root and as a list item. As a field it would
+                // be an array under the empty key, which is written with its key in quotes: ""[2]: x,y
+                throw new JsonIoException("An array header without a key cannot be a field at line " + lineNumber);
+            }
+            char beforeBracket = key.charAt(bracketStart - 1);
+            if (beforeBracket == ' ' || beforeBracket == '\t') {
+                // Any other character there belongs to the key (spec 6)
+                throw new JsonIoException("Malformed array header (whitespace between the key and its bracket"
+                        + " segment) at line " + lineNumber + ": " + key);
+            }
             // The header is parsed from the line, not from the key: the key stops at the line's first colon,
             // and a field list may hold one. The key was trimmed, so find where it starts in the buffer.
             int keyOffset = keyStart;
             while (lineBuf[keyOffset] == ' ') {
                 keyOffset++;
             }
-            arrayHeader = parseHeader(lineBuf, keyOffset + bracketStart, trimEnd, false);
-        }
-        if (arrayHeader != null) {
-            if (bracketStart == 0) {
-                // Spec 6: a header without a key stands only at the root and as a list item. As a field it would
-                // be an array under the empty key, which is written with its key in quotes: ""[2]: x,y
-                throw new JsonIoException("An array header without a key cannot be a field at line " + lineNumber);
-            }
+            ArrayHeader arrayHeader = parseHeader(lineBuf, keyOffset + bracketStart, trimEnd);
             fieldKey = cacheSubstring(key, 0, bracketStart);
             fieldWasQuoted = fieldKey.startsWith("\"");
             if (fieldWasQuoted) {
@@ -709,7 +711,7 @@ public class ToonReader {
         if (end - start == 2 && buf[start] == '[' && buf[start + 1] == ']') {
             return new ArrayList<>();
         }
-        ArrayHeader header = parseHeader(buf, start, end, true);
+        ArrayHeader header = parseHeader(buf, start, end);
         if (listItem && header.isTabular()) {       // (a keyed header always has a field list)
             // Spec 6: a header without a key that has a field list -- a table or a keyed table -- stands only
             // at the root. As a list item an object's first field carries it: "- rows[2]{a,b}:".
@@ -774,8 +776,7 @@ public class ToonReader {
      *
      * @param keyless true when no key stands before the bracket, so the line has no "key: value" reading
      */
-    private ArrayHeader parseHeader(char[] buf, int bracket, int end, boolean keyless) {
-        final boolean mustThrow = strictToon || keyless;
+    private ArrayHeader parseHeader(char[] buf, int bracket, int end) {
         int bracketEnd = -1;
         for (int i = bracket + 1; i < end; i++) {
             if (buf[i] == ']') {
@@ -784,11 +785,8 @@ public class ToonReader {
             }
         }
         if (bracketEnd < 0) {
-            if (mustThrow) {
-                throw new JsonIoException("Malformed array syntax at line " + lineNumber + ": "
-                        + new String(buf, bracket, end - bracket));
-            }
-            return null;
+            throw new JsonIoException("Malformed array syntax at line " + lineNumber + ": "
+                    + new String(buf, bracket, end - bracket));
         }
 
         // Detect delimiter from the bracket segment: [2] = comma, [2\t] = tab, [2|] = pipe
@@ -812,76 +810,44 @@ public class ToonReader {
                 digitsOnly = buf[i] >= '0' && buf[i] <= '9';
             }
             if (!digitsOnly) {
-                if (mustThrow) {
-                    throw new JsonIoException("Malformed keyed header (length) at line " + lineNumber + ": "
-                            + new String(buf, bracket, end - bracket));
-                }
-                return null;
+                throw new JsonIoException("Malformed keyed header (length) at line " + lineNumber + ": "
+                        + new String(buf, bracket, end - bracket));
             }
         }
 
-        int count = parseHeaderCount(buf, bracket + 1, countEnd, mustThrow);
-        if (count == INVALID_COUNT) {
-            return null;
-        }
+        int count = parseHeaderCount(buf, bracket + 1, countEnd);
 
+        // §6: the bracket segment is followed directly by the field list or by the colon, and the field list
+        // directly by the colon. A space there ("items[2] :", "a[1]{x} :") is a header syntax error.
         int pos = bracketEnd + 1;
         FieldEntry[] fields = null;
         if (pos < end && buf[pos] == '{') {
             fields = parseFieldList(buf, pos, end, delimiter, 1);
             if (fields == null) {
-                if (mustThrow) {
-                    throw new JsonIoException("Malformed array header (field list) at line " + lineNumber + ": "
-                            + new String(buf, bracket, end - bracket));
-                }
-                return null;
+                throw new JsonIoException("Malformed array header (field list) at line " + lineNumber + ": "
+                        + new String(buf, bracket, end - bracket));
             }
             pos = fieldListEnd;
         } else if (keyed) {
             // §6: the rows of a keyed header need its field list to say what their cells are.
-            if (mustThrow) {
-                throw new JsonIoException("Malformed keyed header (no field list) at line " + lineNumber + ": "
-                        + new String(buf, bracket, end - bracket));
-            }
-            return null;
-        }
-        while (pos < end && buf[pos] == ' ') {
-            pos++;
+            throw new JsonIoException("Malformed keyed header (no field list) at line " + lineNumber + ": "
+                    + new String(buf, bracket, end - bracket));
         }
         if (pos >= end || buf[pos] != ':') {
-            // Trailing content after the bracket segment or the field list (whitespace between bracket and
-            // fields, extra-bracket noise, a missing colon). Non-strict: literal-key handling at caller.
-            if (mustThrow) {
-                throw new JsonIoException("Malformed array header (unexpected content after "
-                        + (fields == null ? "bracket" : "fields") + " segment) at line " + lineNumber + ": "
-                        + new String(buf, bracket, end - bracket));
-            }
-            return null;
+            throw new JsonIoException("Malformed array header (unexpected content after "
+                    + (fields == null ? "bracket" : "fields") + " segment) at line " + lineNumber + ": "
+                    + new String(buf, bracket, end - bracket));
         }
         return new ArrayHeader(count, delimiter, fields, pos + 1, keyed);
     }
 
-    private static final int INVALID_COUNT = Integer.MIN_VALUE;
-
-    private static boolean isDigitsWithoutLeadingZero(String text) {
-        int len = text.length();
-        if (len == 0 || (len > 1 && text.charAt(0) == '0')) {
-            return false;
-        }
-        for (int i = 0; i < len; i++) {
-            char c = text.charAt(i);
-            if (c < '0' || c > '9') {
-                return false;
-            }
-        }
-        return true;
-    }
-
     /**
-     * The length a bracket segment declares, from buf[start..end). Returns INVALID_COUNT for text that is not
-     * an integer when the caller falls back to a literal key (mustThrow false).
+     * The length a bracket segment declares, from buf[start..end): "0", or digits that do not start with a zero
+     * (spec 6). ASCII digits and nothing else -- no sign, no space, no digit of another script -- in strict and
+     * non-strict mode. A length has no upper bound: one too large to hold is the largest there is, which no
+     * text can meet, so strict mode finds the count unmet and non-strict mode reads what is there.
      */
-    private int parseHeaderCount(char[] buf, int start, int end, boolean mustThrow) {
+    private int parseHeaderCount(char[] buf, int start, int end) {
         // Plain digits with no leading zero are the whole of what a writer produces: no String needed.
         int digits = end - start;
         if (digits > 0 && digits <= 9 && (digits == 1 || buf[start] != '0')) {
@@ -900,32 +866,22 @@ public class ToonReader {
         }
 
         String countStr = new String(buf, start, end - start);
-        String trimmedCount = trimSpaces(countStr);
-        int count;
-        try {
-            count = Integer.parseInt(trimmedCount);
-        } catch (NumberFormatException e) {
-            if (isDigitsWithoutLeadingZero(trimmedCount)) {
-                // Spec 6: a length has no upper bound. One too large to hold still forms a header; no text
-                // can meet it, so strict mode finds the count unmet and non-strict mode reads what is there.
-                return Integer.MAX_VALUE;
-            }
-            if (mustThrow) {
-                throw new JsonIoException("Invalid array count at line " + lineNumber + ": " + countStr);
-            }
-            return INVALID_COUNT;  // §14.2 non-strict tolerance: non-integer bracket content → literal key
+        boolean negative = digits > 1 && buf[start] == '-';
+        boolean allDigits = digits > (negative ? 1 : 0);
+        for (int i = negative ? start + 1 : start; allDigits && i < end; i++) {
+            allDigits = buf[i] >= '0' && buf[i] <= '9';
         }
-        // §14.2 strict: bracket-length leading zeros (e.g. "03") and negative lengths
-        // are malformed array headers.
-        if (strictToon) {
-            if (trimmedCount.length() > 1 && trimmedCount.charAt(0) == '0') {
-                throw new JsonIoException("Array count with leading zeros at line " + lineNumber + ": " + countStr);
-            }
-            if (count < 0) {
-                throw new JsonIoException("Array count must not be negative at line " + lineNumber + ": " + countStr);
-            }
+        if (!allDigits) {
+            throw new JsonIoException("Invalid array count at line " + lineNumber + ": " + countStr);
         }
-        return count;
+        if (negative) {
+            throw new JsonIoException("Array count must not be negative at line " + lineNumber + ": " + countStr);
+        }
+        if (buf[start] == '0') {
+            throw new JsonIoException("Array count with leading zeros at line " + lineNumber + ": " + countStr);
+        }
+        // Ten digits or more: what an int cannot hold is the largest count
+        return digits <= 18 ? (int) Math.min(Long.parseLong(countStr), Integer.MAX_VALUE) : Integer.MAX_VALUE;
     }
 
     /**
@@ -934,10 +890,12 @@ public class ToonReader {
      * {id,customer{name,country},total}. Quotes are honoured: a brace, a delimiter or a colon inside a quoted
      * span is part of the name. Leaves {@link #fieldListEnd} just after the closing brace.
      * <p>
-     * Returns null when the list cannot be read: a brace without its partner, or text between a nested group
-     * and the next delimiter. In strict mode it is also null for a nested group with no name or no fields, and
-     * for whitespace between a name and its group; and a name repeated within one list is an error there
-     * (§14.2), while non-strict mode lets the last one win (§14.4). The same name at two levels is no repeat.
+     * Returns null when the list is not one, in strict and non-strict mode alike: a brace without its partner,
+     * no field at all ({}), an empty entry ({a,} or {a,,b}), a nested group with no name or no fields, a space
+     * between a name and its group, text between a nested group and the next delimiter. A delimiter other than
+     * the header's own is an error of its own. Only a name repeated within one list is left to the mode: an
+     * error in strict mode (§14.2), last one wins in non-strict mode (§14.4). The same name at two levels is no
+     * repeat.
      */
     private FieldEntry[] parseFieldList(char[] buf, int open, int end, char delimiter, int depth) {
         if (depth > maxDepth) {
@@ -962,8 +920,8 @@ public class ToonReader {
                     inQuotes = true;
                 } else if (c == delimiter || c == '{' || c == '}') {
                     break;
-                } else if (strictToon && (c == ',' || c == '\t' || c == '|')) {
-                    // §14.2: an unquoted delimiter other than the header's own. Inside a quoted name these
+                } else if (c == ',' || c == '\t' || c == '|') {
+                    // §6, §14.2: an unquoted delimiter other than the header's own. Inside a quoted name these
                     // characters are literal data.
                     throw new JsonIoException("Delimiter mismatch in tabular header at line " + lineNumber);
                 }
@@ -976,11 +934,11 @@ public class ToonReader {
 
             FieldEntry[] group = null;
             if (buf[i] == '{') {
-                if (strictToon && (nameEnd == nameStart || buf[nameEnd - 1] == ' ')) {
+                if (nameEnd == nameStart || buf[nameEnd - 1] == ' ') {
                     return null;    // a group with no name, or whitespace between the name and its group
                 }
                 group = parseFieldList(buf, i, end, delimiter, depth + 1);
-                if (group == null || (strictToon && group.length == 0)) {
+                if (group == null) {
                     return null;
                 }
                 i = fieldListEnd;
@@ -993,21 +951,28 @@ public class ToonReader {
             }
 
             boolean last = buf[i] == '}';
-            // A trailing empty entry, as in {a,}, adds no field.
-            if (!last || group != null || nameEnd > nameStart) {
-                FieldEntry entry = fieldEntry(nameStart, nameEnd, group);
-                if (names != null && !names.add(entry.name)) {
-                    throw new JsonIoException("Duplicate field name '" + entry.name + "' in array header at line "
-                            + lineNumber);
-                }
-                entries.add(entry);
+            if (group == null && isBlank(buf, nameStart, nameEnd)) {
+                return null;        // no field at all ({}), or an empty entry ({a,}, {,a}, {a,,b})
             }
+            FieldEntry entry = fieldEntry(nameStart, nameEnd, group);
+            if (names != null && !names.add(entry.name)) {
+                throw new JsonIoException("Duplicate field name '" + entry.name + "' in array header at line "
+                        + lineNumber);
+            }
+            entries.add(entry);
             i++;
             if (last) {
                 fieldListEnd = i;
                 return entries.toArray(new FieldEntry[0]);
             }
         }
+    }
+
+    private static boolean isBlank(char[] buf, int start, int end) {
+        while (start < end && buf[start] == ' ') {
+            start++;
+        }
+        return start == end;
     }
 
     /** The field entry whose name is the text in lineBuf[nameStart..nameEnd): trimmed, and unescaped if quoted. */
