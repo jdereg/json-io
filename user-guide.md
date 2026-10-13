@@ -813,6 +813,11 @@ wherever it stands, also in the middle of a value, and a delimiter or colon insi
 means something only inside quotes, so `C:\,D:\` is two values. A value that *begins* with a quote must end with its
 closing quote: `"abc" def` and `"abc` are errors, in strict and non-strict mode.
 
+In a `key: value` line the first colon outside quotes ends the key, and what follows is one value. The key may be
+empty (`: 1` is the key `""`, which json-io writes as `"": 1`). The value has no structure of its own: only `[]`
+means something there, the empty array, and `a: [2]: x` is the string `[2]: x`. An array's header stands before
+the colon, as in `a[2]: x,y`.
+
 A blank line means nothing: it never ends an object or an array and is never counted, so `address:`, a blank line,
 then the indented fields is still one nested object. The one place a blank line may not stand in strict mode is
 inside an array or a keyed table, from its first item or row through the last line that belongs to it; non-strict

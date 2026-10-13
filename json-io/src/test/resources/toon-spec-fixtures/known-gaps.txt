@@ -59,9 +59,7 @@ decode/validation-errors.json#86   throws on tabular rows at depth +1 under a li
 decode/validation-errors.json#90   throws on an empty field entry
 decode/whitespace.json#14          throws on a tab after a list-item hyphen
 
-# Reading: other (a second carriage return, a value that starts with a bracket, the empty key) -- 3
-decode/objects.json#10        parses an unquoted field value starting with a bracket segment as a string
-decode/objects.json#47        parses an empty unquoted key as the empty key
+# Reading: a carriage return ends a line only together with its line feed (spec 12) -- 1
 decode/whitespace.json#15     keeps a second carriage return before CRLF as content
 
 # Writing: other (dotted keys unquoted) -- 1

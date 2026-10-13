@@ -366,7 +366,8 @@ public class ToonReader {
                 return value;
             }
 
-            if (findColonInBuf() > 0) {
+            if (findColonInBuf() >= 0) {
+                // (a colon that opens the line has the empty key before it: spec 7.4)
                 return readObject(0, suggestedType);
             }
 
@@ -410,7 +411,7 @@ public class ToonReader {
 
             // Parse key: value — find colon directly in the line buffer
             int colonPos = findColonInBuf();
-            if (colonPos <= 0) {
+            if (colonPos < 0) {
                 break;  // Not a key: value pair
             }
 
@@ -470,6 +471,11 @@ public class ToonReader {
             arrayHeader = parseHeader(lineBuf, keyOffset + bracketStart, trimEnd, false);
         }
         if (arrayHeader != null) {
+            if (bracketStart == 0) {
+                // Spec 6: a header without a key stands only at the root and as a list item. As a field it would
+                // be an array under the empty key, which is written with its key in quotes: ""[2]: x,y
+                throw new JsonIoException("An array header without a key cannot be a field at line " + lineNumber);
+            }
             fieldKey = cacheSubstring(key, 0, bracketStart);
             fieldWasQuoted = fieldKey.startsWith("\"");
             if (fieldWasQuoted) {
@@ -497,10 +503,12 @@ public class ToonReader {
                     // which emits empty Maps as bare "key:" too.
                     fieldValue = new JsonObject();
                 }
-            } else if (isArrayStart(lineBuf, valueStart, trimEnd)) {
-                fieldValue = readKeylessArray(valueStart, trimEnd, fieldDepth);
+            } else if (isEmptyArrayToken(lineBuf, valueStart, trimEnd)) {
+                fieldValue = new ArrayList<>();
             } else {
-                // "{}" included: the empty object is "key:" with nothing after it (spec 8), and {} is a string
+                // Spec 5.2: the first unquoted colon ended the key, so this is a key-value line and what follows
+                // the colon is one value. Only the token [] has a meaning of its own there (9.1); "[2]: x" is a
+                // string, and so is "{}" -- the empty object is "key:" with nothing after it (8).
                 fieldValue = readScalar(lineBuf, valueStart, trimEnd);
             }
         }
@@ -1101,7 +1109,7 @@ public class ToonReader {
             // Skip lines that look like key: value (they belong to parent object)
             // Check delimiter first (cheap char indexOf) before expensive findColonInBuf.
             // Data rows contain the delimiter, so this short-circuits on the common case.
-            if (indexOfCharInBuf(delimiter) < 0 && findColonInBuf() > 0) {
+            if (indexOfCharInBuf(delimiter) < 0 && findColonInBuf() >= 0) {
                 break;
             }
 
@@ -1158,7 +1166,7 @@ public class ToonReader {
         if (indent < baseIndent) {
             return false;
         }
-        return indexOfCharInBuf(delimiter) >= 0 || findColonInBuf() <= 0;
+        return indexOfCharInBuf(delimiter) >= 0 || findColonInBuf() < 0;
     }
 
     /**
@@ -1400,7 +1408,7 @@ public class ToonReader {
                     if (nextIndent > indent) {
                         if (isArrayStartInBuf()) {
                             elements.add(readArray());
-                        } else if (findColonInBuf() > 0) {
+                        } else if (findColonInBuf() >= 0) {
                             elements.add(readObject(nextIndent, null));
                         } else {
                             // Deeper-indented content that isn't an array or key:value pair
@@ -1423,7 +1431,7 @@ public class ToonReader {
                 // still holds the hyphen line until the first hasLine() inside readInlineObject.
                 // The colon scan skips quoted spans, so it tells a quoted key (- "my key": 1) from a
                 // quoted string that holds a colon (- "a: b") by itself.
-                if (findColonInBuf(elementStart, trimEnd) > 0) {
+                if (findColonInBuf(elementStart, trimEnd) >= 0) {
                     // Per TOON spec: first field of object is on hyphen line
                     // e.g., "- name: John" followed by "  age: 30" on next line
                     JsonObject inlineObj = readInlineObject(elementStart, trimEnd, indent);
@@ -1477,7 +1485,7 @@ public class ToonReader {
         // buffer until the first hasLine() call below (consumeLine() just marks the
         // line; the next line isn't fetched until hasLine() triggers readLineRaw()).
         int relColon = findColonInBuf(firstFieldStart, firstFieldEnd);
-        if (relColon > 0) {
+        if (relColon >= 0) {
             int colonAbs = firstFieldStart + relColon;
             String key = trimSpacesRangeBuf(firstFieldStart, colonAbs);
             int valueStart = colonAbs + 1;
@@ -1511,7 +1519,7 @@ public class ToonReader {
 
             // Find colon directly in the line buffer
             int bufColonPos = findColonInBuf();
-            if (bufColonPos <= 0) {
+            if (bufColonPos < 0) {
                 break;  // Not a key: value pair
             }
 
@@ -2416,6 +2424,17 @@ public class ToonReader {
         return start >= end;
     }
 
+    /** Whether buf[start..end), spaces aside, is the token [] -- the empty array (spec 9.1). */
+    private static boolean isEmptyArrayToken(char[] buf, int start, int end) {
+        while (start < end && buf[start] == ' ') {
+            start++;
+        }
+        while (end > start && buf[end - 1] == ' ') {
+            end--;
+        }
+        return end - start == 2 && buf[start] == '[' && buf[start + 1] == ']';
+    }
+
     private boolean isArrayStart(char[] buf, int start, int end) {
         while (start < end && buf[start] == ' ') {
             start++;
@@ -2658,7 +2677,7 @@ public class ToonReader {
      * may lazy-promote a lite JsonObject to JsonObjectArray/JsonObjectMap.
      */
     private JsonObject putValue(JsonObject target, String key, Object value, boolean wasQuoted) {
-        if (!wasQuoted) {
+        if (!wasQuoted && !key.isEmpty()) {     // (the empty key, ": 1", is a key like another: spec 7.4)
             char first = key.charAt(0);
             // Meta key fast path: only @/$ prefixed keys can be meta
             if (first == '@' || first == '$') {
