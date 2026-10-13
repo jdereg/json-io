@@ -726,7 +726,7 @@ TOON uses a line-oriented, indentation-based structure:
 | Array delimiters | `[ ]` | Count prefix: `[N]:` |
 | Key-value separator | `"key": value` | `key: value` |
 | String quoting | Always quoted | Only when necessary |
-| Line endings | Any | LF only |
+| Line endings | Any | LF (written); LF or CRLF (read) |
 
 ### Example Output
 
@@ -800,6 +800,10 @@ TOON only quotes strings when necessary. Strings are quoted when they:
 
 A byte-order mark (U+FEFF) at the very start of a document is removed before the document is read, so a file saved
 with one reads like the same file without it. json-io writes none.
+
+Lines end at a line feed. json-io writes LF only, and reads CRLF as well: one carriage return before the line
+feed belongs to the line ending. A carriage return anywhere else is part of the value it stands in (json-io itself
+writes one escaped, as `\r`, inside quotes).
 
 The space is TOON's only whitespace. Spaces around a key, a value, an array's token or a table's cell are removed,
 and so are spaces at the end of a line; a tab, a no-break space or any other character there is part of the token

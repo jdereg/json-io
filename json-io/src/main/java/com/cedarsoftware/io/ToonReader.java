@@ -2085,17 +2085,23 @@ public class ToonReader {
 
     /**
      * Read a line from the FastReader into lineBuf.
-     * Handles \n, \r, and \r\n line endings.
+     * A line ends at a line feed, or at a carriage return and line feed together; see the note inside.
      * Returns the number of characters read, or -1 on EOF.
      * The line data is available in lineBuf[lineStart..lineStart+returnValue-1].
      */
     private int readLineRaw() {
+        // Spec 12: a document is split at LF, and a single CR at the end of a line belongs to the line ending
+        // (CRLF input). A CR anywhere else, a second one before the LF included, is content. So the line is
+        // read to its line feed -- FastReader.readLine would end it at a lone CR -- and one CR is taken off.
         lineSlice.release();
-        int borrowed = reader.readLineBorrowed(lineSlice);
+        int borrowed = reader.readLineBorrowedLf(lineSlice);
         if (borrowed != FastReader.COPY_REQUIRED) {
             if (borrowed >= 0) {
                 lineBuf = lineSlice.getBuffer();
                 lineStart = lineSlice.getOffset();
+                if (borrowed > 0 && lineBuf[lineStart + borrowed - 1] == '\r') {
+                    borrowed--;
+                }
             }
             return borrowed;
         }
@@ -2108,16 +2114,22 @@ public class ToonReader {
             if (total >= buf.length) {
                 buf = ownedLineBuf = lineBuf = Arrays.copyOf(buf, buf.length * 2);
             }
-            int count = reader.readLine(buf, total, buf.length - total);
+            int count = reader.readLineLf(buf, total, buf.length - total);
             if (count < 0) {
-                return total > 0 ? total : -1;
+                if (total == 0) {
+                    return -1;
+                }
+                break;      // the input ended without a line feed: its last line
             }
             total += count;
             if (count < buf.length - total + count) {
-                // readLine returned fewer chars than maxLen — line ending was found and consumed
+                // readLineLf returned fewer chars than maxLen — the line feed was found and consumed
                 break;
             }
-            // maxLen reached without finding line ending — grow buffer and continue
+            // maxLen reached without finding the line feed — grow buffer and continue
+        }
+        if (total > 0 && buf[total - 1] == '\r') {
+            total--;
         }
         return total;
     }

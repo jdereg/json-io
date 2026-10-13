@@ -58,6 +58,3 @@ decode/validation-errors.json#85   throws on a hyphen without a following space 
 decode/validation-errors.json#86   throws on tabular rows at depth +1 under a list-item first-field header
 decode/validation-errors.json#90   throws on an empty field entry
 decode/whitespace.json#14          throws on a tab after a list-item hyphen
-
-# Reading: a carriage return ends a line only together with its line feed (spec 12) -- 1
-decode/whitespace.json#15     keeps a second carriage return before CRLF as content
