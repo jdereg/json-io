@@ -153,15 +153,18 @@ class ToonCommentLinesTest {
         }
     }
 
-    /** Only spaces may come before the #. In strict mode a tab in the indentation is an error of its own. */
+    /**
+     * Only spaces may come before the #. In strict mode a tab in the indentation is an error of its own; in
+     * non-strict mode the tab is one level of indentation (spec 14.4), and the line is a field one level down.
+     */
     @Test
     void aLineIndentedWithATabIsNotAComment() {
-        String toon = "a: 1\n\t#x: 2";
+        String toon = "a:\n\t#x: 2";
 
         assertThatThrownBy(() -> read(toon, STRICT))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("Tabs are not allowed in indentation");
-        assertEquals(2L, ((Map<?, ?>) read(toon, LENIENT)).get("#x"));
+        assertEquals(2L, ((Map<?, ?>) ((Map<?, ?>) read(toon, LENIENT)).get("a")).get("#x"));
     }
 
     /** An error still names the line of the file, comment lines included. */

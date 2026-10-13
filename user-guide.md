@@ -801,6 +801,12 @@ TOON only quotes strings when necessary. Strings are quoted when they:
 A byte-order mark (U+FEFF) at the very start of a document is removed before the document is read, so a file saved
 with one reads like the same file without it. json-io writes none.
 
+The space is TOON's only whitespace. Spaces around a key, a value, an array's token or a table's cell are removed,
+and so are spaces at the end of a line; a tab, a no-break space or any other character there is part of the token
+(`name: Ada<TAB>` is the four characters `Ada<TAB>`). json-io writes a string with a tab in quotes, as `"Ada\t"`,
+so this matters only for TOON written by hand or by another tool. Indentation is spaces too: strict mode refuses a
+tab in it, and non-strict mode counts each tab as one level.
+
 Reading is the other side of the quoting rules. A token without quotes is a number only if it is one in JSON's grammar
 (an optional minus, digits without a leading zero, an optional fraction, an optional exponent); `true`, `false` and
 `null` are themselves; everything else is a string. So `.5`, `1.`, `+1`, `05`, `1_000`, `0x10`, `NaN` and

@@ -297,33 +297,33 @@ public class ToonReader {
         return substring;
     }
 
-    private static String trimAscii(String text) {
+    private static String trimSpaces(String text) {
         int start = 0;
         int len = text.length();
         int end = len;
-        if (start < end && text.charAt(start) > ' ' && text.charAt(end - 1) > ' ') {
+        if (start < end && text.charAt(start) != ' ' && text.charAt(end - 1) != ' ') {
             return text;
         }
-        while (start < end && text.charAt(start) <= ' ') {
+        while (start < end && text.charAt(start) == ' ') {
             start++;
         }
-        while (end > start && text.charAt(end - 1) <= ' ') {
+        while (end > start && text.charAt(end - 1) == ' ') {
             end--;
         }
         return (start == 0 && end == len) ? text : text.substring(start, end);
     }
 
-    private static String trimAscii(StringBuilder text) {
+    private static String trimSpaces(StringBuilder text) {
         int start = 0;
         int textLen = text.length();
         int end = textLen;
-        if (start < end && text.charAt(start) > ' ' && text.charAt(end - 1) > ' ') {
+        if (start < end && text.charAt(start) != ' ' && text.charAt(end - 1) != ' ') {
             return text.toString();
         }
-        while (start < end && text.charAt(start) <= ' ') {
+        while (start < end && text.charAt(start) == ' ') {
             start++;
         }
-        while (end > start && text.charAt(end - 1) <= ' ') {
+        while (end > start && text.charAt(end - 1) == ' ') {
             end--;
         }
         if (start == 0 && end == textLen) {
@@ -458,7 +458,7 @@ public class ToonReader {
             int trimStart = currentTrimStart;
             int trimEnd = currentTrimEnd;
             consumeLine();
-            String key = trimAsciiRangeBuf(trimStart, trimStart + colonPos);
+            String key = trimSpacesRangeBuf(trimStart, trimStart + colonPos);
             int valueStart = trimStart + colonPos + 1;
             if (valueStart < trimEnd && lineBuf[valueStart] == ' ') {
                 valueStart++;
@@ -504,7 +504,7 @@ public class ToonReader {
             // The header is parsed from the line, not from the key: the key stops at the line's first colon,
             // and a field list may hold one. The key was trimmed, so find where it starts in the buffer.
             int keyOffset = keyStart;
-            while (lineBuf[keyOffset] <= ' ') {
+            while (lineBuf[keyOffset] == ' ') {
                 keyOffset++;
             }
             arrayHeader = parseHeader(lineBuf, keyOffset + bracketStart, trimEnd, false);
@@ -730,10 +730,10 @@ public class ToonReader {
      */
     private Object readKeylessArray(int start, int end, int headerDepth) throws IOException {
         final char[] buf = lineBuf;
-        while (start < end && buf[start] <= ' ') {
+        while (start < end && buf[start] == ' ') {
             start++;
         }
-        while (end > start && buf[end - 1] <= ' ') {
+        while (end > start && buf[end - 1] == ' ') {
             end--;
         }
         // §9.1 canonical empty-array literal: "[]" with no count, no header, no body.
@@ -859,7 +859,7 @@ public class ToonReader {
             }
             return null;
         }
-        while (pos < end && buf[pos] <= ' ') {
+        while (pos < end && buf[pos] == ' ') {
             pos++;
         }
         if (pos >= end || buf[pos] != ':') {
@@ -900,7 +900,7 @@ public class ToonReader {
         }
 
         String countStr = new String(buf, start, end - start);
-        String trimmedCount = trimAscii(countStr);
+        String trimmedCount = trimSpaces(countStr);
         int count;
         try {
             count = Integer.parseInt(trimmedCount);
@@ -971,7 +971,7 @@ public class ToonReader {
 
             FieldEntry[] group = null;
             if (buf[i] == '{') {
-                if (strictToon && (nameEnd == nameStart || buf[nameEnd - 1] <= ' ')) {
+                if (strictToon && (nameEnd == nameStart || buf[nameEnd - 1] == ' ')) {
                     return null;    // a group with no name, or whitespace between the name and its group
                 }
                 group = parseFieldList(buf, i, end, delimiter, depth + 1);
@@ -1007,7 +1007,7 @@ public class ToonReader {
 
     /** The field entry whose name is the text in lineBuf[nameStart..nameEnd): trimmed, and unescaped if quoted. */
     private FieldEntry fieldEntry(int nameStart, int nameEnd, FieldEntry[] group) {
-        String raw = trimAsciiRangeBuf(nameStart, nameEnd);
+        String raw = trimSpacesRangeBuf(nameStart, nameEnd);
         String name = unquoteString(raw);
         // A meta key quoted or not, as in a header without a nested field group (buildColumnMetaKeys): json-io
         // writes a table's $type column in quotes, $ being no character of an unquoted key
@@ -1078,7 +1078,7 @@ public class ToonReader {
             int trimStart = currentTrimStart;
             int trimEnd = currentTrimEnd;
             consumeLine();
-            String key = unquoteString(trimAsciiRangeBuf(trimStart, trimStart + colonPos));
+            String key = unquoteString(trimSpacesRangeBuf(trimStart, trimStart + colonPos));
             int valueStart = trimStart + colonPos + 1;
 
             // A bare "key:" holds no cell at all, not one empty cell.
@@ -1249,10 +1249,10 @@ public class ToonReader {
 
     private int parseRowIntoObject(char[] buf, int start, int end, List<String> columnHeaders, String[] columnMetaKeys,
                                    char delimiter, JsonObject target) {
-        while (start < end && buf[start] <= ' ') {
+        while (start < end && buf[start] == ' ') {
             start++;
         }
-        while (end > start && buf[end - 1] <= ' ') {
+        while (end > start && buf[end - 1] == ' ') {
             end--;
         }
 
@@ -1313,7 +1313,7 @@ public class ToonReader {
 
             if (c == delimiter && !inQuotes) {
                 if (colIndex < colHeadersSize) {
-                    appendColumn(target, columnHeaders, columnMetaKeys, colIndex, readScalar(trimAscii(current)));
+                    appendColumn(target, columnHeaders, columnMetaKeys, colIndex, readScalar(trimSpaces(current)));
                 }
                 colIndex++;
                 current.setLength(0);
@@ -1324,7 +1324,7 @@ public class ToonReader {
 
         if (current.length() > 0 || colIndex < colHeadersSize) {
             if (colIndex < colHeadersSize) {
-                appendColumn(target, columnHeaders, columnMetaKeys, colIndex, readScalar(trimAscii(current)));
+                appendColumn(target, columnHeaders, columnMetaKeys, colIndex, readScalar(trimSpaces(current)));
             }
             colIndex++;
         }
@@ -1456,7 +1456,7 @@ public class ToonReader {
                 }
 
                 if (c == delimiter && !inQuotes) {
-                    elements.add(readScalar(trimAscii(current)));
+                    elements.add(readScalar(trimSpaces(current)));
                     current.setLength(0);
                 } else {
                     current.append(c);
@@ -1464,7 +1464,7 @@ public class ToonReader {
             }
 
             if (current.length() > 0 || elements.size() < count) {
-                elements.add(readScalar(trimAscii(current)));
+                elements.add(readScalar(trimSpaces(current)));
             }
         }
 
@@ -1515,7 +1515,7 @@ public class ToonReader {
             int trimEnd = currentTrimEnd;
             consumeLine();
             int elementStart = trimStart + 1;
-            while (elementStart < trimEnd && lineBuf[elementStart] <= ' ') {
+            while (elementStart < trimEnd && lineBuf[elementStart] == ' ') {
                 elementStart++;
             }
 
@@ -1612,14 +1612,14 @@ public class ToonReader {
         int relColon = findColonInBuf(firstFieldStart, firstFieldEnd);
         if (relColon > 0) {
             int colonAbs = firstFieldStart + relColon;
-            String key = trimAsciiRangeBuf(firstFieldStart, colonAbs);
+            String key = trimSpacesRangeBuf(firstFieldStart, colonAbs);
             int valueStart = colonAbs + 1;
             while (valueStart < firstFieldEnd && lineBuf[valueStart] == ' ') {
                 valueStart++;
             }
             int valueEnd = firstFieldEnd;
             // Trim trailing ASCII whitespace within the value slice
-            while (valueEnd > valueStart && lineBuf[valueEnd - 1] <= ' ') {
+            while (valueEnd > valueStart && lineBuf[valueEnd - 1] == ' ') {
                 valueEnd--;
             }
 
@@ -1656,7 +1656,7 @@ public class ToonReader {
             int trimStart = currentTrimStart;
             int trimEnd = currentTrimEnd;
             consumeLine();
-            String key = trimAsciiRangeBuf(trimStart, trimStart + bufColonPos);
+            String key = trimSpacesRangeBuf(trimStart, trimStart + bufColonPos);
             int valueStart2 = trimStart + bufColonPos + 1;
             if (valueStart2 < trimEnd && lineBuf[valueStart2] == ' ') {
                 valueStart2++;
@@ -1688,10 +1688,10 @@ public class ToonReader {
     }
 
     private Object readScalar(String text, int start, int end) {
-        while (start < end && text.charAt(start) <= ' ') {
+        while (start < end && text.charAt(start) == ' ') {
             start++;
         }
-        while (end > start && text.charAt(end - 1) <= ' ') {
+        while (end > start && text.charAt(end - 1) == ' ') {
             end--;
         }
         if (start >= end) {
@@ -1738,10 +1738,10 @@ public class ToonReader {
     }
 
     private Object readScalar(char[] buf, int start, int end) {
-        while (start < end && buf[start] <= ' ') {
+        while (start < end && buf[start] == ' ') {
             start++;
         }
-        while (end > start && buf[end - 1] <= ' ') {
+        while (end > start && buf[end - 1] == ' ') {
             end--;
         }
         if (start >= end) {
@@ -2292,26 +2292,44 @@ public class ToonReader {
 
                 // Indent was counted directly from buf — no intermediate String needed
                 final int spaces = lineSpaces;
-                // §12: whitespace-only lines MAY be treated as blank regardless of their
-                // leading-space count. Skip strict-indent + tab checks for such lines so a
-                // 3-space empty line between depth-0 fields (in strict mode) doesn't reject.
-                boolean whitespaceOnly = (spaces == lineLen);
-                if (!whitespaceOnly) {
-                    if (spaces < lineLen && buf[start + spaces] == '\t' && strictToon) {
+                // Spec 12: a line's indentation is its leading run of spaces and tabs, and it must be spaces only.
+                // A line left empty once its trailing spaces are gone is blank, whatever its length was; its
+                // indentation is not checked.
+                int indentEnd = spaces;
+                boolean blank = spaces == lineLen;
+                int depth = spaces / indentSize;
+                if (!blank && buf[start + spaces] == '\t') {
+                    if (strictToon) {
                         throw new JsonIoException("Tabs are not allowed in indentation at line " + lineNumber);
                     }
-                    if (strictToon && spaces % indentSize != 0) {
-                        throw new JsonIoException("Indentation must be a multiple of " + indentSize +
-                                " spaces at line " + lineNumber);
+                    // Non-strict recovery 3 (spec 14.4): the depth is T + floor(S / indentSize), counting every
+                    // tab and every space of the indentation; a line of only spaces and tabs is blank.
+                    int tabs = 0;
+                    int counted = spaces;
+                    while (indentEnd < lineLen) {
+                        char c = buf[start + indentEnd];
+                        if (c == '\t') {
+                            tabs++;
+                        } else if (c == ' ') {
+                            counted++;
+                        } else {
+                            break;
+                        }
+                        indentEnd++;
                     }
+                    blank = indentEnd == lineLen;
+                    depth = tabs + counted / indentSize;
+                } else if (!blank && strictToon && spaces % indentSize != 0) {
+                    throw new JsonIoException("Indentation must be a multiple of " + indentSize +
+                            " spaces at line " + lineNumber);
                 }
-                currentIndent = whitespaceOnly ? 0 : spaces / indentSize;
+                currentIndent = blank ? 0 : depth;
 
-                // Compute trim-end directly from buf
-                int trimStart = start + spaces;
+                // Compute trim-end directly from buf: trailing spaces go, and nothing else (a tab is content)
+                int trimStart = start + indentEnd;
                 int trimEnd = start + lineLen;
                 currentLineEnd = trimEnd;
-                while (trimEnd > trimStart && buf[trimEnd - 1] <= ' ') {
+                while (trimEnd > trimStart && buf[trimEnd - 1] == ' ') {
                     trimEnd--;
                 }
                 currentTrimStart = trimStart;
@@ -2483,32 +2501,32 @@ public class ToonReader {
     /**
      * Trim whitespace and extract a cached String from lineBuf.
      */
-    private String trimAsciiRangeBuf(int start, int end) {
+    private String trimSpacesRangeBuf(int start, int end) {
         char[] buf = lineBuf;
-        if (start < end && buf[start] > ' ' && buf[end - 1] > ' ') {
+        if (start < end && buf[start] != ' ' && buf[end - 1] != ' ') {
             return cacheSubstringFromBuf(buf, start, end);
         }
-        while (start < end && buf[start] <= ' ') start++;
-        while (end > start && buf[end - 1] <= ' ') end--;
+        while (start < end && buf[start] == ' ') start++;
+        while (end > start && buf[end - 1] == ' ') end--;
         if (start >= end) return "";
         return cacheSubstringFromBuf(buf, start, end);
     }
 
     private boolean isTrimmedEmpty(char[] buf, int start, int end) {
-        while (start < end && buf[start] <= ' ') {
+        while (start < end && buf[start] == ' ') {
             start++;
         }
-        while (end > start && buf[end - 1] <= ' ') {
+        while (end > start && buf[end - 1] == ' ') {
             end--;
         }
         return start >= end;
     }
 
     private boolean isArrayStart(char[] buf, int start, int end) {
-        while (start < end && buf[start] <= ' ') {
+        while (start < end && buf[start] == ' ') {
             start++;
         }
-        while (end > start && buf[end - 1] <= ' ') {
+        while (end > start && buf[end - 1] == ' ') {
             end--;
         }
         if (start >= end || buf[start] != '[') {
@@ -2533,10 +2551,10 @@ public class ToonReader {
     }
 
     private boolean isEmptyObject(char[] buf, int start, int end) {
-        while (start < end && buf[start] <= ' ') {
+        while (start < end && buf[start] == ' ') {
             start++;
         }
-        while (end > start && buf[end - 1] <= ' ') {
+        while (end > start && buf[end - 1] == ' ') {
             end--;
         }
         return end - start == 2 && buf[start] == '{' && buf[start + 1] == '}';
