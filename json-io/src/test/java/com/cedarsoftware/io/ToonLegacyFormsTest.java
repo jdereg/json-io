@@ -80,10 +80,10 @@ class ToonLegacyFormsTest {
             + "  - id: 2\n"
             + "    customer:\n"
             + "      name: Bob\n"
-            + "grid[1]:\n"
-            + "  - [2]{x}:\n"
-            + "    1\n"
-            + "    2\n"
+            + "grid[1]:\n"                // (item by item in both forms: a reader refuses "- [2]{x}:")
+            + "  - [2]:\n"
+            + "    - x: 1\n"
+            + "    - x: 2\n"
             + "flat[2]{x,y}:\n"
             + "  1,2\n"
             + "  3,4";

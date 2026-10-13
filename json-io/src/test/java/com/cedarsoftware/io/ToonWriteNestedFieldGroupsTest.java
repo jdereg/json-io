@@ -398,7 +398,8 @@ class ToonWriteNestedFieldGroupsTest {
 
     /**
      * A list directly inside a list has no key, and a header with a field list but no key stands only at the root
-     * (spec 9.4): the inner list is written item by item. 4.113.0 wrote it as a table, which a spec v4 reader refuses.
+     * (spec 9.4): the inner list is written item by item, in the legacy forms too. 4.113.0 wrote it as a table,
+     * which a reader of the spec refuses, json-io 4.114.0 among them.
      */
     @Test
     void aListInsideAListIsNeverATable() {
@@ -427,9 +428,9 @@ class ToonWriteNestedFieldGroupsTest {
                 + "    - x: 2\n"
                 + "      c:\n"
                 + "        y: 2\n"
-                + "  - [2]{x}:\n"
-                + "    3\n"
-                + "    4\n"
+                + "  - [2]:\n"
+                + "    - x: 3\n"
+                + "    - x: 4\n"
                 + "  - [2]: 1,2", toon(doc, LEGACY, Object.class));
     }
 
@@ -461,9 +462,9 @@ class ToonWriteNestedFieldGroupsTest {
                 + "    - x: 6\n"
                 + "      c:\n"
                 + "        y: 2\n"
-                + "  - [2]{x}:\n"
-                + "    7\n"
-                + "    8", JsonIo.toToon(arrays, LEGACY));
+                + "  - [2]:\n"
+                + "    - x: 7\n"
+                + "    - x: 8", JsonIo.toToon(arrays, LEGACY));
         assertEquals("a[1]:\n"
                 + "  - [1]:\n"
                 + "    - rows[2]{x,c{y}}:\n"

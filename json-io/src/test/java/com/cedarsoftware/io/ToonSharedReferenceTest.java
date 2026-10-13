@@ -152,7 +152,7 @@ class ToonSharedReferenceTest {
     @Test
     void aRootListReadsItsIdsAndReferencesAsJsonDoes() {
         String json = "[{\"@id\":1,\"@items\":[\"a\",\"b\"]},{\"@ref\":1},{\"@id\":2,\"k\":\"v\"},{\"@ref\":2}]";
-        String toon = "[4]:\n  -\n    $id: 1\n    $items[2]: a,b\n  -\n    $ref: 1\n  - $id: 2\n    k: v\n  - $ref: 2\n";
+        String toon = "[4]:\n  - $id: 1\n    $items[2]: a,b\n  - $ref: 1\n  - $id: 2\n    k: v\n  - $ref: 2\n";
         ReadOptions maps = new ReadOptionsBuilder().returnAsJsonObjects().build();
         Object[][] reads = {
                 {JsonIo.toJava(json, null).asClass(List.class), JsonIo.fromToon(toon, null).asClass(List.class)},

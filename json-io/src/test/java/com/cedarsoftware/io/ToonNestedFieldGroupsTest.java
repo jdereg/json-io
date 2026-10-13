@@ -288,8 +288,8 @@ class ToonNestedFieldGroupsTest {
                 "rows", listOf(mapOf("id", 1L, "full name", "Ada", "a,b", "x"),
                         mapOf("id", 2L, "full name", "Bob, Jr.", "a,b", "y")),
                 "next", 5L), toon);
-        // A short row is still only an error in strict mode.
-        assertEquals(1, ((List<?>) ((Map<?, ?>) read("rows[1]{a,b,c}:\n  1,2", LENIENT)).get("rows")).size());
+        // A short row is an error in both modes (spec 14.1: a row's width is checked whatever the mode).
+        assertThatThrownBy(() -> read("rows[1]{a,b,c}:\n  1,2", LENIENT)).hasMessageContaining("width mismatch");
         assertThatThrownBy(() -> read("rows[1]{a,b,c}:\n  1,2", STRICT)).hasMessageContaining("width mismatch");
     }
 }

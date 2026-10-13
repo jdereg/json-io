@@ -328,16 +328,14 @@ public class ToonReader {
     public Object readValue(Type suggestedType) {
         try {
             Object value = readRootValueRaw(suggestedType);
-            // §14.2 strict: a TOON document MUST be exactly one value. Trailing non-blank
-            // content after the root value indicates malformed input (two primitives at
-            // root, missing-colon line dangling after a key:nested structure, header with
-            // missing colon followed by orphan rows, etc.). Non-strict tolerates it.
-            if (strictToon) {
-                if (hasLine()) {
-                    String trailing = peekTrimmed();
-                    throw new JsonIoException("Unexpected content after root value at line "
-                            + lineNumber + ": " + trailing);
-                }
+            // Spec 5, 8, 14.2: a document is exactly one value, and every line of it belongs to that value. A
+            // line no reader has taken -- a second primitive at the root, a line indented under a field that
+            // holds a primitive, a line that is no list item among list items, a line after a root array --
+            // is an error in strict and non-strict mode alike: none of the five recoveries (14.4) drops a line.
+            if (hasLine()) {
+                String trailing = peekTrimmed();
+                throw new JsonIoException("Unexpected content after root value at line "
+                        + lineNumber + ": " + trailing);
             }
             return value;
         } catch (IOException e) {
@@ -355,6 +353,12 @@ public class ToonReader {
                     emptyMap.setType(suggestedType);
                 }
                 return emptyMap;
+            }
+
+            if (peekIndent() != 0) {
+                // Spec 5: the root form is found on the first line at depth 0. A document whose first line is
+                // indented has none; no recovery of 14.4 moves it to the margin.
+                throw new JsonIoException("The first line of a document is not indented (line " + lineNumber + ")");
             }
 
             if (isArrayStartInBuf()) {
@@ -490,12 +494,9 @@ public class ToonReader {
                 // level below its hyphen (spec 10), so the lines at that level are the item's other fields, not
                 // this field's content: "- a:" followed by "b: 1" is {a: {}, b: 1}.
                 if (hasLine() && peekIndent() > fieldDepth) {
-                    if (isArrayStartInBuf()) {
-                        fieldValue = readArray();
-                    } else {
-                        // The actual indent of the first nested line is the recursive base
-                        fieldValue = readObject(peekIndent(), null);
-                    }
+                    // The lines below are the fields of an object: a header without a key cannot stand there
+                    // (spec 6), and readObject says so. The first nested line's own depth is the object's.
+                    fieldValue = readObject(peekIndent(), null);
                 } else {
                     // §8: bare "key:" with no nested body (next line is a sibling at the same
                     // indent, or EOF) is an empty nested object — not null. Null is emitted
@@ -684,7 +685,7 @@ public class ToonReader {
         int depth = currentIndent;
         consumeLine();
 
-        return readKeylessArray(start, end, depth);
+        return readKeylessArray(start, end, depth, false);
     }
 
     /**
@@ -695,7 +696,7 @@ public class ToonReader {
      *
      * @param headerDepth the depth at which the header stands
      */
-    private Object readKeylessArray(int start, int end, int headerDepth) throws IOException {
+    private Object readKeylessArray(int start, int end, int headerDepth, boolean listItem) throws IOException {
         final char[] buf = lineBuf;
         while (start < end && buf[start] == ' ') {
             start++;
@@ -708,7 +709,14 @@ public class ToonReader {
         if (end - start == 2 && buf[start] == '[' && buf[start + 1] == ']') {
             return new ArrayList<>();
         }
-        return readHeaderValue(parseHeader(buf, start, end, true), end, headerDepth);
+        ArrayHeader header = parseHeader(buf, start, end, true);
+        if (listItem && header.isTabular()) {       // (a keyed header always has a field list)
+            // Spec 6: a header without a key that has a field list -- a table or a keyed table -- stands only
+            // at the root. As a list item an object's first field carries it: "- rows[2]{a,b}:".
+            throw new JsonIoException("A header with a field list needs a key, except at the root, at line "
+                    + lineNumber);
+        }
+        return readHeaderValue(header, end, headerDepth);
     }
 
     /**
@@ -727,20 +735,31 @@ public class ToonReader {
             }
             return readKeyedObject(header, headerDepth);
         }
-        if (header.count == 0) {
-            return new ArrayList<>();
-        }
-        if (header.isTabular()) {
-            return readTabularArray(header);
-        }
         int valueStart = header.valueStart;
         while (valueStart < lineEnd && lineBuf[valueStart] == ' ') {
             valueStart++;
         }
+        if (header.isTabular()) {
+            if (valueStart < lineEnd) {
+                // Spec 6: a header with a field list carries nothing after its colon; its rows stand below
+                throw new JsonIoException("Content after the colon of a tabular header at line " + lineNumber);
+            }
+            return readTabularArray(header, headerDepth);
+        }
+        // A declared [0] is a count like another (spec 14.4): what stands in the header's scope is read
         if (valueStart < lineEnd) {
             return readInlineArray(lineBuf, valueStart, lineEnd, header.count, header.delimiter);
         }
-        return readListArray(header.count);
+        return readListArray(header.count, headerDepth);
+    }
+
+    /**
+     * The room to give a list for a declared count. The count is a claim of the text, not a fact: a header may
+     * declare two thousand million items and hold none, so the list is sized for at most this many and grows
+     * with the items that come.
+     */
+    private static int roomFor(int count) {
+        return Math.min(count, 1024);
     }
 
     /**
@@ -844,6 +863,20 @@ public class ToonReader {
 
     private static final int INVALID_COUNT = Integer.MIN_VALUE;
 
+    private static boolean isDigitsWithoutLeadingZero(String text) {
+        int len = text.length();
+        if (len == 0 || (len > 1 && text.charAt(0) == '0')) {
+            return false;
+        }
+        for (int i = 0; i < len; i++) {
+            char c = text.charAt(i);
+            if (c < '0' || c > '9') {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /**
      * The length a bracket segment declares, from buf[start..end). Returns INVALID_COUNT for text that is not
      * an integer when the caller falls back to a literal key (mustThrow false).
@@ -872,6 +905,11 @@ public class ToonReader {
         try {
             count = Integer.parseInt(trimmedCount);
         } catch (NumberFormatException e) {
+            if (isDigitsWithoutLeadingZero(trimmedCount)) {
+                // Spec 6: a length has no upper bound. One too large to hold still forms a header; no text
+                // can meet it, so strict mode finds the count unmet and non-strict mode reads what is there.
+                return Integer.MAX_VALUE;
+            }
             if (mustThrow) {
                 throw new JsonIoException("Invalid array count at line " + lineNumber + ": " + countStr);
             }
@@ -1079,37 +1117,32 @@ public class ToonReader {
     /**
      * Read a tabular array: rows of delimiter-separated data where each row becomes an object.
      */
-    private List<Object> readTabularArray(ArrayHeader header) throws IOException {
+    private List<Object> readTabularArray(ArrayHeader header, int headerDepth) throws IOException {
         final int count = header.count;
         final char delimiter = header.delimiter;
         final List<String> columnHeaders = header.columnHeaders;
         final FieldEntry[] fieldTree = header.fieldTree;
-        List<Object> elements = new ArrayList<>(count);
-        int baseIndent = -1;
+        List<Object> elements = new ArrayList<>(roomFor(count));
+        int rowDepth = -1;
         int colHeadersSize = header.leafCount;
         String[] columnMetaKeys = fieldTree == null ? buildColumnMetaKeys(columnHeaders) : null;
         Object[] cells = fieldTree == null ? null : new Object[colHeadersSize];
         final String outerSpan = openSpan;
 
-        while (elements.size() < count) {
-            if (!hasLine()) {
-                break;  // EOF
-            }
-
+        // Spec 9.3, 14.1, 14.4: the table is the row lines of the header's scope -- the lines one level below
+        // the header, down to the first line that is no row. The declared count neither ends the scope nor
+        // cuts it short; it is compared with the rows that were read, in strict mode.
+        while (hasLine()) {
             int indent = peekIndent();
-
-            // First row determines base indent
-            if (baseIndent < 0) {
-                baseIndent = indent;
-            } else if (indent < baseIndent) {
-                // Line at lower indent - end of tabular data
-                break;
+            if (rowDepth < 0) {
+                if (indent <= headerDepth) {
+                    break;      // nothing stands in the header's scope
+                }
+                rowDepth = indent;
+            } else if (indent != rowDepth) {
+                break;          // shallower: the scope is over. Deeper: no row takes it, and readValue refuses it
             }
-
-            // Skip lines that look like key: value (they belong to parent object)
-            // Check delimiter first (cheap char indexOf) before expensive findColonInBuf.
-            // Data rows contain the delimiter, so this short-circuits on the common case.
-            if (indexOfCharInBuf(delimiter) < 0 && findColonInBuf() >= 0) {
+            if (!isRowLine(delimiter)) {
                 break;
             }
 
@@ -1118,24 +1151,26 @@ public class ToonReader {
             consumeLine();
             openSpan = SPAN_TABLE;
 
+            // Spec 14.1: a row holds one cell for each leaf field, in strict and non-strict mode. A row of
+            // another width cannot be laid against the header.
             JsonObject rowObj;
+            int valuesCount;
             if (fieldTree == null) {
                 // Parse the row directly into a pre-sized object (no intermediate List)
                 rowObj = new JsonObject(colHeadersSize);
-                int valuesCount = parseRowIntoObject(lineBuf, trimStart, trimEnd, columnHeaders, columnMetaKeys,
+                valuesCount = parseRowIntoObject(lineBuf, trimStart, trimEnd, columnHeaders, columnMetaKeys,
                         delimiter, rowObj);
-                if (strictToon && valuesCount != colHeadersSize) {
-                    throw new JsonIoException("Tabular row width mismatch at line " + lineNumber +
-                            ", expected " + colHeadersSize + " values, got " + valuesCount);
-                }
             } else {
                 // §9.3: a row under nested field groups holds one cell per leaf field, in the header's
-                // depth-first order. Without every cell the nesting cannot be rebuilt, in either mode.
-                int valuesCount = readRowCells(lineBuf, trimStart, trimEnd, delimiter, cells);
-                if (valuesCount != colHeadersSize) {
-                    throw new JsonIoException("Tabular row width mismatch at line " + lineNumber +
-                            ", expected " + colHeadersSize + " values, got " + valuesCount);
-                }
+                // depth-first order.
+                valuesCount = readRowCells(lineBuf, trimStart, trimEnd, delimiter, cells);
+                rowObj = null;
+            }
+            if (valuesCount != colHeadersSize) {
+                throw new JsonIoException("Tabular row width mismatch at line " + lineNumber +
+                        ", expected " + colHeadersSize + " values, got " + valuesCount);
+            }
+            if (fieldTree != null) {
                 rowCellCursor = 0;
                 rowObj = buildRow(fieldTree, cells);
             }
@@ -1144,29 +1179,42 @@ public class ToonReader {
         }
 
         openSpan = outerSpan;
-        if (strictToon) {
-            if (elements.size() != count) {
-                throw new JsonIoException("Tabular array count mismatch at line " + lineNumber +
-                        ", expected " + count + " rows, got " + elements.size());
-            }
-            if (hasAdditionalTabularRows(baseIndent, delimiter)) {
+        if (strictToon && elements.size() != count) {
+            if (elements.size() > count) {
                 throw new JsonIoException("Tabular array has more rows than declared count " + count +
                         " at line " + lineNumber);
             }
+            throw new JsonIoException("Tabular array count mismatch at line " + lineNumber +
+                    ", expected " + count + " rows, got " + elements.size());
         }
 
         return elements;
     }
 
-    private boolean hasAdditionalTabularRows(int baseIndent, char delimiter) throws IOException {
-        if (!hasLine()) {
-            return false;
+    /**
+     * Whether the current line, standing at row depth, is a row (spec 9.3): it is one unless its first unquoted
+     * colon comes before its first unquoted delimiter, or it has an unquoted colon and no unquoted delimiter.
+     */
+    private boolean isRowLine(char delimiter) {
+        final char[] buf = lineBuf;
+        boolean inQuotes = false;
+        for (int i = currentTrimStart, end = currentTrimEnd; i < end; i++) {
+            char c = buf[i];
+            if (inQuotes) {
+                if (c == '\\') {
+                    i++;
+                } else if (c == '"') {
+                    inQuotes = false;
+                }
+            } else if (c == '"') {
+                inQuotes = true;
+            } else if (c == delimiter) {
+                return true;
+            } else if (c == ':') {
+                return false;
+            }
         }
-        int indent = peekIndent();
-        if (indent < baseIndent) {
-            return false;
-        }
-        return indexOfCharInBuf(delimiter) >= 0 || findColonInBuf() < 0;
+        return true;
     }
 
     /**
@@ -1330,7 +1378,7 @@ public class ToonReader {
      * Returns ArrayList instead of Object[] for better Java interoperability.
      */
     private List<Object> readInlineArray(char[] buf, int start, int end, int count, char delimiter) {
-        List<Object> elements = new ArrayList<>(count);
+        List<Object> elements = new ArrayList<>(roomFor(count));
         // Spec 11.2: split at every unquoted delimiter, keeping empty tokens (the empty string), so N
         // delimiters make N + 1 values. Spec 5.2: a quote opens a quoted span wherever it stands, the next
         // quote that is not part of an escape sequence closes it, and a delimiter inside a span is part of
@@ -1366,32 +1414,31 @@ public class ToonReader {
      * Read a list format array with - element lines.
      * Returns ArrayList instead of Object[] for better Java interoperability.
      */
-    private List<Object> readListArray(int count) throws IOException {
-        List<Object> elements = new ArrayList<>(count);
-        int baseIndent = -1;
+    private List<Object> readListArray(int count, int headerDepth) throws IOException {
+        List<Object> elements = new ArrayList<>(roomFor(count));
+        int itemDepth = -1;
         final String outerSpan = openSpan;
 
-        while (elements.size() < count) {
-            if (!hasLine()) {
-                break;  // EOF
-            }
-
+        // Spec 9.4, 14.1, 14.4: the list is the item lines of the header's scope -- the lines one level below
+        // the header, down to the first line that is no item. The declared count neither ends the scope nor
+        // cuts it short; it is compared with the items that were read, in strict mode.
+        while (hasLine()) {
             int indent = peekIndent();
-
-            // First element determines base indent
-            if (baseIndent < 0) {
-                baseIndent = indent;
-            } else if (indent < baseIndent) {
-                break;  // Back to parent level
-            }
-
-            // Must start with -
-            if (!startsWithDashInBuf()) {
-                break;  // Not a list element
+            if (itemDepth < 0) {
+                if (indent <= headerDepth) {
+                    break;      // nothing stands in the header's scope
+                }
+                itemDepth = indent;
+            } else if (indent != itemDepth) {
+                break;          // shallower: the scope is over. Deeper: no item took it, and readValue refuses it
             }
 
             int trimStart = currentTrimStart;
             int trimEnd = currentTrimEnd;
+            // Spec 5.2: a list item is the bare marker "-", or "-" and at least one space. "-x" is none.
+            if (lineBuf[trimStart] != '-' || (trimEnd - trimStart > 1 && lineBuf[trimStart + 1] != ' ')) {
+                break;
+            }
             consumeLine();
             openSpan = SPAN_LIST;       // whatever this item holds is read inside the span, nested headers too
             int elementStart = trimStart + 1;
@@ -1400,69 +1447,32 @@ public class ToonReader {
             }
 
             if (elementStart >= trimEnd) {
-                // Bare hyphen "- " — per §9.4 emits an empty object UNLESS the next line is
-                // a nested array or object at deeper indent. Match the writer's "empty
-                // object list item as bare hyphen" emission.
-                if (hasLine()) {
-                    int nextIndent = peekIndent();
-                    if (nextIndent > indent) {
-                        if (isArrayStartInBuf()) {
-                            elements.add(readArray());
-                        } else if (findColonInBuf() >= 0) {
-                            elements.add(readObject(nextIndent, null));
-                        } else {
-                            // Deeper-indented content that isn't an array or key:value pair
-                            // is unusual; treat the bare hyphen as an empty object and let
-                            // the outer loop handle that next line on its own.
-                            elements.add(new JsonObject());
-                        }
-                    } else {
-                        elements.add(new JsonObject());
-                    }
-                } else {
-                    elements.add(new JsonObject());
-                }
+                // The bare marker is the empty object (spec 9.4, 10). An object's fields never stand under it:
+                // the first one stands on the hyphen line. A deeper line that follows belongs to nothing.
+                elements.add(new JsonObject());
             } else if (isArrayStart(lineBuf, elementStart, trimEnd)) {
-                elements.add(readKeylessArray(elementStart, trimEnd, indent));
+                elements.add(readKeylessArray(elementStart, trimEnd, indent, true));
+            } else if (findColonInBuf(elementStart, trimEnd) >= 0) {
+                // Per TOON spec: first field of object is on hyphen line, e.g. "- name: John" followed by
+                // "  age: 30" on the next line. The colon scan skips quoted spans, so it tells a quoted key
+                // (- "my key": 1) from a quoted string that holds a colon (- "a: b") by itself.
+                elements.add(readInlineObject(elementStart, trimEnd, indent));
             } else {
-                // Pre-check whether the hyphen-line slice contains an unquoted colon
-                // (indicating an inline object like "- name: John"). Work directly on
-                // lineBuf — no String materialization — since lineBuf[elementStart..trimEnd)
-                // still holds the hyphen line until the first hasLine() inside readInlineObject.
-                // The colon scan skips quoted spans, so it tells a quoted key (- "my key": 1) from a
-                // quoted string that holds a colon (- "a: b") by itself.
-                if (findColonInBuf(elementStart, trimEnd) >= 0) {
-                    // Per TOON spec: first field of object is on hyphen line
-                    // e.g., "- name: John" followed by "  age: 30" on next line
-                    JsonObject inlineObj = readInlineObject(elementStart, trimEnd, indent);
-                    elements.add(inlineObj);
-                } else {
-                    elements.add(readScalar(lineBuf, elementStart, trimEnd));
-                }
+                elements.add(readScalar(lineBuf, elementStart, trimEnd));
             }
         }
 
         openSpan = outerSpan;
-        if (strictToon) {
-            if (elements.size() != count) {
-                throw new JsonIoException("List array count mismatch at line " + lineNumber +
-                        ", expected " + count + " elements, got " + elements.size());
-            }
-            if (hasAdditionalListElements(baseIndent)) {
+        if (strictToon && elements.size() != count) {
+            if (elements.size() > count) {
                 throw new JsonIoException("List array has more elements than declared count " + count +
                         " at line " + lineNumber);
             }
+            throw new JsonIoException("List array count mismatch at line " + lineNumber +
+                    ", expected " + count + " elements, got " + elements.size());
         }
 
         return elements;
-    }
-
-    private boolean hasAdditionalListElements(int baseIndent) throws IOException {
-        if (!hasLine()) {
-            return false;
-        }
-        int indent = peekIndent();
-        return indent >= baseIndent && startsWithDashInBuf();
     }
 
     /**
@@ -2277,18 +2287,6 @@ public class ToonReader {
             }
         }
         return false;
-    }
-
-    private boolean startsWithDashInBuf() {
-        return currentTrimStart < currentTrimEnd && lineBuf[currentTrimStart] == '-';
-    }
-
-    private int indexOfCharInBuf(char c) {
-        char[] buf = lineBuf;
-        for (int i = currentTrimStart; i < currentTrimEnd; i++) {
-            if (buf[i] == c) return i - currentTrimStart;
-        }
-        return -1;
     }
 
     /**

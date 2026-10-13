@@ -345,15 +345,16 @@ class ToonListElementsResolvedTest {
                 + "    " + Point.class.getName() + ",1,2\n"
                 + "    " + Point.class.getName() + ",3,4\n"
                 + "any[1]:\n"
-                + "  - [1]{\"$type\",x,y}:\n"
-                + "    " + Point.class.getName() + ",5,6";
+                + "  - pts[1]{\"$type\",x,y}:\n"
+                + "      " + Point.class.getName() + ",5,6";
 
         Holder back = JsonIo.fromToon(toon, null).asClass(Holder.class);
         List<?> points = (List<?>) back.map.get("pts");
 
         assertInstanceOf(Point.class, points.get(0));
         assertEquals(4, ((Point) points.get(1)).y);
-        assertEquals(5, ((Point) ((List<?>) ((List<?>) back.any).get(0)).get(0)).x);
+        Map<?, ?> item = (Map<?, ?>) ((List<?>) back.any).get(0);
+        assertEquals(5, ((Point) ((List<?>) item.get("pts")).get(0)).x);
     }
 
     // ---------------------------------------------------------------- what did not change

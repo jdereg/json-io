@@ -149,7 +149,8 @@ class ToonDelimitedTokensTest {
     @Test
     void outsideASpanABackslashIsACharacterLikeAnother() {
         assertReads(map("paths", listOf("C:\\", "D:\\")), "paths[2]: C:\\,D:\\");
-        assertReads(map("rows", listOf(map("a", "C:\\", "b", "D:\\"))), "rows[1]{a,b}:\n  C:\\,D:\\");
+        // (in a table the first cell holds no colon: a colon before the first delimiter makes the line no row)
+        assertReads(map("rows", listOf(map("a", "x\\", "b", "D:\\"))), "rows[1]{a,b}:\n  x\\,D:\\");
         assertReads(map("a\\", "b", "k", "x\\y", "l", "\\"), "a\\: b\nk: x\\y\nl: \\");
         assertReads(map("a", listOf("x\\", "\"")), "a[2]: x\\,\"\\\"\"");
     }

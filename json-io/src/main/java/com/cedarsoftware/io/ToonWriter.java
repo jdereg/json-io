@@ -2920,7 +2920,7 @@ public class ToonWriter implements Closeable, Flushable {
                 out.write(" [0]:");
             } else {
                 out.write(" ");
-                keylessListItemArray = v4Forms;
+                keylessListItemArray = true;        // spec 9.4, in both forms: a reader refuses "- [N]{fields}:"
                 try {
                     writeCollection((Collection<?>) element, false);
                 } finally {
@@ -2939,7 +2939,7 @@ public class ToonWriter implements Closeable, Flushable {
                 out.write(" [0]:");
             } else {
                 out.write(" ");
-                keylessListItemArray = v4Forms;
+                keylessListItemArray = true;        // spec 9.4, in both forms: a reader refuses "- [N]{fields}:"
                 try {
                     writeArray(element, false);
                 } finally {

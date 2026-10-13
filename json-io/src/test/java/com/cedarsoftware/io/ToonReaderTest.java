@@ -1255,7 +1255,7 @@ class ToonReaderTest {
 
     @Test
     void testParseObjectWithArray() {
-        String toon = "name: John\ntags:\n  [3]: java,json,toon";
+        String toon = "name: John\ntags[3]: java,json,toon";
         Map<String, Object> map = JsonIo.fromToonToMaps(toon).asClass(Map.class);
         assertEquals("John", map.get("name"));
         List<?> tags = (List<?>) map.get("tags");
@@ -3024,14 +3024,16 @@ class ToonReaderTest {
 
     @Test
     void testListArray_MoreElementsThanCount() {
-        // [2]: with 3 hyphen elements — reader should stop at count
+        // [2]: with 3 hyphen elements. Spec 14.4: a declared count never cuts a scope short; non-strict mode
+        // reads every item that is there (strict mode refuses the mismatch).
         String toon = "items[2]:\n  - one\n  - two\n  - three";
         Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
         List<?> items = (List<?>) map.get("items");
         assertNotNull(items);
-        assertEquals(2, items.size(), "Reader stops reading at declared count");
+        assertEquals(3, items.size(), "Every item in the header's scope is read");
         assertEquals("one", items.get(0));
         assertEquals("two", items.get(1));
+        assertEquals("three", items.get(2));
     }
 
     @Test
@@ -3046,12 +3048,13 @@ class ToonReaderTest {
 
     @Test
     void testTabularArray_MoreRowsThanCount() {
-        // [2]{x,y}: with 3 rows — reader should stop at count
+        // [2]{x,y}: with 3 rows. Spec 14.4: a declared count never cuts a scope short; non-strict mode
+        // reads every row that is there (strict mode refuses the mismatch).
         String toon = "pts[2]{x,y}:\n  1,2\n  3,4\n  5,6";
         Map<String, Object> map = JsonIo.fromToon(toon, null).asClass(Map.class);
         List<?> pts = (List<?>) map.get("pts");
         assertNotNull(pts);
-        assertEquals(2, pts.size(), "Reader stops reading at declared count");
+        assertEquals(3, pts.size(), "Every row in the header's scope is read");
         Map<?, ?> pt1 = (Map<?, ?>) pts.get(0);
         assertEquals(1L, pt1.get("x"));
         assertEquals(2L, pt1.get("y"));
@@ -3098,16 +3101,16 @@ class ToonReaderTest {
     }
 
     @Test
-    void testStrictToon_DelimiterMismatchInHeader_StrictFailsPermissiveWorks() {
+    void testDelimiterMismatchInHeader_FailsInBothModes() {
+        // The bracket declares the pipe, the field list uses commas: one field named "id,name", and rows of two
+        // cells. Strict mode refuses the header; non-strict mode refuses the rows, whose width is checked in
+        // both modes (spec 14.1).
         String toon = "items[2|]{id,name}:\n  1|Alice\n  2|Bob";
 
         assertThrows(JsonIoException.class,
                 () -> JsonIo.fromToon(toon, toonOptions(true)).asClass(Map.class));
-
-        Map<String, Object> map = JsonIo.fromToon(toon, toonOptions(false)).asClass(Map.class);
-        List<?> items = (List<?>) map.get("items");
-        assertNotNull(items);
-        assertEquals(2, items.size());
+        assertThrows(JsonIoException.class,
+                () -> JsonIo.fromToon(toon, toonOptions(false)).asClass(Map.class));
     }
 
     @Test
@@ -3780,12 +3783,10 @@ class ToonReaderTest {
         assertDog(collectionAnnotated.collection.get(0), "CollectionDog", 3);
 
         String noTypeMapKeyToon = "mapKey:\n" +
-                "  [1]:\n" +
-                "    -\n" +
-                "      $key:\n" +
-                "        name: KeyDog\n" +
-                "        bark: 4\n" +
-                "      $value: mapped\n";
+                "  $keys[1]:\n" +
+                "    - name: KeyDog\n" +
+                "      bark: 4\n" +
+                "  $items[1]: mapped\n";
         try {
             ToonMapKeyNoAnnotationTarget noAnnotationMapKey =
                     JsonIo.fromToon(noTypeMapKeyToon, null).asClass(ToonMapKeyNoAnnotationTarget.class);

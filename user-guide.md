@@ -827,6 +827,12 @@ empty (`: 1` is the key `""`, which json-io writes as `"": 1`). The value has no
 means something there, the empty array, and `a: [2]: x` is the string `[2]: x`. An array's header stands before
 the colon, as in `a[2]: x,y`.
 
+Every line of a document belongs to its value, in strict and non-strict mode: a line that nothing takes -- one
+indented under a field that holds a plain value, one among list items that is no item, one after a root array -- is
+an error, never skipped. The number in a header (`items[3]:`) is a claim that strict mode checks; it never decides
+how much is read, so non-strict mode reads every item, row and value that stands in the header's scope, three or
+not. A row of a table must have a cell for every field in both modes.
+
 A blank line means nothing: it never ends an object or an array and is never counted, so `address:`, a blank line,
 then the indented fields is still one nested object. The one place a blank line may not stand in strict mode is
 inside an array or a keyed table, from its first item or row through the last line that belongs to it; non-strict
