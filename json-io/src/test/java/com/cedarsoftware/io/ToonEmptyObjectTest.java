@@ -187,8 +187,8 @@ class ToonEmptyObjectTest {
     }
 
     /**
-     * The other places where an object follows "key:": the end of a folded key, and the key and the value of an
-     * entry in json-io's own form for a map whose keys are not strings.
+     * The other places where an object follows "key:" or a hyphen: the end of a folded key, and the keys and the
+     * values of a map whose keys are not strings ($keys beside $items).
      */
     @Test
     void afterAFoldedKeyAndInAMapWithKeysThatAreNotStrings() {
@@ -216,25 +216,21 @@ class ToonEmptyObjectTest {
         String toon = JsonIo.toToon(holder, null);
 
         assertEquals("complex:\n"
-                + "  [2]:\n"
-                + "  - \n"
-                + "    $key:\n"
-                + "      [2]: 1,2\n"
-                + "    $value:\n"
-                + "      inner:\n"
-                + "      name: v\n"
-                + "      tail:\n"
-                + "  - \n"
-                + "    $key:\n"
-                + "      inner:\n"
+                + "  $keys[2]:\n"
+                + "    - [2]: 1,2\n"
+                + "    - inner:\n"
                 + "      name: k\n"
                 + "      tail:\n"
-                + "    $value:\n"
+                + "  $items[2]:\n"
+                + "    - inner:\n"
+                + "      name: v\n"
+                + "      tail:\n"
+                + "    -\n"
                 + "z: 1", toon);
         for (ReadOptions options : BOTH_MODES) {
             Map<String, Object> back = JsonIo.fromToon(toon, options).asClass(Map.class);
             assertEquals(1L, back.get("z"));
-            assertEquals(2, ((List<?>) back.get("complex")).size());
+            assertEquals(2, ((Map<?, ?>) back.get("complex")).size());
         }
     }
 

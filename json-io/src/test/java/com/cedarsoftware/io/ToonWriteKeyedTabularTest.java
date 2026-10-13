@@ -558,8 +558,7 @@ class ToonWriteKeyedTabularTest {
 
         String toon = JsonIo.toToon(doc, noReferences);
 
-        assertTrue(toon.startsWith("m:\n  [2]:\n") && toon.contains("    $key: plain\n    $value:\n      x: 1\n")
-                && toon.contains("    $key:\n      k: 2\n    $value:\n      x: 2"), toon);
+        assertEquals("m:\n  $keys[2]:\n    - plain\n    - k: 2\n  $items[2]{x}:\n    1\n    2", toon);
         assertEquals(JsonIo.toToon(doc, new WriteOptionsBuilder().cycleSupport(false).toonLegacyForms(true).build()),
                 toon);
     }

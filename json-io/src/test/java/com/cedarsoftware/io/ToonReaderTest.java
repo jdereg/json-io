@@ -893,10 +893,11 @@ class ToonReaderTest {
 
         String toon = JsonIo.toToon(original, null);
 
-        // The TOON should have nested $key fields - the outer ones are entry markers,
-        // the inner ones are the object's actual fields
-        assertTrue(toon.contains("$key:"), "Should contain $key entry marker");
-        assertTrue(toon.contains("$value:"), "Should contain $value entry marker");
+        // The map is written as its keys beside its values ($keys, $items). The key objects' own fields
+        // named $key and $value are written in quotes, so they are not taken for meta keys.
+        assertTrue(toon.contains("$keys[2]"), toon);
+        assertTrue(toon.contains("$items[2]"), toon);
+        assertTrue(toon.contains("\"$key\"") && toon.contains("\"$value\""), toon);
 
         Map<ObjectWithDollarFields, String> restored = JsonIo.fromToon(toon, null)
                 .asType(new TypeHolder<Map<ObjectWithDollarFields, String>>() {});
@@ -931,9 +932,9 @@ class ToonReaderTest {
 
         String toon = JsonIo.toToon(original, null);
 
-        // Simple format should NOT have $key/$value markers
-        assertFalse(toon.contains("$key:"), "Simple key map should not use $key marker");
-        assertFalse(toon.contains("$value:"), "Simple key map should not use $value marker");
+        // Simple format should NOT have the $keys/$items of a map with complex keys
+        assertFalse(toon.contains("$keys"), "Simple key map should not use $keys");
+        assertFalse(toon.contains("$items"), "Simple key map should not use $items");
 
         // Should have the simple format: emp1: followed by nested object
         assertTrue(toon.contains("emp1:"), "Should use simple key format");
@@ -948,10 +949,9 @@ class ToonReaderTest {
 
         String toon = JsonIo.toToon(original, null);
 
-        // Should use array format even for single entry
-        assertTrue(toon.contains("[1]:"), "Should have [1]: for single entry");
-        assertTrue(toon.contains("$key:"), "Should use $key marker");
-        assertTrue(toon.contains("$value:"), "Should use $value marker");
+        // Keys beside values, for a single entry too
+        assertTrue(toon.contains("$keys[1]"), toon);
+        assertTrue(toon.contains("$items[1]"), toon);
 
         Map<TestPerson, String> restored = JsonIo.fromToon(toon, null)
                 .asType(new TypeHolder<Map<TestPerson, String>>() {});
@@ -3621,7 +3621,7 @@ class ToonReaderTest {
         keyMap.put(new ToonDog("KeyDog", 9), "ok");
         String keyMapToon = JsonIo.toToon(keyMap, null);
         Object noHintKeyMap = JsonIo.fromToon(keyMapToon, null).asClass(Object.class);
-        assertTrue(noHintKeyMap instanceof List, "Without hints, complex-key map should deserialize as list entries");
+        assertTrue(noHintKeyMap instanceof Map, "Without hints, a complex-key map is still a map");
 
         Map<ToonDog, String> typedKeyMap = JsonIo.fromToon(keyMapToon, null)
                 .asType(new TypeHolder<Map<ToonDog, String>>() {});

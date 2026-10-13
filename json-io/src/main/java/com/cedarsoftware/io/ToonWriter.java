@@ -283,6 +283,7 @@ public class ToonWriter implements Closeable, Flushable {
     private final boolean skipNullFields;
     private final boolean toonKeyFolding;
     private final boolean v4Forms;          // the forms of TOON spec v4: keyed tables, nested field groups (not legacy)
+    private boolean onHyphenLine;           // the next line is already begun, by a list item's "- ": no indent
     private final boolean prettyPrint;
     // Set for the one array written next, on a list item's hyphen line with no key: such an array is never a table
     // (spec 9.4: a keyless header with a field list stands only at the root). Taken by the array's writer.
@@ -2892,9 +2893,13 @@ public class ToonWriter implements Closeable, Flushable {
             // Nested map - first field on hyphen line per TOON spec
             Map<?, ?> mapElement = (Map<?, ?>) element;
             if (hasComplexKeys(mapElement) || keysNeedTypes(mapElement, Object.class)) {
-                out.write('\n');
+                // Spec 10: an object's first field stands on the hyphen line, its other fields one level below
+                // the hyphen. A field on a line of its own under a bare hyphen is refused by a reader.
+                out.write(' ');
                 depth++;
+                onHyphenLine = true;
                 writeMap(mapElement, typed);
+                onHyphenLine = false;
                 depth--;
             } else {
                 writeMapInline(mapElement, typed);
@@ -2902,11 +2907,10 @@ public class ToonWriter implements Closeable, Flushable {
         } else if (element instanceof Collection) {
             // Nested collection
             if (shouldWrapArrayOrCollectionValue(element) || typed) {
-                // When type metadata is present, wrapping ensures $type and $items
-                // are properly indented relative to the parent hyphen.
-                out.write('\n');
+                // With its type or id the collection is an object ($type, $items): its first field stands on
+                // the hyphen line and the others one level below the hyphen (spec 10).
+                out.write(' ');
                 depth++;
-                writeIndent();
                 writeCollection((Collection<?>) element, typed);
                 depth--;
             } else if (((Collection<?>) element).isEmpty()) {
@@ -2926,9 +2930,8 @@ public class ToonWriter implements Closeable, Flushable {
         } else if (element.getClass().isArray()) {
             // Nested array
             if (shouldWrapArrayOrCollectionValue(element) || typed) {
-                out.write('\n');
+                out.write(' ');
                 depth++;
-                writeIndent();
                 writeArray(element, typed);
                 depth--;
             } else if (ArrayUtilities.getLength(element) == 0) {
@@ -3227,12 +3230,9 @@ public class ToonWriter implements Closeable, Flushable {
             boolean knownSimpleKeyType = currentMapHasSimpleKeyTypeHint;
             currentMapHasSimpleKeyTypeHint = false;  // don't propagate into nested children
             if (keysNeedTypes(map, keyDeclared) || (!knownSimpleKeyType && hasComplexKeys(map))) {
-                // With type info on, keys whose class the reader must be told are written as a list ($keys)
-                if (includeId || includeType || typeMetadataEnabled) {
-                    writeReferencedComplexMap(map, includeId, includeType, keyDeclared, valueType);
-                } else {
-                    writeMapWithComplexKeys(map);
-                }
+                // Keys that are not strings, and keys whose class the reader must be told, are written as a
+                // list beside the list of their values: $keys[N] and $items[N], two fields of an object.
+                writeReferencedComplexMap(map, includeId, includeType, keyDeclared, valueType);
             } else {
                 if (includeId || includeType) {
                     if (includeId) {
@@ -3735,85 +3735,6 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
-     * Write a map with complex object keys using array-of-entries format:
-     * [N]:
-     *   -
-     *     key:
-     *       ...object fields...
-     *     value: ...
-     */
-    private void writeMapWithComplexKeys(Map<?, ?> map) throws IOException {
-        // Write as array of entries
-        writeIndent();
-        out.write(countMarker(map.size()) + ":");
-
-        for (Map.Entry<?, ?> entry : map.entrySet()) {
-            out.write('\n');
-            writeIndent();
-            out.write("- ");
-            out.write('\n');
-            depth++;
-
-            // Write key (using $key to avoid collision with objects that have a "key" field)
-            writeIndent();
-            out.write("$key:");
-            Object key = entry.getKey();
-            if (key == null || isPrimitive(key)) {
-                out.write(" ");
-                writeValue(key);
-            } else {
-                depth++;
-                boolean typed = needsType(key.getClass(), Object.class);
-                if (key instanceof Map) {
-                    out.write('\n');
-                    writeMap((Map<?, ?>) key, typed);
-                } else if (key instanceof Collection) {
-                    out.write('\n');
-                    writeIndent();
-                    writeCollection((Collection<?>) key, typed);
-                } else if (key.getClass().isArray()) {
-                    out.write('\n');
-                    writeIndent();
-                    writeArray(key, typed);
-                } else {
-                    writeNestedObject(key, typed);
-                }
-                depth--;
-            }
-
-            // Write value (using $value to avoid collision with objects that have a "value" field)
-            out.write('\n');
-            writeIndent();
-            out.write("$value:");
-            Object value = entry.getValue();
-            if (value == null || isPrimitive(value)) {
-                out.write(" ");
-                writeValue(value);
-            } else {
-                depth++;
-                boolean typed = needsType(value.getClass(), Object.class);
-                if (value instanceof Map) {
-                    out.write('\n');
-                    writeMap((Map<?, ?>) value, typed);
-                } else if (value instanceof Collection) {
-                    out.write('\n');
-                    writeIndent();
-                    writeCollection((Collection<?>) value, typed);
-                } else if (value.getClass().isArray()) {
-                    out.write('\n');
-                    writeIndent();
-                    writeArray(value, typed);
-                } else {
-                    writeNestedObject(value, typed);
-                }
-                depth--;
-            }
-
-            depth--;
-        }
-    }
-
-    /**
      * A map as its keys and its values, two lists ({$keys, $items}): for keys that are objects, or (type info on)
      * whose class the reader must be told. {@code keyType} and {@code valueType} are what the reader expects.
      */
@@ -3831,21 +3752,29 @@ public class ToonWriter implements Closeable, Flushable {
             writeTypeField(map);
             out.write('\n');
         }
+        // The keys and the values are taken from one pass over the entries, so that the n-th key stands
+        // beside the n-th value whatever order the map's keySet() and values() keep for themselves.
+        List<Object> keys = new ArrayList<>(map.size());
+        List<Object> values = new ArrayList<>(map.size());
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            keys.add(entry.getKey());
+            values.add(entry.getValue());
+        }
         writeIndent();
         out.write(keysKey);
-        out.write(countMarker(map.size()));
+        out.write(countMarker(keys.size()));
         if (typeMetadataEnabled) {
             elementType = keyType;
         }
-        writeCollectionElementsWithHeader(map.keySet());
+        writeCollectionElementsWithHeader(keys);
         out.write('\n');
         writeIndent();
         out.write(itemsKey);
-        out.write(countMarker(map.size()));
+        out.write(countMarker(values.size()));
         if (typeMetadataEnabled) {
             elementType = valueType;
         }
-        writeCollectionElementsWithHeader(map.values());
+        writeCollectionElementsWithHeader(values);
     }
 
     /**
@@ -4459,6 +4388,10 @@ public class ToonWriter implements Closeable, Flushable {
      * Write indentation for current depth.
      */
     private void writeIndent() throws IOException {
+        if (onHyphenLine) {
+            onHyphenLine = false;       // the line was begun by a list item's hyphen: its first field follows it
+            return;
+        }
         if (depth < INDENT_CACHE_SIZE) {
             out.write(indentCache[depth]);
             return;

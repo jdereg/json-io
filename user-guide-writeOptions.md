@@ -1382,9 +1382,18 @@ with `toonLegacyForms(true)` it is written in quotes, as they wrote it.
 A key that holds a dot (`server.port`) is written without quotes, as the spec has it. json-io 4.113.0 and
 earlier quoted it unless `toonKeyFolding` was on, and with `toonLegacyForms(true)` it is written as they wrote it.
 
-The one place where the text is not 4.113.0's: a document that is a single string starting with U+FEFF is written
-in quotes in both modes. Without them a reader that follows the spec, json-io 4.114.0 included, removes the U+FEFF
-as a byte-order mark; with them every reader, old or new, reads the string.
+Three shapes are not written as 4.113.0 wrote them, in either mode, because a reader that follows the spec --
+json-io 4.114.0 included -- refuses or misreads the old text, while every reader, old or new, reads the new one:
+
+- A document that is a single string starting with U+FEFF is written in quotes. Without them a reader removes the
+  U+FEFF as a byte-order mark.
+- A list item that is a list, set or array carrying its `$type` or `$id`, or a map whose keys are not strings,
+  has its first field on the hyphen line (`- $type: ArrayList`). 4.113.0 wrote a bare `-` and the fields on the
+  lines below it, which TOON reads as an empty object followed by lines that belong nowhere.
+- A map whose keys are not strings, written without type information, is `$keys[N]` beside `$items[N]`, as it
+  always was with type information. 4.113.0 wrote `key:`, then a header without a key (`[N]:`), then a
+  `$key` / `$value` pair per entry; a header without a key cannot stand there. Read without a declared type,
+  the new text gives a `Map`, where the old gave a list of entries.
 
 >#### `boolean` isToonLegacyForms()
 >- [ ] Returns `true` if only the forms of TOON spec v3 are written, `false` (the default) for those of spec v4.

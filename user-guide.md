@@ -688,7 +688,12 @@ shapes[2]:
 ```
 
 A list writes its type with `$items`; a map whose keys the reader must be told the class of (an `Integer` key where no
-key type is declared) is written as `$keys` and `$items`; an `EnumSet` names its enum. A `CompactMap`, `CompactSet` or
+key type is declared) is written as `$keys` and `$items`; an `EnumSet` names its enum. A map whose keys are not
+strings at all -- objects, lists, other maps -- is written as `$keys` and `$items` with or without type
+information, as json-io writes it in JSON: the keys in one list (a table when they are alike), the values beside
+them in another, the n-th key belonging to the n-th value. In a list, such a map or a list that carries its `$type`
+or `$id` is an object like another, with its first field on the hyphen line (`- $type: ArrayList`, then
+`$items[2]: 1,2` one level below the hyphen). A `CompactMap`, `CompactSet` or
 `MultiKeyMap` names its base class and writes its configuration from its writer's `toData`, so a case-insensitive map
 reads back case-insensitive.
 
