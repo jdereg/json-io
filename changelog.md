@@ -1,6 +1,20 @@
 ### Revision History
 
 #### 4.114.0 - (unreleased)
+* **DOCS**: **README ratio table re-measured for 4.114.0, all three columns.** `JsonPerformanceTest --with-gson`, median of three runs, JDK 21.0.12, `jackson-databind 2.22.3`, `gson 2.14.0`. 4.113.0 was measured again on the same day, its runs alternating with 4.114.0's, so the two can be compared: between days the machine alone moves a ratio by about 3% (Gson's typed read against Jackson went from 1.42x to 1.48x with neither library changed).
+
+  | Mode (ratio to Jackson) | JsonIo | TOON | Gson |
+  |---|---|---|---|
+  | Read `toJava` (typed) | 1.59x | 1.54x | 1.48x |
+  | Read `toMaps` | 1.28x | 1.35x | 1.47x |
+  | Write `cycleSupport=true` | 1.54x | 1.48x | 2.15x |
+  | Write `cycleSupport=false` | 1.39x | 1.37x | 2.15x |
+  | Write `toMaps` `cycleSupport=true` | 1.52x | 1.50x | 2.10x |
+  | Write `toMaps` `cycleSupport=false` | 1.36x | 1.37x | 2.10x |
+
+  * **Against 4.113.0, measured the same day:** one cell changed. A TOON `toMaps` read takes about 6% longer (1.27x → 1.35x; 4,466 → 4,720 ms for 100,000 reads). It is the cost of the list fix in this release ("The elements of a TOON list are read wherever the list stands"): the benchmark's TOON names `$type`, so the elements of its lists are now resolved, as JSON's always were. Before, they were passed on as parsed -- which is how a `$ref` in such a list came back an empty map. Measured across 18 commits of this release, the step is at that one. A document that names no `$type`, `$id` or `$ref` does not pay it. Every other figure is within about 3% of 4.113.0's: typed reads and TOON writes the same, JSON writes about 2% faster.
+  * **The benchmark's TOON text is the same in both versions**, byte for byte (15,628 characters): the faster reading of quoted cells and quoted inline arrays in this release does not show here, because this data has almost none.
+  * **Derived text in the README:** Gson 1.5-2.2x Jackson (was 1.4-2.2x); typed reads about 7% longer than Gson (was 12%, of which the Gson figure's drift is most); `cycleSupport(false)` 9-10% faster.
 * **BEHAVIOR CHANGE**: **json-io reads and writes fields. Getters and setters are used only when you ask for them.** A getter or setter may do more than hand over a field, and a serializer cannot tell; so by default no code of your class runs, and what comes back is the state that was written. Two new options call the methods instead: **`WriteOptionsBuilder.useGetters(true)`** and **`ReadOptionsBuilder.useSetters(true)`** (and `addPermanentUseGetters(true)` / `addPermanentUseSetters(true)` for every new options object). They are independent: set both, one or neither.
   * **Reading.** json-io 4.55.0 through 4.113.0 called a class's public `setXxx(value)` in place of assigning the field, whenever the class had one. It was never announced: 4.55.0 corrected a lookup that had asked for a method returning `Void` (the wrapper class), which no setter does, so until then every field had been assigned. A setter that does more than assign then ran on an object that was still being read, and a value could be lost with no error: a `setActive(boolean)` that consults a registry dropped the JSON's `false`, a `setParent(p)` that also adds the child to `p.children` read a parent of two children back with four, and a setter that copies the list it is given copied it before json-io had filled it. **From 4.114.0 the field is assigned**, private and final fields included, as in every release before 4.55.0.
   * **Writing.** Through 4.113.0 the writer called a class's public `getXxx()` / `isXxx()` in place of reading the field, whenever the class had one. **From 4.114.0 the field is read.** The JSON differs only where a getter returns something other than its field: a computed value, a copy, a read-only view.
