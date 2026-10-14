@@ -1,5 +1,8 @@
 ### Revision History
 
+#### 4.115.0 - (unreleased)
+* **BUILD**: `java-util` 4.114.0 → **4.115.0**, its next development version: json-io depends on the java-util of its own version number. Until java-util 4.115.0 is released, build it locally first (`mvn install -DskipTests` in java-util).
+
 #### 4.114.0 - 2026-10-13
 * **DOCS**: **README ratio table re-measured for 4.114.0, all three columns.** `JsonPerformanceTest --with-gson`, median of three runs, JDK 21.0.12, `jackson-databind 2.22.3`, `gson 2.14.0`. 4.113.0 was measured again on the same day, its runs alternating with 4.114.0's, so the two can be compared: between days the machine alone moves a ratio by about 3% (Gson's typed read against Jackson went from 1.42x to 1.48x with neither library changed).
 
