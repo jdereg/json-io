@@ -1357,7 +1357,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                             }
                             break;
                         default:
-                            writeJsonObjectObject(jObj, showType);
+                            // Its keys are written as field names only when every one is a String. A JsonObject
+                            // with another key -- built by hand, given one after it was read, or the root of a
+                            // typeless @keys/@items document read with toMaps() -- is written as the map it is.
+                            if (hasOnlyStringKeys(jObj)) {
+                                writeJsonObjectObject(jObj, showType);
+                            } else if (!writeJsonObjectMapWithStringKeys(jObj, showType)) {
+                                writeJsonObjectMap(jObj, showType);
+                            }
                             break;
                     }
                     break;
@@ -2145,6 +2152,16 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         gen.writeEndObjectRaw();
+    }
+
+    /** True when every key of the JsonObject is a String, so that it can be written as an object's fields. */
+    private static boolean hasOnlyStringKeys(JsonObject jObj) {
+        for (int idx = 0, len = jObj.fastEntryCount(); idx < len; idx++) {
+            if (!(jObj.fastKeyAt(idx) instanceof String)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private boolean adjustIfReferenced(JsonObject jObj) {
