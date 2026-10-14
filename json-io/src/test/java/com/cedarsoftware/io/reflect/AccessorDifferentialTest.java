@@ -393,11 +393,12 @@ class AccessorDifferentialTest {
     }
 
     /**
-     * A getter that throws is called once; the field is read instead, then and from then on. (Through 4.113.0 the
-     * getter was called twice before the field was read, on the JDKs where a lambda could be made for it.)
+     * A getter that throws is called once for each read, and the field is read in its place that time. It is asked
+     * again for the next read: through 4.114.0 one throw switched it off for good (GetterThatThrowsTest). (Through
+     * 4.113.0 it was also called twice before the field was read, on the JDKs where a lambda could be made for it.)
      */
     @Test
-    void aGetterThatThrowsIsCalledOnceAndTheFieldIsReadFromThenOn() throws Exception {
+    void aGetterThatThrowsIsCalledOncePerReadAndTheFieldIsReadThatTime() throws Exception {
         Accessor n = Accessor.createMethodAccessor(opened(Throwing.class.getDeclaredField("n")), "getN", "n");
         Accessor s = Accessor.createMethodAccessor(opened(Throwing.class.getDeclaredField("s")), "getS", "s");
         Throwing first = new Throwing();
@@ -408,15 +409,15 @@ class AccessorDifferentialTest {
         assertEquals(7, n.getInt(first));
         assertEquals(7, n.retrieve(first));
         assertEquals(7, n.getInt(second));
-        assertEquals(1, first.nCalls);
-        assertEquals(0, second.nCalls);
+        assertEquals(3, first.nCalls);
+        assertEquals(1, second.nCalls);
 
         assertEquals("the field", s.retrieve(first));
         assertEquals(1, first.sCalls);
         assertEquals("the field", s.retrieve(first));
         assertEquals("the field", s.retrieve(second));
-        assertEquals(1, first.sCalls);
-        assertEquals(0, second.sCalls);
+        assertEquals(2, first.sCalls);
+        assertEquals(1, second.sCalls);
     }
 
     @Test

@@ -94,7 +94,7 @@ public class Accessor {
     private final MethodHandle primitiveGetter; // methodHandle as (Object)int, (Object)long, ... for a primitive field
     private final boolean isPublic;
     private final byte primitiveKind;
-    private volatile boolean handleFailed;      // a call through the handle threw: Field.get is used from then on
+    private volatile boolean handleFailed;      // a field's handle threw: Field.get is used from then on
 
     /** @deprecated Not used by json-io since 4.114.0. Kept so that code naming it still compiles. */
     @Deprecated
@@ -281,16 +281,32 @@ public class Accessor {
                     + getActualFieldName());
         }
 
-        try {
-            if (boxedGetter != null && !handleFailed) {
-                try {
-                    return (Object) boxedGetter.invokeExact(o);
-                } catch (Throwable t) {
-                    // A getter that throws, or a handle that cannot be used after all: the field is read instead
-                    handleFailed = true;
-                }
+        if (boxedGetter != null && !handleFailed) {
+            try {
+                return (Object) boxedGetter.invokeExact(o);
+            } catch (Throwable t) {
+                handleThrew();      // the field is read instead
             }
+        }
+        return readField(o);
+    }
 
+    /**
+     * A call through the handle threw, and the field is read in its place. A handle that reads the field cannot be
+     * used after all, so Field.get reads that field from now on. A getter is another matter: it threw for this
+     * object, in the state this object is in, and says nothing about the next one. It is called again for the next
+     * read. (It used to be switched off for good, and every object written afterwards got the field's value where
+     * the one before had got the getter's.)
+     */
+    private void handleThrew() {
+        if (!isMethod) {
+            handleFailed = true;
+        }
+    }
+
+    /** The field's own value, read with Field.get. */
+    private Object readField(Object o) {
+        try {
             return field.get(o);
         } catch (IllegalAccessException e) {
             Class<?> dc = field.getDeclaringClass();
@@ -311,14 +327,16 @@ public class Accessor {
     public boolean getBoolean(Object o) {
         ensureTarget(o);
         try {
+            boolean threw = false;
             if (primitiveKind == PRIMITIVE_BOOLEAN && primitiveGetter != null && !handleFailed) {
                 try {
                     return (boolean) primitiveGetter.invokeExact(o);
                 } catch (Throwable t) {
-                    handleFailed = true;
+                    handleThrew();
+                    threw = true;
                 }
             }
-            Object v = retrieve(o);
+            Object v = threw ? readField(o) : retrieve(o);
             return v == null ? false : (Boolean) v;
         } catch (JsonIoException e) {
             throw e;
@@ -334,14 +352,16 @@ public class Accessor {
     public byte getByte(Object o) {
         ensureTarget(o);
         try {
+            boolean threw = false;
             if (primitiveKind == PRIMITIVE_BYTE && primitiveGetter != null && !handleFailed) {
                 try {
                     return (byte) primitiveGetter.invokeExact(o);
                 } catch (Throwable t) {
-                    handleFailed = true;
+                    handleThrew();
+                    threw = true;
                 }
             }
-            Object v = retrieve(o);
+            Object v = threw ? readField(o) : retrieve(o);
             return v == null ? (byte) 0 : ((Number) v).byteValue();
         } catch (JsonIoException e) {
             throw e;
@@ -357,14 +377,16 @@ public class Accessor {
     public char getChar(Object o) {
         ensureTarget(o);
         try {
+            boolean threw = false;
             if (primitiveKind == PRIMITIVE_CHAR && primitiveGetter != null && !handleFailed) {
                 try {
                     return (char) primitiveGetter.invokeExact(o);
                 } catch (Throwable t) {
-                    handleFailed = true;
+                    handleThrew();
+                    threw = true;
                 }
             }
-            Object v = retrieve(o);
+            Object v = threw ? readField(o) : retrieve(o);
             return v == null ? (char) 0 : (Character) v;
         } catch (JsonIoException e) {
             throw e;
@@ -380,14 +402,16 @@ public class Accessor {
     public short getShort(Object o) {
         ensureTarget(o);
         try {
+            boolean threw = false;
             if (primitiveKind == PRIMITIVE_SHORT && primitiveGetter != null && !handleFailed) {
                 try {
                     return (short) primitiveGetter.invokeExact(o);
                 } catch (Throwable t) {
-                    handleFailed = true;
+                    handleThrew();
+                    threw = true;
                 }
             }
-            Object v = retrieve(o);
+            Object v = threw ? readField(o) : retrieve(o);
             return v == null ? (short) 0 : ((Number) v).shortValue();
         } catch (JsonIoException e) {
             throw e;
@@ -403,14 +427,16 @@ public class Accessor {
     public int getInt(Object o) {
         ensureTarget(o);
         try {
+            boolean threw = false;
             if (primitiveKind == PRIMITIVE_INT && primitiveGetter != null && !handleFailed) {
                 try {
                     return (int) primitiveGetter.invokeExact(o);
                 } catch (Throwable t) {
-                    handleFailed = true;
+                    handleThrew();
+                    threw = true;
                 }
             }
-            Object v = retrieve(o);
+            Object v = threw ? readField(o) : retrieve(o);
             return v == null ? 0 : ((Number) v).intValue();
         } catch (JsonIoException e) {
             throw e;
@@ -426,14 +452,16 @@ public class Accessor {
     public long getLong(Object o) {
         ensureTarget(o);
         try {
+            boolean threw = false;
             if (primitiveKind == PRIMITIVE_LONG && primitiveGetter != null && !handleFailed) {
                 try {
                     return (long) primitiveGetter.invokeExact(o);
                 } catch (Throwable t) {
-                    handleFailed = true;
+                    handleThrew();
+                    threw = true;
                 }
             }
-            Object v = retrieve(o);
+            Object v = threw ? readField(o) : retrieve(o);
             return v == null ? 0L : ((Number) v).longValue();
         } catch (JsonIoException e) {
             throw e;
@@ -449,14 +477,16 @@ public class Accessor {
     public float getFloat(Object o) {
         ensureTarget(o);
         try {
+            boolean threw = false;
             if (primitiveKind == PRIMITIVE_FLOAT && primitiveGetter != null && !handleFailed) {
                 try {
                     return (float) primitiveGetter.invokeExact(o);
                 } catch (Throwable t) {
-                    handleFailed = true;
+                    handleThrew();
+                    threw = true;
                 }
             }
-            Object v = retrieve(o);
+            Object v = threw ? readField(o) : retrieve(o);
             return v == null ? 0f : ((Number) v).floatValue();
         } catch (JsonIoException e) {
             throw e;
@@ -472,14 +502,16 @@ public class Accessor {
     public double getDouble(Object o) {
         ensureTarget(o);
         try {
+            boolean threw = false;
             if (primitiveKind == PRIMITIVE_DOUBLE && primitiveGetter != null && !handleFailed) {
                 try {
                     return (double) primitiveGetter.invokeExact(o);
                 } catch (Throwable t) {
-                    handleFailed = true;
+                    handleThrew();
+                    threw = true;
                 }
             }
-            Object v = retrieve(o);
+            Object v = threw ? readField(o) : retrieve(o);
             return v == null ? 0d : ((Number) v).doubleValue();
         } catch (JsonIoException e) {
             throw e;
