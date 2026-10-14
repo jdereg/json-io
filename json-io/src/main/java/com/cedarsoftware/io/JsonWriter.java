@@ -2217,22 +2217,38 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // Save current element type (Map value type) and switch to key type for @keys array
         final Class<?> savedValueType = declaredElementType;
 
+        // The keys and the values are taken from ONE pass over the entries, so that the n-th key stands beside
+        // the n-th value whatever order the map's keySet() and values() keep for themselves, and whatever is put
+        // into the map or taken out of it while it is written. (They were two passes, keySet() and then values():
+        // a map whose two views disagree, or that changed in between, was written with keys beside other keys'
+        // values, or with more of one than of the other.) Each key is written as it comes; its value waits.
+        Object[] values = new Object[Math.max(map.size(), 1)];
+        int count = 0;
+
         // @keys array.
         gen.writeFieldNameRaw(keysPrefix);
         gen.writeStartArrayRaw();
         gen.beginInlineArrayBody();
 
-        // Map is non-empty (caller's isEmpty path returned earlier), so the iterators
-        // each have at least one element — peel off the first element + restore, then
-        // loop with the separator BEFORE each subsequent element. Avoids the per-iteration
-        // "is this the first element?" check.
-        Iterator<?> i = map.keySet().iterator();
+        // The first element is peeled off, and the loop writes the separator BEFORE each later one: no
+        // "is this the first element?" check per element. The key and the value are read from the entry before
+        // the iterator moves on (some maps hand out the same entry object again and again).
+        Iterator<Map.Entry<?, ?>> i = ((Map) map).entrySet().iterator();
         declaredElementType = declaredKeyType;
-        writeCollectionElement(i.next());
-        while (i.hasNext()) {
-            output.write(',');
-            gen.writeNewlineIndent();
-            writeCollectionElement(i.next());
+        if (i.hasNext()) {
+            Map.Entry<?, ?> entry = i.next();
+            values[count++] = entry.getValue();
+            writeCollectionElement(entry.getKey());
+            while (i.hasNext()) {
+                output.write(',');
+                gen.writeNewlineIndent();
+                entry = i.next();
+                if (count == values.length) {
+                    values = Arrays.copyOf(values, count << 1);     // the map grew while it was written
+                }
+                values[count++] = entry.getValue();
+                writeCollectionElement(entry.getKey());
+            }
         }
 
         gen.writeEndArrayRaw();
@@ -2242,13 +2258,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         gen.writeStartArrayRaw();
         gen.beginInlineArrayBody();
 
-        i = map.values().iterator();
         declaredElementType = savedValueType;
-        writeCollectionElement(i.next());
-        while (i.hasNext()) {
-            output.write(',');
-            gen.writeNewlineIndent();
-            writeCollectionElement(i.next());
+        if (count > 0) {
+            writeCollectionElement(values[0]);
+            for (int n = 1; n < count; n++) {
+                output.write(',');
+                gen.writeNewlineIndent();
+                writeCollectionElement(values[n]);
+            }
         }
 
         gen.writeEndArrayRaw();
