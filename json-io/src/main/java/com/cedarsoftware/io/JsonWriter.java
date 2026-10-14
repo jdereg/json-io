@@ -2409,6 +2409,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * Check if all keys in the Map can be stringified via Converter (bidirectional String conversion).
      * This requires both key→String and String→key conversions to be supported, ensuring round-trip fidelity.
      * Null keys cause this to return false (fall back to @keys/@items to avoid "null" ambiguity).
+     * <p>
+     * A key that is itself a Map is stringified only when Converter turns it into text. Converter lists Map to
+     * String for every map, and does it for a map that wraps one value -- {@code {"value": x}}, as a JsonObject
+     * read in Maps mode from {@code {"@type":"BigDecimal","value":"1.5"}} is -- and throws for any other. Any
+     * other map key sends its map to {@code @keys}/{@code @items}, as without {@code stringifyMapKeys}.
+     * (Through 4.114.0 the write threw, "To convert from Map to 'String'...".)
      */
     private boolean canStringifyMapKeys(Map map) {
         if (declaredKeyType != null && declaredKeyType != Object.class) {
@@ -2417,30 +2423,58 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             // question is not answered by it: the declared type permits put(null, v), and a null key
             // reaching writeStringifiedMapBody is written as the literal "null" -- precisely the
             // ambiguity this method exists to prevent.  So the conversion check is hoisted and the
-            // null check stays per key.
+            // null check stays per key, as does the Map check: through a raw reference any key gets in.
             if (!(Converter.isConversionSupportedFor(declaredKeyType, String.class)
                     && Converter.isConversionSupportedFor(String.class, declaredKeyType))) {
                 return false;
             }
+            Class<?> notAMap = null;            // the class of the last key found not to be a Map
             for (Object key : map.keySet()) {
                 if (key == null) {
                     return false;
                 }
+                if (key.getClass() != notAMap) {
+                    if (!(key instanceof Map)) {
+                        notAMap = key.getClass();
+                    } else if (!hasText((Map<?, ?>) key)) {
+                        return false;
+                    }
+                }
             }
             return true;
         }
-        // Unknown declared type — check each actual key
+        // Unknown declared type — check each actual key. A class is asked about once, for the first key of it
+        // in a row; a Map key every time, because whether a map has a text form depends on what it holds.
+        Class<?> checked = null;                // the class of the last key found to convert both ways
         for (Object key : map.keySet()) {
             if (key == null) {
                 return false;
             }
             Class<?> keyClass = key.getClass();
+            if (keyClass == checked) {
+                continue;
+            }
             if (!(Converter.isConversionSupportedFor(keyClass, String.class)
                     && Converter.isConversionSupportedFor(String.class, keyClass))) {
                 return false;
             }
+            if (!(key instanceof Map)) {
+                checked = keyClass;
+            } else if (!hasText((Map<?, ?>) key)) {
+                return false;
+            }
         }
         return true;
+    }
+
+    /** Whether Converter turns this map key into text: only Converter knows which maps it reads a value from. */
+    private static boolean hasText(Map<?, ?> key) {
+        try {
+            Converter.convert(key, String.class);
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 
     /**
