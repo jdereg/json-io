@@ -34,6 +34,8 @@ java.nio.ByteBuffer = com.cedarsoftware.io.writers.ByteBufferWriter
 java.nio.CharBuffer = com.cedarsoftware.io.writers.CharBufferWriter
 java.nio.file.Path = com.cedarsoftware.io.Writers$PrimitiveUtf8StringWriter
 java.nio.charset.Charset = com.cedarsoftware.io.Writers$CharsetWriter
+javax.xml.datatype.XMLGregorianCalendar = com.cedarsoftware.io.Writers$XMLGregorianCalendarWriter
+javax.xml.datatype.Duration = com.cedarsoftware.io.Writers$XmlDurationWriter
 
 java.sql.Date = com.cedarsoftware.io.Writers$DateWriter
 java.sql.Timestamp = com.cedarsoftware.io.Writers$TimestampWriter

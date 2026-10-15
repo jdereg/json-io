@@ -2993,11 +2993,16 @@ public class ReadOptionsBuilder {
 
     /**
      * Names json-io wrote for a class before, read only: "StackTraceElementElement" was StackTraceElement's alias from
-     * 2024 to 4.112.0 (a slip that doubled its last word), so JSON and TOON written then still read.
+     * 2024 to 4.112.0 (a slip that doubled its last word), so JSON and TOON written then still read. Through 4.115.0
+     * an XMLGregorianCalendar or a javax.xml.datatype.Duration was written under the JDK's internal class name, which
+     * java-util 4.113.0+ refuses to load: it is read as the public type, whose Converter reads the fields it holds.
      */
     private static void loadFormerAliases() {
         Map<String, String> former = new LinkedHashMap<>();
         former.put(StackTraceElement.class.getName(), "StackTraceElementElement");
+        former.put("javax.xml.datatype.XMLGregorianCalendar",
+                "com.sun.org.apache.xerces.internal.jaxp.datatype.XMLGregorianCalendarImpl");
+        former.put("javax.xml.datatype.Duration", "com.sun.org.apache.xerces.internal.jaxp.datatype.DurationImpl");
         applyAliases(former, (clazz, alias) -> OTHER_COPIES_ALIASES.putIfAbsent(alias, clazz.getName()));
     }
 

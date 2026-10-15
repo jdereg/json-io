@@ -2473,9 +2473,26 @@ public class WriteOptionsBuilder {
                         Date.class.isAssignableFrom(type) ||
                         String.class.isAssignableFrom(type) ||
                         type.isEnum() ||
+                        isXmlDatatypeValue(type) ||
                         AnnotationResolver.getMetadata(type).isNonReferenceable();
             }
         };
+
+        /**
+         * An XMLGregorianCalendar or a javax.xml.datatype.Duration is written as text, as a Calendar is, and is no more
+         * referenceable than one. Their runtime classes are the JDK's internal ones, which config/nonRefs.txt cannot
+         * list (java-util refuses to load them by name), so they are known by their public supertype, by name: json-io
+         * does not require the java.xml module.
+         */
+        private static boolean isXmlDatatypeValue(Class<?> type) {
+            for (Class<?> c = type; c != null; c = c.getSuperclass()) {
+                String name = c.getName();
+                if (name.equals("javax.xml.datatype.XMLGregorianCalendar") || name.equals("javax.xml.datatype.Duration")) {
+                    return true;
+                }
+            }
+            return false;
+        }
 
         /**
          * Default Constructor.  Prevent instantiation outside of package.

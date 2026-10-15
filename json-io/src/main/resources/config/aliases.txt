@@ -127,6 +127,9 @@ sun.nio.fs.UnixPath = Path
 sun.nio.fs.WindowsPath = Path
 java.nio.charset.Charset = Charset
 
+# javax.xml.datatype (JAXB). javax.xml.datatype.Duration keeps its full name: "Duration" is java.time.Duration
+javax.xml.datatype.XMLGregorianCalendar = XMLGregorianCalendar
+
 # Alias all ByteBuffer types to ByteBuffer, as only the "remaining" bytes are serialized (position to limit)
 java.nio.DirectByteBuffer = ByteBuffer
 java.nio.MappedByteBuffer = ByteBuffer

@@ -392,6 +392,35 @@ public class Writers {
     }
 
     /**
+     * Writes a {@code javax.xml.datatype.XMLGregorianCalendar} -- what JAXB generates for {@code xs:dateTime},
+     * {@code xs:date} and the other XML Schema date and time types -- as its lexical form
+     * ({@code "2026-10-15T10:20:30.123-04:00"}, {@code "2020-06-28"}), typed as {@code XMLGregorianCalendar}.
+     * <p>
+     * Its runtime class is the JDK's internal {@code com.sun.org.apache.xerces.internal.jaxp.datatype
+     * .XMLGregorianCalendarImpl}. Written field by field under that name, as through 4.115.0, it came out as zeros on
+     * JDK 17+ (which does not open the class), and java-util 4.113.0+ refuses the name. Its {@code toString()} is
+     * {@code toXMLFormat()}, and the reader converts the text back through the Converter, on every JDK.
+     */
+    public static class XMLGregorianCalendarWriter extends PrimitiveUtf8StringWriter {
+        @Override
+        public String getTypeName(Object o) {
+            return "javax.xml.datatype.XMLGregorianCalendar";
+        }
+    }
+
+    /**
+     * Writes a {@code javax.xml.datatype.Duration} ({@code xs:duration}) as its lexical form ({@code "P1DT2H"}),
+     * typed as {@code javax.xml.datatype.Duration}, for the reason {@link XMLGregorianCalendarWriter} gives: its
+     * runtime class is the JDK's internal {@code DurationImpl}. Its {@code toString()} is the lexical form.
+     */
+    public static class XmlDurationWriter extends PrimitiveUtf8StringWriter {
+        @Override
+        public String getTypeName(Object o) {
+            return "javax.xml.datatype.Duration";
+        }
+    }
+
+    /**
      * Used as a template to write out primitive String types.
      * Uses default key of "value" and encodes the string.
      */
