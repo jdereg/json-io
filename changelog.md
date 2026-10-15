@@ -1,5 +1,8 @@
 ### Revision History
 
+#### 4.116.0 - (unreleased)
+* **BUILD**: `java-util` 4.115.0 → **4.116.0**, its next development version: json-io depends on the java-util of its own version number. Until java-util 4.116.0 is released, build it locally first (`mvn install -DskipTests` in java-util).
+
 #### 4.115.0 - 2026-10-14
 * **BUG FIX**: **A `java.sql.Time` comes back with the date it had.** A `Time` is a `Date` and holds any instant (`new Time(millis)`); JDBC's time of day is the case where the date is 1970-01-01. In 4.113.0 and 4.114.0 the date was lost wherever a `Time` travelled as text. Nothing failed and nothing looked different, because `Time.toString()` prints the time of day only: the `Time` read back prints the same and differs in `getTime()`, `equals()` and `compareTo()`.
   * **Reading.** Text that names a date -- in a `Time` field, or as `{"@type":"java.sql.Time","value":"2020-06-28T01:00:00"}` -- was read as 01:00:00 on **1970-01-01**. Up to 4.112.0 it was read as the instant it names. A wire format that writes a `Time` as a date-time, with a custom writer for instance, came back fifty years off.
