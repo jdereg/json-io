@@ -282,6 +282,7 @@ public class WriteOptionsBuilder {
             options.showRootTypeInfo = other.showRootTypeInfo;
             options.classLoader = other.classLoader;
             options.enumPublicFieldsOnly = other.enumPublicFieldsOnly;
+            options.enumWriter = other.enumWriter;      // writeEnumAsJsonObject() / writeEnumsAsString()
             options.enumSetWrittenOldWay = other.enumSetWrittenOldWay;
             options.forceMapOutputAsTwoArrays = other.forceMapOutputAsTwoArrays;
             options.stringifyMapKeys = other.stringifyMapKeys;
@@ -331,6 +332,9 @@ public class WriteOptionsBuilder {
             options.fieldFilters = other.fieldFilters;
             options.methodFilters = other.methodFilters;
             options.accessorFactories = other.accessorFactories;
+
+            options.customOptions.clear();
+            options.customOptions.putAll(other.customOptions);
         }
     }
 
