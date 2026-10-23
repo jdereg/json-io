@@ -1083,10 +1083,6 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
-     * Write a key string, handling dots appropriately based on key folding setting.
-     * When key folding is OFF, dots in keys must be quoted to prevent expansion on read.
-     */
-    /**
      * Write a TOON key. {@code needsQuote} is precomputed — either at
      * {@link WriteOptionsBuilder.WriteFieldPlan} build time for POJO field names
      * (via {@link #computeKeyNeedsQuoting}) or at the call site for dynamic Map

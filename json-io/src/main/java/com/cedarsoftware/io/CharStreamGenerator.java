@@ -172,16 +172,6 @@ final class CharStreamGenerator extends JsonGenerator {
     }
 
     /**
-     * Reset this generator's structural state to "inside an open object body at the
-     * given JsonWriter indent depth, ready for {@code writeFieldName}." Matches the
-     * state {@link #bridgeInsideObjectBody(Writer, WriteOptions, int)} produces for
-     * a freshly-allocated instance — same stack contents, same
-     * {@code suppressNextIndent} flag, same depth.
-     *
-     * @param currentJsonWriterDepth JsonWriter's current indent depth (post-tabIn)
-     * @since 4.104.0
-     */
-    /**
      * Reset the CURRENT top frame to {@code FRAME_OBJECT_EMPTY} (the "no fields emitted
      * yet" state) without changing {@code gen.depth}. Used by
      * {@link JsonWriter#writeCustom} 's legacy-API dispatch path: after gen-driven
@@ -197,6 +187,16 @@ final class CharStreamGenerator extends JsonGenerator {
         suppressNextIndent = true;
     }
 
+    /**
+     * Reset this generator's structural state to "inside an open object body at the
+     * given JsonWriter indent depth, ready for {@code writeFieldName}." Matches the
+     * state {@link #bridgeInsideObjectBody(Writer, WriteOptions, int)} produces for
+     * a freshly-allocated instance — same stack contents, same
+     * {@code suppressNextIndent} flag, same depth.
+     *
+     * @param currentJsonWriterDepth JsonWriter's current indent depth (post-tabIn)
+     * @since 4.104.0
+     */
     void resetForBridgeInsideObjectBody(int currentJsonWriterDepth) {
         // Ensure the contextStack has enough room for the resulting depth (one frame
         // per indent level plus the top FRAME_OBJECT_EMPTY for the new body).

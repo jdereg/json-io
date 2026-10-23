@@ -2142,10 +2142,6 @@ public abstract class Resolver {
     }
 
     /**
-     * Returns true when the type should be treated as a pseudo-primitive in json-io resolution.
-     * Pseudo-primitives are non-container types that have String conversion support.
-     */
-    /**
      * {@code jsonObj}, each of whose values that json-io wrote with its own type --
      * {@code {"@type":"BigDecimal","value":"123"}} -- is replaced by that value, before the Converter turns the
      * JsonObject into a non-Map type (a Duration from {@code {"duration": ...}}). The Converter reads Maps, not
@@ -2177,6 +2173,10 @@ public abstract class Resolver {
         return jsonObj;
     }
 
+    /**
+     * Returns true when the type should be treated as a pseudo-primitive in json-io resolution.
+     * Pseudo-primitives are non-container types that have String conversion support.
+     */
     static boolean isPseudoPrimitive(Class<?> type) {
         if (type == null || Enum.class.isAssignableFrom(type)) {
             return false;

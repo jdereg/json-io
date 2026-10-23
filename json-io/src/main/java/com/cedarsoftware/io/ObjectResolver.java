@@ -259,10 +259,6 @@ public class ObjectResolver extends Resolver
     }
 
     /**
-     * Seed container metadata on the current JsonObject so downstream traversal can stamp types incrementally.
-     * This avoids deep pre-pass traversal and only annotates the immediate container when metadata is missing.
-     */
-    /**
      * The root's elements, keys and values are read as the type asked for says, as a field's: when the root is a map
      * or collection and the JSON's own type (an {@code @type} ArrayList) is one of the type asked for, or untyped.
      */
@@ -278,6 +274,10 @@ public class ObjectResolver extends Resolver
         }
     }
 
+    /**
+     * Seed container metadata on the current JsonObject so downstream traversal can stamp types incrementally.
+     * This avoids deep pre-pass traversal and only annotates the immediate container when metadata is missing.
+     */
     private void seedIncrementalContainerMetadata(final Type fieldType, final JsonObject jsRhs) {
         if (!(fieldType instanceof ParameterizedType)) {
             return;
@@ -1825,11 +1825,6 @@ public class ObjectResolver extends Resolver
     }
 
     /**
-     * Check if the field has an @IoFormat / @JsonFormat annotation and parse the string accordingly.
-     * Walks the class hierarchy to find the format pattern for the field name.
-     * @return parsed object if pattern found and parsing succeeded, null otherwise
-     */
-    /**
      * Invoke the @IoAnySetter method on the target object for an unrecognized JSON field.
      * Simple values (String, Number, Boolean, null) are passed as-is.
      * JsonObject values that have a resolved target are unwrapped to the target.
@@ -1855,6 +1850,11 @@ public class ObjectResolver extends Resolver
         }
     }
 
+    /**
+     * Check if the field has an @IoFormat / @JsonFormat annotation and parse the string accordingly.
+     * Walks the class hierarchy to find the format pattern for the field name.
+     * @return parsed object if pattern found and parsing succeeded, null otherwise
+     */
     private static Object parseWithFieldFormat(Class<?> targetClass, String fieldName, String value, Class<?> targetType) {
         // Walk the class hierarchy to find the field's format pattern
         String pattern = null;

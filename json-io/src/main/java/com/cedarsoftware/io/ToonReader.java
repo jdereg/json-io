@@ -217,13 +217,6 @@ public class ToonReader {
     }
 
     /**
-     * Create a ToonReader that reads from a Reader and tracks @id/@ref metadata.
-     *
-     * @param reader the reader to read TOON content from
-     * @param readOptions configuration options (may be null for defaults)
-     * @param references reference tracker used during resolution (may be null)
-     */
-    /**
      * True once the document read so far named a meta key ({@code $type}, {@code $id}, {@code $ref}, {@code $items},
      * {@code $keys}, {@code $enum}; {@code @} for {@code $}). A document that names none is plain data.
      */
@@ -231,6 +224,13 @@ public class ToonReader {
         return metaKeysSeen;
     }
 
+    /**
+     * Create a ToonReader that reads from a Reader and tracks @id/@ref metadata.
+     *
+     * @param reader the reader to read TOON content from
+     * @param readOptions configuration options (may be null for defaults)
+     * @param references reference tracker used during resolution (may be null)
+     */
     public ToonReader(Reader reader, ReadOptions readOptions, ReferenceTracker references) {
         this.reader = reader instanceof FastReader ? (FastReader) reader : new FastReader(reader);
         this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
@@ -2294,14 +2294,11 @@ public class ToonReader {
     // ========== Buffer-direct helpers ==========
 
     /**
-     * Find colon position in the current line buffer (within trimmed range).
-     * Returns offset relative to currentTrimStart, or -1 if no valid colon found.
-     */
-    /**
      * Find the key:value colon in the current line buffer.
      * Single-pass scan replaces the former three-loop approach (find colon, check quotes, slow path).
      * Uses a {@code c <= ':'} range guard so letters and underscores (the vast majority of
-     * key characters) need only one comparison per character.
+     * key characters) need only one comparison per character. Returns the offset relative to
+     * {@code currentTrimStart}, or -1 if there is no valid colon.
      */
     private int findColonInBuf() {
         return findColonInBuf(currentTrimStart, currentTrimEnd);
