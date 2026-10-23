@@ -654,7 +654,12 @@ public class ToonWriter implements Closeable, Flushable {
         if (isDataClass(value.getClass())) {
             Object d = dataOf(value);
             if (isInPlace(d)) {
-                writeValue(d);
+                Object form = typeMetadataEnabled ? typedForm(d, contentTypeOf(value)) : d;
+                if (form != d) {
+                    writeMap((Map<?, ?>) form, false);     // {$type, value}: a whole-number Double's, say
+                } else {
+                    writeValue(d);
+                }
                 return;
             }
         }
@@ -711,7 +716,8 @@ public class ToonWriter implements Closeable, Flushable {
      *       (read back as a long or a double), one date or number type where another is declared (converted).</li>
      *   <li>Always: on every value.</li>
      * </ul>
-     * Never on a String, Long, Double or Boolean, which TOON reads back as themselves, nor where a primitive is
+     * Never on a String, Long, Double or Boolean class, which TOON reads back as themselves (but see
+     * {@link #needsType(Object, Class)} for a whole-number Double), nor where a primitive is
      * declared, nor on json-io's own carriers (JsonObject, JsonObjectMap, JsonObjectArray, from re-writing a Maps
      * graph), which are not a type the reader builds. With type info off, only under {@code @IoShowType}, and only
      * on objects and containers.
@@ -739,6 +745,25 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     /**
+     * {@link #needsType(Class, Class)} for a value at hand: also a Double or Float that TOON writes as a whole number
+     * (1.0 as 1, 1e23 and Double.MAX_VALUE as their digits, -0.0 as 0), which a slot that does not declare its type
+     * reads back as a Long or BigInteger. Where double, Double, float or Float is declared the reader converts, so
+     * nothing is added; NaN and Infinity are written as null whatever is declared.
+     */
+    private boolean needsType(Object value, Class<?> declared) {
+        Class<?> c = value.getClass();
+        if (needsType(c, declared)) {
+            return true;
+        }
+        if (!typeMetadataEnabled || (c != Double.class && c != Float.class) || declared == c
+                || !declared.isAssignableFrom(c)) {
+            return false;
+        }
+        double d = ((Number) value).doubleValue();
+        return d == Math.rint(d) && !Double.isInfinite(d);
+    }
+
+    /**
      * Type info on: what is written for {@code value} where the reader expects {@code declared}. A value whose type
      * is written but which TOON writes as something other than an object becomes that object: a scalar
      * {$type, value}; an object written as the value in its place {$type, value: that value} (an Optional's
@@ -749,7 +774,7 @@ public class ToonWriter implements Closeable, Flushable {
         if (value == null || value instanceof Fields) {
             return value;
         }
-        if (!needsType(value.getClass(), declared)) {
+        if (!needsType(value, declared)) {
             // Its custom writer's data even where its class goes without saying, as JSON writes it: a MultiKeyMap's
             // or CompactMap's configuration is its content, not type info
             return value instanceof Map || value instanceof Collection ? containerForm(value, false) : value;
@@ -757,7 +782,8 @@ public class ToonWriter implements Closeable, Flushable {
         Object content;
         Object source;
         if (isPrimitive(value)) {
-            content = value;
+            // TOON writes the number -0 as 0 (spec section 2); as text, -0.0 reads back with its sign
+            content = isNegativeZero(value) ? "-0.0" : value;
             source = null;
         } else if (value instanceof char[]) {
             // As JSON writes it: {$type: char[], $items: [its text]}
@@ -849,7 +875,7 @@ public class ToonWriter implements Closeable, Flushable {
         }
         for (Object key : map.keySet()) {
             if (key != null && !(key instanceof String)
-                    && (declaredKey == Object.class || needsType(key.getClass(), declaredKey))) {
+                    && (declaredKey == Object.class || needsType(key, declaredKey))) {
                 return true;
             }
         }
@@ -901,7 +927,7 @@ public class ToonWriter implements Closeable, Flushable {
             return false;
         }
         Object content = dataOf(value);
-        return isInPlace(content) && content != null && needsType(content.getClass(), Object.class);
+        return isInPlace(content) && content != null && needsType(content, Object.class);
     }
 
     /** A map key's quoting: an object's $type, $id and $items (in its Fields) are meta keys, written bare. */
@@ -1949,7 +1975,7 @@ public class ToonWriter implements Closeable, Flushable {
                 }
                 Object value = entry.getValue();
                 if (value != null && (!isPrimitive(value)
-                        || (typeMetadataEnabled && needsType(value.getClass(), Object.class)))) {
+                        || (typeMetadataEnabled && needsType(value, Object.class)))) {
                     return null;  // Complex values break tabular format
                 }
                 String k = (String) key;
@@ -2230,7 +2256,7 @@ public class ToonWriter implements Closeable, Flushable {
      */
     private boolean isPlainCell(Object value, WriteOptionsBuilder.WriteFieldPlan plan) {
         return isPrimitive(value) && !(typeMetadataEnabled
-                && (plan.forceShowType() || needsType(value.getClass(), plan.effectiveDeclaredType())));
+                && (plan.forceShowType() || needsType(value, plan.effectiveDeclaredType())));
     }
 
     private boolean isPrimitiveFieldPlan(WriteOptionsBuilder.WriteFieldPlan plan) {
@@ -2430,7 +2456,7 @@ public class ToonWriter implements Closeable, Flushable {
     /** A Map's value that is one cell: a primitive that carries no $type (what a map's value does is not declared). */
     private boolean isMapCell(Object value) {
         return value == null
-                || (isPrimitive(value) && !(typeMetadataEnabled && needsType(value.getClass(), Object.class)));
+                || (isPrimitive(value) && !(typeMetadataEnabled && needsType(value, Object.class)));
     }
 
     private RowShape classShape(Object row) {
@@ -4194,6 +4220,11 @@ public class ToonWriter implements Closeable, Flushable {
      * This includes basic types and any type that Converter can convert to String,
      * but excludes structural types (Map, Collection, Array).
      */
+    private static boolean isNegativeZero(Object value) {
+        return (value instanceof Double && Double.doubleToRawLongBits((Double) value) == Long.MIN_VALUE)
+                || (value instanceof Float && Float.floatToRawIntBits((Float) value) == Integer.MIN_VALUE);
+    }
+
     private boolean isPrimitive(Object value) {
         if (value == null) {
             return true;
@@ -4252,7 +4283,7 @@ public class ToonWriter implements Closeable, Flushable {
      */
     private boolean isPlainInline(Object element, Class<?> declared) {
         if (isPrimitive(element)) {
-            return !typeMetadataEnabled || !needsType(element.getClass(), declared);
+            return !typeMetadataEnabled || !needsType(element, declared);
         }
         return isPrimitiveData(element) && (!typeMetadataEnabled
                 || (!needsType(element.getClass(), declared) && !holdsTypedContent(element)));
