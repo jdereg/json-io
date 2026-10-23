@@ -1135,6 +1135,9 @@ final class CharStreamTokenizer extends JsonTokenizer {
             offset = 0;
         }
         if (charsRead >= 0 && charsRead < buf.length) {
+            if (strictJson) {
+                rejectControlChars(chars, offset, charsRead, borrowed ? slice : null);
+            }
             if (borrowed) {
                 int delimiter = chars[offset + charsRead];
                 if (delimiter == quoteChar) {
@@ -1198,12 +1201,32 @@ final class CharStreamTokenizer extends JsonTokenizer {
             error("EOF reached while reading JSON string");
         }
         if (charsRead > 0) {
+            if (strictJson) {
+                rejectControlChars(chars, offset, charsRead, borrowed ? slice : null);
+            }
             str.append(chars, offset, charsRead);
         }
         if (borrowed) {
             slice.release();
         }
         return readStringSlowPath(str, quoteChar);
+    }
+
+    /**
+     * Strict mode: a parse error if {@code chars[offset, offset + len)}, a run of plain chars inside a string, holds a
+     * char below U+0020. RFC 8259 allows those in a string only escaped. A borrowed slice is released first.
+     */
+    private void rejectControlChars(char[] chars, int offset, int len, FastReader.BufferSlice borrowed)
+            throws JsonParseException {
+        for (int i = offset, end = offset + len; i < end; i++) {
+            if (chars[i] < 0x20) {
+                int c = chars[i];
+                if (borrowed != null) {
+                    borrowed.release();
+                }
+                error(String.format("Unescaped control character U+%04X not allowed in strict JSON mode", c));
+            }
+        }
     }
 
     private String readStringSlowPath(StringBuilder str, char quoteChar) throws JsonParseException {
@@ -1216,6 +1239,9 @@ final class CharStreamTokenizer extends JsonTokenizer {
                 error("EOF reached while reading JSON string");
             }
             if (charsRead > 0) {
+                if (strictJson) {
+                    rejectControlChars(buf, 0, charsRead, null);
+                }
                 str.append(buf, 0, charsRead);
             }
             if (charsRead == buf.length) {
@@ -1259,6 +1285,9 @@ final class CharStreamTokenizer extends JsonTokenizer {
             if (c < ESCAPE_CHARS.length) {
                 char escaped = ESCAPE_CHARS[c];
                 if (escaped != '\0') {
+                    if (c == '\'' && strictJson) {
+                        error("Escaped single quote (\\') not allowed in strict JSON mode");
+                    }
                     str.append(escaped);
                 } else if (c == 'u') {
                     handleUnicodeEscape(str, HEX_VALUES);
@@ -1281,6 +1310,9 @@ final class CharStreamTokenizer extends JsonTokenizer {
                     error("EOF reached while reading JSON string");
                 }
                 if (charsRead > 0) {
+                    if (strictJson) {
+                        rejectControlChars(buf, 0, charsRead, null);
+                    }
                     str.append(buf, 0, charsRead);
                 }
                 if (charsRead == buf.length) {
