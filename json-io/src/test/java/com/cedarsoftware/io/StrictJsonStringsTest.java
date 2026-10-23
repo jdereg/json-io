@@ -78,6 +78,21 @@ class StrictJsonStringsTest {
                 .hasMessageContaining("Unescaped control character U+0009 not allowed in strict JSON mode");
     }
 
+    /**
+     * A string whose first run crosses the end of the reader's 65,536-char buffer is copied rather than borrowed; a
+     * tab just past the boundary must be refused there too. The filler before it moves the boundary through it.
+     */
+    @Test
+    void aTabJustPastTheReadBufferIsRefused() {
+        for (int filler = 65500; filler < 65560; filler++) {
+            String json = "[\"" + repeat('x', filler) + "\",\"ab\tc\"]";
+            assertThatThrownBy(() -> JsonIo.toJava(json, STRICT).asClass(Object[].class))
+                    .as("filler %d", filler)
+                    .isInstanceOf(JsonIoException.class)
+                    .hasMessageContaining("Unescaped control character U+0009 not allowed in strict JSON mode");
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"short", "longFirstRun", "longLaterRun", "afterEscape", "longAfterEscape", "key"})
     void nonStrictModeStillKeepsTheTab(String where) {

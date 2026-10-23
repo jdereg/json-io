@@ -1118,12 +1118,15 @@ final class CharStreamTokenizer extends JsonTokenizer {
         final char[] buf = readBuf;
 
         final FastReader.BufferSlice slice = readSlice;
-        int charsRead = in.readUntilBorrowed(slice, buf.length, quoteChar, '\\');
+        // A run of plain chars ends at the quote or a backslash, and in strict mode at a control character too, which
+        // RFC 8259 allows in a string only escaped: the one scan finds all three
+        int charsRead = strictJson ? in.readUntilBorrowed(slice, buf.length, quoteChar, '\\', ' ')
+                : in.readUntilBorrowed(slice, buf.length, quoteChar, '\\');
         char[] chars;
         int offset;
         boolean borrowed = false;
         if (charsRead == FastReader.COPY_REQUIRED) {
-            charsRead = in.readUntil(buf, 0, buf.length, quoteChar, '\\');
+            charsRead = readRun(buf, quoteChar);
             chars = buf;
             offset = 0;
         } else if (charsRead >= 0) {
@@ -1135,9 +1138,6 @@ final class CharStreamTokenizer extends JsonTokenizer {
             offset = 0;
         }
         if (charsRead >= 0 && charsRead < buf.length) {
-            if (strictJson) {
-                rejectControlChars(chars, offset, charsRead, borrowed ? slice : null);
-            }
             if (borrowed) {
                 int delimiter = chars[offset + charsRead];
                 if (delimiter == quoteChar) {
@@ -1165,6 +1165,9 @@ final class CharStreamTokenizer extends JsonTokenizer {
                 if (c == -1) {
                     error("EOF reached while reading JSON string");
                 }
+                if (c < ' ') {
+                    rejectControlChar(c);
+                }
                 if (c != '\\') {
                     error("Expected escape delimiter while reading JSON string");
                 }
@@ -1181,6 +1184,9 @@ final class CharStreamTokenizer extends JsonTokenizer {
             }
             if (c == quoteChar) {
                 return cacheStringFromChars(chars, offset, charsRead);
+            }
+            if (c < ' ') {
+                rejectControlChar(c);
             }
             int escapeChar = in.read();
             if (escapeChar == -1) {
@@ -1201,9 +1207,6 @@ final class CharStreamTokenizer extends JsonTokenizer {
             error("EOF reached while reading JSON string");
         }
         if (charsRead > 0) {
-            if (strictJson) {
-                rejectControlChars(chars, offset, charsRead, borrowed ? slice : null);
-            }
             str.append(chars, offset, charsRead);
         }
         if (borrowed) {
@@ -1213,20 +1216,17 @@ final class CharStreamTokenizer extends JsonTokenizer {
     }
 
     /**
-     * Strict mode: a parse error if {@code chars[offset, offset + len)}, a run of plain chars inside a string, holds a
-     * char below U+0020. RFC 8259 allows those in a string only escaped. A borrowed slice is released first.
+     * Reads a run of a string's plain chars into {@code buf}: up to its quote or a backslash, and in strict mode up to
+     * a control character too.
      */
-    private void rejectControlChars(char[] chars, int offset, int len, FastReader.BufferSlice borrowed)
-            throws JsonParseException {
-        for (int i = offset, end = offset + len; i < end; i++) {
-            if (chars[i] < 0x20) {
-                int c = chars[i];
-                if (borrowed != null) {
-                    borrowed.release();
-                }
-                error(String.format("Unescaped control character U+%04X not allowed in strict JSON mode", c));
-            }
-        }
+    private int readRun(char[] buf, char quoteChar) {
+        return strictJson ? input.readUntil(buf, 0, buf.length, quoteChar, '\\', ' ')
+                : input.readUntil(buf, 0, buf.length, quoteChar, '\\');
+    }
+
+    /** Strict mode: a run stopped at a control character, which RFC 8259 allows in a string only escaped. */
+    private void rejectControlChar(int c) throws JsonParseException {
+        error(String.format("Unescaped control character U+%04X not allowed in strict JSON mode", c));
     }
 
     private String readStringSlowPath(StringBuilder str, char quoteChar) throws JsonParseException {
@@ -1234,14 +1234,11 @@ final class CharStreamTokenizer extends JsonTokenizer {
         final char[] buf = readBuf;
 
         while (true) {
-            int charsRead = in.readUntil(buf, 0, buf.length, quoteChar, '\\');
+            int charsRead = readRun(buf, quoteChar);
             if (charsRead == -1) {
                 error("EOF reached while reading JSON string");
             }
             if (charsRead > 0) {
-                if (strictJson) {
-                    rejectControlChars(buf, 0, charsRead, null);
-                }
                 str.append(buf, 0, charsRead);
             }
             if (charsRead == buf.length) {
@@ -1254,6 +1251,9 @@ final class CharStreamTokenizer extends JsonTokenizer {
             }
             if (c == quoteChar) {
                 break;
+            }
+            if (c < ' ') {
+                rejectControlChar(c);
             }
             // c is the '\\' escape lead (readUntil stops on quoteChar or '\\'); read the actual escape
             // character that follows before handing off, exactly as the borrowed and small-buffer paths do.
@@ -1305,14 +1305,11 @@ final class CharStreamTokenizer extends JsonTokenizer {
             }
 
             while (true) {
-                int charsRead = in.readUntil(buf, 0, buf.length, quoteChar, '\\');
+                int charsRead = readRun(buf, quoteChar);
                 if (charsRead == -1) {
                     error("EOF reached while reading JSON string");
                 }
                 if (charsRead > 0) {
-                    if (strictJson) {
-                        rejectControlChars(buf, 0, charsRead, null);
-                    }
                     str.append(buf, 0, charsRead);
                 }
                 if (charsRead == buf.length) {
@@ -1325,6 +1322,9 @@ final class CharStreamTokenizer extends JsonTokenizer {
                 }
                 if (c == quoteChar) {
                     return cacheString(str);
+                }
+                if (c < ' ') {
+                    rejectControlChar(c);
                 }
                 c = in.read();
                 break;
