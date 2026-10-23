@@ -1,6 +1,7 @@
 ### Revision History
 
-#### Unreleased
+#### 4.118.0 - (unreleased)
+* **BUILD**: `java-util` 4.117.0 → **4.118.0**, its next development version: json-io depends on the java-util of its own version number. Until java-util 4.118.0 is released, build it locally first (`mvn install -DskipTests` in java-util).
 * **BUG FIX**: Strict JSON mode now rejects numbers such as `1.e20`, where an exponent with multiple digits previously hid the missing fractional digit. Both the streaming tokenizer and object reader enforce this check; permissive JSON5 parsing is unchanged.
 
 #### 4.117.0 - 2026-10-16
