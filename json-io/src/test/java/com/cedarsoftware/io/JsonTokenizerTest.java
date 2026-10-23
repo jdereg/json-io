@@ -9,6 +9,8 @@ import java.nio.charset.StandardCharsets;
 
 import com.cedarsoftware.util.FastReader;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -187,13 +189,49 @@ class JsonTokenizerTest {
                 .hasMessageContaining("digit required after decimal point");
     }
 
-    @Test
-    void strictMode_rejectsTrailingDecimalBeforeExponent() throws IOException {
-        // "1.e2" — dot followed by exponent without intervening digit.
-        CharStreamTokenizer t = strictTokenizer("1.e2");
+    @ParameterizedTest
+    @ValueSource(strings = {"1.e2", "1.e20", "1.e+20", "1.e-20", "-1.e20", "0.e20", "-0.E20"})
+    void strictMode_rejectsTrailingDecimalBeforeExponent(String json) throws IOException {
+        CharStreamTokenizer t = strictTokenizer(json);
         assertThatThrownBy(t::nextToken)
                 .isInstanceOf(JsonParseException.class)
                 .hasMessageContaining("digit required after decimal point");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1.e20", "-1.e20", "0.e20"})
+    void strictMode_rejectsTrailingDecimalBeforeExponentThroughPublicApi(String json) throws IOException {
+        ReadOptions options = new ReadOptionsBuilder().strictJson().build();
+        try (JsonTokenizer t = JsonIo.createTokenizer(json, options)) {
+            assertThatThrownBy(t::nextToken)
+                    .isInstanceOf(JsonParseException.class)
+                    .hasMessageContaining("digit required after decimal point");
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1.e20", "-1.e20", "0.e20"})
+    void strictMode_rejectsTrailingDecimalBeforeExponentInArray(String json) {
+        ReadOptions options = new ReadOptionsBuilder().strictJson().build();
+        assertThatThrownBy(() -> JsonIo.toJava("[" + json + "]", options).asClass(Object[].class))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("digit required after decimal point");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1.e2", "1.e20", "1.e+20", "1.e-20", "-1.e20", "0.e20", "-0.E20"})
+    void lenientMode_acceptsTrailingDecimalBeforeExponent(String json) throws IOException {
+        CharStreamTokenizer t = tokenizer(json);
+        assertEquals(JsonToken.VALUE_NUMBER_FLOAT, t.nextToken());
+        assertEquals(Double.parseDouble(json), t.getDoubleValue());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1.0e20", "-1.0e20", "0.0e20", "1e20", "1.0e-20", "-0.0E20"})
+    void strictMode_acceptsValidExponents(String json) throws IOException {
+        CharStreamTokenizer t = strictTokenizer(json);
+        assertEquals(JsonToken.VALUE_NUMBER_FLOAT, t.nextToken());
+        assertEquals(Double.parseDouble(json), t.getDoubleValue());
     }
 
     @Test

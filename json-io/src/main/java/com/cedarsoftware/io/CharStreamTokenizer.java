@@ -879,7 +879,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         while (true) {
             if (c >= '0' && c <= '9') {
                 number.append((char) c);
-                if (seenDot) seenDigitAfterDot = true;
+                if (seenDot && !seenExp) seenDigitAfterDot = true;
             } else if (c == '.') {
                 if (seenDot || seenExp) return (JsonToken) error("Invalid number: " + number + ".");
                 number.append((char) c);
@@ -976,7 +976,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
             if (c >= '0' && c <= '9') {
                 number.append((char) c);
                 seenDigit = true;
-                if (seenDot) seenDigitAfterDot = true;
+                if (seenDot && !seenExp) seenDigitAfterDot = true;
             } else if (c == '.') {
                 if (seenDot || seenExp) {
                     return (JsonToken) error("Invalid number: " + number + ".");
