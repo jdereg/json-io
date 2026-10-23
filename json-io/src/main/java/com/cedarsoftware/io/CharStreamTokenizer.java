@@ -947,6 +947,10 @@ final class CharStreamTokenizer extends JsonTokenizer {
                 }
                 return readHexNumber(isNegative);
             }
+            // RFC 8259: int = zero / ( digit1-9 *DIGIT ) -- a leading 0 stands alone
+            if (strictJson && next >= '0' && next <= '9') {
+                return (JsonToken) error("Leading zeros not allowed in strict JSON mode");
+            }
             pendingChar = next;
         }
 
@@ -963,6 +967,9 @@ final class CharStreamTokenizer extends JsonTokenizer {
             number.append((char) firstNumberChar);
             seenDigit = true;
         } else if (firstNumberChar == '.') {
+            if (strictJson) {   // "-.5": a bare ".5" is refused before it gets here
+                return (JsonToken) error("Leading decimal point not allowed in strict JSON mode");
+            }
             number.append((char) firstNumberChar);
             isFloat = true;
             seenDot = true;

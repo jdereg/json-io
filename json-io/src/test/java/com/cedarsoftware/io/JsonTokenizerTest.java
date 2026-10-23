@@ -263,6 +263,60 @@ class JsonTokenizerTest {
         assertThat(t.getDoubleValue()).isEqualTo(1.0);
     }
 
+    // RFC 8259: int = zero / ( digit1-9 *DIGIT ), and a number starts with a digit after its optional minus.
+    // Up to 4.117.0 strict mode accepted leading zeros (01 read as 1) and "-.5" (while refusing ".5").
+
+    @ParameterizedTest
+    @ValueSource(strings = {"01", "-01", "00", "007", "00.5", "-00.5", "01e5", "-0001.25"})
+    void strictMode_rejectsLeadingZeros(String json) throws IOException {
+        CharStreamTokenizer t = strictTokenizer(json);
+        assertThatThrownBy(t::nextToken)
+                .isInstanceOf(JsonParseException.class)
+                .hasMessageContaining("Leading zeros not allowed in strict JSON mode");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"-.5", "-.5e3"})
+    void strictMode_rejectsLeadingDecimalPointAfterMinus(String json) throws IOException {
+        CharStreamTokenizer t = strictTokenizer(json);
+        assertThatThrownBy(t::nextToken)
+                .isInstanceOf(JsonParseException.class)
+                .hasMessageContaining("Leading decimal point not allowed in strict JSON mode");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"[01]", "[-01]", "{\"a\":007}", "[0,00]", "[-.5]"})
+    void strictMode_rejectsLeadingZerosAndDecimalPointThroughToJava(String json) {
+        ReadOptions options = new ReadOptionsBuilder().strictJson().build();
+        assertThatThrownBy(() -> JsonIo.toJava(json, options).asClass(Object.class))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("not allowed in strict JSON mode");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"0", "-0", "10", "-1000", "100.001", "0.5", "-0.5", "0.05", "0e5", "-0E-5", "0.0"})
+    void strictMode_acceptsZeroAndZerosInsideNumbers(String json) throws IOException {
+        CharStreamTokenizer t = strictTokenizer(json);
+        t.nextToken();
+        assertEquals(Double.parseDouble(json), t.getDoubleValue(), 0.0);   // "-0" is the integer 0: equal as a number
+    }
+
+    @Test
+    void strictMode_acceptsZeroFollowedByASeparator() {
+        ReadOptions options = new ReadOptionsBuilder().strictJson().build();
+        Object[] array = JsonIo.toJava("[0,0 , 0]", options).asClass(Object[].class);
+        assertEquals(3, array.length);
+        assertEquals(0L, array[0]);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"01", "-01", "00.5", "-00.5", "-.5", "007"})
+    void lenientMode_stillAcceptsLeadingZerosAndDecimalPoint(String json) throws IOException {
+        CharStreamTokenizer t = tokenizer(json);
+        t.nextToken();
+        assertEquals(Double.parseDouble(json), t.getDoubleValue());
+    }
+
     // -------------------------------------------------------------------
     // Token-type guards on getBooleanValue() / getNumberType()
     // -------------------------------------------------------------------
