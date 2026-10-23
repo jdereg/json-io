@@ -403,8 +403,9 @@ When `strictJson()` is enabled, the following will cause parse errors:
 - Single-quoted strings
 - Trailing commas
 - Hexadecimal numbers
-- Non-standard number formats (.5, 5., +5)
+- Non-standard number formats (.5, -.5, 5., 1.e5, +5, and leading zeros such as 01 or 00.5)
 - Infinity and NaN literals
+- Unescaped control characters (U+0000 through U+001F, such as a raw tab or line feed) inside a string, and the `\'` escape
 
 For TOON parsing strictness, use `strictToon()` on `ReadOptionsBuilder`:
 

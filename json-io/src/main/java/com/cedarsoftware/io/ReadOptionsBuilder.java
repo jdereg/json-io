@@ -1642,9 +1642,11 @@ public class ReadOptionsBuilder {
      *   <li>Comments (single-line and block)</li>
      *   <li>Trailing commas</li>
      *   <li>Hexadecimal numbers</li>
-     *   <li>Leading/trailing decimal points</li>
+     *   <li>Leading/trailing decimal points ({@code .5}, {@code -.5}, {@code 5.}, {@code 1.e5})</li>
+     *   <li>Leading zeros ({@code 01}, {@code 00.5})</li>
      *   <li>Positive sign on numbers</li>
      *   <li>Multi-line strings</li>
+     *   <li>Unescaped control characters (U+0000 through U+001F) in a string, and the {@code \'} escape</li>
      * </ul>
      * Default is permissive mode (JSON5 features accepted).
      * @return ReadOptionsBuilder for chained access.
