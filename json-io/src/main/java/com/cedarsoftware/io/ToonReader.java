@@ -1806,13 +1806,6 @@ public class ToonReader {
     }
 
     /**
-     * Try to parse text as a number.
-     * Delegates to MathUtilities.parseToMinimalNumericType() which returns the most
-     * appropriate type: Long for integers, BigInteger for large integers, Double for
-     * decimals with <= 16 mantissa digits, BigDecimal for high-precision decimals.
-     * Returns null if text is not a valid number.
-     */
-    /**
      * Detect a forbidden-leading-zero integer form per §2 canonical numbers (§4
      * type-inference). After an optional minus, a '0' followed by any decimal digit
      * (e.g. "05", "-007", "0123") is not a canonical number and MUST decode as a
@@ -1850,6 +1843,14 @@ public class ToonReader {
         return c >= '0' && c <= '9';
     }
 
+    /**
+     * Try to parse text as a number.
+     * Delegates to MathUtilities.parseToMinimalNumericType() which returns the most
+     * appropriate type: Long for integers, BigInteger for large integers, Double for
+     * a decimal the double reads back as (java-util 4.118.0+), BigDecimal for any other
+     * decimal (more digits than a double keeps, or beyond its range).
+     * Returns null if text is not a valid number.
+     */
     private Number parseNumber(String text) {
         if (text.isEmpty()) {
             return null;
