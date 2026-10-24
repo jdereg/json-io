@@ -1235,6 +1235,8 @@ The method may return an object, a list or a map (`@IoValue Address address()` w
 
 On an enum, the method's value is written in place of the name, wherever the enum appears (a field, a list, an `EnumSet`'s items, an `EnumMap`'s and any map's keys, the root), as JSON and as TOON, as Jackson writes it: `GREEN("g")` with `@JsonValue String code()` is `"g"`, and an `int` value is a number. It reads back from the value, and from the name, so what json-io wrote before still reads; a value that is also another constant's name is the value. A custom writer registered for the enum still comes first.
 
+An enum with a one-parameter static `@IoCreator` (or Jackson's `@JsonCreator`) factory method is read through it first, as Jackson reads it, wherever the enum is read from a value (with or without an `@IoValue` method): `@IoCreator static Shade from(String text)` that accepts a code or a name in any case reads `"Dark"`, `"dark"` and `"d"`. When the factory throws or returns null, the value is read as above, then as a name, so the names json-io wrote through 4.117.0 still read past a factory that takes codes only. The value is converted to the factory's parameter type (a number for `of(int n)`); one it cannot be converted to skips the factory. `@IoCreator` on an enum's constructor is ignored.
+
 #### `@IoIgnoreType` — Type-Level Exclusion
 When placed on a class, all fields of that type are excluded from serialization and deserialization across all classes. Useful for cross-cutting exclusion of internal metadata types. Equivalent to Jackson's `@JsonIgnoreType`.
 

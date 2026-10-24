@@ -2124,30 +2124,86 @@ public abstract class Resolver {
         return toJava(type, value);
     }
 
-    // An enum written by its @IoValue (or Jackson's @JsonValue) method: its constants by the value each is written as
-    private static final ClassValue<Map<Object, Object>> ENUM_BY_VALUE = new ClassValue<Map<Object, Object>>() {
+    /**
+     * How an enum's constants are read from a value, past their names: its one-parameter static {@code @IoCreator} (or
+     * Jackson's {@code @JsonCreator}) factory, and the value its {@code @IoValue} (or {@code @JsonValue}) method writes
+     * each constant as. {@link #PLAIN_ENUM} for an enum with neither, read by name alone.
+     */
+    private static final class EnumReading {
+        final Method creator;
+        final Class<?> creatorParameter;
+        final Map<Object, Object> byValue;
+
+        EnumReading(Method creator, Map<Object, Object> byValue) {
+            this.creator = creator;
+            this.creatorParameter = creator == null ? null
+                    : ClassUtilities.toPrimitiveWrapperClass(creator.getParameterTypes()[0]);
+            this.byValue = byValue;
+        }
+    }
+
+    private static final EnumReading PLAIN_ENUM = new EnumReading(null, Collections.emptyMap());
+
+    private static final ClassValue<EnumReading> ENUM_READING = new ClassValue<EnumReading>() {
         @Override
-        protected Map<Object, Object> computeValue(Class<?> type) {
+        protected EnumReading computeValue(Class<?> type) {
             Class<?> enumClass = ClassUtilities.getClassIfEnum(type);
-            Method valueMethod = enumClass == null ? null : AnnotationResolver.getMetadata(enumClass).getValueMethod();
-            if (valueMethod == null) {
-                return Collections.emptyMap();
+            if (enumClass == null) {
+                return PLAIN_ENUM;
             }
-            Map<Object, Object> byValue = new HashMap<>();
-            for (Object constant : enumClass.getEnumConstants()) {
-                Object value;
-                try {
-                    value = valueMethod.invoke(constant);
-                } catch (Exception e) {
-                    throw new JsonIoException("@IoValue method invocation failed for " + enumClass.getName(), e);
-                }
-                if (value != null) {
-                    byValue.putIfAbsent(enumKey(value), constant);
+            AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(enumClass);
+            // A static factory method only: an enum's constructors build no constants
+            Executable annotated = meta.getCreator();
+            Method creator = annotated instanceof Method && annotated.getParameterCount() == 1
+                    && enumClass.isAssignableFrom(((Method) annotated).getReturnType()) ? (Method) annotated : null;
+            Method valueMethod = meta.getValueMethod();
+            Map<Object, Object> byValue = valueMethod == null ? Collections.emptyMap() : new HashMap<>();
+            if (valueMethod != null) {
+                for (Object constant : enumClass.getEnumConstants()) {
+                    Object value;
+                    try {
+                        value = valueMethod.invoke(constant);
+                    } catch (Exception e) {
+                        throw new JsonIoException("@IoValue method invocation failed for " + enumClass.getName(), e);
+                    }
+                    if (value != null) {
+                        byValue.putIfAbsent(enumKey(value), constant);
+                    }
                 }
             }
-            return byValue;
+            return creator == null && byValue.isEmpty() ? PLAIN_ENUM : new EnumReading(creator, byValue);
         }
     };
+
+    /**
+     * The constant {@code value} reads as, past its name: what the enum's factory returns for it (a factory that
+     * throws or returns null does not know it), else the constant written as that value. Null when neither has it;
+     * the caller then reads it as a name, as json-io wrote enums through 4.117.0.
+     */
+    private static Object enumConstant(EnumReading reading, Object value) {
+        if (reading.creator != null) {
+            Object argument = value;
+            boolean usable = true;
+            if (!reading.creatorParameter.isInstance(value)) {
+                try {
+                    argument = com.cedarsoftware.util.Converter.convert(value, reading.creatorParameter);
+                } catch (RuntimeException e) {
+                    usable = false;
+                }
+            }
+            if (usable) {
+                try {
+                    Object constant = reading.creator.invoke(null, argument);
+                    if (constant != null) {
+                        return constant;
+                    }
+                } catch (Exception e) {
+                    // not a value the factory reads: by value, then by name
+                }
+            }
+        }
+        return reading.byValue.isEmpty() ? null : reading.byValue.get(enumKey(value));
+    }
 
     /** A value as it is looked up: a whole number as a Long, another number as a Double, a char as text. */
     private static Object enumKey(Object value) {
@@ -2159,22 +2215,24 @@ public abstract class Resolver {
     }
 
     /**
-     * {@code value} as the constant of {@code type}, an enum written by its {@code @IoValue} (or Jackson's
+     * {@code value} as the constant of {@code type}, an enum with a one-parameter static {@code @IoCreator} (or
+     * Jackson's {@code @JsonCreator}) factory, which reads it first, or written by its {@code @IoValue} (or
      * {@code @JsonValue}) method, that the method returns it for: {@code "g"} for {@code GREEN("g")}. Null when
-     * {@code type} is no such enum or no constant has that value; the caller then reads it as a name, as json-io wrote
-     * such an enum through 4.117.0. Where a value is also another constant's name, the value wins.
+     * {@code type} is no such enum or neither has that value; the caller then reads it as a name, as json-io wrote
+     * enums through 4.117.0. Where a value is also another constant's name, the value wins.
      */
     public static Object enumOfValue(Class<?> type, Object value) {
         if (value == null || type == null || !Enum.class.isAssignableFrom(type)) {
             return null;
         }
-        Map<Object, Object> byValue = ENUM_BY_VALUE.get(type);
-        return byValue.isEmpty() ? null : byValue.get(enumKey(value));
+        EnumReading reading = ENUM_READING.get(type);
+        return reading == PLAIN_ENUM ? null : enumConstant(reading, value);
     }
 
     /**
-     * {@code value} converted to {@code type} by the Converter, which reads an enum by its name; an enum written by its
-     * {@code @IoValue} method is read from that value first ({@link #enumOfValue}), and a TOON number into a
+     * {@code value} converted to {@code type} by the Converter, which reads an enum by its name; an enum with a
+     * one-parameter factory, or written by its {@code @IoValue} method, is read through the factory and from that value
+     * first ({@link #enumOfValue}), and a TOON number into a
      * BigDecimal is the number its text is ({@link #toonDecimal}). For a {@link ClassFactory} converting a value it
      * reads, as json-io converts one.
      *
@@ -2187,11 +2245,11 @@ public abstract class Resolver {
             return toonDecimal((Double) value);
         }
         if (value != null && Enum.class.isAssignableFrom(type) && !isPlainEnum(type)) {
-            Map<Object, Object> byValue = ENUM_BY_VALUE.get(type);
-            if (byValue.isEmpty()) {
+            EnumReading reading = ENUM_READING.get(type);
+            if (reading == PLAIN_ENUM) {
                 plainEnums[nextPlainEnum++ & 3] = type;
             } else {
-                Object constant = byValue.get(enumKey(value));
+                Object constant = enumConstant(reading, value);
                 if (constant != null) {
                     return constant;
                 }
@@ -2222,8 +2280,8 @@ public abstract class Resolver {
         return new BigDecimal(Double.toString(value)).stripTrailingZeros();
     }
 
-    // The last enum classes this read met without an @IoValue method: their constants are read by name alone, and a
-    // look among them costs less than the class's lookup (an enum-heavy read slowed 2-4% with it on every value)
+    // The last enum classes this read met with no factory or @IoValue method: their constants are read by name alone,
+    // and a look among them costs less than the class's lookup (an enum-heavy read slowed 2-4% with it on every value)
     private final Class<?>[] plainEnums = new Class<?>[4];
     private int nextPlainEnum;
 
