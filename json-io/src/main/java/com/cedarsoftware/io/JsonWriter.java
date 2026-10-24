@@ -2630,6 +2630,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
             return true;
         }
+        // showTypeInfoAlways: as a field or an array element of that declared type is (a String, Long, Double, Boolean
+        // or a declared primitive wrapper bare; anything else with its @type)
+        if (alwaysShowingType) {
+            return isForceType(elementClass, declaredElementType);
+        }
         // Enums always need @type for proper deserialization (written as String, need type to convert back)
         if (elementClass.isEnum()) {
             return true;
