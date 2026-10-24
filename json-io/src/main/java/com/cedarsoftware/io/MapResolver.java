@@ -64,10 +64,14 @@ public class MapResolver extends Resolver {
 
     /**
      * Override toJavaObjects to validate rootType before resolution.
-     * In Maps mode, only certain types are supported as rootType.
+     * In Maps mode, only certain types are supported as rootType. {@code Object} is asking for whatever the JSON
+     * holds, as no type ({@code null}) is.
      */
     @Override
     <T> T toJavaObjects(JsonObject rootObj, Type rootType) {
+        if (rootType == Object.class) {
+            rootType = null;
+        }
         verifyRootType(rootType);
         return super.toJavaObjects(rootObj, rootType);
     }
