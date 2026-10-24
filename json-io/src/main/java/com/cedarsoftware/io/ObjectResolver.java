@@ -1418,8 +1418,9 @@ public class ObjectResolver extends Resolver
                 if (converter.isConversionSupportedFor(valueClass, rawInferred)) {
                     return convertValue(o, rawInferred);
                 }
-                // A class written as the single value its @IoValue method returns (List<EmailAddress>)
-                Object built = fromValueForm(o, rawInferred, false);
+                // A class written as the single value its @IoValue method returns (List<EmailAddress>); one that
+                // nothing builds from it is an error, as in a field, not the bare value stored in its place
+                Object built = fromValueForm(o, rawInferred, true);
                 return built == NO_VALUE_FORM ? null : built;
             }
 
@@ -2194,7 +2195,7 @@ public class ObjectResolver extends Resolver
             innerValue = convertValue(rhs, innerType);
         } else if (innerType != Object.class && !innerType.isInstance(rhs)) {
             // A class written as the single value its @IoValue method returns: Optional<EmailAddress>
-            Object built = fromValueForm(rhs, innerType, false);
+            Object built = fromValueForm(rhs, innerType, true);
             innerValue = built == NO_VALUE_FORM ? rhs : built;
         } else {
             innerValue = rhs;
