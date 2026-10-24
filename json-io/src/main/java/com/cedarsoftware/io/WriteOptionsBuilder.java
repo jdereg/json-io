@@ -3,6 +3,7 @@ package com.cedarsoftware.io;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -2971,7 +2972,8 @@ public class WriteOptionsBuilder {
                 reorderPlans(plans, order);
             }
 
-            return new WriteFieldPlanList(plans, clazz == null ? null : findDataWriter(this, clazz));
+            return new WriteFieldPlanList(plans, clazz == null ? null : findDataWriter(this, clazz),
+                    clazz == null ? null : findValueMethod(this, clazz));
         }
 
         /**
@@ -3288,19 +3290,22 @@ public class WriteOptionsBuilder {
 
     /**
      * A class's write plans, as cached per {@link WriteOptions}, with the class's custom writer when that writer gives
-     * its objects as data ({@link JsonClassWriter#toData}). The reference pass and TOON fetch the plans for every
-     * object they walk, so the writer rides along at no extra lookup. Unmodifiable.
+     * its objects as data ({@link JsonClassWriter#toData}), and the {@code @IoValue} method its objects are written
+     * with. The reference pass and TOON fetch the plans for every object they walk, so both ride along at no extra
+     * lookup. Unmodifiable.
      */
     static final class WriteFieldPlanList extends AbstractList<WriteFieldPlan> implements RandomAccess {
         private final WriteFieldPlan[] plans;
         final JsonClassWriter dataWriter;
+        final Method valueMethod;
         // True when a field is of a primitive type: such an object's fields are never all objects, so TOON need not
         // look at them to know it is no keyed table. Asked for every object written as a field's value.
         final boolean anyPrimitiveField;
 
-        WriteFieldPlanList(List<WriteFieldPlan> plans, JsonClassWriter dataWriter) {
+        WriteFieldPlanList(List<WriteFieldPlan> plans, JsonClassWriter dataWriter, Method valueMethod) {
             this.plans = plans.toArray(new WriteFieldPlan[0]);
             this.dataWriter = dataWriter;
+            this.valueMethod = valueMethod;
             boolean primitive = false;
             for (WriteFieldPlan plan : this.plans) {
                 primitive |= plan.primitiveWriteKind() != WriteFieldPlan.PRIMITIVE_NONE;
@@ -3354,6 +3359,25 @@ public class WriteOptionsBuilder {
             return ((WriteFieldPlanList) plans).dataWriter;
         }
         return findDataWriter(options, clazz);
+    }
+
+    /**
+     * The {@code @IoValue} method objects of {@code clazz} are written with, in JSON and TOON, if any: none when a
+     * custom writer writes them. Cached with the class's write plans.
+     */
+    static Method getValueMethod(WriteOptions options, Class<?> clazz, List<WriteFieldPlan> plans) {
+        if (plans instanceof WriteFieldPlanList) {
+            return ((WriteFieldPlanList) plans).valueMethod;
+        }
+        return findValueMethod(options, clazz);
+    }
+
+    static Method findValueMethod(WriteOptions options, Class<?> clazz) {
+        Method valueMethod = AnnotationResolver.getMetadata(clazz).getValueMethod();
+        if (valueMethod == null) {
+            return null;
+        }
+        return options.isNotCustomWrittenClass(clazz) || options.getCustomWriter(clazz) == null ? valueMethod : null;
     }
 
     private static JsonClassWriter findDataWriter(WriteOptions options, Class<?> clazz) {

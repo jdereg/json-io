@@ -959,6 +959,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                     id = existingId != 0 ? existingId : identity++;
                     visited.put(obj, id);
                     referenced.put(obj, id);
+                } else if (id == VALUE_HOLDER) {
+                    traceValue(obj, objectStack, currentDepth + 1);      // each place holding it holds its value
                 }
                 continue;
             }
@@ -1082,6 +1084,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      */
     protected void processFields(final Deque<Object> objectStack, final Object obj, int depth) {
         List<WriteFieldPlan> fields = WriteOptionsBuilder.getWriteFieldPlans(writeOptions, obj.getClass());
+        if (WriteOptionsBuilder.getValueMethod(writeOptions, obj.getClass(), fields) != null) {
+            objVisited.put(obj, VALUE_HOLDER);
+            traceValue(obj, objectStack, depth);
+            return;
+        }
         com.cedarsoftware.io.JsonClassWriter dataWriter =
                 WriteOptionsBuilder.getDataWriter(writeOptions, obj.getClass(), fields);
         if (dataWriter != null && traceData(dataWriter.toData(obj), objectStack, depth)) {
@@ -1103,6 +1110,26 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
             traceVisit(fieldPlan.accessor().retrieve(obj), objectStack, depth);
         }
+    }
+
+    // In the trace's visited map: an object written as the value of its @IoValue method, in its place, where no @id can
+    // go. It is never referenced itself; each place holding it holds its value, traced each time (so a value object
+    // held twice, through one holder or two, gets the @id). Referenced, a second place held {"@ref":n} to an @id
+    // never written, which did not read back.
+    private static final int VALUE_HOLDER = -2;
+
+    /** Traces the value {@code holder}'s {@code @IoValue} method gives, at {@code depth}, one level below it. */
+    private void traceValue(Object holder, Deque<Object> objectStack, int depth) {
+        Class<?> c = holder.getClass();
+        Method valueMethod = WriteOptionsBuilder.getValueMethod(writeOptions, c,
+                WriteOptionsBuilder.getWriteFieldPlans(writeOptions, c));
+        Object value;
+        try {
+            value = valueMethod.invoke(holder);
+        } catch (Exception e) {
+            throw new JsonIoException("@IoValue method invocation failed for " + holder.getClass().getName(), e);
+        }
+        traceVisit(value, objectStack, depth);
     }
 
     /**
