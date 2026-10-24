@@ -371,7 +371,8 @@ public class MapResolver extends Resolver {
         // Get injector map directly - ReadOptions.getDeepInjectorMap() already caches per class
         Map<String, Injector> injectorMap = null;
         if (target != null) {
-            injectorMap = readOptions.getDeepInjectorMap(target.getClass());
+            // (an object of a class built from its parts is left unbuilt in this mode: its class types its fields)
+            injectorMap = readOptions.getDeepInjectorMap(target == UNBUILT ? jsonObj.getRawType() : target.getClass());
         }
 
         // By index, through the allocation-free accessors: this loop runs for every object a Maps-mode read builds,
@@ -406,7 +407,13 @@ public class MapResolver extends Resolver {
                     final Class<?> injectorType = injector.getType();
                     boolean isNonRefClass = readOptions.isNonReferenceableClass(injectorType);
                     if (isNonRefClass) {
-                        jObj.setValue(converter.convert(jObj.getValue(), injectorType));
+                        Object value = jObj.getValue();
+                        Object enumConstant = enumOfJsonObject(jObj, injectorType);
+                        // (a null the Converter has no value for stays null: a Number field's {"@type":"Float",
+                        // "value":null}, a NaN where JSON has none, is null, as Java mode reads it)
+                        jObj.setValue(enumConstant != null ? enumConstant
+                                : value == null && !converter.isConversionSupportedFor(Void.class, injectorType) ? null
+                                : converter.convert(value, injectorType));
                         continue;
                     }
                 }
@@ -452,7 +459,18 @@ public class MapResolver extends Resolver {
                     if (rhs instanceof JsonObject && !Map.class.isAssignableFrom(fieldType)) {
                         resolveTypedValues((JsonObject) rhs);
                     }
-                    Object fieldValue = converter.convert(rhs, fieldType);
+                    Object fieldValue;
+                    try {
+                        // (an enum from the value its @IoValue method writes, then its name)
+                        fieldValue = convertValue(rhs, fieldType);
+                    } catch (IllegalArgumentException e) {
+                        if (!(rhs instanceof Collection)) {
+                            throw e;
+                        }
+                        // A TOON list where an array or collection is declared, of elements the Converter does not
+                        // build (an @IoValue class): left a list, as JSON's array is
+                        continue;
+                    }
                     jsonObj.fastSetValueAt(i, fieldValue);  // Direct update - avoids indexOf() lookup
                 } else if (rhs instanceof String && StringUtilities.isEmpty((String)rhs)) {
                     // Fallback: Allow "" to null out a field when converter doesn't support String conversion.
@@ -586,7 +604,7 @@ public class MapResolver extends Resolver {
         }
 
         if (converter.isConversionSupportedFor(elementClass, componentType)) {
-            Object convertedValue = converter.convert(element, componentType);
+            Object convertedValue = convertValue(element, componentType);   // an enum by its value, then its name
             setArrayElement(target, refArray, index, convertedValue, isPrimitive);
             return;
         }

@@ -1,6 +1,6 @@
 package com.cedarsoftware.io;
 
-import java.lang.reflect.Method;
+import java.lang.reflect.Field;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
@@ -15,6 +15,9 @@ import java.util.Optional;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 
+import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.ReflectionUtils;
+import com.cedarsoftware.util.SystemUtilities;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -22,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -73,6 +77,7 @@ class RecordComponentsTest {
             + "  public record Sparse(String name, int count, boolean flag) { }\n"
             + "  public record Loop(String name, List<Object> items) { }\n"
             + "  public record Self(String name, Object self) { }\n"
+            + "  public record Pair(List<Object> a, List<Object> b, int n) { }\n"
             + "  public static class Holder { public Parts parts; public Totals totals; }\n"
             + "}\n";
 
@@ -80,17 +85,10 @@ class RecordComponentsTest {
 
     @BeforeAll
     static void compile() throws Exception {
-        boolean records;
-        try {
-            Class.forName("java.lang.Record");
-            records = true;
-        } catch (ClassNotFoundException e) {
-            records = false;
-        }
-        Assumptions.assumeTrue(records, "Records need Java 16+");
+        Assumptions.assumeTrue(SystemUtilities.currentJdkMajorVersion() >= 16, "Records need Java 16+");
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         Assumptions.assumeTrue(compiler != null, "No system Java compiler");
-        Path dir = Files.createTempDirectory("recordComponents");
+        Path dir = SystemUtilities.createTempDirectory("recordComponents").toPath();
         Path src = dir.resolve("Records.java");
         Files.write(src, SOURCE.getBytes(StandardCharsets.UTF_8));
         int rc = compiler.run(null, null, null, "-d", dir.toString(), src.toString());
@@ -100,16 +98,20 @@ class RecordComponentsTest {
     }
 
     private static Class<?> cls(String name) throws Exception {
-        return Class.forName("rc.Records$" + name, true, loader);
+        return ClassUtilities.forName("rc.Records$" + name, loader);
     }
 
-    private static Object call(Object target, String accessor) throws Exception {
-        Method m = target.getClass().getMethod(accessor);
-        return m.invoke(target);
+    /** A record built by its canonical constructor (a record's only one here). */
+    private static Object newRecord(String name, Object... components) throws Exception {
+        return ReflectionUtils.getAllConstructors(cls(name))[0].newInstance(components);
+    }
+
+    private static Object call(Object record, String accessor) {
+        return ReflectionUtils.call(record, accessor);
     }
 
     private static Object point(int x, int y) throws Exception {
-        return cls("Point").getConstructor(int.class, int.class).newInstance(x, y);
+        return newRecord("Point", x, y);
     }
 
     private static Object parts() throws Exception {
@@ -117,9 +119,9 @@ class RecordComponentsTest {
         m.put("a", 1);
         m.put("b", 2);
         List<Object> points = new ArrayList<>(Arrays.asList(point(5, 6)));
-        return cls("Parts").getConstructors()[0].newInstance("n", m, new ArrayList<>(Arrays.asList("t1", "t2")),
-                cls("Address").getConstructor(String.class).newInstance("Main"), point(1, 2), new int[] {3, 4},
-                Optional.of("o"), points, point(7, 8));
+        Object address = ReflectionUtils.getConstructor(cls("Address"), String.class).newInstance("Main");
+        return newRecord("Parts", "n", m, new ArrayList<>(Arrays.asList("t1", "t2")), address, point(1, 2),
+                new int[] {3, 4}, Optional.of("o"), points, point(7, 8));
     }
 
     private static ReadOptions readOptions() {
@@ -156,15 +158,17 @@ class RecordComponentsTest {
     /** In a field, and with a compact constructor that copies and sums its map (filled before it is given). */
     @Test
     void inAFieldAndThroughACompactConstructor() throws Exception {
-        Object holder = cls("Holder").getConstructor().newInstance();
+        Object holder = ReflectionUtils.getConstructor(cls("Holder")).newInstance();
+        Field partsField = ReflectionUtils.getField(cls("Holder"), "parts");
+        Field totalsField = ReflectionUtils.getField(cls("Holder"), "totals");
         Map<String, Integer> m = new LinkedHashMap<>();
         m.put("x", 2);
         m.put("y", 3);
-        cls("Holder").getField("parts").set(holder, parts());
-        cls("Holder").getField("totals").set(holder, cls("Totals").getConstructors()[0].newInstance(m, 0));
+        partsField.set(holder, parts());
+        totalsField.set(holder, newRecord("Totals", m, 0));
         Object back = JsonIo.toJava(JsonIo.toJson(holder, null), readOptions()).asClass(cls("Holder"));
-        assertParts(cls("Holder").getField("parts").get(holder), cls("Holder").getField("parts").get(back));
-        Object totals = cls("Holder").getField("totals").get(back);
+        assertParts(partsField.get(holder), partsField.get(back));
+        Object totals = totalsField.get(back);
         assertEquals(5, call(totals, "total"));
         assertEquals(m, call(totals, "m"));
     }
@@ -195,5 +199,34 @@ class RecordComponentsTest {
         JsonIoException e = assertThrows(JsonIoException.class,
                 () -> JsonIo.toJava(self, readOptions()).asClass(cls("Self")));
         assertTrue(String.valueOf(e.getMessage()).contains("refers to it"), e.getMessage());
+    }
+
+    /**
+     * In Maps mode a record holding an object reads as maps: it was built, from parts that stay maps, and threw. It is
+     * no longer built: its components type its fields, and a part it holds twice is one map (an @ref was left).
+     */
+    @Test
+    void inMapsMode() throws Exception {
+        Object parts = parts();
+        WriteOptions always = new WriteOptionsBuilder().showTypeInfoAlways().build();
+        List<Map<?, ?>> reads = Arrays.asList(
+                (Map<?, ?>) JsonIo.toMaps(JsonIo.toJson(parts, null), readOptions()).asClass(null),
+                (Map<?, ?>) JsonIo.toMaps(JsonIo.toJson(parts, always), readOptions()).asClass(null),
+                (Map<?, ?>) JsonIo.fromToonToMaps(JsonIo.toToon(parts, always), readOptions()).asClass(null));
+        for (Map<?, ?> back : reads) {
+            assertEquals("n", back.get("name"));
+            assertEquals("Main", ((Map<?, ?>) back.get("addr")).get("street"));
+        }
+
+        List<Object> shared = new ArrayList<>(Arrays.asList("s", 1L));
+        Object pair = newRecord("Pair", shared, shared, 5);
+        Map<?, ?> back = (Map<?, ?>) JsonIo.toMaps(JsonIo.toJson(pair, null), readOptions()).asClass(null);
+        assertSame(back.get("a"), back.get("b"));
+        assertEquals(5, back.get("n"));
+
+        String list = JsonIo.toJson(new ArrayList<>(Arrays.asList(parts, pair)), null);
+        Object[] items = ((JsonObject) JsonIo.toMaps(list, readOptions()).asClass(null)).getItems();
+        assertEquals("Main", ((Map<?, ?>) ((Map<?, ?>) items[0]).get("addr")).get("street"));
+        assertEquals(5, ((Map<?, ?>) items[1]).get("n"));
     }
 }

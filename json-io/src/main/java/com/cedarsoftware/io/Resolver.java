@@ -41,6 +41,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
+import com.cedarsoftware.io.factory.RecordFactory;
 import com.cedarsoftware.io.reflect.AnnotationResolver;
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
@@ -1675,6 +1676,29 @@ public abstract class Resolver {
     private static final InstantiationPlan REFLECTION_PLAN = (jsonObj, resolver, targetType) ->
             resolver.createInstanceUsingType(jsonObj);
 
+    /**
+     * The target of an object Maps mode leaves unbuilt (see {@link #isBuiltFromParts}): its class, not an instance,
+     * types its fields. Cleared with the target of every other object once its fields are read.
+     */
+    static final Object UNBUILT = new Object();
+
+    private static final InstantiationPlan UNBUILT_PLAN = (jsonObj, resolver, targetType) -> jsonObj.setTarget(UNBUILT);
+
+    /**
+     * True for a class json-io builds from its parts: a record (by json-io's {@link RecordFactory}), an
+     * {@code @IoCreator} or an {@code @IoValue} class. Not a map or collection, nor a class another factory builds.
+     */
+    private static boolean isBuiltFromParts(Class<?> c, ClassFactory factory) {
+        if (Map.class.isAssignableFrom(c) || Collection.class.isAssignableFrom(c)) {
+            return false;
+        }
+        if (factory != null) {
+            return factory instanceof RecordFactory;
+        }
+        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(c);
+        return meta.getCreator() != null || meta.getValueCreator() != null;
+    }
+
     /** A map or collection interface or abstract class: the container the Converter builds for it. */
     private static final InstantiationPlan ABSTRACT_CONTAINER_PLAN = (jsonObj, resolver, targetType) ->
             jsonObj.setTarget(newAbstractContainer(resolver.converter, targetType));
@@ -1777,6 +1801,13 @@ public abstract class Resolver {
             if (factoryClass != null) {
                 factory = getOrCreateAnnotationFactory(factoryClass);
             }
+        }
+
+        // 4a. Maps mode keeps an object a map, so one built from its parts -- a record, an @IoCreator or @IoValue
+        //     class -- is not built: its parts stay maps, which its constructor does not take. Its instance served only
+        //     to type its fields, and its class does that (MapResolver.traverseFields).
+        if (readOptions.isReturningJsonObjects() && isBuiltFromParts(targetType, factory)) {
+            return UNBUILT_PLAN;
         }
         if (factory != null) {
             return new FactoryPlan(factory);
@@ -2950,9 +2981,25 @@ public abstract class Resolver {
     protected Object convertIfNonRefType(JsonObject jsonObj, Class<?> type) {
         if (type != null && readOptions.isNonReferenceableClass(type) &&
                 converter.isConversionSupportedFor(Map.class, type)) {
-            return converter.convert(resolveTypedValues(jsonObj), type);
+            Object enumConstant = enumOfJsonObject(jsonObj, type);
+            return enumConstant != null ? enumConstant : converter.convert(resolveTypedValues(jsonObj), type);
         }
         return null;
+    }
+
+    /**
+     * An enum written as an object, {"@type":..,"name":..} (writeEnumAsJsonObject) or {"@type":..,"value":..} (one
+     * written by its @IoValue method, with its type), as its constant: read through its factory, its value, then its
+     * name ({@link #convertValue}). The Converter read such a map as a constant named "value", or from a null. Null
+     * when {@code type} is no enum or the object holds neither.
+     */
+    protected Object enumOfJsonObject(JsonObject jsonObj, Class<?> type) {
+        if (!Enum.class.isAssignableFrom(type)) {
+            return null;
+        }
+        Object name = jsonObj.get("name");
+        Object value = name != null ? name : jsonObj.getValue();
+        return value == null ? null : convertValue(value, type);
     }
 
     protected abstract Object resolveArray(Type suggestedType, List<Object> list);
