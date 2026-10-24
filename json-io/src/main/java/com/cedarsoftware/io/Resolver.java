@@ -827,6 +827,12 @@ public abstract class Resolver {
                     && converter.isConversionSupportedFor(value.getClass(), innerRaw)) {
                 return java.util.Optional.of(converter.convert(value, innerRaw));
             }
+            if (innerRaw != Object.class && !innerRaw.isInstance(value)) {
+                Object built = fromValueForm(value, innerRaw, false);     // Optional<EmailAddress>
+                if (built != NO_VALUE_FORM) {
+                    return java.util.Optional.of(built);
+                }
+            }
             return java.util.Optional.of(value);
         }
 

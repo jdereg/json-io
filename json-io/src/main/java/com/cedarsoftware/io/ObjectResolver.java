@@ -2134,6 +2134,10 @@ public class ObjectResolver extends Resolver
         } else if (innerType != Object.class && !innerType.isInstance(rhs)
                 && converter.isConversionSupportedFor(rhs.getClass(), innerType)) {
             innerValue = converter.convert(rhs, innerType);
+        } else if (innerType != Object.class && !innerType.isInstance(rhs)) {
+            // A class written as the single value its @IoValue method returns: Optional<EmailAddress>
+            Object built = fromValueForm(rhs, innerType, false);
+            innerValue = built == NO_VALUE_FORM ? rhs : built;
         } else {
             innerValue = rhs;
         }

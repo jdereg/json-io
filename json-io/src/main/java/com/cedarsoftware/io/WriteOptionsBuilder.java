@@ -2415,7 +2415,8 @@ public class WriteOptionsBuilder {
         private volatile ClassValue<List<WriteFieldPlan>> writeFieldPlanCache = newWriteFieldPlanCache();
         private volatile ClassValue<Map<String, Field>> classMetaCache = newClassMetaCache();
         // How TOON writes a class: ToonWriter's own categories, plus DATA for a custom writer that gives its objects as
-        // data (JsonClassWriter.toData), which depends on these options' writers
+        // data (JsonClassWriter.toData), or a class written by its @IoValue method, which depend on these options'
+        // writers
         private volatile ClassValue<ToonWriter.ToonWriteType> toonWriteTypeCache = newToonWriteTypeCache();
 
         private ClassValue<ToonWriter.ToonWriteType> newToonWriteTypeCache() {
@@ -2423,7 +2424,8 @@ public class WriteOptionsBuilder {
                 @Override
                 protected ToonWriter.ToonWriteType computeValue(Class<?> c) {
                     ToonWriter.ToonWriteType type = ToonWriter.writeTypeOf(c);
-                    return type == ToonWriter.ToonWriteType.POJO && findDataWriter(DefaultWriteOptions.this, c) != null
+                    return type == ToonWriter.ToonWriteType.POJO && (findDataWriter(DefaultWriteOptions.this, c) != null
+                            || findValueMethod(DefaultWriteOptions.this, c) != null)
                             ? ToonWriter.ToonWriteType.DATA : type;
                 }
             };
@@ -3298,6 +3300,7 @@ public class WriteOptionsBuilder {
         private final WriteFieldPlan[] plans;
         final JsonClassWriter dataWriter;
         final Method valueMethod;
+        final boolean writtenAsData;        // dataWriter or valueMethod: the class may be written other than as fields
         // True when a field is of a primitive type: such an object's fields are never all objects, so TOON need not
         // look at them to know it is no keyed table. Asked for every object written as a field's value.
         final boolean anyPrimitiveField;
@@ -3306,6 +3309,7 @@ public class WriteOptionsBuilder {
             this.plans = plans.toArray(new WriteFieldPlan[0]);
             this.dataWriter = dataWriter;
             this.valueMethod = valueMethod;
+            this.writtenAsData = dataWriter != null || valueMethod != null;
             boolean primitive = false;
             for (WriteFieldPlan plan : this.plans) {
                 primitive |= plan.primitiveWriteKind() != WriteFieldPlan.PRIMITIVE_NONE;
@@ -3370,6 +3374,14 @@ public class WriteOptionsBuilder {
             return ((WriteFieldPlanList) plans).valueMethod;
         }
         return findValueMethod(options, clazz);
+    }
+
+    /**
+     * False when objects with these write plans are surely written as their fields: json-io's own cached plans know
+     * whether the class has a data writer or an {@code @IoValue} method; any other list may have either.
+     */
+    static boolean mayBeWrittenAsData(List<WriteFieldPlan> plans) {
+        return !(plans instanceof WriteFieldPlanList) || ((WriteFieldPlanList) plans).writtenAsData;
     }
 
     static Method findValueMethod(WriteOptions options, Class<?> clazz) {

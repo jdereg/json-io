@@ -121,6 +121,16 @@ class IoValueIdentityTest {
         }
     }
 
+    /** Two objects, each written as the other. */
+    public static class Mirror {
+        Mirror other;
+
+        @IoValue
+        public Mirror toValue() {
+            return other;
+        }
+    }
+
     public static class TagHolder {
         public Tag a;
         public Tag b;
@@ -255,6 +265,13 @@ class IoValueIdentityTest {
     void aValueMethodThatNeverEndsIsRefusedAtTheDepthLimit() {
         WriteOptions options = new WriteOptionsBuilder().maxObjectGraphDepth(50).maxObjectCount(100000).build();
         JsonIoException e = assertThrows(JsonIoException.class, () -> JsonIo.toJson(new Endless(), options));
+        assertTrue(e.getMessage().contains("too deep"), e.getMessage());
+
+        Mirror a = new Mirror();
+        Mirror b = new Mirror();
+        a.other = b;
+        b.other = a;
+        e = assertThrows(JsonIoException.class, () -> JsonIo.toJson(new Object[] {a, b}, options));
         assertTrue(e.getMessage().contains("too deep"), e.getMessage());
     }
 

@@ -1288,8 +1288,8 @@ class AnnotationTest {
         WriteOptions wo = new WriteOptionsBuilder().build();
 
         String toon = JsonIo.toToon(email, wo);
-        // TOON should serialize via @IoValue as a single value
-        assertTrue(toon.contains("toon@example.com"), "TOON should contain the value: " + toon);
+        // TOON should serialize via @IoValue as a single value (its fields, address: ..., contain it too)
+        assertEquals("toon@example.com", toon);
     }
 
     @Test

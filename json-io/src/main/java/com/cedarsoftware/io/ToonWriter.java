@@ -85,6 +85,8 @@ public class ToonWriter implements Closeable, Flushable {
     private static final int INDENT_CACHE_SIZE = 32;
     private static final String[] INDENT_CACHE = buildIndentCache();
     private static final int VISITED = 1;
+    // In the trace's visited map: an object written as the value of its @IoValue method (see pushValueOf)
+    private static final int VALUE_HOLDER = -1;
     private static final int QUOTE_DECISION_CACHE_MAX = 4096;
     private static final int DECIMAL_FORMAT_CACHE_MAX = 4096;
     private static final int SMALL_LONG_CACHE_LOW = -128;
@@ -201,7 +203,7 @@ public class ToonWriter implements Closeable, Flushable {
     // from the options' own cache (DefaultWriteOptions.getToonWriteType); the static cache below never holds it.
     enum ToonWriteType {
         ARRAY, COLLECTION, MAP, STRING, NUMBER, BOOLEAN, CHARACTER,
-        CONVERTER_SUPPORTED, VALUE_METHOD, POJO, DATA
+        CONVERTER_SUPPORTED, POJO, DATA
     }
 
     /** How TOON writes {@code type} whatever the custom writers: every category but DATA. */
@@ -214,7 +216,6 @@ public class ToonWriter implements Closeable, Flushable {
         if (type == Boolean.class) return ToonWriteType.BOOLEAN;
         if (type == Character.class) return ToonWriteType.CHARACTER;
         if (Converter.isConversionSupportedFor(type, String.class)) return ToonWriteType.CONVERTER_SUPPORTED;
-        if (AnnotationResolver.getMetadata(type).getValueMethod() != null) return ToonWriteType.VALUE_METHOD;
         return ToonWriteType.POJO;
     }
 
@@ -226,9 +227,11 @@ public class ToonWriter implements Closeable, Flushable {
     };
 
     /**
-     * True when TOON writes objects of {@code type} as the data their custom writer gives (JsonClassWriter.toData).
-     * Asked only of what the static category calls a POJO: the hot switches below stay on the static cache, so the
-     * other values never pay for it (and the methods holding those switches stay small enough to inline).
+     * True when TOON writes objects of {@code type} as the data their custom writer gives (JsonClassWriter.toData), or
+     * as the value their {@code @IoValue} method returns, in their place, as JSON writes them: "user@example.com"
+     * rather than {address: user@example.com}. Asked only of what the static category calls a POJO: the hot switches
+     * below stay on the static cache, so the other values never pay for it (and the methods holding those switches
+     * stay small enough to inline).
      */
     private boolean isDataClass(Class<?> type) {
         if (writeTypeCache.get(type) != ToonWriteType.POJO) {
@@ -237,20 +240,37 @@ public class ToonWriter implements Closeable, Flushable {
         if (defaultWriteOptions != null) {
             return defaultWriteOptions.getToonWriteType(type) == ToonWriteType.DATA;
         }
-        return WriteOptionsBuilder.getDataWriter(writeOptions, type) != null;
+        return WriteOptionsBuilder.getDataWriter(writeOptions, type) != null
+                || WriteOptionsBuilder.findValueMethod(writeOptions, type) != null;
     }
 
     // The last object asked for its data, and that data: isPrimitive and the writer ask in turn for the same object
     private Object dataSource;
     private Object data;
 
-    /** The data {@code obj}'s custom writer gives for it (a DATA object): a Map, another value, or NO_DATA. */
+    /**
+     * The data {@code obj}'s custom writer gives for it (a DATA object): a Map, another value, or NO_DATA; for a class
+     * without one, the value its {@code @IoValue} method returns.
+     */
     private Object dataOf(Object obj) {
         if (obj != dataSource) {
-            data = WriteOptionsBuilder.getDataWriter(writeOptions, obj.getClass()).toData(obj);
+            JsonClassWriter writer = WriteOptionsBuilder.getDataWriter(writeOptions, obj.getClass());
+            data = writer != null ? writer.toData(obj) : valueOf(obj);
             dataSource = obj;
         }
         return data;
+    }
+
+    /** The value {@code holder}'s {@code @IoValue} method returns. */
+    private Object valueOf(Object holder) {
+        Class<?> c = holder.getClass();
+        Method valueMethod = WriteOptionsBuilder.getValueMethod(writeOptions, c,
+                WriteOptionsBuilder.getWriteFieldPlans(writeOptions, c));
+        try {
+            return valueMethod.invoke(holder);
+        } catch (Exception e) {
+            throw new JsonIoException("@IoValue method invocation failed for " + c.getName(), e);
+        }
     }
 
     /** True for data written in the object's place (an Optional's content) rather than as its fields. */
@@ -538,7 +558,7 @@ public class ToonWriter implements Closeable, Flushable {
         // before the common case). JFR previously showed the ClassValue dispatch was ~6.6%
         // of ToonWriter samples, and writeNumber's per-call dispatch contributed additional
         // samples for every int/long field. These short-circuits cover the common POJO-field
-        // case without disturbing the slow path for CONVERTER_SUPPORTED / POJO / VALUE_METHOD
+        // case without disturbing the slow path for CONVERTER_SUPPORTED / POJO / DATA
         // types.
         if (value instanceof String) {
             writeString((String) value);
@@ -601,15 +621,6 @@ public class ToonWriter implements Closeable, Flushable {
                 writeString(converterText(value));
                 break;
             }
-            case VALUE_METHOD:
-                try {
-                    Method valueMethod = AnnotationResolver.getMetadata(clazz).getValueMethod();
-                    Object val = valueMethod.invoke(value);
-                    writeValue(val);
-                } catch (Exception e) {
-                    throw new JsonIoException("@IoValue method invocation failed for " + clazz.getName(), e);
-                }
-                break;
             case POJO:
                 writePojo(value, needsType(clazz, Object.class));
                 break;
@@ -4306,16 +4317,26 @@ public class ToonWriter implements Closeable, Flushable {
 
             int seen = objVisited.get(current);
             if (seen != 0) {
-                if (seen == VISITED) {
-                    int id = nextIdentity++;
-                    objVisited.put(current, VISITED + 1);
-                    objsReferenced.put(current, id);
-                }
+                seenAgain(stack, current, seen);
                 continue;
             }
 
             objVisited.put(current, VISITED);
             pushReferenceCandidates(stack, current);
+        }
+    }
+
+    /**
+     * {@code current} met again in the trace: referenced, if it was met once; for one written as its {@code @IoValue}
+     * method's value, its value again, as each place holding it holds its value.
+     */
+    private void seenAgain(Deque<Object> stack, Object current, int seen) {
+        if (seen == VISITED) {
+            int id = nextIdentity++;
+            objVisited.put(current, VISITED + 1);
+            objsReferenced.put(current, id);
+        } else if (seen == VALUE_HOLDER) {
+            pushValueOf(stack, current);
         }
     }
 
@@ -4347,21 +4368,8 @@ public class ToonWriter implements Closeable, Flushable {
 
         List<WriteOptionsBuilder.WriteFieldPlan> plans =
                 WriteOptionsBuilder.getWriteFieldPlans(writeOptions, current.getClass());
-        JsonClassWriter dataWriter = WriteOptionsBuilder.getDataWriter(writeOptions, current.getClass(), plans);
-        if (dataWriter != null) {
-            // What is written for it (JsonClassWriter.toData), which its fields may not show: an Optional's content
-            // or an AtomicReferenceArray's elements are in fields the JDK keeps to itself
-            Object d = dataWriter.toData(current);
-            if (d != JsonClassWriter.NO_DATA) {
-                if (d instanceof Map) {
-                    for (Object value : ((Map<?, ?>) d).values()) {
-                        pushReferenceCandidate(stack, value);
-                    }
-                } else {
-                    pushReferenceCandidate(stack, d);
-                }
-                return;
-            }
+        if (WriteOptionsBuilder.mayBeWrittenAsData(plans) && pushWrittenData(stack, current, plans)) {
+            return;
         }
         for (int i = 0, len = plans.size(); i < len; i++) {
             WriteOptionsBuilder.WriteFieldPlan plan = plans.get(i);
@@ -4403,6 +4411,62 @@ public class ToonWriter implements Closeable, Flushable {
             return compType != null && writeOptions.isNonReferenceableClass(compType);
         }
         return false;
+    }
+
+    /**
+     * Pushes what is written for {@code current} in place of its fields, when that is not them: the value of its
+     * {@code @IoValue} method, or what its custom writer gives (JsonClassWriter.toData), which its fields may not show
+     * (an Optional's content or an AtomicReferenceArray's elements are in fields the JDK keeps to itself). False for
+     * an object written as its fields. Out of line, so the trace's hot method stays small enough to compile well.
+     */
+    private boolean pushWrittenData(Deque<Object> stack, Object current,
+                                    List<WriteOptionsBuilder.WriteFieldPlan> plans) {
+        if (WriteOptionsBuilder.getValueMethod(writeOptions, current.getClass(), plans) != null) {
+            pushValueOf(stack, current);
+            return true;
+        }
+        JsonClassWriter dataWriter = WriteOptionsBuilder.getDataWriter(writeOptions, current.getClass(), plans);
+        if (dataWriter == null) {
+            return false;
+        }
+        Object d = dataWriter.toData(current);
+        if (d == JsonClassWriter.NO_DATA) {
+            return false;
+        }
+        if (d instanceof Map) {
+            for (Object value : ((Map<?, ?>) d).values()) {
+                pushReferenceCandidate(stack, value);
+            }
+        } else {
+            pushReferenceCandidate(stack, d);
+        }
+        return true;
+    }
+
+    /**
+     * {@code holder}, written as the value of its {@code @IoValue} method in its place, where no $id can go: it is
+     * never referenced itself, and each place holding it holds its value, traced each time (so a value object held
+     * twice, through one holder or two, gets the $id), as JSON's reference pass does. A value that is itself such an
+     * object is followed here, up to the depth limit: one made afresh each time, or two whose values are each other,
+     * would never end.
+     */
+    private void pushValueOf(Deque<Object> stack, Object holder) {
+        int depthLimit = writeOptions.getMaxObjectGraphDepth();
+        Object value = holder;
+        for (int depth = 0; ; depth++) {
+            objVisited.put(value, VALUE_HOLDER);
+            value = valueOf(value);
+            if (value == null || isPrimitive(value) || writeTypeCache.get(value.getClass()) != ToonWriteType.POJO
+                    || WriteOptionsBuilder.getValueMethod(writeOptions, value.getClass(),
+                            WriteOptionsBuilder.getWriteFieldPlans(writeOptions, value.getClass())) == null) {
+                break;
+            }
+            if (depth >= depthLimit) {
+                throw new JsonIoException("Object graph too deep (>" + depthLimit
+                        + " levels): each @IoValue method returns another object written by its @IoValue method.");
+            }
+        }
+        pushReferenceCandidate(stack, value);
     }
 
     private void pushReferenceCandidate(Deque<Object> stack, Object candidate) {
