@@ -677,10 +677,9 @@ public abstract class Resolver {
     <T> T toJavaObjects(JsonObject rootObj, Type rootType) {
         // If the JsonObject is a reference, resolve it.
         if (rootObj.isReference()) {
-            rootObj = references.get((long) rootObj.refId);
-            if (rootObj != null) {
-                return (T) rootObj;
-            }
+            // A reference names an object the document defines (all are known before any is resolved): one it does not
+            // is an error that says so, where this went on with null
+            return (T) references.getOrThrow((long) rootObj.refId);
         }
 
         // If already converted, return its target.
