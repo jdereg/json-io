@@ -1275,8 +1275,11 @@ final class CharStreamGenerator extends JsonGenerator {
                 escape = "\\u2028";  // Line separator — escape for JavaScript compatibility
             } else if (ch == 0x2029) {
                 escape = "\\u2029";  // Paragraph separator — escape for JavaScript compatibility
+            } else if (ch < Character.MIN_SURROGATE || ch > Character.MAX_SURROGATE || isPaired(s, i, ch)) {
+                continue;  // Non-ASCII written as-is (UTF-8 handled by Writer), a surrogate pair too
             } else {
-                continue;  // Non-ASCII written as-is (UTF-8 handled by Writer)
+                // An unpaired surrogate has no UTF-8 form (an encoder writes '?' for it): its escape reads back as it
+                escape = toUnicodeEscape(ch);
             }
 
             if (last < i) {
@@ -1290,6 +1293,16 @@ final class CharStreamGenerator extends JsonGenerator {
             output.write(s, last, len - last);
         }
         output.write('"');
+    }
+
+    /**
+     * Whether the surrogate {@code ch} at {@code i} is half of a pair: a high one before a low one, or a low one after a
+     * high one. Out of the loop, which then never moves its own index and stays a counted loop.
+     */
+    private static boolean isPaired(String s, int i, char ch) {
+        return ch <= Character.MAX_HIGH_SURROGATE
+                ? i + 1 < s.length() && Character.isLowSurrogate(s.charAt(i + 1))
+                : i > 0 && Character.isHighSurrogate(s.charAt(i - 1));
     }
 
     /**
@@ -1345,6 +1358,8 @@ final class CharStreamGenerator extends JsonGenerator {
                 output.write("\\'");
             } else if (codePoint == '\\') {
                 output.write("\\\\");
+            } else if (codePoint >= Character.MIN_SURROGATE && codePoint <= Character.MAX_SURROGATE) {
+                output.write(toUnicodeEscape(codePoint));     // an unpaired surrogate: no UTF-8 form
             } else {
                 output.write(s, i, Character.charCount(codePoint));
             }
