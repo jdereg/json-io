@@ -605,11 +605,13 @@ public class ObjectResolver extends Resolver
                             && !isOptionalInstance(referenced)) {
                         // An Optional is written as its content, so a @ref in an Optional field names the content
                         referenced = wrapAsOptional(rawType, effectiveFieldType, referenced);
+                    } else if (!rawType.isInstance(referenced)) {
+                        // An @IoValue class is written as its value, so a @ref in a field of that class names the value
+                        referenced = holderOrSelf(rawType, referenced);
                     }
                     injector.inject(target, referenced);
                 } else {
-                    addUnresolvedReference(new UnresolvedReference(
-                            jsonObj, injector.getName(), jsObj.getReferenceId()));
+                    addUnresolvedFieldReference(jsonObj, injector, rawType, jsObj.getReferenceId());
                 }
                 return;
             }
@@ -943,7 +945,7 @@ public class ObjectResolver extends Resolver
 
             // Strategy 4: REFERENCE - check before expensive factory lookup
             if (jsonElement != null && jsonElement.isReference()) {
-                resolveReferenceInCollection(jsonElement, jsonObj, col, idx, isList);
+                addReferenceToCollection(jsonElement, jsonObj, col, idx, isList, rawElementType);
                 idx++;
                 continue;
             }
@@ -1333,7 +1335,7 @@ public class ObjectResolver extends Resolver
 
             // Strategy 4: REFERENCE - check before expensive factory lookup
             if (jsonElement != null && jsonElement.isReference()) {
-                Object resolved = resolveReferenceElement(jsonElement, jsonObj, i);
+                Object resolved = resolveReferenceElement(jsonElement, jsonObj, i, effectiveRawComponentType);
                 if (resolved != UNRESOLVED_REFERENCE) {
                     setArrayElement(array, refArray, i, resolved, isPrimitive);
                 }
@@ -1438,7 +1440,7 @@ public class ObjectResolver extends Resolver
 
         // If createInstance already fully handled this object, return the target directly
         if (jsonObj.isFinished()) {
-            return jsonObj.getTarget();
+            return asDeclared(rawInferred, jsonObj.getTarget());
         }
 
         Class<?> targetClass = jsonObj.getRawType();
@@ -1608,6 +1610,37 @@ public class ObjectResolver extends Resolver
      */
     private static final Object UNRESOLVED_REFERENCE = new Object();
 
+    /**
+     * {@code value} for a place declared {@code declared}: as it is, or, when that is an {@code @IoValue} class and
+     * {@code value} its value already built (by a reference read first, say), built into the class.
+     */
+    private Object asDeclared(Class<?> declared, Object value) {
+        return declared == null || value == null || declared.isInstance(value) ? value : holderOrSelf(declared, value);
+    }
+
+    /** A class written as the single value its {@code @IoValue} method returns, read back by a creator taking it. */
+    private static boolean isWrittenAsValue(Class<?> type) {
+        return type != null && type != Object.class && !type.isPrimitive()
+                && AnnotationResolver.getMetadata(type).getValueCreator() != null;
+    }
+
+    /**
+     * An element of {@code holderType}, an {@code @IoValue} class, given as a reference: the value it names, built into
+     * the class; or, when that value is not built yet, {@link #UNRESOLVED_REFERENCE}, and {@code setLater} puts it in
+     * place once it is.
+     */
+    private Object holderOfReference(Class<?> holderType, JsonObject reference, JsonObject container,
+                                     BiConsumer<Object, Object> setLater) {
+        long id = reference.getReferenceId();
+        Object target = references.getOrThrow(id).getTarget();
+        if (target != null) {
+            return holderOrSelf(holderType, target);
+        }
+        addUnresolvedReference(new UnresolvedReference(container, id,
+                (built, referenced) -> setLater.accept(built, holderOrSelf(holderType, referenced))));
+        return UNRESOLVED_REFERENCE;
+    }
+
     // ============================================================================
     // Shared array element processing helpers
     // ============================================================================
@@ -1621,6 +1654,50 @@ public class ObjectResolver extends Resolver
      * @param index       The index in the array (for unresolved ref tracking)
      * @return The resolved target, or UNRESOLVED_REFERENCE if not yet resolvable
      */
+    /**
+     * {@link #resolveReferenceElement(JsonObject, JsonObject, int)} for an array of {@code componentType}: when that is
+     * an {@code @IoValue} class, written as its value, the @ref names the value, built into the class.
+     */
+    private Object resolveReferenceElement(JsonObject refHolder, JsonObject arrayHolder, int index,
+                                           Class<?> componentType) {
+        if (!isWrittenAsValue(componentType)) {
+            return resolveReferenceElement(refHolder, arrayHolder, index);
+        }
+        return holderOfReference(componentType, refHolder, arrayHolder,
+                (built, value) -> ((Object[]) built)[index] = value);
+    }
+
+    /**
+     * A @ref element of a collection of {@code elementType}, as {@link #resolveReferenceInCollection} adds it: when
+     * that is an {@code @IoValue} class, written as its value, the @ref names the value, built into the class.
+     */
+    private void addReferenceToCollection(JsonObject reference, JsonObject container, Collection<Object> col,
+                                          int index, boolean isList, Class<?> elementType) {
+        if (!isWrittenAsValue(elementType)) {
+            resolveReferenceInCollection(reference, container, col, index, isList);
+            return;
+        }
+        Object holder = holderOfReference(elementType, reference, container, isList
+                ? (built, value) -> ((List<Object>) built).set(index, value)
+                : (built, value) -> ((Collection<Object>) built).add(value));
+        if (holder != UNRESOLVED_REFERENCE || isList) {
+            col.add(holder == UNRESOLVED_REFERENCE ? null : holder);
+        }
+    }
+
+    /**
+     * A @ref in a field not yet resolvable, patched once the graph is read; for a field of an {@code @IoValue} class,
+     * written as its value, the referenced value is built into the class then.
+     */
+    private void addUnresolvedFieldReference(JsonObject jsonObj, Injector injector, Class<?> fieldType, long id) {
+        if (isWrittenAsValue(fieldType)) {
+            addUnresolvedReference(new UnresolvedReference(jsonObj, id,
+                    (built, referenced) -> injector.inject(built, holderOrSelf(fieldType, referenced))));
+        } else {
+            addUnresolvedReference(new UnresolvedReference(jsonObj, injector.getName(), id));
+        }
+    }
+
     private Object resolveReferenceElement(JsonObject refHolder, JsonObject arrayHolder, int index) {
         long ref = refHolder.getReferenceId();
         JsonObject refObject = references.get(ref);

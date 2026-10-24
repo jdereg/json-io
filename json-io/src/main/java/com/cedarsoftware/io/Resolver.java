@@ -1911,7 +1911,12 @@ public abstract class Resolver {
                 // Use @IoCreator if present; otherwise fall back to ClassUtilities heuristics
                 Executable creator = annMeta.getCreator();
                 Executable valueCreator = annMeta.getValueCreator();
-                if (valueCreator != null && args.containsKey("value")) {
+                int form = valueCreator == null ? FIELDS_FORM : valueForm(annMeta, valueCreator, jsonObj, args);
+                if (form == WHOLE_FORM) {
+                    // An @IoValue class written as its value, an object, list or map: this is that value
+                    return jsonObj.setFinishedTarget(holderOfWhole(jsonObj, valueCreator), true);
+                }
+                if (form == WRAPPED_FORM) {
                     // An @IoValue class written with its type, {"@type":..,"value":..}: the single value goes to
                     // what builds the class from it (its one-parameter @IoCreator, or a constructor taking it)
                     Map<Object, Object> valueArgs = new LinkedHashMap<>();
@@ -1929,6 +1934,99 @@ public abstract class Resolver {
         }
 
         return jsonObj.setTarget(instance);
+    }
+
+    // How an object read as an @IoValue class is written: as its fields, as {"@type":..,"value":..}, or as the value
+    private static final int FIELDS_FORM = 0;
+    private static final int WRAPPED_FORM = 1;
+    private static final int WHOLE_FORM = 2;
+
+    /**
+     * Which form {@code jsonObj} (its entries {@code args}) is in, for a class written as the single value its
+     * {@code @IoValue} method returns and built by {@code valueCreator}. A {@code "value"} key is the typed form
+     * json-io writes where the type must be named (alone, when the value is an object, which may have such a key).
+     * When the creator takes an object, a list or a map, Jackson's {@code @JsonCreator(mode = ...)} says which form
+     * it is when given; otherwise an object holding the creator parameter's key is the class's fields, as TOON wrote
+     * such a class through 4.117.0, and any other object, or an array, is the value itself.
+     */
+    private static int valueForm(AnnotationResolver.ClassAnnotationMetadata meta, Executable valueCreator,
+                                 JsonObject jsonObj, Map<Object, Object> args) {
+        Parameter param = valueCreator.getParameters()[0];
+        boolean objectValue = takesObjectValue(param.getType());
+        if (args.containsKey("value") && (!objectValue || args.size() == 1)) {
+            return WRAPPED_FORM;
+        }
+        if (!objectValue || meta.getCreatorMode() == AnnotationResolver.CREATOR_MODE_PROPERTIES) {
+            return FIELDS_FORM;
+        }
+        if (meta.getCreatorMode() == AnnotationResolver.CREATOR_MODE_DELEGATING
+                || !args.containsKey(AnnotationResolver.getParameterJsonKey(param))) {
+            return WHOLE_FORM;
+        }
+        return FIELDS_FORM;
+    }
+
+    /** A value written as a JSON object or array: an object, a list, a map, an array; not text, a number or a date. */
+    private static boolean takesObjectValue(Class<?> type) {
+        if (Map.class.isAssignableFrom(type) || Collection.class.isAssignableFrom(type) || type.isArray()) {
+            return true;
+        }
+        return !type.isPrimitive() && !type.isEnum() && !isPseudoPrimitive(type);
+    }
+
+    /**
+     * The class {@code jsonObj} names, built by {@code valueCreator} from the value {@code jsonObj} is: the items of an
+     * array, or the object itself, read as the creator's parameter. The object's {@code @id} names the value, as the
+     * writer put it there, so a reference to it elsewhere reads back as the value, not as the class holding it.
+     */
+    private Object holderOfWhole(JsonObject jsonObj, Executable valueCreator) {
+        Parameter param = valueCreator.getParameters()[0];
+        Object value;
+        if (jsonObj.getItems() != null) {
+            value = jsonObj.getItems();
+        } else {
+            JsonObject valueObj = new JsonObject();
+            valueObj.putAll(jsonObj);
+            valueObj.setType(param.getParameterizedType());
+            if (jsonObj.hasId()) {
+                valueObj.setId(jsonObj.getId());
+                references.put(jsonObj.getId(), valueObj);
+            }
+            value = valueObj;
+        }
+        Map<Object, Object> args = new LinkedHashMap<>();
+        args.put(AnnotationResolver.getParameterJsonKey(param), value);
+        return createWith(jsonObj, valueCreator, args);
+    }
+
+    /**
+     * {@code value}, an object already built (one a reference names, say), as {@code holderType} when that class is
+     * written as the single value its {@code @IoValue} method returns and its creator takes such a value; or
+     * {@link #NO_VALUE_FORM}. A reference in a place declared as such a class names the value, as the writer gave the
+     * value, not the class, the {@code @id}.
+     */
+    Object holderOf(Class<?> holderType, Object value) {
+        if (value == null || value instanceof JsonObject || holderType.isInstance(value)) {
+            return NO_VALUE_FORM;
+        }
+        Executable valueCreator = AnnotationResolver.getMetadata(holderType).getValueCreator();
+        if (valueCreator == null) {
+            return NO_VALUE_FORM;
+        }
+        Parameter param = valueCreator.getParameters()[0];
+        if (!ClassUtilities.toPrimitiveWrapperClass(param.getType()).isInstance(value)) {
+            if (!takesObjectValue(param.getType()) || !(value instanceof Collection || value.getClass().isArray())) {
+                return NO_VALUE_FORM;
+            }
+            value = toJava(param.getParameterizedType(), value);      // a JSON array, for a list or array value
+        }
+        return invoke(valueCreator, new Object[] {value});
+    }
+
+    /** {@link #holderOf}, or {@code value} itself when it is not the value of an {@code @IoValue} {@code holderType}. */
+    Object holderOrSelf(Class<?> holderType, Object value) {
+        Object holder = holderOf(holderType, value);
+        return holder == NO_VALUE_FORM ? value : holder;
     }
 
     /** {@link #invokeCreator}, for {@code jsonObj}: an argument that refers back to it says it cannot be given. */
@@ -1974,7 +2072,10 @@ public abstract class Resolver {
             }
             args[i] = value;
         }
+        return invoke(creator, args);
+    }
 
+    private static Object invoke(Executable creator, Object[] args) {
         try {
             if (creator instanceof Constructor) {
                 return ((Constructor<?>) creator).newInstance(args);
@@ -1996,13 +2097,20 @@ public abstract class Resolver {
      * A reference to the object the creator is creating cannot be given to it, as that object does not exist yet.
      */
     private Object creatorArgument(Executable creator, String name, Parameter param, Object value) {
+        Type type = param.getParameterizedType();
         if (value instanceof JsonObject && ((JsonObject) value).isReference()) {
-            JsonObject referenced = references.getOrThrow(((JsonObject) value).getReferenceId());
+            long id = ((JsonObject) value).getReferenceId();
+            JsonObject referenced = references.getOrThrow(id);
             if (creating != null && creating.contains(referenced)) {
                 throw new JsonIoException(creator.getDeclaringClass().getName() + " is created with '" + name
                         + "', which refers to the object being created: its creator cannot be given it before it exists");
             }
-            value = referenced;
+            if (!referenced.isFinished()) {
+                // Built as what it is where it is defined; an @IoValue class gives its id to its value meanwhile
+                Type own = referenced.getType();
+                toJava(own == null || own == Object.class ? type : own, referenced);
+            }
+            return convertToType(references.getOrThrow(id).getTarget(), type);
         } else if (param.getType().isArray() && (value instanceof Collection || value instanceof Object[])) {
             // An array parameter: built as its type, its elements read as its component type
             JsonObjectArray array = new JsonObjectArray();
@@ -2010,7 +2118,7 @@ public abstract class Resolver {
             array.setItems(value instanceof Collection ? ((Collection<?>) value).toArray() : (Object[]) value);
             value = array;
         }
-        return toJava(param.getParameterizedType(), value);
+        return toJava(type, value);
     }
 
     /** What {@link #fromValueForm} returns when the value is not read as an {@code @IoValue} class. */
@@ -2031,7 +2139,7 @@ public abstract class Resolver {
     Object fromValueForm(Object value, Class<?> targetClass, boolean explain) {
         if (!(value instanceof String || value instanceof Number || value instanceof Boolean
                 || value instanceof Character)) {
-            return NO_VALUE_FORM;
+            return holderOf(targetClass, value);
         }
         AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(targetClass);
         Method valueMethod = meta.getValueMethod();

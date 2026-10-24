@@ -390,6 +390,7 @@ public class AnnotationResolver {
             null,
             null,
             null,
+            AnnotationResolver.CREATOR_MODE_DEFAULT,
             null,
             false,
             null,
@@ -698,6 +699,7 @@ public class AnnotationResolver {
         // 5. Scan for @IoValue on instance methods, and for what builds the class from that method's value
         Method valueMethod = scanValueMethod(clazz);
         Executable valueCreator = scanValueCreator(clazz, creator, valueMethod);
+        int creatorMode = scanCreatorMode(creator);
 
         // 6. Scan for @IoGetter/@IoSetter on instance methods
         Map<String, String> getterMethods = null;
@@ -741,6 +743,7 @@ public class AnnotationResolver {
                 creator,
                 valueMethod,
                 valueCreator,
+                creatorMode,
                 includedFields != null ? Collections.unmodifiableSet(includedFields) : null,
                 ignoredType,
                 fieldTypeInfoDefaults != null ? Collections.unmodifiableMap(fieldTypeInfoDefaults) : null,
@@ -1102,6 +1105,33 @@ public class AnnotationResolver {
             }
         }
         return null;
+    }
+
+    /** Jackson's {@code @JsonCreator(mode = ...)}: delegating, properties, or neither said. */
+    public static final int CREATOR_MODE_DEFAULT = 0;
+    public static final int CREATOR_MODE_DELEGATING = 1;
+    public static final int CREATOR_MODE_PROPERTIES = 2;
+
+    /**
+     * The mode a creator annotated with Jackson's {@code @JsonCreator} declares: DELEGATING (it takes the whole JSON
+     * value) or PROPERTIES (it takes named fields). {@code @IoCreator} declares none.
+     */
+    private static int scanCreatorMode(Executable creator) {
+        if (creator == null || !externalAvailable || EXT_CREATOR == null) {
+            return CREATOR_MODE_DEFAULT;
+        }
+        Annotation annotation = creator.getAnnotation(EXT_CREATOR);
+        if (annotation == null) {
+            return CREATOR_MODE_DEFAULT;
+        }
+        try {
+            Object mode = EXT_CREATOR.getMethod("mode").invoke(annotation);
+            String name = mode instanceof Enum ? ((Enum<?>) mode).name() : String.valueOf(mode);
+            return "DELEGATING".equals(name) ? CREATOR_MODE_DELEGATING
+                    : "PROPERTIES".equals(name) ? CREATOR_MODE_PROPERTIES : CREATOR_MODE_DEFAULT;
+        } catch (Exception e) {
+            return CREATOR_MODE_DEFAULT;
+        }
     }
 
     /**
@@ -1468,6 +1498,7 @@ public class AnnotationResolver {
         private final Executable creator;
         private final Method valueMethod;
         private final Executable valueCreator;
+        private final int creatorMode;
         private final Set<String> includedFields;
         private final boolean ignoredType;
         private final Map<String, Class<?>> fieldTypeInfoDefaults;
@@ -1496,6 +1527,7 @@ public class AnnotationResolver {
                                 Executable creator,
                                 Method valueMethod,
                                 Executable valueCreator,
+                                int creatorMode,
                                 Set<String> includedFields,
                                 boolean ignoredType,
                                 Map<String, Class<?>> fieldTypeInfoDefaults,
@@ -1523,6 +1555,7 @@ public class AnnotationResolver {
             this.creator = creator;
             this.valueMethod = valueMethod;
             this.valueCreator = valueCreator;
+            this.creatorMode = creatorMode;
             this.includedFields = includedFields;
             this.ignoredType = ignoredType;
             this.fieldTypeInfoDefaults = fieldTypeInfoDefaults;
@@ -1641,6 +1674,15 @@ public class AnnotationResolver {
          */
         public Executable getValueCreator() {
             return valueCreator;
+        }
+
+        /**
+         * The mode Jackson's {@code @JsonCreator} declares on the creator: {@link #CREATOR_MODE_DELEGATING},
+         * {@link #CREATOR_MODE_PROPERTIES}, or {@link #CREATOR_MODE_DEFAULT} (none said, or {@code @IoCreator}).
+         * @return the mode
+         */
+        public int getCreatorMode() {
+            return creatorMode;
         }
 
         /**
