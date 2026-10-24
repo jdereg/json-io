@@ -337,14 +337,16 @@ public interface WriteOptions {
     int getMaxIndentationDepth();
 
     /**
-     * @return int maximum object graph depth allowed during serialization to prevent stack overflow.
-     * Default is 10,000 levels. This prevents excessive recursion from deeply nested object structures.
+     * @return int maximum object graph depth allowed during serialization, JSON and TOON: a value is one level below
+     * the object holding it. Default is 100,000 levels. Checked in the reference trace with cycleSupport on, and as
+     * each object is written with it off. A graph deeper than the thread's stack can write (a few thousand levels on a
+     * default stack) is refused with a JsonIoException in any case.
      */
     int getMaxObjectGraphDepth();
 
     /**
-     * @return int maximum number of objects allowed during serialization to prevent memory exhaustion.
-     * Default is 100,000 objects. This prevents unbounded memory growth during large object graph processing.
+     * @return int maximum number of objects the reference trace (cycleSupport on) meets in a graph, JSON and TOON:
+     * the memory it keeps per object. Default is 1,000,000,000.
      */
     int getMaxObjectCount();
 

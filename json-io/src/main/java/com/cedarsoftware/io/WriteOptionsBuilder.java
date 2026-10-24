@@ -608,11 +608,12 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * Call this method to set a permanent (JVM lifetime) maximum object graph depth limit for JSON serialization.
-     * All WriteOptions instances will be initialized with this value unless explicitly overridden.
-     * 
-     * @param maxObjectGraphDepth int maximum object graph depth allowed during serialization to prevent stack overflow.
-     *                            Must be at least 1. Default is 10,000.
+     * Call this method to set a permanent (JVM lifetime) maximum object graph depth limit for JSON and TOON
+     * serialization. All WriteOptions instances will be initialized with this value unless explicitly overridden.
+     *
+     * @param maxObjectGraphDepth int maximum object graph depth allowed during serialization
+     *                            ({@link WriteOptions#getMaxObjectGraphDepth()}). Must be at least 1.
+     *                            Default is 100,000.
      */
     public static void addPermanentMaxObjectGraphDepth(int maxObjectGraphDepth) {
         if (maxObjectGraphDepth < 1) {
@@ -623,11 +624,11 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * Call this method to set a permanent (JVM lifetime) maximum object count limit for JSON serialization.
+     * Call this method to set a permanent (JVM lifetime) maximum object count limit for JSON and TOON serialization.
      * All WriteOptions instances will be initialized with this value unless explicitly overridden.
-     * 
-     * @param maxObjectCount int maximum number of objects allowed during serialization to prevent memory exhaustion.
-     *                       Must be at least 1. Default is 100,000.
+     *
+     * @param maxObjectCount int maximum number of objects the reference trace meets
+     *                       ({@link WriteOptions#getMaxObjectCount()}). Must be at least 1. Default is 1,000,000,000.
      */
     public static void addPermanentMaxObjectCount(int maxObjectCount) {
         if (maxObjectCount < 1) {
@@ -2146,8 +2147,8 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * @param maxObjectGraphDepth int maximum object graph depth allowed during serialization.
-     *                            Default is 10,000 levels. This prevents excessive recursion from deeply nested object structures.
+     * @param maxObjectGraphDepth int maximum object graph depth allowed during serialization, JSON and TOON
+     *                            ({@link WriteOptions#getMaxObjectGraphDepth()}). Default is 100,000 levels.
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder maxObjectGraphDepth(int maxObjectGraphDepth) {
@@ -2159,8 +2160,8 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * @param maxObjectCount int maximum number of objects allowed during serialization.
-     *                       Default is 100,000 objects. This prevents unbounded memory growth during large object graph processing.
+     * @param maxObjectCount int maximum number of objects the reference trace meets, JSON and TOON
+     *                       ({@link WriteOptions#getMaxObjectCount()}). Default is 1,000,000,000.
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder maxObjectCount(int maxObjectCount) {

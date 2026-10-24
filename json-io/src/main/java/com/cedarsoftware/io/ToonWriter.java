@@ -362,6 +362,16 @@ public class ToonWriter implements Closeable, Flushable {
     // whether to suppress folding in the nested descent.
     private boolean lastFoldCollision = false;
     private ArrayDeque<Object> traceStack;   // cycleSupport=true: work deque for traceReferences()
+    // The guards, as JSON's (WriteOptions maxObjectGraphDepth, maxObjectCount). With cycleSupport, in the trace: each
+    // value met counts, and a value is one level below the object holding it (traceDepths: the depth of each object on
+    // traceStack, in step with it). Without, the depth only, as each object enters the active path, whose length is its
+    // depth: no trace keeps anything per object, which the count guards.
+    private int[] traceDepths = new int[64];
+    private int traceDepthIndex;
+    private int traceDepth;
+    private int traceCount;
+    private int traceMaxDepth;
+    private int traceMaxObjects;
     // Cache resolved output type names per class for this write operation.
     private final Map<Class<?>, String> typeNameCache = new IdentityHashMap<>(32);
 
@@ -433,6 +443,8 @@ public class ToonWriter implements Closeable, Flushable {
             this.mustQuoteChar = MUST_QUOTE_COMMA;
         }
         this.cycleSupport = this.writeOptions.isCycleSupport();
+        this.traceMaxDepth = this.writeOptions.getMaxObjectGraphDepth();
+        this.traceMaxObjects = this.writeOptions.getMaxObjectCount();
         this.skipNullFields = this.writeOptions.isSkipNullFields();
         this.toonKeyFolding = this.writeOptions.isToonKeyFolding();
         this.v4Forms = !this.writeOptions.isToonLegacyForms();
@@ -540,6 +552,8 @@ public class ToonWriter implements Closeable, Flushable {
             out.flush();
         } catch (IOException e) {
             throw new JsonIoException("Error writing TOON output", e);
+        } catch (StackOverflowError e) {
+            throw JsonWriter.tooDeepToWrite(writeOptions, e);
         } finally {
             if (objVisited != null) objVisited.clear();
             if (objsReferenced != null) objsReferenced.clear();
@@ -1075,6 +1089,9 @@ public class ToonWriter implements Closeable, Flushable {
             return false;
         }
         activePath.put(value, Boolean.TRUE);
+        if (activePath.size() - 1 > traceMaxDepth) {
+            throw traceLimitReached();
+        }
         return true;
     }
 
@@ -4322,13 +4339,16 @@ public class ToonWriter implements Closeable, Flushable {
         }
         traceStack.clear();
         final Deque<Object> stack = traceStack;
-        stack.addFirst(root);
+        traceDepthIndex = 0;
+        traceCount = 0;
+        traceMaxDepth = writeOptions.getMaxObjectGraphDepth();
+        traceMaxObjects = writeOptions.getMaxObjectCount();
+        traceDepth = -1;
+        pushReferenceCandidate(stack, root);    // at depth 0
 
         while (!stack.isEmpty()) {
             final Object current = stack.removeFirst();
-            if (current == null) {
-                continue;
-            }
+            traceDepth = traceDepths[--traceDepthIndex];
             final Class<?> clazz = current.getClass();
             final boolean isNonReferenceable = isPrimitive(current) || writeOptions.isNonReferenceableClass(clazz);
             if (isNonReferenceable) {
@@ -4490,9 +4510,32 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     private void pushReferenceCandidate(Deque<Object> stack, Object candidate) {
-        if (candidate != null && !isPrimitive(candidate) && !writeOptions.isNonReferenceableClass(candidate.getClass())) {
-            stack.addFirst(candidate);
+        if (candidate == null) {
+            return;
         }
+        if (++traceCount > traceMaxObjects || traceDepth >= traceMaxDepth) {    // its depth is traceDepth + 1
+            throw traceLimitReached();
+        }
+        if (!isPrimitive(candidate) && !writeOptions.isNonReferenceableClass(candidate.getClass())) {
+            stack.addFirst(candidate);
+            pushTraceDepth(traceDepth + 1);
+        }
+    }
+
+    private void pushTraceDepth(int depth) {
+        if (traceDepthIndex == traceDepths.length) {
+            traceDepths = Arrays.copyOf(traceDepths, traceDepthIndex * 2);
+        }
+        traceDepths[traceDepthIndex++] = depth;
+    }
+
+    /** The error for a graph past maxObjectCount or maxObjectGraphDepth, with JSON's words. */
+    private JsonIoException traceLimitReached() {
+        if (traceCount > traceMaxObjects) {
+            return new JsonIoException("Object graph too large (>" + traceMaxObjects
+                    + " objects). This may indicate excessive nesting or a memory leak.");
+        }
+        return JsonWriter.tooDeep(traceMaxDepth);
     }
 
     /**

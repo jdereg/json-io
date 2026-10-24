@@ -579,6 +579,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         this.maxStringLength = this.writeOptions.getMaxStringLength();
         this.neverShowingType = this.writeOptions.isNeverShowingType();
         this.alwaysShowingType = this.writeOptions.isAlwaysShowingType();
+        this.traceMaxDepth = this.writeOptions.getMaxObjectGraphDepth();
+        this.traceMaxObjects = this.writeOptions.getMaxObjectCount();
         this.writeLongsAsStrings = this.writeOptions.isWriteLongsAsStrings();
         this.json5SmartQuotes = this.writeOptions.isJson5SmartQuotes();
         this.cycleSupport = this.writeOptions.isCycleSupport();
@@ -903,11 +905,46 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             throw e;
         } catch (Exception e) {
             throw new JsonIoException("Error writing object to JSON:", e);
+        } catch (StackOverflowError e) {
+            throw tooDeepToWrite(writeOptions, e);
         } finally {
             if (objVisited != null) { objVisited.clear(); }
             if (objsReferenced != null) { objsReferenced.clear(); }
             if (activePath != null) { activePath.clear(); }
         }
+    }
+
+    /**
+     * The error for a graph nested deeper than the thread's stack can write (JSON and TOON write a nested object by
+     * recursion): a few thousand levels on a default stack, such as a long linked list, where maxObjectGraphDepth
+     * (100,000 by default) is far deeper.
+     */
+    /**
+     * {@code obj} entering the path of objects being written, without cycleSupport: met on it already is a cycle. The
+     * path's length is its depth, checked against maxObjectGraphDepth (without a trace, the depth only: no trace keeps
+     * anything per object, which maxObjectCount guards).
+     */
+    private void enterActivePath(Object obj) {
+        if (activePath.containsKey(obj)) {
+            throw cycleDetected(obj);
+        }
+        activePath.put(obj, Boolean.TRUE);
+        if (activePath.size() - 1 > traceMaxDepth) {
+            throw tooDeep(traceMaxDepth);
+        }
+    }
+
+    /** Past maxObjectGraphDepth; out of line, so the methods that check stay small. */
+    static JsonIoException tooDeep(int maxDepth) {
+        return new JsonIoException("Object graph too deep (>" + maxDepth
+                + " levels). This may indicate a circular reference or excessively nested structure.");
+    }
+
+    static JsonIoException tooDeepToWrite(WriteOptions writeOptions, StackOverflowError e) {
+        return new JsonIoException("Object graph too deep to write: the thread's stack overflowed. A structure nested"
+                + " thousands of levels deep (such as a long linked list) needs a larger thread stack (-Xss); a lower"
+                + " WriteOptionsBuilder.maxObjectGraphDepth() (now " + writeOptions.getMaxObjectGraphDepth()
+                + ") refuses one sooner.", e);
     }
 
     /**
@@ -1214,10 +1251,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         }
 
         if (!cycleSupport) {
-            if (activePath.containsKey(obj)) {
-                throw cycleDetected(obj);
-            }
-            activePath.put(obj, Boolean.TRUE);
+            enterActivePath(obj);
             return false;
         }
 
