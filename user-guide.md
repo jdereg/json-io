@@ -1187,7 +1187,7 @@ public class UserProfile {
 ```
 
 #### `@IoCreator` — Constructor/Factory Deserialization
-Marks a constructor or static factory method for json-io to use during deserialization. Parameters are matched to JSON keys by name (or via `@IoProperty` on parameters). Equivalent to Jackson's `@JsonCreator`.
+Marks a constructor or static factory method for json-io to use during deserialization. Parameters are matched to JSON keys by name (or via `@IoProperty` on parameters), and each value is read as its parameter's declared type, as a field's would be: an object, a `List<Address>`, a `Map<String, Address>`, an array, or another class with a creator. One object passed to a creator twice, or also held by a field, stays one object; a creator cannot be passed the object it is creating (a reference back to it is an error). Equivalent to Jackson's `@JsonCreator`.
 
 ```java
 public class Money {

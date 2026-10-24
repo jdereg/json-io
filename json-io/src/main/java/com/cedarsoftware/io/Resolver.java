@@ -15,10 +15,12 @@ import java.math.BigInteger;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -145,6 +147,8 @@ public abstract class Resolver {
     final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
     protected final Deque<JsonObject> stack = new ArrayDeque<>();
     private final Collection<JsonObject> mapsToRehash = new ArrayList<>();
+    // The objects whose creator is running: an argument that refers to one of them cannot be given to it
+    private Set<JsonObject> creating;
     // store the missing field found during deserialization to notify any client after the complete resolution is done
     private final Collection<MissingField> missingFields = new ArrayList<>();
     protected ReadOptions readOptions;
@@ -1913,9 +1917,9 @@ public abstract class Resolver {
                     Map<Object, Object> valueArgs = new LinkedHashMap<>();
                     String paramKey = AnnotationResolver.getParameterJsonKey(valueCreator.getParameters()[0]);
                     valueArgs.put(paramKey, args.get("value"));
-                    instance = invokeCreator(valueCreator, valueArgs);
+                    instance = createWith(jsonObj, valueCreator, valueArgs);
                 } else if (creator != null) {
-                    instance = invokeCreator(creator, args);
+                    instance = createWith(jsonObj, creator, args);
                 } else if (Map.class.isAssignableFrom(targetClass)) {
                     instance = newMap(targetClass, args);
                 } else {
@@ -1927,9 +1931,23 @@ public abstract class Resolver {
         return jsonObj.setTarget(instance);
     }
 
+    /** {@link #invokeCreator}, for {@code jsonObj}: an argument that refers back to it says it cannot be given. */
+    private Object createWith(JsonObject jsonObj, Executable creator, Map<Object, Object> args) {
+        if (creating == null) {
+            creating = Collections.newSetFromMap(new IdentityHashMap<>());
+        }
+        creating.add(jsonObj);
+        try {
+            return invokeCreator(creator, args);
+        } finally {
+            creating.remove(jsonObj);
+        }
+    }
+
     /**
      * Invoke an @IoCreator constructor or static factory method, matching parameters by name
      * from the JSON object map. Parameters annotated with @IoProperty use the renamed key.
+     * An object, array or list among the values is read as its parameter's type first (see {@link #creatorArgument}).
      */
     private Object invokeCreator(Executable creator, Map<Object, Object> jsonMap) {
         Parameter[] params = creator.getParameters();
@@ -1941,7 +1959,10 @@ public abstract class Resolver {
             String jsonKey = AnnotationResolver.getParameterJsonKey(param);
 
             Object value = jsonMap.get(jsonKey);
-            if (value != null) {
+            if (value instanceof JsonObject || value instanceof Collection
+                    || (value != null && value.getClass().isArray())) {
+                value = creatorArgument(creator, jsonKey, param, value);
+            } else if (value != null) {
                 Class<?> paramType = param.getType();
                 if (!paramType.isInstance(value)) {
                     try {
@@ -1966,6 +1987,30 @@ public abstract class Resolver {
         } catch (Exception e) {
             throw new JsonIoException("@IoCreator invocation failed for " + creator.getDeclaringClass().getName(), e);
         }
+    }
+
+    /**
+     * A creator's argument as parsed -- an object, a reference, an array or a list -- read as its parameter's type, as
+     * a field's value is: an object built (by its own creator, if it has one), a list's or map's elements read, a
+     * reference the object it names, read now if it has not been yet (a creator needs its arguments before it runs).
+     * A reference to the object the creator is creating cannot be given to it, as that object does not exist yet.
+     */
+    private Object creatorArgument(Executable creator, String name, Parameter param, Object value) {
+        if (value instanceof JsonObject && ((JsonObject) value).isReference()) {
+            JsonObject referenced = references.getOrThrow(((JsonObject) value).getReferenceId());
+            if (creating != null && creating.contains(referenced)) {
+                throw new JsonIoException(creator.getDeclaringClass().getName() + " is created with '" + name
+                        + "', which refers to the object being created: its creator cannot be given it before it exists");
+            }
+            value = referenced;
+        } else if (param.getType().isArray() && (value instanceof Collection || value instanceof Object[])) {
+            // An array parameter: built as its type, its elements read as its component type
+            JsonObjectArray array = new JsonObjectArray();
+            array.setType(param.getType());
+            array.setItems(value instanceof Collection ? ((Collection<?>) value).toArray() : (Object[]) value);
+            value = array;
+        }
+        return toJava(param.getParameterizedType(), value);
     }
 
     /** What {@link #fromValueForm} returns when the value is not read as an {@code @IoValue} class. */
