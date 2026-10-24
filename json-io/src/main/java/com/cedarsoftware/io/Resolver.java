@@ -146,7 +146,7 @@ public abstract class Resolver {
     
     final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
     protected final Deque<JsonObject> stack = new ArrayDeque<>();
-    private final Collection<JsonObject> mapsToRehash = new ArrayList<>();
+    private final List<JsonObject> mapsToRehash = new ArrayList<>();
     // The objects whose creator is running: an argument that refers to one of them cannot be given to it
     private Set<JsonObject> creating;
     // store the missing field found during deserialization to notify any client after the complete resolution is done
@@ -2100,6 +2100,18 @@ public abstract class Resolver {
      * A reference to the object the creator is creating cannot be given to it, as that object does not exist yet.
      */
     private Object creatorArgument(Executable creator, String name, Parameter param, Object value) {
+        int pendingMaps = mapsToRehash.size();
+        Object argument = readCreatorArgument(creator, name, param, value);
+        // A map is filled at the end of the read (rehashMaps), but a creator is given its argument now: the maps read
+        // for it are filled now too, else it saw them empty (Map.copyOf(m), a sum over m). Read through to the end,
+        // their keys are complete; the end fills them again, with what references resolved later give.
+        for (int i = pendingMaps, n = mapsToRehash.size(); i < n; i++) {
+            mapsToRehash.get(i).rehashMaps();
+        }
+        return argument;
+    }
+
+    private Object readCreatorArgument(Executable creator, String name, Parameter param, Object value) {
         Type type = param.getParameterizedType();
         if (value instanceof JsonObject && ((JsonObject) value).isReference()) {
             long id = ((JsonObject) value).getReferenceId();
