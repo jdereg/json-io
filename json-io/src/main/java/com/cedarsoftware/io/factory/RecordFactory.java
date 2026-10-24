@@ -2,7 +2,8 @@ package com.cedarsoftware.io.factory;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
+import java.lang.reflect.Type;
+import java.util.Arrays;
 
 import com.cedarsoftware.io.ClassFactory;
 import com.cedarsoftware.io.JsonClassReader;
@@ -40,36 +41,7 @@ public class RecordFactory implements ClassFactory {
             throw new JsonIoException("Record de-serialization requires Java 16 or higher [current Java version: " + System.getProperty("java.version") + "]");
         }
         try {
-            ArrayList<Class<?>> lParameterTypes = new ArrayList<>(jsonObj.size());
-            ArrayList<Object> lParameterValues = new ArrayList<>(jsonObj.size());
-
-            Method getRecordComponents = ReflectionUtils.getMethod(Class.class, "getRecordComponents");
-            if (getRecordComponents == null) {
-                throw new NoSuchMethodException("getRecordComponents method not found - Java 16+ required for Record support");
-            }
-            Object[] recordComponents = (Object[]) getRecordComponents.invoke(c);
-            for (Object recordComponent : recordComponents) {
-                Class<?> type = (Class<?>) ReflectionUtils.call(recordComponent, "getType");
-                lParameterTypes.add(type);
-
-                String parameterName = (String) ReflectionUtils.call(recordComponent, "getName");
-                JsonObject paramValueJsonObj = new JsonObject();
-
-                paramValueJsonObj.setType(type);
-                paramValueJsonObj.setValue(jsonObj.get(parameterName));
-
-                if (resolver.valueToTarget(paramValueJsonObj)) {
-                    lParameterValues.add(paramValueJsonObj.getTarget());
-                } else {
-                    lParameterValues.add(paramValueJsonObj.getValue());
-                }
-            }
-
-            Constructor<?> constructor = ReflectionUtils.getConstructor(c, lParameterTypes.toArray(new Class[0]));
-            if (constructor == null) {
-                throw new NoSuchMethodException("Record constructor not found for class: " + c.getName() + " with parameter types: " + lParameterTypes);
-            }
-            return constructor.newInstance(lParameterValues.toArray(new Object[0]));
+            return newRecord(c, jsonObj, resolver);
         } catch (JsonIoException e) {
             throw e; // Re-throw JsonIoException as-is
         } catch (NoSuchMethodException e) {
@@ -90,40 +62,7 @@ public class RecordFactory implements ClassFactory {
             }
             try {
                 JsonObject jsonObj = (JsonObject) o;
-
-                ArrayList<Class<?>> lParameterTypes = new ArrayList<>(jsonObj.size());
-                ArrayList<Object> lParameterValues = new ArrayList<>(jsonObj.size());
-
-                Class<?> c = jsonObj.getRawType();
-                // the record components are per definition in the constructor parameter order
-                // we implement this with reflection due to code compatibility Java<16
-                Method getRecordComponents = ReflectionUtils.getMethod(Class.class, "getRecordComponents");
-                if (getRecordComponents == null) {
-                    throw new NoSuchMethodException("getRecordComponents method not found - Java 16+ required for Record support");
-                }
-                Object[] recordComponents = (Object[]) getRecordComponents.invoke(c);
-                for (Object recordComponent : recordComponents) {
-                    Class<?> type = (Class<?>) ReflectionUtils.call(recordComponent, "getType");
-                    lParameterTypes.add(type);
-
-                    String parameterName = (String) ReflectionUtils.call(recordComponent, "getName");
-                    JsonObject paramValueJsonObj = new JsonObject();
-
-                    paramValueJsonObj.setType(type);
-                    paramValueJsonObj.setValue(jsonObj.get(parameterName));
-
-                    if (resolver.valueToTarget(paramValueJsonObj)) {
-                        lParameterValues.add(paramValueJsonObj.getTarget());
-                    } else {
-                        lParameterValues.add(paramValueJsonObj.getValue());
-                    }
-                }
-
-                Constructor<?> constructor = ReflectionUtils.getConstructor(c, lParameterTypes.toArray(new Class[0]));
-                if (constructor == null) {
-                    throw new NoSuchMethodException("Record constructor not found for class: " + c.getName() + " with parameter types: " + lParameterTypes);
-                }
-                return constructor.newInstance(lParameterValues.toArray(new Object[0]));
+                return newRecord(jsonObj.getRawType(), jsonObj, resolver);
             } catch (JsonIoException e) {
                 throw e; // Re-throw JsonIoException as-is
             } catch (ClassCastException e) {
@@ -141,5 +80,45 @@ public class RecordFactory implements ClassFactory {
 
     public boolean isObjectFinal() {
         return true;
+    }
+
+    /**
+     * A record of class {@code c} built from {@code jsonObj}: each component read as its declared (generic) type --
+     * an object, a list, a map, an array, another record, by reference too -- as an {@code @IoCreator}'s arguments are
+     * ({@link Resolver#toJavaArgument}), and given to the canonical constructor. An absent primitive component is its
+     * default. Only scalars were converted before: any other component was given as read, a JsonObject or an
+     * Object[], which the constructor refused (or kept, for a Map).
+     */
+    private static Object newRecord(Class<?> c, JsonObject jsonObj, Resolver resolver)
+            throws ReflectiveOperationException {
+        // the record components are per definition in the constructor parameter order
+        // we implement this with reflection due to code compatibility Java<16
+        Method getRecordComponents = ReflectionUtils.getMethod(Class.class, "getRecordComponents");
+        if (getRecordComponents == null) {
+            throw new NoSuchMethodException(
+                    "getRecordComponents method not found - Java 16+ required for Record support");
+        }
+        Object[] recordComponents = (Object[]) getRecordComponents.invoke(c);
+        Class<?>[] parameterTypes = new Class<?>[recordComponents.length];
+        Object[] parameterValues = new Object[recordComponents.length];
+        for (int i = 0; i < recordComponents.length; i++) {
+            Object recordComponent = recordComponents[i];
+            Class<?> type = (Class<?>) ReflectionUtils.call(recordComponent, "getType");
+            Type genericType = (Type) ReflectionUtils.call(recordComponent, "getGenericType");
+            String parameterName = (String) ReflectionUtils.call(recordComponent, "getName");
+            parameterTypes[i] = type;
+            Object value = jsonObj.get(parameterName);
+            if (value == null) {
+                parameterValues[i] = type.isPrimitive() ? resolver.getConverter().convert(null, type) : null;
+            } else {
+                parameterValues[i] = resolver.toJavaArgument(jsonObj, genericType == null ? type : genericType, value);
+            }
+        }
+        Constructor<?> constructor = ReflectionUtils.getConstructor(c, parameterTypes);
+        if (constructor == null) {
+            throw new NoSuchMethodException("Record constructor not found for class: " + c.getName()
+                    + " with parameter types: " + Arrays.toString(parameterTypes));
+        }
+        return constructor.newInstance(parameterValues);
     }
 }

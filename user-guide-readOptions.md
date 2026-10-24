@@ -545,6 +545,13 @@ processes, you can utilize the `ClassFactory` feature for a tailored solution.
   is invoked with the JSON data. It is the responsibility of the `ClassFactory` to construct an instance of the class,
   ensuring that all necessary data from the JSON is correctly translated and loaded into the new object.
 
+- **Reading the parts it builds from**: a factory that passes values it reads to a constructor or factory method at
+  once (as json-io's own `RecordFactory` gives a record its components) reads each with
+  `resolver.toJavaArgument(jsonObj, declaredType, value)`: built as the declared (generic) type, a reference as the
+  object it names, a list where an array is declared as that array, and the maps it reads filled before it returns
+  (`resolver.toJava(type, value)` fills them at the end of the read). A value that refers to the object being built is
+  an error, since it cannot be given before that object exists.
+
 - **Advantages Over Custom Readers**: Using a `ClassFactory` is generally preferred over a `CustomReader` for class
   instantiation because it integrates more seamlessly with the standard deserialization process, maintaining consistency
   and reducing the potential for errors or data mismatches.

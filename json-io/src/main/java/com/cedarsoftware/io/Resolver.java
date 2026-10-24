@@ -2112,8 +2112,53 @@ public abstract class Resolver {
      * A reference to the object the creator is creating cannot be given to it, as that object does not exist yet.
      */
     private Object creatorArgument(Executable creator, String name, Parameter param, Object value) {
+        if (refersToObjectBeingCreated(value)) {
+            throw new JsonIoException(creator.getDeclaringClass().getName() + " is created with '" + name
+                    + "', which refers to the object being created: its creator cannot be given it before it exists");
+        }
+        return readArgument(param.getParameterizedType(), value);
+    }
+
+    /**
+     * {@code value} read as {@code type} for a constructor or factory method given it during the read, as json-io
+     * gives an {@code @IoCreator} its arguments: for a {@link ClassFactory} building {@code holder} from its parts (a
+     * record from its components). A reference is to the object it names, built as its own type first; a list or
+     * array where an array is declared is built as that array; and, unlike {@link #toJava}, the maps it reads are
+     * filled before it returns (otherwise at the end of the read). A value that refers to {@code holder} cannot be
+     * given before {@code holder} exists: that is an error.
+     *
+     * @param holder the object being built from the value (may be null)
+     * @param type   the declared type of the value: a parameter's or a record component's generic type
+     * @param value  the value read (a scalar, JsonObject, list or array)
+     * @return the value as {@code type}
+     */
+    public Object toJavaArgument(JsonObject holder, Type type, Object value) {
+        if (creating == null) {
+            creating = Collections.newSetFromMap(new IdentityHashMap<>());
+        }
+        boolean added = holder != null && creating.add(holder);
+        try {
+            if (refersToObjectBeingCreated(value)) {
+                Class<?> c = holder == null ? null : holder.getRawType();
+                throw new JsonIoException((c == null ? "An object" : c.getName())
+                        + " is created from a value that refers to it: it cannot be given it before it exists");
+            }
+            return readArgument(type, value);
+        } finally {
+            if (added) {
+                creating.remove(holder);
+            }
+        }
+    }
+
+    private boolean refersToObjectBeingCreated(Object value) {
+        return value instanceof JsonObject && ((JsonObject) value).isReference() && creating != null
+                && creating.contains(references.getOrThrow(((JsonObject) value).getReferenceId()));
+    }
+
+    private Object readArgument(Type type, Object value) {
         int pendingMaps = mapsToRehash.size();
-        Object argument = readCreatorArgument(creator, name, param, value);
+        Object argument = readArgumentAsType(type, value);
         // A map is filled at the end of the read (rehashMaps), but a creator is given its argument now: the maps read
         // for it are filled now too, else it saw them empty (Map.copyOf(m), a sum over m). Read through to the end,
         // their keys are complete; the end fills them again, with what references resolved later give.
@@ -2123,25 +2168,22 @@ public abstract class Resolver {
         return argument;
     }
 
-    private Object readCreatorArgument(Executable creator, String name, Parameter param, Object value) {
-        Type type = param.getParameterizedType();
+    private Object readArgumentAsType(Type type, Object value) {
         if (value instanceof JsonObject && ((JsonObject) value).isReference()) {
             long id = ((JsonObject) value).getReferenceId();
             JsonObject referenced = references.getOrThrow(id);
-            if (creating != null && creating.contains(referenced)) {
-                throw new JsonIoException(creator.getDeclaringClass().getName() + " is created with '" + name
-                        + "', which refers to the object being created: its creator cannot be given it before it exists");
-            }
             if (!referenced.isFinished()) {
                 // Built as what it is where it is defined; an @IoValue class gives its id to its value meanwhile
                 Type own = referenced.getType();
                 toJava(own == null || own == Object.class ? type : own, referenced);
             }
             return convertToType(references.getOrThrow(id).getTarget(), type);
-        } else if (param.getType().isArray() && (value instanceof Collection || value instanceof Object[])) {
+        }
+        Class<?> raw = TypeUtilities.getRawClass(type);
+        if (raw != null && raw.isArray() && (value instanceof Collection || value instanceof Object[])) {
             // An array parameter: built as its type, its elements read as its component type
             JsonObjectArray array = new JsonObjectArray();
-            array.setType(param.getType());
+            array.setType(raw);
             array.setItems(value instanceof Collection ? ((Collection<?>) value).toArray() : (Object[]) value);
             value = array;
         }
