@@ -1101,7 +1101,8 @@ public class WriteOptionsBuilder {
 
     /**
      * Set to always show type. TOON (which writes no type unless one of these is called) then writes {@code $type}
-     * on every value but a String, Long, Double or Boolean, which it reads back as themselves.
+     * on every value but a String, Long, Double or Boolean, which it reads back as themselves, and one where a
+     * primitive's wrapper is declared ({@code List<Integer>}, {@code Integer[]}, an {@code Integer} field), as JSON.
      *
      * @return WriteOptionsBuilder for chained access.
      */

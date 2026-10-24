@@ -339,7 +339,7 @@ The `@type` field on the root object can be controlled when using `showTypeInfoM
 **Note:** The current default is to show the root type (for backward compatibility), but this default will likely change to omit root type in a future release.
 
 **Validation Rules:**
-- `showTypeInfoAlways()` — *always* show `@type` on all objects, root type control not allowed
+- `showTypeInfoAlways()` — *always* show `@type` on all objects (but a String, Long, Double or Boolean, and a value where its primitive's wrapper is declared, as `List<Integer>`: the declaration gives it), on fields, array elements and the elements, keys and values of declared collections and maps alike, in JSON and TOON; root type control not allowed
 - `showTypeInfoNever()` — *never* show `@type` on any object, root type control not allowed
 - `showTypeInfoMinimal()` (default) — allows `showRootTypeInfo()` / `omitRootTypeInfo()` for fine-grained control
 - `showTypeInfoMinimalPlus()` — allows `showRootTypeInfo()` / `omitRootTypeInfo()` for fine-grained control

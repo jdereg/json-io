@@ -333,6 +333,7 @@ public class ToonWriter implements Closeable, Flushable {
     private final String typeKey;
     private final boolean typeMetadataEnabled;
     private final boolean alwaysType;       // showTypeInfoAlways: $type on every value but the four TOON reads as is
+                                            // and one where a primitive's wrapper is declared
     private final boolean minimalPlusType;  // showTypeInfoMinimalPlus: also leaves off what JSON's minimal-plus does
     private final boolean rootType;         // $type on the root (always, or minimal unless omitRootTypeInfo)
     // Type info on: the declared element (Map: value) and key types of the container about to be written, from its
@@ -752,7 +753,7 @@ public class ToonWriter implements Closeable, Flushable {
      *       interface (ArrayList for List, LinkedHashMap for Map, ...).</li>
      *   <li>Minimal-plus: nor where JSON's minimal-plus leaves it off -- an int, short, byte or float in an Object slot
      *       (read back as a long or a double), one date or number type where another is declared (converted).</li>
-     *   <li>Always: on every value.</li>
+     *   <li>Always: on every value but where a primitive's wrapper is declared (List&lt;Integer&gt;), as JSON.</li>
      * </ul>
      * Never on a String, Long, Double or Boolean class, which TOON reads back as themselves (but see
      * {@link #needsType(Object, Class)} for a whole-number Double), nor where a primitive is
@@ -768,8 +769,13 @@ public class ToonWriter implements Closeable, Flushable {
                 || declared.isPrimitive() || JsonObject.class.isAssignableFrom(c)) {
             return false;
         }
-        if (alwaysType || forceShowType) {
+        if (forceShowType) {
             return true;
+        }
+        if (alwaysType) {
+            // As JSON writes always mode: where a primitive's wrapper is declared (List<Integer>, Integer[], an Integer
+            // field), the declaration gives the type
+            return !Primitives.isPrimitive(declared);
         }
         // Object, the most common declaration (a map's value, a raw list's element), has no natural default and is no
         // enum: skip both lookups for it
@@ -791,6 +797,10 @@ public class ToonWriter implements Closeable, Flushable {
     private boolean needsType(Object value, Class<?> declared) {
         Class<?> c = value.getClass();
         if (needsType(c, declared)) {
+            return true;
+        }
+        if (alwaysType && !declared.isPrimitive() && isNegativeZero(value)) {
+            // Where its wrapper is declared too: a TOON number has no -0, its typed form ("-0.0") keeps the sign
             return true;
         }
         if (!typeMetadataEnabled || (c != Double.class && c != Float.class) || declared == c
