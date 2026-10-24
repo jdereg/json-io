@@ -1001,8 +1001,8 @@ public class ObjectResolver extends Resolver
                 continue;
             }
 
-            // Strategy 8: FALLBACK - direct add
-            col.add(element);
+            // Strategy 8: FALLBACK - direct add (a TOON list as the list or array type declared, see declaredFormOf)
+            col.add(declaredFormOf(element, elementType));
             idx++;
         }
     }
@@ -1375,7 +1375,8 @@ public class ObjectResolver extends Resolver
                     && ((String) element).trim().isEmpty()
                     && effectiveRawComponentType != String.class
                     && effectiveRawComponentType != Object.class;
-            setArrayElement(array, refArray, i, isEmptyString ? null : element, isPrimitive);
+            setArrayElement(array, refArray, i, isEmptyString ? null : declaredFormOf(element, effectiveComponentType),
+                    isPrimitive);
         }
         jsonObj.clear();
     }
@@ -1746,6 +1747,25 @@ public class ObjectResolver extends Resolver
      * @param componentType The full generic type for the nested array
      * @return The created array instance
      */
+    /**
+     * {@code element}, when it is a list TOON read (a java.util.List, where JSON's parser gives an Object[]) in a place
+     * declared as another list or array type -- a List&lt;Tags&gt;'s element, a Tags[]'s, a
+     * List&lt;LinkedList&lt;String&gt;&gt;'s -- built as that type, as Strategy 6 builds JSON's array. It stayed the
+     * ArrayList it was read as (an ArrayStoreException in an array). A list already of the declared type, or a place
+     * declared as anything else, keeps it; any other element is itself.
+     */
+    private Object declaredFormOf(Object element, Type declared) {
+        if (!(element instanceof Collection)) {
+            return element;
+        }
+        Class<?> raw = TypeUtilities.getRawClass(declared);
+        if (raw == null || raw.isInstance(element) || !(raw.isArray() || Collection.class.isAssignableFrom(raw))) {
+            return element;
+        }
+        Object[] items = ((Collection<?>) element).toArray();
+        return raw == char[].class ? handleCharArrayElement(items) : handleNestedArrayElement(items, declared);
+    }
+
     private Object handleNestedArrayElement(Object[] arrayElement, Type componentType) {
         JsonObject jsonArray = new JsonObjectArray();
         jsonArray.setItems(arrayElement);
