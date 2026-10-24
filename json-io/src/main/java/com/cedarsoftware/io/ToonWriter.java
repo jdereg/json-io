@@ -1451,7 +1451,7 @@ public class ToonWriter implements Closeable, Flushable {
             BigDecimal bd = (BigDecimal) num;
             if (typeMetadataEnabled) {
                 // With type info on, its text, as JSON writes it: a TOON number drops the scale (1.50 is 1.5)
-                writeQuotedString(MathUtilities.toPlainString(bd, writeOptions.getConverterOptions().getMaxPlainDigits()));
+                writeQuotedString(Writers.bigDecimalText(bd, writeOptions.getConverterOptions().getMaxPlainDigits()));
                 return;
             }
             if (!MathUtilities.fitsPlainDigits(bd.stripTrailingZeros(),

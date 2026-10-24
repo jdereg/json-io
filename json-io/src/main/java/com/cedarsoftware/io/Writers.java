@@ -256,6 +256,15 @@ public class Writers {
     }
 
     /**
+     * A BigDecimal's text, which reads back as the same number with the same scale: plain digits (1.50, 0.0000001) up
+     * to {@code maxPlainDigits}, else its exponent form (1E+999999999 written out is a billion digits); and the
+     * exponent form when the scale is negative (1E+3), whose plain digits (1000) are another scale.
+     */
+    static String bigDecimalText(BigDecimal value, int maxPlainDigits) {
+        return value.scale() < 0 ? value.toString() : MathUtilities.toPlainString(value, maxPlainDigits);
+    }
+
+    /**
      * A number's JSON text: a Double or Float as the decimal Double.toString / Float.toString print from JDK 19 on, on
      * every JDK (JDK 8 printed 1.0E23 as 9.999999999999999E22); any other number its toString().
      */
@@ -1077,9 +1086,7 @@ public class Writers {
             BigDecimal big = (BigDecimal) o;
             // Emit as a quoted JSON string (not a number literal) so JS / Jackson clients
             // that store numbers as doubles do not lose precision on arbitrary-scale BigDecimal.
-            // Plain digits up to ConverterOptions.getMaxPlainDigits(); past that its exponent form
-            // (1E+999999999 written out is a billion digits).
-            gen.writeStringUnescaped(MathUtilities.toPlainString(big,
+            gen.writeStringUnescaped(bigDecimalText(big,
                     context.getWriteOptions().getConverterOptions().getMaxPlainDigits()));
         }
 

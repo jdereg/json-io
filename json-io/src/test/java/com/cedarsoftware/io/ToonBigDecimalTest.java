@@ -90,13 +90,14 @@ class ToonBigDecimalTest {
         }
     }
 
-    /** As JSON writes it: plain digits, so an exponent's scale (1E+3) becomes 1000's. */
+    /** As JSON writes it: plain digits, and a negative scale (1E+3) in its exponent form, which keeps it. */
     @Test
     void theTextIsWhatJsonWrites() {
         Prices p = prices(new BigDecimal("1E+3"));
         String toon = JsonIo.toToon(p, new WriteOptionsBuilder().showTypeInfoMinimal().build());
-        assertTrue(toon.contains("dec: \"1000\""), toon);
-        assertTrue(JsonIo.toJson(p, null).contains("\"dec\":\"1000\""));
+        assertTrue(toon.contains("dec: \"1E+3\""), toon);
+        assertTrue(JsonIo.toJson(p, null).contains("\"dec\":\"1E+3\""));
+        assertExactly(p, JsonIo.fromToon(toon, null).asClass(Prices.class), true, toon);
     }
 
     /** Without type info TOON writes numbers, as before; a BigDecimal read from one is the number its text is. */

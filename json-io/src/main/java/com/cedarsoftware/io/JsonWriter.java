@@ -2537,7 +2537,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 continue;
             }
             Object key = att2value.getKey();
-            String keyStr = (key == null) ? "null" : Converter.convert(key, String.class);
+            // a BigDecimal key as a BigDecimal value is written, keeping its scale (Converter writes 1E+3 as 1000)
+            String keyStr = key == null ? "null" : key instanceof BigDecimal
+                    ? Writers.bigDecimalText((BigDecimal) key, writeOptions.getConverterOptions().getMaxPlainDigits())
+                    : Converter.convert(key, String.class);
             gen.writeFieldName(keyStr);
             writeCollectionElement(value);
             gen.markValue();

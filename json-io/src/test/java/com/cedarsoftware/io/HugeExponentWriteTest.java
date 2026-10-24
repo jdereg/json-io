@@ -53,8 +53,11 @@ class HugeExponentWriteTest {
         Holder holder = new Holder();
         holder.amount = new BigDecimal("999999999999999.99");
         assertTrue(JsonIo.toJson(holder, null).contains("999999999999999.99"));
+        holder.amount = new BigDecimal("999000000000000");
+        assertTrue(JsonIo.toJson(holder, null).contains("\"999000000000000\""));
+        // A negative scale is written in its exponent form, which keeps it; a TOON number has no scale
         holder.amount = new BigDecimal("9.99E14");
-        assertTrue(JsonIo.toJson(holder, null).contains("999000000000000"));
+        assertTrue(JsonIo.toJson(holder, null).contains("\"9.99E+14\""));
         assertTrue(JsonIo.toToon(holder, null).contains("999000000000000"));
         StringWriter out = new StringWriter();
         try (JsonGenerator gen = JsonIo.createGenerator(out)) {
