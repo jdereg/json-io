@@ -680,6 +680,13 @@ public class ObjectResolver extends Resolver
                     injector.inject(target, converter.convert(rhs, rawType));
                     return;
                 }
+                // 4c. A class written as the single value its @IoValue method returns, from that value. Where the
+                // field is declared as that class, the fallback below would fail: say why instead.
+                Object built = fromValueForm(rhs, rawType, rawType == injector.getType());
+                if (built != NO_VALUE_FORM) {
+                    injector.inject(target, built);
+                    return;
+                }
             }
             // 7. FALLBACK for scalars - empty string to null, or direct inject
             if (rhs instanceof String && StringUtilities.isEmpty((String) rhs) && rawType != String.class) {
@@ -1428,7 +1435,9 @@ public class ObjectResolver extends Resolver
                 if (converter.isConversionSupportedFor(valueClass, rawInferred)) {
                     return converter.convert(o, rawInferred);
                 }
-                return null;
+                // A class written as the single value its @IoValue method returns (List<EmailAddress>)
+                Object built = fromValueForm(o, rawInferred, false);
+                return built == NO_VALUE_FORM ? null : built;
             }
 
             // Fast path: If target is Object or compatible, no conversion needed

@@ -864,6 +864,12 @@ public abstract class Resolver {
             }
         }
 
+        // 3b. A class written as the single value its @IoValue method returns, from that value
+        Object built = fromValueForm(value, targetClass, true);
+        if (built != NO_VALUE_FORM) {
+            return built;
+        }
+
         // 4. Lenient mode for complex objects: accept if they share meaningful common ancestors
         //    This is for POJOs/complex objects, NOT for primitives or simple types.
         //    Only apply this when value is a "complex" object (not a primitive wrapper, String, etc.)
@@ -1956,6 +1962,50 @@ public abstract class Resolver {
         } catch (Exception e) {
             throw new JsonIoException("@IoCreator invocation failed for " + creator.getDeclaringClass().getName(), e);
         }
+    }
+
+    /** What {@link #fromValueForm} returns when the value is not read as an {@code @IoValue} class. */
+    static final Object NO_VALUE_FORM = new Object();
+
+    /**
+     * {@code value}, a string, number or boolean, as {@code targetClass} when that class is written as the single
+     * value its {@code @IoValue} method returns: built by its one-parameter {@code @IoCreator}, as the
+     * {"@type":..,"value":..} form is. That value alone is what json-io writes where the class is declared (a field, a
+     * List&lt;EmailAddress&gt;), and up to 4.117.0 it did not read back: an error, or a String in the list. An empty
+     * string stays what it was (null in a field) unless the creator takes text.
+     *
+     * @param explain when the class has an {@code @IoValue} method but no one-parameter {@code @IoCreator}, throw
+     *                saying so, instead of returning {@link #NO_VALUE_FORM}: for a caller whose next step is an error
+     * @return the instance, or {@link #NO_VALUE_FORM}
+     */
+    Object fromValueForm(Object value, Class<?> targetClass, boolean explain) {
+        if (!(value instanceof String || value instanceof Number || value instanceof Boolean
+                || value instanceof Character)) {
+            return NO_VALUE_FORM;
+        }
+        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(targetClass);
+        Method valueMethod = meta.getValueMethod();
+        if (valueMethod == null) {
+            return NO_VALUE_FORM;
+        }
+        boolean empty = value instanceof String && ((String) value).isEmpty();
+        Executable creator = meta.getCreator();
+        if (creator == null || creator.getParameterCount() != 1) {
+            if (explain && !empty) {
+                throw new JsonIoException(targetClass.getName() + " is written as the single value its @IoValue method "
+                        + valueMethod.getName() + "() returns, and reading it back from that value takes an @IoCreator"
+                        + " with one parameter: " + (creator == null ? "it has no @IoCreator"
+                        : "its @IoCreator has " + creator.getParameterCount()));
+            }
+            return NO_VALUE_FORM;
+        }
+        Parameter param = creator.getParameters()[0];
+        if (empty && !param.getType().isAssignableFrom(String.class)) {
+            return NO_VALUE_FORM;
+        }
+        Map<Object, Object> args = new LinkedHashMap<>();
+        args.put(AnnotationResolver.getParameterJsonKey(param), value);
+        return invokeCreator(creator, args);
     }
 
     /**

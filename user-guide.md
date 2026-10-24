@@ -1228,6 +1228,7 @@ public class EmailAddress {
 }
 // Serializes as: "user@example.com" (not {"address":"user@example.com"})
 ```
+It reads back through the class's one-parameter `@IoCreator`, which is given that value, converted to its parameter's type. Where type info is needed (a field declared `Object`), it is written as `{"@type":"...EmailAddress","value":"user@example.com"}`, which reads back the same way.
 
 #### `@IoIgnoreType` — Type-Level Exclusion
 When placed on a class, all fields of that type are excluded from serialization and deserialization across all classes. Useful for cross-cutting exclusion of internal metadata types. Equivalent to Jackson's `@JsonIgnoreType`.
