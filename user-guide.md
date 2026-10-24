@@ -961,7 +961,7 @@ This provides comprehensive coverage far exceeding other TOON implementations:
 | **Collections** | `List`, `Set`, `Collection`, `EnumSet` | Array `[N]: ...` or list format |
 | **Maps** | `Map`, `HashMap`, `TreeMap`, etc. | Object with key-value pairs |
 | **Arrays** | `Object[]`, primitive arrays (`int[]`, `double[]`, etc.) | Inline `[N]: a,b,c` or list format |
-| **Enums** | Any `Enum` type | Enum name as string |
+| **Enums** | Any `Enum` type | Enum name as string; with an `@IoValue` or `@JsonValue` method, that value |
 | **Other** | `Throwable`, custom objects with accessible fields | Object with fields |
 
 **Comparison with JToon (toon-format/toon-java):**
@@ -1232,6 +1232,8 @@ It reads back through the class's one-parameter `@IoCreator`, which is given tha
 TOON writes it the same way (`email: user@example.com`; with type info, `$type` and `value`). An object written as its value carries no `@id`: each place that holds it holds the value, as each place holding a String does, so it reads back as equal objects rather than one shared object. When the value is itself an object, that object keeps its identity as any object does: a reference to it elsewhere reads back as the value, and a place declared as the class that holds such a reference gets the class built around it.
 
 The method may return an object, a list or a map (`@IoValue Address address()` with `@IoCreator Site(Address address)`). The creator then takes the value whole: a JSON object holding the creator parameter's key is the class's fields (`{"address":{...}}`, as TOON wrote such a class through 4.117.0), and any other object, or an array, is the value itself. Jackson's `@JsonCreator(mode = DELEGATING)` or `mode = PROPERTIES` decides, when given. A null value is written as null and reads back as null.
+
+On an enum, the method's value is written in place of the name, wherever the enum appears (a field, a list, an `EnumSet`'s items, an `EnumMap`'s and any map's keys, the root), as JSON and as TOON, as Jackson writes it: `GREEN("g")` with `@JsonValue String code()` is `"g"`, and an `int` value is a number. It reads back from the value, and from the name, so what json-io wrote before still reads; a value that is also another constant's name is the value. A custom writer registered for the enum still comes first.
 
 #### `@IoIgnoreType` — Type-Level Exclusion
 When placed on a class, all fields of that type are excluded from serialization and deserialization across all classes. Useful for cross-cutting exclusion of internal metadata types. Equivalent to Jackson's `@JsonIgnoreType`.

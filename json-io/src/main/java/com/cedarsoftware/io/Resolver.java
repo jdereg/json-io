@@ -860,7 +860,7 @@ public abstract class Resolver {
                 if (value instanceof JsonObject && !Map.class.isAssignableFrom(targetClass)) {
                     resolveTypedValues((JsonObject) value);
                 }
-                return converter.convert(value, targetClass);
+                return enumOrConvert(value, targetClass);
             } catch (Exception e) {
                 // For String→Class conversion from plain JSON strings, if the class is not found,
                 // treat it as a type mismatch rather than exposing "class not found".
@@ -2119,6 +2119,83 @@ public abstract class Resolver {
             value = array;
         }
         return toJava(type, value);
+    }
+
+    // An enum written by its @IoValue (or Jackson's @JsonValue) method: its constants by the value each is written as
+    private static final ClassValue<Map<Object, Object>> ENUM_BY_VALUE = new ClassValue<Map<Object, Object>>() {
+        @Override
+        protected Map<Object, Object> computeValue(Class<?> type) {
+            Class<?> enumClass = ClassUtilities.getClassIfEnum(type);
+            Method valueMethod = enumClass == null ? null : AnnotationResolver.getMetadata(enumClass).getValueMethod();
+            if (valueMethod == null) {
+                return Collections.emptyMap();
+            }
+            Map<Object, Object> byValue = new HashMap<>();
+            for (Object constant : enumClass.getEnumConstants()) {
+                Object value;
+                try {
+                    value = valueMethod.invoke(constant);
+                } catch (Exception e) {
+                    throw new JsonIoException("@IoValue method invocation failed for " + enumClass.getName(), e);
+                }
+                if (value != null) {
+                    byValue.putIfAbsent(enumKey(value), constant);
+                }
+            }
+            return byValue;
+        }
+    };
+
+    /** A value as it is looked up: a whole number as a Long, another number as a Double, a char as text. */
+    private static Object enumKey(Object value) {
+        if (value instanceof Number && !(value instanceof Long)) {
+            double d = ((Number) value).doubleValue();
+            return d == Math.rint(d) && Math.abs(d) < 9.0e15 ? (Object) ((Number) value).longValue() : (Object) d;
+        }
+        return value instanceof Character ? value.toString() : value;
+    }
+
+    /**
+     * {@code value} as the constant of {@code type}, an enum written by its {@code @IoValue} (or Jackson's
+     * {@code @JsonValue}) method, that the method returns it for: {@code "g"} for {@code GREEN("g")}. Null when
+     * {@code type} is no such enum or no constant has that value; the caller then reads it as a name, as json-io wrote
+     * such an enum through 4.117.0. Where a value is also another constant's name, the value wins.
+     */
+    public static Object enumOfValue(Class<?> type, Object value) {
+        if (value == null || type == null || !Enum.class.isAssignableFrom(type)) {
+            return null;
+        }
+        Map<Object, Object> byValue = ENUM_BY_VALUE.get(type);
+        return byValue.isEmpty() ? null : byValue.get(enumKey(value));
+    }
+
+    /**
+     * {@code value} converted to {@code type} by the Converter, which reads an enum by its name; an enum written by its
+     * {@code @IoValue} method is read from that value first ({@link #enumOfValue}).
+     */
+    protected Object enumOrConvert(Object value, Class<?> type) {
+        if (value != null && Enum.class.isAssignableFrom(type) && !isPlainEnum(type)) {
+            Map<Object, Object> byValue = ENUM_BY_VALUE.get(type);
+            if (byValue.isEmpty()) {
+                plainEnums[nextPlainEnum++ & 3] = type;
+            } else {
+                Object constant = byValue.get(enumKey(value));
+                if (constant != null) {
+                    return constant;
+                }
+            }
+        }
+        return converter.convert(value, type);
+    }
+
+    // The last enum classes this read met without an @IoValue method: their constants are read by name alone, and a
+    // look among them costs less than the class's lookup (an enum-heavy read slowed 2-4% with it on every value)
+    private final Class<?>[] plainEnums = new Class<?>[4];
+    private int nextPlainEnum;
+
+    private boolean isPlainEnum(Class<?> type) {
+        Class<?>[] plain = plainEnums;
+        return plain[0] == type || plain[1] == type || plain[2] == type || plain[3] == type;
     }
 
     /** What {@link #fromValueForm} returns when the value is not read as an {@code @IoValue} class. */

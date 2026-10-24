@@ -2425,7 +2425,7 @@ public class WriteOptionsBuilder {
                 protected ToonWriter.ToonWriteType computeValue(Class<?> c) {
                     ToonWriter.ToonWriteType type = ToonWriter.writeTypeOf(c);
                     return type == ToonWriter.ToonWriteType.POJO && (findDataWriter(DefaultWriteOptions.this, c) != null
-                            || findValueMethod(DefaultWriteOptions.this, c) != null)
+                            || findValueMethod(DefaultWriteOptions.this, c) != null || Enum.class.isAssignableFrom(c))
                             ? ToonWriter.ToonWriteType.DATA : type;
                 }
             };
@@ -2874,7 +2874,11 @@ public class WriteOptionsBuilder {
                 return getOrCreateAnnotationWriter(writerClass);
             }
             Class<?> enumClass = ClassUtilities.getClassIfEnum(c);
-            return (enumClass != null) ? enumWriter : nullWriter;
+            if (enumClass == null) {
+                return nullWriter;
+            }
+            // An enum with an @IoValue (or @JsonValue) method is written as that value, as any such class is
+            return AnnotationResolver.getMetadata(enumClass).getValueMethod() != null ? nullWriter : enumWriter;
         }
         
         public Object getCustomOption(String key)

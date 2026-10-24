@@ -215,6 +215,10 @@ public class ToonWriter implements Closeable, Flushable {
         if (Number.class.isAssignableFrom(type)) return ToonWriteType.NUMBER;
         if (type == Boolean.class) return ToonWriteType.BOOLEAN;
         if (type == Character.class) return ToonWriteType.CHARACTER;
+        // An enum with an @IoValue (or @JsonValue) method is written as that value (DATA), as any such class is
+        if (Enum.class.isAssignableFrom(type) && AnnotationResolver.getMetadata(type).getValueMethod() != null) {
+            return ToonWriteType.POJO;
+        }
         if (Converter.isConversionSupportedFor(type, String.class)) return ToonWriteType.CONVERTER_SUPPORTED;
         return ToonWriteType.POJO;
     }
@@ -241,7 +245,7 @@ public class ToonWriter implements Closeable, Flushable {
             return defaultWriteOptions.getToonWriteType(type) == ToonWriteType.DATA;
         }
         return WriteOptionsBuilder.getDataWriter(writeOptions, type) != null
-                || WriteOptionsBuilder.findValueMethod(writeOptions, type) != null;
+                || WriteOptionsBuilder.findValueMethod(writeOptions, type) != null || Enum.class.isAssignableFrom(type);
     }
 
     // The last object asked for its data, and that data: isPrimitive and the writer ask in turn for the same object
@@ -266,6 +270,9 @@ public class ToonWriter implements Closeable, Flushable {
         Class<?> c = holder.getClass();
         Method valueMethod = WriteOptionsBuilder.getValueMethod(writeOptions, c,
                 WriteOptionsBuilder.getWriteFieldPlans(writeOptions, c));
+        if (valueMethod == null && holder instanceof Enum) {
+            return ((Enum<?>) holder).name();      // a custom writer set aside its @IoValue method: its name, as before
+        }
         try {
             return valueMethod.invoke(holder);
         } catch (Exception e) {
@@ -2800,7 +2807,7 @@ public class ToonWriter implements Closeable, Flushable {
             if (n == size) {
                 return null;
             }
-            keys[n] = key == null ? "null" : key.toString();
+            keys[n] = keyText(key);
             quoted[n] = needsQuotingForMapKey(keys[n]);
             n++;
         }
@@ -3051,7 +3058,7 @@ public class ToonWriter implements Closeable, Flushable {
                 }
 
                 Object key = entry.getKey();
-                String keyStr = (key == null) ? "null" : key.toString();
+                String keyStr = keyText(key);
                 writeFieldEntryInline(keyStr, entry.getValue(), keyNeedsQuoting(map, keyStr),
                         valueTypeIn(map, key, valueType));
             }
@@ -3305,6 +3312,14 @@ public class ToonWriter implements Closeable, Flushable {
         return false;
     }
 
+    /** A simple map key's text: an enum written by its {@code @IoValue} method is its value, as JSON writes it. */
+    private String keyText(Object key) {
+        if (key == null) {
+            return "null";
+        }
+        return key instanceof Enum && isDataClass(key.getClass()) ? String.valueOf(dataOf(key)) : key.toString();
+    }
+
     /**
      * Check if an object can be used as a simple map key (written as a string).
      * Simple keys are: null, String, Number, Boolean, Character, Enum, Class.
@@ -3347,7 +3362,7 @@ public class ToonWriter implements Closeable, Flushable {
                 writeIndent();
 
                 Object key = entry.getKey();
-                String keyStr = (key == null) ? "null" : key.toString();
+                String keyStr = keyText(key);
                 writeFieldEntry(keyStr, entry.getValue(), keyNeedsQuoting(map, keyStr),
                         valueTypeIn(map, key, valueType));
             }

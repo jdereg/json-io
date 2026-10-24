@@ -677,9 +677,10 @@ public class ObjectResolver extends Resolver
                     injector.inject(target, converter.convert(rhs, rawType));
                     return;
                 }
-                // 4b. CONVERTER - container and general conversions when annotation/type override adjusted target type
+                // 4b. CONVERTER - container and general conversions when annotation/type override adjusted target
+                // type; an enum written by its @IoValue method from that value
                 if (converter.isConversionSupportedFor(rhsClass, rawType)) {
-                    injector.inject(target, converter.convert(rhs, rawType));
+                    injector.inject(target, enumOrConvert(rhs, rawType));
                     return;
                 }
                 // 4c. A class written as the single value its @IoValue method returns, from that value. Where the
@@ -1410,9 +1411,10 @@ public class ObjectResolver extends Resolver
                         return iso;
                     }
                 }
-                // Type mismatch - try converter directly (skip factory/reader overhead)
+                // Type mismatch - try converter directly (skip factory/reader overhead); an enum written by its
+                // @IoValue method from that value
                 if (converter.isConversionSupportedFor(valueClass, rawInferred)) {
-                    return converter.convert(o, rawInferred);
+                    return enumOrConvert(o, rawInferred);
                 }
                 // A class written as the single value its @IoValue method returns (List<EmailAddress>)
                 Object built = fromValueForm(o, rawInferred, false);
@@ -2187,7 +2189,7 @@ public class ObjectResolver extends Resolver
             innerValue = toJava(inner, rhs);
         } else if (innerType != Object.class && !innerType.isInstance(rhs)
                 && converter.isConversionSupportedFor(rhs.getClass(), innerType)) {
-            innerValue = converter.convert(rhs, innerType);
+            innerValue = enumOrConvert(rhs, innerType);
         } else if (innerType != Object.class && !innerType.isInstance(rhs)) {
             // A class written as the single value its @IoValue method returns: Optional<EmailAddress>
             Object built = fromValueForm(rhs, innerType, false);

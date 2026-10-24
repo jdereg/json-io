@@ -1075,6 +1075,10 @@ public class AnnotationResolver {
      * The method must be a no-arg instance method with a non-void return type.
      */
     private static Method scanValueMethod(Class<?> clazz) {
+        // An enum constant with a body is a subclass of its enum, which declares the method
+        if (clazz.getSuperclass() != null && clazz.getSuperclass().isEnum()) {
+            return scanValueMethod(clazz.getSuperclass());
+        }
         // Check for @IoValue first
         try {
             for (Method method : clazz.getDeclaredMethods()) {

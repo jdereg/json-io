@@ -2653,6 +2653,15 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         return true;
     }
 
+    /** What {@code valueMethod}, an {@code @IoValue} method, returns for {@code holder}. */
+    private static Object valueOf(Method valueMethod, Object holder) {
+        try {
+            return valueMethod.invoke(holder);
+        } catch (Exception e) {
+            throw new JsonIoException("@IoValue method invocation failed for " + holder.getClass().getName(), e);
+        }
+    }
+
     private void writeEnumSet(final EnumSet<?> enumSet) throws IOException {
         final boolean referenced = cycleSupport && this.objsReferenced.containsKey(enumSet);
 
@@ -2719,6 +2728,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // 4.112.0's text, kept byte for byte by showTypeInfoMinimalLegacy(), wrote an enum with more than two fields
         // as an object of them -- every value 0 for a JDK enum, whose fields cannot be read.
         final boolean legacyText = writeOptions.isMinimalLegacyShowingType();
+        // An enum with an @IoValue (or @JsonValue) method: each item is that value, as the enum is written elsewhere
+        final Method valueMethod = AnnotationResolver.getMetadata(enumClass).getValueMethod();
         boolean firstInSet = true;
         for (Enum<?> e : enumSet) {
             if (!firstInSet) {
@@ -2727,6 +2738,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
             firstInSet = false;
 
+            if (valueMethod != null) {
+                writeImpl(valueOf(valueMethod, e), false);
+                continue;
+            }
             List<WriteFieldPlan> mapOfFields = legacyText
                     ? WriteOptionsBuilder.getWriteFieldPlans(writeOptions, e.getClass()) : null;
             if (mapOfFields == null || mapOfFields.size() <= 2) {

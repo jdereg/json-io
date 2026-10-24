@@ -42,9 +42,14 @@ public class EnumClassFactory implements ClassFactory {
 
         Object value = jObj.getValue();
 
+        // {"@type":..,"value":..}: an enum written by its @IoValue method, or else a name
+        Object constant = Resolver.enumOfValue(clazz, value);
+        if (constant != null) {
+            return jObj.setFinishedTarget(constant, true);
+        }
         if (value instanceof String) {
             // Use Converter for String→Enum conversion
-            Enum<?> enumValue = (Enum<?>) resolver.getConverter().convert(value, c);
+            Enum<?> enumValue = (Enum<?>) resolver.getConverter().convert(value, clazz);
             return jObj.setFinishedTarget(enumValue, true);
         }
 

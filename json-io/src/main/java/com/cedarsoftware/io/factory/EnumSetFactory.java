@@ -95,6 +95,9 @@ public class EnumSetFactory implements ClassFactory {
                 // Use Converter for String→Enum conversion
                 Enum<?> enumConstant = (Enum<?>) resolver.getConverter().convert(enumName, itemEnumClass);
                 enumSet.add(enumConstant);
+            } else if (Resolver.enumOfValue(enumClass, item) != null) {
+                // An enum written by its @IoValue method: its values
+                enumSet.add((Enum) Resolver.enumOfValue(enumClass, item));
             } else if (item instanceof String) {
                 // Just enum names
                 String enumName = (String) item;
