@@ -1089,6 +1089,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private void processMap(Map<?, ?> map, Deque<Object> objectStack, int depth) {
+        if (tracedValueOfContainer(map, objectStack, depth)) {
+            return;
+        }
         if (map instanceof JsonObject) {
             JsonObject jsonObject = (JsonObject) map;
             int len = jsonObject.fastEntryCount();
@@ -1105,6 +1108,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     private void processCollection(Collection<?> collection, Deque<Object> objectStack, int depth) {
+        if (tracedValueOfContainer(collection, objectStack, depth)) {
+            return;
+        }
         for (Object item : collection) {
             traceVisit(item, objectStack, depth);
         }
@@ -1154,6 +1160,32 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     // held twice, through one holder or two, gets the @id). Referenced, a second place held {"@ref":n} to an @id
     // never written, which did not read back.
     private static final int VALUE_HOLDER = -2;
+
+    /**
+     * A collection or map written as the value of its {@code @IoValue} method, as writeImpl writes it: a value holder,
+     * its value traced in place of its elements (traced as a container, a second place holding it was written
+     * {"@ref":n} to an @id never written). False for any other.
+     */
+    private boolean tracedValueOfContainer(Object container, Deque<Object> objectStack, int depth) {
+        Class<?> c = container.getClass();
+        Class<?>[] plain = plainContainers;
+        if (plain[0] == c || plain[1] == c || plain[2] == c || plain[3] == c) {
+            return false;
+        }
+        if (AnnotationResolver.getMetadata(c).getValueMethod() == null
+                || WriteOptionsBuilder.findValueMethod(writeOptions, c) == null) {
+            plain[nextPlainContainer++ & 3] = c;
+            return false;
+        }
+        objVisited.put(container, VALUE_HOLDER);
+        traceValue(container, objectStack, depth);
+        return true;
+    }
+
+    // The last list and map classes the trace met that are written as lists and maps: a look among them costs less
+    // than the class's metadata lookup, which on every list and map cost a write 2-3%
+    private final Class<?>[] plainContainers = new Class<?>[4];
+    private int nextPlainContainer;
 
     /** Traces the value {@code holder}'s {@code @IoValue} method gives, at {@code depth}, one level below it. */
     private void traceValue(Object holder, Deque<Object> objectStack, int depth) {

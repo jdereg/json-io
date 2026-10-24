@@ -209,8 +209,14 @@ public class ToonWriter implements Closeable, Flushable {
     /** How TOON writes {@code type} whatever the custom writers: every category but DATA. */
     static ToonWriteType writeTypeOf(Class<?> type) {
         if (type.isArray()) return ToonWriteType.ARRAY;
-        if (Collection.class.isAssignableFrom(type)) return ToonWriteType.COLLECTION;
-        if (Map.class.isAssignableFrom(type)) return ToonWriteType.MAP;
+        if (Collection.class.isAssignableFrom(type) || Map.class.isAssignableFrom(type)) {
+            // A collection or map with an @IoValue (or @JsonValue) method is written as that value (DATA), as any such
+            // class is, where its elements went before (Jackson writes the value)
+            if (AnnotationResolver.getMetadata(type).getValueMethod() != null) {
+                return ToonWriteType.POJO;
+            }
+            return Collection.class.isAssignableFrom(type) ? ToonWriteType.COLLECTION : ToonWriteType.MAP;
+        }
         if (type == String.class) return ToonWriteType.STRING;
         if (Number.class.isAssignableFrom(type)) return ToonWriteType.NUMBER;
         if (type == Boolean.class) return ToonWriteType.BOOLEAN;
@@ -823,11 +829,12 @@ public class ToonWriter implements Closeable, Flushable {
             fields.put(typeKey, typeNameOf(value), AS_IS);
             fields.put(itemsKey, new String[] {new String((char[]) value)}, AS_IS);
             return fields;
-        } else if (value instanceof Map || value instanceof Collection) {
-            return containerForm(value, true);
         } else if (isDataClass(value.getClass()) && isInPlace(dataOf(value))) {
+            // (a list or map written as its @IoValue method's value too: a list or map is a data class only so)
             content = dataOf(value);
             source = value;
+        } else if (value instanceof Map || value instanceof Collection) {
+            return containerForm(value, true);
         } else {
             return value;
         }
@@ -3519,6 +3526,9 @@ public class ToonWriter implements Closeable, Flushable {
                 }
             }
         } else if (value instanceof Collection) {
+            if (wroteValueOfContainer(keyStr, value, keyNeedsQuoting, declared, false)) {
+                return;
+            }
             boolean typed = needsType(value.getClass(), declared);
             if (shouldWrapArrayOrCollectionValue(value) || typed) {
                 // When type metadata is needed, use writeCollection (which emits $type/$items).
@@ -3543,6 +3553,9 @@ public class ToonWriter implements Closeable, Flushable {
                 }
             }
         } else {
+            if (value instanceof Map && wroteValueOfContainer(keyStr, value, keyNeedsQuoting, declared, false)) {
+                return;
+            }
             // An object whose writer gives it as data written in its place (an Optional's content): that value,
             // laid out as itself (a list as "key[N]:", a scalar on the key's line)
             Object inPlace = inPlaceOf(value);
@@ -3675,6 +3688,9 @@ public class ToonWriter implements Closeable, Flushable {
                 }
             }
         } else if (value instanceof Collection) {
+            if (wroteValueOfContainer(keyStr, value, keyNeedsQuoting, declared, true)) {
+                return;
+            }
             boolean typed = needsType(value.getClass(), declared);
             if (shouldWrapArrayOrCollectionValue(value) || typed) {
                 writeKeyStringKnown(keyStr, keyNeedsQuoting);
@@ -3699,6 +3715,9 @@ public class ToonWriter implements Closeable, Flushable {
                 }
             }
         } else {
+            if (value instanceof Map && wroteValueOfContainer(keyStr, value, keyNeedsQuoting, declared, true)) {
+                return;
+            }
             // An object whose writer gives it as data written in its place (an Optional's content): that value,
             // laid out as itself (a list as "key[N]:", a scalar on the key's line)
             Object inPlace = inPlaceOf(value);
@@ -4381,6 +4400,9 @@ public class ToonWriter implements Closeable, Flushable {
     }
 
     private void pushReferenceCandidates(Deque<Object> stack, Object current) {
+        if ((current instanceof Map || current instanceof Collection) && pushedValueOfContainer(stack, current)) {
+            return;
+        }
         if (current instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) current;
             for (Map.Entry<?, ?> entry : map.entrySet()) {
@@ -4508,6 +4530,71 @@ public class ToonWriter implements Closeable, Flushable {
         }
         pushReferenceCandidate(stack, value);
     }
+
+    /**
+     * For a collection or map written as the value of its {@code @IoValue} method: its value, as for any object written
+     * so (pushValueOf), in place of its elements. False for any other collection or map: its static write type says
+     * which in one look, so the others pay no more.
+     */
+    private boolean pushedValueOfContainer(Deque<Object> stack, Object container) {
+        if (!isValueContainer(container.getClass())) {
+            return false;
+        }
+        pushValueOf(stack, container);
+        return true;
+    }
+
+    /**
+     * A list or map written as the value of its {@code @IoValue} method, as a field: written as that value, in its
+     * place (as JSON writes it), as a field entry or an inline one. False for any other list or map. Out of the field
+     * writers, which stay the size they were.
+     */
+    private boolean wroteValueOfContainer(String keyStr, Object value, boolean keyNeedsQuoting, Class<?> declared,
+                                          boolean inline) throws IOException {
+        if (!isValueContainer(value.getClass())) {
+            return false;
+        }
+        Object data = dataOf(value);
+        if (data instanceof Map) {
+            // A map for its value, as any object whose value is a map is written: its entries as its fields, after its
+            // $type where type info is on (JSON: {"@type":..,"value":{..}}), which reads back through its creator
+            writeKeyStringKnown(keyStr, keyNeedsQuoting);
+            out.write(":");
+            int levels = inline ? 2 : 1;
+            depth += levels;
+            writeNestedObject(value, needsType(value.getClass(), declared));
+            depth -= levels;
+            return true;
+        }
+        // Any other value as itself, with no $type of its own, as JSON writes it
+        Class<?> asItself = data == null ? Object.class : data.getClass();
+        if (inline) {
+            writeFieldEntryInline(keyStr, data, keyNeedsQuoting, asItself);
+        } else {
+            writeFieldEntry(keyStr, data, keyNeedsQuoting, asItself);
+        }
+        return true;
+    }
+
+    /**
+     * Whether {@code c}, a list or map class, is written as the value of its {@code @IoValue} method. The last four
+     * classes found written as lists and maps are remembered: a look among them costs less than the class's lookup,
+     * which on every list and map cost a write 1-2%.
+     */
+    private boolean isValueContainer(Class<?> c) {
+        Class<?>[] plain = plainContainers;
+        if (plain[0] == c || plain[1] == c || plain[2] == c || plain[3] == c) {
+            return false;
+        }
+        if (writeTypeCache.get(c) != ToonWriteType.POJO || !isDataClass(c)) {
+            plain[nextPlainContainer++ & 3] = c;
+            return false;
+        }
+        return true;
+    }
+
+    private final Class<?>[] plainContainers = new Class<?>[4];
+    private int nextPlainContainer;
 
     private void pushReferenceCandidate(Deque<Object> stack, Object candidate) {
         if (candidate == null) {

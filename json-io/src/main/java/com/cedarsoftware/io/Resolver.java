@@ -1926,7 +1926,11 @@ public abstract class Resolver {
                     String paramKey = AnnotationResolver.getParameterJsonKey(valueCreator.getParameters()[0]);
                     valueArgs.put(paramKey, args.get("value"));
                     instance = createWith(jsonObj, valueCreator, valueArgs);
-                } else if (creator != null) {
+                    if (instance instanceof Map || instance instanceof Collection) {
+                        // A map or list built from its value is complete: its "value" key is no entry of it
+                        return jsonObj.setFinishedTarget(instance, true);
+                    }
+                } else if (creator != null && !isContainerBuiltFromValue(targetClass, creator, valueCreator)) {
                     instance = createWith(jsonObj, creator, args);
                 } else if (Map.class.isAssignableFrom(targetClass)) {
                     instance = newMap(targetClass, args);
@@ -1937,6 +1941,14 @@ public abstract class Resolver {
         }
 
         return jsonObj.setTarget(instance);
+    }
+
+    /**
+     * A map or list whose creator builds it from its {@code @IoValue} value: given its entries or items (as TOON wrote
+     * one through 4.117.0), it is built as any map or list is, not by that creator.
+     */
+    private static boolean isContainerBuiltFromValue(Class<?> c, Executable creator, Executable valueCreator) {
+        return creator == valueCreator && (Map.class.isAssignableFrom(c) || Collection.class.isAssignableFrom(c));
     }
 
     // How an object read as an @IoValue class is written: as its fields, as {"@type":..,"value":..}, or as the value
@@ -2255,6 +2267,14 @@ public abstract class Resolver {
     public Object convertValue(Object value, Class<?> type) {
         if (toonNumbers && type == BigDecimal.class && value instanceof Double) {
             return toonDecimal((Double) value);
+        }
+        if (value != null && Map.class.isAssignableFrom(type) && !(value instanceof Map)) {
+            // A map written as the value of its @IoValue method, from that value (the Converter would read text as
+            // a map's own text form)
+            Object built = fromValueForm(value, type, false);
+            if (built != NO_VALUE_FORM) {
+                return built;
+            }
         }
         if (value != null && Enum.class.isAssignableFrom(type) && !isPlainEnum(type)) {
             EnumReading reading = ENUM_READING.get(type);
