@@ -2,6 +2,9 @@ package com.cedarsoftware.io;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -76,6 +79,14 @@ class MapsModeReadTest {
         public Plain plain = Plain.B;
         public Code[] arr = {Code.GREEN, Code.RED};
         public Object any = Code.RED;
+    }
+
+    public static class Sets {
+        public EnumSet<Plain> plains = EnumSet.of(Plain.A, Plain.B);
+        public EnumSet<Code> codes = EnumSet.of(Code.GREEN);
+        public Object any = EnumSet.of(Plain.B);
+        public List<Object> list = new ArrayList<>(Collections.singletonList(EnumSet.of(Plain.A)));
+        public Map<String, Object> map = new LinkedHashMap<>(Collections.singletonMap("k", EnumSet.of(Plain.B)));
     }
 
     public static class Mail {
@@ -170,6 +181,24 @@ class MapsModeReadTest {
         assertArrayEquals(new Object[] {Code.GREEN, Code.RED}, ((JsonObject) reads.get(1).get("arr")).getItems());
         String typeLast = "{\"@items\":[\"g\",\"r\"],\"@type\":\"" + Code[].class.getName() + "\"}";
         assertArrayEquals(new Code[] {Code.GREEN, Code.RED}, (Object[]) JsonIo.toMaps(typeLast, null).asClass(null));
+    }
+
+    /** An EnumSet holds its items: in a field or a map it read empty, in a list it threw (ClassCastException). */
+    @Test
+    void enumSetsHoldTheirItems() {
+        for (Map<?, ?> sets : Arrays.asList(json(new Sets(), null), json(new Sets(), ALWAYS), toon(new Sets(), MINIMAL),
+                toon(new Sets(), ALWAYS))) {
+            assertEquals(EnumSet.of(Plain.A, Plain.B), sets.get("plains"));
+            assertEquals(EnumSet.of(Code.GREEN), sets.get("codes"));
+            assertEquals(EnumSet.of(Plain.B), sets.get("any"));
+            assertEquals(EnumSet.of(Plain.B), ((Map<?, ?>) sets.get("map")).get("k"));
+        }
+        // In a list, as at the root: the object as read, the set its target
+        for (Map<?, ?> sets : Arrays.asList(json(new Sets(), null), json(new Sets(), ALWAYS))) {
+            Object list = sets.get("list");
+            Object element = list instanceof JsonObject ? ((JsonObject) list).getItems()[0] : ((Object[]) list)[0];
+            assertEquals(EnumSet.of(Plain.A), ((JsonObject) element).getTarget());
+        }
     }
 
     @Test

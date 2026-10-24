@@ -2981,25 +2981,14 @@ public abstract class Resolver {
     protected Object convertIfNonRefType(JsonObject jsonObj, Class<?> type) {
         if (type != null && readOptions.isNonReferenceableClass(type) &&
                 converter.isConversionSupportedFor(Map.class, type)) {
-            Object enumConstant = enumOfJsonObject(jsonObj, type);
-            return enumConstant != null ? enumConstant : converter.convert(resolveTypedValues(jsonObj), type);
+            if (Enum.class.isAssignableFrom(type)) {
+                // An enum written as an object, or an EnumSet ({"@enum":..,"@items":[..]}): by its factory, as at the
+                // root. The Converter read an EnumSet as a map, which holds none of its items: an empty set
+                return createInstance(jsonObj);
+            }
+            return converter.convert(resolveTypedValues(jsonObj), type);
         }
         return null;
-    }
-
-    /**
-     * An enum written as an object, {"@type":..,"name":..} (writeEnumAsJsonObject) or {"@type":..,"value":..} (one
-     * written by its @IoValue method, with its type), as its constant: read through its factory, its value, then its
-     * name ({@link #convertValue}). The Converter read such a map as a constant named "value", or from a null. Null
-     * when {@code type} is no enum or the object holds neither.
-     */
-    protected Object enumOfJsonObject(JsonObject jsonObj, Class<?> type) {
-        if (!Enum.class.isAssignableFrom(type)) {
-            return null;
-        }
-        Object name = jsonObj.get("name");
-        Object value = name != null ? name : jsonObj.getValue();
-        return value == null ? null : convertValue(value, type);
     }
 
     protected abstract Object resolveArray(Type suggestedType, List<Object> list);

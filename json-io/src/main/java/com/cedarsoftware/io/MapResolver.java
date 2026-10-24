@@ -489,6 +489,21 @@ public class MapResolver extends Resolver {
     }
 
     /**
+     * An enum written as an object, {"@type":..,"name":..} (writeEnumAsJsonObject) or {"@type":..,"value":..} (one
+     * written by its @IoValue method, with its type), as its constant: read through its factory, its value, then its
+     * name ({@link #convertValue}). The Converter read such a map as a constant named "value", or from a null. Null
+     * when {@code type} is no enum or the object holds neither.
+     */
+    private Object enumOfJsonObject(JsonObject jsonObj, Class<?> type) {
+        if (!Enum.class.isAssignableFrom(type)) {
+            return null;
+        }
+        Object name = jsonObj.get("name");
+        Object value = name != null ? name : jsonObj.getValue();
+        return value == null ? null : convertValue(value, type);
+    }
+
+    /**
      * Handles nested array elements, whether they come as JsonObject instances or raw arrays.
      *
      * @param element        The array element to handle.
@@ -683,6 +698,11 @@ public class MapResolver extends Resolver {
         Collection<Object> col = (Collection<Object>) jsonObj.getTarget();
         if (col == null) {
             col = (Collection<Object>) createInstance(jsonObj);
+            if (col instanceof EnumSet) {
+                // Built from its items by its factory (EnumSetFactory), as at the root: its names were added to it
+                // again (a ClassCastException) where an EnumSet stands in a list or map
+                return;
+            }
         }
 
         // Performance: Pre-size ArrayList to avoid repeated resizing
