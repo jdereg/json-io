@@ -1296,8 +1296,8 @@ final class CharStreamGenerator extends JsonGenerator {
     }
 
     /**
-     * Whether the surrogate {@code ch} at {@code i} is half of a pair: a high one before a low one, or a low one after a
-     * high one. Out of the loop, which then never moves its own index and stays a counted loop.
+     * Whether the surrogate {@code ch} at {@code i} is half of a pair: a high one before a low one, or a low one after
+     * a high one. Out of the loop, which then never moves its own index and stays a counted loop.
      */
     private static boolean isPaired(String s, int i, char ch) {
         return ch <= Character.MAX_HIGH_SURROGATE
@@ -1352,7 +1352,8 @@ final class CharStreamGenerator extends JsonGenerator {
                     case '\n': output.write("\\n"); break;
                     case '\r': output.write("\\r"); break;
                     case '\t': output.write("\\t"); break;
-                    default:   output.write(CONTROL_UNICODE_ESCAPES[codePoint]);
+                    default:   output.write(codePoint == 0x7F ? ESCAPE_STRINGS[0x7F]      // DEL, past the 32 controls
+                            : CONTROL_UNICODE_ESCAPES[codePoint]);
                 }
             } else if (codePoint == '\'') {
                 output.write("\\'");
