@@ -693,7 +693,7 @@ A value that carries its type is written as an object, as JSON writes it:
 ```
 anything:
   $type: BigDecimal
-  value: 1.25
+  value: "1.25"
 shapes[2]:
   - $type: com.example.Circle
     radius: 1
@@ -947,7 +947,7 @@ This provides comprehensive coverage far exceeding other TOON implementations:
 | Category | Types | TOON Output |
 |----------|-------|-------------|
 | **Primitives & Wrappers** | `byte`, `Byte`, `short`, `Short`, `int`, `Integer`, `long`, `Long`, `float`, `Float`, `double`, `Double`, `boolean`, `Boolean`, `char`, `Character` | Numeric form or `true`/`false` |
-| **Big Numbers** | `BigInteger`, `BigDecimal` | Numeric (unquoted) |
+| **Big Numbers** | `BigInteger`, `BigDecimal` | Numeric (unquoted); with type info on, a `BigDecimal` as its text (`"1.50"`), which keeps its scale, as JSON writes it |
 | **Atomic Types** | `AtomicInteger`, `AtomicLong`, `AtomicBoolean` | Unwrapped numeric/boolean value |
 | **Atomic Holders** | `AtomicReferenceArray`, `AtomicMarkableReference`, `AtomicStampedReference` | Object: `array` (its elements), or `pair` (`reference` with `mark` or `stamp`) |
 | **Concurrency** | `AtomicIntegerArray`, `AtomicLongArray`, `Semaphore`, `CountDownLatch`, `ReentrantLock`, `ReentrantReadWriteLock` | Object with what the type's factory reads: `value` (the numbers), `permits` and `fair`, `count`, `fair` |

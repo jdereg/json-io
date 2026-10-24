@@ -71,7 +71,7 @@ public class ArrayFactory<T> implements ClassFactory {
                     Object val = items[i];
                     if (val != null) {
                         if (val instanceof JsonObject) {
-                            val = unwrapJsonObject((JsonObject) val, componentType, converter);
+                            val = unwrapJsonObject((JsonObject) val, componentType, resolver);
                         } else {
                             val = converter.convert(val, componentType);
                         }
@@ -97,11 +97,11 @@ public class ArrayFactory<T> implements ClassFactory {
                     Object val = items[i];
                     if (val != null) {
                         if (val instanceof JsonObject) {
-                            val = unwrapJsonObject((JsonObject) val, componentType, converter);
+                            val = unwrapJsonObject((JsonObject) val, componentType, resolver);
                         } else if (!componentType.isInstance(val)) {
                             // Only convert if value is not already assignable to component type
                             // This preserves subclass types (e.g., java.sql.Date in a Date[] array)
-                            val = converter.convert(val, componentType);
+                            val = resolver.convertValue(val, componentType);
                         }
                         typedArray[i] = val;
                     }
@@ -114,7 +114,7 @@ public class ArrayFactory<T> implements ClassFactory {
                         if (!componentType.isInstance(val)) {
                             // Only convert if value is not already assignable to component type
                             // This preserves subclass types (e.g., java.sql.Date in a Date[] array)
-                            val = converter.convert(val, componentType);
+                            val = resolver.convertValue(val, componentType);
                         }
                         typedArray[i] = val;
                     }
@@ -129,7 +129,7 @@ public class ArrayFactory<T> implements ClassFactory {
      * Unwraps a JsonObject, handling nested {@type:..., value:...} structures.
      * Returns the converted value ready for array assignment.
      */
-    private Object unwrapJsonObject(JsonObject jsonObject, Class<?> componentType, Converter converter) {
+    private Object unwrapJsonObject(JsonObject jsonObject, Class<?> componentType, Resolver resolver) {
         Object val = jsonObject;
         Type type = null;
 
@@ -145,7 +145,7 @@ public class ArrayFactory<T> implements ClassFactory {
 
         // Use the specified type, or fall back to component type
         Class<?> targetType = (type == null) ? componentType : TypeUtilities.getRawClass(type);
-        return converter.convert(val, targetType);
+        return resolver.convertValue(val, targetType);
     }
 
     public Class<?> getType() {

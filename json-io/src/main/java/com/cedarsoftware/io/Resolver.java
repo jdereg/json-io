@@ -860,7 +860,7 @@ public abstract class Resolver {
                 if (value instanceof JsonObject && !Map.class.isAssignableFrom(targetClass)) {
                     resolveTypedValues((JsonObject) value);
                 }
-                return enumOrConvert(value, targetClass);
+                return convertValue(value, targetClass);
             } catch (Exception e) {
                 // For String→Class conversion from plain JSON strings, if the class is not found,
                 // treat it as a type mismatch rather than exposing "class not found".
@@ -1653,7 +1653,10 @@ public abstract class Resolver {
 
     /** Pseudo-primitives (BigInteger, BigDecimal, UUID, Date, ...) — go through Converter. */
     private static final InstantiationPlan PSEUDO_PRIMITIVE_PLAN = (jsonObj, resolver, targetType) -> {
-        Object result = resolver.converter.convert(resolver.resolveTypedValues(jsonObj), targetType);
+        Object result = resolver.toonNumbers && targetType == BigDecimal.class && jsonObj.size() == 1
+                && jsonObj.get("value") instanceof Double
+                ? resolver.toonDecimal((Double) jsonObj.get("value"))
+                : resolver.converter.convert(resolver.resolveTypedValues(jsonObj), targetType);
         return jsonObj.setFinishedTarget(result, true);
     };
 
@@ -2171,9 +2174,18 @@ public abstract class Resolver {
 
     /**
      * {@code value} converted to {@code type} by the Converter, which reads an enum by its name; an enum written by its
-     * {@code @IoValue} method is read from that value first ({@link #enumOfValue}).
+     * {@code @IoValue} method is read from that value first ({@link #enumOfValue}), and a TOON number into a
+     * BigDecimal is the number its text is ({@link #toonDecimal}). For a {@link ClassFactory} converting a value it
+     * reads, as json-io converts one.
+     *
+     * @param value the value read
+     * @param type  the type to convert it to
+     * @return the converted value
      */
-    protected Object enumOrConvert(Object value, Class<?> type) {
+    public Object convertValue(Object value, Class<?> type) {
+        if (toonNumbers && type == BigDecimal.class && value instanceof Double) {
+            return toonDecimal((Double) value);
+        }
         if (value != null && Enum.class.isAssignableFrom(type) && !isPlainEnum(type)) {
             Map<Object, Object> byValue = ENUM_BY_VALUE.get(type);
             if (byValue.isEmpty()) {
@@ -2186,6 +2198,28 @@ public abstract class Resolver {
             }
         }
         return converter.convert(value, type);
+    }
+
+    // Read from TOON: its numbers are written with no exponent and no trailing zeros (see toonDecimal)
+    private boolean toonNumbers;
+
+    void setToonNumbers(boolean toonNumbers) {
+        this.toonNumbers = toonNumbers;
+    }
+
+    /** True when reading TOON, whose numbers {@link #convertValue} reads into a BigDecimal by their text. */
+    protected boolean isReadingToonNumbers() {
+        return toonNumbers;
+    }
+
+    /**
+     * A TOON number the reader made a Double, as the BigDecimal its text is. TOON writes a number with no exponent
+     * and no trailing zeros, and the reader makes a Double only of text the Double reads back as, so that text is
+     * the Double's shortest decimal with its trailing zeros stripped: 0.0000000000000000000000000001 is 1E-28, where
+     * the Converter's BigDecimal.valueOf gives 1.0E-28, the same number with another scale.
+     */
+    private Object toonDecimal(Double value) {
+        return new BigDecimal(Double.toString(value)).stripTrailingZeros();
     }
 
     // The last enum classes this read met without an @IoValue method: their constants are read by name alone, and a

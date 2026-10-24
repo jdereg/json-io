@@ -222,7 +222,7 @@ class ToonMinimalTypeTest {
                 + "byName: null\n"
                 + "anything:\n"
                 + "  $type: BigDecimal\n"
-                + "  value: 1.25\n"
+                + "  value: \"1.25\"\n"
                 + "objects: null\n"
                 + "problem: null", toon.trim());
     }
@@ -323,7 +323,7 @@ class ToonMinimalTypeTest {
         }
         // Where the type argument gives the content's class, the content carries none
         String minimal = JsonIo.toToon(h, MINIMAL);
-        assertTrue(minimal.contains("\nnumber: 1.5\n"), minimal);
+        assertTrue(minimal.contains("\nnumber: \"1.5\"\n"), minimal);     // a BigDecimal, its text
         assertTrue(minimal.contains("\ncount: 4\n"), minimal);
     }
 

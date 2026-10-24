@@ -1863,6 +1863,7 @@ public class JsonIo {
                             ToonReader parser = new ToonReader(input, readOptions, resolver.getReferences());
                             Object parsed = parser.readValue(typeHolder.getType());
                             resolver.setParsedListsHoldMeta(parser.metaKeysSeen());
+                            resolver.setToonNumbers(true);
                             return parsed;
                         },
                         "Error parsing TOON value",
@@ -1923,6 +1924,7 @@ public class JsonIo {
                             ToonReader parser = new ToonReader(input, readOptions, resolver.getReferences());
                             Object parsed = parser.readValue(typeHolder.getType());
                             resolver.setParsedListsHoldMeta(parser.metaKeysSeen());
+                            resolver.setToonNumbers(true);
                             return parsed;
                         },
                         "Error parsing TOON value",

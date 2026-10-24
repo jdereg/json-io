@@ -185,7 +185,9 @@ public class ObjectResolver extends Resolver
         Class<?> rawFieldType = TypeUtilities.getRawClass(fieldType);
         if (rawFieldType != null && rawFieldType.isArray()) {
             Class<?> componentType = rawFieldType.getComponentType();
-            if (canUseFastPathForArray(elements, componentType)) {
+            // (a TOON number into a BigDecimal[] takes the element path: the BigDecimal its text is)
+            if (canUseFastPathForArray(elements, componentType)
+                    && !(componentType == BigDecimal.class && isReadingToonNumbers())) {
                 // Fast path: use Converter for simple type arrays (e.g., int[] -> long[])
                 injector.inject(target, converter.convert(elements, rawFieldType));
                 return;
@@ -674,13 +676,13 @@ public class ObjectResolver extends Resolver
                 final boolean pseudoPrimitive =
                         fieldTypeUnchanged ? assignmentPlan.pseudoPrimitive : isPseudoPrimitive(rawType);
                 if (pseudoPrimitive && converter.isConversionSupportedFor(rhsClass, rawType)) {
-                    injector.inject(target, converter.convert(rhs, rawType));
+                    injector.inject(target, convertValue(rhs, rawType));
                     return;
                 }
                 // 4b. CONVERTER - container and general conversions when annotation/type override adjusted target
                 // type; an enum written by its @IoValue method from that value
                 if (converter.isConversionSupportedFor(rhsClass, rawType)) {
-                    injector.inject(target, enumOrConvert(rhs, rawType));
+                    injector.inject(target, convertValue(rhs, rawType));
                     return;
                 }
                 // 4c. A class written as the single value its @IoValue method returns, from that value. Where the
@@ -1414,7 +1416,7 @@ public class ObjectResolver extends Resolver
                 // Type mismatch - try converter directly (skip factory/reader overhead); an enum written by its
                 // @IoValue method from that value
                 if (converter.isConversionSupportedFor(valueClass, rawInferred)) {
-                    return enumOrConvert(o, rawInferred);
+                    return convertValue(o, rawInferred);
                 }
                 // A class written as the single value its @IoValue method returns (List<EmailAddress>)
                 Object built = fromValueForm(o, rawInferred, false);
@@ -2189,7 +2191,7 @@ public class ObjectResolver extends Resolver
             innerValue = toJava(inner, rhs);
         } else if (innerType != Object.class && !innerType.isInstance(rhs)
                 && converter.isConversionSupportedFor(rhs.getClass(), innerType)) {
-            innerValue = enumOrConvert(rhs, innerType);
+            innerValue = convertValue(rhs, innerType);
         } else if (innerType != Object.class && !innerType.isInstance(rhs)) {
             // A class written as the single value its @IoValue method returns: Optional<EmailAddress>
             Object built = fromValueForm(rhs, innerType, false);
