@@ -1228,7 +1228,7 @@ public class EmailAddress {
 }
 // Serializes as: "user@example.com" (not {"address":"user@example.com"})
 ```
-It reads back through the class's one-parameter `@IoCreator`, which is given that value, converted to its parameter's type. Where type info is needed (a field declared `Object`), it is written as `{"@type":"...EmailAddress","value":"user@example.com"}`, which reads back the same way.
+It reads back through the class's one-parameter `@IoCreator`, which is given that value, converted to its parameter's type; without one, through the constructor whose one parameter has the method's return type (or its boxed or primitive form), as Jackson uses a single-argument constructor. Where type info is needed (a field declared `Object`), it is written as `{"@type":"...EmailAddress","value":"user@example.com"}`, which reads back the same way.
 TOON writes it the same way (`email: user@example.com`; with type info, `$type` and `value`). An object written as its value carries no `@id`: each place that holds it holds the value, as each place holding a String does, so it reads back as equal objects rather than one shared object. When the value is itself an object, that object keeps its identity as any object does.
 
 #### `@IoIgnoreType` — Type-Level Exclusion

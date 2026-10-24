@@ -1906,18 +1906,16 @@ public abstract class Resolver {
 
                 // Use @IoCreator if present; otherwise fall back to ClassUtilities heuristics
                 Executable creator = annMeta.getCreator();
-                if (creator != null) {
-                    // If the class has @IoValue and the JSON has a "value" key (from typed write),
-                    // pass the single value to the creator's first parameter
-                    if (annMeta.getValueMethod() != null && args.containsKey("value") && creator.getParameterCount() == 1) {
-                        Map<Object, Object> valueArgs = new LinkedHashMap<>();
-                        // Map the "value" key to whatever the creator's first parameter name is
-                        String paramKey = AnnotationResolver.getParameterJsonKey(creator.getParameters()[0]);
-                        valueArgs.put(paramKey, args.get("value"));
-                        instance = invokeCreator(creator, valueArgs);
-                    } else {
-                        instance = invokeCreator(creator, args);
-                    }
+                Executable valueCreator = annMeta.getValueCreator();
+                if (valueCreator != null && args.containsKey("value")) {
+                    // An @IoValue class written with its type, {"@type":..,"value":..}: the single value goes to
+                    // what builds the class from it (its one-parameter @IoCreator, or a constructor taking it)
+                    Map<Object, Object> valueArgs = new LinkedHashMap<>();
+                    String paramKey = AnnotationResolver.getParameterJsonKey(valueCreator.getParameters()[0]);
+                    valueArgs.put(paramKey, args.get("value"));
+                    instance = invokeCreator(valueCreator, valueArgs);
+                } else if (creator != null) {
+                    instance = invokeCreator(creator, args);
                 } else if (Map.class.isAssignableFrom(targetClass)) {
                     instance = newMap(targetClass, args);
                 } else {
@@ -1975,12 +1973,13 @@ public abstract class Resolver {
 
     /**
      * {@code value}, a string, number or boolean, as {@code targetClass} when that class is written as the single
-     * value its {@code @IoValue} method returns: built by its one-parameter {@code @IoCreator}, as the
-     * {"@type":..,"value":..} form is. That value alone is what json-io writes where the class is declared (a field, a
-     * List&lt;EmailAddress&gt;), and up to 4.117.0 it did not read back: an error, or a String in the list. An empty
-     * string stays what it was (null in a field) unless the creator takes text.
+     * value its {@code @IoValue} method returns: built by its one-parameter {@code @IoCreator}, or else the
+     * constructor taking that value's type, as the {"@type":..,"value":..} form is. That value alone is what json-io
+     * writes where the class is declared (a field, a List&lt;EmailAddress&gt;), and up to 4.117.0 it did not read back:
+     * an error, or a String in the list. An empty string stays what it was (null in a field) unless the creator takes
+     * text.
      *
-     * @param explain when the class has an {@code @IoValue} method but no one-parameter {@code @IoCreator}, throw
+     * @param explain when the class has an {@code @IoValue} method but nothing that builds it from the value, throw
      *                saying so, instead of returning {@link #NO_VALUE_FORM}: for a caller whose next step is an error
      * @return the instance, or {@link #NO_VALUE_FORM}
      */
@@ -1995,13 +1994,15 @@ public abstract class Resolver {
             return NO_VALUE_FORM;
         }
         boolean empty = value instanceof String && ((String) value).isEmpty();
-        Executable creator = meta.getCreator();
-        if (creator == null || creator.getParameterCount() != 1) {
+        Executable creator = meta.getValueCreator();
+        if (creator == null) {
             if (explain && !empty) {
+                Executable annotated = meta.getCreator();
                 throw new JsonIoException(targetClass.getName() + " is written as the single value its @IoValue method "
                         + valueMethod.getName() + "() returns, and reading it back from that value takes an @IoCreator"
-                        + " with one parameter: " + (creator == null ? "it has no @IoCreator"
-                        : "its @IoCreator has " + creator.getParameterCount()));
+                        + " with one parameter or a constructor that takes a " + valueMethod.getReturnType().getSimpleName()
+                        + ": " + (annotated == null ? "it has neither"
+                        : "its @IoCreator has " + annotated.getParameterCount() + " and no constructor takes one"));
             }
             return NO_VALUE_FORM;
         }

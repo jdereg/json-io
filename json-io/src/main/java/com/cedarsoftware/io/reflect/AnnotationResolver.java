@@ -390,6 +390,7 @@ public class AnnotationResolver {
             null,
             null,
             null,
+            null,
             false,
             null,
             null,
@@ -694,8 +695,9 @@ public class AnnotationResolver {
         // 4. Scan for @IoCreator on constructors and static factory methods
         Executable creator = scanCreator(clazz);
 
-        // 5. Scan for @IoValue on instance methods
+        // 5. Scan for @IoValue on instance methods, and for what builds the class from that method's value
         Method valueMethod = scanValueMethod(clazz);
+        Executable valueCreator = scanValueCreator(clazz, creator, valueMethod);
 
         // 6. Scan for @IoGetter/@IoSetter on instance methods
         Map<String, String> getterMethods = null;
@@ -738,6 +740,7 @@ public class AnnotationResolver {
                 Collections.unmodifiableSet(nonNullFields),
                 creator,
                 valueMethod,
+                valueCreator,
                 includedFields != null ? Collections.unmodifiableSet(includedFields) : null,
                 ignoredType,
                 fieldTypeInfoDefaults != null ? Collections.unmodifiableMap(fieldTypeInfoDefaults) : null,
@@ -1101,6 +1104,41 @@ public class AnnotationResolver {
         return null;
     }
 
+    /**
+     * What builds {@code clazz} from the single value its {@code @IoValue} method returns: a one-parameter creator,
+     * else the constructor whose one parameter has the type the method returns (or its boxed or primitive form), as
+     * Jackson uses a single-argument constructor. Null when there is no {@code @IoValue} method or neither.
+     */
+    private static Executable scanValueCreator(Class<?> clazz, Executable creator, Method valueMethod) {
+        if (valueMethod == null) {
+            return null;
+        }
+        if (creator != null && creator.getParameterCount() == 1) {
+            return creator;
+        }
+        Class<?> valueType = valueMethod.getReturnType();
+        Class<?> boxed = ClassUtilities.toPrimitiveWrapperClass(valueType);
+        Constructor<?> match = null;
+        try {
+            for (Constructor<?> ctor : clazz.getDeclaredConstructors()) {
+                if (ctor.getParameterCount() != 1) {
+                    continue;
+                }
+                Class<?> paramType = ctor.getParameterTypes()[0];
+                if (paramType == valueType) {
+                    match = ctor;
+                    break;
+                }
+                if (match == null && ClassUtilities.toPrimitiveWrapperClass(paramType) == boxed) {
+                    match = ctor;
+                }
+            }
+        } catch (SecurityException e) {
+            return null;
+        }
+        return match == null ? null : ReflectionUtils.getConstructor(clazz, match.getParameterTypes());
+    }
+
     // ---- Getter/Setter scanner ----
 
     /**
@@ -1429,6 +1467,7 @@ public class AnnotationResolver {
         private final Set<String> nonNullFields;
         private final Executable creator;
         private final Method valueMethod;
+        private final Executable valueCreator;
         private final Set<String> includedFields;
         private final boolean ignoredType;
         private final Map<String, Class<?>> fieldTypeInfoDefaults;
@@ -1456,6 +1495,7 @@ public class AnnotationResolver {
                                 Set<String> nonNullFields,
                                 Executable creator,
                                 Method valueMethod,
+                                Executable valueCreator,
                                 Set<String> includedFields,
                                 boolean ignoredType,
                                 Map<String, Class<?>> fieldTypeInfoDefaults,
@@ -1482,6 +1522,7 @@ public class AnnotationResolver {
             this.nonNullFields = nonNullFields;
             this.creator = creator;
             this.valueMethod = valueMethod;
+            this.valueCreator = valueCreator;
             this.includedFields = includedFields;
             this.ignoredType = ignoredType;
             this.fieldTypeInfoDefaults = fieldTypeInfoDefaults;
@@ -1591,6 +1632,15 @@ public class AnnotationResolver {
          */
         public Method getValueMethod() {
             return valueMethod;
+        }
+
+        /**
+         * Get what builds this class from the single value its @IoValue method returns: a one-parameter @IoCreator,
+         * else the constructor taking that value's type. Null when there is no @IoValue method or neither.
+         * @return the constructor or static factory method, or null
+         */
+        public Executable getValueCreator() {
+            return valueCreator;
         }
 
         /**
