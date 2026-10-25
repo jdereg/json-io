@@ -1,7 +1,9 @@
 package com.cedarsoftware.io;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -285,15 +287,14 @@ public class MapResolver extends Resolver {
     }
 
     /**
-     * A value json-io writes with its type ({"@type":"BigDecimal","value":"1.50"}, a date, a UUID, a Character) as
-     * a field holds it: the value, wherever it sits -- in a list or an array, a typed collection, a map's keys and
-     * values. It stayed the object holding it everywhere but in a field, at the root and in a root array. Any other
-     * object (an enum's too, for now) is returned as it is.
+     * A value json-io writes with its type ({"@type":"BigDecimal","value":"1.50"}, a date, a UUID, a Character, a
+     * simple enum's constant) as a field holds it: the value, wherever it sits -- in a list or an array, a typed
+     * collection, a map's keys and values. It stayed the object holding it everywhere but in a field, at the root and
+     * in a root array. Any other object is returned as it is.
      */
     private Object valueOf(JsonObject jObj) {
         Class<?> type = jObj.getRawType();
-        if (type == null || ClassUtilities.getClassIfEnum(type) != null || !getReadOptions().isNonReferenceableClass(type)
-                || !converter.isConversionSupportedFor(Map.class, type)) {
+        if (!isValueClass(type) || isEnumSet(jObj)) {
             return jObj;
         }
         if (!jObj.isFinished() && jObj.getTarget() == null) {
@@ -336,6 +337,15 @@ public class MapResolver extends Resolver {
                 Number.class.isAssignableFrom(javaClass)) {
             Class<?> basicType = getJsonSynonymType(javaClass);
             return converter.convert(rootObj, basicType);
+        }
+
+        // A simple enum's constant, as it is anywhere in the tree (it was the object holding it)
+        Class<?> enumClass = ClassUtilities.getClassIfEnum(javaClass);
+        if (enumClass != null && isSimpleEnum(enumClass)) {
+            Object constant = convertIfNonRefType(rootObj, javaClass);
+            if (constant != null) {
+                return constant;
+            }
         }
 
         // Return primitive results directly, otherwise return the raw JsonObject
@@ -625,6 +635,11 @@ public class MapResolver extends Resolver {
         Object target = jsonObj.getTarget() != null ? jsonObj.getTarget() : items;
         Class<?> componentType = getArrayComponentType(jsonObj);
         final int targetComponentKind = scalarTargetKind(componentType);
+        // An array whose type declares enum elements ({"@type":"Code[]",..}) reads them as that enum, as a field of that
+        // type does; Maps mode builds no array for it, so its declaration is its type, not its target's
+        Class<?> declared = jsonObj.getRawType();
+        final Class<?> elementType = componentType == Object.class && declared != null && declared.isArray()
+                && ClassUtilities.getClassIfEnum(declared.getComponentType()) != null ? declared.getComponentType() : componentType;
 
         // Optimize: check array type ONCE, not on every element assignment
         final boolean isPrimitive = componentType.isPrimitive();
@@ -648,7 +663,8 @@ public class MapResolver extends Resolver {
             if (elementClass.isArray() || (jsonElement != null && jsonElement.isArray())) {
                 handleNestedArray(element, componentType, target, i);
             } else {
-                processArrayElement(element, jsonElement, elementClass, componentType, target, refArray, i, isPrimitive, targetComponentKind);
+                processArrayElement(element, jsonElement, elementClass, componentType, elementType, target, refArray, i,
+                        isPrimitive, targetComponentKind);
             }
         }
         // Note: setFinished() already called by markFinishedIfNot() at method start
@@ -671,7 +687,8 @@ public class MapResolver extends Resolver {
      * Process a single array element that is not a nested array.
      */
     private void processArrayElement(Object element, JsonObject jsonElement, Class<?> elementClass, Class<?> componentType,
-                                     Object target, Object[] refArray, int index, boolean isPrimitive, int targetComponentKind) {
+                                     Class<?> elementType, Object target, Object[] refArray, int index, boolean isPrimitive,
+                                     int targetComponentKind) {
         if (tryAssignParsedScalarToArray(target, refArray, index, element, elementClass, isPrimitive, targetComponentKind)) {
             return;
         }
@@ -694,7 +711,7 @@ public class MapResolver extends Resolver {
         }
 
         if (jsonElement != null) {
-            processJsonObjectArrayElement(jsonElement, target, refArray, index, isPrimitive);
+            processJsonObjectArrayElement(jsonElement, elementType, target, refArray, index, isPrimitive);
             return;
         }
 
@@ -704,24 +721,24 @@ public class MapResolver extends Resolver {
     /**
      * Process a JsonObject element within an array.
      */
-    private void processJsonObjectArrayElement(JsonObject jsonObject, Object target, Object[] refArray,
+    private void processJsonObjectArrayElement(JsonObject jsonObject, Class<?> componentType, Object target, Object[] refArray,
                                                int index, boolean isPrimitive) {
         if (jsonObject.isReference()) {
-            processArrayReference(jsonObject, target, refArray, index, isPrimitive);
+            processArrayReference(jsonObject, componentType, target, refArray, index, isPrimitive);
         } else {
-            processArrayJsonObject(jsonObject, target, refArray, index, isPrimitive);
+            processArrayJsonObject(jsonObject, componentType, target, refArray, index, isPrimitive);
         }
     }
 
     /**
      * Process an @ref reference within an array.
      */
-    private void processArrayReference(JsonObject jsonObject, Object target, Object[] refArray,
+    private void processArrayReference(JsonObject jsonObject, Class<?> componentType, Object target, Object[] refArray,
                                        int index, boolean isPrimitive) {
         long refId = jsonObject.getReferenceId();
         JsonObject refObject = references.getOrThrow(refId);
 
-        Object convertedRef = convertIfNonRefType(refObject, refObject.getRawType());
+        Object convertedRef = convertArrayElement(refObject, componentType);
         if (convertedRef != null) {
             refObject.setFinishedTarget(convertedRef, true);
             setArrayElement(target, refArray, index, refObject.getTarget(), isPrimitive);
@@ -733,9 +750,9 @@ public class MapResolver extends Resolver {
     /**
      * Process a non-reference JsonObject within an array.
      */
-    private void processArrayJsonObject(JsonObject jsonObject, Object target, Object[] refArray,
+    private void processArrayJsonObject(JsonObject jsonObject, Class<?> componentType, Object target, Object[] refArray,
                                         int index, boolean isPrimitive) {
-        Object converted = convertIfNonRefType(jsonObject, jsonObject.getRawType());
+        Object converted = convertArrayElement(jsonObject, componentType);
         if (converted != null) {
             setArrayElement(target, refArray, index, converted, isPrimitive);
             jsonObject.setFinished();
@@ -855,19 +872,80 @@ public class MapResolver extends Resolver {
     }
 
     /**
-     * An object of any class, on the classpath or not -- not a collection, a map or an array, nor a value json-io
-     * writes with its type (a number, a date, a UUID, an enum constant), which are read as before. A constant with a
-     * body (its class an anonymous subclass of its enum, as json-io names it) stays JSON too: it was a null.
+     * An object of any class, on the classpath or not -- not a collection, a map or an array, nor a value (see
+     * {@link #isValueClass}: a number, a date, a UUID, a simple enum's constant), which are read as before. Another
+     * enum's constant stays JSON too: one with a body (its class an anonymous subclass of its enum) was a null.
      */
     private boolean staysJson(JsonObject jObj) {
-        if (jObj.getJsonType() != JsonObject.JsonType.OBJECT) {
+        return jObj.getJsonType() == JsonObject.JsonType.OBJECT && !isValueClass(jObj.getRawType());
+    }
+
+    /**
+     * The class of a value Maps mode reads as that value: one of the Converter's value types (a number, a date, a
+     * UUID: on every JVM), or a simple enum on the classpath. Any other enum -- with fields of its own, or a constant
+     * with a body -- stays JSON, as an object of any other class does.
+     */
+    private boolean isValueClass(Class<?> type) {
+        if (type == null) {
             return false;
         }
-        Class<?> type = jObj.getRawType();
-        if (type == null || type == Object.class) {
+        Class<?> enumClass = ClassUtilities.getClassIfEnum(type);
+        if (enumClass != null) {
+            return isSimpleEnum(enumClass);
+        }
+        return getReadOptions().isNonReferenceableClass(type) && converter.isConversionSupportedFor(Map.class, type);
+    }
+
+    /**
+     * An enum that is only its constants: no fields of its own and no constant with a body. Told without initializing
+     * it: an enum is final unless a constant has a body (JLS 8.9). Once per class (getDeclaredFields() copies them).
+     */
+    static boolean isSimpleEnum(Class<?> enumClass) {
+        return SIMPLE_ENUMS.get(enumClass);
+    }
+
+    private static final ClassValue<Boolean> SIMPLE_ENUMS = new ClassValue<Boolean>() {
+        @Override
+        protected Boolean computeValue(Class<?> enumClass) {
+            if (!Modifier.isFinal(enumClass.getModifiers())) {
+                return false;
+            }
+            for (Field field : enumClass.getDeclaredFields()) {
+                if (!Modifier.isStatic(field.getModifiers())) {
+                    return false;
+                }
+            }
             return true;
         }
-        return !(getReadOptions().isNonReferenceableClass(type) && converter.isConversionSupportedFor(Map.class, type));
+    };
+
+    /**
+     * An element of an array as its value: an enum constant of any enum where the array's type declares enum elements
+     * ({"@type":"Code[]",..}), as a field's declared type does; otherwise as any value (see {@link #isValueClass}).
+     */
+    private Object convertArrayElement(JsonObject element, Class<?> componentType) {
+        if (ClassUtilities.getClassIfEnum(componentType) != null) {
+            return super.convertIfNonRefType(element, element.getRawType());
+        }
+        return convertIfNonRefType(element, element.getRawType());
+    }
+
+    /** An EnumSet's form: its enum's type, with its constants as @items. A container, read as before. */
+    private static boolean isEnumSet(JsonObject jObj) {
+        return jObj.getItems() != null;
+    }
+
+    /**
+     * A constant of an enum other than a simple one stays JSON (see {@link #isValueClass}); a value type is its value.
+     * An EnumSet is read as before.
+     */
+    @Override
+    protected Object convertIfNonRefType(JsonObject jsonObj, Class<?> type) {
+        Class<?> enumClass = type == null ? null : ClassUtilities.getClassIfEnum(type);
+        if (enumClass != null && !isEnumSet(jsonObj) && !isSimpleEnum(enumClass)) {
+            return null;
+        }
+        return super.convertIfNonRefType(jsonObj, type);
     }
 
     protected Object resolveArray(Type suggestedType, List<Object> list) {

@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -170,7 +171,9 @@ class MapsModeReadTest {
         for (Map<?, ?> bag : reads) {
             assertEquals(Code.GREEN, bag.get("code"));     // the value, also where it was written with its type
             assertEquals(Plain.B, bag.get("plain"));
-            assertEquals(Code.RED, bag.get("any"));
+            // Where Object is declared, an enum with a field of its own stays JSON, as an object of a class does: only
+            // a simple enum (no fields, no constant with a body) is its constant there
+            assertInstanceOf(JsonObject.class, bag.get("any"));
         }
         // An array the JSON types: its elements are read as its component type, also where its type follows them
         assertArrayEquals(new Object[] {Code.GREEN, Code.RED}, ((JsonObject) reads.get(1).get("arr")).getItems());
